@@ -1,7 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { AppointmentStatus } from "@prisma/client";
-import { Type } from "class-transformer";
-import { IsDateString, IsEnum, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
+import { IsDateString, IsEnum, IsOptional, IsString, MaxLength } from "class-validator";
 
 export class CreateAppointmentDto {
   @ApiProperty()
@@ -34,11 +33,4 @@ export class CreateAppointmentDto {
   @IsString()
   @MaxLength(2000)
   notes?: string;
-
-  @ApiPropertyOptional({ description: "Visit fee for this appointment; defaults to tenant appointmentDefaultFee" })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0)
-  feeAmount?: number;
 }

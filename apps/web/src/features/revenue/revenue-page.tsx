@@ -11,7 +11,7 @@ import { useClinicsQuery, useRevenueQuery, useRevenueTotalsQuery } from "@/lib/a
 import { ApiError, apiPost } from "@/lib/http";
 import { defaultMonthRange } from "@/stores/date-range-store";
 
-const REV_CATEGORIES = ["VISIT", "PROCEDURE", "LAB", "PHARMACY", "IMAGING", "APPOINTMENT_FEE", "OTHER"] as const;
+const REV_CATEGORIES = ["VISIT", "VISIT_FEE", "PROCEDURE", "LAB", "PHARMACY", "IMAGING", "APPOINTMENT_FEE", "OTHER"] as const;
 
 export function RevenuePage() {
   const { t, i18n } = useTranslation();

@@ -33,12 +33,29 @@ export class AppointmentsController {
     @Query("from") from?: string,
     @Query("to") to?: string,
     @Query("patientMrn") patientMrn?: string,
+    @Query("patientSearch") patientSearch?: string,
+    @Query("patientId") patientId?: string,
     @Query("status") status?: string,
     @Query("clinicId") clinicId?: string,
     @Query("sortBy") sortBy?: string,
-    @Query("sortOrder") sortOrder?: string
+    @Query("sortOrder") sortOrder?: string,
+    @Query("bookableOnly") bookableOnly?: string
   ) {
-    return this.appointments.list(user.tenantId, page, pageSize, from, to, patientMrn, status, clinicId, sortBy, sortOrder);
+    return this.appointments.list(
+      user.tenantId,
+      page,
+      pageSize,
+      from,
+      to,
+      patientMrn,
+      patientSearch,
+      patientId,
+      status,
+      clinicId,
+      sortBy,
+      sortOrder,
+      bookableOnly
+    );
   }
 
   @Post()

@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAdminOverviewQuery, useAppointmentsQuery, useClinicsQuery, usePatientsQuery, useUsersQuery } from "@/lib/api-hooks";
+import { useAppointmentsQuery, useClinicsQuery, usePatientsQuery, useUsersQuery } from "@/lib/api-hooks";
 import { ApiError, apiPost } from "@/lib/http";
 
 function toAppointmentIso(localDatetime: string): string {
@@ -116,13 +116,6 @@ export function AppointmentsPage() {
   const [end, setEnd] = useState("");
   const [formErr, setFormErr] = useState<string | null>(null);
   const [bookOk, setBookOk] = useState<string | null>(null);
-  const [aptFee, setAptFee] = useState("");
-  const adminOv = useAdminOverviewQuery();
-  useEffect(() => {
-    if (!showBookPanel) return;
-    const d = adminOv.data?.currentTenant?.appointmentDefaultFee;
-    if (d != null && Number.isFinite(Number(d))) setAptFee(String(d));
-  }, [showBookPanel, adminOv.data?.currentTenant?.appointmentDefaultFee]);
 
   const [bookPatientSearch, setBookPatientSearch] = useState("");
   const [debouncedBookPatient, setDebouncedBookPatient] = useState("");
@@ -154,14 +147,12 @@ export function AppointmentsPage() {
       const startsAt = toAppointmentIso(start);
       const endsAt = toAppointmentIso(end);
       if (new Date(endsAt) <= new Date(startsAt)) throw new Error("End must be after start.");
-      const fee = Number.parseFloat(aptFee.trim() || "0");
       return apiPost("/api/v1/appointments", {
         clinicId,
         patientId,
         clinicianId,
         startsAt,
         endsAt,
-        feeAmount: Number.isFinite(fee) && fee >= 0 ? fee : 0,
       });
     },
     onSuccess: () => {
@@ -173,7 +164,6 @@ export function AppointmentsPage() {
       setStart("");
       setEnd("");
       void qc.invalidateQueries({ queryKey: ["appointments"] });
-      void qc.invalidateQueries({ queryKey: ["revenue"] });
       void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
     },
     onError: (e: unknown) => {
@@ -225,8 +215,11 @@ export function AppointmentsPage() {
               <SearchablePickList
                 items={[
                   { value: "", label: t("appointments.anyStatus", "Any status") },
+                  { value: "PENDING_CONFIRMATION", label: "PENDING_CONFIRMATION" },
+                  { value: "CONFIRMED", label: "CONFIRMED" },
                   { value: "SCHEDULED", label: "SCHEDULED" },
                   { value: "CHECKED_IN", label: "CHECKED_IN" },
+                  { value: "IN_PROGRESS", label: "IN_PROGRESS" },
                   { value: "COMPLETED", label: "COMPLETED" },
                   { value: "CANCELLED", label: "CANCELLED" },
                   { value: "NO_SHOW", label: "NO_SHOW" },
@@ -327,18 +320,6 @@ export function AppointmentsPage() {
             <div className="space-y-2">
               <Label>{t("appointments.ends")}</Label>
               <Input className="ltr-nums" type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>{t("appointments.fee", "Appointment fee")}</Label>
-              <Input
-                className="ltr-nums"
-                type="number"
-                min="0"
-                step="0.01"
-                value={aptFee}
-                onChange={(e) => setAptFee(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">{t("appointments.feeHint", "Default comes from admin tenant settings.")}</p>
             </div>
             <div className="flex flex-wrap items-end gap-2 sm:col-span-2">
               <Button

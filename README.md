@@ -57,11 +57,11 @@ Typical flows:
 
 - List and open encounters; structured visit data, diagnoses, medications, **document uploads** (e.g. lab / radiology).
 - Finalization workflow aligned with the API.
+- Creating an encounter captures a **visit fee** (default from tenant admin **default visit fee**); amounts greater than zero post a revenue ledger line (`VISIT_FEE`).
 
 ### Appointments
 
-- Search and paginate appointments; book with clinic, patient, physician, start/end, **appointment fee** (default from tenant admin setting).
-- Successful bookings with a fee create **revenue ledger** entries (`APPOINTMENT_FEE`) where configured.
+- Search and paginate appointments; book with clinic, patient, physician, start/end (scheduling only; no fee on the appointment).
 - Detail and edit (within business rules for terminal statuses).
 
 ### Clinics

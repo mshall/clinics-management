@@ -3,10 +3,12 @@ import { Type } from "class-transformer";
 import { IsNumber, IsOptional, Min } from "class-validator";
 
 export class PatchTenantSettingsDto {
-  @ApiPropertyOptional({ description: "Default appointment fee (same currency as tenant base), used when booking" })
+  @ApiPropertyOptional({
+    description: "Default visit/consultation fee for new encounters (same currency as tenant base)",
+  })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  appointmentDefaultFee?: number;
+  defaultVisitFee?: number;
 }

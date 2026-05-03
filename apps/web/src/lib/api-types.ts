@@ -50,6 +50,8 @@ export interface EncounterDetailDto {
   weightKg: number | null;
   heightCm: number | null;
   noMedications: boolean;
+  visitFeeAmount: number;
+  appointmentId?: string | null;
   finalizedAt: string | null;
   diagnoses: DiagnosisDto[];
   medications: EncounterMedicationDto[];
@@ -133,7 +135,8 @@ export interface AppointmentDto {
   endsAt: string;
   status: string;
   notes: string | null;
-  feeAmount: number;
+  patientMrn?: string | null;
+  patientName?: string | null;
 }
 
 export interface HrSummaryDto {
@@ -155,7 +158,7 @@ export interface RevenueTotalsDto {
 }
 
 export interface AdminOverviewDto {
-  currentTenant: { id: string; name: string; baseCurrency: string; appointmentDefaultFee: number } | null;
+  currentTenant: { id: string; name: string; baseCurrency: string; defaultVisitFee: number } | null;
   registeredTenants: number;
   featureFlags: Array<{ id: string; key: string; enabled: boolean; description: string | null }>;
   recentAudit: Array<{ id: string; action: string; resource: string; resourceId: string | null; createdAt: string }>;

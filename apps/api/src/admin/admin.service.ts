@@ -27,7 +27,7 @@ export class AdminService {
             id: tenant.id,
             name: tenant.name,
             baseCurrency: tenant.baseCurrency,
-            appointmentDefaultFee: Number(tenant.appointmentDefaultFee),
+            defaultVisitFee: Number(tenant.defaultVisitFee),
           }
         : null,
       registeredTenants: tenantCount,
@@ -102,18 +102,18 @@ export class AdminService {
   }
 
   async patchTenantSettings(tenantId: string, dto: PatchTenantSettingsDto) {
-    if (dto.appointmentDefaultFee === undefined) {
+    if (dto.defaultVisitFee === undefined) {
       throw new BadRequestException("No supported fields to update");
     }
     const row = await this.prisma.tenant.update({
       where: { id: tenantId },
-      data: { appointmentDefaultFee: dto.appointmentDefaultFee },
+      data: { defaultVisitFee: dto.defaultVisitFee },
     });
     return {
       id: row.id,
       name: row.name,
       baseCurrency: row.baseCurrency,
-      appointmentDefaultFee: Number(row.appointmentDefaultFee),
+      defaultVisitFee: Number(row.defaultVisitFee),
     };
   }
 

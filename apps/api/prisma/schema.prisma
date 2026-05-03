@@ -67,8 +67,11 @@ enum LeaveStatus {
 }
 
 enum AppointmentStatus {
+  PENDING_CONFIRMATION
+  CONFIRMED
   SCHEDULED
   CHECKED_IN
+  IN_PROGRESS
   COMPLETED
   CANCELLED
   NO_SHOW
@@ -91,7 +94,7 @@ model Tenant {
   name                  String
   baseCurrency          String          @default("AED")
   defaultLocale         String          @default("en")
-  appointmentDefaultFee Decimal         @default(150) @db.Decimal(14, 2)
+  defaultVisitFee Decimal         @default(150) @db.Decimal(14, 2)
   users          User[]
   clinics        Clinic[]
   patients       Patient[]
@@ -212,8 +215,12 @@ model Encounter {
   weightKg       Decimal?          @db.Decimal(6, 2)
   heightCm       Decimal?          @db.Decimal(6, 2)
   noMedications  Boolean           @default(false)
+  visitFeeAmount Decimal           @default(0) @db.Decimal(14, 2)
+  appointmentId  String?
+  appointment    Appointment?     @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   finalizedAt    DateTime?
   diagnoses      Diagnosis[]
+  revenueEntries RevenueEntry[]
   medications    EncounterMedication[]
   documents      EncounterDocument[]
   createdAt      DateTime          @default(now())
@@ -221,6 +228,7 @@ model Encounter {
 
   @@index([tenantId, clinicId, finalizedAt])
   @@index([patientId])
+  @@index([appointmentId])
 }
 
 model Diagnosis {
@@ -284,6 +292,8 @@ model RevenueEntry {
   clinic        Clinic        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   appointmentId String?
   appointment   Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  encounterId   String?
+  encounter     Encounter?    @relation(fields: [encounterId], references: [id], onDelete: SetNull)
   category      String
   description   String?
   grossAmount   Decimal       @db.Decimal(14, 2)
@@ -297,6 +307,7 @@ model RevenueEntry {
 
   @@index([tenantId, clinicId, postedAt])
   @@index([appointmentId])
+  @@index([encounterId])
 }
 
 model Expense {
@@ -392,10 +403,10 @@ model Appointment {
   clinician      User              @relation("AppointmentClinician", fields: [clinicianId], references: [id], onDelete: Restrict)
   startsAt       DateTime
   endsAt         DateTime
-  status         AppointmentStatus @default(SCHEDULED)
+  status         AppointmentStatus @default(PENDING_CONFIRMATION)
   notes          String?
-  feeAmount      Decimal           @default(0) @db.Decimal(14, 2)
   revenueEntries RevenueEntry[]
+  encounters     Encounter[]
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 

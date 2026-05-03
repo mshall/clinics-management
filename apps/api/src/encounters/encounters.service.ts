@@ -4,7 +4,13 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { EncounterDocumentKind, EncounterStatus, Prisma } from "@prisma/client";
+import {
+  AppointmentStatus,
+  EncounterDocumentKind,
+  EncounterStatus,
+  Prisma,
+  RevenueStatus,
+} from "@prisma/client";
 import { randomUUID } from "crypto";
 import { createReadStream } from "fs";
 import * as fs from "fs/promises";
@@ -131,6 +137,8 @@ export class EncountersService {
       weightKg: e.weightKg != null ? Number(e.weightKg) : null,
       heightCm: e.heightCm != null ? Number(e.heightCm) : null,
       noMedications: e.noMedications,
+      visitFeeAmount: Number(e.visitFeeAmount),
+      appointmentId: e.appointmentId ?? null,
       finalizedAt: e.finalizedAt ? e.finalizedAt.toISOString() : null,
       diagnoses: e.diagnoses.map((d) => this.mapDiag(d)),
       medications: lite ? [] : e.medications.map((m) => this.mapMed(m)),
@@ -211,17 +219,84 @@ export class EncountersService {
     if (!clinic) throw new BadRequestException("Invalid clinicId");
     if (!patient) throw new BadRequestException("Invalid patientId");
 
-    const row = await this.prisma.encounter.create({
-      data: {
-        tenantId,
-        clinicId: dto.clinicId,
-        patientId: dto.patientId,
-        clinicianId,
-        visitType: dto.visitType,
-        chiefComplaint: dto.chiefComplaint ?? null,
-        status: EncounterStatus.DRAFT,
-      },
-      include: encounterIncludeDef,
+    const appointmentIdOpt = dto.appointmentId?.trim() || null;
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      const tenant = await tx.tenant.findUnique({ where: { id: tenantId } });
+      if (!tenant) throw new BadRequestException("Tenant not found");
+      const defaultFee = Number(tenant.defaultVisitFee);
+      const feeRaw =
+        dto.visitFeeAmount !== undefined && dto.visitFeeAmount !== null ? Number(dto.visitFeeAmount) : defaultFee;
+      const visitFeeAmount = Number.isFinite(feeRaw) && feeRaw >= 0 ? feeRaw : defaultFee;
+
+      let linkAppointmentId: string | null = null;
+      if (appointmentIdOpt) {
+        const apt = await tx.appointment.findFirst({
+          where: { id: appointmentIdOpt, tenantId, patientId: dto.patientId },
+        });
+        if (!apt) throw new BadRequestException("Appointment not found for this patient");
+        const linkableStatuses = new Set<AppointmentStatus>([
+          AppointmentStatus.PENDING_CONFIRMATION,
+          AppointmentStatus.CONFIRMED,
+          AppointmentStatus.SCHEDULED,
+        ]);
+        if (!linkableStatuses.has(apt.status)) {
+          throw new BadRequestException("This appointment cannot be linked to a new encounter");
+        }
+        const existingDraft = await tx.encounter.findFirst({
+          where: {
+            appointmentId: appointmentIdOpt,
+            tenantId,
+            status: { in: [EncounterStatus.DRAFT, EncounterStatus.AMENDED] },
+          },
+        });
+        if (existingDraft) {
+          throw new BadRequestException("An open encounter is already linked to this appointment");
+        }
+        linkAppointmentId = appointmentIdOpt;
+      }
+
+      const enc = await tx.encounter.create({
+        data: {
+          tenantId,
+          clinicId: dto.clinicId,
+          patientId: dto.patientId,
+          clinicianId,
+          visitType: dto.visitType,
+          chiefComplaint: dto.chiefComplaint ?? null,
+          status: EncounterStatus.DRAFT,
+          visitFeeAmount,
+          appointmentId: linkAppointmentId,
+        },
+        include: encounterIncludeDef,
+      });
+
+      if (linkAppointmentId) {
+        await tx.appointment.update({
+          where: { id: linkAppointmentId },
+          data: { status: AppointmentStatus.IN_PROGRESS },
+        });
+      }
+
+      if (visitFeeAmount > 0) {
+        await tx.revenueEntry.create({
+          data: {
+            tenantId,
+            clinicId: dto.clinicId,
+            encounterId: enc.id,
+            category: "VISIT_FEE",
+            description: `Visit fee · encounter ${enc.id.slice(0, 8)}…`,
+            grossAmount: visitFeeAmount,
+            taxAmount: 0,
+            netAmount: visitFeeAmount,
+            currency: tenant.baseCurrency,
+            postedAt: new Date(),
+            status: RevenueStatus.POSTED,
+          },
+        });
+      }
+
+      return enc;
     });
     return this.mapEncounter(row);
   }
@@ -443,13 +518,24 @@ export class EncountersService {
       throw new BadRequestException('Remove medications or disable "no medications prescribed"');
     }
 
-    const row = await this.prisma.encounter.update({
-      where: { id: encounterId },
-      data: {
-        status: EncounterStatus.FINALIZED,
-        finalizedAt: new Date(),
-      },
-      include: encounterIncludeDef,
+    const aptId = enc.appointmentId;
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.encounter.update({
+        where: { id: encounterId },
+        data: {
+          status: EncounterStatus.FINALIZED,
+          finalizedAt: new Date(),
+        },
+        include: encounterIncludeDef,
+      });
+      if (aptId) {
+        await tx.appointment.update({
+          where: { id: aptId },
+          data: { status: AppointmentStatus.COMPLETED },
+        });
+      }
+      return updated;
     });
     return this.mapEncounter(row);
   }

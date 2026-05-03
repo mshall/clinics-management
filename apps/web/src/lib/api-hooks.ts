@@ -57,6 +57,7 @@ export interface PatientsListParams {
   pageSize?: number;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
+  enabled?: boolean;
 }
 
 function patientsQs(p: PatientsListParams): URLSearchParams {
@@ -75,10 +76,12 @@ function patientsQs(p: PatientsListParams): URLSearchParams {
 }
 
 export function usePatientsQuery(params: PatientsListParams) {
-  const q = patientsQs(params);
+  const { enabled = true, ...listParams } = params;
+  const q = patientsQs(listParams);
   return useQuery({
     queryKey: ["patients", Object.fromEntries(q.entries())],
     queryFn: () => apiGet<Paginated<PatientDto>>(`/api/v1/patients?${q.toString()}`),
+    enabled,
   });
 }
 
@@ -351,24 +354,33 @@ export interface AppointmentsListParams extends PagedRangeParams {
   from?: string;
   to?: string;
   patientMrn?: string;
+  patientSearch?: string;
+  patientId?: string;
   status?: string;
   clinicId?: string;
+  bookableOnly?: boolean;
+  enabled?: boolean;
 }
 
 export function useAppointmentsQuery(params: AppointmentsListParams = {}) {
+  const { enabled = true, bookableOnly, ...rest } = params;
   const q = new URLSearchParams();
-  q.set("page", String(params.page ?? 1));
-  q.set("pageSize", String(params.pageSize ?? 10));
-  if (params.from?.trim()) q.set("from", params.from.trim());
-  if (params.to?.trim()) q.set("to", params.to.trim());
-  if (params.patientMrn?.trim()) q.set("patientMrn", params.patientMrn.trim());
-  if (params.status?.trim()) q.set("status", params.status.trim());
-  if (params.clinicId?.trim()) q.set("clinicId", params.clinicId.trim());
-  if (params.sortBy) q.set("sortBy", params.sortBy);
-  if (params.sortOrder) q.set("sortOrder", params.sortOrder);
+  q.set("page", String(rest.page ?? 1));
+  q.set("pageSize", String(rest.pageSize ?? 10));
+  if (rest.from?.trim()) q.set("from", rest.from.trim());
+  if (rest.to?.trim()) q.set("to", rest.to.trim());
+  if (rest.patientMrn?.trim()) q.set("patientMrn", rest.patientMrn.trim());
+  if (rest.patientSearch?.trim()) q.set("patientSearch", rest.patientSearch.trim());
+  if (rest.patientId?.trim()) q.set("patientId", rest.patientId.trim());
+  if (rest.status?.trim()) q.set("status", rest.status.trim());
+  if (rest.clinicId?.trim()) q.set("clinicId", rest.clinicId.trim());
+  if (rest.sortBy) q.set("sortBy", rest.sortBy);
+  if (rest.sortOrder) q.set("sortOrder", rest.sortOrder);
+  if (bookableOnly) q.set("bookableOnly", "true");
   return useQuery({
     queryKey: ["appointments", Object.fromEntries(q.entries())],
     queryFn: () => apiGet<Paginated<AppointmentDto>>(`/api/v1/appointments?${q.toString()}`),
+    enabled,
   });
 }
 

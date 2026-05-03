@@ -109,6 +109,7 @@ export function EncounterDetailPage() {
   const invalidate = () => {
     void qc.invalidateQueries({ queryKey: ["encounter", id] });
     void qc.invalidateQueries({ queryKey: ["encounters"] });
+    void qc.invalidateQueries({ queryKey: ["appointments"] });
   };
 
   const noMedMutation = useMutation({
@@ -254,10 +255,13 @@ export function EncounterDetailPage() {
 
   const finalizeMutation = useMutation({
     mutationFn: () => apiPost<EncounterDetailDto>(`/api/v1/encounters/${id}/finalize`, {}),
-    onSuccess: () => {
+    onSuccess: (data) => {
       setErr(null);
       setMsg(t("encounters.finalized"));
       invalidate();
+      if (data.appointmentId) {
+        void qc.invalidateQueries({ queryKey: ["appointment", data.appointmentId] });
+      }
     },
     onError: (e: unknown) => {
       setMsg(null);
@@ -317,6 +321,20 @@ export function EncounterDetailPage() {
 
       {msg ? <p className="text-sm text-emerald-600 dark:text-emerald-400">{msg}</p> : null}
       {err ? <p className="text-sm text-destructive">{err}</p> : null}
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">{t("encounters.visitFee", "Visit fee")}</CardTitle>
+          <CardDescription>{t("encounters.visitFeeLockedHint", "Set when this encounter was created.")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-lg font-semibold ltr-nums">
+            {new Intl.NumberFormat(i18n.language === "ar" ? "ar-AE" : "en-AE", { style: "currency", currency: "AED" }).format(
+              enc.visitFeeAmount ?? 0
+            )}
+          </p>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="pb-2">

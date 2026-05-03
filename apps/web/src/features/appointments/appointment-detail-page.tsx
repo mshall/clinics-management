@@ -18,7 +18,7 @@ function toDatetimeLocalValue(iso: string): string {
 }
 
 function isReadOnlyStatus(status: string): boolean {
-  return status === "COMPLETED" || status === "CANCELLED";
+  return status === "COMPLETED";
 }
 
 export function AppointmentDetailPage() {
@@ -146,19 +146,6 @@ export function AppointmentDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t("appointments.fee", "Appointment fee")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-lg font-semibold ltr-nums">
-            {new Intl.NumberFormat(i18n.language === "ar" ? "ar-AE" : "en-AE", { style: "currency", currency: "AED" }).format(
-              apt.feeAmount ?? 0
-            )}
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
           <CardTitle className="text-base">{t("appointments.editSection", "Details")}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
@@ -235,11 +222,16 @@ export function AppointmentDetailPage() {
               disabled={readOnly}
               onChange={(e) => setStatus(e.target.value)}
             >
+              <option value="PENDING_CONFIRMATION">{t("appointments.statusPending", "Pending confirmation")}</option>
+              <option value="CONFIRMED">{t("appointments.statusConfirmed", "Confirmed")}</option>
               <option value="SCHEDULED">SCHEDULED</option>
+              <option value="IN_PROGRESS" disabled={status !== "IN_PROGRESS"}>
+                {t("appointments.statusInProgress", "In progress")}
+              </option>
+              <option value="CANCELLED">{t("appointments.statusCancelled", "Cancelled")}</option>
+              <option value="NO_SHOW">NO_SHOW</option>
               <option value="CHECKED_IN">CHECKED_IN</option>
               <option value="COMPLETED">COMPLETED</option>
-              <option value="CANCELLED">CANCELLED</option>
-              <option value="NO_SHOW">NO_SHOW</option>
             </select>
           </div>
           <div className="space-y-2 sm:col-span-2">
@@ -263,14 +255,6 @@ export function AppointmentDetailPage() {
                 onClick={() => statusOnlyMut.mutate("COMPLETED")}
               >
                 {t("appointments.markCompleted", "Mark completed")}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={statusOnlyMut.isPending || apt.status === "CANCELLED"}
-                onClick={() => statusOnlyMut.mutate("CANCELLED")}
-              >
-                {t("appointments.markCancelled", "Mark cancelled")}
               </Button>
             </div>
           ) : (

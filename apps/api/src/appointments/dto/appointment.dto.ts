@@ -26,6 +26,9 @@ export class AppointmentDto {
   @ApiPropertyOptional({ nullable: true })
   notes!: string | null;
 
-  @ApiProperty({ description: "Fee charged for this visit (same currency as tenant base)" })
-  feeAmount!: number;
+  @ApiPropertyOptional({ nullable: true, description: "Present on list responses when patient is included" })
+  patientMrn?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  patientName?: string | null;
 }

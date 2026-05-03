@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsObject, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import { Type } from "class-transformer";
+import { IsNumber, IsOptional, IsString, MaxLength, Min, MinLength } from "class-validator";
 
 export class CreateEncounterDto {
   @ApiProperty()
@@ -21,4 +22,20 @@ export class CreateEncounterDto {
   @IsString()
   @MaxLength(2000)
   chiefComplaint?: string;
+
+  @ApiPropertyOptional({
+    description: "Consultation / visit fee for this encounter; defaults to tenant defaultVisitFee",
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  visitFeeAmount?: number;
+
+  @ApiPropertyOptional({
+    description: "Optional booked appointment for this patient; visit moves to in progress until encounter is finalized",
+  })
+  @IsOptional()
+  @IsString()
+  appointmentId?: string;
 }

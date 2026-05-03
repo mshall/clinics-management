@@ -215,12 +215,12 @@ export function AdminPage() {
   const [adminSection, setAdminSection] = useState<"clinics" | "organization">("clinics");
   const [feeDraft, setFeeDraft] = useState("");
   useEffect(() => {
-    const v = overview.data?.currentTenant?.appointmentDefaultFee;
+    const v = overview.data?.currentTenant?.defaultVisitFee;
     if (v != null && Number.isFinite(Number(v))) setFeeDraft(String(v));
-  }, [overview.data?.currentTenant?.appointmentDefaultFee]);
+  }, [overview.data?.currentTenant?.defaultVisitFee]);
 
   const patchFeeMut = useMutation({
-    mutationFn: () => apiPatch("/api/v1/admin/tenant-settings", { appointmentDefaultFee: Number.parseFloat(feeDraft) }),
+    mutationFn: () => apiPatch("/api/v1/admin/tenant-settings", { defaultVisitFee: Number.parseFloat(feeDraft) }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["admin", "overview"] }),
     onError: (e: unknown) => {
       if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
@@ -291,7 +291,7 @@ export function AdminPage() {
           {isGroupAdmin ? (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">{t("admin.defaultAppointmentFee", "Default appointment fee")}</CardTitle>
+                <CardTitle className="text-base">{t("admin.defaultVisitFee", "Default visit fee (encounters)")}</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-wrap items-end gap-3">
                 <div className="space-y-2">

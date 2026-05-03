@@ -6,12 +6,12 @@ import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/s
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TablePagination } from "@/components/table-pagination";
-import { useClinicsQuery, useEncountersQuery, usePatientsQuery } from "@/lib/api-hooks";
-import type { EncounterDetailDto } from "@/lib/api-types";
+import { useAdminOverviewQuery, useAppointmentsQuery, useClinicsQuery, useEncountersQuery, usePatientsQuery } from "@/lib/api-hooks";
+import type { AppointmentDto, EncounterDetailDto } from "@/lib/api-types";
 import { ApiError, apiPost } from "@/lib/http";
 import { ENCOUNTER_VISIT_TYPES } from "@/lib/visit-types";
 import { defaultMonthRange } from "@/stores/date-range-store";
@@ -56,8 +56,8 @@ export function EncountersListPage() {
   const [patientSearch, setPatientSearch] = useState("");
   const [debouncedPatientSearch, setDebouncedPatientSearch] = useState("");
   useEffect(() => {
-    const t = window.setTimeout(() => setDebouncedPatientSearch(patientSearch), 280);
-    return () => window.clearTimeout(t);
+    const timer = window.setTimeout(() => setDebouncedPatientSearch(patientSearch), 280);
+    return () => window.clearTimeout(timer);
   }, [patientSearch]);
   const { data: dialogPatData, isPending: dialogPatientsPending } = usePatientsQuery({
     search: debouncedPatientSearch.trim() || undefined,
@@ -109,7 +109,38 @@ export function EncountersListPage() {
   const [createPatientId, setCreatePatientId] = useState("");
   const [createClinicId, setCreateClinicId] = useState("");
   const [createVisitType, setCreateVisitType] = useState<string>(ENCOUNTER_VISIT_TYPES[0] ?? "Office visit");
+  const [createVisitFee, setCreateVisitFee] = useState("");
   const [createErr, setCreateErr] = useState<string | null>(null);
+  const [aptPickerSearch, setAptPickerSearch] = useState("");
+  const [debouncedAptPicker, setDebouncedAptPicker] = useState("");
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedAptPicker(aptPickerSearch), 320);
+    return () => window.clearTimeout(timer);
+  }, [aptPickerSearch]);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState("");
+  const aptPickerEnabled =
+    createOpen && (Boolean(createPatientId.trim()) || debouncedAptPicker.trim().length >= 2);
+  const { data: aptPickerData, isPending: aptPickerPending } = useAppointmentsQuery({
+    patientSearch:
+      createPatientId.trim().length > 0
+        ? undefined
+        : debouncedAptPicker.trim().length >= 2
+          ? debouncedAptPicker.trim()
+          : undefined,
+    patientId: createPatientId.trim() || undefined,
+    bookableOnly: true,
+    page: 1,
+    pageSize: 30,
+    enabled: aptPickerEnabled,
+  });
+  const aptPickerRows = aptPickerData?.items ?? [];
+
+  const adminOv = useAdminOverviewQuery();
+  useEffect(() => {
+    if (!createOpen) return;
+    const d = adminOv.data?.currentTenant?.defaultVisitFee;
+    if (d != null && Number.isFinite(Number(d))) setCreateVisitFee(String(d));
+  }, [createOpen, adminOv.data?.currentTenant?.defaultVisitFee]);
 
   const openCreateDialog = () => {
     setPatientSearch("");
@@ -117,23 +148,39 @@ export function EncountersListPage() {
     setCreatePatientId("");
     setCreateClinicId(clinics[0]?.id ?? "");
     setCreateVisitType(ENCOUNTER_VISIT_TYPES[0] ?? "Office visit");
+    const d = adminOv.data?.currentTenant?.defaultVisitFee;
+    setCreateVisitFee(d != null && Number.isFinite(Number(d)) ? String(d) : "");
     setCreateErr(null);
+    setAptPickerSearch("");
+    setDebouncedAptPicker("");
+    setSelectedAppointmentId("");
     setCreateOpen(true);
   };
 
   const createMut = useMutation({
-    mutationFn: () =>
-      apiPost<EncounterDetailDto>("/api/v1/encounters", {
+    mutationFn: () => {
+      const body: Record<string, unknown> = {
         clinicId: createClinicId,
         patientId: createPatientId,
         visitType: createVisitType,
         chiefComplaint: "",
-      }),
+      };
+      const trimmed = createVisitFee.trim();
+      if (trimmed !== "") {
+        const fee = Number.parseFloat(trimmed);
+        if (Number.isFinite(fee) && fee >= 0) body.visitFeeAmount = fee;
+      }
+      if (selectedAppointmentId.trim()) body.appointmentId = selectedAppointmentId.trim();
+      return apiPost<EncounterDetailDto>("/api/v1/encounters", body);
+    },
     onSuccess: (enc) => {
       setCreateErr(null);
       setCreateOpen(false);
       void qc.invalidateQueries({ queryKey: ["encounters"] });
       void qc.invalidateQueries({ queryKey: ["patient", enc.patientId] });
+      void qc.invalidateQueries({ queryKey: ["appointments"] });
+      void qc.invalidateQueries({ queryKey: ["revenue"] });
+      void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
       navigate(`/encounters/${enc.id}`);
     },
     onError: (e: unknown) => {
@@ -151,21 +198,19 @@ export function EncountersListPage() {
           <p className="text-muted-foreground">{t("encounters.listSubtitle")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            disabled={patientRegistryTotal === 0}
+            title={
+              patientRegistryTotal === 0
+                ? t("encounters.noPatientsRegistered", "Register a patient before creating encounters.")
+                : undefined
+            }
+            onClick={openCreateDialog}
+          >
+            {t("encounters.newEncounter", "New encounter")}
+          </Button>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-            <DialogTrigger asChild>
-              <Button
-                type="button"
-                disabled={patientRegistryTotal === 0}
-                title={
-                  patientRegistryTotal === 0
-                    ? t("encounters.noPatientsRegistered", "Register a patient before creating encounters.")
-                    : undefined
-                }
-                onClick={openCreateDialog}
-              >
-                {t("encounters.newEncounter", "New encounter")}
-              </Button>
-            </DialogTrigger>
             <DialogContent aria-describedby={undefined}>
               <DialogHeader>
                 <DialogTitle>{t("encounters.createEncounterTitle", "Create encounter")}</DialogTitle>
@@ -199,7 +244,11 @@ export function EncountersListPage() {
                             "flex w-full flex-col gap-0.5 border-b border-border px-3 py-2 text-start text-sm last:border-b-0 hover:bg-muted/60",
                             createPatientId === p.id && "bg-muted/80"
                           )}
-                          onClick={() => setCreatePatientId(p.id)}
+                          onPointerDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setCreatePatientId(p.id);
+                            setSelectedAppointmentId("");
+                          }}
                         >
                           <span className="font-medium">
                             {p.firstNameEn} {p.lastNameEn}
@@ -209,6 +258,63 @@ export function EncountersListPage() {
                       ))
                     )}
                   </div>
+                </div>
+                <div className="space-y-2 rounded-md border border-dashed border-border p-3">
+                  <Label>{t("encounters.linkedAppointment", "Booked appointment (optional)")}</Label>
+                  <p className="text-xs text-muted-foreground">
+                    {t(
+                      "encounters.linkedAppointmentHint",
+                      "Search by patient name, MRN, phone, or national ID. Selecting one marks the visit in progress until the encounter is finalized."
+                    )}
+                  </p>
+                  <Input
+                    className="ltr-nums"
+                    placeholder={t("encounters.appointmentSearchPlaceholder", "Type at least 2 characters or pick a patient first…")}
+                    value={aptPickerSearch}
+                    onChange={(e) => setAptPickerSearch(e.target.value)}
+                    autoComplete="off"
+                  />
+                  <div className="max-h-40 overflow-auto rounded-md border border-border">
+                    {!aptPickerEnabled ? (
+                      <p className="px-3 py-2 text-xs text-muted-foreground">
+                        {t("encounters.appointmentSearchIdle", "Type to search or select a patient to see their bookings.")}
+                      </p>
+                    ) : aptPickerPending ? (
+                      <p className="px-3 py-2 text-xs text-muted-foreground">{t("common.loading")}</p>
+                    ) : aptPickerRows.length === 0 ? (
+                      <p className="px-3 py-2 text-xs text-muted-foreground">{t("encounters.noBookableAppointments", "No matching open appointments.")}</p>
+                    ) : (
+                      aptPickerRows.map((a: AppointmentDto) => (
+                        <button
+                          key={a.id}
+                          type="button"
+                          onPointerDown={(e) => e.preventDefault()}
+                          className={cn(
+                            "flex w-full flex-col gap-0.5 border-b border-border px-3 py-2 text-start text-sm last:border-b-0 hover:bg-muted/60",
+                            selectedAppointmentId === a.id && "bg-muted/80"
+                          )}
+                          onClick={() => {
+                            setSelectedAppointmentId(a.id);
+                            setCreatePatientId(a.patientId);
+                            setCreateClinicId(a.clinicId);
+                          }}
+                        >
+                          <span className="font-medium ltr-nums">
+                            {new Date(a.startsAt).toLocaleString(i18n.language === "ar" ? "ar-AE" : "en-AE")}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {(a.patientName ?? "").trim() || "—"} · {a.patientMrn ?? a.patientId.slice(0, 8)}
+                          </span>
+                          <span className="text-xs text-muted-foreground">{a.status}</span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                  {selectedAppointmentId ? (
+                    <Button type="button" variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setSelectedAppointmentId("")}>
+                      {t("encounters.clearAppointment", "Clear appointment link")}
+                    </Button>
+                  ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label>{t("encounters.clinic", "Clinic")}</Label>
@@ -237,6 +343,20 @@ export function EncountersListPage() {
                       </option>
                     ))}
                   </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>{t("encounters.visitFee", "Visit fee")}</Label>
+                  <Input
+                    className="ltr-nums"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={createVisitFee}
+                    onChange={(e) => setCreateVisitFee(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t("encounters.visitFeeHint", "Default comes from organization settings (admin).")}
+                  </p>
                 </div>
                 <Button
                   type="button"

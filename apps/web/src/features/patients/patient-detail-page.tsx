@@ -44,6 +44,9 @@ export function PatientDetailPage() {
     onSuccess: (enc) => {
       void qc.invalidateQueries({ queryKey: ["encounters"] });
       void qc.invalidateQueries({ queryKey: ["patient", id] });
+      void qc.invalidateQueries({ queryKey: ["appointments"] });
+      void qc.invalidateQueries({ queryKey: ["revenue"] });
+      void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
       navigate(`/encounters/${enc.id}`);
     },
     onError: (e: unknown) => {

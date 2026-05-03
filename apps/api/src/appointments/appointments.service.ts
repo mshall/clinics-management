@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { AppointmentStatus, Prisma, RevenueStatus } from "@prisma/client";
+import { AppointmentStatus, EncounterStatus, Prisma } from "@prisma/client";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
@@ -7,22 +7,28 @@ import type { CreateAppointmentDto } from "./dto/create-appointment.dto";
 import type { AppointmentDto } from "./dto/appointment.dto";
 import type { UpdateAppointmentDto } from "./dto/update-appointment.dto";
 
+type AppointmentRow = Prisma.AppointmentGetPayload<{
+  include: { patient: { select: { mrn: true; firstNameEn: true; lastNameEn: true } } };
+}>;
+
 @Injectable()
 export class AppointmentsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private map(a: {
-    id: string;
-    clinicId: string;
-    patientId: string;
-    clinicianId: string;
-    startsAt: Date;
-    endsAt: Date;
-    status: AppointmentStatus;
-    notes: string | null;
-    feeAmount: { toString(): string };
-  }): AppointmentDto {
-    return {
+  private map(
+    a: {
+      id: string;
+      clinicId: string;
+      patientId: string;
+      clinicianId: string;
+      startsAt: Date;
+      endsAt: Date;
+      status: AppointmentStatus;
+      notes: string | null;
+    },
+    patient?: { mrn: string; firstNameEn: string; lastNameEn: string } | null
+  ): AppointmentDto {
+    const dto = {
       id: a.id,
       clinicId: a.clinicId,
       patientId: a.patientId,
@@ -31,8 +37,14 @@ export class AppointmentsService {
       endsAt: a.endsAt.toISOString(),
       status: a.status,
       notes: a.notes,
-      feeAmount: Number(a.feeAmount),
-    };
+      ...(patient
+        ? {
+            patientMrn: patient.mrn,
+            patientName: `${patient.firstNameEn} ${patient.lastNameEn}`.trim(),
+          }
+        : {}),
+    } as AppointmentDto;
+    return dto;
   }
 
   async list(
@@ -42,10 +54,13 @@ export class AppointmentsService {
     fromStr?: string,
     toStr?: string,
     patientMrn?: string,
+    patientSearch?: string,
+    patientIdStr?: string,
     statusStr?: string,
     clinicIdStr?: string,
     sortByStr?: string,
-    sortOrderStr?: string
+    sortOrderStr?: string,
+    bookableOnlyStr?: string
   ) {
     const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
     const sortField = pickSortField(sortByStr, ["startsAt", "endsAt", "status", "createdAt"] as const, "startsAt");
@@ -69,6 +84,49 @@ export class AppointmentsService {
       and.push({ patient: { mrn: { contains: mrn, mode: "insensitive" } } });
     }
 
+    const pid = patientIdStr?.trim();
+    if (pid) {
+      and.push({ patientId: pid });
+    }
+
+    const broad = patientSearch?.trim() ?? "";
+    if (broad.length > 0) {
+      and.push({
+        patient: {
+          is: {
+            deletedAt: null,
+            OR: [
+              { mrn: { contains: broad, mode: "insensitive" } },
+              { nationalId: { contains: broad, mode: "insensitive" } },
+              { phone: { contains: broad, mode: "insensitive" } },
+              { firstNameEn: { contains: broad, mode: "insensitive" } },
+              { lastNameEn: { contains: broad, mode: "insensitive" } },
+            ],
+          },
+        },
+      });
+    }
+
+    const bookableOnly = bookableOnlyStr?.trim().toLowerCase() === "true" || bookableOnlyStr === "1";
+    if (bookableOnly) {
+      and.push({
+        status: {
+          in: [
+            AppointmentStatus.PENDING_CONFIRMATION,
+            AppointmentStatus.CONFIRMED,
+            AppointmentStatus.SCHEDULED,
+          ],
+        },
+      });
+      and.push({
+        encounters: {
+          none: {
+            status: { in: [EncounterStatus.DRAFT, EncounterStatus.AMENDED] },
+          },
+        },
+      });
+    }
+
     const st = statusStr?.trim().toUpperCase();
     if (st && (Object.values(AppointmentStatus) as string[]).includes(st)) {
       and.push({ status: st as AppointmentStatus });
@@ -86,9 +144,17 @@ export class AppointmentsService {
         orderBy: { [sortField]: sortDir },
         skip,
         take: pageSize,
+        include: {
+          patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } },
+        },
       }),
     ]);
-    return paginate(rows.map((r) => this.map(r)), total, page, pageSize);
+    return paginate(
+      rows.map((r: AppointmentRow) => this.map(r, r.patient)),
+      total,
+      page,
+      pageSize
+    );
   }
 
   async create(tenantId: string, dto: CreateAppointmentDto): Promise<AppointmentDto> {
@@ -102,75 +168,65 @@ export class AppointmentsService {
     const end = new Date(dto.endsAt);
     if (end <= start) throw new BadRequestException("endsAt must be after startsAt");
 
-    const row = await this.prisma.$transaction(async (tx) => {
-      const tenant = await tx.tenant.findUnique({ where: { id: tenantId } });
-      if (!tenant) throw new BadRequestException("Tenant not found");
-      const defaultFee = Number(tenant.appointmentDefaultFee);
-      const feeRaw = dto.feeAmount !== undefined && dto.feeAmount !== null ? Number(dto.feeAmount) : defaultFee;
-      const feeAmount = Number.isFinite(feeRaw) && feeRaw >= 0 ? feeRaw : defaultFee;
-
-      const apt = await tx.appointment.create({
-        data: {
-          tenantId,
-          clinicId: dto.clinicId,
-          patientId: dto.patientId,
-          clinicianId: dto.clinicianId,
-          startsAt: start,
-          endsAt: end,
-          status: dto.status ?? AppointmentStatus.SCHEDULED,
-          notes: dto.notes ?? null,
-          feeAmount,
-        },
-      });
-
-      if (feeAmount > 0) {
-        await tx.revenueEntry.create({
-          data: {
-            tenantId,
-            clinicId: dto.clinicId,
-            appointmentId: apt.id,
-            category: "APPOINTMENT_FEE",
-            description: `Appointment fee · ${apt.id.slice(0, 8)}…`,
-            grossAmount: feeAmount,
-            taxAmount: 0,
-            netAmount: feeAmount,
-            currency: tenant.baseCurrency,
-            postedAt: start,
-            status: RevenueStatus.POSTED,
-          },
-        });
-      }
-
-      return apt;
+    const row = await this.prisma.appointment.create({
+      data: {
+        tenantId,
+        clinicId: dto.clinicId,
+        patientId: dto.patientId,
+        clinicianId: dto.clinicianId,
+        startsAt: start,
+        endsAt: end,
+        status: dto.status ?? AppointmentStatus.PENDING_CONFIRMATION,
+        notes: dto.notes ?? null,
+      },
+      include: {
+        patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } },
+      },
     });
-    return this.map(row);
+    return this.map(row, row.patient);
   }
 
   async updateStatus(tenantId: string, id: string, status: AppointmentStatus): Promise<AppointmentDto> {
-    const existing = await this.prisma.appointment.findFirst({ where: { id, tenantId } });
+    const existing = await this.prisma.appointment.findFirst({
+      where: { id, tenantId },
+      include: { patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } } },
+    });
     if (!existing) throw new NotFoundException("Appointment not found");
+    if (existing.status === AppointmentStatus.COMPLETED) {
+      throw new BadRequestException("Cannot change status of a completed appointment");
+    }
+    if (status === AppointmentStatus.IN_PROGRESS) {
+      throw new BadRequestException("In-progress is set automatically when an encounter is linked to this appointment");
+    }
     const row = await this.prisma.appointment.update({
       where: { id },
       data: { status },
+      include: { patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } } },
     });
-    return this.map(row);
+    return this.map(row, row.patient);
   }
 
   async getById(tenantId: string, id: string): Promise<AppointmentDto> {
-    const row = await this.prisma.appointment.findFirst({ where: { id, tenantId } });
+    const row = await this.prisma.appointment.findFirst({
+      where: { id, tenantId },
+      include: { patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } } },
+    });
     if (!row) throw new NotFoundException("Appointment not found");
-    return this.map(row);
+    return this.map(row, row.patient);
   }
 
-  private isTerminalStatus(s: AppointmentStatus): boolean {
-    return s === AppointmentStatus.COMPLETED || s === AppointmentStatus.CANCELLED;
+  private isCompletedStatus(s: AppointmentStatus): boolean {
+    return s === AppointmentStatus.COMPLETED;
   }
 
   async update(tenantId: string, id: string, dto: UpdateAppointmentDto): Promise<AppointmentDto> {
     const existing = await this.prisma.appointment.findFirst({ where: { id, tenantId } });
     if (!existing) throw new NotFoundException("Appointment not found");
-    if (this.isTerminalStatus(existing.status)) {
-      throw new BadRequestException("This appointment is read-only (completed or cancelled)");
+    if (this.isCompletedStatus(existing.status)) {
+      throw new BadRequestException("This appointment is read-only (completed)");
+    }
+    if (dto.status === AppointmentStatus.IN_PROGRESS) {
+      throw new BadRequestException("In-progress is set automatically when an encounter is linked to this appointment");
     }
 
     const nextStarts = dto.startsAt !== undefined ? new Date(dto.startsAt) : existing.startsAt;
@@ -201,7 +257,8 @@ export class AppointmentsService {
         status: dto.status !== undefined ? dto.status : undefined,
         notes: dto.notes !== undefined ? (dto.notes === "" ? null : dto.notes) : undefined,
       },
+      include: { patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } } },
     });
-    return this.map(row);
+    return this.map(row, row.patient);
   }
 }
