@@ -217,6 +217,7 @@ export function AppointmentsPage() {
                   { value: "", label: t("appointments.anyStatus", "Any status") },
                   { value: "SCHEDULED", label: "SCHEDULED" },
                   { value: "CONFIRMED", label: "CONFIRMED" },
+                  { value: "CHECKED_IN", label: "CHECKED_IN" },
                   { value: "CANCELLED", label: "CANCELLED" },
                   { value: "COMPLETED", label: "COMPLETED" },
                 ]}

@@ -12,6 +12,8 @@ export function appointmentStatusClassName(status: string): string {
       return "border-transparent bg-red-600 text-white shadow-sm dark:bg-red-600 dark:text-white";
     case "CONFIRMED":
       return "border-transparent bg-sky-600 text-white shadow-sm dark:bg-sky-600 dark:text-white";
+    case "CHECKED_IN":
+      return "border-transparent bg-violet-600 text-white shadow-sm dark:bg-violet-600 dark:text-white";
     case "SCHEDULED":
       return "border-transparent bg-orange-500 text-white shadow-sm dark:bg-orange-500 dark:text-white";
     default:
@@ -28,6 +30,8 @@ export function appointmentStatusLabel(status: string, t: TFunction): string {
       return t("appointments.statusCancelled", "Cancelled");
     case "CONFIRMED":
       return t("appointments.statusConfirmed", "Confirmed");
+    case "CHECKED_IN":
+      return t("appointments.statusCheckedIn", "Checked in");
     case "SCHEDULED":
       return t("appointments.statusScheduled", "Scheduled");
     default:

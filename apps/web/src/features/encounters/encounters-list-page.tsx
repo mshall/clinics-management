@@ -265,7 +265,7 @@ export function EncountersListPage() {
                   <p className="text-xs text-muted-foreground">
                     {t(
                       "encounters.linkedAppointmentHint",
-                      "Search by patient name, MRN, phone, or national ID. Linking sets the appointment to confirmed until the encounter is finalized (then completed)."
+                      "Search by patient name, MRN, phone, or national ID. Linking sets the appointment to checked in until the encounter is finalized (then completed)."
                     )}
                   </p>
                   <Input

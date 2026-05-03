@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { AppointmentStatusBadge } from "@/components/appointment-status-badge";
+import { AppointmentStatusBadge, appointmentStatusClassName } from "@/components/appointment-status-badge";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { useAppointmentQuery, useClinicsQuery, usePatientQuery, usePatientsQuery, useUsersQuery } from "@/lib/api-hooks";
 import type { AppointmentDto } from "@/lib/api-types";
 import { ApiError, apiPatch } from "@/lib/http";
+import { cn } from "@/lib/utils";
 
 function toDatetimeLocalValue(iso: string): string {
   const d = new Date(iso);
@@ -287,15 +288,9 @@ export function AppointmentDetailPage() {
           <div className="space-y-2 sm:col-span-2">
             <Label>{t("appointments.status")}</Label>
             {readOnly ? (
-              <p className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm font-medium">
-                {apt.status === "COMPLETED"
-                  ? t("appointments.statusCompleted", "Completed")
-                  : apt.status === "CONFIRMED"
-                    ? t("appointments.statusConfirmed", "Confirmed")
-                    : apt.status === "CANCELLED"
-                      ? t("appointments.statusCancelled", "Cancelled")
-                      : t("appointments.statusScheduled", "Scheduled")}
-              </p>
+              <div className="rounded-md border border-border bg-muted/30 px-3 py-2">
+                <AppointmentStatusBadge status={apt.status} />
+              </div>
             ) : (
               <div className="space-y-3">
                 <p className="text-xs text-muted-foreground">
@@ -305,33 +300,34 @@ export function AppointmentDetailPage() {
                   )}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={apt.status === "SCHEDULED" ? "default" : "outline"}
-                    disabled={statusOnlyMut.isPending || apt.status === "SCHEDULED"}
-                    onClick={() => statusOnlyMut.mutate("SCHEDULED")}
-                  >
-                    {t("appointments.statusScheduled", "Scheduled")}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={apt.status === "CONFIRMED" ? "default" : "outline"}
-                    disabled={statusOnlyMut.isPending || apt.status === "CONFIRMED"}
-                    onClick={() => statusOnlyMut.mutate("CONFIRMED")}
-                  >
-                    {t("appointments.statusConfirmed", "Confirmed")}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={apt.status === "CANCELLED" ? "default" : "outline"}
-                    disabled={statusOnlyMut.isPending || apt.status === "CANCELLED"}
-                    onClick={() => statusOnlyMut.mutate("CANCELLED")}
-                  >
-                    {t("appointments.statusCancelled", "Cancelled")}
-                  </Button>
+                  {(
+                    [
+                      ["SCHEDULED", t("appointments.statusScheduled", "Scheduled")] as const,
+                      ["CONFIRMED", t("appointments.statusConfirmed", "Confirmed")] as const,
+                      ["CHECKED_IN", t("appointments.statusCheckedIn", "Checked in")] as const,
+                      ["CANCELLED", t("appointments.statusCancelled", "Cancelled")] as const,
+                      ["COMPLETED", t("appointments.markCompleted", "Mark completed")] as const,
+                    ] as const
+                  ).map(([code, label]) => {
+                    const active = apt.status === code;
+                    return (
+                      <Button
+                        key={code}
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={statusOnlyMut.isPending}
+                        className={cn(
+                          active
+                            ? cn(appointmentStatusClassName(code), "text-white shadow-sm hover:opacity-95")
+                            : "border-border bg-background hover:bg-muted/60"
+                        )}
+                        onClick={() => statusOnlyMut.mutate(code)}
+                      >
+                        {label}
+                      </Button>
+                    );
+                  })}
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">
@@ -345,6 +341,7 @@ export function AppointmentDetailPage() {
                   >
                     <option value="SCHEDULED">{t("appointments.statusScheduled", "Scheduled")}</option>
                     <option value="CONFIRMED">{t("appointments.statusConfirmed", "Confirmed")}</option>
+                    <option value="CHECKED_IN">{t("appointments.statusCheckedIn", "Checked in")}</option>
                     <option value="CANCELLED">{t("appointments.statusCancelled", "Cancelled")}</option>
                   </select>
                 </div>
@@ -364,14 +361,6 @@ export function AppointmentDetailPage() {
             <div className="flex flex-wrap gap-2 sm:col-span-2">
               <Button type="button" disabled={saveMut.isPending} onClick={onSave}>
                 {t("common.save", "Save")}
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={statusOnlyMut.isPending || apt.status === "COMPLETED"}
-                onClick={() => statusOnlyMut.mutate("COMPLETED")}
-              >
-                {t("appointments.markCompleted", "Mark completed")}
               </Button>
             </div>
           ) : (

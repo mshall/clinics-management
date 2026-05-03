@@ -270,7 +270,7 @@ export class EncountersService {
       if (linkAppointmentId) {
         await tx.appointment.update({
           where: { id: linkAppointmentId },
-          data: { status: AppointmentStatus.CONFIRMED },
+          data: { status: AppointmentStatus.CHECKED_IN },
         });
       }
 
