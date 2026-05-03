@@ -110,6 +110,12 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 - Amendments recorded with reason and timestamp; original retained.
 - Doctor authentication required for finalizing notes and prescriptions.
 
+### 6.1a Appointments & encounters (current build)
+
+- **Appointment statuses:** Scheduled (default when booking), Confirmed, Cancelled, Completed. The appointment record is read-only after Completed.
+- **Encounter link:** An optional booked appointment (same patient) may be attached when creating an encounter; linking sets the appointment to **Confirmed**; **finalizing** the encounter sets it to **Completed**.
+- **Visit fee** is set on **encounter** creation (tenant default in administration); amounts greater than zero create a `VISIT_FEE` revenue ledger line. Appointments do not store a fee.
+
 ### 6.2 Multi-Branch Support
 
 - Group structure: one **Parent Clinic** owns multiple **Branches** (also called sister or sub-clinics).

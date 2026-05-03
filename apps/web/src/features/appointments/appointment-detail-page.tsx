@@ -140,7 +140,7 @@ export function AppointmentDetailPage() {
 
       {readOnly ? (
         <p className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-          {t("appointments.readOnlyHint", "This appointment is completed or cancelled and cannot be edited.")}
+          {t("appointments.readOnlyHint", "This appointment is completed and cannot be edited.")}
         </p>
       ) : null}
 

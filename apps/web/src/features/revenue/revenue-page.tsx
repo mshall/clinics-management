@@ -11,6 +11,7 @@ import { useClinicsQuery, useRevenueQuery, useRevenueTotalsQuery } from "@/lib/a
 import { ApiError, apiPost } from "@/lib/http";
 import { defaultMonthRange } from "@/stores/date-range-store";
 
+/** VISIT_FEE = encounter consultation; APPOINTMENT_FEE = legacy rows only (fees no longer booked on appointments). */
 const REV_CATEGORIES = ["VISIT", "VISIT_FEE", "PROCEDURE", "LAB", "PHARMACY", "IMAGING", "APPOINTMENT_FEE", "OTHER"] as const;
 
 export function RevenuePage() {
