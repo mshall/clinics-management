@@ -6,7 +6,9 @@ export type PatientDto = components["schemas"]["PatientDto"] & {
   homeBranchId?: string | null;
   nationalId?: string | null;
 };
-export type ClinicDto = components["schemas"]["ClinicDto"];
+export type ClinicDto = components["schemas"]["ClinicDto"] & {
+  parentNameEn?: string | null;
+};
 /** OpenAPI snapshot + fields added in API after last codegen */
 export type GroupOverviewKpisDto = components["schemas"]["GroupOverviewKpisDto"] & {
   netProfitMonth?: number;

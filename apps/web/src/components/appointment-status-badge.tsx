@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +19,7 @@ export function appointmentStatusClassName(status: string): string {
   }
 }
 
-export function appointmentStatusLabel(status: string, t: (k: string, d?: string) => string): string {
+export function appointmentStatusLabel(status: string, t: TFunction): string {
   const u = status.toUpperCase();
   switch (u) {
     case "COMPLETED":

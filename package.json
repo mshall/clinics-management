@@ -6,6 +6,7 @@
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:setup": "npm run db:setup -w api",
+    "sync": "npm install && npm run db:setup && npm run codegen -w web",
     "dev": "concurrently -n api,web -c blue,green \"npm run dev -w api\" \"npm run dev -w web\"",
     "dev:e2e": "bash scripts/dev-e2e.sh",
     "dev:web": "npm run dev -w web",
