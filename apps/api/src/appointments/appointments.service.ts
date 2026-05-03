@@ -111,11 +111,7 @@ export class AppointmentsService {
     if (bookableOnly) {
       and.push({
         status: {
-          in: [
-            AppointmentStatus.PENDING_CONFIRMATION,
-            AppointmentStatus.CONFIRMED,
-            AppointmentStatus.SCHEDULED,
-          ],
+          in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED],
         },
       });
       and.push({
@@ -176,7 +172,7 @@ export class AppointmentsService {
         clinicianId: dto.clinicianId,
         startsAt: start,
         endsAt: end,
-        status: dto.status ?? AppointmentStatus.PENDING_CONFIRMATION,
+        status: dto.status ?? AppointmentStatus.SCHEDULED,
         notes: dto.notes ?? null,
       },
       include: {
@@ -194,9 +190,6 @@ export class AppointmentsService {
     if (!existing) throw new NotFoundException("Appointment not found");
     if (existing.status === AppointmentStatus.COMPLETED) {
       throw new BadRequestException("Cannot change status of a completed appointment");
-    }
-    if (status === AppointmentStatus.IN_PROGRESS) {
-      throw new BadRequestException("In-progress is set automatically when an encounter is linked to this appointment");
     }
     const row = await this.prisma.appointment.update({
       where: { id },
@@ -224,9 +217,6 @@ export class AppointmentsService {
     if (!existing) throw new NotFoundException("Appointment not found");
     if (this.isCompletedStatus(existing.status)) {
       throw new BadRequestException("This appointment is read-only (completed)");
-    }
-    if (dto.status === AppointmentStatus.IN_PROGRESS) {
-      throw new BadRequestException("In-progress is set automatically when an encounter is linked to this appointment");
     }
 
     const nextStarts = dto.startsAt !== undefined ? new Date(dto.startsAt) : existing.startsAt;

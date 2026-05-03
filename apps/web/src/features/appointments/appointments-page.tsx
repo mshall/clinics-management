@@ -215,14 +215,10 @@ export function AppointmentsPage() {
               <SearchablePickList
                 items={[
                   { value: "", label: t("appointments.anyStatus", "Any status") },
-                  { value: "PENDING_CONFIRMATION", label: "PENDING_CONFIRMATION" },
-                  { value: "CONFIRMED", label: "CONFIRMED" },
                   { value: "SCHEDULED", label: "SCHEDULED" },
-                  { value: "CHECKED_IN", label: "CHECKED_IN" },
-                  { value: "IN_PROGRESS", label: "IN_PROGRESS" },
-                  { value: "COMPLETED", label: "COMPLETED" },
+                  { value: "CONFIRMED", label: "CONFIRMED" },
                   { value: "CANCELLED", label: "CANCELLED" },
-                  { value: "NO_SHOW", label: "NO_SHOW" },
+                  { value: "COMPLETED", label: "COMPLETED" },
                 ]}
                 value={fltStatus}
                 onValueChange={(v) => {

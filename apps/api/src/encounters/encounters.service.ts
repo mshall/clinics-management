@@ -235,11 +235,7 @@ export class EncountersService {
           where: { id: appointmentIdOpt, tenantId, patientId: dto.patientId },
         });
         if (!apt) throw new BadRequestException("Appointment not found for this patient");
-        const linkableStatuses = new Set<AppointmentStatus>([
-          AppointmentStatus.PENDING_CONFIRMATION,
-          AppointmentStatus.CONFIRMED,
-          AppointmentStatus.SCHEDULED,
-        ]);
+        const linkableStatuses = new Set<AppointmentStatus>([AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED]);
         if (!linkableStatuses.has(apt.status)) {
           throw new BadRequestException("This appointment cannot be linked to a new encounter");
         }
@@ -274,7 +270,7 @@ export class EncountersService {
       if (linkAppointmentId) {
         await tx.appointment.update({
           where: { id: linkAppointmentId },
-          data: { status: AppointmentStatus.IN_PROGRESS },
+          data: { status: AppointmentStatus.CONFIRMED },
         });
       }
 

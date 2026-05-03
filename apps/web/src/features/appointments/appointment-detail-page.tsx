@@ -222,16 +222,10 @@ export function AppointmentDetailPage() {
               disabled={readOnly}
               onChange={(e) => setStatus(e.target.value)}
             >
-              <option value="PENDING_CONFIRMATION">{t("appointments.statusPending", "Pending confirmation")}</option>
+              <option value="SCHEDULED">{t("appointments.statusScheduled", "Scheduled")}</option>
               <option value="CONFIRMED">{t("appointments.statusConfirmed", "Confirmed")}</option>
-              <option value="SCHEDULED">SCHEDULED</option>
-              <option value="IN_PROGRESS" disabled={status !== "IN_PROGRESS"}>
-                {t("appointments.statusInProgress", "In progress")}
-              </option>
               <option value="CANCELLED">{t("appointments.statusCancelled", "Cancelled")}</option>
-              <option value="NO_SHOW">NO_SHOW</option>
-              <option value="CHECKED_IN">CHECKED_IN</option>
-              <option value="COMPLETED">COMPLETED</option>
+              <option value="COMPLETED">{t("appointments.statusCompleted", "Completed")}</option>
             </select>
           </div>
           <div className="space-y-2 sm:col-span-2">

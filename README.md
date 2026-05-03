@@ -62,7 +62,8 @@ Typical flows:
 ### Appointments
 
 - Search and paginate appointments; book with clinic, patient, physician, start/end (scheduling only; no fee on the appointment).
-- Detail and edit (within business rules for terminal statuses).
+- Status model: **Scheduled** (default on create), **Confirmed**, **Cancelled**, **Completed**. Linking an encounter sets the booking to **Confirmed**; finalizing that encounter sets **Completed**.
+- Detail and edit until the appointment is **Completed** (then read-only).
 
 ### Clinics
 

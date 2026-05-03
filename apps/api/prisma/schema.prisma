@@ -67,14 +67,10 @@ enum LeaveStatus {
 }
 
 enum AppointmentStatus {
-  PENDING_CONFIRMATION
-  CONFIRMED
   SCHEDULED
-  CHECKED_IN
-  IN_PROGRESS
-  COMPLETED
+  CONFIRMED
   CANCELLED
-  NO_SHOW
+  COMPLETED
 }
 
 enum AttendanceStatus {
@@ -403,7 +399,7 @@ model Appointment {
   clinician      User              @relation("AppointmentClinician", fields: [clinicianId], references: [id], onDelete: Restrict)
   startsAt       DateTime
   endsAt         DateTime
-  status         AppointmentStatus @default(PENDING_CONFIRMATION)
+  status         AppointmentStatus @default(SCHEDULED)
   notes          String?
   revenueEntries RevenueEntry[]
   encounters     Encounter[]
