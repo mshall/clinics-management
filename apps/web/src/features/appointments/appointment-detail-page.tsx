@@ -2,8 +2,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
+import { toast } from "sonner";
+import { AppointmentStatusBadge } from "@/components/appointment-status-badge";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -111,11 +112,17 @@ export function AppointmentDetailPage() {
       setFormErr(null);
       void qc.invalidateQueries({ queryKey: ["appointment", id] });
       void qc.invalidateQueries({ queryKey: ["appointments"] });
+      toast.success(t("appointments.saveSuccess", "Appointment saved."));
     },
     onError: (e: unknown) => {
-      if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
-        setFormErr(String((e.body as { message?: unknown }).message));
-      } else setFormErr(e instanceof Error ? e.message : String(e));
+      const msg =
+        e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body
+          ? String((e.body as { message?: unknown }).message)
+          : e instanceof Error
+            ? e.message
+            : String(e);
+      setFormErr(msg);
+      toast.error(msg);
     },
   });
 
@@ -125,22 +132,42 @@ export function AppointmentDetailPage() {
       setFormErr(null);
       void qc.invalidateQueries({ queryKey: ["appointment", id] });
       void qc.invalidateQueries({ queryKey: ["appointments"] });
+      toast.success(t("appointments.statusUpdated", "Status updated."));
     },
     onError: (e: unknown) => {
-      if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
-        setFormErr(String((e.body as { message?: unknown }).message));
-      } else setFormErr(e instanceof Error ? e.message : String(e));
+      const msg =
+        e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body
+          ? String((e.body as { message?: unknown }).message)
+          : e instanceof Error
+            ? e.message
+            : String(e);
+      setFormErr(msg);
+      toast.error(msg);
     },
   });
 
   const onSave = () => {
     if (!id || readOnly) return;
+    const start = new Date(startsLocal);
+    const end = new Date(endsLocal);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      const msg = t("appointments.invalidDateRange", "Enter valid start and end times.");
+      setFormErr(msg);
+      toast.error(msg);
+      return;
+    }
+    if (end <= start) {
+      const msg = t("appointments.endAfterStart", "End time must be after start time.");
+      setFormErr(msg);
+      toast.error(msg);
+      return;
+    }
     saveMut.mutate({
       clinicId,
       patientId,
       clinicianId,
-      startsAt: new Date(startsLocal).toISOString(),
-      endsAt: new Date(endsLocal).toISOString(),
+      startsAt: start.toISOString(),
+      endsAt: end.toISOString(),
       notes: notes.trim() === "" ? "" : notes,
       status,
     });
@@ -175,7 +202,7 @@ export function AppointmentDetailPage() {
           <h1 className="text-2xl font-bold tracking-tight">{t("appointments.detailTitle", "Appointment")}</h1>
           <p className="text-muted-foreground ltr-nums text-sm">{apt.id}</p>
         </div>
-        <Badge variant="secondary">{apt.status}</Badge>
+        <AppointmentStatusBadge status={apt.status} />
       </div>
 
       {formErr ? <p className="text-sm text-destructive">{formErr}</p> : null}

@@ -6,7 +6,7 @@ import { SearchablePickList, type PickListItem } from "@/components/searchable-p
 import { cn } from "@/lib/utils";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { TablePagination } from "@/components/table-pagination";
-import { Badge } from "@/components/ui/badge";
+import { AppointmentStatusBadge } from "@/components/appointment-status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,7 +25,7 @@ export function AppointmentsPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
   const [sortBy, setSortBy] = useState("startsAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [fltFrom, setFltFrom] = useState("");
@@ -417,7 +417,7 @@ export function AppointmentsPage() {
                         )}
                       </td>
                       <td className="px-3 py-2">
-                        <Badge variant="secondary">{a.status}</Badge>
+                        <AppointmentStatusBadge status={a.status} />
                       </td>
                     </tr>
                   ))}

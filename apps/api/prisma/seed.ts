@@ -344,7 +344,9 @@ async function main() {
 
   await prisma.appointment.createMany({
     data: demoAppointmentStatuses.map((st, i) => {
-      const day = Math.min(28, 4 + (i % 24));
+      const n = demoAppointmentStatuses.length;
+      const baseDay = Math.max(1, Math.min(28, now.getDate()));
+      const day = Math.min(28, baseDay + (n - i));
       const start = new Date(now.getFullYear(), now.getMonth(), day, 8 + (i % 9), (i * 13) % 60, 0);
       const end = new Date(start.getTime() + 30 * 60000);
       return {

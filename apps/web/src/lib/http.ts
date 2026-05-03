@@ -94,7 +94,13 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
     const parsed = await parseJson(res);
     throw new ApiError(messageFromErrorBody(res.status, parsed, res.statusText || "Request failed"), res.status, parsed);
   }
-  return (await res.json()) as T;
+  const text = await res.text();
+  if (!text) return {} as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new ApiError("Invalid JSON response", res.status, text);
+  }
 }
 
 export async function apiPostFormData<T>(path: string, formData: FormData): Promise<T> {

@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TablePagination } from "@/components/table-pagination";
+import { AppointmentStatusBadge } from "@/components/appointment-status-badge";
 import { useAdminOverviewQuery, useAppointmentsQuery, useClinicsQuery, useEncountersQuery, usePatientsQuery } from "@/lib/api-hooks";
 import type { AppointmentDto, EncounterDetailDto } from "@/lib/api-types";
 import { ApiError, apiPost } from "@/lib/http";
@@ -305,7 +306,7 @@ export function EncountersListPage() {
                           <span className="text-xs text-muted-foreground">
                             {(a.patientName ?? "").trim() || "—"} · {a.patientMrn ?? a.patientId.slice(0, 8)}
                           </span>
-                          <span className="text-xs text-muted-foreground">{a.status}</span>
+                          <AppointmentStatusBadge status={a.status} className="mt-0.5 w-fit" />
                         </button>
                       ))
                     )}
