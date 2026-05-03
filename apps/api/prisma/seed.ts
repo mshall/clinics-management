@@ -319,19 +319,43 @@ async function main() {
     })),
   });
 
+  const demoAppointmentStatuses: AppointmentStatus[] = [
+    AppointmentStatus.SCHEDULED,
+    AppointmentStatus.CONFIRMED,
+    AppointmentStatus.CANCELLED,
+    AppointmentStatus.COMPLETED,
+    AppointmentStatus.SCHEDULED,
+    AppointmentStatus.CONFIRMED,
+    AppointmentStatus.SCHEDULED,
+    AppointmentStatus.CANCELLED,
+    AppointmentStatus.COMPLETED,
+    AppointmentStatus.CONFIRMED,
+    AppointmentStatus.SCHEDULED,
+    AppointmentStatus.SCHEDULED,
+    AppointmentStatus.CANCELLED,
+    AppointmentStatus.CONFIRMED,
+    AppointmentStatus.COMPLETED,
+    AppointmentStatus.SCHEDULED,
+    AppointmentStatus.CONFIRMED,
+    AppointmentStatus.CANCELLED,
+    AppointmentStatus.SCHEDULED,
+    AppointmentStatus.COMPLETED,
+  ];
+
   await prisma.appointment.createMany({
-    data: Array.from({ length: 15 }, (_, i) => {
-      const start = new Date(now.getFullYear(), now.getMonth(), Math.min(26, 10 + i), 9 + (i % 3), 0, 0);
+    data: demoAppointmentStatuses.map((st, i) => {
+      const day = Math.min(28, 4 + (i % 24));
+      const start = new Date(now.getFullYear(), now.getMonth(), day, 8 + (i % 9), (i * 13) % 60, 0);
       const end = new Date(start.getTime() + 30 * 60000);
       return {
         tenantId: t0.id,
         clinicId: clinics[i % clinics.length]!.id,
-        patientId: patients[(i + 3) % patients.length]!.id,
+        patientId: patients[(i + 2) % patients.length]!.id,
         clinicianId: physician.id,
         startsAt: start,
         endsAt: end,
-        status: i % 5 === 0 ? AppointmentStatus.SCHEDULED : AppointmentStatus.COMPLETED,
-        notes: `Appointment slot ${i + 1}`,
+        status: st,
+        notes: `Demo appointment ${i + 1} — ${st}`,
       };
     }),
   });

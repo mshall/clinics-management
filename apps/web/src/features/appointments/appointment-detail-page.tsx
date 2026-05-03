@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
+import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,22 +23,30 @@ function isReadOnlyStatus(status: string): boolean {
 }
 
 export function AppointmentDetailPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { id } = useParams();
   const qc = useQueryClient();
   const { data: apt, isPending, isError, error } = useAppointmentQuery(id);
   const { data: clinics = [] } = useClinicsQuery();
-  const { data: patData } = usePatientsQuery({ page: 1, pageSize: 200 });
   const { data: userData } = useUsersQuery({ page: 1, pageSize: 100 });
+
+  const readOnly = apt ? isReadOnlyStatus(apt.status) : false;
+
+  const [patientPickerSearch, setPatientPickerSearch] = useState("");
+  const [debouncedPatientSearch, setDebouncedPatientSearch] = useState("");
+  useEffect(() => {
+    const tid = window.setTimeout(() => setDebouncedPatientSearch(patientPickerSearch), 280);
+    return () => window.clearTimeout(tid);
+  }, [patientPickerSearch]);
+
+  const { data: patData } = usePatientsQuery({
+    search: debouncedPatientSearch.trim() || undefined,
+    page: 1,
+    pageSize: 150,
+    enabled: Boolean(apt && !readOnly),
+  });
   const patients = patData?.items ?? [];
-  const patientMissingFromList = Boolean(apt && !patients.some((p) => p.id === apt.patientId));
-  const { data: extraPatient } = usePatientQuery(patientMissingFromList && apt ? apt.patientId : undefined);
-  const patientOptions = useMemo(() => {
-    if (extraPatient && !patients.some((p) => p.id === extraPatient.id)) {
-      return [extraPatient, ...patients];
-    }
-    return patients;
-  }, [patients, extraPatient]);
+
   const physicians = (userData?.items ?? []).filter((u) => u.role === "PHYSICIAN");
 
   const [clinicId, setClinicId] = useState("");
@@ -60,7 +69,40 @@ export function AppointmentDetailPage() {
     setStatus(apt.status);
   }, [apt]);
 
-  const readOnly = apt ? isReadOnlyStatus(apt.status) : false;
+  const selectedPatientMissing = Boolean(patientId && !patients.some((p) => p.id === patientId));
+  const { data: extraPatient } = usePatientQuery(selectedPatientMissing ? patientId : undefined);
+
+  const clinicItems: PickListItem[] = useMemo(
+    () =>
+      clinics.map((c) => ({
+        value: c.id,
+        label: c.nameEn,
+        hint: [c.city, c.country].filter(Boolean).join(" · ") || undefined,
+      })),
+    [clinics]
+  );
+
+  const patientItems: PickListItem[] = useMemo(() => {
+    if (!apt) return [];
+    if (readOnly) {
+      return [
+        {
+          value: apt.patientId,
+          label: (apt.patientName?.trim() || t("appointments.patient", "Patient")).trim(),
+          hint: apt.patientMrn ?? undefined,
+        },
+      ];
+    }
+    const merged = [...patients];
+    if (extraPatient && !merged.some((p) => p.id === extraPatient.id)) {
+      merged.unshift(extraPatient);
+    }
+    return merged.map((p) => ({
+      value: p.id,
+      label: `${p.firstNameEn} ${p.lastNameEn}`.trim(),
+      hint: p.mrn,
+    }));
+  }, [apt, readOnly, patients, extraPatient, t]);
 
   const saveMut = useMutation({
     mutationFn: (body: Partial<AppointmentDto> & Record<string, unknown>) =>
@@ -151,33 +193,34 @@ export function AppointmentDetailPage() {
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
             <Label>{t("appointments.clinic")}</Label>
-            <select
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+            <SearchablePickList
+              items={clinicItems}
               value={clinicId}
+              onValueChange={setClinicId}
               disabled={readOnly}
-              onChange={(e) => setClinicId(e.target.value)}
-            >
-              {clinics.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nameEn}
-                </option>
-              ))}
-            </select>
+              searchPlaceholder={t("appointments.filterClinic", "Type clinic name…")}
+              placeholder={t("appointments.pick")}
+              emptyMessage={t("appointments.noClinicMatch", "No clinics match.")}
+            />
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label>{t("appointments.patient")}</Label>
-            <select
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+            {!readOnly ? (
+              <p className="text-xs text-muted-foreground">
+                {t("encounters.selectPatientHint", "Search by name or MRN, then choose a row.")}
+              </p>
+            ) : null}
+            <SearchablePickList
+              items={patientItems}
               value={patientId}
+              onValueChange={setPatientId}
+              onSearchQueryChange={(q) => setPatientPickerSearch(q)}
               disabled={readOnly}
-              onChange={(e) => setPatientId(e.target.value)}
-            >
-              {patientOptions.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.mrn} — {p.firstNameEn} {p.lastNameEn}
-                </option>
-              ))}
-            </select>
+              searchPlaceholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
+              placeholder={t("appointments.pick")}
+              emptyMessage={t("encounters.noPatientsMatch", "No patients match.")}
+              localFilter={false}
+            />
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label>{t("appointments.clinician")}</Label>
@@ -216,17 +259,27 @@ export function AppointmentDetailPage() {
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label>{t("appointments.status")}</Label>
-            <select
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-              value={status}
-              disabled={readOnly}
-              onChange={(e) => setStatus(e.target.value)}
-            >
-              <option value="SCHEDULED">{t("appointments.statusScheduled", "Scheduled")}</option>
-              <option value="CONFIRMED">{t("appointments.statusConfirmed", "Confirmed")}</option>
-              <option value="CANCELLED">{t("appointments.statusCancelled", "Cancelled")}</option>
-              <option value="COMPLETED">{t("appointments.statusCompleted", "Completed")}</option>
-            </select>
+            {readOnly ? (
+              <p className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm font-medium">
+                {apt.status === "COMPLETED"
+                  ? t("appointments.statusCompleted", "Completed")
+                  : apt.status === "CONFIRMED"
+                    ? t("appointments.statusConfirmed", "Confirmed")
+                    : apt.status === "CANCELLED"
+                      ? t("appointments.statusCancelled", "Cancelled")
+                      : t("appointments.statusScheduled", "Scheduled")}
+              </p>
+            ) : (
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+              >
+                <option value="SCHEDULED">{t("appointments.statusScheduled", "Scheduled")}</option>
+                <option value="CONFIRMED">{t("appointments.statusConfirmed", "Confirmed")}</option>
+                <option value="CANCELLED">{t("appointments.statusCancelled", "Cancelled")}</option>
+              </select>
+            )}
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label>{t("appointments.notes", "Notes")}</Label>

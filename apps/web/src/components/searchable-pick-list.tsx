@@ -19,6 +19,8 @@ interface SearchablePickListProps {
   disabled?: boolean;
   /** When false, parent is responsible for filtering (e.g. server search); all `items` are shown. */
   localFilter?: boolean;
+  /** When the search box changes (while open); use with `localFilter={false}` for server-driven lists. */
+  onSearchQueryChange?: (query: string) => void;
   className?: string;
 }
 
@@ -31,6 +33,7 @@ export function SearchablePickList({
   emptyMessage = "No matches.",
   disabled,
   localFilter = true,
+  onSearchQueryChange,
   className,
 }: SearchablePickListProps) {
   const uid = useId();
@@ -60,20 +63,27 @@ export function SearchablePickList({
     (next: string) => {
       onValueChange(next);
       setQ("");
+      onSearchQueryChange?.("");
       setOpen(false);
     },
-    [onValueChange]
+    [onValueChange, onSearchQueryChange]
   );
+
+  const closeWithoutPick = useCallback(() => {
+    setOpen(false);
+    setQ("");
+    onSearchQueryChange?.("");
+  }, [onSearchQueryChange]);
 
   useEffect(() => {
     if (!open) return;
     const onDocPointerDown = (e: PointerEvent) => {
       const el = rootRef.current;
       if (!el || el.contains(e.target as Node)) return;
-      setOpen(false);
+      closeWithoutPick();
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") closeWithoutPick();
     };
     document.addEventListener("pointerdown", onDocPointerDown, true);
     document.addEventListener("keydown", onKey);
@@ -81,7 +91,7 @@ export function SearchablePickList({
       document.removeEventListener("pointerdown", onDocPointerDown, true);
       document.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [open, closeWithoutPick]);
 
   useEffect(() => {
     if (!open) return;
@@ -107,6 +117,7 @@ export function SearchablePickList({
             if (disabled) return;
             setOpen(true);
             setQ("");
+            onSearchQueryChange?.("");
           }}
         >
           <span className="min-w-0 flex-1 truncate">{displayText ?? placeholder}</span>
@@ -121,7 +132,11 @@ export function SearchablePickList({
             placeholder={searchPlaceholder}
             value={q}
             disabled={disabled}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setQ(v);
+              onSearchQueryChange?.(v);
+            }}
             aria-autocomplete="list"
             aria-controls={listboxId}
             role="combobox"
@@ -129,7 +144,7 @@ export function SearchablePickList({
             onKeyDown={(e) => {
               if (e.key === "Escape") {
                 e.stopPropagation();
-                setOpen(false);
+                closeWithoutPick();
               }
             }}
           />
