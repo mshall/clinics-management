@@ -1,0 +1,248 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Clinic Management System API",
+    "description": "REST API v1. Regenerate with `npm run openapi:export -w api` (requires DATABASE_URL and a running schema).",
+    "version": "1.0.0"
+  },
+  "servers": [{ "url": "/", "description": "API root (use /api/v1 paths)" }],
+  "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": ["auth"],
+        "summary": "Exchange credentials for a JWT",
+        "operationId": "authLogin",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/LoginDto" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/LoginResponseDto" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "tags": ["auth"],
+        "summary": "Current user profile",
+        "operationId": "authMe",
+        "security": [{ "bearer": [] }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/AuthUserDto" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/patients": {
+      "get": {
+        "tags": ["patients"],
+        "summary": "List patients",
+        "operationId": "patientsList",
+        "security": [{ "bearer": [] }],
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/PatientDto" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/patients/{id}": {
+      "get": {
+        "tags": ["patients"],
+        "summary": "Get patient by id",
+        "operationId": "patientsGet",
+        "security": [{ "bearer": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/PatientDto" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/clinics": {
+      "get": {
+        "tags": ["clinics"],
+        "summary": "List clinics",
+        "operationId": "clinicsList",
+        "security": [{ "bearer": [] }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/ClinicDto" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/dashboards/group-overview": {
+      "get": {
+        "tags": ["dashboards"],
+        "summary": "Group KPIs",
+        "operationId": "dashboardGroupOverview",
+        "security": [{ "bearer": [] }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GroupOverviewKpisDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/live": {
+      "get": {
+        "tags": ["health"],
+        "summary": "Liveness",
+        "operationId": "healthLive",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "status": { "type": "string", "example": "ok" } },
+                  "required": ["status"]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+    },
+    "schemas": {
+      "LoginDto": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string", "minLength": 1 }
+        }
+      },
+      "AuthUserDto": {
+        "type": "object",
+        "required": ["id", "tenantId", "email", "displayName", "role"],
+        "properties": {
+          "id": { "type": "string" },
+          "tenantId": { "type": "string" },
+          "email": { "type": "string" },
+          "displayName": { "type": "string" },
+          "role": {
+            "type": "string",
+            "enum": [
+              "GROUP_ADMIN",
+              "BRANCH_MANAGER",
+              "PHYSICIAN",
+              "NURSE",
+              "RECEPTIONIST",
+              "HR_OFFICER",
+              "FINANCE_OFFICER"
+            ]
+          }
+        }
+      },
+      "LoginResponseDto": {
+        "type": "object",
+        "required": ["accessToken", "user"],
+        "properties": {
+          "accessToken": { "type": "string" },
+          "user": { "$ref": "#/components/schemas/AuthUserDto" }
+        }
+      },
+      "PatientDto": {
+        "type": "object",
+        "required": ["id", "mrn", "firstNameEn", "lastNameEn", "dob", "gender", "phone"],
+        "properties": {
+          "id": { "type": "string" },
+          "mrn": { "type": "string" },
+          "firstNameEn": { "type": "string" },
+          "lastNameEn": { "type": "string" },
+          "firstNameAr": { "type": "string", "nullable": true },
+          "lastNameAr": { "type": "string", "nullable": true },
+          "dob": { "type": "string", "format": "date" },
+          "gender": { "type": "string", "enum": ["M", "F", "OTHER", "UNKNOWN"] },
+          "phone": { "type": "string" },
+          "email": { "type": "string", "nullable": true },
+          "homeBranch": { "type": "string", "nullable": true }
+        }
+      },
+      "ClinicDto": {
+        "type": "object",
+        "required": ["id", "nameEn", "nameAr", "city", "country", "kind"],
+        "properties": {
+          "id": { "type": "string" },
+          "parentClinicId": { "type": "string", "nullable": true },
+          "nameEn": { "type": "string" },
+          "nameAr": { "type": "string" },
+          "city": { "type": "string" },
+          "country": { "type": "string" },
+          "kind": { "type": "string", "enum": ["parent", "branch"] }
+        }
+      },
+      "GroupOverviewKpisDto": {
+        "type": "object",
+        "required": [
+          "patients",
+          "encounters30d",
+          "encountersPeriodTotal",
+          "appointmentsPeriodTotal",
+          "revenueMonth",
+          "expensesMonth",
+          "branches",
+          "headcount"
+        ],
+        "properties": {
+          "patients": { "type": "integer" },
+          "encounters30d": { "type": "integer" },
+          "encountersPeriodTotal": { "type": "integer" },
+          "appointmentsPeriodTotal": { "type": "integer" },
+          "revenueMonth": { "type": "number" },
+          "expensesMonth": { "type": "number" },
+          "branches": { "type": "integer" },
+          "headcount": { "type": "integer" }
+        }
+      }
+    }
+  }
+}

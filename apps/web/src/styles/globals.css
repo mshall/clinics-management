@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 200 85% 32%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 25% 93%;
+    --secondary-foreground: 222 40% 18%;
+    --muted: 210 20% 94%;
+    --muted-foreground: 215 16% 40%;
+    --accent: 186 45% 92%;
+    --accent-foreground: 200 70% 22%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 20% 88%;
+    --input: 214 20% 88%;
+    --ring: 200 85% 32%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222 47% 8%;
+    --foreground: 210 30% 96%;
+    --card: 222 40% 11%;
+    --card-foreground: 210 30% 96%;
+    --popover: 222 40% 11%;
+    --popover-foreground: 210 30% 96%;
+    --primary: 188 72% 42%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 217 25% 17%;
+    --secondary-foreground: 210 25% 92%;
+    --muted: 217 20% 18%;
+    --muted-foreground: 215 15% 65%;
+    --accent: 200 35% 18%;
+    --accent-foreground: 186 60% 88%;
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 20% 20%;
+    --input: 217 20% 20%;
+    --ring: 188 72% 42%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  /* Numbers and codes stay LTR in Arabic (clinical norm) */
+  .ltr-nums {
+    direction: ltr;
+    unicode-bidi: embed;
+  }
+}

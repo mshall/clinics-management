@@ -1,0 +1,1 @@
+export const EXPENSE_CATEGORIES = ["UTILITIES", "MATERIALS", "PAYROLL", "MARKETING", "RENT", "IT", "OTHER"] as const;
