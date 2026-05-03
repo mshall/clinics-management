@@ -270,15 +270,58 @@ export function AppointmentDetailPage() {
                       : t("appointments.statusScheduled", "Scheduled")}
               </p>
             ) : (
-              <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-              >
-                <option value="SCHEDULED">{t("appointments.statusScheduled", "Scheduled")}</option>
-                <option value="CONFIRMED">{t("appointments.statusConfirmed", "Confirmed")}</option>
-                <option value="CANCELLED">{t("appointments.statusCancelled", "Cancelled")}</option>
-              </select>
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  {t(
+                    "appointments.statusQuickHint",
+                    "Set status with one tap, or choose below and use Save with other edits."
+                  )}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={apt.status === "SCHEDULED" ? "default" : "outline"}
+                    disabled={statusOnlyMut.isPending || apt.status === "SCHEDULED"}
+                    onClick={() => statusOnlyMut.mutate("SCHEDULED")}
+                  >
+                    {t("appointments.statusScheduled", "Scheduled")}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={apt.status === "CONFIRMED" ? "default" : "outline"}
+                    disabled={statusOnlyMut.isPending || apt.status === "CONFIRMED"}
+                    onClick={() => statusOnlyMut.mutate("CONFIRMED")}
+                  >
+                    {t("appointments.statusConfirmed", "Confirmed")}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={apt.status === "CANCELLED" ? "default" : "outline"}
+                    disabled={statusOnlyMut.isPending || apt.status === "CANCELLED"}
+                    onClick={() => statusOnlyMut.mutate("CANCELLED")}
+                  >
+                    {t("appointments.statusCancelled", "Cancelled")}
+                  </Button>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">
+                    {t("appointments.statusWithSave", "Or pick status for the next save")}
+                  </p>
+                  <select
+                    id={`appointment-status-select-${id}`}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                  >
+                    <option value="SCHEDULED">{t("appointments.statusScheduled", "Scheduled")}</option>
+                    <option value="CONFIRMED">{t("appointments.statusConfirmed", "Confirmed")}</option>
+                    <option value="CANCELLED">{t("appointments.statusCancelled", "Cancelled")}</option>
+                  </select>
+                </div>
+              </div>
             )}
           </div>
           <div className="space-y-2 sm:col-span-2">
