@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
+import { CreateActionButton } from "@/components/create-action-button";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,14 +10,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { TablePagination } from "@/components/table-pagination";
-import { AppointmentStatusBadge } from "@/components/appointment-status-badge";
 import { useAdminOverviewQuery, useAppointmentsQuery, useClinicsQuery, useEncountersQuery, usePatientsQuery } from "@/lib/api-hooks";
 import type { AppointmentDto, EncounterDetailDto } from "@/lib/api-types";
 import { ApiError, apiPost } from "@/lib/http";
 import { ENCOUNTER_VISIT_TYPES } from "@/lib/visit-types";
 import { defaultMonthRange } from "@/stores/date-range-store";
-import { cn } from "@/lib/utils";
 
 export function EncountersListPage() {
   const { t, i18n } = useTranslation();
@@ -67,6 +67,15 @@ export function EncountersListPage() {
     enabled: createOpen,
   });
   const dialogPatientList = dialogPatData?.items;
+  const dialogPatientItems: PickListItem[] = useMemo(
+    () =>
+      (dialogPatientList ?? []).map((p) => ({
+        value: p.id,
+        label: `${p.firstNameEn} ${p.lastNameEn}`.trim(),
+        hint: p.mrn,
+      })),
+    [dialogPatientList]
+  );
   const { data: clinics = [] } = useClinicsQuery();
   const data = encData?.items ?? [];
   const total = encData?.total ?? 0;
@@ -135,6 +144,15 @@ export function EncountersListPage() {
     enabled: aptPickerEnabled,
   });
   const aptPickerRows = aptPickerData?.items ?? [];
+  const aptPickerItems: PickListItem[] = useMemo(
+    () =>
+      aptPickerRows.map((a: AppointmentDto) => ({
+        value: a.id,
+        label: `${new Date(a.startsAt).toLocaleString(i18n.language === "ar" ? "ar-AE" : "en-AE")} · ${a.status}`,
+        hint: `${(a.patientName ?? "").trim() || "—"} · ${a.patientMrn ?? a.patientId.slice(0, 8)}`,
+      })),
+    [aptPickerRows, i18n.language]
+  );
 
   const adminOv = useAdminOverviewQuery();
   useEffect(() => {
@@ -199,7 +217,7 @@ export function EncountersListPage() {
           <p className="text-muted-foreground">{t("encounters.listSubtitle")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button
+          <CreateActionButton
             type="button"
             disabled={patientRegistryTotal === 0}
             title={
@@ -210,7 +228,7 @@ export function EncountersListPage() {
             onClick={openCreateDialog}
           >
             {t("encounters.newEncounter", "New encounter")}
-          </Button>
+          </CreateActionButton>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogContent aria-describedby={undefined}>
               <DialogHeader>
@@ -224,41 +242,21 @@ export function EncountersListPage() {
                 <div className="space-y-2">
                   <Label>{t("encounters.patient")}</Label>
                   <p className="text-xs text-muted-foreground">{t("encounters.selectPatientHint", "Choose a patient from the list (search by name or MRN).")}</p>
-                  <Input
-                    className="ltr-nums"
-                    placeholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
-                    value={patientSearch}
-                    onChange={(e) => setPatientSearch(e.target.value)}
-                    autoComplete="off"
+                  <SearchablePickList
+                    items={dialogPatientItems}
+                    value={createPatientId}
+                    onValueChange={(v) => {
+                      setCreatePatientId(v);
+                      setSelectedAppointmentId("");
+                    }}
+                    onSearchQueryChange={setPatientSearch}
+                    searchPlaceholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
+                    placeholder={t("encounters.pickPatient", "Pick patient")}
+                    emptyMessage={dialogPatientsPending ? t("common.loading") : t("encounters.noPatientsMatch", "No patients match.")}
+                    localFilter={false}
+                    minSearchLength={1}
+                    idleMessage={t("encounters.patientSearchIdle", "Start typing to show matching patients.")}
                   />
-                  <div className="max-h-44 overflow-auto rounded-md border border-border">
-                    {dialogPatientsPending ? (
-                      <p className="px-3 py-2 text-xs text-muted-foreground">{t("common.loading")}</p>
-                    ) : (dialogPatientList ?? []).length === 0 ? (
-                      <p className="px-3 py-2 text-xs text-muted-foreground">{t("encounters.noPatientsMatch", "No patients match.")}</p>
-                    ) : (
-                      (dialogPatientList ?? []).map((p) => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          className={cn(
-                            "flex w-full flex-col gap-0.5 border-b border-border px-3 py-2 text-start text-sm last:border-b-0 hover:bg-muted/60",
-                            createPatientId === p.id && "bg-muted/80"
-                          )}
-                          onPointerDown={(e) => e.preventDefault()}
-                          onClick={() => {
-                            setCreatePatientId(p.id);
-                            setSelectedAppointmentId("");
-                          }}
-                        >
-                          <span className="font-medium">
-                            {p.firstNameEn} {p.lastNameEn}
-                          </span>
-                          <span className="text-xs text-muted-foreground ltr-nums">{p.mrn}</span>
-                        </button>
-                      ))
-                    )}
-                  </div>
                 </div>
                 <div className="space-y-2 rounded-md border border-dashed border-border p-3">
                   <Label>{t("encounters.linkedAppointment", "Booked appointment (optional)")}</Label>
@@ -268,49 +266,25 @@ export function EncountersListPage() {
                       "Search by patient name, MRN, phone, or national ID. Linking sets the appointment to checked in until the encounter is finalized (then completed)."
                     )}
                   </p>
-                  <Input
-                    className="ltr-nums"
-                    placeholder={t("encounters.appointmentSearchPlaceholder", "Type at least 2 characters or pick a patient first…")}
-                    value={aptPickerSearch}
-                    onChange={(e) => setAptPickerSearch(e.target.value)}
-                    autoComplete="off"
+                  <SearchablePickList
+                    items={aptPickerItems}
+                    value={selectedAppointmentId}
+                    onValueChange={(v) => {
+                      setSelectedAppointmentId(v);
+                      const row = aptPickerRows.find((a) => a.id === v);
+                      if (row) {
+                        setCreatePatientId(row.patientId);
+                        setCreateClinicId(row.clinicId);
+                      }
+                    }}
+                    onSearchQueryChange={setAptPickerSearch}
+                    searchPlaceholder={t("encounters.appointmentSearchPlaceholder", "Type at least 2 characters or pick a patient first…")}
+                    placeholder={t("encounters.linkedAppointment", "Booked appointment (optional)")}
+                    emptyMessage={aptPickerPending ? t("common.loading") : t("encounters.noBookableAppointments", "No matching open appointments.")}
+                    localFilter={false}
+                    minSearchLength={createPatientId.trim().length > 0 ? 0 : 2}
+                    idleMessage={t("encounters.appointmentSearchIdle", "Type to search or select a patient to see their bookings.")}
                   />
-                  <div className="max-h-40 overflow-auto rounded-md border border-border">
-                    {!aptPickerEnabled ? (
-                      <p className="px-3 py-2 text-xs text-muted-foreground">
-                        {t("encounters.appointmentSearchIdle", "Type to search or select a patient to see their bookings.")}
-                      </p>
-                    ) : aptPickerPending ? (
-                      <p className="px-3 py-2 text-xs text-muted-foreground">{t("common.loading")}</p>
-                    ) : aptPickerRows.length === 0 ? (
-                      <p className="px-3 py-2 text-xs text-muted-foreground">{t("encounters.noBookableAppointments", "No matching open appointments.")}</p>
-                    ) : (
-                      aptPickerRows.map((a: AppointmentDto) => (
-                        <button
-                          key={a.id}
-                          type="button"
-                          onPointerDown={(e) => e.preventDefault()}
-                          className={cn(
-                            "flex w-full flex-col gap-0.5 border-b border-border px-3 py-2 text-start text-sm last:border-b-0 hover:bg-muted/60",
-                            selectedAppointmentId === a.id && "bg-muted/80"
-                          )}
-                          onClick={() => {
-                            setSelectedAppointmentId(a.id);
-                            setCreatePatientId(a.patientId);
-                            setCreateClinicId(a.clinicId);
-                          }}
-                        >
-                          <span className="font-medium ltr-nums">
-                            {new Date(a.startsAt).toLocaleString(i18n.language === "ar" ? "ar-AE" : "en-AE")}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {(a.patientName ?? "").trim() || "—"} · {a.patientMrn ?? a.patientId.slice(0, 8)}
-                          </span>
-                          <AppointmentStatusBadge status={a.status} className="mt-0.5 w-fit" />
-                        </button>
-                      ))
-                    )}
-                  </div>
                   {selectedAppointmentId ? (
                     <Button type="button" variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setSelectedAppointmentId("")}>
                       {t("encounters.clearAppointment", "Clear appointment link")}
@@ -359,7 +333,7 @@ export function EncountersListPage() {
                     {t("encounters.visitFeeHint", "Default comes from organization settings (admin).")}
                   </p>
                 </div>
-                <Button
+                <CreateActionButton
                   type="button"
                   disabled={
                     patientRegistryTotal === 0 ||
@@ -371,7 +345,7 @@ export function EncountersListPage() {
                   onClick={() => createMut.mutate()}
                 >
                   {t("encounters.createAndOpen", "Create & open")}
-                </Button>
+                </CreateActionButton>
               </div>
             </DialogContent>
           </Dialog>

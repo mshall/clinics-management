@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { CreateActionButton } from "@/components/create-action-button";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { TablePagination } from "@/components/table-pagination";
@@ -388,7 +389,7 @@ export function HrPage() {
               }}
             >
               <DialogTrigger asChild>
-                <Button type="button">{t("hr.addEmployee")}</Button>
+                <CreateActionButton type="button">{t("hr.addEmployee")}</CreateActionButton>
               </DialogTrigger>
               <DialogContent className="max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
                 <DialogHeader>
@@ -456,13 +457,13 @@ export function HrPage() {
                     {empIdDocFile ? <p className="text-xs text-muted-foreground ltr-nums">{empIdDocFile.name}</p> : null}
                   </div>
                   <div className="flex items-end sm:col-span-2">
-                    <Button
+                    <CreateActionButton
                       type="button"
                       disabled={!empClinic || !empFn || !empLn || empPhone.replace(/\D/g, "").length < 8 || createEmp.isPending}
                       onClick={() => createEmp.mutate()}
                     >
                       {t("hr.saveEmployee")}
-                    </Button>
+                    </CreateActionButton>
                   </div>
                 </div>
               </DialogContent>
@@ -597,9 +598,9 @@ export function HrPage() {
                   <Label>{t("hr.workDate")}</Label>
                   <Input className="ltr-nums" type="date" value={attDate} onChange={(e) => setAttDate(e.target.value)} />
                 </div>
-                <Button type="button" disabled={!attEmp || createAtt.isPending} onClick={() => createAtt.mutate()}>
+                <CreateActionButton type="button" disabled={!attEmp || createAtt.isPending} onClick={() => createAtt.mutate()}>
                   {t("hr.submitAttendance")}
-                </Button>
+                </CreateActionButton>
               </div>
             </div>
             <div>
@@ -725,7 +726,7 @@ export function HrPage() {
             <CardTitle className="text-base">{t("hr.leave")}</CardTitle>
             <Dialog open={leaveReqOpen} onOpenChange={setLeaveReqOpen}>
               <DialogTrigger asChild>
-                <Button type="button">{t("hr.requestLeave")}</Button>
+                <CreateActionButton type="button">{t("hr.requestLeave")}</CreateActionButton>
               </DialogTrigger>
               <DialogContent aria-describedby={undefined}>
                 <DialogHeader>
@@ -760,9 +761,9 @@ export function HrPage() {
                     <Label>{t("hr.end")}</Label>
                     <Input className="ltr-nums" type="date" value={leaveEnd} onChange={(e) => setLeaveEnd(e.target.value)} />
                   </div>
-                  <Button type="button" disabled={!leaveEmp || createLeave.isPending} onClick={() => createLeave.mutate()}>
+                  <CreateActionButton type="button" disabled={!leaveEmp || createLeave.isPending} onClick={() => createLeave.mutate()}>
                     {t("hr.submitLeave")}
-                  </Button>
+                  </CreateActionButton>
                 </div>
               </DialogContent>
             </Dialog>

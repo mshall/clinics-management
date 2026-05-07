@@ -2,8 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { CreateActionButton } from "@/components/create-action-button";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
-import { cn } from "@/lib/utils";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { TablePagination } from "@/components/table-pagination";
 import { AppointmentStatusBadge } from "@/components/appointment-status-badge";
@@ -130,6 +130,15 @@ export function AppointmentsPage() {
     enabled: showBookPanel,
   });
   const bookPatients = bookPatData?.items ?? [];
+  const bookPatientItems: PickListItem[] = useMemo(
+    () =>
+      bookPatients.map((p) => ({
+        value: p.id,
+        label: `${p.firstNameEn} ${p.lastNameEn}`.trim(),
+        hint: p.mrn,
+      })),
+    [bookPatients]
+  );
 
   const clinicItems: PickListItem[] = useMemo(
     () => clinics.map((c) => ({ value: c.id, label: c.nameEn })),
@@ -187,9 +196,9 @@ export function AppointmentsPage() {
         <Button type="button" variant={showSearchPanel ? "default" : "outline"} onClick={() => setShowSearchPanel((s) => !s)}>
           {showSearchPanel ? t("appointments.hideSearch", "Hide search") : t("appointments.showSearch", "Search appointments")}
         </Button>
-        <Button type="button" variant={showBookPanel ? "default" : "outline"} onClick={() => setShowBookPanel((s) => !s)}>
+        <CreateActionButton type="button" onClick={() => setShowBookPanel((s) => !s)}>
           {showBookPanel ? t("appointments.hideBook", "Hide booking") : t("appointments.showBook", "Book an appointment")}
-        </Button>
+        </CreateActionButton>
       </div>
 
       {showSearchPanel ? (
@@ -268,36 +277,20 @@ export function AppointmentsPage() {
             <div className="space-y-2 sm:col-span-2">
               <Label>{t("appointments.patient")}</Label>
               <p className="text-xs text-muted-foreground">{t("encounters.selectPatientHint", "Search by name or MRN, then choose a row.")}</p>
-              <Input
-                className="ltr-nums"
-                placeholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
-                value={bookPatientSearch}
-                onChange={(e) => setBookPatientSearch(e.target.value)}
+              <SearchablePickList
+                items={bookPatientItems}
+                value={patientId}
+                onValueChange={setPatientId}
+                onSearchQueryChange={setBookPatientSearch}
+                searchPlaceholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
+                placeholder={t("appointments.pick")}
+                emptyMessage={
+                  bookPatientsPending ? t("common.loading") : t("encounters.noPatientsMatch", "No patients match.")
+                }
+                localFilter={false}
+                minSearchLength={1}
+                idleMessage={t("encounters.patientSearchIdle", "Start typing to show matching patients.")}
               />
-              <div className="max-h-44 overflow-auto rounded-md border border-border">
-                {bookPatientsPending ? (
-                  <p className="px-3 py-2 text-xs text-muted-foreground">{t("common.loading")}</p>
-                ) : bookPatients.length === 0 ? (
-                  <p className="px-3 py-2 text-xs text-muted-foreground">{t("encounters.noPatientsMatch", "No patients match.")}</p>
-                ) : (
-                  bookPatients.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      className={cn(
-                        "flex w-full flex-col gap-0.5 border-b border-border px-3 py-2 text-start text-sm last:border-b-0 hover:bg-muted/60",
-                        patientId === p.id && "bg-muted/80"
-                      )}
-                      onClick={() => setPatientId(p.id)}
-                    >
-                      <span className="font-medium">
-                        {p.firstNameEn} {p.lastNameEn}
-                      </span>
-                      <span className="text-xs text-muted-foreground ltr-nums">{p.mrn}</span>
-                    </button>
-                  ))
-                )}
-              </div>
             </div>
             <div className="space-y-2 sm:col-span-2">
               <Label>{t("appointments.clinician")}</Label>
@@ -319,7 +312,7 @@ export function AppointmentsPage() {
               <Input className="ltr-nums" type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} />
             </div>
             <div className="flex flex-wrap items-end gap-2 sm:col-span-2">
-              <Button
+              <CreateActionButton
                 type="button"
                 disabled={!clinicId || !patientId || !clinicianId || !start || !end || createMut.isPending}
                 onClick={() => {
@@ -329,7 +322,7 @@ export function AppointmentsPage() {
                 }}
               >
                 {t("appointments.create")}
-              </Button>
+              </CreateActionButton>
             </div>
           </CardContent>
         </Card>

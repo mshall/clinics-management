@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from "react";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { TablePagination } from "@/components/table-pagination";
 import { useTranslation } from "react-i18next";
+import { CreateActionButton } from "@/components/create-action-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -272,13 +273,13 @@ export function ExpensesPage() {
             ) : null}
           </div>
           <div className="flex items-end">
-            <Button
+            <CreateActionButton
               type="button"
               disabled={!clinicId || !amount || createMut.isPending}
               onClick={() => createMut.mutate()}
             >
               {t("expenses.submit")}
-            </Button>
+            </CreateActionButton>
           </div>
           {formErr ? <p className="text-sm text-destructive sm:col-span-full">{formErr}</p> : null}
         </CardContent>

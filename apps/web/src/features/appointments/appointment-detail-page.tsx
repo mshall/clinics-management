@@ -31,8 +31,9 @@ export function AppointmentDetailPage() {
   const { data: apt, isPending, isError, error } = useAppointmentQuery(id);
   const { data: clinics = [] } = useClinicsQuery();
   const { data: userData } = useUsersQuery({ page: 1, pageSize: 100 });
+  const [forceCompletedLock, setForceCompletedLock] = useState(false);
 
-  const readOnly = apt ? isReadOnlyStatus(apt.status) : false;
+  const readOnly = apt ? isReadOnlyStatus(apt.status) || forceCompletedLock : false;
 
   const [patientPickerSearch, setPatientPickerSearch] = useState("");
   const [debouncedPatientSearch, setDebouncedPatientSearch] = useState("");
@@ -69,6 +70,7 @@ export function AppointmentDetailPage() {
     setEndsLocal(toDatetimeLocalValue(apt.endsAt));
     setNotes(apt.notes ?? "");
     setStatus(apt.status);
+    setForceCompletedLock(apt.status === "COMPLETED");
   }, [apt]);
 
   const selectedPatientMissing = Boolean(patientId && !patients.some((p) => p.id === patientId));
@@ -129,6 +131,9 @@ export function AppointmentDetailPage() {
 
   const statusOnlyMut = useMutation({
     mutationFn: (next: string) => apiPatch<AppointmentDto>(`/api/v1/appointments/${id}/status`, { status: next }),
+    onMutate: (next) => {
+      if (next === "COMPLETED") setForceCompletedLock(true);
+    },
     onSuccess: () => {
       setFormErr(null);
       void qc.invalidateQueries({ queryKey: ["appointment", id] });
@@ -136,6 +141,7 @@ export function AppointmentDetailPage() {
       toast.success(t("appointments.statusUpdated", "Status updated."));
     },
     onError: (e: unknown) => {
+      setForceCompletedLock(false);
       const msg =
         e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body
           ? String((e.body as { message?: unknown }).message)
@@ -322,7 +328,18 @@ export function AppointmentDetailPage() {
                             ? cn(appointmentStatusClassName(code), "text-white shadow-sm hover:opacity-95")
                             : "border-border bg-background hover:bg-muted/60"
                         )}
-                        onClick={() => statusOnlyMut.mutate(code)}
+                        onClick={() => {
+                          if (code === "COMPLETED") {
+                            const yes = window.confirm(
+                              t(
+                                "appointments.confirmComplete",
+                                "Mark this appointment as completed? This will lock editing and status changes."
+                              )
+                            );
+                            if (!yes) return;
+                          }
+                          statusOnlyMut.mutate(code);
+                        }}
                       >
                         {label}
                       </Button>

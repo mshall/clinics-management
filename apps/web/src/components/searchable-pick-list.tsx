@@ -21,6 +21,10 @@ interface SearchablePickListProps {
   localFilter?: boolean;
   /** When the search box changes (while open); use with `localFilter={false}` for server-driven lists. */
   onSearchQueryChange?: (query: string) => void;
+  /** Minimum typed chars before options are shown while open. */
+  minSearchLength?: number;
+  /** Message shown while waiting for minimum search length. */
+  idleMessage?: string;
   className?: string;
 }
 
@@ -34,6 +38,8 @@ export function SearchablePickList({
   disabled,
   localFilter = true,
   onSearchQueryChange,
+  minSearchLength = 0,
+  idleMessage = "Start typing to search.",
   className,
 }: SearchablePickListProps) {
   const uid = useId();
@@ -58,6 +64,7 @@ export function SearchablePickList({
 
   const selectedLabel = items.find((i) => i.value === value)?.label;
   const displayText = selectedLabel ?? (value ? value.slice(0, 8) : null);
+  const meetsMinSearch = q.trim().length >= minSearchLength;
 
   const pick = useCallback(
     (next: string) => {
@@ -153,7 +160,9 @@ export function SearchablePickList({
             role="listbox"
             className="max-h-44 overflow-auto rounded-md border border-border bg-background shadow-sm"
           >
-            {filtered.length === 0 ? (
+            {!meetsMinSearch ? (
+              <p className="px-3 py-2 text-xs text-muted-foreground">{idleMessage}</p>
+            ) : filtered.length === 0 ? (
               <p className="px-3 py-2 text-xs text-muted-foreground">{emptyMessage}</p>
             ) : (
               filtered.map((i, idx) => (

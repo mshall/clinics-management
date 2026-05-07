@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { CreateActionButton } from "@/components/create-action-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -179,7 +180,7 @@ export function PatientsPage() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button type="button">{t("patients.newPatient")}</Button>
+            <CreateActionButton type="button">{t("patients.newPatient")}</CreateActionButton>
           </DialogTrigger>
           <DialogContent aria-describedby={undefined}>
             <DialogHeader>
@@ -245,14 +246,14 @@ export function PatientsPage() {
                   ))}
                 </select>
               </div>
-              <Button
+              <CreateActionButton
                 type="button"
                 className="mt-2"
                 disabled={!firstNameEn || !lastNameEn || !dob || !phone || createMut.isPending}
                 onClick={() => createMut.mutate()}
               >
                 {t("patients.submitRegister")}
-              </Button>
+              </CreateActionButton>
             </div>
           </DialogContent>
         </Dialog>

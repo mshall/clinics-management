@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { CreateActionButton } from "@/components/create-action-button";
 import { SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { TablePagination } from "@/components/table-pagination";
 import { Button } from "@/components/ui/button";
@@ -240,9 +241,9 @@ export function RevenuePage() {
             <Input className="ltr-nums bg-muted/50" readOnly value={gross.trim() ? money(netComputed) : ""} type="text" />
           </div>
           <div className="flex items-end">
-            <Button type="button" disabled={!clinicId || !gross || createMut.isPending} onClick={() => createMut.mutate()}>
+            <CreateActionButton type="button" disabled={!clinicId || !gross || createMut.isPending} onClick={() => createMut.mutate()}>
               {t("revenue.submit")}
-            </Button>
+            </CreateActionButton>
           </div>
           {formErr ? <p className="text-sm text-destructive sm:col-span-full">{formErr}</p> : null}
         </CardContent>
