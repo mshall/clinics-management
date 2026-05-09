@@ -1,10 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEmail, IsOptional, IsString, IsUUID, MaxLength, MinLength } from "class-validator";
+import { Transform } from "class-transformer";
+import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
 
 export class CreateClinicDto {
-  @ApiPropertyOptional({ description: "Parent clinic id; omit for a top-level (parent) clinic" })
+  @ApiPropertyOptional({ description: "Parent clinic id; omit for a top-level (parent) clinic (Prisma cuid, not UUID)" })
+  @Transform(({ value }) => {
+    if (value === null || value === undefined) return undefined;
+    if (typeof value === "string" && !value.trim()) return undefined;
+    return typeof value === "string" ? value.trim() : value;
+  })
   @IsOptional()
-  @IsUUID()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
   parentClinicId?: string | null;
 
   @ApiProperty()
