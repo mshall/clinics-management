@@ -3,6 +3,7 @@ import {
   AttendanceStatus,
   EmploymentType,
   EncounterStatus,
+  type Encounter,
   ExpenseStatus,
   Gender,
   LeaveStatus,
@@ -15,6 +16,12 @@ import {
 import * as bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
+
+/** Extra synthetic rows for load / edge-case testing (keeps first 15 named demo patients stable). */
+const BULK_EXTRA_PATIENTS = 285;
+const ENCOUNTER_SEED_COUNT = 360;
+const APPOINTMENT_SEED_COUNT = 260;
+const AUDIT_SEED_COUNT = 220;
 
 const ICD = [
   { code: "I10", en: "Essential hypertension", ar: "ارتفاع ضغط الدم الأساسي" },
@@ -246,6 +253,26 @@ async function main() {
     )
   );
 
+  const bulkPatientRows = Array.from({ length: BULK_EXTRA_PATIENTS }, (_, k) => {
+    const i = 15 + k;
+    const idx = i + 1;
+    return {
+      tenantId: t0.id,
+      mrn: `MRN-${String(10001 + i).padStart(5, "0")}`,
+      firstNameEn: `BulkFirst${idx}`,
+      lastNameEn: `BulkLast${idx}`,
+      firstNameAr: i % 5 === 0 ? `ب${idx}` : null,
+      lastNameAr: i % 7 === 0 ? `ع${idx}` : null,
+      dob: new Date(1965 + (i % 40), (i % 12) + 1, (i % 27) + 1),
+      gender: genders[i % genders.length] ?? Gender.UNKNOWN,
+      phone: `+97151${String(1000000 + i).slice(1)}`,
+      email: `bulkpatient${idx}@demo.example.com`,
+      nationalId: `784-1990-${String(1000000 + i).padStart(7, "0")}-1`,
+      homeBranchId: clinics[i % clinics.length]!.id,
+    };
+  });
+  await prisma.patient.createMany({ data: bulkPatientRows });
+
   const employees = await Promise.all(
     Array.from({ length: 15 }, (_, i) =>
       prisma.employee.create({
@@ -267,68 +294,123 @@ async function main() {
     )
   );
 
-  const now = new Date();
-  const encounters = await Promise.all(
-    Array.from({ length: 15 }, (_, i) => {
-      const day = Math.min(28, i + 1);
-      const createdAt = new Date(now.getFullYear(), now.getMonth(), day, 9 + (i % 5), (i * 7) % 60, 0);
-      return prisma.encounter.create({
-        data: {
-          tenantId: t0.id,
-          clinicId: clinics[i % clinics.length]!.id,
-          patientId: patients[i]!.id,
-          clinicianId: i % 2 === 0 ? physician.id : physician2.id,
-          status: i % 4 === 0 ? EncounterStatus.DRAFT : EncounterStatus.FINALIZED,
-          noMedications: i % 4 === 0,
-          heartRate: 68 + i,
-          spo2: 97 + (i % 3),
-          bpSystolic: 118 + i,
-          bpDiastolic: 76 + (i % 4),
-          temperature: 36.6 + (i % 5) * 0.1,
-          visitType: ["Follow-up", "Consultation", "Walk-in", "Telehealth", "Annual physical"][i % 5]!,
-          chiefComplaint: ["Cough", "Headache", "Follow-up HTN", "DM review", "Back pain", "Fever", "Rash", "Anxiety", "URI", "Knee pain", "Check-up", "Refill", "Lab review", "Pediatric growth", "Travel advice"][i],
-          subjective: i % 4 === 0 ? "Patient reports symptoms for 3 days." : "Stable on current medications.",
-          objective: "Vitals stable. Examination unremarkable except as noted.",
-          assessment: "Clinical picture consistent with working diagnosis.",
-          plan: "Medications adjusted as needed. Follow-up in 2–4 weeks.",
-          vitalsJson: { bp: `${120 + i}/${80 + (i % 5)}`, hr: 68 + i, tempC: 36.5 + (i % 3) * 0.1, spo2: 98 },
-          finalizedAt: i % 4 === 0 ? null : new Date(now.getTime() - i * 86400000),
-          createdAt,
-        },
-      });
+  await prisma.employee.create({
+    data: {
+      tenantId: t0.id,
+      clinicId: branches[2]!.id,
+      employeeNumber: "EMP-PHYS-SEED",
+      firstNameEn: "Demo",
+      lastNameEn: "Physician",
+      email: physician.email,
+      phone: "+971501112200",
+      jobTitle: "Attending Physician",
+      employmentType: EmploymentType.FULL_TIME,
+      hireDate: new Date(2019, 3, 1),
+      salaryBase: 52000,
+      userId: physician.id,
+    },
+  });
+  await prisma.employee.create({
+    data: {
+      tenantId: t0.id,
+      clinicId: branches[7]!.id,
+      employeeNumber: "EMP-PHYS2-SEED",
+      firstNameEn: "Second",
+      lastNameEn: "Physician",
+      email: physician2.email,
+      phone: "+971501112201",
+      jobTitle: "Attending Physician",
+      employmentType: EmploymentType.FULL_TIME,
+      hireDate: new Date(2020, 6, 15),
+      salaryBase: 51000,
+      userId: physician2.id,
+    },
+  });
+
+  const patientIdsOrdered = (
+    await prisma.patient.findMany({
+      where: { tenantId: t0.id },
+      select: { id: true },
+      orderBy: { mrn: "asc" },
     })
-  );
+  ).map((p) => p.id);
 
-  await Promise.all(
-    Array.from({ length: 15 }, (_, i) =>
-      prisma.diagnosis.create({
-        data: {
-          tenantId: t0.id,
-          encounterId: encounters[i]!.id,
-          icd10Code: ICD[i]!.code,
-          descriptionEn: ICD[i]!.en,
-          descriptionAr: ICD[i]!.ar,
-          isPrimary: true,
-        },
+  const now = new Date();
+  const BATCH = 45;
+  const encounters: Encounter[] = [];
+  for (let start = 0; start < ENCOUNTER_SEED_COUNT; start += BATCH) {
+    const slice = await Promise.all(
+      Array.from({ length: Math.min(BATCH, ENCOUNTER_SEED_COUNT - start) }, (_, j) => {
+        const i = start + j;
+        const day = Math.min(28, (i % 28) + 1);
+        const createdAt = new Date(now.getFullYear(), now.getMonth(), day, 9 + (i % 5), (i * 7) % 60, 0);
+        return prisma.encounter.create({
+          data: {
+            tenantId: t0.id,
+            clinicId: clinics[i % clinics.length]!.id,
+            patientId: patientIdsOrdered[i % patientIdsOrdered.length]!,
+            clinicianId: i % 2 === 0 ? physician.id : physician2.id,
+            status: i % 4 === 0 ? EncounterStatus.DRAFT : EncounterStatus.FINALIZED,
+            noMedications: i % 4 === 0,
+            heartRate: 68 + (i % 40),
+            spo2: 97 + (i % 3),
+            bpSystolic: 118 + (i % 30),
+            bpDiastolic: 76 + (i % 4),
+            temperature: 36.6 + (i % 5) * 0.1,
+            visitType: ["Follow-up", "Consultation", "Walk-in", "Telehealth", "Annual physical"][i % 5]!,
+            chiefComplaint: `Chief complaint seed ${i + 1}`,
+            subjective: i % 4 === 0 ? "Patient reports symptoms for 3 days." : "Stable on current medications.",
+            objective: "Vitals stable. Examination unremarkable except as noted.",
+            assessment: "Clinical picture consistent with working diagnosis.",
+            plan: "Medications adjusted as needed. Follow-up in 2–4 weeks.",
+            vitalsJson: { bp: `${120 + (i % 20)}/${80 + (i % 5)}`, hr: 68 + (i % 40), tempC: 36.5 + (i % 3) * 0.1, spo2: 98 },
+            finalizedAt: i % 4 === 0 ? null : new Date(now.getTime() - (i % 120) * 86400000),
+            createdAt,
+          },
+        });
       })
-    )
-  );
+    );
+    encounters.push(...slice);
+  }
 
-  await Promise.all(
-    encounters.map((enc, i) =>
-      i % 4 !== 0
-        ? prisma.encounterMedication.create({
-            data: {
-              tenantId: t0.id,
-              encounterId: enc.id,
-              drugName: ["Metformin", "Lisinopril", "Atorvastatin", "Omeprazole", "Salbutamol inhaler"][i % 5]!,
-              dosage: "As directed",
-              frequency: "BID",
-            },
-          })
-        : Promise.resolve()
-    )
-  );
+  const diagBatch = 80;
+  for (let start = 0; start < encounters.length; start += diagBatch) {
+    await Promise.all(
+      encounters.slice(start, start + diagBatch).map((enc, j) => {
+        const i = start + j;
+        const icd = ICD[i % ICD.length]!;
+        return prisma.diagnosis.create({
+          data: {
+            tenantId: t0.id,
+            encounterId: enc.id,
+            icd10Code: icd.code,
+            descriptionEn: icd.en,
+            descriptionAr: icd.ar,
+            isPrimary: true,
+          },
+        });
+      })
+    );
+  }
+
+  const medBatch = 80;
+  for (let start = 0; start < encounters.length; start += medBatch) {
+    await Promise.all(
+      encounters.slice(start, start + medBatch).map((enc, j) => {
+        const i = start + j;
+        if (i % 4 === 0) return Promise.resolve();
+        return prisma.encounterMedication.create({
+          data: {
+            tenantId: t0.id,
+            encounterId: enc.id,
+            drugName: ["Metformin", "Lisinopril", "Atorvastatin", "Omeprazole", "Salbutamol inhaler"][i % 5]!,
+            dosage: "As directed",
+            frequency: "BID",
+          },
+        });
+      })
+    );
+  }
 
   const y = now.getFullYear();
   const m = now.getMonth();
@@ -424,8 +506,8 @@ async function main() {
     postedAt: Date;
     status: RevenueStatus;
   }[] = [];
-  for (const monthOffset of [0, -1, -2] as const) {
-    for (let i = 0; i < 5; i++) {
+  for (const monthOffset of [0, -1, -2, -3] as const) {
+    for (let i = 0; i < 12; i++) {
       orgWideOrphans.push({
         tenantId: t0.id,
         clinicId: clinics[(i + Math.abs(monthOffset)) % clinics.length]!.id,
@@ -457,8 +539,8 @@ async function main() {
     status: ExpenseStatus;
   }[] = [];
   let expIdx = 0;
-  for (const monthOffset of [0, -1, -2] as const) {
-    for (let i = 0; i < 8; i++) {
+  for (const monthOffset of [0, -1, -2, -3] as const) {
+    for (let i = 0; i < 14; i++) {
       expenseRows.push({
         tenantId: t0.id,
         clinicId: clinics[(expIdx + i) % clinics.length]!.id,
@@ -496,42 +578,25 @@ async function main() {
     })),
   });
 
-  const demoAppointmentStatuses: AppointmentStatus[] = [
+  const appointmentStatusCycle: AppointmentStatus[] = [
     AppointmentStatus.SCHEDULED,
     AppointmentStatus.CONFIRMED,
     AppointmentStatus.CHECKED_IN,
     AppointmentStatus.CANCELLED,
-    AppointmentStatus.COMPLETED,
-    AppointmentStatus.SCHEDULED,
-    AppointmentStatus.CONFIRMED,
-    AppointmentStatus.CHECKED_IN,
-    AppointmentStatus.CANCELLED,
-    AppointmentStatus.COMPLETED,
-    AppointmentStatus.CONFIRMED,
-    AppointmentStatus.SCHEDULED,
-    AppointmentStatus.CHECKED_IN,
-    AppointmentStatus.CANCELLED,
-    AppointmentStatus.CONFIRMED,
-    AppointmentStatus.COMPLETED,
-    AppointmentStatus.SCHEDULED,
-    AppointmentStatus.CONFIRMED,
-    AppointmentStatus.CHECKED_IN,
-    AppointmentStatus.CANCELLED,
-    AppointmentStatus.SCHEDULED,
     AppointmentStatus.COMPLETED,
   ];
 
   await prisma.appointment.createMany({
-    data: demoAppointmentStatuses.map((st, i) => {
-      const n = demoAppointmentStatuses.length;
+    data: Array.from({ length: APPOINTMENT_SEED_COUNT }, (_, i) => {
+      const st = appointmentStatusCycle[i % appointmentStatusCycle.length]!;
       const baseDay = Math.max(1, Math.min(28, now.getDate()));
-      const day = Math.min(28, baseDay + (n - i));
+      const day = Math.min(28, Math.max(1, baseDay + ((APPOINTMENT_SEED_COUNT - i) % 27)));
       const start = new Date(now.getFullYear(), now.getMonth(), day, 8 + (i % 9), (i * 13) % 60, 0);
       const end = new Date(start.getTime() + 30 * 60000);
       return {
         tenantId: t0.id,
         clinicId: clinics[i % clinics.length]!.id,
-        patientId: patients[(i + 2) % patients.length]!.id,
+        patientId: patientIdsOrdered[(i + 2) % patientIdsOrdered.length]!,
         clinicianId: i % 2 === 0 ? physician.id : physician2.id,
         startsAt: start,
         endsAt: end,
@@ -542,12 +607,12 @@ async function main() {
   });
 
   await prisma.auditLog.createMany({
-    data: Array.from({ length: 15 }, (_, i) => ({
+    data: Array.from({ length: AUDIT_SEED_COUNT }, (_, i) => ({
       tenantId: t0.id,
       actorId: usersForAudit[i % usersForAudit.length]!.id,
       clinicId: clinics[i % clinics.length]!.id,
-      action: ["LOGIN", "CREATE_PATIENT", "UPDATE_ENCOUNTER", "POST_REVENUE", "APPROVE_EXPENSE", "BOOK_APPT", "HR_LEAVE", "FINALIZE_ENCOUNTER", "EXPORT", "SETTINGS", "INVITE", "ROLE_CHANGE", "BACKUP", "SYNC", "REPORT_RUN"][i],
-      resource: ["User", "Patient", "Encounter", "RevenueEntry", "Expense", "Appointment", "LeaveRequest", "Employee", "Clinic", "Tenant", "AuditLog", "FeatureFlag", "Diagnosis", "Attendance", "Report"][i],
+      action: ["LOGIN", "CREATE_PATIENT", "UPDATE_ENCOUNTER", "POST_REVENUE", "APPROVE_EXPENSE", "BOOK_APPT", "HR_LEAVE", "FINALIZE_ENCOUNTER", "EXPORT", "SETTINGS", "INVITE", "ROLE_CHANGE", "BACKUP", "SYNC", "REPORT_RUN"][i % 15],
+      resource: ["User", "Patient", "Encounter", "RevenueEntry", "Expense", "Appointment", "LeaveRequest", "Employee", "Clinic", "Tenant", "AuditLog", "FeatureFlag", "Diagnosis", "Attendance", "Report"][i % 15],
       resourceId: users[0]!.id,
       metadata: { index: i, demo: true },
     })),

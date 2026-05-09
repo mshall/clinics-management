@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { AppointmentStatus, EncounterStatus, Prisma, UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
-import { CLINIC_SCOPE_ROLES } from "../common/clinic-scope";
+import { CLINIC_SCOPE_ROLES, fetchPhysicianNetworkClinicIds } from "../common/clinic-scope";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
@@ -169,10 +169,21 @@ export class AppointmentsService {
     }
 
     const clinicId = clinicIdStr?.trim();
-    if (clinicId) and.push({ clinicId });
 
     if (viewer && isPhysicianRole(viewer.role)) {
+      const net = await fetchPhysicianNetworkClinicIds(this.prisma, tenantId, viewer.userId);
+      if (!net.length) {
+        return paginate([], 0, page, pageSize);
+      }
       and.push({ clinicianId: viewer.userId });
+      if (clinicId) {
+        if (!net.includes(clinicId)) {
+          return paginate([], 0, page, pageSize);
+        }
+        and.push({ clinicId });
+      } else {
+        and.push({ clinicId: { in: net } });
+      }
     } else if (viewer && CLINIC_SCOPE_ROLES.has(viewer.role)) {
       const scopes = await this.prisma.clinicAdminScope.findMany({
         where: { tenantId, userId: viewer.userId },
@@ -182,7 +193,16 @@ export class AppointmentsService {
       if (!ids.length) {
         return paginate([], 0, page, pageSize);
       }
-      and.push({ clinicId: { in: ids } });
+      if (clinicId) {
+        if (!ids.includes(clinicId)) {
+          return paginate([], 0, page, pageSize);
+        }
+        and.push({ clinicId });
+      } else {
+        and.push({ clinicId: { in: ids } });
+      }
+    } else if (clinicId) {
+      and.push({ clinicId });
     }
 
     const where: Prisma.AppointmentWhereInput = { AND: and };

@@ -25,6 +25,8 @@ import type { Paginated } from "@/lib/paginated";
 import { useAuthStore } from "@/stores/auth-store";
 import { defaultMonthRange, useDateRangeStore } from "@/stores/date-range-store";
 
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
 /** Encounters ledger must always send a valid YYYY-MM-DD pair; avoid half-empty persisted UI state. */
 function encounterLedgerFromTo(from: string, to: string): { from: string; to: string } {
   const f = from?.trim() ?? "";
@@ -33,7 +35,10 @@ function encounterLedgerFromTo(from: string, to: string): { from: string; to: st
   return defaultMonthRange();
 }
 
-const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+/** Avoid firing authenticated API calls before persisted auth has rehydrated (prevents naked `/api` requests). */
+function useHasAuthToken(): boolean {
+  return useAuthStore((s) => Boolean(s.accessToken));
+}
 
 function resolveRevenueRange(from?: string, to?: string): { from: string; to: string } {
   const d = defaultMonthRange();
@@ -100,20 +105,22 @@ function patientsQs(p: PatientsListParams): URLSearchParams {
 }
 
 export function usePatientsQuery(params: PatientsListParams) {
+  const hasToken = useHasAuthToken();
   const { enabled = true, ...listParams } = params;
   const q = patientsQs(listParams);
   return useQuery({
     queryKey: ["patients", Object.fromEntries(q.entries())],
     queryFn: () => apiGet<Paginated<PatientDto>>(`/api/v1/patients?${q.toString()}`),
-    enabled,
+    enabled: enabled && hasToken,
   });
 }
 
 export function usePatientQuery(id: string | undefined) {
+  const hasToken = useHasAuthToken();
   return useQuery({
     queryKey: ["patient", id],
     queryFn: () => apiGet<PatientDto>(`/api/v1/patients/${id}`),
-    enabled: Boolean(id),
+    enabled: Boolean(id) && hasToken,
   });
 }
 
@@ -127,17 +134,20 @@ export function useDashboardKpisQuery() {
 }
 
 export function useClinicsQuery() {
+  const hasToken = useHasAuthToken();
   return useQuery({
     queryKey: ["clinics"],
     queryFn: () => apiGet<ClinicDto[]>("/api/v1/clinics"),
+    enabled: hasToken,
   });
 }
 
 export function useClinicQuery(id: string | undefined) {
+  const hasToken = useHasAuthToken();
   return useQuery({
     queryKey: ["clinic", id],
     queryFn: () => apiGet<ClinicDetailDto>(`/api/v1/clinics/${id}`),
-    enabled: Boolean(id),
+    enabled: Boolean(id) && hasToken,
   });
 }
 
@@ -157,6 +167,7 @@ export interface EncountersListParams {
 }
 
 export function useEncountersQuery(params: EncountersListParams = {}) {
+  const hasToken = useHasAuthToken();
   const viewerId = useAuthStore((s) => s.user?.id ?? "");
   const viewerRole = useAuthStore((s) => s.user?.role ?? "");
   const storeFrom = useDateRangeStore((s) => s.from);
@@ -178,7 +189,7 @@ export function useEncountersQuery(params: EncountersListParams = {}) {
   if (params.sortBy) q.set("sortBy", params.sortBy);
   if (params.sortOrder) q.set("sortOrder", params.sortOrder);
   const qs = q.toString();
-  const enabled = params.enabled !== false;
+  const enabled = (params.enabled !== false) && hasToken;
   return useQuery({
     queryKey: patientChart
       ? [
@@ -211,12 +222,13 @@ export function useEncountersQuery(params: EncountersListParams = {}) {
 }
 
 export function useEncounterQuery(id: string | undefined) {
+  const hasToken = useHasAuthToken();
   const viewerId = useAuthStore((s) => s.user?.id ?? "");
   const viewerRole = useAuthStore((s) => s.user?.role ?? "");
   return useQuery({
     queryKey: ["encounter", id, viewerId, viewerRole],
     queryFn: () => apiGet<EncounterDetailDto>(`/api/v1/encounters/${id}`),
-    enabled: Boolean(id),
+    enabled: Boolean(id) && hasToken,
   });
 }
 
@@ -276,6 +288,7 @@ export interface RevenueListParams {
 }
 
 export function useRevenueQuery(params: RevenueListParams) {
+  const hasToken = useHasAuthToken();
   const viewerId = useAuthStore((s) => s.user?.id ?? "");
   const { enabled = true, ...p } = params;
   const { from, to } = resolveRevenueRange(p.from, p.to);
@@ -302,11 +315,12 @@ export function useRevenueQuery(params: RevenueListParams) {
       p.sortOrder,
     ],
     queryFn: () => apiGet<Paginated<RevenueEntryDto>>(`/api/v1/revenue?${q.toString()}`),
-    enabled,
+    enabled: enabled && hasToken,
   });
 }
 
 export function useRevenueTotalsQuery(params: { from: string; to: string; clinicId?: string; clinicianId?: string }) {
+  const hasToken = useHasAuthToken();
   const viewerId = useAuthStore((s) => s.user?.id ?? "");
   const { from, to } = resolveRevenueRange(params.from, params.to);
   const q = new URLSearchParams();
@@ -317,6 +331,7 @@ export function useRevenueTotalsQuery(params: { from: string; to: string; clinic
   return useQuery({
     queryKey: ["revenue", "totals", viewerId, from, to, params.clinicId ?? "", params.clinicianId ?? ""],
     queryFn: () => apiGet<RevenueTotalsDto>(`/api/v1/revenue/totals?${q.toString()}`),
+    enabled: hasToken,
   });
 }
 
@@ -438,6 +453,7 @@ export interface AppointmentsListParams extends PagedRangeParams {
 }
 
 export function useAppointmentsQuery(params: AppointmentsListParams = {}) {
+  const hasToken = useHasAuthToken();
   const viewerId = useAuthStore((s) => s.user?.id ?? "");
   const viewerRole = useAuthStore((s) => s.user?.role ?? "");
   const { enabled = true, bookableOnly, ...rest } = params;
@@ -457,21 +473,23 @@ export function useAppointmentsQuery(params: AppointmentsListParams = {}) {
   return useQuery({
     queryKey: ["appointments", viewerId, viewerRole, Object.fromEntries(q.entries())],
     queryFn: () => apiGet<Paginated<AppointmentDto>>(`/api/v1/appointments?${q.toString()}`),
-    enabled,
+    enabled: enabled && hasToken,
   });
 }
 
 export function useAppointmentQuery(id: string | undefined) {
+  const hasToken = useHasAuthToken();
   const viewerId = useAuthStore((s) => s.user?.id ?? "");
   const viewerRole = useAuthStore((s) => s.user?.role ?? "");
   return useQuery({
     queryKey: ["appointment", id, viewerId, viewerRole],
     queryFn: () => apiGet<AppointmentDto>(`/api/v1/appointments/${id}`),
-    enabled: Boolean(id),
+    enabled: Boolean(id) && hasToken,
   });
 }
 
 export function useUsersQuery(params: PagedRangeParams & { enabled?: boolean } = {}) {
+  const hasToken = useHasAuthToken();
   const { enabled = true, ...p } = params;
   const q = new URLSearchParams();
   q.set("page", String(p.page ?? 1));
@@ -479,14 +497,16 @@ export function useUsersQuery(params: PagedRangeParams & { enabled?: boolean } =
   return useQuery({
     queryKey: ["users", p.page ?? 1, p.pageSize ?? 100],
     queryFn: () => apiGet<Paginated<UserListItemDto>>(`/api/v1/users?${q.toString()}`),
-    enabled,
+    enabled: enabled && hasToken,
   });
 }
 
 export function useAdminOverviewQuery() {
+  const hasToken = useHasAuthToken();
   return useQuery({
     queryKey: ["admin", "overview"],
     queryFn: () => apiGet<AdminOverviewDto>("/api/v1/admin/overview"),
+    enabled: hasToken,
   });
 }
 

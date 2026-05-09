@@ -20,7 +20,7 @@ import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { resolveLedgerListingRange } from "../common/reporting-range";
 import { paginate, parsePageParams } from "../common/pagination";
 import type { JwtUser } from "../auth/jwt-user";
-import { CLINIC_SCOPE_ROLES } from "../common/clinic-scope";
+import { CLINIC_SCOPE_ROLES, fetchPhysicianNetworkClinicIds } from "../common/clinic-scope";
 import { PrismaService } from "../prisma/prisma.service";
 import type { AddDiagnosisDto } from "./dto/add-diagnosis.dto";
 import type { AddEncounterMedicationDto } from "./dto/add-encounter-medication.dto";
@@ -186,6 +186,11 @@ export class EncountersService {
     };
     if (viewer && isPhysicianRole(viewer.role)) {
       where.clinicianId = viewer.userId;
+      const net = await fetchPhysicianNetworkClinicIds(this.prisma, tenantId, viewer.userId);
+      if (!net.length) {
+        return paginate([], 0, page, pageSize);
+      }
+      where.clinicId = { in: net };
     } else if (viewer && CLINIC_SCOPE_ROLES.has(viewer.role)) {
       const scopes = await this.prisma.clinicAdminScope.findMany({
         where: { tenantId, userId: viewer.userId },

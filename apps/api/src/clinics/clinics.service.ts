@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma, UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
+import { fetchPhysicianNetworkClinicIds } from "../common/clinic-scope";
 import { PrismaService } from "../prisma/prisma.service";
 import type { CreateClinicDto } from "./dto/create-clinic.dto";
 import type { ClinicDetailDto } from "./dto/clinic-detail.dto";
@@ -27,6 +28,10 @@ export class ClinicsService {
       include: { parent: { select: { id: true, nameEn: true, nameAr: true } } },
     });
     if (!row) throw new NotFoundException("Clinic not found");
+    if (user.role === UserRole.PHYSICIAN) {
+      const net = await fetchPhysicianNetworkClinicIds(this.prisma, tenantId, user.userId);
+      if (!net.includes(id)) throw new NotFoundException("Clinic not found");
+    }
     if (user.role === UserRole.CLINIC_ADMIN || user.role === UserRole.BRANCH_MANAGER) {
       const scope = await this.prisma.clinicAdminScope.findFirst({
         where: { tenantId, userId: user.userId, clinicId: id },
@@ -56,7 +61,11 @@ export class ClinicsService {
 
   async list(tenantId: string, user: JwtUser): Promise<ClinicDto[]> {
     let where: Prisma.ClinicWhereInput = { tenantId };
-    if (user.role === UserRole.CLINIC_ADMIN || user.role === UserRole.BRANCH_MANAGER) {
+    if (user.role === UserRole.PHYSICIAN) {
+      const ids = await fetchPhysicianNetworkClinicIds(this.prisma, tenantId, user.userId);
+      if (!ids.length) return [];
+      where = { tenantId, id: { in: ids } };
+    } else if (user.role === UserRole.CLINIC_ADMIN || user.role === UserRole.BRANCH_MANAGER) {
       const scopes = await this.prisma.clinicAdminScope.findMany({
         where: { tenantId, userId: user.userId },
         select: { clinicId: true },

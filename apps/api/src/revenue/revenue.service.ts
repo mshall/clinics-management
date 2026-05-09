@@ -2,8 +2,8 @@ import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/com
 import { Prisma, RevenueStatus, UserRole } from "@prisma/client";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
-import { fetchClinicScopeIds } from "../common/clinic-scope";
-import { resolveReportingRange } from "../common/reporting-range";
+import { fetchClinicScopeIds, fetchPhysicianNetworkClinicIds } from "../common/clinic-scope";
+import { resolveLedgerListingRange } from "../common/reporting-range";
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
 import type { CreateRevenueDto } from "./dto/create-revenue.dto";
@@ -83,24 +83,37 @@ export class RevenueService {
     user: JwtUser
   ) {
     this.assertLedgerAccess(user.role);
-    const { start, end } = resolveReportingRange(fromStr, toStr);
+    const { start, end } = resolveLedgerListingRange(fromStr, toStr);
     const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
     const clinicId = clinicIdStr?.trim();
 
     let clinicScope: Prisma.RevenueEntryWhereInput = {};
-    const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
-    if (scopeIds !== null) {
-      if (!scopeIds.length) {
+    if (user.role === UserRole.PHYSICIAN) {
+      const net = await fetchPhysicianNetworkClinicIds(this.prisma, tenantId, user.userId);
+      if (!net.length) {
         return paginate([], 0, page, pageSize);
       }
       if (clinicId) {
-        if (!scopeIds.includes(clinicId)) throw new ForbiddenException("Clinic is outside your assigned scope");
+        if (!net.includes(clinicId)) throw new ForbiddenException("Clinic is outside your assigned scope");
         clinicScope = { clinicId };
       } else {
-        clinicScope = { clinicId: { in: scopeIds } };
+        clinicScope = { clinicId: { in: net } };
       }
-    } else if (clinicId) {
-      clinicScope = { clinicId };
+    } else {
+      const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
+      if (scopeIds !== null) {
+        if (!scopeIds.length) {
+          return paginate([], 0, page, pageSize);
+        }
+        if (clinicId) {
+          if (!scopeIds.includes(clinicId)) throw new ForbiddenException("Clinic is outside your assigned scope");
+          clinicScope = { clinicId };
+        } else {
+          clinicScope = { clinicId: { in: scopeIds } };
+        }
+      } else if (clinicId) {
+        clinicScope = { clinicId };
+      }
     }
 
     const where: Prisma.RevenueEntryWhereInput = {
@@ -138,23 +151,36 @@ export class RevenueService {
     user: JwtUser
   ): Promise<RevenueTotalsDto> {
     this.assertLedgerAccess(user.role);
-    const { start, end } = resolveReportingRange(fromStr, toStr);
+    const { start, end } = resolveLedgerListingRange(fromStr, toStr);
     const clinicId = clinicIdStr?.trim();
 
     let clinicScope: Prisma.RevenueEntryWhereInput = {};
-    const scopeIdsTot = await fetchClinicScopeIds(this.prisma, tenantId, user);
-    if (scopeIdsTot !== null) {
-      if (!scopeIdsTot.length) {
+    if (user.role === UserRole.PHYSICIAN) {
+      const net = await fetchPhysicianNetworkClinicIds(this.prisma, tenantId, user.userId);
+      if (!net.length) {
         return { grossTotal: 0, netTotal: 0 };
       }
       if (clinicId) {
-        if (!scopeIdsTot.includes(clinicId)) throw new ForbiddenException("Clinic is outside your assigned scope");
+        if (!net.includes(clinicId)) throw new ForbiddenException("Clinic is outside your assigned scope");
         clinicScope = { clinicId };
       } else {
-        clinicScope = { clinicId: { in: scopeIdsTot } };
+        clinicScope = { clinicId: { in: net } };
       }
-    } else if (clinicId) {
-      clinicScope = { clinicId };
+    } else {
+      const scopeIdsTot = await fetchClinicScopeIds(this.prisma, tenantId, user);
+      if (scopeIdsTot !== null) {
+        if (!scopeIdsTot.length) {
+          return { grossTotal: 0, netTotal: 0 };
+        }
+        if (clinicId) {
+          if (!scopeIdsTot.includes(clinicId)) throw new ForbiddenException("Clinic is outside your assigned scope");
+          clinicScope = { clinicId };
+        } else {
+          clinicScope = { clinicId: { in: scopeIdsTot } };
+        }
+      } else if (clinicId) {
+        clinicScope = { clinicId };
+      }
     }
 
     const where: Prisma.RevenueEntryWhereInput = {
@@ -208,7 +234,7 @@ export class RevenueService {
     if (user.role !== UserRole.GROUP_ADMIN && user.role !== UserRole.CLINIC_ADMIN && user.role !== UserRole.BRANCH_MANAGER) {
       throw new ForbiddenException("Only administrators may view clinic revenue breakdown");
     }
-    const { start, end } = resolveReportingRange(fromStr, toStr);
+    const { start, end } = resolveLedgerListingRange(fromStr, toStr);
     let scopeClinicIds: string[] | null = null;
     const bdScope = await fetchClinicScopeIds(this.prisma, tenantId, user);
     if (bdScope !== null) {

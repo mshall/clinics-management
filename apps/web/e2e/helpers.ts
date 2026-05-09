@@ -5,6 +5,19 @@ export async function login(page: Page, email: string, password = "demo"): Promi
   await page.goto("/login");
   await page.getByLabel(/email/i).fill(email);
   await page.getByLabel(/^password$/i).fill(password);
+  const loginPost = page.waitForResponse(
+    (r) => r.url().includes("/api/v1/auth/login") && r.request().method() === "POST",
+    { timeout: 120_000 },
+  );
   await page.getByRole("button", { name: /sign in/i }).click();
-  await page.waitForURL((u) => !u.pathname.includes("login"), { timeout: 20_000 });
+  const res = await loginPost;
+  if (!res.ok()) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Login API ${res.status()}: ${body.slice(0, 500)}`);
+  }
+  await page.waitForURL((u) => !u.pathname.includes("login"), {
+    timeout: 120_000,
+    /** Heavy /patients first paint can delay domcontentloaded; commit is enough for URL change. */
+    waitUntil: "commit",
+  });
 }

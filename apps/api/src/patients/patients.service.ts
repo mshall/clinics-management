@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Gender, Prisma } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
-import { fetchClinicScopeIds } from "../common/clinic-scope";
+import { fetchPatientListClinicScopeIds } from "../common/clinic-scope";
 import { PatientDto } from "../common/dto/patient.dto";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
@@ -117,7 +117,7 @@ export class PatientsService {
   }
 
   async listPaginated(tenantId: string, q: PatientListQuery, user: JwtUser) {
-    const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
+    const scopeIds = await fetchPatientListClinicScopeIds(this.prisma, tenantId, user);
     if (scopeIds !== null && !scopeIds.length) {
       const { page, pageSize } = parsePageParams(q.page, q.pageSize);
       return paginate([], 0, page, pageSize);
@@ -140,13 +140,14 @@ export class PatientsService {
   }
 
   async getById(tenantId: string, id: string, user: JwtUser): Promise<PatientDto> {
-    const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
+    const scopeIds = await fetchPatientListClinicScopeIds(this.prisma, tenantId, user);
     const row = await this.prisma.patient.findFirst({
       where: { id, tenantId, deletedAt: null },
       include: { homeBranch: { select: { nameEn: true } } },
     });
     if (!row) throw new NotFoundException("Patient not found");
-    if (scopeIds?.length) {
+    if (scopeIds !== null) {
+      if (!scopeIds.length) throw new NotFoundException("Patient not found");
       const homeOk = row.homeBranchId && scopeIds.includes(row.homeBranchId);
       if (!homeOk) {
         const visitOk = await this.prisma.encounter.findFirst({
@@ -174,8 +175,8 @@ export class PatientsService {
 
   private async assertHomeBranchInScope(tenantId: string, user: JwtUser, homeBranchId: string | null | undefined): Promise<void> {
     if (!homeBranchId) return;
-    const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
-    if (scopeIds !== null && !scopeIds.includes(homeBranchId)) {
+    const scopeIds = await fetchPatientListClinicScopeIds(this.prisma, tenantId, user);
+    if (scopeIds !== null && (!scopeIds.length || !scopeIds.includes(homeBranchId))) {
       throw new ForbiddenException("homeBranchId is outside clinics you manage");
     }
   }
