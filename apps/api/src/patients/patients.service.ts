@@ -1,4 +1,10 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from "@nestjs/common";
 import { Gender, Prisma } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { fetchPatientListClinicScopeIds } from "../common/clinic-scope";
@@ -24,6 +30,8 @@ export interface PatientListQuery {
 
 @Injectable()
 export class PatientsService {
+  private readonly logger = new Logger(PatientsService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   private map(p: {
@@ -48,7 +56,13 @@ export class PatientsService {
     dto.lastNameEn = p.lastNameEn;
     dto.firstNameAr = p.firstNameAr;
     dto.lastNameAr = p.lastNameAr;
-    dto.dob = p.dob.toISOString().slice(0, 10);
+    const dob = p.dob instanceof Date && !Number.isNaN(p.dob.getTime()) ? p.dob : null;
+    if (!dob) {
+      this.logger.error(`Patient ${p.id} has invalid dob; fix data in DB`);
+      dto.dob = "1900-01-01";
+    } else {
+      dto.dob = dob.toISOString().slice(0, 10);
+    }
     dto.gender = p.gender as PatientDto["gender"];
     dto.phone = p.phone;
     dto.email = p.email;
