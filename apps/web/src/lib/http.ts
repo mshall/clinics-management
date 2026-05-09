@@ -103,6 +103,22 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
   }
 }
 
+export async function apiPut<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(apiUrl(path), {
+    method: "PUT",
+    headers: { ...authHeadersJson(), "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (res.status === 401) {
+    useAuthStore.getState().signOut();
+  }
+  if (!res.ok) {
+    const parsed = await parseJson(res);
+    throw new ApiError(messageFromErrorBody(res.status, parsed, res.statusText || "Request failed"), res.status, parsed);
+  }
+  return (await res.json()) as T;
+}
+
 export async function apiPostFormData<T>(path: string, formData: FormData): Promise<T> {
   const token = useAuthStore.getState().accessToken;
   const headers: Record<string, string> = { Accept: "application/json" };

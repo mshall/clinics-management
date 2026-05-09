@@ -15,6 +15,8 @@ import { useAdminOverviewQuery, useClinicsQuery, useTenantsQuery } from "@/lib/a
 import { ApiError, apiPatch, apiPost } from "@/lib/http";
 import { MIDDLE_EAST_COUNTRY_OPTIONS } from "@/lib/middle-east-countries";
 import { useAuthStore } from "@/stores/auth-store";
+import { AdminCreateEmployeePanel } from "./admin-create-employee-panel";
+import { AdminDataExplorerPanel } from "./admin-data-explorer-panel";
 import { AdminGovernancePanel } from "./admin-governance-panel";
 
 const USER_ROLES = [
@@ -35,13 +37,20 @@ export function AdminPage() {
   const authUser = useAuthStore((s) => s.user);
   const isGroupAdmin = authUser?.role === "group_admin";
   const isClinicAdmin = authUser?.role === "clinic_admin";
+  const isPlatformSuperAdmin = Boolean(authUser?.platformSuperAdmin);
   const overview = useAdminOverviewQuery();
   const { data: clinics = [] } = useClinicsQuery();
   const [tPage, setTPage] = useState(1);
   const [tPs, setTPs] = useState(10);
   const [tSortBy, setTSortBy] = useState("name");
   const [tSortOrder, setTSortOrder] = useState<SortOrder>("asc");
-  const tenants = useTenantsQuery({ page: tPage, pageSize: tPs, sortBy: tSortBy, sortOrder: tSortOrder, enabled: isGroupAdmin });
+  const tenants = useTenantsQuery({
+    page: tPage,
+    pageSize: tPs,
+    sortBy: tSortBy,
+    sortOrder: tSortOrder,
+    enabled: isGroupAdmin && isPlatformSuperAdmin,
+  });
 
   const [clParentId, setClParentId] = useState("");
   const [clNameEn, setClNameEn] = useState("");
@@ -224,8 +233,11 @@ export function AdminPage() {
     onError: (e: unknown) => console.error(e),
   });
 
-  const [adminSection, setAdminSection] = useState<"clinics" | "organization" | "governance">("clinics");
+  const [adminSection, setAdminSection] = useState<"clinics" | "organization" | "data" | "governance">("clinics");
   const [feeDraft, setFeeDraft] = useState("");
+  useEffect(() => {
+    if (!isPlatformSuperAdmin && adminSection === "data") setAdminSection("clinics");
+  }, [isPlatformSuperAdmin, adminSection]);
   useEffect(() => {
     const v = overview.data?.currentTenant?.defaultVisitFee;
     if (v != null && Number.isFinite(Number(v))) setFeeDraft(String(v));
@@ -248,9 +260,10 @@ export function AdminPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("nav.governance")}</h1>
-          <p className="text-muted-foreground">{t("admin.governanceSubtitle")}</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("nav.admin", "Administration")}</h1>
+          <p className="text-muted-foreground">{t("admin.clinicAdminSubtitle", "Staff onboarding and clinic governance.")}</p>
         </div>
+        <AdminCreateEmployeePanel />
         <AdminGovernancePanel />
       </div>
     );
@@ -276,6 +289,11 @@ export function AdminPage() {
         <Button type="button" size="sm" variant={adminSection === "organization" ? "default" : "outline"} onClick={() => setAdminSection("organization")}>
           {t("admin.tabOrganization", "Organization & settings")}
         </Button>
+        {isPlatformSuperAdmin ? (
+          <Button type="button" size="sm" variant={adminSection === "data" ? "default" : "outline"} onClick={() => setAdminSection("data")}>
+            {t("admin.tabDataExplorer", "Data explorer")}
+          </Button>
+        ) : null}
         <Button type="button" size="sm" variant={adminSection === "governance" ? "default" : "outline"} onClick={() => setAdminSection("governance")}>
           {t("admin.tabGovernance")}
         </Button>
@@ -283,8 +301,14 @@ export function AdminPage() {
 
       {adminSection === "governance" ? (
         <AdminGovernancePanel />
+      ) : adminSection === "data" ? (
+        isPlatformSuperAdmin ? (
+          <AdminDataExplorerPanel />
+        ) : null
       ) : adminSection === "organization" ? (
         <div className="space-y-6">
+          <AdminCreateEmployeePanel />
+
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
@@ -686,6 +710,7 @@ export function AdminPage() {
         </CardContent>
       </Card>
 
+      {isPlatformSuperAdmin ? (
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
           <CardTitle className="text-base">{t("admin.allTenants")}</CardTitle>
@@ -778,6 +803,7 @@ export function AdminPage() {
           />
         </CardContent>
       </Card>
+      ) : null}
         </div>
       ) : null}
     </div>

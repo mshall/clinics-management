@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { useAdminAuditLogsQuery } from "@/lib/api-hooks";
 import type { AdminAuditLogItemDto } from "@/lib/api-types";
+import { ClinicNavTabsPanel } from "./clinic-nav-tabs-panel";
 
 export function AdminGovernancePanel() {
   const { t, i18n } = useTranslation();
@@ -33,6 +34,7 @@ export function AdminGovernancePanel() {
 
   return (
     <div className="space-y-4">
+      <ClinicNavTabsPanel />
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{t("admin.tabGovernance")}</CardTitle>

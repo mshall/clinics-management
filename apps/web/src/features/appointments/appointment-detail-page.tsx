@@ -207,7 +207,20 @@ export function AppointmentDetailPage() {
             <Link to="/appointments">← {t("appointments.backToList", "Back to appointments")}</Link>
           </Button>
           <h1 className="text-2xl font-bold tracking-tight">{t("appointments.detailTitle", "Appointment")}</h1>
-          <p className="text-muted-foreground ltr-nums text-sm">{apt.id}</p>
+          <p className="text-muted-foreground text-sm">
+            {apt.patientName ? (
+              <span>
+                {t("appointments.patient", "Patient")}: <span className="font-medium text-foreground">{apt.patientName}</span>
+              </span>
+            ) : null}
+            {apt.patientName && apt.clinicianName ? <span className="text-muted-foreground"> · </span> : null}
+            {apt.clinicianName ? (
+              <span>
+                {t("appointments.clinician", "Clinician")}: <span className="font-medium text-foreground">{apt.clinicianName}</span>
+              </span>
+            ) : null}
+          </p>
+          <p className="text-xs text-muted-foreground ltr-nums">{t("appointments.referenceId", "Reference")}: {apt.id}</p>
         </div>
         <AppointmentStatusBadge status={apt.status} />
       </div>

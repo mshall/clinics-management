@@ -86,7 +86,7 @@ export class HrController {
   @ApiOperation({ summary: "Hire / register employee" })
   @ApiCreatedResponse({ type: EmployeeDto })
   createEmployee(@CurrentUser() user: JwtUser, @Body() body: CreateEmployeeDto) {
-    return this.hr.createEmployee(user.tenantId, body);
+    return this.hr.createEmployee(user.tenantId, body, user);
   }
 
   @Post("employees/:id/id-document")
@@ -113,7 +113,7 @@ export class HrController {
     @Param("id") id: string,
     @UploadedFile() file?: Express.Multer.File
   ) {
-    return this.hr.attachEmployeeIdDocument(user.tenantId, id, file);
+    return this.hr.attachEmployeeIdDocument(user.tenantId, id, user, file);
   }
 
   @Get("attendance")

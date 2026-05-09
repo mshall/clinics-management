@@ -1,10 +1,12 @@
 import { Navigate } from "react-router-dom";
+import { showNavItem } from "@/lib/nav-policy";
 import { canViewRevenue } from "@/lib/permissions";
 import { useAuthStore } from "@/stores/auth-store";
 import { RevenuePage } from "./revenue-page";
 
 export function RevenueGate() {
   const role = useAuthStore((s) => s.user?.role);
-  if (!canViewRevenue(role)) return <Navigate to="/" replace />;
+  const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
+  if (!canViewRevenue(role) || !showNavItem(role, "revenue", navTabKeys)) return <Navigate to="/" replace />;
   return <RevenuePage />;
 }

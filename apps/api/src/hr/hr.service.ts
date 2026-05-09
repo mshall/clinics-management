@@ -1,9 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { AttendanceStatus, LeaveStatus, Prisma } from "@prisma/client";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { AttendanceStatus, LeaveStatus, Prisma, UserRole } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { createReadStream } from "fs";
 import * as fs from "fs/promises";
 import * as path from "path";
+import type { JwtUser } from "../auth/jwt-user";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
@@ -19,9 +20,30 @@ const ALLOWED_ID_DOC_MIME = new Set(["application/pdf", "image/jpeg", "image/png
 
 type IdDocFile = { buffer: Buffer; originalname: string; mimetype: string; size: number };
 
+const EMPLOYEE_MANAGE_ROLES = new Set<UserRole>([
+  UserRole.GROUP_ADMIN,
+  UserRole.CLINIC_ADMIN,
+  UserRole.HR_OFFICER,
+  UserRole.BRANCH_MANAGER,
+]);
+
 @Injectable()
 export class HrService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private assertCanManageEmployees(viewer: JwtUser): void {
+    if (!EMPLOYEE_MANAGE_ROLES.has(viewer.role)) {
+      throw new ForbiddenException("You do not have permission to manage employees");
+    }
+  }
+
+  private async assertClinicAdminCanUseClinic(tenantId: string, viewer: JwtUser, clinicId: string): Promise<void> {
+    if (viewer.role !== UserRole.CLINIC_ADMIN) return;
+    const scope = await this.prisma.clinicAdminScope.findFirst({
+      where: { tenantId, userId: viewer.userId, clinicId },
+    });
+    if (!scope) throw new ForbiddenException("Clinic is outside your assignment");
+  }
 
   private employeeUploadRoot(): string {
     return path.join(process.cwd(), "uploads", "employees");
@@ -177,7 +199,9 @@ export class HrService {
     return this.mapEmployee(row);
   }
 
-  async createEmployee(tenantId: string, dto: CreateEmployeeDto): Promise<EmployeeDto> {
+  async createEmployee(tenantId: string, dto: CreateEmployeeDto, viewer: JwtUser): Promise<EmployeeDto> {
+    this.assertCanManageEmployees(viewer);
+    await this.assertClinicAdminCanUseClinic(tenantId, viewer, dto.clinicId);
     const clinic = await this.prisma.clinic.findFirst({ where: { id: dto.clinicId, tenantId } });
     if (!clinic) throw new BadRequestException("Invalid clinicId");
     const phone = dto.phone.replace(/\D/g, "");
@@ -209,9 +233,11 @@ export class HrService {
     }
   }
 
-  async attachEmployeeIdDocument(tenantId: string, employeeId: string, file?: IdDocFile): Promise<EmployeeDto> {
+  async attachEmployeeIdDocument(tenantId: string, employeeId: string, viewer: JwtUser, file?: IdDocFile): Promise<EmployeeDto> {
+    this.assertCanManageEmployees(viewer);
     const emp = await this.prisma.employee.findFirst({ where: { id: employeeId, tenantId } });
     if (!emp) throw new NotFoundException("Employee not found");
+    await this.assertClinicAdminCanUseClinic(tenantId, viewer, emp.clinicId);
     if (!file?.buffer?.length) throw new BadRequestException("File is required");
     if (file.size > MAX_ID_DOC_BYTES) throw new BadRequestException("File too large (max 15MB)");
     const mime = file.mimetype || "application/octet-stream";

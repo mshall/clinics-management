@@ -97,7 +97,7 @@ async function main() {
       addressAr: "المدينة الطبية، مبنى 1",
       locationUrl: "https://maps.google.com/?q=25.2048,55.2708",
       phone: "+97140000001",
-      email: "dubai@demo.clinic",
+      email: "dubai@kiorly.com",
       licenseNumber: "DHA-DEMO-001",
       defaultLanguage: Locale.en,
     },
@@ -117,7 +117,7 @@ async function main() {
           addressAr: `منطقة ${i + 1}`,
           locationUrl: "https://maps.google.com/?q=25.0,55.2",
           phone: `+971600${String(10000 + i).slice(1)}`,
-          email: `branch${i + 1}@demo.clinic`,
+          email: `branch${i + 1}@kiorly.com`,
           licenseNumber: `MOH-DEMO-${200 + i}`,
           defaultLanguage: i % 3 === 0 ? Locale.ar : Locale.en,
         },
@@ -131,7 +131,7 @@ async function main() {
       prisma.user.create({
         data: {
           tenantId: t0.id,
-          email: i === 0 ? "admin@demo.clinic" : i === 1 ? "physician@demo.clinic" : `staff${i + 1}@demo.clinic`,
+          email: i === 0 ? "admin@kiorly.com" : i === 1 ? "physician@kiorly.com" : `staff${i + 1}@kiorly.com`,
           passwordHash,
           displayName:
             i === 0
@@ -144,11 +144,11 @@ async function main() {
       })
     )
   );
-  const physician = users.find((u) => u.email === "physician@demo.clinic")!;
+  const physician = users.find((u) => u.email === "physician@kiorly.com")!;
   const physician2 = await prisma.user.create({
     data: {
       tenantId: t0.id,
-      email: "doctor2@demo.clinic",
+      email: "doctor2@kiorly.com",
       passwordHash,
       displayName: "Dr. Second Physician",
       role: UserRole.PHYSICIAN,
@@ -158,7 +158,7 @@ async function main() {
   const clinicAdminUser = await prisma.user.create({
     data: {
       tenantId: t0.id,
-      email: "clinicadmin@demo.clinic",
+      email: "clinicadmin@kiorly.com",
       passwordHash,
       displayName: "Demo Clinic Administrator",
       role: UserRole.CLINIC_ADMIN,
@@ -174,7 +174,7 @@ async function main() {
   await prisma.user.create({
     data: {
       tenantId: t0.id,
-      email: "assistant@demo.clinic",
+      email: "assistant@kiorly.com",
       passwordHash,
       displayName: "Demo Clinic Assistant",
       role: UserRole.CLINIC_ASSISTANT,
@@ -184,7 +184,7 @@ async function main() {
   await prisma.user.create({
     data: {
       tenantId: t0.id,
-      email: "nurse@demo.clinic",
+      email: "nurse@kiorly.com",
       passwordHash,
       displayName: "Demo Nurse",
       role: UserRole.NURSE,
@@ -193,7 +193,7 @@ async function main() {
   await prisma.user.create({
     data: {
       tenantId: t0.id,
-      email: "receptionist@demo.clinic",
+      email: "receptionist@kiorly.com",
       passwordHash,
       displayName: "Demo Receptionist",
       role: UserRole.RECEPTIONIST,
@@ -202,7 +202,7 @@ async function main() {
   await prisma.user.create({
     data: {
       tenantId: t0.id,
-      email: "finance@demo.clinic",
+      email: "finance@kiorly.com",
       passwordHash,
       displayName: "Demo Finance Officer",
       role: UserRole.FINANCE_OFFICER,
@@ -211,7 +211,7 @@ async function main() {
   await prisma.user.create({
     data: {
       tenantId: t0.id,
-      email: "branchmgr@demo.clinic",
+      email: "branchmgr@kiorly.com",
       passwordHash,
       displayName: "Demo Branch Manager",
       role: UserRole.BRANCH_MANAGER,
@@ -252,7 +252,7 @@ async function main() {
           employeeNumber: `EMP-${String(i + 1).padStart(5, "0")}`,
           firstNameEn: ["Mona", "Samir", "Lina", "Karim", "Nadia", "Walid", "Reem", "Ziad", "Salma", "Bassam", "Ghada", "Imad", "Yasmin", "Maher", "Hiba"][i] ?? `Emp${i}`,
           lastNameEn: ["Farid", "Antoun", "Haddad", "Sabbagh", "Khoury", "Mansour", "Awad", "Tannous", "Barakat", "Najjar", "Saad", "Rizk", "Fadel", "Hamdan", "Chehab"][i] ?? `Last${i}`,
-          email: `employee${i + 1}@demo.clinic`,
+          email: `employee${i + 1}@kiorly.com`,
           phone: `+97155${String(200000 + i).slice(1)}`,
           jobTitle: ["Nurse", "Receptionist", "HR Specialist", "Lab Tech", "Radiographer", "Pharmacist", "Physiotherapist", "Admin", "Cashier", "Coordinator", "Driver", "Cleaner", "IT", "Security", "Biomed"][i] ?? "Staff",
           employmentType: [EmploymentType.FULL_TIME, EmploymentType.PART_TIME, EmploymentType.CONTRACTOR, EmploymentType.LOCUM][i % 4]!,
@@ -579,7 +579,7 @@ async function main() {
   console.log(
     "Seed OK — main tenant:",
     t0.id,
-    "| logins (password: demo): admin@demo.clinic, physician@demo.clinic, doctor2@demo.clinic, clinicadmin@demo.clinic, assistant@demo.clinic, nurse@demo.clinic, receptionist@demo.clinic, finance@demo.clinic, branchmgr@demo.clinic"
+    "| logins (password: demo): admin@kiorly.com, physician@kiorly.com, doctor2@kiorly.com, clinicadmin@kiorly.com, assistant@kiorly.com, nurse@kiorly.com, receptionist@kiorly.com, finance@kiorly.com, branchmgr@kiorly.com"
   );
 }
 

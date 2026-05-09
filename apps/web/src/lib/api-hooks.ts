@@ -16,6 +16,7 @@ import type {
   HrSummaryDto,
   LeaveRequestDto,
   RevenueEntryDto,
+  ReportsMonthlySeriesDto,
   TenantListItemDto,
   UserListItemDto,
 } from "@/lib/api-types";
@@ -477,6 +478,16 @@ export function useAdminOverviewQuery() {
   return useQuery({
     queryKey: ["admin", "overview"],
     queryFn: () => apiGet<AdminOverviewDto>("/api/v1/admin/overview"),
+  });
+}
+
+export function useReportsMonthlySeriesQuery(months: number) {
+  const m = Math.min(36, Math.max(3, Number.isFinite(months) ? months : 12));
+  const viewerId = useAuthStore((s) => s.user?.id ?? "");
+  const viewerRole = useAuthStore((s) => s.user?.role ?? "");
+  return useQuery({
+    queryKey: ["reports", "monthly-series", m, viewerId, viewerRole],
+    queryFn: () => apiGet<ReportsMonthlySeriesDto>(`/api/v1/reports/monthly-series?months=${m}`),
   });
 }
 

@@ -78,6 +78,8 @@ export interface ExpenseDto {
 export interface RevenueEntryDto {
   id: string;
   clinicId: string;
+  clinicNameEn?: string | null;
+  clinicNameAr?: string | null;
   category: string;
   description: string | null;
   grossAmount: number;
@@ -133,6 +135,8 @@ export interface AppointmentDto {
   clinicId: string;
   patientId: string;
   clinicianId: string;
+  /** Employee first/last (EN) when linked, else user displayName */
+  clinicianName?: string | null;
   startsAt: string;
   endsAt: string;
   status: string;
@@ -225,4 +229,17 @@ export interface ClinicRevenueBreakdownDto {
   }>;
   grandGross: number;
   grandNet: number;
+}
+
+export interface ReportsMonthlySeriesItemDto {
+  month: string;
+  monthStart: string;
+  visits: number;
+  revenue: number;
+  newPatients: number;
+}
+
+export interface ReportsMonthlySeriesDto {
+  months: number;
+  items: ReportsMonthlySeriesItemDto[];
 }

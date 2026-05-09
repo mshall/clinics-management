@@ -41,7 +41,8 @@ function formatMoney(n: number, lng: string) {
 export function DashboardPage() {
   const { t, i18n } = useTranslation();
   const role = useAuthStore((s) => s.user?.role);
-  const home = defaultHomeForRole(role);
+  const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
+  const home = defaultHomeForRole(role, navTabKeys);
   if (home !== "/") {
     return <Navigate to={home} replace />;
   }

@@ -24,7 +24,7 @@
     "signIn": "تسجيل الدخول",
     "email": "البريد الإلكتروني",
     "password": "كلمة المرور",
-    "demoHint": "تسجيل الدخول عبر الخادم: شغّل Docker ثم db:setup. حسابات تجريبية (كلمة المرور demo): physician@demo.clinic، doctor2@demo.clinic، admin@demo.clinic، clinicadmin@demo.clinic، assistant@demo.clinic، nurse@demo.clinic، receptionist@demo.clinic، finance@demo.clinic، branchmgr@demo.clinic.",
+    "demoHint": "تسجيل الدخول عبر الخادم: شغّل Docker ثم db:setup. حسابات تجريبية (كلمة المرور demo): physician@kiorly.com، doctor2@kiorly.com، admin@kiorly.com، clinicadmin@kiorly.com، assistant@kiorly.com، nurse@kiorly.com، receptionist@kiorly.com، finance@kiorly.com، branchmgr@kiorly.com.",
     "mfaPlaceholder": "رمز التحقق (تجريبي — أي 6 أرقام)",
     "signOut": "تسجيل الخروج"
   },

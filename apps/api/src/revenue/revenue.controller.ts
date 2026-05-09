@@ -41,7 +41,7 @@ export class RevenueController {
     @Query("clinicianId") clinicianId?: string
   ) {
     const clinicianUserId = resolveClinicianFilter(user, clinicianId);
-    return this.revenue.totals(user.tenantId, from, to, clinicId, clinicianUserId);
+    return this.revenue.totals(user.tenantId, from, to, clinicId, clinicianUserId, user);
   }
 
   @Get("clinic-breakdown")
@@ -66,13 +66,13 @@ export class RevenueController {
     @Query("clinicianId") clinicianId?: string
   ) {
     const clinicianUserId = resolveClinicianFilter(user, clinicianId);
-    return this.revenue.list(user.tenantId, from, to, page, pageSize, clinicId, sortBy, sortOrder, clinicianUserId);
+    return this.revenue.list(user.tenantId, from, to, page, pageSize, clinicId, sortBy, sortOrder, clinicianUserId, user);
   }
 
   @Post()
   @ApiOperation({ summary: "Post a revenue entry" })
   @ApiCreatedResponse({ type: RevenueEntryDto })
   create(@CurrentUser() user: JwtUser, @Body() body: CreateRevenueDto) {
-    return this.revenue.create(user.tenantId, body);
+    return this.revenue.create(user.tenantId, body, user);
   }
 }

@@ -44,6 +44,7 @@ Users
 - **ALB** terminates TLS for the API, runs health checks on `/api/v1` or a dedicated health route.
 - **RDS** lives in **private subnets**; security group allows **only** the ECS service security group on port **5432**.
 - **Secrets** (`JWT_SECRET`, `DATABASE_URL`, etc.) in **AWS Secrets Manager** (or SSM Parameter Store **SecureString**); injected as environment variables in the task definition.
+- **Optional:** `PLATFORM_SUPER_ADMIN_EMAILS` — comma-separated operator emails allowed to call **all-tenants** admin APIs and the **data explorer**. Omit or leave empty so organization administrators never receive those capabilities in production unless you designate explicit break-glass accounts.
 
 ---
 
@@ -78,6 +79,7 @@ Users
 - **CPU / memory:** start small (e.g. 0.25 vCPU / 512 MB) and increase if p95 latency or memory pressure warrants.
 - **Environment variables** (non-secret): `PORT=3000`, `NODE_ENV=production`, `SWAGGER_ENABLED=false`.
 - **Secrets:** map Secrets Manager ARNs to env vars (`DATABASE_URL`, `JWT_SECRET`).
+- **Optional non-secret:** `PLATFORM_SUPER_ADMIN_EMAILS` if you use platform-only admin tools; prefer a dedicated secret only if you do not want the value visible in plain task env (then read from Secrets Manager into the same variable name).
 - **Logging:** `awslogs` driver to a CloudWatch log group.
 
 ### 5.3 Service + ALB

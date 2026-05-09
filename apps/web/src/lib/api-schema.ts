@@ -19,4 +19,7 @@ export type GroupOverviewKpisDto = components["schemas"]["GroupOverviewKpisDto"]
   appointmentsPeriodTotal?: number;
 };
 export type LoginResponseDto = components["schemas"]["LoginResponseDto"];
-export type AuthUserDto = components["schemas"]["AuthUserDto"];
+export type AuthUserDto = components["schemas"]["AuthUserDto"] & {
+  navTabKeys?: string[] | null;
+  platformSuperAdmin?: boolean;
+};

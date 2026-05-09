@@ -592,17 +592,21 @@ GET    /files/:id                      # presigned GET URL with short TTL
 
 Group-admin-facing operations not specific to any one domain.
 
-**Endpoints:**
+**Implemented endpoints (v1):**
 ```
-POST   /admin/tenants                  # provision a clinic group (super-admin)
-GET    /admin/tenants/:id/usage        # usage metrics for billing
-POST   /admin/tenants/:id/suspend
-GET    /admin/feature-flags
+GET    /admin/overview
+GET    /admin/audit-logs
+GET    /admin/tenants                    # paginated list of all tenants — **platform super-admin only** (see below)
+PATCH  /admin/tenant-settings
+POST   /admin/users
 PATCH  /admin/feature-flags/:key
 ```
 
-**Notes:**
-- Backed by a feature-flag service (e.g., simple DB-backed flags v1; can swap to Unleash/LaunchDarkly later).
+**Platform super-admin gate:** `GET /admin/tenants` and all `/admin/data-explorer/*` routes require the caller’s email to appear in the API environment variable `PLATFORM_SUPER_ADMIN_EMAILS` (comma-separated, case-insensitive). Organization **GROUP_ADMIN** users do not receive these capabilities unless explicitly listed. Login and `GET /auth/me` return `platformSuperAdmin: true` when applicable so the web app can hide those tabs by default.
+
+**HR employee creation:** `POST /hr/employees` and ID-document upload require an allowed role (`GROUP_ADMIN`, `CLINIC_ADMIN`, `HR_OFFICER`, `BRANCH_MANAGER`). `CLINIC_ADMIN` may only assign employees to clinics in `ClinicAdminScope`.
+
+**Reports (live charts):** `GET /reports/monthly-series?months=N` returns per-calendar-month aggregates: finalized encounter counts (`finalizedAt` in month), sum of **posted** revenue (`postedAt` in month), and new patients (`createdAt` in month). Physicians receive the same shape scoped to their encounters/revenue rows only.
 
 #### 6.2.18 HealthModule
 
@@ -1035,7 +1039,7 @@ Authentication to AWS uses **GitHub OIDC** — no long-lived access keys.
 
 ## 18. Seed & Reference Data
 
-The demo tenant in `apps/api/prisma/seed.ts` creates named accounts (e.g. `admin@demo.clinic`, `physician@demo.clinic`, `doctor2@demo.clinic`, `clinicadmin@demo.clinic`, `assistant@demo.clinic`, `nurse@demo.clinic`, `receptionist@demo.clinic`, `finance@demo.clinic`, `branchmgr@demo.clinic`) with a shared password documented in the repository **README** — use these for manual QA of role-specific navigation and API scope.
+The demo tenant in `apps/api/prisma/seed.ts` creates named accounts (e.g. `admin@kiorly.com`, `physician@kiorly.com`, `doctor2@kiorly.com`, `clinicadmin@kiorly.com`, `assistant@kiorly.com`, `nurse@kiorly.com`, `receptionist@kiorly.com`, `finance@kiorly.com`, `branchmgr@kiorly.com`) with a shared password documented in the repository **README** — use these for manual QA of role-specific navigation and API scope.
 
 Shipped as code under `apps/api/prisma/seed/`:
 - ICD-10 (subset by speciality, configurable).

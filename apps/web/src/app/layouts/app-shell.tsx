@@ -1,5 +1,5 @@
 import { LogOut, Menu } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { showReportingPeriodBar } from "@/lib/permissions";
@@ -18,6 +18,16 @@ export function AppShell() {
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    const syncNav = () => {
+      if (useAuthStore.getState().accessToken) {
+        void useAuthStore.getState().refreshSessionFromServer();
+      }
+    };
+    if (useAuthStore.persist.hasHydrated()) syncNav();
+    return useAuthStore.persist.onFinishHydration(syncNav);
+  }, []);
 
   return (
     <div className="flex min-h-screen bg-muted/40">

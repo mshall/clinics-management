@@ -24,7 +24,7 @@
     "signIn": "Sign in",
     "email": "Email",
     "password": "Password",
-    "demoHint": "Sign in against the API: run Docker + db:setup, then use e.g. physician@demo.clinic / demo, doctor2@demo.clinic / demo, admin@demo.clinic / demo, clinicadmin@demo.clinic / demo, assistant@demo.clinic / demo, nurse@demo.clinic / demo, receptionist@demo.clinic / demo, finance@demo.clinic / demo, branchmgr@demo.clinic / demo (password demo for all).",
+    "demoHint": "Sign in against the API: run Docker + db:setup, then use e.g. physician@kiorly.com / demo, doctor2@kiorly.com / demo, admin@kiorly.com / demo, clinicadmin@kiorly.com / demo, assistant@kiorly.com / demo, nurse@kiorly.com / demo, receptionist@kiorly.com / demo, finance@kiorly.com / demo, branchmgr@kiorly.com / demo (password demo for all).",
     "mfaPlaceholder": "MFA code (demo — any 6 digits)",
     "signOut": "Sign out"
   },

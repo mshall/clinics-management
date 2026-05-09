@@ -5,10 +5,11 @@ import { ApiError } from "@/lib/http";
 export type LoginResponse = LoginResponseDto;
 
 export async function loginRequest(email: string, password: string): Promise<LoginResponse> {
+  const normalizedEmail = email.normalize("NFKC").trim().toLowerCase();
   const res = await fetch(apiUrl("/api/v1/auth/login"), {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email: normalizedEmail, password }),
   });
   const data = (await res.json().catch(() => null)) as LoginResponse | { message?: string | string[] } | null;
   if (!res.ok) {

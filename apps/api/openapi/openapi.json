@@ -177,9 +177,13 @@
               "NURSE",
               "RECEPTIONIST",
               "HR_OFFICER",
-              "FINANCE_OFFICER"
+              "FINANCE_OFFICER",
+              "CLINIC_ADMIN",
+              "CLINIC_ASSISTANT"
             ]
-          }
+          },
+          "navTabKeys": { "type": "array", "items": { "type": "string" }, "nullable": true },
+          "platformSuperAdmin": { "type": "boolean", "description": "Set when email is listed in PLATFORM_SUPER_ADMIN_EMAILS" }
         }
       },
       "LoginResponseDto": {

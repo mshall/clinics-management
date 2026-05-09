@@ -192,19 +192,19 @@ npm run dev
 - **API:** [http://localhost:3000](http://localhost:3000)
 - **Swagger:** [http://localhost:3000/docs](http://localhost:3000/docs)
 
-After `db:setup`, use the **demo seed users** below (password **`demo`** for every account). Additional mixed-role staff accounts `staff3@demo.clinic` … `staff15@demo.clinic` are also created; see `apps/api/prisma/seed.ts` for exact role assignment.
+After `db:setup`, use the **demo seed users** below (password **`demo`** for every account). Additional mixed-role staff accounts `staff3@kiorly.com` … `staff15@kiorly.com` are also created; see `apps/api/prisma/seed.ts` for exact role assignment.
 
 | Email | Display name (seed) | Role |
 |--------|----------------------|------|
-| `admin@demo.clinic` | Group Administrator | Group admin |
-| `physician@demo.clinic` | Dr. Demo Physician | Physician |
-| `doctor2@demo.clinic` | Dr. Second Physician | Physician |
-| `clinicadmin@demo.clinic` | Demo Clinic Administrator | Clinic admin (scoped clinics) |
-| `assistant@demo.clinic` | Demo Clinic Assistant | Clinic assistant |
-| `nurse@demo.clinic` | Demo Nurse | Nurse |
-| `receptionist@demo.clinic` | Demo Receptionist | Receptionist |
-| `finance@demo.clinic` | Demo Finance Officer | Finance officer |
-| `branchmgr@demo.clinic` | Demo Branch Manager | Branch manager |
+| `admin@kiorly.com` | Group Administrator | Group admin |
+| `physician@kiorly.com` | Dr. Demo Physician | Physician |
+| `doctor2@kiorly.com` | Dr. Second Physician | Physician |
+| `clinicadmin@kiorly.com` | Demo Clinic Administrator | Clinic admin (scoped clinics) |
+| `assistant@kiorly.com` | Demo Clinic Assistant | Clinic assistant |
+| `nurse@kiorly.com` | Demo Nurse | Nurse |
+| `receptionist@kiorly.com` | Demo Receptionist | Receptionist |
+| `finance@kiorly.com` | Demo Finance Officer | Finance officer |
+| `branchmgr@kiorly.com` | Demo Branch Manager | Branch manager |
 
 ### 7. Production-style builds (optional local check)
 

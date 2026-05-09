@@ -4,8 +4,12 @@ dist
 *.local
 .env
 .env.*
+!.env.example
+!**/.env.example
 apps/api/.env
 apps/web/.env
 apps/web/node_modules
 apps/web/dist
 apps/api/uploads
+apps/web/playwright-report
+apps/web/test-results

@@ -13,6 +13,7 @@ import { PatientsModule } from "./patients/patients.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { ReportsModule } from "./reports/reports.module";
 import { RevenueModule } from "./revenue/revenue.module";
+import { UserNavTabsModule } from "./user-nav-tabs/user-nav-tabs.module";
 import { UsersModule } from "./users/users.module";
 
 @Module({
@@ -32,6 +33,7 @@ import { UsersModule } from "./users/users.module";
     AdminModule,
     ReportsModule,
     UsersModule,
+    UserNavTabsModule,
   ],
 })
 export class AppModule {}

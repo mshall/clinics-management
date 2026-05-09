@@ -1,4 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { Prisma, UserRole } from "@prisma/client";
+import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
 import type { CreateClinicDto } from "./dto/create-clinic.dto";
 import type { ClinicDetailDto } from "./dto/clinic-detail.dto";
@@ -19,12 +21,18 @@ export interface ClinicDto {
 export class ClinicsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getOne(tenantId: string, id: string): Promise<ClinicDetailDto> {
+  async getOne(tenantId: string, id: string, user: JwtUser): Promise<ClinicDetailDto> {
     const row = await this.prisma.clinic.findFirst({
       where: { id, tenantId },
       include: { parent: { select: { id: true, nameEn: true, nameAr: true } } },
     });
     if (!row) throw new NotFoundException("Clinic not found");
+    if (user.role === UserRole.CLINIC_ADMIN) {
+      const scope = await this.prisma.clinicAdminScope.findFirst({
+        where: { tenantId, userId: user.userId, clinicId: id },
+      });
+      if (!scope) throw new NotFoundException("Clinic not found");
+    }
     return {
       id: row.id,
       parentClinicId: row.parentClinicId,
@@ -46,9 +54,19 @@ export class ClinicsService {
     };
   }
 
-  async list(tenantId: string): Promise<ClinicDto[]> {
+  async list(tenantId: string, user: JwtUser): Promise<ClinicDto[]> {
+    let where: Prisma.ClinicWhereInput = { tenantId };
+    if (user.role === UserRole.CLINIC_ADMIN) {
+      const scopes = await this.prisma.clinicAdminScope.findMany({
+        where: { tenantId, userId: user.userId },
+        select: { clinicId: true },
+      });
+      const ids = scopes.map((s) => s.clinicId);
+      if (!ids.length) return [];
+      where = { tenantId, id: { in: ids } };
+    }
     const rows = await this.prisma.clinic.findMany({
-      where: { tenantId },
+      where,
       orderBy: [{ parentClinicId: "asc" }, { nameEn: "asc" }],
       include: { parent: { select: { nameEn: true } } },
     });

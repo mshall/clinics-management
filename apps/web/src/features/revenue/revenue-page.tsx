@@ -2,25 +2,36 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CreateActionButton } from "@/components/create-action-button";
-import { SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
+import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { TablePagination } from "@/components/table-pagination";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useClinicsQuery, useRevenueQuery, useRevenueTotalsQuery } from "@/lib/api-hooks";
+import { useClinicsQuery, useClinicRevenueBreakdownQuery, useRevenueQuery, useRevenueTotalsQuery } from "@/lib/api-hooks";
+import type { RevenueEntryDto } from "@/lib/api-types";
 import { ApiError, apiPost } from "@/lib/http";
-import { defaultMonthRange } from "@/stores/date-range-store";
+import { useDateRangeStore } from "@/stores/date-range-store";
+import { useAuthStore } from "@/stores/auth-store";
 
 /** VISIT_FEE = encounter consultation; APPOINTMENT_FEE = legacy rows only (fees no longer booked on appointments). */
 const REV_CATEGORIES = ["VISIT", "VISIT_FEE", "PROCEDURE", "LAB", "PHARMACY", "IMAGING", "APPOINTMENT_FEE", "OTHER"] as const;
 
+function clinicDisplayName(r: RevenueEntryDto, lng: string): string {
+  const en = r.clinicNameEn?.trim();
+  const ar = r.clinicNameAr?.trim();
+  if (lng === "ar") return ar || en || r.clinicId;
+  return en || ar || r.clinicId;
+}
+
 export function RevenuePage() {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
-  const initialRange = useMemo(() => defaultMonthRange(), []);
-  const [from, setFrom] = useState(initialRange.from);
-  const [to, setTo] = useState(initialRange.to);
+  const { from, to, setRange, resetToCurrentMonth } = useDateRangeStore();
+  const authUser = useAuthStore((s) => s.user);
+  const breakdownEnabled = authUser?.role === "group_admin" || authUser?.role === "clinic_admin";
+  const bd = useClinicRevenueBreakdownQuery(breakdownEnabled);
+
   const [filterClinicId, setFilterClinicId] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -55,6 +66,7 @@ export function RevenuePage() {
   const [rfNet, setRfNet] = useState("");
   const [rfPosted, setRfPosted] = useState("");
   const [rfStatus, setRfStatus] = useState("");
+  const [rfClinic, setRfClinic] = useState("");
 
   const onSort = (column: string) => {
     const next = toggleSort(sortBy, sortOrder, column);
@@ -106,7 +118,12 @@ export function RevenuePage() {
     const fn = rfNet.trim();
     const fp = n(rfPosted);
     const fs = n(rfStatus);
+    const fcl = n(rfClinic);
     return rows.filter((r) => {
+      if (fcl) {
+        const label = clinicDisplayName(r, i18n.language).toLowerCase();
+        if (!label.includes(fcl)) return false;
+      }
       if (fc && !r.category.toLowerCase().includes(fc)) return false;
       if (fn) {
         const hay = `${r.netAmount} ${fmt(r.netAmount)}`.toLowerCase();
@@ -119,7 +136,9 @@ export function RevenuePage() {
       if (fs && !r.status.toLowerCase().includes(fs)) return false;
       return true;
     });
-  }, [rows, rfCategory, rfNet, rfPosted, rfStatus, i18n.language]);
+  }, [rows, rfCategory, rfNet, rfPosted, rfStatus, rfClinic, i18n.language]);
+
+  const breakdownRows = bd.data?.items ?? [];
 
   return (
     <div className="space-y-6">
@@ -131,21 +150,43 @@ export function RevenuePage() {
       {isError ? <p className="text-sm text-destructive">{error instanceof Error ? error.message : t("common.error")}</p> : null}
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_10rem_10rem] lg:items-stretch">
-        <Card className="lg:max-w-md">
+        <Card className="lg:max-w-xl">
           <CardHeader className="pb-2 pt-4">
             <CardTitle className="text-sm font-medium">{t("revenue.searchFilters", "Search ledger")}</CardTitle>
+            <CardDescription className="text-xs">
+              {t(
+                "revenue.searchLedgerHint",
+                "Pick a date range, then either all clinics in this organization or one clinic. Totals and the table follow this filter."
+              )}
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap items-end gap-3 pb-4">
             <div className="space-y-1.5">
               <Label className="text-xs">{t("reports.usingRange", "From")}</Label>
-              <Input className="h-9 ltr-nums" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
+              <Input
+                className="h-9 ltr-nums"
+                type="date"
+                value={from}
+                onChange={(e) => {
+                  setRange(e.target.value, to);
+                  setPage(1);
+                }}
+              />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">{t("common.to", "To")}</Label>
-              <Input className="h-9 ltr-nums" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
+              <Input
+                className="h-9 ltr-nums"
+                type="date"
+                value={to}
+                onChange={(e) => {
+                  setRange(from, e.target.value);
+                  setPage(1);
+                }}
+              />
             </div>
-            <div className="min-w-[9rem] flex-1 space-y-1.5">
-              <Label className="text-xs">{t("revenue.clinic")}</Label>
+            <div className="min-w-[11rem] flex-1 space-y-1.5">
+              <Label className="text-xs">{t("revenue.ledgerClinicFilter", "Clinic scope")}</Label>
               <select
                 className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
                 value={filterClinicId}
@@ -154,7 +195,7 @@ export function RevenuePage() {
                   setPage(1);
                 }}
               >
-                <option value="">{t("revenue.allClinics", "All clinics")}</option>
+                <option value="">{t("revenue.allClinicsOrganization", "All clinics (organization)")}</option>
                 {clinics.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.nameEn}
@@ -162,7 +203,17 @@ export function RevenuePage() {
                 ))}
               </select>
             </div>
-            <Button type="button" variant="secondary" size="sm" className="h-9" onClick={() => { const r = defaultMonthRange(); setFrom(r.from); setTo(r.to); setPage(1); }}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="h-9"
+              onClick={() => {
+                resetToCurrentMonth();
+                setPage(1);
+                void qc.invalidateQueries();
+              }}
+            >
               {t("revenue.thisMonth", "This month")}
             </Button>
           </CardContent>
@@ -184,6 +235,53 @@ export function RevenuePage() {
           </CardContent>
         </Card>
       </div>
+
+      {breakdownEnabled ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t("revenue.byClinicTitle", "Posted revenue by clinic")}</CardTitle>
+            <CardDescription className="ltr-nums">
+              {t("revenue.byClinicSubtitle", "Same reporting period as above.")}{" "}
+              {t("revenue.grandGross", "Gross")}: {money(bd.data?.grandGross ?? 0)} · {t("revenue.grandNet", "Net")}: {money(bd.data?.grandNet ?? 0)}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {bd.isError ? (
+              <p className="text-sm text-destructive">{bd.error instanceof Error ? bd.error.message : t("common.error")}</p>
+            ) : bd.isPending ? (
+              <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+            ) : (
+              <div className="overflow-hidden rounded-md border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/60">
+                    <tr>
+                      <th className="px-3 py-2 text-start font-medium">{t("revenue.clinic")}</th>
+                      <th className="px-3 py-2 text-start font-medium">{t("revenue.totalGross", "Gross")}</th>
+                      <th className="px-3 py-2 text-start font-medium">{t("revenue.totalNet", "Net")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {breakdownRows.map((r) => (
+                      <tr key={r.clinicId} className="border-t border-border">
+                        <td className="px-3 py-2 font-medium">{i18n.language === "ar" ? r.nameAr || r.nameEn : r.nameEn}</td>
+                        <td className="px-3 py-2 ltr-nums text-muted-foreground">{money(r.grossTotal)}</td>
+                        <td className="px-3 py-2 ltr-nums">{money(r.netTotal)}</td>
+                      </tr>
+                    ))}
+                    {!breakdownRows.length ? (
+                      <tr>
+                        <td colSpan={3} className="px-3 py-6 text-center text-muted-foreground">
+                          {t("revenue.noBreakdownRows", "No posted revenue in this range.")}
+                        </td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -257,12 +355,13 @@ export function RevenuePage() {
             variant="ghost"
             size="sm"
             className="h-8 text-xs"
-            disabled={!rfCategory.trim() && !rfNet.trim() && !rfPosted.trim() && !rfStatus.trim()}
+            disabled={!rfCategory.trim() && !rfNet.trim() && !rfPosted.trim() && !rfStatus.trim() && !rfClinic.trim()}
             onClick={() => {
               setRfCategory("");
               setRfNet("");
               setRfPosted("");
               setRfStatus("");
+              setRfClinic("");
             }}
           >
             {t("patients.clearColFilters", "Clear column filters")}
@@ -273,6 +372,7 @@ export function RevenuePage() {
             <table className="w-full text-sm">
               <thead className="bg-muted/60">
                 <tr>
+                  <FilterTh label={t("revenue.clinic")} value={rfClinic} onChange={setRfClinic} />
                   <SortableTh
                     label={t("revenue.category")}
                     column="category"
@@ -314,7 +414,7 @@ export function RevenuePage() {
               <tbody>
                 {isPending ? (
                   <tr>
-                    <td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">
+                    <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">
                       {t("common.loading")}
                     </td>
                   </tr>
@@ -322,6 +422,9 @@ export function RevenuePage() {
                 {!isPending &&
                   filteredRevenueRows.map((r) => (
                     <tr key={r.id} className="border-t border-border">
+                      <td className="max-w-[14rem] truncate px-3 py-2 font-medium" title={clinicDisplayName(r, i18n.language)}>
+                        {clinicDisplayName(r, i18n.language)}
+                      </td>
                       <td className="px-3 py-2">{r.category}</td>
                       <td className="px-3 py-2 ltr-nums">{money(r.netAmount)}</td>
                       <td className="px-3 py-2 ltr-nums text-xs text-muted-foreground">
@@ -332,7 +435,7 @@ export function RevenuePage() {
                   ))}
                 {!isPending && rows.length > 0 && filteredRevenueRows.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">
+                    <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">
                       {t("patients.noColMatch", "No rows match the column filters.")}
                     </td>
                   </tr>

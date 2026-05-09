@@ -1,22 +1,11 @@
 import type { DemoRole } from "@/lib/roles";
 
-/** Roles that must not see the global revenue ledger (encounter-linked fees live here). */
-const NO_REVENUE: ReadonlySet<DemoRole> = new Set([
-  "nurse",
-  "receptionist",
-  "hr_officer",
-  "clinic_assistant",
-  "clinic_admin",
-]);
+/** Roles that must not see the revenue ledger (group / finance / branch / clinic admin / physician). */
+const NO_REVENUE: ReadonlySet<DemoRole> = new Set(["nurse", "receptionist", "hr_officer", "clinic_assistant"]);
 
 export function canViewRevenue(role: DemoRole | undefined): boolean {
   if (!role) return false;
   return !NO_REVENUE.has(role);
-}
-
-export function canViewClinicRevenue(role: DemoRole | undefined): boolean {
-  if (!role) return false;
-  return role === "clinic_admin" || role === "group_admin";
 }
 
 /** Global reporting range: dashboard, reports, and any screen that reads `useDateRangeStore` for API queries. */
@@ -25,7 +14,6 @@ export function showReportingPeriodBar(pathname: string): boolean {
   if (pathname === "/reports" || pathname.startsWith("/reports/")) return true;
   if (
     pathname === "/revenue" ||
-    pathname === "/clinic-revenue" ||
     pathname === "/doctor-revenue" ||
     pathname === "/expenses" ||
     pathname === "/hr" ||

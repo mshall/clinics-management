@@ -14,6 +14,12 @@ export class AppointmentDto {
   @ApiProperty()
   clinicianId!: string;
 
+  @ApiPropertyOptional({
+    nullable: true,
+    description: "Clinician name: linked employee first/last (EN) when present, else user displayName",
+  })
+  clinicianName!: string | null;
+
   @ApiProperty()
   startsAt!: string;
 

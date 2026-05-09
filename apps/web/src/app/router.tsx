@@ -17,7 +17,6 @@ import { PatientDetailPage } from "@/features/patients/patient-detail-page";
 import { PatientsPage } from "@/features/patients/patients-page";
 import { ProfileGate } from "@/features/profile/profile-gate";
 import { ReportsPage } from "@/features/reports/reports-page";
-import { ClinicRevenueGate } from "@/features/revenue/clinic-revenue-gate";
 import { DoctorRevenueGate } from "@/features/revenue/doctor-revenue-gate";
 import { RevenueGate } from "@/features/revenue/revenue-gate";
 
@@ -43,7 +42,7 @@ export const router = createBrowserRouter([
       { path: "clinics/:id", element: <ClinicDetailPage /> },
       { path: "expenses", element: <ExpensesPage /> },
       { path: "revenue", element: <RevenueGate /> },
-      { path: "clinic-revenue", element: <ClinicRevenueGate /> },
+      { path: "clinic-revenue", element: <Navigate to="/revenue" replace /> },
       { path: "doctor-revenue", element: <DoctorRevenueGate /> },
       { path: "profile", element: <ProfileGate /> },
       { path: "hr", element: <HrPage /> },

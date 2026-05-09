@@ -20,19 +20,6 @@ export function PatientsPage() {
   const qc = useQueryClient();
   const [quickSearch, setQuickSearch] = useState("");
   const debouncedQuick = useDebouncedValue(quickSearch, 300);
-  const [advOpen, setAdvOpen] = useState(false);
-  const [fMrn, setFMrn] = useState("");
-  const [fPhone, setFPhone] = useState("");
-  const [fName, setFName] = useState("");
-  const [fNationalId, setFNationalId] = useState("");
-  const [fGender, setFGender] = useState("");
-  const [applied, setApplied] = useState({
-    mrn: "",
-    phone: "",
-    name: "",
-    nationalId: "",
-    gender: "",
-  });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [sortBy, setSortBy] = useState("mrn");
@@ -47,17 +34,12 @@ export function PatientsPage() {
   const query = useMemo(
     () => ({
       search: debouncedQuick,
-      mrn: applied.mrn || undefined,
-      phone: applied.phone || undefined,
-      name: applied.name || undefined,
-      nationalId: applied.nationalId || undefined,
-      gender: applied.gender || undefined,
       page,
       pageSize,
       sortBy,
       sortOrder,
     }),
-    [debouncedQuick, applied, page, pageSize, sortBy, sortOrder]
+    [debouncedQuick, page, pageSize, sortBy, sortOrder]
   );
 
   const onSort = (column: string) => {
@@ -95,7 +77,7 @@ export function PatientsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedQuick, applied.mrn, applied.phone, applied.name, applied.nationalId, applied.gender]);
+  }, [debouncedQuick]);
 
   const { data: clinics = [] } = useClinicsQuery();
   const [open, setOpen] = useState(false);
@@ -110,28 +92,6 @@ export function PatientsPage() {
   const [email, setEmail] = useState("");
   const [nationalId, setNationalId] = useState("");
   const [homeBranchId, setHomeBranchId] = useState("");
-
-  const applyAdvanced = () => {
-    setApplied({
-      mrn: fMrn.trim(),
-      phone: fPhone.trim(),
-      name: fName.trim(),
-      nationalId: fNationalId.trim(),
-      gender: fGender,
-    });
-    setPage(1);
-  };
-
-  const clearAdvanced = () => {
-    setFMrn("");
-    setFPhone("");
-    setFName("");
-    setFNationalId("");
-    setFGender("");
-    setApplied({ mrn: "", phone: "", name: "", nationalId: "", gender: "" });
-    setQuickSearch("");
-    setPage(1);
-  };
 
   const createMut = useMutation({
     mutationFn: () =>
@@ -290,51 +250,6 @@ export function PatientsPage() {
             placeholder={t("patients.searchPlaceholder")}
             aria-busy={isFetching}
           />
-          <div>
-            <Button type="button" variant="outline" size="sm" onClick={() => setAdvOpen((v) => !v)}>
-              {advOpen ? t("patients.hideAdvanced") : t("patients.advancedSearch")}
-            </Button>
-          </div>
-          {advOpen ? (
-            <div className="grid gap-3 rounded-md border border-border p-4 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="space-y-2">
-                <Label>{t("patients.mrn")}</Label>
-                <Input className="ltr-nums" value={fMrn} onChange={(e) => setFMrn(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>{t("patients.phone")}</Label>
-                <Input className="ltr-nums" value={fPhone} onChange={(e) => setFPhone(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>{t("patients.filterName")}</Label>
-                <Input value={fName} onChange={(e) => setFName(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>{t("patients.nationalId")}</Label>
-                <Input className="ltr-nums" value={fNationalId} onChange={(e) => setFNationalId(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>{t("patients.gender")}</Label>
-                <select
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={fGender}
-                  onChange={(e) => setFGender(e.target.value)}
-                >
-                  <option value="">{t("patients.anyGender")}</option>
-                  <option value="M">{t("patients.genderM")}</option>
-                  <option value="F">{t("patients.genderF")}</option>
-                </select>
-              </div>
-              <div className="flex flex-wrap items-end gap-2 sm:col-span-2 lg:col-span-3">
-                <Button type="button" onClick={applyAdvanced}>
-                  {t("patients.applyFilters")}
-                </Button>
-                <Button type="button" variant="secondary" onClick={clearAdvanced}>
-                  {t("patients.clearFilters")}
-                </Button>
-              </div>
-            </div>
-          ) : null}
           <div className="overflow-hidden rounded-md border">
             <table className="w-full text-sm">
               <thead className="bg-muted/60">

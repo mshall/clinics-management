@@ -4,6 +4,7 @@ import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
+import { isPlatformSuperAdminEmail } from "../common/platform-super-admin";
 import { AdminService } from "./admin.service";
 import { CreateTenantUserDto } from "./dto/create-tenant-user.dto";
 import { PatchFeatureFlagDto } from "./dto/patch-feature-flag.dto";
@@ -47,8 +48,8 @@ export class AdminController {
     @Query("sortBy") sortBy?: string,
     @Query("sortOrder") sortOrder?: string
   ) {
-    if (user.role !== UserRole.GROUP_ADMIN) {
-      throw new ForbiddenException("Only platform administrators can list all organizations");
+    if (!isPlatformSuperAdminEmail(user.email)) {
+      throw new ForbiddenException("Only platform super administrators can list all organizations");
     }
     return this.admin.listTenants(page, pageSize, sortBy, sortOrder);
   }

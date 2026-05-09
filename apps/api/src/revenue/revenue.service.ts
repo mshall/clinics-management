@@ -9,13 +9,41 @@ import type { CreateRevenueDto } from "./dto/create-revenue.dto";
 import type { RevenueEntryDto } from "./dto/revenue.dto";
 import type { RevenueTotalsDto } from "./dto/revenue-totals.dto";
 
+const LEDGER_ROLES: ReadonlySet<UserRole> = new Set([
+  UserRole.GROUP_ADMIN,
+  UserRole.BRANCH_MANAGER,
+  UserRole.FINANCE_OFFICER,
+  UserRole.CLINIC_ADMIN,
+  UserRole.PHYSICIAN,
+]);
+
+const POST_REVENUE_ROLES: ReadonlySet<UserRole> = new Set([
+  UserRole.GROUP_ADMIN,
+  UserRole.BRANCH_MANAGER,
+  UserRole.FINANCE_OFFICER,
+  UserRole.CLINIC_ADMIN,
+]);
+
 @Injectable()
 export class RevenueService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private assertLedgerAccess(role: UserRole): void {
+    if (!LEDGER_ROLES.has(role)) {
+      throw new ForbiddenException("You may not view the revenue ledger");
+    }
+  }
+
+  private assertPostRevenue(role: UserRole): void {
+    if (!POST_REVENUE_ROLES.has(role)) {
+      throw new ForbiddenException("You may not post revenue entries");
+    }
+  }
+
   private map(r: {
     id: string;
     clinicId: string;
+    clinic?: { nameEn: string; nameAr: string } | null;
     category: string;
     description: string | null;
     grossAmount: { toString(): string };
@@ -28,6 +56,8 @@ export class RevenueService {
     return {
       id: r.id,
       clinicId: r.clinicId,
+      clinicNameEn: r.clinic?.nameEn ?? null,
+      clinicNameAr: r.clinic?.nameAr ?? null,
       category: r.category,
       description: r.description,
       grossAmount: Number(r.grossAmount),
@@ -41,22 +71,45 @@ export class RevenueService {
 
   async list(
     tenantId: string,
-    fromStr?: string,
-    toStr?: string,
-    pageStr?: string,
-    pageSizeStr?: string,
-    clinicIdStr?: string,
-    sortByStr?: string,
-    sortOrderStr?: string,
-    clinicianUserId?: string
+    fromStr: string | undefined,
+    toStr: string | undefined,
+    pageStr: string | undefined,
+    pageSizeStr: string | undefined,
+    clinicIdStr: string | undefined,
+    sortByStr: string | undefined,
+    sortOrderStr: string | undefined,
+    clinicianUserId: string | undefined,
+    user: JwtUser
   ) {
+    this.assertLedgerAccess(user.role);
     const { start, end } = resolveReportingRange(fromStr, toStr);
     const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
     const clinicId = clinicIdStr?.trim();
+
+    let clinicScope: Prisma.RevenueEntryWhereInput = {};
+    if (user.role === UserRole.CLINIC_ADMIN) {
+      const scopes = await this.prisma.clinicAdminScope.findMany({
+        where: { tenantId, userId: user.userId },
+        select: { clinicId: true },
+      });
+      const ids = scopes.map((s) => s.clinicId);
+      if (!ids.length) {
+        return paginate([], 0, page, pageSize);
+      }
+      if (clinicId) {
+        if (!ids.includes(clinicId)) throw new ForbiddenException("Clinic is outside your assigned scope");
+        clinicScope = { clinicId };
+      } else {
+        clinicScope = { clinicId: { in: ids } };
+      }
+    } else if (clinicId) {
+      clinicScope = { clinicId };
+    }
+
     const where: Prisma.RevenueEntryWhereInput = {
       tenantId,
       postedAt: { gte: start, lte: end },
-      ...(clinicId ? { clinicId } : {}),
+      ...clinicScope,
       ...(clinicianUserId
         ? {
             encounterId: { not: null },
@@ -73,18 +126,48 @@ export class RevenueService {
         orderBy: { [sortField]: sortDir },
         skip,
         take: pageSize,
+        include: { clinic: { select: { nameEn: true, nameAr: true } } },
       }),
     ]);
     return paginate(rows.map((row) => this.map(row)), total, page, pageSize);
   }
 
-  async totals(tenantId: string, fromStr?: string, toStr?: string, clinicIdStr?: string, clinicianUserId?: string): Promise<RevenueTotalsDto> {
+  async totals(
+    tenantId: string,
+    fromStr: string | undefined,
+    toStr: string | undefined,
+    clinicIdStr: string | undefined,
+    clinicianUserId: string | undefined,
+    user: JwtUser
+  ): Promise<RevenueTotalsDto> {
+    this.assertLedgerAccess(user.role);
     const { start, end } = resolveReportingRange(fromStr, toStr);
     const clinicId = clinicIdStr?.trim();
+
+    let clinicScope: Prisma.RevenueEntryWhereInput = {};
+    if (user.role === UserRole.CLINIC_ADMIN) {
+      const scopes = await this.prisma.clinicAdminScope.findMany({
+        where: { tenantId, userId: user.userId },
+        select: { clinicId: true },
+      });
+      const ids = scopes.map((s) => s.clinicId);
+      if (!ids.length) {
+        return { grossTotal: 0, netTotal: 0 };
+      }
+      if (clinicId) {
+        if (!ids.includes(clinicId)) throw new ForbiddenException("Clinic is outside your assigned scope");
+        clinicScope = { clinicId };
+      } else {
+        clinicScope = { clinicId: { in: ids } };
+      }
+    } else if (clinicId) {
+      clinicScope = { clinicId };
+    }
+
     const where: Prisma.RevenueEntryWhereInput = {
       tenantId,
       postedAt: { gte: start, lte: end },
-      ...(clinicId ? { clinicId } : {}),
+      ...clinicScope,
       ...(clinicianUserId
         ? {
             encounterId: { not: null },
@@ -102,7 +185,16 @@ export class RevenueService {
     };
   }
 
-  async create(tenantId: string, dto: CreateRevenueDto): Promise<RevenueEntryDto> {
+  async create(tenantId: string, dto: CreateRevenueDto, user: JwtUser): Promise<RevenueEntryDto> {
+    this.assertPostRevenue(user.role);
+    if (user.role === UserRole.CLINIC_ADMIN) {
+      const scopes = await this.prisma.clinicAdminScope.findMany({
+        where: { tenantId, userId: user.userId },
+        select: { clinicId: true },
+      });
+      const ids = scopes.map((s) => s.clinicId);
+      if (!ids.includes(dto.clinicId)) throw new ForbiddenException("Clinic is outside your assigned scope");
+    }
     const clinic = await this.prisma.clinic.findFirst({ where: { id: dto.clinicId, tenantId } });
     if (!clinic) throw new BadRequestException("Invalid clinicId");
     const row = await this.prisma.revenueEntry.create({
@@ -118,6 +210,7 @@ export class RevenueService {
         postedAt: new Date(dto.postedAt),
         status: dto.status ?? RevenueStatus.POSTED,
       },
+      include: { clinic: { select: { nameEn: true, nameAr: true } } },
     });
     return this.map(row);
   }

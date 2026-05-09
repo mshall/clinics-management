@@ -140,6 +140,7 @@ Reporting: monthly/quarterly/annual expense by branch, by category, group consol
 
 ### 6.4 HR Module
 
+- **New employee registration** for organization and clinic administrators is performed under **Administration** (employment type, salary, clinic assignment, optional ID document). The HR area remains the operational hub for directory, attendance, and leave.
 - **Employee directory** per branch with profile, contract, documents (ID, license, certifications, expiry tracking).
 - **Roles & employment type** (full-time, part-time, contractor, locum).
 - **Attendance** – clock in/out, manual entry, biometric integration hook.
@@ -163,7 +164,12 @@ Reporting: monthly/quarterly/annual expense by branch, by category, group consol
 - Add **Sister/Sub Clinics** under a parent.
 - Manage users, roles, and permissions across the group.
 - View group-level KPIs: total patients, encounters, revenue, expenses, headcount.
+- **Organization administrators** use the full admin experience except **platform-only** tools (cross-tenant directory and raw **data explorer**), which are gated separately for designated platform operators.
 - Manage subscription / licensing (if SaaS billing is in scope).
+
+### 6.6.1 Reports & analytics
+
+- The **Reports** area charts **visit volume** (finalized encounters), **posted revenue**, and **new patient registrations** per calendar month from live ledger and patient data—not illustrative placeholders.
 
 ### 6.7 Clinic Onboarding Form
 

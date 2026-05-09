@@ -19,7 +19,7 @@ export class ClinicsController {
   @ApiOperation({ summary: "List clinics and branches for the tenant" })
   @ApiOkResponse({ type: ClinicDto, isArray: true })
   list(@CurrentUser() user: JwtUser) {
-    return this.clinics.list(user.tenantId);
+    return this.clinics.list(user.tenantId, user);
   }
 
   @Post()
@@ -33,6 +33,6 @@ export class ClinicsController {
   @ApiOperation({ summary: "Get one clinic including registration fields from admin" })
   @ApiOkResponse({ type: ClinicDetailDto })
   getOne(@CurrentUser() user: JwtUser, @Param("id") id: string) {
-    return this.clinics.getOne(user.tenantId, id);
+    return this.clinics.getOne(user.tenantId, id, user);
   }
 }
