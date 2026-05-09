@@ -57,7 +57,12 @@ export class RevenueService {
       tenantId,
       postedAt: { gte: start, lte: end },
       ...(clinicId ? { clinicId } : {}),
-      ...(clinicianUserId ? { encounter: { is: { clinicianId: clinicianUserId } } } : {}),
+      ...(clinicianUserId
+        ? {
+            encounterId: { not: null },
+            encounter: { is: { clinicianId: clinicianUserId } },
+          }
+        : {}),
     };
     const sortField = pickSortField(sortByStr, ["postedAt", "netAmount", "category", "status", "grossAmount"] as const, "postedAt");
     const sortDir = parseSortOrder(sortOrderStr);
@@ -80,7 +85,12 @@ export class RevenueService {
       tenantId,
       postedAt: { gte: start, lte: end },
       ...(clinicId ? { clinicId } : {}),
-      ...(clinicianUserId ? { encounter: { is: { clinicianId: clinicianUserId } } } : {}),
+      ...(clinicianUserId
+        ? {
+            encounterId: { not: null },
+            encounter: { is: { clinicianId: clinicianUserId } },
+          }
+        : {}),
     };
     const agg = await this.prisma.revenueEntry.aggregate({
       where,

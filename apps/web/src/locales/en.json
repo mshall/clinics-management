@@ -268,7 +268,7 @@
     "roleLabel": "Role"
   },
   "doctorRevenue": {
-    "subtitle": "Revenue from completed encounters and other ledger rows tied to you (not appointments).",
+    "subtitle": "Revenue from completed encounters and other ledger rows tied to you (not appointments). Use the reporting period bar above to change dates; demo data spans the current and prior two months after a fresh seed.",
     "gross": "Gross (period)",
     "net": "Net (period)",
     "lines": "Revenue lines",

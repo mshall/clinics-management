@@ -19,9 +19,19 @@ export function canViewClinicRevenue(role: DemoRole | undefined): boolean {
   return role === "clinic_admin" || role === "group_admin";
 }
 
-/** Global reporting range: dashboard KPIs and reports only. */
+/** Global reporting range: dashboard, reports, and any screen that reads `useDateRangeStore` for API queries. */
 export function showReportingPeriodBar(pathname: string): boolean {
   if (pathname === "/") return true;
   if (pathname === "/reports" || pathname.startsWith("/reports/")) return true;
+  if (
+    pathname === "/revenue" ||
+    pathname === "/clinic-revenue" ||
+    pathname === "/doctor-revenue" ||
+    pathname === "/expenses" ||
+    pathname === "/hr" ||
+    pathname.startsWith("/hr/")
+  ) {
+    return true;
+  }
   return false;
 }

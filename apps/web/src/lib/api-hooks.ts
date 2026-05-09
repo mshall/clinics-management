@@ -22,7 +22,17 @@ import type {
 import { apiGet } from "@/lib/http";
 import type { Paginated } from "@/lib/paginated";
 import { useAuthStore } from "@/stores/auth-store";
-import { useDateRangeStore } from "@/stores/date-range-store";
+import { defaultMonthRange, useDateRangeStore } from "@/stores/date-range-store";
+
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+function resolveRevenueRange(from?: string, to?: string): { from: string; to: string } {
+  const d = defaultMonthRange();
+  const f = from?.trim() ?? "";
+  const t = to?.trim() ?? "";
+  if (ISO_DAY.test(f) && ISO_DAY.test(t)) return { from: f, to: t };
+  return d;
+}
 
 export type { PatientDto, ClinicDto, GroupOverviewKpisDto };
 export type {
@@ -44,9 +54,10 @@ export type {
 
 function rangeQs(): string {
   const { from, to } = useDateRangeStore.getState();
+  const r = resolveRevenueRange(from, to);
   const q = new URLSearchParams();
-  q.set("from", from);
-  q.set("to", to);
+  q.set("from", r.from);
+  q.set("to", r.to);
   return q.toString();
 }
 
@@ -257,9 +268,10 @@ export interface RevenueListParams {
 export function useRevenueQuery(params: RevenueListParams) {
   const viewerId = useAuthStore((s) => s.user?.id ?? "");
   const { enabled = true, ...p } = params;
+  const { from, to } = resolveRevenueRange(p.from, p.to);
   const q = new URLSearchParams();
-  q.set("from", p.from);
-  q.set("to", p.to);
+  q.set("from", from);
+  q.set("to", to);
   q.set("page", String(p.page ?? 1));
   q.set("pageSize", String(p.pageSize ?? 10));
   if (p.clinicId?.trim()) q.set("clinicId", p.clinicId.trim());
@@ -270,8 +282,8 @@ export function useRevenueQuery(params: RevenueListParams) {
     queryKey: [
       "revenue",
       viewerId,
-      p.from,
-      p.to,
+      from,
+      to,
       p.clinicId ?? "",
       p.clinicianId ?? "",
       p.page ?? 1,
@@ -286,13 +298,14 @@ export function useRevenueQuery(params: RevenueListParams) {
 
 export function useRevenueTotalsQuery(params: { from: string; to: string; clinicId?: string; clinicianId?: string }) {
   const viewerId = useAuthStore((s) => s.user?.id ?? "");
+  const { from, to } = resolveRevenueRange(params.from, params.to);
   const q = new URLSearchParams();
-  q.set("from", params.from);
-  q.set("to", params.to);
+  q.set("from", from);
+  q.set("to", to);
   if (params.clinicId?.trim()) q.set("clinicId", params.clinicId.trim());
   if (params.clinicianId?.trim()) q.set("clinicianId", params.clinicianId.trim());
   return useQuery({
-    queryKey: ["revenue", "totals", viewerId, params.from, params.to, params.clinicId ?? "", params.clinicianId ?? ""],
+    queryKey: ["revenue", "totals", viewerId, from, to, params.clinicId ?? "", params.clinicianId ?? ""],
     queryFn: () => apiGet<RevenueTotalsDto>(`/api/v1/revenue/totals?${q.toString()}`),
   });
 }

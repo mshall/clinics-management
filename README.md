@@ -322,6 +322,7 @@ Use **Amazon Lightsail** (fixed monthly) **or** one **EC2** instance (e.g. **t4g
 
 - Product / requirements context: `Docs/Clinic_Management_System_PRD.md`
 - Technical RFC (if present): `Docs/Clinic_Management_System_RFC.md`
+- AWS deployment (RDS, ECS/Fargate, S3/CloudFront, checklist): `Docs/AWS_Cloud_Deployment_Guide.md`
 
 ---
 

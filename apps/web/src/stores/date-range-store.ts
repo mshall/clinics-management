@@ -22,6 +22,8 @@ interface DateRangeState {
   resetToCurrentMonth: () => void;
 }
 
+const RANGE_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
 export const useDateRangeStore = create<DateRangeState>()(
   persist(
     (set) => ({
@@ -31,6 +33,16 @@ export const useDateRangeStore = create<DateRangeState>()(
     }),
     {
       name: "cms-reporting-range",
+      version: 2,
+      migrate: (persisted, version) => {
+        const fresh = defaultMonthRange();
+        if (version < 2) return fresh;
+        const p = persisted as { from?: unknown; to?: unknown };
+        const from = typeof p.from === "string" ? p.from.trim() : "";
+        const to = typeof p.to === "string" ? p.to.trim() : "";
+        if (RANGE_DAY.test(from) && RANGE_DAY.test(to)) return { from, to };
+        return fresh;
+      },
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({ from: s.from, to: s.to }),
     }

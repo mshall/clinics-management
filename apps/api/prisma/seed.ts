@@ -327,11 +327,16 @@ async function main() {
     )
   );
 
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const y = now.getFullYear();
+  const m = now.getMonth();
 
-  /** Ledger rows tied to encounters so physician-scoped revenue (doctor dashboard) is populated. */
+  /** Always within the calendar month of `now` (local) so the default reporting range shows data. */
+  const postedThisMonth = (day: number, hour: number, minute: number) =>
+    new Date(y, m, Math.min(28, Math.max(1, day)), hour % 24, minute % 60, 0, 0);
+
+  /** Ledger rows tied to encounters — physician-scoped revenue uses `encounter.clinicianId`. */
   const encounterRevenue = encounters.flatMap((enc, i) => {
-    const basePosted = new Date(Math.max(startOfMonth.getTime(), enc.createdAt.getTime()));
+    const basePosted = postedThisMonth(1 + (i % 27), 9 + (i % 6), 10 + (i % 40));
     const visitNet = 380 + i * 22;
     const rows = [
       {
@@ -366,33 +371,105 @@ async function main() {
     }
     return rows;
   });
-  const orgWideOrphans = Array.from({ length: 5 }, (_, i) => ({
-    tenantId: t0.id,
-    clinicId: clinics[i % clinics.length]!.id,
-    encounterId: null as string | null,
-    category: "RETAIL",
-    description: `Branch retail (no encounter) ${i + 1}`,
-    grossAmount: 95 + i * 12,
-    taxAmount: 0,
-    netAmount: 95 + i * 12,
-    currency: "AED",
-    postedAt: new Date(startOfMonth.getTime() + (20 + i) * 3600000),
-    status: RevenueStatus.POSTED,
-  }));
-  await prisma.revenueEntry.createMany({ data: [...encounterRevenue, ...orgWideOrphans] });
 
-  await prisma.expense.createMany({
-    data: Array.from({ length: 15 }, (_, i) => ({
-      tenantId: t0.id,
-      clinicId: clinics[i % clinics.length]!.id,
-      category: ["UTILITIES", "MATERIALS", "PAYROLL", "MARKETING", "RENT"][i % 5]!,
-      vendorName: `Vendor ${i + 1} LLC`,
-      amount: 3000 + i * 200,
-      currency: "AED",
-      incurredAt: new Date(startOfMonth.getTime() + i * 7200000),
-      status: i % 3 === 0 ? ExpenseStatus.PENDING : ExpenseStatus.APPROVED,
-    })),
+  /** Extra encounter-linked rows in prior months so changing the reporting bar still shows data. */
+  const crossMonthEncounterRevenue: {
+    tenantId: string;
+    clinicId: string;
+    encounterId: string;
+    category: string;
+    description: string;
+    grossAmount: number;
+    taxAmount: number;
+    netAmount: number;
+    currency: string;
+    postedAt: Date;
+    status: RevenueStatus;
+  }[] = [];
+  for (const doc of [physician, physician2]) {
+    const theirs = encounters.filter((e) => e.clinicianId === doc.id && e.status === EncounterStatus.FINALIZED);
+    const enc0 = theirs[0];
+    if (!enc0) continue;
+    for (const monthOffset of [0, -1, -2] as const) {
+      crossMonthEncounterRevenue.push({
+        tenantId: t0.id,
+        clinicId: enc0.clinicId,
+        encounterId: enc0.id,
+        category: "ADD_ON",
+        description: `Demo add-on (seed) · ${doc.email} · month offset ${monthOffset}`,
+        grossAmount: 265,
+        taxAmount: 0,
+        netAmount: 265,
+        currency: "AED",
+        postedAt: new Date(y, m + monthOffset, 16, 13, 20, 0, 0),
+        status: RevenueStatus.POSTED,
+      });
+    }
+  }
+
+  /** No encounter — visible on the org revenue ledger (finance / branch manager / group admin). */
+  const orgWideOrphans: {
+    tenantId: string;
+    clinicId: string;
+    encounterId: string | null;
+    category: string;
+    description: string;
+    grossAmount: number;
+    taxAmount: number;
+    netAmount: number;
+    currency: string;
+    postedAt: Date;
+    status: RevenueStatus;
+  }[] = [];
+  for (const monthOffset of [0, -1, -2] as const) {
+    for (let i = 0; i < 5; i++) {
+      orgWideOrphans.push({
+        tenantId: t0.id,
+        clinicId: clinics[(i + Math.abs(monthOffset)) % clinics.length]!.id,
+        encounterId: null,
+        category: "RETAIL",
+        description: `Branch retail (no encounter) mo${monthOffset} #${i + 1}`,
+        grossAmount: 88 + i * 11 + Math.abs(monthOffset) * 6,
+        taxAmount: 0,
+        netAmount: 88 + i * 11 + Math.abs(monthOffset) * 6,
+        currency: "AED",
+        postedAt: new Date(y, m + monthOffset, 3 + i * 4, 10, 15 + i, 0, 0),
+        status: RevenueStatus.POSTED,
+      });
+    }
+  }
+
+  await prisma.revenueEntry.createMany({
+    data: [...encounterRevenue, ...crossMonthEncounterRevenue, ...orgWideOrphans],
   });
+
+  const expenseRows: {
+    tenantId: string;
+    clinicId: string;
+    category: string;
+    vendorName: string;
+    amount: number;
+    currency: string;
+    incurredAt: Date;
+    status: ExpenseStatus;
+  }[] = [];
+  let expIdx = 0;
+  for (const monthOffset of [0, -1, -2] as const) {
+    for (let i = 0; i < 8; i++) {
+      expenseRows.push({
+        tenantId: t0.id,
+        clinicId: clinics[(expIdx + i) % clinics.length]!.id,
+        category: ["UTILITIES", "MATERIALS", "PAYROLL", "MARKETING", "RENT"][expIdx % 5]!,
+        vendorName: `Vendor ${expIdx + 1} LLC`,
+        amount: 2200 + expIdx * 175,
+        currency: "AED",
+        incurredAt: new Date(y, m + monthOffset, 2 + ((i * 3) % 26), 11, 30 + i, 0, 0),
+        status: expIdx % 3 === 0 ? ExpenseStatus.PENDING : ExpenseStatus.APPROVED,
+      });
+      expIdx += 1;
+    }
+  }
+  await prisma.expense.createMany({ data: expenseRows });
 
   await prisma.attendance.createMany({
     data: Array.from({ length: 15 }, (_, i) => ({

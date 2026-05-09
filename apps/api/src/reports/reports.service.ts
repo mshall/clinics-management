@@ -16,7 +16,10 @@ export class ReportsService {
       status: RevenueStatus.POSTED,
       postedAt: { gte: start, lte: end },
       ...(viewer?.role === UserRole.PHYSICIAN
-        ? { encounter: { is: { clinicianId: viewer.userId } } }
+        ? {
+            encounterId: { not: null },
+            encounter: { is: { clinicianId: viewer.userId } },
+          }
         : {}),
     };
 

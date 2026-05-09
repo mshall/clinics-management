@@ -960,6 +960,8 @@ Under the hood, `pnpm deploy:<env>`:
 
 ## 14. AWS Deployment Architecture
 
+> **Operational guide:** For a step-by-step AWS checklist (RDS, ECS/Fargate, S3/CloudFront, env vars, migrations), see `Docs/AWS_Cloud_Deployment_Guide.md` in this repository.
+
 ```
                    Route 53
                       │
