@@ -1,17 +1,11 @@
 import { expect, test } from "@playwright/test";
-
-async function login(page: import("@playwright/test").Page, email: string, password = "demo") {
-  await page.goto("/login");
-  await page.getByLabel(/email/i).fill(email);
-  await page.getByLabel(/^password$/i).fill(password);
-  await page.getByRole("button", { name: /sign in/i }).click();
-}
+import { login } from "./helpers";
 
 test.describe("UX flows & data wiring smoke", () => {
   test("patients list has quick search without advanced search toggle", async ({ page }) => {
     await login(page, "admin@kiorly.com");
     await page.goto("/patients");
-    await expect(page.getByPlaceholder(/search/i)).toBeVisible();
+    await expect(page.getByPlaceholder(/MRN|national ID/i)).toBeVisible();
     await expect(page.getByRole("button", { name: /advanced search/i })).toHaveCount(0);
   });
 
@@ -26,7 +20,7 @@ test.describe("UX flows & data wiring smoke", () => {
     await login(page, "admin@kiorly.com");
     await page.goto("/hr");
     await page.getByRole("button", { name: /employees/i }).click();
-    await expect(page.getByRole("link", { name: /administration/i })).toBeVisible();
+    await expect(page.getByRole("main").getByRole("link", { name: /^admin$/i })).toBeVisible();
   });
 
   test("reports page loads monthly series from API (chart canvas present)", async ({ page }) => {

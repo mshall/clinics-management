@@ -1,18 +1,11 @@
 import { expect, test } from "@playwright/test";
-
-async function login(page: import("@playwright/test").Page) {
-  await page.goto("/login");
-  await page.getByLabel(/email/i).fill("admin@kiorly.com");
-  await page.getByLabel(/^password$/i).fill("demo");
-  await page.getByRole("button", { name: /sign in/i }).click();
-  await page.waitForURL(/\//);
-}
+import { login } from "./helpers";
 
 test.describe("Clinics directory", () => {
   test("row navigates to clinic detail", async ({ page }) => {
-    await login(page);
+    await login(page, "admin@kiorly.com");
     await page.goto("/clinics");
-    await expect(page.getByRole("heading", { name: /clinics/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /clinics.*branches/i })).toBeVisible();
     const row = page.locator("tbody tr").filter({ hasText: /Dubai|Ahmed|HQ/i }).first();
     await row.click();
     await expect(page).toHaveURL(/\/clinics\/[^/]+$/);

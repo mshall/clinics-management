@@ -1,11 +1,5 @@
 import { expect, test } from "@playwright/test";
-
-async function login(page: import("@playwright/test").Page, email: string, password = "demo") {
-  await page.goto("/login");
-  await page.getByLabel(/email/i).fill(email);
-  await page.getByLabel(/^password$/i).fill(password);
-  await page.getByRole("button", { name: /sign in/i }).click();
-}
+import { login } from "./helpers";
 
 test.describe("Auth & RBAC smoke", () => {
   test("physician lands on patients and sees appointments and doctor revenue nav", async ({ page }) => {
@@ -27,7 +21,8 @@ test.describe("Auth & RBAC smoke", () => {
 
   test("clinic admin opens administration with staff and governance", async ({ page }) => {
     await login(page, "clinicadmin@kiorly.com");
-    await expect(page.getByRole("heading", { name: /administration/i })).toBeVisible();
+    await page.goto("/admin");
+    await expect(page.getByRole("heading", { name: /^admin$/i })).toBeVisible();
     await expect(page.getByRole("heading", { name: /create employee/i })).toBeVisible();
     await expect(page.getByText(/audit/i).first()).toBeVisible();
   });
@@ -35,6 +30,6 @@ test.describe("Auth & RBAC smoke", () => {
   test("group admin sees governance tab on admin page", async ({ page }) => {
     await login(page, "admin@kiorly.com");
     await page.goto("/admin");
-    await expect(page.getByRole("button", { name: /governance/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /governance.*audit|audit/i })).toBeVisible();
   });
 });

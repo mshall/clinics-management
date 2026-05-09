@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:5173";
+/** Prefer localhost so IPv6-only Vite binds still resolve on macOS. */
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:5173";
 
 export default defineConfig({
   testDir: "./e2e",
