@@ -133,6 +133,8 @@ export interface LeaveRequestDto {
 export interface AppointmentDto {
   id: string;
   clinicId: string;
+  clinicNameEn?: string | null;
+  clinicNameAr?: string | null;
   patientId: string;
   clinicianId: string;
   /** Employee first/last (EN) when linked, else user displayName */

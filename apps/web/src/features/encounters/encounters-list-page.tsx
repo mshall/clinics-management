@@ -175,11 +175,19 @@ export function EncountersListPage() {
   const aptPickerRows = aptPickerData?.items ?? [];
   const aptPickerItems: PickListItem[] = useMemo(
     () =>
-      aptPickerRows.map((a: AppointmentDto) => ({
-        value: a.id,
-        label: `${new Date(a.startsAt).toLocaleString(i18n.language === "ar" ? "ar-AE" : "en-AE")} · ${a.status}`,
-        hint: `${(a.patientName ?? "").trim() || "—"} · ${a.patientMrn ?? a.patientId.slice(0, 8)}`,
-      })),
+      aptPickerRows.map((a: AppointmentDto) => {
+        const clinicHint =
+          (i18n.language === "ar"
+            ? a.clinicNameAr?.trim() || a.clinicNameEn?.trim()
+            : a.clinicNameEn?.trim() || a.clinicNameAr?.trim()) ?? "";
+        return {
+          value: a.id,
+          label: `${new Date(a.startsAt).toLocaleString(i18n.language === "ar" ? "ar-AE" : "en-AE")} · ${a.status}`,
+          hint: [clinicHint, `${(a.patientName ?? "").trim() || "—"} · ${a.patientMrn ?? a.patientId.slice(0, 8)}`]
+            .filter(Boolean)
+            .join(" · "),
+        };
+      }),
     [aptPickerRows, i18n.language]
   );
 
@@ -245,7 +253,14 @@ export function EncountersListPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("encounters.listTitle")}</h1>
-          <p className="text-muted-foreground">{t("encounters.listSubtitle")}</p>
+          <p className="text-muted-foreground">
+            {isPhysician
+              ? t(
+                  "encounters.listSubtitlePhysician",
+                  "Encounters where you are the attending physician, across all clinics. The clinic column shows where each visit took place."
+                )
+              : t("encounters.listSubtitle")}
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <CreateActionButton
@@ -501,6 +516,7 @@ export function EncountersListPage() {
                     filterValue={efEncStatus}
                     onFilterChange={setEfEncStatus}
                   />
+                  <FilterTh label={t("encounters.clinic")} value={efClinic} onChange={setEfClinic} align="start" />
                   <SortableTh
                     label={t("encounters.visitType")}
                     column="visitType"
@@ -510,7 +526,6 @@ export function EncountersListPage() {
                     filterValue={efVisit}
                     onFilterChange={setEfVisit}
                   />
-                  <FilterTh label={t("encounters.clinic")} value={efClinic} onChange={setEfClinic} align="start" />
                   <FilterTh label={t("encounters.patient")} value={efPatient} onChange={setEfPatient} align="center" />
                   <SortableTh
                     label={t("encounters.updated")}
@@ -549,7 +564,6 @@ export function EncountersListPage() {
                       <td className="px-3 py-2">
                         <Badge variant={e.status === "FINALIZED" ? "default" : "secondary"}>{e.status}</Badge>
                       </td>
-                      <td className="px-3 py-2">{e.visitType}</td>
                       <td className="px-3 py-2">
                         <Badge
                           variant="outline"
@@ -565,6 +579,7 @@ export function EncountersListPage() {
                             : e.clinicNameEn ?? e.clinicNameAr) ?? "—"}
                         </Badge>
                       </td>
+                      <td className="px-3 py-2">{e.visitType}</td>
                       <td className="px-3 py-2 text-center">
                         {patientLabel.get(e.patientId) ?? (
                           <span className="font-mono text-xs text-muted-foreground ltr-nums">{e.patientId.slice(0, 8)}…</span>

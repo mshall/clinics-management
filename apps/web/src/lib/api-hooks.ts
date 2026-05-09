@@ -25,6 +25,14 @@ import type { Paginated } from "@/lib/paginated";
 import { useAuthStore } from "@/stores/auth-store";
 import { defaultMonthRange, useDateRangeStore } from "@/stores/date-range-store";
 
+/** Encounters ledger must always send a valid YYYY-MM-DD pair; avoid half-empty persisted UI state. */
+function encounterLedgerFromTo(from: string, to: string): { from: string; to: string } {
+  const f = from?.trim() ?? "";
+  const t = to?.trim() ?? "";
+  if (ISO_DAY.test(f) && ISO_DAY.test(t)) return { from: f, to: t };
+  return defaultMonthRange();
+}
+
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 function resolveRevenueRange(from?: string, to?: string): { from: string; to: string } {
@@ -153,9 +161,10 @@ export function useEncountersQuery(params: EncountersListParams = {}) {
   const viewerRole = useAuthStore((s) => s.user?.role ?? "");
   const storeFrom = useDateRangeStore((s) => s.from);
   const storeTo = useDateRangeStore((s) => s.to);
-  const from = params.from ?? storeFrom;
-  const to = params.to ?? storeTo;
+  const rawFrom = params.from ?? storeFrom;
+  const rawTo = params.to ?? storeTo;
   const patientChart = Boolean(params.patientId?.trim());
+  const { from, to } = patientChart ? { from: rawFrom, to: rawTo } : encounterLedgerFromTo(rawFrom, rawTo);
   const q = new URLSearchParams();
   /** Patient chart lists all encounters for the patient; omit reporting range from URL and cache key. */
   if (!patientChart) {

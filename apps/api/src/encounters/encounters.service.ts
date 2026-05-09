@@ -17,7 +17,7 @@ import { createReadStream } from "fs";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
-import { resolveReportingRange } from "../common/reporting-range";
+import { resolveLedgerListingRange } from "../common/reporting-range";
 import { paginate, parsePageParams } from "../common/pagination";
 import type { JwtUser } from "../auth/jwt-user";
 import { CLINIC_SCOPE_ROLES } from "../common/clinic-scope";
@@ -211,7 +211,7 @@ export class EncountersService {
       };
     }
     if (!patientId) {
-      const { start, end } = resolveReportingRange(fromStr, toStr);
+      const { start, end } = resolveLedgerListingRange(fromStr, toStr);
       where.createdAt = { gte: start, lte: end };
     }
     const [total, rows] = await Promise.all([

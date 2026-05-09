@@ -12,7 +12,8 @@
     "db:setup": "prisma generate && prisma migrate deploy && tsx prisma/seed.ts",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "openapi:export": "tsx scripts/openapi-export.ts"
+    "openapi:export": "tsx scripts/openapi-export.ts",
+    "test:unit": "node --import tsx --test src/common/reporting-range.node.test.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.15",

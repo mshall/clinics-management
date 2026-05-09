@@ -7,6 +7,7 @@ import { AppointmentStatusBadge, appointmentStatusClassName } from "@/components
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAppointmentQuery, useClinicsQuery, usePatientQuery, usePatientsQuery, useUsersQuery } from "@/lib/api-hooks";
@@ -24,6 +25,13 @@ function isReadOnlyStatus(status: string): boolean {
   return status === "COMPLETED";
 }
 
+const STATUS_CODES = ["SCHEDULED", "CONFIRMED", "CHECKED_IN", "CANCELLED", "COMPLETED"] as const;
+type AppointmentStatusCode = (typeof STATUS_CODES)[number];
+
+function isAppointmentStatusCode(s: string): s is AppointmentStatusCode {
+  return (STATUS_CODES as readonly string[]).includes(s);
+}
+
 export function AppointmentDetailPage() {
   const { t } = useTranslation();
   const { id } = useParams();
@@ -31,9 +39,7 @@ export function AppointmentDetailPage() {
   const { data: apt, isPending, isError, error } = useAppointmentQuery(id);
   const { data: clinics = [] } = useClinicsQuery();
   const { data: userData } = useUsersQuery({ page: 1, pageSize: 100 });
-  const [forceCompletedLock, setForceCompletedLock] = useState(false);
-
-  const readOnly = apt ? isReadOnlyStatus(apt.status) || forceCompletedLock : false;
+  const readOnly = apt ? isReadOnlyStatus(apt.status) : false;
 
   const [patientPickerSearch, setPatientPickerSearch] = useState("");
   const [debouncedPatientSearch, setDebouncedPatientSearch] = useState("");
@@ -60,6 +66,7 @@ export function AppointmentDetailPage() {
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState("");
   const [formErr, setFormErr] = useState<string | null>(null);
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!apt) return;
@@ -70,8 +77,25 @@ export function AppointmentDetailPage() {
     setEndsLocal(toDatetimeLocalValue(apt.endsAt));
     setNotes(apt.notes ?? "");
     setStatus(apt.status);
-    setForceCompletedLock(apt.status === "COMPLETED");
   }, [apt]);
+
+  const statusLabel = (code: string) => {
+    if (!isAppointmentStatusCode(code)) return code;
+    const map: Record<AppointmentStatusCode, string> = {
+      SCHEDULED: t("appointments.statusScheduled", "Scheduled"),
+      CONFIRMED: t("appointments.statusConfirmed", "Confirmed"),
+      CHECKED_IN: t("appointments.statusCheckedIn", "Checked in"),
+      CANCELLED: t("appointments.statusCancelled", "Cancelled"),
+      COMPLETED: t("appointments.statusCompleted", "Completed"),
+    };
+    return map[code];
+  };
+
+  const toastStatusDraft = (code: string) => {
+    toast.success(
+      t("appointments.statusDraftToast", "Status: {{status}}. Click Save to apply.", { status: statusLabel(code) })
+    );
+  };
 
   const selectedPatientMissing = Boolean(patientId && !patients.some((p) => p.id === patientId));
   const { data: extraPatient } = usePatientQuery(selectedPatientMissing ? patientId : undefined);
@@ -111,37 +135,20 @@ export function AppointmentDetailPage() {
   const saveMut = useMutation({
     mutationFn: (body: Partial<AppointmentDto> & Record<string, unknown>) =>
       apiPatch<AppointmentDto>(`/api/v1/appointments/${id}`, body),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       setFormErr(null);
       void qc.invalidateQueries({ queryKey: ["appointment", id] });
       void qc.invalidateQueries({ queryKey: ["appointments"] });
-      toast.success(t("appointments.saveSuccess", "Appointment saved."));
+      const st = typeof variables.status === "string" ? variables.status : undefined;
+      if (st) {
+        toast.success(
+          t("appointments.savedWithStatus", "Appointment saved. Status is now {{status}}.", { status: statusLabel(st) })
+        );
+      } else {
+        toast.success(t("appointments.saveSuccess", "Appointment saved."));
+      }
     },
     onError: (e: unknown) => {
-      const msg =
-        e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body
-          ? String((e.body as { message?: unknown }).message)
-          : e instanceof Error
-            ? e.message
-            : String(e);
-      setFormErr(msg);
-      toast.error(msg);
-    },
-  });
-
-  const statusOnlyMut = useMutation({
-    mutationFn: (next: string) => apiPatch<AppointmentDto>(`/api/v1/appointments/${id}/status`, { status: next }),
-    onMutate: (next) => {
-      if (next === "COMPLETED") setForceCompletedLock(true);
-    },
-    onSuccess: () => {
-      setFormErr(null);
-      void qc.invalidateQueries({ queryKey: ["appointment", id] });
-      void qc.invalidateQueries({ queryKey: ["appointments"] });
-      toast.success(t("appointments.statusUpdated", "Status updated."));
-    },
-    onError: (e: unknown) => {
-      setForceCompletedLock(false);
       const msg =
         e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body
           ? String((e.body as { message?: unknown }).message)
@@ -201,6 +208,35 @@ export function AppointmentDetailPage() {
 
   return (
     <div className="space-y-6">
+      <Dialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen}>
+        <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>{t("appointments.confirmCompleteTitle", "Mark appointment completed?")}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {t(
+              "appointments.confirmCompleteBody",
+              "Completed appointments lock editing. Nothing is saved until you click Save."
+            )}
+          </p>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setCompleteDialogOpen(false)}>
+              {t("common.cancel", "Cancel")}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setStatus("COMPLETED");
+                setCompleteDialogOpen(false);
+                toastStatusDraft("COMPLETED");
+              }}
+            >
+              {t("appointments.confirmCompleteAction", "Continue")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <Button variant="ghost" className="mb-2 h-auto px-0 text-muted-foreground" asChild>
@@ -315,7 +351,7 @@ export function AppointmentDetailPage() {
                 <p className="text-xs text-muted-foreground">
                   {t(
                     "appointments.statusQuickHint",
-                    "Set status with one tap, or choose below and use Save with other edits."
+                    "Choose a status below, then click Save to apply. Marking completed asks for confirmation first."
                   )}
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -328,14 +364,14 @@ export function AppointmentDetailPage() {
                       ["COMPLETED", t("appointments.markCompleted", "Mark completed")] as const,
                     ] as const
                   ).map(([code, label]) => {
-                    const active = apt.status === code;
+                    const active = status === code;
                     return (
                       <Button
                         key={code}
                         type="button"
                         size="sm"
                         variant="outline"
-                        disabled={statusOnlyMut.isPending}
+                        disabled={saveMut.isPending}
                         className={cn(
                           active
                             ? cn(appointmentStatusClassName(code), "text-white shadow-sm hover:opacity-95")
@@ -343,15 +379,12 @@ export function AppointmentDetailPage() {
                         )}
                         onClick={() => {
                           if (code === "COMPLETED") {
-                            const yes = window.confirm(
-                              t(
-                                "appointments.confirmComplete",
-                                "Mark this appointment as completed? This will lock editing and status changes."
-                              )
-                            );
-                            if (!yes) return;
+                            if (status !== "COMPLETED") setCompleteDialogOpen(true);
+                            return;
                           }
-                          statusOnlyMut.mutate(code);
+                          if (code === status) return;
+                          setStatus(code);
+                          toastStatusDraft(code);
                         }}
                       >
                         {label}
@@ -361,18 +394,27 @@ export function AppointmentDetailPage() {
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">
-                    {t("appointments.statusWithSave", "Or pick status for the next save")}
+                    {t("appointments.statusWithSave", "Or choose from the list (same as shortcuts)")}
                   </p>
                   <select
                     id={`appointment-status-select-${id}`}
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={status}
-                    onChange={(e) => setStatus(e.target.value)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "COMPLETED") {
+                        setCompleteDialogOpen(true);
+                        return;
+                      }
+                      setStatus(v);
+                      toastStatusDraft(v);
+                    }}
                   >
                     <option value="SCHEDULED">{t("appointments.statusScheduled", "Scheduled")}</option>
                     <option value="CONFIRMED">{t("appointments.statusConfirmed", "Confirmed")}</option>
                     <option value="CHECKED_IN">{t("appointments.statusCheckedIn", "Checked in")}</option>
                     <option value="CANCELLED">{t("appointments.statusCancelled", "Cancelled")}</option>
+                    <option value="COMPLETED">{t("appointments.statusCompleted", "Completed")}</option>
                   </select>
                 </div>
               </div>

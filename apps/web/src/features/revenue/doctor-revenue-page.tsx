@@ -6,6 +6,13 @@ import { useRevenueQuery, useRevenueTotalsQuery } from "@/lib/api-hooks";
 import type { RevenueEntryDto } from "@/lib/api-types";
 import { useDateRangeStore } from "@/stores/date-range-store";
 
+function clinicCellLabel(r: RevenueEntryDto, lng: string): string {
+  const en = r.clinicNameEn?.trim();
+  const ar = r.clinicNameAr?.trim();
+  if (lng === "ar") return ar || en || r.clinicId;
+  return en || ar || r.clinicId;
+}
+
 export function DoctorRevenuePage() {
   const { t, i18n } = useTranslation();
   const { from, to } = useDateRangeStore();
@@ -55,7 +62,10 @@ export function DoctorRevenuePage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{t("doctorRevenue.lines", "Revenue lines")}</CardTitle>
-          <CardDescription>{t("doctorRevenue.linesHint", "Only entries linked to encounters where you are the attending doctor.")}</CardDescription>
+          <CardDescription>
+            {t("doctorRevenue.linesHint", "Only entries linked to encounters where you are the attending doctor.")}{" "}
+            {t("doctorRevenue.linesClinicHint", "The clinic column shows which location each line belongs to.")}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {list.isError ? (
@@ -66,6 +76,7 @@ export function DoctorRevenuePage() {
               <thead className="bg-muted/60">
                 <tr>
                   <th className="px-3 py-2 text-start font-medium">{t("revenue.category")}</th>
+                  <th className="px-3 py-2 text-start font-medium">{t("appointments.clinic", "Clinic")}</th>
                   <th className="px-3 py-2 text-start font-medium">{t("revenue.net", "Net")}</th>
                   <th className="px-3 py-2 text-start font-medium">{t("revenue.posted")}</th>
                 </tr>
@@ -74,13 +85,16 @@ export function DoctorRevenuePage() {
                 {rows.map((r) => (
                   <tr key={r.id} className="border-t border-border">
                     <td className="px-3 py-2">{r.category}</td>
+                    <td className="max-w-[14rem] truncate px-3 py-2 text-muted-foreground" title={clinicCellLabel(r, i18n.language)}>
+                      {clinicCellLabel(r, i18n.language)}
+                    </td>
                     <td className="px-3 py-2 ltr-nums">{money(r.netAmount)}</td>
                     <td className="px-3 py-2 text-muted-foreground ltr-nums">{new Date(r.postedAt).toLocaleString()}</td>
                   </tr>
                 ))}
                 {!list.isPending && !rows.length ? (
                   <tr>
-                    <td colSpan={3} className="px-3 py-6 text-center text-muted-foreground">
+                    <td colSpan={4} className="px-3 py-6 text-center text-muted-foreground">
                       {t("doctorRevenue.empty", "No revenue lines in this period.")}
                     </td>
                   </tr>

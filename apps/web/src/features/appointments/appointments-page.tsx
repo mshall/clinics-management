@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAppointmentsQuery, useClinicsQuery, usePatientsQuery, useUsersQuery } from "@/lib/api-hooks";
 import { ApiError, apiPost } from "@/lib/http";
+import { useAuthStore } from "@/stores/auth-store";
 
 function toAppointmentIso(localDatetime: string): string {
   const d = new Date(localDatetime);
@@ -25,6 +26,7 @@ export function AppointmentsPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const authUser = useAuthStore((s) => s.user);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [sortBy, setSortBy] = useState("startsAt");
@@ -114,6 +116,9 @@ export function AppointmentsPage() {
   const [clinicId, setClinicId] = useState("");
   const [patientId, setPatientId] = useState("");
   const [clinicianId, setClinicianId] = useState("");
+  useEffect(() => {
+    if (authUser?.role === "physician" && authUser.id) setClinicianId(authUser.id);
+  }, [authUser?.role, authUser?.id]);
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [formErr, setFormErr] = useState<string | null>(null);
@@ -189,7 +194,14 @@ export function AppointmentsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("appointments.title")}</h1>
-        <p className="text-muted-foreground">{t("appointments.subtitle")}</p>
+        <p className="text-muted-foreground">
+          {authUser?.role === "physician"
+            ? t(
+                "appointments.subtitlePhysician",
+                "Every appointment where you are the clinician, across all clinics in this organization."
+              )
+            : t("appointments.subtitle")}
+        </p>
       </div>
 
       {isError ? <p className="text-sm text-destructive">{error instanceof Error ? error.message : t("common.error")}</p> : null}
@@ -354,7 +366,7 @@ export function AppointmentsPage() {
             <table className="w-full text-sm">
               <thead className="bg-muted/60">
                 <tr>
-                  <FilterTh label={t("appointments.clinic")} value={afClinic} onChange={setAfClinic} />
+                  <FilterTh label={t("appointments.patient")} value={afPatient} onChange={setAfPatient} />
                   <SortableTh
                     label={t("appointments.starts")}
                     column="startsAt"
@@ -364,7 +376,7 @@ export function AppointmentsPage() {
                     filterValue={afStarts}
                     onFilterChange={setAfStarts}
                   />
-                  <FilterTh label={t("appointments.patient")} value={afPatient} onChange={setAfPatient} />
+                  <FilterTh label={t("appointments.clinic")} value={afClinic} onChange={setAfClinic} />
                   <SortableTh
                     label={t("appointments.status")}
                     column="status"
@@ -388,11 +400,14 @@ export function AppointmentsPage() {
                   filteredAppointments.map((a) => {
                     const cRow = clinicById.get(a.clinicId);
                     const clinicLabel =
-                      cRow != null
+                      (i18n.language === "ar"
+                        ? a.clinicNameAr?.trim() || a.clinicNameEn?.trim()
+                        : a.clinicNameEn?.trim() || a.clinicNameAr?.trim()) ||
+                      (cRow != null
                         ? i18n.language === "ar"
                           ? cRow.ar || cRow.en
                           : cRow.en || cRow.ar
-                        : null;
+                        : null);
                     return (
                     <tr
                       key={a.id}
@@ -407,6 +422,14 @@ export function AppointmentsPage() {
                         }
                       }}
                     >
+                      <td className="max-w-[10rem] truncate px-3 py-2 text-xs sm:max-w-[14rem]">
+                        {patientLabel.get(a.patientId) ?? (
+                          <span className="font-mono text-muted-foreground ltr-nums">{a.patientId.slice(0, 8)}…</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 ltr-nums text-xs">
+                        {new Date(a.startsAt).toLocaleString(i18n.language === "ar" ? "ar-AE" : "en-AE")}
+                      </td>
                       <td className="px-3 py-2">
                         <Badge
                           variant="outline"
@@ -417,14 +440,6 @@ export function AppointmentsPage() {
                             <span className="font-mono ltr-nums text-muted-foreground">{a.clinicId.slice(0, 8)}…</span>
                           )}
                         </Badge>
-                      </td>
-                      <td className="px-3 py-2 ltr-nums text-xs">
-                        {new Date(a.startsAt).toLocaleString(i18n.language === "ar" ? "ar-AE" : "en-AE")}
-                      </td>
-                      <td className="max-w-[10rem] truncate px-3 py-2 text-xs sm:max-w-[14rem]">
-                        {patientLabel.get(a.patientId) ?? (
-                          <span className="font-mono text-muted-foreground ltr-nums">{a.patientId.slice(0, 8)}…</span>
-                        )}
                       </td>
                       <td className="px-3 py-2">
                         <AppointmentStatusBadge status={a.status} />

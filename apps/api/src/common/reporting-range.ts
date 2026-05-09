@@ -46,3 +46,24 @@ export function resolveReportingRange(fromStr?: string, toStr?: string): { start
 
   return { start, end };
 }
+
+/**
+ * For paginated ledger-style lists (e.g. encounters) where query params may be
+ * partially cleared in the UI or persisted oddly: never throw; fall back to the
+ * current calendar month instead of {@link resolveReportingRange} rejecting the request.
+ */
+export function resolveLedgerListingRange(fromStr?: string, toStr?: string): { start: Date; end: Date } {
+  const f = fromStr?.trim() ?? "";
+  const t = toStr?.trim() ?? "";
+  if (f.length === 0 && t.length === 0) {
+    return resolveReportingRange(undefined, undefined);
+  }
+  if (f.length === 0 || t.length === 0 || !ISO_DAY.test(f) || !ISO_DAY.test(t)) {
+    return resolveReportingRange(undefined, undefined);
+  }
+  try {
+    return resolveReportingRange(f, t);
+  } catch {
+    return resolveReportingRange(undefined, undefined);
+  }
+}

@@ -9,17 +9,18 @@ import type { CreateAppointmentDto } from "./dto/create-appointment.dto";
 import type { AppointmentDto } from "./dto/appointment.dto";
 import type { UpdateAppointmentDto } from "./dto/update-appointment.dto";
 
-type AppointmentRow = Prisma.AppointmentGetPayload<{
-  include: {
-    patient: { select: { mrn: true; firstNameEn: true; lastNameEn: true } };
-    clinician: {
-      select: {
-        displayName: true;
-        employee: { select: { firstNameEn: true; lastNameEn: true } };
-      };
-    };
-  };
-}>;
+const appointmentDtoInclude = {
+  patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } },
+  clinic: { select: { nameEn: true, nameAr: true } },
+  clinician: {
+    select: {
+      displayName: true,
+      employee: { select: { firstNameEn: true, lastNameEn: true } },
+    },
+  },
+} as const;
+
+type AppointmentRow = Prisma.AppointmentGetPayload<{ include: typeof appointmentDtoInclude }>;
 
 function isPhysicianRole(role: UserRole | undefined): boolean {
   return role === UserRole.PHYSICIAN || String(role) === "PHYSICIAN";
@@ -60,37 +61,28 @@ export class AppointmentsService {
     return d || null;
   }
 
-  private map(
-    a: {
-      id: string;
-      clinicId: string;
-      patientId: string;
-      clinicianId: string;
-      startsAt: Date;
-      endsAt: Date;
-      status: AppointmentStatus;
-      notes: string | null;
-    },
-    patient: { mrn: string; firstNameEn: string; lastNameEn: string } | null | undefined,
-    clinician: { displayName: string; employee: { firstNameEn: string; lastNameEn: string } | null } | null | undefined
-  ): AppointmentDto {
-    const dto = {
-      id: a.id,
-      clinicId: a.clinicId,
-      patientId: a.patientId,
-      clinicianId: a.clinicianId,
+  private mapRow(row: AppointmentRow): AppointmentDto {
+    const patient = row.patient;
+    const clinician = row.clinician;
+    const dto: AppointmentDto = {
+      id: row.id,
+      clinicId: row.clinicId,
+      clinicNameEn: row.clinic?.nameEn ?? null,
+      clinicNameAr: row.clinic?.nameAr ?? null,
+      patientId: row.patientId,
+      clinicianId: row.clinicianId,
       clinicianName: this.clinicianDisplayName(clinician ?? null),
-      startsAt: a.startsAt.toISOString(),
-      endsAt: a.endsAt.toISOString(),
-      status: a.status,
-      notes: a.notes,
+      startsAt: row.startsAt.toISOString(),
+      endsAt: row.endsAt.toISOString(),
+      status: row.status,
+      notes: row.notes,
       ...(patient
         ? {
             patientMrn: patient.mrn,
             patientName: `${patient.firstNameEn} ${patient.lastNameEn}`.trim(),
           }
         : {}),
-    } as AppointmentDto;
+    };
     return dto;
   }
 
@@ -193,7 +185,7 @@ export class AppointmentsService {
       and.push({ clinicId: { in: ids } });
     }
 
-    const where: Prisma.AppointmentWhereInput = and.length > 1 ? { AND: and } : { tenantId };
+    const where: Prisma.AppointmentWhereInput = { AND: and };
 
     const [total, rows] = await Promise.all([
       this.prisma.appointment.count({ where }),
@@ -202,19 +194,11 @@ export class AppointmentsService {
         orderBy: { [sortField]: sortDir },
         skip,
         take: pageSize,
-        include: {
-          patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } },
-          clinician: {
-            select: {
-              displayName: true,
-              employee: { select: { firstNameEn: true, lastNameEn: true } },
-            },
-          },
-        },
+        include: appointmentDtoInclude,
       }),
     ]);
     return paginate(
-      rows.map((r: AppointmentRow) => this.map(r, r.patient, r.clinician)),
+      rows.map((r: AppointmentRow) => this.mapRow(r)),
       total,
       page,
       pageSize
@@ -246,17 +230,9 @@ export class AppointmentsService {
         status: dto.status ?? AppointmentStatus.SCHEDULED,
         notes: dto.notes ?? null,
       },
-      include: {
-        patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } },
-        clinician: {
-          select: {
-            displayName: true,
-            employee: { select: { firstNameEn: true, lastNameEn: true } },
-          },
-        },
-      },
+      include: appointmentDtoInclude,
     });
-    return this.map(row, row.patient, row.clinician);
+    return this.mapRow(row);
   }
 
   async updateStatus(
@@ -267,15 +243,7 @@ export class AppointmentsService {
   ): Promise<AppointmentDto> {
     const existing = await this.prisma.appointment.findFirst({
       where: { id, tenantId },
-      include: {
-        patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } },
-        clinician: {
-          select: {
-            displayName: true,
-            employee: { select: { firstNameEn: true, lastNameEn: true } },
-          },
-        },
-      },
+      include: appointmentDtoInclude,
     });
     if (!existing) throw new NotFoundException("Appointment not found");
     await this.assertAppointmentAccess(viewer, existing);
@@ -285,35 +253,19 @@ export class AppointmentsService {
     const row = await this.prisma.appointment.update({
       where: { id },
       data: { status },
-      include: {
-        patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } },
-        clinician: {
-          select: {
-            displayName: true,
-            employee: { select: { firstNameEn: true, lastNameEn: true } },
-          },
-        },
-      },
+      include: appointmentDtoInclude,
     });
-    return this.map(row, row.patient, row.clinician);
+    return this.mapRow(row);
   }
 
   async getById(tenantId: string, id: string, viewer?: JwtUser): Promise<AppointmentDto> {
     const row = await this.prisma.appointment.findFirst({
       where: { id, tenantId },
-      include: {
-        patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } },
-        clinician: {
-          select: {
-            displayName: true,
-            employee: { select: { firstNameEn: true, lastNameEn: true } },
-          },
-        },
-      },
+      include: appointmentDtoInclude,
     });
     if (!row) throw new NotFoundException("Appointment not found");
     await this.assertAppointmentAccess(viewer, row);
-    return this.map(row, row.patient, row.clinician);
+    return this.mapRow(row);
   }
 
   private isCompletedStatus(s: AppointmentStatus): boolean {
@@ -356,16 +308,8 @@ export class AppointmentsService {
         status: dto.status !== undefined ? dto.status : undefined,
         notes: dto.notes !== undefined ? (dto.notes === "" ? null : dto.notes) : undefined,
       },
-      include: {
-        patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } },
-        clinician: {
-          select: {
-            displayName: true,
-            employee: { select: { firstNameEn: true, lastNameEn: true } },
-          },
-        },
-      },
+      include: appointmentDtoInclude,
     });
-    return this.map(row, row.patient, row.clinician);
+    return this.mapRow(row);
   }
 }
