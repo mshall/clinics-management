@@ -22,6 +22,7 @@ import {
 } from "@/lib/api-hooks";
 import type { AppointmentDto, EncounterDetailDto } from "@/lib/api-types";
 import { ApiError, apiPost } from "@/lib/http";
+import { resolvePatientListLabel } from "@/lib/patient-display";
 import { ENCOUNTER_VISIT_TYPES } from "@/lib/visit-types";
 import { defaultMonthRange } from "@/stores/date-range-store";
 import { useAuthStore } from "@/stores/auth-store";
@@ -120,7 +121,12 @@ export function EncountersListPage() {
       if (fv && !e.visitType.toLowerCase().includes(fv)) return false;
       if (fc && !name(e).toLowerCase().includes(fc)) return false;
       if (fp) {
-        const label = (patientLabel.get(e.patientId) ?? e.patientId).toLowerCase();
+        const label = resolvePatientListLabel({
+          patientId: e.patientId,
+          patientMrn: e.patientMrn,
+          patientName: e.patientName,
+          registryLabel: patientLabel.get(e.patientId),
+        }).text.toLowerCase();
         if (!label.includes(fp)) return false;
       }
       if (fu) {
@@ -581,9 +587,19 @@ export function EncountersListPage() {
                       </td>
                       <td className="px-3 py-2">{e.visitType}</td>
                       <td className="px-3 py-2 text-center">
-                        {patientLabel.get(e.patientId) ?? (
-                          <span className="font-mono text-xs text-muted-foreground ltr-nums">{e.patientId.slice(0, 8)}…</span>
-                        )}
+                        {(() => {
+                          const r = resolvePatientListLabel({
+                            patientId: e.patientId,
+                            patientMrn: e.patientMrn,
+                            patientName: e.patientName,
+                            registryLabel: patientLabel.get(e.patientId),
+                          });
+                          return r.isIdFallback ? (
+                            <span className="font-mono text-xs text-muted-foreground ltr-nums">{r.text}</span>
+                          ) : (
+                            r.text
+                          );
+                        })()}
                       </td>
                       <td className="px-3 py-2 ltr-nums text-xs text-muted-foreground">
                         {new Date(e.updatedAt).toLocaleString(i18n.language === "ar" ? "ar-AE" : "en-AE")}

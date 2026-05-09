@@ -24,6 +24,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { resolvePatientListLabel } from "@/lib/patient-display";
 import { ENCOUNTER_VISIT_TYPES } from "@/lib/visit-types";
 import { useAuthStore } from "@/stores/auth-store";
 import { useEncounterQuery } from "@/lib/api-hooks";
@@ -307,8 +308,23 @@ export function EncounterDetailPage() {
           </div>
           <p className="text-muted-foreground">
             {visitType}
-            <span className="ms-2 font-mono text-xs text-muted-foreground/90 ltr-nums" title={enc.patientId}>
-              · {t("encounters.patient")}: {enc.patientId.slice(0, 10)}…
+            <span
+              className="ms-2 text-xs text-muted-foreground/90 ltr-nums"
+              title={enc.patientId}
+            >
+              · {t("encounters.patient")}:{" "}
+              {(() => {
+                const r = resolvePatientListLabel({
+                  patientId: enc.patientId,
+                  patientMrn: enc.patientMrn,
+                  patientName: enc.patientName,
+                });
+                return r.isIdFallback ? (
+                  <span className="font-mono">{r.text}</span>
+                ) : (
+                  <span className="font-medium text-foreground">{r.text}</span>
+                );
+              })()}
             </span>
           </p>
         </div>

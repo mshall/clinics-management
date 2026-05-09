@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAppointmentsQuery, useClinicsQuery, usePatientsQuery, useUsersQuery } from "@/lib/api-hooks";
 import { ApiError, apiPost } from "@/lib/http";
+import { resolvePatientListLabel } from "@/lib/patient-display";
 import { useAuthStore } from "@/stores/auth-store";
 
 function toAppointmentIso(localDatetime: string): string {
@@ -423,9 +424,19 @@ export function AppointmentsPage() {
                       }}
                     >
                       <td className="max-w-[10rem] truncate px-3 py-2 text-xs sm:max-w-[14rem]">
-                        {patientLabel.get(a.patientId) ?? (
-                          <span className="font-mono text-muted-foreground ltr-nums">{a.patientId.slice(0, 8)}…</span>
-                        )}
+                        {(() => {
+                          const r = resolvePatientListLabel({
+                            patientId: a.patientId,
+                            patientMrn: a.patientMrn,
+                            patientName: a.patientName,
+                            registryLabel: patientLabel.get(a.patientId),
+                          });
+                          return r.isIdFallback ? (
+                            <span className="font-mono text-muted-foreground ltr-nums">{r.text}</span>
+                          ) : (
+                            r.text
+                          );
+                        })()}
                       </td>
                       <td className="px-3 py-2 ltr-nums text-xs">
                         {new Date(a.startsAt).toLocaleString(i18n.language === "ar" ? "ar-AE" : "en-AE")}

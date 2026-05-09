@@ -35,6 +35,8 @@ export interface EncounterDetailDto {
   clinicNameEn?: string | null;
   clinicNameAr?: string | null;
   patientId: string;
+  patientMrn?: string | null;
+  patientName?: string | null;
   clinicianId: string;
   status: string;
   visitType: string;

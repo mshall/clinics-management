@@ -76,6 +76,12 @@ export class EncounterDetailDto {
   @ApiProperty()
   patientId!: string;
 
+  @ApiPropertyOptional({ nullable: true, description: "Patient MRN when patient row is joined" })
+  patientMrn?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, description: "Patient display name (EN) when patient row is joined" })
+  patientName?: string | null;
+
   @ApiProperty()
   clinicianId!: string;
 

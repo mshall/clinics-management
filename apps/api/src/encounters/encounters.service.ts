@@ -49,6 +49,7 @@ const encounterIncludeDef: Prisma.EncounterInclude = {
   medications: { orderBy: { createdAt: "asc" } },
   documents: { orderBy: { createdAt: "asc" } },
   clinic: { select: { nameEn: true, nameAr: true } },
+  patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } },
 };
 
 type EncounterRow = Prisma.EncounterGetPayload<{ include: typeof encounterIncludeDef }>;
@@ -127,12 +128,19 @@ export class EncountersService {
 
   private mapEncounter(e: EncounterRow, opts?: { lite?: boolean }): EncounterDetailDto {
     const lite = opts?.lite ?? false;
+    const patient = e.patient;
     return {
       id: e.id,
       clinicId: e.clinicId,
       clinicNameEn: e.clinic?.nameEn ?? null,
       clinicNameAr: e.clinic?.nameAr ?? null,
       patientId: e.patientId,
+      ...(patient
+        ? {
+            patientMrn: patient.mrn,
+            patientName: `${patient.firstNameEn} ${patient.lastNameEn}`.trim(),
+          }
+        : {}),
       clinicianId: e.clinicianId,
       status: e.status,
       visitType: e.visitType,
