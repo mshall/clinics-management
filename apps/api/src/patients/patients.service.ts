@@ -1,5 +1,7 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Gender, Prisma } from "@prisma/client";
+import type { JwtUser } from "../auth/jwt-user";
+import { fetchClinicScopeIds } from "../common/clinic-scope";
 import { PatientDto } from "../common/dto/patient.dto";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
@@ -56,12 +58,18 @@ export class PatientsService {
     return dto;
   }
 
-  private buildWhere(tenantId: string, q: PatientListQuery): Prisma.PatientWhereInput {
+  private buildWhere(tenantId: string, q: PatientListQuery, scopeClinicIds: string[] | null): Prisma.PatientWhereInput {
     const where: Prisma.PatientWhereInput = {
       tenantId,
       deletedAt: null,
     };
     const and: Prisma.PatientWhereInput[] = [];
+
+    if (scopeClinicIds?.length) {
+      and.push({
+        OR: [{ homeBranchId: { in: scopeClinicIds } }, { encounters: { some: { clinicId: { in: scopeClinicIds } } } }],
+      });
+    }
 
     const broad = q.search?.trim() ?? "";
     if (broad.length > 0) {
@@ -108,9 +116,14 @@ export class PatientsService {
     return where;
   }
 
-  async listPaginated(tenantId: string, q: PatientListQuery) {
+  async listPaginated(tenantId: string, q: PatientListQuery, user: JwtUser) {
+    const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
+    if (scopeIds !== null && !scopeIds.length) {
+      const { page, pageSize } = parsePageParams(q.page, q.pageSize);
+      return paginate([], 0, page, pageSize);
+    }
     const { page, pageSize, skip } = parsePageParams(q.page, q.pageSize);
-    const where = this.buildWhere(tenantId, q);
+    const where = this.buildWhere(tenantId, q, scopeIds);
     const sortField = pickSortField(q.sortBy, ["mrn", "dob", "firstNameEn", "lastNameEn", "createdAt", "gender"] as const, "mrn");
     const sortDir = parseSortOrder(q.sortOrder);
     const [total, rows] = await Promise.all([
@@ -126,12 +139,23 @@ export class PatientsService {
     return paginate(rows.map((r) => this.map(r)), total, page, pageSize);
   }
 
-  async getById(tenantId: string, id: string): Promise<PatientDto> {
+  async getById(tenantId: string, id: string, user: JwtUser): Promise<PatientDto> {
+    const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
     const row = await this.prisma.patient.findFirst({
       where: { id, tenantId, deletedAt: null },
       include: { homeBranch: { select: { nameEn: true } } },
     });
     if (!row) throw new NotFoundException("Patient not found");
+    if (scopeIds?.length) {
+      const homeOk = row.homeBranchId && scopeIds.includes(row.homeBranchId);
+      if (!homeOk) {
+        const visitOk = await this.prisma.encounter.findFirst({
+          where: { tenantId, patientId: id, clinicId: { in: scopeIds } },
+          select: { id: true },
+        });
+        if (!visitOk) throw new NotFoundException("Patient not found");
+      }
+    }
     return this.map(row);
   }
 
@@ -148,7 +172,16 @@ export class PatientsService {
     return `MRN-${String(n + 1).padStart(5, "0")}`;
   }
 
-  async create(tenantId: string, dto: CreatePatientDto): Promise<PatientDto> {
+  private async assertHomeBranchInScope(tenantId: string, user: JwtUser, homeBranchId: string | null | undefined): Promise<void> {
+    if (!homeBranchId) return;
+    const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
+    if (scopeIds !== null && !scopeIds.includes(homeBranchId)) {
+      throw new ForbiddenException("homeBranchId is outside clinics you manage");
+    }
+  }
+
+  async create(tenantId: string, dto: CreatePatientDto, user: JwtUser): Promise<PatientDto> {
+    await this.assertHomeBranchInScope(tenantId, user, dto.homeBranchId ?? null);
     if (dto.homeBranchId) {
       const branch = await this.prisma.clinic.findFirst({
         where: { id: dto.homeBranchId, tenantId },
@@ -183,11 +216,15 @@ export class PatientsService {
     return this.map(row);
   }
 
-  async update(tenantId: string, id: string, dto: UpdatePatientDto): Promise<PatientDto> {
+  async update(tenantId: string, id: string, dto: UpdatePatientDto, user: JwtUser): Promise<PatientDto> {
+    await this.getById(tenantId, id, user);
     const existing = await this.prisma.patient.findFirst({
       where: { id, tenantId, deletedAt: null },
     });
     if (!existing) throw new NotFoundException("Patient not found");
+    if (dto.homeBranchId !== undefined) {
+      await this.assertHomeBranchInScope(tenantId, user, dto.homeBranchId ?? null);
+    }
     if (dto.homeBranchId) {
       const branch = await this.prisma.clinic.findFirst({
         where: { id: dto.homeBranchId, tenantId },

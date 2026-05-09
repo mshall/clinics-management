@@ -27,7 +27,7 @@ export class ClinicsService {
       include: { parent: { select: { id: true, nameEn: true, nameAr: true } } },
     });
     if (!row) throw new NotFoundException("Clinic not found");
-    if (user.role === UserRole.CLINIC_ADMIN) {
+    if (user.role === UserRole.CLINIC_ADMIN || user.role === UserRole.BRANCH_MANAGER) {
       const scope = await this.prisma.clinicAdminScope.findFirst({
         where: { tenantId, userId: user.userId, clinicId: id },
       });
@@ -56,7 +56,7 @@ export class ClinicsService {
 
   async list(tenantId: string, user: JwtUser): Promise<ClinicDto[]> {
     let where: Prisma.ClinicWhereInput = { tenantId };
-    if (user.role === UserRole.CLINIC_ADMIN) {
+    if (user.role === UserRole.CLINIC_ADMIN || user.role === UserRole.BRANCH_MANAGER) {
       const scopes = await this.prisma.clinicAdminScope.findMany({
         where: { tenantId, userId: user.userId },
         select: { clinicId: true },

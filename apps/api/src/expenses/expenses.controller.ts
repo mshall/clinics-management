@@ -60,7 +60,7 @@ export class ExpensesController {
     @Query("sortOrder") sortOrder?: string,
     @Query("clinicId") clinicId?: string
   ) {
-    return this.expenses.list(user.tenantId, from, to, page, pageSize, sortBy, sortOrder, clinicId);
+    return this.expenses.list(user.tenantId, user, from, to, page, pageSize, sortBy, sortOrder, clinicId);
   }
 
   @Get(":id/proof")
@@ -70,7 +70,7 @@ export class ExpensesController {
     @CurrentUser() user: JwtUser,
     @Param("id") id: string
   ): Promise<StreamableFile> {
-    const meta = await this.expenses.getProofFileMeta(user.tenantId, id);
+    const meta = await this.expenses.getProofFileMeta(user.tenantId, id, user);
     const stream = this.expenses.getProofReadStream(meta.absolutePath);
     return new StreamableFile(stream, {
       type: meta.mimeType,
@@ -109,13 +109,13 @@ export class ExpensesController {
     @Body() body: CreateExpenseDto,
     @UploadedFile() proof?: Express.Multer.File
   ) {
-    return this.expenses.create(user.tenantId, body, proof);
+    return this.expenses.create(user.tenantId, body, user, proof);
   }
 
   @Patch(":id/status")
   @ApiOperation({ summary: "Approve or reject expense" })
   @ApiOkResponse({ type: ExpenseDto })
   patchStatus(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchExpenseStatusDto) {
-    return this.expenses.updateStatus(user.tenantId, id, body.status);
+    return this.expenses.updateStatus(user.tenantId, id, body.status, user);
   }
 }

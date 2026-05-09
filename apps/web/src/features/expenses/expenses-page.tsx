@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Receipt } from "lucide-react";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { TablePagination } from "@/components/table-pagination";
@@ -46,7 +46,14 @@ export function ExpensesPage() {
   const expTotal = expData?.total ?? 0;
   const expTotalPages = expData?.totalPages ?? 1;
   const { data: clinics = [] } = useClinicsQuery();
+  const singleManagedClinic = clinics.length === 1 ? clinics[0]! : null;
   const [clinicId, setClinicId] = useState("");
+  useEffect(() => {
+    if (singleManagedClinic) {
+      setClinicId(singleManagedClinic.id);
+      setFilterClinicId(singleManagedClinic.id);
+    }
+  }, [singleManagedClinic?.id]);
   const [category, setCategory] = useState("UTILITIES");
   const [vendor, setVendor] = useState("");
   const [amount, setAmount] = useState("");
@@ -174,21 +181,27 @@ export function ExpensesPage() {
             </div>
             <div className="min-w-[10rem] flex-1 space-y-1.5">
               <Label className="text-xs">{t("expenses.clinic")}</Label>
-              <select
-                className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
-                value={filterClinicId}
-                onChange={(e) => {
-                  setFilterClinicId(e.target.value);
-                  setPage(1);
-                }}
-              >
-                <option value="">{t("expenses.allClinics", "All clinics")}</option>
-                {clinics.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nameEn}
-                  </option>
-                ))}
-              </select>
+              {singleManagedClinic ? (
+                <p className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-2 text-sm">
+                  {singleManagedClinic.nameEn}
+                </p>
+              ) : (
+                <select
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+                  value={filterClinicId}
+                  onChange={(e) => {
+                    setFilterClinicId(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="">{t("expenses.allClinics", "All clinics")}</option>
+                  {clinics.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nameEn}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             <Button
               type="button"
@@ -229,18 +242,24 @@ export function ExpensesPage() {
         <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <div className="space-y-2">
             <Label>{t("expenses.clinic")}</Label>
-            <select
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              value={clinicId}
-              onChange={(e) => setClinicId(e.target.value)}
-            >
-              <option value="">{t("expenses.pickClinic")}</option>
-              {clinics.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nameEn}
-                </option>
-              ))}
-            </select>
+            {singleManagedClinic ? (
+              <p className="flex min-h-10 items-center rounded-md border border-input bg-muted/40 px-3 py-2 text-sm">
+                {singleManagedClinic.nameEn}
+              </p>
+            ) : (
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={clinicId}
+                onChange={(e) => setClinicId(e.target.value)}
+              >
+                <option value="">{t("expenses.pickClinic")}</option>
+                {clinics.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nameEn}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
           <div className="space-y-2">
             <Label>{t("expenses.category")}</Label>

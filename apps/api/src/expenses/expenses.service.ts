@@ -1,5 +1,7 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { ExpenseStatus, Prisma } from "@prisma/client";
+import type { JwtUser } from "../auth/jwt-user";
+import { fetchClinicScopeIds } from "../common/clinic-scope";
 import { randomUUID } from "crypto";
 import { createReadStream } from "fs";
 import * as fs from "fs/promises";
@@ -61,6 +63,7 @@ export class ExpensesService {
 
   async list(
     tenantId: string,
+    user: JwtUser,
     fromStr?: string,
     toStr?: string,
     pageStr?: string,
@@ -69,15 +72,31 @@ export class ExpensesService {
     sortOrderStr?: string,
     clinicIdStr?: string
   ) {
+    const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
+    if (scopeIds !== null && !scopeIds.length) {
+      const { page, pageSize } = parsePageParams(pageStr, pageSizeStr);
+      return paginate([], 0, page, pageSize);
+    }
     const { start, end } = resolveReportingRange(fromStr, toStr);
     const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
     const sortField = pickSortField(sortByStr, ["incurredAt", "amount", "category", "status", "vendorName"] as const, "incurredAt");
     const sortDir = parseSortOrder(sortOrderStr);
     const clinicId = clinicIdStr?.trim();
+    let clinicFilter: Prisma.ExpenseWhereInput = {};
+    if (scopeIds !== null) {
+      if (clinicId) {
+        if (!scopeIds.includes(clinicId)) throw new ForbiddenException("Clinic is outside your assigned scope");
+        clinicFilter = { clinicId };
+      } else {
+        clinicFilter = { clinicId: { in: scopeIds } };
+      }
+    } else if (clinicId) {
+      clinicFilter = { clinicId };
+    }
     const where: Prisma.ExpenseWhereInput = {
       tenantId,
       incurredAt: { gte: start, lte: end },
-      ...(clinicId ? { clinicId } : {}),
+      ...clinicFilter,
     };
     const [total, rows] = await Promise.all([
       this.prisma.expense.count({ where }),
@@ -91,7 +110,11 @@ export class ExpensesService {
     return paginate(rows.map((r) => this.map(r)), total, page, pageSize);
   }
 
-  async create(tenantId: string, dto: CreateExpenseDto, proof?: ProofFile): Promise<ExpenseDto> {
+  async create(tenantId: string, dto: CreateExpenseDto, user: JwtUser, proof?: ProofFile): Promise<ExpenseDto> {
+    const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
+    if (scopeIds !== null && !scopeIds.includes(dto.clinicId)) {
+      throw new ForbiddenException("Clinic is outside your assigned scope");
+    }
     const clinic = await this.prisma.clinic.findFirst({ where: { id: dto.clinicId, tenantId } });
     if (!clinic) throw new BadRequestException("Invalid clinicId");
 
@@ -133,9 +156,13 @@ export class ExpensesService {
     return this.map(row);
   }
 
-  async updateStatus(tenantId: string, id: string, status: ExpenseStatus): Promise<ExpenseDto> {
+  async updateStatus(tenantId: string, id: string, status: ExpenseStatus, user: JwtUser): Promise<ExpenseDto> {
     const existing = await this.prisma.expense.findFirst({ where: { id, tenantId } });
     if (!existing) throw new NotFoundException("Expense not found");
+    const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
+    if (scopeIds !== null && !scopeIds.includes(existing.clinicId)) {
+      throw new NotFoundException("Expense not found");
+    }
     const row = await this.prisma.expense.update({
       where: { id },
       data: { status },
@@ -143,9 +170,13 @@ export class ExpensesService {
     return this.map(row);
   }
 
-  async getProofFileMeta(tenantId: string, expenseId: string): Promise<{ absolutePath: string; mimeType: string; originalFileName: string }> {
+  async getProofFileMeta(tenantId: string, expenseId: string, user: JwtUser): Promise<{ absolutePath: string; mimeType: string; originalFileName: string }> {
     const exp = await this.prisma.expense.findFirst({ where: { id: expenseId, tenantId } });
     if (!exp?.proofRelativePath || !exp.proofOriginalName || !exp.proofMimeType) {
+      throw new NotFoundException("No proof attached to this expense");
+    }
+    const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
+    if (scopeIds !== null && !scopeIds.includes(exp.clinicId)) {
       throw new NotFoundException("No proof attached to this expense");
     }
     const absolutePath = path.join(this.uploadRoot(), exp.proofRelativePath);

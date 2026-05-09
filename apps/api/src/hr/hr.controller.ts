@@ -60,14 +60,14 @@ export class HrController {
     @Query("sortBy") sortBy?: string,
     @Query("sortOrder") sortOrder?: string
   ) {
-    return this.hr.listEmployees(user.tenantId, page, pageSize, search, clinicId, nameFilter, clinicFilter, sortBy, sortOrder);
+    return this.hr.listEmployees(user.tenantId, user, page, pageSize, search, clinicId, nameFilter, clinicFilter, sortBy, sortOrder);
   }
 
   @Get("employees/:id/id-document")
   @ApiOperation({ summary: "Download employee ID / passport attachment (if any)" })
   @ApiOkResponse({ description: "Binary file stream" })
   async getEmployeeIdDocument(@CurrentUser() user: JwtUser, @Param("id") id: string): Promise<StreamableFile> {
-    const meta = await this.hr.getEmployeeIdDocumentMeta(user.tenantId, id);
+    const meta = await this.hr.getEmployeeIdDocumentMeta(user.tenantId, id, user);
     const stream = this.hr.getEmployeeIdDocumentReadStream(meta.absolutePath);
     return new StreamableFile(stream, {
       type: meta.mimeType,
@@ -79,7 +79,7 @@ export class HrController {
   @ApiOperation({ summary: "Get employee by id" })
   @ApiOkResponse({ type: EmployeeDto })
   getEmployee(@CurrentUser() user: JwtUser, @Param("id") id: string) {
-    return this.hr.getEmployee(user.tenantId, id);
+    return this.hr.getEmployee(user.tenantId, id, user);
   }
 
   @Post("employees")

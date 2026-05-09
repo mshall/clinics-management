@@ -31,38 +31,42 @@ export class PatientsController {
     @Query("sortBy") sortBy?: string,
     @Query("sortOrder") sortOrder?: string
   ) {
-    return this.patients.listPaginated(user.tenantId, {
-      search,
-      mrn,
-      phone,
-      gender,
-      name,
-      nationalId,
-      page,
-      pageSize,
-      sortBy,
-      sortOrder,
-    });
+    return this.patients.listPaginated(
+      user.tenantId,
+      {
+        search,
+        mrn,
+        phone,
+        gender,
+        name,
+        nationalId,
+        page,
+        pageSize,
+        sortBy,
+        sortOrder,
+      },
+      user
+    );
   }
 
   @Post()
   @ApiOperation({ summary: "Register a new patient" })
   @ApiCreatedResponse({ type: PatientDto })
   create(@CurrentUser() user: JwtUser, @Body() body: CreatePatientDto) {
-    return this.patients.create(user.tenantId, body);
+    return this.patients.create(user.tenantId, body, user);
   }
 
   @Patch(":id")
   @ApiOperation({ summary: "Update patient demographics" })
   @ApiOkResponse({ type: PatientDto })
   update(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: UpdatePatientDto) {
-    return this.patients.update(user.tenantId, id, body);
+    return this.patients.update(user.tenantId, id, body, user);
   }
 
   @Get(":id")
   @ApiOperation({ summary: "Get patient by id" })
   @ApiOkResponse({ type: PatientDto })
   get(@CurrentUser() user: JwtUser, @Param("id") id: string) {
-    return this.patients.getById(user.tenantId, id);
+    return this.patients.getById(user.tenantId, id, user);
   }
 }

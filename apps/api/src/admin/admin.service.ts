@@ -3,6 +3,7 @@ import { Prisma, UserRole } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
+import { fetchClinicScopeIds } from "../common/clinic-scope";
 import { PrismaService } from "../prisma/prisma.service";
 import type { JwtUser } from "../auth/jwt-user";
 import type { CreateTenantUserDto } from "./dto/create-tenant-user.dto";
@@ -84,9 +85,11 @@ export class AdminService {
     const email = dto.email.toLowerCase().trim();
     const existing = await this.prisma.user.findFirst({ where: { tenantId, email } });
     if (existing) throw new BadRequestException("Email already in use for this organization");
-    if (dto.role === UserRole.CLINIC_ADMIN) {
+    if (dto.role === UserRole.CLINIC_ADMIN || dto.role === UserRole.BRANCH_MANAGER) {
       const ids = dto.clinicIds ?? [];
-      if (!ids.length) throw new BadRequestException("clinicIds is required when creating a clinic administrator");
+      if (!ids.length) {
+        throw new BadRequestException("clinicIds is required when creating a clinic administrator or branch manager");
+      }
     }
     const passwordHash = bcrypt.hashSync(dto.password, 10);
     const row = await this.prisma.$transaction(async (tx) => {
@@ -99,7 +102,7 @@ export class AdminService {
           role: dto.role,
         },
       });
-      if (dto.role === UserRole.CLINIC_ADMIN && dto.clinicIds?.length) {
+      if ((dto.role === UserRole.CLINIC_ADMIN || dto.role === UserRole.BRANCH_MANAGER) && dto.clinicIds?.length) {
         for (const cid of dto.clinicIds) {
           const c = await tx.clinic.findFirst({ where: { id: cid, tenantId } });
           if (!c) throw new BadRequestException(`Invalid clinicId: ${cid}`);
@@ -125,18 +128,15 @@ export class AdminService {
   }
 
   async auditLogs(tenantId: string, pageStr: string | undefined, pageSizeStr: string | undefined, qRaw: string | undefined, user: JwtUser) {
-    if (user.role !== UserRole.GROUP_ADMIN && user.role !== UserRole.CLINIC_ADMIN) {
+    if (user.role !== UserRole.GROUP_ADMIN && user.role !== UserRole.CLINIC_ADMIN && user.role !== UserRole.BRANCH_MANAGER) {
       throw new ForbiddenException("Only administrators may list audit logs");
     }
     const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
     const q = qRaw?.trim() ?? "";
     let scopeClinicIds: string[] | null = null;
-    if (user.role === UserRole.CLINIC_ADMIN) {
-      const scopes = await this.prisma.clinicAdminScope.findMany({
-        where: { tenantId, userId: user.userId },
-        select: { clinicId: true },
-      });
-      scopeClinicIds = scopes.map((s) => s.clinicId);
+    const auditScope = await fetchClinicScopeIds(this.prisma, tenantId, user);
+    if (auditScope !== null) {
+      scopeClinicIds = auditScope;
       if (!scopeClinicIds.length) {
         return paginate([], 0, page, pageSize);
       }

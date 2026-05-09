@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { AppointmentStatus, EncounterStatus, Prisma, UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
+import { CLINIC_SCOPE_ROLES } from "../common/clinic-scope";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
@@ -36,7 +37,7 @@ export class AppointmentsService {
     if (isPhysicianRole(viewer.role) && row.clinicianId !== viewer.userId) {
       throw new ForbiddenException("You can only access appointments where you are the clinician");
     }
-    if (viewer.role === UserRole.CLINIC_ADMIN) {
+    if (CLINIC_SCOPE_ROLES.has(viewer.role)) {
       const ok = await this.prisma.clinicAdminScope.findFirst({
         where: { tenantId: viewer.tenantId, userId: viewer.userId, clinicId: row.clinicId },
       });
@@ -180,7 +181,7 @@ export class AppointmentsService {
 
     if (viewer && isPhysicianRole(viewer.role)) {
       and.push({ clinicianId: viewer.userId });
-    } else if (viewer?.role === UserRole.CLINIC_ADMIN) {
+    } else if (viewer && CLINIC_SCOPE_ROLES.has(viewer.role)) {
       const scopes = await this.prisma.clinicAdminScope.findMany({
         where: { tenantId, userId: viewer.userId },
         select: { clinicId: true },

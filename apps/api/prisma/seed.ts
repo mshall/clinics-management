@@ -208,7 +208,7 @@ async function main() {
       role: UserRole.FINANCE_OFFICER,
     },
   });
-  await prisma.user.create({
+  const branchMgrUser = await prisma.user.create({
     data: {
       tenantId: t0.id,
       email: "branchmgr@kiorly.com",
@@ -216,6 +216,9 @@ async function main() {
       displayName: "Demo Branch Manager",
       role: UserRole.BRANCH_MANAGER,
     },
+  });
+  await prisma.clinicAdminScope.create({
+    data: { tenantId: t0.id, userId: branchMgrUser.id, clinicId: hq.id },
   });
 
   const usersForAudit = [...users, clinicAdminUser, physician2];

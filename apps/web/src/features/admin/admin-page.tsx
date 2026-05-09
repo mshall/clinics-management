@@ -37,6 +37,7 @@ export function AdminPage() {
   const authUser = useAuthStore((s) => s.user);
   const isGroupAdmin = authUser?.role === "group_admin";
   const isClinicAdmin = authUser?.role === "clinic_admin";
+  const isBranchManager = authUser?.role === "branch_manager";
   const isPlatformSuperAdmin = Boolean(authUser?.platformSuperAdmin);
   const overview = useAdminOverviewQuery();
   const { data: clinics = [] } = useClinicsQuery();
@@ -88,7 +89,7 @@ export function AdminPage() {
   const [userErr, setUserErr] = useState<string | null>(null);
 
   useEffect(() => {
-    if (uRole !== "CLINIC_ADMIN") setUClinicIds([]);
+    if (uRole !== "CLINIC_ADMIN" && uRole !== "BRANCH_MANAGER") setUClinicIds([]);
   }, [uRole]);
 
   const onTenantSort = (column: string) => {
@@ -182,7 +183,7 @@ export function AdminPage() {
         password: uPassword,
         displayName: uName.trim(),
         role: uRole,
-        ...(uRole === "CLINIC_ADMIN" && uClinicIds.length ? { clinicIds: uClinicIds } : {}),
+        ...((uRole === "CLINIC_ADMIN" || uRole === "BRANCH_MANAGER") && uClinicIds.length ? { clinicIds: uClinicIds } : {}),
       }),
     onSuccess: () => {
       setUserErr(null);
@@ -253,15 +254,19 @@ export function AdminPage() {
     },
   });
 
-  if (authUser && !isGroupAdmin && !isClinicAdmin) {
+  if (authUser && !isGroupAdmin && !isClinicAdmin && !isBranchManager) {
     return <Navigate to="/" replace />;
   }
-  if (isClinicAdmin) {
+  if (isClinicAdmin || isBranchManager) {
     return (
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("nav.admin", "Administration")}</h1>
-          <p className="text-muted-foreground">{t("admin.clinicAdminSubtitle", "Staff onboarding and clinic governance.")}</p>
+          <p className="text-muted-foreground">
+            {isBranchManager
+              ? t("admin.branchManagerSubtitle", "Staff onboarding and governance for clinics you manage.")
+              : t("admin.clinicAdminSubtitle", "Staff onboarding and clinic governance.")}
+          </p>
         </div>
         <AdminCreateEmployeePanel />
         <AdminGovernancePanel />
@@ -426,7 +431,7 @@ export function AdminPage() {
                     ))}
                   </select>
                 </div>
-                {uRole === "CLINIC_ADMIN" ? (
+                {uRole === "CLINIC_ADMIN" || uRole === "BRANCH_MANAGER" ? (
                   <div className="space-y-2 sm:col-span-full">
                     <Label>{t("admin.clinicAdminScopes")}</Label>
                     <p className="text-xs text-muted-foreground">{t("admin.clinicAdminScopesHint")}</p>
@@ -457,7 +462,7 @@ export function AdminPage() {
                       uPassword.length < 8 ||
                       !uName.trim() ||
                       createUserMut.isPending ||
-                      (uRole === "CLINIC_ADMIN" && uClinicIds.length === 0)
+                      ((uRole === "CLINIC_ADMIN" || uRole === "BRANCH_MANAGER") && uClinicIds.length === 0)
                     }
                     onClick={() => createUserMut.mutate()}
                   >

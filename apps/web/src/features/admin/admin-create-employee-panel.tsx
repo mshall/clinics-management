@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CreateActionButton } from "@/components/create-action-button";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useClinicsQuery } from "@/lib/api-hooks";
+import { useAuthStore } from "@/stores/auth-store";
 import type { EmployeeDto } from "@/lib/api-types";
 import { ApiError, apiPost, apiPostFormData } from "@/lib/http";
 
@@ -20,10 +21,15 @@ const EMP_TYPES: PickListItem[] = [
 export function AdminCreateEmployeePanel() {
   const { t } = useTranslation();
   const qc = useQueryClient();
+  const role = useAuthStore((s) => s.user?.role);
   const { data: clinics = [] } = useClinicsQuery();
   const clinicItems: PickListItem[] = useMemo(() => clinics.map((c) => ({ value: c.id, label: c.nameEn })), [clinics]);
+  const singleManagedClinic = clinics.length === 1 ? clinics[0]! : null;
 
   const [empClinic, setEmpClinic] = useState("");
+  useEffect(() => {
+    if (singleManagedClinic) setEmpClinic(singleManagedClinic.id);
+  }, [singleManagedClinic?.id]);
   const [empFn, setEmpFn] = useState("");
   const [empLn, setEmpLn] = useState("");
   const [empEmail, setEmpEmail] = useState("");
@@ -87,13 +93,22 @@ export function AdminCreateEmployeePanel() {
           {formErr ? <p className="text-sm text-destructive sm:col-span-full">{formErr}</p> : null}
           <div className="space-y-2 sm:col-span-2">
             <Label>{t("hr.clinic")}</Label>
-            <SearchablePickList
-              items={clinicItems}
-              value={empClinic}
-              onValueChange={setEmpClinic}
-              searchPlaceholder={t("appointments.filterClinic", "Type clinic name…")}
-              placeholder={t("hr.pickClinic")}
-            />
+            {singleManagedClinic ? (
+              <p className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm">
+                {singleManagedClinic.nameEn}{" "}
+                <span className="text-muted-foreground">
+                  ({role === "branch_manager" ? t("admin.managedClinicBm", "your clinic") : t("admin.managedClinicCa", "assigned clinic")})
+                </span>
+              </p>
+            ) : (
+              <SearchablePickList
+                items={clinicItems}
+                value={empClinic}
+                onValueChange={setEmpClinic}
+                searchPlaceholder={t("appointments.filterClinic", "Type clinic name…")}
+                placeholder={t("hr.pickClinic")}
+              />
+            )}
           </div>
           <div className="space-y-2">
             <Label>{t("hr.firstName")}</Label>

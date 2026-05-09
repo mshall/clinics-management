@@ -5,6 +5,7 @@ import { createReadStream } from "fs";
 import * as fs from "fs/promises";
 import * as path from "path";
 import type { JwtUser } from "../auth/jwt-user";
+import { CLINIC_SCOPE_ROLES, fetchClinicScopeIds } from "../common/clinic-scope";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
@@ -38,7 +39,7 @@ export class HrService {
   }
 
   private async assertClinicAdminCanUseClinic(tenantId: string, viewer: JwtUser, clinicId: string): Promise<void> {
-    if (viewer.role !== UserRole.CLINIC_ADMIN) return;
+    if (!CLINIC_SCOPE_ROLES.has(viewer.role)) return;
     const scope = await this.prisma.clinicAdminScope.findFirst({
       where: { tenantId, userId: viewer.userId, clinicId },
     });
@@ -144,6 +145,7 @@ export class HrService {
 
   async listEmployees(
     tenantId: string,
+    viewer: JwtUser,
     pageStr?: string,
     pageSizeStr?: string,
     search?: string,
@@ -153,6 +155,11 @@ export class HrService {
     sortByStr?: string,
     sortOrderStr?: string
   ) {
+    const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, viewer);
+    if (scopeIds !== null && !scopeIds.length) {
+      const { page, pageSize } = parsePageParams(pageStr, pageSizeStr);
+      return paginate([], 0, page, pageSize);
+    }
     const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
     const legacySearch = search?.trim();
     const nameFilter = (nameFilterStr ?? legacySearch)?.trim();
@@ -160,7 +167,16 @@ export class HrService {
     const clinicId = clinicIdStr?.trim();
 
     const and: Prisma.EmployeeWhereInput[] = [{ tenantId }];
-    if (clinicId) and.push({ clinicId });
+    if (scopeIds !== null) {
+      if (clinicId) {
+        if (!scopeIds.includes(clinicId)) throw new ForbiddenException("Clinic is outside your assignment");
+        and.push({ clinicId });
+      } else {
+        and.push({ clinicId: { in: scopeIds } });
+      }
+    } else if (clinicId) {
+      and.push({ clinicId });
+    }
     if (nameFilter) {
       and.push({
         OR: [
@@ -190,12 +206,13 @@ export class HrService {
     return paginate(rows.map((r) => this.mapEmployee(r)), total, page, pageSize);
   }
 
-  async getEmployee(tenantId: string, id: string): Promise<EmployeeDto> {
+  async getEmployee(tenantId: string, id: string, viewer: JwtUser): Promise<EmployeeDto> {
     const row = await this.prisma.employee.findFirst({
       where: { id, tenantId },
       include: { clinic: { select: { nameEn: true } } },
     });
     if (!row) throw new NotFoundException("Employee not found");
+    await this.assertClinicAdminCanUseClinic(tenantId, viewer, row.clinicId);
     return this.mapEmployee(row);
   }
 
@@ -262,12 +279,14 @@ export class HrService {
 
   async getEmployeeIdDocumentMeta(
     tenantId: string,
-    employeeId: string
+    employeeId: string,
+    viewer: JwtUser
   ): Promise<{ absolutePath: string; mimeType: string; originalFileName: string }> {
     const emp = await this.prisma.employee.findFirst({ where: { id: employeeId, tenantId } });
     if (!emp?.idDocRelativePath || !emp.idDocOriginalName || !emp.idDocMimeType) {
       throw new NotFoundException("No ID document attached");
     }
+    await this.assertClinicAdminCanUseClinic(tenantId, viewer, emp.clinicId);
     const absolutePath = path.join(this.employeeUploadRoot(), emp.idDocRelativePath);
     try {
       await fs.access(absolutePath);
