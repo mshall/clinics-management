@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAttendanceQuery, useEmployeesQuery, useHrSummaryQuery, useLeaveRequestsQuery } from "@/lib/api-hooks";
 import { apiPatch, apiPost } from "@/lib/http";
+import { columnFilterIncludes } from "@/lib/utils";
 
 type Tab = "summary" | "employees" | "attendance" | "leave";
 
@@ -176,51 +177,38 @@ export function HrPage() {
   const filteredEmpRows = useMemo(() => {
     const loc = i18n.language === "ar" ? "ar-AE" : "en-AE";
     const fmt = (x: number) => new Intl.NumberFormat(loc, { style: "currency", currency: "AED" }).format(x);
-    const n = (s: string) => s.trim().toLowerCase();
-    const f0 = n(ecfNum);
-    const f3 = n(ecfTitle);
-    const fs = ecfSalary.trim().toLowerCase();
     return empRows.filter((e) => {
-      if (f0 && !e.employeeNumber.toLowerCase().includes(f0)) return false;
-      if (f3 && !e.jobTitle.toLowerCase().includes(f3)) return false;
-      if (fs) {
-        const hay = `${e.salaryBase} ${fmt(e.salaryBase)}`.toLowerCase();
-        if (!hay.includes(fs)) return false;
+      if (ecfNum.trim() && !columnFilterIncludes(e.employeeNumber, ecfNum)) return false;
+      if (ecfTitle.trim() && !columnFilterIncludes(e.jobTitle, ecfTitle)) return false;
+      if (ecfSalary.trim()) {
+        const hay = `${e.salaryBase} ${fmt(e.salaryBase)}`;
+        if (!columnFilterIncludes(hay, ecfSalary)) return false;
       }
       return true;
     });
   }, [empRows, ecfNum, ecfTitle, ecfSalary, i18n.language]);
 
   const filteredAttRows = useMemo(() => {
-    const n = (s: string) => s.trim().toLowerCase();
-    const fd = n(acfDate);
-    const fe = n(acfEmp);
-    const fc = n(acfClinic);
-    const fst = n(acfStat);
     return attRows.filter((a) => {
-      if (fd && !a.workDate.toLowerCase().includes(fd)) return false;
-      if (fe) {
-        const hay = `${a.employeeFullName ?? ""} ${a.employeeNumber ?? ""} ${a.employeeId}`.toLowerCase();
-        if (!hay.includes(fe)) return false;
+      if (acfDate.trim() && !columnFilterIncludes(a.workDate, acfDate)) return false;
+      if (acfEmp.trim()) {
+        const hay = `${a.employeeFullName ?? ""} ${a.employeeNumber ?? ""} ${a.employeeId}`;
+        if (!columnFilterIncludes(hay, acfEmp)) return false;
       }
-      if (fc && !(a.clinicNameEn ?? "").toLowerCase().includes(fc)) return false;
-      if (fst && !a.status.toLowerCase().includes(fst)) return false;
+      if (acfClinic.trim() && !columnFilterIncludes(a.clinicNameEn ?? "", acfClinic)) return false;
+      if (acfStat.trim() && !columnFilterIncludes(a.status, acfStat)) return false;
       return true;
     });
   }, [attRows, acfDate, acfEmp, acfClinic, acfStat]);
 
   const filteredLeaveRows = useMemo(() => {
-    const n = (s: string) => s.trim().toLowerCase();
-    const ft = n(lcfType);
-    const fd = n(lcfDates);
-    const fs = n(lcfStat);
     return leaveRows.filter((l) => {
-      if (ft && !l.type.toLowerCase().includes(ft)) return false;
-      if (fd) {
-        const range = `${l.startDate} ${l.endDate}`.toLowerCase();
-        if (!range.includes(fd)) return false;
+      if (lcfType.trim() && !columnFilterIncludes(l.type, lcfType)) return false;
+      if (lcfDates.trim()) {
+        const range = `${l.startDate} ${l.endDate}`;
+        if (!columnFilterIncludes(range, lcfDates)) return false;
       }
-      if (fs && !l.status.toLowerCase().includes(fs)) return false;
+      if (lcfStat.trim() && !columnFilterIncludes(l.status, lcfStat)) return false;
       return true;
     });
   }, [leaveRows, lcfType, lcfDates, lcfStat]);

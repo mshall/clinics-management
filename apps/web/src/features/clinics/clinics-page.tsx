@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useClinicsQuery } from "@/lib/api-hooks";
+import { columnFilterIncludes } from "@/lib/utils";
 
 export function ClinicsPage() {
   const { t, i18n } = useTranslation();
@@ -19,22 +20,18 @@ export function ClinicsPage() {
   const [cfCity, setCfCity] = useState("");
 
   const filtered = useMemo(() => {
-    const n = (s: string) => s.trim().toLowerCase();
-    const fk = n(cfKind);
-    const fn = n(cfName);
-    const fc = n(cfCity);
     return data.filter((c) => {
-      if (fk) {
-        const kindHay = `${c.kind} parent branch ${t("clinics.parent")} ${t("clinics.branch")}`.toLowerCase();
-        if (!kindHay.includes(fk)) return false;
+      if (cfKind.trim()) {
+        const kindHay = `${c.kind} parent branch ${t("clinics.parent")} ${t("clinics.branch")}`;
+        if (!columnFilterIncludes(kindHay, cfKind)) return false;
       }
-      if (fn) {
-        const nameHay = `${c.nameEn} ${c.nameAr}`.toLowerCase();
-        if (!nameHay.includes(fn)) return false;
+      if (cfName.trim()) {
+        const nameHay = `${c.nameEn} ${c.nameAr}`;
+        if (!columnFilterIncludes(nameHay, cfName)) return false;
       }
-      if (fc) {
-        const locHay = `${c.city} ${c.country}`.toLowerCase();
-        if (!locHay.includes(fc)) return false;
+      if (cfCity.trim()) {
+        const locHay = `${c.city} ${c.country}`;
+        if (!columnFilterIncludes(locHay, cfCity)) return false;
       }
       return true;
     });

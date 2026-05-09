@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { useAdminOverviewQuery, useClinicsQuery, useTenantsQuery } from "@/lib/api-hooks";
 import { ApiError, apiPatch, apiPost } from "@/lib/http";
 import { MIDDLE_EAST_COUNTRY_OPTIONS } from "@/lib/middle-east-countries";
+import { columnFilterIncludes } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { AdminCreateEmployeePanel } from "./admin-create-employee-panel";
 import { AdminDataExplorerPanel } from "./admin-data-explorer-panel";
@@ -113,21 +114,14 @@ export function AdminPage() {
   );
 
   const filteredClinics = useMemo(() => {
-    const n = (s: string) => s.trim().toLowerCase();
-    const fe = n(cfNameEn);
-    const fa = n(cfNameAr);
-    const fp = n(cfParent);
-    const fc = n(cfCity);
-    const fco = n(cfCountry);
-    const fk = n(cfKind);
     return clinics.filter((c) => {
-      if (fe && !c.nameEn.toLowerCase().includes(fe)) return false;
-      if (fa && !c.nameAr.toLowerCase().includes(fa)) return false;
+      if (cfNameEn.trim() && !columnFilterIncludes(c.nameEn, cfNameEn)) return false;
+      if (cfNameAr.trim() && !columnFilterIncludes(c.nameAr ?? "", cfNameAr)) return false;
       const parentLabel = (c.parentNameEn ?? "").trim() || "none";
-      if (fp && !parentLabel.toLowerCase().includes(fp)) return false;
-      if (fc && !c.city.toLowerCase().includes(fc)) return false;
-      if (fco && !c.country.toLowerCase().includes(fco)) return false;
-      if (fk && !c.kind.toLowerCase().includes(fk)) return false;
+      if (cfParent.trim() && !columnFilterIncludes(parentLabel, cfParent)) return false;
+      if (cfCity.trim() && !columnFilterIncludes(c.city, cfCity)) return false;
+      if (cfCountry.trim() && !columnFilterIncludes(c.country, cfCountry)) return false;
+      if (cfKind.trim() && !columnFilterIncludes(c.kind, cfKind)) return false;
       return true;
     });
   }, [clinics, cfNameEn, cfNameAr, cfParent, cfCity, cfCountry, cfKind]);
@@ -205,24 +199,24 @@ export function AdminPage() {
   const tTotalPages = tenants.data?.totalPages ?? 1;
 
   const filteredTenantRows = useMemo(() => {
-    const n = (s: string) => s.trim().toLowerCase();
-    const fn = n(tfName);
-    const fu = n(tfUsers);
-    const fc = n(tfClinics);
-    const fr = n(tfRegistered);
-    const fp = n(tfPatients);
     const matchNum = (cell: number, q: string) => {
-      if (!q) return true;
+      if (!q.trim()) return true;
       const digits = q.replace(/[^\d]/g, "");
-      return (digits && String(cell).includes(digits)) || String(cell).toLowerCase().includes(q);
+      return (digits && String(cell).includes(digits)) || columnFilterIncludes(String(cell), q);
     };
     return tenantRows.filter((row) => {
-      if (fn && !row.name.toLowerCase().includes(fn)) return false;
-      if (fu && !matchNum(row.counts.users, fu)) return false;
-      if (fc && !matchNum(row.counts.clinics, fc)) return false;
-      if (fp && !matchNum(row.counts.patients, fp)) return false;
-      const regStr = new Date(row.createdAt).toLocaleDateString().toLowerCase();
-      if (fr && !regStr.includes(fr) && !row.createdAt.toLowerCase().includes(fr)) return false;
+      if (tfName.trim() && !columnFilterIncludes(row.name, tfName)) return false;
+      if (tfUsers.trim() && !matchNum(row.counts.users, tfUsers)) return false;
+      if (tfClinics.trim() && !matchNum(row.counts.clinics, tfClinics)) return false;
+      if (tfPatients.trim() && !matchNum(row.counts.patients, tfPatients)) return false;
+      const regStr = new Date(row.createdAt).toLocaleDateString();
+      if (
+        tfRegistered.trim() &&
+        !columnFilterIncludes(regStr, tfRegistered) &&
+        !columnFilterIncludes(row.createdAt, tfRegistered)
+      ) {
+        return false;
+      }
       return true;
     });
   }, [tenantRows, tfName, tfUsers, tfClinics, tfRegistered, tfPatients]);

@@ -23,6 +23,7 @@ import {
 import type { AppointmentDto, EncounterDetailDto } from "@/lib/api-types";
 import { ApiError, apiPost } from "@/lib/http";
 import { resolvePatientListLabel } from "@/lib/patient-display";
+import { columnFilterIncludes } from "@/lib/utils";
 import { ENCOUNTER_VISIT_TYPES } from "@/lib/visit-types";
 import { defaultMonthRange } from "@/stores/date-range-store";
 import { useAuthStore } from "@/stores/auth-store";
@@ -110,28 +111,22 @@ export function EncountersListPage() {
     const loc = i18n.language === "ar" ? "ar-AE" : "en-AE";
     const name = (e: EncounterDetailDto) =>
       (i18n.language === "ar" ? e.clinicNameAr ?? e.clinicNameEn : e.clinicNameEn ?? e.clinicNameAr) ?? "—";
-    const n = (s: string) => s.trim().toLowerCase();
-    const fst = n(efEncStatus);
-    const fv = n(efVisit);
-    const fc = n(efClinic);
-    const fp = n(efPatient);
-    const fu = n(efUpdated);
     return data.filter((e) => {
-      if (fst && !e.status.toLowerCase().includes(fst)) return false;
-      if (fv && !e.visitType.toLowerCase().includes(fv)) return false;
-      if (fc && !name(e).toLowerCase().includes(fc)) return false;
-      if (fp) {
-        const label = resolvePatientListLabel({
+      if (efEncStatus.trim() && !columnFilterIncludes(e.status, efEncStatus)) return false;
+      if (efVisit.trim() && !columnFilterIncludes(e.visitType, efVisit)) return false;
+      if (efClinic.trim() && !columnFilterIncludes(name(e), efClinic)) return false;
+      if (efPatient.trim()) {
+        const pText = resolvePatientListLabel({
           patientId: e.patientId,
           patientMrn: e.patientMrn,
           patientName: e.patientName,
           registryLabel: patientLabel.get(e.patientId),
-        }).text.toLowerCase();
-        if (!label.includes(fp)) return false;
+        }).text;
+        if (!columnFilterIncludes(pText, efPatient)) return false;
       }
-      if (fu) {
-        const ds = new Date(e.updatedAt).toLocaleString(loc).toLowerCase();
-        if (!ds.includes(fu) && !e.updatedAt.toLowerCase().includes(fu)) return false;
+      if (efUpdated.trim()) {
+        const ds = new Date(e.updatedAt).toLocaleString(loc);
+        if (!columnFilterIncludes(ds, efUpdated) && !columnFilterIncludes(e.updatedAt, efUpdated)) return false;
       }
       return true;
     });

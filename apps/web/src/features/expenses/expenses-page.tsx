@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { useClinicsQuery, useExpensesQuery } from "@/lib/api-hooks";
 import { EXPENSE_CATEGORIES } from "@/lib/expense-categories";
 import { ApiError, apiFetchBlob, apiPatch, apiPostFormData } from "@/lib/http";
+import { columnFilterIncludes } from "@/lib/utils";
 import { defaultMonthRange } from "@/stores/date-range-store";
 
 export function ExpensesPage() {
@@ -110,28 +111,21 @@ export function ExpensesPage() {
   const filteredExpenses = useMemo(() => {
     const loc = i18n.language === "ar" ? "ar-AE" : "en-AE";
     const formatMoney = (x: number) => new Intl.NumberFormat(loc, { style: "currency", currency: "AED" }).format(x);
-    const n = (s: string) => s.trim().toLowerCase();
-    const fc = n(efCategory);
-    const fv = n(efVendor);
-    const fa = efAmount.trim();
-    const fs = n(efStatus);
-    const fd = n(efDate);
-    const fp = n(efProof);
     return expenses.filter((e) => {
-      if (fc && !e.category.toLowerCase().includes(fc)) return false;
-      if (fv && !(e.vendorName ?? "").toLowerCase().includes(fv)) return false;
-      if (fa) {
-        const hay = `${e.amount} ${formatMoney(e.amount)}`.toLowerCase();
-        if (!hay.includes(fa.toLowerCase())) return false;
+      if (efCategory.trim() && !columnFilterIncludes(e.category, efCategory)) return false;
+      if (efVendor.trim() && !columnFilterIncludes(e.vendorName ?? "", efVendor)) return false;
+      if (efAmount.trim()) {
+        const hay = `${e.amount} ${formatMoney(e.amount)}`;
+        if (!columnFilterIncludes(hay, efAmount)) return false;
       }
-      if (fs && !e.status.toLowerCase().includes(fs)) return false;
-      if (fd) {
-        const ds = new Date(e.incurredAt).toLocaleDateString(loc).toLowerCase();
-        if (!ds.includes(fd) && !e.incurredAt.toLowerCase().includes(fd)) return false;
+      if (efStatus.trim() && !columnFilterIncludes(e.status, efStatus)) return false;
+      if (efDate.trim()) {
+        const ds = new Date(e.incurredAt).toLocaleDateString(loc);
+        if (!columnFilterIncludes(ds, efDate) && !columnFilterIncludes(e.incurredAt, efDate)) return false;
       }
-      if (fp) {
-        const proofHay = (e.hasProof ? "yes y download proof file" : "no none —").toLowerCase();
-        if (!proofHay.includes(fp)) return false;
+      if (efProof.trim()) {
+        const proofHay = e.hasProof ? "yes y download proof file" : "no none —";
+        if (!columnFilterIncludes(proofHay, efProof)) return false;
       }
       return true;
     });

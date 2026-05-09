@@ -13,6 +13,7 @@ import { TablePagination } from "@/components/table-pagination";
 import type { PatientDto } from "@/lib/api-schema";
 import { useClinicsQuery, usePatientsQuery } from "@/lib/api-hooks";
 import { ApiError, apiPost } from "@/lib/http";
+import { columnFilterIncludes } from "@/lib/utils";
 
 export function PatientsPage() {
   const { t, i18n } = useTranslation();
@@ -55,22 +56,21 @@ export function PatientsPage() {
   const totalPages = data?.totalPages ?? 1;
 
   const filteredPatients = useMemo(() => {
-    const n = (s: string) => s.trim().toLowerCase();
-    const fm = n(pfMrn);
-    const fn = n(pfName);
-    const fg = n(pfGender);
-    const fd = n(pfDob);
-    const fe = n(pfEmail);
-    const fb = n(pfBranch);
     return items.filter((p) => {
-      if (fm && !p.mrn.toLowerCase().includes(fm)) return false;
-      const nameHay = `${p.firstNameEn} ${p.lastNameEn} ${p.firstNameAr ?? ""} ${p.lastNameAr ?? ""}`.toLowerCase();
-      if (fn && !nameHay.includes(fn)) return false;
-      const gLabel = (p.gender === "M" ? "male m" : p.gender === "F" ? "female f" : p.gender).toLowerCase();
-      if (fg && !gLabel.includes(fg) && !String(p.gender).toLowerCase().includes(fg)) return false;
-      if (fd && !p.dob.toLowerCase().includes(fd)) return false;
-      if (fe && !(p.email ?? "").toLowerCase().includes(fe)) return false;
-      if (fb && !(p.homeBranch ?? "").toLowerCase().includes(fb)) return false;
+      if (pfMrn.trim() && !columnFilterIncludes(p.mrn, pfMrn)) return false;
+      const nameHay = `${p.firstNameEn} ${p.lastNameEn} ${p.firstNameAr ?? ""} ${p.lastNameAr ?? ""}`;
+      if (pfName.trim() && !columnFilterIncludes(nameHay, pfName)) return false;
+      const gLabel = p.gender === "M" ? "male m" : p.gender === "F" ? "female f" : String(p.gender);
+      if (
+        pfGender.trim() &&
+        !columnFilterIncludes(gLabel, pfGender) &&
+        !columnFilterIncludes(String(p.gender), pfGender)
+      ) {
+        return false;
+      }
+      if (pfDob.trim() && !columnFilterIncludes(p.dob, pfDob)) return false;
+      if (pfEmail.trim() && !columnFilterIncludes(p.email ?? "", pfEmail)) return false;
+      if (pfBranch.trim() && !columnFilterIncludes(p.homeBranch ?? "", pfBranch)) return false;
       return true;
     });
   }, [items, pfMrn, pfName, pfGender, pfDob, pfEmail, pfBranch]);

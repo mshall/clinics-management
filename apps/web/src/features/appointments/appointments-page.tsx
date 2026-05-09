@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { useAppointmentsQuery, useClinicsQuery, usePatientsQuery, useUsersQuery } from "@/lib/api-hooks";
 import { ApiError, apiPost } from "@/lib/http";
 import { resolvePatientListLabel } from "@/lib/patient-display";
+import { columnFilterIncludes } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 
 function toAppointmentIso(localDatetime: string): string {
@@ -86,26 +87,26 @@ export function AppointmentsPage() {
 
   const filteredAppointments = useMemo(() => {
     const loc = i18n.language === "ar" ? "ar-AE" : "en-AE";
-    const n = (s: string) => s.trim().toLowerCase();
-    const fc = n(afClinic);
-    const fs = n(afStarts);
-    const fp = n(afPatient);
-    const fst = n(afStatus);
     return rows.filter((a) => {
-      if (fc) {
+      if (afClinic.trim()) {
         const row = clinicById.get(a.clinicId);
-        const label = (row ? (i18n.language === "ar" ? row.ar || row.en : row.en || row.ar) : a.clinicId).toLowerCase();
-        if (!label.includes(fc)) return false;
+        const label = row ? (i18n.language === "ar" ? row.ar || row.en : row.en || row.ar) : a.clinicId;
+        if (!columnFilterIncludes(label, afClinic)) return false;
       }
-      if (fs) {
-        const ds = new Date(a.startsAt).toLocaleString(loc).toLowerCase();
-        if (!ds.includes(fs) && !a.startsAt.toLowerCase().includes(fs)) return false;
+      if (afStarts.trim()) {
+        const ds = new Date(a.startsAt).toLocaleString(loc);
+        if (!columnFilterIncludes(ds, afStarts) && !columnFilterIncludes(a.startsAt, afStarts)) return false;
       }
-      if (fp) {
-        const label = (patientLabel.get(a.patientId) ?? a.patientId).toLowerCase();
-        if (!label.includes(fp)) return false;
+      if (afPatient.trim()) {
+        const pText = resolvePatientListLabel({
+          patientId: a.patientId,
+          patientMrn: a.patientMrn,
+          patientName: a.patientName,
+          registryLabel: patientLabel.get(a.patientId),
+        }).text;
+        if (!columnFilterIncludes(pText, afPatient)) return false;
       }
-      if (fst && !a.status.toLowerCase().includes(fst)) return false;
+      if (afStatus.trim() && !columnFilterIncludes(a.status, afStatus)) return false;
       return true;
     });
   }, [rows, afClinic, afStarts, afPatient, afStatus, i18n.language, patientLabel, clinicById]);

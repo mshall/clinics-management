@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useClinicsQuery, useClinicRevenueBreakdownQuery, useRevenueQuery, useRevenueTotalsQuery } from "@/lib/api-hooks";
 import type { RevenueEntryDto } from "@/lib/api-types";
 import { ApiError, apiPost } from "@/lib/http";
+import { columnFilterIncludes } from "@/lib/utils";
 import { useDateRangeStore } from "@/stores/date-range-store";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -121,27 +122,18 @@ export function RevenuePage() {
   const filteredRevenueRows = useMemo(() => {
     const loc = i18n.language === "ar" ? "ar-AE" : "en-AE";
     const fmt = (x: number) => new Intl.NumberFormat(loc, { style: "currency", currency: "AED" }).format(x);
-    const n = (s: string) => s.trim().toLowerCase();
-    const fc = n(rfCategory);
-    const fn = rfNet.trim();
-    const fp = n(rfPosted);
-    const fs = n(rfStatus);
-    const fcl = n(rfClinic);
     return rows.filter((r) => {
-      if (fcl) {
-        const label = clinicDisplayName(r, i18n.language).toLowerCase();
-        if (!label.includes(fcl)) return false;
+      if (rfClinic.trim() && !columnFilterIncludes(clinicDisplayName(r, i18n.language), rfClinic)) return false;
+      if (rfCategory.trim() && !columnFilterIncludes(r.category, rfCategory)) return false;
+      if (rfNet.trim()) {
+        const hay = `${r.netAmount} ${fmt(r.netAmount)}`;
+        if (!columnFilterIncludes(hay, rfNet)) return false;
       }
-      if (fc && !r.category.toLowerCase().includes(fc)) return false;
-      if (fn) {
-        const hay = `${r.netAmount} ${fmt(r.netAmount)}`.toLowerCase();
-        if (!hay.includes(fn.toLowerCase())) return false;
+      if (rfPosted.trim()) {
+        const ds = new Date(r.postedAt).toLocaleString(loc);
+        if (!columnFilterIncludes(ds, rfPosted) && !columnFilterIncludes(r.postedAt, rfPosted)) return false;
       }
-      if (fp) {
-        const ds = new Date(r.postedAt).toLocaleString(loc).toLowerCase();
-        if (!ds.includes(fp) && !r.postedAt.toLowerCase().includes(fp)) return false;
-      }
-      if (fs && !r.status.toLowerCase().includes(fs)) return false;
+      if (rfStatus.trim() && !columnFilterIncludes(r.status, rfStatus)) return false;
       return true;
     });
   }, [rows, rfCategory, rfNet, rfPosted, rfStatus, rfClinic, i18n.language]);
