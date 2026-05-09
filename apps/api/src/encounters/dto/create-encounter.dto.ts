@@ -11,6 +11,13 @@ export class CreateEncounterDto {
   @IsString()
   patientId!: string;
 
+  @ApiPropertyOptional({
+    description: "Attending physician (user id). Required for non-physician callers; ignored when caller is a physician (self).",
+  })
+  @IsOptional()
+  @IsString()
+  clinicianId?: string;
+
   @ApiProperty({ example: "Follow-up" })
   @IsString()
   @MinLength(1)

@@ -54,7 +54,8 @@ export class AppointmentsController {
       clinicId,
       sortBy,
       sortOrder,
-      bookableOnly
+      bookableOnly,
+      user
     );
   }
 
@@ -62,27 +63,27 @@ export class AppointmentsController {
   @ApiOperation({ summary: "Book appointment" })
   @ApiCreatedResponse({ type: AppointmentDto })
   create(@CurrentUser() user: JwtUser, @Body() body: CreateAppointmentDto) {
-    return this.appointments.create(user.tenantId, body);
+    return this.appointments.create(user.tenantId, user, body);
   }
 
   @Get(":id")
   @ApiOperation({ summary: "Get appointment by id" })
   @ApiOkResponse({ type: AppointmentDto })
   getOne(@CurrentUser() user: JwtUser, @Param("id") id: string) {
-    return this.appointments.getById(user.tenantId, id);
+    return this.appointments.getById(user.tenantId, id, user);
   }
 
   @Patch(":id/status")
   @ApiOperation({ summary: "Update appointment status" })
   @ApiOkResponse({ type: AppointmentDto })
   patchStatus(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchAppointmentStatusDto) {
-    return this.appointments.updateStatus(user.tenantId, id, body.status);
+    return this.appointments.updateStatus(user.tenantId, id, body.status, user);
   }
 
   @Patch(":id")
   @ApiOperation({ summary: "Update appointment (not allowed when completed or cancelled)" })
   @ApiOkResponse({ type: AppointmentDto })
   update(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: UpdateAppointmentDto) {
-    return this.appointments.update(user.tenantId, id, body);
+    return this.appointments.update(user.tenantId, id, body, user);
   }
 }

@@ -24,7 +24,7 @@ async function bootstrap() {
 
   if (process.env.SWAGGER_ENABLED !== "false") {
     const swaggerConfig = new DocumentBuilder()
-      .setTitle("Clinic Management System API")
+      .setTitle("Kiorly API")
       .setDescription("REST API for the clinic platform (v1).")
       .setVersion("1.0.0")
       .addBearerAuth({ type: "http", scheme: "bearer", bearerFormat: "JWT" }, "bearer")

@@ -1,6 +1,7 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import type { CreateClinicDto } from "./dto/create-clinic.dto";
+import type { ClinicDetailDto } from "./dto/clinic-detail.dto";
 
 export interface ClinicDto {
   id: string;
@@ -17,6 +18,33 @@ export interface ClinicDto {
 @Injectable()
 export class ClinicsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async getOne(tenantId: string, id: string): Promise<ClinicDetailDto> {
+    const row = await this.prisma.clinic.findFirst({
+      where: { id, tenantId },
+      include: { parent: { select: { id: true, nameEn: true, nameAr: true } } },
+    });
+    if (!row) throw new NotFoundException("Clinic not found");
+    return {
+      id: row.id,
+      parentClinicId: row.parentClinicId,
+      parentNameEn: row.parent?.nameEn ?? null,
+      parentNameAr: row.parent?.nameAr ?? null,
+      nameEn: row.nameEn,
+      nameAr: row.nameAr,
+      city: row.city,
+      country: row.country,
+      kind: row.parentClinicId ? "branch" : "parent",
+      logoUrl: row.logoUrl ?? null,
+      addressEn: row.addressEn,
+      addressAr: row.addressAr,
+      locationUrl: row.locationUrl,
+      phone: row.phone,
+      email: row.email,
+      licenseNumber: row.licenseNumber,
+      defaultLanguage: row.defaultLanguage,
+    };
+  }
 
   async list(tenantId: string): Promise<ClinicDto[]> {
     const rows = await this.prisma.clinic.findMany({

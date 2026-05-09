@@ -760,6 +760,7 @@ model AuditLog {
 - **Idempotency:** all unsafe POSTs accept an `Idempotency-Key` header; results cached for 24h in Redis.
 - **OpenAPI:** auto-generated from NestJS decorators; published as a static asset and consumed by frontends to generate typed clients (`openapi-typescript-codegen`).
 - **Rate Limits:** per-IP and per-user, enforced by Redis-backed throttler.
+- **RBAC list/detail scope (implemented):** `PHYSICIAN` JWTs restrict **encounters** and **appointments** lists and detail/mutation endpoints to rows where `clinicianId` matches the authenticated user; `POST /appointments` rejects a physician attempting to book on behalf of another clinician. `CLINIC_ADMIN` JWTs restrict appointments (and encounters, where applicable) to clinics listed in `ClinicAdminScope`. Web navigation mirrors these capabilities via `apps/web/src/lib/nav-policy.ts` and TanStack Query keys include the viewer identity to avoid cross-user cache bleed on shared browsers.
 
 ## 9. Frontend (Web) — `apps/web`
 
@@ -804,7 +805,7 @@ apps/web/src/
 - Login + MFA.
 - Group Admin: Dashboard, Tenants, Branches, Users, Feature Flags.
 - Branch Manager: Branch Dashboard, Staff, Expenses, Reports.
-- Clinician: Patient search, Encounter editor (split pane: history + active note), Prescription pad.
+- Clinician: Patient search, **Appointments** (own schedule), Encounter editor (split pane: history + active note), Prescription pad, doctor-scoped revenue; appointments and encounters lists show a prominent **clinic** column (localized).
 - Reception: Appointments, Check-in.
 - HR: Employees, Attendance, Leave, Payroll.
 - Reports: navigable report catalog with filters, charts, and export buttons.
@@ -1031,6 +1032,8 @@ Authentication to AWS uses **GitHub OIDC** — no long-lived access keys.
 - **Migration tests:** every migration runs forward and is verified against a snapshot of the prior schema.
 
 ## 18. Seed & Reference Data
+
+The demo tenant in `apps/api/prisma/seed.ts` creates named accounts (e.g. `admin@demo.clinic`, `physician@demo.clinic`, `doctor2@demo.clinic`, `clinicadmin@demo.clinic`, `assistant@demo.clinic`, `nurse@demo.clinic`, `receptionist@demo.clinic`, `finance@demo.clinic`, `branchmgr@demo.clinic`) with a shared password documented in the repository **README** — use these for manual QA of role-specific navigation and API scope.
 
 Shipped as code under `apps/api/prisma/seed/`:
 - ICD-10 (subset by speciality, configurable).

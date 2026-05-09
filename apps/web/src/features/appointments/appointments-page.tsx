@@ -7,6 +7,7 @@ import { SearchablePickList, type PickListItem } from "@/components/searchable-p
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { TablePagination } from "@/components/table-pagination";
 import { AppointmentStatusBadge } from "@/components/appointment-status-badge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -67,9 +68,9 @@ export function AppointmentsPage() {
   const aptTotal = aptData?.total ?? 0;
   const aptTotalPages = aptData?.totalPages ?? 1;
   const { data: clinics = [] } = useClinicsQuery();
-  const clinicNameById = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const c of clinics) m.set(c.id, c.nameEn);
+  const clinicById = useMemo(() => {
+    const m = new Map<string, { en: string; ar: string }>();
+    for (const c of clinics) m.set(c.id, { en: c.nameEn, ar: c.nameAr });
     return m;
   }, [clinics]);
   const { data: patData } = usePatientsQuery({ page: 1, pageSize: 200 });
@@ -89,8 +90,9 @@ export function AppointmentsPage() {
     const fst = n(afStatus);
     return rows.filter((a) => {
       if (fc) {
-        const cn = (clinicNameById.get(a.clinicId) ?? a.clinicId).toLowerCase();
-        if (!cn.includes(fc)) return false;
+        const row = clinicById.get(a.clinicId);
+        const label = (row ? (i18n.language === "ar" ? row.ar || row.en : row.en || row.ar) : a.clinicId).toLowerCase();
+        if (!label.includes(fc)) return false;
       }
       if (fs) {
         const ds = new Date(a.startsAt).toLocaleString(loc).toLowerCase();
@@ -103,7 +105,7 @@ export function AppointmentsPage() {
       if (fst && !a.status.toLowerCase().includes(fst)) return false;
       return true;
     });
-  }, [rows, afClinic, afStarts, afPatient, afStatus, i18n.language, patientLabel, clinicNameById]);
+  }, [rows, afClinic, afStarts, afPatient, afStatus, i18n.language, patientLabel, clinicById]);
 
   const { data: userData } = useUsersQuery({ page: 1, pageSize: 100 });
   const users = userData?.items ?? [];
@@ -383,7 +385,15 @@ export function AppointmentsPage() {
                   </tr>
                 ) : null}
                 {!isPending &&
-                  filteredAppointments.map((a) => (
+                  filteredAppointments.map((a) => {
+                    const cRow = clinicById.get(a.clinicId);
+                    const clinicLabel =
+                      cRow != null
+                        ? i18n.language === "ar"
+                          ? cRow.ar || cRow.en
+                          : cRow.en || cRow.ar
+                        : null;
+                    return (
                     <tr
                       key={a.id}
                       role="link"
@@ -397,10 +407,16 @@ export function AppointmentsPage() {
                         }
                       }}
                     >
-                      <td className="max-w-[9rem] truncate px-3 py-2 text-xs text-muted-foreground sm:max-w-[12rem]">
-                        {clinicNameById.get(a.clinicId) ?? (
-                          <span className="font-mono ltr-nums">{a.clinicId.slice(0, 8)}…</span>
-                        )}
+                      <td className="px-3 py-2">
+                        <Badge
+                          variant="outline"
+                          className="max-w-[14rem] truncate border-primary/35 bg-primary/5 font-normal text-foreground"
+                          title={clinicLabel ?? undefined}
+                        >
+                          {clinicLabel ?? (
+                            <span className="font-mono ltr-nums text-muted-foreground">{a.clinicId.slice(0, 8)}…</span>
+                          )}
+                        </Badge>
                       </td>
                       <td className="px-3 py-2 ltr-nums text-xs">
                         {new Date(a.startsAt).toLocaleString(i18n.language === "ar" ? "ar-AE" : "en-AE")}
@@ -414,7 +430,8 @@ export function AppointmentsPage() {
                         <AppointmentStatusBadge status={a.status} />
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 {!isPending && rows.length > 0 && filteredAppointments.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">

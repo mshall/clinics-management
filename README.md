@@ -28,7 +28,7 @@ The platform is designed for **healthcare groups** that operate **one or many cl
 Typical flows:
 
 - **Front desk / nurses:** patients, appointments, encounters (within role limits).
-- **Physicians:** encounters, appointments, clinical documentation.
+- **Physicians:** patients, encounters, **own** appointments schedule, doctor revenue, clinical documentation.
 - **Finance:** expenses, revenue (where permitted), reports.
 - **HR:** employees, attendance, leave.
 - **Group admin:** tenant settings, clinics, users, feature flags, cross-tenant views where implemented.
@@ -61,7 +61,8 @@ Typical flows:
 
 ### Appointments
 
-- Search and paginate appointments; book with clinic, patient, physician, start/end (scheduling only; no fee on the appointment).
+- Search and paginate appointments; book with clinic, patient, physician, start/end (scheduling only; no fee on the appointment). The list highlights **clinic** (English / Arabic name from the directory).
+- **Physicians** see the Appointments area in navigation; the API returns only rows where they are the **attending clinician**. Physicians booking through the UI must create appointments **as themselves**.
 - Status model: **Scheduled** (default on create), **Confirmed**, **Cancelled**, **Completed**. Linking an encounter sets the booking to **Confirmed**; finalizing that encounter sets **Completed**.
 - Detail and edit until the appointment is **Completed** (then read-only).
 
@@ -191,7 +192,19 @@ npm run dev
 - **API:** [http://localhost:3000](http://localhost:3000)
 - **Swagger:** [http://localhost:3000/docs](http://localhost:3000/docs)
 
-Log in with the **seed** accounts printed after `db:setup` (e.g. `admin@demo.clinic` / `demo` — confirm in `seed.ts`).
+After `db:setup`, use the **demo seed users** below (password **`demo`** for every account). Additional mixed-role staff accounts `staff3@demo.clinic` … `staff15@demo.clinic` are also created; see `apps/api/prisma/seed.ts` for exact role assignment.
+
+| Email | Display name (seed) | Role |
+|--------|----------------------|------|
+| `admin@demo.clinic` | Group Administrator | Group admin |
+| `physician@demo.clinic` | Dr. Demo Physician | Physician |
+| `doctor2@demo.clinic` | Dr. Second Physician | Physician |
+| `clinicadmin@demo.clinic` | Demo Clinic Administrator | Clinic admin (scoped clinics) |
+| `assistant@demo.clinic` | Demo Clinic Assistant | Clinic assistant |
+| `nurse@demo.clinic` | Demo Nurse | Nurse |
+| `receptionist@demo.clinic` | Demo Receptionist | Receptionist |
+| `finance@demo.clinic` | Demo Finance Officer | Finance officer |
+| `branchmgr@demo.clinic` | Demo Branch Manager | Branch manager |
 
 ### 7. Production-style builds (optional local check)
 

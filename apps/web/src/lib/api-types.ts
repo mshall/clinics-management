@@ -32,6 +32,8 @@ export interface EncounterDocumentDto {
 export interface EncounterDetailDto {
   id: string;
   clinicId: string;
+  clinicNameEn?: string | null;
+  clinicNameAr?: string | null;
   patientId: string;
   clinicianId: string;
   status: string;
@@ -178,4 +180,49 @@ export interface UserListItemDto {
   email: string;
   displayName: string;
   role: string;
+}
+
+export interface ClinicDetailDto {
+  id: string;
+  parentClinicId: string | null;
+  parentNameEn: string | null;
+  parentNameAr: string | null;
+  nameEn: string;
+  nameAr: string;
+  city: string;
+  country: string;
+  kind: "parent" | "branch";
+  logoUrl: string | null;
+  addressEn: string;
+  addressAr: string;
+  locationUrl: string;
+  phone: string;
+  email: string;
+  licenseNumber: string;
+  defaultLanguage: string;
+}
+
+export interface AdminAuditLogItemDto {
+  id: string;
+  action: string;
+  resource: string;
+  resourceId: string | null;
+  clinicId: string | null;
+  createdAt: string;
+  actorDisplayName: string | null;
+  actorEmail: string | null;
+  metadata: Record<string, unknown> | null;
+}
+
+export interface ClinicRevenueBreakdownDto {
+  items: Array<{
+    clinicId: string;
+    nameEn: string;
+    nameAr: string;
+    grossTotal: number;
+    netTotal: number;
+    taxTotal: number;
+  }>;
+  grandGross: number;
+  grandNet: number;
 }

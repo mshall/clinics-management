@@ -5,6 +5,7 @@ import { AdminPage } from "@/features/admin/admin-page";
 import { AppointmentDetailPage } from "@/features/appointments/appointment-detail-page";
 import { AppointmentsPage } from "@/features/appointments/appointments-page";
 import { LoginPage } from "@/features/auth/login-page";
+import { ClinicDetailPage } from "@/features/clinics/clinic-detail-page";
 import { ClinicsPage } from "@/features/clinics/clinics-page";
 import { DashboardPage } from "@/features/dashboard/dashboard-page";
 import { EncounterDetailPage } from "@/features/encounters/encounter-detail-page";
@@ -14,7 +15,10 @@ import { EmployeeDetailPage } from "@/features/hr/employee-detail-page";
 import { HrPage } from "@/features/hr/hr-page";
 import { PatientDetailPage } from "@/features/patients/patient-detail-page";
 import { PatientsPage } from "@/features/patients/patients-page";
+import { ProfileGate } from "@/features/profile/profile-gate";
 import { ReportsPage } from "@/features/reports/reports-page";
+import { ClinicRevenueGate } from "@/features/revenue/clinic-revenue-gate";
+import { DoctorRevenueGate } from "@/features/revenue/doctor-revenue-gate";
 import { RevenueGate } from "@/features/revenue/revenue-gate";
 
 export const router = createBrowserRouter([
@@ -36,8 +40,12 @@ export const router = createBrowserRouter([
       { path: "appointments", element: <AppointmentsPage /> },
       { path: "appointments/:id", element: <AppointmentDetailPage /> },
       { path: "clinics", element: <ClinicsPage /> },
+      { path: "clinics/:id", element: <ClinicDetailPage /> },
       { path: "expenses", element: <ExpensesPage /> },
       { path: "revenue", element: <RevenueGate /> },
+      { path: "clinic-revenue", element: <ClinicRevenueGate /> },
+      { path: "doctor-revenue", element: <DoctorRevenueGate /> },
+      { path: "profile", element: <ProfileGate /> },
       { path: "hr", element: <HrPage /> },
       { path: "hr/employees/:id", element: <EmployeeDetailPage /> },
       { path: "reports", element: <ReportsPage /> },

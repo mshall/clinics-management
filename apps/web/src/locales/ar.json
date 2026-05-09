@@ -1,7 +1,7 @@
 {
   "app": {
-    "name": "نظام إدارة العيادات",
-    "tagline": "السجل الصحي الإلكتروني والفروع والموارد البشرية والمالية — ثنائي اللغة من الأساس"
+    "name": "كيورلي",
+    "tagline": "إدارة العيادات"
   },
   "nav": {
     "menu": "قائمة التنقل",
@@ -14,15 +14,26 @@
     "revenue": "الإيرادات",
     "hr": "الموارد البشرية",
     "reports": "التقارير",
-    "admin": "الإدارة"
+    "admin": "الإدارة",
+    "doctorRevenue": "إيرادات الطبيب",
+    "profile": "الملف الشخصي",
+    "clinicRevenue": "إيرادات العيادة",
+    "governance": "الحوكمة والتدقيق"
   },
   "auth": {
     "signIn": "تسجيل الدخول",
     "email": "البريد الإلكتروني",
     "password": "كلمة المرور",
-    "demoHint": "تسجيل الدخول عبر الخادم: شغّل Docker ثم db:setup، ثم physician@demo.clinic / demo أو admin@demo.clinic / demo.",
+    "demoHint": "تسجيل الدخول عبر الخادم: شغّل Docker ثم db:setup. حسابات تجريبية (كلمة المرور demo): physician@demo.clinic، doctor2@demo.clinic، admin@demo.clinic، clinicadmin@demo.clinic، assistant@demo.clinic، nurse@demo.clinic، receptionist@demo.clinic، finance@demo.clinic، branchmgr@demo.clinic.",
     "mfaPlaceholder": "رمز التحقق (تجريبي — أي 6 أرقام)",
     "signOut": "تسجيل الخروج"
+  },
+  "theme": {
+    "label": "المظهر",
+    "appearance": "المظهر",
+    "light": "فاتح",
+    "dark": "داكن (كيورلي)",
+    "rememberForNextLogin": "استخدامه افتراضيًا عند تسجيل الدخول لاحقًا"
   },
   "dateRange": {
     "label": "فترة التقارير",
@@ -95,6 +106,7 @@
     "recent": "آخر الزيارات",
     "status": "الحالة",
     "visitType": "نوع الزيارة",
+    "clinic": "العيادة",
     "patient": "المريض",
     "diagnoses": "تشخيص",
     "updated": "آخر تحديث",

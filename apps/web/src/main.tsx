@@ -6,6 +6,9 @@ import { Toaster } from "sonner";
 import { router } from "@/app/router";
 import "@/lib/i18n";
 import "@/styles/globals.css";
+import { applyThemeFromPersistedStorage } from "@/stores/theme-store";
+
+applyThemeFromPersistedStorage();
 
 const queryClient = new QueryClient({
   defaultOptions: {

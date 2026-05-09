@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { FilterTh } from "@/components/sortable-th";
 import { TablePagination } from "@/components/table-pagination";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +10,7 @@ import { useClinicsQuery } from "@/lib/api-hooks";
 
 export function ClinicsPage() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const { data = [], isPending, isError, error } = useClinicsQuery();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -104,7 +106,19 @@ export function ClinicsPage() {
                   </thead>
                   <tbody>
                     {slice.map((c) => (
-                      <tr key={c.id} className="border-t border-border">
+                      <tr
+                        key={c.id}
+                        className="cursor-pointer border-t border-border hover:bg-muted/50"
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            navigate(`/clinics/${c.id}`);
+                          }
+                        }}
+                        onClick={() => navigate(`/clinics/${c.id}`)}
+                      >
                         <td className="px-3 py-2">
                           <Badge variant={c.kind === "parent" ? "default" : "outline"}>
                             {c.kind === "parent" ? t("clinics.parent") : t("clinics.branch")}

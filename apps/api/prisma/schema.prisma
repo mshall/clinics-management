@@ -15,6 +15,8 @@ enum UserRole {
   RECEPTIONIST
   HR_OFFICER
   FINANCE_OFFICER
+  CLINIC_ADMIN
+  CLINIC_ASSISTANT
 }
 
 enum Gender {
@@ -94,6 +96,7 @@ model Tenant {
   defaultVisitFee Decimal         @default(150) @db.Decimal(14, 2)
   users          User[]
   clinics        Clinic[]
+  clinicAdminScopes ClinicAdminScope[]
   patients       Patient[]
   encounters     Encounter[]
   revenueEntries RevenueEntry[]
@@ -119,6 +122,8 @@ model User {
   employee     Employee?
   encounters   Encounter[]    @relation("EncounterClinician")
   appointments Appointment[] @relation("AppointmentClinician")
+  auditLogsAsActor AuditLog[] @relation("AuditLogActor")
+  clinicAdminScopes ClinicAdminScope[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -151,11 +156,27 @@ model Clinic {
   expenses         Expense[]
   employees        Employee[]
   appointments     Appointment[]
+  auditLogs        AuditLog[]
+  clinicAdminScopes ClinicAdminScope[]
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
   @@index([tenantId])
   @@index([parentClinicId])
+}
+
+model ClinicAdminScope {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clinicId  String
+  clinic    Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, clinicId])
+  @@index([tenantId, userId])
 }
 
 model Patient {
@@ -424,6 +445,9 @@ model AuditLog {
   tenantId   String
   tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   actorId    String?
+  actor      User?    @relation("AuditLogActor", fields: [actorId], references: [id], onDelete: SetNull)
+  clinicId   String?
+  clinic     Clinic?  @relation(fields: [clinicId], references: [id], onDelete: SetNull)
   action     String
   resource   String
   resourceId String?
@@ -431,4 +455,5 @@ model AuditLog {
   createdAt  DateTime @default(now())
 
   @@index([tenantId, createdAt])
+  @@index([tenantId, clinicId])
 }

@@ -54,7 +54,7 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 |---|---|---|
 | **Group Administrator** | Owns the parent clinic and oversees branches | Provision branches, view consolidated KPIs, manage permissions |
 | **Branch Manager** | Runs a single clinic or branch | Manage staff, expenses, schedules, daily operations |
-| **Physician / Clinician** | Sees patients, writes prescriptions, updates records | Fast EHR entry, prescription safety, history at a glance |
+| **Physician / Clinician** | Sees patients, own schedule (appointments as clinician), encounters, revenue attributed to them | Fast EHR entry, prescription safety, history at a glance |
 | **Nurse / Medical Assistant** | Supports clinical workflow | Vitals capture, triage, appointment prep |
 | **Receptionist / Front Desk** | Patient intake and scheduling | Registration, appointment booking, billing |
 | **HR Officer** | Manages employees | Onboarding, attendance, leave, payroll inputs |
@@ -115,6 +115,8 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 - **Appointment statuses:** Scheduled (default when booking), Confirmed, Cancelled, Completed. The appointment record is read-only after Completed.
 - **Encounter link:** An optional booked appointment (same patient) may be attached when creating an encounter; linking sets the appointment to **Confirmed**; **finalizing** the encounter sets it to **Completed**.
 - **Visit fee** is set on **encounter** creation (tenant default in administration); amounts greater than zero create a `VISIT_FEE` revenue ledger line. Appointments do not store a fee.
+- **Physician experience:** The web app exposes **Appointments** in the main navigation for physicians. List and detail APIs return only appointments where the JWT user is the **attending clinician**; physicians may only **book** appointments as themselves. The appointments ledger table highlights **clinic** (localized name) for at-a-glance branch context.
+- **Clinic administrator:** Appointment lists are limited to clinics in the administrator’s **scope**; detail and mutations outside that scope are denied.
 
 ### 6.2 Multi-Branch Support
 

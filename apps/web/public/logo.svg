@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- K top half -->
+  <rect x="50" y="40" width="14" height="55" fill="#0f1419"/>
+  <path d="M 64 90 L 64 78 L 138 40 L 148 52 Z" fill="#0f1419"/>
+  <!-- K bottom half -->
+  <rect x="50" y="105" width="14" height="55" fill="#0f1419"/>
+  <path d="M 64 110 L 64 122 L 138 160 L 148 148 Z" fill="#0f1419"/>
+  <!-- Pulse line through cleft -->
+  <path d="M 20 100 L 70 100 L 78 90 L 86 110 L 94 100 L 180 100"
+        stroke="#b8964a" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

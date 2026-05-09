@@ -5,7 +5,9 @@ export type DemoRole =
   | "nurse"
   | "receptionist"
   | "hr_officer"
-  | "finance_officer";
+  | "finance_officer"
+  | "clinic_admin"
+  | "clinic_assistant";
 
 export function mapApiRole(role: string): DemoRole {
   const m: Record<string, DemoRole> = {
@@ -16,6 +18,8 @@ export function mapApiRole(role: string): DemoRole {
     RECEPTIONIST: "receptionist",
     HR_OFFICER: "hr_officer",
     FINANCE_OFFICER: "finance_officer",
+    CLINIC_ADMIN: "clinic_admin",
+    CLINIC_ASSISTANT: "clinic_assistant",
   };
   return m[role] ?? "physician";
 }

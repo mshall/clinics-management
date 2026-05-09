@@ -10,6 +10,7 @@ import {
   EncounterStatus,
   Prisma,
   RevenueStatus,
+  UserRole,
 } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { createReadStream } from "fs";
@@ -18,6 +19,7 @@ import * as path from "path";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { resolveReportingRange } from "../common/reporting-range";
 import { paginate, parsePageParams } from "../common/pagination";
+import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
 import type { AddDiagnosisDto } from "./dto/add-diagnosis.dto";
 import type { AddEncounterMedicationDto } from "./dto/add-encounter-medication.dto";
@@ -45,9 +47,20 @@ const encounterIncludeDef: Prisma.EncounterInclude = {
   diagnoses: { orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }] },
   medications: { orderBy: { createdAt: "asc" } },
   documents: { orderBy: { createdAt: "asc" } },
+  clinic: { select: { nameEn: true, nameAr: true } },
 };
 
 type EncounterRow = Prisma.EncounterGetPayload<{ include: typeof encounterIncludeDef }>;
+
+function isPhysicianRole(role: UserRole | undefined): boolean {
+  return role === UserRole.PHYSICIAN || String(role) === "PHYSICIAN";
+}
+
+function assertPhysicianEncounterAccess(viewer: JwtUser | undefined, encounter: { clinicianId: string }): void {
+  if (viewer && isPhysicianRole(viewer.role) && encounter.clinicianId !== viewer.userId) {
+    throw new ForbiddenException("You can only work on encounters assigned to you");
+  }
+}
 
 @Injectable()
 export class EncountersService {
@@ -116,6 +129,8 @@ export class EncountersService {
     return {
       id: e.id,
       clinicId: e.clinicId,
+      clinicNameEn: e.clinic?.nameEn ?? null,
+      clinicNameAr: e.clinic?.nameAr ?? null,
       patientId: e.patientId,
       clinicianId: e.clinicianId,
       status: e.status,
@@ -157,7 +172,8 @@ export class EncountersService {
     pageStr?: string,
     pageSizeStr?: string,
     sortByStr?: string,
-    sortOrderStr?: string
+    sortOrderStr?: string,
+    viewer?: JwtUser
   ) {
     const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
     const sortField = pickSortField(sortByStr, ["createdAt", "updatedAt", "visitType", "status"] as const, "createdAt");
@@ -167,6 +183,19 @@ export class EncountersService {
       tenantId,
       ...(patientId ? { patientId } : {}),
     };
+    if (viewer && isPhysicianRole(viewer.role)) {
+      where.clinicianId = viewer.userId;
+    } else if (viewer?.role === UserRole.CLINIC_ADMIN) {
+      const scopes = await this.prisma.clinicAdminScope.findMany({
+        where: { tenantId, userId: viewer.userId },
+        select: { clinicId: true },
+      });
+      const ids = scopes.map((s) => s.clinicId);
+      if (!ids.length) {
+        return paginate([], 0, page, pageSize);
+      }
+      where.clinicId = { in: ids };
+    }
     const ps = patientSearchStr?.trim();
     if (ps && !patientId) {
       where.patient = {
@@ -202,16 +231,40 @@ export class EncountersService {
     );
   }
 
-  async getById(tenantId: string, id: string): Promise<EncounterDetailDto> {
+  async getById(tenantId: string, id: string, viewer?: JwtUser): Promise<EncounterDetailDto> {
     const row = await this.prisma.encounter.findFirst({
       where: { id, tenantId },
       include: encounterIncludeDef,
     });
     if (!row) throw new NotFoundException("Encounter not found");
+    if (viewer && isPhysicianRole(viewer.role) && row.clinicianId !== viewer.userId) {
+      throw new ForbiddenException("You can only open encounters assigned to you");
+    }
     return this.mapEncounter(row);
   }
 
-  async create(tenantId: string, clinicianId: string, dto: CreateEncounterDto): Promise<EncounterDetailDto> {
+  async create(tenantId: string, actor: JwtUser, dto: CreateEncounterDto): Promise<EncounterDetailDto> {
+    let clinicianId: string;
+    if (isPhysicianRole(actor.role)) {
+      clinicianId = actor.userId;
+    } else {
+      let raw = dto.clinicianId?.trim() || null;
+      const aptId = dto.appointmentId?.trim();
+      if (!raw && aptId) {
+        const apt = await this.prisma.appointment.findFirst({
+          where: { id: aptId, tenantId, patientId: dto.patientId },
+          select: { clinicianId: true },
+        });
+        raw = apt?.clinicianId ?? null;
+      }
+      if (!raw) throw new BadRequestException("clinicianId is required (or link a booked appointment to infer the physician)");
+      const doc = await this.prisma.user.findFirst({
+        where: { id: raw, tenantId, role: UserRole.PHYSICIAN },
+      });
+      if (!doc) throw new BadRequestException("clinicianId must be a physician in this organization");
+      clinicianId = raw;
+    }
+
     const [clinic, patient] = await Promise.all([
       this.prisma.clinic.findFirst({ where: { id: dto.clinicId, tenantId } }),
       this.prisma.patient.findFirst({ where: { id: dto.patientId, tenantId, deletedAt: null } }),
@@ -303,9 +356,10 @@ export class EncountersService {
     }
   }
 
-  async update(tenantId: string, id: string, dto: UpdateEncounterDto): Promise<EncounterDetailDto> {
+  async update(tenantId: string, id: string, dto: UpdateEncounterDto, viewer?: JwtUser): Promise<EncounterDetailDto> {
     const existing = await this.prisma.encounter.findFirst({ where: { id, tenantId } });
     if (!existing) throw new NotFoundException("Encounter not found");
+    assertPhysicianEncounterAccess(viewer, existing);
     this.ensureEditable(existing.status);
 
     const data: Prisma.EncounterUpdateInput = {};
@@ -344,9 +398,15 @@ export class EncountersService {
     return this.mapEncounter(row);
   }
 
-  async addDiagnosis(tenantId: string, encounterId: string, dto: AddDiagnosisDto): Promise<DiagnosisDto> {
+  async addDiagnosis(
+    tenantId: string,
+    encounterId: string,
+    dto: AddDiagnosisDto,
+    viewer?: JwtUser
+  ): Promise<DiagnosisDto> {
     const enc = await this.prisma.encounter.findFirst({ where: { id: encounterId, tenantId } });
     if (!enc) throw new NotFoundException("Encounter not found");
+    assertPhysicianEncounterAccess(viewer, enc);
     this.ensureEditable(enc.status);
 
     if (dto.isPrimary) {
@@ -369,9 +429,15 @@ export class EncountersService {
     return this.mapDiag(d);
   }
 
-  async removeDiagnosis(tenantId: string, encounterId: string, diagnosisId: string): Promise<void> {
+  async removeDiagnosis(
+    tenantId: string,
+    encounterId: string,
+    diagnosisId: string,
+    viewer?: JwtUser
+  ): Promise<void> {
     const enc = await this.prisma.encounter.findFirst({ where: { id: encounterId, tenantId } });
     if (!enc) throw new NotFoundException("Encounter not found");
+    assertPhysicianEncounterAccess(viewer, enc);
     this.ensureEditable(enc.status);
 
     const res = await this.prisma.diagnosis.deleteMany({
@@ -383,10 +449,12 @@ export class EncountersService {
   async addMedication(
     tenantId: string,
     encounterId: string,
-    dto: AddEncounterMedicationDto
+    dto: AddEncounterMedicationDto,
+    viewer?: JwtUser
   ): Promise<EncounterMedicationDto> {
     const enc = await this.prisma.encounter.findFirst({ where: { id: encounterId, tenantId } });
     if (!enc) throw new NotFoundException("Encounter not found");
+    assertPhysicianEncounterAccess(viewer, enc);
     this.ensureEditable(enc.status);
 
     const m = await this.prisma.encounterMedication.create({
@@ -408,9 +476,15 @@ export class EncountersService {
     return this.mapMed(m);
   }
 
-  async removeMedication(tenantId: string, encounterId: string, medicationId: string): Promise<void> {
+  async removeMedication(
+    tenantId: string,
+    encounterId: string,
+    medicationId: string,
+    viewer?: JwtUser
+  ): Promise<void> {
     const enc = await this.prisma.encounter.findFirst({ where: { id: encounterId, tenantId } });
     if (!enc) throw new NotFoundException("Encounter not found");
+    assertPhysicianEncounterAccess(viewer, enc);
     this.ensureEditable(enc.status);
     const res = await this.prisma.encounterMedication.deleteMany({
       where: { id: medicationId, encounterId, tenantId },
@@ -422,10 +496,12 @@ export class EncountersService {
     tenantId: string,
     encounterId: string,
     kind: EncounterDocumentKind,
-    file: { buffer: Buffer; originalname: string; mimetype: string; size: number }
+    file: { buffer: Buffer; originalname: string; mimetype: string; size: number },
+    viewer?: JwtUser
   ): Promise<EncounterDocumentDto> {
     const enc = await this.prisma.encounter.findFirst({ where: { id: encounterId, tenantId } });
     if (!enc) throw new NotFoundException("Encounter not found");
+    assertPhysicianEncounterAccess(viewer, enc);
     this.ensureEditable(enc.status);
 
     if (!file?.buffer?.length) throw new BadRequestException("Missing file");
@@ -458,8 +534,12 @@ export class EncountersService {
   async getDocumentAbsolutePath(
     tenantId: string,
     encounterId: string,
-    documentId: string
+    documentId: string,
+    viewer?: JwtUser
   ): Promise<{ absolutePath: string; mimeType: string; originalFileName: string }> {
+    const enc = await this.prisma.encounter.findFirst({ where: { id: encounterId, tenantId } });
+    if (!enc) throw new NotFoundException("Encounter not found");
+    assertPhysicianEncounterAccess(viewer, enc);
     const doc = await this.prisma.encounterDocument.findFirst({
       where: { id: documentId, encounterId, tenantId },
     });
@@ -477,9 +557,10 @@ export class EncountersService {
     return createReadStream(absolutePath);
   }
 
-  async removeDocument(tenantId: string, encounterId: string, documentId: string): Promise<void> {
+  async removeDocument(tenantId: string, encounterId: string, documentId: string, viewer?: JwtUser): Promise<void> {
     const enc = await this.prisma.encounter.findFirst({ where: { id: encounterId, tenantId } });
     if (!enc) throw new NotFoundException("Encounter not found");
+    assertPhysicianEncounterAccess(viewer, enc);
     this.ensureEditable(enc.status);
 
     const doc = await this.prisma.encounterDocument.findFirst({

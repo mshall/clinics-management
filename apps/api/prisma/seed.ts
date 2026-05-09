@@ -61,6 +61,7 @@ async function main() {
   await prisma.appointment.deleteMany();
   await prisma.encounter.deleteMany();
   await prisma.employee.deleteMany();
+  await prisma.clinicAdminScope.deleteMany();
   await prisma.auditLog.deleteMany();
   await prisma.expense.deleteMany();
   await prisma.revenueEntry.deleteMany();
@@ -144,6 +145,80 @@ async function main() {
     )
   );
   const physician = users.find((u) => u.email === "physician@demo.clinic")!;
+  const physician2 = await prisma.user.create({
+    data: {
+      tenantId: t0.id,
+      email: "doctor2@demo.clinic",
+      passwordHash,
+      displayName: "Dr. Second Physician",
+      role: UserRole.PHYSICIAN,
+    },
+  });
+
+  const clinicAdminUser = await prisma.user.create({
+    data: {
+      tenantId: t0.id,
+      email: "clinicadmin@demo.clinic",
+      passwordHash,
+      displayName: "Demo Clinic Administrator",
+      role: UserRole.CLINIC_ADMIN,
+    },
+  });
+  await prisma.clinicAdminScope.createMany({
+    data: [
+      { tenantId: t0.id, userId: clinicAdminUser.id, clinicId: hq.id },
+      { tenantId: t0.id, userId: clinicAdminUser.id, clinicId: branches[0]!.id },
+    ],
+  });
+
+  await prisma.user.create({
+    data: {
+      tenantId: t0.id,
+      email: "assistant@demo.clinic",
+      passwordHash,
+      displayName: "Demo Clinic Assistant",
+      role: UserRole.CLINIC_ASSISTANT,
+    },
+  });
+
+  await prisma.user.create({
+    data: {
+      tenantId: t0.id,
+      email: "nurse@demo.clinic",
+      passwordHash,
+      displayName: "Demo Nurse",
+      role: UserRole.NURSE,
+    },
+  });
+  await prisma.user.create({
+    data: {
+      tenantId: t0.id,
+      email: "receptionist@demo.clinic",
+      passwordHash,
+      displayName: "Demo Receptionist",
+      role: UserRole.RECEPTIONIST,
+    },
+  });
+  await prisma.user.create({
+    data: {
+      tenantId: t0.id,
+      email: "finance@demo.clinic",
+      passwordHash,
+      displayName: "Demo Finance Officer",
+      role: UserRole.FINANCE_OFFICER,
+    },
+  });
+  await prisma.user.create({
+    data: {
+      tenantId: t0.id,
+      email: "branchmgr@demo.clinic",
+      passwordHash,
+      displayName: "Demo Branch Manager",
+      role: UserRole.BRANCH_MANAGER,
+    },
+  });
+
+  const usersForAudit = [...users, clinicAdminUser, physician2];
 
   const genders = [Gender.F, Gender.M, Gender.F, Gender.M, Gender.OTHER, Gender.F, Gender.M, Gender.UNKNOWN, Gender.F, Gender.M, Gender.F, Gender.M, Gender.F, Gender.M, Gender.F];
 
@@ -199,7 +274,7 @@ async function main() {
           tenantId: t0.id,
           clinicId: clinics[i % clinics.length]!.id,
           patientId: patients[i]!.id,
-          clinicianId: physician.id,
+          clinicianId: i % 2 === 0 ? physician.id : physician2.id,
           status: i % 4 === 0 ? EncounterStatus.DRAFT : EncounterStatus.FINALIZED,
           noMedications: i % 4 === 0,
           heartRate: 68 + i,
@@ -254,35 +329,57 @@ async function main() {
 
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  await prisma.revenueEntry.createMany({
-    data: Array.from({ length: 15 }, (_, i) => ({
-      tenantId: t0.id,
-      clinicId: clinics[i % clinics.length]!.id,
-      category: ["VISIT", "PROCEDURE", "LAB", "PHARMACY", "IMAGING"][i % 5]!,
-      description: `Posted revenue line ${i + 1}`,
-      grossAmount: 400 + i * 25,
-      taxAmount: 20 + i,
-      netAmount: 380 + i * 25,
-      currency: "AED",
-      postedAt: new Date(startOfMonth.getTime() + i * 3600000),
-      status: RevenueStatus.POSTED,
-    })),
+  /** Ledger rows tied to encounters so physician-scoped revenue (doctor dashboard) is populated. */
+  const encounterRevenue = encounters.flatMap((enc, i) => {
+    const basePosted = new Date(Math.max(startOfMonth.getTime(), enc.createdAt.getTime()));
+    const visitNet = 380 + i * 22;
+    const rows = [
+      {
+        tenantId: t0.id,
+        clinicId: enc.clinicId,
+        encounterId: enc.id,
+        category: "VISIT_FEE",
+        description: `Visit fee · ${enc.visitType}`,
+        grossAmount: visitNet,
+        taxAmount: 0,
+        netAmount: visitNet,
+        currency: "AED",
+        postedAt: basePosted,
+        status: RevenueStatus.POSTED,
+      },
+    ];
+    if (enc.status === EncounterStatus.FINALIZED) {
+      const addNet = 120 + (i % 4) * 35;
+      rows.push({
+        tenantId: t0.id,
+        clinicId: enc.clinicId,
+        encounterId: enc.id,
+        category: "PROCEDURE",
+        description: `Procedure / ancillaries · encounter ${i + 1}`,
+        grossAmount: addNet,
+        taxAmount: 0,
+        netAmount: addNet,
+        currency: "AED",
+        postedAt: new Date(basePosted.getTime() + 90 * 60_000),
+        status: RevenueStatus.POSTED,
+      });
+    }
+    return rows;
   });
-
-  await prisma.revenueEntry.createMany({
-    data: [0, 1, 2].map((i) => ({
-      tenantId: t0.id,
-      clinicId: clinics[i % clinics.length]!.id,
-      category: "VISIT",
-      description: `Same-day demo revenue ${i + 1}`,
-      grossAmount: 550 + i * 50,
-      taxAmount: 25,
-      netAmount: 525 + i * 50,
-      currency: "AED",
-      postedAt: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10 + i, 0, 0),
-      status: RevenueStatus.POSTED,
-    })),
-  });
+  const orgWideOrphans = Array.from({ length: 5 }, (_, i) => ({
+    tenantId: t0.id,
+    clinicId: clinics[i % clinics.length]!.id,
+    encounterId: null as string | null,
+    category: "RETAIL",
+    description: `Branch retail (no encounter) ${i + 1}`,
+    grossAmount: 95 + i * 12,
+    taxAmount: 0,
+    netAmount: 95 + i * 12,
+    currency: "AED",
+    postedAt: new Date(startOfMonth.getTime() + (20 + i) * 3600000),
+    status: RevenueStatus.POSTED,
+  }));
+  await prisma.revenueEntry.createMany({ data: [...encounterRevenue, ...orgWideOrphans] });
 
   await prisma.expense.createMany({
     data: Array.from({ length: 15 }, (_, i) => ({
@@ -355,7 +452,7 @@ async function main() {
         tenantId: t0.id,
         clinicId: clinics[i % clinics.length]!.id,
         patientId: patients[(i + 2) % patients.length]!.id,
-        clinicianId: physician.id,
+        clinicianId: i % 2 === 0 ? physician.id : physician2.id,
         startsAt: start,
         endsAt: end,
         status: st,
@@ -367,7 +464,8 @@ async function main() {
   await prisma.auditLog.createMany({
     data: Array.from({ length: 15 }, (_, i) => ({
       tenantId: t0.id,
-      actorId: users[i % users.length]!.id,
+      actorId: usersForAudit[i % usersForAudit.length]!.id,
+      clinicId: clinics[i % clinics.length]!.id,
       action: ["LOGIN", "CREATE_PATIENT", "UPDATE_ENCOUNTER", "POST_REVENUE", "APPROVE_EXPENSE", "BOOK_APPT", "HR_LEAVE", "FINALIZE_ENCOUNTER", "EXPORT", "SETTINGS", "INVITE", "ROLE_CHANGE", "BACKUP", "SYNC", "REPORT_RUN"][i],
       resource: ["User", "Patient", "Encounter", "RevenueEntry", "Expense", "Appointment", "LeaveRequest", "Employee", "Clinic", "Tenant", "AuditLog", "FeatureFlag", "Diagnosis", "Attendance", "Report"][i],
       resourceId: users[0]!.id,
@@ -401,7 +499,11 @@ async function main() {
     })),
   });
 
-  console.log("Seed OK — main tenant:", t0.id, "| login: admin@demo.clinic or physician@demo.clinic | password: demo");
+  console.log(
+    "Seed OK — main tenant:",
+    t0.id,
+    "| logins (password: demo): admin@demo.clinic, physician@demo.clinic, doctor2@demo.clinic, clinicadmin@demo.clinic, assistant@demo.clinic, nurse@demo.clinic, receptionist@demo.clinic, finance@demo.clinic, branchmgr@demo.clinic"
+  );
 }
 
 main()

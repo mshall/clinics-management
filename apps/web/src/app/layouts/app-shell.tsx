@@ -6,6 +6,7 @@ import { showReportingPeriodBar } from "@/lib/permissions";
 import { AppNavLinks } from "@/components/app-nav-links";
 import { DateRangeBar } from "@/components/date-range-bar";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useAuthStore } from "@/stores/auth-store";
@@ -22,10 +23,10 @@ export function AppShell() {
     <div className="flex min-h-screen bg-muted/40">
       <aside className="hidden w-60 shrink-0 border-e border-border bg-card md:flex md:flex-col">
         <div className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-4">
-          <img src="/logo.png" alt="" className="h-9 w-9 rounded-md object-contain" width={36} height={36} />
+          <img src="/logo.svg" alt="" className="h-9 w-9 object-contain" width={36} height={36} />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold leading-tight">{t("app.name")}</p>
-            <p className="truncate text-xs text-muted-foreground">MVP shell</p>
+            <p className="truncate text-xs text-muted-foreground">{t("app.tagline")}</p>
           </div>
         </div>
         <div className="flex flex-1 flex-col">
@@ -45,10 +46,10 @@ export function AppShell() {
               <SheetContent className="p-0" aria-describedby={undefined}>
                 <SheetTitle className="sr-only">{t("nav.menu")}</SheetTitle>
                 <SheetHeader className="flex h-14 shrink-0 flex-row items-center gap-3 border-b border-border px-4">
-                  <img src="/logo.png" alt="" className="h-9 w-9 rounded-md object-contain" width={36} height={36} />
+                  <img src="/logo.svg" alt="" className="h-9 w-9 object-contain" width={36} height={36} />
                   <div className="min-w-0 text-start">
                     <p className="truncate text-sm font-semibold leading-tight">{t("app.name")}</p>
-                    <p className="truncate text-xs text-muted-foreground">MVP shell</p>
+                    <p className="truncate text-xs text-muted-foreground">{t("app.tagline")}</p>
                   </div>
                 </SheetHeader>
                 <AppNavLinks onNavigate={() => setMobileOpen(false)} />
@@ -62,6 +63,7 @@ export function AppShell() {
                 {user.displayName} · {user.role.replace("_", " ")}
               </span>
             ) : null}
+            <ThemeSwitcher />
             <LanguageSwitcher />
             <Button
               variant="ghost"

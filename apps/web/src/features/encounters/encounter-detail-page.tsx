@@ -84,7 +84,7 @@ export function EncounterDetailPage() {
     setWeightKg(enc.weightKg != null ? String(enc.weightKg) : "");
     setHeightCm(enc.heightCm != null ? String(enc.heightCm) : "");
     setNoMedications(enc.noMedications ?? false);
-  }, [enc?.id, enc?.updatedAt]);
+  }, [enc?.id]);
 
   useEffect(() => {
     return () => {

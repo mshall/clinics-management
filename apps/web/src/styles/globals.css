@@ -26,26 +26,27 @@
     --radius: 0.5rem;
   }
 
+  /* Kiorly logo: #0f1419 base, #b8964a accent */
   .dark {
-    --background: 222 47% 8%;
-    --foreground: 210 30% 96%;
-    --card: 222 40% 11%;
-    --card-foreground: 210 30% 96%;
-    --popover: 222 40% 11%;
-    --popover-foreground: 210 30% 96%;
-    --primary: 188 72% 42%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 217 25% 17%;
-    --secondary-foreground: 210 25% 92%;
-    --muted: 217 20% 18%;
-    --muted-foreground: 215 15% 65%;
-    --accent: 200 35% 18%;
-    --accent-foreground: 186 60% 88%;
+    --background: 215 28% 8%;
+    --foreground: 45 15% 94%;
+    --card: 215 26% 11%;
+    --card-foreground: 45 12% 94%;
+    --popover: 215 26% 11%;
+    --popover-foreground: 45 12% 94%;
+    --primary: 43 44% 48%;
+    --primary-foreground: 215 32% 10%;
+    --secondary: 215 22% 16%;
+    --secondary-foreground: 45 10% 92%;
+    --muted: 215 18% 18%;
+    --muted-foreground: 215 12% 68%;
+    --accent: 43 28% 18%;
+    --accent-foreground: 43 55% 78%;
     --destructive: 0 62% 45%;
     --destructive-foreground: 0 0% 100%;
-    --border: 217 20% 20%;
-    --input: 217 20% 20%;
-    --ring: 188 72% 42%;
+    --border: 215 18% 20%;
+    --input: 215 18% 20%;
+    --ring: 43 44% 52%;
   }
 
   * {

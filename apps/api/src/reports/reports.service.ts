@@ -1,22 +1,28 @@
 import { Injectable } from "@nestjs/common";
-import { ExpenseStatus, RevenueStatus } from "@prisma/client";
+import { ExpenseStatus, Prisma, RevenueStatus, UserRole } from "@prisma/client";
 import { formatLocalYmd, resolveReportingRange } from "../common/reporting-range";
+import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async profitLoss(tenantId: string, fromStr?: string, toStr?: string) {
+  async profitLoss(tenantId: string, fromStr?: string, toStr?: string, viewer?: JwtUser) {
     const { start, end } = resolveReportingRange(fromStr, toStr);
+
+    const revenueWhere: Prisma.RevenueEntryWhereInput = {
+      tenantId,
+      status: RevenueStatus.POSTED,
+      postedAt: { gte: start, lte: end },
+      ...(viewer?.role === UserRole.PHYSICIAN
+        ? { encounter: { is: { clinicianId: viewer.userId } } }
+        : {}),
+    };
 
     const [rev, exp] = await Promise.all([
       this.prisma.revenueEntry.aggregate({
-        where: {
-          tenantId,
-          status: RevenueStatus.POSTED,
-          postedAt: { gte: start, lte: end },
-        },
+        where: revenueWhere,
         _sum: { netAmount: true },
       }),
       this.prisma.expense.aggregate({

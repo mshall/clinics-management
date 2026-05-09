@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Navigate } from "react-router-dom";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { TablePagination } from "@/components/table-pagination";
@@ -14,6 +15,7 @@ import { useAdminOverviewQuery, useClinicsQuery, useTenantsQuery } from "@/lib/a
 import { ApiError, apiPatch, apiPost } from "@/lib/http";
 import { MIDDLE_EAST_COUNTRY_OPTIONS } from "@/lib/middle-east-countries";
 import { useAuthStore } from "@/stores/auth-store";
+import { AdminGovernancePanel } from "./admin-governance-panel";
 
 const USER_ROLES = [
   "GROUP_ADMIN",
@@ -23,6 +25,8 @@ const USER_ROLES = [
   "RECEPTIONIST",
   "HR_OFFICER",
   "FINANCE_OFFICER",
+  "CLINIC_ADMIN",
+  "CLINIC_ASSISTANT",
 ] as const;
 
 export function AdminPage() {
@@ -30,13 +34,14 @@ export function AdminPage() {
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
   const isGroupAdmin = authUser?.role === "group_admin";
+  const isClinicAdmin = authUser?.role === "clinic_admin";
   const overview = useAdminOverviewQuery();
   const { data: clinics = [] } = useClinicsQuery();
   const [tPage, setTPage] = useState(1);
   const [tPs, setTPs] = useState(10);
   const [tSortBy, setTSortBy] = useState("name");
   const [tSortOrder, setTSortOrder] = useState<SortOrder>("asc");
-  const tenants = useTenantsQuery({ page: tPage, pageSize: tPs, sortBy: tSortBy, sortOrder: tSortOrder });
+  const tenants = useTenantsQuery({ page: tPage, pageSize: tPs, sortBy: tSortBy, sortOrder: tSortOrder, enabled: isGroupAdmin });
 
   const [clParentId, setClParentId] = useState("");
   const [clNameEn, setClNameEn] = useState("");
@@ -70,7 +75,12 @@ export function AdminPage() {
   const [uPassword, setUPassword] = useState("");
   const [uName, setUName] = useState("");
   const [uRole, setURole] = useState<string>("NURSE");
+  const [uClinicIds, setUClinicIds] = useState<string[]>([]);
   const [userErr, setUserErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (uRole !== "CLINIC_ADMIN") setUClinicIds([]);
+  }, [uRole]);
 
   const onTenantSort = (column: string) => {
     const next = toggleSort(tSortBy, tSortOrder, column);
@@ -163,6 +173,7 @@ export function AdminPage() {
         password: uPassword,
         displayName: uName.trim(),
         role: uRole,
+        ...(uRole === "CLINIC_ADMIN" && uClinicIds.length ? { clinicIds: uClinicIds } : {}),
       }),
     onSuccess: () => {
       setUserErr(null);
@@ -171,6 +182,7 @@ export function AdminPage() {
       setUEmail("");
       setUPassword("");
       setUName("");
+      setUClinicIds([]);
     },
     onError: (e: unknown) => {
       if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
@@ -212,7 +224,7 @@ export function AdminPage() {
     onError: (e: unknown) => console.error(e),
   });
 
-  const [adminSection, setAdminSection] = useState<"clinics" | "organization">("clinics");
+  const [adminSection, setAdminSection] = useState<"clinics" | "organization" | "governance">("clinics");
   const [feeDraft, setFeeDraft] = useState("");
   useEffect(() => {
     const v = overview.data?.currentTenant?.defaultVisitFee;
@@ -228,6 +240,21 @@ export function AdminPage() {
       } else alert(e instanceof Error ? e.message : String(e));
     },
   });
+
+  if (authUser && !isGroupAdmin && !isClinicAdmin) {
+    return <Navigate to="/" replace />;
+  }
+  if (isClinicAdmin) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{t("nav.governance")}</h1>
+          <p className="text-muted-foreground">{t("admin.governanceSubtitle")}</p>
+        </div>
+        <AdminGovernancePanel />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -249,9 +276,14 @@ export function AdminPage() {
         <Button type="button" size="sm" variant={adminSection === "organization" ? "default" : "outline"} onClick={() => setAdminSection("organization")}>
           {t("admin.tabOrganization", "Organization & settings")}
         </Button>
+        <Button type="button" size="sm" variant={adminSection === "governance" ? "default" : "outline"} onClick={() => setAdminSection("governance")}>
+          {t("admin.tabGovernance")}
+        </Button>
       </div>
 
-      {adminSection === "organization" ? (
+      {adminSection === "governance" ? (
+        <AdminGovernancePanel />
+      ) : adminSection === "organization" ? (
         <div className="space-y-6">
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
@@ -370,10 +402,39 @@ export function AdminPage() {
                     ))}
                   </select>
                 </div>
+                {uRole === "CLINIC_ADMIN" ? (
+                  <div className="space-y-2 sm:col-span-full">
+                    <Label>{t("admin.clinicAdminScopes")}</Label>
+                    <p className="text-xs text-muted-foreground">{t("admin.clinicAdminScopesHint")}</p>
+                    <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-border p-2">
+                      {clinics.map((c) => (
+                        <label key={c.id} className="flex cursor-pointer items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            className="size-4 rounded border-input"
+                            checked={uClinicIds.includes(c.id)}
+                            onChange={() =>
+                              setUClinicIds((prev) => (prev.includes(c.id) ? prev.filter((x) => x !== c.id) : [...prev, c.id]))
+                            }
+                          />
+                          <span>
+                            {c.nameEn} <span className="text-muted-foreground">({c.kind})</span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 <div className="flex items-end sm:col-span-2">
                   <Button
                     type="button"
-                    disabled={!uEmail.trim() || uPassword.length < 8 || !uName.trim() || createUserMut.isPending}
+                    disabled={
+                      !uEmail.trim() ||
+                      uPassword.length < 8 ||
+                      !uName.trim() ||
+                      createUserMut.isPending ||
+                      (uRole === "CLINIC_ADMIN" && uClinicIds.length === 0)
+                    }
                     onClick={() => createUserMut.mutate()}
                   >
                     {t("admin.createUser", "Create user")}

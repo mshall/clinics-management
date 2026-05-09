@@ -1,7 +1,7 @@
 {
   "app": {
-    "name": "Clinic Management System",
-    "tagline": "EHR, branches, HR & finance — bilingual by design"
+    "name": "Kiorly",
+    "tagline": "Clinic Management"
   },
   "nav": {
     "menu": "Navigation menu",
@@ -14,15 +14,26 @@
     "revenue": "Revenue",
     "hr": "HR",
     "reports": "Reports",
-    "admin": "Admin"
+    "admin": "Admin",
+    "doctorRevenue": "Doctor revenue",
+    "profile": "Profile",
+    "clinicRevenue": "Clinic revenue",
+    "governance": "Governance & audit"
   },
   "auth": {
     "signIn": "Sign in",
     "email": "Email",
     "password": "Password",
-    "demoHint": "Sign in against the API: run Docker + db:setup, then use physician@demo.clinic / demo (or admin@demo.clinic / demo).",
+    "demoHint": "Sign in against the API: run Docker + db:setup, then use e.g. physician@demo.clinic / demo, doctor2@demo.clinic / demo, admin@demo.clinic / demo, clinicadmin@demo.clinic / demo, assistant@demo.clinic / demo, nurse@demo.clinic / demo, receptionist@demo.clinic / demo, finance@demo.clinic / demo, branchmgr@demo.clinic / demo (password demo for all).",
     "mfaPlaceholder": "MFA code (demo — any 6 digits)",
     "signOut": "Sign out"
+  },
+  "theme": {
+    "label": "Theme",
+    "appearance": "Appearance",
+    "light": "Light",
+    "dark": "Dark (Kiorly)",
+    "rememberForNextLogin": "Use as default when I sign in again"
   },
   "dateRange": {
     "label": "Reporting period",
@@ -95,6 +106,7 @@
     "recent": "Recent encounters",
     "status": "Status",
     "visitType": "Visit type",
+    "clinic": "Clinic",
     "patient": "Patient",
     "diagnoses": "Dx",
     "updated": "Updated",
@@ -119,7 +131,7 @@
     "soap": "SOAP",
     "vitals": "Vitals",
     "finalize": "Finalize encounter",
-    "finalizeHint": "Only the assigned clinician can finalize. Add medications or mark “no medications prescribed”.",
+    "finalizeHint": "Only the assigned doctor can finalize. Add medications or mark “no medications prescribed”.",
     "hr": "Heart rate (bpm)",
     "spo2": "SpO₂ (%)",
     "bpSys": "BP systolic",
@@ -168,7 +180,11 @@
     "appointmentSearchPlaceholder": "Type at least 2 characters or pick a patient first…",
     "appointmentSearchIdle": "Type to search or select a patient to see their bookings.",
     "noBookableAppointments": "No matching open appointments.",
-    "clearAppointment": "Clear appointment link"
+    "clearAppointment": "Clear appointment link",
+    "attendingPhysician": "Attending doctor",
+    "attendingPhysicianHint": "Required when creating an encounter for someone else. Pre-filled when you link a booked appointment.",
+    "noDoctors": "No doctor accounts in this organization.",
+    "pickDoctorIdle": "Pick the attending doctor for this encounter."
   },
   "appointments": {
     "title": "Appointments",
@@ -177,11 +193,11 @@
     "book": "Book appointment",
     "clinic": "Clinic",
     "patient": "Patient",
-    "clinician": "Clinician",
+    "clinician": "Doctor",
     "starts": "Starts",
     "ends": "Ends",
     "pick": "Select…",
-    "pickPhysician": "Select physician…",
+    "pickPhysician": "Select doctor…",
     "create": "Create",
     "list": "Upcoming & recent",
     "status": "Status",
@@ -218,7 +234,46 @@
     "subtitle": "Parent clinic, sister branches, onboarding fields per PRD.",
     "addBranch": "Add branch",
     "parent": "Parent",
-    "branch": "Branch"
+    "branch": "Branch",
+    "detailRegistration": "Registration",
+    "detailRegistrationHint": "Values entered when the clinic was added.",
+    "detailLocation": "Location & addresses",
+    "licenseNumber": "License",
+    "phone": "Phone",
+    "email": "Email",
+    "defaultLanguage": "Default language",
+    "addressEn": "Address (EN)",
+    "addressAr": "Address (AR)",
+    "locationUrl": "Map link",
+    "parentClinic": "Parent clinic",
+    "viewParent": "View parent"
+  },
+  "clinicRevenue": {
+    "subtitle": "Posted encounter revenue by clinic for the reporting period.",
+    "totals": "Organization totals",
+    "grandGross": "Gross",
+    "grandNet": "Net",
+    "clinic": "Clinic",
+    "gross": "Gross",
+    "net": "Net",
+    "noData": "No posted revenue in this range.",
+    "breakdownTitle": "Revenue lines",
+    "noLines": "No lines in this range."
+  },
+  "profile": {
+    "title": "Profile",
+    "subtitle": "Your account in this organization.",
+    "about": "About",
+    "aboutPlaceholder": "Tell colleagues about your focus areas and languages — demo placeholder text.",
+    "roleLabel": "Role"
+  },
+  "doctorRevenue": {
+    "subtitle": "Revenue from completed encounters and other ledger rows tied to you (not appointments).",
+    "gross": "Gross (period)",
+    "net": "Net (period)",
+    "lines": "Revenue lines",
+    "linesHint": "Only entries linked to encounters where you are the attending doctor.",
+    "empty": "No revenue lines in this period."
   },
   "expenses": {
     "title": "Expenses",
@@ -325,6 +380,17 @@
     "noTenantsMatch": "No tenants match the filters.",
     "tabClinics": "Clinics & tenants",
     "tabOrganization": "Organization & settings",
+    "tabGovernance": "Governance & audit",
+    "governanceSubtitle": "Searchable audit trail of actions in your scope.",
+    "auditSearch": "Search actions, resources, or people",
+    "auditDetailTitle": "Audit entry",
+    "clinicAdminScopes": "Clinics for this administrator",
+    "clinicAdminScopesHint": "Select at least one clinic when role is Clinic administrator.",
+    "auditColAction": "Action",
+    "auditColWhen": "Time",
+    "auditColActor": "Employee",
+    "auditColResource": "Resource",
+    "auditEmpty": "No audit rows match your filters.",
     "defaultVisitFee": "Default visit fee (encounters)",
     "feeAmount": "Amount (base currency)",
     "saveFee": "Save",
@@ -379,6 +445,7 @@
     "save": "Save",
     "cancel": "Cancel",
     "close": "Close",
+    "back": "Back",
     "remove": "Remove",
     "error": "Something went wrong.",
     "comingSoon": "API-backed data coming with the NestJS backend."

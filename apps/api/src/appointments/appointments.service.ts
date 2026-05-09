@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { AppointmentStatus, EncounterStatus, Prisma } from "@prisma/client";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { AppointmentStatus, EncounterStatus, Prisma, UserRole } from "@prisma/client";
+import type { JwtUser } from "../auth/jwt-user";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
@@ -11,9 +12,31 @@ type AppointmentRow = Prisma.AppointmentGetPayload<{
   include: { patient: { select: { mrn: true; firstNameEn: true; lastNameEn: true } } };
 }>;
 
+function isPhysicianRole(role: UserRole | undefined): boolean {
+  return role === UserRole.PHYSICIAN || String(role) === "PHYSICIAN";
+}
+
 @Injectable()
 export class AppointmentsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private async assertAppointmentAccess(
+    viewer: JwtUser | undefined,
+    row: { clinicianId: string; clinicId: string }
+  ): Promise<void> {
+    if (!viewer) return;
+    if (isPhysicianRole(viewer.role) && row.clinicianId !== viewer.userId) {
+      throw new ForbiddenException("You can only access appointments where you are the clinician");
+    }
+    if (viewer.role === UserRole.CLINIC_ADMIN) {
+      const ok = await this.prisma.clinicAdminScope.findFirst({
+        where: { tenantId: viewer.tenantId, userId: viewer.userId, clinicId: row.clinicId },
+      });
+      if (!ok) {
+        throw new ForbiddenException("This appointment is outside your assigned clinics");
+      }
+    }
+  }
 
   private map(
     a: {
@@ -60,7 +83,8 @@ export class AppointmentsService {
     clinicIdStr?: string,
     sortByStr?: string,
     sortOrderStr?: string,
-    bookableOnlyStr?: string
+    bookableOnlyStr?: string,
+    viewer?: JwtUser
   ) {
     const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
     const sortField = pickSortField(sortByStr, ["startsAt", "endsAt", "status", "createdAt"] as const, "startsAt");
@@ -131,6 +155,20 @@ export class AppointmentsService {
     const clinicId = clinicIdStr?.trim();
     if (clinicId) and.push({ clinicId });
 
+    if (viewer && isPhysicianRole(viewer.role)) {
+      and.push({ clinicianId: viewer.userId });
+    } else if (viewer?.role === UserRole.CLINIC_ADMIN) {
+      const scopes = await this.prisma.clinicAdminScope.findMany({
+        where: { tenantId, userId: viewer.userId },
+        select: { clinicId: true },
+      });
+      const ids = scopes.map((s) => s.clinicId);
+      if (!ids.length) {
+        return paginate([], 0, page, pageSize);
+      }
+      and.push({ clinicId: { in: ids } });
+    }
+
     const where: Prisma.AppointmentWhereInput = and.length > 1 ? { AND: and } : { tenantId };
 
     const [total, rows] = await Promise.all([
@@ -153,7 +191,10 @@ export class AppointmentsService {
     );
   }
 
-  async create(tenantId: string, dto: CreateAppointmentDto): Promise<AppointmentDto> {
+  async create(tenantId: string, actor: JwtUser, dto: CreateAppointmentDto): Promise<AppointmentDto> {
+    if (isPhysicianRole(actor.role) && dto.clinicianId.trim() !== actor.userId) {
+      throw new BadRequestException("Physicians may only book appointments as themselves");
+    }
     const [clinic, patient, clinician] = await Promise.all([
       this.prisma.clinic.findFirst({ where: { id: dto.clinicId, tenantId } }),
       this.prisma.patient.findFirst({ where: { id: dto.patientId, tenantId, deletedAt: null } }),
@@ -182,12 +223,18 @@ export class AppointmentsService {
     return this.map(row, row.patient);
   }
 
-  async updateStatus(tenantId: string, id: string, status: AppointmentStatus): Promise<AppointmentDto> {
+  async updateStatus(
+    tenantId: string,
+    id: string,
+    status: AppointmentStatus,
+    viewer?: JwtUser
+  ): Promise<AppointmentDto> {
     const existing = await this.prisma.appointment.findFirst({
       where: { id, tenantId },
       include: { patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } } },
     });
     if (!existing) throw new NotFoundException("Appointment not found");
+    await this.assertAppointmentAccess(viewer, existing);
     if (existing.status === AppointmentStatus.COMPLETED) {
       throw new BadRequestException("Cannot change status of a completed appointment");
     }
@@ -199,12 +246,13 @@ export class AppointmentsService {
     return this.map(row, row.patient);
   }
 
-  async getById(tenantId: string, id: string): Promise<AppointmentDto> {
+  async getById(tenantId: string, id: string, viewer?: JwtUser): Promise<AppointmentDto> {
     const row = await this.prisma.appointment.findFirst({
       where: { id, tenantId },
       include: { patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } } },
     });
     if (!row) throw new NotFoundException("Appointment not found");
+    await this.assertAppointmentAccess(viewer, row);
     return this.map(row, row.patient);
   }
 
@@ -212,9 +260,10 @@ export class AppointmentsService {
     return s === AppointmentStatus.COMPLETED;
   }
 
-  async update(tenantId: string, id: string, dto: UpdateAppointmentDto): Promise<AppointmentDto> {
+  async update(tenantId: string, id: string, dto: UpdateAppointmentDto, viewer?: JwtUser): Promise<AppointmentDto> {
     const existing = await this.prisma.appointment.findFirst({ where: { id, tenantId } });
     if (!existing) throw new NotFoundException("Appointment not found");
+    await this.assertAppointmentAccess(viewer, existing);
     if (this.isCompletedStatus(existing.status)) {
       throw new BadRequestException("This appointment is read-only (completed)");
     }

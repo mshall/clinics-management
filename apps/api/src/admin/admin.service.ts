@@ -1,8 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { Prisma, UserRole } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
+import type { JwtUser } from "../auth/jwt-user";
 import type { CreateTenantUserDto } from "./dto/create-tenant-user.dto";
 import type { PatchTenantSettingsDto } from "./dto/patch-tenant-settings.dto";
 
@@ -82,15 +84,36 @@ export class AdminService {
     const email = dto.email.toLowerCase().trim();
     const existing = await this.prisma.user.findFirst({ where: { tenantId, email } });
     if (existing) throw new BadRequestException("Email already in use for this organization");
+    if (dto.role === UserRole.CLINIC_ADMIN) {
+      const ids = dto.clinicIds ?? [];
+      if (!ids.length) throw new BadRequestException("clinicIds is required when creating a clinic administrator");
+    }
     const passwordHash = bcrypt.hashSync(dto.password, 10);
-    const row = await this.prisma.user.create({
-      data: {
-        tenantId,
-        email,
-        displayName: dto.displayName.trim(),
-        passwordHash,
-        role: dto.role,
-      },
+    const row = await this.prisma.$transaction(async (tx) => {
+      const u = await tx.user.create({
+        data: {
+          tenantId,
+          email,
+          displayName: dto.displayName.trim(),
+          passwordHash,
+          role: dto.role,
+        },
+      });
+      if (dto.role === UserRole.CLINIC_ADMIN && dto.clinicIds?.length) {
+        for (const cid of dto.clinicIds) {
+          const c = await tx.clinic.findFirst({ where: { id: cid, tenantId } });
+          if (!c) throw new BadRequestException(`Invalid clinicId: ${cid}`);
+        }
+        await tx.clinicAdminScope.createMany({
+          data: dto.clinicIds.map((clinicId) => ({
+            tenantId,
+            userId: u.id,
+            clinicId,
+          })),
+          skipDuplicates: true,
+        });
+      }
+      return u;
     });
     return {
       id: row.id,
@@ -99,6 +122,61 @@ export class AdminService {
       displayName: row.displayName,
       role: row.role,
     };
+  }
+
+  async auditLogs(tenantId: string, pageStr: string | undefined, pageSizeStr: string | undefined, qRaw: string | undefined, user: JwtUser) {
+    if (user.role !== UserRole.GROUP_ADMIN && user.role !== UserRole.CLINIC_ADMIN) {
+      throw new ForbiddenException("Only administrators may list audit logs");
+    }
+    const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
+    const q = qRaw?.trim() ?? "";
+    let scopeClinicIds: string[] | null = null;
+    if (user.role === UserRole.CLINIC_ADMIN) {
+      const scopes = await this.prisma.clinicAdminScope.findMany({
+        where: { tenantId, userId: user.userId },
+        select: { clinicId: true },
+      });
+      scopeClinicIds = scopes.map((s) => s.clinicId);
+      if (!scopeClinicIds.length) {
+        return paginate([], 0, page, pageSize);
+      }
+    }
+    const where: Prisma.AuditLogWhereInput = {
+      tenantId,
+      ...(scopeClinicIds ? { clinicId: { in: scopeClinicIds } } : {}),
+      ...(q
+        ? {
+            OR: [
+              { action: { contains: q, mode: "insensitive" } },
+              { resource: { contains: q, mode: "insensitive" } },
+              { actor: { is: { displayName: { contains: q, mode: "insensitive" } } } },
+              { actor: { is: { email: { contains: q, mode: "insensitive" } } } },
+            ],
+          }
+        : {}),
+    };
+    const [total, rows] = await Promise.all([
+      this.prisma.auditLog.count({ where }),
+      this.prisma.auditLog.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: pageSize,
+        include: { actor: { select: { displayName: true, email: true } } },
+      }),
+    ]);
+    const items = rows.map((r) => ({
+      id: r.id,
+      action: r.action,
+      resource: r.resource,
+      resourceId: r.resourceId,
+      clinicId: r.clinicId,
+      createdAt: r.createdAt.toISOString(),
+      actorDisplayName: r.actor?.displayName ?? null,
+      actorEmail: r.actor?.email ?? null,
+      metadata: r.metadata === null ? null : (r.metadata as Record<string, unknown>),
+    }));
+    return paginate(items, total, page, pageSize);
   }
 
   async patchTenantSettings(tenantId: string, dto: PatchTenantSettingsDto) {

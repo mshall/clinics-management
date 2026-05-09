@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -47,13 +48,16 @@ export function LoginPage() {
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-background to-muted/60">
       <header className="flex items-center justify-between gap-3 px-4 py-4 md:px-8">
         <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="" className="h-10 w-10 rounded-lg object-contain shadow-sm" width={40} height={40} />
+          <img src="/logo.svg" alt="" className="h-10 w-10 object-contain shadow-sm" width={40} height={40} />
           <div>
             <p className="text-sm font-semibold leading-tight">{t("app.name")}</p>
             <p className="text-xs text-muted-foreground">{t("app.tagline")}</p>
           </div>
         </div>
-        <LanguageSwitcher />
+        <div className="flex items-center gap-2">
+          <ThemeSwitcher />
+          <LanguageSwitcher />
+        </div>
       </header>
       <div className="flex flex-1 items-center justify-center p-4">
         <Card className="w-full max-w-md shadow-lg">

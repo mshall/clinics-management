@@ -16,6 +16,6 @@ export class ReportsController {
   @ApiOperation({ summary: "Monthly revenue, expenses, and net profit" })
   @ApiOkResponse()
   profitLoss(@CurrentUser() user: JwtUser, @Query("from") from?: string, @Query("to") to?: string) {
-    return this.reports.profitLoss(user.tenantId, from, to);
+    return this.reports.profitLoss(user.tenantId, from, to, user);
   }
 }

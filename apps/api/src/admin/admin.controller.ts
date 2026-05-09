@@ -1,4 +1,5 @@
 import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { UserRole } from "@prisma/client";
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -22,15 +23,33 @@ export class AdminController {
     return this.admin.overview(user.tenantId);
   }
 
+  @Get("audit-logs")
+  @ApiOperation({
+    summary: "Paginated audit log (super admin: full tenant; clinic admin: actions tied to assigned clinics)",
+  })
+  @ApiOkResponse()
+  auditLogs(
+    @CurrentUser() user: JwtUser,
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string,
+    @Query("q") q?: string
+  ) {
+    return this.admin.auditLogs(user.tenantId, page, pageSize, q, user);
+  }
+
   @Get("tenants")
   @ApiOperation({ summary: "List all organizations (platform)" })
   @ApiOkResponse()
   tenants(
+    @CurrentUser() user: JwtUser,
     @Query("page") page?: string,
     @Query("pageSize") pageSize?: string,
     @Query("sortBy") sortBy?: string,
     @Query("sortOrder") sortOrder?: string
   ) {
+    if (user.role !== UserRole.GROUP_ADMIN) {
+      throw new ForbiddenException("Only platform administrators can list all organizations");
+    }
     return this.admin.listTenants(page, pageSize, sortBy, sortOrder);
   }
 
@@ -57,7 +76,10 @@ export class AdminController {
   @Patch("feature-flags/:key")
   @ApiOperation({ summary: "Toggle feature flag" })
   @ApiOkResponse()
-  patchFlag(@Param("key") key: string, @Body() body: PatchFeatureFlagDto) {
+  patchFlag(@CurrentUser() user: JwtUser, @Param("key") key: string, @Body() body: PatchFeatureFlagDto) {
+    if (user.role !== UserRole.GROUP_ADMIN) {
+      throw new ForbiddenException("Only platform administrators can change feature flags");
+    }
     return this.admin.setFeatureFlag(key, body.enabled);
   }
 }

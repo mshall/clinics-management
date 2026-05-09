@@ -1,6 +1,6 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
-import { IsEmail, IsEnum, IsString, MaxLength, MinLength } from "class-validator";
+import { IsArray, IsEmail, IsEnum, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
 
 export class CreateTenantUserDto {
   @ApiProperty()
@@ -22,4 +22,13 @@ export class CreateTenantUserDto {
   @ApiProperty({ enum: UserRole })
   @IsEnum(UserRole)
   role!: UserRole;
+
+  @ApiPropertyOptional({
+    description: "When role is CLINIC_ADMIN, assign one or more clinics (and branches) this administrator may govern.",
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  clinicIds?: string[];
 }

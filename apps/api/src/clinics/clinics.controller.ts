@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
 import { ClinicDto } from "../common/dto/clinic.dto";
+import { ClinicDetailDto } from "./dto/clinic-detail.dto";
 import { CreateClinicDto } from "./dto/create-clinic.dto";
 import { ClinicsService } from "./clinics.service";
 
@@ -26,5 +27,12 @@ export class ClinicsController {
   @ApiCreatedResponse({ description: "ClinicDto" })
   create(@CurrentUser() user: JwtUser, @Body() body: CreateClinicDto) {
     return this.clinics.create(user.tenantId, body);
+  }
+
+  @Get(":id")
+  @ApiOperation({ summary: "Get one clinic including registration fields from admin" })
+  @ApiOkResponse({ type: ClinicDetailDto })
+  getOne(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.clinics.getOne(user.tenantId, id);
   }
 }

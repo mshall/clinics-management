@@ -1,4 +1,7 @@
 import { useTranslation } from "react-i18next";
+import { Navigate } from "react-router-dom";
+import { defaultHomeForRole } from "@/lib/nav-policy";
+import { useAuthStore } from "@/stores/auth-store";
 import {
   Area,
   AreaChart,
@@ -37,6 +40,11 @@ function formatMoney(n: number, lng: string) {
 
 export function DashboardPage() {
   const { t, i18n } = useTranslation();
+  const role = useAuthStore((s) => s.user?.role);
+  const home = defaultHomeForRole(role);
+  if (home !== "/") {
+    return <Navigate to={home} replace />;
+  }
   const { data, isPending, isError, error } = useDashboardKpisQuery();
 
   return (

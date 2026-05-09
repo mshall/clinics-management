@@ -1,8 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ClinicDto, GroupOverviewKpisDto, PatientDto } from "@/lib/api-schema";
 import type {
+  AdminAuditLogItemDto,
   AdminOverviewDto,
   AppointmentDto,
+  ClinicDetailDto,
+  ClinicRevenueBreakdownDto,
   RevenueTotalsDto,
   AttendanceDto,
   EmployeeDto,
@@ -18,6 +21,7 @@ import type {
 } from "@/lib/api-types";
 import { apiGet } from "@/lib/http";
 import type { Paginated } from "@/lib/paginated";
+import { useAuthStore } from "@/stores/auth-store";
 import { useDateRangeStore } from "@/stores/date-range-store";
 
 export type { PatientDto, ClinicDto, GroupOverviewKpisDto };
@@ -109,6 +113,14 @@ export function useClinicsQuery() {
   });
 }
 
+export function useClinicQuery(id: string | undefined) {
+  return useQuery({
+    queryKey: ["clinic", id],
+    queryFn: () => apiGet<ClinicDetailDto>(`/api/v1/clinics/${id}`),
+    enabled: Boolean(id),
+  });
+}
+
 export interface EncountersListParams {
   patientId?: string;
   /** Filter ledger by patient name or MRN (server-side). Ignored when patientId is set. */
@@ -125,6 +137,8 @@ export interface EncountersListParams {
 }
 
 export function useEncountersQuery(params: EncountersListParams = {}) {
+  const viewerId = useAuthStore((s) => s.user?.id ?? "");
+  const viewerRole = useAuthStore((s) => s.user?.role ?? "");
   const storeFrom = useDateRangeStore((s) => s.from);
   const storeTo = useDateRangeStore((s) => s.to);
   const from = params.from ?? storeFrom;
@@ -149,6 +163,8 @@ export function useEncountersQuery(params: EncountersListParams = {}) {
       ? [
           "encounters",
           "patient",
+          viewerId,
+          viewerRole,
           params.patientId!.trim(),
           params.page ?? 1,
           params.pageSize ?? 10,
@@ -158,6 +174,8 @@ export function useEncountersQuery(params: EncountersListParams = {}) {
       : [
           "encounters",
           "ledger",
+          viewerId,
+          viewerRole,
           from,
           to,
           params.patientSearch?.trim() ?? "",
@@ -172,8 +190,10 @@ export function useEncountersQuery(params: EncountersListParams = {}) {
 }
 
 export function useEncounterQuery(id: string | undefined) {
+  const viewerId = useAuthStore((s) => s.user?.id ?? "");
+  const viewerRole = useAuthStore((s) => s.user?.role ?? "");
   return useQuery({
-    queryKey: ["encounter", id],
+    queryKey: ["encounter", id, viewerId, viewerRole],
     queryFn: () => apiGet<EncounterDetailDto>(`/api/v1/encounters/${id}`),
     enabled: Boolean(id),
   });
@@ -225,44 +245,76 @@ export interface RevenueListParams {
   from: string;
   to: string;
   clinicId?: string;
+  /** When permitted by the API, filter ledger rows to encounters for this physician. */
+  clinicianId?: string;
   page?: number;
   pageSize?: number;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
+  enabled?: boolean;
 }
 
 export function useRevenueQuery(params: RevenueListParams) {
+  const viewerId = useAuthStore((s) => s.user?.id ?? "");
+  const { enabled = true, ...p } = params;
   const q = new URLSearchParams();
-  q.set("from", params.from);
-  q.set("to", params.to);
-  q.set("page", String(params.page ?? 1));
-  q.set("pageSize", String(params.pageSize ?? 10));
-  if (params.clinicId?.trim()) q.set("clinicId", params.clinicId.trim());
-  if (params.sortBy) q.set("sortBy", params.sortBy);
-  if (params.sortOrder) q.set("sortOrder", params.sortOrder);
+  q.set("from", p.from);
+  q.set("to", p.to);
+  q.set("page", String(p.page ?? 1));
+  q.set("pageSize", String(p.pageSize ?? 10));
+  if (p.clinicId?.trim()) q.set("clinicId", p.clinicId.trim());
+  if (p.clinicianId?.trim()) q.set("clinicianId", p.clinicianId.trim());
+  if (p.sortBy) q.set("sortBy", p.sortBy);
+  if (p.sortOrder) q.set("sortOrder", p.sortOrder);
   return useQuery({
     queryKey: [
       "revenue",
-      params.from,
-      params.to,
-      params.clinicId ?? "",
-      params.page ?? 1,
-      params.pageSize ?? 10,
-      params.sortBy,
-      params.sortOrder,
+      viewerId,
+      p.from,
+      p.to,
+      p.clinicId ?? "",
+      p.clinicianId ?? "",
+      p.page ?? 1,
+      p.pageSize ?? 10,
+      p.sortBy,
+      p.sortOrder,
     ],
     queryFn: () => apiGet<Paginated<RevenueEntryDto>>(`/api/v1/revenue?${q.toString()}`),
+    enabled,
   });
 }
 
-export function useRevenueTotalsQuery(params: { from: string; to: string; clinicId?: string }) {
+export function useRevenueTotalsQuery(params: { from: string; to: string; clinicId?: string; clinicianId?: string }) {
+  const viewerId = useAuthStore((s) => s.user?.id ?? "");
   const q = new URLSearchParams();
   q.set("from", params.from);
   q.set("to", params.to);
   if (params.clinicId?.trim()) q.set("clinicId", params.clinicId.trim());
+  if (params.clinicianId?.trim()) q.set("clinicianId", params.clinicianId.trim());
   return useQuery({
-    queryKey: ["revenue", "totals", params.from, params.to, params.clinicId ?? ""],
+    queryKey: ["revenue", "totals", viewerId, params.from, params.to, params.clinicId ?? "", params.clinicianId ?? ""],
     queryFn: () => apiGet<RevenueTotalsDto>(`/api/v1/revenue/totals?${q.toString()}`),
+  });
+}
+
+export function useClinicRevenueBreakdownQuery(enabled = true) {
+  const { from, to } = useDateRangeStore();
+  return useQuery({
+    queryKey: ["revenue", "clinic-breakdown", from, to],
+    queryFn: () => apiGet<ClinicRevenueBreakdownDto>(`/api/v1/revenue/clinic-breakdown?${rangeQs()}`),
+    enabled,
+  });
+}
+
+export function useAdminAuditLogsQuery(params: { page: number; pageSize: number; q: string; enabled?: boolean }) {
+  const q = new URLSearchParams();
+  q.set("page", String(params.page));
+  q.set("pageSize", String(params.pageSize));
+  if (params.q.trim()) q.set("q", params.q.trim());
+  return useQuery({
+    queryKey: ["admin", "audit-logs", params.page, params.pageSize, params.q.trim()],
+    queryFn: () => apiGet<Paginated<AdminAuditLogItemDto>>(`/api/v1/admin/audit-logs?${q.toString()}`),
+    enabled: params.enabled ?? true,
   });
 }
 
@@ -363,6 +415,8 @@ export interface AppointmentsListParams extends PagedRangeParams {
 }
 
 export function useAppointmentsQuery(params: AppointmentsListParams = {}) {
+  const viewerId = useAuthStore((s) => s.user?.id ?? "");
+  const viewerRole = useAuthStore((s) => s.user?.role ?? "");
   const { enabled = true, bookableOnly, ...rest } = params;
   const q = new URLSearchParams();
   q.set("page", String(rest.page ?? 1));
@@ -378,27 +432,31 @@ export function useAppointmentsQuery(params: AppointmentsListParams = {}) {
   if (rest.sortOrder) q.set("sortOrder", rest.sortOrder);
   if (bookableOnly) q.set("bookableOnly", "true");
   return useQuery({
-    queryKey: ["appointments", Object.fromEntries(q.entries())],
+    queryKey: ["appointments", viewerId, viewerRole, Object.fromEntries(q.entries())],
     queryFn: () => apiGet<Paginated<AppointmentDto>>(`/api/v1/appointments?${q.toString()}`),
     enabled,
   });
 }
 
 export function useAppointmentQuery(id: string | undefined) {
+  const viewerId = useAuthStore((s) => s.user?.id ?? "");
+  const viewerRole = useAuthStore((s) => s.user?.role ?? "");
   return useQuery({
-    queryKey: ["appointment", id],
+    queryKey: ["appointment", id, viewerId, viewerRole],
     queryFn: () => apiGet<AppointmentDto>(`/api/v1/appointments/${id}`),
     enabled: Boolean(id),
   });
 }
 
-export function useUsersQuery(params: PagedRangeParams = {}) {
+export function useUsersQuery(params: PagedRangeParams & { enabled?: boolean } = {}) {
+  const { enabled = true, ...p } = params;
   const q = new URLSearchParams();
-  q.set("page", String(params.page ?? 1));
-  q.set("pageSize", String(params.pageSize ?? 100));
+  q.set("page", String(p.page ?? 1));
+  q.set("pageSize", String(p.pageSize ?? 100));
   return useQuery({
-    queryKey: ["users", params.page ?? 1, params.pageSize ?? 100],
+    queryKey: ["users", p.page ?? 1, p.pageSize ?? 100],
     queryFn: () => apiGet<Paginated<UserListItemDto>>(`/api/v1/users?${q.toString()}`),
+    enabled,
   });
 }
 
@@ -409,14 +467,16 @@ export function useAdminOverviewQuery() {
   });
 }
 
-export function useTenantsQuery(params: PagedRangeParams = {}) {
+export function useTenantsQuery(params: PagedRangeParams & { enabled?: boolean } = {}) {
+  const { enabled = true, ...p } = params;
   const q = new URLSearchParams();
-  q.set("page", String(params.page ?? 1));
-  q.set("pageSize", String(params.pageSize ?? 10));
-  if (params.sortBy) q.set("sortBy", params.sortBy);
-  if (params.sortOrder) q.set("sortOrder", params.sortOrder);
+  q.set("page", String(p.page ?? 1));
+  q.set("pageSize", String(p.pageSize ?? 10));
+  if (p.sortBy) q.set("sortBy", p.sortBy);
+  if (p.sortOrder) q.set("sortOrder", p.sortOrder);
   return useQuery({
     queryKey: ["admin", "tenants", Object.fromEntries(q.entries())],
     queryFn: () => apiGet<Paginated<TenantListItemDto>>(`/api/v1/admin/tenants?${q.toString()}`),
+    enabled,
   });
 }

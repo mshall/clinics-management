@@ -67,6 +67,12 @@ export class EncounterDetailDto {
   @ApiProperty()
   clinicId!: string;
 
+  @ApiPropertyOptional({ nullable: true, description: "Clinic display name (English)" })
+  clinicNameEn!: string | null;
+
+  @ApiPropertyOptional({ nullable: true, description: "Clinic display name (Arabic)" })
+  clinicNameAr!: string | null;
+
   @ApiProperty()
   patientId!: string;
 

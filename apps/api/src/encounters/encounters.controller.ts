@@ -67,7 +67,8 @@ export class EncountersController {
       page,
       pageSize,
       sortBy,
-      sortOrder
+      sortOrder,
+      user
     );
   }
 
@@ -75,7 +76,7 @@ export class EncountersController {
   @ApiOperation({ summary: "Create draft encounter for a patient" })
   @ApiCreatedResponse({ type: EncounterDetailDto })
   create(@CurrentUser() user: JwtUser, @Body() body: CreateEncounterDto) {
-    return this.encounters.create(user.tenantId, user.userId, body);
+    return this.encounters.create(user.tenantId, user, body);
   }
 
   @Get(":id/documents/:docId/file")
@@ -86,7 +87,7 @@ export class EncountersController {
     @Param("id") encounterId: string,
     @Param("docId") docId: string
   ): Promise<StreamableFile> {
-    const meta = await this.encounters.getDocumentAbsolutePath(user.tenantId, encounterId, docId);
+    const meta = await this.encounters.getDocumentAbsolutePath(user.tenantId, encounterId, docId, user);
     const stream = this.encounters.getDocumentReadStream(meta.absolutePath);
     return new StreamableFile(stream, {
       type: meta.mimeType,
@@ -98,14 +99,14 @@ export class EncountersController {
   @ApiOperation({ summary: "Get encounter with diagnoses, medications, documents" })
   @ApiOkResponse({ type: EncounterDetailDto })
   get(@CurrentUser() user: JwtUser, @Param("id") id: string) {
-    return this.encounters.getById(user.tenantId, id);
+    return this.encounters.getById(user.tenantId, id, user);
   }
 
   @Patch(":id")
   @ApiOperation({ summary: "Update SOAP / vitals / no-medications (draft only)" })
   @ApiOkResponse({ type: EncounterDetailDto })
   patch(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: UpdateEncounterDto) {
-    return this.encounters.update(user.tenantId, id, body);
+    return this.encounters.update(user.tenantId, id, body, user);
   }
 
   @Post(":id/documents")
@@ -142,7 +143,7 @@ export class EncountersController {
           ? EncounterDocumentKind.LAB
           : null;
     if (!kind) throw new BadRequestException("kind must be LAB or RADIOLOGY");
-    return this.encounters.uploadDocument(user.tenantId, id, kind, file);
+    return this.encounters.uploadDocument(user.tenantId, id, kind, file, user);
   }
 
   @Delete(":id/documents/:docId")
@@ -153,7 +154,7 @@ export class EncountersController {
     @Param("id") encounterId: string,
     @Param("docId") docId: string
   ) {
-    await this.encounters.removeDocument(user.tenantId, encounterId, docId);
+    await this.encounters.removeDocument(user.tenantId, encounterId, docId, user);
     return { ok: true };
   }
 
@@ -165,7 +166,7 @@ export class EncountersController {
     @Param("id") id: string,
     @Body() body: AddEncounterMedicationDto
   ) {
-    return this.encounters.addMedication(user.tenantId, id, body);
+    return this.encounters.addMedication(user.tenantId, id, body, user);
   }
 
   @Delete(":id/medications/:medicationId")
@@ -176,7 +177,7 @@ export class EncountersController {
     @Param("id") encounterId: string,
     @Param("medicationId") medicationId: string
   ) {
-    await this.encounters.removeMedication(user.tenantId, encounterId, medicationId);
+    await this.encounters.removeMedication(user.tenantId, encounterId, medicationId, user);
     return { ok: true };
   }
 
@@ -184,7 +185,7 @@ export class EncountersController {
   @ApiOperation({ summary: "Add ICD-10 diagnosis to encounter" })
   @ApiCreatedResponse({ type: DiagnosisDto })
   addDiagnosis(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: AddDiagnosisDto) {
-    return this.encounters.addDiagnosis(user.tenantId, id, body);
+    return this.encounters.addDiagnosis(user.tenantId, id, body, user);
   }
 
   @Delete(":id/diagnoses/:diagnosisId")
@@ -195,7 +196,7 @@ export class EncountersController {
     @Param("id") id: string,
     @Param("diagnosisId") diagnosisId: string
   ) {
-    await this.encounters.removeDiagnosis(user.tenantId, id, diagnosisId);
+    await this.encounters.removeDiagnosis(user.tenantId, id, diagnosisId, user);
     return { ok: true };
   }
 

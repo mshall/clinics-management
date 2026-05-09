@@ -12,16 +12,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { TablePagination } from "@/components/table-pagination";
-import { useAdminOverviewQuery, useAppointmentsQuery, useClinicsQuery, useEncountersQuery, usePatientsQuery } from "@/lib/api-hooks";
+import {
+  useAdminOverviewQuery,
+  useAppointmentsQuery,
+  useClinicsQuery,
+  useEncountersQuery,
+  usePatientsQuery,
+  useUsersQuery,
+} from "@/lib/api-hooks";
 import type { AppointmentDto, EncounterDetailDto } from "@/lib/api-types";
 import { ApiError, apiPost } from "@/lib/http";
 import { ENCOUNTER_VISIT_TYPES } from "@/lib/visit-types";
 import { defaultMonthRange } from "@/stores/date-range-store";
+import { useAuthStore } from "@/stores/auth-store";
 
 export function EncountersListPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const authUser = useAuthStore((s) => s.user);
+  const isPhysician = authUser?.role === "physician";
   const initialRange = useMemo(() => defaultMonthRange(), []);
   const [from, setFrom] = useState(initialRange.from);
   const [to, setTo] = useState(initialRange.to);
@@ -82,6 +92,7 @@ export function EncountersListPage() {
   const totalPages = encData?.totalPages ?? 1;
   const [efEncStatus, setEfEncStatus] = useState("");
   const [efVisit, setEfVisit] = useState("");
+  const [efClinic, setEfClinic] = useState("");
   const [efPatient, setEfPatient] = useState("");
   const [efUpdated, setEfUpdated] = useState("");
 
@@ -96,14 +107,18 @@ export function EncountersListPage() {
 
   const filteredEncounters = useMemo(() => {
     const loc = i18n.language === "ar" ? "ar-AE" : "en-AE";
+    const name = (e: EncounterDetailDto) =>
+      (i18n.language === "ar" ? e.clinicNameAr ?? e.clinicNameEn : e.clinicNameEn ?? e.clinicNameAr) ?? "—";
     const n = (s: string) => s.trim().toLowerCase();
     const fst = n(efEncStatus);
     const fv = n(efVisit);
+    const fc = n(efClinic);
     const fp = n(efPatient);
     const fu = n(efUpdated);
     return data.filter((e) => {
       if (fst && !e.status.toLowerCase().includes(fst)) return false;
       if (fv && !e.visitType.toLowerCase().includes(fv)) return false;
+      if (fc && !name(e).toLowerCase().includes(fc)) return false;
       if (fp) {
         const label = (patientLabel.get(e.patientId) ?? e.patientId).toLowerCase();
         if (!label.includes(fp)) return false;
@@ -114,12 +129,13 @@ export function EncountersListPage() {
       }
       return true;
     });
-  }, [data, efEncStatus, efVisit, efPatient, efUpdated, i18n.language, patientLabel]);
+  }, [data, efEncStatus, efVisit, efClinic, efPatient, efUpdated, i18n.language, patientLabel]);
 
   const [createPatientId, setCreatePatientId] = useState("");
   const [createClinicId, setCreateClinicId] = useState("");
   const [createVisitType, setCreateVisitType] = useState<string>(ENCOUNTER_VISIT_TYPES[0] ?? "Office visit");
   const [createVisitFee, setCreateVisitFee] = useState("");
+  const [createClinicianId, setCreateClinicianId] = useState("");
   const [createErr, setCreateErr] = useState<string | null>(null);
   const [aptPickerSearch, setAptPickerSearch] = useState("");
   const [debouncedAptPicker, setDebouncedAptPicker] = useState("");
@@ -143,6 +159,19 @@ export function EncountersListPage() {
     pageSize: 30,
     enabled: aptPickerEnabled,
   });
+  const { data: usersForDoctors } = useUsersQuery({ page: 1, pageSize: 200, enabled: createOpen && !isPhysician });
+  const doctorPickItems: PickListItem[] = useMemo(
+    () =>
+      (usersForDoctors?.items ?? [])
+        .filter((u) => u.role === "PHYSICIAN")
+        .map((u) => ({
+          value: u.id,
+          label: u.displayName,
+          hint: u.email,
+        })),
+    [usersForDoctors?.items]
+  );
+
   const aptPickerRows = aptPickerData?.items ?? [];
   const aptPickerItems: PickListItem[] = useMemo(
     () =>
@@ -173,6 +202,7 @@ export function EncountersListPage() {
     setAptPickerSearch("");
     setDebouncedAptPicker("");
     setSelectedAppointmentId("");
+    setCreateClinicianId("");
     setCreateOpen(true);
   };
 
@@ -190,6 +220,7 @@ export function EncountersListPage() {
         if (Number.isFinite(fee) && fee >= 0) body.visitFeeAmount = fee;
       }
       if (selectedAppointmentId.trim()) body.appointmentId = selectedAppointmentId.trim();
+      if (!isPhysician && createClinicianId.trim()) body.clinicianId = createClinicianId.trim();
       return apiPost<EncounterDetailDto>("/api/v1/encounters", body);
     },
     onSuccess: (enc) => {
@@ -275,6 +306,7 @@ export function EncountersListPage() {
                       if (row) {
                         setCreatePatientId(row.patientId);
                         setCreateClinicId(row.clinicId);
+                        setCreateClinicianId(row.clinicianId);
                       }
                     }}
                     onSearchQueryChange={setAptPickerSearch}
@@ -286,11 +318,37 @@ export function EncountersListPage() {
                     idleMessage={t("encounters.appointmentSearchIdle", "Type to search or select a patient to see their bookings.")}
                   />
                   {selectedAppointmentId ? (
-                    <Button type="button" variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setSelectedAppointmentId("")}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-xs"
+                      onClick={() => {
+                        setSelectedAppointmentId("");
+                        setCreateClinicianId("");
+                      }}
+                    >
                       {t("encounters.clearAppointment", "Clear appointment link")}
                     </Button>
                   ) : null}
                 </div>
+                {!isPhysician ? (
+                  <div className="space-y-2">
+                    <Label>{t("encounters.attendingPhysician")}</Label>
+                    <p className="text-xs text-muted-foreground">{t("encounters.attendingPhysicianHint")}</p>
+                    <SearchablePickList
+                      items={doctorPickItems}
+                      value={createClinicianId}
+                      onValueChange={setCreateClinicianId}
+                      searchPlaceholder={t("appointments.pickPhysician")}
+                      placeholder={t("encounters.attendingPhysician")}
+                      emptyMessage={t("encounters.noDoctors", "No doctor accounts in this organization.")}
+                      localFilter
+                      minSearchLength={0}
+                      idleMessage={t("encounters.pickDoctorIdle", "Pick the attending doctor for this encounter.")}
+                    />
+                  </div>
+                ) : null}
                 <div className="space-y-2">
                   <Label>{t("encounters.clinic", "Clinic")}</Label>
                   <select
@@ -340,7 +398,10 @@ export function EncountersListPage() {
                     !createPatientId ||
                     !createClinicId ||
                     !createVisitType.trim() ||
-                    createMut.isPending
+                    createMut.isPending ||
+                    (!isPhysician &&
+                      !createClinicianId.trim() &&
+                      !selectedAppointmentId.trim())
                   }
                   onClick={() => createMut.mutate()}
                 >
@@ -408,10 +469,17 @@ export function EncountersListPage() {
             variant="ghost"
             size="sm"
             className="h-8 text-xs"
-            disabled={!efEncStatus.trim() && !efVisit.trim() && !efPatient.trim() && !efUpdated.trim()}
+            disabled={
+              !efEncStatus.trim() &&
+              !efVisit.trim() &&
+              !efClinic.trim() &&
+              !efPatient.trim() &&
+              !efUpdated.trim()
+            }
             onClick={() => {
               setEfEncStatus("");
               setEfVisit("");
+              setEfClinic("");
               setEfPatient("");
               setEfUpdated("");
             }}
@@ -442,6 +510,7 @@ export function EncountersListPage() {
                     filterValue={efVisit}
                     onFilterChange={setEfVisit}
                   />
+                  <FilterTh label={t("encounters.clinic")} value={efClinic} onChange={setEfClinic} align="start" />
                   <FilterTh label={t("encounters.patient")} value={efPatient} onChange={setEfPatient} align="center" />
                   <SortableTh
                     label={t("encounters.updated")}
@@ -457,7 +526,7 @@ export function EncountersListPage() {
               <tbody>
                 {isPending ? (
                   <tr>
-                    <td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">
+                    <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">
                       {t("common.loading")}
                     </td>
                   </tr>
@@ -481,6 +550,21 @@ export function EncountersListPage() {
                         <Badge variant={e.status === "FINALIZED" ? "default" : "secondary"}>{e.status}</Badge>
                       </td>
                       <td className="px-3 py-2">{e.visitType}</td>
+                      <td className="px-3 py-2">
+                        <Badge
+                          variant="outline"
+                          className="max-w-[14rem] truncate border-primary/35 bg-primary/5 font-normal text-foreground"
+                          title={
+                            (i18n.language === "ar"
+                              ? e.clinicNameAr ?? e.clinicNameEn
+                              : e.clinicNameEn ?? e.clinicNameAr) ?? undefined
+                          }
+                        >
+                          {(i18n.language === "ar"
+                            ? e.clinicNameAr ?? e.clinicNameEn
+                            : e.clinicNameEn ?? e.clinicNameAr) ?? "—"}
+                        </Badge>
+                      </td>
                       <td className="px-3 py-2 text-center">
                         {patientLabel.get(e.patientId) ?? (
                           <span className="font-mono text-xs text-muted-foreground ltr-nums">{e.patientId.slice(0, 8)}…</span>
@@ -493,14 +577,14 @@ export function EncountersListPage() {
                   ))}
                 {!isPending && data.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">
+                    <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">
                       {t("encounters.empty")}
                     </td>
                   </tr>
                 ) : null}
                 {!isPending && data.length > 0 && filteredEncounters.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">
+                    <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">
                       {t("patients.noColMatch", "No rows match the column filters.")}
                     </td>
                   </tr>

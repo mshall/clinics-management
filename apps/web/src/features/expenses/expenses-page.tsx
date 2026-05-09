@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
+import { Receipt } from "lucide-react";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { TablePagination } from "@/components/table-pagination";
 import { useTranslation } from "react-i18next";
@@ -128,6 +129,7 @@ export function ExpensesPage() {
       return true;
     });
   }, [expenses, efCategory, efVendor, efAmount, efStatus, efDate, efProof, i18n.language]);
+  const selectedPeriodTotal = useMemo(() => expenses.reduce((sum, e) => sum + e.amount, 0), [expenses]);
 
   const downloadProof = async (id: string, filename: string | null) => {
     try {
@@ -156,52 +158,69 @@ export function ExpensesPage() {
 
       {isError ? <p className="text-sm text-destructive">{error instanceof Error ? error.message : t("common.error")}</p> : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t("expenses.searchLedger", "Search ledger")}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-end gap-4">
-          <div className="space-y-2">
-            <Label>{t("expenses.from", "From")}</Label>
-            <Input className="ltr-nums" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
-          </div>
-          <div className="space-y-2">
-            <Label>{t("expenses.to", "To")}</Label>
-            <Input className="ltr-nums" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
-          </div>
-          <div className="min-w-[12rem] space-y-2">
-            <Label>{t("expenses.clinic")}</Label>
-            <select
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              value={filterClinicId}
-              onChange={(e) => {
-                setFilterClinicId(e.target.value);
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <Card className="lg:max-w-2xl">
+          <CardHeader className="pb-2 pt-4">
+            <CardTitle className="text-sm font-medium">{t("expenses.searchLedger", "Search ledger")}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-end gap-3 pb-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t("expenses.from", "From")}</Label>
+              <Input className="h-9 ltr-nums" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t("expenses.to", "To")}</Label>
+              <Input className="h-9 ltr-nums" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
+            </div>
+            <div className="min-w-[10rem] flex-1 space-y-1.5">
+              <Label className="text-xs">{t("expenses.clinic")}</Label>
+              <select
+                className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+                value={filterClinicId}
+                onChange={(e) => {
+                  setFilterClinicId(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">{t("expenses.allClinics", "All clinics")}</option>
+                {clinics.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nameEn}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="h-9"
+              onClick={() => {
+                const r = defaultMonthRange();
+                setFrom(r.from);
+                setTo(r.to);
                 setPage(1);
               }}
             >
-              <option value="">{t("expenses.allClinics", "All clinics")}</option>
-              {clinics.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nameEn}
-                </option>
-              ))}
-            </select>
-          </div>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              const r = defaultMonthRange();
-              setFrom(r.from);
-              setTo(r.to);
-              setPage(1);
-            }}
-          >
-            {t("expenses.thisMonth", "This month")}
-          </Button>
-        </CardContent>
-      </Card>
+              {t("expenses.thisMonth", "This month")}
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-1 pt-4">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <Receipt className="h-4 w-4 text-rose-500" />
+              {t("expenses.periodTotal", "Total expenses")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1 pb-4 pt-0">
+            <p className="text-lg font-semibold ltr-nums">{money(selectedPeriodTotal)}</p>
+            <p className="text-xs text-muted-foreground ltr-nums">
+              {from} → {to}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader>
