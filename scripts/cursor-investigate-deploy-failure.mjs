@@ -3,6 +3,9 @@
  * GitHub Actions: after a failed AWS deploy, run Cursor (cloud by default) to analyze
  * diagnostics and open a PR with fixes. Requires CURSOR_API_KEY and GITHUB_TOKEN with
  * contents:write + pull-requests:write (see workflow job permissions).
+ *
+ * Uses Agent.create + send + wait (not Agent.prompt) so SIGTERM/SIGINT from "Cancel workflow"
+ * can call run.cancel() and dispose the SDK client; avoids needing a second force-cancel.
  * @see https://cursor.com/docs/sdk/typescript
  */
 import fs from "node:fs";
@@ -75,26 +78,15 @@ ${diagnostics.slice(0, 220_000)}
 
 A pull request will be created automatically when you finish (\`autoCreatePR\`).`;
 
-const agentOptionsBase = { apiKey };
+const agentOptionsBase = { apiKey, model: { id: "composer-2" } };
 
-try {
-  let result;
-
-  if (useLocal) {
-    result = await Agent.prompt(prompt, {
+/** @type {import("@cursor/sdk").AgentOptions} */
+const createOptions = useLocal
+  ? { ...agentOptionsBase, local: { cwd: process.cwd(), settingSources: [] } }
+  : {
       ...agentOptionsBase,
-      model: { id: "composer-2" },
-      local: { cwd: process.cwd(), settingSources: [] },
-    });
-  } else {
-    const url = repoCloneUrl();
-    const ref = startingRef();
-    console.log(`::notice::Cursor cloud agent: repo=${url} ref=${ref} autoCreatePR=true`);
-    result = await Agent.prompt(prompt, {
-      ...agentOptionsBase,
-      model: { id: "composer-2" },
       cloud: {
-        repos: [{ url, startingRef: ref }],
+        repos: [{ url: repoCloneUrl(), startingRef: startingRef() }],
         autoCreatePR: true,
         skipReviewerRequest: true,
         envVars: {
@@ -102,31 +94,86 @@ try {
           GH_TOKEN: ghToken,
         },
       },
-    });
+    };
+
+let shuttingDown = false;
+/** @type {import("@cursor/sdk").Run | undefined} */
+let activeRun;
+/** @type {import("@cursor/sdk").SDKAgent | undefined} */
+let sdkAgent;
+
+async function disposeSdk() {
+  if (!sdkAgent) return;
+  const a = sdkAgent;
+  sdkAgent = undefined;
+  await a[Symbol.asyncDispose]().catch(() => {});
+}
+
+async function onWorkflowCancel(sig) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.error(`::notice::${sig} — cancelling Cursor run (workflow cancel).`);
+  try {
+    if (activeRun?.supports("cancel")) {
+      await activeRun.cancel();
+    }
+  } catch (e) {
+    const m = e instanceof Error ? e.message : String(e);
+    console.error(`::warning::run.cancel failed: ${m}`);
+  }
+  await disposeSdk();
+  process.exit(sig === "SIGINT" ? 130 : 143);
+}
+
+process.once("SIGTERM", () => {
+  void onWorkflowCancel("SIGTERM");
+});
+process.once("SIGINT", () => {
+  void onWorkflowCancel("SIGINT");
+});
+
+try {
+  if (!useLocal) {
+    console.log(`::notice::Cursor cloud agent: repo=${repoCloneUrl()} ref=${startingRef()} autoCreatePR=true`);
   }
 
-  const prHint =
-    result.git?.branches?.map((b) => b.prUrl).filter(Boolean)[0] ||
-    result.result?.match(/https:\/\/github\.com\/[^)\s]+\/pull\/\d+/)?.[0] ||
-    "_check Cursor dashboard / repo Pull requests_";
+  sdkAgent = await Agent.create(createOptions);
+  try {
+    activeRun = await sdkAgent.send(prompt);
+    const result = await activeRun.wait();
 
-  const body = `## Cursor SDK deploy post-mortem
+    const prHint =
+      result.git?.branches?.map((b) => b.prUrl).filter(Boolean)[0] ||
+      result.result?.match(/https:\/\/github\.com\/[^)\s]+\/pull\/\d+/)?.[0] ||
+      "_check Cursor dashboard / repo Pull requests_";
+
+    const body = `## Cursor SDK deploy post-mortem
 
 **Run status:** \`${result.status}\`
 **PR / link:** ${prHint}
 
 ${result.result ?? "_no assistant text in result.result_"}
 `;
-  console.log(body);
-  appendSummary(body);
+    console.log(body);
+    appendSummary(body);
 
-  if (result.status !== "finished") {
-    console.log(`::warning::Cursor run ended with status=${result.status}`);
+    if (result.status !== "finished") {
+      console.log(`::warning::Cursor run ended with status=${result.status}`);
+    }
+  } finally {
+    if (!shuttingDown) {
+      await disposeSdk();
+    }
   }
 } catch (e) {
   const msg = e instanceof Error ? e.message : String(e);
   console.log(`::warning::Cursor SDK error (non-fatal): ${msg}`);
   appendSummary(`## Cursor SDK deploy post-mortem\n\n_Skipped or error:_ ${msg}\n`);
+  if (!shuttingDown) {
+    await disposeSdk();
+  }
 }
 
-process.exit(0);
+if (!shuttingDown) {
+  process.exit(0);
+}

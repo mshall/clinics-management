@@ -179,6 +179,8 @@ jobs:
           if-no-files-found: warn
 
   # Optional: Cursor cloud agent clones repo, applies fix, opens PR (needs CURSOR_API_KEY + write token).
+  # Cancelling the workflow sends SIGTERM; scripts/cursor-investigate-deploy-failure.mjs calls run.cancel()
+  # so this job stops without a second "force cancel". Job timeout is a backstop if the SDK hangs.
   # @see https://cursor.com/docs/sdk/typescript
   cursor_investigate_deploy:
     name: Cursor cloud agent (fix PR, optional)
@@ -188,6 +190,7 @@ jobs:
       contents: write
       pull-requests: write
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
 
