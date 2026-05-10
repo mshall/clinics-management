@@ -14,6 +14,20 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+/** VPCE DnsEntries are "HostedZoneId:dnsName"; if that slips into https://…, URL() rejects it. */
+function normalizeVpceHttpsUrl(url) {
+  if (!url || typeof url !== "string") return url;
+  return url.replace(/^https:\/\/Z[a-z0-9]+:(?=vpce-)/i, "https://");
+}
+
+for (const k of ["AWS_ENDPOINT_URL_SECRETS_MANAGER", "AWS_ENDPOINT_URL_KMS", "AWS_ENDPOINT_URL_STS"]) {
+  const v = process.env[k];
+  if (v && v !== normalizeVpceHttpsUrl(v)) {
+    process.env[k] = normalizeVpceHttpsUrl(v);
+    console.error(`[boot] normalized ${k} (stripped Route53 hosted zone prefix from VPCE URL)`);
+  }
+}
+
 const dbSecretArn = process.env.DB_SECRET_ARN;
 if (dbSecretArn) {
   const region =
