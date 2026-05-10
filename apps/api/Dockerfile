@@ -18,6 +18,7 @@ COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 COPY apps/api/prisma ./apps/api/prisma
+COPY apps/api/prisma.config.ts ./apps/api/prisma.config.ts
 COPY apps/api/docker-entrypoint.mjs ./apps/api/docker-entrypoint.mjs
 # Must match prisma major/minor used in package-lock (api devDependency); mismatched CLI breaks `migrate deploy` on boot.
 RUN npm ci --omit=dev && npm install -g prisma@6.19.3
