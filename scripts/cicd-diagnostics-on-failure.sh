@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # Run from GitHub Actions after a failed CDK deploy. Collects CFN + App Runner API + CloudWatch (no secrets).
 # Tunable: LOG_LOOKBACK_MS, LOG_GROUPS_MAX, LINES_PER_GROUP, STACK_EVENTS_RECENT, LOG_SINCE (for `aws logs tail`, e.g. 3h).
+#
+# `aws logs tail` defaults to --follow (live stream), which never returns and blocks "Cancel workflow".
+# We pass --no-follow everywhere. SIGTERM/SIGINT kills child CLIs so the job stops promptly.
 set +e
+export AWS_PAGER=""
+trap 'export _diag_cancel=1; echo "::notice::Diagnostics interrupted — stopping child processes..."; pkill -TERM -P "$$" 2>/dev/null || true; sleep 0.3; pkill -KILL -P "$$" 2>/dev/null || true; exit 143' TERM INT
 STACK="${CDK_STACK_NAME:-kiorly-clinics-management}"
 REGION="${AWS_REGION:-eu-central-1}"
 LOOKBACK_MS="${LOG_LOOKBACK_MS:-7200000}" # 2 hours (filter-log-events fallback)
@@ -69,8 +74,9 @@ dump_apprunner_group() {
   local g="$1"
   local lines="$2"
   [[ -z "$g" ]] && return
+  [[ -n "${_diag_cancel:-}" ]] && return
   echo "--- $g ---"
-  aws logs tail "$g" --region "$REGION" --since "$LOG_SINCE" --format short 2>/dev/null | tail -n "$lines" || \
+  aws logs tail "$g" --region "$REGION" --since "$LOG_SINCE" --format short --no-follow 2>/dev/null | tail -n "$lines" || \
     aws logs filter-log-events --region "$REGION" --log-group-name "$g" --start-time "$START_MS" \
       --query 'events[*].message' --output text 2>&1 | tail -n "$lines"
 }
@@ -95,8 +101,9 @@ echo "::group::Lambda / custom resource log groups (prefix /aws/lambda/ — newe
 aws logs describe-log-groups --region "$REGION" --log-group-name-prefix "/aws/lambda/" \
   --query 'sort_by(logGroups,&logGroupName)[*].logGroupName' --output text 2>&1 | tr '\t' '\n' | tail -n 20 | while read -r g; do
   [[ -z "$g" ]] && continue
+  [[ -n "${_diag_cancel:-}" ]] && continue
   echo "--- $g ---"
-  aws logs tail "$g" --region "$REGION" --since "$LOG_SINCE" --format short 2>/dev/null | tail -n 120 || \
+  aws logs tail "$g" --region "$REGION" --since "$LOG_SINCE" --format short --no-follow 2>/dev/null | tail -n 120 || \
     aws logs filter-log-events --region "$REGION" --log-group-name "$g" --start-time "$START_MS" \
       --query 'events[*].message' --output text 2>&1 | tail -n 120
 done
@@ -106,8 +113,9 @@ echo "::group::RDS log groups (prefix /aws/rds/ — if export enabled)"
 aws logs describe-log-groups --region "$REGION" --log-group-name-prefix "/aws/rds/" \
   --query 'sort_by(logGroups,&logGroupName)[*].logGroupName' --output text 2>&1 | tr '\t' '\n' | tail -n 15 | while read -r g; do
   [[ -z "$g" ]] && continue
+  [[ -n "${_diag_cancel:-}" ]] && continue
   echo "--- $g ---"
-  aws logs tail "$g" --region "$REGION" --since "$LOG_SINCE" --format short 2>/dev/null | tail -n 80 || true
+  aws logs tail "$g" --region "$REGION" --since "$LOG_SINCE" --format short --no-follow 2>/dev/null | tail -n 80 || true
 done
 echo "::endgroup::"
 

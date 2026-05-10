@@ -126,6 +126,8 @@ jobs:
       id-token: write
       contents: read
     runs-on: ubuntu-latest
+    # Backstop if AWS CLI hangs; script uses `aws logs tail --no-follow` + SIGTERM trap for prompt cancel.
+    timeout-minutes: 20
     env:
       # Wider CloudWatch window + more groups (see scripts/cicd-diagnostics-on-failure.sh).
       LOG_LOOKBACK_MS: "10800000"
