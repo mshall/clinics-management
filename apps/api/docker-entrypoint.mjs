@@ -14,31 +14,26 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-/** VPCE DnsEntries are "HostedZoneId:dnsName"; if that slips into https://…, URL() rejects it. */
-function normalizeVpceHttpsUrl(url) {
-  if (!url || typeof url !== "string") return url;
-  return url.replace(/^https:\/\/Z[a-z0-9]+:(?=vpce-)/i, "https://");
-}
-
-for (const k of ["AWS_ENDPOINT_URL_SECRETS_MANAGER", "AWS_ENDPOINT_URL_KMS", "AWS_ENDPOINT_URL_STS"]) {
-  const v = process.env[k];
-  if (v && v !== normalizeVpceHttpsUrl(v)) {
-    process.env[k] = normalizeVpceHttpsUrl(v);
-    console.error(`[boot] normalized ${k} (stripped Route53 hosted zone prefix from VPCE URL)`);
-  }
+/** CDK sets *HOST only (vpce-….vpce.amazonaws.com); SDK needs https URL. */
+function vpceHttpsFromHost(host) {
+  if (!host || typeof host !== "string") return undefined;
+  let h = host.trim();
+  // Defensive: DnsEntry "HostedZoneId:dnsName" if a deploy path ever passes the pair as host only.
+  if (/^Z[a-z0-9]+:(?=vpce-)/i.test(h)) h = h.replace(/^Z[a-z0-9]+:/i, "");
+  return h ? `https://${h}` : undefined;
 }
 
 const dbSecretArn = process.env.DB_SECRET_ARN;
 if (dbSecretArn) {
   const region =
     process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "eu-central-1";
-  const smEndpoint = process.env.AWS_ENDPOINT_URL_SECRETS_MANAGER;
+  const smEndpoint = vpceHttpsFromHost(process.env.SECRETS_MANAGER_VPCE_HOST);
   const client = new SecretsManagerClient({
     region,
     ...(smEndpoint ? { endpoint: smEndpoint } : {}),
   });
   if (smEndpoint) {
-    console.error("[boot] Secrets Manager client using AWS_ENDPOINT_URL_SECRETS_MANAGER (VPC interface)");
+    console.error("[boot] Secrets Manager client using SECRETS_MANAGER_VPCE_HOST (VPC interface)");
   }
   const maxAttempts = Number(process.env.DB_SECRET_FETCH_ATTEMPTS ?? "8");
   let lastErr;
@@ -120,6 +115,13 @@ if (process.env.PRISMA_MIGRATE_ON_BOOT === "true") {
     process.exit(migrateExit);
   }
 }
+
+const kmsEp = vpceHttpsFromHost(process.env.KMS_VPCE_HOST);
+const stsEp = vpceHttpsFromHost(process.env.STS_VPCE_HOST);
+const smEpForChild = vpceHttpsFromHost(process.env.SECRETS_MANAGER_VPCE_HOST);
+if (smEpForChild) process.env.AWS_ENDPOINT_URL_SECRETS_MANAGER = smEpForChild;
+if (kmsEp) process.env.AWS_ENDPOINT_URL_KMS = kmsEp;
+if (stsEp) process.env.AWS_ENDPOINT_URL_STS = stsEp;
 
 const mainJs = path.join(__dirname, "dist", "main.js");
 console.error("[boot] spawning Nest", mainJs, "PORT=", process.env.PORT ?? "3000", "NODE_ENV=", process.env.NODE_ENV ?? "");

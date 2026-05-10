@@ -119,13 +119,17 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     stsEndpoint.connections.allowFrom(connectorSg, ec2.Port.tcp(443), "AWS SDK credential chain");
 
     // App Runner tasks often still resolve regional hostnames to public IPs; private DNS for VPCE
-    // is not always applied the same as on EC2. Pin SDK traffic to the interface endpoint hostnames.
-    // vpcEndpointDnsEntries elements are "HostedZoneId:dnsName" (see InterfaceVpcEndpoint in aws-cdk-lib).
-    const vpceHttpsUrl = (dnsEntry: string) =>
-      `https://${cdk.Fn.select(1, cdk.Fn.split(":", dnsEntry))}`;
-    const secretsManagerVpceUrl = vpceHttpsUrl(secretsManagerEndpoint.vpcEndpointDnsEntries[0]);
-    const kmsVpceUrl = vpceHttpsUrl(kmsEndpoint.vpcEndpointDnsEntries[0]);
-    const stsVpceUrl = vpceHttpsUrl(stsEndpoint.vpcEndpointDnsEntries[0]);
+    // is not always applied the same as on EC2. Pass VPCE DNS hostnames only (no https://, no zone id)
+    // so App Runner env values never embed "HostedZoneId:host" URL quirks.
+    // DnsEntries[0] is "HostedZoneId:dnsName" — take the dnsName segment only.
+    const vpceHostnameFromEndpoint = (endpoint: ec2.InterfaceVpcEndpoint) => {
+      const cfn = endpoint.node.defaultChild as ec2.CfnVPCEndpoint;
+      const firstPair = cdk.Fn.select(0, cfn.attrDnsEntries);
+      return cdk.Fn.select(1, cdk.Fn.split(":", firstPair));
+    };
+    const secretsManagerVpceHost = vpceHostnameFromEndpoint(secretsManagerEndpoint);
+    const kmsVpceHost = vpceHostnameFromEndpoint(kmsEndpoint);
+    const stsVpceHost = vpceHostnameFromEndpoint(stsEndpoint);
 
     const vpcConnector = new apprunner.CfnVpcConnector(this, "AppRunnerVpcConnector", {
       vpcConnectorName: "kiorly-clinic-connector",
@@ -177,9 +181,9 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
               { name: "TZ", value: "Europe/Berlin" },
               { name: "AWS_REGION", value: deploymentRegion },
               { name: "AWS_DEFAULT_REGION", value: deploymentRegion },
-              { name: "AWS_ENDPOINT_URL_SECRETS_MANAGER", value: secretsManagerVpceUrl },
-              { name: "AWS_ENDPOINT_URL_KMS", value: kmsVpceUrl },
-              { name: "AWS_ENDPOINT_URL_STS", value: stsVpceUrl },
+              { name: "SECRETS_MANAGER_VPCE_HOST", value: secretsManagerVpceHost },
+              { name: "KMS_VPCE_HOST", value: kmsVpceHost },
+              { name: "STS_VPCE_HOST", value: stsVpceHost },
               { name: "DB_SECRET_ARN", value: db.secret!.secretArn },
               // Apply migrations on each deploy so RDS is never missing tables (avoids silent boot + broken API).
               { name: "PRISMA_MIGRATE_ON_BOOT", value: "true" },
