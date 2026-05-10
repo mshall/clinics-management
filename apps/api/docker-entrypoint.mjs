@@ -18,7 +18,14 @@ const dbSecretArn = process.env.DB_SECRET_ARN;
 if (dbSecretArn) {
   const region =
     process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "eu-central-1";
-  const client = new SecretsManagerClient({ region });
+  const smEndpoint = process.env.AWS_ENDPOINT_URL_SECRETS_MANAGER;
+  const client = new SecretsManagerClient({
+    region,
+    ...(smEndpoint ? { endpoint: smEndpoint } : {}),
+  });
+  if (smEndpoint) {
+    console.error("[boot] Secrets Manager client using AWS_ENDPOINT_URL_SECRETS_MANAGER (VPC interface)");
+  }
   const maxAttempts = Number(process.env.DB_SECRET_FETCH_ATTEMPTS ?? "8");
   let lastErr;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
