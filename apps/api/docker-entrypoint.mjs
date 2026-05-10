@@ -4,6 +4,7 @@
  */
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { spawn, spawnSync } from "node:child_process";
+import { createServer } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -52,18 +53,51 @@ if (dbSecretArn) {
 }
 
 if (process.env.PRISMA_MIGRATE_ON_BOOT === "true") {
-  console.error("[boot] PRISMA_MIGRATE_ON_BOOT=true — running prisma migrate deploy …");
-  const cwd = __dirname;
-  const migrate = spawnSync("npx", ["prisma", "migrate", "deploy"], {
-    stdio: "inherit",
-    env: process.env,
-    cwd,
+  // App Runner health-checks this path immediately; Nest is not listening until migrate finishes.
+  // A short-lived HTTP server keeps checks passing during migrate deploy.
+  const port = Number(process.env.PORT ?? "3000");
+  const server = createServer((req, res) => {
+    const p = req.url?.split("?")[0] ?? "";
+    const live = req.method === "GET" && p === "/api/v1/health/live";
+    res.statusCode = live ? 200 : 503;
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.end(JSON.stringify(live ? { status: "ok" } : { status: "migrating" }));
   });
-  if (migrate.status !== 0) {
-    console.error("[boot] prisma migrate deploy failed with status", migrate.status);
-    process.exit(migrate.status ?? 1);
+
+  await new Promise((resolve, reject) => {
+    server.listen(port, "0.0.0.0", () => {
+      console.error("[boot] migrate-time health probe listening on", port);
+      resolve();
+    });
+    server.on("error", reject);
+  });
+
+  let migrateExit = 0;
+  try {
+    console.error("[boot] PRISMA_MIGRATE_ON_BOOT=true — running prisma migrate deploy …");
+    const cwd = __dirname;
+    const migrate = spawnSync("npx", ["prisma", "migrate", "deploy"], {
+      stdio: "inherit",
+      env: process.env,
+      cwd,
+    });
+    migrateExit = migrate.status ?? 1;
+    if (migrateExit !== 0) {
+      console.error("[boot] prisma migrate deploy failed with status", migrateExit);
+    } else {
+      console.error("[boot] prisma migrate deploy completed OK");
+    }
+  } finally {
+    await new Promise((resolve) => {
+      server.close(() => {
+        console.error("[boot] migrate-time health probe closed");
+        resolve();
+      });
+    });
   }
-  console.error("[boot] prisma migrate deploy completed OK");
+  if (migrateExit !== 0) {
+    process.exit(migrateExit);
+  }
 }
 
 const mainJs = path.join(__dirname, "dist", "main.js");
