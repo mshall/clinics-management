@@ -106,7 +106,10 @@ jobs:
       - name: Deploy CDK stack (full log capture, CDK verbose in CI)
         env:
           CI: true
-        run: bash -x scripts/cicd-deploy.sh 2>&1 | tee deploy-full.log
+        run: |
+          set -o pipefail
+          bash -x scripts/cicd-deploy.sh 2>&1 | tee deploy-full.log
+          exit "${PIPESTATUS[0]}"
 
       - name: Upload full deploy step log
         if: always()
@@ -120,7 +123,8 @@ jobs:
   post_deploy_diagnostics:
     name: Post-failure AWS diagnostics
     needs: deploy
-    if: failure()
+    # Use needs.deploy.result — bare `failure()` can skip this job if another job state confuses the graph.
+    if: ${{ always() && needs.deploy.result == 'failure' }}
     permissions:
       id-token: write
       contents: read

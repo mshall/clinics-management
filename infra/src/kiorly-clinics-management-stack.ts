@@ -223,7 +223,11 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     appRunnerService.node.addDependency(kmsEndpoint);
     appRunnerService.node.addDependency(stsEndpoint);
 
-    const apiOriginDomain = cdk.Fn.select(2, cdk.Fn.split("/", appRunnerService.attrServiceUrl));
+    // ServiceUrl is https://<host> with no path — Fn::Select(2, Split("/", url)) fails (only 2 segments after https:).
+    const apiOriginDomain = cdk.Fn.select(
+      0,
+      cdk.Fn.split("/", cdk.Fn.select(1, cdk.Fn.split("//", appRunnerService.attrServiceUrl))),
+    );
 
     const dist = new cloudfront.Distribution(this, "SiteDistribution", {
       comment: "Kiorly clinic SPA + App Runner API (no ALB/NAT)",
