@@ -3,9 +3,11 @@ import * as cdk from "aws-cdk-lib";
 import * as apprunner from "aws-cdk-lib/aws-apprunner";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
+import * as cr from "aws-cdk-lib/custom-resources";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as ecr_assets from "aws-cdk-lib/aws-ecr-assets";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as rds from "aws-cdk-lib/aws-rds";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
@@ -223,22 +225,39 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     appRunnerService.node.addDependency(kmsEndpoint);
     appRunnerService.node.addDependency(stsEndpoint);
 
-    // App Runner ServiceUrl is usually https://<host> but can be host-only; Split("//", …) then Fn::Select(1) fails
-    // on a single segment. Split on "://" and branch: no scheme → whole URL is host; else → segment after scheme.
-    const serviceUrl = appRunnerService.attrServiceUrl;
-    const byScheme = cdk.Fn.split("://", serviceUrl);
-    const appRunnerUrlHasNoScheme = new cdk.CfnCondition(this, "AppRunnerUrlHasNoScheme", {
-      expression: cdk.Fn.conditionEquals(cdk.Fn.select(0, byScheme), serviceUrl),
+    // CloudFront needs the origin hostname only. Intrinsic-only parsing used CfnConditions on GetAtt(ServiceUrl),
+    // which CloudFormation rejects ("Cannot reference resources in the Conditions block"). Parse at deploy time.
+    const originHostParser = new lambda.Function(this, "AppRunnerOriginHostParser", {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: "index.onEvent",
+      timeout: cdk.Duration.seconds(30),
+      code: lambda.Code.fromInline(`
+exports.onEvent = async (event) => {
+  if (event.RequestType === "Delete") {
+    return { PhysicalResourceId: event.PhysicalResourceId ?? "deleted" };
+  }
+  const url = String(event.ResourceProperties.ServiceUrl ?? "");
+  let host = url;
+  const scheme = host.indexOf("://");
+  if (scheme !== -1) host = host.slice(scheme + 3);
+  const slash = host.indexOf("/");
+  if (slash !== -1) host = host.slice(0, slash);
+  host = host.trim();
+  if (!host) throw new Error("Empty origin host from App Runner ServiceUrl");
+  return { PhysicalResourceId: host.substring(0, 250), Data: { Host: host } };
+};
+`),
     });
-    const hostWithOptionalPath = cdk.Fn.conditionIf(
-      appRunnerUrlHasNoScheme.logicalId,
-      serviceUrl,
-      cdk.Fn.select(1, byScheme),
-    );
-    const apiOriginDomain = cdk.Fn.select(
-      0,
-      cdk.Fn.split("/", hostWithOptionalPath as unknown as string),
-    );
+    const originHostProvider = new cr.Provider(this, "AppRunnerOriginHostProvider", {
+      onEventHandler: originHostParser,
+    });
+    const originHostResource = new cdk.CustomResource(this, "AppRunnerOriginHost", {
+      serviceToken: originHostProvider.serviceToken,
+      resourceType: "Custom::AppRunnerOriginHost",
+      properties: { ServiceUrl: appRunnerService.attrServiceUrl },
+    });
+    originHostResource.node.addDependency(appRunnerService);
+    const apiOriginDomain = originHostResource.getAttString("Host");
 
     const dist = new cloudfront.Distribution(this, "SiteDistribution", {
       comment: "Kiorly clinic SPA + App Runner API (no ALB/NAT)",
