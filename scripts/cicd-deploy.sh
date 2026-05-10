@@ -16,4 +16,11 @@ npm run build -w web
 cd infra
 npm ci
 npm run build
-npx cdk deploy --require-approval never
+
+# In GitHub Actions, emit verbose CDK / construct logging for post-mortem artifacts.
+CDK_DEPLOY_ARGS=(--require-approval never)
+if [ "${CI:-}" = "true" ]; then
+  export CDK_DEBUG="${CDK_DEBUG:-1}"
+  CDK_DEPLOY_ARGS+=(--verbose)
+fi
+npx cdk deploy "${CDK_DEPLOY_ARGS[@]}"

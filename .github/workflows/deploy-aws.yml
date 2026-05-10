@@ -33,6 +33,7 @@
 #
 # If the job shows only "exit code 1", open the "Deploy CDK stack" step log — the real error
 # is usually npm/cdk/docker or a CloudFormation event (e.g. App Runner NotStabilized).
+# On PRs, `.github/workflows/pr-synth-build.yml` runs `npm run infra:synth` (no AWS deploy) for early feedback.
 #
 # --- Why CI cannot "pause, let Cursor fix, resume this CloudFormation step" ---
 # CloudFormation/CDK is not a resumable workflow engine: a failed resource (e.g. ApiService
@@ -100,8 +101,18 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Deploy CDK stack
-        run: bash scripts/cicd-deploy.sh
+      - name: Deploy CDK stack (full log capture, CDK verbose in CI)
+        env:
+          CI: true
+        run: bash -x scripts/cicd-deploy.sh 2>&1 | tee deploy-full.log
+
+      - name: Upload full deploy step log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aws-deploy-full-log
+          path: deploy-full.log
+          if-no-files-found: warn
 
   # Runs only when deploy fails: pulls CFN + App Runner log context into the job log (no auto-fix).
   post_deploy_diagnostics:
@@ -114,8 +125,20 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      # Wider CloudWatch window + more groups (see scripts/cicd-diagnostics-on-failure.sh).
+      LOG_LOOKBACK_MS: "10800000"
+      LOG_GROUPS_MAX: "40"
+      LINES_PER_GROUP: "280"
+      STACK_EVENTS_RECENT: "80"
     steps:
       - uses: actions/checkout@v6
+
+      - name: Download deploy job full log
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: aws-deploy-full-log
+          path: .
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v6
@@ -123,8 +146,26 @@ jobs:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Collect CloudFormation & App Runner diagnostics
+      - name: Collect CloudFormation & CloudWatch diagnostics
         run: bash scripts/cicd-diagnostics-on-failure.sh 2>&1 | tee diagnostics.log
+
+      - name: Append captured deploy log to diagnostics bundle
+        if: always()
+        run: |
+          set -e
+          if [ -f deploy-full.log ]; then
+            {
+              echo ""
+              echo "================================================================================"
+              echo "FULL DEPLOY JOB LOG (bash -x scripts/cicd-deploy.sh; CDK_DEBUG + cdk --verbose when CI=true)"
+              echo "================================================================================"
+              # Keep artifact under ~1 MiB text for upload / agent context
+              tail -c 950000 deploy-full.log
+            } >> diagnostics.log
+          else
+            echo "" >> diagnostics.log
+            echo "(deploy-full.log artifact missing — deploy step may have failed before tee created the file)" >> diagnostics.log
+          fi
 
       - name: Upload diagnostics artifact
         if: always()

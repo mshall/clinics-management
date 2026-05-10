@@ -56,7 +56,7 @@ function startingRef() {
 
 const prompt = `The GitHub Action "Deploy to AWS" (CDK) just failed — often AWS::AppRunner::Service NotStabilized.
 
-Below is automated AWS diagnostics (CloudFormation events + App Runner log snippets where available):
+Below is automated AWS diagnostics. It usually includes: recent CloudFormation timeline, failed/rollback events, App Runner + Lambda + RDS log groups (wider lookback), **and a section "FULL DEPLOY JOB LOG"** with `bash -x` + CDK `--verbose` output when captured in CI.
 
 --- DIAGNOSTICS ---
 ${diagnostics.slice(0, 100_000)}
