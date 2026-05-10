@@ -21,9 +21,6 @@ concurrency:
   group: pr-synth-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   synth-and-build:
     runs-on: ubuntu-latest
@@ -40,7 +37,7 @@ jobs:
             infra/package-lock.json
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: CDK synth (web build + infra synth)
         run: npm run infra:synth
