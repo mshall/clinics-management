@@ -110,7 +110,7 @@ jobs:
 
       - name: Upload full deploy step log
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: aws-deploy-full-log
           path: deploy-full.log
@@ -138,7 +138,7 @@ jobs:
 
       - name: Download deploy job full log
         continue-on-error: true
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: aws-deploy-full-log
           path: .
@@ -172,7 +172,7 @@ jobs:
 
       - name: Upload diagnostics artifact
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: aws-deploy-diagnostics
           path: diagnostics.log
@@ -191,7 +191,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         continue-on-error: true
         with:
           name: aws-deploy-diagnostics
