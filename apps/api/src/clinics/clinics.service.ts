@@ -101,7 +101,13 @@ export class ClinicsService {
     const email = dto.email?.trim().toLowerCase() || "clinic@local.invalid";
     const licenseNumber = dto.licenseNumber?.trim() || "LIC-PENDING";
 
-    let parentClinicId: string | null = dto.parentClinicId ?? null;
+    let parentClinicId: string | null = null;
+    const rawParent = dto.parentClinicId as unknown;
+    if (rawParent !== undefined && rawParent !== null) {
+      const s = typeof rawParent === "string" ? rawParent.trim() : String(rawParent).trim();
+      if (s.length > 64) throw new BadRequestException("parentClinicId is too long");
+      if (s) parentClinicId = s;
+    }
     if (parentClinicId) {
       const parent = await this.prisma.clinic.findFirst({
         where: { id: parentClinicId, tenantId },

@@ -2,7 +2,7 @@
 
 A full-stack **clinic management system**: multi-clinic tenants, RBAC, patient registry, clinical encounters, scheduling, HR, expenses, revenue, reporting, and administration. The stack is a **NestJS** REST API with **Prisma** / **PostgreSQL**, and a **React** (Vite) SPA with **Tailwind CSS** and **i18n** (English / Arabic).
 
-**Repository:** [github.com/mshall/clinics-management](https://github.com/mshall/clinics-management)
+**Repository:** [github.com/mshall/kiorly-clinics-management](https://github.com/mshall/kiorly-clinics-management)
 
 ---
 
@@ -135,8 +135,8 @@ Typical flows:
 ### 1. Clone the repository
 
 ```bash
-git clone git@github.com:mshall/clinics-management.git
-cd clinics-management
+git clone git@github.com:mshall/kiorly-clinics-management.git
+cd kiorly-clinics-management
 ```
 
 ### 2. Install dependencies

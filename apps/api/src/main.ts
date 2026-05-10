@@ -37,8 +37,9 @@ async function bootstrap() {
     });
   }
 
-  const port = process.env.PORT ?? "3000";
-  await app.listen(port);
+  const port = Number(process.env.PORT ?? 3000);
+  const host = process.env.LISTEN_HOST ?? "0.0.0.0";
+  await app.listen(port, host);
   console.log(`API listening on http://localhost:${port}/api/v1`);
   if (process.env.SWAGGER_ENABLED !== "false") {
     console.log(`OpenAPI UI: http://localhost:${port}/docs`);

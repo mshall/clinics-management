@@ -1,5 +1,5 @@
 {
-  "name": "ahmed-clinic-infra",
+  "name": "kiorly-clinics-management-infra",
   "private": true,
   "scripts": {
     "build": "tsc",

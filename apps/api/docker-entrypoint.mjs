@@ -11,15 +11,23 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const dbSecretArn = process.env.DB_SECRET_ARN;
 if (dbSecretArn) {
-  const client = new SecretsManagerClient({});
-  const out = await client.send(new GetSecretValueCommand({ SecretId: dbSecretArn }));
-  const j = JSON.parse(out.SecretString ?? "{}");
-  const u = encodeURIComponent(String(j.username ?? ""));
-  const p = encodeURIComponent(String(j.password ?? ""));
-  const host = j.host ?? j.hostname;
-  const port = j.port ?? 5432;
-  const dbname = j.dbname ?? j.database ?? "postgres";
-  process.env.DATABASE_URL = `postgresql://${u}:${p}@${host}:${port}/${dbname}?schema=public&sslmode=require`;
+  const region =
+    process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "eu-central-1";
+  const client = new SecretsManagerClient({ region });
+  try {
+    const out = await client.send(new GetSecretValueCommand({ SecretId: dbSecretArn }));
+    const j = JSON.parse(out.SecretString ?? "{}");
+    const u = encodeURIComponent(String(j.username ?? ""));
+    const p = encodeURIComponent(String(j.password ?? ""));
+    const host = j.host ?? j.hostname;
+    const port = j.port ?? 5432;
+    const dbname = j.dbname ?? j.database ?? "postgres";
+    // sslmode=no-verify: RDS may require TLS; slim images often lack RDS CA bundle (require would fail).
+    process.env.DATABASE_URL = `postgresql://${u}:${p}@${host}:${port}/${dbname}?schema=public&sslmode=no-verify`;
+  } catch (e) {
+    console.error("Failed to load DB secret from Secrets Manager:", e);
+    process.exit(1);
+  }
 }
 
 if (process.env.PRISMA_MIGRATE_ON_BOOT === "true") {

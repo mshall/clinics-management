@@ -1,18 +1,20 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
-import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import { Allow, IsEmail, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
 
 export class CreateClinicDto {
-  @ApiPropertyOptional({ description: "Parent clinic id; omit for a top-level (parent) clinic (Prisma cuid, not UUID)" })
+  /**
+   * Intentionally not validated with @IsString / @IsUUID: clinic ids are Prisma `cuid()` strings.
+   * `@Allow()` keeps whitelist enabled while skipping class-validator constraints on this field.
+   * Length and existence checks run in `ClinicsService.create`.
+   */
+  @ApiPropertyOptional({ description: "Parent clinic id; omit for a top-level (parent) clinic (Prisma cuid)" })
   @Transform(({ value }) => {
     if (value === null || value === undefined) return undefined;
     if (typeof value === "string" && !value.trim()) return undefined;
     return typeof value === "string" ? value.trim() : value;
   })
-  @IsOptional()
-  @IsString()
-  @MinLength(1)
-  @MaxLength(64)
+  @Allow()
   parentClinicId?: string | null;
 
   @ApiProperty()

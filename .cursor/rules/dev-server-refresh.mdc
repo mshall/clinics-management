@@ -3,14 +3,20 @@ description: After repo changes, restart with a fresh npm run dev so API/web wat
 alwaysApply: true
 ---
 
+# Command execution (do not delegate)
+
+When shell access is available, **run** install, build, Prisma, dev-server, test, and port-cleanup commands yourself. Do not end a turn by only telling the user to run those commands unless the environment truly cannot execute them.
+
+Project-wide sibling: user-level `~/.cursor/rules/agent-execute-allowlist-commands.mdc` (`alwaysApply: true`) states the same “run the shell yourself” standard for **all** workspaces on this machine.
+
 # Fresh `npm run dev` after changes
 
 Whenever you complete meaningful edits in this monorepo (Nest API, Vite web, Prisma schema/migrations, root or workspace `package.json`, env files, or shared tooling):
 
-1. **Regenerate Prisma client** when `apps/api/prisma/schema.prisma` or migrations changed: from `apps/api`, run `npx prisma generate` (and `npx prisma migrate deploy` if the user uses migrations against a live DB).
+1. **Regenerate Prisma client** when `apps/api/prisma/schema.prisma` or migrations changed: run `npm run prisma:generate -w api` from the repo root (or `npx prisma generate` from `apps/api`), and `npx prisma migrate deploy` when migrations must be applied to the DB the user is using.
 2. **Restart the dev stack** so file watchers and the Nest/Vite processes reload everything:
    - Stop the existing root dev process for this repo if one is running (same machine: free ports **3000** and **5173** / **5174** if needed, or stop the prior `npm run dev` job).
    - From the **repository root**, run a **fresh** `npm run dev` (this project uses `concurrently` for API + web).
-3. Do **not** assume an old background `npm run dev` is still authoritative after your edits—either restart it yourself when you have shell access, or instruct the user to restart that terminal once.
+3. Do **not** assume an old background `npm run dev` is still authoritative after your edits—restart it yourself when you have shell access.
 
 Skip only for edits that cannot affect runtime (e.g. comments-only in docs with no build impact)—when in doubt, restart.

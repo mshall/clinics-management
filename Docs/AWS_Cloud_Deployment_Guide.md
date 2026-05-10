@@ -69,7 +69,7 @@ Users
 
 ### 5.1 Build and push an image
 
-1. Create an **ECR** repository, e.g. `clinics-management-api`.
+1. Create an **ECR** repository, e.g. `kiorly-clinics-management-api`.
 2. Build the API image (you can adapt the existing Dockerfile under `infra/docker` if present, or add a multi-stage Dockerfile that runs `npm run build -w api` and starts `node dist/main.js`).
 3. Authenticate Docker to ECR, **tag**, and **push** the image.
 

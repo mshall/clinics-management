@@ -84,7 +84,7 @@ async function main() {
     Array.from({ length: 15 }, (_, i) =>
       prisma.tenant.create({
         data: {
-          name: i === 0 ? "Ahmed Clinic Group (Demo)" : `Shell Organization ${i + 1}`,
+          name: i === 0 ? "Kiorly Clinic Group (Demo)" : `Shell Organization ${i + 1}`,
           baseCurrency: "AED",
           defaultLocale: "en",
         },
@@ -96,7 +96,7 @@ async function main() {
   const hq = await prisma.clinic.create({
     data: {
       tenantId: t0.id,
-      nameEn: "Ahmed Medical Center — Dubai HQ",
+      nameEn: "Kiorly Medical Center — Dubai HQ",
       nameAr: "مركز أحمد الطبي — دبي",
       country: "AE",
       city: "Dubai",
@@ -116,7 +116,7 @@ async function main() {
         data: {
           tenantId: t0.id,
           parentClinicId: hq.id,
-          nameEn: `Ahmed Clinic Branch ${i + 1}`,
+          nameEn: `Kiorly Clinic Branch ${i + 1}`,
           nameAr: `فرع أحمد ${i + 1}`,
           country: "AE",
           city: i % 2 === 0 ? "Sharjah" : "Abu Dhabi",

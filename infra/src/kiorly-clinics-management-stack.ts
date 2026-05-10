@@ -12,14 +12,16 @@ import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import type { Construct } from "constructs";
 
-export interface AhmedClinicStackProps extends cdk.StackProps {
+export interface KiorlyClinicsManagementStackProps extends cdk.StackProps {
   /** AWS region for VPC/RDS/App Runner (Frankfurt = eu-central-1). */
   deploymentRegion: string;
 }
 
-export class AhmedClinicStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props: AhmedClinicStackProps) {
+export class KiorlyClinicsManagementStack extends cdk.Stack {
+  constructor(scope: Construct, id: string, props: KiorlyClinicsManagementStackProps) {
     super(scope, id, props);
+
+    const { deploymentRegion } = props;
 
     const vpc = new ec2.Vpc(this, "Vpc", {
       maxAzs: 2,
@@ -40,7 +42,7 @@ export class AhmedClinicStack extends cdk.Stack {
     });
 
     const jwtSecret = new secretsmanager.Secret(this, "JwtSecret", {
-      description: "JWT signing secret for Nest API (JSON jwt key; App Runner injects full string, AuthModule parses)",
+      description: "JWT signing secret for Nest API (JSON jwt key; App Runner injects jwt field only)",
       generateSecretString: {
         secretStringTemplate: JSON.stringify({}),
         generateStringKey: "jwt",
@@ -88,7 +90,7 @@ export class AhmedClinicStack extends cdk.Stack {
     db.connections.allowFrom(connectorSg, ec2.Port.tcp(5432), "App Runner connector to PostgreSQL");
 
     const vpcConnector = new apprunner.CfnVpcConnector(this, "AppRunnerVpcConnector", {
-      vpcConnectorName: "clinic-connector",
+      vpcConnectorName: "kiorly-clinic-connector",
       subnets: vpc.selectSubnets({ subnetType: ec2.SubnetType.PUBLIC }).subnetIds,
       securityGroups: [connectorSg.securityGroupId],
     });
@@ -115,8 +117,11 @@ export class AhmedClinicStack extends cdk.Stack {
     db.secret!.grantRead(instanceRole);
     jwtSecret.grantRead(instanceRole);
 
+    // App Runner: reference JSON key so JWT_SECRET is a plain string (matches JwtModule + Passport JwtStrategy).
+    const jwtSecretFieldArn = `${jwtSecret.secretArn}:jwt::`;
+
     const appRunnerService = new apprunner.CfnService(this, "ApiService", {
-      serviceName: `clinic-api-${cdk.Names.uniqueId(this).slice(-8).toLowerCase()}`,
+      serviceName: `kiorly-api-${cdk.Names.uniqueId(this).slice(-8).toLowerCase()}`,
       sourceConfiguration: {
         autoDeploymentsEnabled: false,
         authenticationConfiguration: {
@@ -132,10 +137,12 @@ export class AhmedClinicStack extends cdk.Stack {
               { name: "PORT", value: "3000" },
               { name: "SWAGGER_ENABLED", value: "false" },
               { name: "TZ", value: "Europe/Berlin" },
+              { name: "AWS_REGION", value: deploymentRegion },
+              { name: "AWS_DEFAULT_REGION", value: deploymentRegion },
               { name: "DB_SECRET_ARN", value: db.secret!.secretArn },
-              { name: "PRISMA_MIGRATE_ON_BOOT", value: "true" },
+              { name: "PRISMA_MIGRATE_ON_BOOT", value: "false" },
             ],
-            runtimeEnvironmentSecrets: [{ name: "JWT_SECRET", value: jwtSecret.secretArn }],
+            runtimeEnvironmentSecrets: [{ name: "JWT_SECRET", value: jwtSecretFieldArn }],
           },
         },
       },
@@ -145,9 +152,10 @@ export class AhmedClinicStack extends cdk.Stack {
         instanceRoleArn: instanceRole.roleArn,
       },
       healthCheckConfiguration: {
-        protocol: "TCP",
-        interval: 10,
-        timeout: 5,
+        protocol: "HTTP",
+        path: "/api/v1/health/live",
+        interval: 15,
+        timeout: 10,
         healthyThreshold: 1,
         unhealthyThreshold: 8,
       },
@@ -167,7 +175,7 @@ export class AhmedClinicStack extends cdk.Stack {
     const apiOriginDomain = cdk.Fn.select(2, cdk.Fn.split("/", appRunnerService.attrServiceUrl));
 
     const dist = new cloudfront.Distribution(this, "SiteDistribution", {
-      comment: "Clinic SPA + App Runner API (no ALB/NAT)",
+      comment: "Kiorly clinic SPA + App Runner API (no ALB/NAT)",
       defaultRootObject: "index.html",
       priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
       minimumProtocolVersion: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,

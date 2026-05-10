@@ -15,12 +15,15 @@
 # 4) GitHub repo > Settings > Secrets and variables > Actions > New repository secret:
 #      Name:  AWS_DEPLOY_ROLE_ARN
 #      Value: arn:aws:iam::990597228737:role/GitHubAction-AssumeRole
-#    (Trust policy must allow this repo, e.g. repo:mshall/* on sub — see IAM role GitHubAction-AssumeRole.)
+#    (Trust policy must allow this repo, e.g. repo:mshall/kiorly-clinics-management:* — see IAM OIDC role.)
 #
 # --- One-time CDK bootstrap (run locally once per account/region) ---
 #   npx cdk bootstrap aws://ACCOUNT/eu-central-1
 #
-# If the stack is ROLLBACK_COMPLETE, delete it in CloudFormation before the next deploy.
+# If stack kiorly-clinics-management is ROLLBACK_COMPLETE, delete it in CloudFormation before the next deploy.
+#
+# If the job shows only "exit code 1", open the "Deploy CDK stack" step log — the real error
+# is usually npm/cdk/docker or a CloudFormation event (e.g. App Runner NotStabilized).
 
 name: Deploy to AWS
 
@@ -45,8 +48,19 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    env:
+      # Until all composite actions ship Node 24 builds, silence Node 20 deprecation noise.
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            infra/package-lock.json
 
       - name: Check GitHub secret
         run: |
@@ -56,16 +70,14 @@ jobs:
           fi
 
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: package-lock.json
+      # CDK DockerImageAsset runs `docker build` during deploy; Buildx avoids flaky default builder.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Deploy CDK stack
         run: bash scripts/cicd-deploy.sh
