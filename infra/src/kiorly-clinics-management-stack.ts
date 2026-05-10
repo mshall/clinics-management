@@ -223,22 +223,15 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     appRunnerService.node.addDependency(kmsEndpoint);
     appRunnerService.node.addDependency(stsEndpoint);
 
-    // App Runner ServiceUrl is usually https://<host> but can be host-only; Split("//", …) then Fn::Select(1) fails
-    // on a single segment. Split on "://" and branch: no scheme → whole URL is host; else → segment after scheme.
-    const serviceUrl = appRunnerService.attrServiceUrl;
-    const byScheme = cdk.Fn.split("://", serviceUrl);
-    const appRunnerUrlHasNoScheme = new cdk.CfnCondition(this, "AppRunnerUrlHasNoScheme", {
-      expression: cdk.Fn.conditionEquals(cdk.Fn.select(0, byScheme), serviceUrl),
-    });
-    const hostWithOptionalPath = cdk.Fn.conditionIf(
-      appRunnerUrlHasNoScheme.logicalId,
-      serviceUrl,
-      cdk.Fn.select(1, byScheme),
-    );
-    const apiOriginDomain = cdk.Fn.select(
-      0,
-      cdk.Fn.split("/", hostWithOptionalPath as unknown as string),
-    );
+    // CloudFront Origin domain must omit scheme/port. CFN forbids referencing other resources inside the
+    // template Conditions section; the previous Fn::ConditionEquals(ServiceUrl…) created an ApiService dependency
+    // there and blocked change sets ("Unresolved dependencies [ApiService]").
+    // Default public hostname is documented as https://{ServiceId}.{region}.awsapprunner.com.
+    const apiOriginDomain = cdk.Fn.join(".", [
+      appRunnerService.attrServiceId,
+      deploymentRegion,
+      "awsapprunner.com",
+    ]);
 
     const dist = new cloudfront.Distribution(this, "SiteDistribution", {
       comment: "Kiorly clinic SPA + App Runner API (no ALB/NAT)",
