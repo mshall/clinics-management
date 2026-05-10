@@ -9,6 +9,8 @@ RUN npm ci
 
 FROM deps AS build
 COPY apps/api ./apps/api
+# prisma.config.ts loads at `prisma generate` time and requires DATABASE_URL; no DB is contacted during generate.
+ENV DATABASE_URL="postgresql://build:build@127.0.0.1:5432/build?schema=public"
 RUN npm run build -w api
 
 FROM node:22-bookworm-slim AS runner
