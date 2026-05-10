@@ -17,10 +17,14 @@
 #      Value: arn:aws:iam::990597228737:role/GitHubAction-AssumeRole
 #    (Trust policy must allow this repo, e.g. repo:mshall/kiorly-clinics-management:* — see IAM OIDC role.)
 #
-# 5) Optional — Cursor SDK post-mortem after a failed deploy (same pricing as Cursor usage):
+# 5) Optional — Cursor cloud agent after a failed deploy (opens a PR; same Cursor billing as other agent runs):
 #      Name:  CURSOR_API_KEY
-#      Value: API key from https://cursor.com/dashboard/integrations (or team service account).
-#    If unset, the "Cursor SDK investigation" job skips quietly. This does not auto-merge fixes.
+#      Value: https://cursor.com/dashboard/integrations (or team service account).
+# 6) Optional — if `github.token` cannot push branches (org policy), add a classic PAT or fine-grained token:
+#      Name:  CURSOR_CLOUD_GITHUB_TOKEN
+#      Scopes: repo contents + pull requests (write) for this repository only.
+#    The "Cursor cloud agent" job uses `github.token` when this secret is empty. It does not auto-merge PRs.
+#    To force the old local-only analysis (no PR), set env CURSOR_SDK_RUNTIME=local on that job.
 #
 # --- One-time CDK bootstrap (run locally once per account/region) ---
 #   npx cdk bootstrap aws://ACCOUNT/eu-central-1
@@ -60,6 +64,9 @@ env:
 
 jobs:
   deploy:
+    permissions:
+      id-token: write
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
@@ -101,6 +108,9 @@ jobs:
     name: Post-failure AWS diagnostics
     needs: deploy
     if: failure()
+    permissions:
+      id-token: write
+      contents: read
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -124,12 +134,15 @@ jobs:
           path: diagnostics.log
           if-no-files-found: warn
 
-  # Optional: Cursor TypeScript SDK analyzes diagnostics + repo (no auto-merge). Needs CURSOR_API_KEY.
-  # @see https://cursor.com/docs/api/sdk/typescript
+  # Optional: Cursor cloud agent clones repo, applies fix, opens PR (needs CURSOR_API_KEY + write token).
+  # @see https://cursor.com/docs/sdk/typescript
   cursor_investigate_deploy:
-    name: Cursor SDK investigation (optional)
+    name: Cursor cloud agent (fix PR, optional)
     needs: [deploy, post_deploy_diagnostics]
     if: ${{ always() && needs.deploy.result == 'failure' }}
+    permissions:
+      contents: write
+      pull-requests: write
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -151,9 +164,11 @@ jobs:
       - name: Install dependencies (for @cursor/sdk)
         run: npm ci
 
-      - name: Cursor SDK post-mortem (writes to job summary)
+      - name: Cursor cloud agent (PR + job summary)
         continue-on-error: true
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          CURSOR_CLOUD_GITHUB_TOKEN: ${{ secrets.CURSOR_CLOUD_GITHUB_TOKEN }}
           DIAGNOSTICS_LOG: diagnostics.log
+          GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/cursor-investigate-deploy-failure.mjs
