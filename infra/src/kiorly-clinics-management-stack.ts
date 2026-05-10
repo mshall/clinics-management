@@ -223,22 +223,13 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     appRunnerService.node.addDependency(kmsEndpoint);
     appRunnerService.node.addDependency(stsEndpoint);
 
-    // App Runner ServiceUrl is usually https://<host> but can be host-only; Split("//", …) then Fn::Select(1) fails
-    // on a single segment. Split on "://" and branch: no scheme → whole URL is host; else → segment after scheme.
+    // CloudFront HttpOrigin domain from App Runner ServiceUrl (AWS::AppRunner::Service).
+    // DescribeService returns host-only URLs (e.g. "nse9ry2qce.eu-central-1.awsapprunner.com") — no "https://".
+    // Do NOT use Fn::If + Fn::Select(1, Fn::Split("://", …)): CloudFormation evaluates BOTH Fn::If branches,
+    // so host-only values yield a one-element Split and SiteDistribution fails at creation with:
+    // "Template error: Fn::Select cannot select nonexistent value at index 1".
     const serviceUrl = appRunnerService.attrServiceUrl;
-    const byScheme = cdk.Fn.split("://", serviceUrl);
-    const appRunnerUrlHasNoScheme = new cdk.CfnCondition(this, "AppRunnerUrlHasNoScheme", {
-      expression: cdk.Fn.conditionEquals(cdk.Fn.select(0, byScheme), serviceUrl),
-    });
-    const hostWithOptionalPath = cdk.Fn.conditionIf(
-      appRunnerUrlHasNoScheme.logicalId,
-      serviceUrl,
-      cdk.Fn.select(1, byScheme),
-    );
-    const apiOriginDomain = cdk.Fn.select(
-      0,
-      cdk.Fn.split("/", hostWithOptionalPath as unknown as string),
-    );
+    const apiOriginDomain = cdk.Fn.select(0, cdk.Fn.split("/", serviceUrl));
 
     const dist = new cloudfront.Distribution(this, "SiteDistribution", {
       comment: "Kiorly clinic SPA + App Runner API (no ALB/NAT)",
