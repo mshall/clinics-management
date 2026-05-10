@@ -56,20 +56,24 @@ function startingRef() {
 
 const prompt = `The GitHub Action "Deploy to AWS" (CDK) just failed — often AWS::AppRunner::Service NotStabilized.
 
-Below is automated AWS diagnostics. It usually includes: recent CloudFormation timeline, failed/rollback events, App Runner + Lambda + RDS log groups (wider lookback), **and a section "FULL DEPLOY JOB LOG"** with `bash -x` + CDK `--verbose` output when captured in CI.
+The bundle below is the **authoritative** evidence (you do **not** have live AWS API access from this agent). It includes, when available:
+- **App Runner describe-service** + **list-operations** JSON (status / failures),
+- **CloudWatch** for \`/aws/apprunner/...\` (**aws logs tail**, plus expanded groups matching the service id),
+- Lambda + RDS log prefixes,
+- **FULL DEPLOY JOB LOG** (bash -x + CDK \`--verbose\` / Docker build + cdk deploy).
 
 --- DIAGNOSTICS ---
-${diagnostics.slice(0, 100_000)}
+${diagnostics.slice(0, 220_000)}
 --- END DIAGNOSTICS ---
 
-You are in a cloned GitHub repo. **Implement** the smallest set of code/config changes that plausibly fix this failure (Dockerfile, apps/api entrypoint, infra CDK stack, health checks, Prisma/migrate, etc.). Use only paths that exist in the repo.
+**You must:** (1) locate **application stderr** / Nest / Node stack traces and lines prefixed \`[boot]\` in the App Runner sections; (2) quote the **smallest verbatim snippets** that prove the root cause; (3) **implement** the minimal repo fix (Dockerfile, \`apps/api/docker-entrypoint.mjs\`, \`apps/api/src\`, \`infra/src\`, health/migrate/env).
 
 **Requirements:**
-- Make concrete edits and commit with a message like \`fix(aws): address App Runner deploy failure from CI diagnostics\`.
-- Do not widen scope beyond the deploy/runtime issue suggested by diagnostics.
-- If diagnostics are insufficient, explain what to collect next in the PR description (do not add new doc files unless the repo already uses that pattern).
+- Commit with a message like \`fix(aws): address App Runner failure from CI diagnostics\`.
+- In the PR body, lead with **Root cause (from logs):** citing the quoted lines.
+- If application logs are empty (service torn down too fast), say so and rely on **FULL DEPLOY JOB LOG** + describe-service / operations JSON.
 
-A pull request will be created automatically when you finish (\`autoCreatePR\`). Ensure your branch pushes cleanly.`;
+A pull request will be created automatically when you finish (\`autoCreatePR\`).`;
 
 const agentOptionsBase = { apiKey };
 

@@ -34,6 +34,7 @@ if (dbSecretArn) {
       }
       // sslmode=no-verify: RDS may require TLS; slim images often lack RDS CA bundle (require would fail).
       process.env.DATABASE_URL = `postgresql://${u}:${p}@${host}:${port}/${dbname}?schema=public&sslmode=no-verify`;
+      console.error("[boot] DATABASE_URL built (host/port/db):", host, String(port), dbname);
       lastErr = undefined;
       break;
     } catch (e) {
@@ -51,6 +52,7 @@ if (dbSecretArn) {
 }
 
 if (process.env.PRISMA_MIGRATE_ON_BOOT === "true") {
+  console.error("[boot] PRISMA_MIGRATE_ON_BOOT=true — running prisma migrate deploy …");
   const cwd = __dirname;
   const migrate = spawnSync("npx", ["prisma", "migrate", "deploy"], {
     stdio: "inherit",
@@ -58,11 +60,14 @@ if (process.env.PRISMA_MIGRATE_ON_BOOT === "true") {
     cwd,
   });
   if (migrate.status !== 0) {
+    console.error("[boot] prisma migrate deploy failed with status", migrate.status);
     process.exit(migrate.status ?? 1);
   }
+  console.error("[boot] prisma migrate deploy completed OK");
 }
 
 const mainJs = path.join(__dirname, "dist", "main.js");
+console.error("[boot] spawning Nest", mainJs, "PORT=", process.env.PORT ?? "3000", "NODE_ENV=", process.env.NODE_ENV ?? "");
 const child = spawn(process.execPath, [mainJs], { stdio: "inherit", env: process.env });
 child.on("exit", (code, signal) => {
   process.exit(code ?? (signal ? 1 : 0));

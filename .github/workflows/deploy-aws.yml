@@ -12,6 +12,8 @@
 #        "StringLike": { "token.actions.githubusercontent.com:sub": "repo:OWNER/REPO:*" }
 #      }
 # 3) Attach a policy that allows CDK deploy (e.g. AdministratorAccess for simplicity, or scoped CDK policy).
+#    Post-failure diagnostics also call `aws apprunner describe-service`, `list-operations`, and CloudWatch Logs
+#    (`logs:FilterLogEvents`, `logs:DescribeLogGroups`, `logs:Tail*`) — include those if you scope IAM tightly.
 # 4) GitHub repo > Settings > Secrets and variables > Actions > New repository secret:
 #      Name:  AWS_DEPLOY_ROLE_ARN
 #      Value: arn:aws:iam::990597228737:role/GitHubAction-AssumeRole
@@ -130,6 +132,7 @@ jobs:
       LOG_GROUPS_MAX: "40"
       LINES_PER_GROUP: "280"
       STACK_EVENTS_RECENT: "80"
+      LOG_SINCE: "3h"
     steps:
       - uses: actions/checkout@v6
 
