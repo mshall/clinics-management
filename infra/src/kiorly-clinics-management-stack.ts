@@ -89,6 +89,35 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
 
     db.connections.allowFrom(connectorSg, ec2.Port.tcp(5432), "App Runner connector to PostgreSQL");
 
+    // App Runner VPC egress has no NAT; connector ENIs do not use a stable public path to reach
+    // regional AWS APIs on the public internet. Private interface endpoints keep SDK traffic
+    // (Secrets Manager for DATABASE_URL, KMS decrypt, STS for SigV4) inside the VPC.
+    const awsApiEndpointSubnets = { subnetType: ec2.SubnetType.PRIVATE_ISOLATED };
+    const secretsManagerEndpoint = vpc.addInterfaceEndpoint("SecretsManagerEndpoint", {
+      service: ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
+      subnets: awsApiEndpointSubnets,
+      privateDnsEnabled: true,
+    });
+    secretsManagerEndpoint.connections.allowFrom(
+      connectorSg,
+      ec2.Port.tcp(443),
+      "docker-entrypoint GetSecretValue for DB secret",
+    );
+
+    const kmsEndpoint = vpc.addInterfaceEndpoint("KmsEndpoint", {
+      service: ec2.InterfaceVpcEndpointAwsService.KMS,
+      subnets: awsApiEndpointSubnets,
+      privateDnsEnabled: true,
+    });
+    kmsEndpoint.connections.allowFrom(connectorSg, ec2.Port.tcp(443), "Secrets Manager / RDS decrypt");
+
+    const stsEndpoint = vpc.addInterfaceEndpoint("StsEndpoint", {
+      service: ec2.InterfaceVpcEndpointAwsService.STS,
+      subnets: awsApiEndpointSubnets,
+      privateDnsEnabled: true,
+    });
+    stsEndpoint.connections.allowFrom(connectorSg, ec2.Port.tcp(443), "AWS SDK credential chain");
+
     const vpcConnector = new apprunner.CfnVpcConnector(this, "AppRunnerVpcConnector", {
       vpcConnectorName: "kiorly-clinic-connector",
       subnets: vpc.selectSubnets({ subnetType: ec2.SubnetType.PUBLIC }).subnetIds,
@@ -174,6 +203,9 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     appRunnerService.node.addDependency(vpcConnector);
     appRunnerService.node.addDependency(imageAsset);
     appRunnerService.node.addDependency(db);
+    appRunnerService.node.addDependency(secretsManagerEndpoint);
+    appRunnerService.node.addDependency(kmsEndpoint);
+    appRunnerService.node.addDependency(stsEndpoint);
 
     const apiOriginDomain = cdk.Fn.select(2, cdk.Fn.split("/", appRunnerService.attrServiceUrl));
 
