@@ -24,6 +24,15 @@
 #
 # If the job shows only "exit code 1", open the "Deploy CDK stack" step log — the real error
 # is usually npm/cdk/docker or a CloudFormation event (e.g. App Runner NotStabilized).
+#
+# --- Why CI cannot "pause, let Cursor fix, resume this CloudFormation step" ---
+# CloudFormation/CDK is not a resumable workflow engine: a failed resource (e.g. ApiService
+# NotStabilized) fails the whole stack change; AWS rolls back or leaves ROLLBACK_COMPLETE.
+# There is no supported "continue from Aws::AppRunner::Service" API. Keeping healthy siblings
+# without rollback means splitting stacks (e.g. network+RDS in stack A, App Runner in stack B)
+# or accepting partial manual cleanup. For AI-assisted fixes from CI, use an out-of-band step
+# (e.g. Cursor TypeScript SDK / Cloud Agent opening a PR) after this workflow fails — not
+# inside the same CFN transaction.
 
 name: Deploy to AWS
 
@@ -81,3 +90,23 @@ jobs:
 
       - name: Deploy CDK stack
         run: bash scripts/cicd-deploy.sh
+
+  # Runs only when deploy fails: pulls CFN + App Runner log context into the job log (no auto-fix).
+  post_deploy_diagnostics:
+    name: Post-failure AWS diagnostics
+    needs: deploy
+    if: failure()
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Collect CloudFormation & App Runner diagnostics
+        run: bash scripts/cicd-diagnostics-on-failure.sh
