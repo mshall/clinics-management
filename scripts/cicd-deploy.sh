@@ -11,10 +11,21 @@ echo "CDK deploy: account=${CDK_DEFAULT_ACCOUNT} region=${AWS_REGION}"
 docker version
 
 cd "$ROOT"
-npm ci
+# CI: trim npm noise — deprecations (rimraf/glob/prebuild-install, etc.) are almost always transitive
+# from Prisma/@cursor-sdk/sqlite3/native toolchains, not direct app code. --no-audit/--no-fund skip the
+# summary footer; LOGLEVEL=error applies only to this npm ci (workspace builds keep default logging).
+if [[ "${CI:-}" == "true" ]]; then
+  NPM_CONFIG_LOGLEVEL=error npm ci --no-audit --no-fund
+else
+  npm ci --no-audit --no-fund
+fi
 npm run build -w web
 cd infra
-npm ci
+if [[ "${CI:-}" == "true" ]]; then
+  NPM_CONFIG_LOGLEVEL=error npm ci --no-audit --no-fund
+else
+  npm ci --no-audit --no-fund
+fi
 npm run build
 
 # In GitHub Actions, emit verbose CDK / construct logging for post-mortem artifacts.
