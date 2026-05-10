@@ -1,0 +1,71 @@
+# Deploys the CDK stack (eu-central-1): VPC, RDS, App Runner API, S3 + CloudFront web.
+#
+# --- One-time AWS setup (OIDC, recommended) ---
+# 1) IAM > Identity providers > Add: provider URL https://token.actions.githubusercontent.com,
+#    Audience: sts.amazonaws.com
+# 2) IAM > Roles > Create role > Web identity > GitHub > authorize your org/repo.
+#    Or create a role with custom trust (replace OWNER, REPO, ACCOUNT_ID):
+#      "Principal": { "Federated": "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com" }
+#      "Action": "sts:AssumeRoleWithWebIdentity"
+#      "Condition": {
+#        "StringEquals": { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com" },
+#        "StringLike": { "token.actions.githubusercontent.com:sub": "repo:OWNER/REPO:*" }
+#      }
+# 3) Attach a policy that allows CDK deploy (e.g. AdministratorAccess for simplicity, or scoped CDK policy).
+# 4) GitHub repo > Settings > Secrets and variables > Actions > New repository secret:
+#      Name:  AWS_DEPLOY_ROLE_ARN
+#      Value: arn:aws:iam::990597228737:role/GitHubAction-AssumeRole
+#    (Trust policy must allow this repo, e.g. repo:mshall/* on sub — see IAM role GitHubAction-AssumeRole.)
+#
+# --- One-time CDK bootstrap (run locally once per account/region) ---
+#   npx cdk bootstrap aws://ACCOUNT/eu-central-1
+#
+# If the stack is ROLLBACK_COMPLETE, delete it in CloudFormation before the next deploy.
+
+name: Deploy to AWS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-aws-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: eu-central-1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check GitHub secret
+        run: |
+          if [ -z "${{ secrets.AWS_DEPLOY_ROLE_ARN }}" ]; then
+            echo "::error::Add repository secret AWS_DEPLOY_ROLE_ARN (see workflow header comments)."
+            exit 1
+          fi
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Deploy CDK stack
+        run: bash scripts/cicd-deploy.sh

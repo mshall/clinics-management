@@ -1,0 +1,15 @@
+.git
+.github
+.cursor
+**/node_modules
+**/cdk.out
+**/dist
+**/.env
+**/.env.*
+!**/.env.example
+apps/web/dist
+infra/cdk.out
+**/*.md
+**/playwright-report
+**/test-results
+**/.turbo

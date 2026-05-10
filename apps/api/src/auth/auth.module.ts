@@ -12,10 +12,24 @@ import { JwtStrategy } from "./jwt.strategy";
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        secret: config.getOrThrow<string>("JWT_SECRET"),
-        signOptions: { expiresIn: "7d" },
-      }),
+      useFactory: (config: ConfigService) => {
+        const raw = config.getOrThrow<string>("JWT_SECRET").trim();
+        let secret = raw;
+        if (raw.startsWith("{")) {
+          try {
+            const parsed = JSON.parse(raw) as { jwt?: string };
+            if (typeof parsed.jwt === "string" && parsed.jwt.length > 0) {
+              secret = parsed.jwt;
+            }
+          } catch {
+            /* use raw string */
+          }
+        }
+        return {
+          secret,
+          signOptions: { expiresIn: "7d" },
+        };
+      },
     }),
   ],
   controllers: [AuthController],

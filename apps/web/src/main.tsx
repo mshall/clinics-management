@@ -8,6 +8,9 @@ import "@/lib/i18n";
 import "@/styles/globals.css";
 import { applyThemeFromPersistedStorage } from "@/stores/theme-store";
 
+/** Default IANA timezone for clinic operations (Frankfurt); matches AWS eu-central-1 + RDS. */
+export const APP_TIME_ZONE = "Europe/Berlin";
+
 applyThemeFromPersistedStorage();
 
 const queryClient = new QueryClient({

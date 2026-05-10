@@ -13,3 +13,5 @@ apps/web/dist
 apps/api/uploads
 apps/web/playwright-report
 apps/web/test-results
+infra/cdk.out
+infra/lib

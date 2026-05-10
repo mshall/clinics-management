@@ -16,7 +16,11 @@
     "lint": "npm run lint -w web",
     "preview": "npm run preview -w web",
     "test:e2e": "npm run test:e2e -w web",
-    "test:unit": "npm run test:unit -w api"
+    "test:unit": "npm run test:unit -w api",
+    "infra:synth": "npm run build -w web && npm run synth --prefix infra",
+    "infra:deploy": "npm run build -w web && npm run deploy --prefix infra",
+    "infra:deploy:aws": "bash scripts/deploy-aws.sh",
+    "infra:deploy:ci": "bash scripts/cicd-deploy.sh"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
