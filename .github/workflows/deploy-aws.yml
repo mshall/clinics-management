@@ -17,6 +17,11 @@
 #      Value: arn:aws:iam::990597228737:role/GitHubAction-AssumeRole
 #    (Trust policy must allow this repo, e.g. repo:mshall/kiorly-clinics-management:* — see IAM OIDC role.)
 #
+# 5) Optional — Cursor SDK post-mortem after a failed deploy (same pricing as Cursor usage):
+#      Name:  CURSOR_API_KEY
+#      Value: API key from https://cursor.com/dashboard/integrations (or team service account).
+#    If unset, the "Cursor SDK investigation" job skips quietly. This does not auto-merge fixes.
+#
 # --- One-time CDK bootstrap (run locally once per account/region) ---
 #   npx cdk bootstrap aws://ACCOUNT/eu-central-1
 #
@@ -109,4 +114,46 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Collect CloudFormation & App Runner diagnostics
-        run: bash scripts/cicd-diagnostics-on-failure.sh
+        run: bash scripts/cicd-diagnostics-on-failure.sh 2>&1 | tee diagnostics.log
+
+      - name: Upload diagnostics artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aws-deploy-diagnostics
+          path: diagnostics.log
+          if-no-files-found: warn
+
+  # Optional: Cursor TypeScript SDK analyzes diagnostics + repo (no auto-merge). Needs CURSOR_API_KEY.
+  # @see https://cursor.com/docs/api/sdk/typescript
+  cursor_investigate_deploy:
+    name: Cursor SDK investigation (optional)
+    needs: [deploy, post_deploy_diagnostics]
+    if: ${{ always() && needs.deploy.result == 'failure' }}
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: aws-deploy-diagnostics
+          path: .
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies (for @cursor/sdk)
+        run: npm ci
+
+      - name: Cursor SDK post-mortem (writes to job summary)
+        continue-on-error: true
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          DIAGNOSTICS_LOG: diagnostics.log
+        run: node scripts/cursor-investigate-deploy-failure.mjs

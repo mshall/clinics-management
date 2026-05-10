@@ -1,7 +1,10 @@
 {
   "name": "kiorly-clinics-management",
   "private": true,
-  "workspaces": ["apps/web", "apps/api"],
+  "workspaces": [
+    "apps/web",
+    "apps/api"
+  ],
   "scripts": {
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
@@ -23,6 +26,7 @@
     "infra:deploy:ci": "bash scripts/cicd-deploy.sh"
   },
   "devDependencies": {
+    "@cursor/sdk": "^1.0.12",
     "concurrently": "^9.1.2"
   }
 }
