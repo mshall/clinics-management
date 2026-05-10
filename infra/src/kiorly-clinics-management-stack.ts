@@ -140,24 +140,27 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
               { name: "AWS_REGION", value: deploymentRegion },
               { name: "AWS_DEFAULT_REGION", value: deploymentRegion },
               { name: "DB_SECRET_ARN", value: db.secret!.secretArn },
-              { name: "PRISMA_MIGRATE_ON_BOOT", value: "false" },
+              // Apply migrations on each deploy so RDS is never missing tables (avoids silent boot + broken API).
+              { name: "PRISMA_MIGRATE_ON_BOOT", value: "true" },
             ],
             runtimeEnvironmentSecrets: [{ name: "JWT_SECRET", value: jwtSecretFieldArn }],
           },
         },
       },
       instanceConfiguration: {
-        cpu: "0.5 vCPU",
-        memory: "1 GB",
+        // Cold Nest + Prisma migrate on boot needs more than 0.5 vCPU to stabilize within App Runner health windows.
+        cpu: "1 vCPU",
+        memory: "2 GB",
         instanceRoleArn: instanceRole.roleArn,
       },
       healthCheckConfiguration: {
         protocol: "HTTP",
         path: "/api/v1/health/live",
-        interval: 15,
+        interval: 10,
         timeout: 10,
         healthyThreshold: 1,
-        unhealthyThreshold: 8,
+        // ~3.3 minutes of failing checks before NotStabilized (migrate + first Nest listen on cold start).
+        unhealthyThreshold: 20,
       },
       networkConfiguration: {
         ingressConfiguration: { isPubliclyAccessible: true },
