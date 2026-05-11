@@ -259,6 +259,32 @@ exports.onEvent = async (event) => {
     originHostResource.node.addDependency(appRunnerService);
     const apiOriginDomain = originHostResource.getAttString("Host");
 
+    // Do NOT use distribution-wide errorResponses (403/404 → index.html with 200): they apply to the App Runner
+    // origin too, so API JSON (e.g. login) can be replaced by HTML while res.ok stays true — the SPA then crashes
+    // on res.accessToken. SPA routing: viewer-request function on the S3 default behavior only rewrites non-/api,
+    // non-asset paths to /index.html (see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/example_cloudfront_functions_spa_url_rewrite_section.html).
+    const spaViewerRewrite = new cloudfront.Function(this, "SpaViewerRewrite", {
+      comment: "SPA deep links: serve index.html for paths without a file extension; leave /api/* unchanged",
+      code: cloudfront.FunctionCode.fromInline(`
+function handler(event) {
+  var request = event.request;
+  var uri = request.uri || "";
+  if (uri.startsWith("/api")) {
+    return request;
+  }
+  if (uri.indexOf(".") !== -1) {
+    return request;
+  }
+  if (uri === "/" || uri === "") {
+    return request;
+  }
+  request.uri = "/index.html";
+  return request;
+}
+`),
+      runtime: cloudfront.FunctionRuntime.JS_1_0,
+    });
+
     const dist = new cloudfront.Distribution(this, "SiteDistribution", {
       comment: "Kiorly clinic SPA + App Runner API (no ALB/NAT)",
       defaultRootObject: "index.html",
@@ -274,6 +300,9 @@ exports.onEvent = async (event) => {
         allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
         cachedMethods: cloudfront.CachedMethods.CACHE_GET_HEAD_OPTIONS,
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+        functionAssociations: [
+          { function: spaViewerRewrite, eventType: cloudfront.FunctionEventType.VIEWER_REQUEST },
+        ],
       },
       additionalBehaviors: {
         "/api/*": {
@@ -288,20 +317,6 @@ exports.onEvent = async (event) => {
           originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER,
         },
       },
-      errorResponses: [
-        {
-          httpStatus: 403,
-          responseHttpStatus: 200,
-          responsePagePath: "/index.html",
-          ttl: cdk.Duration.seconds(0),
-        },
-        {
-          httpStatus: 404,
-          responseHttpStatus: 200,
-          responsePagePath: "/index.html",
-          ttl: cdk.Duration.seconds(0),
-        },
-      ],
     });
 
     new s3deploy.BucketDeployment(this, "WebDeploy", {

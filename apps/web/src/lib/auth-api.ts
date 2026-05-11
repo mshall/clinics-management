@@ -11,6 +11,7 @@ export async function loginRequest(email: string, password: string): Promise<Log
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({ email: normalizedEmail, password }),
   });
+  const contentType = res.headers.get("content-type") ?? "";
   const data = (await res.json().catch(() => null)) as LoginResponse | { message?: string | string[] } | null;
   if (!res.ok) {
     let msg = "Sign in failed";
@@ -21,6 +22,16 @@ export async function loginRequest(email: string, password: string): Promise<Log
         msg = (data as { message: string }).message;
       }
     }
+    throw new ApiError(msg, res.status, data);
+  }
+  const token = data && typeof data === "object" ? (data as { accessToken?: unknown }).accessToken : undefined;
+  const user = data && typeof data === "object" ? (data as { user?: unknown }).user : undefined;
+  if (typeof token !== "string" || !token || !user || typeof user !== "object") {
+    const bodyStr = typeof data === "string" ? data : "";
+    const htmlish = contentType.includes("text/html") || (bodyStr.length > 0 && bodyStr.trim().startsWith("<"));
+    const msg = htmlish
+      ? "Sign in failed: API returned a web page instead of JSON. Check that /api/* reaches the API (e.g. CloudFront must not replace API errors with the SPA)."
+      : "Sign in failed: invalid response from server.";
     throw new ApiError(msg, res.status, data);
   }
   return data as LoginResponse;
