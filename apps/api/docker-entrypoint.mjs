@@ -116,6 +116,21 @@ if (process.env.PRISMA_MIGRATE_ON_BOOT === "true") {
   }
 }
 
+if (process.env.PRISMA_SEED_ON_BOOT === "true") {
+  console.error("[boot] PRISMA_SEED_ON_BOOT=true — running seed script …");
+  const seedScript = path.join(__dirname, "prisma", "seed.ts");
+  const seedResult = spawnSync("npx", ["tsx", seedScript], {
+    stdio: "inherit",
+    env: process.env,
+    cwd: __dirname,
+  });
+  if ((seedResult.status ?? 1) !== 0) {
+    console.error("[boot] seed script failed with status", seedResult.status, "— continuing anyway");
+  } else {
+    console.error("[boot] seed script completed OK");
+  }
+}
+
 const kmsEp = vpceHttpsFromHost(process.env.KMS_VPCE_HOST);
 const stsEp = vpceHttpsFromHost(process.env.STS_VPCE_HOST);
 const smEpForChild = vpceHttpsFromHost(process.env.SECRETS_MANAGER_VPCE_HOST);

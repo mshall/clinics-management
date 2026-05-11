@@ -139,6 +139,14 @@ git clone git@github.com:mshall/kiorly-clinics-management.git
 cd kiorly-clinics-management
 ```
 
+Use this folder as your editor workspace root (e.g. Cursor **File → Open Folder**). If the project used to live under `.../AhmedClinic`, reopen at `.../kiorly-clinics-management` so terminals, search, and Git all resolve to the current path.
+
+To align Cursor’s own project metadata folder with this path (optional, run once in Terminal):
+
+`mv ~/.cursor/projects/Users-shall-Documents-Peraonal-Work-AhmedClinic ~/.cursor/projects/Users-shall-Documents-Peraonal-Work-kiorly-clinics-management`
+
+Skip this if the destination name already exists or you use a different editor layout.
+
 ### 2. Install dependencies
 
 From the **repository root**:

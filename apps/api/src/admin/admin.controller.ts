@@ -21,6 +21,10 @@ export class AdminController {
   @ApiOperation({ summary: "Admin dashboard: tenant, flags, audit tail" })
   @ApiOkResponse()
   overview(@CurrentUser() user: JwtUser) {
+    const allowed: Set<UserRole> = new Set([UserRole.GROUP_ADMIN, UserRole.CLINIC_ADMIN, UserRole.BRANCH_MANAGER]);
+    if (!allowed.has(user.role)) {
+      throw new ForbiddenException("Only administrators can access the admin overview");
+    }
     return this.admin.overview(user.tenantId);
   }
 

@@ -68,7 +68,7 @@ export class HrController {
   @ApiOkResponse({ description: "Binary file stream" })
   async getEmployeeIdDocument(@CurrentUser() user: JwtUser, @Param("id") id: string): Promise<StreamableFile> {
     const meta = await this.hr.getEmployeeIdDocumentMeta(user.tenantId, id, user);
-    const stream = this.hr.getEmployeeIdDocumentReadStream(meta.absolutePath);
+    const stream = await this.hr.openEmployeeIdDocumentReadStream(meta.storageKey);
     return new StreamableFile(stream, {
       type: meta.mimeType,
       disposition: `attachment; filename*=UTF-8''${encodeURIComponent(meta.originalFileName)}`,

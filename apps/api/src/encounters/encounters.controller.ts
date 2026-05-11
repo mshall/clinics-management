@@ -87,8 +87,8 @@ export class EncountersController {
     @Param("id") encounterId: string,
     @Param("docId") docId: string
   ): Promise<StreamableFile> {
-    const meta = await this.encounters.getDocumentAbsolutePath(user.tenantId, encounterId, docId, user);
-    const stream = this.encounters.getDocumentReadStream(meta.absolutePath);
+    const meta = await this.encounters.getDocumentFileMeta(user.tenantId, encounterId, docId, user);
+    const stream = await this.encounters.openDocumentReadStream(meta.storageKey);
     return new StreamableFile(stream, {
       type: meta.mimeType,
       disposition: `inline; filename*=UTF-8''${encodeURIComponent(meta.originalFileName)}`,

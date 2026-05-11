@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -13,8 +14,6 @@ import {
   UserRole,
 } from "@prisma/client";
 import { randomUUID } from "crypto";
-import { createReadStream } from "fs";
-import * as fs from "fs/promises";
 import * as path from "path";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { resolveLedgerListingRange } from "../common/reporting-range";
@@ -22,6 +21,7 @@ import { paginate, parsePageParams } from "../common/pagination";
 import type { JwtUser } from "../auth/jwt-user";
 import { CLINIC_SCOPE_ROLES, fetchPhysicianNetworkClinicIds } from "../common/clinic-scope";
 import { PrismaService } from "../prisma/prisma.service";
+import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { AddDiagnosisDto } from "./dto/add-diagnosis.dto";
 import type { AddEncounterMedicationDto } from "./dto/add-encounter-medication.dto";
 import type { CreateEncounterDto } from "./dto/create-encounter.dto";
@@ -66,11 +66,10 @@ function assertPhysicianEncounterAccess(viewer: JwtUser | undefined, encounter: 
 
 @Injectable()
 export class EncountersService {
-  constructor(private readonly prisma: PrismaService) {}
-
-  private uploadRoot(): string {
-    return path.join(process.cwd(), "uploads", "encounters");
-  }
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
+  ) {}
 
   private mapDiag(d: {
     id: string;
@@ -526,9 +525,7 @@ export class EncountersService {
     const docId = randomUUID();
     const base = path.basename(file.originalname || "upload").replace(/[^\w.\-]+/g, "_").slice(0, 120) || "upload";
     const relativePath = `${tenantId}/${encounterId}/${docId}-${base}`;
-    const abs = path.join(this.uploadRoot(), tenantId, encounterId, `${docId}-${base}`);
-    await fs.mkdir(path.dirname(abs), { recursive: true });
-    await fs.writeFile(abs, file.buffer);
+    await this.uploads.put("encounters", relativePath, file.buffer, mime);
 
     const row = await this.prisma.encounterDocument.create({
       data: {
@@ -545,12 +542,12 @@ export class EncountersService {
     return this.mapDoc(row);
   }
 
-  async getDocumentAbsolutePath(
+  async getDocumentFileMeta(
     tenantId: string,
     encounterId: string,
     documentId: string,
     viewer?: JwtUser
-  ): Promise<{ absolutePath: string; mimeType: string; originalFileName: string }> {
+  ): Promise<{ storageKey: string; mimeType: string; originalFileName: string }> {
     const enc = await this.prisma.encounter.findFirst({ where: { id: encounterId, tenantId } });
     if (!enc) throw new NotFoundException("Encounter not found");
     assertPhysicianEncounterAccess(viewer, enc);
@@ -558,17 +555,12 @@ export class EncountersService {
       where: { id: documentId, encounterId, tenantId },
     });
     if (!doc) throw new NotFoundException("Document not found");
-    const absolutePath = path.join(this.uploadRoot(), doc.relativePath);
-    try {
-      await fs.access(absolutePath);
-    } catch {
-      throw new NotFoundException("File missing on disk");
-    }
-    return { absolutePath, mimeType: doc.mimeType, originalFileName: doc.originalFileName };
+    await this.uploads.assertExists("encounters", doc.relativePath);
+    return { storageKey: doc.relativePath, mimeType: doc.mimeType, originalFileName: doc.originalFileName };
   }
 
-  getDocumentReadStream(absolutePath: string) {
-    return createReadStream(absolutePath);
+  openDocumentReadStream(storageKey: string) {
+    return this.uploads.getReadStream("encounters", storageKey);
   }
 
   async removeDocument(tenantId: string, encounterId: string, documentId: string, viewer?: JwtUser): Promise<void> {
@@ -581,13 +573,8 @@ export class EncountersService {
       where: { id: documentId, encounterId, tenantId },
     });
     if (!doc) throw new NotFoundException("Document not found");
-    const abs = path.join(this.uploadRoot(), doc.relativePath);
     await this.prisma.encounterDocument.delete({ where: { id: documentId } });
-    try {
-      await fs.unlink(abs);
-    } catch {
-      /* ignore */
-    }
+    await this.uploads.deleteObject("encounters", doc.relativePath);
   }
 
   async finalize(tenantId: string, userId: string, encounterId: string): Promise<EncounterDetailDto> {

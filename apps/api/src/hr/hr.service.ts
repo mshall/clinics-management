@@ -1,14 +1,19 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { AttendanceStatus, LeaveStatus, Prisma, UserRole } from "@prisma/client";
 import { randomUUID } from "crypto";
-import { createReadStream } from "fs";
-import * as fs from "fs/promises";
 import * as path from "path";
 import type { JwtUser } from "../auth/jwt-user";
 import { CLINIC_SCOPE_ROLES, fetchClinicScopeIds } from "../common/clinic-scope";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
+import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { CreateAttendanceDto } from "./dto/create-attendance.dto";
 import type { CreateEmployeeDto } from "./dto/create-employee.dto";
 import type { CreateLeaveRequestDto } from "./dto/create-leave-request.dto";
@@ -30,7 +35,10 @@ const EMPLOYEE_MANAGE_ROLES = new Set<UserRole>([
 
 @Injectable()
 export class HrService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
+  ) {}
 
   private assertCanManageEmployees(viewer: JwtUser): void {
     if (!EMPLOYEE_MANAGE_ROLES.has(viewer.role)) {
@@ -44,10 +52,6 @@ export class HrService {
       where: { tenantId, userId: viewer.userId, clinicId },
     });
     if (!scope) throw new ForbiddenException("Clinic is outside your assignment");
-  }
-
-  private employeeUploadRoot(): string {
-    return path.join(process.cwd(), "uploads", "employees");
   }
 
   private async nextEmployeeNumber(tenantId: string): Promise<string> {
@@ -262,9 +266,7 @@ export class HrService {
     const docId = randomUUID();
     const base = path.basename(file.originalname || "id").replace(/[^\w.\-]+/g, "_").slice(0, 120) || "id";
     const relativePath = `${tenantId}/${employeeId}/${docId}-${base}`;
-    const abs = path.join(this.employeeUploadRoot(), tenantId, employeeId, `${docId}-${base}`);
-    await fs.mkdir(path.dirname(abs), { recursive: true });
-    await fs.writeFile(abs, file.buffer);
+    await this.uploads.put("employees", relativePath, file.buffer, mime);
     const row = await this.prisma.employee.update({
       where: { id: employeeId },
       data: {
@@ -281,23 +283,18 @@ export class HrService {
     tenantId: string,
     employeeId: string,
     viewer: JwtUser
-  ): Promise<{ absolutePath: string; mimeType: string; originalFileName: string }> {
+  ): Promise<{ storageKey: string; mimeType: string; originalFileName: string }> {
     const emp = await this.prisma.employee.findFirst({ where: { id: employeeId, tenantId } });
     if (!emp?.idDocRelativePath || !emp.idDocOriginalName || !emp.idDocMimeType) {
       throw new NotFoundException("No ID document attached");
     }
     await this.assertClinicAdminCanUseClinic(tenantId, viewer, emp.clinicId);
-    const absolutePath = path.join(this.employeeUploadRoot(), emp.idDocRelativePath);
-    try {
-      await fs.access(absolutePath);
-    } catch {
-      throw new NotFoundException("ID document file missing on disk");
-    }
-    return { absolutePath, mimeType: emp.idDocMimeType, originalFileName: emp.idDocOriginalName };
+    await this.uploads.assertExists("employees", emp.idDocRelativePath);
+    return { storageKey: emp.idDocRelativePath, mimeType: emp.idDocMimeType, originalFileName: emp.idDocOriginalName };
   }
 
-  getEmployeeIdDocumentReadStream(absolutePath: string) {
-    return createReadStream(absolutePath);
+  openEmployeeIdDocumentReadStream(storageKey: string) {
+    return this.uploads.getReadStream("employees", storageKey);
   }
 
   async listAttendance(

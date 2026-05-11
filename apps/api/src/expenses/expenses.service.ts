@@ -1,15 +1,20 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { ExpenseStatus, Prisma } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { fetchClinicScopeIds } from "../common/clinic-scope";
 import { randomUUID } from "crypto";
-import { createReadStream } from "fs";
-import * as fs from "fs/promises";
 import * as path from "path";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { resolveReportingRange } from "../common/reporting-range";
 import { PrismaService } from "../prisma/prisma.service";
+import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { CreateExpenseDto } from "./dto/create-expense.dto";
 import type { ExpenseDto } from "./dto/expense.dto";
 
@@ -28,11 +33,10 @@ type ProofFile = { buffer: Buffer; originalname: string; mimetype: string; size:
 
 @Injectable()
 export class ExpensesService {
-  constructor(private readonly prisma: PrismaService) {}
-
-  private uploadRoot(): string {
-    return path.join(process.cwd(), "uploads", "expenses");
-  }
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
+  ) {}
 
   private map(e: {
     id: string;
@@ -139,9 +143,7 @@ export class ExpensesService {
       const docId = randomUUID();
       const base = path.basename(proof.originalname || "receipt").replace(/[^\w.\-]+/g, "_").slice(0, 120) || "receipt";
       const relativePath = `${tenantId}/${row.id}/${docId}-${base}`;
-      const abs = path.join(this.uploadRoot(), tenantId, row.id, `${docId}-${base}`);
-      await fs.mkdir(path.dirname(abs), { recursive: true });
-      await fs.writeFile(abs, proof.buffer);
+      await this.uploads.put("expenses", relativePath, proof.buffer, mime);
 
       row = await this.prisma.expense.update({
         where: { id: row.id },
@@ -170,7 +172,11 @@ export class ExpensesService {
     return this.map(row);
   }
 
-  async getProofFileMeta(tenantId: string, expenseId: string, user: JwtUser): Promise<{ absolutePath: string; mimeType: string; originalFileName: string }> {
+  async getProofFileMeta(
+    tenantId: string,
+    expenseId: string,
+    user: JwtUser
+  ): Promise<{ storageKey: string; mimeType: string; originalFileName: string }> {
     const exp = await this.prisma.expense.findFirst({ where: { id: expenseId, tenantId } });
     if (!exp?.proofRelativePath || !exp.proofOriginalName || !exp.proofMimeType) {
       throw new NotFoundException("No proof attached to this expense");
@@ -179,20 +185,15 @@ export class ExpensesService {
     if (scopeIds !== null && !scopeIds.includes(exp.clinicId)) {
       throw new NotFoundException("No proof attached to this expense");
     }
-    const absolutePath = path.join(this.uploadRoot(), exp.proofRelativePath);
-    try {
-      await fs.access(absolutePath);
-    } catch {
-      throw new NotFoundException("Proof file missing on disk");
-    }
+    await this.uploads.assertExists("expenses", exp.proofRelativePath);
     return {
-      absolutePath,
+      storageKey: exp.proofRelativePath,
       mimeType: exp.proofMimeType,
       originalFileName: exp.proofOriginalName,
     };
   }
 
-  getProofReadStream(absolutePath: string) {
-    return createReadStream(absolutePath);
+  openProofReadStream(storageKey: string) {
+    return this.uploads.getReadStream("expenses", storageKey);
   }
 }

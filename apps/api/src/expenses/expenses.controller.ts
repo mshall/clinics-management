@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Param,
   Patch,
@@ -21,7 +22,7 @@ import {
   ApiProperty,
   ApiTags,
 } from "@nestjs/swagger";
-import { ExpenseStatus } from "@prisma/client";
+import { ExpenseStatus, UserRole } from "@prisma/client";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { IsEnum } from "class-validator";
 import { memoryStorage } from "multer";
@@ -40,12 +41,26 @@ class PatchExpenseStatusDto {
   status!: ExpenseStatus;
 }
 
+const EXPENSE_ROLES: Set<UserRole> = new Set([
+  UserRole.GROUP_ADMIN,
+  UserRole.CLINIC_ADMIN,
+  UserRole.BRANCH_MANAGER,
+  UserRole.FINANCE_OFFICER,
+  UserRole.HR_OFFICER,
+]);
+
 @ApiTags("expenses")
 @ApiBearerAuth("bearer")
 @Controller("expenses")
 @UseGuards(JwtAuthGuard)
 export class ExpensesController {
   constructor(private readonly expenses: ExpensesService) {}
+
+  private assertExpenseAccess(user: JwtUser): void {
+    if (!EXPENSE_ROLES.has(user.role)) {
+      throw new ForbiddenException("You do not have permission to access expenses");
+    }
+  }
 
   @Get()
   @ApiOperation({ summary: "List expenses" })
@@ -60,6 +75,7 @@ export class ExpensesController {
     @Query("sortOrder") sortOrder?: string,
     @Query("clinicId") clinicId?: string
   ) {
+    this.assertExpenseAccess(user);
     return this.expenses.list(user.tenantId, user, from, to, page, pageSize, sortBy, sortOrder, clinicId);
   }
 
@@ -71,7 +87,7 @@ export class ExpensesController {
     @Param("id") id: string
   ): Promise<StreamableFile> {
     const meta = await this.expenses.getProofFileMeta(user.tenantId, id, user);
-    const stream = this.expenses.getProofReadStream(meta.absolutePath);
+    const stream = await this.expenses.openProofReadStream(meta.storageKey);
     return new StreamableFile(stream, {
       type: meta.mimeType,
       disposition: `attachment; filename*=UTF-8''${encodeURIComponent(meta.originalFileName)}`,
@@ -109,6 +125,7 @@ export class ExpensesController {
     @Body() body: CreateExpenseDto,
     @UploadedFile() proof?: Express.Multer.File
   ) {
+    this.assertExpenseAccess(user);
     return this.expenses.create(user.tenantId, body, user, proof);
   }
 
@@ -116,6 +133,7 @@ export class ExpensesController {
   @ApiOperation({ summary: "Approve or reject expense" })
   @ApiOkResponse({ type: ExpenseDto })
   patchStatus(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchExpenseStatusDto) {
+    this.assertExpenseAccess(user);
     return this.expenses.updateStatus(user.tenantId, id, body.status, user);
   }
 }

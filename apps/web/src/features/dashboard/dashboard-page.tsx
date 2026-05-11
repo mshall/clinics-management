@@ -43,10 +43,11 @@ export function DashboardPage() {
   const role = useAuthStore((s) => s.user?.role);
   const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
   const home = defaultHomeForRole(role, navTabKeys);
+  const { data, isPending, isError, error } = useDashboardKpisQuery();
+
   if (home !== "/") {
     return <Navigate to={home} replace />;
   }
-  const { data, isPending, isError, error } = useDashboardKpisQuery();
 
   return (
     <div className="space-y-6">

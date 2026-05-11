@@ -35,12 +35,23 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       ],
     });
 
+    vpc.addGatewayEndpoint("S3Gateway", {
+      service: ec2.GatewayVpcEndpointAwsService.S3,
+    });
+
     const webBucket = new s3.Bucket(this, "WebBucket", {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
       enforceSSL: true,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
+    });
+
+    const apiUploadsBucket = new s3.Bucket(this, "ApiUploadsBucket", {
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
     const jwtSecret = new secretsmanager.Secret(this, "JwtSecret", {
@@ -160,6 +171,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     });
     db.secret!.grantRead(instanceRole);
     jwtSecret.grantRead(instanceRole);
+    apiUploadsBucket.grantReadWrite(instanceRole);
 
     // App Runner: reference JSON key so JWT_SECRET is a plain string (matches JwtModule + Passport JwtStrategy).
     const jwtSecretFieldArn = `${jwtSecret.secretArn}:jwt::`;
@@ -189,6 +201,9 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
               { name: "DB_SECRET_ARN", value: db.secret!.secretArn },
               // Apply migrations on each deploy so RDS is never missing tables (avoids silent boot + broken API).
               { name: "PRISMA_MIGRATE_ON_BOOT", value: "true" },
+              { name: "PRISMA_SEED_ON_BOOT", value: "true" },
+              { name: "UPLOAD_STORAGE", value: "s3" },
+              { name: "S3_UPLOAD_BUCKET", value: apiUploadsBucket.bucketName },
             ],
             runtimeEnvironmentSecrets: [{ name: "JWT_SECRET", value: jwtSecretFieldArn }],
           },
@@ -314,7 +329,7 @@ function handler(event) {
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
           allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
           cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
-          originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER,
+          originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
         },
       },
     });
