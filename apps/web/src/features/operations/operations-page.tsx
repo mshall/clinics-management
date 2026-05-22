@@ -143,9 +143,9 @@ export function OperationsPage() {
 
   const [efPatient, setEfPatient] = useState("");
   const [efDoctor, setEfDoctor] = useState("");
-  const [efDate, setEfDate] = useState("");
-  const [efTotal, setEfTotal] = useState("");
-  const [efDown, setEfDown] = useState("");
+  const [efDate] = useState("");
+  const [efTotal] = useState("");
+  const [efDown] = useState("");
   const [efStatus, setEfStatus] = useState("");
   const [completeConfirmOp, setCompleteConfirmOp] = useState<OperationDto | null>(null);
   const [completeCollectionAmount, setCompleteCollectionAmount] = useState("");

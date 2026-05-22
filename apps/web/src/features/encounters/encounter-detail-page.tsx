@@ -18,6 +18,7 @@ import {
   Upload,
   Wind,
 } from "lucide-react";
+import type { TFunction } from "i18next";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
@@ -45,7 +46,7 @@ function apiErrorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
-function encounterStatusLabel(t: (key: string, fallback?: string) => string, code: string): string {
+function encounterStatusLabel(t: TFunction, code: string): string {
   const map: Record<string, string> = {
     DRAFT: t("encounters.statusDraft", "Draft"),
     AMENDED: t("encounters.statusAmended", "Amended"),
