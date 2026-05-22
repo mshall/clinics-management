@@ -107,7 +107,7 @@ export function SearchablePickList({
   }, [open]);
 
   return (
-    <div ref={rootRef} className={cn("space-y-1", className)}>
+    <div ref={rootRef} className={cn("relative space-y-1", className)}>
       {!open ? (
         <button
           type="button"
@@ -158,7 +158,7 @@ export function SearchablePickList({
           <div
             id={listboxId}
             role="listbox"
-            className="max-h-44 overflow-auto rounded-md border border-border bg-background shadow-sm"
+            className="absolute left-0 right-0 top-full z-50 mt-1 max-h-44 overflow-auto rounded-md border border-border bg-background shadow-md"
           >
             {!meetsMinSearch ? (
               <p className="px-3 py-2 text-xs text-muted-foreground">{idleMessage}</p>

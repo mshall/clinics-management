@@ -29,6 +29,7 @@ export function AppointmentsPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
+  const isPhysician = authUser?.role === "physician";
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [sortBy, setSortBy] = useState("startsAt");
@@ -44,6 +45,12 @@ export function AppointmentsPage() {
   const [afStarts, setAfStarts] = useState("");
   const [afPatient, setAfPatient] = useState("");
   const [afStatus, setAfStatus] = useState("");
+
+  useEffect(() => {
+    if (!isPhysician) return;
+    setSortOrder("asc");
+    setFltFrom((prev) => prev || new Date().toISOString().slice(0, 10));
+  }, [isPhysician]);
 
   const listParams = useMemo(
     () => ({
@@ -111,7 +118,7 @@ export function AppointmentsPage() {
     });
   }, [rows, afClinic, afStarts, afPatient, afStatus, i18n.language, patientLabel, clinicById]);
 
-  const { data: userData } = useUsersQuery({ page: 1, pageSize: 100 });
+  const { data: userData } = useUsersQuery({ page: 1, pageSize: 100, enabled: showBookPanel && !isPhysician });
   const users = userData?.items ?? [];
   const physicians = users.filter((u) => u.role === "PHYSICIAN");
 
@@ -195,12 +202,14 @@ export function AppointmentsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t("appointments.title")}</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          {isPhysician ? t("appointments.myTitle", "My appointments") : t("appointments.title")}
+        </h1>
         <p className="text-muted-foreground">
-          {authUser?.role === "physician"
+          {isPhysician
             ? t(
                 "appointments.subtitlePhysician",
-                "Every appointment where you are the clinician, across all clinics in this organization."
+                "Appointments where you are the assigned doctor. Use the date range to focus on upcoming visits."
               )
             : t("appointments.subtitle")}
         </p>
@@ -208,16 +217,71 @@ export function AppointmentsPage() {
 
       {isError ? <p className="text-sm text-destructive">{error instanceof Error ? error.message : t("common.error")}</p> : null}
 
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" variant={showSearchPanel ? "default" : "outline"} onClick={() => setShowSearchPanel((s) => !s)}>
-          {showSearchPanel ? t("appointments.hideSearch", "Hide search") : t("appointments.showSearch", "Search appointments")}
-        </Button>
-        <CreateActionButton type="button" onClick={() => setShowBookPanel((s) => !s)}>
-          {showBookPanel ? t("appointments.hideBook", "Hide booking") : t("appointments.showBook", "Book an appointment")}
-        </CreateActionButton>
-      </div>
+      {isPhysician ? (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">{t("appointments.dateRange", "Date range")}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-end gap-4">
+            <div className="space-y-1">
+              <Label htmlFor="phys-apt-from">{t("appointments.filterFrom", "From date")}</Label>
+              <Input
+                id="phys-apt-from"
+                className="ltr-nums"
+                type="date"
+                value={fltFrom}
+                onChange={(e) => {
+                  setFltFrom(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="phys-apt-to">{t("appointments.filterTo", "To date")}</Label>
+              <Input
+                id="phys-apt-to"
+                className="ltr-nums"
+                type="date"
+                value={fltTo}
+                onChange={(e) => {
+                  setFltTo(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="phys-apt-status">{t("appointments.status")}</Label>
+              <select
+                id="phys-apt-status"
+                className="flex h-9 min-w-[160px] rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                value={fltStatus}
+                onChange={(e) => {
+                  setFltStatus(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">{t("appointments.anyStatus", "Any status")}</option>
+                <option value="SCHEDULED">SCHEDULED</option>
+                <option value="CONFIRMED">CONFIRMED</option>
+                <option value="CHECKED_IN">CHECKED_IN</option>
+                <option value="CANCELLED">CANCELLED</option>
+                <option value="COMPLETED">COMPLETED</option>
+              </select>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant={showSearchPanel ? "default" : "outline"} onClick={() => setShowSearchPanel((s) => !s)}>
+            {showSearchPanel ? t("appointments.hideSearch", "Hide search") : t("appointments.showSearch", "Search appointments")}
+          </Button>
+          <CreateActionButton type="button" onClick={() => setShowBookPanel((s) => !s)}>
+            {showBookPanel ? t("appointments.hideBook", "Hide booking") : t("appointments.showBook", "Book an appointment")}
+          </CreateActionButton>
+        </div>
+      )}
 
-      {showSearchPanel ? (
+      {!isPhysician && showSearchPanel ? (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">{t("appointments.filters", "Search appointments")}</CardTitle>
@@ -272,7 +336,7 @@ export function AppointmentsPage() {
         </Card>
       ) : null}
 
-      {showBookPanel ? (
+      {!isPhysician && showBookPanel ? (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">{t("appointments.book")}</CardTitle>
@@ -346,7 +410,9 @@ export function AppointmentsPage() {
 
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
-          <CardTitle className="text-base">{t("appointments.list")}</CardTitle>
+          <CardTitle className="text-base">
+            {isPhysician ? t("appointments.myList", "My schedule") : t("appointments.list")}
+          </CardTitle>
           <Button
             type="button"
             variant="ghost"
@@ -395,6 +461,15 @@ export function AppointmentsPage() {
                   <tr>
                     <td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">
                       {t("common.loading")}
+                    </td>
+                  </tr>
+                ) : null}
+                {!isPending && rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">
+                      {isPhysician
+                        ? t("appointments.myEmpty", "No appointments assigned to you in this period.")
+                        : t("appointments.empty", "No appointments found.")}
                     </td>
                   </tr>
                 ) : null}

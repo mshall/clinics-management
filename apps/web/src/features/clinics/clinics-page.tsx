@@ -1,17 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { CreateActionButton } from "@/components/create-action-button";
 import { FilterTh } from "@/components/sortable-th";
 import { TablePagination } from "@/components/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AddClinicDialog } from "@/features/clinics/add-clinic-dialog";
 import { useClinicsQuery } from "@/lib/api-hooks";
 import { columnFilterIncludes } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth-store";
+
+const CREATE_CLINIC_ROLES = new Set(["group_admin", "clinic_admin", "branch_manager"]);
 
 export function ClinicsPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const authUser = useAuthStore((s) => s.user);
+  const canCreateClinic = authUser?.role ? CREATE_CLINIC_ROLES.has(authUser.role) : false;
+  const [addClinicOpen, setAddClinicOpen] = useState(false);
   const { data = [], isPending, isError, error } = useClinicsQuery();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -78,11 +86,14 @@ export function ClinicsPage() {
             >
               {t("patients.clearColFilters", "Clear column filters")}
             </Button>
-            <Badge variant="secondary" className="shrink-0">
-              {t("clinics.addBranch")}
-            </Badge>
+            {canCreateClinic ? (
+              <CreateActionButton type="button" onClick={() => setAddClinicOpen(true)}>
+                {t("admin.openAddClinic", "Add clinic…")}
+              </CreateActionButton>
+            ) : null}
           </div>
         </CardHeader>
+        {canCreateClinic ? <AddClinicDialog open={addClinicOpen} onOpenChange={setAddClinicOpen} /> : null}
         <CardContent className="space-y-3">
           {isError ? (
             <p className="text-sm text-destructive">{error instanceof Error ? error.message : t("common.comingSoon")}</p>

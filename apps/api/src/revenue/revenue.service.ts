@@ -1,5 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
-import { Prisma, RevenueStatus, UserRole } from "@prisma/client";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { OperationStatus, Prisma, RevenueStatus, UserRole } from "@prisma/client";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { fetchClinicScopeIds, fetchPhysicianNetworkClinicIds } from "../common/clinic-scope";
@@ -15,6 +15,7 @@ const LEDGER_ROLES: ReadonlySet<UserRole> = new Set([
   UserRole.BRANCH_MANAGER,
   UserRole.FINANCE_OFFICER,
   UserRole.CLINIC_ADMIN,
+  UserRole.CLINIC_ASSISTANT,
   UserRole.PHYSICIAN,
 ]);
 
@@ -206,6 +207,9 @@ export class RevenueService {
 
   async create(tenantId: string, dto: CreateRevenueDto, user: JwtUser): Promise<RevenueEntryDto> {
     this.assertPostRevenue(user.role);
+    if (dto.operationId?.trim()) {
+      return this.createOperationPayment(tenantId, dto, user);
+    }
     const scopeIdsCreate = await fetchClinicScopeIds(this.prisma, tenantId, user);
     if (scopeIdsCreate !== null && !scopeIdsCreate.includes(dto.clinicId)) {
       throw new ForbiddenException("Clinic is outside your assigned scope");
@@ -228,6 +232,85 @@ export class RevenueService {
       include: { clinic: { select: { nameEn: true, nameAr: true } } },
     });
     return this.map(row);
+  }
+
+  private async createOperationPayment(
+    tenantId: string,
+    dto: CreateRevenueDto,
+    user: JwtUser
+  ): Promise<RevenueEntryDto> {
+    const operationId = dto.operationId!.trim();
+    const operation = await this.prisma.operation.findFirst({
+      where: { id: operationId, tenantId },
+      include: {
+        patient: { select: { firstNameEn: true, lastNameEn: true, mrn: true } },
+        clinic: { select: { nameEn: true, nameAr: true } },
+        clinician: {
+          select: {
+            displayName: true,
+            employee: { select: { firstNameEn: true, lastNameEn: true } },
+          },
+        },
+      },
+    });
+    if (!operation) throw new NotFoundException("Operation not found");
+    if (operation.status === OperationStatus.CANCELLED) {
+      throw new BadRequestException("Cannot record payment for a cancelled operation");
+    }
+    if (operation.status === OperationStatus.COMPLETED) {
+      throw new BadRequestException("This operation is already fully paid and completed");
+    }
+
+    const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
+    if (scopeIds !== null && !scopeIds.includes(operation.clinicId)) {
+      throw new ForbiddenException("Operation is outside your assigned clinics");
+    }
+
+    const balance = Number(operation.totalCost) - Number(operation.paidAmount);
+    const netAmount = dto.netAmount;
+    if (netAmount <= 0) {
+      throw new BadRequestException("Payment amount must be greater than zero");
+    }
+    if (netAmount > balance + 0.001) {
+      throw new BadRequestException(`Payment exceeds remaining balance (${balance.toFixed(2)} AED)`);
+    }
+    if (dto.clinicId !== operation.clinicId) {
+      throw new BadRequestException("Clinic must match the operation clinic");
+    }
+
+    const patientName = operation.patient
+      ? `${operation.patient.firstNameEn} ${operation.patient.lastNameEn}`.trim()
+      : operation.patientId;
+    const clinician = operation.clinician;
+    let clinicianName = clinician?.displayName?.trim() ?? "";
+    if (!clinicianName && clinician?.employee) {
+      clinicianName = `${clinician.employee.firstNameEn ?? ""} ${clinician.employee.lastNameEn ?? ""}`.trim();
+    }
+    if (!clinicianName) clinicianName = operation.clinicianId;
+
+    const description =
+      dto.description?.trim() ||
+      `Operation payment · ${patientName} · ${clinicianName} · ${netAmount.toFixed(2)} AED`;
+
+    await this.prisma.operation.update({
+      where: { id: operationId },
+      data: { paidAmount: { increment: netAmount } },
+    });
+
+    return {
+      id: operationId,
+      clinicId: operation.clinicId,
+      clinicNameEn: operation.clinic?.nameEn ?? null,
+      clinicNameAr: operation.clinic?.nameAr ?? null,
+      category: "OPERATION_PAYMENT",
+      description,
+      grossAmount: dto.grossAmount,
+      taxAmount: dto.taxAmount,
+      netAmount,
+      currency: dto.currency,
+      postedAt: new Date(dto.postedAt).toISOString(),
+      status: RevenueStatus.POSTED,
+    };
   }
 
   async clinicBreakdown(tenantId: string, fromStr: string | undefined, toStr: string | undefined, user: JwtUser) {

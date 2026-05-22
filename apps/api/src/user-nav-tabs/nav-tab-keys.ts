@@ -6,6 +6,7 @@ export const VALID_NAV_TAB_KEYS = new Set([
   "patients",
   "encounters",
   "appointments",
+  "operations",
   "clinics",
   "expenses",
   "revenue",
@@ -21,6 +22,7 @@ const FULL: string[] = [
   "patients",
   "encounters",
   "appointments",
+  "operations",
   "clinics",
   "expenses",
   "revenue",
@@ -35,14 +37,15 @@ const ROLE_MAX: Record<UserRole, readonly string[]> = {
   [UserRole.BRANCH_MANAGER]: FULL,
   [UserRole.FINANCE_OFFICER]: FULL,
   [UserRole.HR_OFFICER]: FULL,
-  [UserRole.PHYSICIAN]: ["patients", "encounters", "appointments", "doctor_revenue", "profile", "reports"],
+  [UserRole.PHYSICIAN]: ["patients", "encounters", "appointments", "operations", "doctor_revenue", "profile", "reports"],
   [UserRole.NURSE]: ["patients", "appointments", "encounters", "profile"],
-  [UserRole.RECEPTIONIST]: ["patients", "appointments", "encounters", "profile"],
+  [UserRole.RECEPTIONIST]: ["patients", "appointments", "encounters", "operations", "profile"],
   [UserRole.CLINIC_ADMIN]: [
     "dashboard",
     "patients",
     "appointments",
     "encounters",
+    "operations",
     "clinics",
     "expenses",
     "revenue",
@@ -51,7 +54,7 @@ const ROLE_MAX: Record<UserRole, readonly string[]> = {
     "admin",
     "profile",
   ],
-  [UserRole.CLINIC_ASSISTANT]: ["patients", "appointments", "encounters", "profile"],
+  [UserRole.CLINIC_ASSISTANT]: ["patients", "appointments", "encounters", "operations", "expenses", "revenue", "profile"],
 };
 
 export function maxNavTabsForRole(role: UserRole): Set<string> {

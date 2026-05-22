@@ -6,6 +6,7 @@ import {
   CircleDollarSign,
   LayoutDashboard,
   Receipt,
+  Scissors,
   Settings,
   Stethoscope,
   User,
@@ -30,6 +31,7 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const { pathname } = useLocation();
   const role = useAuthStore((s) => s.user?.role);
   const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
+  const isPhysician = role === "physician";
   const showRevenue = canViewRevenue(role) && showNavItem(role, "revenue", navTabKeys);
 
   return (
@@ -55,7 +57,13 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
       {showNavItem(role, "appointments", navTabKeys) ? (
         <NavLink to="/appointments" className={navClass} onClick={() => onNavigate?.()}>
           <CalendarDays className="size-4 shrink-0" />
-          {t("nav.appointments")}
+          {isPhysician ? t("appointments.myNav", "My appointments") : t("nav.appointments")}
+        </NavLink>
+      ) : null}
+      {showNavItem(role, "operations", navTabKeys) ? (
+        <NavLink to="/operations" className={navClass} onClick={() => onNavigate?.()}>
+          <Scissors className="size-4 shrink-0" />
+          {t("nav.operations")}
         </NavLink>
       ) : null}
       {showNavItem(role, "clinics", navTabKeys) ? (

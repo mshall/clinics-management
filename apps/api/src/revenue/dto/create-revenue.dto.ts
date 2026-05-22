@@ -50,4 +50,9 @@ export class CreateRevenueDto {
   @IsOptional()
   @IsEnum(RevenueStatus)
   status?: RevenueStatus;
+
+  @ApiPropertyOptional({ description: "When set, records a payment against this operation and updates paid amount" })
+  @IsOptional()
+  @IsString()
+  operationId?: string;
 }

@@ -9,6 +9,7 @@ import { EncountersModule } from "./encounters/encounters.module";
 import { ExpensesModule } from "./expenses/expenses.module";
 import { HealthModule } from "./health/health.module";
 import { HrModule } from "./hr/hr.module";
+import { OperationsModule } from "./operations/operations.module";
 import { PatientsModule } from "./patients/patients.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { ReportsModule } from "./reports/reports.module";
@@ -32,6 +33,7 @@ import { UsersModule } from "./users/users.module";
     RevenueModule,
     HrModule,
     AppointmentsModule,
+    OperationsModule,
     AdminModule,
     ReportsModule,
     UsersModule,

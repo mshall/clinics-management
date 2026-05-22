@@ -6,6 +6,7 @@ import type {
   AppointmentDto,
   ClinicDetailDto,
   ClinicRevenueBreakdownDto,
+  ClinicPhysicianDto,
   RevenueTotalsDto,
   AttendanceDto,
   EmployeeDto,
@@ -13,6 +14,7 @@ import type {
   EncounterDocumentDto,
   EncounterMedicationDto,
   ExpenseDto,
+  OperationDto,
   HrSummaryDto,
   LeaveRequestDto,
   RevenueEntryDto,
@@ -151,6 +153,51 @@ export function useClinicQuery(id: string | undefined) {
   });
 }
 
+export function useSchedulingPhysiciansQuery(params: {
+  clinicId?: string;
+  search?: string;
+  enabled?: boolean;
+}) {
+  const hasToken = useHasAuthToken();
+  const { enabled = true, clinicId, search } = params;
+  const q = new URLSearchParams();
+  if (clinicId?.trim()) q.set("clinicId", clinicId.trim());
+  if (search?.trim()) q.set("search", search.trim());
+  return useQuery({
+    queryKey: ["clinicians", "scheduling", clinicId ?? "", search ?? ""],
+    queryFn: () => apiGet<ClinicPhysicianDto[]>(`/api/v1/clinics/physicians/scheduling?${q.toString()}`),
+    enabled: enabled && hasToken,
+  });
+}
+
+export function useClinicPhysiciansQuery(clinicId: string | undefined, search?: string) {
+  const hasToken = useHasAuthToken();
+  const q = new URLSearchParams();
+  if (search?.trim()) q.set("search", search.trim());
+  const qs = q.toString();
+  return useQuery({
+    queryKey: ["clinic", clinicId, "physicians", search ?? ""],
+    queryFn: () => apiGet<ClinicPhysicianDto[]>(`/api/v1/clinics/${clinicId}/physicians${qs ? `?${qs}` : ""}`),
+    enabled: Boolean(clinicId) && hasToken,
+  });
+}
+
+export function useAvailableClinicPhysiciansQuery(
+  clinicId: string | undefined,
+  search?: string,
+  enabled = true
+) {
+  const hasToken = useHasAuthToken();
+  const q = new URLSearchParams();
+  if (search?.trim()) q.set("search", search.trim());
+  const qs = q.toString();
+  return useQuery({
+    queryKey: ["clinic", clinicId, "physicians", "available", search ?? ""],
+    queryFn: () => apiGet<ClinicPhysicianDto[]>(`/api/v1/clinics/${clinicId}/physicians/available${qs ? `?${qs}` : ""}`),
+    enabled: Boolean(clinicId) && enabled && hasToken,
+  });
+}
+
 export interface EncountersListParams {
   patientId?: string;
   /** Filter ledger by patient name or MRN (server-side). Ignored when patientId is set. */
@@ -271,6 +318,58 @@ export function useExpensesQuery(params: ExpensesListParams = {}) {
       params.sortOrder,
     ],
     queryFn: () => apiGet<Paginated<ExpenseDto>>(`/api/v1/expenses?${q.toString()}`),
+  });
+}
+
+export interface OperationsListParams {
+  from: string;
+  to: string;
+  clinicId?: string;
+  status?: string;
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}
+
+export function useOperationsQuery(params: OperationsListParams) {
+  const storeFrom = useDateRangeStore((s) => s.from);
+  const storeTo = useDateRangeStore((s) => s.to);
+  const from = params.from ?? storeFrom;
+  const to = params.to ?? storeTo;
+  const q = new URLSearchParams();
+  q.set("from", from);
+  q.set("to", to);
+  q.set("page", String(params.page ?? 1));
+  q.set("pageSize", String(params.pageSize ?? 10));
+  if (params.clinicId?.trim()) q.set("clinicId", params.clinicId.trim());
+  if (params.status?.trim()) q.set("status", params.status.trim());
+  if (params.sortBy) q.set("sortBy", params.sortBy);
+  if (params.sortOrder) q.set("sortOrder", params.sortOrder);
+  return useQuery({
+    queryKey: [
+      "operations",
+      from,
+      to,
+      params.clinicId ?? "",
+      params.status ?? "",
+      params.page ?? 1,
+      params.pageSize ?? 10,
+      params.sortBy,
+      params.sortOrder,
+    ],
+    queryFn: () => apiGet<Paginated<OperationDto>>(`/api/v1/operations?${q.toString()}`),
+  });
+}
+
+export function usePayableOperationsQuery(clinicId?: string, enabled = true) {
+  const q = new URLSearchParams();
+  if (clinicId?.trim()) q.set("clinicId", clinicId.trim());
+  const qs = q.toString();
+  return useQuery({
+    queryKey: ["operations", "payable", clinicId ?? ""],
+    queryFn: () => apiGet<OperationDto[]>(`/api/v1/operations/payable${qs ? `?${qs}` : ""}`),
+    enabled,
   });
 }
 

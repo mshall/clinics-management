@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useClinicsQuery, useClinicRevenueBreakdownQuery, useRevenueQuery, useRevenueTotalsQuery } from "@/lib/api-hooks";
+import { useClinicsQuery, useClinicRevenueBreakdownQuery, usePayableOperationsQuery, useRevenueQuery, useRevenueTotalsQuery } from "@/lib/api-hooks";
 import type { RevenueEntryDto } from "@/lib/api-types";
 import { ApiError, apiPost } from "@/lib/http";
 import { columnFilterIncludes } from "@/lib/utils";
@@ -16,7 +16,7 @@ import { useDateRangeStore } from "@/stores/date-range-store";
 import { useAuthStore } from "@/stores/auth-store";
 
 /** VISIT_FEE = encounter consultation; APPOINTMENT_FEE = legacy rows only (fees no longer booked on appointments). */
-const REV_CATEGORIES = ["VISIT", "VISIT_FEE", "PROCEDURE", "LAB", "PHARMACY", "IMAGING", "APPOINTMENT_FEE", "OTHER"] as const;
+const REV_CATEGORIES = ["VISIT", "VISIT_FEE", "PROCEDURE", "LAB", "PHARMACY", "IMAGING", "APPOINTMENT_FEE", "OPERATION_PAYMENT", "OTHER"] as const;
 
 function clinicDisplayName(r: RevenueEntryDto, lng: string): string {
   const en = r.clinicNameEn?.trim();
@@ -68,6 +68,7 @@ export function RevenuePage() {
     }
   }, [singleManagedClinic?.id]);
   const [category, setCategory] = useState("VISIT");
+  const [operationId, setOperationId] = useState("");
   const [gross, setGross] = useState("");
   const [vatPercent, setVatPercent] = useState("");
   const [formErr, setFormErr] = useState<string | null>(null);
@@ -84,24 +85,38 @@ export function RevenuePage() {
     setPage(1);
   };
 
+  const { data: payableOps = [] } = usePayableOperationsQuery(clinicId || filterClinicId || undefined);
+  const selectedOperation = useMemo(
+    () => payableOps.find((o) => o.id === operationId) ?? null,
+    [payableOps, operationId]
+  );
+  const operationBalance = selectedOperation?.balanceDue ?? 0;
+
   const createMut = useMutation({
-    mutationFn: () =>
-      apiPost<unknown>("/api/v1/revenue", {
-        clinicId,
-        category,
-        description: `Manual entry ${new Date().toISOString().slice(0, 10)}`,
+    mutationFn: () => {
+      const payload: Record<string, unknown> = {
+        clinicId: operationId && selectedOperation ? selectedOperation.clinicId : clinicId,
+        category: operationId ? "OPERATION_PAYMENT" : category,
+        description: operationId
+          ? `Operation payment · ${selectedOperation?.patientName ?? selectedOperation?.patientMrn ?? operationId}`
+          : `Manual entry ${new Date().toISOString().slice(0, 10)}`,
         grossAmount: grossN,
         taxAmount: taxComputed,
         netAmount: netComputed,
         currency: "AED",
         postedAt: new Date().toISOString(),
-      }),
+      };
+      if (operationId) payload.operationId = operationId;
+      return apiPost<unknown>("/api/v1/revenue", payload);
+    },
     onSuccess: () => {
       setFormErr(null);
       void qc.invalidateQueries({ queryKey: ["revenue"] });
+      void qc.invalidateQueries({ queryKey: ["operations"] });
       void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
       setGross("");
       setVatPercent("");
+      setOperationId("");
     },
     onError: (e: unknown) => {
       if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
@@ -118,6 +133,9 @@ export function RevenuePage() {
   const vatClamped = Number.isFinite(vatN) ? Math.min(100, Math.max(0, vatN)) : 0;
   const taxComputed = Math.round(grossN * (vatClamped / 100) * 100) / 100;
   const netComputed = Math.round((grossN - taxComputed) * 100) / 100;
+
+  const paymentExceedsBalance =
+    operationId.length > 0 && netComputed > 0 && netComputed > operationBalance + 0.001;
 
   const filteredRevenueRows = useMemo(() => {
     const loc = i18n.language === "ar" ? "ar-AE" : "en-AE";
@@ -294,6 +312,45 @@ export function RevenuePage() {
           <CardTitle className="text-base">{t("revenue.post")}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+          <div className="space-y-2 sm:col-span-2 lg:col-span-6">
+            <Label>{t("revenue.linkOperation", "Link to operation (optional)")}</Label>
+            <select
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={operationId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setOperationId(id);
+                if (id) {
+                  const op = payableOps.find((o) => o.id === id);
+                  if (op) {
+                    setClinicId(op.clinicId);
+                    const balance = op.balanceDue ?? 0;
+                    setGross(String(balance));
+                    setVatPercent("");
+                  }
+                }
+              }}
+            >
+              <option value="">{t("revenue.noOperation", "No operation — general revenue")}</option>
+              {payableOps.map((o) => {
+                const patient = o.patientName?.trim() || o.patientMrn || o.patientId.slice(0, 8);
+                const balance = o.balanceDue ?? o.totalCost - (o.paidAmount ?? 0);
+                return (
+                  <option key={o.id} value={o.id}>
+                    {patient} · {new Date(o.operationDate).toLocaleDateString(i18n.language === "ar" ? "ar-AE" : "en-AE")} ·{" "}
+                    {money(balance)} {t("operations.balanceDue", "Balance")}
+                  </option>
+                );
+              })}
+            </select>
+            {selectedOperation ? (
+              <p className="text-xs text-muted-foreground">
+                {t("revenue.operationBalanceHint", { amount: money(operationBalance), defaultValue: "Remaining balance: {{amount}}" })}
+                {" · "}
+                {t("revenue.operationPaymentHint", "Payment amount will update the operation paid total.")}
+              </p>
+            ) : null}
+          </div>
           <div className="space-y-2">
             <Label>{t("revenue.clinic")}</Label>
             {singleManagedClinic ? (
@@ -319,8 +376,9 @@ export function RevenuePage() {
             <Label>{t("revenue.category")}</Label>
             <select
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              value={category}
+              value={operationId ? "OPERATION_PAYMENT" : category}
               onChange={(e) => setCategory(e.target.value)}
+              disabled={operationId.length > 0}
             >
               {REV_CATEGORIES.map((c) => (
                 <option key={c} value={c}>
@@ -351,10 +409,24 @@ export function RevenuePage() {
             <Input className="ltr-nums bg-muted/50" readOnly value={gross.trim() ? money(netComputed) : ""} type="text" />
           </div>
           <div className="flex items-end">
-            <CreateActionButton type="button" disabled={!clinicId || !gross || createMut.isPending} onClick={() => createMut.mutate()}>
+            <CreateActionButton
+              type="button"
+              disabled={
+                !(operationId ? selectedOperation?.clinicId : clinicId) ||
+                !gross ||
+                createMut.isPending ||
+                paymentExceedsBalance
+              }
+              onClick={() => createMut.mutate()}
+            >
               {t("revenue.submit")}
             </CreateActionButton>
           </div>
+          {paymentExceedsBalance ? (
+            <p className="text-sm text-destructive sm:col-span-full">
+              {t("revenue.operationBalanceHint", { amount: money(operationBalance), defaultValue: "Remaining balance: {{amount}}" })}
+            </p>
+          ) : null}
           {formErr ? <p className="text-sm text-destructive sm:col-span-full">{formErr}</p> : null}
         </CardContent>
       </Card>

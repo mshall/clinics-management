@@ -47,6 +47,7 @@ const EXPENSE_ROLES: Set<UserRole> = new Set([
   UserRole.BRANCH_MANAGER,
   UserRole.FINANCE_OFFICER,
   UserRole.HR_OFFICER,
+  UserRole.CLINIC_ASSISTANT,
 ]);
 
 @ApiTags("expenses")

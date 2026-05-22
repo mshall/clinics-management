@@ -17,6 +17,7 @@ const NAV_I18N: Record<NavItemKey, string> = {
   patients: "nav.patients",
   encounters: "nav.encounters",
   appointments: "nav.appointments",
+  operations: "nav.operations",
   clinics: "nav.clinics",
   expenses: "nav.expenses",
   revenue: "nav.revenue",

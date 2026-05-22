@@ -1,7 +1,7 @@
 import type { DemoRole } from "@/lib/roles";
 
 /** Roles that must not see the revenue ledger (group / finance / branch / clinic admin / physician). */
-const NO_REVENUE: ReadonlySet<DemoRole> = new Set(["nurse", "receptionist", "hr_officer", "clinic_assistant"]);
+const NO_REVENUE: ReadonlySet<DemoRole> = new Set(["nurse", "receptionist", "hr_officer"]);
 
 export function canViewRevenue(role: DemoRole | undefined): boolean {
   if (!role) return false;

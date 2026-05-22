@@ -149,6 +149,34 @@ export interface AppointmentDto {
   patientName?: string | null;
 }
 
+export interface OperationDto {
+  id: string;
+  clinicId: string;
+  clinicNameEn?: string | null;
+  clinicNameAr?: string | null;
+  patientId: string;
+  patientMrn?: string | null;
+  patientName?: string | null;
+  clinicianId: string;
+  clinicianName?: string | null;
+  operationDate: string;
+  totalCost: number;
+  downPayment: number;
+  paidAmount: number;
+  balanceDue: number;
+  comments: string | null;
+  status: string;
+  createdAt: string;
+}
+
+export interface ClinicPhysicianDto {
+  userId: string;
+  displayName: string;
+  email: string | null;
+  employeeId: string;
+  jobTitle: string | null;
+}
+
 export interface HrSummaryDto {
   employeeCount: number;
   monthlyPayrollEstimate: number;

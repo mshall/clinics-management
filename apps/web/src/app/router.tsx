@@ -11,6 +11,7 @@ import { DashboardPage } from "@/features/dashboard/dashboard-page";
 import { EncounterDetailPage } from "@/features/encounters/encounter-detail-page";
 import { EncountersListPage } from "@/features/encounters/encounters-list-page";
 import { ExpensesPage } from "@/features/expenses/expenses-page";
+import { OperationsPage } from "@/features/operations/operations-page";
 import { EmployeeDetailPage } from "@/features/hr/employee-detail-page";
 import { HrPage } from "@/features/hr/hr-page";
 import { PatientDetailPage } from "@/features/patients/patient-detail-page";
@@ -38,6 +39,7 @@ export const router = createBrowserRouter([
       { path: "encounters/demo", element: <Navigate to="/encounters" replace /> },
       { path: "appointments", element: <AppointmentsPage /> },
       { path: "appointments/:id", element: <AppointmentDetailPage /> },
+      { path: "operations", element: <OperationsPage /> },
       { path: "clinics", element: <ClinicsPage /> },
       { path: "clinics/:id", element: <ClinicDetailPage /> },
       { path: "expenses", element: <ExpensesPage /> },

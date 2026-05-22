@@ -6,17 +6,20 @@ test.describe("Auth & RBAC smoke", () => {
     await login(page, "physician@kiorly.com");
     await expect(page).toHaveURL(/\/patients$/);
     await expect(page.getByRole("link", { name: /appointments/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /operations/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /doctor revenue/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /^revenue$/i })).not.toBeVisible();
   });
 
-  test("assistant only sees patients, appointments, encounters", async ({ page }) => {
+  test("assistant sees patients, appointments, encounters, revenue, and expenses", async ({ page }) => {
     await login(page, "assistant@kiorly.com");
     await expect(page).toHaveURL(/\/patients$/);
     await expect(page.getByRole("link", { name: /appointments/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /operations/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /encounters/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^revenue$/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /expenses/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /^admin$/i })).not.toBeVisible();
-    await expect(page.getByRole("link", { name: /revenue/i })).not.toBeVisible();
   });
 
   test("clinic admin opens administration with staff and governance", async ({ page }) => {

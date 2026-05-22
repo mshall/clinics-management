@@ -76,6 +76,12 @@ enum AppointmentStatus {
   CANCELLED
 }
 
+enum OperationStatus {
+  SCHEDULED
+  CANCELLED
+  COMPLETED
+}
+
 enum AttendanceStatus {
   PRESENT
   LATE
@@ -104,6 +110,7 @@ model Tenant {
   expenses       Expense[]
   employees      Employee[]
   appointments   Appointment[]
+  operations     Operation[]
   auditLogs              AuditLog[]
   diagnoses              Diagnosis[]
   encounterMedications   EncounterMedication[]
@@ -124,6 +131,8 @@ model User {
   employee     Employee?
   encounters   Encounter[]    @relation("EncounterClinician")
   appointments Appointment[] @relation("AppointmentClinician")
+  operationsPerformed Operation[] @relation("OperationClinician")
+  operationsCreated   Operation[] @relation("OperationCreatedBy")
   auditLogsAsActor AuditLog[] @relation("AuditLogActor")
   clinicAdminScopes ClinicAdminScope[]
   navTabGrant       UserNavTabGrant? @relation("UserNavTabGrantUser")
@@ -176,6 +185,7 @@ model Clinic {
   expenses         Expense[]
   employees        Employee[]
   appointments     Appointment[]
+  operations       Operation[]
   auditLogs        AuditLog[]
   clinicAdminScopes ClinicAdminScope[]
   createdAt        DateTime        @default(now())
@@ -218,6 +228,7 @@ model Patient {
   deletedAt    DateTime?
   encounters   Encounter[]
   appointments Appointment[]
+  operations   Operation[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -332,6 +343,8 @@ model RevenueEntry {
   appointment   Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   encounterId   String?
   encounter     Encounter?    @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+  operationId   String?
+  operation     Operation?    @relation(fields: [operationId], references: [id], onDelete: SetNull)
   category      String
   description   String?
   grossAmount   Decimal       @db.Decimal(14, 2)
@@ -346,6 +359,7 @@ model RevenueEntry {
   @@index([tenantId, clinicId, postedAt])
   @@index([appointmentId])
   @@index([encounterId])
+  @@index([operationId])
 }
 
 model Expense {
@@ -449,6 +463,33 @@ model Appointment {
   updatedAt      DateTime          @updatedAt
 
   @@index([tenantId, clinicId, startsAt])
+  @@index([patientId])
+}
+
+model Operation {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId        String
+  clinic          Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patientId       String
+  patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  clinicianId     String
+  clinician       User     @relation("OperationClinician", fields: [clinicianId], references: [id], onDelete: Restrict)
+  createdByUserId String?
+  createdBy       User?    @relation("OperationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  operationDate   DateTime
+  totalCost       Decimal  @db.Decimal(14, 2)
+  downPayment     Decimal         @default(0) @db.Decimal(14, 2)
+  paidAmount      Decimal         @default(0) @db.Decimal(14, 2)
+  comments        String?
+  status          OperationStatus @default(SCHEDULED)
+  revenueEntries  RevenueEntry[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId, clinicId, operationDate])
+  @@index([tenantId, clinicianId, operationDate])
   @@index([patientId])
 }
 

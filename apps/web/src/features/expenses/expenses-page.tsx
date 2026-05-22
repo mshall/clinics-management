@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Receipt } from "lucide-react";
+import { Eye, Receipt } from "lucide-react";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { TablePagination } from "@/components/table-pagination";
 import { useTranslation } from "react-i18next";
@@ -55,11 +55,30 @@ export function ExpensesPage() {
       setFilterClinicId(singleManagedClinic.id);
     }
   }, [singleManagedClinic?.id]);
+
+  useEffect(() => {
+    return () => {
+      if (viewerUrlRef.current) {
+        URL.revokeObjectURL(viewerUrlRef.current);
+        viewerUrlRef.current = null;
+      }
+    };
+  }, []);
+
+  const closeProofViewer = () => {
+    if (viewerUrlRef.current) {
+      URL.revokeObjectURL(viewerUrlRef.current);
+      viewerUrlRef.current = null;
+    }
+    setProofViewer(null);
+  };
   const [category, setCategory] = useState("UTILITIES");
   const [vendor, setVendor] = useState("");
   const [amount, setAmount] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
   const proofInputRef = useRef<HTMLInputElement>(null);
+  const viewerUrlRef = useRef<string | null>(null);
+  const [proofViewer, setProofViewer] = useState<{ filename: string; url: string; contentType: string } | null>(null);
   const [formErr, setFormErr] = useState<string | null>(null);
   const [efCategory, setEfCategory] = useState("");
   const [efVendor, setEfVendor] = useState("");
@@ -124,13 +143,26 @@ export function ExpensesPage() {
         if (!columnFilterIncludes(ds, efDate) && !columnFilterIncludes(e.incurredAt, efDate)) return false;
       }
       if (efProof.trim()) {
-        const proofHay = e.hasProof ? "yes y download proof file" : "no none —";
+        const proofHay = e.hasProof ? "yes y view download proof file" : "no none —";
         if (!columnFilterIncludes(proofHay, efProof)) return false;
       }
       return true;
     });
   }, [expenses, efCategory, efVendor, efAmount, efStatus, efDate, efProof, i18n.language]);
   const selectedPeriodTotal = useMemo(() => expenses.reduce((sum, e) => sum + e.amount, 0), [expenses]);
+
+  const viewProof = async (id: string, filename: string | null) => {
+    try {
+      const { blob, contentType } = await apiFetchBlob(`/api/v1/expenses/${id}/proof`);
+      const url = URL.createObjectURL(blob);
+      if (viewerUrlRef.current) URL.revokeObjectURL(viewerUrlRef.current);
+      viewerUrlRef.current = url;
+      setProofViewer({ filename: filename?.trim() || "expense-proof", url, contentType });
+    } catch (e) {
+      if (e instanceof ApiError) alert(e.message);
+      else alert(e instanceof Error ? e.message : String(e));
+    }
+  };
 
   const downloadProof = async (id: string, filename: string | null) => {
     try {
@@ -152,6 +184,45 @@ export function ExpensesPage() {
 
   return (
     <div className="space-y-6">
+      {proofViewer ? (
+        <div
+          role="dialog"
+          aria-modal
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={closeProofViewer}
+        >
+          <div
+            className="relative max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-lg border border-border bg-card shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-border px-4 py-2">
+              <p className="truncate text-sm font-medium">{proofViewer.filename}</p>
+              <div className="flex shrink-0 gap-2">
+                <Button type="button" variant="outline" size="sm" asChild>
+                  <a href={proofViewer.url} download={proofViewer.filename}>
+                    {t("expenses.downloadProof", "Download")}
+                  </a>
+                </Button>
+                <Button type="button" variant="secondary" size="sm" onClick={closeProofViewer}>
+                  {t("common.close")}
+                </Button>
+              </div>
+            </div>
+            <div className="max-h-[calc(90vh-3rem)] overflow-auto p-4">
+              {proofViewer.contentType.startsWith("image/") ? (
+                <img src={proofViewer.url} alt="" className="mx-auto max-h-[70vh] max-w-full object-contain" />
+              ) : proofViewer.contentType.includes("pdf") ? (
+                <iframe title={proofViewer.filename} src={proofViewer.url} className="h-[70vh] w-full rounded border" />
+              ) : (
+                <a href={proofViewer.url} download={proofViewer.filename} className="text-primary underline">
+                  {t("expenses.downloadProof", "Download")}
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("expenses.title")}</h1>
         <p className="text-muted-foreground">{t("expenses.subtitle")}</p>
@@ -419,15 +490,27 @@ export function ExpensesPage() {
                       </td>
                       <td className="px-3 py-2">
                         {e.hasProof ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="h-8 text-xs"
-                            onClick={() => void downloadProof(e.id, e.proofOriginalName)}
-                          >
-                            {t("expenses.downloadProof", "Download")}
-                          </Button>
+                          <div className="flex flex-wrap gap-1">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-8 gap-1 text-xs"
+                              onClick={() => void viewProof(e.id, e.proofOriginalName)}
+                            >
+                              <Eye className="h-3.5 w-3.5" aria-hidden />
+                              {t("expenses.viewProof", "View")}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 text-xs"
+                              onClick={() => void downloadProof(e.id, e.proofOriginalName)}
+                            >
+                              {t("expenses.downloadProof", "Download")}
+                            </Button>
+                          </div>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}

@@ -5,6 +5,7 @@ export type NavItemKey =
   | "patients"
   | "encounters"
   | "appointments"
+  | "operations"
   | "clinics"
   | "expenses"
   | "revenue"
@@ -19,6 +20,7 @@ const FULL: NavItemKey[] = [
   "patients",
   "encounters",
   "appointments",
+  "operations",
   "clinics",
   "expenses",
   "revenue",
@@ -33,14 +35,15 @@ const ROLE_KEYS: Record<DemoRole, NavItemKey[]> = {
   branch_manager: FULL,
   finance_officer: FULL,
   hr_officer: FULL,
-  physician: ["patients", "encounters", "appointments", "doctor_revenue", "profile", "reports"],
+  physician: ["patients", "encounters", "appointments", "operations", "doctor_revenue", "profile", "reports"],
   nurse: ["patients", "appointments", "encounters", "profile"],
-  receptionist: ["patients", "appointments", "encounters", "profile"],
+  receptionist: ["patients", "appointments", "encounters", "operations", "profile"],
   clinic_admin: [
     "dashboard",
     "patients",
     "appointments",
     "encounters",
+    "operations",
     "clinics",
     "expenses",
     "revenue",
@@ -49,7 +52,7 @@ const ROLE_KEYS: Record<DemoRole, NavItemKey[]> = {
     "admin",
     "profile",
   ],
-  clinic_assistant: ["patients", "appointments", "encounters", "profile"],
+  clinic_assistant: ["patients", "appointments", "encounters", "operations", "expenses", "revenue", "profile"],
 };
 
 export function navKeysForRole(role: DemoRole | undefined): Set<NavItemKey> {
@@ -63,6 +66,7 @@ export const NAV_ITEM_PATH: Record<NavItemKey, string> = {
   patients: "/patients",
   encounters: "/encounters",
   appointments: "/appointments",
+  operations: "/operations",
   clinics: "/clinics",
   expenses: "/expenses",
   revenue: "/revenue",
@@ -78,6 +82,7 @@ const HOME_PRIORITY: NavItemKey[] = [
   "patients",
   "encounters",
   "appointments",
+  "operations",
   "clinics",
   "expenses",
   "revenue",
