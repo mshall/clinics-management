@@ -86,6 +86,7 @@ enum AttendanceStatus {
 enum EncounterDocumentKind {
   LAB
   RADIOLOGY
+  PRESCRIPTION
 }
 
 model Tenant {

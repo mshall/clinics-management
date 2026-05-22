@@ -22,7 +22,7 @@ export interface EncounterMedicationDto {
 
 export interface EncounterDocumentDto {
   id: string;
-  kind: "LAB" | "RADIOLOGY";
+  kind: "LAB" | "RADIOLOGY" | "PRESCRIPTION";
   originalFileName: string;
   mimeType: string;
   sizeBytes: number;

@@ -44,7 +44,7 @@ export class EncounterDocumentDto {
   @ApiProperty()
   id!: string;
 
-  @ApiProperty({ enum: ["LAB", "RADIOLOGY"] })
+  @ApiProperty({ enum: ["LAB", "RADIOLOGY", "PRESCRIPTION"] })
   kind!: string;
 
   @ApiProperty()

@@ -1,10 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
+  Ban,
   Eye,
   FileText,
+  FileUp,
   FlaskConical,
   Heart,
+  Lock,
   Pill,
   Ruler,
   Scale,
@@ -18,11 +21,14 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { resolvePatientListLabel } from "@/lib/patient-display";
 import { ENCOUNTER_VISIT_TYPES } from "@/lib/visit-types";
@@ -30,6 +36,23 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useEncounterQuery } from "@/lib/api-hooks";
 import type { EncounterDetailDto, EncounterDocumentDto } from "@/lib/api-types";
 import { ApiError, apiDelete, apiFetchBlob, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
+import { cn } from "@/lib/utils";
+
+function apiErrorMessage(e: unknown): string {
+  if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
+    return String((e.body as { message?: string }).message);
+  }
+  return e instanceof Error ? e.message : String(e);
+}
+
+function encounterStatusLabel(t: (key: string, fallback?: string) => string, code: string): string {
+  const map: Record<string, string> = {
+    DRAFT: t("encounters.statusDraft", "Draft"),
+    AMENDED: t("encounters.statusAmended", "Amended"),
+    FINALIZED: t("encounters.statusFinalized", "Finalized"),
+  };
+  return map[code] ?? code;
+}
 
 function numOrUndef(s: string): number | undefined {
   const t = s.trim();
@@ -37,6 +60,9 @@ function numOrUndef(s: string): number | undefined {
   const n = Number.parseFloat(t);
   return Number.isFinite(n) ? n : undefined;
 }
+
+type DocKind = "LAB" | "RADIOLOGY" | "PRESCRIPTION";
+type MedTab = "none" | "manual" | "prescription";
 
 export function EncounterDetailPage() {
   const { t, i18n } = useTranslation();
@@ -58,16 +84,18 @@ export function EncounterDetailPage() {
   const [temperature, setTemperature] = useState("");
   const [weightKg, setWeightKg] = useState("");
   const [heightCm, setHeightCm] = useState("");
-  const [noMedications, setNoMedications] = useState(false);
   const [drugName, setDrugName] = useState("");
   const [dosage, setDosage] = useState("");
   const [frequency, setFrequency] = useState("");
-  const [msg, setMsg] = useState<string | null>(null);
-  const [err, setErr] = useState<string | null>(null);
+  const [noMedications, setNoMedications] = useState(false);
+  const [medTab, setMedTab] = useState<MedTab>("manual");
+  const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false);
+  const [noMedsConfirmOpen, setNoMedsConfirmOpen] = useState(false);
   const [viewer, setViewer] = useState<{ doc: EncounterDocumentDto; url: string; contentType: string } | null>(null);
   const viewerUrlRef = useRef<string | null>(null);
   const replaceFileRef = useRef<HTMLInputElement>(null);
-  const pendingReplaceRef = useRef<{ docId: string; kind: "LAB" | "RADIOLOGY" } | null>(null);
+  const prescriptionFileRef = useRef<HTMLInputElement>(null);
+  const pendingReplaceRef = useRef<{ docId: string; kind: DocKind } | null>(null);
 
   useEffect(() => {
     if (!enc) return;
@@ -85,7 +113,8 @@ export function EncounterDetailPage() {
     setWeightKg(enc.weightKg != null ? String(enc.weightKg) : "");
     setHeightCm(enc.heightCm != null ? String(enc.heightCm) : "");
     setNoMedications(enc.noMedications ?? false);
-  }, [enc?.id]);
+    if (enc.noMedications) setMedTab("none");
+  }, [enc?.id, enc?.noMedications]);
 
   useEffect(() => {
     return () => {
@@ -113,18 +142,6 @@ export function EncounterDetailPage() {
     void qc.invalidateQueries({ queryKey: ["appointments"] });
   };
 
-  const noMedMutation = useMutation({
-    mutationFn: (v: boolean) => apiPatch<EncounterDetailDto>(`/api/v1/encounters/${id}`, { noMedications: v }),
-    onSuccess: (data) => {
-      setNoMedications(data.noMedications);
-      setErr(null);
-      invalidate();
-    },
-    onError: (e: unknown) => {
-      setErr(e instanceof Error ? e.message : String(e));
-    },
-  });
-
   const saveMutation = useMutation({
     mutationFn: async () => {
       return apiPatch<EncounterDetailDto>(`/api/v1/encounters/${id}`, {
@@ -144,14 +161,16 @@ export function EncounterDetailPage() {
         heightCm: numOrUndef(heightCm),
       });
     },
-    onSuccess: () => {
-      setErr(null);
-      setMsg(t("encounters.saved"));
+    onSuccess: (data) => {
       invalidate();
+      toast.success(
+        t("encounters.savedWithStatus", "Encounter saved. Status: {{status}}.", {
+          status: encounterStatusLabel(t, data.status),
+        })
+      );
     },
     onError: (e: unknown) => {
-      setMsg(null);
-      setErr(e instanceof Error ? e.message : String(e));
+      toast.error(apiErrorMessage(e));
     },
   });
 
@@ -167,15 +186,12 @@ export function EncounterDetailPage() {
       setDosage("");
       setFrequency("");
       setNoMedications(false);
-      setErr(null);
-      setMsg(t("encounters.medAdded"));
+      setMedTab("manual");
+      toast.success(t("encounters.medAdded"));
       invalidate();
     },
     onError: (e: unknown) => {
-      setMsg(null);
-      if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
-        setErr(String((e.body as { message?: string }).message));
-      } else setErr(e instanceof Error ? e.message : String(e));
+      toast.error(apiErrorMessage(e));
     },
   });
 
@@ -184,33 +200,67 @@ export function EncounterDetailPage() {
     onSuccess: () => {
       invalidate();
     },
-    onError: (e: unknown) => setErr(e instanceof Error ? e.message : String(e)),
+    onError: (e: unknown) => toast.error(apiErrorMessage(e)),
   });
 
+  const noMedMutation = useMutation({
+    mutationFn: (v: boolean) => apiPatch<EncounterDetailDto>(`/api/v1/encounters/${id}`, { noMedications: v }),
+    onSuccess: (data) => {
+      setNoMedications(data.noMedications);
+      setNoMedsConfirmOpen(false);
+      if (data.noMedications) setMedTab("none");
+      invalidate();
+    },
+    onError: (e: unknown) => toast.error(apiErrorMessage(e)),
+  });
+
+  const selectMedTab = (tab: MedTab) => {
+    if (tab === medTab || noMedMutation.isPending) return;
+    if (!draft) {
+      setMedTab(tab);
+      return;
+    }
+    if (tab === "none") {
+      if (noMedications) return;
+      const hasData = (enc?.medications?.length ?? 0) > 0 || (enc?.documents?.some((d) => d.kind === "PRESCRIPTION") ?? false);
+      if (hasData) {
+        setNoMedsConfirmOpen(true);
+        return;
+      }
+      noMedMutation.mutate(true);
+      return;
+    }
+    if (noMedications) {
+      noMedMutation.mutate(false, { onSuccess: () => setMedTab(tab) });
+      return;
+    }
+    setMedTab(tab);
+  };
+
   const uploadMutation = useMutation({
-    mutationFn: ({ file, kind }: { file: File; kind: "LAB" | "RADIOLOGY" }) => {
+    mutationFn: ({ file, kind }: { file: File; kind: DocKind }) => {
       const fd = new FormData();
       fd.set("file", file);
       fd.set("kind", kind);
       return apiPostFormData<EncounterDocumentDto>(`/api/v1/encounters/${id}/documents`, fd);
     },
-    onSuccess: () => {
-      setErr(null);
-      setMsg(t("encounters.docUploaded"));
+    onSuccess: (_data, variables) => {
+      if (variables.kind === "PRESCRIPTION") {
+        setNoMedications(false);
+        setMedTab("prescription");
+      }
+      toast.success(t("encounters.docUploaded"));
       invalidate();
     },
     onError: (e: unknown) => {
-      setMsg(null);
-      if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
-        setErr(String((e.body as { message?: string }).message));
-      } else setErr(e instanceof Error ? e.message : String(e));
+      toast.error(apiErrorMessage(e));
     },
   });
 
   const removeDocMutation = useMutation({
     mutationFn: (docId: string) => apiDelete(`/api/v1/encounters/${id}/documents/${docId}`),
     onSuccess: () => invalidate(),
-    onError: (e: unknown) => setErr(e instanceof Error ? e.message : String(e)),
+    onError: (e: unknown) => toast.error(apiErrorMessage(e)),
   });
 
   const openDocument = async (doc: EncounterDocumentDto) => {
@@ -222,11 +272,11 @@ export function EncounterDetailPage() {
       viewerUrlRef.current = url;
       setViewer({ doc, url, contentType });
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : String(e));
+      toast.error(apiErrorMessage(e));
     }
   };
 
-  const startReplace = (docId: string, kind: "LAB" | "RADIOLOGY") => {
+  const startReplace = (docId: string, kind: DocKind) => {
     pendingReplaceRef.current = { docId, kind };
     replaceFileRef.current?.click();
   };
@@ -238,37 +288,34 @@ export function EncounterDetailPage() {
     pendingReplaceRef.current = null;
     if (!file || !id || !pending) return;
     try {
-      setErr(null);
-      setMsg(null);
       await apiDelete(`/api/v1/encounters/${id}/documents/${pending.docId}`);
       const fd = new FormData();
       fd.set("file", file);
       fd.set("kind", pending.kind);
       await apiPostFormData<EncounterDocumentDto>(`/api/v1/encounters/${id}/documents`, fd);
-      setMsg(t("encounters.docReplaced", "Document replaced"));
+      toast.success(t("encounters.docReplaced", "Document replaced"));
       invalidate();
     } catch (e: unknown) {
-      if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
-        setErr(String((e.body as { message?: string }).message));
-      } else setErr(e instanceof Error ? e.message : String(e));
+      toast.error(apiErrorMessage(e));
     }
   };
 
   const finalizeMutation = useMutation({
     mutationFn: () => apiPost<EncounterDetailDto>(`/api/v1/encounters/${id}/finalize`, {}),
     onSuccess: (data) => {
-      setErr(null);
-      setMsg(t("encounters.finalized"));
+      setFinalizeDialogOpen(false);
       invalidate();
       if (data.appointmentId) {
         void qc.invalidateQueries({ queryKey: ["appointment", data.appointmentId] });
       }
+      toast.success(
+        t("encounters.finalizedWithStatus", "Encounter finalized. Status: {{status}}.", {
+          status: encounterStatusLabel(t, data.status),
+        })
+      );
     },
     onError: (e: unknown) => {
-      setMsg(null);
-      if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
-        setErr(String((e.body as { message?: string }).message));
-      } else setErr(e instanceof Error ? e.message : String(e));
+      toast.error(apiErrorMessage(e));
     },
   });
 
@@ -294,10 +341,112 @@ export function EncounterDetailPage() {
 
   const labs = enc.documents?.filter((d) => d.kind === "LAB") ?? [];
   const radiology = enc.documents?.filter((d) => d.kind === "RADIOLOGY") ?? [];
+  const prescriptions = enc.documents?.filter((d) => d.kind === "PRESCRIPTION") ?? [];
   const meds = enc.medications ?? [];
+  const hasMedicationData = meds.length > 0 || prescriptions.length > 0;
+  const medsPanelActive = draft ? !noMedications : !enc.noMedications;
+  const activeMedTab = medTab;
 
   return (
     <div className="space-y-6">
+      <Dialog open={finalizeDialogOpen} onOpenChange={setFinalizeDialogOpen}>
+        <DialogContent
+          className="gap-0 overflow-hidden border-amber-200 p-0 sm:max-w-md dark:border-amber-900/60"
+          aria-describedby="encounter-finalize-desc"
+        >
+          <div className="border-b border-amber-100 bg-gradient-to-br from-amber-50 to-orange-50 px-6 py-5 dark:border-amber-900/40 dark:from-amber-950/80 dark:to-orange-950/40">
+            <DialogHeader className="space-y-3 text-start">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-100 ring-4 ring-amber-100/80 dark:bg-amber-900/60 dark:ring-amber-900/40">
+                <Lock className="h-5 w-5 text-amber-700 dark:text-amber-300" aria-hidden />
+              </div>
+              <DialogTitle className="text-start text-xl">{t("encounters.confirmFinalizeTitle", "Finalize this encounter?")}</DialogTitle>
+            </DialogHeader>
+          </div>
+          <div className="space-y-4 px-6 py-5">
+            <p id="encounter-finalize-desc" className="text-sm leading-relaxed text-muted-foreground">
+              {t(
+                "encounters.confirmFinalizeBody",
+                "Once finalized, SOAP notes, vitals, medications, and documents can no longer be edited. This action cannot be undone."
+              )}
+            </p>
+            <div className="rounded-lg border border-amber-200/80 bg-amber-50/50 px-3 py-2 text-sm dark:border-amber-900/50 dark:bg-amber-950/30">
+              <span className="text-muted-foreground">{t("encounters.status", "Status")}: </span>
+              <span className="font-medium text-amber-900 dark:text-amber-100">
+                {enc ? encounterStatusLabel(t, enc.status) : "—"}
+              </span>
+              <span className="mx-2 text-muted-foreground">→</span>
+              <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                {encounterStatusLabel(t, "FINALIZED")}
+              </span>
+            </div>
+            <div className="flex flex-wrap justify-end gap-2 pt-1">
+              <Button type="button" variant="outline" onClick={() => setFinalizeDialogOpen(false)} disabled={finalizeMutation.isPending}>
+                {t("common.cancel", "Cancel")}
+              </Button>
+              <Button
+                type="button"
+                className="bg-amber-600 text-white hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-500"
+                disabled={finalizeMutation.isPending}
+                onClick={() => finalizeMutation.mutate()}
+              >
+                {finalizeMutation.isPending ? t("common.loading", "Loading…") : t("encounters.confirmFinalizeAction", "Yes, finalize")}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={noMedsConfirmOpen} onOpenChange={setNoMedsConfirmOpen}>
+        <DialogContent
+          className="gap-0 overflow-hidden border-slate-300 p-0 sm:max-w-md dark:border-slate-700"
+          aria-describedby="encounter-no-meds-desc"
+        >
+          <div className="border-b border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 px-6 py-5 dark:border-slate-800 dark:from-slate-900 dark:to-slate-950">
+            <DialogHeader className="space-y-3 text-start">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-200 ring-4 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-800/80">
+                <Ban className="h-5 w-5 text-slate-700 dark:text-slate-300" aria-hidden />
+              </div>
+              <DialogTitle className="text-start text-xl">{t("encounters.confirmNoMedsTitle", "Mark no medications prescribed?")}</DialogTitle>
+            </DialogHeader>
+          </div>
+          <div className="space-y-4 px-6 py-5">
+            <p id="encounter-no-meds-desc" className="text-sm leading-relaxed text-muted-foreground">
+              {t(
+                "encounters.confirmNoMedsBody",
+                "Any medications you added and any uploaded prescriptions will be permanently removed from this encounter."
+              )}
+            </p>
+            {hasMedicationData ? (
+              <ul className="space-y-1 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm dark:bg-destructive/10">
+                {meds.length > 0 ? (
+                  <li className="text-destructive/90 dark:text-destructive">
+                    {t("encounters.confirmNoMedsMedsCount", "{{count}} manual medication(s) will be removed.", { count: meds.length })}
+                  </li>
+                ) : null}
+                {prescriptions.length > 0 ? (
+                  <li className="text-destructive/90 dark:text-destructive">
+                    {t("encounters.confirmNoMedsRxCount", "{{count}} uploaded prescription(s) will be removed.", { count: prescriptions.length })}
+                  </li>
+                ) : null}
+              </ul>
+            ) : null}
+            <div className="flex flex-wrap justify-end gap-2 pt-1">
+              <Button type="button" variant="outline" onClick={() => setNoMedsConfirmOpen(false)} disabled={noMedMutation.isPending}>
+                {t("common.cancel", "Cancel")}
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={noMedMutation.isPending}
+                onClick={() => noMedMutation.mutate(true)}
+              >
+                {noMedMutation.isPending ? t("common.loading", "Loading…") : t("encounters.confirmNoMedsAction", "Yes, remove all")}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <input ref={replaceFileRef} type="file" accept="application/pdf,image/*,text/plain" className="hidden" onChange={onReplaceFilePicked} />
 
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -334,9 +483,6 @@ export function EncounterDetailPage() {
           </Button>
         </div>
       </div>
-
-      {msg ? <p className="text-sm text-emerald-600 dark:text-emerald-400">{msg}</p> : null}
-      {err ? <p className="text-sm text-destructive">{err}</p> : null}
 
       <Card>
         <CardHeader className="pb-2">
@@ -491,7 +637,7 @@ export function EncounterDetailPage() {
                 <Button type="button" variant="secondary" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
                   {t("common.save")}
                 </Button>
-                <Button type="button" onClick={() => finalizeMutation.mutate()} disabled={finalizeMutation.isPending || !canFinalize}>
+                <Button type="button" onClick={() => setFinalizeDialogOpen(true)} disabled={finalizeMutation.isPending || !canFinalize}>
                   {t("encounters.finalize")}
                 </Button>
               </div>
@@ -628,70 +774,178 @@ export function EncounterDetailPage() {
               </CardTitle>
               <CardDescription>{t("encounters.medsHint")}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {draft ? (
-                <label className="flex items-start gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    className="mt-1"
-                    checked={noMedications}
-                    disabled={noMedMutation.isPending}
-                    onChange={(e) => {
-                      const v = e.target.checked;
-                      setNoMedications(v);
-                      noMedMutation.mutate(v);
-                    }}
-                  />
-                  <span>{t("encounters.noMedsCheck")}</span>
-                </label>
-              ) : null}
-              <ul className="space-y-2 text-sm">
-                {meds.map((m) => (
-                  <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border px-2 py-1.5">
-                    <div>
-                      <span className="font-medium">{m.drugName}</span>
-                      {m.dosage ? <span className="text-muted-foreground"> · {m.dosage}</span> : null}
-                      {m.frequency ? <span className="text-muted-foreground"> · {m.frequency}</span> : null}
-                    </div>
-                    {draft ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive"
-                        onClick={() => removeMedMutation.mutate(m.id)}
-                        disabled={removeMedMutation.isPending || noMedications}
-                      >
-                        {t("common.remove")}
-                      </Button>
+            <CardContent>
+              <Tabs value={activeMedTab} onValueChange={(v) => selectMedTab(v as MedTab)}>
+                <TabsList className="grid h-auto w-full grid-cols-3 gap-1 p-1">
+                  <TabsTrigger
+                    value="none"
+                    className="gap-1.5 data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900 dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-slate-100"
+                  >
+                    <Ban className="h-4 w-4 shrink-0" aria-hidden />
+                    <span className="hidden sm:inline">{t("encounters.medModeNone")}</span>
+                    <span className="sm:hidden">{t("encounters.medTabNoneShort", "None")}</span>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="manual"
+                    className="gap-1.5 data-[state=active]:bg-emerald-100 data-[state=active]:text-emerald-950 dark:data-[state=active]:bg-emerald-950 dark:data-[state=active]:text-emerald-50"
+                  >
+                    <Pill className="h-4 w-4 shrink-0" aria-hidden />
+                    <span className="hidden sm:inline">{t("encounters.medModeManual")}</span>
+                    <span className="sm:hidden">{t("encounters.medTabManualShort", "Manual")}</span>
+                    {meds.length > 0 ? (
+                      <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-[10px]">
+                        {meds.length}
+                      </Badge>
                     ) : null}
-                  </li>
-                ))}
-                {meds.length === 0 && !noMedications ? (
-                  <li className="text-muted-foreground">{t("encounters.noMedsYet")}</li>
-                ) : null}
-              </ul>
-              {draft && !noMedications ? (
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="space-y-1">
-                    <Label>{t("encounters.drugName")}</Label>
-                    <Input value={drugName} onChange={(e) => setDrugName(e.target.value)} />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>{t("encounters.dosage")}</Label>
-                    <Input value={dosage} onChange={(e) => setDosage(e.target.value)} />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>{t("encounters.frequency")}</Label>
-                    <Input value={frequency} onChange={(e) => setFrequency(e.target.value)} />
-                  </div>
-                  <div className="flex items-end">
-                    <Button type="button" onClick={() => addMedMutation.mutate()} disabled={!drugName.trim() || addMedMutation.isPending}>
-                      {t("encounters.addMed")}
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="prescription"
+                    className="gap-1.5 data-[state=active]:bg-violet-100 data-[state=active]:text-violet-950 dark:data-[state=active]:bg-violet-950 dark:data-[state=active]:text-violet-50"
+                  >
+                    <FileUp className="h-4 w-4 shrink-0" aria-hidden />
+                    <span className="hidden sm:inline">{t("encounters.medModePrescription")}</span>
+                    <span className="sm:hidden">{t("encounters.medTabRxShort", "Rx")}</span>
+                    {prescriptions.length > 0 ? (
+                      <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-[10px]">
+                        {prescriptions.length}
+                      </Badge>
+                    ) : null}
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="none" className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-900/30">
+                  <p className="text-sm text-muted-foreground">
+                    {t(
+                      "encounters.noMedsTabHint",
+                      "No medications were prescribed for this visit. Switch to Manual or Prescription tabs to add entries."
+                    )}
+                  </p>
+                  {draft && noMedications ? (
+                    <p className="mt-2 text-sm font-medium text-slate-700 dark:text-slate-300">{t("encounters.noMedsActive", "Selected")}</p>
+                  ) : null}
+                </TabsContent>
+
+                <TabsContent value="manual" className="rounded-xl border border-emerald-200/80 bg-emerald-50/30 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+                  {!medsPanelActive && draft ? (
+                    <p className="mb-3 text-sm text-muted-foreground">{t("encounters.panelDisabledNoMeds")}</p>
+                  ) : null}
+                  <ul className="space-y-2 text-sm">
+                    {meds.map((m) => (
+                      <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border bg-background px-2 py-1.5">
+                        <div className="min-w-0">
+                          <span className="font-medium">{m.drugName}</span>
+                          {m.dosage ? <span className="text-muted-foreground"> · {m.dosage}</span> : null}
+                          {m.frequency ? <span className="text-muted-foreground"> · {m.frequency}</span> : null}
+                        </div>
+                        {draft && medsPanelActive ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive"
+                            onClick={() => removeMedMutation.mutate(m.id)}
+                            disabled={removeMedMutation.isPending}
+                          >
+                            {t("common.remove")}
+                          </Button>
+                        ) : null}
+                      </li>
+                    ))}
+                    {meds.length === 0 ? <li className="text-muted-foreground">{t("encounters.noMedsYet")}</li> : null}
+                  </ul>
+                  {draft && medsPanelActive ? (
+                    <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                      <div className="space-y-1">
+                        <Label>{t("encounters.drugName")}</Label>
+                        <Input value={drugName} onChange={(e) => setDrugName(e.target.value)} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label>{t("encounters.dosage")}</Label>
+                        <Input value={dosage} onChange={(e) => setDosage(e.target.value)} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label>{t("encounters.frequency")}</Label>
+                        <Input value={frequency} onChange={(e) => setFrequency(e.target.value)} />
+                      </div>
+                      <div className="flex items-end">
+                        <Button type="button" className="w-full" onClick={() => addMedMutation.mutate()} disabled={!drugName.trim() || addMedMutation.isPending}>
+                          {t("encounters.addMed")}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+                </TabsContent>
+
+                <TabsContent value="prescription" className="rounded-xl border border-violet-200/80 bg-violet-50/30 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
+                  {!medsPanelActive && draft ? (
+                    <p className="mb-3 text-sm text-muted-foreground">{t("encounters.panelDisabledNoMeds")}</p>
+                  ) : null}
+                  {draft && medsPanelActive ? (
+                    <>
+                      <input
+                        ref={prescriptionFileRef}
+                        type="file"
+                        accept="application/pdf,image/*,text/plain"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          e.target.value = "";
+                          if (f) uploadMutation.mutate({ file: f, kind: "PRESCRIPTION" });
+                        }}
+                      />
+                      <button
+                        type="button"
+                        disabled={uploadMutation.isPending}
+                        onClick={() => prescriptionFileRef.current?.click()}
+                        className={cn(
+                          "mb-4 flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-sm transition-colors",
+                          "border-violet-300 bg-violet-50/50 text-violet-900 hover:border-violet-400 hover:bg-violet-50",
+                          "dark:border-violet-700 dark:bg-violet-950/30 dark:text-violet-100 dark:hover:border-violet-500 dark:hover:bg-violet-950/50",
+                          uploadMutation.isPending && "pointer-events-none opacity-60"
+                        )}
+                      >
+                        <FileUp className="h-8 w-8 text-violet-500 dark:text-violet-400" aria-hidden />
+                        <span className="font-medium">{t("encounters.uploadPrescription", "Upload prescription")}</span>
+                        <span className="text-xs text-violet-700/80 dark:text-violet-300/80">{t("encounters.prescriptionUploadHint")}</span>
+                      </button>
+                    </>
+                  ) : null}
+                  <ul className="space-y-2 text-sm">
+                    {prescriptions.map((d) => (
+                      <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border bg-background px-2 py-1.5">
+                        <span className="truncate font-medium">{d.originalFileName}</span>
+                        <div className="flex shrink-0 gap-1">
+                          <Button type="button" variant="ghost" size="sm" onClick={() => void openDocument(d)}>
+                            <Eye className="h-4 w-4" />
+                            <span className="sr-only">{t("encounters.viewDoc")}</span>
+                          </Button>
+                          {draft && medsPanelActive ? (
+                            <>
+                              <Button type="button" variant="ghost" size="sm" onClick={() => startReplace(d.id, "PRESCRIPTION")}>
+                                <Upload className="h-4 w-4" />
+                                <span className="sr-only">{t("encounters.replaceDoc", "Replace")}</span>
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive"
+                                onClick={() => removeDocMutation.mutate(d.id)}
+                                disabled={removeDocMutation.isPending}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          ) : null}
+                        </div>
+                      </li>
+                    ))}
+                    {prescriptions.length === 0 ? (
+                      <li className="text-muted-foreground">{t("encounters.noPrescriptionYet")}</li>
+                    ) : null}
+                  </ul>
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         </div>

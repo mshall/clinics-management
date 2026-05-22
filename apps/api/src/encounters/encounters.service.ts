@@ -369,6 +369,17 @@ export class EncountersService {
     }
   }
 
+  private async deletePrescriptionDocuments(tenantId: string, encounterId: string): Promise<void> {
+    const docs = await this.prisma.encounterDocument.findMany({
+      where: { tenantId, encounterId, kind: EncounterDocumentKind.PRESCRIPTION },
+    });
+    if (docs.length === 0) return;
+    await this.prisma.encounterDocument.deleteMany({
+      where: { tenantId, encounterId, kind: EncounterDocumentKind.PRESCRIPTION },
+    });
+    await Promise.all(docs.map((d) => this.uploads.deleteObject("encounters", d.relativePath)));
+  }
+
   async update(tenantId: string, id: string, dto: UpdateEncounterDto, viewer?: JwtUser): Promise<EncounterDetailDto> {
     const existing = await this.prisma.encounter.findFirst({ where: { id, tenantId } });
     if (!existing) throw new NotFoundException("Encounter not found");
@@ -400,6 +411,7 @@ export class EncountersService {
       data.noMedications = dto.noMedications;
       if (dto.noMedications) {
         await this.prisma.encounterMedication.deleteMany({ where: { encounterId: id, tenantId } });
+        await this.deletePrescriptionDocuments(tenantId, id);
       }
     }
 
@@ -522,6 +534,14 @@ export class EncountersService {
     const mime = file.mimetype || "application/octet-stream";
     if (!ALLOWED_MIME.has(mime)) throw new BadRequestException(`Unsupported file type: ${mime}`);
 
+    if (kind === EncounterDocumentKind.PRESCRIPTION) {
+      await this.deletePrescriptionDocuments(tenantId, encounterId);
+      await this.prisma.encounter.update({
+        where: { id: encounterId },
+        data: { noMedications: false },
+      });
+    }
+
     const docId = randomUUID();
     const base = path.basename(file.originalname || "upload").replace(/[^\w.\-]+/g, "_").slice(0, 120) || "upload";
     const relativePath = `${tenantId}/${encounterId}/${docId}-${base}`;
@@ -580,7 +600,7 @@ export class EncountersService {
   async finalize(tenantId: string, userId: string, encounterId: string): Promise<EncounterDetailDto> {
     const enc = await this.prisma.encounter.findFirst({
       where: { id: encounterId, tenantId },
-      include: { medications: true },
+      include: { medications: true, documents: true },
     });
     if (!enc) throw new NotFoundException("Encounter not found");
     if (enc.status === EncounterStatus.FINALIZED) {
@@ -589,11 +609,16 @@ export class EncountersService {
     if (enc.clinicianId !== userId) {
       throw new ForbiddenException("Only the assigned clinician can finalize this encounter");
     }
-    if (!enc.noMedications && enc.medications.length === 0) {
-      throw new BadRequestException('Add at least one medication or enable "no medications prescribed"');
+    const prescriptionCount = enc.documents.filter((d) => d.kind === EncounterDocumentKind.PRESCRIPTION).length;
+    const hasManualMeds = enc.medications.length > 0;
+    const hasPrescription = prescriptionCount > 0;
+    if (!enc.noMedications && !hasManualMeds && !hasPrescription) {
+      throw new BadRequestException(
+        'Add at least one medication, upload a prescription, or enable "no medications prescribed"'
+      );
     }
-    if (enc.noMedications && enc.medications.length > 0) {
-      throw new BadRequestException('Remove medications or disable "no medications prescribed"');
+    if (enc.noMedications && (hasManualMeds || hasPrescription)) {
+      throw new BadRequestException('Remove medications/prescription or disable "no medications prescribed"');
     }
 
     const aptId = enc.appointmentId;

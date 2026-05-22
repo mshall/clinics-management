@@ -110,7 +110,7 @@ export class EncountersController {
   }
 
   @Post(":id/documents")
-  @ApiOperation({ summary: "Upload lab or radiology document (multipart field: file, kind=LAB|RADIOLOGY)" })
+  @ApiOperation({ summary: "Upload lab, radiology, or prescription document (multipart field: file, kind=LAB|RADIOLOGY|PRESCRIPTION)" })
   @ApiConsumes("multipart/form-data")
   @ApiBody({
     schema: {
@@ -118,7 +118,7 @@ export class EncountersController {
       required: ["file", "kind"],
       properties: {
         file: { type: "string", format: "binary" },
-        kind: { type: "string", enum: ["LAB", "RADIOLOGY"] },
+        kind: { type: "string", enum: ["LAB", "RADIOLOGY", "PRESCRIPTION"] },
       },
     },
   })
@@ -141,8 +141,10 @@ export class EncountersController {
         ? EncounterDocumentKind.RADIOLOGY
         : kindRaw === "LAB"
           ? EncounterDocumentKind.LAB
-          : null;
-    if (!kind) throw new BadRequestException("kind must be LAB or RADIOLOGY");
+          : kindRaw === "PRESCRIPTION"
+            ? EncounterDocumentKind.PRESCRIPTION
+            : null;
+    if (!kind) throw new BadRequestException("kind must be LAB, RADIOLOGY, or PRESCRIPTION");
     return this.encounters.uploadDocument(user.tenantId, id, kind, file, user);
   }
 
