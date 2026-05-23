@@ -36,6 +36,9 @@ jobs:
             package-lock.json
             infra/package-lock.json
 
+      - name: Install dependencies
+        run: NPM_CONFIG_LOGLEVEL=error npm ci --no-audit --no-fund
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 

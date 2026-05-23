@@ -837,6 +837,8 @@ export function OperationsPage() {
                       sortBy={sortBy}
                       sortOrder={sortOrder}
                       onSort={onSort}
+                      filterValue={efDate}
+                      onFilterChange={setEfDate}
                     />
                     <FilterTh
                       label={t("operations.patient", "Patient")}
@@ -854,6 +856,8 @@ export function OperationsPage() {
                       sortBy={sortBy}
                       sortOrder={sortOrder}
                       onSort={onSort}
+                      filterValue={efTotal}
+                      onFilterChange={setEfTotal}
                     />
                     <SortableTh
                       label={t("operations.downPayment", "Down payment (AED)")}
@@ -861,6 +865,8 @@ export function OperationsPage() {
                       sortBy={sortBy}
                       sortOrder={sortOrder}
                       onSort={onSort}
+                      filterValue={efDown}
+                      onFilterChange={setEfDown}
                     />
                     <th className="px-3 py-2 text-start font-medium">{t("operations.paidAmount", "Paid (AED)")}</th>
                     <th className="px-3 py-2 text-start font-medium">{t("operations.balanceDue", "Balance (AED)")}</th>
