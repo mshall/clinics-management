@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CreateActionButton } from "@/components/create-action-button";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
+import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -275,8 +276,8 @@ export function RevenuePage() {
             ) : bd.isPending ? (
               <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
             ) : (
-              <div className="overflow-hidden rounded-md border">
-                <table className="w-full text-sm">
+              <ResponsiveTable>
+                <table className="w-full min-w-[640px] text-sm">
                   <thead className="bg-muted/60">
                     <tr>
                       <th className="px-3 py-2 text-start font-medium">{t("revenue.clinic")}</th>
@@ -301,7 +302,7 @@ export function RevenuePage() {
                     ) : null}
                   </tbody>
                 </table>
-              </div>
+              </ResponsiveTable>
             )}
           </CardContent>
         </Card>
@@ -452,8 +453,8 @@ export function RevenuePage() {
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="overflow-hidden rounded-md border">
-            <table className="w-full text-sm">
+          <ResponsiveTable>
+            <table className="w-full min-w-[960px] text-sm">
               <thead className="bg-muted/60">
                 <tr>
                   <FilterTh label={t("revenue.clinic")} value={rfClinic} onChange={setRfClinic} />
@@ -526,7 +527,7 @@ export function RevenuePage() {
                 ) : null}
               </tbody>
             </table>
-          </div>
+          </ResponsiveTable>
           <TablePagination
             page={page}
             pageSize={pageSize}

@@ -6,6 +6,7 @@ import { CreateActionButton } from "@/components/create-action-button";
 import { OperationStatusBadge } from "@/components/operation-status-badge";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
+import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -821,13 +822,14 @@ export function OperationsPage() {
               : t("operations.list", "Scheduled operations")}
           </CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
+        <CardContent>
           {isPending ? (
             <p className="text-sm text-muted-foreground">{t("common.loading", "Loading…")}</p>
           ) : isError ? (
             <p className="text-sm text-destructive">{error instanceof Error ? error.message : String(error)}</p>
           ) : (
             <>
+              <ResponsiveTable>
               <table className="w-full min-w-[720px] text-sm">
                 <thead>
                   <tr className="border-b text-muted-foreground">
@@ -966,6 +968,7 @@ export function OperationsPage() {
                   )}
                 </tbody>
               </table>
+              </ResponsiveTable>
               <TablePagination
                 page={page}
                 pageSize={pageSize}

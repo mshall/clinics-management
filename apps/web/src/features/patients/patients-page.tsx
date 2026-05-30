@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
+import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import type { PatientDto } from "@/lib/api-schema";
 import { useClinicsQuery, usePatientsQuery } from "@/lib/api-hooks";
@@ -250,8 +251,8 @@ export function PatientsPage() {
             placeholder={t("patients.searchPlaceholder")}
             aria-busy={isFetching}
           />
-          <div className="overflow-hidden rounded-md border">
-            <table className="w-full text-sm">
+          <ResponsiveTable>
+            <table className="w-full min-w-[720px] text-sm">
               <thead className="bg-muted/60">
                 <tr className="text-start">
                   <SortableTh
@@ -348,7 +349,7 @@ export function PatientsPage() {
                 ) : null}
               </tbody>
             </table>
-          </div>
+          </ResponsiveTable>
           <TablePagination
             page={page}
             pageSize={pageSize}

@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { CreateActionButton } from "@/components/create-action-button";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
+import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { AppointmentStatusBadge } from "@/components/appointment-status-badge";
 import { Badge } from "@/components/ui/badge";
@@ -430,8 +431,8 @@ export function AppointmentsPage() {
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="overflow-hidden rounded-md border">
-            <table className="w-full text-sm">
+          <ResponsiveTable>
+            <table className="w-full min-w-[960px] text-sm">
               <thead className="bg-muted/60">
                 <tr>
                   <FilterTh label={t("appointments.patient")} value={afPatient} onChange={setAfPatient} />
@@ -543,7 +544,7 @@ export function AppointmentsPage() {
                 ) : null}
               </tbody>
             </table>
-          </div>
+          </ResponsiveTable>
           <TablePagination
             page={page}
             pageSize={pageSize}

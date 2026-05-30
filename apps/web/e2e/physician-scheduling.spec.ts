@@ -10,7 +10,7 @@ test.describe("Physician appointments & encounters", () => {
     await page.goto("/appointments");
     const response = await listRes;
     expect(response.status()).toBe(200);
-    await expect(page.getByRole("heading", { name: /^appointments$/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /appointments/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /MRN-\d+ —/ }).first()).toBeVisible();
   });
 

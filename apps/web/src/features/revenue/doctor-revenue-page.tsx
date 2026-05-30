@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRevenueQuery, useRevenueTotalsQuery } from "@/lib/api-hooks";
@@ -71,8 +72,8 @@ export function DoctorRevenuePage() {
           {list.isError ? (
             <p className="text-sm text-destructive">{list.error instanceof Error ? list.error.message : t("common.error")}</p>
           ) : null}
-          <div className="overflow-hidden rounded-md border">
-            <table className="w-full text-sm">
+          <ResponsiveTable>
+            <table className="w-full min-w-[480px] text-sm">
               <thead className="bg-muted/60">
                 <tr>
                   <th className="px-3 py-2 text-start font-medium">{t("revenue.category")}</th>
@@ -101,7 +102,7 @@ export function DoctorRevenuePage() {
                 ) : null}
               </tbody>
             </table>
-          </div>
+          </ResponsiveTable>
           {list.data && list.data.total > 0 ? (
             <TablePagination
               page={page}

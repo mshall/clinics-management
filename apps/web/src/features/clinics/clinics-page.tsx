@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { CreateActionButton } from "@/components/create-action-button";
 import { FilterTh } from "@/components/sortable-th";
+import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -99,8 +100,8 @@ export function ClinicsPage() {
             <p className="text-sm text-destructive">{error instanceof Error ? error.message : t("common.comingSoon")}</p>
           ) : (
             <>
-              <div className="overflow-hidden rounded-md border">
-                <table className="w-full text-sm">
+              <ResponsiveTable>
+                <table className="w-full min-w-[480px] text-sm">
                   <thead className="bg-muted/60">
                     <tr className="text-start">
                       <FilterTh label={`${t("clinics.parent")} / ${t("clinics.branch")}`} value={cfKind} onChange={setCfKind} />
@@ -160,7 +161,7 @@ export function ClinicsPage() {
                     ) : null}
                   </tbody>
                 </table>
-              </div>
+              </ResponsiveTable>
               {total > 0 ? (
                 <TablePagination
                   page={page}

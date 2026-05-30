@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CreateActionButton } from "@/components/create-action-button";
+import { ResponsiveTable } from "@/components/responsive-table";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,7 +65,7 @@ export function ClinicDoctorsPanel({ clinicId }: { clinicId: string }) {
     <div className="space-y-4">
       {canManage ? (
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+          <CardHeader className="flex flex-col gap-3 space-y-0 pb-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="text-base">{t("clinics.assignDoctor", "Assign a doctor")}</CardTitle>
               <CardDescription>
@@ -126,8 +127,8 @@ export function ClinicDoctorsPanel({ clinicId }: { clinicId: string }) {
           ) : assigned.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("clinics.noAssignedDoctors", "No doctors assigned yet.")}</p>
           ) : (
-            <div className="overflow-hidden rounded-md border">
-              <table className="w-full text-sm">
+            <ResponsiveTable>
+              <table className="w-full min-w-[640px] text-sm">
                 <thead className="bg-muted/60">
                   <tr>
                     <th className="px-3 py-2 text-start font-medium">{t("clinics.doctorName", "Name")}</th>
@@ -160,7 +161,7 @@ export function ClinicDoctorsPanel({ clinicId }: { clinicId: string }) {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ResponsiveTable>
           )}
         </CardContent>
       </Card>

@@ -33,7 +33,7 @@ export function DateRangeBar() {
           </Label>
           <Input
             id="range-from"
-            className="h-9 w-[11rem] ltr-nums"
+            className="h-9 w-full min-w-0 sm:w-[11rem] ltr-nums"
             type="date"
             value={draftFrom}
             onChange={(e) => setDraftFrom(e.target.value)}
@@ -45,7 +45,7 @@ export function DateRangeBar() {
           </Label>
           <Input
             id="range-to"
-            className="h-9 w-[11rem] ltr-nums"
+            className="h-9 w-full min-w-0 sm:w-[11rem] ltr-nums"
             type="date"
             value={draftTo}
             onChange={(e) => setDraftTo(e.target.value)}

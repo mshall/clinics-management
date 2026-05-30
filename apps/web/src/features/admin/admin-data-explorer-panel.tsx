@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -206,7 +207,7 @@ export function AdminDataExplorerPanel() {
           ) : null}
 
           {columns.length > 0 ? (
-            <div className="overflow-x-auto rounded-md border">
+            <ResponsiveTable>
               <table className="w-full min-w-[640px] text-xs">
                 <thead className="bg-muted/60">
                   <tr>
@@ -257,7 +258,7 @@ export function AdminDataExplorerPanel() {
                   })}
                 </tbody>
               </table>
-            </div>
+            </ResponsiveTable>
           ) : null}
 
           {listQ.data && listQ.data.total > 0 ? (

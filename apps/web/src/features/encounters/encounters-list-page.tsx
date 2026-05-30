@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
+import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import {
   useAdminOverviewQuery,
@@ -504,8 +505,8 @@ export function EncountersListPage() {
           </Button>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="overflow-hidden rounded-md border">
-            <table className="w-full text-sm">
+          <ResponsiveTable>
+            <table className="w-full min-w-[960px] text-sm">
               <thead className="bg-muted/60">
                 <tr className="text-start">
                   <SortableTh
@@ -617,7 +618,7 @@ export function EncountersListPage() {
                 ) : null}
               </tbody>
             </table>
-          </div>
+          </ResponsiveTable>
           <TablePagination
             page={page}
             pageSize={pageSize}

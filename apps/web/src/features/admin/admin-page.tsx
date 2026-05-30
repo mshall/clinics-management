@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Navigate } from "react-router-dom";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
+import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -643,8 +644,8 @@ export function AdminPage() {
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto rounded-md border">
-            <table className="w-full min-w-[640px] text-sm">
+          <ResponsiveTable>
+            <table className="w-full min-w-[960px] text-sm">
               <thead className="bg-muted/60">
                 <tr>
                   <th className="align-top px-2 py-2 text-start">
@@ -702,7 +703,7 @@ export function AdminPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ResponsiveTable>
           {filteredClinics.length === 0 ? (
             <p className="mt-2 text-center text-sm text-muted-foreground">{t("admin.noClinicsMatch", "No clinics match the filters.")}</p>
           ) : null}
@@ -731,8 +732,8 @@ export function AdminPage() {
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="overflow-hidden rounded-md border">
-            <table className="w-full text-sm">
+          <ResponsiveTable>
+            <table className="w-full min-w-[960px] text-sm">
               <thead className="bg-muted/60">
                 <tr>
                   <SortableTh
@@ -787,7 +788,7 @@ export function AdminPage() {
                 ) : null}
               </tbody>
             </table>
-          </div>
+          </ResponsiveTable>
           <TablePagination
             page={tPage}
             pageSize={tPs}

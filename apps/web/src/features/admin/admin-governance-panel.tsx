@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,8 +74,8 @@ export function AdminGovernancePanel() {
             <p className="text-sm text-destructive">{audit.error instanceof Error ? audit.error.message : t("common.error")}</p>
           ) : null}
 
-          <div className="overflow-hidden rounded-md border">
-            <table className="w-full text-sm">
+          <ResponsiveTable>
+            <table className="w-full min-w-[720px] text-sm">
               <thead className="bg-muted/60">
                 <tr>
                   <th className="px-3 py-2 text-start font-medium">{t("admin.auditColAction", "Action")}</th>
@@ -113,7 +114,7 @@ export function AdminGovernancePanel() {
                 ) : null}
               </tbody>
             </table>
-          </div>
+          </ResponsiveTable>
 
           {total > 0 ? (
             <TablePagination

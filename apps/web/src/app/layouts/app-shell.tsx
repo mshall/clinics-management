@@ -90,7 +90,7 @@ export function AppShell() {
           </div>
         </header>
         {showReportingPeriodBar(pathname) ? <DateRangeBar /> : null}
-        <main className="mx-auto w-full max-w-[min(96rem,calc(100vw-1.5rem))] flex-1 p-4 md:p-6">
+        <main className="mx-auto w-full max-w-[min(96rem,calc(100vw-1rem))] flex-1 p-3 sm:p-4 md:p-6">
           <Outlet />
         </main>
       </div>

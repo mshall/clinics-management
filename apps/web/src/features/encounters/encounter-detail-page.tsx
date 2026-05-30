@@ -450,10 +450,10 @@ export function EncounterDetailPage() {
 
       <input ref={replaceFileRef} type="file" accept="application/pdf,image/*,text/plain" className="hidden" onChange={onReplaceFilePicked} />
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight">{t("encounters.title")}</h1>
+            <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{t("encounters.title")}</h1>
             <Badge variant={enc.status === "FINALIZED" ? "default" : "secondary"}>{enc.status}</Badge>
           </div>
           <p className="text-muted-foreground">

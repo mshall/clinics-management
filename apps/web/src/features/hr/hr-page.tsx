@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { CreateActionButton } from "@/components/create-action-button";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
+import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -336,8 +337,8 @@ export function HrPage() {
                 {t("patients.clearColFilters", "Clear column filters")}
               </Button>
             </div>
-            <div className="overflow-hidden rounded-md border">
-              <table className="w-full text-sm">
+            <ResponsiveTable>
+              <table className="w-full min-w-[720px] text-sm">
                 <thead className="bg-muted/60">
                   <tr>
                     <SortableTh
@@ -405,7 +406,7 @@ export function HrPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ResponsiveTable>
             <TablePagination
               page={empPage}
               pageSize={empPs}
@@ -507,8 +508,8 @@ export function HrPage() {
                 </div>
               </div>
             </div>
-            <div className="overflow-hidden rounded-md border">
-              <table className="w-full text-sm">
+            <ResponsiveTable>
+              <table className="w-full min-w-[720px] text-sm">
                 <thead className="bg-muted/60">
                   <tr>
                     <SortableTh
@@ -551,7 +552,7 @@ export function HrPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ResponsiveTable>
             <TablePagination
               page={attPage}
               pageSize={attPs}
@@ -669,8 +670,8 @@ export function HrPage() {
                 {t("patients.clearColFilters", "Clear column filters")}
               </Button>
             </div>
-            <div className="overflow-hidden rounded-md border">
-              <table className="w-full text-sm">
+            <ResponsiveTable>
+              <table className="w-full min-w-[720px] text-sm">
                 <thead className="bg-muted/60">
                   <tr>
                     <SortableTh
@@ -734,7 +735,7 @@ export function HrPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ResponsiveTable>
             <TablePagination
               page={leavePage}
               pageSize={leavePs}

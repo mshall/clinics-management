@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { useClinicsQuery, useEncountersQuery, usePatientQuery } from "@/lib/api-hooks";
 import type { EncounterDetailDto } from "@/lib/api-types";
@@ -215,8 +216,8 @@ export function PatientDetailPage() {
               <p className="text-muted-foreground">{t("patients.noVitals", "No vitals captured yet.")}</p>
             ) : (
               <div className="space-y-3">
-                <div className="overflow-hidden rounded-md border">
-                  <table className="w-full text-xs sm:text-sm">
+                <ResponsiveTable>
+                  <table className="w-full min-w-[640px] text-xs sm:text-sm">
                     <thead className="bg-muted/60">
                       <tr>
                         <th className="px-2 py-2 text-start font-medium text-muted-foreground">{t("encounters.updated", "Updated")}</th>
@@ -246,7 +247,7 @@ export function PatientDetailPage() {
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </ResponsiveTable>
                 <TablePagination
                   page={vitalsPage}
                   pageSize={vitalsPageSize}

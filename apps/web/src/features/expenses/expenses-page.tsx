@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Eye, Receipt } from "lucide-react";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
+import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { useTranslation } from "react-i18next";
 import { CreateActionButton } from "@/components/create-action-button";
@@ -410,8 +411,8 @@ export function ExpensesPage() {
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="overflow-hidden rounded-md border">
-            <table className="w-full text-sm">
+          <ResponsiveTable>
+            <table className="w-full min-w-[720px] text-sm">
               <thead className="bg-muted/60">
                 <tr>
                   <SortableTh
@@ -538,7 +539,7 @@ export function ExpensesPage() {
                 ) : null}
               </tbody>
             </table>
-          </div>
+          </ResponsiveTable>
           <TablePagination
             page={page}
             pageSize={pageSize}
