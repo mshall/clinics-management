@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { useAppointmentQuery, useClinicsQuery, usePatientQuery, usePatientsQuery, useUsersQuery } from "@/lib/api-hooks";
 import type { AppointmentDto } from "@/lib/api-types";
 import { ApiError, apiPatch } from "@/lib/http";
+import { patientToPickListItem } from "@/lib/patient-display";
 import { cn } from "@/lib/utils";
 
 function toDatetimeLocalValue(iso: string): string {
@@ -125,11 +126,7 @@ export function AppointmentDetailPage() {
     if (extraPatient && !merged.some((p) => p.id === extraPatient.id)) {
       merged.unshift(extraPatient);
     }
-    return merged.map((p) => ({
-      value: p.id,
-      label: `${p.firstNameEn} ${p.lastNameEn}`.trim(),
-      hint: p.mrn,
-    }));
+    return merged.map((p) => patientToPickListItem(p));
   }, [apt, readOnly, patients, extraPatient, t]);
 
   const saveMut = useMutation({

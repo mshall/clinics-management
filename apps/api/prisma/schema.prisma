@@ -223,6 +223,9 @@ model Patient {
   phone        String
   email        String?
   nationalId   String?
+  nationalIdDocRelativePath String?
+  nationalIdDocOriginalName String?
+  nationalIdDocMimeType     String?
   homeBranchId String?
   homeBranch   Clinic?        @relation("PatientHomeBranch", fields: [homeBranchId], references: [id])
   deletedAt    DateTime?

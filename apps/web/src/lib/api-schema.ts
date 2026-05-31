@@ -5,6 +5,7 @@ export type { components, paths, webhooks } from "@/lib/openapi-types.gen";
 export type PatientDto = components["schemas"]["PatientDto"] & {
   homeBranchId?: string | null;
   nationalId?: string | null;
+  hasNationalIdDoc?: boolean;
 };
 export type ClinicDto = components["schemas"]["ClinicDto"] & {
   parentNameEn?: string | null;

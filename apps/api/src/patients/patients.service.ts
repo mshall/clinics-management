@@ -1,19 +1,28 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { Gender, Prisma } from "@prisma/client";
+import { randomUUID } from "crypto";
+import * as path from "node:path";
 import type { JwtUser } from "../auth/jwt-user";
 import { fetchPatientListClinicScopeIds } from "../common/clinic-scope";
 import { PatientDto } from "../common/dto/patient.dto";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
+import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { CreatePatientDto } from "./dto/create-patient.dto";
 import type { UpdatePatientDto } from "./dto/update-patient.dto";
+
+const MAX_NATIONAL_ID_DOC_BYTES = 15 * 1024 * 1024;
+const ALLOWED_NATIONAL_ID_DOC_MIME = new Set(["application/pdf", "image/jpeg", "image/png", "image/gif", "image/webp"]);
+
+type NationalIdDocFile = { buffer: Buffer; originalname: string; mimetype: string; size: number };
 
 export interface PatientListQuery {
   search?: string;
@@ -32,7 +41,10 @@ export interface PatientListQuery {
 export class PatientsService {
   private readonly logger = new Logger(PatientsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
+  ) {}
 
   private map(p: {
     id: string;
@@ -46,6 +58,7 @@ export class PatientsService {
     phone: string;
     email: string | null;
     nationalId: string | null;
+    nationalIdDocRelativePath?: string | null;
     homeBranchId: string | null;
     homeBranch: { nameEn: string } | null;
   }): PatientDto {
@@ -67,6 +80,7 @@ export class PatientsService {
     dto.phone = p.phone;
     dto.email = p.email;
     dto.nationalId = p.nationalId;
+    dto.hasNationalIdDoc = Boolean(p.nationalIdDocRelativePath);
     dto.homeBranch = p.homeBranch ? p.homeBranch.nameEn : null;
     dto.homeBranchId = p.homeBranchId;
     return dto;
@@ -87,17 +101,34 @@ export class PatientsService {
 
     const broad = q.search?.trim() ?? "";
     if (broad.length > 0) {
-      and.push({
-        OR: [
-          { mrn: { contains: broad, mode: "insensitive" } },
-          { firstNameEn: { contains: broad, mode: "insensitive" } },
-          { lastNameEn: { contains: broad, mode: "insensitive" } },
-          { firstNameAr: { contains: broad, mode: "insensitive" } },
-          { lastNameAr: { contains: broad, mode: "insensitive" } },
-          { phone: { contains: broad, mode: "insensitive" } },
-          { nationalId: { contains: broad, mode: "insensitive" } },
-        ],
-      });
+      const tokens = broad.split(/\s+/).filter(Boolean);
+      if (tokens.length > 1) {
+        and.push({
+          AND: tokens.map((token) => ({
+            OR: [
+              { mrn: { contains: token, mode: "insensitive" } },
+              { firstNameEn: { contains: token, mode: "insensitive" } },
+              { lastNameEn: { contains: token, mode: "insensitive" } },
+              { firstNameAr: { contains: token, mode: "insensitive" } },
+              { lastNameAr: { contains: token, mode: "insensitive" } },
+              { phone: { contains: token, mode: "insensitive" } },
+              { nationalId: { contains: token, mode: "insensitive" } },
+            ],
+          })),
+        });
+      } else {
+        and.push({
+          OR: [
+            { mrn: { contains: broad, mode: "insensitive" } },
+            { firstNameEn: { contains: broad, mode: "insensitive" } },
+            { lastNameEn: { contains: broad, mode: "insensitive" } },
+            { firstNameAr: { contains: broad, mode: "insensitive" } },
+            { lastNameAr: { contains: broad, mode: "insensitive" } },
+            { phone: { contains: broad, mode: "insensitive" } },
+            { nationalId: { contains: broad, mode: "insensitive" } },
+          ],
+        });
+      }
     }
 
     const mrn = q.mrn?.trim();
@@ -271,5 +302,56 @@ export class PatientsService {
       include: { homeBranch: { select: { nameEn: true } } },
     });
     return this.map(row);
+  }
+
+  async attachNationalIdDocument(
+    tenantId: string,
+    patientId: string,
+    user: JwtUser,
+    file?: NationalIdDocFile
+  ): Promise<PatientDto> {
+    await this.getById(tenantId, patientId, user);
+    if (!file?.buffer?.length) throw new BadRequestException("File is required");
+    if (file.size > MAX_NATIONAL_ID_DOC_BYTES) throw new BadRequestException("File too large (max 15MB)");
+    const mime = file.mimetype || "application/octet-stream";
+    if (!ALLOWED_NATIONAL_ID_DOC_MIME.has(mime)) throw new BadRequestException(`Unsupported file type: ${mime}`);
+    const docId = randomUUID();
+    const base = path.basename(file.originalname || "national-id").replace(/[^\w.\-]+/g, "_").slice(0, 120) || "national-id";
+    const relativePath = `${tenantId}/${patientId}/${docId}-${base}`;
+    await this.uploads.put("patients", relativePath, file.buffer, mime);
+    const row = await this.prisma.patient.update({
+      where: { id: patientId },
+      data: {
+        nationalIdDocRelativePath: relativePath,
+        nationalIdDocOriginalName: file.originalname || base,
+        nationalIdDocMimeType: mime,
+      },
+      include: { homeBranch: { select: { nameEn: true } } },
+    });
+    return this.map(row);
+  }
+
+  async getNationalIdDocumentMeta(
+    tenantId: string,
+    patientId: string,
+    user: JwtUser
+  ): Promise<{ storageKey: string; mimeType: string; originalFileName: string }> {
+    await this.getById(tenantId, patientId, user);
+    const row = await this.prisma.patient.findFirst({
+      where: { id: patientId, tenantId, deletedAt: null },
+    });
+    if (!row?.nationalIdDocRelativePath || !row.nationalIdDocOriginalName || !row.nationalIdDocMimeType) {
+      throw new NotFoundException("No national ID document attached");
+    }
+    await this.uploads.assertExists("patients", row.nationalIdDocRelativePath);
+    return {
+      storageKey: row.nationalIdDocRelativePath,
+      mimeType: row.nationalIdDocMimeType,
+      originalFileName: row.nationalIdDocOriginalName,
+    };
+  }
+
+  openNationalIdDocumentReadStream(storageKey: string) {
+    return this.uploads.getReadStream("patients", storageKey);
   }
 }

@@ -1,5 +1,27 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
-import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  StreamableFile,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from "@nestjs/common";
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from "@nestjs/swagger";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { memoryStorage } from "multer";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
@@ -7,6 +29,8 @@ import { PatientDto } from "../common/dto/patient.dto";
 import { CreatePatientDto } from "./dto/create-patient.dto";
 import { UpdatePatientDto } from "./dto/update-patient.dto";
 import { PatientsService } from "./patients.service";
+
+const NATIONAL_ID_DOC_UPLOAD_LIMIT = 15 * 1024 * 1024;
 
 @ApiTags("patients")
 @ApiBearerAuth("bearer")
@@ -54,6 +78,45 @@ export class PatientsController {
   @ApiCreatedResponse({ type: PatientDto })
   create(@CurrentUser() user: JwtUser, @Body() body: CreatePatientDto) {
     return this.patients.create(user.tenantId, body, user);
+  }
+
+  @Get(":id/national-id-document")
+  @ApiOperation({ summary: "Download optional national ID / SSN scan (if uploaded)" })
+  @ApiOkResponse({ description: "Binary file stream" })
+  async getNationalIdDocument(@CurrentUser() user: JwtUser, @Param("id") id: string): Promise<StreamableFile> {
+    const meta = await this.patients.getNationalIdDocumentMeta(user.tenantId, id, user);
+    const stream = await this.patients.openNationalIdDocumentReadStream(meta.storageKey);
+    return new StreamableFile(stream, {
+      type: meta.mimeType,
+      disposition: `attachment; filename*=UTF-8''${encodeURIComponent(meta.originalFileName)}`,
+    });
+  }
+
+  @Post(":id/national-id-document")
+  @ApiOperation({ summary: "Upload optional national ID / SSN scan (PDF or image, max 15MB)" })
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        file: { type: "string", format: "binary", description: "National ID / SSN scan" },
+      },
+      required: ["file"],
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor("file", {
+      storage: memoryStorage(),
+      limits: { fileSize: NATIONAL_ID_DOC_UPLOAD_LIMIT },
+    })
+  )
+  @ApiOkResponse({ type: PatientDto })
+  uploadNationalIdDocument(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @UploadedFile() file?: Express.Multer.File
+  ) {
+    return this.patients.attachNationalIdDocument(user.tenantId, id, user, file);
   }
 
   @Patch(":id")

@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAppointmentsQuery, useClinicsQuery, usePatientsQuery, useUsersQuery } from "@/lib/api-hooks";
 import { ApiError, apiPost } from "@/lib/http";
-import { resolvePatientListLabel } from "@/lib/patient-display";
+import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
 import { columnFilterIncludes } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -148,12 +148,7 @@ export function AppointmentsPage() {
   });
   const bookPatients = bookPatData?.items ?? [];
   const bookPatientItems: PickListItem[] = useMemo(
-    () =>
-      bookPatients.map((p) => ({
-        value: p.id,
-        label: `${p.firstNameEn} ${p.lastNameEn}`.trim(),
-        hint: p.mrn,
-      })),
+    () => bookPatients.map((p) => patientToPickListItem(p)),
     [bookPatients]
   );
 
@@ -357,13 +352,13 @@ export function AppointmentsPage() {
             </div>
             <div className="space-y-2 sm:col-span-2">
               <Label>{t("appointments.patient")}</Label>
-              <p className="text-xs text-muted-foreground">{t("encounters.selectPatientHint", "Search by name or MRN, then choose a row.")}</p>
+              <p className="text-xs text-muted-foreground">{t("encounters.selectPatientHint")}</p>
               <SearchablePickList
                 items={bookPatientItems}
                 value={patientId}
                 onValueChange={setPatientId}
                 onSearchQueryChange={setBookPatientSearch}
-                searchPlaceholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
+                searchPlaceholder={t("encounters.patientSearchPlaceholder")}
                 placeholder={t("appointments.pick")}
                 emptyMessage={
                   bookPatientsPending ? t("common.loading") : t("encounters.noPatientsMatch", "No patients match.")

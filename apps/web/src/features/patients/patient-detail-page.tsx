@@ -13,7 +13,7 @@ import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { useClinicsQuery, useEncountersQuery, usePatientQuery } from "@/lib/api-hooks";
 import type { EncounterDetailDto } from "@/lib/api-types";
-import { apiPost } from "@/lib/http";
+import { apiFetchBlob, apiPost } from "@/lib/http";
 
 export function PatientDetailPage() {
   const { t, i18n } = useTranslation();
@@ -198,6 +198,28 @@ export function PatientDetailPage() {
               label={t("patients.nationalId")}
               value={<span className="break-all font-mono text-xs ltr-nums">{patient.nationalId ?? "—"}</span>}
             />
+            {patient.hasNationalIdDoc ? (
+              <>
+                <Separator />
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-muted-foreground">{t("patients.nationalIdDocument")}</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={async () => {
+                      const { blob } = await apiFetchBlob(`/api/v1/patients/${patient.id}/national-id-document`);
+                      const url = URL.createObjectURL(blob);
+                      window.open(url, "_blank", "noopener,noreferrer");
+                      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+                    }}
+                  >
+                    {t("patients.downloadNationalIdDoc")}
+                  </Button>
+                </div>
+              </>
+            ) : null}
             <Separator />
             <Row label={t("patients.email")} value={<span className="break-all">{patient.email ?? "—"}</span>} />
           </CardContent>

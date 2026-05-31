@@ -22,7 +22,7 @@ import {
 } from "@/lib/api-hooks";
 import type { OperationDto } from "@/lib/api-types";
 import { ApiError, apiPatch, apiPost } from "@/lib/http";
-import { resolvePatientListLabel } from "@/lib/patient-display";
+import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
 import { columnFilterIncludes } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { defaultMonthRange } from "@/stores/date-range-store";
@@ -128,12 +128,7 @@ export function OperationsPage() {
   });
   const bookPatients = bookPatData?.items ?? [];
   const bookPatientItems: PickListItem[] = useMemo(
-    () =>
-      bookPatients.map((p) => ({
-        value: p.id,
-        label: `${p.firstNameEn} ${p.lastNameEn}`.trim(),
-        hint: p.mrn,
-      })),
+    () => bookPatients.map((p) => patientToPickListItem(p)),
     [bookPatients]
   );
 
@@ -205,12 +200,7 @@ export function OperationsPage() {
   });
   const editPatients = editPatData?.items ?? [];
   const editPatientItems: PickListItem[] = useMemo(
-    () =>
-      editPatients.map((p) => ({
-        value: p.id,
-        label: `${p.firstNameEn} ${p.lastNameEn}`.trim(),
-        hint: p.mrn,
-      })),
+    () => editPatients.map((p) => patientToPickListItem(p)),
     [editPatients]
   );
   const editPhysicianItems: PickListItem[] = useMemo(

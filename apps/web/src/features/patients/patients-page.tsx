@@ -13,7 +13,7 @@ import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import type { PatientDto } from "@/lib/api-schema";
 import { useClinicsQuery, usePatientsQuery } from "@/lib/api-hooks";
-import { ApiError, apiPost } from "@/lib/http";
+import { ApiError, apiPost, apiPostFormData } from "@/lib/http";
 import { columnFilterIncludes } from "@/lib/utils";
 
 export function PatientsPage() {
@@ -92,11 +92,12 @@ export function PatientsPage() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [nationalId, setNationalId] = useState("");
+  const [nationalIdDocFile, setNationalIdDocFile] = useState<File | null>(null);
   const [homeBranchId, setHomeBranchId] = useState("");
 
   const createMut = useMutation({
-    mutationFn: () =>
-      apiPost<PatientDto>("/api/v1/patients", {
+    mutationFn: async () => {
+      const patient = await apiPost<PatientDto>("/api/v1/patients", {
         firstNameEn,
         lastNameEn,
         firstNameAr: firstNameAr || undefined,
@@ -107,7 +108,14 @@ export function PatientsPage() {
         email: email || undefined,
         nationalId: nationalId.trim() || undefined,
         homeBranchId: homeBranchId || undefined,
-      }),
+      });
+      if (nationalIdDocFile) {
+        const fd = new FormData();
+        fd.append("file", nationalIdDocFile);
+        await apiPostFormData<PatientDto>(`/api/v1/patients/${patient.id}/national-id-document`, fd);
+      }
+      return patient;
+    },
     onSuccess: () => {
       setFormErr(null);
       setOpen(false);
@@ -120,6 +128,7 @@ export function PatientsPage() {
       setPhone("");
       setEmail("");
       setNationalId("");
+      setNationalIdDocFile(null);
       setHomeBranchId("");
       void qc.invalidateQueries({ queryKey: ["patients"] });
       void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
@@ -187,6 +196,17 @@ export function PatientsPage() {
               <div className="space-y-2">
                 <Label>{t("patients.nationalId")}</Label>
                 <Input className="ltr-nums" value={nationalId} onChange={(e) => setNationalId(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("patients.nationalIdDocument")}</Label>
+                <Input
+                  className="cursor-pointer text-sm"
+                  type="file"
+                  accept="application/pdf,image/*"
+                  onChange={(e) => setNationalIdDocFile(e.target.files?.[0] ?? null)}
+                />
+                <p className="text-xs text-muted-foreground">{t("patients.nationalIdDocumentHint")}</p>
+                {nationalIdDocFile ? <p className="text-xs text-muted-foreground ltr-nums">{nationalIdDocFile.name}</p> : null}
               </div>
               <div className="space-y-2">
                 <Label>{t("patients.email")}</Label>

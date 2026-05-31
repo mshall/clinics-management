@@ -23,7 +23,7 @@ import {
 } from "@/lib/api-hooks";
 import type { AppointmentDto, EncounterDetailDto } from "@/lib/api-types";
 import { ApiError, apiPost } from "@/lib/http";
-import { resolvePatientListLabel } from "@/lib/patient-display";
+import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
 import { columnFilterIncludes } from "@/lib/utils";
 import { ENCOUNTER_VISIT_TYPES } from "@/lib/visit-types";
 import { defaultMonthRange } from "@/stores/date-range-store";
@@ -81,12 +81,7 @@ export function EncountersListPage() {
   });
   const dialogPatientList = dialogPatData?.items;
   const dialogPatientItems: PickListItem[] = useMemo(
-    () =>
-      (dialogPatientList ?? []).map((p) => ({
-        value: p.id,
-        label: `${p.firstNameEn} ${p.lastNameEn}`.trim(),
-        hint: p.mrn,
-      })),
+    () => (dialogPatientList ?? []).map((p) => patientToPickListItem(p)),
     [dialogPatientList]
   );
   const { data: clinics = [] } = useClinicsQuery();
