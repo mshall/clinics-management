@@ -9,10 +9,12 @@ import { CreateActionButton } from "@/components/create-action-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useClinicsQuery, useExpensesQuery } from "@/lib/api-hooks";
 import { EXPENSE_CATEGORIES } from "@/lib/expense-categories";
+import type { ExpenseDto } from "@/lib/api-types";
 import { ApiError, apiFetchBlob, apiPatch, apiPostFormData } from "@/lib/http";
 import { columnFilterIncludes } from "@/lib/utils";
 import {
@@ -93,6 +95,13 @@ export function ExpensesPage() {
   const [efStatus, setEfStatus] = useState("");
   const [efDate, setEfDate] = useState("");
   const [efProof, setEfProof] = useState("");
+  const [detail, setDetail] = useState<ExpenseDto | null>(null);
+
+  const clinicById = useMemo(() => new Map(clinics.map((c) => [c.id, c])), [clinics]);
+  const clinicLabelForExpense = (e: ExpenseDto) => {
+    const c = clinicById.get(e.clinicId);
+    return c ? formatClinicName(c, i18n.language) : e.clinicId;
+  };
 
   const createMut = useMutation({
     mutationFn: () => {
@@ -480,7 +489,19 @@ export function ExpensesPage() {
                 ) : null}
                 {!isPending &&
                   filteredExpenses.map((e) => (
-                    <tr key={e.id} className="border-t border-border">
+                    <tr
+                      key={e.id}
+                      className="cursor-pointer border-t border-border hover:bg-muted/50"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setDetail(e)}
+                      onKeyDown={(ev) => {
+                        if (ev.key === "Enter" || ev.key === " ") {
+                          ev.preventDefault();
+                          setDetail(e);
+                        }
+                      }}
+                    >
                       <td className="px-3 py-2">{formatExpenseCategory(e.category, t)}</td>
                       <td className="px-3 py-2 text-muted-foreground">{e.vendorName ?? "—"}</td>
                       <td className="px-3 py-2 ltr-nums">{money(e.amount)}</td>
@@ -495,7 +516,7 @@ export function ExpensesPage() {
                       <td className="px-3 py-2 ltr-nums text-xs text-muted-foreground">
                         {new Date(e.incurredAt).toLocaleDateString(localeForLanguage(i18n.language))}
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2" onClick={(ev) => ev.stopPropagation()}>
                         {e.hasProof ? (
                           <div className="flex flex-wrap gap-1">
                             <Button
@@ -522,7 +543,7 @@ export function ExpensesPage() {
                           <span className="text-muted-foreground">—</span>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-end">
+                      <td className="px-3 py-2 text-end" onClick={(ev) => ev.stopPropagation()}>
                         {e.status === "PENDING" ? (
                           <div className="flex justify-end gap-1">
                             <Button size="sm" variant="secondary" onClick={() => statusMut.mutate({ id: e.id, status: "APPROVED" })}>
@@ -560,6 +581,88 @@ export function ExpensesPage() {
           />
         </CardContent>
       </Card>
+
+      <Dialog open={Boolean(detail)} onOpenChange={(o) => !o && setDetail(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>{t("expenses.detailTitle")}</DialogTitle>
+          </DialogHeader>
+          {detail ? (
+            <dl className="space-y-3 text-sm">
+              <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("expenses.clinic")}</dt>
+                <dd className="font-medium">{clinicLabelForExpense(detail)}</dd>
+              </div>
+              <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("expenses.category")}</dt>
+                <dd className="font-medium">{formatExpenseCategory(detail.category, t)}</dd>
+              </div>
+              <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("expenses.vendor")}</dt>
+                <dd className="font-medium">{detail.vendorName?.trim() || "—"}</dd>
+              </div>
+              <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("expenses.amount")}</dt>
+                <dd className="font-medium ltr-nums">{money(detail.amount)}</dd>
+              </div>
+              <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("expenses.status")}</dt>
+                <dd>
+                  <Badge
+                    variant={detail.status === "APPROVED" ? "default" : "secondary"}
+                    className={detail.status === "REJECTED" ? "border-destructive/60 text-destructive" : undefined}
+                  >
+                    {formatExpenseStatus(detail.status, t)}
+                  </Badge>
+                </dd>
+              </div>
+              <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("expenses.date")}</dt>
+                <dd className="font-medium ltr-nums">
+                  {new Date(detail.incurredAt).toLocaleString(localeForLanguage(i18n.language))}
+                </dd>
+              </div>
+              <div className="flex flex-col gap-1 sm:flex-row sm:gap-3">
+                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("expenses.proof")}</dt>
+                <dd>
+                  {detail.hasProof ? (
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-8 gap-1 text-xs"
+                        onClick={() => void viewProof(detail.id, detail.proofOriginalName)}
+                      >
+                        <Eye className="h-3.5 w-3.5" aria-hidden />
+                        {t("expenses.viewProof")}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 text-xs"
+                        onClick={() => void downloadProof(detail.id, detail.proofOriginalName)}
+                      >
+                        {t("expenses.downloadProof")}
+                      </Button>
+                      {detail.proofOriginalName?.trim() ? (
+                        <span className="self-center text-xs text-muted-foreground">{detail.proofOriginalName}</span>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">{t("expenses.noProof")}</span>
+                  )}
+                </dd>
+              </div>
+              <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("expenses.entryId")}</dt>
+                <dd className="font-mono text-xs text-muted-foreground">{detail.id}</dd>
+              </div>
+            </dl>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

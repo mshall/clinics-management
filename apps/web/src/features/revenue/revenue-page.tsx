@@ -7,6 +7,7 @@ import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useClinicsQuery, useClinicRevenueBreakdownQuery, usePayableOperationsQuery, useRevenueQuery, useRevenueTotalsQuery } from "@/lib/api-hooks";
@@ -80,6 +81,7 @@ export function RevenuePage() {
   const [rfPosted, setRfPosted] = useState("");
   const [rfStatus, setRfStatus] = useState("");
   const [rfClinic, setRfClinic] = useState("");
+  const [detail, setDetail] = useState<RevenueEntryDto | null>(null);
 
   const onSort = (column: string) => {
     const next = toggleSort(sortBy, sortOrder, column);
@@ -508,7 +510,19 @@ export function RevenuePage() {
                 ) : null}
                 {!isPending &&
                   filteredRevenueRows.map((r) => (
-                    <tr key={r.id} className="border-t border-border">
+                    <tr
+                      key={r.id}
+                      className="cursor-pointer border-t border-border hover:bg-muted/50"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setDetail(r)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setDetail(r);
+                        }
+                      }}
+                    >
                       <td className="max-w-[14rem] truncate px-3 py-2 font-medium" title={clinicDisplayName(r, i18n.language)}>
                         {clinicDisplayName(r, i18n.language)}
                       </td>
@@ -544,6 +558,58 @@ export function RevenuePage() {
           />
         </CardContent>
       </Card>
+
+      <Dialog open={Boolean(detail)} onOpenChange={(o) => !o && setDetail(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>{t("revenue.detailTitle")}</DialogTitle>
+          </DialogHeader>
+          {detail ? (
+            <dl className="space-y-3 text-sm">
+              <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("revenue.clinic")}</dt>
+                <dd className="font-medium">{clinicDisplayName(detail, i18n.language)}</dd>
+              </div>
+              <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("revenue.category")}</dt>
+                <dd className="font-medium">{formatRevenueCategory(detail.category, t)}</dd>
+              </div>
+              <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("revenue.status")}</dt>
+                <dd className="font-medium">{formatRevenueStatus(detail.status, t)}</dd>
+              </div>
+              <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("revenue.gross")}</dt>
+                <dd className="font-medium ltr-nums">{money(detail.grossAmount)}</dd>
+              </div>
+              <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("revenue.tax")}</dt>
+                <dd className="font-medium ltr-nums">{money(detail.taxAmount)}</dd>
+              </div>
+              <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("revenue.net")}</dt>
+                <dd className="font-medium ltr-nums">{money(detail.netAmount)}</dd>
+              </div>
+              <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("revenue.posted")}</dt>
+                <dd className="font-medium ltr-nums">
+                  {new Date(detail.postedAt).toLocaleString(localeForLanguage(i18n.language))}
+                </dd>
+              </div>
+              {detail.description?.trim() ? (
+                <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                  <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("revenue.description")}</dt>
+                  <dd className="font-medium">{detail.description}</dd>
+                </div>
+              ) : null}
+              <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("revenue.entryId")}</dt>
+                <dd className="font-mono text-xs text-muted-foreground">{detail.id}</dd>
+              </div>
+            </dl>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

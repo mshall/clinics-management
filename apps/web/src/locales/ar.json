@@ -427,6 +427,9 @@
     "allClinicsOrganization": "كل العيادات (المنظمة)",
     "thisMonth": "هذا الشهر",
     "periodTotal": "إجمالي المصروفات",
+    "detailTitle": "تفاصيل المصروف",
+    "entryId": "معرّف القيد",
+    "noProof": "لا يوجد إثبات دفع مرفق",
     "categories": {
       "UTILITIES": "المرافق",
       "MATERIALS": "المواد والمستلزمات",
@@ -473,6 +476,9 @@
     "noBreakdownRows": "لا إيرادات مُثبتة في هذا النطاق.",
     "vatPercent": "ضريبة القيمة المضافة %",
     "status": "الحالة",
+    "detailTitle": "تفاصيل قيد الإيراد",
+    "description": "الوصف",
+    "entryId": "معرّف القيد",
     "categories": {
       "VISIT": "زيارة",
       "VISIT_FEE": "رسوم الزيارة",

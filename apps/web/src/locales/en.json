@@ -427,6 +427,9 @@
     "allClinicsOrganization": "All clinics (organization)",
     "thisMonth": "This month",
     "periodTotal": "Total expenses",
+    "detailTitle": "Expense details",
+    "entryId": "Entry ID",
+    "noProof": "No payment proof attached",
     "categories": {
       "UTILITIES": "Utilities",
       "MATERIALS": "Materials & supplies",
@@ -473,6 +476,9 @@
     "noBreakdownRows": "No posted revenue in this range.",
     "vatPercent": "VAT %",
     "status": "Status",
+    "detailTitle": "Revenue entry details",
+    "description": "Description",
+    "entryId": "Entry ID",
     "categories": {
       "VISIT": "Visit",
       "VISIT_FEE": "Visit fee",
