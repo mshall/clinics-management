@@ -14,6 +14,7 @@ import { TablePagination } from "@/components/table-pagination";
 import { useClinicsQuery, useEncountersQuery, usePatientQuery } from "@/lib/api-hooks";
 import type { EncounterDetailDto } from "@/lib/api-types";
 import { apiFetchBlob, apiPost } from "@/lib/http";
+import { formatEncounterStatus, localeForLanguage } from "@/lib/locale-display";
 
 export function PatientDetailPage() {
   const { t, i18n } = useTranslation();
@@ -168,7 +169,7 @@ export function PatientDetailPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               <Button asChild variant="outline">
-                <Link to="/patients">{i18n.language === "ar" ? "القائمة" : "Back to list"}</Link>
+                <Link to="/patients">{t("patients.backToList")}</Link>
               </Button>
               <Button
                 type="button"
@@ -185,7 +186,7 @@ export function PatientDetailPage() {
       <div className="grid gap-4 xl:grid-cols-[1.1fr_1fr]">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{i18n.language === "ar" ? "التفاصيل الشخصية" : "Personal details"}</CardTitle>
+            <CardTitle className="text-base">{t("patients.personalDetails")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <Row label={t("patients.dob")} value={<span className="ltr-nums">{patient.dob}</span>} />
@@ -254,7 +255,7 @@ export function PatientDetailPage() {
                       {vitalsRows.map((e) => (
                         <tr key={e.id} className="border-t border-border">
                           <td className="px-2 py-2 ltr-nums text-xs text-muted-foreground">
-                            {new Date(e.updatedAt).toLocaleString(i18n.language === "ar" ? "ar-AE" : "en-AE")}
+                            {new Date(e.updatedAt).toLocaleString(localeForLanguage(i18n.language))}
                           </td>
                           <td className="px-2 py-2 ltr-nums">{e.heartRate ?? "—"}</td>
                           <td className="px-2 py-2 ltr-nums">{e.spo2 != null ? `${e.spo2}%` : "—"}</td>
@@ -320,11 +321,11 @@ export function PatientDetailPage() {
                     >
                       <div>
                         <Badge variant={e.status === "FINALIZED" ? "default" : "secondary"} className="me-2">
-                          {e.status}
+                          {formatEncounterStatus(e.status, t)}
                         </Badge>
                         <span>{e.visitType}</span>
                         <span className="ms-2 text-xs text-muted-foreground ltr-nums">
-                          {new Date(e.updatedAt).toLocaleDateString(i18n.language === "ar" ? "ar-AE" : "en-AE")}
+                          {new Date(e.updatedAt).toLocaleDateString(localeForLanguage(i18n.language))}
                         </span>
                       </div>
                     </li>

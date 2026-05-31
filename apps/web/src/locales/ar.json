@@ -100,7 +100,13 @@
     "encounters": "الزيارات",
     "newEncounter": "زيارة جديدة",
     "viewAllEncounters": "كل الزيارات",
-    "noEncounters": "لا توجد زيارات لهذا المريض بعد."
+    "noEncounters": "لا توجد زيارات لهذا المريض بعد.",
+    "backToList": "العودة للقائمة",
+    "personalDetails": "التفاصيل الشخصية",
+    "vitalsHistory": "سجل العلامات الحيوية",
+    "noVitals": "لم تُسجَّل علامات حيوية بعد.",
+    "uploadPhoto": "رفع صورة",
+    "photoHint": "صورة اختيارية للملف (JPEG/PNG)."
   },
   "encounters": {
     "title": "زيارة",
@@ -210,7 +216,12 @@
     "appointmentSearchPlaceholder": "اكتب حرفين على الأقل أو اختر مريضًا أولًا…",
     "appointmentSearchIdle": "ابحث أو اختر مريضًا لعرض حجوزاته.",
     "noBookableAppointments": "لا مواعيد مفتوحة مطابقة.",
-    "clearAppointment": "إلغاء ربط الموعد"
+    "clearAppointment": "إلغاء ربط الموعد",
+    "attendingPhysician": "الطبيب المعالج",
+    "attendingPhysicianHint": "مطلوب عند إنشاء زيارة لشخص آخر. يُملأ تلقائيًا عند ربط موعد محجوز.",
+    "noDoctors": "لا حسابات أطباء في هذه المنظمة.",
+    "pickDoctorIdle": "اختر الطبيب المعالج لهذه الزيارة.",
+    "selectVisitType": "اختر نوع الزيارة"
   },
   "appointments": {
     "title": "المواعيد",
@@ -279,7 +290,63 @@
     "addDoctor": "إضافة طبيب",
     "pickDoctor": "اختر الطبيب",
     "noDoctorsAvailable": "لا يوجد أطباء متاحون.",
-    "doctorName": "الاسم"
+    "doctorName": "الاسم",
+    "detailRegistration": "التسجيل",
+    "detailRegistrationHint": "القيم المُدخلة عند إضافة العيادة.",
+    "detailLocation": "الموقع والعناوين",
+    "licenseNumber": "الترخيص",
+    "phone": "الهاتف",
+    "email": "البريد",
+    "defaultLanguage": "اللغة الافتراضية",
+    "addressEn": "العنوان (إنجليزي)",
+    "addressAr": "العنوان (عربي)",
+    "locationUrl": "رابط الخريطة",
+    "parentClinic": "العيادة الأم",
+    "viewParent": "عرض الأم",
+    "directory": "الدليل",
+    "records": "سجل",
+    "nameColumnEn": "الاسم (إنجليزي)",
+    "nameColumnAr": "الاسم (عربي)",
+    "cityColumn": "المدينة"
+  },
+  "clinicRevenue": {
+    "subtitle": "إيرادات الزيارات المُثبتة حسب العيادة لفترة التقارير.",
+    "totals": "إجماليات المنظمة",
+    "grandGross": "الإجمالي",
+    "grandNet": "الصافي",
+    "clinic": "العيادة",
+    "gross": "الإجمالي",
+    "net": "الصافي",
+    "noData": "لا إيرادات مُثبتة في هذا النطاق.",
+    "breakdownTitle": "بنود الإيرادات",
+    "noLines": "لا بنود في هذا النطاق."
+  },
+  "profile": {
+    "title": "الملف الشخصي",
+    "subtitle": "حسابك في هذه المنظمة.",
+    "about": "نبذة",
+    "aboutPlaceholder": "عرّف زملاءك بمجالات تركيزك ولغاتك — نص تجريبي.",
+    "roleLabel": "الدور"
+  },
+  "doctorRevenue": {
+    "subtitle": "إيرادات الزيارات المكتملة وقيود أخرى مرتبطة بك (وليس المواعيد). استخدم شريط فترة التقارير أعلاه لتغيير التواريخ.",
+    "gross": "الإجمالي (الفترة)",
+    "net": "الصافي (الفترة)",
+    "lines": "بنود الإيرادات",
+    "linesHint": "فقط القيود المرتبطة بزيارات أنت الطبيب المعالج فيها.",
+    "linesClinicHint": "عمود العيادة يوضح مكان كل زيارة.",
+    "empty": "لا بنود إيرادات في هذه الفترة."
+  },
+  "roles": {
+    "group_admin": "مدير المجموعة",
+    "clinic_admin": "مدير العيادة",
+    "branch_manager": "مدير الفرع",
+    "physician": "طبيب",
+    "nurse": "ممرض/ة",
+    "receptionist": "موظف استقبال",
+    "clinic_assistant": "مساعد عيادة",
+    "finance_officer": "مسؤول مالي",
+    "hr_officer": "مسؤول موارد بشرية"
   },
   "operations": {
     "title": "العمليات",
@@ -354,7 +421,26 @@
     "viewProof": "عرض",
     "downloadProof": "تنزيل",
     "proofTooLarge": "الملف كبير جدًا (الحد الأقصى 15 ميجابايت).",
-    "noLedgerMatch": "لا صفوف تطابق مرشحات الأعمدة."
+    "noLedgerMatch": "لا صفوف تطابق مرشحات الأعمدة.",
+    "searchLedger": "بحث الدفتر",
+    "allClinics": "كل العيادات",
+    "allClinicsOrganization": "كل العيادات (المنظمة)",
+    "thisMonth": "هذا الشهر",
+    "periodTotal": "إجمالي المصروفات",
+    "categories": {
+      "UTILITIES": "المرافق",
+      "MATERIALS": "المواد والمستلزمات",
+      "PAYROLL": "الرواتب",
+      "MARKETING": "التسويق",
+      "RENT": "الإيجار",
+      "IT": "تقنية المعلومات والبرمجيات",
+      "OTHER": "أخرى"
+    },
+    "statuses": {
+      "PENDING": "قيد الانتظار",
+      "APPROVED": "موافق عليه",
+      "REJECTED": "مرفوض"
+    }
   },
   "revenue": {
     "title": "الإيرادات",
@@ -372,7 +458,36 @@
     "linkOperation": "ربط بعملية (اختياري)",
     "noOperation": "بدون عملية — إيراد عام",
     "operationBalanceHint": "الرصيد المتبقي: {{amount}}",
-    "operationPaymentHint": "يُحدَّث رصيد العملية. تُسجَّل الإيرادات عند تعليم العملية كمكتملة."
+    "operationPaymentHint": "يُحدَّث رصيد العملية. تُسجَّل الإيرادات عند تعليم العملية كمكتملة.",
+    "searchFilters": "بحث الدفتر",
+    "searchLedgerHint": "اختر نطاق التاريخ، ثم كل العيادات في المنظمة أو عيادة واحدة. الإجماليات والجدول يتبعان هذا المرشح.",
+    "ledgerClinicFilter": "نطاق العيادة",
+    "allClinicsOrganization": "كل العيادات (المنظمة)",
+    "thisMonth": "هذا الشهر",
+    "totalGross": "إجمالي الإجمالي",
+    "totalNet": "إجمالي الصافي",
+    "byClinicTitle": "الإيرادات المُثبتة حسب العيادة",
+    "byClinicSubtitle": "نفس فترة التقارير أعلاه.",
+    "grandGross": "الإجمالي",
+    "grandNet": "الصافي",
+    "noBreakdownRows": "لا إيرادات مُثبتة في هذا النطاق.",
+    "vatPercent": "ضريبة القيمة المضافة %",
+    "status": "الحالة",
+    "categories": {
+      "VISIT": "زيارة",
+      "VISIT_FEE": "رسوم الزيارة",
+      "PROCEDURE": "إجراء",
+      "LAB": "مختبر",
+      "PHARMACY": "صيدلية",
+      "IMAGING": "تصوير",
+      "APPOINTMENT_FEE": "رسوم الموعد",
+      "OPERATION_PAYMENT": "دفعة عملية",
+      "OTHER": "أخرى"
+    },
+    "statuses": {
+      "POSTED": "مُثبت",
+      "VOID": "ملغى"
+    }
   },
   "hr": {
     "title": "الموارد البشرية",
@@ -410,7 +525,34 @@
     "dates": "التواريخ",
     "submitLeave": "إرسال الطلب",
     "approve": "موافقة",
-    "reject": "رفض"
+    "reject": "رفض",
+    "idDocument": "الهوية / جواز السفر (PDF أو صورة)",
+    "downloadIdDoc": "تنزيل",
+    "filterEmpType": "تصفية النوع…",
+    "attendanceStatuses": {
+      "PRESENT": "حاضر",
+      "LATE": "متأخر",
+      "ABSENT": "غائب",
+      "HALF_DAY": "نصف يوم"
+    },
+    "leaveStatuses": {
+      "PENDING": "قيد الانتظار",
+      "APPROVED": "موافق عليه",
+      "REJECTED": "مرفوض",
+      "CANCELLED": "ملغى"
+    },
+    "employmentTypes": {
+      "FULL_TIME": "دوام كامل",
+      "PART_TIME": "دوام جزئي",
+      "CONTRACTOR": "متعاقد",
+      "LOCUM": "طبيب بديل"
+    },
+    "leaveTypes": {
+      "ANNUAL": "إجازة سنوية",
+      "SICK": "إجازة مرضية",
+      "UNPAID": "إجازة بدون راتب",
+      "OTHER": "أخرى"
+    }
   },
   "reports": {
     "title": "التقارير",
@@ -442,6 +584,17 @@
     "noTenantsMatch": "لا مستأجرين يطابقون المرشحات.",
     "tabClinics": "العيادات والمستأجرون",
     "tabOrganization": "المنظمة والإعدادات",
+    "tabGovernance": "الحوكمة والتدقيق",
+    "governanceSubtitle": "سجل تدقيق قابل للبحث ضمن نطاق صلاحياتك.",
+    "auditSearch": "بحث الإجراءات أو الموارد أو الأشخاص",
+    "auditDetailTitle": "سجل التدقيق",
+    "clinicAdminScopes": "عيادات هذا المدير",
+    "clinicAdminScopesHint": "اختر عيادة واحدة على الأقل عندما يكون الدور مدير عيادة.",
+    "auditColAction": "الإجراء",
+    "auditColWhen": "الوقت",
+    "auditColActor": "الموظف",
+    "auditColResource": "المورد",
+    "auditEmpty": "لا سجلات تطابق مرشحاتك.",
     "defaultVisitFee": "رسوم الزيارة الافتراضية",
     "feeAmount": "المبلغ (عملة الأساس)",
     "saveFee": "حفظ",
@@ -496,6 +649,7 @@
     "save": "حفظ",
     "cancel": "إلغاء",
     "close": "إغلاق",
+    "back": "رجوع",
     "remove": "إزالة",
     "error": "حدث خطأ.",
     "comingSoon": "البيانات من الخادم ستُضاف مع واجهة NestJS."

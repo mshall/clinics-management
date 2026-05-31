@@ -16,19 +16,26 @@ import { Label } from "@/components/ui/label";
 import { useAttendanceQuery, useEmployeesQuery, useHrSummaryQuery, useLeaveRequestsQuery } from "@/lib/api-hooks";
 import { apiPatch, apiPost } from "@/lib/http";
 import { columnFilterIncludes } from "@/lib/utils";
+import {
+  formatAttendanceStatus,
+  formatClinicNameFields,
+  formatLeaveStatus,
+  formatLeaveType,
+  localeForLanguage,
+} from "@/lib/locale-display";
 
 type Tab = "summary" | "employees" | "attendance" | "leave";
 
-const LEAVE_TYPES: PickListItem[] = [
-  { value: "ANNUAL", label: "ANNUAL" },
-  { value: "SICK", label: "SICK" },
-  { value: "UNPAID", label: "UNPAID" },
-  { value: "OTHER", label: "OTHER" },
-];
-
-
 export function HrPage() {
   const { t, i18n } = useTranslation();
+  const leaveTypeItems: PickListItem[] = useMemo(
+    () =>
+      (["ANNUAL", "SICK", "UNPAID", "OTHER"] as const).map((value) => ({
+        value,
+        label: formatLeaveType(value, t),
+      })),
+    [t],
+  );
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>("summary");
@@ -173,10 +180,10 @@ export function HrPage() {
   });
 
   const money = (n: number) =>
-    new Intl.NumberFormat(i18n.language === "ar" ? "ar-AE" : "en-AE", { style: "currency", currency: "AED" }).format(n);
+    new Intl.NumberFormat(localeForLanguage(i18n.language), { style: "currency", currency: "AED" }).format(n);
 
   const filteredEmpRows = useMemo(() => {
-    const loc = i18n.language === "ar" ? "ar-AE" : "en-AE";
+    const loc = localeForLanguage(i18n.language);
     const fmt = (x: number) => new Intl.NumberFormat(loc, { style: "currency", currency: "AED" }).format(x);
     return empRows.filter((e) => {
       if (ecfNum.trim() && !columnFilterIncludes(e.employeeNumber, ecfNum)) return false;
@@ -197,19 +204,19 @@ export function HrPage() {
         if (!columnFilterIncludes(hay, acfEmp)) return false;
       }
       if (acfClinic.trim() && !columnFilterIncludes(a.clinicNameEn ?? "", acfClinic)) return false;
-      if (acfStat.trim() && !columnFilterIncludes(a.status, acfStat)) return false;
+      if (acfStat.trim() && !columnFilterIncludes(formatAttendanceStatus(a.status, t), acfStat)) return false;
       return true;
     });
   }, [attRows, acfDate, acfEmp, acfClinic, acfStat]);
 
   const filteredLeaveRows = useMemo(() => {
     return leaveRows.filter((l) => {
-      if (lcfType.trim() && !columnFilterIncludes(l.type, lcfType)) return false;
+      if (lcfType.trim() && !columnFilterIncludes(formatLeaveType(l.type, t), lcfType)) return false;
       if (lcfDates.trim()) {
         const range = `${l.startDate} ${l.endDate}`;
         if (!columnFilterIncludes(range, lcfDates)) return false;
       }
-      if (lcfStat.trim() && !columnFilterIncludes(l.status, lcfStat)) return false;
+      if (lcfStat.trim() && !columnFilterIncludes(formatLeaveStatus(l.status, t), lcfStat)) return false;
       return true;
     });
   }, [leaveRows, lcfType, lcfDates, lcfStat]);
@@ -396,7 +403,9 @@ export function HrPage() {
                       }}
                     >
                       <td className="px-2 py-2 font-mono text-xs">{e.employeeNumber}</td>
-                      <td className="px-2 py-2 text-start align-middle text-muted-foreground">{e.clinicNameEn ?? "—"}</td>
+                      <td className="px-2 py-2 text-start align-middle text-muted-foreground">
+                        {formatClinicNameFields(e.clinicNameEn, null, i18n.language)}
+                      </td>
                       <td className="px-2 py-2">
                         {e.firstNameEn} {e.lastNameEn}
                       </td>
@@ -544,9 +553,11 @@ export function HrPage() {
                           {a.employeeNumber ?? a.employeeId.slice(0, 8)}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-start align-middle text-muted-foreground">{a.clinicNameEn ?? "—"}</td>
+                      <td className="px-3 py-2 text-start align-middle text-muted-foreground">
+                        {formatClinicNameFields(a.clinicNameEn, null, i18n.language)}
+                      </td>
                       <td className="px-3 py-2">
-                        <Badge variant="secondary">{a.status}</Badge>
+                        <Badge variant="secondary">{formatAttendanceStatus(a.status, t)}</Badge>
                       </td>
                     </tr>
                   ))}
@@ -595,7 +606,7 @@ export function HrPage() {
                   <div className="space-y-2">
                     <Label>{t("hr.leaveType")}</Label>
                     <SearchablePickList
-                      items={LEAVE_TYPES}
+                      items={leaveTypeItems}
                       value={leaveType}
                       onValueChange={setLeaveType}
                       searchPlaceholder={t("hr.filterLeaveType", "Filter leave type…")}
@@ -707,7 +718,7 @@ export function HrPage() {
                 <tbody>
                   {filteredLeaveRows.map((l) => (
                     <tr key={l.id} className="border-t border-border">
-                      <td className="px-3 py-2">{l.type}</td>
+                      <td className="px-3 py-2">{formatLeaveType(l.type, t)}</td>
                       <td className="px-3 py-2 ltr-nums text-xs">
                         {l.startDate} → {l.endDate}
                       </td>
@@ -716,7 +727,7 @@ export function HrPage() {
                           variant={l.status === "APPROVED" ? "default" : "secondary"}
                           className={l.status === "REJECTED" ? "border-destructive/60 text-destructive" : undefined}
                         >
-                          {l.status}
+                          {formatLeaveStatus(l.status, t)}
                         </Badge>
                       </td>
                       <td className="px-3 py-2 text-end">

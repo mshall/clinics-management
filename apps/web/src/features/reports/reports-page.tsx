@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useReportsMonthlySeriesQuery } from "@/lib/api-hooks";
 import { useDateRangeStore } from "@/stores/date-range-store";
+import { localeForLanguage } from "@/lib/locale-display";
 
 export function ReportsPage() {
   const { t, i18n } = useTranslation();
@@ -28,7 +29,7 @@ export function ReportsPage() {
   const chartData = useMemo(() => series.data?.items ?? [], [series.data?.items]);
 
   const money = (n: number) =>
-    new Intl.NumberFormat(i18n.language === "ar" ? "ar-AE" : "en-AE", {
+    new Intl.NumberFormat(localeForLanguage(i18n.language), {
       style: "currency",
       currency: "AED",
       maximumFractionDigits: 0,

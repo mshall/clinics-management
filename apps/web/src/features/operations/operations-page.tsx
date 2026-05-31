@@ -23,6 +23,7 @@ import {
 import type { OperationDto } from "@/lib/api-types";
 import { ApiError, apiPatch, apiPost } from "@/lib/http";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
+import { formatClinicName, localeForLanguage } from "@/lib/locale-display";
 import { columnFilterIncludes } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { defaultMonthRange } from "@/stores/date-range-store";
@@ -216,7 +217,7 @@ export function OperationsPage() {
   }, [singleManagedClinic?.id]);
 
   const filteredRows = useMemo(() => {
-    const loc = i18n.language === "ar" ? "ar-AE" : "en-AE";
+    const loc = localeForLanguage(i18n.language);
     return rows.filter((o) => {
       if (efPatient.trim()) {
         const pText = resolvePatientListLabel({
@@ -344,7 +345,7 @@ export function OperationsPage() {
     },
   });
 
-  const loc = i18n.language === "ar" ? "ar-AE" : "en-AE";
+  const loc = localeForLanguage(i18n.language);
   const money = (n: number) =>
     n.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -499,7 +500,7 @@ export function OperationsPage() {
                   >
                     {clinics.map((c) => (
                       <option key={c.id} value={c.id}>
-                        {i18n.language === "ar" ? c.nameAr || c.nameEn : c.nameEn || c.nameAr}
+                        {formatClinicName(c, i18n.language)}
                       </option>
                     ))}
                   </select>
@@ -637,7 +638,7 @@ export function OperationsPage() {
                 <option value="">{t("operations.allClinics", "All clinics")}</option>
                 {clinics.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {i18n.language === "ar" ? c.nameAr || c.nameEn : c.nameEn || c.nameAr}
+                    {formatClinicName(c, i18n.language)}
                   </option>
                 ))}
               </select>
@@ -684,7 +685,7 @@ export function OperationsPage() {
                         <option value="">{t("operations.autoClinic", "Patient home branch")}</option>
                         {clinics.map((c) => (
                           <option key={c.id} value={c.id}>
-                            {i18n.language === "ar" ? c.nameAr || c.nameEn : c.nameEn || c.nameAr}
+                            {formatClinicName(c, i18n.language)}
                           </option>
                         ))}
                       </select>
@@ -885,11 +886,7 @@ export function OperationsPage() {
                   ) : (
                     filteredRows.map((o) => {
                       const clinic = clinicById.get(o.clinicId);
-                      const clinicLabel = clinic
-                        ? i18n.language === "ar"
-                          ? clinic.ar || clinic.en
-                          : clinic.en || clinic.ar
-                        : null;
+                      const clinicLabel = clinic ? formatClinicName({ nameEn: clinic.en, nameAr: clinic.ar }, i18n.language) : null;
                       const patientText = resolvePatientListLabel({
                         patientId: o.patientId,
                         patientMrn: o.patientMrn,

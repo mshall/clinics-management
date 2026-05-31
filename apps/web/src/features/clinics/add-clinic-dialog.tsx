@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useClinicsQuery } from "@/lib/api-hooks";
 import { ApiError, apiPost } from "@/lib/http";
 import { MIDDLE_EAST_COUNTRY_OPTIONS } from "@/lib/middle-east-countries";
+import { formatClinicName } from "@/lib/locale-display";
 
 type AddClinicDialogProps = {
   open: boolean;
@@ -16,7 +17,7 @@ type AddClinicDialogProps = {
 };
 
 export function AddClinicDialog({ open, onOpenChange }: AddClinicDialogProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const { data: clinics = [] } = useClinicsQuery();
 
@@ -37,9 +38,9 @@ export function AddClinicDialog({ open, onOpenChange }: AddClinicDialogProps) {
   const parentClinicPickItems: PickListItem[] = useMemo(
     () => [
       { value: "", label: t("admin.newParentClinic", "None — create as parent clinic") },
-      ...clinics.filter((c) => c.kind === "parent").map((c) => ({ value: c.id, label: c.nameEn })),
+      ...clinics.filter((c) => c.kind === "parent").map((c) => ({ value: c.id, label: formatClinicName(c, i18n.language) })),
     ],
-    [clinics, t]
+    [clinics, t, i18n.language]
   );
 
   const countryPickItems: PickListItem[] = useMemo(

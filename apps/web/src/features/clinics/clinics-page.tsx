@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AddClinicDialog } from "@/features/clinics/add-clinic-dialog";
 import { useClinicsQuery } from "@/lib/api-hooks";
 import { columnFilterIncludes } from "@/lib/utils";
+import { formatClinicName } from "@/lib/locale-display";
 import { useAuthStore } from "@/stores/auth-store";
 
 const CREATE_CLINIC_ROLES = new Set(["group_admin", "clinic_admin", "branch_manager"]);
@@ -67,9 +68,9 @@ export function ClinicsPage() {
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
           <div>
-            <CardTitle className="text-base">{i18n.language === "ar" ? "العيادات" : "Directory"}</CardTitle>
+            <CardTitle className="text-base">{t("clinics.directory")}</CardTitle>
             <CardDescription>
-              {isPending ? t("common.loading") : `${filtered.length} / ${data.length} ${i18n.language === "ar" ? "سجل" : "records"}`}
+              {isPending ? t("common.loading") : `${filtered.length} / ${data.length} ${t("clinics.records")}`}
             </CardDescription>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -106,11 +107,11 @@ export function ClinicsPage() {
                     <tr className="text-start">
                       <FilterTh label={`${t("clinics.parent")} / ${t("clinics.branch")}`} value={cfKind} onChange={setCfKind} />
                       <FilterTh
-                        label={i18n.language === "ar" ? "الاسم (عربي)" : "Name (EN)"}
+                        label={i18n.language === "ar" ? t("clinics.nameColumnAr") : t("clinics.nameColumnEn")}
                         value={cfName}
                         onChange={setCfName}
                       />
-                      <FilterTh label={i18n.language === "ar" ? "المدينة" : "City"} value={cfCity} onChange={setCfCity} />
+                      <FilterTh label={t("clinics.cityColumn")} value={cfCity} onChange={setCfCity} />
                     </tr>
                   </thead>
                   <tbody>
@@ -134,11 +135,7 @@ export function ClinicsPage() {
                           </Badge>
                         </td>
                         <td className="px-3 py-2">
-                          {i18n.language === "ar" ? (
-                            <span>{c.nameAr}</span>
-                          ) : (
-                            <span>{c.nameEn}</span>
-                          )}
+                          {formatClinicName(c, i18n.language)}
                         </td>
                         <td className="px-3 py-2 text-muted-foreground">
                           {c.city}, {c.country}

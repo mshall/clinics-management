@@ -15,6 +15,8 @@ import type { PatientDto } from "@/lib/api-schema";
 import { useClinicsQuery, usePatientsQuery } from "@/lib/api-hooks";
 import { ApiError, apiPost, apiPostFormData } from "@/lib/http";
 import { columnFilterIncludes } from "@/lib/utils";
+import { formatGender } from "@/lib/locale-display";
+import { formatClinicName } from "@/lib/locale-display";
 
 export function PatientsPage() {
   const { t, i18n } = useTranslation();
@@ -222,7 +224,7 @@ export function PatientsPage() {
                   <option value="">{t("patients.optionalBranch")}</option>
                   {clinics.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.nameEn}
+                      {formatClinicName(c, i18n.language)}
                     </option>
                   ))}
                 </select>
@@ -285,7 +287,7 @@ export function PatientsPage() {
                     onFilterChange={setPfMrn}
                   />
                   <SortableTh
-                    label={i18n.language === "ar" ? "الاسم" : "Name"}
+                    label={t("hr.name")}
                     column="lastNameEn"
                     sortBy={sortBy}
                     sortOrder={sortOrder}
@@ -345,7 +347,7 @@ export function PatientsPage() {
                     </td>
                     <td className="px-3 py-2 text-center">
                       <span className="text-xs font-medium text-muted-foreground">
-                        {p.gender === "M" ? t("patients.genderM") : p.gender === "F" ? t("patients.genderF") : p.gender}
+                        {formatGender(p.gender, t)}
                       </span>
                     </td>
                     <td className="px-3 py-2 ltr-nums">{p.dob}</td>

@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuthStore } from "@/stores/auth-store";
+import { formatUserRole } from "@/lib/locale-display";
 
 export function ProfilePage() {
   const { t } = useTranslation();
@@ -34,7 +35,7 @@ export function ProfilePage() {
             <CardTitle className="text-xl leading-tight">{user?.displayName ?? "—"}</CardTitle>
             <CardDescription className="break-all">{user?.email}</CardDescription>
             <p className="text-xs text-muted-foreground">
-              {t("profile.roleLabel", "Role")}: <span className="font-mono uppercase">{user?.role.replace(/_/g, " ")}</span>
+              {t("profile.roleLabel")}: <span>{user?.role ? formatUserRole(user.role, t) : "—"}</span>
             </p>
           </div>
         </CardHeader>

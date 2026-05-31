@@ -100,7 +100,13 @@
     "encounters": "Encounters",
     "newEncounter": "New encounter",
     "viewAllEncounters": "All encounters",
-    "noEncounters": "No encounters yet for this patient."
+    "noEncounters": "No encounters yet for this patient.",
+    "backToList": "Back to list",
+    "personalDetails": "Personal details",
+    "vitalsHistory": "Vitals history",
+    "noVitals": "No vitals captured yet.",
+    "uploadPhoto": "Upload photo",
+    "photoHint": "Optional profile photo (JPEG/PNG)."
   },
   "encounters": {
     "title": "Encounter",
@@ -214,7 +220,8 @@
     "attendingPhysician": "Attending doctor",
     "attendingPhysicianHint": "Required when creating an encounter for someone else. Pre-filled when you link a booked appointment.",
     "noDoctors": "No doctor accounts in this organization.",
-    "pickDoctorIdle": "Pick the attending doctor for this encounter."
+    "pickDoctorIdle": "Pick the attending doctor for this encounter.",
+    "selectVisitType": "Select visit type"
   },
   "appointments": {
     "title": "Appointments",
@@ -295,7 +302,12 @@
     "addDoctor": "Add doctor",
     "pickDoctor": "Select physician",
     "noDoctorsAvailable": "No available physicians.",
-    "doctorName": "Name"
+    "doctorName": "Name",
+    "directory": "Directory",
+    "records": "records",
+    "nameColumnEn": "Name (EN)",
+    "nameColumnAr": "Name (AR)",
+    "cityColumn": "City"
   },
   "clinicRevenue": {
     "subtitle": "Posted encounter revenue by clinic for the reporting period.",
@@ -322,7 +334,19 @@
     "net": "Net (period)",
     "lines": "Revenue lines",
     "linesHint": "Only entries linked to encounters where you are the attending doctor.",
+    "linesClinicHint": "The clinic column shows where each visit took place.",
     "empty": "No revenue lines in this period."
+  },
+  "roles": {
+    "group_admin": "Group admin",
+    "clinic_admin": "Clinic admin",
+    "branch_manager": "Branch manager",
+    "physician": "Physician",
+    "nurse": "Nurse",
+    "receptionist": "Receptionist",
+    "clinic_assistant": "Clinic assistant",
+    "finance_officer": "Finance officer",
+    "hr_officer": "HR officer"
   },
   "operations": {
     "title": "Operations",
@@ -397,7 +421,26 @@
     "viewProof": "View",
     "downloadProof": "Download",
     "proofTooLarge": "File is too large (max 15 MB).",
-    "noLedgerMatch": "No rows match the column filters."
+    "noLedgerMatch": "No rows match the column filters.",
+    "searchLedger": "Search ledger",
+    "allClinics": "All clinics",
+    "allClinicsOrganization": "All clinics (organization)",
+    "thisMonth": "This month",
+    "periodTotal": "Total expenses",
+    "categories": {
+      "UTILITIES": "Utilities",
+      "MATERIALS": "Materials & supplies",
+      "PAYROLL": "Payroll",
+      "MARKETING": "Marketing",
+      "RENT": "Rent",
+      "IT": "IT & software",
+      "OTHER": "Other"
+    },
+    "statuses": {
+      "PENDING": "Pending",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected"
+    }
   },
   "revenue": {
     "title": "Revenue",
@@ -415,7 +458,36 @@
     "linkOperation": "Link to operation (optional)",
     "noOperation": "No operation — general revenue",
     "operationBalanceHint": "Remaining balance: {{amount}}",
-    "operationPaymentHint": "Payment updates the operation balance. Revenue is posted when the operation is marked complete."
+    "operationPaymentHint": "Payment updates the operation balance. Revenue is posted when the operation is marked complete.",
+    "searchFilters": "Search ledger",
+    "searchLedgerHint": "Pick a date range, then either all clinics in this organization or one clinic. Totals and the table follow this filter.",
+    "ledgerClinicFilter": "Clinic scope",
+    "allClinicsOrganization": "All clinics (organization)",
+    "thisMonth": "This month",
+    "totalGross": "Total gross",
+    "totalNet": "Total net",
+    "byClinicTitle": "Posted revenue by clinic",
+    "byClinicSubtitle": "Same reporting period as above.",
+    "grandGross": "Gross",
+    "grandNet": "Net",
+    "noBreakdownRows": "No posted revenue in this range.",
+    "vatPercent": "VAT %",
+    "status": "Status",
+    "categories": {
+      "VISIT": "Visit",
+      "VISIT_FEE": "Visit fee",
+      "PROCEDURE": "Procedure",
+      "LAB": "Laboratory",
+      "PHARMACY": "Pharmacy",
+      "IMAGING": "Imaging",
+      "APPOINTMENT_FEE": "Appointment fee",
+      "OPERATION_PAYMENT": "Operation payment",
+      "OTHER": "Other"
+    },
+    "statuses": {
+      "POSTED": "Posted",
+      "VOID": "Void"
+    }
   },
   "hr": {
     "title": "HR",
@@ -453,7 +525,34 @@
     "dates": "Dates",
     "submitLeave": "Submit request",
     "approve": "Approve",
-    "reject": "Reject"
+    "reject": "Reject",
+    "idDocument": "ID / passport (PDF or image)",
+    "downloadIdDoc": "Download",
+    "filterEmpType": "Filter type…",
+    "attendanceStatuses": {
+      "PRESENT": "Present",
+      "LATE": "Late",
+      "ABSENT": "Absent",
+      "HALF_DAY": "Half day"
+    },
+    "leaveStatuses": {
+      "PENDING": "Pending",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "CANCELLED": "Cancelled"
+    },
+    "employmentTypes": {
+      "FULL_TIME": "Full time",
+      "PART_TIME": "Part time",
+      "CONTRACTOR": "Contractor",
+      "LOCUM": "Locum"
+    },
+    "leaveTypes": {
+      "ANNUAL": "Annual leave",
+      "SICK": "Sick leave",
+      "UNPAID": "Unpaid leave",
+      "OTHER": "Other"
+    }
   },
   "reports": {
     "title": "Reports",

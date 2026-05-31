@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClinicDoctorsPanel } from "@/features/clinics/clinic-doctors-panel";
 import { useClinicQuery } from "@/lib/api-hooks";
+import { formatClinicName, formatClinicNameFields } from "@/lib/locale-display";
 
 export function ClinicDetailPage() {
   const { t, i18n } = useTranslation();
@@ -26,7 +27,7 @@ export function ClinicDetailPage() {
     );
   }
 
-  const name = i18n.language === "ar" ? c.nameAr : c.nameEn;
+  const name = formatClinicName(c, i18n.language);
 
   return (
     <div className="space-y-6">
@@ -115,7 +116,7 @@ export function ClinicDetailPage() {
                 <CardTitle className="text-base">{t("clinics.parentClinic", "Parent clinic")}</CardTitle>
               </CardHeader>
               <CardContent className="text-sm">
-                <p className="font-medium">{i18n.language === "ar" ? c.parentNameAr : c.parentNameEn}</p>
+                <p className="font-medium">{formatClinicNameFields(c.parentNameEn, c.parentNameAr, i18n.language)}</p>
                 <Button asChild variant="link" className="h-auto px-0">
                   <Link to={`/clinics/${c.parentClinicId}`}>{t("clinics.viewParent", "View parent")}</Link>
                 </Button>

@@ -14,6 +14,7 @@ import { useAppointmentQuery, useClinicsQuery, usePatientQuery, usePatientsQuery
 import type { AppointmentDto } from "@/lib/api-types";
 import { ApiError, apiPatch } from "@/lib/http";
 import { patientToPickListItem } from "@/lib/patient-display";
+import { formatClinicName } from "@/lib/locale-display";
 import { cn } from "@/lib/utils";
 
 function toDatetimeLocalValue(iso: string): string {
@@ -34,7 +35,7 @@ function isAppointmentStatusCode(s: string): s is AppointmentStatusCode {
 }
 
 export function AppointmentDetailPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { id } = useParams();
   const qc = useQueryClient();
   const { data: apt, isPending, isError, error } = useAppointmentQuery(id);
@@ -105,10 +106,10 @@ export function AppointmentDetailPage() {
     () =>
       clinics.map((c) => ({
         value: c.id,
-        label: c.nameEn,
+        label: formatClinicName(c, i18n.language),
         hint: [c.city, c.country].filter(Boolean).join(" · ") || undefined,
       })),
-    [clinics]
+    [clinics, i18n.language],
   );
 
   const patientItems: PickListItem[] = useMemo(() => {

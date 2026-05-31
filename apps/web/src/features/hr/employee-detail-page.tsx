@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useEmployeeQuery } from "@/lib/api-hooks";
 import { apiFetchBlob } from "@/lib/http";
+import { formatClinicNameFields, formatEmploymentType, localeForLanguage } from "@/lib/locale-display";
 
 export function EmployeeDetailPage() {
   const { t, i18n } = useTranslation();
@@ -14,7 +15,7 @@ export function EmployeeDetailPage() {
   const { data: emp, isPending, isError, error } = useEmployeeQuery(id);
 
   const money = (n: number) =>
-    new Intl.NumberFormat(i18n.language === "ar" ? "ar-AE" : "en-AE", { style: "currency", currency: "AED" }).format(n);
+    new Intl.NumberFormat(localeForLanguage(i18n.language), { style: "currency", currency: "AED" }).format(n);
 
   if (isPending) {
     return <p className="text-muted-foreground">{t("common.loading")}</p>;
@@ -48,7 +49,7 @@ export function EmployeeDetailPage() {
           <CardTitle className="text-base">{t("hr.employeeDetails", "Employee details")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
-          <Row label={t("hr.clinic")} value={emp.clinicNameEn ?? "—"} />
+          <Row label={t("hr.clinic")} value={formatClinicNameFields(emp.clinicNameEn, null, i18n.language)} />
           <Separator />
           <Row label={t("hr.email")} value={emp.email ?? "—"} />
           <Separator />
@@ -56,7 +57,7 @@ export function EmployeeDetailPage() {
           <Separator />
           <Row label={t("hr.jobTitle")} value={emp.jobTitle} />
           <Separator />
-          <Row label={t("hr.employmentType")} value={<Badge variant="secondary">{emp.employmentType}</Badge>} />
+          <Row label={t("hr.employmentType")} value={<Badge variant="secondary">{formatEmploymentType(emp.employmentType, t)}</Badge>} />
           <Separator />
           <Row label={t("hr.hireDate", "Hire date")} value={<span className="ltr-nums">{emp.hireDate}</span>} />
           <Separator />

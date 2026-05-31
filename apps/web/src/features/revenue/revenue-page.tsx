@@ -13,17 +13,19 @@ import { useClinicsQuery, useClinicRevenueBreakdownQuery, usePayableOperationsQu
 import type { RevenueEntryDto } from "@/lib/api-types";
 import { ApiError, apiPost } from "@/lib/http";
 import { columnFilterIncludes } from "@/lib/utils";
+import {
+  formatClinicName,
+  formatClinicNameFields,
+  formatRevenueCategory,
+  formatRevenueStatus,
+  localeForLanguage,
+  REVENUE_CATEGORIES,
+} from "@/lib/locale-display";
 import { useDateRangeStore } from "@/stores/date-range-store";
 import { useAuthStore } from "@/stores/auth-store";
 
-/** VISIT_FEE = encounter consultation; APPOINTMENT_FEE = legacy rows only (fees no longer booked on appointments). */
-const REV_CATEGORIES = ["VISIT", "VISIT_FEE", "PROCEDURE", "LAB", "PHARMACY", "IMAGING", "APPOINTMENT_FEE", "OPERATION_PAYMENT", "OTHER"] as const;
-
 function clinicDisplayName(r: RevenueEntryDto, lng: string): string {
-  const en = r.clinicNameEn?.trim();
-  const ar = r.clinicNameAr?.trim();
-  if (lng === "ar") return ar || en || r.clinicId;
-  return en || ar || r.clinicId;
+  return formatClinicNameFields(r.clinicNameEn, r.clinicNameAr, lng, r.clinicId);
 }
 
 export function RevenuePage() {
@@ -127,7 +129,7 @@ export function RevenuePage() {
   });
 
   const money = (n: number) =>
-    new Intl.NumberFormat(i18n.language === "ar" ? "ar-AE" : "en-AE", { style: "currency", currency: "AED" }).format(n);
+    new Intl.NumberFormat(localeForLanguage(i18n.language), { style: "currency", currency: "AED" }).format(n);
 
   const grossN = Number.parseFloat(gross || "0");
   const vatN = Number.parseFloat(vatPercent || "0");
@@ -139,11 +141,11 @@ export function RevenuePage() {
     operationId.length > 0 && netComputed > 0 && netComputed > operationBalance + 0.001;
 
   const filteredRevenueRows = useMemo(() => {
-    const loc = i18n.language === "ar" ? "ar-AE" : "en-AE";
+    const loc = localeForLanguage(i18n.language);
     const fmt = (x: number) => new Intl.NumberFormat(loc, { style: "currency", currency: "AED" }).format(x);
     return rows.filter((r) => {
       if (rfClinic.trim() && !columnFilterIncludes(clinicDisplayName(r, i18n.language), rfClinic)) return false;
-      if (rfCategory.trim() && !columnFilterIncludes(r.category, rfCategory)) return false;
+      if (rfCategory.trim() && !columnFilterIncludes(formatRevenueCategory(r.category, t), rfCategory)) return false;
       if (rfNet.trim()) {
         const hay = `${r.netAmount} ${fmt(r.netAmount)}`;
         if (!columnFilterIncludes(hay, rfNet)) return false;
@@ -152,7 +154,7 @@ export function RevenuePage() {
         const ds = new Date(r.postedAt).toLocaleString(loc);
         if (!columnFilterIncludes(ds, rfPosted) && !columnFilterIncludes(r.postedAt, rfPosted)) return false;
       }
-      if (rfStatus.trim() && !columnFilterIncludes(r.status, rfStatus)) return false;
+      if (rfStatus.trim() && !columnFilterIncludes(formatRevenueStatus(r.status, t), rfStatus)) return false;
       return true;
     });
   }, [rows, rfCategory, rfNet, rfPosted, rfStatus, rfClinic, i18n.language]);
@@ -181,7 +183,7 @@ export function RevenuePage() {
           </CardHeader>
           <CardContent className="flex flex-wrap items-end gap-3 pb-4">
             <div className="space-y-1.5">
-              <Label className="text-xs">{t("reports.usingRange", "From")}</Label>
+              <Label className="text-xs">{t("dateRange.from")}</Label>
               <Input
                 className="h-9 ltr-nums"
                 type="date"
@@ -208,7 +210,7 @@ export function RevenuePage() {
               <Label className="text-xs">{t("revenue.ledgerClinicFilter", "Clinic scope")}</Label>
               {singleManagedClinic ? (
                 <p className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-2 text-sm">
-                  {singleManagedClinic.nameEn}
+                  {formatClinicName(singleManagedClinic, i18n.language)}
                 </p>
               ) : (
                 <select
@@ -222,7 +224,7 @@ export function RevenuePage() {
                   <option value="">{t("revenue.allClinicsOrganization", "All clinics (organization)")}</option>
                   {clinics.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.nameEn}
+                      {formatClinicName(c, i18n.language)}
                     </option>
                   ))}
                 </select>
@@ -288,7 +290,7 @@ export function RevenuePage() {
                   <tbody>
                     {breakdownRows.map((r) => (
                       <tr key={r.clinicId} className="border-t border-border">
-                        <td className="px-3 py-2 font-medium">{i18n.language === "ar" ? r.nameAr || r.nameEn : r.nameEn}</td>
+                        <td className="px-3 py-2 font-medium">{formatClinicName({ nameEn: r.nameEn, nameAr: r.nameAr }, i18n.language)}</td>
                         <td className="px-3 py-2 ltr-nums text-muted-foreground">{money(r.grossTotal)}</td>
                         <td className="px-3 py-2 ltr-nums">{money(r.netTotal)}</td>
                       </tr>
@@ -338,7 +340,7 @@ export function RevenuePage() {
                 const balance = o.balanceDue ?? o.totalCost - (o.paidAmount ?? 0);
                 return (
                   <option key={o.id} value={o.id}>
-                    {patient} · {new Date(o.operationDate).toLocaleDateString(i18n.language === "ar" ? "ar-AE" : "en-AE")} ·{" "}
+                    {patient} · {new Date(o.operationDate).toLocaleDateString(localeForLanguage(i18n.language))} ·{" "}
                     {money(balance)} {t("operations.balanceDue", "Balance")}
                   </option>
                 );
@@ -356,7 +358,7 @@ export function RevenuePage() {
             <Label>{t("revenue.clinic")}</Label>
             {singleManagedClinic ? (
               <p className="flex min-h-10 items-center rounded-md border border-input bg-muted/40 px-3 py-2 text-sm">
-                {singleManagedClinic.nameEn}
+                {formatClinicName(singleManagedClinic, i18n.language)}
               </p>
             ) : (
               <select
@@ -367,7 +369,7 @@ export function RevenuePage() {
                 <option value="">{t("revenue.pickClinic")}</option>
                 {clinics.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.nameEn}
+                    {formatClinicName(c, i18n.language)}
                   </option>
                 ))}
               </select>
@@ -381,9 +383,9 @@ export function RevenuePage() {
               onChange={(e) => setCategory(e.target.value)}
               disabled={operationId.length > 0}
             >
-              {REV_CATEGORIES.map((c) => (
+              {REVENUE_CATEGORIES.map((c) => (
                 <option key={c} value={c}>
-                  {c}
+                  {formatRevenueCategory(c, t)}
                 </option>
               ))}
             </select>
@@ -510,12 +512,12 @@ export function RevenuePage() {
                       <td className="max-w-[14rem] truncate px-3 py-2 font-medium" title={clinicDisplayName(r, i18n.language)}>
                         {clinicDisplayName(r, i18n.language)}
                       </td>
-                      <td className="px-3 py-2">{r.category}</td>
+                      <td className="px-3 py-2">{formatRevenueCategory(r.category, t)}</td>
                       <td className="px-3 py-2 ltr-nums">{money(r.netAmount)}</td>
                       <td className="px-3 py-2 ltr-nums text-xs text-muted-foreground">
-                        {new Date(r.postedAt).toLocaleString(i18n.language === "ar" ? "ar-AE" : "en-AE")}
+                        {new Date(r.postedAt).toLocaleString(localeForLanguage(i18n.language))}
                       </td>
-                      <td className="px-3 py-2 text-xs">{r.status}</td>
+                      <td className="px-3 py-2 text-xs">{formatRevenueStatus(r.status, t)}</td>
                     </tr>
                   ))}
                 {!isPending && rows.length > 0 && filteredRevenueRows.length === 0 ? (

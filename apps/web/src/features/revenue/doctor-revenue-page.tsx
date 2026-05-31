@@ -6,12 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useRevenueQuery, useRevenueTotalsQuery } from "@/lib/api-hooks";
 import type { RevenueEntryDto } from "@/lib/api-types";
 import { useDateRangeStore } from "@/stores/date-range-store";
+import {
+  formatClinicNameFields,
+  formatRevenueCategory,
+  localeForLanguage,
+} from "@/lib/locale-display";
 
 function clinicCellLabel(r: RevenueEntryDto, lng: string): string {
-  const en = r.clinicNameEn?.trim();
-  const ar = r.clinicNameAr?.trim();
-  if (lng === "ar") return ar || en || r.clinicId;
-  return en || ar || r.clinicId;
+  return formatClinicNameFields(r.clinicNameEn, r.clinicNameAr, lng, r.clinicId);
 }
 
 export function DoctorRevenuePage() {
@@ -24,7 +26,7 @@ export function DoctorRevenuePage() {
   const list = useRevenueQuery({ from, to, page, pageSize, sortBy: "postedAt", sortOrder: "desc" });
 
   const money = (n: number) =>
-    new Intl.NumberFormat(i18n.language === "ar" ? "ar-AE" : "en-AE", {
+    new Intl.NumberFormat(localeForLanguage(i18n.language), {
       style: "currency",
       currency: "AED",
       maximumFractionDigits: 2,
@@ -85,7 +87,7 @@ export function DoctorRevenuePage() {
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id} className="border-t border-border">
-                    <td className="px-3 py-2">{r.category}</td>
+                    <td className="px-3 py-2">{formatRevenueCategory(r.category, t)}</td>
                     <td className="max-w-[14rem] truncate px-3 py-2 text-muted-foreground" title={clinicCellLabel(r, i18n.language)}>
                       {clinicCellLabel(r, i18n.language)}
                     </td>

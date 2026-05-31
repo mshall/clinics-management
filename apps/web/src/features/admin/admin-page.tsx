@@ -16,6 +16,7 @@ import { useAdminOverviewQuery, useClinicsQuery, useTenantsQuery } from "@/lib/a
 import { ApiError, apiPatch, apiPost } from "@/lib/http";
 import { MIDDLE_EAST_COUNTRY_OPTIONS } from "@/lib/middle-east-countries";
 import { columnFilterIncludes } from "@/lib/utils";
+import { formatClinicName, formatUserRole } from "@/lib/locale-display";
 import { useAuthStore } from "@/stores/auth-store";
 import { AdminCreateEmployeePanel } from "./admin-create-employee-panel";
 import { AdminDataExplorerPanel } from "./admin-data-explorer-panel";
@@ -34,7 +35,7 @@ const USER_ROLES = [
 ] as const;
 
 export function AdminPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
   const isGroupAdmin = authUser?.role === "group_admin";
@@ -104,9 +105,9 @@ export function AdminPage() {
   const parentClinicPickItems: PickListItem[] = useMemo(
     () => [
       { value: "", label: t("admin.newParentClinic", "None — create as parent clinic") },
-      ...clinics.filter((c) => c.kind === "parent").map((c) => ({ value: c.id, label: c.nameEn })),
+      ...clinics.filter((c) => c.kind === "parent").map((c) => ({ value: c.id, label: formatClinicName(c, i18n.language) })),
     ],
-    [clinics, t]
+    [clinics, t, i18n.language]
   );
 
   const countryPickItems: PickListItem[] = useMemo(
@@ -413,7 +414,7 @@ export function AdminPage() {
                   <Input value={uName} onChange={(e) => setUName(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Role</Label>
+                  <Label>{t("profile.roleLabel")}</Label>
                   <select
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={uRole}
@@ -421,7 +422,7 @@ export function AdminPage() {
                   >
                     {USER_ROLES.map((r) => (
                       <option key={r} value={r}>
-                        {r}
+                        {formatUserRole(r, t)}
                       </option>
                     ))}
                   </select>
@@ -442,7 +443,8 @@ export function AdminPage() {
                             }
                           />
                           <span>
-                            {c.nameEn} <span className="text-muted-foreground">({c.kind})</span>
+                            {formatClinicName(c, i18n.language)}{" "}
+                            <span className="text-muted-foreground">({c.kind === "parent" ? t("clinics.parent") : t("clinics.branch")})</span>
                           </span>
                         </label>
                       ))}
@@ -689,7 +691,7 @@ export function AdminPage() {
               <tbody>
                 {filteredClinics.map((c) => (
                   <tr key={c.id} className="border-t border-border">
-                    <td className="px-2 py-2 font-medium">{c.nameEn}</td>
+                    <td className="px-2 py-2 font-medium">{formatClinicName(c, i18n.language)}</td>
                     <td className="px-2 py-2 text-muted-foreground">{c.parentNameEn ?? t("admin.parentNone", "None")}</td>
                     <td className="px-2 py-2" dir="rtl">
                       {c.nameAr}

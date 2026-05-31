@@ -22,7 +22,9 @@ import {
   useUsersQuery,
 } from "@/lib/api-hooks";
 import type { AppointmentDto, EncounterDetailDto } from "@/lib/api-types";
+import { appointmentStatusLabel } from "@/components/appointment-status-badge";
 import { ApiError, apiPost } from "@/lib/http";
+import { formatEncounterStatus, formatClinicName, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
 import { columnFilterIncludes } from "@/lib/utils";
 import { ENCOUNTER_VISIT_TYPES } from "@/lib/visit-types";
@@ -104,11 +106,10 @@ export function EncountersListPage() {
   const patientRegistryTotal = patData?.total ?? 0;
 
   const filteredEncounters = useMemo(() => {
-    const loc = i18n.language === "ar" ? "ar-AE" : "en-AE";
-    const name = (e: EncounterDetailDto) =>
-      (i18n.language === "ar" ? e.clinicNameAr ?? e.clinicNameEn : e.clinicNameEn ?? e.clinicNameAr) ?? "—";
+    const loc = localeForLanguage(i18n.language);
+    const name = (e: EncounterDetailDto) => formatClinicNameFields(e.clinicNameEn, e.clinicNameAr, i18n.language);
     return data.filter((e) => {
-      if (efEncStatus.trim() && !columnFilterIncludes(e.status, efEncStatus)) return false;
+      if (efEncStatus.trim() && !columnFilterIncludes(formatEncounterStatus(e.status, t), efEncStatus)) return false;
       if (efVisit.trim() && !columnFilterIncludes(e.visitType, efVisit)) return false;
       if (efClinic.trim() && !columnFilterIncludes(name(e), efClinic)) return false;
       if (efPatient.trim()) {
@@ -126,7 +127,7 @@ export function EncountersListPage() {
       }
       return true;
     });
-  }, [data, efEncStatus, efVisit, efClinic, efPatient, efUpdated, i18n.language, patientLabel]);
+  }, [data, efEncStatus, efVisit, efClinic, efPatient, efUpdated, i18n.language, patientLabel, t]);
 
   const [createPatientId, setCreatePatientId] = useState("");
   const [createClinicId, setCreateClinicId] = useState("");
@@ -173,13 +174,10 @@ export function EncountersListPage() {
   const aptPickerItems: PickListItem[] = useMemo(
     () =>
       aptPickerRows.map((a: AppointmentDto) => {
-        const clinicHint =
-          (i18n.language === "ar"
-            ? a.clinicNameAr?.trim() || a.clinicNameEn?.trim()
-            : a.clinicNameEn?.trim() || a.clinicNameAr?.trim()) ?? "";
+        const clinicHint = formatClinicNameFields(a.clinicNameEn, a.clinicNameAr, i18n.language);
         return {
           value: a.id,
-          label: `${new Date(a.startsAt).toLocaleString(i18n.language === "ar" ? "ar-AE" : "en-AE")} · ${a.status}`,
+          label: `${new Date(a.startsAt).toLocaleString(localeForLanguage(i18n.language))} · ${appointmentStatusLabel(a.status, t)}`,
           hint: [clinicHint, `${(a.patientName ?? "").trim() || "—"} · ${a.patientMrn ?? a.patientId.slice(0, 8)}`]
             .filter(Boolean)
             .join(" · "),
@@ -370,7 +368,7 @@ export function EncountersListPage() {
                   >
                     {clinics.map((c) => (
                       <option key={c.id} value={c.id}>
-                        {c.nameEn}
+                        {formatClinicName(c, i18n.language)}
                       </option>
                     ))}
                   </select>
@@ -559,21 +557,15 @@ export function EncountersListPage() {
                       }}
                     >
                       <td className="px-3 py-2">
-                        <Badge variant={e.status === "FINALIZED" ? "default" : "secondary"}>{e.status}</Badge>
+                        <Badge variant={e.status === "FINALIZED" ? "default" : "secondary"}>{formatEncounterStatus(e.status, t)}</Badge>
                       </td>
                       <td className="px-3 py-2">
                         <Badge
                           variant="outline"
                           className="max-w-[14rem] truncate border-primary/35 bg-primary/5 font-normal text-foreground"
-                          title={
-                            (i18n.language === "ar"
-                              ? e.clinicNameAr ?? e.clinicNameEn
-                              : e.clinicNameEn ?? e.clinicNameAr) ?? undefined
-                          }
+                          title={formatClinicNameFields(e.clinicNameEn, e.clinicNameAr, i18n.language)}
                         >
-                          {(i18n.language === "ar"
-                            ? e.clinicNameAr ?? e.clinicNameEn
-                            : e.clinicNameEn ?? e.clinicNameAr) ?? "—"}
+                          {formatClinicNameFields(e.clinicNameEn, e.clinicNameAr, i18n.language)}
                         </Badge>
                       </td>
                       <td className="px-3 py-2">{e.visitType}</td>
@@ -593,7 +585,7 @@ export function EncountersListPage() {
                         })()}
                       </td>
                       <td className="px-3 py-2 ltr-nums text-xs text-muted-foreground">
-                        {new Date(e.updatedAt).toLocaleString(i18n.language === "ar" ? "ar-AE" : "en-AE")}
+                        {new Date(e.updatedAt).toLocaleString(localeForLanguage(i18n.language))}
                       </td>
                     </tr>
                   ))}

@@ -9,6 +9,7 @@ import { ApiError, apiGet, apiPut } from "@/lib/http";
 import type { NavItemKey } from "@/lib/nav-policy";
 import { navKeysForRole, orderedNavKeysForRole } from "@/lib/nav-policy";
 import { mapApiRole } from "@/lib/roles";
+import { formatUserRole } from "@/lib/locale-display";
 import type { DemoRole } from "@/lib/roles";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -134,7 +135,7 @@ export function ClinicNavTabsPanel() {
             <option value="">{t("admin.navTabsPickUser", "Select a user…")}</option>
             {pickableUsers.map((u) => (
               <option key={u.id} value={u.id}>
-                {u.displayName} ({u.email}) · {u.role}
+                {u.displayName} ({u.email}) · {formatUserRole(mapApiRole(u.role), t)}
               </option>
             ))}
           </select>

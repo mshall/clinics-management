@@ -37,6 +37,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useEncounterQuery } from "@/lib/api-hooks";
 import type { EncounterDetailDto, EncounterDocumentDto } from "@/lib/api-types";
 import { ApiError, apiDelete, apiFetchBlob, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
+import { formatEncounterStatus, localeForLanguage } from "@/lib/locale-display";
 import { cn } from "@/lib/utils";
 
 function apiErrorMessage(e: unknown): string {
@@ -454,7 +455,7 @@ export function EncounterDetailPage() {
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{t("encounters.title")}</h1>
-            <Badge variant={enc.status === "FINALIZED" ? "default" : "secondary"}>{enc.status}</Badge>
+            <Badge variant={enc.status === "FINALIZED" ? "default" : "secondary"}>{formatEncounterStatus(enc.status, t)}</Badge>
           </div>
           <p className="text-muted-foreground">
             {visitType}
@@ -492,7 +493,7 @@ export function EncounterDetailPage() {
         </CardHeader>
         <CardContent>
           <p className="text-lg font-semibold ltr-nums">
-            {new Intl.NumberFormat(i18n.language === "ar" ? "ar-AE" : "en-AE", { style: "currency", currency: "AED" }).format(
+            {new Intl.NumberFormat(localeForLanguage(i18n.language), { style: "currency", currency: "AED" }).format(
               enc.visitFeeAmount ?? 0
             )}
           </p>
@@ -597,7 +598,7 @@ export function EncounterDetailPage() {
                   value={visitType}
                   onChange={(e) => setVisitType(e.target.value)}
                 >
-                  <option value="">{i18n.language === "ar" ? "اختر نوع الزيارة" : "Select visit type"}</option>
+                  <option value="">{t("encounters.selectVisitType")}</option>
                   {ENCOUNTER_VISIT_TYPES.map((vt) => (
                     <option key={vt} value={vt}>
                       {vt}

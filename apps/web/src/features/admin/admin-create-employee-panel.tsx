@@ -10,20 +10,23 @@ import { useClinicsQuery } from "@/lib/api-hooks";
 import { useAuthStore } from "@/stores/auth-store";
 import type { EmployeeDto } from "@/lib/api-types";
 import { ApiError, apiPost, apiPostFormData } from "@/lib/http";
+import { formatClinicName, formatEmploymentType } from "@/lib/locale-display";
 
-const EMP_TYPES: PickListItem[] = [
-  { value: "FULL_TIME", label: "FULL_TIME" },
-  { value: "PART_TIME", label: "PART_TIME" },
-  { value: "CONTRACTOR", label: "CONTRACTOR" },
-  { value: "LOCUM", label: "LOCUM" },
-];
+const EMP_TYPE_VALUES = ["FULL_TIME", "PART_TIME", "CONTRACTOR", "LOCUM"] as const;
 
 export function AdminCreateEmployeePanel() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const role = useAuthStore((s) => s.user?.role);
   const { data: clinics = [] } = useClinicsQuery();
-  const clinicItems: PickListItem[] = useMemo(() => clinics.map((c) => ({ value: c.id, label: c.nameEn })), [clinics]);
+  const clinicItems: PickListItem[] = useMemo(
+    () => clinics.map((c) => ({ value: c.id, label: formatClinicName(c, i18n.language) })),
+    [clinics, i18n.language],
+  );
+  const empTypeItems: PickListItem[] = useMemo(
+    () => EMP_TYPE_VALUES.map((value) => ({ value, label: formatEmploymentType(value, t) })),
+    [t],
+  );
   const singleManagedClinic = clinics.length === 1 ? clinics[0]! : null;
 
   const [empClinic, setEmpClinic] = useState("");
@@ -95,7 +98,7 @@ export function AdminCreateEmployeePanel() {
             <Label>{t("hr.clinic")}</Label>
             {singleManagedClinic ? (
               <p className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm">
-                {singleManagedClinic.nameEn}{" "}
+                {formatClinicName(singleManagedClinic, i18n.language)}{" "}
                 <span className="text-muted-foreground">
                   ({role === "branch_manager" ? t("admin.managedClinicBm", "your clinic") : t("admin.managedClinicCa", "assigned clinic")})
                 </span>
@@ -138,7 +141,7 @@ export function AdminCreateEmployeePanel() {
           <div className="space-y-2">
             <Label>{t("hr.employmentType", "Employment type")}</Label>
             <SearchablePickList
-              items={EMP_TYPES}
+              items={empTypeItems}
               value={empType}
               onValueChange={setEmpType}
               searchPlaceholder={t("hr.filterEmpType", "Filter type…")}

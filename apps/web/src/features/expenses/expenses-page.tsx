@@ -15,6 +15,12 @@ import { useClinicsQuery, useExpensesQuery } from "@/lib/api-hooks";
 import { EXPENSE_CATEGORIES } from "@/lib/expense-categories";
 import { ApiError, apiFetchBlob, apiPatch, apiPostFormData } from "@/lib/http";
 import { columnFilterIncludes } from "@/lib/utils";
+import {
+  formatClinicName,
+  formatExpenseCategory,
+  formatExpenseStatus,
+  localeForLanguage,
+} from "@/lib/locale-display";
 import { defaultMonthRange } from "@/stores/date-range-store";
 
 export function ExpensesPage() {
@@ -126,19 +132,19 @@ export function ExpensesPage() {
   });
 
   const money = (n: number) =>
-    new Intl.NumberFormat(i18n.language === "ar" ? "ar-AE" : "en-AE", { style: "currency", currency: "AED" }).format(n);
+    new Intl.NumberFormat(localeForLanguage(i18n.language), { style: "currency", currency: "AED" }).format(n);
 
   const filteredExpenses = useMemo(() => {
-    const loc = i18n.language === "ar" ? "ar-AE" : "en-AE";
+    const loc = localeForLanguage(i18n.language);
     const formatMoney = (x: number) => new Intl.NumberFormat(loc, { style: "currency", currency: "AED" }).format(x);
     return expenses.filter((e) => {
-      if (efCategory.trim() && !columnFilterIncludes(e.category, efCategory)) return false;
+      if (efCategory.trim() && !columnFilterIncludes(formatExpenseCategory(e.category, t), efCategory)) return false;
       if (efVendor.trim() && !columnFilterIncludes(e.vendorName ?? "", efVendor)) return false;
       if (efAmount.trim()) {
         const hay = `${e.amount} ${formatMoney(e.amount)}`;
         if (!columnFilterIncludes(hay, efAmount)) return false;
       }
-      if (efStatus.trim() && !columnFilterIncludes(e.status, efStatus)) return false;
+      if (efStatus.trim() && !columnFilterIncludes(formatExpenseStatus(e.status, t), efStatus)) return false;
       if (efDate.trim()) {
         const ds = new Date(e.incurredAt).toLocaleDateString(loc);
         if (!columnFilterIncludes(ds, efDate) && !columnFilterIncludes(e.incurredAt, efDate)) return false;
@@ -249,7 +255,7 @@ export function ExpensesPage() {
               <Label className="text-xs">{t("expenses.clinic")}</Label>
               {singleManagedClinic ? (
                 <p className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-2 text-sm">
-                  {singleManagedClinic.nameEn}
+                  {formatClinicName(singleManagedClinic, i18n.language)}
                 </p>
               ) : (
                 <select
@@ -263,7 +269,7 @@ export function ExpensesPage() {
                   <option value="">{t("expenses.allClinics", "All clinics")}</option>
                   {clinics.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.nameEn}
+                      {formatClinicName(c, i18n.language)}
                     </option>
                   ))}
                 </select>
@@ -310,7 +316,7 @@ export function ExpensesPage() {
             <Label>{t("expenses.clinic")}</Label>
             {singleManagedClinic ? (
               <p className="flex min-h-10 items-center rounded-md border border-input bg-muted/40 px-3 py-2 text-sm">
-                {singleManagedClinic.nameEn}
+                {formatClinicName(singleManagedClinic, i18n.language)}
               </p>
             ) : (
               <select
@@ -321,7 +327,7 @@ export function ExpensesPage() {
                 <option value="">{t("expenses.pickClinic")}</option>
                 {clinics.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.nameEn}
+                    {formatClinicName(c, i18n.language)}
                   </option>
                 ))}
               </select>
@@ -336,7 +342,7 @@ export function ExpensesPage() {
             >
               {EXPENSE_CATEGORIES.map((c) => (
                 <option key={c} value={c}>
-                  {c}
+                  {formatExpenseCategory(c, t)}
                 </option>
               ))}
             </select>
@@ -475,7 +481,7 @@ export function ExpensesPage() {
                 {!isPending &&
                   filteredExpenses.map((e) => (
                     <tr key={e.id} className="border-t border-border">
-                      <td className="px-3 py-2">{e.category}</td>
+                      <td className="px-3 py-2">{formatExpenseCategory(e.category, t)}</td>
                       <td className="px-3 py-2 text-muted-foreground">{e.vendorName ?? "—"}</td>
                       <td className="px-3 py-2 ltr-nums">{money(e.amount)}</td>
                       <td className="px-3 py-2">
@@ -483,11 +489,11 @@ export function ExpensesPage() {
                           variant={e.status === "APPROVED" ? "default" : "secondary"}
                           className={e.status === "REJECTED" ? "border-destructive/60 text-destructive" : undefined}
                         >
-                          {e.status}
+                          {formatExpenseStatus(e.status, t)}
                         </Badge>
                       </td>
                       <td className="px-3 py-2 ltr-nums text-xs text-muted-foreground">
-                        {new Date(e.incurredAt).toLocaleDateString(i18n.language === "ar" ? "ar-AE" : "en-AE")}
+                        {new Date(e.incurredAt).toLocaleDateString(localeForLanguage(i18n.language))}
                       </td>
                       <td className="px-3 py-2">
                         {e.hasProof ? (

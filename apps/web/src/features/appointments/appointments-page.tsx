@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { useAppointmentsQuery, useClinicsQuery, usePatientsQuery, useUsersQuery } from "@/lib/api-hooks";
 import { ApiError, apiPost } from "@/lib/http";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
+import { formatClinicName, formatClinicNameFields, formatUserRole, localeForLanguage } from "@/lib/locale-display";
 import { columnFilterIncludes } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -94,11 +95,11 @@ export function AppointmentsPage() {
   }, [patients]);
 
   const filteredAppointments = useMemo(() => {
-    const loc = i18n.language === "ar" ? "ar-AE" : "en-AE";
+    const loc = localeForLanguage(i18n.language);
     return rows.filter((a) => {
       if (afClinic.trim()) {
         const row = clinicById.get(a.clinicId);
-        const label = row ? (i18n.language === "ar" ? row.ar || row.en : row.en || row.ar) : a.clinicId;
+        const label = row ? formatClinicName({ nameEn: row.en, nameAr: row.ar }, i18n.language) : a.clinicId;
         if (!columnFilterIncludes(label, afClinic)) return false;
       }
       if (afStarts.trim()) {
@@ -153,12 +154,12 @@ export function AppointmentsPage() {
   );
 
   const clinicItems: PickListItem[] = useMemo(
-    () => clinics.map((c) => ({ value: c.id, label: c.nameEn })),
-    [clinics]
+    () => clinics.map((c) => ({ value: c.id, label: formatClinicName(c, i18n.language) })),
+    [clinics, i18n.language],
   );
   const physicianItems: PickListItem[] = useMemo(
-    () => physicians.map((u) => ({ value: u.id, label: u.displayName, hint: u.role })),
-    [physicians]
+    () => physicians.map((u) => ({ value: u.id, label: u.displayName, hint: formatUserRole(u.role, t) })),
+    [physicians, t],
   );
 
   const createMut = useMutation({
@@ -473,14 +474,7 @@ export function AppointmentsPage() {
                   filteredAppointments.map((a) => {
                     const cRow = clinicById.get(a.clinicId);
                     const clinicLabel =
-                      (i18n.language === "ar"
-                        ? a.clinicNameAr?.trim() || a.clinicNameEn?.trim()
-                        : a.clinicNameEn?.trim() || a.clinicNameAr?.trim()) ||
-                      (cRow != null
-                        ? i18n.language === "ar"
-                          ? cRow.ar || cRow.en
-                          : cRow.en || cRow.ar
-                        : null);
+                      formatClinicNameFields(a.clinicNameEn, a.clinicNameAr, i18n.language, cRow ? formatClinicName({ nameEn: cRow.en, nameAr: cRow.ar }, i18n.language) : a.clinicId);
                     return (
                     <tr
                       key={a.id}
@@ -511,7 +505,7 @@ export function AppointmentsPage() {
                         })()}
                       </td>
                       <td className="px-3 py-2 ltr-nums text-xs">
-                        {new Date(a.startsAt).toLocaleString(i18n.language === "ar" ? "ar-AE" : "en-AE")}
+                        {new Date(a.startsAt).toLocaleString(localeForLanguage(i18n.language))}
                       </td>
                       <td className="px-3 py-2">
                         <Badge

@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { useAdminAuditLogsQuery } from "@/lib/api-hooks";
 import type { AdminAuditLogItemDto } from "@/lib/api-types";
+import { localeForLanguage } from "@/lib/locale-display";
 import { ClinicNavTabsPanel } from "./clinic-nav-tabs-panel";
 
 export function AdminGovernancePanel() {
@@ -100,7 +101,7 @@ export function AdminGovernancePanel() {
                   >
                     <td className="px-3 py-2 font-medium">{r.action}</td>
                     <td className="px-3 py-2 text-muted-foreground ltr-nums">
-                      {new Date(r.createdAt).toLocaleString(i18n.language === "ar" ? "ar-AE" : "en-AE")}
+                      {new Date(r.createdAt).toLocaleString(localeForLanguage(i18n.language))}
                     </td>
                     <td className="px-3 py-2">{r.actorDisplayName ?? r.actorEmail ?? "—"}</td>
                   </tr>
