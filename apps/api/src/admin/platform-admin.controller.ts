@@ -5,6 +5,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
 import { ClinicDto } from "../common/dto/clinic.dto";
 import { CreateClinicDto } from "../clinics/dto/create-clinic.dto";
+import { PatchClinicDto } from "../clinics/dto/patch-clinic.dto";
 import { CreateTenantDto } from "./dto/create-tenant.dto";
 import { CreateTenantUserDto } from "./dto/create-tenant-user.dto";
 import { PatchFeatureFlagDto } from "./dto/patch-feature-flag.dto";
@@ -97,6 +98,29 @@ export class PlatformAdminController {
   @ApiCreatedResponse({ type: ClinicDto })
   createClinic(@CurrentUser() user: JwtUser, @Param("tenantId") tenantId: string, @Body() body: CreateClinicDto) {
     return this.platform.createClinic(user, tenantId, body);
+  }
+
+  @Get("tenants/:tenantId/clinics/:clinicId")
+  @ApiOperation({ summary: "Get clinic registration details" })
+  @ApiOkResponse()
+  getClinic(
+    @CurrentUser() user: JwtUser,
+    @Param("tenantId") tenantId: string,
+    @Param("clinicId") clinicId: string,
+  ) {
+    return this.platform.getClinic(user, tenantId, clinicId);
+  }
+
+  @Patch("tenants/:tenantId/clinics/:clinicId")
+  @ApiOperation({ summary: "Update clinic registration details" })
+  @ApiOkResponse()
+  patchClinic(
+    @CurrentUser() user: JwtUser,
+    @Param("tenantId") tenantId: string,
+    @Param("clinicId") clinicId: string,
+    @Body() body: PatchClinicDto,
+  ) {
+    return this.platform.patchClinic(user, tenantId, clinicId, body);
   }
 
   @Post("tenants/:tenantId/users")

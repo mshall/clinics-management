@@ -5,6 +5,7 @@ import type { JwtUser } from "../auth/jwt-user";
 import { isPlatformSuperAdmin } from "../common/platform-super-admin";
 import { ClinicsService } from "../clinics/clinics.service";
 import type { CreateClinicDto } from "../clinics/dto/create-clinic.dto";
+import type { PatchClinicDto } from "../clinics/dto/patch-clinic.dto";
 import { PrismaService } from "../prisma/prisma.service";
 import { AdminService } from "./admin.service";
 import type { CreateTenantDto } from "./dto/create-tenant.dto";
@@ -116,8 +117,13 @@ export class PlatformAdminService {
     }
 
     const ic = dto.initialClinic;
-    if (ic && (!ic.nameEn?.trim() || !ic.nameAr?.trim() || !ic.city?.trim())) {
-      throw new BadRequestException("initialClinic requires nameEn, nameAr, and city");
+    if (ic) {
+      if (!ic.nameEn?.trim() || !ic.nameAr?.trim() || !ic.city?.trim()) {
+        throw new BadRequestException("initialClinic requires nameEn, nameAr, and city");
+      }
+      if (!ic.addressEn?.trim() || !ic.addressAr?.trim() || !ic.locationUrl?.trim()) {
+        throw new BadRequestException("initialClinic requires addressEn, addressAr, and locationUrl");
+      }
     }
 
     const result = await this.prisma.$transaction(async (tx) => {
@@ -146,28 +152,14 @@ export class PlatformAdminService {
         groupAdmin = { id: u.id, email: u.email, displayName: u.displayName, role: u.role };
       }
 
-      let initialClinic: { id: string; nameEn: string; kind: "parent" } | null = null;
-      if (ic) {
-        const c = await tx.clinic.create({
-          data: {
-            tenantId: row.id,
-            nameEn: ic.nameEn.trim(),
-            nameAr: ic.nameAr.trim(),
-            city: ic.city.trim(),
-            country: ic.country?.trim() || "AE",
-            addressEn: ic.city.trim(),
-            addressAr: ic.city.trim(),
-            locationUrl: "https://maps.example.com",
-            phone: "+971000000000",
-            email: `hq@${row.id.slice(0, 8)}.clinic.local`,
-            licenseNumber: "PENDING",
-          },
-        });
-        initialClinic = { id: c.id, nameEn: c.nameEn, kind: "parent" };
-      }
-
-      return { row, groupAdmin, initialClinic };
+      return { row, groupAdmin };
     });
+
+    let initialClinic: { id: string; nameEn: string; kind: "parent" } | null = null;
+    if (ic) {
+      const created = await this.clinics.create(result.row.id, { ...ic, parentClinicId: undefined });
+      initialClinic = { id: created.id, nameEn: created.nameEn, kind: "parent" };
+    }
 
     return {
       id: result.row.id,
@@ -176,8 +168,12 @@ export class PlatformAdminService {
       defaultLocale: result.row.defaultLocale,
       createdAt: result.row.createdAt.toISOString(),
       groupAdmin: result.groupAdmin,
-      initialClinic: result.initialClinic,
-      counts: { users: result.groupAdmin ? 1 : 0, clinics: result.initialClinic ? 1 : 0, patients: 0 },
+      initialClinic,
+      counts: {
+        users: result.groupAdmin ? 1 : 0,
+        clinics: initialClinic ? 1 : 0,
+        patients: 0,
+      },
     };
   }
 
@@ -239,6 +235,41 @@ export class PlatformAdminService {
     this.assertPlatform(user);
     await this.assertTenant(tenantId);
     return this.clinics.create(tenantId, dto);
+  }
+
+  async getClinic(user: JwtUser, tenantId: string, clinicId: string) {
+    this.assertPlatform(user);
+    await this.assertTenant(tenantId);
+    const row = await this.prisma.clinic.findFirst({
+      where: { id: clinicId, tenantId },
+      include: { parent: { select: { nameEn: true, nameAr: true } } },
+    });
+    if (!row) throw new NotFoundException("Clinic not found");
+    return {
+      id: row.id,
+      parentClinicId: row.parentClinicId,
+      parentNameEn: row.parent?.nameEn ?? null,
+      parentNameAr: row.parent?.nameAr ?? null,
+      nameEn: row.nameEn,
+      nameAr: row.nameAr,
+      city: row.city,
+      country: row.country,
+      kind: row.parentClinicId ? "branch" : "parent",
+      logoUrl: row.logoUrl ?? null,
+      addressEn: row.addressEn,
+      addressAr: row.addressAr,
+      locationUrl: row.locationUrl,
+      phone: row.phone,
+      email: row.email,
+      licenseNumber: row.licenseNumber,
+      defaultLanguage: row.defaultLanguage,
+    };
+  }
+
+  async patchClinic(user: JwtUser, tenantId: string, clinicId: string, dto: PatchClinicDto) {
+    this.assertPlatform(user);
+    await this.assertTenant(tenantId);
+    return this.clinics.update(tenantId, clinicId, dto);
   }
 
   async createUser(user: JwtUser, tenantId: string, dto: CreateTenantUserDto) {

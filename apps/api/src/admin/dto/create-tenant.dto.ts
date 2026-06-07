@@ -1,8 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import { IsOptional, IsString, MaxLength, MinLength, ValidateNested } from "class-validator";
+import { CreateClinicDto } from "../../clinics/dto/create-clinic.dto";
 import { CreateTenantGroupAdminDto } from "./create-tenant-group-admin.dto";
-import { CreateTenantInitialClinicDto } from "./create-tenant-initial-clinic.dto";
 
 export class CreateTenantDto {
   @ApiProperty({ example: "Acme Clinic Group" })
@@ -33,11 +33,11 @@ export class CreateTenantDto {
   groupAdmin?: CreateTenantGroupAdminDto;
 
   @ApiPropertyOptional({
-    description: "Optional first parent clinic (HQ) created with the organization",
-    type: CreateTenantInitialClinicDto,
+    description: "Optional first parent clinic (HQ) — same fields as organization admin clinic onboarding",
+    type: CreateClinicDto,
   })
   @IsOptional()
   @ValidateNested()
-  @Type(() => CreateTenantInitialClinicDto)
-  initialClinic?: CreateTenantInitialClinicDto;
+  @Type(() => CreateClinicDto)
+  initialClinic?: CreateClinicDto;
 }

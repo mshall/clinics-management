@@ -4,6 +4,7 @@ import type { JwtUser } from "../auth/jwt-user";
 import { CLINIC_SCOPE_ROLES, fetchClinicScopeIds, fetchPhysicianNetworkClinicIds } from "../common/clinic-scope";
 import { PrismaService } from "../prisma/prisma.service";
 import type { CreateClinicDto } from "./dto/create-clinic.dto";
+import type { PatchClinicDto } from "./dto/patch-clinic.dto";
 import type { ClinicDetailDto } from "./dto/clinic-detail.dto";
 import type { ClinicPhysicianDto } from "./dto/clinic-physician.dto";
 
@@ -393,6 +394,51 @@ export class ClinicsService {
       country: row.country,
       kind: row.parentClinicId ? "branch" : "parent",
       logoUrl: row.logoUrl ?? null,
+    };
+  }
+
+  async update(tenantId: string, id: string, dto: PatchClinicDto) {
+    const existing = await this.prisma.clinic.findFirst({ where: { id, tenantId } });
+    if (!existing) throw new NotFoundException("Clinic not found");
+
+    const data: Record<string, string | null> = {};
+    if (dto.nameEn !== undefined) data.nameEn = dto.nameEn.trim();
+    if (dto.nameAr !== undefined) data.nameAr = dto.nameAr.trim();
+    if (dto.country !== undefined) data.country = dto.country.trim() || "AE";
+    if (dto.city !== undefined) data.city = dto.city.trim();
+    if (dto.addressEn !== undefined) data.addressEn = dto.addressEn.trim();
+    if (dto.addressAr !== undefined) data.addressAr = dto.addressAr.trim();
+    if (dto.locationUrl !== undefined) data.locationUrl = dto.locationUrl.trim();
+    if (dto.phone !== undefined) data.phone = dto.phone.trim();
+    if (dto.email !== undefined) data.email = dto.email.trim().toLowerCase();
+    if (dto.licenseNumber !== undefined) data.licenseNumber = dto.licenseNumber.trim();
+    if (dto.logoUrl !== undefined) data.logoUrl = dto.logoUrl.trim() || null;
+    if (!Object.keys(data).length) throw new BadRequestException("No supported fields to update");
+
+    const row = await this.prisma.clinic.update({
+      where: { id },
+      data,
+      include: { parent: { select: { nameEn: true, nameAr: true } } },
+    });
+
+    return {
+      id: row.id,
+      parentClinicId: row.parentClinicId,
+      parentNameEn: row.parent?.nameEn ?? null,
+      parentNameAr: row.parent?.nameAr ?? null,
+      nameEn: row.nameEn,
+      nameAr: row.nameAr,
+      city: row.city,
+      country: row.country,
+      kind: row.parentClinicId ? "branch" : "parent",
+      logoUrl: row.logoUrl ?? null,
+      addressEn: row.addressEn,
+      addressAr: row.addressAr,
+      locationUrl: row.locationUrl,
+      phone: row.phone,
+      email: row.email,
+      licenseNumber: row.licenseNumber,
+      defaultLanguage: row.defaultLanguage,
     };
   }
 }
