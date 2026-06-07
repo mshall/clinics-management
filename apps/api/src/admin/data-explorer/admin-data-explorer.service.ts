@@ -13,7 +13,7 @@ import {
   UserRole,
 } from "@prisma/client";
 import type { JwtUser } from "../../auth/jwt-user";
-import { isPlatformSuperAdminEmail } from "../../common/platform-super-admin";
+import { isPlatformSuperAdmin } from "../../common/platform-super-admin";
 import { paginate, parsePageParams } from "../../common/pagination";
 import { PrismaService } from "../../prisma/prisma.service";
 
@@ -40,8 +40,15 @@ export const DATA_EXPLORER_TABLES = [
 
 export type DataExplorerTable = (typeof DATA_EXPLORER_TABLES)[number];
 
+function assertExplorerTenant(user: JwtUser): string {
+  if (user.tenantId != null) return user.tenantId;
+  throw new ForbiddenException(
+    "Data explorer requires organization membership; platform operators should use /admin/platform APIs",
+  );
+}
+
 function assertPlatformSuperAdmin(user: JwtUser): void {
-  if (!isPlatformSuperAdminEmail(user.email)) {
+  if (!isPlatformSuperAdmin(user)) {
     throw new ForbiddenException("Only platform super administrators can use the data explorer");
   }
 }
@@ -104,7 +111,7 @@ export class AdminDataExplorerService {
     assertPlatformSuperAdmin(user);
     if (!isTableKey(table)) throw new BadRequestException("Unknown table");
     const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
-    const tenantId = user.tenantId;
+    const tenantId = assertExplorerTenant(user);
 
     switch (table) {
       case "feature_flags": {
@@ -275,7 +282,7 @@ export class AdminDataExplorerService {
   async getOne(user: JwtUser, table: string, id: string) {
     assertPlatformSuperAdmin(user);
     if (!isTableKey(table)) throw new BadRequestException("Unknown table");
-    const tenantId = user.tenantId;
+    const tenantId = assertExplorerTenant(user);
     const row = await this.findOneRaw(table, id, tenantId);
     if (!row) throw new NotFoundException("Row not found");
     return serializeRow(row);
@@ -331,7 +338,7 @@ export class AdminDataExplorerService {
   async create(user: JwtUser, table: string, body: Record<string, unknown>) {
     assertPlatformSuperAdmin(user);
     if (!isTableKey(table)) throw new BadRequestException("Unknown table");
-    const tenantId = user.tenantId;
+    const tenantId = assertExplorerTenant(user);
 
     switch (table) {
       case "patients": {
@@ -546,7 +553,7 @@ export class AdminDataExplorerService {
   async patch(user: JwtUser, table: string, id: string, body: Record<string, unknown>) {
     assertPlatformSuperAdmin(user);
     if (!isTableKey(table)) throw new BadRequestException("Unknown table");
-    const tenantId = user.tenantId;
+    const tenantId = assertExplorerTenant(user);
     await this.getOne(user, table, id);
 
     switch (table) {
@@ -822,7 +829,7 @@ export class AdminDataExplorerService {
   async remove(user: JwtUser, table: string, id: string) {
     assertPlatformSuperAdmin(user);
     if (!isTableKey(table)) throw new BadRequestException("Unknown table");
-    const tenantId = user.tenantId;
+    const tenantId = assertExplorerTenant(user);
     await this.getOne(user, table, id);
 
     switch (table) {

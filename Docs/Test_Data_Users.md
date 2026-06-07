@@ -6,13 +6,36 @@ Reference for QA, demos, and onboarding. All seeded accounts use password **`dem
 
 **Primary organization:** `Kiorly Clinic Group (Demo)` — 1 HQ clinic + 14 branches (see [Clinic hierarchy](#clinic-hierarchy)).
 
-**Additional organizations:** seed creates 14 empty shell tenants (`Shell Organization 2` … `Shell Organization 15`) with no users; use the platform data explorer to inspect them.
+**Additional organizations:** seed creates 14 empty shell tenants (`Shell Organization 2` … `Shell Organization 15`) with no users; use the platform admin UI to inspect or manage them.
 
 ---
 
-## Platform admin control panel
+## Platform super administrator
 
-Platform-only tools are **not** granted by the `GROUP_ADMIN` role alone. The signed-in user’s email must also appear in the API env var `PLATFORM_SUPER_ADMIN_EMAILS` (comma-separated, case-insensitive). See `apps/api/.env.example`.
+Dedicated platform operator with **no organization membership** (`tenantId: null`). Use this account to create tenants, clinics under each tenant, and users assigned to clinics.
+
+| Email | Password | Role | Organization | UI |
+|-------|----------|------|--------------|-----|
+| `superadmin@kiorly.com` | `demo` | `PLATFORM_SUPER_ADMIN` | **None** | **Platform** tab → create orgs, clinics, users |
+
+The demo seed populates **Kiorly Clinic Group (Demo)**. Use **`superadmin@kiorly.com`** to provision **new** organizations with a group admin (email + password) in one step on the **Platform** tab.
+
+After sign-in you land on `/platform`. Navigation shows **Platform** and **Profile** only.
+
+**Typical provisioning flow:**
+
+1. **Platform** → Create organization (name, currency, locale)
+2. Fill **Group administrator** — email (username), password, display name
+3. Optionally check **Also create first HQ clinic**
+4. Select the org → add branches, create clinic-scoped users, adjust settings
+
+**API:** `GET/POST/PATCH /api/v1/admin/platform/*` — overview, tenants, clinics, users, feature flags.
+
+---
+
+## Legacy platform email allowlist (optional)
+
+Organization **Group Admin** users can also receive cross-tenant tools when their email appears in `PLATFORM_SUPER_ADMIN_EMAILS` (comma-separated). See `apps/api/.env.example`. This is separate from the dedicated `superadmin@kiorly.com` account.
 
 When `platformSuperAdmin: true` (login / `GET /auth/me`), the **Administration** page shows the full group-admin console **plus**:
 
@@ -22,7 +45,7 @@ When `platformSuperAdmin: true` (login / `GET /auth/me`), the **Administration**
 | Data explorer | Admin → **Data explorer** tab | `GET/POST/PATCH/DELETE /api/v1/admin/data-explorer/*` — direct CRUD on allowlisted tables |
 | Cross-tenant DB tables | Data explorer | `feature_flags`, `tenants`, `users`, `clinics`, `patients`, `employees`, `appointments`, `encounters`, `expenses`, `revenue_entries`, `audit_logs`, `clinic_admin_scopes`, `user_nav_tab_grants`, `diagnoses`, `encounter_medications`, `attendances`, `leave_requests` |
 
-### Recommended platform operator login
+### Group admin with platform flag (break-glass)
 
 | Email | Password | App role | `platformSuperAdmin` | Admin UI |
 |-------|----------|----------|----------------------|----------|
@@ -125,7 +148,8 @@ Branches are children of HQ (`parentClinicId` → HQ).
 
 | Goal | Login |
 |------|--------|
-| Platform data explorer + all tenants | `admin@kiorly.com` + `PLATFORM_SUPER_ADMIN_EMAILS` |
+| Create tenants, clinics, org users (no org membership) | `superadmin@kiorly.com` |
+| Platform data explorer + all tenants (legacy) | `admin@kiorly.com` + `PLATFORM_SUPER_ADMIN_EMAILS` |
 | Organization settings & create clinic | `admin@kiorly.com` |
 | Single-clinic admin experience | `clinicadmin@kiorly.com` or `branchmgr@kiorly.com` |
 | Clinical workflow & prescriptions | `physician@kiorly.com` (draft encounters with meds) |

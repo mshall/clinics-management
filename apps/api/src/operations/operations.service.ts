@@ -71,6 +71,7 @@ export class OperationsService {
     if (isPhysicianRole(viewer.role) && row.clinicianId !== viewer.userId) {
       throw new ForbiddenException("You can only manage operations assigned to you");
     }
+    if (viewer.tenantId == null) throw new ForbiddenException();
     const scopeIds = await fetchClinicScopeIds(this.prisma, viewer.tenantId, viewer);
     if (scopeIds !== null && !scopeIds.includes(row.clinicId)) {
       throw new ForbiddenException("This operation is outside your assigned clinics");

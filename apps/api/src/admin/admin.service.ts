@@ -81,8 +81,50 @@ export class AdminService {
     return paginate(items, total, page, pageSize);
   }
 
+  async listTenantUsers(tenantId: string, pageStr?: string, pageSizeStr?: string) {
+    await this.assertTenantExists(tenantId);
+    const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
+    const where = { tenantId };
+    const [total, rows] = await Promise.all([
+      this.prisma.user.count({ where }),
+      this.prisma.user.findMany({
+        where,
+        orderBy: { email: "asc" },
+        skip,
+        take: pageSize,
+        select: { id: true, email: true, displayName: true, role: true, createdAt: true },
+      }),
+    ]);
+    const items = rows.map((r) => ({
+      id: r.id,
+      email: r.email,
+      displayName: r.displayName,
+      role: r.role,
+      createdAt: r.createdAt.toISOString(),
+    }));
+    return paginate(items, total, page, pageSize);
+  }
+
+  private async assertTenantExists(tenantId: string) {
+    const row = await this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true } });
+    if (!row) throw new NotFoundException("Organization not found");
+  }
+
+  async listFeatureFlags() {
+    const flags = await this.prisma.featureFlag.findMany({ orderBy: { key: "asc" } });
+    return flags.map((f) => ({
+      id: f.id,
+      key: f.key,
+      enabled: f.enabled,
+      description: f.description,
+    }));
+  }
+
   async createTenantUser(tenantId: string, dto: CreateTenantUserDto) {
     const email = dto.email.toLowerCase().trim();
+    if (dto.role === UserRole.PLATFORM_SUPER_ADMIN) {
+      throw new BadRequestException("Cannot create platform super administrators through this endpoint");
+    }
     const existing = await this.prisma.user.findFirst({ where: { tenantId, email } });
     if (existing) throw new BadRequestException("Email already in use for this organization");
     if (dto.role === UserRole.CLINIC_ADMIN || dto.role === UserRole.BRANCH_MANAGER) {

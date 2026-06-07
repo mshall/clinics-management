@@ -29,6 +29,7 @@ import { memoryStorage } from "multer";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
+import { requireTenantId } from "../auth/require-tenant";
 import { CreateExpenseDto } from "./dto/create-expense.dto";
 import { ExpenseDto } from "./dto/expense.dto";
 import { ExpensesService } from "./expenses.service";
@@ -77,7 +78,7 @@ export class ExpensesController {
     @Query("clinicId") clinicId?: string
   ) {
     this.assertExpenseAccess(user);
-    return this.expenses.list(user.tenantId, user, from, to, page, pageSize, sortBy, sortOrder, clinicId);
+    return this.expenses.list(requireTenantId(user), user, from, to, page, pageSize, sortBy, sortOrder, clinicId);
   }
 
   @Get(":id/proof")
@@ -87,7 +88,7 @@ export class ExpensesController {
     @CurrentUser() user: JwtUser,
     @Param("id") id: string
   ): Promise<StreamableFile> {
-    const meta = await this.expenses.getProofFileMeta(user.tenantId, id, user);
+    const meta = await this.expenses.getProofFileMeta(requireTenantId(user), id, user);
     const stream = await this.expenses.openProofReadStream(meta.storageKey);
     return new StreamableFile(stream, {
       type: meta.mimeType,
@@ -127,7 +128,7 @@ export class ExpensesController {
     @UploadedFile() proof?: Express.Multer.File
   ) {
     this.assertExpenseAccess(user);
-    return this.expenses.create(user.tenantId, body, user, proof);
+    return this.expenses.create(requireTenantId(user), body, user, proof);
   }
 
   @Patch(":id/status")
@@ -135,6 +136,6 @@ export class ExpensesController {
   @ApiOkResponse({ type: ExpenseDto })
   patchStatus(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchExpenseStatusDto) {
     this.assertExpenseAccess(user);
-    return this.expenses.updateStatus(user.tenantId, id, body.status, user);
+    return this.expenses.updateStatus(requireTenantId(user), id, body.status, user);
   }
 }

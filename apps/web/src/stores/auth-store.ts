@@ -9,7 +9,7 @@ export type { DemoRole } from "@/lib/roles";
 
 export interface AuthUser {
   id: string;
-  tenantId: string;
+  tenantId: string | null;
   email: string;
   displayName: string;
   role: DemoRole;

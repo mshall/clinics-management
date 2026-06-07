@@ -16,6 +16,7 @@ import { IsEnum } from "class-validator";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
+import { requireTenantId } from "../auth/require-tenant";
 import { CreateAttendanceDto } from "./dto/create-attendance.dto";
 import { CreateEmployeeDto } from "./dto/create-employee.dto";
 import { CreateLeaveRequestDto } from "./dto/create-leave-request.dto";
@@ -43,7 +44,7 @@ export class HrController {
   @ApiOperation({ summary: "HR KPIs: headcount, payroll estimate, pending leave" })
   @ApiOkResponse()
   summary(@CurrentUser() user: JwtUser) {
-    return this.hr.hrSummary(user.tenantId);
+    return this.hr.hrSummary(requireTenantId(user));
   }
 
   @Get("employees")
@@ -60,14 +61,14 @@ export class HrController {
     @Query("sortBy") sortBy?: string,
     @Query("sortOrder") sortOrder?: string
   ) {
-    return this.hr.listEmployees(user.tenantId, user, page, pageSize, search, clinicId, nameFilter, clinicFilter, sortBy, sortOrder);
+    return this.hr.listEmployees(requireTenantId(user), user, page, pageSize, search, clinicId, nameFilter, clinicFilter, sortBy, sortOrder);
   }
 
   @Get("employees/:id/id-document")
   @ApiOperation({ summary: "Download employee ID / passport attachment (if any)" })
   @ApiOkResponse({ description: "Binary file stream" })
   async getEmployeeIdDocument(@CurrentUser() user: JwtUser, @Param("id") id: string): Promise<StreamableFile> {
-    const meta = await this.hr.getEmployeeIdDocumentMeta(user.tenantId, id, user);
+    const meta = await this.hr.getEmployeeIdDocumentMeta(requireTenantId(user), id, user);
     const stream = await this.hr.openEmployeeIdDocumentReadStream(meta.storageKey);
     return new StreamableFile(stream, {
       type: meta.mimeType,
@@ -79,14 +80,14 @@ export class HrController {
   @ApiOperation({ summary: "Get employee by id" })
   @ApiOkResponse({ type: EmployeeDto })
   getEmployee(@CurrentUser() user: JwtUser, @Param("id") id: string) {
-    return this.hr.getEmployee(user.tenantId, id, user);
+    return this.hr.getEmployee(requireTenantId(user), id, user);
   }
 
   @Post("employees")
   @ApiOperation({ summary: "Hire / register employee" })
   @ApiCreatedResponse({ type: EmployeeDto })
   createEmployee(@CurrentUser() user: JwtUser, @Body() body: CreateEmployeeDto) {
-    return this.hr.createEmployee(user.tenantId, body, user);
+    return this.hr.createEmployee(requireTenantId(user), body, user);
   }
 
   @Post("employees/:id/id-document")
@@ -113,7 +114,7 @@ export class HrController {
     @Param("id") id: string,
     @UploadedFile() file?: Express.Multer.File
   ) {
-    return this.hr.attachEmployeeIdDocument(user.tenantId, id, user, file);
+    return this.hr.attachEmployeeIdDocument(requireTenantId(user), id, user, file);
   }
 
   @Get("attendance")
@@ -130,14 +131,14 @@ export class HrController {
     @Query("sortBy") sortBy?: string,
     @Query("sortOrder") sortOrder?: string
   ) {
-    return this.hr.listAttendance(user.tenantId, page, pageSize, employeeId, workDateFrom, workDateTo, status, sortBy, sortOrder);
+    return this.hr.listAttendance(requireTenantId(user), page, pageSize, employeeId, workDateFrom, workDateTo, status, sortBy, sortOrder);
   }
 
   @Post("attendance")
   @ApiOperation({ summary: "Clock attendance" })
   @ApiCreatedResponse({ type: AttendanceDto })
   createAttendance(@CurrentUser() user: JwtUser, @Body() body: CreateAttendanceDto) {
-    return this.hr.createAttendance(user.tenantId, body);
+    return this.hr.createAttendance(requireTenantId(user), body);
   }
 
   @Get("leave-requests")
@@ -154,20 +155,20 @@ export class HrController {
     @Query("sortBy") sortBy?: string,
     @Query("sortOrder") sortOrder?: string
   ) {
-    return this.hr.listLeaveRequests(user.tenantId, page, pageSize, employeeId, status, startFrom, startTo, sortBy, sortOrder);
+    return this.hr.listLeaveRequests(requireTenantId(user), page, pageSize, employeeId, status, startFrom, startTo, sortBy, sortOrder);
   }
 
   @Post("leave-requests")
   @ApiOperation({ summary: "Submit leave request" })
   @ApiCreatedResponse({ type: LeaveRequestDto })
   createLeave(@CurrentUser() user: JwtUser, @Body() body: CreateLeaveRequestDto) {
-    return this.hr.createLeaveRequest(user.tenantId, body);
+    return this.hr.createLeaveRequest(requireTenantId(user), body);
   }
 
   @Patch("leave-requests/:id/status")
   @ApiOperation({ summary: "Approve or reject leave" })
   @ApiOkResponse({ type: LeaveRequestDto })
   patchLeaveStatus(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchLeaveStatusDto) {
-    return this.hr.updateLeaveStatus(user.tenantId, id, body.status);
+    return this.hr.updateLeaveStatus(requireTenantId(user), id, body.status);
   }
 }

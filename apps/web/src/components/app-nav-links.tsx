@@ -4,6 +4,7 @@ import {
   CalendarDays,
   ClipboardList,
   CircleDollarSign,
+  Globe2,
   LayoutDashboard,
   Receipt,
   Scissors,
@@ -104,6 +105,12 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
         <NavLink to="/reports" className={navClass} onClick={() => onNavigate?.()}>
           <Activity className="size-4 shrink-0" />
           {t("nav.reports")}
+        </NavLink>
+      ) : null}
+      {showNavItem(role, "platform", navTabKeys) ? (
+        <NavLink to="/platform" className={navClass} onClick={() => onNavigate?.()}>
+          <Globe2 className="size-4 shrink-0" />
+          {t("nav.platform")}
         </NavLink>
       ) : null}
       {showNavItem(role, "profile", navTabKeys) ? (

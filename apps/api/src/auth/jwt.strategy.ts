@@ -8,7 +8,7 @@ import { PrismaService } from "../prisma/prisma.service";
 
 interface JwtPayload {
   sub: string;
-  tenantId: string;
+  tenantId: string | null;
   email: string;
   role: JwtUser["role"];
 }
@@ -28,7 +28,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: JwtPayload): Promise<JwtUser> {
     const user = await this.prisma.user.findFirst({
-      where: { id: payload.sub, tenantId: payload.tenantId },
+      where:
+        payload.tenantId != null
+          ? { id: payload.sub, tenantId: payload.tenantId }
+          : { id: payload.sub, tenantId: null },
     });
     if (!user) throw new UnauthorizedException();
     return {

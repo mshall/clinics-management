@@ -4,7 +4,8 @@ import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
-import { isPlatformSuperAdminEmail } from "../common/platform-super-admin";
+import { requireTenantId } from "../auth/require-tenant";
+import { isPlatformSuperAdmin } from "../common/platform-super-admin";
 import { AdminService } from "./admin.service";
 import { CreateTenantUserDto } from "./dto/create-tenant-user.dto";
 import { PatchFeatureFlagDto } from "./dto/patch-feature-flag.dto";
@@ -22,10 +23,10 @@ export class AdminController {
   @ApiOkResponse()
   overview(@CurrentUser() user: JwtUser) {
     const allowed: Set<UserRole> = new Set([UserRole.GROUP_ADMIN, UserRole.CLINIC_ADMIN, UserRole.BRANCH_MANAGER]);
-    if (!allowed.has(user.role)) {
+    if (!allowed.has(user.role) || !user.tenantId) {
       throw new ForbiddenException("Only administrators can access the admin overview");
     }
-    return this.admin.overview(user.tenantId);
+    return this.admin.overview(requireTenantId(user));
   }
 
   @Get("audit-logs")
@@ -39,7 +40,7 @@ export class AdminController {
     @Query("pageSize") pageSize?: string,
     @Query("q") q?: string
   ) {
-    return this.admin.auditLogs(user.tenantId, page, pageSize, q, user);
+    return this.admin.auditLogs(requireTenantId(user), page, pageSize, q, user);
   }
 
   @Get("tenants")
@@ -52,7 +53,7 @@ export class AdminController {
     @Query("sortBy") sortBy?: string,
     @Query("sortOrder") sortOrder?: string
   ) {
-    if (!isPlatformSuperAdminEmail(user.email)) {
+    if (!isPlatformSuperAdmin(user)) {
       throw new ForbiddenException("Only platform super administrators can list all organizations");
     }
     return this.admin.listTenants(page, pageSize, sortBy, sortOrder);
@@ -65,17 +66,17 @@ export class AdminController {
     if (user.role !== "GROUP_ADMIN") {
       throw new ForbiddenException("Only group administrators can update tenant settings");
     }
-    return this.admin.patchTenantSettings(user.tenantId, body);
+    return this.admin.patchTenantSettings(requireTenantId(user), body);
   }
 
   @Post("users")
   @ApiOperation({ summary: "Create a user in the current tenant with a fixed platform role (group admin only)" })
   @ApiCreatedResponse()
   createUser(@CurrentUser() user: JwtUser, @Body() body: CreateTenantUserDto) {
-    if (user.role !== "GROUP_ADMIN") {
+    if (user.role !== "GROUP_ADMIN" || !user.tenantId) {
       throw new ForbiddenException("Only group administrators can create users");
     }
-    return this.admin.createTenantUser(user.tenantId, body);
+    return this.admin.createTenantUser(requireTenantId(user), body);
   }
 
   @Patch("feature-flags/:key")

@@ -685,8 +685,19 @@ async function main() {
   console.log(
     "Seed OK — main tenant:",
     t0.id,
-    "| logins (password: demo): admin@kiorly.com, physician@kiorly.com, doctor2@kiorly.com, clinicadmin@kiorly.com, assistant@kiorly.com, nurse@kiorly.com, receptionist@kiorly.com, finance@kiorly.com, branchmgr@kiorly.com"
+    "| logins (password: demo): superadmin@kiorly.com (platform), admin@kiorly.com, physician@kiorly.com, doctor2@kiorly.com, clinicadmin@kiorly.com, assistant@kiorly.com, nurse@kiorly.com, receptionist@kiorly.com, finance@kiorly.com, branchmgr@kiorly.com"
   );
+
+  await prisma.user.deleteMany({ where: { email: "superadmin@kiorly.com", tenantId: null } });
+  await prisma.user.create({
+    data: {
+      tenantId: null,
+      email: "superadmin@kiorly.com",
+      passwordHash,
+      displayName: "Platform Super Administrator",
+      role: UserRole.PLATFORM_SUPER_ADMIN,
+    },
+  });
 }
 
 main()

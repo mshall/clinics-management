@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcryptjs";
-import { isPlatformSuperAdminEmail } from "../common/platform-super-admin";
+import { isPlatformSuperAdmin } from "../common/platform-super-admin";
 import { PrismaService } from "../prisma/prisma.service";
 
 function normalizeLoginEmail(raw: string): string {
@@ -60,7 +60,13 @@ export class AuthService {
       role: user.role,
     });
 
-    const navTabKeys = await this.navTabKeysForUser(user.tenantId, user.id);
+    const navTabKeys =
+      user.tenantId != null ? await this.navTabKeysForUser(user.tenantId, user.id) : null;
+
+    const platformSuperAdmin = isPlatformSuperAdmin({
+      email: user.email,
+      role: user.role,
+    });
 
     return {
       accessToken,
@@ -71,16 +77,18 @@ export class AuthService {
         displayName: user.displayName,
         role: user.role,
         navTabKeys,
+        platformSuperAdmin,
       },
     };
   }
 
-  async me(userId: string, tenantId: string) {
+  async me(userId: string, tenantId: string | null) {
     const user = await this.prisma.user.findFirst({
-      where: { id: userId, tenantId },
+      where: tenantId != null ? { id: userId, tenantId } : { id: userId, tenantId: null },
     });
     if (!user) throw new UnauthorizedException();
-    const navTabKeys = await this.navTabKeysForUser(tenantId, userId);
+    const navTabKeys =
+      user.tenantId != null ? await this.navTabKeysForUser(user.tenantId, userId) : null;
     return {
       id: user.id,
       tenantId: user.tenantId,
@@ -88,7 +96,10 @@ export class AuthService {
       displayName: user.displayName,
       role: user.role,
       navTabKeys,
-      platformSuperAdmin: isPlatformSuperAdminEmail(user.email),
+      platformSuperAdmin: isPlatformSuperAdmin({
+        email: user.email,
+        role: user.role,
+      }),
     };
   }
 }

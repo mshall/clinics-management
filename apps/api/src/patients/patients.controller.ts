@@ -25,6 +25,7 @@ import { memoryStorage } from "multer";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
+import { requireTenantId } from "../auth/require-tenant";
 import { PatientDto } from "../common/dto/patient.dto";
 import { CreatePatientDto } from "./dto/create-patient.dto";
 import { UpdatePatientDto } from "./dto/update-patient.dto";
@@ -56,7 +57,7 @@ export class PatientsController {
     @Query("sortOrder") sortOrder?: string
   ) {
     return this.patients.listPaginated(
-      user.tenantId,
+      requireTenantId(user),
       {
         search,
         mrn,
@@ -77,14 +78,14 @@ export class PatientsController {
   @ApiOperation({ summary: "Register a new patient" })
   @ApiCreatedResponse({ type: PatientDto })
   create(@CurrentUser() user: JwtUser, @Body() body: CreatePatientDto) {
-    return this.patients.create(user.tenantId, body, user);
+    return this.patients.create(requireTenantId(user), body, user);
   }
 
   @Get(":id/national-id-document")
   @ApiOperation({ summary: "Download optional national ID / SSN scan (if uploaded)" })
   @ApiOkResponse({ description: "Binary file stream" })
   async getNationalIdDocument(@CurrentUser() user: JwtUser, @Param("id") id: string): Promise<StreamableFile> {
-    const meta = await this.patients.getNationalIdDocumentMeta(user.tenantId, id, user);
+    const meta = await this.patients.getNationalIdDocumentMeta(requireTenantId(user), id, user);
     const stream = await this.patients.openNationalIdDocumentReadStream(meta.storageKey);
     return new StreamableFile(stream, {
       type: meta.mimeType,
@@ -116,20 +117,20 @@ export class PatientsController {
     @Param("id") id: string,
     @UploadedFile() file?: Express.Multer.File
   ) {
-    return this.patients.attachNationalIdDocument(user.tenantId, id, user, file);
+    return this.patients.attachNationalIdDocument(requireTenantId(user), id, user, file);
   }
 
   @Patch(":id")
   @ApiOperation({ summary: "Update patient demographics" })
   @ApiOkResponse({ type: PatientDto })
   update(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: UpdatePatientDto) {
-    return this.patients.update(user.tenantId, id, body, user);
+    return this.patients.update(requireTenantId(user), id, body, user);
   }
 
   @Get(":id")
   @ApiOperation({ summary: "Get patient by id" })
   @ApiOkResponse({ type: PatientDto })
   get(@CurrentUser() user: JwtUser, @Param("id") id: string) {
-    return this.patients.getById(user.tenantId, id, user);
+    return this.patients.getById(requireTenantId(user), id, user);
   }
 }

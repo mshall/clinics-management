@@ -39,6 +39,7 @@ export class AppointmentsService {
       throw new ForbiddenException("You can only access appointments where you are the clinician");
     }
     if (CLINIC_SCOPE_ROLES.has(viewer.role)) {
+      if (viewer.tenantId == null) throw new ForbiddenException();
       const ok = await this.prisma.clinicAdminScope.findFirst({
         where: { tenantId: viewer.tenantId, userId: viewer.userId, clinicId: row.clinicId },
       });

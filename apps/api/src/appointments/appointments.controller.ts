@@ -5,6 +5,7 @@ import { IsEnum } from "class-validator";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
+import { requireTenantId } from "../auth/require-tenant";
 import { AppointmentsService } from "./appointments.service";
 import { AppointmentDto } from "./dto/appointment.dto";
 import { CreateAppointmentDto } from "./dto/create-appointment.dto";
@@ -42,7 +43,7 @@ export class AppointmentsController {
     @Query("bookableOnly") bookableOnly?: string
   ) {
     return this.appointments.list(
-      user.tenantId,
+      requireTenantId(user),
       page,
       pageSize,
       from,
@@ -63,27 +64,27 @@ export class AppointmentsController {
   @ApiOperation({ summary: "Book appointment" })
   @ApiCreatedResponse({ type: AppointmentDto })
   create(@CurrentUser() user: JwtUser, @Body() body: CreateAppointmentDto) {
-    return this.appointments.create(user.tenantId, user, body);
+    return this.appointments.create(requireTenantId(user), user, body);
   }
 
   @Get(":id")
   @ApiOperation({ summary: "Get appointment by id" })
   @ApiOkResponse({ type: AppointmentDto })
   getOne(@CurrentUser() user: JwtUser, @Param("id") id: string) {
-    return this.appointments.getById(user.tenantId, id, user);
+    return this.appointments.getById(requireTenantId(user), id, user);
   }
 
   @Patch(":id/status")
   @ApiOperation({ summary: "Update appointment status" })
   @ApiOkResponse({ type: AppointmentDto })
   patchStatus(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchAppointmentStatusDto) {
-    return this.appointments.updateStatus(user.tenantId, id, body.status, user);
+    return this.appointments.updateStatus(requireTenantId(user), id, body.status, user);
   }
 
   @Patch(":id")
   @ApiOperation({ summary: "Update appointment (not allowed when completed or cancelled)" })
   @ApiOkResponse({ type: AppointmentDto })
   update(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: UpdateAppointmentDto) {
-    return this.appointments.update(user.tenantId, id, body, user);
+    return this.appointments.update(requireTenantId(user), id, body, user);
   }
 }

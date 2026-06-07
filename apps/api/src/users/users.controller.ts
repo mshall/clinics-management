@@ -4,6 +4,7 @@ import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swa
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
+import { requireTenantId } from "../auth/require-tenant";
 import { UsersService } from "./users.service";
 
 @ApiTags("users")
@@ -32,6 +33,6 @@ export class UsersController {
     if (!UsersController.USER_LIST_ROLES.has(user.role)) {
       throw new ForbiddenException("You do not have permission to list users");
     }
-    return this.users.listForTenant(user.tenantId, page, pageSize);
+    return this.users.listForTenant(requireTenantId(user), page, pageSize);
   }
 }

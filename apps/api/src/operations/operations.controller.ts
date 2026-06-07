@@ -6,6 +6,7 @@ import { IsEnum, IsNumber, IsOptional, Min } from "class-validator";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
+import { requireTenantId } from "../auth/require-tenant";
 import { CreateOperationDto } from "./dto/create-operation.dto";
 import { OperationDto } from "./dto/operation.dto";
 import { UpdateOperationDto } from "./dto/update-operation.dto";
@@ -88,7 +89,7 @@ export class OperationsController {
     @Query("status") status?: string
   ) {
     this.assertViewAccess(user);
-    return this.operations.list(user.tenantId, user, from, to, page, pageSize, sortBy, sortOrder, clinicId, status);
+    return this.operations.list(requireTenantId(user), user, from, to, page, pageSize, sortBy, sortOrder, clinicId, status);
   }
 
   @Get("payable")
@@ -96,7 +97,7 @@ export class OperationsController {
   @ApiOkResponse({ type: OperationDto, isArray: true })
   listPayable(@CurrentUser() user: JwtUser, @Query("clinicId") clinicId?: string) {
     this.assertViewAccess(user);
-    return this.operations.listPayable(user.tenantId, user, clinicId);
+    return this.operations.listPayable(requireTenantId(user), user, clinicId);
   }
 
   @Post()
@@ -104,7 +105,7 @@ export class OperationsController {
   @ApiCreatedResponse({ type: OperationDto })
   create(@CurrentUser() user: JwtUser, @Body() body: CreateOperationDto) {
     this.assertCreateAccess(user);
-    return this.operations.create(user.tenantId, body, user);
+    return this.operations.create(requireTenantId(user), body, user);
   }
 
   @Patch(":id")
@@ -112,7 +113,7 @@ export class OperationsController {
   @ApiOkResponse({ type: OperationDto })
   update(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: UpdateOperationDto) {
     this.assertStatusAccess(user);
-    return this.operations.update(user.tenantId, id, body, user);
+    return this.operations.update(requireTenantId(user), id, body, user);
   }
 
   @Patch(":id/status")
@@ -120,6 +121,6 @@ export class OperationsController {
   @ApiOkResponse({ type: OperationDto })
   patchStatus(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchOperationStatusDto) {
     this.assertStatusAccess(user);
-    return this.operations.updateStatus(user.tenantId, id, body.status, user, body.collectionAmount);
+    return this.operations.updateStatus(requireTenantId(user), id, body.status, user, body.collectionAmount);
   }
 }

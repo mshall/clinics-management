@@ -167,6 +167,26 @@ Reporting: monthly/quarterly/annual expense by branch, by category, group consol
 - **Organization administrators** use the full admin experience except **platform-only** tools (cross-tenant directory and raw **data explorer**), which are gated separately for designated platform operators.
 - Manage subscription / licensing (if SaaS billing is in scope).
 
+### 6.6.0 Platform super administration
+
+A dedicated **Platform Super Administrator** operates outside any organization (`tenantId` null, role `PLATFORM_SUPER_ADMIN`). This account is used by the SaaS operator to onboard new clinic groups on the platform.
+
+| Capability | Description |
+|---|---|
+| **Platform overview** | Cross-tenant KPIs: organization count, users, clinics, patients, encounters |
+| **Create organization** | Name, base currency, default locale; atomically provision the first **Group Admin** (email/username + password + display name) |
+| **Optional HQ clinic** | When creating an organization, optionally create the first parent (HQ) clinic in the same transaction |
+| **List & manage organizations** | Paginated directory with per-org user/clinic/patient counts |
+| **Organization settings** | Update name, currency, locale, default visit fee for any tenant |
+| **Clinic provisioning** | Add parent clinics or branches under any organization |
+| **User provisioning** | Create any organization role; assign clinics for clinic admin / branch manager |
+| **User directory** | List all users within a selected organization |
+| **Global feature flags** | View and toggle platform-wide feature flags |
+
+**Out of scope for the dedicated platform account:** clinical workflows (patients, encounters, prescriptions), org-scoped finance/HR, and the raw data explorer (reserved for legacy break-glass org admins via email allowlist). The platform super admin signs in to the **Platform** tab only (plus Profile).
+
+**Representative user story:** *As a Platform Super Administrator*, I want to create a new clinic group with a group admin login in one step so the customer can sign in and complete clinic onboarding immediately.
+
 ### 6.6.1 Reports & analytics
 
 - The **Reports** area charts **visit volume** (finalized encounters), **posted revenue**, and **new patient registrations** per calendar month from live ledger and patient data—not illustrative placeholders.

@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { loginRequest } from "@/lib/auth-api";
+import { defaultHomeForRole } from "@/lib/nav-policy";
 import { useAuthStore } from "@/stores/auth-store";
 
 export function LoginPage() {
@@ -24,7 +25,8 @@ export function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   if (user && token) {
-    const to = (location.state as { from?: string } | null)?.from ?? "/";
+    const from = (location.state as { from?: string } | null)?.from;
+    const to = from && from !== "/login" ? from : defaultHomeForRole(user.role, user.navTabKeys);
     return <Navigate to={to} replace />;
   }
 
@@ -36,7 +38,12 @@ export function LoginPage() {
       void mfa;
       const res = await loginRequest(email, password);
       setSession(res.accessToken, res.user);
-      navigate((location.state as { from?: string } | null)?.from ?? "/", { replace: true });
+      const from = (location.state as { from?: string } | null)?.from;
+      const home = defaultHomeForRole(
+        useAuthStore.getState().user?.role,
+        useAuthStore.getState().user?.navTabKeys,
+      );
+      navigate(from && from !== "/login" ? from : home, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : t("auth.signIn"));
     } finally {

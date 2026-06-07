@@ -5,8 +5,8 @@ export class AuthUserDto {
   @ApiProperty()
   id!: string;
 
-  @ApiProperty()
-  tenantId!: string;
+  @ApiProperty({ nullable: true, description: "Null for platform super administrators" })
+  tenantId!: string | null;
 
   @ApiProperty()
   email!: string;
@@ -25,7 +25,7 @@ export class AuthUserDto {
   navTabKeys?: string[] | null;
 
   @ApiPropertyOptional({
-    description: "True when this user's email is listed in PLATFORM_SUPER_ADMIN_EMAILS (data explorer, all tenants)",
+    description: "True for PLATFORM_SUPER_ADMIN role or when email is listed in PLATFORM_SUPER_ADMIN_EMAILS",
   })
   platformSuperAdmin?: boolean;
 }

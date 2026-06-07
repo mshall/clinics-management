@@ -4,6 +4,7 @@ import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
+import { requireTenantId } from "../auth/require-tenant";
 import { CreateRevenueDto } from "./dto/create-revenue.dto";
 import { RevenueEntryDto } from "./dto/revenue.dto";
 import { RevenueTotalsDto } from "./dto/revenue-totals.dto";
@@ -41,14 +42,14 @@ export class RevenueController {
     @Query("clinicianId") clinicianId?: string
   ) {
     const clinicianUserId = resolveClinicianFilter(user, clinicianId);
-    return this.revenue.totals(user.tenantId, from, to, clinicId, clinicianUserId, user);
+    return this.revenue.totals(requireTenantId(user), from, to, clinicId, clinicianUserId, user);
   }
 
   @Get("clinic-breakdown")
   @ApiOperation({ summary: "Posted revenue aggregated per clinic (super admin or clinic admin scope)" })
   @ApiOkResponse()
   clinicBreakdown(@CurrentUser() user: JwtUser, @Query("from") from?: string, @Query("to") to?: string) {
-    return this.revenue.clinicBreakdown(user.tenantId, from, to, user);
+    return this.revenue.clinicBreakdown(requireTenantId(user), from, to, user);
   }
 
   @Get()
@@ -66,13 +67,13 @@ export class RevenueController {
     @Query("clinicianId") clinicianId?: string
   ) {
     const clinicianUserId = resolveClinicianFilter(user, clinicianId);
-    return this.revenue.list(user.tenantId, from, to, page, pageSize, clinicId, sortBy, sortOrder, clinicianUserId, user);
+    return this.revenue.list(requireTenantId(user), from, to, page, pageSize, clinicId, sortBy, sortOrder, clinicianUserId, user);
   }
 
   @Post()
   @ApiOperation({ summary: "Post a revenue entry" })
   @ApiCreatedResponse({ type: RevenueEntryDto })
   create(@CurrentUser() user: JwtUser, @Body() body: CreateRevenueDto) {
-    return this.revenue.create(user.tenantId, body, user);
+    return this.revenue.create(requireTenantId(user), body, user);
   }
 }

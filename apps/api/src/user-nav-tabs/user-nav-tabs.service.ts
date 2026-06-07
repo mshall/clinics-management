@@ -8,8 +8,8 @@ import { isFullRoleNav, sanitizeNavTabKeysForRole } from "./nav-tab-keys";
 export class UserNavTabsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private assertCanManage(actor: JwtUser, target: { id: string; role: UserRole; tenantId: string }): void {
-    if (target.tenantId !== actor.tenantId) throw new ForbiddenException();
+  private assertCanManage(actor: JwtUser, target: { id: string; role: UserRole; tenantId: string | null }): void {
+    if (actor.tenantId == null || target.tenantId !== actor.tenantId) throw new ForbiddenException();
     if (actor.role === UserRole.GROUP_ADMIN) return;
     if (actor.role === UserRole.CLINIC_ADMIN) {
       if (target.role === UserRole.GROUP_ADMIN || target.role === UserRole.CLINIC_ADMIN) {

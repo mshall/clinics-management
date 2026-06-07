@@ -602,7 +602,24 @@ POST   /admin/users
 PATCH  /admin/feature-flags/:key
 ```
 
-**Platform super-admin gate:** `GET /admin/tenants` and all `/admin/data-explorer/*` routes require the caller’s email to appear in the API environment variable `PLATFORM_SUPER_ADMIN_EMAILS` (comma-separated, case-insensitive). Organization **GROUP_ADMIN** users do not receive these capabilities unless explicitly listed. Login and `GET /auth/me` return `platformSuperAdmin: true` when applicable so the web app can hide those tabs by default.
+**Platform super-admin gate:** Dedicated users with role `PLATFORM_SUPER_ADMIN` and `tenantId: null`, and/or callers whose email appears in `PLATFORM_SUPER_ADMIN_EMAILS`. Login and `GET /auth/me` return `platformSuperAdmin: true` when applicable.
+
+**Platform administration endpoints (v1):**
+```
+GET    /admin/platform/overview
+GET    /admin/platform/feature-flags
+PATCH  /admin/platform/feature-flags/:key
+GET    /admin/platform/tenants
+POST   /admin/platform/tenants              # optional groupAdmin + initialClinic in body
+GET    /admin/platform/tenants/:tenantId
+PATCH  /admin/platform/tenants/:tenantId
+GET    /admin/platform/tenants/:tenantId/users
+GET    /admin/platform/tenants/:tenantId/clinics
+POST   /admin/platform/tenants/:tenantId/clinics
+POST   /admin/platform/tenants/:tenantId/users
+```
+
+Legacy org-scoped platform tools (`GET /admin/tenants`, `/admin/data-explorer/*`) remain available to **GROUP_ADMIN** users listed in `PLATFORM_SUPER_ADMIN_EMAILS`.
 
 **HR employee creation:** `POST /hr/employees` and ID-document upload require an allowed role (`GROUP_ADMIN`, `CLINIC_ADMIN`, `HR_OFFICER`, `BRANCH_MANAGER`). `CLINIC_ADMIN` may only assign employees to clinics in `ClinicAdminScope`.
 

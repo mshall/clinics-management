@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swa
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
+import { requireTenantId } from "../auth/require-tenant";
 import { GroupOverviewKpisDto } from "../common/dto/dashboard.dto";
 import { DashboardService } from "./dashboard.service";
 
@@ -21,6 +22,6 @@ export class DashboardController {
     @Query("from") from?: string,
     @Query("to") to?: string
   ) {
-    return this.dashboard.groupOverview(user.tenantId, from, to);
+    return this.dashboard.groupOverview(requireTenantId(user), from, to);
   }
 }

@@ -16,6 +16,7 @@ import { EmployeeDetailPage } from "@/features/hr/employee-detail-page";
 import { HrPage } from "@/features/hr/hr-page";
 import { PatientDetailPage } from "@/features/patients/patient-detail-page";
 import { PatientsPage } from "@/features/patients/patients-page";
+import { PlatformAdminPage } from "@/features/platform/platform-admin-page";
 import { ProfileGate } from "@/features/profile/profile-gate";
 import { ReportsPage } from "@/features/reports/reports-page";
 import { DoctorRevenueGate } from "@/features/revenue/doctor-revenue-gate";
@@ -50,6 +51,7 @@ export const router = createBrowserRouter([
       { path: "hr", element: <HrPage /> },
       { path: "hr/employees/:id", element: <EmployeeDetailPage /> },
       { path: "reports", element: <ReportsPage /> },
+      { path: "platform", element: <PlatformAdminPage /> },
       { path: "admin", element: <AdminPage /> },
     ],
   },
