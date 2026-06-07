@@ -15,6 +15,14 @@ export function defaultMonthRange(): { from: string; to: string } {
   return { from: formatLocalYmd(start), to: formatLocalYmd(end) };
 }
 
+/** Wider default for encounter ledger (last 12 calendar months). */
+export function defaultEncounterListRange(): { from: string; to: string } {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  return { from: formatLocalYmd(start), to: formatLocalYmd(end) };
+}
+
 interface DateRangeState {
   from: string;
   to: string;

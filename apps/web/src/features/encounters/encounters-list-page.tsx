@@ -17,6 +17,7 @@ import {
   useAdminOverviewQuery,
   useAppointmentsQuery,
   useClinicsQuery,
+  encounterLedgerFromTo,
   useEncountersQuery,
   usePatientsQuery,
   useUsersQuery,
@@ -28,7 +29,7 @@ import { formatEncounterStatus, formatClinicName, formatClinicNameFields, locale
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
 import { columnFilterIncludes } from "@/lib/utils";
 import { ENCOUNTER_VISIT_TYPES } from "@/lib/visit-types";
-import { defaultMonthRange } from "@/stores/date-range-store";
+import { defaultEncounterListRange, defaultMonthRange } from "@/stores/date-range-store";
 import { useAuthStore } from "@/stores/auth-store";
 
 export function EncountersListPage() {
@@ -37,7 +38,7 @@ export function EncountersListPage() {
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
   const isPhysician = authUser?.role === "physician";
-  const initialRange = useMemo(() => defaultMonthRange(), []);
+  const initialRange = useMemo(() => defaultEncounterListRange(), []);
   const [from, setFrom] = useState(initialRange.from);
   const [to, setTo] = useState(initialRange.to);
   const [ledgerPatientQuery, setLedgerPatientQuery] = useState("");
@@ -50,13 +51,14 @@ export function EncountersListPage() {
   const [pageSize, setPageSize] = useState(10);
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-  const { data: encData, isPending, isError, error } = useEncountersQuery({
+  const ledgerRange = useMemo(() => encounterLedgerFromTo(from, to), [from, to]);
+  const { data: encData, isPending, isError, error, refetch, isFetching } = useEncountersQuery({
     page,
     pageSize,
     sortBy,
     sortOrder,
-    from,
-    to,
+    from: ledgerRange.from,
+    to: ledgerRange.to,
     patientSearch: debouncedLedgerPatient.trim() || undefined,
   });
 
@@ -95,6 +97,7 @@ export function EncountersListPage() {
   const [efClinic, setEfClinic] = useState("");
   const [efPatient, setEfPatient] = useState("");
   const [efUpdated, setEfUpdated] = useState("");
+  const [draftOnly, setDraftOnly] = useState(false);
 
   const patientLabel = useMemo(() => {
     const m = new Map<string, string>();
@@ -109,6 +112,7 @@ export function EncountersListPage() {
     const loc = localeForLanguage(i18n.language);
     const name = (e: EncounterDetailDto) => formatClinicNameFields(e.clinicNameEn, e.clinicNameAr, i18n.language);
     return data.filter((e) => {
+      if (draftOnly && e.status !== "DRAFT" && e.status !== "AMENDED") return false;
       if (efEncStatus.trim() && !columnFilterIncludes(formatEncounterStatus(e.status, t), efEncStatus)) return false;
       if (efVisit.trim() && !columnFilterIncludes(e.visitType, efVisit)) return false;
       if (efClinic.trim() && !columnFilterIncludes(name(e), efClinic)) return false;
@@ -127,7 +131,7 @@ export function EncountersListPage() {
       }
       return true;
     });
-  }, [data, efEncStatus, efVisit, efClinic, efPatient, efUpdated, i18n.language, patientLabel, t]);
+  }, [data, draftOnly, efEncStatus, efVisit, efClinic, efPatient, efUpdated, i18n.language, patientLabel, t]);
 
   const [createPatientId, setCreatePatientId] = useState("");
   const [createClinicId, setCreateClinicId] = useState("");
@@ -427,7 +431,12 @@ export function EncountersListPage() {
       </div>
 
       {isError ? (
-        <p className="text-sm text-destructive">{error instanceof Error ? error.message : t("common.error")}</p>
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+          <p className="flex-1">{error instanceof Error ? error.message : t("common.error")}</p>
+          <Button type="button" variant="outline" size="sm" disabled={isFetching} onClick={() => void refetch()}>
+            {t("common.retry", "Retry")}
+          </Button>
+        </div>
       ) : null}
 
       <Card>
@@ -457,7 +466,31 @@ export function EncountersListPage() {
           </div>
           <Button
             type="button"
+            variant={draftOnly ? "default" : "outline"}
+            size="sm"
+            onClick={() => {
+              setDraftOnly((v) => !v);
+              setPage(1);
+            }}
+          >
+            {t("encounters.showDraftOnly")}
+          </Button>
+          <Button
+            type="button"
             variant="secondary"
+            size="sm"
+            onClick={() => {
+              const r = defaultEncounterListRange();
+              setFrom(r.from);
+              setTo(r.to);
+              setPage(1);
+            }}
+          >
+            {t("encounters.lastTwelveMonths", "Last 12 months")}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
             size="sm"
             onClick={() => {
               const r = defaultMonthRange();

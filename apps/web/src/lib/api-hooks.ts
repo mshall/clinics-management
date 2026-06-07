@@ -22,7 +22,7 @@ import type {
   TenantListItemDto,
   UserListItemDto,
 } from "@/lib/api-types";
-import { apiGet } from "@/lib/http";
+import { ApiError, apiGet } from "@/lib/http";
 import type { Paginated } from "@/lib/paginated";
 import { useAuthStore } from "@/stores/auth-store";
 import { defaultMonthRange, useDateRangeStore } from "@/stores/date-range-store";
@@ -30,7 +30,7 @@ import { defaultMonthRange, useDateRangeStore } from "@/stores/date-range-store"
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Encounters ledger must always send a valid YYYY-MM-DD pair; avoid half-empty persisted UI state. */
-function encounterLedgerFromTo(from: string, to: string): { from: string; to: string } {
+export function encounterLedgerFromTo(from: string, to: string): { from: string; to: string } {
   const f = from?.trim() ?? "";
   const t = to?.trim() ?? "";
   if (ISO_DAY.test(f) && ISO_DAY.test(t)) return { from: f, to: t };
@@ -265,6 +265,11 @@ export function useEncountersQuery(params: EncountersListParams = {}) {
         ],
     queryFn: () => apiGet<Paginated<EncounterDetailDto>>(`/api/v1/encounters?${qs}`),
     enabled,
+    retry: (failureCount, error) => {
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) return false;
+      return failureCount < 3;
+    },
+    retryDelay: (attempt) => 400 * (attempt + 1),
   });
 }
 

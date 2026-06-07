@@ -9,6 +9,7 @@ import {
   Heart,
   Lock,
   Pill,
+  Printer,
   Ruler,
   Scale,
   ScanLine,
@@ -37,7 +38,8 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useEncounterQuery } from "@/lib/api-hooks";
 import type { EncounterDetailDto, EncounterDocumentDto } from "@/lib/api-types";
 import { ApiError, apiDelete, apiFetchBlob, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
-import { formatEncounterStatus, localeForLanguage } from "@/lib/locale-display";
+import { formatEncounterStatus, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
+import { generatePrescriptionPng } from "@/lib/prescription-image";
 import { cn } from "@/lib/utils";
 
 function apiErrorMessage(e: unknown): string {
@@ -45,6 +47,18 @@ function apiErrorMessage(e: unknown): string {
     return String((e.body as { message?: string }).message);
   }
   return e instanceof Error ? e.message : String(e);
+}
+
+function printPrescriptionImage(imageUrl: string, title: string): boolean {
+  const win = window.open("", "_blank");
+  if (!win) return false;
+  const safeTitle = title.replace(/[<>&"]/g, "");
+  win.document.write(`<!DOCTYPE html><html><head><title>${safeTitle}</title>
+<style>@page{margin:10mm}body{margin:0;display:flex;justify-content:center;align-items:flex-start}
+img{max-width:100%;height:auto}</style></head>
+<body><img src="${imageUrl}" alt="" onload="window.print();window.onafterprint=function(){window.close()}"/></body></html>`);
+  win.document.close();
+  return true;
 }
 
 function encounterStatusLabel(t: TFunction, code: string): string {
@@ -98,6 +112,8 @@ export function EncounterDetailPage() {
   const replaceFileRef = useRef<HTMLInputElement>(null);
   const prescriptionFileRef = useRef<HTMLInputElement>(null);
   const pendingReplaceRef = useRef<{ docId: string; kind: DocKind } | null>(null);
+  const generatedRxUrlRef = useRef<string | null>(null);
+  const [generatedRxPreview, setGeneratedRxPreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!enc) return;
@@ -119,10 +135,26 @@ export function EncounterDetailPage() {
   }, [enc?.id, enc?.noMedications]);
 
   useEffect(() => {
+    if (generatedRxUrlRef.current) {
+      URL.revokeObjectURL(generatedRxUrlRef.current);
+      generatedRxUrlRef.current = null;
+    }
+    setGeneratedRxPreview(null);
+  }, [
+    enc?.medications
+      ?.map((m) => `${m.id}|${m.drugName}|${m.dosage ?? ""}|${m.frequency ?? ""}`)
+      .join(";"),
+  ]);
+
+  useEffect(() => {
     return () => {
       if (viewerUrlRef.current) {
         URL.revokeObjectURL(viewerUrlRef.current);
         viewerUrlRef.current = null;
+      }
+      if (generatedRxUrlRef.current) {
+        URL.revokeObjectURL(generatedRxUrlRef.current);
+        generatedRxUrlRef.current = null;
       }
     };
   }, []);
@@ -249,9 +281,56 @@ export function EncounterDetailPage() {
     onSuccess: (_data, variables) => {
       if (variables.kind === "PRESCRIPTION") {
         setNoMedications(false);
-        setMedTab("prescription");
+        if (!variables.file.name.startsWith("prescription-generated-")) {
+          setMedTab("prescription");
+        }
       }
       toast.success(t("encounters.docUploaded"));
+      invalidate();
+    },
+    onError: (e: unknown) => {
+      toast.error(apiErrorMessage(e));
+    },
+  });
+
+  const generatePrescriptionMutation = useMutation({
+    mutationFn: async () => {
+      if (!enc || meds.length === 0) throw new Error("No medications");
+      const rtl = i18n.language === "ar";
+      const blob = await generatePrescriptionPng({
+        clinicName: formatClinicNameFields(enc.clinicNameEn, enc.clinicNameAr, i18n.language, enc.clinicId),
+        patientName: enc.patientName?.trim() || enc.patientId,
+        patientMrn: enc.patientMrn,
+        date: new Date(),
+        medications: meds,
+        physicianName: user?.displayName,
+        rtl,
+        labels: {
+          title: t("encounters.generatedPrescription"),
+          patient: t("encounters.patient"),
+          mrn: t("patients.mrn"),
+          date: t("expenses.date"),
+          medications: t("encounters.medications"),
+          signature: t("encounters.prescriptionSignature", "Physician"),
+        },
+      });
+      const stamp = new Date().toISOString().slice(0, 10);
+      const file = new File([blob], `prescription-generated-${stamp}.png`, { type: "image/png" });
+      if (generatedRxUrlRef.current) URL.revokeObjectURL(generatedRxUrlRef.current);
+      const previewUrl = URL.createObjectURL(blob);
+      generatedRxUrlRef.current = previewUrl;
+      setGeneratedRxPreview(previewUrl);
+      await apiPostFormData<EncounterDocumentDto>(`/api/v1/encounters/${id}/documents`, (() => {
+        const fd = new FormData();
+        fd.set("file", file);
+        fd.set("kind", "PRESCRIPTION");
+        return fd;
+      })());
+      return previewUrl;
+    },
+    onSuccess: () => {
+      setNoMedications(false);
+      toast.success(t("encounters.prescriptionGenerated"));
       invalidate();
     },
     onError: (e: unknown) => {
@@ -855,6 +934,58 @@ export function EncounterDetailPage() {
                     ))}
                     {meds.length === 0 ? <li className="text-muted-foreground">{t("encounters.noMedsYet")}</li> : null}
                   </ul>
+                  {meds.length > 0 ? (
+                    <div className="mt-4 space-y-3">
+                      {draft && medsPanelActive ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className="gap-2"
+                            disabled={generatePrescriptionMutation.isPending}
+                            onClick={() => generatePrescriptionMutation.mutate()}
+                          >
+                            <FileText className="h-4 w-4 shrink-0" aria-hidden />
+                            {t("encounters.generatePrescription")}
+                          </Button>
+                          <p className="text-xs text-muted-foreground">{t("encounters.generatePrescriptionHint")}</p>
+                        </div>
+                      ) : null}
+                      {generatedRxPreview ? (
+                        <div className="rounded-xl border border-emerald-300/80 bg-background p-3 dark:border-emerald-800">
+                          <p className="mb-2 text-sm font-medium">{t("encounters.generatedPrescription")}</p>
+                          <img
+                            src={generatedRxPreview}
+                            alt={t("encounters.generatedPrescription")}
+                            className="mx-auto max-h-[min(70vh,520px)] w-full rounded-md border border-border object-contain"
+                          />
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <Button type="button" size="sm" variant="outline" asChild>
+                              <a href={generatedRxPreview} download={`prescription-${enc.patientMrn ?? enc.id}.png`}>
+                                {t("encounters.downloadFile")}
+                              </a>
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="gap-1.5"
+                              onClick={() => {
+                                const ok = printPrescriptionImage(
+                                  generatedRxPreview,
+                                  t("encounters.generatedPrescription")
+                                );
+                                if (!ok) toast.error(t("encounters.printBlocked", "Allow pop-ups to print the prescription."));
+                              }}
+                            >
+                              <Printer className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                              {t("encounters.printPrescription")}
+                            </Button>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                   {draft && medsPanelActive ? (
                     <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                       <div className="space-y-1">

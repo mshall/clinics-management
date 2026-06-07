@@ -412,6 +412,44 @@ async function main() {
     );
   }
 
+  /** Editable demo encounters (draft, current week) for QA — visible to all roles in default 12-month range. */
+  const demoWeekBase = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 0, 0, 0);
+  const demoDraftSpecs = [
+    { clinicianId: physician.id, patientIdx: 0, visitType: "Consultation", chief: "Demo editable encounter — physician" },
+    { clinicianId: physician.id, patientIdx: 1, visitType: "Follow-up", chief: "Demo editable encounter — add medications & prescription" },
+    { clinicianId: physician2.id, patientIdx: 2, visitType: "Walk-in", chief: "Demo editable encounter — doctor2" },
+    { clinicianId: physician.id, patientIdx: 3, visitType: "Telehealth", chief: "Demo editable encounter — prescription test" },
+  ];
+  for (let i = 0; i < demoDraftSpecs.length; i++) {
+    const spec = demoDraftSpecs[i]!;
+    const createdAt = new Date(demoWeekBase.getTime() - i * 86400000);
+    const enc = await prisma.encounter.create({
+      data: {
+        tenantId: t0.id,
+        clinicId: hq.id,
+        patientId: patientIdsOrdered[spec.patientIdx % patientIdsOrdered.length]!,
+        clinicianId: spec.clinicianId,
+        status: EncounterStatus.DRAFT,
+        noMedications: false,
+        visitType: spec.visitType,
+        chiefComplaint: spec.chief,
+        subjective: "Demo patient for editing SOAP, vitals, and medications.",
+        objective: "Examination unremarkable.",
+        assessment: "Working diagnosis for demo.",
+        plan: "Medications as listed. Follow up as needed.",
+        createdAt,
+        updatedAt: createdAt,
+      },
+    });
+    encounters.push(enc);
+    await prisma.encounterMedication.createMany({
+      data: [
+        { tenantId: t0.id, encounterId: enc.id, drugName: "Paracetamol 500mg", dosage: "1 tablet", frequency: "TID" },
+        { tenantId: t0.id, encounterId: enc.id, drugName: "Ibuprofen 400mg", dosage: "1 tablet", frequency: "BID" },
+      ],
+    });
+  }
+
   const y = now.getFullYear();
   const m = now.getMonth();
 
