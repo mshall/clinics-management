@@ -285,7 +285,7 @@ export function EncountersListPage() {
                   <p className="text-sm text-muted-foreground">{t("encounters.noPatientsRegistered", "Register a patient first.")}</p>
                 ) : null}
                 <div className="space-y-2">
-                  <Label>{t("encounters.patient")}</Label>
+                  <Label required>{t("encounters.patient")}</Label>
                   <p className="text-xs text-muted-foreground">{t("encounters.selectPatientHint", "Choose a patient from the list (search by name or MRN).")}</p>
                   <SearchablePickList
                     items={dialogPatientItems}
@@ -364,7 +364,7 @@ export function EncountersListPage() {
                   </div>
                 ) : null}
                 <div className="space-y-2">
-                  <Label>{t("encounters.clinic", "Clinic")}</Label>
+                  <Label required>{t("encounters.clinic", "Clinic")}</Label>
                   <select
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={createClinicId}
@@ -378,7 +378,7 @@ export function EncountersListPage() {
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <Label>{t("encounters.visitType")}</Label>
+                  <Label required>{t("encounters.visitType")}</Label>
                   <select
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={createVisitType}

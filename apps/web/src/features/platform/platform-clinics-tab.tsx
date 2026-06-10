@@ -18,6 +18,7 @@ import {
   type ClinicFormValues,
 } from "@/features/clinics/clinic-form-utils";
 import { apiErrorMessage, type PlatformClinicRow, type TenantRow } from "@/features/platform/platform-shared";
+import { isRootClinic, clinicKindLabel } from "@/lib/clinic-kind";
 import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel";
 import { apiGet, apiPatch, apiPost } from "@/lib/http";
 import type { Paginated } from "@/lib/paginated";
@@ -70,7 +71,10 @@ export function PlatformClinicsTab() {
 
   const orgClinicsQuery = useQuery({
     queryKey: ["platform", "clinics", activeTenantId],
-    queryFn: () => apiGet<{ id: string; nameEn: string; kind: string }[]>(`/api/v1/admin/platform/tenants/${activeTenantId}/clinics`),
+    queryFn: () =>
+      apiGet<{ id: string; nameEn: string; parentClinicId: string | null }[]>(
+        `/api/v1/admin/platform/tenants/${activeTenantId}/clinics`,
+      ),
     enabled: Boolean(activeTenantId) && isCreate,
   });
 
@@ -82,11 +86,8 @@ export function PlatformClinicsTab() {
   });
 
   const parentClinicItems: PickListItem[] = useMemo(
-    () => [
-      { value: "", label: t("platform.newParentClinic") },
-      ...(orgClinicsQuery.data ?? []).filter((c) => c.kind === "parent").map((c) => ({ value: c.id, label: c.nameEn })),
-    ],
-    [orgClinicsQuery.data, t],
+    () => (orgClinicsQuery.data ?? []).filter(isRootClinic).map((c) => ({ value: c.id, label: c.nameEn })),
+    [orgClinicsQuery.data],
   );
 
   useEffect(() => {
@@ -227,7 +228,9 @@ export function PlatformClinicsTab() {
                       <td className="px-3 py-2 font-medium">{row.nameEn}</td>
                       <td className="px-3 py-2">{row.city}</td>
                       <td className="px-3 py-2">
-                        <Badge variant={row.kind === "parent" ? "default" : "secondary"}>{row.kind}</Badge>
+                        <Badge variant={row.kind === "branch" ? "secondary" : row.kind === "parent" ? "default" : "outline"}>
+                          {clinicKindLabel(row.kind, t)}
+                        </Badge>
                       </td>
                       <td className="px-3 py-2 ltr-nums">{row.phone ?? "—"}</td>
                     </tr>
@@ -254,7 +257,7 @@ export function PlatformClinicsTab() {
             <div className="space-y-4">
               {isCreate ? (
                 <div className="space-y-2">
-                  <Label>{t("platform.orgName")}</Label>
+                  <Label required>{t("platform.orgName")}</Label>
                   <select
                     className="flex h-10 w-full max-w-md rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={createTenantId}

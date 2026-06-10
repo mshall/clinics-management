@@ -273,7 +273,7 @@ export function AppointmentDetailPage() {
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
-            <Label>{t("appointments.clinic")}</Label>
+            <Label required>{t("appointments.clinic")}</Label>
             <SearchablePickList
               items={clinicItems}
               value={clinicId}
@@ -285,7 +285,7 @@ export function AppointmentDetailPage() {
             />
           </div>
           <div className="space-y-2 sm:col-span-2">
-            <Label>{t("appointments.patient")}</Label>
+            <Label required>{t("appointments.patient")}</Label>
             {!readOnly ? (
               <p className="text-xs text-muted-foreground">
                 {t("encounters.selectPatientHint", "Search by name or MRN, then choose a row.")}
@@ -304,7 +304,7 @@ export function AppointmentDetailPage() {
             />
           </div>
           <div className="space-y-2 sm:col-span-2">
-            <Label>{t("appointments.clinician")}</Label>
+            <Label required>{t("appointments.clinician")}</Label>
             <select
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
               value={clinicianId}
@@ -319,7 +319,7 @@ export function AppointmentDetailPage() {
             </select>
           </div>
           <div className="space-y-2">
-            <Label>{t("appointments.starts")}</Label>
+            <Label required>{t("appointments.starts")}</Label>
             <Input
               className="ltr-nums"
               type="datetime-local"
@@ -329,7 +329,7 @@ export function AppointmentDetailPage() {
             />
           </div>
           <div className="space-y-2">
-            <Label>{t("appointments.ends")}</Label>
+            <Label required>{t("appointments.ends")}</Label>
             <Input
               className="ltr-nums"
               type="datetime-local"

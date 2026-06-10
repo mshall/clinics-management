@@ -443,7 +443,7 @@ export function HrPage() {
               <CardTitle className="mb-2 text-sm font-medium">{t("hr.recordAttendance")}</CardTitle>
               <div className="flex flex-wrap items-end gap-3">
                 <div className="min-w-[12rem] flex-1 space-y-2">
-                  <Label>{t("hr.employee")}</Label>
+                  <Label required>{t("hr.employee")}</Label>
                   <SearchablePickList
                     items={employeePickItems}
                     value={attEmp}
@@ -594,7 +594,7 @@ export function HrPage() {
                 </DialogHeader>
                 <div className="grid gap-3 pt-2">
                   <div className="space-y-2">
-                    <Label>{t("hr.employee")}</Label>
+                    <Label required>{t("hr.employee")}</Label>
                     <SearchablePickList
                       items={employeePickItems}
                       value={leaveEmp}

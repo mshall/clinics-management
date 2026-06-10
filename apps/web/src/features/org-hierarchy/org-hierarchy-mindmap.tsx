@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { formatUserRole } from "@/lib/locale-display";
+import { clinicKindLabel } from "@/lib/clinic-kind";
 import { cn } from "@/lib/utils";
 import type { OrgHierarchyNode } from "@/features/org-hierarchy/org-hierarchy-types";
 
@@ -165,12 +166,7 @@ export function OrgHierarchyMindMap({
             const selected = selectedId === box.node.id;
             const counts = countLine(box.node, t);
             const roleLabel = box.node.meta?.role ? formatUserRole(box.node.meta.role, t) : null;
-            const kindLabel =
-              box.node.meta?.kind === "parent"
-                ? t("clinics.parent")
-                : box.node.meta?.kind === "branch"
-                  ? t("clinics.branch")
-                  : null;
+            const kindLabel = box.node.meta?.kind ? clinicKindLabel(box.node.meta.kind, t) : null;
             const subtitle = box.node.subtitle ?? roleLabel ?? kindLabel ?? counts;
 
             return (

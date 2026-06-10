@@ -245,7 +245,7 @@ export function PlatformUsersTab() {
             <div className="grid gap-3 md:grid-cols-2">
               {isCreate ? (
                 <div className="space-y-2 md:col-span-2">
-                  <Label>{t("platform.orgName")}</Label>
+                  <Label required>{t("platform.orgName")}</Label>
                   <select
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={uTenantId}
@@ -269,11 +269,11 @@ export function PlatformUsersTab() {
                 </div>
               )}
               <div className="space-y-2">
-                <Label>{t("platform.username")}</Label>
+                <Label required>{t("platform.username")}</Label>
                 <Input type="email" value={uEmail} onChange={(e) => setUEmail(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>{isEdit ? t("platform.newPasswordOptional") : t("auth.password")}</Label>
+                <Label required={isCreate}>{isEdit ? t("platform.newPasswordOptional") : t("auth.password")}</Label>
                 <PasswordInput
                   value={uPassword}
                   onChange={setUPassword}
@@ -282,7 +282,7 @@ export function PlatformUsersTab() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>{t("admin.displayName")}</Label>
+                <Label required>{t("admin.displayName")}</Label>
                 <Input value={uName} onChange={(e) => setUName(e.target.value)} />
               </div>
               <div className="space-y-2">
@@ -304,7 +304,7 @@ export function PlatformUsersTab() {
               </div>
               {needsClinics ? (
                 <div className="space-y-2 md:col-span-2">
-                  <Label>{t("platform.assignClinics")}</Label>
+                  <Label required>{t("platform.assignClinics")}</Label>
                   {!activeTenantId ? (
                     <p className="text-sm text-muted-foreground">{t("platform.tabs.pickOrgFirst")}</p>
                   ) : clinicsQuery.isPending ? (

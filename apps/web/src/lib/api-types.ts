@@ -227,7 +227,7 @@ export interface ClinicDetailDto {
   nameAr: string;
   city: string;
   country: string;
-  kind: "parent" | "branch";
+  kind: "parent" | "branch" | "standalone";
   logoUrl: string | null;
   addressEn: string;
   addressAr: string;

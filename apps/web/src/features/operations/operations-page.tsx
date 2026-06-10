@@ -406,7 +406,9 @@ export function OperationsPage() {
                 </div>
                 {completeBalance > 0.001 ? (
                   <div className="space-y-1">
-                    <Label htmlFor="complete-collection">{t("operations.collectRemaining", "Amount collected now (AED)")}</Label>
+                    <Label htmlFor="complete-collection" required>
+                      {t("operations.collectRemaining", "Amount collected now (AED)")}
+                    </Label>
                     <Input
                       id="complete-collection"
                       className="ltr-nums"
@@ -477,7 +479,7 @@ export function OperationsPage() {
           {editOp ? (
             <div className="space-y-4">
               <div className="space-y-1">
-                <Label htmlFor="edit-op-date">{t("operations.operationDate", "Operation date")}</Label>
+                <Label htmlFor="edit-op-date" required>{t("operations.operationDate", "Operation date")}</Label>
                 <Input
                   id="edit-op-date"
                   className="ltr-nums"
@@ -507,7 +509,7 @@ export function OperationsPage() {
                 </div>
               ) : null}
               <div className="space-y-1">
-                <Label>{t("operations.patient", "Patient")}</Label>
+                <Label required>{t("operations.patient", "Patient")}</Label>
                 <SearchablePickList
                   items={editPatientItems}
                   value={editPatientId}
@@ -524,7 +526,7 @@ export function OperationsPage() {
                 />
               </div>
               <div className="space-y-1">
-                <Label>{t("operations.doctor", "Performing doctor")}</Label>
+                <Label required>{t("operations.doctor", "Performing doctor")}</Label>
                 <SearchablePickList
                   items={editPhysicianItems}
                   value={editClinicianId}
@@ -542,7 +544,7 @@ export function OperationsPage() {
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <Label htmlFor="edit-op-total">{t("operations.totalCost", "Total cost (AED)")}</Label>
+                  <Label htmlFor="edit-op-total" required>{t("operations.totalCost", "Total cost (AED)")}</Label>
                   <Input
                     id="edit-op-total"
                     className="ltr-nums"
@@ -661,7 +663,7 @@ export function OperationsPage() {
                 <legend className="px-1 text-sm font-medium">{t("operations.sectionWhen", "When & where")}</legend>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-1">
-                    <Label htmlFor="op-date">{t("operations.operationDate", "Operation date")}</Label>
+                    <Label htmlFor="op-date" required>{t("operations.operationDate", "Operation date")}</Label>
                     <Input
                       id="op-date"
                       className="ltr-nums"
@@ -698,7 +700,7 @@ export function OperationsPage() {
                 <legend className="px-1 text-sm font-medium">{t("operations.sectionPeople", "Patient & doctor")}</legend>
                 <div className="space-y-4">
                   <div className="space-y-1">
-                    <Label>{t("operations.patient", "Patient")}</Label>
+                    <Label required>{t("operations.patient", "Patient")}</Label>
                     <p className="text-xs text-muted-foreground">
                       {t("encounters.selectPatientHint", "Search by name or MRN, then choose a row.")}
                     </p>
@@ -718,7 +720,7 @@ export function OperationsPage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label>{t("operations.doctor", "Performing doctor")}</Label>
+                    <Label required>{t("operations.doctor", "Performing doctor")}</Label>
                     <p className="text-xs text-muted-foreground">
                       {t("operations.doctorHint", "Doctors assigned to the selected clinic. Type a name to filter.")}
                     </p>
@@ -744,7 +746,7 @@ export function OperationsPage() {
                 <legend className="px-1 text-sm font-medium">{t("operations.sectionPayment", "Cost & payment")}</legend>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-1">
-                    <Label htmlFor="op-total">{t("operations.totalCost", "Total cost (AED)")}</Label>
+                    <Label htmlFor="op-total" required>{t("operations.totalCost", "Total cost (AED)")}</Label>
                     <Input
                       id="op-total"
                       className="ltr-nums bg-background"

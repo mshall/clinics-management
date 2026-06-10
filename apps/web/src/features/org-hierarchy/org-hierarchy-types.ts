@@ -14,7 +14,7 @@ export type OrgHierarchyNode = {
   };
   meta?: {
     role?: string;
-    kind?: "parent" | "branch";
+    kind?: "parent" | "branch" | "standalone";
     email?: string;
     city?: string;
     currency?: string;

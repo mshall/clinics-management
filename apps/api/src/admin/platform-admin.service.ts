@@ -4,6 +4,8 @@ import * as bcrypt from "bcryptjs";
 import type { JwtUser } from "../auth/jwt-user";
 import { isPlatformSuperAdmin } from "../common/platform-super-admin";
 import { ClinicsService } from "../clinics/clinics.service";
+import type { ClinicKind } from "../clinics/clinic-kind";
+import { resolveClinicKind } from "../clinics/clinic-kind";
 import type { CreateClinicDto } from "../clinics/dto/create-clinic.dto";
 import type { PatchClinicDto } from "../clinics/dto/patch-clinic.dto";
 import { paginate, parsePageParams } from "../common/pagination";
@@ -178,10 +180,10 @@ export class PlatformAdminService {
       return { row, groupAdmin };
     });
 
-    let initialClinic: { id: string; nameEn: string; kind: "parent" } | null = null;
+    let initialClinic: { id: string; nameEn: string; kind: ClinicKind } | null = null;
     if (hasInitialClinic && ic) {
       const created = await this.clinics.create(result.row.id, { ...ic, parentClinicId: undefined });
-      initialClinic = { id: created.id, nameEn: created.nameEn, kind: "parent" };
+      initialClinic = { id: created.id, nameEn: created.nameEn, kind: created.kind };
     }
 
     return {
@@ -292,6 +294,7 @@ export class PlatformAdminService {
       include: {
         tenant: { select: { id: true, name: true } },
         parent: { select: { nameEn: true } },
+        _count: { select: { branches: true } },
       },
     });
     return rows.map((c) => ({
@@ -304,7 +307,7 @@ export class PlatformAdminService {
       nameAr: c.nameAr,
       city: c.city,
       country: c.country,
-      kind: c.parentClinicId ? "branch" : "parent",
+      kind: resolveClinicKind(c.parentClinicId, c._count.branches),
       phone: c.phone,
       email: c.email,
     }));
@@ -316,7 +319,7 @@ export class PlatformAdminService {
     const rows = await this.prisma.clinic.findMany({
       where: { tenantId },
       orderBy: [{ parentClinicId: "asc" }, { nameEn: "asc" }],
-      include: { parent: { select: { nameEn: true } } },
+      include: { parent: { select: { nameEn: true } }, _count: { select: { branches: true } } },
     });
     return rows.map((c) => ({
       id: c.id,
@@ -326,7 +329,7 @@ export class PlatformAdminService {
       nameAr: c.nameAr,
       city: c.city,
       country: c.country,
-      kind: c.parentClinicId ? "branch" : "parent",
+      kind: resolveClinicKind(c.parentClinicId, c._count.branches),
     }));
   }
 
@@ -344,6 +347,7 @@ export class PlatformAdminService {
       include: {
         tenant: { select: { name: true } },
         parent: { select: { nameEn: true, nameAr: true } },
+        _count: { select: { branches: true } },
       },
     });
     if (!row) throw new NotFoundException("Clinic not found");
@@ -358,7 +362,7 @@ export class PlatformAdminService {
       nameAr: row.nameAr,
       city: row.city,
       country: row.country,
-      kind: row.parentClinicId ? "branch" : "parent",
+      kind: resolveClinicKind(row.parentClinicId, row._count.branches),
       logoUrl: row.logoUrl ?? null,
       addressEn: row.addressEn,
       addressAr: row.addressAr,

@@ -161,11 +161,11 @@ export function PatientsPage() {
             <div className="flex flex-col gap-3 pt-1">
               {formErr ? <p className="text-sm text-destructive">{formErr}</p> : null}
               <div className="space-y-2">
-                <Label>{t("patients.firstNameEn")}</Label>
+                <Label required>{t("patients.firstNameEn")}</Label>
                 <Input value={firstNameEn} onChange={(e) => setFirstNameEn(e.target.value)} autoComplete="given-name" />
               </div>
               <div className="space-y-2">
-                <Label>{t("patients.lastNameEn")}</Label>
+                <Label required>{t("patients.lastNameEn")}</Label>
                 <Input value={lastNameEn} onChange={(e) => setLastNameEn(e.target.value)} autoComplete="family-name" />
               </div>
               <div className="space-y-2">
@@ -177,7 +177,7 @@ export function PatientsPage() {
                 <Input value={lastNameAr} onChange={(e) => setLastNameAr(e.target.value)} dir="rtl" />
               </div>
               <div className="space-y-2">
-                <Label>{t("patients.dob")}</Label>
+                <Label required>{t("patients.dob")}</Label>
                 <Input className="ltr-nums" type="date" value={dob} onChange={(e) => setDob(e.target.value)} />
               </div>
               <div className="space-y-2">
@@ -192,7 +192,7 @@ export function PatientsPage() {
                 </select>
               </div>
               <div className="space-y-2">
-                <Label>{t("patients.phone")}</Label>
+                <Label required>{t("patients.phone")}</Label>
                 <Input className="ltr-nums" value={phone} onChange={(e) => setPhone(e.target.value)} />
               </div>
               <div className="space-y-2">

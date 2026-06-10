@@ -342,7 +342,7 @@ export function AppointmentsPage() {
             {bookOk ? <p className="text-sm text-emerald-600 sm:col-span-full dark:text-emerald-400">{bookOk}</p> : null}
             {formErr ? <p className="text-sm text-destructive sm:col-span-full">{formErr}</p> : null}
             <div className="space-y-2 sm:col-span-2">
-              <Label>{t("appointments.clinic")}</Label>
+              <Label required>{t("appointments.clinic")}</Label>
               <SearchablePickList
                 items={clinicItems}
                 value={clinicId}
@@ -352,7 +352,7 @@ export function AppointmentsPage() {
               />
             </div>
             <div className="space-y-2 sm:col-span-2">
-              <Label>{t("appointments.patient")}</Label>
+              <Label required>{t("appointments.patient")}</Label>
               <p className="text-xs text-muted-foreground">{t("encounters.selectPatientHint")}</p>
               <SearchablePickList
                 items={bookPatientItems}
@@ -370,7 +370,7 @@ export function AppointmentsPage() {
               />
             </div>
             <div className="space-y-2 sm:col-span-2">
-              <Label>{t("appointments.clinician")}</Label>
+              <Label required>{t("appointments.clinician")}</Label>
               <SearchablePickList
                 items={physicianItems}
                 value={clinicianId}
@@ -381,11 +381,11 @@ export function AppointmentsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>{t("appointments.starts")}</Label>
+              <Label required>{t("appointments.starts")}</Label>
               <Input className="ltr-nums" type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>{t("appointments.ends")}</Label>
+              <Label required>{t("appointments.ends")}</Label>
               <Input className="ltr-nums" type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} />
             </div>
             <div className="flex flex-wrap items-end gap-2 sm:col-span-2">

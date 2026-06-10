@@ -25,8 +25,8 @@ export class ClinicDetailDto {
   @ApiProperty()
   country!: string;
 
-  @ApiProperty({ enum: ["parent", "branch"] })
-  kind!: "parent" | "branch";
+  @ApiProperty({ enum: ["parent", "branch", "standalone"] })
+  kind!: "parent" | "branch" | "standalone";
 
   @ApiPropertyOptional({ nullable: true })
   logoUrl!: string | null;

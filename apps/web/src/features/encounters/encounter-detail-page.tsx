@@ -989,7 +989,7 @@ export function EncounterDetailPage() {
                   {draft && medsPanelActive ? (
                     <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                       <div className="space-y-1">
-                        <Label>{t("encounters.drugName")}</Label>
+                        <Label required>{t("encounters.drugName")}</Label>
                         <Input value={drugName} onChange={(e) => setDrugName(e.target.value)} />
                       </div>
                       <div className="space-y-1">

@@ -17,7 +17,7 @@ export type OrgHierarchyNode = {
   };
   meta?: {
     role?: UserRole;
-    kind?: "parent" | "branch";
+    kind?: "parent" | "branch" | "standalone";
     email?: string;
     city?: string;
     currency?: string;
@@ -150,8 +150,8 @@ export async function buildTenantHierarchy(
     (c) => c.parentClinicId && !visibleClinicSet.has(c.parentClinicId),
   );
 
-  function buildClinicNode(c: ClinicRow, kind: "parent" | "branch"): OrgHierarchyNode {
-    const branches = kind === "parent" ? (branchesByParent.get(c.id) ?? []) : [];
+  function buildClinicNode(c: ClinicRow, role: "parent" | "standalone" | "branch"): OrgHierarchyNode {
+    const branches = role !== "branch" ? (branchesByParent.get(c.id) ?? []) : [];
     const clinicUsers = usersByClinic.get(c.id) ?? [];
     const children: OrgHierarchyNode[] = [
       ...branches.map((b) => buildClinicNode(b, "branch")),
@@ -162,14 +162,17 @@ export async function buildTenantHierarchy(
       nodeType: "clinic",
       label: c.nameEn,
       subtitle: c.city,
-      meta: { kind, city: c.city },
+      meta: { kind: role, city: c.city },
       counts: { users: clinicUsers.length, branches: branches.length },
       children,
     };
   }
 
   const clinicChildren = [
-    ...parentClinicRows.map((c) => buildClinicNode(c, "parent")),
+    ...parentClinicRows.map((c) => {
+      const branchCount = (branchesByParent.get(c.id) ?? []).length;
+      return buildClinicNode(c, branchCount > 0 ? "parent" : "standalone");
+    }),
     ...orphanBranches.map((c) => buildClinicNode(c, "branch")),
   ];
 

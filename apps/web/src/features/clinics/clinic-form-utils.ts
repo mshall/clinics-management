@@ -1,4 +1,5 @@
 export type ClinicFormValues = {
+  clinicPlacement: "standalone" | "branch";
   parentClinicId: string;
   nameEn: string;
   nameAr: string;
@@ -15,6 +16,7 @@ export type ClinicFormValues = {
 
 export function emptyClinicForm(): ClinicFormValues {
   return {
+    clinicPlacement: "standalone",
     parentClinicId: "",
     nameEn: "",
     nameAr: "",
@@ -55,6 +57,9 @@ export function collectClinicFormErrors(
   if (!v.city.trim()) {
     errors.push(t("admin.errorClinicCity", "City is required."));
   }
+  if (v.clinicPlacement === "branch" && !v.parentClinicId.trim()) {
+    errors.push(t("admin.errorClinicParent", "Select the parent clinic for this branch."));
+  }
   return errors;
 }
 
@@ -72,7 +77,8 @@ export function hasPartialClinicForm(v: ClinicFormValues): boolean {
       v.email.trim() ||
       v.licenseNumber.trim() ||
       v.logoUrl.trim() ||
-      v.parentClinicId.trim(),
+      v.parentClinicId.trim() ||
+      v.clinicPlacement === "branch",
   );
 }
 
@@ -90,7 +96,7 @@ export function clinicFormToCreatePayload(v: ClinicFormValues, opts?: { includeP
     email: v.email.trim() || undefined,
     licenseNumber: v.licenseNumber.trim() || undefined,
   };
-  if (opts?.includeParent !== false && v.parentClinicId.trim()) {
+  if (v.clinicPlacement === "branch" && opts?.includeParent !== false && v.parentClinicId.trim()) {
     body.parentClinicId = v.parentClinicId.trim();
   }
   return body;
@@ -111,6 +117,7 @@ export function clinicDetailToForm(d: {
   licenseNumber: string;
 }): ClinicFormValues {
   return {
+    clinicPlacement: d.parentClinicId ? "branch" : "standalone",
     parentClinicId: d.parentClinicId ?? "",
     nameEn: d.nameEn,
     nameAr: d.nameAr,

@@ -31,23 +31,68 @@ export function ClinicFormFields({
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       {showParentPicker ? (
-        <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor={`${idPrefix}-parent`}>{t("admin.parentClinic", "Parent clinic (optional)")}</Label>
-          <SearchablePickList
-            items={parentClinicItems}
-            value={values.parentClinicId}
-            onValueChange={(v) => onChange({ parentClinicId: v })}
-            searchPlaceholder={t("admin.filterParentClinic", "Type to find parent…")}
-            placeholder={t("admin.pickParent", "Parent")}
-          />
+        <div className="space-y-3 sm:col-span-2">
+          <div className="space-y-2">
+            <Label>{t("admin.clinicPlacement", "Clinic structure")}</Label>
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border px-3 py-2 text-sm">
+                <input
+                  type="radio"
+                  name={`${idPrefix}-placement`}
+                  className="mt-1"
+                  checked={values.clinicPlacement === "standalone"}
+                  onChange={() => onChange({ clinicPlacement: "standalone", parentClinicId: "" })}
+                />
+                <span>
+                  <span className="font-medium">{t("admin.clinicPlacementStandalone", "Standalone clinic")}</span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    {t("admin.clinicPlacementStandaloneHint", "Same level as other root clinics in the organization.")}
+                  </span>
+                </span>
+              </label>
+              <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border px-3 py-2 text-sm">
+                <input
+                  type="radio"
+                  name={`${idPrefix}-placement`}
+                  className="mt-1"
+                  checked={values.clinicPlacement === "branch"}
+                  onChange={() => onChange({ clinicPlacement: "branch" })}
+                />
+                <span>
+                  <span className="font-medium">{t("admin.clinicPlacementBranch", "Branch of an existing clinic")}</span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    {t("admin.clinicPlacementBranchHint", "Attach under a root-level clinic as a child location.")}
+                  </span>
+                </span>
+              </label>
+            </div>
+          </div>
+          {values.clinicPlacement === "branch" ? (
+            <div className="space-y-2">
+              <Label htmlFor={`${idPrefix}-parent`} required>
+                {t("admin.parentClinic", "Parent clinic")}
+              </Label>
+              <SearchablePickList
+                items={parentClinicItems}
+                value={values.parentClinicId}
+                onValueChange={(v) => onChange({ parentClinicId: v })}
+                searchPlaceholder={t("admin.filterParentClinic", "Type to find parent…")}
+                placeholder={t("admin.pickParent", "Parent")}
+              />
+            </div>
+          ) : null}
         </div>
       ) : null}
       <div className="space-y-2">
-        <Label htmlFor={`${idPrefix}-nameEn`}>{t("admin.nameEn", "Name (EN)")}</Label>
+        <Label htmlFor={`${idPrefix}-nameEn`} required>
+          {t("admin.nameEn", "Name (EN)")}
+        </Label>
         <Input id={`${idPrefix}-nameEn`} value={values.nameEn} onChange={(e) => onChange({ nameEn: e.target.value })} />
       </div>
       <div className="space-y-2">
-        <Label htmlFor={`${idPrefix}-nameAr`}>{t("admin.nameAr", "Name (AR)")}</Label>
+        <Label htmlFor={`${idPrefix}-nameAr`} required>
+          {t("admin.nameAr", "Name (AR)")}
+        </Label>
         <Input
           id={`${idPrefix}-nameAr`}
           value={values.nameAr}
@@ -56,7 +101,9 @@ export function ClinicFormFields({
         />
       </div>
       <div className="space-y-2 sm:col-span-2">
-        <Label htmlFor={`${idPrefix}-city`}>{t("admin.city", "City")}</Label>
+        <Label htmlFor={`${idPrefix}-city`} required>
+          {t("admin.city", "City")}
+        </Label>
         <Input id={`${idPrefix}-city`} value={values.city} onChange={(e) => onChange({ city: e.target.value })} />
       </div>
       <div className="space-y-2 sm:col-span-2">

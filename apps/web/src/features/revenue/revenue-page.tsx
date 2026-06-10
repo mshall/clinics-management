@@ -357,7 +357,7 @@ export function RevenuePage() {
             ) : null}
           </div>
           <div className="space-y-2">
-            <Label>{t("revenue.clinic")}</Label>
+            <Label required>{t("revenue.clinic")}</Label>
             {singleManagedClinic ? (
               <p className="flex min-h-10 items-center rounded-md border border-input bg-muted/40 px-3 py-2 text-sm">
                 {formatClinicName(singleManagedClinic, i18n.language)}
@@ -393,7 +393,7 @@ export function RevenuePage() {
             </select>
           </div>
           <div className="space-y-2">
-            <Label>{t("revenue.gross")}</Label>
+            <Label required>{t("revenue.gross")}</Label>
             <Input className="ltr-nums" value={gross} onChange={(e) => setGross(e.target.value)} type="number" min="0" step="0.01" />
           </div>
           <div className="space-y-2">

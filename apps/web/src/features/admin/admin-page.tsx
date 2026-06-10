@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Navigate } from "react-router-dom";
-import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
+import type { PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
@@ -15,9 +15,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAdminOverviewQuery, useClinicQuery, useClinicsQuery, useTenantsQuery } from "@/lib/api-hooks";
 import { ApiError, apiPatch, apiPost } from "@/lib/http";
-import { MIDDLE_EAST_COUNTRY_OPTIONS } from "@/lib/middle-east-countries";
 import { cn, columnFilterIncludes } from "@/lib/utils";
 import { formatClinicName, formatUserRole } from "@/lib/locale-display";
+import { clinicKindLabel, isRootClinic } from "@/lib/clinic-kind";
 import { useAuthStore } from "@/stores/auth-store";
 import { ClinicFormFields } from "@/features/clinics/clinic-form-fields";
 import {
@@ -72,18 +72,7 @@ export function AdminPage() {
   const [editClinicErr, setEditClinicErr] = useState<string | null>(null);
   const selectedClinicDetail = useClinicQuery(selectedClinicId ?? undefined);
 
-  const [clParentId, setClParentId] = useState("");
-  const [clNameEn, setClNameEn] = useState("");
-  const [clNameAr, setClNameAr] = useState("");
-  const [clCity, setClCity] = useState("");
-  const [clCountry, setClCountry] = useState("AE");
-  const [clAddressEn, setClAddressEn] = useState("");
-  const [clAddressAr, setClAddressAr] = useState("");
-  const [clLocationUrl, setClLocationUrl] = useState("");
-  const [clLogoUrl, setClLogoUrl] = useState("");
-  const [clPhone, setClPhone] = useState("");
-  const [clEmail, setClEmail] = useState("");
-  const [clLicense, setClLicense] = useState("");
+  const [addClinicForm, setAddClinicForm] = useState<ClinicFormValues>(emptyClinicForm());
   const [clinicErr, setClinicErr] = useState<string | null>(null);
 
   const [cfNameEn, setCfNameEn] = useState("");
@@ -119,16 +108,8 @@ export function AdminPage() {
   };
 
   const parentClinicPickItems: PickListItem[] = useMemo(
-    () => [
-      { value: "", label: t("admin.newParentClinic", "None — create as parent clinic") },
-      ...clinics.filter((c) => c.kind === "parent").map((c) => ({ value: c.id, label: formatClinicName(c, i18n.language) })),
-    ],
-    [clinics, t, i18n.language]
-  );
-
-  const countryPickItems: PickListItem[] = useMemo(
-    () => MIDDLE_EAST_COUNTRY_OPTIONS.map((o) => ({ value: o.value, label: `${o.label} (${o.value})` })),
-    []
+    () => clinics.filter(isRootClinic).map((c) => ({ value: c.id, label: formatClinicName(c, i18n.language) })),
+    [clinics, i18n.language],
   );
 
   const filteredClinics = useMemo(() => {
@@ -145,18 +126,7 @@ export function AdminPage() {
   }, [clinics, cfNameEn, cfNameAr, cfParent, cfCity, cfCountry, cfKind]);
 
   const resetClinicForm = () => {
-    setClParentId("");
-    setClNameEn("");
-    setClNameAr("");
-    setClCity("");
-    setClCountry("AE");
-    setClAddressEn("");
-    setClAddressAr("");
-    setClLocationUrl("");
-    setClLogoUrl("");
-    setClPhone("");
-    setClEmail("");
-    setClLicense("");
+    setAddClinicForm(emptyClinicForm());
   };
 
   useEffect(() => {
@@ -184,26 +154,8 @@ export function AdminPage() {
     },
   });
 
-  const addClinicFormValues = useMemo<ClinicFormValues>(
-    () => ({
-      parentClinicId: clParentId,
-      nameEn: clNameEn,
-      nameAr: clNameAr,
-      city: clCity,
-      country: clCountry,
-      addressEn: clAddressEn,
-      addressAr: clAddressAr,
-      locationUrl: clLocationUrl,
-      logoUrl: clLogoUrl,
-      phone: clPhone,
-      email: clEmail,
-      licenseNumber: clLicense,
-    }),
-    [clAddressAr, clAddressEn, clCity, clCountry, clEmail, clLicense, clLocationUrl, clLogoUrl, clNameAr, clNameEn, clParentId, clPhone],
-  );
-
   const createClinicMut = useMutation({
-    mutationFn: () => apiPost("/api/v1/clinics", clinicFormToCreatePayload(addClinicFormValues)),
+    mutationFn: () => apiPost("/api/v1/clinics", clinicFormToCreatePayload(addClinicForm)),
     onSuccess: () => {
       setClinicErr(null);
       resetClinicForm();
@@ -220,7 +172,7 @@ export function AdminPage() {
 
   const handleCreateClinic = () => {
     if (createClinicMut.isPending) return;
-    const errors = collectClinicFormErrors(addClinicFormValues, t);
+    const errors = collectClinicFormErrors(addClinicForm, t);
     if (errors.length > 0) {
       toast.error(t("admin.clinicValidationTitle", "Complete the required clinic fields"), {
         description: errors.join("\n"),
@@ -430,7 +382,7 @@ export function AdminPage() {
               </CardHeader>
               <CardContent className="flex flex-wrap items-end gap-3">
                 <div className="space-y-2">
-                  <Label>{t("admin.feeAmount", "Amount (base currency)")}</Label>
+                  <Label required>{t("admin.feeAmount", "Amount (base currency)")}</Label>
                   <Input className="ltr-nums w-40" type="number" min="0" step="0.01" value={feeDraft} onChange={(e) => setFeeDraft(e.target.value)} />
                 </div>
                 <Button type="button" disabled={patchFeeMut.isPending || feeDraft === ""} onClick={() => patchFeeMut.mutate()}>
@@ -480,15 +432,15 @@ export function AdminPage() {
               </CardHeader>
               <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="space-y-2">
-                  <Label>Email</Label>
+                  <Label required>Email</Label>
                   <Input type="email" value={uEmail} onChange={(e) => setUEmail(e.target.value)} autoComplete="off" />
                 </div>
                 <div className="space-y-2">
-                  <Label>{t("admin.tempPassword", "Temporary password")}</Label>
+                  <Label required>{t("admin.tempPassword", "Temporary password")}</Label>
                   <Input type="password" value={uPassword} onChange={(e) => setUPassword(e.target.value)} autoComplete="new-password" />
                 </div>
                 <div className="space-y-2">
-                  <Label>{t("admin.displayName", "Display name")}</Label>
+                  <Label required>{t("admin.displayName", "Display name")}</Label>
                   <Input value={uName} onChange={(e) => setUName(e.target.value)} />
                 </div>
                 <div className="space-y-2">
@@ -507,7 +459,7 @@ export function AdminPage() {
                 </div>
                 {uRole === "CLINIC_ADMIN" || uRole === "BRANCH_MANAGER" ? (
                   <div className="space-y-2 sm:col-span-full">
-                    <Label>{t("admin.clinicAdminScopes")}</Label>
+                    <Label required>{t("admin.clinicAdminScopes")}</Label>
                     <p className="text-xs text-muted-foreground">{t("admin.clinicAdminScopesHint")}</p>
                     <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-border p-2">
                       {clinics.map((c) => (
@@ -522,7 +474,7 @@ export function AdminPage() {
                           />
                           <span>
                             {formatClinicName(c, i18n.language)}{" "}
-                            <span className="text-muted-foreground">({c.kind === "parent" ? t("clinics.parent") : t("clinics.branch")})</span>
+                            <span className="text-muted-foreground">({clinicKindLabel(c.kind, t)})</span>
                           </span>
                         </label>
                       ))}
@@ -579,98 +531,14 @@ export function AdminPage() {
               <DialogHeader>
                 <DialogTitle>{t("admin.addClinicDialogTitle")}</DialogTitle>
               </DialogHeader>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2 sm:col-span-2">
-                  <Label>{t("admin.parentClinic", "Parent clinic (optional)")}</Label>
-                  <SearchablePickList
-                    items={parentClinicPickItems}
-                    value={clParentId}
-                    onValueChange={setClParentId}
-                    searchPlaceholder={t("admin.filterParentClinic", "Type to find parent…")}
-                    placeholder={t("admin.pickParent", "Parent")}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t("admin.nameEn", "Name (EN)")}</Label>
-                  <Input value={clNameEn} onChange={(e) => setClNameEn(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t("admin.nameAr", "Name (AR)")}</Label>
-                  <Input value={clNameAr} onChange={(e) => setClNameAr(e.target.value)} dir="rtl" />
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label>{t("admin.city", "City")}</Label>
-                  <Input value={clCity} onChange={(e) => setClCity(e.target.value)} />
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label>{t("admin.country", "Country")}</Label>
-                  <SearchablePickList
-                    items={countryPickItems}
-                    value={clCountry}
-                    onValueChange={setClCountry}
-                    searchPlaceholder={t("admin.filterCountry", "Type country name or code…")}
-                    placeholder={t("admin.country")}
-                  />
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label>{t("admin.addressEn", "Full address (English)")}</Label>
-                  <textarea
-                    className="flex min-h-[88px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={clAddressEn}
-                    onChange={(e) => setClAddressEn(e.target.value)}
-                    placeholder={t("admin.addressEnPh", "Street, building, area…")}
-                  />
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label>{t("admin.addressAr", "Full address (Arabic)")}</Label>
-                  <textarea
-                    className="flex min-h-[88px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={clAddressAr}
-                    onChange={(e) => setClAddressAr(e.target.value)}
-                    dir="rtl"
-                    placeholder={t("admin.addressArPh", "العنوان الكامل…")}
-                  />
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label>{t("admin.locationUrl", "Location link (maps URL)")}</Label>
-                  <Input
-                    className="ltr-nums"
-                    type="url"
-                    value={clLocationUrl}
-                    onChange={(e) => setClLocationUrl(e.target.value)}
-                    placeholder="https://maps.google.com/?q=..."
-                  />
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label>{t("admin.logoUrl", "Logo (image URL)")}</Label>
-                  <Input
-                    className="ltr-nums"
-                    type="url"
-                    value={clLogoUrl}
-                    onChange={(e) => setClLogoUrl(e.target.value)}
-                    placeholder="https://…"
-                  />
-                  {clLogoUrl.trim() ? (
-                    <div className="mt-2 rounded-md border border-border bg-muted/30 p-2">
-                      <p className="mb-1 text-xs text-muted-foreground">{t("admin.logoPreview", "Preview")}</p>
-                      <img src={clLogoUrl.trim()} alt="" className="max-h-20 max-w-[12rem] object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                    </div>
-                  ) : null}
-                </div>
-                <div className="space-y-2">
-                  <Label>{t("admin.phone", "Phone")}</Label>
-                  <Input className="ltr-nums" value={clPhone} onChange={(e) => setClPhone(e.target.value)} placeholder="+971…" />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t("admin.email", "Email")}</Label>
-                  <Input type="email" value={clEmail} onChange={(e) => setClEmail(e.target.value)} />
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label>{t("admin.licenseNumber", "License number")}</Label>
-                  <Input className="font-mono text-sm" value={clLicense} onChange={(e) => setClLicense(e.target.value)} />
-                </div>
-                {clinicErr ? <p className="text-sm text-destructive sm:col-span-full">{clinicErr}</p> : null}
-              </div>
+              <ClinicFormFields
+                idPrefix="admin-add-clinic"
+                values={addClinicForm}
+                onChange={(patch) => setAddClinicForm((prev) => ({ ...prev, ...patch }))}
+                showParentPicker
+                parentClinicItems={parentClinicPickItems}
+              />
+              {clinicErr ? <p className="text-sm text-destructive">{clinicErr}</p> : null}
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <Button type="button" variant="outline" onClick={() => setAddClinicOpen(false)}>
                   {t("common.cancel")}

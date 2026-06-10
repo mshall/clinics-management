@@ -10,6 +10,7 @@ import { ApiError, apiPost } from "@/lib/http";
 import { formatClinicName } from "@/lib/locale-display";
 import { ClinicFormFields } from "./clinic-form-fields";
 import { clinicFormToCreatePayload, collectClinicFormErrors, emptyClinicForm } from "./clinic-form-utils";
+import { isRootClinic } from "@/lib/clinic-kind";
 
 type AddClinicDialogProps = {
   open: boolean;
@@ -21,15 +22,13 @@ export function AddClinicDialog({ open, onOpenChange }: AddClinicDialogProps) {
   const qc = useQueryClient();
   const { data: clinics = [] } = useClinicsQuery();
 
-  const [form, setForm] = useState(emptyClinicForm);
+  const [form, setForm] = useState(emptyClinicForm());
   const [clinicErr, setClinicErr] = useState<string | null>(null);
 
   const parentClinicPickItems: PickListItem[] = useMemo(
-    () => [
-      { value: "", label: t("admin.newParentClinic", "None — create as parent clinic") },
-      ...clinics.filter((c) => c.kind === "parent").map((c) => ({ value: c.id, label: formatClinicName(c, i18n.language) })),
-    ],
-    [clinics, t, i18n.language],
+    () =>
+      clinics.filter(isRootClinic).map((c) => ({ value: c.id, label: formatClinicName(c, i18n.language) })),
+    [clinics, i18n.language],
   );
 
   const collectErrors = useCallback(() => collectClinicFormErrors(form, t), [form, t]);

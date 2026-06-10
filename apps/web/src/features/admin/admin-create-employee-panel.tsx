@@ -95,7 +95,7 @@ export function AdminCreateEmployeePanel() {
         <div className="grid gap-3 sm:grid-cols-2">
           {formErr ? <p className="text-sm text-destructive sm:col-span-full">{formErr}</p> : null}
           <div className="space-y-2 sm:col-span-2">
-            <Label>{t("hr.clinic")}</Label>
+            <Label required>{t("hr.clinic")}</Label>
             {singleManagedClinic ? (
               <p className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm">
                 {formatClinicName(singleManagedClinic, i18n.language)}{" "}
@@ -114,11 +114,11 @@ export function AdminCreateEmployeePanel() {
             )}
           </div>
           <div className="space-y-2">
-            <Label>{t("hr.firstName")}</Label>
+            <Label required>{t("hr.firstName")}</Label>
             <Input value={empFn} onChange={(e) => setEmpFn(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label>{t("hr.lastName")}</Label>
+            <Label required>{t("hr.lastName")}</Label>
             <Input value={empLn} onChange={(e) => setEmpLn(e.target.value)} />
           </div>
           <div className="space-y-2">
@@ -126,7 +126,7 @@ export function AdminCreateEmployeePanel() {
             <Input type="email" value={empEmail} onChange={(e) => setEmpEmail(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label>{t("hr.phone")}</Label>
+            <Label required>{t("hr.phone")}</Label>
             <Input
               className="ltr-nums"
               inputMode="numeric"

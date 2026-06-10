@@ -72,7 +72,7 @@ export function LoginPage() {
             <form className="space-y-4" onSubmit={(e) => void handleSubmit(e)}>
               {error ? <p className="text-sm text-destructive">{error}</p> : null}
               <div className="space-y-2">
-                <Label htmlFor="email">{t("auth.email")}</Label>
+                <Label htmlFor="email" required>{t("auth.email")}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -83,7 +83,7 @@ export function LoginPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">{t("auth.password")}</Label>
+                <Label htmlFor="password" required>{t("auth.password")}</Label>
                 <Input
                   id="password"
                   type="password"

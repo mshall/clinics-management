@@ -201,11 +201,11 @@ export function PlatformOrganizationsTab() {
           </DialogHeader>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>{t("admin.nameEn", "Name (EN)")}</Label>
+              <Label required>{t("admin.nameEn", "Name (EN)")}</Label>
               <Input value={tenantName} onChange={(e) => setTenantName(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>{t("admin.nameAr", "Name (AR)")}</Label>
+              <Label required>{t("admin.nameAr", "Name (AR)")}</Label>
               <Input value={tenantNameAr} onChange={(e) => setTenantNameAr(e.target.value)} dir="rtl" />
             </div>
             <div className="space-y-2">
@@ -227,15 +227,15 @@ export function PlatformOrganizationsTab() {
               <p className="text-sm font-medium">{t("platform.groupAdminSection")}</p>
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:items-end">
                 <div className="space-y-2">
-                  <Label>{t("platform.groupAdminEmail")}</Label>
+                  <Label required>{t("platform.groupAdminEmail")}</Label>
                   <Input type="email" value={gaEmail} onChange={(e) => setGaEmail(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>{t("auth.password")}</Label>
+                  <Label required>{t("auth.password")}</Label>
                   <PasswordInput value={gaPassword} onChange={setGaPassword} />
                 </div>
                 <div className="space-y-2">
-                  <Label>{t("admin.displayName")}</Label>
+                  <Label required>{t("admin.displayName")}</Label>
                   <Input value={gaName} onChange={(e) => setGaName(e.target.value)} />
                 </div>
               </div>

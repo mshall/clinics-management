@@ -34,7 +34,7 @@ export type PlatformClinicRow = {
   nameAr: string;
   city: string;
   country: string;
-  kind: "parent" | "branch";
+  kind: "parent" | "branch" | "standalone";
   phone?: string;
   email?: string;
 };

@@ -322,7 +322,7 @@ export function ExpensesPage() {
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <div className="space-y-2">
-            <Label>{t("expenses.clinic")}</Label>
+            <Label required>{t("expenses.clinic")}</Label>
             {singleManagedClinic ? (
               <p className="flex min-h-10 items-center rounded-md border border-input bg-muted/40 px-3 py-2 text-sm">
                 {formatClinicName(singleManagedClinic, i18n.language)}
@@ -361,7 +361,7 @@ export function ExpensesPage() {
             <Input value={vendor} onChange={(e) => setVendor(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label>{t("expenses.amount")}</Label>
+            <Label required>{t("expenses.amount")}</Label>
             <Input className="ltr-nums" value={amount} onChange={(e) => setAmount(e.target.value)} type="number" min="0" step="0.01" />
           </div>
           <div className="space-y-2 sm:col-span-2 lg:col-span-5">

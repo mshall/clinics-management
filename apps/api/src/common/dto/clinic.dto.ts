@@ -19,8 +19,8 @@ export class ClinicDto {
   @ApiProperty()
   country!: string;
 
-  @ApiProperty({ enum: ["parent", "branch"] })
-  kind!: "parent" | "branch";
+  @ApiProperty({ enum: ["parent", "branch", "standalone"] })
+  kind!: "parent" | "branch" | "standalone";
 
   @ApiPropertyOptional({ nullable: true, description: "Parent clinic display name when loaded with list" })
   parentNameEn!: string | null;

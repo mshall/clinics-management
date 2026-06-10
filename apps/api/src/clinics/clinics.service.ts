@@ -7,6 +7,8 @@ import type { CreateClinicDto } from "./dto/create-clinic.dto";
 import type { PatchClinicDto } from "./dto/patch-clinic.dto";
 import type { ClinicDetailDto } from "./dto/clinic-detail.dto";
 import type { ClinicPhysicianDto } from "./dto/clinic-physician.dto";
+import type { ClinicKind } from "./clinic-kind";
+import { resolveClinicKind } from "./clinic-kind";
 
 export interface ClinicDto {
   id: string;
@@ -16,7 +18,7 @@ export interface ClinicDto {
   nameAr: string;
   city: string;
   country: string;
-  kind: "parent" | "branch";
+  kind: ClinicKind;
   logoUrl: string | null;
 }
 
@@ -273,7 +275,10 @@ export class ClinicsService {
   async getOne(tenantId: string, id: string, user: JwtUser): Promise<ClinicDetailDto> {
     const row = await this.prisma.clinic.findFirst({
       where: { id, tenantId },
-      include: { parent: { select: { id: true, nameEn: true, nameAr: true } } },
+      include: {
+        parent: { select: { id: true, nameEn: true, nameAr: true } },
+        _count: { select: { branches: true } },
+      },
     });
     if (!row) throw new NotFoundException("Clinic not found");
     if (user.role === UserRole.PHYSICIAN) {
@@ -295,7 +300,7 @@ export class ClinicsService {
       nameAr: row.nameAr,
       city: row.city,
       country: row.country,
-      kind: row.parentClinicId ? "branch" : "parent",
+      kind: resolveClinicKind(row.parentClinicId, row._count.branches),
       logoUrl: row.logoUrl ?? null,
       addressEn: row.addressEn,
       addressAr: row.addressAr,
@@ -325,7 +330,7 @@ export class ClinicsService {
     const rows = await this.prisma.clinic.findMany({
       where,
       orderBy: [{ parentClinicId: "asc" }, { nameEn: "asc" }],
-      include: { parent: { select: { nameEn: true } } },
+      include: { parent: { select: { nameEn: true } }, _count: { select: { branches: true } } },
     });
     return rows.map((c) => ({
       id: c.id,
@@ -335,7 +340,7 @@ export class ClinicsService {
       nameAr: c.nameAr,
       city: c.city,
       country: c.country,
-      kind: c.parentClinicId ? "branch" : "parent",
+      kind: resolveClinicKind(c.parentClinicId, c._count.branches),
       logoUrl: c.logoUrl ?? null,
     }));
   }
@@ -361,6 +366,9 @@ export class ClinicsService {
         where: { id: parentClinicId, tenantId },
       });
       if (!parent) throw new BadRequestException("Invalid parentClinicId");
+      if (parent.parentClinicId) {
+        throw new BadRequestException("Branches can only be created under a root-level clinic");
+      }
     }
 
     const logoUrl = dto.logoUrl?.trim() || null;
@@ -392,7 +400,7 @@ export class ClinicsService {
       nameAr: row.nameAr,
       city: row.city,
       country: row.country,
-      kind: row.parentClinicId ? "branch" : "parent",
+      kind: resolveClinicKind(row.parentClinicId, 0),
       logoUrl: row.logoUrl ?? null,
     };
   }
@@ -419,7 +427,10 @@ export class ClinicsService {
     const row = await this.prisma.clinic.update({
       where: { id },
       data,
-      include: { parent: { select: { nameEn: true, nameAr: true } } },
+      include: {
+        parent: { select: { nameEn: true, nameAr: true } },
+        _count: { select: { branches: true } },
+      },
     });
 
     return {
@@ -431,7 +442,7 @@ export class ClinicsService {
       nameAr: row.nameAr,
       city: row.city,
       country: row.country,
-      kind: row.parentClinicId ? "branch" : "parent",
+      kind: resolveClinicKind(row.parentClinicId, row._count.branches),
       logoUrl: row.logoUrl ?? null,
       addressEn: row.addressEn,
       addressAr: row.addressAr,

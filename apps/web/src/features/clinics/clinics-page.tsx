@@ -12,6 +12,7 @@ import { AddClinicDialog } from "@/features/clinics/add-clinic-dialog";
 import { useClinicsQuery } from "@/lib/api-hooks";
 import { columnFilterIncludes } from "@/lib/utils";
 import { formatClinicName } from "@/lib/locale-display";
+import { clinicKindLabel } from "@/lib/clinic-kind";
 import { useAuthStore } from "@/stores/auth-store";
 
 const CREATE_CLINIC_ROLES = new Set(["group_admin", "clinic_admin", "branch_manager"]);
@@ -32,7 +33,7 @@ export function ClinicsPage() {
   const filtered = useMemo(() => {
     return data.filter((c) => {
       if (cfKind.trim()) {
-        const kindHay = `${c.kind} parent branch ${t("clinics.parent")} ${t("clinics.branch")}`;
+        const kindHay = `${c.kind} parent branch standalone ${t("clinics.parent")} ${t("clinics.branch")} ${t("clinics.standalone", "Clinic")}`;
         if (!columnFilterIncludes(kindHay, cfKind)) return false;
       }
       if (cfName.trim()) {
@@ -130,8 +131,8 @@ export function ClinicsPage() {
                         onClick={() => navigate(`/clinics/${c.id}`)}
                       >
                         <td className="px-3 py-2">
-                          <Badge variant={c.kind === "parent" ? "default" : "outline"}>
-                            {c.kind === "parent" ? t("clinics.parent") : t("clinics.branch")}
+                          <Badge variant={c.kind === "branch" ? "outline" : c.kind === "parent" ? "default" : "secondary"}>
+                            {clinicKindLabel(c.kind, t)}
                           </Badge>
                         </td>
                         <td className="px-3 py-2">

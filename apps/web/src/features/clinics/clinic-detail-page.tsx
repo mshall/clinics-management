@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClinicDoctorsPanel } from "@/features/clinics/clinic-doctors-panel";
 import { useClinicQuery } from "@/lib/api-hooks";
 import { formatClinicName, formatClinicNameFields } from "@/lib/locale-display";
+import { clinicKindLabel } from "@/lib/clinic-kind";
 
 export function ClinicDetailPage() {
   const { t, i18n } = useTranslation();
@@ -35,8 +36,8 @@ export function ClinicDetailPage() {
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight">{name}</h1>
-            <Badge variant={c.kind === "parent" ? "default" : "outline"}>
-              {c.kind === "parent" ? t("clinics.parent") : t("clinics.branch")}
+            <Badge variant={c.kind === "branch" ? "outline" : c.kind === "parent" ? "default" : "secondary"}>
+              {clinicKindLabel(c.kind, t)}
             </Badge>
           </div>
           <p className="text-muted-foreground">

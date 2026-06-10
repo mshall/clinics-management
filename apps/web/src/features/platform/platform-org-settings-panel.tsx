@@ -110,7 +110,7 @@ export function PlatformOrgSettingsPanel({
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           <div className="space-y-2">
-            <Label>{t("admin.nameEn", "Name (EN)")}</Label>
+            <Label required>{t("admin.nameEn", "Name (EN)")}</Label>
             <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
           </div>
           <div className="space-y-2">
