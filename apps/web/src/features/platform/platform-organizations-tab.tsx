@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { ClinicFormFields } from "@/features/clinics/clinic-form-fields";
-import { clinicFormToCreatePayload, emptyClinicForm, isClinicFormComplete, type ClinicFormValues } from "@/features/clinics/clinic-form-utils";
+import { clinicFormToCreatePayload, emptyClinicForm, hasPartialClinicForm, isClinicFormComplete, type ClinicFormValues } from "@/features/clinics/clinic-form-utils";
 import { PlatformOrgSettingsPanel } from "@/features/platform/platform-org-settings-panel";
 import { apiErrorMessage, type TenantRow } from "@/features/platform/platform-shared";
 import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel";
@@ -74,7 +74,9 @@ export function PlatformOrganizationsTab() {
         defaultLocale: tenantLocale.trim() || "en",
         groupAdmin: { email: gaEmail.trim(), password: gaPassword, displayName: gaName.trim() },
       };
-      if (createOrgWithHq) body.initialClinic = clinicFormToCreatePayload(hqForm, { includeParent: false });
+      if (createOrgWithHq && isClinicFormComplete(hqForm)) {
+        body.initialClinic = clinicFormToCreatePayload(hqForm, { includeParent: false });
+      }
       return apiPost<{ id: string }>("/api/v1/admin/platform/tenants", body);
     },
     onSuccess: (row: { id: string }) => {
@@ -87,13 +89,16 @@ export function PlatformOrganizationsTab() {
     onError: (e: unknown) => setTenantErr(apiErrorMessage(e)),
   });
 
+  const passwordTooShort = gaPassword.length > 0 && gaPassword.length < 8;
+  const partialClinic = createOrgWithHq && hasPartialClinicForm(hqForm);
+
   const canCreateOrg =
     tenantName.trim() &&
     tenantNameAr.trim() &&
     gaEmail.trim() &&
     gaPassword.length >= 8 &&
     gaName.trim() &&
-    (!createOrgWithHq || isClinicFormComplete(hqForm));
+    !partialClinic;
 
   return (
     <div className="space-y-6">
@@ -199,12 +204,26 @@ export function PlatformOrganizationsTab() {
             <div className="md:col-span-2 space-y-3">
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={createOrgWithHq} onChange={(e) => setCreateOrgWithHq(e.target.checked)} />
-                {t("platform.createInitialHq")}
+                {t("platform.createInitialHqOptional", "Optionally add a first clinic (leave unchecked to skip)")}
               </label>
               {createOrgWithHq ? (
                 <div className="rounded-md border border-border p-4">
+                  <p className="mb-3 text-xs text-muted-foreground">
+                    {t(
+                      "platform.createInitialHqHint",
+                      "Fill all required clinic fields to provision a clinic now, or leave them blank and add clinics later from the Clinics tab.",
+                    )}
+                  </p>
                   <ClinicFormFields idPrefix="hq-create" values={hqForm} onChange={(p) => setHqForm((v) => ({ ...v, ...p }))} />
                 </div>
+              ) : null}
+              {partialClinic ? (
+                <p className="text-sm text-destructive">
+                  {t(
+                    "platform.partialClinicBlocked",
+                    "Complete all required clinic fields or clear them — a partial clinic cannot be saved.",
+                  )}
+                </p>
               ) : null}
             </div>
             <div className="md:col-span-2 flex flex-wrap gap-2">
@@ -215,6 +234,11 @@ export function PlatformOrganizationsTab() {
                 {t("common.cancel")}
               </Button>
             </div>
+            {passwordTooShort ? (
+              <p className="md:col-span-2 text-sm text-destructive">
+                {t("platform.groupAdminPasswordMin", "Group admin password must be at least 8 characters.")}
+              </p>
+            ) : null}
             {tenantErr ? <p className="md:col-span-2 text-sm text-destructive">{tenantErr}</p> : null}
           </div>
         </DialogContent>

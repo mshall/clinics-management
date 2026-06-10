@@ -123,7 +123,16 @@ export class PlatformAdminService {
     }
 
     const ic = dto.initialClinic;
-    if (ic) {
+    const hasInitialClinic = Boolean(
+      ic &&
+        (ic.nameEn?.trim() ||
+          ic.nameAr?.trim() ||
+          ic.city?.trim() ||
+          ic.addressEn?.trim() ||
+          ic.addressAr?.trim() ||
+          ic.locationUrl?.trim()),
+    );
+    if (hasInitialClinic && ic) {
       if (!ic.nameEn?.trim() || !ic.nameAr?.trim() || !ic.city?.trim()) {
         throw new BadRequestException("initialClinic requires nameEn, nameAr, and city");
       }
@@ -163,7 +172,7 @@ export class PlatformAdminService {
     });
 
     let initialClinic: { id: string; nameEn: string; kind: "parent" } | null = null;
-    if (ic) {
+    if (hasInitialClinic && ic) {
       const created = await this.clinics.create(result.row.id, { ...ic, parentClinicId: undefined });
       initialClinic = { id: created.id, nameEn: created.nameEn, kind: "parent" };
     }

@@ -41,6 +41,24 @@ export function isClinicFormComplete(v: ClinicFormValues): boolean {
   );
 }
 
+/** True when the user started filling clinic fields but has not completed required ones. */
+export function hasPartialClinicForm(v: ClinicFormValues): boolean {
+  if (isClinicFormComplete(v)) return false;
+  return Boolean(
+    v.nameEn.trim() ||
+      v.nameAr.trim() ||
+      v.city.trim() ||
+      v.addressEn.trim() ||
+      v.addressAr.trim() ||
+      v.locationUrl.trim() ||
+      v.phone.trim() ||
+      v.email.trim() ||
+      v.licenseNumber.trim() ||
+      v.logoUrl.trim() ||
+      v.parentClinicId.trim(),
+  );
+}
+
 export function clinicFormToCreatePayload(v: ClinicFormValues, opts?: { includeParent?: boolean }) {
   const body: Record<string, string | undefined> = {
     nameEn: v.nameEn.trim(),
