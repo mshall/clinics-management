@@ -6,7 +6,29 @@ Reference for QA, demos, and onboarding. All seeded accounts use password **`dem
 
 **Primary organization:** `Kiorly Clinic Group (Demo)` — 1 HQ clinic + 14 branches (see [Clinic hierarchy](#clinic-hierarchy)).
 
-**Additional organizations:** seed creates 14 empty shell tenants (`Shell Organization 2` … `Shell Organization 15`) with no users; use the platform admin UI to inspect or manage them.
+**Additional organizations:** seed creates **Dr Ahmed Shall Group** (4 Cairo clinics, EGP) and 13 empty shell tenants (`Shell Organization 3` … `Shell Organization 15`) with no users; use the platform admin UI to inspect or manage them.
+
+---
+
+## Dr Ahmed Shall Group (seeded)
+
+Professor / consultant in chronic pain, joints, spine, and neuritis (non-surgical) — Cairo University Qasr Al-Aini.
+
+| Email | Password | Role |
+|-------|----------|------|
+| `admin@drahmedshall.com` | `demo` | Group admin |
+| `dr.ahmed@drahmedshall.com` | `demo` | Physician |
+
+**Booking phones (seed):** +201019234886 · +201010027404
+
+| Clinic (EN) | City | Schedule (from clinic address) |
+|-------------|------|--------------------------------|
+| Heliopolis Clinic — Obour Buildings | Heliopolis | Sun–Wed: patients 4 PM, Dr. 5 PM |
+| Fifth Settlement Clinic — CMC | New Cairo | Mon: patients 7 PM, Dr. 8 PM |
+| Mohandessin Clinic | Mohandessin | Thu: from 12 PM |
+| Capital Hospital Dokki — Contract Clinic | Dokki | Tue: patients 4–6 PM |
+
+All four clinics are **standalone** root locations under the group (flat layout). Maps links are stored in each clinic’s `locationUrl`.
 
 ---
 
@@ -167,7 +189,7 @@ Branches are children of HQ (`parentClinicId` → HQ).
 | Encounters | 360 (+ 4 demo drafts) |
 | Appointments | 260 |
 | Employees | 17 (+ physicians linked to users) |
-| Organizations | 15 (1 populated, 14 shells) |
-| Clinics | 15 (1 HQ + 14 branches) |
+| Organizations | 15 (1 Kiorly demo populated, 1 Dr Ahmed Shall with 4 clinics, 13 shells) |
+| Clinics | 19 (Kiorly: 1 HQ + 14 branches; Dr Ahmed: 4 standalone) |
 
 Source of truth for accounts and roles: `apps/api/prisma/seed.ts`.

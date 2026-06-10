@@ -84,15 +84,138 @@ async function main() {
     Array.from({ length: 15 }, (_, i) =>
       prisma.tenant.create({
         data: {
-          name: i === 0 ? "Kiorly Clinic Group (Demo)" : `Shell Organization ${i + 1}`,
-          nameAr: i === 0 ? "مجموعة كيورلي للعيادات (تجريبي)" : `منظمة ${i + 1}`,
-          baseCurrency: "AED",
-          defaultLocale: "en",
+          name:
+            i === 0
+              ? "Kiorly Clinic Group (Demo)"
+              : i === 1
+                ? "Dr Ahmed Shall Group"
+                : `Shell Organization ${i + 1}`,
+          nameAr:
+            i === 0
+              ? "مجموعة كيورلي للعيادات (تجريبي)"
+              : i === 1
+                ? "مجموعة د. أحمد الشال — استشاري علاج الآلام المزمنة والمفاصل والعمود الفقري"
+                : `منظمة ${i + 1}`,
+          baseCurrency: i === 1 ? "EGP" : "AED",
+          defaultLocale: i === 1 ? "ar" : "en",
         },
       })
     )
   );
   const t0 = tenants[0]!;
+  const drAhmedTenant = tenants[1]!;
+
+  const drAhmedClinics = await Promise.all([
+    prisma.clinic.create({
+      data: {
+        tenantId: drAhmedTenant.id,
+        nameEn: "Heliopolis Clinic — Obour Buildings",
+        nameAr: "عيادة مصر الجديدة — عمارات العبور",
+        country: "EG",
+        city: "Heliopolis",
+        addressEn:
+          "35 Obour Buildings, 5th Floor, near Wholesale Market, in front of Metro El-Ma'arad (Land of Exhibitions). Sun–Wed: patients from 4:00 PM, Dr. Ahmed from 5:00 PM. First-come, first-served. Please bring all prior test results.",
+        addressAr:
+          "٣٥ عمارات العبور، الدور الخامس، بجوار جملة ماركت، أمام محطة مترو أرض المعارض. الأحد–الأربعاء: حضور المرضى ٤ مساءً، الدكتور ٥ مساءً. الدخول بأسبقية الحضور. نرجو إحضار كافة الفحوصات.",
+        locationUrl: "https://maps.app.goo.gl/NAaZw15GZHSwWYkM9",
+        phone: "+201019234886",
+        email: "heliopolis@dr-ahmedelshall.com",
+        licenseNumber: "EG-AES-HEL-001",
+        defaultLanguage: Locale.ar,
+      },
+    }),
+    prisma.clinic.create({
+      data: {
+        tenantId: drAhmedTenant.id,
+        nameEn: "Fifth Settlement Clinic — CMC",
+        nameAr: "عيادة التجمع الخامس — CMC",
+        country: "EG",
+        city: "New Cairo",
+        addressEn:
+          "CMC Building, Clinic 309, 3rd Floor, behind Al-Gouna Hospital, N Teseen St, First New Cairo, Cairo Governorate 11835. Mon: patients from 7:00 PM, Dr. Ahmed from 8:00 PM. First-come, first-served.",
+        addressAr:
+          "مبنى CMC، عيادة ٣٠٩، الدور الثالث، خلف مستشفى الجوي، شارع التسعين، التجمع الخامس. يوم الاثنين: حضور المرضى من ٧ مساءً، الدكتور ٨ مساءً. الدخول بأسبقية الحضور.",
+        locationUrl: "https://maps.app.goo.gl/edg1c4Ex6FBR5v6W8",
+        phone: "+201010027404",
+        email: "cmc@dr-ahmedelshall.com",
+        licenseNumber: "EG-AES-CMC-001",
+        defaultLanguage: Locale.ar,
+      },
+    }),
+    prisma.clinic.create({
+      data: {
+        tenantId: drAhmedTenant.id,
+        nameEn: "Mohandessin Clinic",
+        nameAr: "عيادة المهندسين",
+        country: "EG",
+        city: "Mohandessin",
+        addressEn:
+          "42 Syria Street, 4th Floor, above Spinneys, Egyptian Vascular Center. Thu: clinic opens 12:00 PM, Dr. Ahmed from 12:00 PM. First-come, first-served.",
+        addressAr:
+          "٤٢ ش سوريا، الدور الرابع، أعلى سبينيز، المركز المصري للأوعية. الخميس: تفتح العيادة من ١٢ ظهراً، حضور الدكتور ١٢ ظ. الدخول بأسبقية الحضور.",
+        locationUrl: "https://maps.google.com/?q=42+Syria+St,+Mohandessin,+Giza",
+        phone: "+201019234886",
+        email: "mohandessin@dr-ahmedelshall.com",
+        licenseNumber: "EG-AES-MOH-001",
+        defaultLanguage: Locale.ar,
+      },
+    }),
+    prisma.clinic.create({
+      data: {
+        tenantId: drAhmedTenant.id,
+        nameEn: "Capital Hospital Dokki — Contract Clinic",
+        nameAr: "مستشفى العاصمة بالدقي — (تعاقدات)",
+        country: "EG",
+        city: "Dokki",
+        addressEn:
+          "Capital Hospital Dokki, 1st Floor, El Ahrar Street (off Ahmed Abdel Aziz Street). Tue: patients 4:00–6:00 PM. First-come, first-served. Please bring all prior test results.",
+        addressAr:
+          "مستشفى العاصمة بالدقي، الدور الأول، شارع الأحرار المتفرع من شارع البطل أحمد عبد العزيز. يوم الثلاثاء: حضور المرضى ٤–٦ مساءً. الدخول بأسبقية الحضور.",
+        locationUrl: "https://maps.app.goo.gl/ZJ8tXKZdoFrSKn419",
+        phone: "+201010027404",
+        email: "dokki@dr-ahmedelshall.com",
+        licenseNumber: "EG-AES-DOK-001",
+        defaultLanguage: Locale.ar,
+      },
+    }),
+  ]);
+
+  await prisma.user.create({
+    data: {
+      tenantId: drAhmedTenant.id,
+      email: "admin@drahmedshall.com",
+      passwordHash,
+      displayName: "Dr Ahmed Shall Group Admin",
+      role: UserRole.GROUP_ADMIN,
+    },
+  });
+
+  const drAhmedPhysician = await prisma.user.create({
+    data: {
+      tenantId: drAhmedTenant.id,
+      email: "dr.ahmed@drahmedshall.com",
+      passwordHash,
+      displayName: "Prof. Dr. Ahmed El Shall",
+      role: UserRole.PHYSICIAN,
+    },
+  });
+
+  await prisma.employee.create({
+    data: {
+      tenantId: drAhmedTenant.id,
+      clinicId: drAhmedClinics[0]!.id,
+      employeeNumber: "AES-PHYS-001",
+      firstNameEn: "Ahmed",
+      lastNameEn: "El Shall",
+      email: drAhmedPhysician.email,
+      phone: "+201019234886",
+      jobTitle: "Consultant — Chronic Pain & Spine (Non-surgical)",
+      employmentType: EmploymentType.FULL_TIME,
+      hireDate: new Date(2010, 0, 1),
+      salaryBase: 0,
+      userId: drAhmedPhysician.id,
+    },
+  });
 
   const hq = await prisma.clinic.create({
     data: {
@@ -686,7 +809,10 @@ async function main() {
   console.log(
     "Seed OK — main tenant:",
     t0.id,
-    "| logins (password: demo): superadmin@kiorly.com (platform), admin@kiorly.com, physician@kiorly.com, doctor2@kiorly.com, clinicadmin@kiorly.com, assistant@kiorly.com, nurse@kiorly.com, receptionist@kiorly.com, finance@kiorly.com, branchmgr@kiorly.com"
+    "| Dr Ahmed Shall Group:",
+    drAhmedTenant.id,
+    `(${drAhmedClinics.length} clinics)`,
+    "| logins (password: demo): superadmin@kiorly.com (platform), admin@kiorly.com, admin@drahmedshall.com, dr.ahmed@drahmedshall.com, physician@kiorly.com, doctor2@kiorly.com, clinicadmin@kiorly.com, assistant@kiorly.com, nurse@kiorly.com, receptionist@kiorly.com, finance@kiorly.com, branchmgr@kiorly.com"
   );
 
   await prisma.user.deleteMany({ where: { email: "superadmin@kiorly.com", tenantId: null } });
