@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import type { PickListItem } from "@/components/searchable-pick-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,8 +13,8 @@ import { ClinicFormFields } from "@/features/clinics/clinic-form-fields";
 import {
   clinicDetailToForm,
   clinicFormToCreatePayload,
+  collectClinicFormErrors,
   emptyClinicForm,
-  isClinicFormComplete,
   type ClinicFormValues,
 } from "@/features/clinics/clinic-form-utils";
 import { apiErrorMessage, type PlatformClinicRow, type TenantRow } from "@/features/platform/platform-shared";
@@ -136,6 +137,26 @@ export function PlatformClinicsTab() {
   });
 
   const editRow = editSelection ? clinicRows.find((c) => c.id === editSelection.clinicId) : null;
+
+  const collectErrors = useCallback(() => {
+    if (isCreate) {
+      return collectClinicFormErrors(form, t, { requireTenant: true, tenantId: createTenantId });
+    }
+    return collectClinicFormErrors(form, t);
+  }, [createTenantId, form, isCreate, t]);
+
+  const handleSave = () => {
+    if (createMut.isPending || patchMut.isPending) return;
+    const errors = collectErrors();
+    if (errors.length > 0) {
+      toast.error(t("admin.clinicValidationTitle", "Complete the required clinic fields"), {
+        description: errors.join("\n"),
+      });
+      return;
+    }
+    if (isCreate) createMut.mutate();
+    else patchMut.mutate();
+  };
 
   return (
     <div className="space-y-6">
@@ -273,8 +294,8 @@ export function PlatformClinicsTab() {
                   <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"
-                      disabled={!isClinicFormComplete(form) || createMut.isPending || patchMut.isPending}
-                      onClick={() => (isCreate ? createMut.mutate() : patchMut.mutate())}
+                      disabled={createMut.isPending || patchMut.isPending}
+                      onClick={handleSave}
                     >
                       {isEdit ? t("platform.saveClinic") : t("admin.saveClinic")}
                     </Button>

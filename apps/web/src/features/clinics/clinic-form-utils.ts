@@ -30,15 +30,32 @@ export function emptyClinicForm(): ClinicFormValues {
   };
 }
 
+/** Matches API requirements: English name, Arabic name, and city. Other fields get server defaults when omitted. */
 export function isClinicFormComplete(v: ClinicFormValues): boolean {
-  return Boolean(
-    v.nameEn.trim() &&
-      v.nameAr.trim() &&
-      v.city.trim() &&
-      v.addressEn.trim() &&
-      v.addressAr.trim() &&
-      v.locationUrl.trim(),
-  );
+  return Boolean(v.nameEn.trim() && v.nameAr.trim() && v.city.trim());
+}
+
+type ClinicFormTranslate = (key: string, defaultValue: string) => string;
+
+export function collectClinicFormErrors(
+  v: ClinicFormValues,
+  t: ClinicFormTranslate,
+  opts?: { tenantId?: string; requireTenant?: boolean },
+): string[] {
+  const errors: string[] = [];
+  if (opts?.requireTenant && !opts.tenantId?.trim()) {
+    errors.push(t("platform.errorOrgNotSelected", "No organization selected."));
+  }
+  if (!v.nameEn.trim()) {
+    errors.push(t("admin.errorClinicNameEn", "Clinic name (English) is required."));
+  }
+  if (!v.nameAr.trim()) {
+    errors.push(t("admin.errorClinicNameAr", "Clinic name (Arabic) is required."));
+  }
+  if (!v.city.trim()) {
+    errors.push(t("admin.errorClinicCity", "City is required."));
+  }
+  return errors;
 }
 
 /** True when the user started filling clinic fields but has not completed required ones. */

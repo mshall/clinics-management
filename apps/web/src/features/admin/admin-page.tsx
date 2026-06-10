@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { Navigate } from "react-router-dom";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
@@ -22,8 +23,8 @@ import { ClinicFormFields } from "@/features/clinics/clinic-form-fields";
 import {
   clinicDetailToForm,
   clinicFormToCreatePayload,
+  collectClinicFormErrors,
   emptyClinicForm,
-  isClinicFormComplete,
   type ClinicFormValues,
 } from "@/features/clinics/clinic-form-utils";
 import { AdminCreateEmployeePanel } from "./admin-create-employee-panel";
@@ -183,27 +184,32 @@ export function AdminPage() {
     },
   });
 
+  const addClinicFormValues = useMemo<ClinicFormValues>(
+    () => ({
+      parentClinicId: clParentId,
+      nameEn: clNameEn,
+      nameAr: clNameAr,
+      city: clCity,
+      country: clCountry,
+      addressEn: clAddressEn,
+      addressAr: clAddressAr,
+      locationUrl: clLocationUrl,
+      logoUrl: clLogoUrl,
+      phone: clPhone,
+      email: clEmail,
+      licenseNumber: clLicense,
+    }),
+    [clAddressAr, clAddressEn, clCity, clCountry, clEmail, clLicense, clLocationUrl, clLogoUrl, clNameAr, clNameEn, clParentId, clPhone],
+  );
+
   const createClinicMut = useMutation({
-    mutationFn: () =>
-      apiPost("/api/v1/clinics", {
-        parentClinicId: clParentId || undefined,
-        nameEn: clNameEn.trim(),
-        nameAr: clNameAr.trim(),
-        city: clCity.trim(),
-        country: clCountry.trim() || "AE",
-        addressEn: clAddressEn.trim(),
-        addressAr: clAddressAr.trim(),
-        locationUrl: clLocationUrl.trim(),
-        logoUrl: clLogoUrl.trim() || undefined,
-        phone: clPhone.trim() || undefined,
-        email: clEmail.trim() || undefined,
-        licenseNumber: clLicense.trim() || undefined,
-      }),
+    mutationFn: () => apiPost("/api/v1/clinics", clinicFormToCreatePayload(addClinicFormValues)),
     onSuccess: () => {
       setClinicErr(null);
-      void qc.invalidateQueries({ queryKey: ["clinics"] });
       resetClinicForm();
       setAddClinicOpen(false);
+      void qc.invalidateQueries({ queryKey: ["clinics"] });
+      void qc.invalidateQueries({ queryKey: ["org-hierarchy"] });
     },
     onError: (e: unknown) => {
       if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
@@ -211,6 +217,30 @@ export function AdminPage() {
       } else setClinicErr(e instanceof Error ? e.message : String(e));
     },
   });
+
+  const handleCreateClinic = () => {
+    if (createClinicMut.isPending) return;
+    const errors = collectClinicFormErrors(addClinicFormValues, t);
+    if (errors.length > 0) {
+      toast.error(t("admin.clinicValidationTitle", "Complete the required clinic fields"), {
+        description: errors.join("\n"),
+      });
+      return;
+    }
+    createClinicMut.mutate();
+  };
+
+  const handlePatchClinic = () => {
+    if (patchClinicMut.isPending) return;
+    const errors = collectClinicFormErrors(editClinicForm, t);
+    if (errors.length > 0) {
+      toast.error(t("admin.clinicValidationTitle", "Complete the required clinic fields"), {
+        description: errors.join("\n"),
+      });
+      return;
+    }
+    patchClinicMut.mutate();
+  };
 
   const createUserMut = useMutation({
     mutationFn: () =>
@@ -647,16 +677,8 @@ export function AdminPage() {
                 </Button>
                 <Button
                   type="button"
-                  disabled={
-                    !clNameEn.trim() ||
-                    !clNameAr.trim() ||
-                    !clCity.trim() ||
-                    !clAddressEn.trim() ||
-                    !clAddressAr.trim() ||
-                    !clLocationUrl.trim() ||
-                    createClinicMut.isPending
-                  }
-                  onClick={() => createClinicMut.mutate()}
+                  disabled={createClinicMut.isPending}
+                  onClick={handleCreateClinic}
                 >
                   {t("admin.saveClinic", "Save clinic")}
                 </Button>
@@ -793,8 +815,8 @@ export function AdminPage() {
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
-                  disabled={!isClinicFormComplete(editClinicForm) || patchClinicMut.isPending}
-                  onClick={() => patchClinicMut.mutate()}
+                  disabled={patchClinicMut.isPending}
+                  onClick={handlePatchClinic}
                 >
                   {t("platform.saveClinic", "Save clinic")}
                 </Button>

@@ -70,7 +70,10 @@ export function ClinicFormFields({
         />
       </div>
       <div className="space-y-2 sm:col-span-2">
-        <Label htmlFor={`${idPrefix}-addressEn`}>{t("admin.addressEn", "Full address (English)")}</Label>
+        <Label htmlFor={`${idPrefix}-addressEn`}>
+          {t("admin.addressEn", "Full address (English)")}{" "}
+          <span className="text-xs font-normal text-muted-foreground">({t("common.optional", "optional")})</span>
+        </Label>
         <textarea
           id={`${idPrefix}-addressEn`}
           className="flex min-h-[88px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -80,7 +83,10 @@ export function ClinicFormFields({
         />
       </div>
       <div className="space-y-2 sm:col-span-2">
-        <Label htmlFor={`${idPrefix}-addressAr`}>{t("admin.addressAr", "Full address (Arabic)")}</Label>
+        <Label htmlFor={`${idPrefix}-addressAr`}>
+          {t("admin.addressAr", "Full address (Arabic)")}{" "}
+          <span className="text-xs font-normal text-muted-foreground">({t("common.optional", "optional")})</span>
+        </Label>
         <textarea
           id={`${idPrefix}-addressAr`}
           className="flex min-h-[88px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -91,7 +97,10 @@ export function ClinicFormFields({
         />
       </div>
       <div className="space-y-2 sm:col-span-2">
-        <Label htmlFor={`${idPrefix}-location`}>{t("admin.locationUrl", "Location link (maps URL)")}</Label>
+        <Label htmlFor={`${idPrefix}-location`}>
+          {t("admin.locationUrl", "Location link (maps URL)")}{" "}
+          <span className="text-xs font-normal text-muted-foreground">({t("common.optional", "optional")})</span>
+        </Label>
         <Input
           id={`${idPrefix}-location`}
           className="ltr-nums"

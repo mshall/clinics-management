@@ -742,6 +742,10 @@
     "phone": "الهاتف",
     "email": "البريد",
     "licenseNumber": "رقم الترخيص",
+    "errorClinicNameEn": "اسم العيادة (إنجليزي) مطلوب.",
+    "errorClinicNameAr": "اسم العيادة (عربي) مطلوب.",
+    "errorClinicCity": "المدينة مطلوبة.",
+    "clinicValidationTitle": "أكمل حقول العيادة المطلوبة",
     "saveClinic": "حفظ العيادة",
     "clinicsList": "عيادات هذه المنظمة",
     "clearClinicFilters": "مسح المرشحات",
@@ -771,6 +775,7 @@
     "back": "رجوع",
     "remove": "إزالة",
     "error": "حدث خطأ.",
+    "optional": "اختياري",
     "comingSoon": "البيانات من الخادم ستُضاف مع واجهة NestJS."
   }
 }

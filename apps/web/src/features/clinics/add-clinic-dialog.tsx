@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import type { PickListItem } from "@/components/searchable-pick-list";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -8,7 +9,7 @@ import { useClinicsQuery } from "@/lib/api-hooks";
 import { ApiError, apiPost } from "@/lib/http";
 import { formatClinicName } from "@/lib/locale-display";
 import { ClinicFormFields } from "./clinic-form-fields";
-import { clinicFormToCreatePayload, emptyClinicForm, isClinicFormComplete } from "./clinic-form-utils";
+import { clinicFormToCreatePayload, collectClinicFormErrors, emptyClinicForm } from "./clinic-form-utils";
 
 type AddClinicDialogProps = {
   open: boolean;
@@ -31,6 +32,8 @@ export function AddClinicDialog({ open, onOpenChange }: AddClinicDialogProps) {
     [clinics, t, i18n.language],
   );
 
+  const collectErrors = useCallback(() => collectClinicFormErrors(form, t), [form, t]);
+
   const createClinicMut = useMutation({
     mutationFn: () => apiPost("/api/v1/clinics", clinicFormToCreatePayload(form)),
     onSuccess: () => {
@@ -45,6 +48,18 @@ export function AddClinicDialog({ open, onOpenChange }: AddClinicDialogProps) {
       } else setClinicErr(e instanceof Error ? e.message : String(e));
     },
   });
+
+  const handleSave = () => {
+    if (createClinicMut.isPending) return;
+    const errors = collectErrors();
+    if (errors.length > 0) {
+      toast.error(t("admin.clinicValidationTitle", "Complete the required clinic fields"), {
+        description: errors.join("\n"),
+      });
+      return;
+    }
+    createClinicMut.mutate();
+  };
 
   return (
     <Dialog
@@ -73,7 +88,7 @@ export function AddClinicDialog({ open, onOpenChange }: AddClinicDialogProps) {
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             {t("common.cancel", "Cancel")}
           </Button>
-          <Button type="button" disabled={!isClinicFormComplete(form) || createClinicMut.isPending} onClick={() => createClinicMut.mutate()}>
+          <Button type="button" disabled={createClinicMut.isPending} onClick={handleSave}>
             {t("admin.saveClinic", "Save clinic")}
           </Button>
         </div>

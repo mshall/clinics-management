@@ -742,6 +742,10 @@
     "phone": "Phone",
     "email": "Email",
     "licenseNumber": "License number",
+    "errorClinicNameEn": "Clinic name (English) is required.",
+    "errorClinicNameAr": "Clinic name (Arabic) is required.",
+    "errorClinicCity": "City is required.",
+    "clinicValidationTitle": "Complete the required clinic fields",
     "saveClinic": "Save clinic",
     "clinicsList": "Clinics in this organization",
     "clearClinicFilters": "Clear filters",
@@ -771,6 +775,7 @@
     "back": "Back",
     "remove": "Remove",
     "error": "Something went wrong.",
+    "optional": "optional",
     "comingSoon": "API-backed data coming with the NestJS backend."
   }
 }
