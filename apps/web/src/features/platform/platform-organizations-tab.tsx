@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { PasswordInput } from "@/components/password-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,7 @@ export function PlatformOrganizationsTab() {
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
 
   const [tenantName, setTenantName] = useState("");
+  const [tenantNameAr, setTenantNameAr] = useState("");
   const [tenantCurrency, setTenantCurrency] = useState("AED");
   const [tenantLocale, setTenantLocale] = useState("en");
   const [gaEmail, setGaEmail] = useState("");
@@ -45,6 +47,7 @@ export function PlatformOrganizationsTab() {
 
   const resetCreateForm = () => {
     setTenantName("");
+    setTenantNameAr("");
     setTenantCurrency("AED");
     setTenantLocale("en");
     setGaEmail("");
@@ -66,7 +69,8 @@ export function PlatformOrganizationsTab() {
     mutationFn: () => {
       const body: Record<string, unknown> = {
         name: tenantName.trim(),
-        baseCurrency: tenantCurrency.trim() || "AED",
+        nameAr: tenantNameAr.trim(),
+        baseCurrency: tenantCurrency,
         defaultLocale: tenantLocale.trim() || "en",
         groupAdmin: { email: gaEmail.trim(), password: gaPassword, displayName: gaName.trim() },
       };
@@ -85,6 +89,7 @@ export function PlatformOrganizationsTab() {
 
   const canCreateOrg =
     tenantName.trim() &&
+    tenantNameAr.trim() &&
     gaEmail.trim() &&
     gaPassword.length >= 8 &&
     gaName.trim() &&
@@ -146,18 +151,22 @@ export function PlatformOrganizationsTab() {
       </Card>
 
       <Dialog open={dialogMode === "create"} onOpenChange={(open) => !open && closeDialog()}>
-        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto" aria-describedby={undefined}>
+        <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>{t("platform.tabs.createOrg")}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2 md:col-span-2">
-              <Label>{t("platform.orgName")}</Label>
+            <div className="space-y-2">
+              <Label>{t("admin.nameEn", "Name (EN)")}</Label>
               <Input value={tenantName} onChange={(e) => setTenantName(e.target.value)} />
             </div>
             <div className="space-y-2">
+              <Label>{t("admin.nameAr", "Name (AR)")}</Label>
+              <Input value={tenantNameAr} onChange={(e) => setTenantNameAr(e.target.value)} dir="rtl" />
+            </div>
+            <div className="space-y-2">
               <Label>{t("platform.baseCurrency")}</Label>
-              <Input value={tenantCurrency} onChange={(e) => setTenantCurrency(e.target.value)} />
+              <BaseCurrencySelect value={tenantCurrency} onChange={setTenantCurrency} />
             </div>
             <div className="space-y-2">
               <Label>{t("platform.defaultLocale")}</Label>
@@ -172,7 +181,7 @@ export function PlatformOrganizationsTab() {
             </div>
             <div className="md:col-span-2 rounded-md border border-border p-4 space-y-3">
               <p className="text-sm font-medium">{t("platform.groupAdminSection")}</p>
-              <div className="grid gap-3 md:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:items-end">
                 <div className="space-y-2">
                   <Label>{t("platform.groupAdminEmail")}</Label>
                   <Input type="email" value={gaEmail} onChange={(e) => setGaEmail(e.target.value)} />

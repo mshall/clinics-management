@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { loginRequest } from "@/lib/auth-api";
-import { defaultHomeForRole } from "@/lib/nav-policy";
+import { resolvePostLoginPath } from "@/lib/nav-policy";
 import { useAuthStore } from "@/stores/auth-store";
 
 export function LoginPage() {
@@ -26,7 +26,7 @@ export function LoginPage() {
 
   if (user && token) {
     const from = (location.state as { from?: string } | null)?.from;
-    const to = from && from !== "/login" ? from : defaultHomeForRole(user.role, user.navTabKeys);
+    const to = resolvePostLoginPath(user.role, user.navTabKeys, from);
     return <Navigate to={to} replace />;
   }
 
@@ -39,11 +39,8 @@ export function LoginPage() {
       const res = await loginRequest(email, password);
       setSession(res.accessToken, res.user);
       const from = (location.state as { from?: string } | null)?.from;
-      const home = defaultHomeForRole(
-        useAuthStore.getState().user?.role,
-        useAuthStore.getState().user?.navTabKeys,
-      );
-      navigate(from && from !== "/login" ? from : home, { replace: true });
+      const { user: signedIn } = useAuthStore.getState();
+      navigate(resolvePostLoginPath(signedIn?.role, signedIn?.navTabKeys, from), { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : t("auth.signIn"));
     } finally {

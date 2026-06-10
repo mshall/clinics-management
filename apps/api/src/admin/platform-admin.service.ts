@@ -87,6 +87,7 @@ export class PlatformAdminService {
       select: {
         id: true,
         name: true,
+        nameAr: true,
         baseCurrency: true,
         defaultLocale: true,
         defaultVisitFee: true,
@@ -98,6 +99,7 @@ export class PlatformAdminService {
     return {
       id: row.id,
       name: row.name,
+      nameAr: row.nameAr,
       baseCurrency: row.baseCurrency,
       defaultLocale: row.defaultLocale,
       defaultVisitFee: Number(row.defaultVisitFee),
@@ -110,6 +112,8 @@ export class PlatformAdminService {
     this.assertPlatform(user);
     const name = dto.name.trim();
     if (!name) throw new BadRequestException("name is required");
+    const nameAr = dto.nameAr.trim();
+    if (!nameAr) throw new BadRequestException("nameAr is required");
 
     const ga = dto.groupAdmin;
     if (ga) {
@@ -132,6 +136,7 @@ export class PlatformAdminService {
       const row = await tx.tenant.create({
         data: {
           name,
+          nameAr,
           baseCurrency: dto.baseCurrency?.trim() || "AED",
           defaultLocale: dto.defaultLocale?.trim() || "en",
         },
@@ -166,6 +171,7 @@ export class PlatformAdminService {
     return {
       id: result.row.id,
       name: result.row.name,
+      nameAr: result.row.nameAr,
       baseCurrency: result.row.baseCurrency,
       defaultLocale: result.row.defaultLocale,
       createdAt: result.row.createdAt.toISOString(),
@@ -184,6 +190,7 @@ export class PlatformAdminService {
     await this.assertTenant(tenantId);
     const data: {
       name?: string;
+      nameAr?: string;
       baseCurrency?: string;
       defaultLocale?: string;
       defaultVisitFee?: number;
@@ -192,6 +199,11 @@ export class PlatformAdminService {
       const n = dto.name.trim();
       if (!n) throw new BadRequestException("name cannot be empty");
       data.name = n;
+    }
+    if (dto.nameAr !== undefined) {
+      const n = dto.nameAr.trim();
+      if (!n) throw new BadRequestException("nameAr cannot be empty");
+      data.nameAr = n;
     }
     if (dto.baseCurrency !== undefined) data.baseCurrency = dto.baseCurrency.trim();
     if (dto.defaultLocale !== undefined) data.defaultLocale = dto.defaultLocale.trim();
@@ -202,6 +214,7 @@ export class PlatformAdminService {
     return {
       id: row.id,
       name: row.name,
+      nameAr: row.nameAr,
       baseCurrency: row.baseCurrency,
       defaultLocale: row.defaultLocale,
       defaultVisitFee: Number(row.defaultVisitFee),

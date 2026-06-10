@@ -1,19 +1,27 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsNumber, IsOptional, IsString, MaxLength, Min, MinLength } from "class-validator";
+import { IsIn, IsNumber, IsOptional, IsString, MaxLength, Min, MinLength } from "class-validator";
+import { BASE_CURRENCIES } from "../../common/base-currencies";
 
 export class PlatformPatchTenantDto {
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: "Organization name (English)" })
   @IsOptional()
   @IsString()
   @MinLength(1)
   @MaxLength(200)
   name?: string;
 
-  @ApiPropertyOptional({ example: "AED" })
+  @ApiPropertyOptional({ description: "Organization name (Arabic)" })
   @IsOptional()
   @IsString()
-  @MaxLength(8)
+  @MinLength(1)
+  @MaxLength(200)
+  nameAr?: string;
+
+  @ApiPropertyOptional({ example: "AED", enum: BASE_CURRENCIES })
+  @IsOptional()
+  @IsString()
+  @IsIn(BASE_CURRENCIES)
   baseCurrency?: string;
 
   @ApiPropertyOptional({ example: "en" })

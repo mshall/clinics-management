@@ -70,6 +70,7 @@ export class AdminService {
         select: {
           id: true,
           name: true,
+          nameAr: true,
           baseCurrency: true,
           defaultLocale: true,
           createdAt: true,
@@ -80,6 +81,7 @@ export class AdminService {
     const items = rows.map((r) => ({
       id: r.id,
       name: r.name,
+      nameAr: r.nameAr,
       baseCurrency: r.baseCurrency,
       defaultLocale: r.defaultLocale,
       createdAt: r.createdAt.toISOString(),

@@ -148,3 +148,32 @@ export function defaultHomeForRole(role: DemoRole | undefined, navTabKeys?: stri
   }
   return "/profile";
 }
+
+/** Map a URL path (including detail routes) to the nav tab that owns it. */
+export function navKeyForPath(path: string): NavItemKey | null {
+  const pathname = (path.split("?")[0] ?? "/").replace(/\/+$/, "") || "/";
+  const entries = (Object.entries(NAV_ITEM_PATH) as [NavItemKey, string][]).sort(
+    (a, b) => b[1].length - a[1].length,
+  );
+  for (const [key, base] of entries) {
+    if (base === "/") {
+      if (pathname === "/") return "dashboard";
+      continue;
+    }
+    if (pathname === base || pathname.startsWith(`${base}/`)) return key;
+  }
+  return null;
+}
+
+/** After sign-in, only return `from` when the user's role may access that route. */
+export function resolvePostLoginPath(
+  role: DemoRole | undefined,
+  navTabKeys: string[] | null | undefined,
+  from?: string | null,
+): string {
+  const home = defaultHomeForRole(role, navTabKeys);
+  if (!from || from === "/login") return home;
+  const key = navKeyForPath(from);
+  if (!key || !effectiveNavKeys(role, navTabKeys).has(key)) return home;
+  return from;
+}

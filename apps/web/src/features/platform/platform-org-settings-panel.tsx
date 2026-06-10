@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +19,8 @@ export function PlatformOrgSettingsPanel({
   const qc = useQueryClient();
 
   const [editName, setEditName] = useState("");
-  const [editCurrency, setEditCurrency] = useState("");
+  const [editNameAr, setEditNameAr] = useState("");
+  const [editCurrency, setEditCurrency] = useState("AED");
   const [editLocale, setEditLocale] = useState("");
   const [editVisitFee, setEditVisitFee] = useState("");
   const [settingsErr, setSettingsErr] = useState<string | null>(null);
@@ -33,6 +35,7 @@ export function PlatformOrgSettingsPanel({
   useEffect(() => {
     if (!detail) return;
     setEditName(detail.name);
+    setEditNameAr(detail.nameAr ?? "");
     setEditCurrency(detail.baseCurrency);
     setEditLocale(detail.defaultLocale);
     setEditVisitFee(String(detail.defaultVisitFee));
@@ -42,7 +45,8 @@ export function PlatformOrgSettingsPanel({
     mutationFn: () =>
       apiPatch(`/api/v1/admin/platform/tenants/${tenantId}`, {
         name: editName.trim(),
-        baseCurrency: editCurrency.trim(),
+        nameAr: editNameAr.trim(),
+        baseCurrency: editCurrency,
         defaultLocale: editLocale.trim(),
         defaultVisitFee: Number(editVisitFee) || 0,
       }),
@@ -63,20 +67,31 @@ export function PlatformOrgSettingsPanel({
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           <div className="space-y-2">
-            <Label>{t("platform.orgName")}</Label>
+            <Label>{t("admin.nameEn", "Name (EN)")}</Label>
             <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
           </div>
           <div className="space-y-2">
+            <Label>{t("admin.nameAr", "Name (AR)")}</Label>
+            <Input value={editNameAr} onChange={(e) => setEditNameAr(e.target.value)} dir="rtl" />
+          </div>
+          <div className="space-y-2">
             <Label>{t("platform.baseCurrency")}</Label>
-            <Input value={editCurrency} onChange={(e) => setEditCurrency(e.target.value)} />
+            <BaseCurrencySelect value={editCurrency} onChange={setEditCurrency} />
           </div>
           <div className="space-y-2">
             <Label>{t("platform.defaultLocale")}</Label>
-            <Input value={editLocale} onChange={(e) => setEditLocale(e.target.value)} />
+            <select
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={editLocale}
+              onChange={(e) => setEditLocale(e.target.value)}
+            >
+              <option value="en">English</option>
+              <option value="ar">Arabic</option>
+            </select>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 md:col-span-2">
             <Label>{t("platform.defaultVisitFee")}</Label>
-            <Input type="number" min={0} value={editVisitFee} onChange={(e) => setEditVisitFee(e.target.value)} />
+            <Input type="number" min={0} className="max-w-xs" value={editVisitFee} onChange={(e) => setEditVisitFee(e.target.value)} />
           </div>
           <div className="md:col-span-2">
             <Button type="button" disabled={patchMut.isPending} onClick={() => patchMut.mutate()}>

@@ -99,6 +99,7 @@ enum EncounterDocumentKind {
 model Tenant {
   id                    String          @id @default(cuid())
   name                  String
+  nameAr                String          @default("")
   baseCurrency          String          @default("AED")
   defaultLocale         String          @default("en")
   defaultVisitFee Decimal         @default(150) @db.Decimal(14, 2)

@@ -85,6 +85,7 @@ async function main() {
       prisma.tenant.create({
         data: {
           name: i === 0 ? "Kiorly Clinic Group (Demo)" : `Shell Organization ${i + 1}`,
+          nameAr: i === 0 ? "مجموعة كيورلي للعيادات (تجريبي)" : `منظمة ${i + 1}`,
           baseCurrency: "AED",
           defaultLocale: "en",
         },

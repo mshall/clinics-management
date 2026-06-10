@@ -3,6 +3,7 @@ import { ApiError } from "@/lib/http";
 export type TenantRow = {
   id: string;
   name: string;
+  nameAr: string;
   baseCurrency: string;
   defaultLocale: string;
   createdAt: string;

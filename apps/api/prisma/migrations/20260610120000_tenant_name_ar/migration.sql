@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Tenant" ADD COLUMN "nameAr" TEXT NOT NULL DEFAULT '';
