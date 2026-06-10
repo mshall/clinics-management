@@ -15,7 +15,7 @@ export interface AuthUser {
   role: DemoRole;
   /** Subset of tabs from clinic/group admin; undefined/null = full role menu */
   navTabKeys?: string[] | null;
-  /** From PLATFORM_SUPER_ADMIN_EMAILS on the API */
+  /** Legacy email gate: data explorer on Admin, not platform routes */
   platformSuperAdmin?: boolean;
 }
 

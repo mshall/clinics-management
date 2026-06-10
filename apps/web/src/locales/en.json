@@ -19,6 +19,10 @@
     "doctorRevenue": "Doctor revenue",
     "profile": "Profile",
     "platform": "Platform",
+    "platformOverview": "Overview",
+    "platformOrganizations": "Organizations",
+    "platformUsers": "Users",
+    "platformClinics": "Clinics",
     "clinicRevenue": "Clinic revenue",
     "governance": "Governance & audit"
   },
@@ -26,7 +30,6 @@
     "signIn": "Sign in",
     "email": "Email",
     "password": "Password",
-    "demoHint": "Sign in against the API: run Docker + db:setup, then use e.g. physician@kiorly.com / demo, doctor2@kiorly.com / demo, admin@kiorly.com / demo, clinicadmin@kiorly.com / demo, assistant@kiorly.com / demo, nurse@kiorly.com / demo, receptionist@kiorly.com / demo, finance@kiorly.com / demo, branchmgr@kiorly.com / demo (password demo for all).",
     "mfaPlaceholder": "MFA code (demo — any 6 digits)",
     "signOut": "Sign out"
   },
@@ -596,7 +599,7 @@
     "groupAdminHint": "Email and password the organization owner will use to sign in and manage their clinics.",
     "groupAdminEmail": "Group admin email (username)",
     "createInitialHq": "Also create first HQ (parent) clinic",
-    "orgTableHint": "Click a row to view and edit organization details, clinics, and users.",
+    "orgTableHint": "Click a row to open organization details and edit settings.",
     "orgDetails": "Organization details",
     "orgDetailsHint": "Update settings, manage clinics, and provision users for this organization.",
     "patients": "Patients",
@@ -630,7 +633,42 @@
       "clinics": "Clinics",
       "patients": "Patients",
       "encounters": "Encounters"
-    }
+    },
+    "tabs": {
+      "organizations": "Organizations",
+      "users": "Users",
+      "clinics": "Clinics",
+      "createOrg": "Create organization",
+      "usersList": "All users",
+      "usersListHint": "Every organization user with assigned clinics. Click a row to edit credentials and role.",
+      "clinicsList": "All clinics",
+      "clinicsListHint": "Every clinic and branch across organizations. Click a row to edit registration details.",
+      "filterOrg": "Filter by organization",
+      "allOrgs": "All organizations",
+      "pickOrg": "Select organization…",
+      "pickOrgFirst": "Select an organization first to assign clinics.",
+      "newUser": "New user",
+      "editUser": "Edit user",
+      "newClinic": "New clinic",
+      "editClinic": "Edit clinic",
+      "kind": "Type"
+    },
+    "username": "Username (email)",
+    "newPasswordOptional": "New password (optional)",
+    "leaveBlankPassword": "Leave blank to keep current password",
+    "saveUser": "Save user",
+    "changePassword": "Change password",
+    "confirmRevealPassword": "Stored passwords are encrypted and cannot be viewed. Confirm to set a new password for this user.",
+    "passwordNotRetrievable": "The current password cannot be displayed. You can set a new one below.",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
+  },
+  "orgHierarchy": {
+    "title": "Organization map",
+    "platformHint": "All organizations with clinics, branches, and assigned users. Expand nodes to explore the breakdown.",
+    "orgHint": "Your organization: parent (HQ) clinics, their branches, and staff assigned to each location.",
+    "branches": "branches",
+    "showTree": "Show Tree"
   },
   "admin": {
     "title": "Administration",

@@ -19,6 +19,10 @@
     "doctorRevenue": "إيرادات الطبيب",
     "profile": "الملف الشخصي",
     "platform": "المنصة",
+    "platformOverview": "نظرة عامة",
+    "platformOrganizations": "المنظمات",
+    "platformUsers": "المستخدمون",
+    "platformClinics": "العيادات",
     "clinicRevenue": "إيرادات العيادة",
     "governance": "الحوكمة والتدقيق"
   },
@@ -26,7 +30,6 @@
     "signIn": "تسجيل الدخول",
     "email": "البريد الإلكتروني",
     "password": "كلمة المرور",
-    "demoHint": "تسجيل الدخول عبر الخادم: شغّل Docker ثم db:setup. حسابات تجريبية (كلمة المرور demo): physician@kiorly.com، doctor2@kiorly.com، admin@kiorly.com، clinicadmin@kiorly.com، assistant@kiorly.com، nurse@kiorly.com، receptionist@kiorly.com، finance@kiorly.com، branchmgr@kiorly.com.",
     "mfaPlaceholder": "رمز التحقق (تجريبي — أي 6 أرقام)",
     "signOut": "تسجيل الخروج"
   },
@@ -630,7 +633,42 @@
       "clinics": "العيادات",
       "patients": "المرضى",
       "encounters": "الزيارات"
-    }
+    },
+    "tabs": {
+      "organizations": "المنظمات",
+      "users": "المستخدمون",
+      "clinics": "العيادات",
+      "createOrg": "إنشاء منظمة",
+      "usersList": "كل المستخدمين",
+      "usersListHint": "جميع مستخدمي المنظمات مع العيادات المعيّنة. انقر على صف للتعديل.",
+      "clinicsList": "كل العيادات",
+      "clinicsListHint": "كل العيادات والفروع عبر المنظمات. انقر على صف لتعديل بيانات التسجيل.",
+      "filterOrg": "تصفية حسب المنظمة",
+      "allOrgs": "كل المنظمات",
+      "pickOrg": "اختر المنظمة…",
+      "pickOrgFirst": "اختر المنظمة أولاً لتعيين العيادات.",
+      "newUser": "مستخدم جديد",
+      "editUser": "تعديل مستخدم",
+      "newClinic": "عيادة جديدة",
+      "editClinic": "تعديل عيادة",
+      "kind": "النوع"
+    },
+    "username": "اسم المستخدم (البريد)",
+    "newPasswordOptional": "كلمة مرور جديدة (اختياري)",
+    "leaveBlankPassword": "اتركه فارغاً للإبقاء على كلمة المرور الحالية",
+    "saveUser": "حفظ المستخدم",
+    "changePassword": "تغيير كلمة المرور",
+    "confirmRevealPassword": "كلمات المرور المخزنة مشفرة ولا يمكن عرضها. أكّد لتعيين كلمة مرور جديدة لهذا المستخدم.",
+    "passwordNotRetrievable": "لا يمكن عرض كلمة المرور الحالية. يمكنك تعيين كلمة جديدة أدناه.",
+    "showPassword": "إظهار كلمة المرور",
+    "hidePassword": "إخفاء كلمة المرور"
+  },
+  "orgHierarchy": {
+    "title": "خريطة المنظمة",
+    "platformHint": "جميع المنظمات مع العيادات والفروع والمستخدمين المعيّنين. وسّع العقد لاستكشاف التفاصيل.",
+    "orgHint": "منظمتك: عيادات المقر (HQ)، فروعها، والموظفون المعيّنون في كل موقع.",
+    "branches": "فروع",
+    "showTree": "عرض الشجرة"
   },
   "admin": {
     "title": "الإدارة",

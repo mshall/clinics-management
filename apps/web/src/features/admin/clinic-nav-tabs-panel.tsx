@@ -14,7 +14,10 @@ import type { DemoRole } from "@/lib/roles";
 import { useAuthStore } from "@/stores/auth-store";
 
 const NAV_I18N: Record<NavItemKey, string> = {
-  platform: "nav.platform",
+  platform: "nav.platformOverview",
+  platform_organizations: "nav.platformOrganizations",
+  platform_users: "nav.platformUsers",
+  platform_clinics: "nav.platformClinics",
   dashboard: "nav.dashboard",
   patients: "nav.patients",
   encounters: "nav.encounters",

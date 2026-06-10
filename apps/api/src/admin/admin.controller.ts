@@ -88,4 +88,19 @@ export class AdminController {
     }
     return this.admin.setFeatureFlag(key, body.enabled);
   }
+
+  @Get("org-hierarchy")
+  @ApiOperation({ summary: "Organization tree: clinics, branches, and users" })
+  @ApiOkResponse()
+  orgHierarchy(@CurrentUser() user: JwtUser) {
+    const allowed: Set<UserRole> = new Set([
+      UserRole.GROUP_ADMIN,
+      UserRole.CLINIC_ADMIN,
+      UserRole.BRANCH_MANAGER,
+    ]);
+    if (!allowed.has(user.role) || !user.tenantId) {
+      throw new ForbiddenException("Only organization administrators can view the hierarchy");
+    }
+    return this.admin.getOrgHierarchyForUser(user, requireTenantId(user));
+  }
 }

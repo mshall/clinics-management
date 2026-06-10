@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, ForbiddenException, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
 import { CurrentUser } from "../auth/current-user.decorator";
@@ -9,6 +9,7 @@ import { ClinicDto } from "../common/dto/clinic.dto";
 import { AssignClinicPhysicianDto, ClinicPhysicianDto } from "./dto/clinic-physician.dto";
 import { ClinicDetailDto } from "./dto/clinic-detail.dto";
 import { CreateClinicDto } from "./dto/create-clinic.dto";
+import { PatchClinicDto } from "./dto/patch-clinic.dto";
 import { ClinicsService } from "./clinics.service";
 
 const SCHEDULING_ROLES: Set<UserRole> = new Set([
@@ -17,6 +18,12 @@ const SCHEDULING_ROLES: Set<UserRole> = new Set([
   UserRole.BRANCH_MANAGER,
   UserRole.CLINIC_ASSISTANT,
   UserRole.RECEPTIONIST,
+]);
+
+const CLINIC_UPDATE_ROLES: Set<UserRole> = new Set([
+  UserRole.GROUP_ADMIN,
+  UserRole.CLINIC_ADMIN,
+  UserRole.BRANCH_MANAGER,
 ]);
 
 @ApiTags("clinics")
@@ -95,5 +102,15 @@ export class ClinicsController {
   @ApiOkResponse({ type: ClinicDetailDto })
   getOne(@CurrentUser() user: JwtUser, @Param("id") id: string) {
     return this.clinics.getOne(requireTenantId(user), id, user);
+  }
+
+  @Patch(":id")
+  @ApiOperation({ summary: "Update clinic registration fields" })
+  @ApiOkResponse({ type: ClinicDetailDto })
+  patch(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchClinicDto) {
+    if (!CLINIC_UPDATE_ROLES.has(user.role)) {
+      throw new ForbiddenException("You do not have permission to update this clinic");
+    }
+    return this.clinics.update(requireTenantId(user), id, body, user);
   }
 }

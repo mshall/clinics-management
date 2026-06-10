@@ -6,11 +6,13 @@ import { isPlatformSuperAdmin } from "../common/platform-super-admin";
 import { ClinicsService } from "../clinics/clinics.service";
 import type { CreateClinicDto } from "../clinics/dto/create-clinic.dto";
 import type { PatchClinicDto } from "../clinics/dto/patch-clinic.dto";
+import { paginate, parsePageParams } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
 import { AdminService } from "./admin.service";
 import type { CreateTenantDto } from "./dto/create-tenant.dto";
 import type { CreateTenantUserDto } from "./dto/create-tenant-user.dto";
 import type { PlatformPatchTenantDto } from "./dto/platform-patch-tenant.dto";
+import type { PlatformPatchTenantUserDto } from "./dto/platform-patch-tenant-user.dto";
 
 @Injectable()
 export class PlatformAdminService {
@@ -211,6 +213,75 @@ export class PlatformAdminService {
     return this.admin.listTenantUsers(tenantId, pageStr, pageSizeStr);
   }
 
+  async listAllUsers(user: JwtUser, pageStr?: string, pageSizeStr?: string, tenantIdFilter?: string) {
+    this.assertPlatform(user);
+    const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
+    const where = tenantIdFilter?.trim()
+      ? { tenantId: tenantIdFilter.trim() }
+      : { NOT: { tenantId: null } };
+    const [total, rows] = await Promise.all([
+      this.prisma.user.count({ where }),
+      this.prisma.user.findMany({
+        where,
+        orderBy: [{ tenant: { name: "asc" } }, { email: "asc" }],
+        skip,
+        take: pageSize,
+        include: {
+          tenant: { select: { id: true, name: true } },
+          clinicAdminScopes: { include: { clinic: { select: { id: true, nameEn: true } } } },
+        },
+      }),
+    ]);
+    const items = rows.map((r) => ({
+      id: r.id,
+      tenantId: r.tenantId,
+      tenantName: r.tenant?.name ?? "—",
+      email: r.email,
+      displayName: r.displayName,
+      role: r.role,
+      createdAt: r.createdAt.toISOString(),
+      clinicIds: r.clinicAdminScopes.map((s) => s.clinicId),
+      clinics: r.clinicAdminScopes.map((s) => ({ id: s.clinic.id, nameEn: s.clinic.nameEn })),
+    }));
+    return paginate(items, total, page, pageSize);
+  }
+
+  getUser(user: JwtUser, tenantId: string, userId: string) {
+    this.assertPlatform(user);
+    return this.admin.getTenantUser(tenantId, userId);
+  }
+
+  patchUser(user: JwtUser, tenantId: string, userId: string, dto: PlatformPatchTenantUserDto) {
+    this.assertPlatform(user);
+    return this.admin.updateTenantUser(tenantId, userId, dto);
+  }
+
+  async listAllClinics(user: JwtUser, tenantIdFilter?: string) {
+    this.assertPlatform(user);
+    const rows = await this.prisma.clinic.findMany({
+      where: tenantIdFilter?.trim() ? { tenantId: tenantIdFilter.trim() } : undefined,
+      orderBy: [{ tenant: { name: "asc" } }, { parentClinicId: "asc" }, { nameEn: "asc" }],
+      include: {
+        tenant: { select: { id: true, name: true } },
+        parent: { select: { nameEn: true } },
+      },
+    });
+    return rows.map((c) => ({
+      id: c.id,
+      tenantId: c.tenantId,
+      tenantName: c.tenant.name,
+      parentClinicId: c.parentClinicId,
+      parentNameEn: c.parent?.nameEn ?? null,
+      nameEn: c.nameEn,
+      nameAr: c.nameAr,
+      city: c.city,
+      country: c.country,
+      kind: c.parentClinicId ? "branch" : "parent",
+      phone: c.phone,
+      email: c.email,
+    }));
+  }
+
   async listClinics(user: JwtUser, tenantId: string) {
     this.assertPlatform(user);
     await this.assertTenant(tenantId);
@@ -242,11 +313,16 @@ export class PlatformAdminService {
     await this.assertTenant(tenantId);
     const row = await this.prisma.clinic.findFirst({
       where: { id: clinicId, tenantId },
-      include: { parent: { select: { nameEn: true, nameAr: true } } },
+      include: {
+        tenant: { select: { name: true } },
+        parent: { select: { nameEn: true, nameAr: true } },
+      },
     });
     if (!row) throw new NotFoundException("Clinic not found");
     return {
       id: row.id,
+      tenantId: row.tenantId,
+      tenantName: row.tenant.name,
       parentClinicId: row.parentClinicId,
       parentNameEn: row.parent?.nameEn ?? null,
       parentNameAr: row.parent?.nameAr ?? null,
@@ -289,5 +365,10 @@ export class PlatformAdminService {
   setFeatureFlag(user: JwtUser, key: string, enabled: boolean) {
     this.assertPlatform(user);
     return this.admin.setFeatureFlag(key, enabled);
+  }
+
+  getHierarchy(user: JwtUser, tenantId?: string) {
+    this.assertPlatform(user);
+    return this.admin.getPlatformHierarchy(tenantId);
   }
 }

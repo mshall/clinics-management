@@ -7,7 +7,14 @@ import { fetchClinicScopeIds } from "../common/clinic-scope";
 import { PrismaService } from "../prisma/prisma.service";
 import type { JwtUser } from "../auth/jwt-user";
 import type { CreateTenantUserDto } from "./dto/create-tenant-user.dto";
+import type { PlatformPatchTenantUserDto } from "./dto/platform-patch-tenant-user.dto";
 import type { PatchTenantSettingsDto } from "./dto/patch-tenant-settings.dto";
+import {
+  buildPlatformHierarchy,
+  buildTenantHierarchy,
+  resolveVisibleClinicIds,
+  type OrgHierarchyNode,
+} from "./org-hierarchy";
 
 @Injectable()
 export class AdminService {
@@ -169,6 +176,83 @@ export class AdminService {
     };
   }
 
+  async getTenantUser(tenantId: string, userId: string) {
+    await this.assertTenantExists(tenantId);
+    const row = await this.prisma.user.findFirst({
+      where: { id: userId, tenantId },
+      include: {
+        tenant: { select: { id: true, name: true } },
+        clinicAdminScopes: { include: { clinic: { select: { id: true, nameEn: true } } } },
+      },
+    });
+    if (!row) throw new NotFoundException("User not found");
+    return {
+      id: row.id,
+      tenantId: row.tenantId,
+      tenantName: row.tenant?.name ?? null,
+      email: row.email,
+      displayName: row.displayName,
+      role: row.role,
+      createdAt: row.createdAt.toISOString(),
+      clinicIds: row.clinicAdminScopes.map((s) => s.clinicId),
+      clinics: row.clinicAdminScopes.map((s) => ({ id: s.clinic.id, nameEn: s.clinic.nameEn })),
+    };
+  }
+
+  async updateTenantUser(tenantId: string, userId: string, dto: PlatformPatchTenantUserDto) {
+    await this.assertTenantExists(tenantId);
+    const existing = await this.prisma.user.findFirst({ where: { id: userId, tenantId } });
+    if (!existing) throw new NotFoundException("User not found");
+    if (existing.role === UserRole.PLATFORM_SUPER_ADMIN || dto.role === UserRole.PLATFORM_SUPER_ADMIN) {
+      throw new BadRequestException("Cannot modify platform super administrators through this endpoint");
+    }
+
+    const nextRole = dto.role ?? existing.role;
+    if (nextRole === UserRole.CLINIC_ADMIN || nextRole === UserRole.BRANCH_MANAGER) {
+      if (dto.clinicIds !== undefined && !dto.clinicIds.length) {
+        throw new BadRequestException("clinicIds is required for clinic administrator or branch manager");
+      }
+    }
+
+    if (dto.email !== undefined) {
+      const email = dto.email.toLowerCase().trim();
+      const clash = await this.prisma.user.findFirst({ where: { tenantId, email, NOT: { id: userId } } });
+      if (clash) throw new BadRequestException("Email already in use for this organization");
+    }
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      const u = await tx.user.update({
+        where: { id: userId },
+        data: {
+          ...(dto.email !== undefined ? { email: dto.email.toLowerCase().trim() } : {}),
+          ...(dto.displayName !== undefined ? { displayName: dto.displayName.trim() } : {}),
+          ...(dto.role !== undefined ? { role: dto.role } : {}),
+          ...(dto.password !== undefined ? { passwordHash: bcrypt.hashSync(dto.password, 10) } : {}),
+        },
+      });
+
+      if (dto.clinicIds !== undefined) {
+        await tx.clinicAdminScope.deleteMany({ where: { tenantId, userId } });
+        if (dto.clinicIds.length && (nextRole === UserRole.CLINIC_ADMIN || nextRole === UserRole.BRANCH_MANAGER)) {
+          for (const cid of dto.clinicIds) {
+            const c = await tx.clinic.findFirst({ where: { id: cid, tenantId } });
+            if (!c) throw new BadRequestException(`Invalid clinicId: ${cid}`);
+          }
+          await tx.clinicAdminScope.createMany({
+            data: dto.clinicIds.map((clinicId) => ({ tenantId, userId, clinicId })),
+            skipDuplicates: true,
+          });
+        }
+      } else if (dto.role !== undefined && nextRole !== UserRole.CLINIC_ADMIN && nextRole !== UserRole.BRANCH_MANAGER) {
+        await tx.clinicAdminScope.deleteMany({ where: { tenantId, userId } });
+      }
+
+      return u;
+    });
+
+    return this.getTenantUser(tenantId, row.id);
+  }
+
   async auditLogs(tenantId: string, pageStr: string | undefined, pageSizeStr: string | undefined, qRaw: string | undefined, user: JwtUser) {
     if (user.role !== UserRole.GROUP_ADMIN && user.role !== UserRole.CLINIC_ADMIN && user.role !== UserRole.BRANCH_MANAGER) {
       throw new ForbiddenException("Only administrators may list audit logs");
@@ -244,5 +328,15 @@ export class AdminService {
       where: { key },
       data: { enabled },
     });
+  }
+
+  async getOrgHierarchyForUser(user: JwtUser, tenantId: string): Promise<OrgHierarchyNode> {
+    const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
+    const visible = await resolveVisibleClinicIds(this.prisma, tenantId, scopeIds);
+    return buildTenantHierarchy(this.prisma, tenantId, visible);
+  }
+
+  getPlatformHierarchy(tenantIdFilter?: string): Promise<OrgHierarchyNode> {
+    return buildPlatformHierarchy(this.prisma, tenantIdFilter);
   }
 }

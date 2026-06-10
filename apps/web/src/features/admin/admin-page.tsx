@@ -12,15 +12,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAdminOverviewQuery, useClinicsQuery, useTenantsQuery } from "@/lib/api-hooks";
+import { useAdminOverviewQuery, useClinicQuery, useClinicsQuery, useTenantsQuery } from "@/lib/api-hooks";
 import { ApiError, apiPatch, apiPost } from "@/lib/http";
 import { MIDDLE_EAST_COUNTRY_OPTIONS } from "@/lib/middle-east-countries";
-import { columnFilterIncludes } from "@/lib/utils";
+import { cn, columnFilterIncludes } from "@/lib/utils";
 import { formatClinicName, formatUserRole } from "@/lib/locale-display";
 import { useAuthStore } from "@/stores/auth-store";
+import { ClinicFormFields } from "@/features/clinics/clinic-form-fields";
+import {
+  clinicDetailToForm,
+  clinicFormToCreatePayload,
+  emptyClinicForm,
+  isClinicFormComplete,
+  type ClinicFormValues,
+} from "@/features/clinics/clinic-form-utils";
 import { AdminCreateEmployeePanel } from "./admin-create-employee-panel";
 import { AdminDataExplorerPanel } from "./admin-data-explorer-panel";
 import { AdminGovernancePanel } from "./admin-governance-panel";
+import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel";
 
 const USER_ROLES = [
   "GROUP_ADMIN",
@@ -42,6 +51,7 @@ export function AdminPage() {
   const isClinicAdmin = authUser?.role === "clinic_admin";
   const isBranchManager = authUser?.role === "branch_manager";
   const isPlatformSuperAdmin = Boolean(authUser?.platformSuperAdmin);
+  const isPlatformRole = authUser?.role === "platform_super_admin";
   const overview = useAdminOverviewQuery();
   const { data: clinics = [] } = useClinicsQuery();
   const [tPage, setTPage] = useState(1);
@@ -53,8 +63,13 @@ export function AdminPage() {
     pageSize: tPs,
     sortBy: tSortBy,
     sortOrder: tSortOrder,
-    enabled: isGroupAdmin && isPlatformSuperAdmin,
+    enabled: isPlatformRole,
   });
+
+  const [selectedClinicId, setSelectedClinicId] = useState<string | null>(null);
+  const [editClinicForm, setEditClinicForm] = useState<ClinicFormValues>(emptyClinicForm());
+  const [editClinicErr, setEditClinicErr] = useState<string | null>(null);
+  const selectedClinicDetail = useClinicQuery(selectedClinicId ?? undefined);
 
   const [clParentId, setClParentId] = useState("");
   const [clNameEn, setClNameEn] = useState("");
@@ -142,6 +157,31 @@ export function AdminPage() {
     setClEmail("");
     setClLicense("");
   };
+
+  useEffect(() => {
+    if (!selectedClinicId || !selectedClinicDetail.data) return;
+    setEditClinicForm(clinicDetailToForm(selectedClinicDetail.data));
+    setEditClinicErr(null);
+  }, [selectedClinicId, selectedClinicDetail.data]);
+
+  const patchClinicMut = useMutation({
+    mutationFn: () =>
+      apiPatch(
+        `/api/v1/clinics/${selectedClinicId}`,
+        clinicFormToCreatePayload(editClinicForm, { includeParent: false }),
+      ),
+    onSuccess: () => {
+      setEditClinicErr(null);
+      setSelectedClinicId(null);
+      void qc.invalidateQueries({ queryKey: ["clinics"] });
+      void qc.invalidateQueries({ queryKey: ["org-hierarchy"] });
+    },
+    onError: (e: unknown) => {
+      if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
+        setEditClinicErr(String((e.body as { message?: unknown }).message));
+      } else setEditClinicErr(e instanceof Error ? e.message : String(e));
+    },
+  });
 
   const createClinicMut = useMutation({
     mutationFn: () =>
@@ -256,13 +296,16 @@ export function AdminPage() {
   if (isClinicAdmin || isBranchManager) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("nav.admin", "Administration")}</h1>
-          <p className="text-muted-foreground">
-            {isBranchManager
-              ? t("admin.branchManagerSubtitle", "Staff onboarding and governance for clinics you manage.")
-              : t("admin.clinicAdminSubtitle", "Staff onboarding and clinic governance.")}
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">{t("nav.admin", "Administration")}</h1>
+            <p className="text-muted-foreground">
+              {isBranchManager
+                ? t("admin.branchManagerSubtitle", "Staff onboarding and governance for clinics you manage.")
+                : t("admin.clinicAdminSubtitle", "Staff onboarding and clinic governance.")}
+            </p>
+          </div>
+          <OrgHierarchyPanel scope="tenant" />
         </div>
         <AdminCreateEmployeePanel />
         <AdminGovernancePanel />
@@ -283,7 +326,8 @@ export function AdminPage() {
         </p>
       ) : null}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
         <Button type="button" size="sm" variant={adminSection === "clinics" ? "default" : "outline"} onClick={() => setAdminSection("clinics")}>
           {t("admin.tabClinics", "Clinics & tenants")}
         </Button>
@@ -298,6 +342,8 @@ export function AdminPage() {
         <Button type="button" size="sm" variant={adminSection === "governance" ? "default" : "outline"} onClick={() => setAdminSection("governance")}>
           {t("admin.tabGovernance")}
         </Button>
+        </div>
+        <OrgHierarchyPanel scope="tenant" />
       </div>
 
       {adminSection === "governance" ? (
@@ -320,10 +366,12 @@ export function AdminPage() {
                   <span className="text-muted-foreground">{t("admin.name")}: </span>
                   {overview.data?.currentTenant?.name ?? "—"}
                 </p>
-                <p className="ltr-nums">
-                  <span className="text-muted-foreground">{t("admin.tenantsRegistered")}: </span>
-                  {overview.data?.registeredTenants ?? "—"}
-                </p>
+                {isPlatformRole ? (
+                  <p className="ltr-nums">
+                    <span className="text-muted-foreground">{t("admin.tenantsRegistered")}: </span>
+                    {overview.data?.registeredTenants ?? "—"}
+                  </p>
+                ) : null}
               </CardContent>
             </Card>
 
@@ -479,8 +527,9 @@ export function AdminPage() {
       {adminSection === "clinics" ? (
         <div className="space-y-6">
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
           <CardTitle className="text-base">{t("admin.addClinic", "Clinics: parent & branches")}</CardTitle>
+          <OrgHierarchyPanel scope="tenant" />
         </CardHeader>
         <CardContent>
           <Button type="button" onClick={() => setAddClinicOpen(true)}>
@@ -690,7 +739,14 @@ export function AdminPage() {
               </thead>
               <tbody>
                 {filteredClinics.map((c) => (
-                  <tr key={c.id} className="border-t border-border">
+                  <tr
+                    key={c.id}
+                    className={cn(
+                      "cursor-pointer border-t border-border hover:bg-muted/40",
+                      selectedClinicId === c.id && "bg-muted/50",
+                    )}
+                    onClick={() => setSelectedClinicId(c.id)}
+                  >
                     <td className="px-2 py-2 font-medium">{formatClinicName(c, i18n.language)}</td>
                     <td className="px-2 py-2 text-muted-foreground">{c.parentNameEn ?? t("admin.parentNone", "None")}</td>
                     <td className="px-2 py-2" dir="rtl">
@@ -712,7 +768,46 @@ export function AdminPage() {
         </CardContent>
       </Card>
 
-      {isPlatformSuperAdmin ? (
+      <Dialog open={Boolean(selectedClinicId)} onOpenChange={(open) => !open && setSelectedClinicId(null)}>
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>
+              {t("platform.tabs.editClinic", "Edit clinic")}
+              {selectedClinicDetail.data ? ` — ${formatClinicName(selectedClinicDetail.data, i18n.language)}` : ""}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedClinicDetail.isPending ? (
+            <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+          ) : selectedClinicDetail.isError ? (
+            <p className="text-sm text-destructive">
+              {selectedClinicDetail.error instanceof Error ? selectedClinicDetail.error.message : t("common.error")}
+            </p>
+          ) : (
+            <div className="space-y-4">
+              <ClinicFormFields
+                idPrefix="admin-edit-clinic"
+                values={editClinicForm}
+                onChange={(patch) => setEditClinicForm((prev) => ({ ...prev, ...patch }))}
+              />
+              {editClinicErr ? <p className="text-sm text-destructive">{editClinicErr}</p> : null}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  disabled={!isClinicFormComplete(editClinicForm) || patchClinicMut.isPending}
+                  onClick={() => patchClinicMut.mutate()}
+                >
+                  {t("platform.saveClinic", "Save clinic")}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setSelectedClinicId(null)}>
+                  {t("common.cancel", "Cancel")}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {isPlatformRole ? (
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
           <CardTitle className="text-base">{t("admin.allTenants")}</CardTitle>

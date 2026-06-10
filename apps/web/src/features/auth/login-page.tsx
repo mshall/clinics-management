@@ -4,7 +4,7 @@ import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { loginRequest } from "@/lib/auth-api";
@@ -70,7 +70,6 @@ export function LoginPage() {
         <Card className="w-full max-w-md shadow-lg">
           <CardHeader>
             <CardTitle>{t("auth.signIn")}</CardTitle>
-            <CardDescription>{t("auth.demoHint")}</CardDescription>
           </CardHeader>
           <CardContent>
             <form className="space-y-4" onSubmit={(e) => void handleSubmit(e)}>

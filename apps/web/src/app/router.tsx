@@ -16,7 +16,11 @@ import { EmployeeDetailPage } from "@/features/hr/employee-detail-page";
 import { HrPage } from "@/features/hr/hr-page";
 import { PatientDetailPage } from "@/features/patients/patient-detail-page";
 import { PatientsPage } from "@/features/patients/patients-page";
-import { PlatformAdminPage } from "@/features/platform/platform-admin-page";
+import { PlatformClinicsTab } from "@/features/platform/platform-clinics-tab";
+import { PlatformLayout } from "@/features/platform/platform-layout";
+import { PlatformOrganizationsTab } from "@/features/platform/platform-organizations-tab";
+import { PlatformOverviewPage } from "@/features/platform/platform-overview-page";
+import { PlatformUsersTab } from "@/features/platform/platform-users-tab";
 import { ProfileGate } from "@/features/profile/profile-gate";
 import { ReportsPage } from "@/features/reports/reports-page";
 import { DoctorRevenueGate } from "@/features/revenue/doctor-revenue-gate";
@@ -51,7 +55,16 @@ export const router = createBrowserRouter([
       { path: "hr", element: <HrPage /> },
       { path: "hr/employees/:id", element: <EmployeeDetailPage /> },
       { path: "reports", element: <ReportsPage /> },
-      { path: "platform", element: <PlatformAdminPage /> },
+      {
+        path: "platform",
+        element: <PlatformLayout />,
+        children: [
+          { index: true, element: <PlatformOverviewPage /> },
+          { path: "organizations", element: <PlatformOrganizationsTab /> },
+          { path: "users", element: <PlatformUsersTab /> },
+          { path: "clinics", element: <PlatformClinicsTab /> },
+        ],
+      },
       { path: "admin", element: <AdminPage /> },
     ],
   },

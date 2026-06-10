@@ -5,6 +5,7 @@ import {
   ClipboardList,
   CircleDollarSign,
   Globe2,
+  Hospital,
   LayoutDashboard,
   Receipt,
   Scissors,
@@ -34,9 +35,42 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
   const isPhysician = role === "physician";
   const showRevenue = canViewRevenue(role) && showNavItem(role, "revenue", navTabKeys);
+  const showPlatformNav =
+    showNavItem(role, "platform", navTabKeys) ||
+    showNavItem(role, "platform_organizations", navTabKeys) ||
+    showNavItem(role, "platform_users", navTabKeys) ||
+    showNavItem(role, "platform_clinics", navTabKeys);
 
   return (
     <nav className="flex flex-col gap-0.5 p-3">
+      {showPlatformNav ? (
+        <>
+          {showNavItem(role, "platform", navTabKeys) ? (
+            <NavLink to="/platform" end className={navClass} onClick={() => onNavigate?.()}>
+              <Globe2 className="size-4 shrink-0" />
+              {t("nav.platformOverview")}
+            </NavLink>
+          ) : null}
+          {showNavItem(role, "platform_organizations", navTabKeys) ? (
+            <NavLink to="/platform/organizations" className={navClass} onClick={() => onNavigate?.()}>
+              <Building2 className="size-4 shrink-0" />
+              {t("nav.platformOrganizations")}
+            </NavLink>
+          ) : null}
+          {showNavItem(role, "platform_users", navTabKeys) ? (
+            <NavLink to="/platform/users" className={navClass} onClick={() => onNavigate?.()}>
+              <Users className="size-4 shrink-0" />
+              {t("nav.platformUsers")}
+            </NavLink>
+          ) : null}
+          {showNavItem(role, "platform_clinics", navTabKeys) ? (
+            <NavLink to="/platform/clinics" className={navClass} onClick={() => onNavigate?.()}>
+              <Hospital className="size-4 shrink-0" />
+              {t("nav.platformClinics")}
+            </NavLink>
+          ) : null}
+        </>
+      ) : null}
       {showNavItem(role, "dashboard", navTabKeys) ? (
         <NavLink to="/" end className={navClass} onClick={() => onNavigate?.()}>
           <LayoutDashboard className="size-4 shrink-0" />
@@ -105,12 +139,6 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
         <NavLink to="/reports" className={navClass} onClick={() => onNavigate?.()}>
           <Activity className="size-4 shrink-0" />
           {t("nav.reports")}
-        </NavLink>
-      ) : null}
-      {showNavItem(role, "platform", navTabKeys) ? (
-        <NavLink to="/platform" className={navClass} onClick={() => onNavigate?.()}>
-          <Globe2 className="size-4 shrink-0" />
-          {t("nav.platform")}
         </NavLink>
       ) : null}
       {showNavItem(role, "profile", navTabKeys) ? (

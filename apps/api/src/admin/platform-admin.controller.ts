@@ -10,6 +10,7 @@ import { CreateTenantDto } from "./dto/create-tenant.dto";
 import { CreateTenantUserDto } from "./dto/create-tenant-user.dto";
 import { PatchFeatureFlagDto } from "./dto/patch-feature-flag.dto";
 import { PlatformPatchTenantDto } from "./dto/platform-patch-tenant.dto";
+import { PlatformPatchTenantUserDto } from "./dto/platform-patch-tenant-user.dto";
 import { PlatformAdminService } from "./platform-admin.service";
 
 @ApiTags("admin-platform")
@@ -26,6 +27,13 @@ export class PlatformAdminController {
     return this.platform.getOverview(user);
   }
 
+  @Get("hierarchy")
+  @ApiOperation({ summary: "Platform hierarchy tree (all organizations or one filtered)" })
+  @ApiOkResponse()
+  hierarchy(@CurrentUser() user: JwtUser, @Query("tenantId") tenantId?: string) {
+    return this.platform.getHierarchy(user, tenantId);
+  }
+
   @Get("feature-flags")
   @ApiOperation({ summary: "List global feature flags" })
   @ApiOkResponse()
@@ -38,6 +46,25 @@ export class PlatformAdminController {
   @ApiOkResponse()
   patchFeatureFlag(@CurrentUser() user: JwtUser, @Param("key") key: string, @Body() body: PatchFeatureFlagDto) {
     return this.platform.setFeatureFlag(user, key, body.enabled);
+  }
+
+  @Get("users")
+  @ApiOperation({ summary: "List all organization users (platform-wide)" })
+  @ApiOkResponse()
+  listAllUsers(
+    @CurrentUser() user: JwtUser,
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string,
+    @Query("tenantId") tenantId?: string,
+  ) {
+    return this.platform.listAllUsers(user, page, pageSize, tenantId);
+  }
+
+  @Get("clinics")
+  @ApiOperation({ summary: "List all clinics (platform-wide)" })
+  @ApiOkResponse()
+  listAllClinics(@CurrentUser() user: JwtUser, @Query("tenantId") tenantId?: string) {
+    return this.platform.listAllClinics(user, tenantId);
   }
 
   @Get("tenants")
@@ -128,5 +155,28 @@ export class PlatformAdminController {
   @ApiCreatedResponse()
   createUser(@CurrentUser() user: JwtUser, @Param("tenantId") tenantId: string, @Body() body: CreateTenantUserDto) {
     return this.platform.createUser(user, tenantId, body);
+  }
+
+  @Get("tenants/:tenantId/users/:userId")
+  @ApiOperation({ summary: "Get organization user details" })
+  @ApiOkResponse()
+  getUser(
+    @CurrentUser() user: JwtUser,
+    @Param("tenantId") tenantId: string,
+    @Param("userId") userId: string,
+  ) {
+    return this.platform.getUser(user, tenantId, userId);
+  }
+
+  @Patch("tenants/:tenantId/users/:userId")
+  @ApiOperation({ summary: "Update organization user (email, password, role, clinic scope)" })
+  @ApiOkResponse()
+  patchUser(
+    @CurrentUser() user: JwtUser,
+    @Param("tenantId") tenantId: string,
+    @Param("userId") userId: string,
+    @Body() body: PlatformPatchTenantUserDto,
+  ) {
+    return this.platform.patchUser(user, tenantId, userId, body);
   }
 }

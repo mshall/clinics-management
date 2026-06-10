@@ -3,6 +3,9 @@ import { UserRole } from "@prisma/client";
 /** Must match `NavItemKey` in `apps/web/src/lib/nav-policy.ts`. */
 export const VALID_NAV_TAB_KEYS = new Set([
   "platform",
+  "platform_organizations",
+  "platform_users",
+  "platform_clinics",
   "dashboard",
   "patients",
   "encounters",
@@ -56,7 +59,13 @@ const ROLE_MAX: Record<UserRole, readonly string[]> = {
     "profile",
   ],
   [UserRole.CLINIC_ASSISTANT]: ["patients", "appointments", "encounters", "operations", "expenses", "revenue", "profile"],
-  [UserRole.PLATFORM_SUPER_ADMIN]: ["platform", "profile"],
+  [UserRole.PLATFORM_SUPER_ADMIN]: [
+    "platform",
+    "platform_organizations",
+    "platform_users",
+    "platform_clinics",
+    "profile",
+  ],
 };
 
 export function maxNavTabsForRole(role: UserRole): Set<string> {

@@ -2,6 +2,9 @@ import type { DemoRole } from "@/lib/roles";
 
 export type NavItemKey =
   | "platform"
+  | "platform_organizations"
+  | "platform_users"
+  | "platform_clinics"
   | "dashboard"
   | "patients"
   | "encounters"
@@ -32,7 +35,7 @@ const FULL: NavItemKey[] = [
 ];
 
 const ROLE_KEYS: Record<DemoRole, NavItemKey[]> = {
-  platform_super_admin: ["platform", "profile"],
+  platform_super_admin: ["platform", "platform_organizations", "platform_users", "platform_clinics", "profile"],
   group_admin: FULL,
   branch_manager: FULL,
   finance_officer: FULL,
@@ -65,6 +68,9 @@ export function navKeysForRole(role: DemoRole | undefined): Set<NavItemKey> {
 /** Route path for each tab (used for default landing when dashboard is hidden). */
 export const NAV_ITEM_PATH: Record<NavItemKey, string> = {
   platform: "/platform",
+  platform_organizations: "/platform/organizations",
+  platform_users: "/platform/users",
+  platform_clinics: "/platform/clinics",
   dashboard: "/",
   patients: "/patients",
   encounters: "/encounters",
@@ -81,6 +87,9 @@ export const NAV_ITEM_PATH: Record<NavItemKey, string> = {
 };
 
 const HOME_PRIORITY: NavItemKey[] = [
+  "platform_organizations",
+  "platform_users",
+  "platform_clinics",
   "platform",
   "dashboard",
   "patients",

@@ -71,8 +71,8 @@ export function clinicDetailToForm(d: {
   addressAr: string;
   locationUrl: string;
   logoUrl?: string | null;
-  phone: string;
-  email: string;
+  phone?: string;
+  email?: string;
   licenseNumber: string;
 }): ClinicFormValues {
   return {
@@ -85,8 +85,8 @@ export function clinicDetailToForm(d: {
     addressAr: d.addressAr,
     locationUrl: d.locationUrl,
     logoUrl: d.logoUrl ?? "",
-    phone: d.phone,
-    email: d.email,
+    phone: d.phone ?? "",
+    email: d.email ?? "",
     licenseNumber: d.licenseNumber,
   };
 }

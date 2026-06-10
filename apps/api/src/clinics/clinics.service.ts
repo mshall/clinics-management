@@ -397,7 +397,8 @@ export class ClinicsService {
     };
   }
 
-  async update(tenantId: string, id: string, dto: PatchClinicDto) {
+  async update(tenantId: string, id: string, dto: PatchClinicDto, user?: JwtUser) {
+    if (user) await this.assertClinicVisible(tenantId, id, user);
     const existing = await this.prisma.clinic.findFirst({ where: { id, tenantId } });
     if (!existing) throw new NotFoundException("Clinic not found");
 
