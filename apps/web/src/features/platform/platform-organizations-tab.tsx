@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { PasswordInput } from "@/components/password-input";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import { PlatformOrgSettingsPanel } from "@/features/platform/platform-org-setti
 import { apiErrorMessage, type TenantRow } from "@/features/platform/platform-shared";
 import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel";
 import { apiGet, apiPost } from "@/lib/http";
+import { cn } from "@/lib/utils";
 import type { Paginated } from "@/lib/paginated";
 
 type DialogMode = null | "create" | { edit: string };
@@ -92,13 +94,50 @@ export function PlatformOrganizationsTab() {
   const passwordTooShort = gaPassword.length > 0 && gaPassword.length < 8;
   const partialClinic = createOrgWithHq && hasPartialClinicForm(hqForm);
 
-  const canCreateOrg =
-    tenantName.trim() &&
-    tenantNameAr.trim() &&
-    gaEmail.trim() &&
-    gaPassword.length >= 8 &&
-    gaName.trim() &&
-    !partialClinic;
+  const collectCreateOrgErrors = useCallback((): string[] => {
+    const errors: string[] = [];
+    if (!tenantName.trim()) {
+      errors.push(t("platform.errorOrgNameEn", "Organization name (English) is required."));
+    }
+    if (!tenantNameAr.trim()) {
+      errors.push(t("platform.errorOrgNameAr", "Organization name (Arabic) is required."));
+    }
+    if (!gaEmail.trim()) {
+      errors.push(t("platform.errorGroupAdminEmail", "Group admin email is required."));
+    }
+    if (!gaPassword.trim()) {
+      errors.push(t("platform.errorGroupAdminPassword", "Group admin password is required."));
+    } else if (gaPassword.length < 8) {
+      errors.push(t("platform.groupAdminPasswordMin", "Group admin password must be at least 8 characters."));
+    }
+    if (!gaName.trim()) {
+      errors.push(t("platform.errorGroupAdminName", "Group admin display name is required."));
+    }
+    if (partialClinic) {
+      errors.push(
+        t(
+          "platform.partialClinicBlocked",
+          "Complete all required clinic fields or clear them — a partial clinic cannot be saved.",
+        ),
+      );
+    }
+    return errors;
+  }, [gaEmail, gaName, gaPassword, partialClinic, t, tenantName, tenantNameAr]);
+
+  const canCreateOrg = collectCreateOrgErrors().length === 0;
+
+  const handleCreateOrg = () => {
+    if (createTenantMut.isPending) return;
+    const errors = collectCreateOrgErrors();
+    if (errors.length > 0) {
+      toast.error(t("platform.createOrgValidationTitle", "Complete the form to create the organization"), {
+        description: errors.join("\n"),
+        duration: 8000,
+      });
+      return;
+    }
+    createTenantMut.mutate();
+  };
 
   return (
     <div className="space-y-6">
@@ -227,7 +266,12 @@ export function PlatformOrganizationsTab() {
               ) : null}
             </div>
             <div className="md:col-span-2 flex flex-wrap gap-2">
-              <Button type="button" disabled={!canCreateOrg || createTenantMut.isPending} onClick={() => createTenantMut.mutate()}>
+              <Button
+                type="button"
+                disabled={createTenantMut.isPending}
+                className={cn(!canCreateOrg && !createTenantMut.isPending && "opacity-60")}
+                onClick={handleCreateOrg}
+              >
                 {t("platform.createOrgBtn")}
               </Button>
               <Button type="button" variant="outline" onClick={closeDialog}>
