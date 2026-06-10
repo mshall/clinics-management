@@ -13,6 +13,7 @@ import { ClinicFormFields } from "@/features/clinics/clinic-form-fields";
 import {
   clinicDetailToForm,
   clinicFormToCreatePayload,
+  clinicFormToPatchPayload,
   collectClinicFormErrors,
   emptyClinicForm,
   type ClinicFormValues,
@@ -75,7 +76,7 @@ export function PlatformClinicsTab() {
       apiGet<{ id: string; nameEn: string; parentClinicId: string | null }[]>(
         `/api/v1/admin/platform/tenants/${activeTenantId}/clinics`,
       ),
-    enabled: Boolean(activeTenantId) && isCreate,
+    enabled: Boolean(activeTenantId) && dialogOpen,
   });
 
   const clinicDetailQuery = useQuery({
@@ -88,6 +89,22 @@ export function PlatformClinicsTab() {
   const parentClinicItems: PickListItem[] = useMemo(
     () => (orgClinicsQuery.data ?? []).filter(isRootClinic).map((c) => ({ value: c.id, label: c.nameEn })),
     [orgClinicsQuery.data],
+  );
+
+  const editParentClinicItems: PickListItem[] = useMemo(
+    () =>
+      (orgClinicsQuery.data ?? [])
+        .filter((c) => isRootClinic(c) && c.id !== editSelection?.clinicId)
+        .map((c) => ({ value: c.id, label: c.nameEn })),
+    [orgClinicsQuery.data, editSelection?.clinicId],
+  );
+
+  const editBranchCount = useMemo(
+    () =>
+      editSelection
+        ? (orgClinicsQuery.data ?? []).filter((c) => c.parentClinicId === editSelection.clinicId).length
+        : 0,
+    [orgClinicsQuery.data, editSelection],
   );
 
   useEffect(() => {
@@ -126,7 +143,7 @@ export function PlatformClinicsTab() {
     mutationFn: () =>
       apiPatch(
         `/api/v1/admin/platform/tenants/${editSelection!.tenantId}/clinics/${editSelection!.clinicId}`,
-        clinicFormToCreatePayload(form, { includeParent: false }),
+        clinicFormToPatchPayload(form),
       ),
     onSuccess: () => {
       setClErr(null);
@@ -291,8 +308,10 @@ export function PlatformClinicsTab() {
                     idPrefix={isEdit ? "edit-clinic" : "new-clinic"}
                     values={form}
                     onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
-                    showParentPicker={isCreate}
-                    parentClinicItems={parentClinicItems}
+                    showStructureEditor={isCreate || isEdit}
+                    parentClinicItems={isEdit ? editParentClinicItems : parentClinicItems}
+                    currentKind={isEdit ? clinicDetailQuery.data?.kind : undefined}
+                    branchCount={isEdit ? editBranchCount : 0}
                   />
                   <div className="flex flex-wrap gap-2">
                     <Button

@@ -1,7 +1,21 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import { Transform } from "class-transformer";
+import { Allow, IsEmail, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
 
 export class PatchClinicDto {
+  @ApiPropertyOptional({
+    description: "Parent clinic id; set null to make a root-level clinic, or a root clinic id to attach as branch",
+    nullable: true,
+  })
+  @Transform(({ value }) => {
+    if (value === null) return null;
+    if (value === undefined) return undefined;
+    if (typeof value === "string" && !value.trim()) return null;
+    return typeof value === "string" ? value.trim() : value;
+  })
+  @Allow()
+  parentClinicId?: string | null;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

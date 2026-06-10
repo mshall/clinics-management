@@ -4,24 +4,37 @@ import { SearchablePickList, type PickListItem } from "@/components/searchable-p
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MIDDLE_EAST_COUNTRY_OPTIONS } from "@/lib/middle-east-countries";
+import { clinicKindLabel, type ClinicKind } from "@/lib/clinic-kind";
 import type { ClinicFormValues } from "./clinic-form-utils";
 
 type ClinicFormFieldsProps = {
   values: ClinicFormValues;
   onChange: (patch: Partial<ClinicFormValues>) => void;
+  /** Show clinic structure type dropdown and optional parent picker (create + edit). */
+  showStructureEditor?: boolean;
+  /** @deprecated Use showStructureEditor */
   showParentPicker?: boolean;
   parentClinicItems?: PickListItem[];
+  /** Current saved kind (edit dialog). */
+  currentKind?: ClinicKind;
+  /** When > 0, this clinic cannot be converted to a branch. */
+  branchCount?: number;
   idPrefix?: string;
 };
 
 export function ClinicFormFields({
   values,
   onChange,
+  showStructureEditor = false,
   showParentPicker = false,
   parentClinicItems = [],
+  currentKind,
+  branchCount = 0,
   idPrefix = "clinic",
 }: ClinicFormFieldsProps) {
   const { t } = useTranslation();
+  const structureVisible = showStructureEditor || showParentPicker;
+  const branchOptionDisabled = branchCount > 0;
 
   const countryPickItems: PickListItem[] = useMemo(
     () => MIDDLE_EAST_COUNTRY_OPTIONS.map((o) => ({ value: o.value, label: `${o.label} (${o.value})` })),
@@ -30,42 +43,53 @@ export function ClinicFormFields({
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      {showParentPicker ? (
+      {structureVisible ? (
         <div className="space-y-3 sm:col-span-2">
-          <div className="space-y-2">
-            <Label>{t("admin.clinicPlacement", "Clinic structure")}</Label>
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border px-3 py-2 text-sm">
-                <input
-                  type="radio"
-                  name={`${idPrefix}-placement`}
-                  className="mt-1"
-                  checked={values.clinicPlacement === "standalone"}
-                  onChange={() => onChange({ clinicPlacement: "standalone", parentClinicId: "" })}
-                />
-                <span>
-                  <span className="font-medium">{t("admin.clinicPlacementStandalone", "Standalone clinic")}</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    {t("admin.clinicPlacementStandaloneHint", "Same level as other root clinics in the organization.")}
-                  </span>
-                </span>
-              </label>
-              <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border px-3 py-2 text-sm">
-                <input
-                  type="radio"
-                  name={`${idPrefix}-placement`}
-                  className="mt-1"
-                  checked={values.clinicPlacement === "branch"}
-                  onChange={() => onChange({ clinicPlacement: "branch" })}
-                />
-                <span>
-                  <span className="font-medium">{t("admin.clinicPlacementBranch", "Branch of an existing clinic")}</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    {t("admin.clinicPlacementBranchHint", "Attach under a root-level clinic as a child location.")}
-                  </span>
-                </span>
-              </label>
+          {currentKind ? (
+            <div className="space-y-1">
+              <Label>{t("admin.clinicType", "Clinic type")}</Label>
+              <p className="text-sm font-medium">{clinicKindLabel(currentKind, t)}</p>
+              {branchCount > 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  {t("admin.clinicHasBranchesHint", "{{count}} branch(es) use this clinic as parent.", {
+                    count: branchCount,
+                  })}
+                </p>
+              ) : null}
             </div>
+          ) : null}
+          <div className="space-y-2">
+            <Label htmlFor={`${idPrefix}-placement`} required>
+              {t("admin.clinicPlacement", "Clinic structure")}
+            </Label>
+            <select
+              id={`${idPrefix}-placement`}
+              className="flex h-10 w-full max-w-md rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={values.clinicPlacement}
+              onChange={(e) => {
+                const next = e.target.value as ClinicFormValues["clinicPlacement"];
+                if (next === "standalone") onChange({ clinicPlacement: "standalone", parentClinicId: "" });
+                else onChange({ clinicPlacement: "branch" });
+              }}
+            >
+              <option value="standalone">{t("admin.clinicPlacementStandalone", "Standalone clinic")}</option>
+              <option value="branch" disabled={branchOptionDisabled}>
+                {t("admin.clinicPlacementBranch", "Branch of an existing clinic")}
+              </option>
+            </select>
+            <p className="text-xs text-muted-foreground">
+              {values.clinicPlacement === "standalone"
+                ? t("admin.clinicPlacementStandaloneHint", "Same level as other root clinics in the organization.")
+                : t("admin.clinicPlacementBranchHint", "Attach under a root-level clinic as a child location.")}
+            </p>
+            {branchOptionDisabled ? (
+              <p className="text-xs text-muted-foreground">
+                {t(
+                  "admin.clinicCannotBecomeBranch",
+                  "Clinics with branches cannot be converted to a branch. Reassign or remove branches first.",
+                )}
+              </p>
+            ) : null}
           </div>
           {values.clinicPlacement === "branch" ? (
             <div className="space-y-2">

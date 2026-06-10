@@ -23,6 +23,7 @@ import { ClinicFormFields } from "@/features/clinics/clinic-form-fields";
 import {
   clinicDetailToForm,
   clinicFormToCreatePayload,
+  clinicFormToPatchPayload,
   collectClinicFormErrors,
   emptyClinicForm,
   type ClinicFormValues,
@@ -112,6 +113,19 @@ export function AdminPage() {
     [clinics, i18n.language],
   );
 
+  const editParentClinicPickItems: PickListItem[] = useMemo(
+    () =>
+      clinics
+        .filter((c) => isRootClinic(c) && c.id !== selectedClinicId)
+        .map((c) => ({ value: c.id, label: formatClinicName(c, i18n.language) })),
+    [clinics, i18n.language, selectedClinicId],
+  );
+
+  const editBranchCount = useMemo(
+    () => (selectedClinicId ? clinics.filter((c) => c.parentClinicId === selectedClinicId).length : 0),
+    [clinics, selectedClinicId],
+  );
+
   const filteredClinics = useMemo(() => {
     return clinics.filter((c) => {
       if (cfNameEn.trim() && !columnFilterIncludes(c.nameEn, cfNameEn)) return false;
@@ -137,10 +151,7 @@ export function AdminPage() {
 
   const patchClinicMut = useMutation({
     mutationFn: () =>
-      apiPatch(
-        `/api/v1/clinics/${selectedClinicId}`,
-        clinicFormToCreatePayload(editClinicForm, { includeParent: false }),
-      ),
+      apiPatch(`/api/v1/clinics/${selectedClinicId}`, clinicFormToPatchPayload(editClinicForm)),
     onSuccess: () => {
       setEditClinicErr(null);
       setSelectedClinicId(null);
@@ -535,7 +546,7 @@ export function AdminPage() {
                 idPrefix="admin-add-clinic"
                 values={addClinicForm}
                 onChange={(patch) => setAddClinicForm((prev) => ({ ...prev, ...patch }))}
-                showParentPicker
+                showStructureEditor
                 parentClinicItems={parentClinicPickItems}
               />
               {clinicErr ? <p className="text-sm text-destructive">{clinicErr}</p> : null}
@@ -645,7 +656,9 @@ export function AdminPage() {
                     <td className="px-2 py-2">{c.city}</td>
                     <td className="px-2 py-2 ltr-nums">{c.country}</td>
                     <td className="px-2 py-2">
-                      <Badge variant="secondary">{c.kind}</Badge>
+                      <Badge variant={c.kind === "branch" ? "secondary" : c.kind === "parent" ? "default" : "outline"}>
+                        {clinicKindLabel(c.kind, t)}
+                      </Badge>
                     </td>
                   </tr>
                 ))}
@@ -678,6 +691,10 @@ export function AdminPage() {
                 idPrefix="admin-edit-clinic"
                 values={editClinicForm}
                 onChange={(patch) => setEditClinicForm((prev) => ({ ...prev, ...patch }))}
+                showStructureEditor
+                parentClinicItems={editParentClinicPickItems}
+                currentKind={selectedClinicDetail.data?.kind}
+                branchCount={editBranchCount}
               />
               {editClinicErr ? <p className="text-sm text-destructive">{editClinicErr}</p> : null}
               <div className="flex flex-wrap gap-2">

@@ -82,6 +82,28 @@ export function hasPartialClinicForm(v: ClinicFormValues): boolean {
   );
 }
 
+export function clinicFormToPatchPayload(v: ClinicFormValues) {
+  const body: Record<string, string | null | undefined> = {
+    nameEn: v.nameEn.trim(),
+    nameAr: v.nameAr.trim(),
+    city: v.city.trim(),
+    country: v.country.trim() || "AE",
+    addressEn: v.addressEn.trim(),
+    addressAr: v.addressAr.trim(),
+    locationUrl: v.locationUrl.trim(),
+    logoUrl: v.logoUrl.trim() || undefined,
+    phone: v.phone.trim() || undefined,
+    email: v.email.trim() || undefined,
+    licenseNumber: v.licenseNumber.trim() || undefined,
+  };
+  if (v.clinicPlacement === "standalone") {
+    body.parentClinicId = null;
+  } else {
+    body.parentClinicId = v.parentClinicId.trim();
+  }
+  return body;
+}
+
 export function clinicFormToCreatePayload(v: ClinicFormValues, opts?: { includeParent?: boolean }) {
   const body: Record<string, string | undefined> = {
     nameEn: v.nameEn.trim(),

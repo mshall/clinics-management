@@ -407,10 +407,31 @@ export class ClinicsService {
 
   async update(tenantId: string, id: string, dto: PatchClinicDto, user?: JwtUser) {
     if (user) await this.assertClinicVisible(tenantId, id, user);
-    const existing = await this.prisma.clinic.findFirst({ where: { id, tenantId } });
+    const existing = await this.prisma.clinic.findFirst({
+      where: { id, tenantId },
+      include: { _count: { select: { branches: true } } },
+    });
     if (!existing) throw new NotFoundException("Clinic not found");
 
     const data: Record<string, string | null> = {};
+    if (dto.parentClinicId !== undefined) {
+      if (dto.parentClinicId === null) {
+        if (existing._count.branches > 0) {
+          throw new BadRequestException("Cannot detach parent: this clinic has branches assigned to it");
+        }
+        data.parentClinicId = null;
+      } else {
+        if (dto.parentClinicId === id) throw new BadRequestException("A clinic cannot be its own parent");
+        const parent = await this.prisma.clinic.findFirst({
+          where: { id: dto.parentClinicId, tenantId },
+        });
+        if (!parent) throw new BadRequestException("Invalid parentClinicId");
+        if (parent.parentClinicId) {
+          throw new BadRequestException("Branches can only be attached under a root-level clinic");
+        }
+        data.parentClinicId = dto.parentClinicId;
+      }
+    }
     if (dto.nameEn !== undefined) data.nameEn = dto.nameEn.trim();
     if (dto.nameAr !== undefined) data.nameAr = dto.nameAr.trim();
     if (dto.country !== undefined) data.country = dto.country.trim() || "AE";
