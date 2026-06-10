@@ -29,9 +29,15 @@ export class PlatformAdminService {
   }
 
   private async assertTenant(tenantId: string) {
-    const row = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
+    const id = tenantId.trim();
+    if (!id) throw new NotFoundException("Organization not found");
+    const row = await this.prisma.tenant.findUnique({ where: { id } });
     if (!row) throw new NotFoundException("Organization not found");
     return row;
+  }
+
+  private normalizeTenantId(tenantId: string): string {
+    return tenantId.trim();
   }
 
   async getOverview(user: JwtUser) {
@@ -82,8 +88,9 @@ export class PlatformAdminService {
 
   async getTenant(user: JwtUser, tenantId: string) {
     this.assertPlatform(user);
+    const id = this.normalizeTenantId(tenantId);
     const row = await this.prisma.tenant.findUnique({
-      where: { id: tenantId },
+      where: { id },
       select: {
         id: true,
         name: true,
@@ -196,7 +203,8 @@ export class PlatformAdminService {
 
   async patchTenant(user: JwtUser, tenantId: string, dto: PlatformPatchTenantDto) {
     this.assertPlatform(user);
-    await this.assertTenant(tenantId);
+    const id = this.normalizeTenantId(tenantId);
+    await this.assertTenant(id);
     const data: {
       name?: string;
       nameAr?: string;
@@ -210,16 +218,14 @@ export class PlatformAdminService {
       data.name = n;
     }
     if (dto.nameAr !== undefined) {
-      const n = dto.nameAr.trim();
-      if (!n) throw new BadRequestException("nameAr cannot be empty");
-      data.nameAr = n;
+      data.nameAr = dto.nameAr.trim();
     }
     if (dto.baseCurrency !== undefined) data.baseCurrency = dto.baseCurrency.trim();
     if (dto.defaultLocale !== undefined) data.defaultLocale = dto.defaultLocale.trim();
     if (dto.defaultVisitFee !== undefined) data.defaultVisitFee = dto.defaultVisitFee;
     if (!Object.keys(data).length) throw new BadRequestException("No supported fields to update");
 
-    const row = await this.prisma.tenant.update({ where: { id: tenantId }, data });
+    const row = await this.prisma.tenant.update({ where: { id }, data });
     return {
       id: row.id,
       name: row.name,

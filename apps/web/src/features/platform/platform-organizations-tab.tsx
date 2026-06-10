@@ -307,7 +307,9 @@ export function PlatformOrganizationsTab() {
               ))}
             </div>
           ) : null}
-          {editTenantId ? <PlatformOrgSettingsPanel tenantId={editTenantId} onSaved={closeDialog} /> : null}
+          {editTenantId ? (
+            <PlatformOrgSettingsPanel key={editTenantId} tenantId={editTenantId} onSaved={closeDialog} />
+          ) : null}
         </DialogContent>
       </Dialog>
     </div>
