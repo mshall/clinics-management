@@ -12,11 +12,16 @@ import * as rds from "aws-cdk-lib/aws-rds";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
+import * as ses from "aws-cdk-lib/aws-ses";
 import type { Construct } from "constructs";
 
 export interface KiorlyClinicsManagementStackProps extends cdk.StackProps {
   /** AWS region for VPC/RDS/App Runner (Frankfurt = eu-central-1). */
   deploymentRegion: string;
+  /** Email address for pre-deploy DB backup notifications (SES must verify this identity). */
+  backupEmailTo?: string;
+  /** SES From address; defaults to backupEmailTo when omitted. */
+  backupEmailFrom?: string;
 }
 
 export class KiorlyClinicsManagementStack extends cdk.Stack {
@@ -24,6 +29,14 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     super(scope, id, props);
 
     const { deploymentRegion } = props;
+    const backupEmailTo =
+      props.backupEmailTo ??
+      (this.node.tryGetContext("backupEmailTo") as string | undefined) ??
+      "mohamed.s.elshall2011@gmail.com";
+    const backupEmailFrom =
+      props.backupEmailFrom ??
+      (this.node.tryGetContext("backupEmailFrom") as string | undefined) ??
+      backupEmailTo;
 
     const vpc = new ec2.Vpc(this, "Vpc", {
       maxAzs: 2,
@@ -87,8 +100,8 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       multiAz: false,
       credentials: rds.Credentials.fromGeneratedSecret("clinicapp"),
       databaseName: "clinic",
-      backupRetention: cdk.Duration.days(3),
-      deleteAutomatedBackups: true,
+      backupRetention: cdk.Duration.days(7),
+      deleteAutomatedBackups: false,
       removalPolicy: cdk.RemovalPolicy.SNAPSHOT,
       deletionProtection: false,
       cloudwatchLogsExports: ["postgresql"],
@@ -130,6 +143,67 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       privateDnsEnabled: true,
     });
     stsEndpoint.connections.allowFrom(connectorSg, ec2.Port.tcp(443), "AWS SDK credential chain");
+
+    const sesEndpoint = vpc.addInterfaceEndpoint("SesEndpoint", {
+      service: ec2.InterfaceVpcEndpointAwsService.SES,
+      subnets: awsApiEndpointSubnets,
+      privateDnsEnabled: true,
+    });
+
+    const dbBackupBucket = new s3.Bucket(this, "DbBackupBucket", {
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      lifecycleRules: [{ expiration: cdk.Duration.days(30) }],
+    });
+
+    const backupLambdaSg = new ec2.SecurityGroup(this, "DbBackupLambdaSg", {
+      vpc,
+      description: "Pre-deploy pg_dump Lambda — RDS + VPC endpoints",
+      allowAllOutbound: true,
+    });
+    db.connections.allowFrom(backupLambdaSg, ec2.Port.tcp(5432), "Pre-deploy backup Lambda to PostgreSQL");
+    sesEndpoint.connections.allowFrom(backupLambdaSg, ec2.Port.tcp(443), "Backup Lambda to SES");
+    secretsManagerEndpoint.connections.allowFrom(
+      backupLambdaSg,
+      ec2.Port.tcp(443),
+      "Backup Lambda GetSecretValue",
+    );
+
+    new ses.EmailIdentity(this, "BackupEmailFromIdentity", {
+      identity: ses.Identity.email(backupEmailFrom),
+    });
+    if (backupEmailFrom.toLowerCase() !== backupEmailTo.toLowerCase()) {
+      new ses.EmailIdentity(this, "BackupEmailToIdentity", {
+        identity: ses.Identity.email(backupEmailTo),
+      });
+    }
+
+    const dbBackupFn = new lambda.DockerImageFunction(this, "DbBackupFn", {
+      code: lambda.DockerImageCode.fromImageAsset(path.join(__dirname, "..", "lambda", "db-backup")),
+      timeout: cdk.Duration.minutes(10),
+      memorySize: 1024,
+      vpc,
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
+      securityGroups: [backupLambdaSg],
+      environment: {
+        DB_SECRET_ARN: db.secret!.secretArn,
+        BACKUP_EMAIL_TO: backupEmailTo,
+        BACKUP_EMAIL_FROM: backupEmailFrom,
+        BACKUP_BUCKET: dbBackupBucket.bucketName,
+      },
+    });
+    db.secret!.grantRead(dbBackupFn);
+    dbBackupBucket.grantReadWrite(dbBackupFn);
+    dbBackupFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["ses:SendRawEmail", "ses:SendEmail"],
+        resources: ["*"],
+      }),
+    );
+    dbBackupFn.node.addDependency(db);
+    dbBackupFn.node.addDependency(sesEndpoint);
 
     // App Runner tasks often still resolve regional hostnames to public IPs; private DNS for VPCE
     // is not always applied the same as on EC2. Pass VPCE DNS hostnames only (no https://, no zone id)
@@ -201,7 +275,8 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
               { name: "DB_SECRET_ARN", value: db.secret!.secretArn },
               // Apply migrations on each deploy so RDS is never missing tables (avoids silent boot + broken API).
               { name: "PRISMA_MIGRATE_ON_BOOT", value: "true" },
-              { name: "PRISMA_SEED_ON_BOOT", value: "true" },
+              // Never run the destructive demo seed on AWS — it wipes all tenants. Seed locally with db:setup.
+              { name: "PRISMA_SEED_ON_BOOT", value: "false" },
               { name: "UPLOAD_STORAGE", value: "s3" },
               { name: "S3_UPLOAD_BUCKET", value: apiUploadsBucket.bucketName },
             ],
@@ -355,6 +430,16 @@ function handler(event) {
 
     new cdk.CfnOutput(this, "DbSecretArn", {
       value: db.secret!.secretArn,
+    });
+
+    new cdk.CfnOutput(this, "DbBackupFunctionName", {
+      value: dbBackupFn.functionName,
+      description: "Pre-deploy pg_dump Lambda (emails backup before CI deploy)",
+    });
+
+    new cdk.CfnOutput(this, "DbBackupEmailTo", {
+      value: backupEmailTo,
+      description: "Verify this address in SES (inbox link) before backup emails succeed",
     });
 
     new cdk.CfnOutput(this, "RegionNote", {

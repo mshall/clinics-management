@@ -61,7 +61,9 @@ Users
    npx prisma migrate deploy
    ```
 
-5. **Seeding:** run `npx prisma db seed` **only** in non-production if you want demo data; **never** run destructive demo seed against a real tenant without review.
+5. **Seeding:** run `npx prisma db seed` **only** on local/dev machines (`npm run db:setup -w api`). **AWS App Runner sets `PRISMA_SEED_ON_BOOT=false`** so deploys apply migrations only and **never** run the destructive demo seed.
+
+6. **Pre-deploy backups:** CI invokes a VPC Lambda (`DbBackupFn`) before each CDK deploy. It `pg_dump`s PostgreSQL, emails a `.sql.gz` attachment to `mohamed.s.elshall2011@gmail.com` (or `-c backupEmailTo=...`), and stores a copy in S3. **Verify the SES email identity** (inbox link from AWS) before the first backup. RDS automated backups are retained **7 days**.
 
 ---
 

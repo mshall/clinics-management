@@ -118,6 +118,7 @@ if (process.env.PRISMA_MIGRATE_ON_BOOT === "true") {
 
 if (process.env.PRISMA_SEED_ON_BOOT === "true") {
   console.error("[boot] PRISMA_SEED_ON_BOOT=true — running seed script …");
+  console.error("[boot] WARNING: demo seed deletes all tenants/clinics/users — never enable on AWS production.");
   const seedScript = path.join(__dirname, "prisma", "seed.ts");
   const seedResult = spawnSync("npx", ["tsx", seedScript], {
     stdio: "inherit",
