@@ -39,7 +39,7 @@ cat "$OUT"
 echo ""
 
 if grep -q '"FunctionError"' "$INVOKE_META"; then
-  echo "::error::Pre-deploy database backup Lambda failed. Verify SES identity for mohamed.s.elshall2011@gmail.com and check CloudWatch logs."
+  echo "::error::Pre-deploy database backup Lambda failed. Verify SES identity for kiorlyclinics@gmail.com and check CloudWatch logs."
   rm -f "$OUT" "$INVOKE_META"
   exit 1
 fi

@@ -22,7 +22,7 @@
 #
 # 5) After the first deploy with the backup Lambda, verify SES email identity:
 #    AWS Console > SES (eu-central-1) > Verified identities — click the link sent to
-#    mohamed.s.elshall2011@gmail.com (or override with CDK context backupEmailTo=...).
+#    kiorlyclinics@gmail.com (or override with CDK context backupEmailTo=...).
 #    Pre-deploy CI invokes DbBackupFn to pg_dump RDS and email the gzip before each deploy.
 #    App Runner sets PRISMA_SEED_ON_BOOT=false so deploys never wipe existing DB rows.
 #

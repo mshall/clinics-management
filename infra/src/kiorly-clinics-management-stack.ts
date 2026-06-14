@@ -32,7 +32,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     const backupEmailTo =
       props.backupEmailTo ??
       (this.node.tryGetContext("backupEmailTo") as string | undefined) ??
-      "mohamed.s.elshall2011@gmail.com";
+      "kiorlyclinics@gmail.com";
     const backupEmailFrom =
       props.backupEmailFrom ??
       (this.node.tryGetContext("backupEmailFrom") as string | undefined) ??
