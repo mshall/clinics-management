@@ -160,7 +160,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
 
     const backupLambdaSg = new ec2.SecurityGroup(this, "DbBackupLambdaSg", {
       vpc,
-      description: "Pre-deploy pg_dump Lambda — RDS + VPC endpoints",
+      description: "Pre-deploy pg_dump Lambda to RDS and VPC endpoints",
       allowAllOutbound: true,
     });
     db.connections.allowFrom(backupLambdaSg, ec2.Port.tcp(5432), "Pre-deploy backup Lambda to PostgreSQL");
