@@ -27,11 +27,12 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { PatientDto } from "../common/dto/patient.dto";
+import { PatientDocumentDto } from "../common/dto/patient-document.dto";
 import { CreatePatientDto } from "./dto/create-patient.dto";
 import { UpdatePatientDto } from "./dto/update-patient.dto";
 import { PatientsService } from "./patients.service";
 
-const NATIONAL_ID_DOC_UPLOAD_LIMIT = 15 * 1024 * 1024;
+const PATIENT_DOC_UPLOAD_LIMIT = 15 * 1024 * 1024;
 
 @ApiTags("patients")
 @ApiBearerAuth("bearer")
@@ -108,7 +109,7 @@ export class PatientsController {
   @UseInterceptors(
     FileInterceptor("file", {
       storage: memoryStorage(),
-      limits: { fileSize: NATIONAL_ID_DOC_UPLOAD_LIMIT },
+      limits: { fileSize: PATIENT_DOC_UPLOAD_LIMIT },
     })
   )
   @ApiOkResponse({ type: PatientDto })
@@ -118,6 +119,51 @@ export class PatientsController {
     @UploadedFile() file?: Express.Multer.File
   ) {
     return this.patients.attachNationalIdDocument(requireTenantId(user), id, user, file);
+  }
+
+  @Post(":id/documents")
+  @ApiOperation({ summary: "Attach a document with description to patient record" })
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        file: { type: "string", format: "binary" },
+        description: { type: "string", description: "Required description for this document" },
+      },
+      required: ["file", "description"],
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor("file", {
+      storage: memoryStorage(),
+      limits: { fileSize: PATIENT_DOC_UPLOAD_LIMIT },
+    }),
+  )
+  @ApiCreatedResponse({ type: PatientDocumentDto })
+  uploadDocument(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Body("description") description: string,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.patients.attachDocument(requireTenantId(user), id, user, description, file);
+  }
+
+  @Get(":id/documents/:documentId")
+  @ApiOperation({ summary: "Download a patient-attached document" })
+  @ApiOkResponse({ description: "Binary file stream" })
+  async getDocument(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Param("documentId") documentId: string,
+  ): Promise<StreamableFile> {
+    const meta = await this.patients.getDocumentMeta(requireTenantId(user), id, documentId, user);
+    const stream = await this.patients.openDocumentReadStream(meta.storageKey);
+    return new StreamableFile(stream, {
+      type: meta.mimeType,
+      disposition: `attachment; filename*=UTF-8''${encodeURIComponent(meta.originalFileName)}`,
+    });
   }
 
   @Patch(":id")

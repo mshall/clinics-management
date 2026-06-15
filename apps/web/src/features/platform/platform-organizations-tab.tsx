@@ -219,8 +219,8 @@ export function PlatformOrganizationsTab() {
                 value={tenantLocale}
                 onChange={(e) => setTenantLocale(e.target.value)}
               >
-                <option value="en">English</option>
-                <option value="ar">Arabic</option>
+                <option value="en">{t("common.english")}</option>
+                <option value="ar">{t("common.arabic")}</option>
               </select>
             </div>
             <div className="md:col-span-2 rounded-md border border-border p-4 space-y-3">

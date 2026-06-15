@@ -10,6 +10,7 @@ import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useAuthStore } from "@/stores/auth-store";
+import { formatUserRole } from "@/lib/locale-display";
 
 export function AppShell() {
   const { t } = useTranslation();
@@ -49,7 +50,7 @@ export function AppShell() {
           <div className="flex items-center gap-2 md:hidden">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
-                <Button variant="outline" size="icon" aria-label="Menu">
+                <Button variant="outline" size="icon" aria-label={t("common.menu")}>
                   <Menu className="size-5" />
                 </Button>
               </SheetTrigger>
@@ -70,7 +71,7 @@ export function AppShell() {
           <div className="ms-auto flex items-center gap-2">
             {user ? (
               <span className="hidden max-w-[12rem] truncate text-sm text-muted-foreground sm:inline">
-                {user.displayName} · {user.role.replace("_", " ")}
+                {user.displayName} · {formatUserRole(user.role, t)}
               </span>
             ) : null}
             <ThemeSwitcher />

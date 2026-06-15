@@ -133,8 +133,8 @@ export function PlatformOrgSettingsPanel({
               value={editLocale}
               onChange={(e) => setEditLocale(e.target.value)}
             >
-              <option value="en">English</option>
-              <option value="ar">Arabic</option>
+              <option value="en">{t("common.english")}</option>
+              <option value="ar">{t("common.arabic")}</option>
             </select>
           </div>
           <div className="space-y-2 md:col-span-2">

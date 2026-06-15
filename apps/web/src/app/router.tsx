@@ -25,6 +25,7 @@ import { ProfileGate } from "@/features/profile/profile-gate";
 import { ReportsPage } from "@/features/reports/reports-page";
 import { DoctorRevenueGate } from "@/features/revenue/doctor-revenue-gate";
 import { RevenueGate } from "@/features/revenue/revenue-gate";
+import { NavGate } from "@/components/nav-gate";
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
@@ -36,25 +37,25 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      { index: true, element: <DashboardPage /> },
-      { path: "patients", element: <PatientsPage /> },
-      { path: "patients/:id", element: <PatientDetailPage /> },
-      { path: "encounters", element: <EncountersListPage /> },
-      { path: "encounters/:id", element: <EncounterDetailPage /> },
+      { index: true, element: <NavGate tab="dashboard"><DashboardPage /></NavGate> },
+      { path: "patients", element: <NavGate tab="patients"><PatientsPage /></NavGate> },
+      { path: "patients/:id", element: <NavGate tab="patients"><PatientDetailPage /></NavGate> },
+      { path: "encounters", element: <NavGate tab="encounters"><EncountersListPage /></NavGate> },
+      { path: "encounters/:id", element: <NavGate tab="encounters"><EncounterDetailPage /></NavGate> },
       { path: "encounters/demo", element: <Navigate to="/encounters" replace /> },
-      { path: "appointments", element: <AppointmentsPage /> },
-      { path: "appointments/:id", element: <AppointmentDetailPage /> },
-      { path: "operations", element: <OperationsPage /> },
-      { path: "clinics", element: <ClinicsPage /> },
-      { path: "clinics/:id", element: <ClinicDetailPage /> },
-      { path: "expenses", element: <ExpensesPage /> },
+      { path: "appointments", element: <NavGate tab="appointments"><AppointmentsPage /></NavGate> },
+      { path: "appointments/:id", element: <NavGate tab="appointments"><AppointmentDetailPage /></NavGate> },
+      { path: "operations", element: <NavGate tab="operations"><OperationsPage /></NavGate> },
+      { path: "clinics", element: <NavGate tab="clinics"><ClinicsPage /></NavGate> },
+      { path: "clinics/:id", element: <NavGate tab="clinics"><ClinicDetailPage /></NavGate> },
+      { path: "expenses", element: <NavGate tab="expenses"><ExpensesPage /></NavGate> },
       { path: "revenue", element: <RevenueGate /> },
       { path: "clinic-revenue", element: <Navigate to="/revenue" replace /> },
       { path: "doctor-revenue", element: <DoctorRevenueGate /> },
       { path: "profile", element: <ProfileGate /> },
-      { path: "hr", element: <HrPage /> },
-      { path: "hr/employees/:id", element: <EmployeeDetailPage /> },
-      { path: "reports", element: <ReportsPage /> },
+      { path: "hr", element: <NavGate tab="hr"><HrPage /></NavGate> },
+      { path: "hr/employees/:id", element: <NavGate tab="hr"><EmployeeDetailPage /></NavGate> },
+      { path: "reports", element: <NavGate tab="reports"><ReportsPage /></NavGate> },
       {
         path: "platform",
         element: <PlatformLayout />,
@@ -65,7 +66,7 @@ export const router = createBrowserRouter([
           { path: "clinics", element: <PlatformClinicsTab /> },
         ],
       },
-      { path: "admin", element: <AdminPage /> },
+      { path: "admin", element: <NavGate tab="admin"><AdminPage /></NavGate> },
     ],
   },
   { path: "*", element: <Navigate to="/" replace /> },

@@ -59,7 +59,9 @@
       "netProfit": "صافي الربح (الفترة)",
       "branches": "الفروع النشطة",
       "headcount": "حسابات المستخدمين",
-      "employees": "موظفو الموارد البشرية"
+      "employees": "موظفو الموارد البشرية",
+      "appointmentsPeriod": "المواعيد (الفترة)",
+      "encountersPeriod": "الزيارات (الفترة)"
     },
     "chartPlaceholder": "مخططات الإيرادات والمصروفات ستستخدم بيانات حية لاحقًا."
   },
@@ -110,7 +112,38 @@
     "vitalsHistory": "سجل العلامات الحيوية",
     "noVitals": "لم تُسجَّل علامات حيوية بعد.",
     "uploadPhoto": "رفع صورة",
-    "photoHint": "صورة اختيارية للملف (JPEG/PNG)."
+    "photoHint": "صورة اختيارية للملف (JPEG/PNG).",
+    "attachDocuments": "المستندات",
+    "addDocument": "إضافة مستند",
+    "documentsOptionalHint": "اختياري — أرفق ملفاً مع وصف لكل مستند.",
+    "documentN": "مستند {{n}}",
+    "documentDescription": "الوصف",
+    "documentDescriptionPh": "مثال: نتائج تحاليل، خطاب تحويل…",
+    "documentFile": "الملف",
+    "downloadDocument": "تنزيل",
+    "cameThrough": "كيف وصل إلينا",
+    "howDidTheyFindUs": "كيف وجدونا؟",
+    "cameThroughOptional": "اختياري",
+    "explainMore": "اشرح أكثر",
+    "explainMorePh": "أضف تفاصيل…",
+    "referringDoctor": "الطبيب المحوّل",
+    "referringDoctorPh": "اسم الطبيب",
+    "otherChannelDetail": "كيف وجد العيادة؟",
+    "otherChannelPh": "صف القناة",
+    "acquisitionSocialFacebook": "وسائل التواصل — فيسبوك",
+    "acquisitionSocialInstagram": "وسائل التواصل — إنستجرام",
+    "acquisitionSocialTiktok": "وسائل التواصل — تيك توك",
+    "acquisitionWebsiteGoogle": "الموقع — جوجل",
+    "acquisitionDoctorReferral": "تحويل من طبيب",
+    "acquisitionOther": "أخرى",
+    "errorDocDescriptionRequired": "كل مستند مرفق يحتاج وصفاً.",
+    "errorDocFileRequired": "اختر ملفاً لكل وصف مستند.",
+    "errorReferralNameRequired": "أدخل اسم الطبيب المحوّل.",
+    "errorOtherChannelRequired": "صف كيف وجد المريض العيادة.",
+    "errorExplainMoreRequired": "حقل «اشرح أكثر» مطلوب.",
+    "errorFirstNameAr": "الاسم الأول بالعربية مطلوب.",
+    "errorLastNameAr": "اسم العائلة بالعربية مطلوب.",
+    "photoOptional": "صورة الملف الشخصي اختيارية."
   },
   "encounters": {
     "title": "زيارة",
@@ -210,7 +243,6 @@
     "selectPatientHint": "ابحث بالاسم (إنجليزي أو عربي) أو رقم الملف ثم اختر صفًا.",
     "patientSearchPlaceholder": "اكتب الاسم بالعربية أو الإنجليزية أو رقم الملف…",
     "noPatientsMatch": "لا يوجد مرضى مطابقون.",
-    "clinic": "العيادة",
     "visitFee": "رسوم الزيارة",
     "visitFeeHint": "القيمة الافتراضية من إعدادات المنظمة (الإدارة).",
     "visitFeeLockedHint": "تُحدد عند إنشاء هذه الزيارة.",
@@ -234,7 +266,26 @@
     "attendingPhysicianHint": "مطلوب عند إنشاء زيارة لشخص آخر. يُملأ تلقائيًا عند ربط موعد محجوز.",
     "noDoctors": "لا حسابات أطباء في هذه المنظمة.",
     "pickDoctorIdle": "اختر الطبيب المعالج لهذه الزيارة.",
-    "selectVisitType": "اختر نوع الزيارة"
+    "selectVisitType": "اختر نوع الزيارة",
+    "docReplaced": "تم استبدال المستند",
+    "listSubtitlePhysician": "الزيارات التي أنت الطبيب المعالج فيها، عبر جميع العيادات. عمود العيادة يوضح مكان كل زيارة.",
+    "patientSearchIdle": "ابدأ الكتابة لعرض المرضى المطابقين.",
+    "pickPatient": "اختر مريضاً",
+    "vitalsHr": "نبض",
+    "vitalsSpo2": "SpO₂",
+    "vitalsBp": "ضغط",
+    "vitalsTemp": "حرارة",
+    "vitalsWtHt": "وزن/طول",
+    "visitTypes": {
+      "office_visit": "زيارة عيادة",
+      "follow_up": "متابعة",
+      "consultation": "استشارة",
+      "walk_in": "حضور مباشر",
+      "telehealth": "عن بُعد",
+      "annual_physical": "فحص سنوي",
+      "urgent_care": "رعاية عاجلة",
+      "procedure": "إجراء"
+    }
   },
   "appointments": {
     "title": "المواعيد",
@@ -284,7 +335,20 @@
     "statusScheduled": "مجدول",
     "statusConfirmed": "مؤكد",
     "statusCancelled": "ملغى",
-    "statusCompleted": "مكتمل"
+    "statusCompleted": "مكتمل",
+    "confirmCompleteAction": "متابعة",
+    "confirmCompleteBody": "المواعيد المكتملة تُقفل للتعديل. لا يُحفظ شيء حتى تنقر حفظ.",
+    "confirmCompleteTitle": "تعليم الموعد كمكتمل؟",
+    "endAfterStart": "وقت الانتهاء يجب أن يكون بعد وقت البداية.",
+    "invalidDateRange": "أدخل أوقات بداية ونهاية صالحة.",
+    "noClinicMatch": "لا توجد عيادات مطابقة.",
+    "referenceId": "المرجع",
+    "saveSuccess": "تم حفظ الموعد.",
+    "savedWithStatus": "تم حفظ الموعد. الحالة الآن {{status}}.",
+    "statusCheckedIn": "تم تسجيل الحضور",
+    "statusDraftToast": "الحالة: {{status}}. انقر حفظ للتطبيق.",
+    "statusQuickHint": "اختر حالة أدناه ثم انقر حفظ. إكمال الموعد يطلب تأكيداً أولاً.",
+    "statusWithSave": "أو اختر من القائمة (مثل الاختصارات)"
   },
   "clinics": {
     "title": "العيادات والفروع",
@@ -359,6 +423,7 @@
     "physician": "طبيب",
     "nurse": "ممرض/ة",
     "receptionist": "موظف استقبال",
+    "call_center": "مركز اتصال",
     "clinic_assistant": "مساعد عيادة",
     "finance_officer": "مسؤول مالي",
     "hr_officer": "مسؤول موارد بشرية"
@@ -412,7 +477,8 @@
     "edit": "تعديل",
     "editTitle": "تعديل العملية",
     "updated": "تم تحديث العملية.",
-    "saveChanges": "حفظ التغييرات"
+    "saveChanges": "حفظ التغييرات",
+    "errorPrescriptionRequired": "ارفع وصفة طبية أو أنشئ واحدة من الأدوية اليدوية."
   },
   "expenses": {
     "title": "المصروفات",
@@ -458,7 +524,9 @@
       "PENDING": "قيد الانتظار",
       "APPROVED": "موافق عليه",
       "REJECTED": "مرفوض"
-    }
+    },
+    "from": "من",
+    "to": "إلى"
   },
   "revenue": {
     "title": "الإيرادات",
@@ -573,7 +641,24 @@
       "SICK": "إجازة مرضية",
       "UNPAID": "إجازة بدون راتب",
       "OTHER": "أخرى"
-    }
+    },
+    "addEmployeeInAdmin": "يُسجَّل الموظفون الجدد من",
+    "addEmployeeInAdminSuffix": " ← المنظمة والإعدادات.",
+    "anyEmployee": "الكل",
+    "anyStatus": "الكل",
+    "attendanceHistory": "سجل الحضور",
+    "attendanceIntro": "سجّل حضوراً جديداً واستعرض السجل حسب الموظف والتاريخ.",
+    "backToHr": "العودة إلى الموارد البشرية",
+    "employeeDetails": "تفاصيل الموظف",
+    "filterEmployee": "تصفية الموظف",
+    "filterLeaveType": "تصفية نوع الإجازة…",
+    "filterStatus": "تصفية الحالة…",
+    "from": "من",
+    "hireDate": "تاريخ التعيين",
+    "searchPlaceholder": "الاسم أو الرقم",
+    "startFrom": "البداية من",
+    "startTo": "البداية إلى",
+    "to": "إلى"
   },
   "reports": {
     "title": "التقارير",
@@ -584,7 +669,15 @@
     "month": "الشهر",
     "revenue": "الإيرادات",
     "expenses": "المصروفات",
-    "netProfit": "صافي الربح"
+    "netProfit": "صافي الربح",
+    "chartNewPatients": "تسجيل مرضى جدد",
+    "chartRevenue": "الإيرادات المُرحّلة (درهم)",
+    "chartVisits": "حجم الزيارات",
+    "growthExplorer": "مستكشف النمو",
+    "growthExplorerHintLive": "سلسلة شهرية من الزيارات المُنهية والإيرادات المُرحّلة وتسجيل المرضى في منظمتك.",
+    "months": "أشهر السجل",
+    "newPatients": "مرضى جدد",
+    "visits": "زيارات"
   },
   "platform": {
     "title": "إدارة المنصة",
@@ -764,7 +857,40 @@
     "kind": "النوع",
     "parentNone": "لا شيء",
     "noClinicsMatch": "لا عيادات تطابق المرشحات.",
-    "registered": "تاريخ التسجيل"
+    "registered": "تاريخ التسجيل",
+    "branchManagerSubtitle": "انضمام الموظفين والحوكمة للعيادات التي تديرها.",
+    "clinicAdminSubtitle": "انضمام الموظفين وحوكمة العيادة.",
+    "createEmployee": "إنشاء موظف",
+    "createEmployeeHint": "نوع التوظيف والراتب وتعيين العيادة. رفع وثيقة الهوية اختياري.",
+    "dataExplorerAddRow": "إضافة صف (JSON)",
+    "dataExplorerCreate": "إنشاء",
+    "dataExplorerCreateTitle": "إنشاء صف (JSON)",
+    "dataExplorerDeleteConfirm": "حذف هذا الصف؟",
+    "dataExplorerDescription": "استعراض وتعديل الجداول المسموح بها في قاعدة البيانات لهذه المنظمة. التغييرات فورية؛ الإجراءات التدميرية لا يمكن التراجع عنها. كلمات المرور لا تُعرض ولا تُحدَّث من هنا.",
+    "dataExplorerEdit": "تعديل",
+    "dataExplorerEditHint": "أرسل الحقول المراد تغييرها فقط. يُستثنى حقل id.",
+    "dataExplorerEditTitle": "تعديل صف (JSON)",
+    "dataExplorerEmpty": "لا توجد صفوف في هذا الجدول.",
+    "dataExplorerInvalidJson": "JSON غير صالح.",
+    "dataExplorerNoId": "لا يوجد حقل id؛ لا يمكن التعديل عبر الواجهة.",
+    "dataExplorerOps": "العمليات:",
+    "dataExplorerSavePatch": "حفظ التغييرات",
+    "dataExplorerScope": "النطاق",
+    "dataExplorerTable": "الجدول",
+    "dataExplorerTitle": "مستكشف البيانات",
+    "dataExplorerView": "عرض",
+    "dataExplorerViewTitle": "صف JSON",
+    "managedClinicBm": "عيادتك",
+    "managedClinicCa": "العيادة المعيّنة",
+    "navTabsFullRoleHint": "عند حفظ جميع التبويبات يُزال التخصيص.",
+    "navTabsPickUser": "اختر مستخدماً…",
+    "navTabsReset": "استخدام افتراضيات الدور",
+    "navTabsSave": "حفظ التبويبات",
+    "navTabsSubtitle": "اختر موظفاً وحدد الأقسام الظاهرة في الشريط الجانبي. الملف الشخصي يبقى دائماً. امسح التخصيص لاستعادة افتراضيات الدور.",
+    "navTabsTitle": "تبويبات الشريط لكل مستخدم",
+    "navTabsUser": "المستخدم",
+    "role": "الدور",
+    "tabDataExplorer": "مستكشف البيانات"
   },
   "pagination": {
     "showing": "{{from}}–{{to}} من {{total}}",
@@ -777,7 +903,7 @@
     "actions": "إجراءات",
     "loading": "جاري التحميل…",
     "language": "اللغة",
-    "english": "English",
+    "english": "الإنجليزية",
     "arabic": "العربية",
     "save": "حفظ",
     "cancel": "إلغاء",
@@ -786,6 +912,11 @@
     "remove": "إزالة",
     "error": "حدث خطأ.",
     "optional": "اختياري",
-    "comingSoon": "البيانات من الخادم ستُضاف مع واجهة NestJS."
+    "comingSoon": "البيانات من الخادم ستُضاف مع واجهة NestJS.",
+    "delete": "حذف",
+    "hide": "إخفاء",
+    "retry": "إعادة المحاولة",
+    "to": "إلى",
+    "menu": "القائمة"
   }
 }

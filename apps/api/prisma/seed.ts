@@ -60,6 +60,7 @@ const ROLES_CYCLE = [
 ];
 
 async function main() {
+  await prisma.patientDocument.deleteMany();
   await prisma.encounterDocument.deleteMany();
   await prisma.encounterMedication.deleteMany();
   await prisma.diagnosis.deleteMany();
@@ -328,6 +329,15 @@ async function main() {
       passwordHash,
       displayName: "Demo Receptionist",
       role: UserRole.RECEPTIONIST,
+    },
+  });
+  await prisma.user.create({
+    data: {
+      tenantId: t0.id,
+      email: "callcenter@kiorly.com",
+      passwordHash,
+      displayName: "Demo Call Center",
+      role: UserRole.CALL_CENTER,
     },
   });
   await prisma.user.create({
@@ -812,7 +822,7 @@ async function main() {
     "| Dr Ahmed Shall Group:",
     drAhmedTenant.id,
     `(${drAhmedClinics.length} clinics)`,
-    "| logins (password: demo): superadmin@kiorly.com (platform), admin@kiorly.com, admin@drahmedshall.com, dr.ahmed@drahmedshall.com, physician@kiorly.com, doctor2@kiorly.com, clinicadmin@kiorly.com, assistant@kiorly.com, nurse@kiorly.com, receptionist@kiorly.com, finance@kiorly.com, branchmgr@kiorly.com"
+    "| logins (password: demo): superadmin@kiorly.com (platform), admin@kiorly.com, admin@drahmedshall.com, dr.ahmed@drahmedshall.com, physician@kiorly.com, doctor2@kiorly.com, clinicadmin@kiorly.com, assistant@kiorly.com, nurse@kiorly.com, receptionist@kiorly.com, callcenter@kiorly.com, finance@kiorly.com, branchmgr@kiorly.com"
   );
 
   await prisma.user.deleteMany({ where: { email: "superadmin@kiorly.com", tenantId: null } });

@@ -3,6 +3,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import { CreateActionButton } from "@/components/create-action-button";
+import {
+  emptyPatientAcquisitionFormValues,
+  PatientAcquisitionFields,
+  patientAcquisitionFormToBody,
+  patientAcquisitionFormValuesFromPatient,
+  validatePatientAcquisitionForm,
+  type PatientAcquisitionFormValues,
+} from "@/components/patient-acquisition-fields";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +27,7 @@ import {
   useClinicsQuery,
   encounterLedgerFromTo,
   useEncountersQuery,
+  usePatientQuery,
   usePatientsQuery,
   useUsersQuery,
 } from "@/lib/api-hooks";
@@ -28,7 +37,7 @@ import { ApiError, apiPost } from "@/lib/http";
 import { formatEncounterStatus, formatClinicName, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
 import { columnFilterIncludes } from "@/lib/utils";
-import { ENCOUNTER_VISIT_TYPES } from "@/lib/visit-types";
+import { ENCOUNTER_VISIT_TYPES, formatVisitType } from "@/lib/visit-types";
 import { defaultEncounterListRange, defaultMonthRange } from "@/stores/date-range-store";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -146,6 +155,21 @@ export function EncountersListPage() {
     return () => window.clearTimeout(timer);
   }, [aptPickerSearch]);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState("");
+  const [acquisitionValues, setAcquisitionValues] = useState<PatientAcquisitionFormValues>(
+    emptyPatientAcquisitionFormValues(),
+  );
+  const { data: selectedPatient } = usePatientQuery(createOpen && createPatientId ? createPatientId : undefined);
+  useEffect(() => {
+    if (!createOpen) return;
+    if (!createPatientId) {
+      setAcquisitionValues(emptyPatientAcquisitionFormValues());
+      return;
+    }
+    if (selectedPatient) {
+      setAcquisitionValues(patientAcquisitionFormValuesFromPatient(selectedPatient));
+    }
+  }, [createOpen, createPatientId, selectedPatient]);
+
   const aptPickerEnabled =
     createOpen && (Boolean(createPatientId.trim()) || debouncedAptPicker.trim().length >= 2);
   const { data: aptPickerData, isPending: aptPickerPending } = useAppointmentsQuery({
@@ -210,16 +234,21 @@ export function EncountersListPage() {
     setDebouncedAptPicker("");
     setSelectedAppointmentId("");
     setCreateClinicianId("");
+    setAcquisitionValues(emptyPatientAcquisitionFormValues());
     setCreateOpen(true);
   };
 
   const createMut = useMutation({
     mutationFn: () => {
+      const acquisitionError = validatePatientAcquisitionForm(acquisitionValues, t);
+      if (acquisitionError) throw new Error(acquisitionError);
+
       const body: Record<string, unknown> = {
         clinicId: createClinicId,
         patientId: createPatientId,
         visitType: createVisitType,
         chiefComplaint: "",
+        ...patientAcquisitionFormToBody(acquisitionValues),
       };
       const trimmed = createVisitFee.trim();
       if (trimmed !== "") {
@@ -386,7 +415,7 @@ export function EncountersListPage() {
                   >
                     {ENCOUNTER_VISIT_TYPES.map((vt) => (
                       <option key={vt} value={vt}>
-                        {vt}
+                        {formatVisitType(vt, t)}
                       </option>
                     ))}
                   </select>
@@ -405,6 +434,11 @@ export function EncountersListPage() {
                     {t("encounters.visitFeeHint", "Default comes from organization settings (admin).")}
                   </p>
                 </div>
+                <PatientAcquisitionFields
+                  className="space-y-0 border-t border-border pt-3"
+                  values={acquisitionValues}
+                  onChange={setAcquisitionValues}
+                />
                 <CreateActionButton
                   type="button"
                   disabled={
@@ -417,7 +451,15 @@ export function EncountersListPage() {
                       !createClinicianId.trim() &&
                       !selectedAppointmentId.trim())
                   }
-                  onClick={() => createMut.mutate()}
+                  onClick={() => {
+                    const acquisitionError = validatePatientAcquisitionForm(acquisitionValues, t);
+                    if (acquisitionError) {
+                      setCreateErr(acquisitionError);
+                      return;
+                    }
+                    setCreateErr(null);
+                    createMut.mutate();
+                  }}
                 >
                   {t("encounters.createAndOpen", "Create & open")}
                 </CreateActionButton>
@@ -601,7 +643,7 @@ export function EncountersListPage() {
                           {formatClinicNameFields(e.clinicNameEn, e.clinicNameAr, i18n.language)}
                         </Badge>
                       </td>
-                      <td className="px-3 py-2">{e.visitType}</td>
+                      <td className="px-3 py-2">{formatVisitType(e.visitType, t)}</td>
                       <td className="px-3 py-2 text-center">
                         {(() => {
                           const r = resolvePatientListLabel({

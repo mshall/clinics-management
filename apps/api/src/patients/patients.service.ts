@@ -6,23 +6,29 @@ import {
   Logger,
   NotFoundException,
 } from "@nestjs/common";
-import { Gender, Prisma } from "@prisma/client";
+import { Gender, PatientAcquisitionChannel, Prisma } from "@prisma/client";
 import { randomUUID } from "crypto";
 import * as path from "node:path";
 import type { JwtUser } from "../auth/jwt-user";
 import { fetchPatientListClinicScopeIds } from "../common/clinic-scope";
 import { PatientDto } from "../common/dto/patient.dto";
+import { PatientDocumentDto } from "../common/dto/patient-document.dto";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
+import {
+  hasPatientAcquisitionInput,
+  patientAcquisitionUpdateData,
+  validatePatientAcquisition,
+} from "../common/patient-acquisition";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { CreatePatientDto } from "./dto/create-patient.dto";
 import type { UpdatePatientDto } from "./dto/update-patient.dto";
 
-const MAX_NATIONAL_ID_DOC_BYTES = 15 * 1024 * 1024;
-const ALLOWED_NATIONAL_ID_DOC_MIME = new Set(["application/pdf", "image/jpeg", "image/png", "image/gif", "image/webp"]);
+const MAX_PATIENT_DOC_BYTES = 15 * 1024 * 1024;
+const ALLOWED_PATIENT_DOC_MIME = new Set(["application/pdf", "image/jpeg", "image/png", "image/gif", "image/webp"]);
 
-type NationalIdDocFile = { buffer: Buffer; originalname: string; mimetype: string; size: number };
+type PatientDocFile = { buffer: Buffer; originalname: string; mimetype: string; size: number };
 
 export interface PatientListQuery {
   search?: string;
@@ -46,7 +52,26 @@ export class PatientsService {
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
   ) {}
 
-  private map(p: {
+  private mapDoc(d: {
+    id: string;
+    description: string;
+    originalFileName: string;
+    mimeType: string;
+    sizeBytes: number;
+    createdAt: Date;
+  }): PatientDocumentDto {
+    const dto = new PatientDocumentDto();
+    dto.id = d.id;
+    dto.description = d.description;
+    dto.originalFileName = d.originalFileName;
+    dto.mimeType = d.mimeType;
+    dto.sizeBytes = d.sizeBytes;
+    dto.createdAt = d.createdAt.toISOString();
+    return dto;
+  }
+
+  private map(
+    p: {
     id: string;
     mrn: string;
     firstNameEn: string;
@@ -59,9 +84,22 @@ export class PatientsService {
     email: string | null;
     nationalId: string | null;
     nationalIdDocRelativePath?: string | null;
+    acquisitionChannel?: PatientAcquisitionChannel | null;
+    acquisitionReferralName?: string | null;
+    acquisitionOtherDetail?: string | null;
     homeBranchId: string | null;
     homeBranch: { nameEn: string } | null;
-  }): PatientDto {
+    documents?: {
+      id: string;
+      description: string;
+      originalFileName: string;
+      mimeType: string;
+      sizeBytes: number;
+      createdAt: Date;
+    }[];
+  },
+    opts?: { includeDocuments?: boolean },
+  ): PatientDto {
     const dto = new PatientDto();
     dto.id = p.id;
     dto.mrn = p.mrn;
@@ -81,8 +119,14 @@ export class PatientsService {
     dto.email = p.email;
     dto.nationalId = p.nationalId;
     dto.hasNationalIdDoc = Boolean(p.nationalIdDocRelativePath);
+    dto.acquisitionChannel = p.acquisitionChannel ?? null;
+    dto.acquisitionReferralName = p.acquisitionReferralName ?? null;
+    dto.acquisitionOtherDetail = p.acquisitionOtherDetail ?? null;
     dto.homeBranch = p.homeBranch ? p.homeBranch.nameEn : null;
     dto.homeBranchId = p.homeBranchId;
+    if (opts?.includeDocuments && p.documents) {
+      dto.documents = p.documents.map((d) => this.mapDoc(d));
+    }
     return dto;
   }
 
@@ -188,7 +232,10 @@ export class PatientsService {
     const scopeIds = await fetchPatientListClinicScopeIds(this.prisma, tenantId, user);
     const row = await this.prisma.patient.findFirst({
       where: { id, tenantId, deletedAt: null },
-      include: { homeBranch: { select: { nameEn: true } } },
+      include: {
+        homeBranch: { select: { nameEn: true } },
+        documents: { orderBy: { createdAt: "asc" } },
+      },
     });
     if (!row) throw new NotFoundException("Patient not found");
     if (scopeIds !== null) {
@@ -202,7 +249,7 @@ export class PatientsService {
         if (!visitOk) throw new NotFoundException("Patient not found");
       }
     }
-    return this.map(row);
+    return this.map(row, { includeDocuments: true });
   }
 
   private async nextMrn(tenantId: string): Promise<string> {
@@ -228,6 +275,7 @@ export class PatientsService {
 
   async create(tenantId: string, dto: CreatePatientDto, user: JwtUser): Promise<PatientDto> {
     await this.assertHomeBranchInScope(tenantId, user, dto.homeBranchId ?? null);
+    validatePatientAcquisition(dto);
     if (dto.homeBranchId) {
       const branch = await this.prisma.clinic.findFirst({
         where: { id: dto.homeBranchId, tenantId },
@@ -248,13 +296,14 @@ export class PatientsService {
         mrn,
         firstNameEn: dto.firstNameEn,
         lastNameEn: dto.lastNameEn,
-        firstNameAr: dto.firstNameAr ?? null,
-        lastNameAr: dto.lastNameAr ?? null,
+        firstNameAr: dto.firstNameAr.trim(),
+        lastNameAr: dto.lastNameAr.trim(),
         dob: new Date(dto.dob),
         gender: dto.gender,
         phone: dto.phone,
         email: dto.email?.trim() || null,
         nationalId,
+        ...patientAcquisitionUpdateData(dto),
         homeBranchId: dto.homeBranchId ?? null,
       },
       include: { homeBranch: { select: { nameEn: true } } },
@@ -264,6 +313,7 @@ export class PatientsService {
 
   async update(tenantId: string, id: string, dto: UpdatePatientDto, user: JwtUser): Promise<PatientDto> {
     await this.getById(tenantId, id, user);
+    validatePatientAcquisition(dto);
     const existing = await this.prisma.patient.findFirst({
       where: { id, tenantId, deletedAt: null },
     });
@@ -295,6 +345,20 @@ export class PatientsService {
     if (dto.email !== undefined) data.email = dto.email?.trim() || null;
     if (dto.nationalId !== undefined) data.nationalId = nextNational ?? null;
     if (dto.homeBranchId !== undefined) data.homeBranch = dto.homeBranchId ? { connect: { id: dto.homeBranchId } } : { disconnect: true };
+    if (dto.acquisitionChannel !== undefined) {
+      Object.assign(data, patientAcquisitionUpdateData({
+        acquisitionChannel: dto.acquisitionChannel,
+        acquisitionReferralName: dto.acquisitionReferralName,
+        acquisitionOtherDetail: dto.acquisitionOtherDetail,
+      }));
+    } else {
+      if (dto.acquisitionReferralName !== undefined) {
+        data.acquisitionReferralName = dto.acquisitionReferralName?.trim() || null;
+      }
+      if (dto.acquisitionOtherDetail !== undefined) {
+        data.acquisitionOtherDetail = dto.acquisitionOtherDetail?.trim() || null;
+      }
+    }
 
     const row = await this.prisma.patient.update({
       where: { id },
@@ -308,13 +372,13 @@ export class PatientsService {
     tenantId: string,
     patientId: string,
     user: JwtUser,
-    file?: NationalIdDocFile
+    file?: PatientDocFile
   ): Promise<PatientDto> {
     await this.getById(tenantId, patientId, user);
     if (!file?.buffer?.length) throw new BadRequestException("File is required");
-    if (file.size > MAX_NATIONAL_ID_DOC_BYTES) throw new BadRequestException("File too large (max 15MB)");
+    if (file.size > MAX_PATIENT_DOC_BYTES) throw new BadRequestException("File too large (max 15MB)");
     const mime = file.mimetype || "application/octet-stream";
-    if (!ALLOWED_NATIONAL_ID_DOC_MIME.has(mime)) throw new BadRequestException(`Unsupported file type: ${mime}`);
+    if (!ALLOWED_PATIENT_DOC_MIME.has(mime)) throw new BadRequestException(`Unsupported file type: ${mime}`);
     const docId = randomUUID();
     const base = path.basename(file.originalname || "national-id").replace(/[^\w.\-]+/g, "_").slice(0, 120) || "national-id";
     const relativePath = `${tenantId}/${patientId}/${docId}-${base}`;
@@ -352,6 +416,64 @@ export class PatientsService {
   }
 
   openNationalIdDocumentReadStream(storageKey: string) {
+    return this.uploads.getReadStream("patients", storageKey);
+  }
+
+  async attachDocument(
+    tenantId: string,
+    patientId: string,
+    user: JwtUser,
+    description: string,
+    file?: PatientDocFile,
+  ): Promise<PatientDocumentDto> {
+    await this.getById(tenantId, patientId, user);
+    const desc = description?.trim();
+    if (!desc) throw new BadRequestException("Document description is required");
+    if (!file?.buffer?.length) throw new BadRequestException("File is required");
+    if (file.size > MAX_PATIENT_DOC_BYTES) throw new BadRequestException("File too large (max 15MB)");
+    const mime = file.mimetype || "application/octet-stream";
+    if (!ALLOWED_PATIENT_DOC_MIME.has(mime)) throw new BadRequestException(`Unsupported file type: ${mime}`);
+
+    const docId = randomUUID();
+    const base = path.basename(file.originalname || "document").replace(/[^\w.\-]+/g, "_").slice(0, 120) || "document";
+    const relativePath = `${tenantId}/${patientId}/docs/${docId}-${base}`;
+    await this.uploads.put("patients", relativePath, file.buffer, mime);
+
+    const row = await this.prisma.patientDocument.create({
+      data: {
+        id: docId,
+        tenantId,
+        patientId,
+        description: desc,
+        originalFileName: file.originalname || base,
+        mimeType: mime,
+        sizeBytes: file.size,
+        relativePath,
+      },
+    });
+    return this.mapDoc(row);
+  }
+
+  async getDocumentMeta(
+    tenantId: string,
+    patientId: string,
+    documentId: string,
+    user: JwtUser,
+  ): Promise<{ storageKey: string; mimeType: string; originalFileName: string }> {
+    await this.getById(tenantId, patientId, user);
+    const doc = await this.prisma.patientDocument.findFirst({
+      where: { id: documentId, patientId, tenantId },
+    });
+    if (!doc) throw new NotFoundException("Document not found");
+    await this.uploads.assertExists("patients", doc.relativePath);
+    return {
+      storageKey: doc.relativePath,
+      mimeType: doc.mimeType,
+      originalFileName: doc.originalFileName,
+    };
+  }
+
+  openDocumentReadStream(storageKey: string) {
     return this.uploads.getReadStream("patients", storageKey);
   }
 }

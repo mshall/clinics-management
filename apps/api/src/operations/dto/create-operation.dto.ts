@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsDateString, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
+import { IsBoolean, IsDateString, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
 
 export class CreateOperationDto {
   @ApiProperty()
@@ -35,4 +35,9 @@ export class CreateOperationDto {
   @IsOptional()
   @IsString()
   clinicId?: string;
+
+  @ApiPropertyOptional({ description: "When true, no medications or prescriptions apply to this operation" })
+  @IsOptional()
+  @IsBoolean()
+  noMedications?: boolean;
 }

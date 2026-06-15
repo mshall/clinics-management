@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { PatientDocumentDto } from "./patient-document.dto";
 
 export class PatientDto {
   @ApiProperty()
@@ -42,4 +43,27 @@ export class PatientDto {
 
   @ApiPropertyOptional({ description: "Whether a national ID / SSN scan is on file" })
   hasNationalIdDoc?: boolean;
+
+  @ApiPropertyOptional({
+    enum: [
+      "SOCIAL_FACEBOOK",
+      "SOCIAL_INSTAGRAM",
+      "SOCIAL_TIKTOK",
+      "WEBSITE_GOOGLE",
+      "DOCTOR_REFERRAL",
+      "OTHER",
+    ],
+    nullable: true,
+    type: String,
+  })
+  acquisitionChannel!: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  acquisitionReferralName!: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  acquisitionOtherDetail!: string | null;
+
+  @ApiPropertyOptional({ type: [PatientDocumentDto] })
+  documents?: PatientDocumentDto[];
 }

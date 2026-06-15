@@ -1,14 +1,28 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { OperationStatus, Prisma, RevenueStatus, UserRole } from "@prisma/client";
+import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { OperationDocumentKind, OperationStatus, Prisma, RevenueStatus, UserRole } from "@prisma/client";
+import { randomUUID } from "crypto";
+import * as path from "path";
 import type { JwtUser } from "../auth/jwt-user";
 import { fetchClinicScopeIds } from "../common/clinic-scope";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { resolveReportingRange } from "../common/reporting-range";
 import { PrismaService } from "../prisma/prisma.service";
+import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
+import type { AddOperationMedicationDto, OperationDocumentDto, OperationMedicationDto } from "./dto/operation-clinical.dto";
 import type { CreateOperationDto } from "./dto/create-operation.dto";
 import type { OperationDto } from "./dto/operation.dto";
 import type { UpdateOperationDto } from "./dto/update-operation.dto";
+
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+const ALLOWED_MIME = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "text/plain",
+]);
 
 const operationInclude = {
   patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true, homeBranchId: true } },
@@ -29,7 +43,77 @@ function isPhysicianRole(role: UserRole | undefined): boolean {
 
 @Injectable()
 export class OperationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
+  ) {}
+
+  private ensureEditableStatus(status: OperationStatus): void {
+    if (status !== OperationStatus.SCHEDULED) {
+      throw new BadRequestException("Only scheduled operations can be edited");
+    }
+  }
+
+  private mapDoc(row: {
+    id: string;
+    kind: OperationDocumentKind;
+    description: string | null;
+    originalFileName: string;
+    mimeType: string;
+    sizeBytes: number;
+    createdAt: Date;
+  }): OperationDocumentDto {
+    return {
+      id: row.id,
+      kind: row.kind,
+      description: row.description,
+      originalFileName: row.originalFileName,
+      mimeType: row.mimeType,
+      sizeBytes: row.sizeBytes,
+      createdAt: row.createdAt.toISOString(),
+    };
+  }
+
+  private mapMed(row: {
+    id: string;
+    drugName: string;
+    dosage: string | null;
+    route: string | null;
+    frequency: string | null;
+    duration: string | null;
+    instructions: string | null;
+  }): OperationMedicationDto {
+    return {
+      id: row.id,
+      drugName: row.drugName,
+      dosage: row.dosage,
+      route: row.route,
+      frequency: row.frequency,
+      duration: row.duration,
+      instructions: row.instructions,
+    };
+  }
+
+  private async deletePrescriptionDocuments(tenantId: string, operationId: string): Promise<void> {
+    const docs = await this.prisma.operationDocument.findMany({
+      where: { tenantId, operationId, kind: OperationDocumentKind.PRESCRIPTION },
+    });
+    for (const doc of docs) {
+      await this.prisma.operationDocument.delete({ where: { id: doc.id } });
+      await this.uploads.deleteObject("operations", doc.relativePath).catch(() => undefined);
+    }
+  }
+
+  private async clearMedicationData(tenantId: string, operationId: string): Promise<void> {
+    const docs = await this.prisma.operationDocument.findMany({
+      where: { tenantId, operationId, kind: OperationDocumentKind.PRESCRIPTION },
+    });
+    for (const doc of docs) {
+      await this.prisma.operationDocument.delete({ where: { id: doc.id } });
+      await this.uploads.deleteObject("operations", doc.relativePath).catch(() => undefined);
+    }
+    await this.prisma.operationMedication.deleteMany({ where: { tenantId, operationId } });
+  }
 
   private clinicianDisplayName(
     clinician: null | { displayName: string; employee: { firstNameEn: string; lastNameEn: string } | null }
@@ -202,6 +286,7 @@ export class OperationsService {
         paidAmount: downPayment,
         comments: dto.comments?.trim() || null,
         status: OperationStatus.SCHEDULED,
+        noMedications: dto.noMedications ?? false,
       },
       include: operationInclude,
     });
@@ -332,6 +417,7 @@ export class OperationsService {
         downPayment,
         paidAmount,
         comments: dto.comments !== undefined ? dto.comments.trim() || null : existing.comments,
+        ...(dto.noMedications !== undefined ? { noMedications: dto.noMedications } : {}),
       },
       include: operationInclude,
     });
@@ -433,5 +519,123 @@ export class OperationsService {
     }
 
     throw new BadRequestException("Invalid status");
+  }
+
+  async addMedication(
+    tenantId: string,
+    operationId: string,
+    dto: AddOperationMedicationDto,
+    viewer: JwtUser,
+  ): Promise<OperationMedicationDto> {
+    const op = await this.prisma.operation.findFirst({ where: { id: operationId, tenantId } });
+    if (!op) throw new NotFoundException("Operation not found");
+    await this.assertOperationAccess(viewer, op);
+    this.ensureEditableStatus(op.status);
+
+    const m = await this.prisma.operationMedication.create({
+      data: {
+        tenantId,
+        operationId,
+        drugName: dto.drugName.trim(),
+        dosage: dto.dosage?.trim() || null,
+        route: dto.route?.trim() || null,
+        frequency: dto.frequency?.trim() || null,
+        duration: dto.duration?.trim() || null,
+        instructions: dto.instructions?.trim() || null,
+      },
+    });
+    await this.prisma.operation.update({
+      where: { id: operationId },
+      data: { noMedications: false },
+    });
+    return this.mapMed(m);
+  }
+
+  async uploadDocument(
+    tenantId: string,
+    operationId: string,
+    kind: OperationDocumentKind,
+    description: string | undefined,
+    file: { buffer: Buffer; originalname: string; mimetype: string; size: number },
+    viewer: JwtUser,
+  ): Promise<OperationDocumentDto> {
+    const op = await this.prisma.operation.findFirst({ where: { id: operationId, tenantId } });
+    if (!op) throw new NotFoundException("Operation not found");
+    await this.assertOperationAccess(viewer, op);
+    this.ensureEditableStatus(op.status);
+
+    if (!file?.buffer?.length) throw new BadRequestException("Missing file");
+    if (file.size > MAX_UPLOAD_BYTES) throw new BadRequestException("File too large (max 15MB)");
+    const mime = file.mimetype || "application/octet-stream";
+    if (!ALLOWED_MIME.has(mime)) throw new BadRequestException(`Unsupported file type: ${mime}`);
+
+    const desc = description?.trim() || null;
+    if (kind === OperationDocumentKind.ATTACHMENT && !desc) {
+      throw new BadRequestException("Document description is required");
+    }
+
+    if (kind === OperationDocumentKind.PRESCRIPTION) {
+      await this.deletePrescriptionDocuments(tenantId, operationId);
+      await this.prisma.operation.update({
+        where: { id: operationId },
+        data: { noMedications: false },
+      });
+    }
+
+    const docId = randomUUID();
+    const base = path.basename(file.originalname || "upload").replace(/[^\w.\-]+/g, "_").slice(0, 120) || "upload";
+    const relativePath = `${tenantId}/${operationId}/${docId}-${base}`;
+    await this.uploads.put("operations", relativePath, file.buffer, mime);
+
+    const row = await this.prisma.operationDocument.create({
+      data: {
+        id: docId,
+        tenantId,
+        operationId,
+        kind,
+        description: kind === OperationDocumentKind.ATTACHMENT ? desc : null,
+        originalFileName: file.originalname || base,
+        mimeType: mime,
+        sizeBytes: file.size,
+        relativePath,
+      },
+    });
+    return this.mapDoc(row);
+  }
+
+  async setNoMedications(tenantId: string, operationId: string, noMedications: boolean, viewer: JwtUser): Promise<void> {
+    const op = await this.prisma.operation.findFirst({ where: { id: operationId, tenantId } });
+    if (!op) throw new NotFoundException("Operation not found");
+    await this.assertOperationAccess(viewer, op);
+    this.ensureEditableStatus(op.status);
+
+    if (noMedications) {
+      await this.clearMedicationData(tenantId, operationId);
+    }
+    await this.prisma.operation.update({
+      where: { id: operationId },
+      data: { noMedications },
+    });
+  }
+
+  async getDocumentFileMeta(
+    tenantId: string,
+    operationId: string,
+    documentId: string,
+    viewer: JwtUser,
+  ): Promise<{ storageKey: string; mimeType: string; originalFileName: string }> {
+    const op = await this.prisma.operation.findFirst({ where: { id: operationId, tenantId } });
+    if (!op) throw new NotFoundException("Operation not found");
+    await this.assertOperationAccess(viewer, op);
+    const doc = await this.prisma.operationDocument.findFirst({
+      where: { id: documentId, operationId, tenantId },
+    });
+    if (!doc) throw new NotFoundException("Document not found");
+    await this.uploads.assertExists("operations", doc.relativePath);
+    return { storageKey: doc.relativePath, mimeType: doc.mimeType, originalFileName: doc.originalFileName };
+  }
+
+  openDocumentReadStream(storageKey: string) {
+    return this.uploads.getReadStream("operations", storageKey);
   }
 }

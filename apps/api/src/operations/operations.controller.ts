@@ -1,16 +1,49 @@
-import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
-import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags } from "@nestjs/swagger";
-import { OperationStatus, UserRole } from "@prisma/client";
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  StreamableFile,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiProperty,
+  ApiPropertyOptional,
+  ApiTags,
+} from "@nestjs/swagger";
+import { OperationDocumentKind, OperationStatus, UserRole } from "@prisma/client";
 import { Type } from "class-transformer";
 import { IsEnum, IsNumber, IsOptional, Min } from "class-validator";
+import { memoryStorage } from "multer";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { CreateOperationDto } from "./dto/create-operation.dto";
 import { OperationDto } from "./dto/operation.dto";
+import {
+  AddOperationMedicationDto,
+  OperationDocumentDto,
+  OperationMedicationDto,
+} from "./dto/operation-clinical.dto";
 import { UpdateOperationDto } from "./dto/update-operation.dto";
 import { OperationsService } from "./operations.service";
+
+const UPLOAD_LIMIT = 15 * 1024 * 1024;
 
 const OPERATIONS_VIEW_ROLES: Set<UserRole> = new Set([
   UserRole.GROUP_ADMIN,
@@ -106,6 +139,75 @@ export class OperationsController {
   create(@CurrentUser() user: JwtUser, @Body() body: CreateOperationDto) {
     this.assertCreateAccess(user);
     return this.operations.create(requireTenantId(user), body, user);
+  }
+
+  @Get(":id/documents/:docId/file")
+  @ApiOperation({ summary: "Stream operation document (inline display)" })
+  @ApiOkResponse({ description: "Binary file stream" })
+  async getDocumentFile(
+    @CurrentUser() user: JwtUser,
+    @Param("id") operationId: string,
+    @Param("docId") docId: string,
+  ): Promise<StreamableFile> {
+    this.assertViewAccess(user);
+    const meta = await this.operations.getDocumentFileMeta(requireTenantId(user), operationId, docId, user);
+    const stream = await this.operations.openDocumentReadStream(meta.storageKey);
+    return new StreamableFile(stream, {
+      type: meta.mimeType,
+      disposition: `inline; filename*=UTF-8''${encodeURIComponent(meta.originalFileName)}`,
+    });
+  }
+
+  @Post(":id/documents")
+  @ApiOperation({ summary: "Upload attachment or prescription document (multipart: file, kind, optional description)" })
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({
+    schema: {
+      type: "object",
+      required: ["file", "kind"],
+      properties: {
+        file: { type: "string", format: "binary" },
+        kind: { type: "string", enum: ["ATTACHMENT", "PRESCRIPTION"] },
+        description: { type: "string" },
+      },
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor("file", {
+      storage: memoryStorage(),
+      limits: { fileSize: UPLOAD_LIMIT },
+    }),
+  )
+  @ApiCreatedResponse({ type: OperationDocumentDto })
+  async uploadDocument(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Body("kind") kindRaw?: string,
+    @Body("description") description?: string,
+  ): Promise<OperationDocumentDto> {
+    this.assertCreateAccess(user);
+    if (!file) throw new BadRequestException("file is required");
+    const kind =
+      kindRaw === "PRESCRIPTION"
+        ? OperationDocumentKind.PRESCRIPTION
+        : kindRaw === "ATTACHMENT"
+          ? OperationDocumentKind.ATTACHMENT
+          : null;
+    if (!kind) throw new BadRequestException("kind must be ATTACHMENT or PRESCRIPTION");
+    return this.operations.uploadDocument(requireTenantId(user), id, kind, description, file, user);
+  }
+
+  @Post(":id/medications")
+  @ApiOperation({ summary: "Add medication for this operation" })
+  @ApiCreatedResponse({ type: OperationMedicationDto })
+  addMedication(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Body() body: AddOperationMedicationDto,
+  ) {
+    this.assertCreateAccess(user);
+    return this.operations.addMedication(requireTenantId(user), id, body, user);
   }
 
   @Patch(":id")

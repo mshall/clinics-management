@@ -39,6 +39,7 @@ const USER_ROLES = [
   "PHYSICIAN",
   "NURSE",
   "RECEPTIONIST",
+  "CALL_CENTER",
   "HR_OFFICER",
   "FINANCE_OFFICER",
   "CLINIC_ADMIN",
@@ -443,7 +444,7 @@ export function AdminPage() {
               </CardHeader>
               <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="space-y-2">
-                  <Label required>Email</Label>
+                  <Label required>{t("auth.email")}</Label>
                   <Input type="email" value={uEmail} onChange={(e) => setUEmail(e.target.value)} autoComplete="off" />
                 </div>
                 <div className="space-y-2">

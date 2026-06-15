@@ -15,12 +15,19 @@ import { useClinicsQuery, useEncountersQuery, usePatientQuery } from "@/lib/api-
 import type { EncounterDetailDto } from "@/lib/api-types";
 import { apiFetchBlob, apiPost } from "@/lib/http";
 import { formatEncounterStatus, localeForLanguage } from "@/lib/locale-display";
+import { patientAcquisitionDisplay, type PatientAcquisitionChannel } from "@/lib/patient-acquisition";
+import type { PatientDocumentDto } from "@/lib/api-schema";
+import { showNavItem } from "@/lib/nav-policy";
+import { useAuthStore } from "@/stores/auth-store";
 
 export function PatientDetailPage() {
   const { t, i18n } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const role = useAuthStore((s) => s.user?.role);
+  const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
+  const canViewEncounters = showNavItem(role, "encounters", navTabKeys);
   const { data: patient, isPending, isError, error } = usePatientQuery(id);
   const [encPage, setEncPage] = useState(1);
   const [encPageSize, setEncPageSize] = useState(10);
@@ -34,7 +41,7 @@ export function PatientDetailPage() {
     pageSize: encPageSize,
     sortBy: "updatedAt",
     sortOrder: "desc",
-    enabled: Boolean(id),
+    enabled: Boolean(id) && canViewEncounters,
   });
   const { data: vitalsData, isPending: vitalsLoading } = useEncountersQuery({
     patientId: id,
@@ -42,7 +49,7 @@ export function PatientDetailPage() {
     pageSize: vitalsPageSize,
     sortBy: "updatedAt",
     sortOrder: "desc",
-    enabled: Boolean(id),
+    enabled: Boolean(id) && canViewEncounters,
   });
   const encounters = encData?.items ?? [];
   const encTotal = encData?.total ?? 0;
@@ -171,19 +178,21 @@ export function PatientDetailPage() {
               <Button asChild variant="outline">
                 <Link to="/patients">{t("patients.backToList")}</Link>
               </Button>
-              <Button
-                type="button"
-                disabled={!defaultClinicId || createEncounter.isPending}
-                onClick={() => createEncounter.mutate()}
-              >
-                {t("patients.newEncounter")}
-              </Button>
+              {canViewEncounters ? (
+                <Button
+                  type="button"
+                  disabled={!defaultClinicId || createEncounter.isPending}
+                  onClick={() => createEncounter.mutate()}
+                >
+                  {t("patients.newEncounter")}
+                </Button>
+              ) : null}
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 xl:grid-cols-[1.1fr_1fr]">
+      <div className={`grid gap-4 ${canViewEncounters ? "xl:grid-cols-[1.1fr_1fr]" : ""}`}>
         <Card>
           <CardHeader>
             <CardTitle className="text-base">{t("patients.personalDetails")}</CardTitle>
@@ -223,8 +232,60 @@ export function PatientDetailPage() {
             ) : null}
             <Separator />
             <Row label={t("patients.email")} value={<span className="break-all">{patient.email ?? "—"}</span>} />
+            <Separator />
+            <Row
+              label={t("patients.howDidTheyFindUs", "How did they find us?")}
+              value={
+                <span className="text-end">
+                  {patientAcquisitionDisplay(
+                    patient.acquisitionChannel as PatientAcquisitionChannel | null | undefined,
+                    patient.acquisitionReferralName,
+                    patient.acquisitionOtherDetail,
+                    t,
+                  )}
+                </span>
+              }
+            />
+            {(patient.documents?.length ?? 0) > 0 ? (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <span className="text-muted-foreground">{t("patients.attachDocuments", "Documents")}</span>
+                  <ul className="space-y-2">
+                    {(patient.documents as PatientDocumentDto[]).map((doc) => (
+                      <li
+                        key={doc.id}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium">{doc.description}</p>
+                          <p className="truncate text-xs text-muted-foreground ltr-nums">{doc.originalFileName}</p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0"
+                          onClick={async () => {
+                            const { blob } = await apiFetchBlob(
+                              `/api/v1/patients/${patient.id}/documents/${doc.id}`,
+                            );
+                            const url = URL.createObjectURL(blob);
+                            window.open(url, "_blank", "noopener,noreferrer");
+                            window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+                          }}
+                        >
+                          {t("patients.downloadDocument", "Download")}
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </>
+            ) : null}
           </CardContent>
         </Card>
+        {canViewEncounters ? (
         <Card>
           <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
             <CardTitle className="flex items-center gap-2 text-base">
@@ -244,11 +305,11 @@ export function PatientDetailPage() {
                     <thead className="bg-muted/60">
                       <tr>
                         <th className="px-2 py-2 text-start font-medium text-muted-foreground">{t("encounters.updated", "Updated")}</th>
-                        <th className="px-2 py-2 text-start font-medium text-muted-foreground">HR</th>
-                        <th className="px-2 py-2 text-start font-medium text-muted-foreground">SpO2</th>
-                        <th className="px-2 py-2 text-start font-medium text-muted-foreground">BP</th>
-                        <th className="px-2 py-2 text-start font-medium text-muted-foreground">Temp</th>
-                        <th className="px-2 py-2 text-start font-medium text-muted-foreground">Wt/Ht</th>
+                        <th className="px-2 py-2 text-start font-medium text-muted-foreground">{t("encounters.vitalsHr")}</th>
+                        <th className="px-2 py-2 text-start font-medium text-muted-foreground">{t("encounters.vitalsSpo2")}</th>
+                        <th className="px-2 py-2 text-start font-medium text-muted-foreground">{t("encounters.vitalsBp")}</th>
+                        <th className="px-2 py-2 text-start font-medium text-muted-foreground">{t("encounters.vitalsTemp")}</th>
+                        <th className="px-2 py-2 text-start font-medium text-muted-foreground">{t("encounters.vitalsWtHt")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -287,8 +348,10 @@ export function PatientDetailPage() {
             )}
           </CardContent>
         </Card>
+        ) : null}
       </div>
 
+      {canViewEncounters ? (
       <div className="grid gap-4">
         <Card>
           <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
@@ -348,6 +411,7 @@ export function PatientDetailPage() {
           </CardContent>
         </Card>
       </div>
+      ) : null}
     </div>
   );
 }

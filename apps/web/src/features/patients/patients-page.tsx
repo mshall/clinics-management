@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -17,6 +18,22 @@ import { ApiError, apiPost, apiPostFormData } from "@/lib/http";
 import { columnFilterIncludes } from "@/lib/utils";
 import { formatGender } from "@/lib/locale-display";
 import { formatClinicName } from "@/lib/locale-display";
+import { useAuthStore } from "@/stores/auth-store";
+import {
+  PATIENT_ACQUISITION_CHANNELS,
+  patientAcquisitionLabel,
+  type PatientAcquisitionChannel,
+} from "@/lib/patient-acquisition";
+
+type PendingPatientDocument = {
+  id: string;
+  file: File | null;
+  description: string;
+};
+
+function emptyPendingDocument(): PendingPatientDocument {
+  return { id: crypto.randomUUID(), file: null, description: "" };
+}
 
 export function PatientsPage() {
   const { t, i18n } = useTranslation();
@@ -83,6 +100,9 @@ export function PatientsPage() {
   }, [debouncedQuick]);
 
   const { data: clinics = [] } = useClinicsQuery();
+  const authRole = useAuthStore((s) => s.user?.role);
+  const singleManagedClinic = clinics.length === 1 ? clinics[0]! : null;
+  const defaultHomeBranchId = singleManagedClinic?.id ?? clinics[0]?.id ?? "";
   const [open, setOpen] = useState(false);
   const [formErr, setFormErr] = useState<string | null>(null);
   const [firstNameEn, setFirstNameEn] = useState("");
@@ -96,42 +116,105 @@ export function PatientsPage() {
   const [nationalId, setNationalId] = useState("");
   const [nationalIdDocFile, setNationalIdDocFile] = useState<File | null>(null);
   const [homeBranchId, setHomeBranchId] = useState("");
+  const [docRows, setDocRows] = useState<PendingPatientDocument[]>([]);
+  const [acquisitionChannel, setAcquisitionChannel] = useState<PatientAcquisitionChannel | "">("");
+  const [acquisitionReferralName, setAcquisitionReferralName] = useState("");
+  const [acquisitionOtherDetail, setAcquisitionOtherDetail] = useState("");
+
+  const resetForm = () => {
+    setFirstNameEn("");
+    setLastNameEn("");
+    setFirstNameAr("");
+    setLastNameAr("");
+    setDob("");
+    setGender("M");
+    setPhone("");
+    setEmail("");
+    setNationalId("");
+    setNationalIdDocFile(null);
+    setHomeBranchId(defaultHomeBranchId);
+    setDocRows([]);
+    setAcquisitionChannel("");
+    setAcquisitionReferralName("");
+    setAcquisitionOtherDetail("");
+  };
+
+  useEffect(() => {
+    if (open && defaultHomeBranchId) {
+      setHomeBranchId(defaultHomeBranchId);
+    }
+  }, [open, defaultHomeBranchId]);
+
+  const validateForm = (): string | null => {
+    if (!firstNameAr.trim()) {
+      return t("patients.errorFirstNameAr", "Arabic first name is required.");
+    }
+    if (!lastNameAr.trim()) {
+      return t("patients.errorLastNameAr", "Arabic last name is required.");
+    }
+    for (const row of docRows) {
+      if (row.file && !row.description.trim()) {
+        return t("patients.errorDocDescriptionRequired", "Each attached document needs a description.");
+      }
+      if (row.description.trim() && !row.file) {
+        return t("patients.errorDocFileRequired", "Choose a file for each document description.");
+      }
+    }
+    if (acquisitionChannel === "DOCTOR_REFERRAL" && !acquisitionReferralName.trim()) {
+      return t("patients.errorExplainMoreRequired", "Explain more is required.");
+    }
+    if (acquisitionChannel === "OTHER" && !acquisitionOtherDetail.trim()) {
+      return t("patients.errorExplainMoreRequired", "Explain more is required.");
+    }
+    return null;
+  };
 
   const createMut = useMutation({
     mutationFn: async () => {
-      const patient = await apiPost<PatientDto>("/api/v1/patients", {
+      const validationError = validateForm();
+      if (validationError) throw new Error(validationError);
+
+      const body: Record<string, string | undefined> = {
         firstNameEn,
         lastNameEn,
-        firstNameAr: firstNameAr || undefined,
-        lastNameAr: lastNameAr || undefined,
+        firstNameAr: firstNameAr.trim(),
+        lastNameAr: lastNameAr.trim(),
         dob,
         gender,
         phone,
-        email: email || undefined,
+        email: email.trim() || undefined,
         nationalId: nationalId.trim() || undefined,
         homeBranchId: homeBranchId || undefined,
-      });
+      };
+      if (acquisitionChannel) {
+        body.acquisitionChannel = acquisitionChannel;
+        if (acquisitionChannel === "DOCTOR_REFERRAL") {
+          body.acquisitionReferralName = acquisitionReferralName.trim();
+        }
+        if (acquisitionChannel === "OTHER") {
+          body.acquisitionOtherDetail = acquisitionOtherDetail.trim();
+        }
+      }
+
+      const patient = await apiPost<PatientDto>("/api/v1/patients", body);
       if (nationalIdDocFile) {
         const fd = new FormData();
         fd.append("file", nationalIdDocFile);
         await apiPostFormData<PatientDto>(`/api/v1/patients/${patient.id}/national-id-document`, fd);
+      }
+      for (const row of docRows) {
+        if (!row.file) continue;
+        const fd = new FormData();
+        fd.append("file", row.file);
+        fd.append("description", row.description.trim());
+        await apiPostFormData(`/api/v1/patients/${patient.id}/documents`, fd);
       }
       return patient;
     },
     onSuccess: () => {
       setFormErr(null);
       setOpen(false);
-      setFirstNameEn("");
-      setLastNameEn("");
-      setFirstNameAr("");
-      setLastNameAr("");
-      setDob("");
-      setGender("M");
-      setPhone("");
-      setEmail("");
-      setNationalId("");
-      setNationalIdDocFile(null);
-      setHomeBranchId("");
+      resetForm();
       void qc.invalidateQueries({ queryKey: ["patients"] });
       void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
     },
@@ -154,7 +237,7 @@ export function PatientsPage() {
           <DialogTrigger asChild>
             <CreateActionButton type="button">{t("patients.newPatient")}</CreateActionButton>
           </DialogTrigger>
-          <DialogContent aria-describedby={undefined}>
+          <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto" aria-describedby={undefined}>
             <DialogHeader>
               <DialogTitle>{t("patients.registerTitle")}</DialogTitle>
             </DialogHeader>
@@ -169,11 +252,11 @@ export function PatientsPage() {
                 <Input value={lastNameEn} onChange={(e) => setLastNameEn(e.target.value)} autoComplete="family-name" />
               </div>
               <div className="space-y-2">
-                <Label>{t("patients.firstNameAr")}</Label>
+                <Label required>{t("patients.firstNameAr")}</Label>
                 <Input value={firstNameAr} onChange={(e) => setFirstNameAr(e.target.value)} dir="rtl" />
               </div>
               <div className="space-y-2">
-                <Label>{t("patients.lastNameAr")}</Label>
+                <Label required>{t("patients.lastNameAr")}</Label>
                 <Input value={lastNameAr} onChange={(e) => setLastNameAr(e.target.value)} dir="rtl" />
               </div>
               <div className="space-y-2">
@@ -196,11 +279,17 @@ export function PatientsPage() {
                 <Input className="ltr-nums" value={phone} onChange={(e) => setPhone(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>{t("patients.nationalId")}</Label>
+                <Label>
+                  {t("patients.nationalId")}{" "}
+                  <span className="text-xs font-normal text-muted-foreground">({t("common.optional", "optional")})</span>
+                </Label>
                 <Input className="ltr-nums" value={nationalId} onChange={(e) => setNationalId(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>{t("patients.nationalIdDocument")}</Label>
+                <Label>
+                  {t("patients.nationalIdDocument")}{" "}
+                  <span className="text-xs font-normal text-muted-foreground">({t("common.optional", "optional")})</span>
+                </Label>
                 <Input
                   className="cursor-pointer text-sm"
                   type="file"
@@ -211,29 +300,170 @@ export function PatientsPage() {
                 {nationalIdDocFile ? <p className="text-xs text-muted-foreground ltr-nums">{nationalIdDocFile.name}</p> : null}
               </div>
               <div className="space-y-2">
-                <Label>{t("patients.email")}</Label>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+                <Label>
+                  {t("patients.email")}{" "}
+                  <span className="text-xs font-normal text-muted-foreground">({t("common.optional", "optional")})</span>
+                </Label>
+                <Input type="text" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
               </div>
               <div className="space-y-2">
                 <Label>{t("patients.homeBranch")}</Label>
+                {singleManagedClinic ? (
+                  <p className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm">
+                    {formatClinicName(singleManagedClinic, i18n.language)}{" "}
+                    <span className="text-muted-foreground">
+                      (
+                      {authRole === "branch_manager"
+                        ? t("admin.managedClinicBm", "your clinic")
+                        : t("admin.managedClinicCa", "assigned clinic")}
+                      )
+                    </span>
+                  </p>
+                ) : (
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={homeBranchId}
+                    onChange={(e) => setHomeBranchId(e.target.value)}
+                  >
+                    <option value="">{t("patients.optionalBranch")}</option>
+                    {clinics.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {formatClinicName(c, i18n.language)}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              <div className="space-y-3 border-t border-border pt-3">
+                <div className="flex items-center justify-between gap-2">
+                  <Label>{t("patients.attachDocuments", "Documents")}</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1 text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
+                    onClick={() => setDocRows((rows) => [...rows, emptyPendingDocument()])}
+                  >
+                    <Plus className="h-4 w-4 text-emerald-600" />
+                    {t("patients.addDocument", "Add a document")}
+                  </Button>
+                </div>
+                {docRows.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">{t("patients.documentsOptionalHint", "Optional — attach files with a description for each.")}</p>
+                ) : (
+                  <div className="space-y-3">
+                    {docRows.map((row, index) => (
+                      <div key={row.id} className="space-y-2 rounded-md border border-border p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {t("patients.documentN", "Document {{n}}", { n: index + 1 })}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0 text-muted-foreground"
+                            aria-label={t("common.remove", "Remove")}
+                            onClick={() => setDocRows((rows) => rows.filter((r) => r.id !== row.id))}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="space-y-2">
+                          <Label required>{t("patients.documentDescription", "Description")}</Label>
+                          <Input
+                            value={row.description}
+                            onChange={(e) =>
+                              setDocRows((rows) =>
+                                rows.map((r) => (r.id === row.id ? { ...r, description: e.target.value } : r)),
+                              )
+                            }
+                            placeholder={t("patients.documentDescriptionPh", "e.g. Lab results, referral letter…")}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label required>{t("patients.documentFile", "File")}</Label>
+                          <Input
+                            className="cursor-pointer text-sm"
+                            type="file"
+                            accept="application/pdf,image/*"
+                            onChange={(e) =>
+                              setDocRows((rows) =>
+                                rows.map((r) => (r.id === row.id ? { ...r, file: e.target.files?.[0] ?? null } : r)),
+                              )
+                            }
+                          />
+                          {row.file ? <p className="text-xs text-muted-foreground ltr-nums">{row.file.name}</p> : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2 border-t border-border pt-3">
+                <Label>{t("patients.howDidTheyFindUs", "How did they find us?")}</Label>
                 <select
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={homeBranchId}
-                  onChange={(e) => setHomeBranchId(e.target.value)}
+                  value={acquisitionChannel}
+                  onChange={(e) => {
+                    const v = e.target.value as PatientAcquisitionChannel | "";
+                    setAcquisitionChannel(v);
+                    if (v !== "DOCTOR_REFERRAL") setAcquisitionReferralName("");
+                    if (v !== "OTHER") setAcquisitionOtherDetail("");
+                  }}
                 >
-                  <option value="">{t("patients.optionalBranch")}</option>
-                  {clinics.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {formatClinicName(c, i18n.language)}
+                  <option value="">{t("patients.cameThroughOptional", "Optional")}</option>
+                  {PATIENT_ACQUISITION_CHANNELS.map((ch) => (
+                    <option key={ch} value={ch}>
+                      {patientAcquisitionLabel(ch, t)}
                     </option>
                   ))}
                 </select>
               </div>
+              {acquisitionChannel === "DOCTOR_REFERRAL" ? (
+                <div className="space-y-2">
+                  <Label required>{t("patients.explainMore", "Explain more")}</Label>
+                  <Input
+                    value={acquisitionReferralName}
+                    onChange={(e) => setAcquisitionReferralName(e.target.value)}
+                    placeholder={t("patients.explainMorePh", "Add details…")}
+                  />
+                </div>
+              ) : null}
+              {acquisitionChannel === "OTHER" ? (
+                <div className="space-y-2">
+                  <Label required>{t("patients.explainMore", "Explain more")}</Label>
+                  <Input
+                    value={acquisitionOtherDetail}
+                    onChange={(e) => setAcquisitionOtherDetail(e.target.value)}
+                    placeholder={t("patients.explainMorePh", "Add details…")}
+                  />
+                </div>
+              ) : null}
+
               <CreateActionButton
                 type="button"
                 className="mt-2"
-                disabled={!firstNameEn || !lastNameEn || !dob || !phone || createMut.isPending}
-                onClick={() => createMut.mutate()}
+                disabled={
+                  !firstNameEn ||
+                  !lastNameEn ||
+                  !firstNameAr.trim() ||
+                  !lastNameAr.trim() ||
+                  !dob ||
+                  !phone ||
+                  createMut.isPending
+                }
+                onClick={() => {
+                  const validationError = validateForm();
+                  if (validationError) {
+                    setFormErr(validationError);
+                    return;
+                  }
+                  setFormErr(null);
+                  createMut.mutate();
+                }}
               >
                 {t("patients.submitRegister")}
               </CreateActionButton>

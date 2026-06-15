@@ -18,6 +18,7 @@ const SCHEDULING_ROLES: Set<UserRole> = new Set([
   UserRole.BRANCH_MANAGER,
   UserRole.CLINIC_ASSISTANT,
   UserRole.RECEPTIONIST,
+  UserRole.CALL_CENTER,
 ]);
 
 const CLINIC_UPDATE_ROLES: Set<UserRole> = new Set([

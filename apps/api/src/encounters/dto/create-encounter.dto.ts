@@ -1,8 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import { IsNumber, IsOptional, IsString, MaxLength, Min, MinLength } from "class-validator";
+import { PatientAcquisitionFieldsDto } from "../../common/dto/patient-acquisition-fields.dto";
 
-export class CreateEncounterDto {
+export class CreateEncounterDto extends PatientAcquisitionFieldsDto {
   @ApiProperty()
   @IsString()
   clinicId!: string;

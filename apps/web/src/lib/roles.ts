@@ -5,6 +5,7 @@ export type DemoRole =
   | "physician"
   | "nurse"
   | "receptionist"
+  | "call_center"
   | "hr_officer"
   | "finance_officer"
   | "clinic_admin"
@@ -18,6 +19,7 @@ export function mapApiRole(role: string): DemoRole {
     PHYSICIAN: "physician",
     NURSE: "nurse",
     RECEPTIONIST: "receptionist",
+    CALL_CENTER: "call_center",
     HR_OFFICER: "hr_officer",
     FINANCE_OFFICER: "finance_officer",
     CLINIC_ADMIN: "clinic_admin",

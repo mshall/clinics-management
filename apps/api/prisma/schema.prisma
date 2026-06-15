@@ -14,6 +14,7 @@ enum UserRole {
   PHYSICIAN
   NURSE
   RECEPTIONIST
+  CALL_CENTER
   HR_OFFICER
   FINANCE_OFFICER
   CLINIC_ADMIN
@@ -77,6 +78,11 @@ enum AppointmentStatus {
   CANCELLED
 }
 
+enum OperationDocumentKind {
+  ATTACHMENT
+  PRESCRIPTION
+}
+
 enum OperationStatus {
   SCHEDULED
   CANCELLED
@@ -94,6 +100,15 @@ enum EncounterDocumentKind {
   LAB
   RADIOLOGY
   PRESCRIPTION
+}
+
+enum PatientAcquisitionChannel {
+  SOCIAL_FACEBOOK
+  SOCIAL_INSTAGRAM
+  SOCIAL_TIKTOK
+  WEBSITE_GOOGLE
+  DOCTOR_REFERRAL
+  OTHER
 }
 
 model Tenant {
@@ -117,6 +132,9 @@ model Tenant {
   diagnoses              Diagnosis[]
   encounterMedications   EncounterMedication[]
   encounterDocuments     EncounterDocument[]
+  operationDocuments     OperationDocument[]
+  operationMedications   OperationMedication[]
+  patientDocuments       PatientDocument[]
   userNavTabGrants       UserNavTabGrant[]
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
@@ -228,12 +246,16 @@ model Patient {
   nationalIdDocRelativePath String?
   nationalIdDocOriginalName String?
   nationalIdDocMimeType     String?
+  acquisitionChannel          PatientAcquisitionChannel?
+  acquisitionReferralName     String?
+  acquisitionOtherDetail      String?
   homeBranchId String?
   homeBranch   Clinic?        @relation("PatientHomeBranch", fields: [homeBranchId], references: [id])
   deletedAt    DateTime?
   encounters   Encounter[]
   appointments Appointment[]
   operations   Operation[]
+  documents    PatientDocument[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -241,6 +263,23 @@ model Patient {
   @@unique([tenantId, nationalId])
   @@index([tenantId])
   @@index([tenantId, phone])
+}
+
+model PatientDocument {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patientId        String
+  patient          Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  description      String
+  originalFileName String
+  mimeType         String
+  sizeBytes        Int
+  relativePath     String
+  createdAt        DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([patientId])
 }
 
 model Encounter {
@@ -489,6 +528,9 @@ model Operation {
   paidAmount      Decimal         @default(0) @db.Decimal(14, 2)
   comments        String?
   status          OperationStatus @default(SCHEDULED)
+  noMedications   Boolean         @default(false)
+  documents       OperationDocument[]
+  medications     OperationMedication[]
   revenueEntries  RevenueEntry[]
   createdAt       DateTime        @default(now())
   updatedAt       DateTime @updatedAt
@@ -496,6 +538,43 @@ model Operation {
   @@index([tenantId, clinicId, operationDate])
   @@index([tenantId, clinicianId, operationDate])
   @@index([patientId])
+}
+
+model OperationDocument {
+  id               String                @id @default(cuid())
+  tenantId         String
+  tenant           Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  operationId      String
+  operation        Operation             @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  kind             OperationDocumentKind @default(ATTACHMENT)
+  description      String?
+  originalFileName String
+  mimeType         String
+  sizeBytes        Int
+  relativePath     String
+  createdAt        DateTime              @default(now())
+
+  @@index([tenantId])
+  @@index([operationId])
+}
+
+model OperationMedication {
+  id           String    @id @default(cuid())
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  operationId  String
+  operation    Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  drugName     String
+  dosage       String?
+  route        String?
+  frequency    String?
+  duration     String?
+  instructions String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([operationId])
 }
 
 model FeatureFlag {

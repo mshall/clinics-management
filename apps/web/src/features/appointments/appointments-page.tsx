@@ -7,7 +7,7 @@ import { SearchablePickList, type PickListItem } from "@/components/searchable-p
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
-import { AppointmentStatusBadge } from "@/components/appointment-status-badge";
+import { AppointmentStatusBadge, appointmentStatusLabel } from "@/components/appointment-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -258,11 +258,11 @@ export function AppointmentsPage() {
                 }}
               >
                 <option value="">{t("appointments.anyStatus", "Any status")}</option>
-                <option value="SCHEDULED">SCHEDULED</option>
-                <option value="CONFIRMED">CONFIRMED</option>
-                <option value="CHECKED_IN">CHECKED_IN</option>
-                <option value="CANCELLED">CANCELLED</option>
-                <option value="COMPLETED">COMPLETED</option>
+                {(["SCHEDULED", "CONFIRMED", "CHECKED_IN", "CANCELLED", "COMPLETED"] as const).map((s) => (
+                  <option key={s} value={s}>
+                    {appointmentStatusLabel(s, t)}
+                  </option>
+                ))}
               </select>
             </div>
           </CardContent>
@@ -301,11 +301,10 @@ export function AppointmentsPage() {
               <SearchablePickList
                 items={[
                   { value: "", label: t("appointments.anyStatus", "Any status") },
-                  { value: "SCHEDULED", label: "SCHEDULED" },
-                  { value: "CONFIRMED", label: "CONFIRMED" },
-                  { value: "CHECKED_IN", label: "CHECKED_IN" },
-                  { value: "CANCELLED", label: "CANCELLED" },
-                  { value: "COMPLETED", label: "COMPLETED" },
+                  ...(["SCHEDULED", "CONFIRMED", "CHECKED_IN", "CANCELLED", "COMPLETED"] as const).map((s) => ({
+                    value: s,
+                    label: appointmentStatusLabel(s, t),
+                  })),
                 ]}
                 value={fltStatus}
                 onValueChange={(v) => {

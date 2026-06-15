@@ -38,6 +38,7 @@ export class ClinicsService {
     UserRole.BRANCH_MANAGER,
     UserRole.CLINIC_ASSISTANT,
     UserRole.RECEPTIONIST,
+    UserRole.CALL_CENTER,
   ]);
 
   private async assertClinicVisible(tenantId: string, clinicId: string, user: JwtUser): Promise<void> {

@@ -6,6 +6,19 @@ export type PatientDto = components["schemas"]["PatientDto"] & {
   homeBranchId?: string | null;
   nationalId?: string | null;
   hasNationalIdDoc?: boolean;
+  acquisitionChannel?: string | null;
+  acquisitionReferralName?: string | null;
+  acquisitionOtherDetail?: string | null;
+  documents?: PatientDocumentDto[];
+};
+
+export type PatientDocumentDto = {
+  id: string;
+  description: string;
+  originalFileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: string;
 };
 export type ClinicDto = components["schemas"]["ClinicDto"] & {
   parentNameEn?: string | null;

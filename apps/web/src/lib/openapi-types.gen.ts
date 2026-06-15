@@ -138,7 +138,7 @@ export interface components {
             email: string;
             displayName: string;
             /** @enum {string} */
-            role: "GROUP_ADMIN" | "BRANCH_MANAGER" | "PHYSICIAN" | "NURSE" | "RECEPTIONIST" | "HR_OFFICER" | "FINANCE_OFFICER" | "CLINIC_ADMIN" | "CLINIC_ASSISTANT";
+            role: "GROUP_ADMIN" | "BRANCH_MANAGER" | "PHYSICIAN" | "NURSE" | "RECEPTIONIST" | "CALL_CENTER" | "HR_OFFICER" | "FINANCE_OFFICER" | "CLINIC_ADMIN" | "CLINIC_ASSISTANT";
             navTabKeys?: string[] | null;
             /** @description Set when email is listed in PLATFORM_SUPER_ADMIN_EMAILS */
             platformSuperAdmin?: boolean;

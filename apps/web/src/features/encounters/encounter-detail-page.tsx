@@ -33,7 +33,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { resolvePatientListLabel } from "@/lib/patient-display";
-import { ENCOUNTER_VISIT_TYPES } from "@/lib/visit-types";
+import { ENCOUNTER_VISIT_TYPES, formatVisitType } from "@/lib/visit-types";
 import { useAuthStore } from "@/stores/auth-store";
 import { useEncounterQuery } from "@/lib/api-hooks";
 import type { EncounterDetailDto, EncounterDocumentDto } from "@/lib/api-types";
@@ -537,7 +537,7 @@ export function EncounterDetailPage() {
             <Badge variant={enc.status === "FINALIZED" ? "default" : "secondary"}>{formatEncounterStatus(enc.status, t)}</Badge>
           </div>
           <p className="text-muted-foreground">
-            {visitType}
+            {formatVisitType(visitType, t)}
             <span
               className="ms-2 text-xs text-muted-foreground/90 ltr-nums"
               title={enc.patientId}
@@ -680,15 +680,15 @@ export function EncounterDetailPage() {
                   <option value="">{t("encounters.selectVisitType")}</option>
                   {ENCOUNTER_VISIT_TYPES.map((vt) => (
                     <option key={vt} value={vt}>
-                      {vt}
+                      {formatVisitType(vt, t)}
                     </option>
                   ))}
                   {visitType && !(ENCOUNTER_VISIT_TYPES as readonly string[]).includes(visitType) ? (
-                    <option value={visitType}>{visitType}</option>
+                    <option value={visitType}>{formatVisitType(visitType, t)}</option>
                   ) : null}
                 </select>
               ) : (
-                <p className="text-sm">{visitType}</p>
+                <p className="text-sm">{formatVisitType(visitType, t)}</p>
               )}
             </div>
             <div className="space-y-2">

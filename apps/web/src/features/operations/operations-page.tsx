@@ -3,6 +3,18 @@ import { Lock } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CreateActionButton } from "@/components/create-action-button";
+import {
+  MedicationsPrescriptionDraftPanel,
+  resetMedicationsPrescriptionDraft,
+  type MedTab,
+  type PendingMedication,
+} from "@/components/medications-prescription-draft-panel";
+import {
+  PendingDocumentAttachments,
+  pendingDocumentValidationMessage,
+  validatePendingDocuments,
+  type PendingDocumentRow,
+} from "@/components/pending-document-attachments";
 import { OperationStatusBadge } from "@/components/operation-status-badge";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
@@ -21,7 +33,7 @@ import {
   useSchedulingPhysiciansQuery,
 } from "@/lib/api-hooks";
 import type { OperationDto } from "@/lib/api-types";
-import { ApiError, apiPatch, apiPost } from "@/lib/http";
+import { ApiError, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
 import { formatClinicName, localeForLanguage } from "@/lib/locale-display";
 import { columnFilterIncludes } from "@/lib/utils";
@@ -99,6 +111,11 @@ export function OperationsPage() {
   const [comments, setComments] = useState("");
   const [formErr, setFormErr] = useState<string | null>(null);
   const [createOk, setCreateOk] = useState<string | null>(null);
+  const [docRows, setDocRows] = useState<PendingDocumentRow[]>([]);
+  const [medTab, setMedTab] = useState<MedTab>("none");
+  const [medications, setMedications] = useState<PendingMedication[]>([]);
+  const [prescriptionFile, setPrescriptionFile] = useState<File | null>(null);
+  const [generatedPrescriptionFile, setGeneratedPrescriptionFile] = useState<File | null>(null);
 
   const [bookPatientSearch, setBookPatientSearch] = useState("");
   const [debouncedBookPatient, setDebouncedBookPatient] = useState("");
@@ -137,6 +154,50 @@ export function OperationsPage() {
     () => physicians.map((d) => ({ value: d.userId, label: d.displayName, hint: d.email ?? undefined })),
     [physicians]
   );
+
+  const selectedPatient = useMemo(
+    () => bookPatients.find((p) => p.id === patientId) ?? patients.find((p) => p.id === patientId),
+    [bookPatients, patients, patientId],
+  );
+  const selectedPhysician = useMemo(
+    () => physicians.find((d) => d.userId === clinicianId),
+    [physicians, clinicianId],
+  );
+  const selectedClinic = useMemo(() => {
+    const id = schedulingClinicId || selectedPatient?.homeBranchId || clinics[0]?.id;
+    return clinics.find((c) => c.id === id) ?? clinics[0];
+  }, [schedulingClinicId, selectedPatient?.homeBranchId, clinics]);
+
+  const prescriptionContext = useMemo(
+    () => ({
+      clinicName: selectedClinic ? formatClinicName(selectedClinic, i18n.language) : "—",
+      patientName: selectedPatient
+        ? `${selectedPatient.firstNameEn} ${selectedPatient.lastNameEn}`.trim()
+        : "—",
+      patientMrn: selectedPatient?.mrn,
+      physicianName: selectedPhysician?.displayName ?? authUser?.displayName ?? null,
+    }),
+    [selectedClinic, selectedPatient, selectedPhysician, authUser?.displayName, i18n.language],
+  );
+
+  const resetCreateForm = () => {
+    setPatientId("");
+    setBookPatientSearch("");
+    setDebouncedBookPatient("");
+    setClinicianId("");
+    setDoctorSearch("");
+    setDebouncedDoctorSearch("");
+    setOperationDate("");
+    setTotalCost("");
+    setDownPayment("");
+    setComments("");
+    setDocRows([]);
+    const medReset = resetMedicationsPrescriptionDraft();
+    setMedTab(medReset.medTab);
+    setMedications(medReset.medications);
+    setPrescriptionFile(medReset.prescriptionFile);
+    setGeneratedPrescriptionFile(medReset.generatedPrescriptionFile);
+  };
 
   const [efPatient, setEfPatient] = useState("");
   const [efDoctor, setEfDoctor] = useState("");
@@ -312,8 +373,16 @@ export function OperationsPage() {
   });
 
   const createMut = useMutation({
-    mutationFn: () =>
-      apiPost<unknown>("/api/v1/operations", {
+    mutationFn: async () => {
+      const docValidation = validatePendingDocuments(docRows);
+      const docMsg = pendingDocumentValidationMessage(docValidation, t);
+      if (docMsg) throw new Error(docMsg);
+
+      if (medTab === "prescription" && !prescriptionFile && !generatedPrescriptionFile) {
+        throw new Error(t("operations.errorPrescriptionRequired", "Upload a prescription or generate one from manual medications."));
+      }
+
+      const op = await apiPost<OperationDto>("/api/v1/operations", {
         patientId,
         clinicianId,
         operationDate: toOperationIso(operationDate),
@@ -321,21 +390,45 @@ export function OperationsPage() {
         downPayment: downPayment.trim() ? Number.parseFloat(downPayment) : 0,
         comments: comments.trim() || undefined,
         clinicId: schedulingClinicId || undefined,
-      }),
+        noMedications: medTab === "none",
+      });
+
+      for (const row of docRows) {
+        if (!row.file) continue;
+        const fd = new FormData();
+        fd.append("file", row.file);
+        fd.append("kind", "ATTACHMENT");
+        fd.append("description", row.description.trim());
+        await apiPostFormData(`/api/v1/operations/${op.id}/documents`, fd);
+      }
+
+      if (medTab !== "none") {
+        for (const m of medications) {
+          await apiPost(`/api/v1/operations/${op.id}/medications`, {
+            drugName: m.drugName,
+            dosage: m.dosage.trim() || undefined,
+            frequency: m.frequency.trim() || undefined,
+          });
+        }
+        const rxFile =
+          medTab === "prescription"
+            ? prescriptionFile ?? generatedPrescriptionFile
+            : generatedPrescriptionFile;
+        if (rxFile) {
+          const fd = new FormData();
+          fd.append("file", rxFile);
+          fd.append("kind", "PRESCRIPTION");
+          await apiPostFormData(`/api/v1/operations/${op.id}/documents`, fd);
+        }
+      }
+
+      return op;
+    },
     onSuccess: () => {
       setFormErr(null);
       setCreateOk(t("operations.created", "Operation scheduled."));
       void qc.invalidateQueries({ queryKey: ["operations"] });
-      setPatientId("");
-      setBookPatientSearch("");
-      setDebouncedBookPatient("");
-      setClinicianId("");
-      setDoctorSearch("");
-      setDebouncedDoctorSearch("");
-      setOperationDate("");
-      setTotalCost("");
-      setDownPayment("");
-      setComments("");
+      resetCreateForm();
     },
     onError: (e: unknown) => {
       setCreateOk(null);
@@ -783,6 +876,26 @@ export function OperationsPage() {
                   value={comments}
                   onChange={(e) => setComments(e.target.value)}
                   placeholder={t("operations.commentsPlaceholder", "Notes about the procedure…")}
+                />
+              </fieldset>
+
+              <fieldset className="space-y-3 rounded-lg border border-border p-4">
+                <legend className="px-1 text-sm font-medium">{t("patients.attachDocuments", "Documents")}</legend>
+                <PendingDocumentAttachments rows={docRows} onChange={setDocRows} />
+              </fieldset>
+
+              <fieldset className="space-y-3 rounded-lg border border-border p-4">
+                <legend className="px-1 text-sm font-medium">{t("encounters.medications")}</legend>
+                <MedicationsPrescriptionDraftPanel
+                  medTab={medTab}
+                  onMedTabChange={setMedTab}
+                  medications={medications}
+                  onMedicationsChange={setMedications}
+                  prescriptionFile={prescriptionFile}
+                  onPrescriptionFileChange={setPrescriptionFile}
+                  generatedPrescriptionFile={generatedPrescriptionFile}
+                  onGeneratedPrescriptionFileChange={setGeneratedPrescriptionFile}
+                  prescriptionContext={prescriptionContext}
                 />
               </fieldset>
 

@@ -25,6 +25,11 @@ import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-b
 import type { AddDiagnosisDto } from "./dto/add-diagnosis.dto";
 import type { AddEncounterMedicationDto } from "./dto/add-encounter-medication.dto";
 import type { CreateEncounterDto } from "./dto/create-encounter.dto";
+import {
+  hasPatientAcquisitionInput,
+  patientAcquisitionUpdateData,
+  validatePatientAcquisition,
+} from "../common/patient-acquisition";
 import type {
   DiagnosisDto,
   EncounterDetailDto,
@@ -285,6 +290,10 @@ export class EncountersService {
     if (!clinic) throw new BadRequestException("Invalid clinicId");
     if (!patient) throw new BadRequestException("Invalid patientId");
 
+    if (hasPatientAcquisitionInput(dto)) {
+      validatePatientAcquisition(dto);
+    }
+
     const appointmentIdOpt = dto.appointmentId?.trim() || null;
 
     const row = await this.prisma.$transaction(async (tx) => {
@@ -355,6 +364,13 @@ export class EncountersService {
             postedAt: new Date(),
             status: RevenueStatus.POSTED,
           },
+        });
+      }
+
+      if (hasPatientAcquisitionInput(dto)) {
+        await tx.patient.update({
+          where: { id: dto.patientId },
+          data: patientAcquisitionUpdateData(dto),
         });
       }
 

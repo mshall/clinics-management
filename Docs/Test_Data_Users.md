@@ -98,6 +98,7 @@ These users belong to **Kiorly Clinic Group (Demo)** and typically see data acro
 | `staff7@kiorly.com` | `demo` | HR Officer | Demo User 7 | HR module |
 | `nurse@kiorly.com` | `demo` | Nurse | Demo Nurse | Patients, appointments, encounters |
 | `receptionist@kiorly.com` | `demo` | Receptionist | Demo Receptionist | Front desk, operations |
+| `callcenter@kiorly.com` | `demo` | Call Center | Demo Call Center | Org-wide patients & appointments only (all clinics) |
 | `assistant@kiorly.com` | `demo` | Clinic Assistant | Demo Clinic Assistant | Patients, appointments, encounters, operations, revenue, expenses |
 
 ### Additional seeded org users (`staff3` … `staff15`)
@@ -178,6 +179,7 @@ Branches are children of HQ (`parentClinicId` → HQ).
 | Finance ledger | `finance@kiorly.com` |
 | HR | `staff7@kiorly.com` |
 | Reception / operations | `receptionist@kiorly.com` |
+| Call center (org-wide patients & appointments) | `callcenter@kiorly.com` |
 
 ---
 

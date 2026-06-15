@@ -8,13 +8,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { AppLocale } from "@/lib/i18n";
+import { persistLocale } from "@/lib/locale-cookie";
 
 export function LanguageSwitcher() {
   const { t, i18n } = useTranslation();
 
   function setLocale(lng: AppLocale) {
     void i18n.changeLanguage(lng);
-    localStorage.setItem("cms_locale", lng);
+    persistLocale(lng);
   }
 
   return (

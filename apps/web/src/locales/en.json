@@ -59,7 +59,9 @@
       "netProfit": "Net profit (period)",
       "branches": "Active branches",
       "headcount": "User accounts",
-      "employees": "HR employees"
+      "employees": "HR employees",
+      "appointmentsPeriod": "Appointments (period)",
+      "encountersPeriod": "Encounters (period)"
     },
     "chartPlaceholder": "Income vs expenses and growth charts will use Recharts with live data."
   },
@@ -110,7 +112,38 @@
     "vitalsHistory": "Vitals history",
     "noVitals": "No vitals captured yet.",
     "uploadPhoto": "Upload photo",
-    "photoHint": "Optional profile photo (JPEG/PNG)."
+    "photoHint": "Optional profile photo (JPEG/PNG).",
+    "attachDocuments": "Documents",
+    "addDocument": "Add a document",
+    "documentsOptionalHint": "Optional — attach files with a description for each.",
+    "documentN": "Document {{n}}",
+    "documentDescription": "Description",
+    "documentDescriptionPh": "e.g. Lab results, referral letter…",
+    "documentFile": "File",
+    "downloadDocument": "Download",
+    "cameThrough": "Came through",
+    "howDidTheyFindUs": "How did they find us?",
+    "cameThroughOptional": "Optional",
+    "explainMore": "Explain more",
+    "explainMorePh": "Add details…",
+    "referringDoctor": "Referring doctor",
+    "referringDoctorPh": "Doctor's name",
+    "otherChannelDetail": "How did they find us?",
+    "otherChannelPh": "Describe the channel",
+    "acquisitionSocialFacebook": "Social Media — Facebook",
+    "acquisitionSocialInstagram": "Social Media — Instagram",
+    "acquisitionSocialTiktok": "Social Media — TikTok",
+    "acquisitionWebsiteGoogle": "Website — Google",
+    "acquisitionDoctorReferral": "Doctor Referral",
+    "acquisitionOther": "Other",
+    "errorDocDescriptionRequired": "Each attached document needs a description.",
+    "errorDocFileRequired": "Choose a file for each document description.",
+    "errorReferralNameRequired": "Enter the referring doctor's name.",
+    "errorOtherChannelRequired": "Describe how the patient found the clinic.",
+    "errorExplainMoreRequired": "Explain more is required.",
+    "errorFirstNameAr": "Arabic first name is required.",
+    "errorLastNameAr": "Arabic last name is required.",
+    "photoOptional": "Profile photo is optional."
   },
   "encounters": {
     "title": "Encounter",
@@ -210,7 +243,6 @@
     "selectPatientHint": "Search by English name, Arabic name, or MRN, then choose a row.",
     "patientSearchPlaceholder": "Type English name, Arabic name, or MRN…",
     "noPatientsMatch": "No patients match.",
-    "clinic": "Clinic",
     "visitFee": "Visit fee",
     "visitFeeHint": "Default comes from organization settings (admin).",
     "visitFeeLockedHint": "Set when this encounter was created.",
@@ -234,7 +266,26 @@
     "attendingPhysicianHint": "Required when creating an encounter for someone else. Pre-filled when you link a booked appointment.",
     "noDoctors": "No doctor accounts in this organization.",
     "pickDoctorIdle": "Pick the attending doctor for this encounter.",
-    "selectVisitType": "Select visit type"
+    "selectVisitType": "Select visit type",
+    "docReplaced": "Document replaced",
+    "listSubtitlePhysician": "Encounters where you are the attending physician, across all clinics. The clinic column shows where each visit took place.",
+    "patientSearchIdle": "Start typing to show matching patients.",
+    "pickPatient": "Pick patient",
+    "vitalsHr": "HR",
+    "vitalsSpo2": "SpO₂",
+    "vitalsBp": "BP",
+    "vitalsTemp": "Temp",
+    "vitalsWtHt": "Wt/Ht",
+    "visitTypes": {
+      "office_visit": "Office visit",
+      "follow_up": "Follow-up",
+      "consultation": "Consultation",
+      "walk_in": "Walk-in",
+      "telehealth": "Telehealth",
+      "annual_physical": "Annual physical",
+      "urgent_care": "Urgent care",
+      "procedure": "Procedure"
+    }
   },
   "appointments": {
     "title": "Appointments",
@@ -284,7 +335,20 @@
     "statusScheduled": "Scheduled",
     "statusConfirmed": "Confirmed",
     "statusCancelled": "Cancelled",
-    "statusCompleted": "Completed"
+    "statusCompleted": "Completed",
+    "confirmCompleteAction": "Continue",
+    "confirmCompleteBody": "Completed appointments lock editing. Nothing is saved until you click Save.",
+    "confirmCompleteTitle": "Mark appointment completed?",
+    "endAfterStart": "End time must be after start time.",
+    "invalidDateRange": "Enter valid start and end times.",
+    "noClinicMatch": "No clinics match.",
+    "referenceId": "Reference",
+    "saveSuccess": "Appointment saved.",
+    "savedWithStatus": "Appointment saved. Status is now {{status}}.",
+    "statusCheckedIn": "Checked in",
+    "statusDraftToast": "Status: {{status}}. Click Save to apply.",
+    "statusQuickHint": "Choose a status below, then click Save to apply. Marking completed asks for confirmation first.",
+    "statusWithSave": "Or choose from the list (same as shortcuts)"
   },
   "clinics": {
     "title": "Clinics & branches",
@@ -359,6 +423,7 @@
     "physician": "Physician",
     "nurse": "Nurse",
     "receptionist": "Receptionist",
+    "call_center": "Call center",
     "clinic_assistant": "Clinic assistant",
     "finance_officer": "Finance officer",
     "hr_officer": "HR officer"
@@ -412,7 +477,8 @@
     "edit": "Edit",
     "editTitle": "Edit operation",
     "updated": "Operation updated.",
-    "saveChanges": "Save changes"
+    "saveChanges": "Save changes",
+    "errorPrescriptionRequired": "Upload a prescription or generate one from manual medications."
   },
   "expenses": {
     "title": "Expenses",
@@ -458,7 +524,9 @@
       "PENDING": "Pending",
       "APPROVED": "Approved",
       "REJECTED": "Rejected"
-    }
+    },
+    "from": "From",
+    "to": "To"
   },
   "revenue": {
     "title": "Revenue",
@@ -573,7 +641,24 @@
       "SICK": "Sick leave",
       "UNPAID": "Unpaid leave",
       "OTHER": "Other"
-    }
+    },
+    "addEmployeeInAdmin": "New hires are registered under",
+    "addEmployeeInAdminSuffix": " → Organization & settings.",
+    "anyEmployee": "Any",
+    "anyStatus": "Any",
+    "attendanceHistory": "Attendance history",
+    "attendanceIntro": "Record new attendance and review history by employee and date.",
+    "backToHr": "Back to HR",
+    "employeeDetails": "Employee details",
+    "filterEmployee": "Filter employee",
+    "filterLeaveType": "Filter leave type…",
+    "filterStatus": "Filter status…",
+    "from": "From",
+    "hireDate": "Hire date",
+    "searchPlaceholder": "Name or number",
+    "startFrom": "Start from",
+    "startTo": "Start to",
+    "to": "To"
   },
   "reports": {
     "title": "Reports",
@@ -584,7 +669,15 @@
     "month": "Month",
     "revenue": "Revenue",
     "expenses": "Expenses",
-    "netProfit": "Net profit"
+    "netProfit": "Net profit",
+    "chartNewPatients": "New patient intake",
+    "chartRevenue": "Posted revenue (AED)",
+    "chartVisits": "Visit volume",
+    "growthExplorer": "Growth explorer",
+    "growthExplorerHintLive": "Monthly series from finalized encounters, posted revenue, and patient registrations in your organization.",
+    "months": "Months of history",
+    "newPatients": "New patients",
+    "visits": "Visits"
   },
   "platform": {
     "title": "Platform administration",
@@ -764,7 +857,40 @@
     "kind": "Kind",
     "parentNone": "None",
     "noClinicsMatch": "No clinics match the filters.",
-    "registered": "Registered"
+    "registered": "Registered",
+    "branchManagerSubtitle": "Staff onboarding and governance for clinics you manage.",
+    "clinicAdminSubtitle": "Staff onboarding and clinic governance.",
+    "createEmployee": "Create employee",
+    "createEmployeeHint": "Employment type, salary, and clinic assignment. Optional ID document upload.",
+    "dataExplorerAddRow": "Add row (JSON)",
+    "dataExplorerCreate": "Create",
+    "dataExplorerCreateTitle": "Create row (JSON)",
+    "dataExplorerDeleteConfirm": "Delete this row?",
+    "dataExplorerDescription": "Browse and edit allowlisted database tables for this organization. Changes apply immediately; destructive actions cannot be undone. Passwords are never exposed or set from here.",
+    "dataExplorerEdit": "Edit",
+    "dataExplorerEditHint": "Send only fields to change. id is omitted.",
+    "dataExplorerEditTitle": "Patch row (JSON body)",
+    "dataExplorerEmpty": "No rows in this table.",
+    "dataExplorerInvalidJson": "Invalid JSON.",
+    "dataExplorerNoId": "This row has no id field; cannot edit via API.",
+    "dataExplorerOps": "Operations:",
+    "dataExplorerSavePatch": "Save changes",
+    "dataExplorerScope": "Scope",
+    "dataExplorerTable": "Table",
+    "dataExplorerTitle": "Data explorer",
+    "dataExplorerView": "View",
+    "dataExplorerViewTitle": "Row JSON",
+    "managedClinicBm": "your clinic",
+    "managedClinicCa": "assigned clinic",
+    "navTabsFullRoleHint": "Saving with all tabs checked removes the custom override.",
+    "navTabsPickUser": "Select a user…",
+    "navTabsReset": "Use role defaults",
+    "navTabsSave": "Save tabs",
+    "navTabsSubtitle": "Choose an employee and tick which sections appear in their sidebar. Profile always stays on. Clear override to restore their role defaults.",
+    "navTabsTitle": "Sidebar tabs per user",
+    "navTabsUser": "User",
+    "role": "Role",
+    "tabDataExplorer": "Data explorer"
   },
   "pagination": {
     "showing": "{{from}}–{{to}} of {{total}}",
@@ -786,6 +912,11 @@
     "remove": "Remove",
     "error": "Something went wrong.",
     "optional": "optional",
-    "comingSoon": "API-backed data coming with the NestJS backend."
+    "comingSoon": "API-backed data coming with the NestJS backend.",
+    "delete": "Delete",
+    "hide": "Hide",
+    "retry": "Retry",
+    "to": "To",
+    "menu": "Menu"
   }
 }

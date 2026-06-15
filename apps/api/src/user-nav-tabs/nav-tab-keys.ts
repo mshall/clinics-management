@@ -44,6 +44,7 @@ const ROLE_MAX: Record<UserRole, readonly string[]> = {
   [UserRole.PHYSICIAN]: ["patients", "encounters", "appointments", "operations", "doctor_revenue", "profile", "reports"],
   [UserRole.NURSE]: ["patients", "appointments", "encounters", "profile"],
   [UserRole.RECEPTIONIST]: ["patients", "appointments", "encounters", "operations", "profile"],
+  [UserRole.CALL_CENTER]: ["patients", "appointments", "profile"],
   [UserRole.CLINIC_ADMIN]: [
     "dashboard",
     "patients",
