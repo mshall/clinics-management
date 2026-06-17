@@ -38,16 +38,30 @@ async function listenServer(server, port, label) {
   });
 }
 
-function respondBoot(res, req) {
+function isAppRunnerLiveProbe(req) {
   const p = req.url?.split("?")[0] ?? "";
-  const live = req.method === "GET" && p === "/api/v1/health/live";
+  const method = req.method ?? "GET";
+  return (method === "GET" || method === "HEAD") && p === "/api/v1/health/live";
+}
+
+function respondBoot(res, req) {
+  const live = isAppRunnerLiveProbe(req);
   res.statusCode = live ? 200 : 503;
   res.setHeader("Content-Type", "application/json; charset=utf-8");
+  if (req.method === "HEAD") {
+    res.end();
+    return;
+  }
   res.end(JSON.stringify(live ? { status: "ok", phase: "starting" } : { status: "starting" }));
 }
 
 function createUpstreamProxy(upstreamPort) {
   return createServer((req, res) => {
+    // App Runner liveness only — never forward (upstream may hang > health timeout during migrate/Nest boot).
+    if (isAppRunnerLiveProbe(req)) {
+      respondBoot(res, req);
+      return;
+    }
     const upstreamReq = httpRequest(
       {
         hostname: "127.0.0.1",
@@ -80,7 +94,7 @@ function runChild(command, args) {
 
 async function runMigrate() {
   console.error("[boot] PRISMA_MIGRATE_ON_BOOT=true — running prisma migrate deploy …");
-  const exit = await runChild("npx", ["prisma", "migrate", "deploy"]);
+  const exit = await runChild("prisma", ["migrate", "deploy"]);
   if (exit !== 0) {
     console.error("[boot] prisma migrate deploy failed with status", exit);
     process.exit(exit);
@@ -165,12 +179,34 @@ async function main() {
 
   const nestEnv = { ...process.env, PORT: String(internalPort) };
   const mainJs = path.join(__dirname, "dist", "main.js");
-  console.error("[boot] spawning Nest", mainJs, "internal PORT=", internalPort);
-  const child = spawn(process.execPath, [mainJs], { stdio: "inherit", env: nestEnv });
+  let nestRestarts = 0;
 
-  child.on("exit", (code, signal) => {
-    process.exit(code ?? (signal ? 1 : 0));
-  });
+  function spawnNest() {
+    console.error("[boot] spawning Nest", mainJs, "internal PORT=", internalPort);
+    const child = spawn(process.execPath, [mainJs], { stdio: "inherit", env: nestEnv });
+    child.on("exit", (code, signal) => {
+      if (code === 0 && !signal) {
+        process.exit(0);
+      }
+      nestRestarts++;
+      console.error(
+        "[boot] Nest exited",
+        "code=",
+        code,
+        "signal=",
+        signal,
+        "restart=",
+        nestRestarts,
+      );
+      if (nestRestarts > 5) {
+        console.error("[boot] Nest restart limit — proxy keeps /health/live for App Runner");
+        return;
+      }
+      setTimeout(spawnNest, 2000);
+    });
+  }
+
+  spawnNest();
 }
 
 main().catch((err) => {
