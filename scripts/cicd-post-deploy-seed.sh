@@ -40,7 +40,7 @@ echo ""
 
 if grep -q '"FunctionError"' "$INVOKE_META"; then
   echo "::error::Post-deploy seed Lambda failed. Check CloudWatch: /aws/lambda/${FN}"
-  aws logs tail "/aws/lambda/${FN}" --region "$AWS_REGION" --since 30m --format short --no-follow 2>/dev/null | tail -n 80 || true
+  aws logs tail "/aws/lambda/${FN}" --region "$AWS_REGION" --since 45m --format short --no-follow 2>/dev/null | tail -n 120 || true
   exit 1
 fi
 

@@ -235,11 +235,13 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       environment: {
         DB_SECRET_ARN: db.secret!.secretArn,
         SECRETS_MANAGER_VPCE_HOST: secretsManagerVpceHost,
+        KMS_VPCE_HOST: kmsVpceHost,
         PRISMA_SEED_ENSURE_DEMO_PASSWORDS: "true",
       },
     });
     db.secret!.grantRead(dbSeedFn);
     dbSeedFn.node.addDependency(db);
+    dbSeedFn.node.addDependency(kmsEndpoint);
 
     // App Runner tasks often still resolve regional hostnames to public IPs; private DNS for VPCE
     // is not always applied the same as on EC2. Pass VPCE DNS hostnames only (no https://, no zone id)

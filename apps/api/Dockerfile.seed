@@ -6,9 +6,13 @@ RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
-RUN npm ci --omit=dev && npm install -g prisma@6.19.3 tsx
+# Include devDependencies (tsx, prisma CLI) — this image is not the runtime API bundle.
+RUN npm ci && npm install -g prisma@6.19.3
 COPY apps/api/prisma ./apps/api/prisma
 COPY apps/api/prisma.config.ts ./apps/api/prisma.config.ts
-COPY infra/lambda/db-seed/run.mjs ./apps/api/run-seed.mjs
 WORKDIR /repo/apps/api
+ENV DATABASE_URL="postgresql://build:build@127.0.0.1:5432/build?schema=public"
+RUN npx prisma generate
+COPY infra/lambda/db-seed/run.mjs ./run-seed.mjs
+ENV PATH="/repo/node_modules/.bin:/usr/local/bin:${PATH}"
 CMD ["node", "run-seed.mjs"]
