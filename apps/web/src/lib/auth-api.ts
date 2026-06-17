@@ -22,6 +22,11 @@ export async function loginRequest(email: string, password: string): Promise<Log
         msg = (data as { message: string }).message;
       }
     }
+    if (res.status === 503) {
+      msg = `${msg} (database schema may be out of date — wait for deploy/migrations to finish)`;
+    } else if (res.status >= 500 && msg === "Sign in failed") {
+      msg = `Server error (${res.status}). Try again in a minute or use password "demo" for seeded accounts.`;
+    }
     throw new ApiError(msg, res.status, data);
   }
   const token = data && typeof data === "object" ? (data as { accessToken?: unknown }).accessToken : undefined;

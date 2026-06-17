@@ -18,7 +18,7 @@ export function LoginPage() {
   const user = useAuthStore((s) => s.user);
   const token = useAuthStore((s) => s.accessToken);
   const setSession = useAuthStore((s) => s.setSession);
-  const [email, setEmail] = useState("physician@kiorly.com");
+  const [email, setEmail] = useState("admin@drahmedshall.com");
   const [password, setPassword] = useState("demo");
   const [mfa, setMfa] = useState("");
   const [error, setError] = useState<string | null>(null);

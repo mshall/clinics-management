@@ -73,8 +73,23 @@ async function ensureUser(passwordHash: string, data: UserSeed) {
   const existing = await prisma.user.findFirst({
     where: { email: data.email, tenantId: data.tenantId },
   });
-  // Never overwrite existing accounts (password, role, display name) — AWS re-deploy must stay non-destructive.
-  if (existing) return existing;
+  if (existing) {
+    if (process.env.PRISMA_SEED_ENSURE_DEMO_PASSWORDS === "true") {
+      let matchesDemo = false;
+      try {
+        matchesDemo = bcrypt.compareSync("demo", existing.passwordHash);
+      } catch {
+        matchesDemo = false;
+      }
+      if (!matchesDemo) {
+        return prisma.user.update({
+          where: { id: existing.id },
+          data: { passwordHash },
+        });
+      }
+    }
+    return existing;
+  }
   return prisma.user.create({ data: { ...data, passwordHash } });
 }
 

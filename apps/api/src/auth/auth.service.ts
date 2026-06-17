@@ -20,6 +20,15 @@ function loginEmailLookupVariants(normalized: string): string[] {
   return [...out];
 }
 
+function passwordMatches(password: string, passwordHash: string | null | undefined): boolean {
+  if (!passwordHash) return false;
+  try {
+    return bcrypt.compareSync(password, passwordHash);
+  } catch {
+    return false;
+  }
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -50,7 +59,7 @@ export class AuthService {
         passwordHash: true,
       },
     });
-    const user = candidates.find((u) => bcrypt.compareSync(password, u.passwordHash));
+    const user = candidates.find((u) => passwordMatches(password, u.passwordHash));
     if (!user) throw new UnauthorizedException("Invalid credentials");
 
     const accessToken = this.jwt.sign({

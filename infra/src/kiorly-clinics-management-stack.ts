@@ -294,6 +294,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
               { name: "PRISMA_MIGRATE_ON_BOOT", value: "true" },
               // Idempotent demo seed on boot: empty DB gets full demo; existing data only adds missing demo users.
               { name: "PRISMA_SEED_ON_BOOT", value: "true" },
+              { name: "PRISMA_SEED_ENSURE_DEMO_PASSWORDS", value: "true" },
               { name: "UPLOAD_STORAGE", value: "s3" },
               { name: "S3_UPLOAD_BUCKET", value: apiUploadsBucket.bucketName },
             ],
