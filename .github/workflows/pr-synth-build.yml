@@ -11,6 +11,7 @@ on:
       - "package.json"
       - "package-lock.json"
       - "scripts/cicd-deploy.sh"
+      - "scripts/cicd-pre-deploy-backup.sh"
       - "scripts/cicd-diagnostics-on-failure.sh"
       - ".github/workflows/**"
 
