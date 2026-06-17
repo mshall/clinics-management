@@ -36,12 +36,15 @@ export class PrismaClientExceptionFilter implements ExceptionFilter {
       return;
     }
 
+    const isProd = process.env.NODE_ENV === "production";
+
     if (exception instanceof Prisma.PrismaClientKnownRequestError && ["P1000", "P1001", "P1003"].includes(exception.code)) {
       res.status(HttpStatus.SERVICE_UNAVAILABLE).json({
         statusCode: HttpStatus.SERVICE_UNAVAILABLE,
         error: "Database unavailable",
-        message:
-          "Cannot connect to PostgreSQL. Start Docker (npm run db:up from repo root) and set apps/api/.env DATABASE_URL to postgresql://cms:cms@localhost:5432/cms?schema=public — then run npm run db:setup.",
+        message: isProd
+          ? "The database is temporarily unavailable. Please try again in a minute."
+          : "Cannot connect to PostgreSQL. Start Docker (npm run db:up from repo root) and set apps/api/.env DATABASE_URL to postgresql://cms:cms@localhost:5432/cms?schema=public — then run npm run db:setup.",
         prismaCode: exception.code,
       });
       return;
@@ -55,8 +58,9 @@ export class PrismaClientExceptionFilter implements ExceptionFilter {
       res.status(HttpStatus.SERVICE_UNAVAILABLE).json({
         statusCode: HttpStatus.SERVICE_UNAVAILABLE,
         error: "Database unavailable",
-        message:
-          "PostgreSQL is not reachable. Run npm run db:up and npm run db:setup, then confirm apps/api/.env DATABASE_URL matches docker-compose (cms:cms@localhost:5432/cms).",
+        message: isProd
+          ? "The database is temporarily unavailable. Please try again in a minute."
+          : "PostgreSQL is not reachable. Run npm run db:up and npm run db:setup, then confirm apps/api/.env DATABASE_URL matches docker-compose (cms:cms@localhost:5432/cms).",
         prismaCode: code,
       });
       return;

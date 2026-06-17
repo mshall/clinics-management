@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { apiUrl } from "@/lib/api-url";
 import { loginRequest } from "@/lib/auth-api";
 import { resolvePostLoginPath } from "@/lib/nav-policy";
 import { useAuthStore } from "@/stores/auth-store";
@@ -23,6 +24,31 @@ export function LoginPage() {
   const [mfa, setMfa] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [apiReady, setApiReady] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    async function ping() {
+      try {
+        const res = await fetch(apiUrl("/api/v1/health/live"), { method: "GET" });
+        if (cancelled) return;
+        setApiReady(res.ok);
+        if (!res.ok) timer = setTimeout(() => void ping(), 3000);
+      } catch {
+        if (cancelled) return;
+        setApiReady(false);
+        timer = setTimeout(() => void ping(), 3000);
+      }
+    }
+
+    void ping();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
 
   if (user && token) {
     const from = (location.state as { from?: string } | null)?.from;
@@ -70,6 +96,13 @@ export function LoginPage() {
           </CardHeader>
           <CardContent>
             <form className="space-y-4" onSubmit={(e) => void handleSubmit(e)}>
+              {apiReady === false ? (
+                <p className="text-sm text-muted-foreground">
+                  {import.meta.env.DEV
+                    ? "Waiting for the local API — run `npm run dev` from the repo root if this persists."
+                    : t("auth.apiStarting", "The server is starting up. Sign-in will be available in a moment.")}
+                </p>
+              ) : null}
               {error ? <p className="text-sm text-destructive">{error}</p> : null}
               <div className="space-y-2">
                 <Label htmlFor="email" required>{t("auth.email")}</Label>
@@ -105,7 +138,7 @@ export function LoginPage() {
                   placeholder="123456"
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={submitting}>
+              <Button type="submit" className="w-full" disabled={submitting || apiReady === false}>
                 {submitting ? t("common.loading") : t("auth.signIn")}
               </Button>
             </form>

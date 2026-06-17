@@ -29,7 +29,21 @@ try {
     process.exit(1);
   }
   console.log('OK  Password "demo" works');
-  console.log("\nLogin should work at http://localhost:5173/login");
+
+  let apiOk = false;
+  try {
+    const res = await fetch("http://localhost:3000/api/v1/health/live");
+    apiOk = res.ok;
+  } catch {
+    apiOk = false;
+  }
+  if (!apiOk) {
+    console.error("FAIL  API not listening on http://localhost:3000");
+    console.error("     From the repo root run: npm run dev");
+    process.exit(1);
+  }
+  console.log("OK  API listening on http://localhost:3000");
+  console.log("\nLogin: http://localhost:5173/login  (admin@drahmedshall.com / demo)");
 } catch (err) {
   console.error("FAIL  Database error:", err instanceof Error ? err.message : err);
   console.error("\nFix:");
