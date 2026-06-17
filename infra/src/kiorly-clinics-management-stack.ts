@@ -282,6 +282,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
             runtimeEnvironmentVariables: [
               { name: "NODE_ENV", value: "production" },
               { name: "PORT", value: "3000" },
+              { name: "NEST_INTERNAL_PORT", value: "3001" },
               { name: "SWAGGER_ENABLED", value: "false" },
               { name: "TZ", value: "Europe/Berlin" },
               { name: "AWS_REGION", value: deploymentRegion },
@@ -314,8 +315,8 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
         interval: 10,
         timeout: 10,
         healthyThreshold: 1,
-        // migrate + Nest cold start on deploy; seed runs in background after /health/live is up.
-        unhealthyThreshold: 30,
+        // migrate + synchronous seed + Nest cold start on deploy.
+        unhealthyThreshold: 45,
       },
       networkConfiguration: {
         ingressConfiguration: { isPubliclyAccessible: true },

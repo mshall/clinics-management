@@ -1,13 +1,14 @@
 /**
- * Builds DATABASE_URL from RDS Secrets Manager JSON (host, port, username, password, dbname)
- * when DB_SECRET_ARN is set, optionally runs Prisma migrations, then starts the Nest app.
+ * Builds DATABASE_URL from RDS Secrets Manager JSON when DB_SECRET_ARN is set,
+ * runs Prisma migrate/seed, then starts Nest behind a port-3000 boot proxy.
  *
- * App Runner health-checks :3000 immediately. Nest cold start can take 20–40s, so we keep a
- * lightweight proxy on PORT (3000) and run Nest on NEST_INTERNAL_PORT (3001) until upstream is ready.
+ * App Runner health-checks :3000 for the entire boot window. The proxy listens
+ * on PORT first (no gap between migrate and Nest), answers /health/live while
+ * migrate/seed/Nest warm up, and forwards all traffic once Nest is ready.
  */
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { spawn, spawnSync } from "node:child_process";
-import { createServer } from "node:http";
+import { createServer, request as httpRequest } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -25,16 +26,6 @@ function vpceHttpsFromHost(host) {
   return h ? `https://${h}` : undefined;
 }
 
-function createBootHealthServer(port) {
-  return createServer((req, res) => {
-    const p = req.url?.split("?")[0] ?? "";
-    const live = req.method === "GET" && p === "/api/v1/health/live";
-    res.statusCode = live ? 200 : 503;
-    res.setHeader("Content-Type", "application/json; charset=utf-8");
-    res.end(JSON.stringify(live ? { status: "ok", phase: "boot" } : { status: "starting" }));
-  });
-}
-
 async function listenServer(server, port, label) {
   await new Promise((resolve, reject) => {
     server.listen(port, "0.0.0.0", () => {
@@ -45,43 +36,63 @@ async function listenServer(server, port, label) {
   });
 }
 
-function runSeedInBackground() {
-  const seedScript = path.join(__dirname, "prisma", "seed.ts");
-  console.error("[boot] PRISMA_SEED_ON_BOOT=true — scheduling idempotent seed in background …");
-  const child = spawn("npx", ["tsx", seedScript], {
+function respondBoot(res, req) {
+  const p = req.url?.split("?")[0] ?? "";
+  const live = req.method === "GET" && p === "/api/v1/health/live";
+  res.statusCode = live ? 200 : 503;
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.end(JSON.stringify(live ? { status: "ok", phase: "starting" } : { status: "starting" }));
+}
+
+function createUpstreamProxy(upstreamPort) {
+  return createServer((req, res) => {
+    const upstreamReq = httpRequest(
+      {
+        hostname: "127.0.0.1",
+        port: upstreamPort,
+        path: req.url,
+        method: req.method,
+        headers: { ...req.headers, host: `127.0.0.1:${upstreamPort}` },
+      },
+      (upstreamRes) => {
+        res.writeHead(upstreamRes.statusCode ?? 502, upstreamRes.headers);
+        upstreamRes.pipe(res);
+      },
+    );
+    upstreamReq.on("error", () => respondBoot(res, req));
+    req.pipe(upstreamReq);
+  });
+}
+
+function runMigrateSync() {
+  console.error("[boot] PRISMA_MIGRATE_ON_BOOT=true — running prisma migrate deploy …");
+  const migrate = spawnSync("npx", ["prisma", "migrate", "deploy"], {
     stdio: "inherit",
     env: process.env,
     cwd: __dirname,
-    detached: true,
   });
-  child.unref();
+  const exit = migrate.status ?? 1;
+  if (exit !== 0) {
+    console.error("[boot] prisma migrate deploy failed with status", exit);
+    process.exit(exit);
+  }
+  console.error("[boot] prisma migrate deploy completed OK");
 }
 
-function createUpstreamProxy(publicPort, upstreamPort) {
-  return createServer((req, res) => {
-    const target = `http://127.0.0.1:${upstreamPort}${req.url ?? "/"}`;
-    fetch(target, { method: req.method, headers: req.headers }).then(async (upstream) => {
-      res.statusCode = upstream.status;
-      upstream.headers.forEach((value, key) => {
-        if (key.toLowerCase() === "transfer-encoding") return;
-        res.setHeader(key, value);
-      });
-      const body = Buffer.from(await upstream.arrayBuffer());
-      res.end(body);
-    }).catch(() => {
-      const p = req.url?.split("?")[0] ?? "";
-      const live = req.method === "GET" && p === "/api/v1/health/live";
-      if (live) {
-        res.statusCode = 200;
-        res.setHeader("Content-Type", "application/json; charset=utf-8");
-        res.end(JSON.stringify({ status: "ok", phase: "starting" }));
-        return;
-      }
-      res.statusCode = 503;
-      res.setHeader("Content-Type", "application/json; charset=utf-8");
-      res.end(JSON.stringify({ status: "starting" }));
-    });
+function runSeedSync() {
+  const seedScript = path.join(__dirname, "prisma", "seed.ts");
+  console.error("[boot] PRISMA_SEED_ON_BOOT=true — running idempotent seed …");
+  const seed = spawnSync("npx", ["tsx", seedScript], {
+    stdio: "inherit",
+    env: process.env,
+    cwd: __dirname,
   });
+  const exit = seed.status ?? 1;
+  if (exit !== 0) {
+    console.error("[boot] seed failed with status", exit, "— continuing to start API");
+  } else {
+    console.error("[boot] seed completed OK");
+  }
 }
 
 const dbSecretArn = process.env.DB_SECRET_ARN;
@@ -133,24 +144,6 @@ const internalPort = Number(process.env.NEST_INTERNAL_PORT ?? "3001");
 const migrateOnBoot = process.env.PRISMA_MIGRATE_ON_BOOT === "true";
 const seedOnBoot = process.env.PRISMA_SEED_ON_BOOT === "true";
 
-if (migrateOnBoot) {
-  const bootHealthServer = createBootHealthServer(publicPort);
-  await listenServer(bootHealthServer, publicPort, "migrate-time health probe");
-  console.error("[boot] PRISMA_MIGRATE_ON_BOOT=true — running prisma migrate deploy …");
-  const migrate = spawnSync("npx", ["prisma", "migrate", "deploy"], {
-    stdio: "inherit",
-    env: process.env,
-    cwd: __dirname,
-  });
-  const migrateExit = migrate.status ?? 1;
-  await new Promise((resolve) => bootHealthServer.close(() => resolve()));
-  if (migrateExit !== 0) {
-    console.error("[boot] prisma migrate deploy failed with status", migrateExit);
-    process.exit(migrateExit);
-  }
-  console.error("[boot] prisma migrate deploy completed OK");
-}
-
 const kmsEp = vpceHttpsFromHost(process.env.KMS_VPCE_HOST);
 const stsEp = vpceHttpsFromHost(process.env.STS_VPCE_HOST);
 const smEpForChild = vpceHttpsFromHost(process.env.SECRETS_MANAGER_VPCE_HOST);
@@ -158,28 +151,16 @@ if (smEpForChild) process.env.AWS_ENDPOINT_URL_SECRETS_MANAGER = smEpForChild;
 if (kmsEp) process.env.AWS_ENDPOINT_URL_KMS = kmsEp;
 if (stsEp) process.env.AWS_ENDPOINT_URL_STS = stsEp;
 
-const proxy = createUpstreamProxy(publicPort, internalPort);
+const proxy = createUpstreamProxy(internalPort);
 await listenServer(proxy, publicPort, "upstream proxy");
+
+if (migrateOnBoot) runMigrateSync();
+if (seedOnBoot) runSeedSync();
 
 const nestEnv = { ...process.env, PORT: String(internalPort) };
 const mainJs = path.join(__dirname, "dist", "main.js");
 console.error("[boot] spawning Nest", mainJs, "internal PORT=", internalPort);
 const child = spawn(process.execPath, [mainJs], { stdio: "inherit", env: nestEnv });
-
-if (seedOnBoot) {
-  let seeded = false;
-  const seedTimer = setInterval(() => {
-    fetch(`http://127.0.0.1:${internalPort}/api/v1/health/live`)
-      .then((res) => {
-        if (res.ok && !seeded) {
-          seeded = true;
-          clearInterval(seedTimer);
-          runSeedInBackground();
-        }
-      })
-      .catch(() => {});
-  }, 2000);
-}
 
 child.on("exit", (code, signal) => {
   process.exit(code ?? (signal ? 1 : 0));

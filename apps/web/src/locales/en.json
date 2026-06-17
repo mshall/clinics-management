@@ -842,6 +842,8 @@
     "orgUsersEdit": "Edit user",
     "orgUsersDeleteConfirm": "Delete this user? This cannot be undone.",
     "orgUsersNoClinics": "—",
+    "orgUsersLegacyApi": "Read-only list — full user management will be available after the API deploy completes.",
+    "orgUsersLegacyApiEmpty": "The deployed API is still updating or demo users are still seeding. Refresh in a minute — if the list stays empty after deploy, check App Runner logs for seed errors.",
     "rbacHint": "Example: NURSE cannot access Revenue; PHYSICIAN and FINANCE_OFFICER can.",
     "addClinic": "Clinics: parent & branches",
     "newParentClinic": "None — create as parent clinic",

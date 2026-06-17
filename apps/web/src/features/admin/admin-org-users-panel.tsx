@@ -48,6 +48,41 @@ export function AdminOrgUsersPanel() {
   const [userErr, setUserErr] = useState<string | null>(null);
   const [legacyUsersApi, setLegacyUsersApi] = useState(false);
 
+  async function fetchLegacyOrgUsers(pageNum: number, size: number, q: string): Promise<Paginated<OrgUserRow>> {
+    const qParam = q.trim() ? `&q=${encodeURIComponent(q.trim())}` : "";
+    const first = await apiGet<Paginated<OrgUserRow>>(
+      `/api/v1/users?page=1&pageSize=${Math.max(size, 100)}${qParam}`,
+    );
+    let items = [...first.items];
+    if (!q.trim() && first.totalPages > 1) {
+      for (let p = 2; p <= first.totalPages; p += 1) {
+        const next = await apiGet<Paginated<OrgUserRow>>(
+          `/api/v1/users?page=${p}&pageSize=${Math.max(size, 100)}${qParam}`,
+        );
+        items.push(...next.items);
+      }
+    }
+    const start = (pageNum - 1) * size;
+    const pageItems = items.slice(start, start + size).map((u) => ({
+      id: u.id,
+      email: u.email,
+      displayName: u.displayName,
+      role: u.role,
+      createdAt: u.createdAt ?? "",
+      clinicIds: u.clinicIds ?? [],
+      clinics: u.clinics ?? [],
+    }));
+    const total = q.trim() ? pageItems.length : first.total;
+    const totalPages = Math.max(1, Math.ceil(total / size));
+    return {
+      items: pageItems,
+      total,
+      page: pageNum,
+      pageSize: size,
+      totalPages,
+    };
+  }
+
   async function fetchOrgUsers(pageNum: number, size: number, q: string) {
     const query = q.trim() ? `&q=${encodeURIComponent(q.trim())}` : "";
     try {
@@ -58,28 +93,8 @@ export function AdminOrgUsersPanel() {
       return data;
     } catch (err) {
       if (!(err instanceof ApiError) || err.status !== 404) throw err;
-      const basic = await apiGet<Paginated<{ id: string; email: string; displayName: string; role: string }>>(
-        `/api/v1/users?page=${pageNum}&pageSize=${size}`,
-      );
       setLegacyUsersApi(true);
-      const qLower = q.trim().toLowerCase();
-      const filtered = qLower
-        ? basic.items.filter(
-            (u) => u.email.toLowerCase().includes(qLower) || u.displayName.toLowerCase().includes(qLower),
-          )
-        : basic.items;
-      return {
-        items: filtered.map((u) => ({
-          ...u,
-          createdAt: "",
-          clinicIds: [],
-          clinics: [],
-        })),
-        total: qLower ? filtered.length : basic.total,
-        page: basic.page,
-        pageSize: basic.pageSize,
-        totalPages: qLower ? 1 : basic.totalPages,
-      } satisfies Paginated<OrgUserRow>;
+      return fetchLegacyOrgUsers(pageNum, size, q);
     }
   }
 
@@ -208,11 +223,23 @@ export function AdminOrgUsersPanel() {
         </CardHeader>
         <CardContent className="space-y-4">
           {legacyUsersApi ? (
-            <p className="text-sm text-muted-foreground">
-              {t(
-                "admin.orgUsersLegacyApi",
-                "Read-only list — the deployed API is still updating. User management will be available after the next successful deploy.",
-              )}
+            <p className="text-sm text-amber-700 dark:text-amber-400">
+              {total < 3
+                ? t(
+                    "admin.orgUsersLegacyApiEmpty",
+                    "The deployed API is still updating or demo users are still seeding. Refresh in a minute — if the list stays empty after deploy, check App Runner logs for seed errors.",
+                  )
+                : t(
+                    "admin.orgUsersLegacyApi",
+                    "Read-only list — full user management will be available after the API deploy completes.",
+                  )}
+            </p>
+          ) : null}
+          {usersQuery.isError ? (
+            <p className="text-sm text-destructive">
+              {usersQuery.error instanceof ApiError
+                ? usersQuery.error.message
+                : t("common.error")}
             </p>
           ) : null}
           <div className="max-w-sm space-y-2">

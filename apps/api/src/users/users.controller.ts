@@ -28,11 +28,12 @@ export class UsersController {
   list(
     @CurrentUser() user: JwtUser,
     @Query("page") page?: string,
-    @Query("pageSize") pageSize?: string
+    @Query("pageSize") pageSize?: string,
+    @Query("q") q?: string,
   ) {
     if (!UsersController.USER_LIST_ROLES.has(user.role)) {
       throw new ForbiddenException("You do not have permission to list users");
     }
-    return this.users.listForTenant(requireTenantId(user), page, pageSize);
+    return this.users.listForTenant(requireTenantId(user), page, pageSize, q);
   }
 }
