@@ -6,8 +6,9 @@
     "watch": "tsc -w",
     "cdk": "cdk",
     "check:ascii-descriptions": "node scripts/check-ascii-descriptions.mjs",
-    "synth": "npm run check:ascii-descriptions && npm run build && cdk synth",
-    "deploy": "npm run check:ascii-descriptions && npm run build && cdk deploy --require-approval never"
+    "check:ascii-cfn-templates": "node scripts/check-ascii-cfn-templates.mjs",
+    "synth": "npm run check:ascii-descriptions && npm run build && cdk synth && npm run check:ascii-cfn-templates",
+    "deploy": "npm run check:ascii-descriptions && npm run build && cdk synth && npm run check:ascii-cfn-templates && cdk deploy --require-approval never"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
