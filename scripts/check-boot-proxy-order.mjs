@@ -1,62 +1,105 @@
 #!/usr/bin/env node
 /**
- * App Runner health-checks PORT (3000) during deploy. health-sidecar.mjs must bind :3000
- * before docker-boot.mjs runs (via docker-entrypoint.sh).
+ * App Runner health-checks PORT (3000) during deploy. docker-entrypoint.mjs must bind :3000
+ * via listenServer(proxy) before any VPC/Secrets Manager / migrate work.
  */
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const apiDir = join(dirname(fileURLToPath(import.meta.url)), "..", "apps", "api");
-const sidecarPath = join(apiDir, "health-sidecar.mjs");
-const shellPath = join(apiDir, "docker-entrypoint.sh");
-const bootPath = join(apiDir, "docker-boot.mjs");
+const entrypointPath = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "apps",
+  "api",
+  "docker-entrypoint.mjs",
+);
+const source = readFileSync(entrypointPath, "utf8");
 
-const sidecar = readFileSync(sidecarPath, "utf8");
-const shell = readFileSync(shellPath, "utf8");
-const boot = readFileSync(bootPath, "utf8");
+if (/^import\s+.*@aws-sdk\//m.test(source)) {
+  console.error(
+    `${entrypointPath}: do not statically import @aws-sdk at module load — dynamic-import after listenServer so :3000 binds before heavy SDK init`,
+  );
+  process.exit(1);
+}
+
+const mainMatch = source.match(/async function main\s*\(\)\s*\{([\s\S]*?)^\}/m);
+if (!mainMatch) {
+  console.error(`${entrypointPath}: missing async function main()`);
+  process.exit(1);
+}
+
+const mainBody = mainMatch[1];
+const listenIdx = mainBody.search(/await listenServer\s*\(\s*proxy/);
+const secretIdx = mainBody.search(/await loadDbSecretFromArn\s*\(/);
+const migrateIdx = mainBody.search(/await runMigrateWithRetry\s*\(/);
+const vpceEnvIdx = mainBody.search(/AWS_ENDPOINT_URL_SECRETS_MANAGER/);
 
 let failed = false;
 
-if (!/health-sidecar\.mjs/.test(shell)) {
-  console.error(`${shellPath}: must start health-sidecar.mjs before docker-boot.mjs`);
+if (listenIdx === -1) {
+  console.error(`${entrypointPath}: main() must await listenServer(proxy, …) before boot work`);
+  failed = true;
+}
+if (secretIdx !== -1 && listenIdx !== -1 && secretIdx < listenIdx) {
+  console.error(
+    `${entrypointPath}: loadDbSecretFromArn must run after listenServer(proxy) — proxy must answer liveness during secret retries`,
+  );
+  failed = true;
+}
+if (migrateIdx !== -1 && listenIdx !== -1 && migrateIdx < listenIdx) {
+  console.error(
+    `${entrypointPath}: runMigrateWithRetry must run after listenServer(proxy) — migrate blocks the event loop worker but proxy must already be listening`,
+  );
+  failed = true;
+}
+if (vpceEnvIdx !== -1 && listenIdx !== -1 && vpceEnvIdx < listenIdx) {
+  console.error(`${entrypointPath}: VPC endpoint env setup must run after listenServer(proxy)`);
   failed = true;
 }
 
-if (!/method === "GET" \|\| method === "HEAD"/.test(sidecar)) {
-  console.error(`${sidecarPath}: must accept HEAD for App Runner liveness`);
+if (!/method === "GET" \|\| method === "HEAD"/.test(source)) {
+  console.error(`${entrypointPath}: must accept HEAD for App Runner liveness`);
   failed = true;
 }
 
-if (!/\/api\/v1\/health\/live\/"/.test(sidecar)) {
-  console.error(`${sidecarPath}: must accept trailing slash on /api/v1/health/live/`);
+if (!/\/api\/v1\/health\/live\/"/.test(source)) {
+  console.error(`${entrypointPath}: must accept trailing slash on /api/v1/health/live/`);
   failed = true;
 }
 
-if (/^import\s+.*@aws-sdk\/client-secrets-manager/m.test(boot)) {
-  console.error(`${bootPath}: use dynamic import for @aws-sdk/client-secrets-manager`);
+if (!/isAppRunnerLiveProbe\(req\)[\s\S]*?return;/.test(source)) {
+  console.error(
+    `${entrypointPath}: createUpstreamProxy must answer liveness locally — never forward /health/live to Nest during boot`,
+  );
   failed = true;
 }
 
-if (/process\.exit\s*\(\s*1\s*\)/.test(boot)) {
-  console.error(`${bootPath}: must not process.exit(1) — health sidecar must stay up during boot`);
+const loadSecretFn = source.match(/async function loadDbSecretFromArn[\s\S]*?^}/m);
+if (loadSecretFn && /process\.exit\s*\(\s*1\s*\)/.test(loadSecretFn[0])) {
+  console.error(`${entrypointPath}: loadDbSecretFromArn must not process.exit`);
   failed = true;
 }
 
-const migrateFn = boot.match(/async function runMigrate[\s\S]*?^}/m);
-if (migrateFn && /process\.exit\s*\(/.test(migrateFn[0])) {
-  console.error(`${bootPath}: runMigrate must not process.exit`);
+const migrateFn = source.match(/async function runMigrateWithRetry[\s\S]*?^}/m);
+if (migrateFn && /process\.exit/.test(migrateFn[0])) {
+  console.error(
+    `${entrypointPath}: runMigrateWithRetry must not process.exit — a failed prisma migrate deploy must not kill the :3000 proxy`,
+  );
   failed = true;
 }
 
-const secretFn = boot.match(/async function loadDbSecretFromArn[\s\S]*?^}/m);
-if (secretFn && /process\.exit\s*\(\s*1\s*\)/.test(secretFn[0])) {
-  console.error(`${bootPath}: loadDbSecretFromArn must not process.exit`);
+if (!/await listenServer\s*\(\s*proxy[\s\S]*?proxyListening\s*=\s*true/.test(mainBody)) {
+  console.error(
+    `${entrypointPath}: set proxyListening after listenServer so post-boot fatals do not exit before App Runner stabilizes`,
+  );
   failed = true;
 }
 
-if (!/runChild\("npx", \["prisma", "migrate", "deploy"\]\)/.test(boot)) {
-  console.error(`${bootPath}: runMigrate must use npx prisma migrate deploy`);
+if (/handoffToProxy|health-sidecar/.test(source)) {
+  console.error(
+    `${entrypointPath}: must not hand off or rebind :3000 — a single boot proxy must stay bound for the entire deploy window`,
+  );
   failed = true;
 }
 
