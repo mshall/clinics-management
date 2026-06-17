@@ -150,6 +150,15 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       privateDnsEnabled: true,
     });
 
+    // DnsEntries[0] is "HostedZoneId:dnsName" — take the dnsName segment only.
+    const vpceHostnameFromEndpoint = (endpoint: ec2.InterfaceVpcEndpoint) => {
+      const cfn = endpoint.node.defaultChild as ec2.CfnVPCEndpoint;
+      const firstPair = cdk.Fn.select(0, cfn.attrDnsEntries);
+      return cdk.Fn.select(1, cdk.Fn.split(":", firstPair));
+    };
+    const secretsManagerVpceHost = vpceHostnameFromEndpoint(secretsManagerEndpoint);
+    const sesVpceHost = vpceHostnameFromEndpoint(sesEndpoint);
+
     const dbBackupBucket = new s3.Bucket(this, "DbBackupBucket", {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
@@ -193,6 +202,9 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
         BACKUP_EMAIL_TO: backupEmailTo,
         BACKUP_EMAIL_FROM: backupEmailFrom,
         BACKUP_BUCKET: dbBackupBucket.bucketName,
+        // Isolated subnet has no NAT; explicit VPCE hosts match App Runner docker-entrypoint pattern.
+        SECRETS_MANAGER_VPCE_HOST: secretsManagerVpceHost,
+        SES_VPCE_HOST: sesVpceHost,
       },
     });
     db.secret!.grantRead(dbBackupFn);
@@ -209,13 +221,6 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     // App Runner tasks often still resolve regional hostnames to public IPs; private DNS for VPCE
     // is not always applied the same as on EC2. Pass VPCE DNS hostnames only (no https://, no zone id)
     // so App Runner env values never embed "HostedZoneId:host" URL quirks.
-    // DnsEntries[0] is "HostedZoneId:dnsName" — take the dnsName segment only.
-    const vpceHostnameFromEndpoint = (endpoint: ec2.InterfaceVpcEndpoint) => {
-      const cfn = endpoint.node.defaultChild as ec2.CfnVPCEndpoint;
-      const firstPair = cdk.Fn.select(0, cfn.attrDnsEntries);
-      return cdk.Fn.select(1, cdk.Fn.split(":", firstPair));
-    };
-    const secretsManagerVpceHost = vpceHostnameFromEndpoint(secretsManagerEndpoint);
     const kmsVpceHost = vpceHostnameFromEndpoint(kmsEndpoint);
     const stsVpceHost = vpceHostnameFromEndpoint(stsEndpoint);
 
