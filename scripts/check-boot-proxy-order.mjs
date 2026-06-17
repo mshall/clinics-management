@@ -17,9 +17,9 @@ const entrypointPath = join(
 );
 const source = readFileSync(entrypointPath, "utf8");
 
-if (/^import\s+.*@aws-sdk\/client-secrets-manager/m.test(source)) {
+if (/^import\s+.*@aws-sdk\//m.test(source)) {
   console.error(
-    `${entrypointPath}: do not statically import @aws-sdk/client-secrets-manager — dynamic import after listen keeps :3000 up during cold module load`,
+    `${entrypointPath}: do not statically import @aws-sdk at module load — dynamic-import after listenServer so :3000 binds before heavy SDK init`,
   );
   process.exit(1);
 }
@@ -39,7 +39,7 @@ if (!mainMatch) {
 const mainBody = mainMatch[1];
 const listenIdx = mainBody.search(/await listenServer\s*\(\s*proxy/);
 const secretIdx = mainBody.search(/await loadDbSecretFromArn\s*\(/);
-const migrateIdx = mainBody.search(/await runMigrate\s*\(/);
+const migrateIdx = mainBody.search(/await runMigrateWithRetry\s*\(/);
 const vpceEnvIdx = mainBody.search(/AWS_ENDPOINT_URL_SECRETS_MANAGER/);
 
 let failed = false;
@@ -56,7 +56,7 @@ if (secretIdx !== -1 && listenIdx !== -1 && secretIdx < listenIdx) {
 }
 if (migrateIdx !== -1 && listenIdx !== -1 && migrateIdx < listenIdx) {
   console.error(
-    `${entrypointPath}: runMigrate must run after listenServer(proxy) — migrate blocks the event loop worker but proxy must already be listening`,
+    `${entrypointPath}: runMigrateWithRetry must run after listenServer(proxy) — migrate blocks the event loop worker but proxy must already be listening`,
   );
   failed = true;
 }
@@ -96,10 +96,17 @@ if (loadSecretFn && /process\.exit\s*\(\s*1\s*\)/.test(loadSecretFn[0])) {
   failed = true;
 }
 
-const migrateFn = source.match(/async function runMigrate[\s\S]*?^}/m);
-if (migrateFn && /process\.exit\s*\(/.test(migrateFn[0])) {
+const migrateFn = source.match(/async function runMigrateWithRetry[\s\S]*?^}/m);
+if (migrateFn && /process\.exit/.test(migrateFn[0])) {
   console.error(
-    `${entrypointPath}: runMigrate must not process.exit — a failed migrate deploy must not drop the :3000 liveness proxy`,
+    `${entrypointPath}: runMigrateWithRetry must not process.exit — a failed prisma migrate deploy must not kill the :3000 proxy`,
+  );
+  failed = true;
+}
+
+if (!/await listenServer\s*\(\s*proxy[\s\S]*?proxyListening\s*=\s*true/.test(mainBody)) {
+  console.error(
+    `${entrypointPath}: set proxyListening after listenServer so post-boot fatals do not exit before App Runner stabilizes`,
   );
   failed = true;
 }

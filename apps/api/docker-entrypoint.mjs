@@ -98,18 +98,24 @@ function runChild(command, args) {
   });
 }
 
-async function runMigrate() {
+async function runMigrateWithRetry() {
   let attempt = 0;
   while (true) {
     attempt++;
-    console.error(`[boot] PRISMA_MIGRATE_ON_BOOT=true — prisma migrate deploy (attempt ${attempt}) …`);
-    const exit = await runChild("prisma", ["migrate", "deploy"]);
-    if (exit === 0) {
-      console.error("[boot] prisma migrate deploy completed OK");
-      return;
+    console.error(
+      `[boot] PRISMA_MIGRATE_ON_BOOT=true — prisma migrate deploy (attempt ${attempt}) …`,
+    );
+    try {
+      const exit = await runChild("prisma", ["migrate", "deploy"]);
+      if (exit === 0) {
+        console.error("[boot] prisma migrate deploy completed OK");
+        return;
+      }
+      console.error("[boot] prisma migrate deploy failed with status", exit, "— retrying");
+    } catch (e) {
+      console.error("[boot] prisma migrate deploy error:", e?.message ?? e, "— retrying");
     }
-    console.error("[boot] prisma migrate deploy failed with status", exit, "— retrying (proxy keeps /health/live)");
-    await sleep(Math.min(30_000, 5000 * Math.min(attempt, 6)));
+    await sleep(Math.min(30_000, 2000 * Math.min(attempt, 5)));
   }
 }
 
@@ -125,24 +131,30 @@ async function runSeed() {
 }
 
 async function loadDbSecretFromArn(dbSecretArn) {
-  const { GetSecretValueCommand, SecretsManagerClient } = await import("@aws-sdk/client-secrets-manager");
-  const region =
-    process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "eu-central-1";
-  const smEndpoint = vpceHttpsFromHost(process.env.SECRETS_MANAGER_VPCE_HOST);
-  const client = new SecretsManagerClient({
-    region,
-    ...(smEndpoint ? { endpoint: smEndpoint } : {}),
-  });
-  if (smEndpoint) {
-    console.error("[boot] Secrets Manager client using SECRETS_MANAGER_VPCE_HOST (VPC interface)");
-  }
   // Keep retrying while :3000 proxy answers App Runner liveness — process.exit here caused
   // ~40s rollbacks when the 8-attempt budget expired during cold VPC endpoint warm-up.
   let attempt = 0;
+  let secretsSdk;
+  let client;
   while (true) {
     attempt++;
     try {
-      const out = await client.send(new GetSecretValueCommand({ SecretId: dbSecretArn }));
+      if (!secretsSdk) {
+        secretsSdk = await import("@aws-sdk/client-secrets-manager");
+        const region =
+          process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "eu-central-1";
+        const smEndpoint = vpceHttpsFromHost(process.env.SECRETS_MANAGER_VPCE_HOST);
+        client = new secretsSdk.SecretsManagerClient({
+          region,
+          ...(smEndpoint ? { endpoint: smEndpoint } : {}),
+        });
+        if (smEndpoint) {
+          console.error("[boot] Secrets Manager client using SECRETS_MANAGER_VPCE_HOST (VPC interface)");
+        }
+      }
+      const out = await client.send(
+        new secretsSdk.GetSecretValueCommand({ SecretId: dbSecretArn }),
+      );
       const j = JSON.parse(out.SecretString ?? "{}");
       const u = encodeURIComponent(String(j.username ?? ""));
       const p = encodeURIComponent(String(j.password ?? ""));
@@ -157,10 +169,14 @@ async function loadDbSecretFromArn(dbSecretArn) {
       return;
     } catch (e) {
       console.error(`DB secret fetch attempt ${attempt} failed:`, e?.message ?? e);
+      secretsSdk = undefined;
+      client = undefined;
       await sleep(Math.min(30_000, 750 * 2 ** Math.min(attempt - 1, 6)));
     }
   }
 }
+
+let proxyListening = false;
 
 async function main() {
   const publicPort = Number(process.env.PORT ?? "3000");
@@ -170,6 +186,7 @@ async function main() {
 
   const proxy = createUpstreamProxy(internalPort);
   await listenServer(proxy, publicPort, "upstream proxy");
+  proxyListening = true;
 
   const kmsEp = vpceHttpsFromHost(process.env.KMS_VPCE_HOST);
   const stsEp = vpceHttpsFromHost(process.env.STS_VPCE_HOST);
@@ -183,7 +200,7 @@ async function main() {
     await loadDbSecretFromArn(dbSecretArn);
   }
 
-  if (migrateOnBoot) await runMigrate();
+  if (migrateOnBoot) await runMigrateWithRetry();
   if (seedOnBoot) await runSeed();
 
   const nestEnv = { ...process.env, PORT: String(internalPort) };
@@ -220,5 +237,8 @@ async function main() {
 
 main().catch((err) => {
   console.error("[boot] fatal:", err);
-  process.exit(1);
+  // After :3000 is up, never exit — App Runner rolls back ~40s after connection refused.
+  if (!proxyListening) {
+    process.exit(1);
+  }
 });
