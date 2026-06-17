@@ -59,6 +59,29 @@ if (/^const dbSecretArn[\s\S]*await listenServer/m.test(source.replace(mainBody,
   failed = true;
 }
 
+if (!/method === "GET" \|\| method === "HEAD"/.test(source)) {
+  console.error(
+    `${entrypointPath}: isAppRunnerLiveProbe must accept HEAD — App Runner liveness probes use HEAD and otherwise get 503`,
+  );
+  failed = true;
+}
+
+const proxyFn = source.match(/function createUpstreamProxy[\s\S]*?^}/m);
+if (!proxyFn || !/if\s*\(\s*isAppRunnerLiveProbe\s*\(\s*req\s*\)\s*\)/.test(proxyFn[0])) {
+  console.error(
+    `${entrypointPath}: createUpstreamProxy must short-circuit isAppRunnerLiveProbe before forwarding — upstream Nest is down during migrate`,
+  );
+  failed = true;
+}
+
+const loadSecretFn = source.match(/async function loadDbSecretFromArn[\s\S]*?^}/m);
+if (loadSecretFn && /process\.exit\s*\(\s*1\s*\)/.test(loadSecretFn[0])) {
+  console.error(
+    `${entrypointPath}: loadDbSecretFromArn must not process.exit — keep the :3000 proxy alive while retrying Secrets Manager`,
+  );
+  failed = true;
+}
+
 if (failed) {
   process.exit(1);
 }
