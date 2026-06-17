@@ -224,10 +224,11 @@ export function AdminOrgUsersPanel() {
         <CardContent className="space-y-4">
           {legacyUsersApi ? (
             <p className="text-sm text-amber-700 dark:text-amber-400">
-              {total < 3
+              {total < 10
                 ? t(
                     "admin.orgUsersLegacyApiEmpty",
-                    "The deployed API is still updating or demo users are still seeding. Refresh in a minute — if the list stays empty after deploy, check App Runner logs for seed errors.",
+                    "Only {{count}} users found — the API deploy is still rolling out or demo seed has not finished. Refresh in a few minutes after the GitHub Deploy workflow succeeds.",
+                    { count: total },
                   )
                 : t(
                     "admin.orgUsersLegacyApi",

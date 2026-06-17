@@ -222,6 +222,25 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     dbBackupFn.node.addDependency(kmsEndpoint);
     dbBackupFn.node.addDependency(sesEndpoint);
 
+    const dbSeedFn = new lambda.DockerImageFunction(this, "DbSeedFn", {
+      code: lambda.DockerImageCode.fromImageAsset(path.join(__dirname, "..", ".."), {
+        file: "apps/api/Dockerfile.seed",
+        platform: ecr_assets.Platform.LINUX_AMD64,
+      }),
+      timeout: cdk.Duration.minutes(15),
+      memorySize: 2048,
+      vpc,
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
+      securityGroups: [backupLambdaSg],
+      environment: {
+        DB_SECRET_ARN: db.secret!.secretArn,
+        SECRETS_MANAGER_VPCE_HOST: secretsManagerVpceHost,
+        PRISMA_SEED_ENSURE_DEMO_PASSWORDS: "true",
+      },
+    });
+    db.secret!.grantRead(dbSeedFn);
+    dbSeedFn.node.addDependency(db);
+
     // App Runner tasks often still resolve regional hostnames to public IPs; private DNS for VPCE
     // is not always applied the same as on EC2. Pass VPCE DNS hostnames only (no https://, no zone id)
     // so App Runner env values never embed "HostedZoneId:host" URL quirks.
@@ -456,6 +475,11 @@ function handler(event) {
     new cdk.CfnOutput(this, "DbBackupFunctionName", {
       value: dbBackupFn.functionName,
       description: "Pre-deploy pg_dump Lambda (emails backup before CI deploy)",
+    });
+
+    new cdk.CfnOutput(this, "DbSeedFunctionName", {
+      value: dbSeedFn.functionName,
+      description: "Post-deploy idempotent Prisma seed Lambda (ensures demo org users on RDS)",
     });
 
     new cdk.CfnOutput(this, "DbBackupEmailTo", {

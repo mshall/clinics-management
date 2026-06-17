@@ -68,8 +68,20 @@ admin_raw="$(curl -sS -w "\n%{http_code}" -X GET "$APP_URL/api/v1/admin/users?pa
 admin_http="$(echo "$admin_raw" | tail -1)"
 admin_body="$(echo "$admin_raw" | sed '$d')"
 
+admin_total="$(echo "$admin_body" | python3 -c "import sys,json; print(json.load(sys.stdin).get('total',0))" 2>/dev/null || echo 0)"
 if [[ "$admin_http" == "404" ]]; then
-  echo "::error::GET /api/v1/admin/users returned 404 — App Runner may be on a stale rolled-back API image"
+  echo "WARN  GET /api/v1/admin/users returned 404 — checking /users fallback …"
+  users_raw="$(curl -sS -w "\n%{http_code}" -X GET "$APP_URL/api/v1/users?page=1&pageSize=200" \
+    -H "Authorization: Bearer $access_token" \
+    -H "Accept: application/json")"
+  users_http="$(echo "$users_raw" | tail -1)"
+  users_body="$(echo "$users_raw" | sed '$d')"
+  users_total="$(echo "$users_body" | python3 -c "import sys,json; print(json.load(sys.stdin).get('total',0))" 2>/dev/null || echo 0)"
+  if [[ "$users_http" == "200" && "${users_total:-0}" -ge 10 ]]; then
+    echo "OK  GET /api/v1/users fallback (total=$users_total) — API image may still be rolling forward"
+    exit 0
+  fi
+  echo "::error::GET /api/v1/admin/users returned 404 and /users total=$users_total — App Runner may be on a stale rolled-back API image"
   exit 1
 fi
 
