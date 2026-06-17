@@ -16,12 +16,21 @@ LINES_PER_GROUP="${LINES_PER_GROUP:-250}"
 STACK_EVENTS_RECENT="${STACK_EVENTS_RECENT:-60}"
 LOG_SINCE="${LOG_SINCE:-2h}"
 
-echo "::group::CloudFormation stack"
+STACK_STATUS="$(aws cloudformation describe-stacks --stack-name "$STACK" --region "$REGION" \
+  --query 'Stacks[0].StackStatus' --output text 2>/dev/null || echo UNKNOWN)"
+
+echo "::group::CloudFormation stack (current status)"
 aws cloudformation describe-stacks --stack-name "$STACK" --region "$REGION" \
   --query 'Stacks[0].{Name:StackName,Status:StackStatus,Reason:StackStatusReason}' --output table 2>&1
+if [[ "$STACK_STATUS" == UPDATE_COMPLETE || "$STACK_STATUS" == CREATE_COMPLETE ]]; then
+  echo ""
+  echo "NOTE: Stack is ${STACK_STATUS}. If deploy-full.log is missing, the job likely failed in"
+  echo "  'Pre-deploy database backup' (before CDK deploy), not in CloudFormation."
+  echo "  FAILED/ROLLBACK events below may be from earlier deploy attempts (e.g. fixed ASCII SG description)."
+fi
 echo "::endgroup::"
 
-echo "::group::Stack events (FAILED / ROLLBACK)"
+echo "::group::Stack events (FAILED / ROLLBACK — may include older attempts)"
 aws cloudformation describe-stack-events --stack-name "$STACK" --region "$REGION" \
   --query "StackEvents[?contains(ResourceStatus, 'FAILED') || contains(ResourceStatus, 'ROLLBACK')].[Timestamp,LogicalResourceId,ResourceStatus,ResourceStatusReason]" \
   --output table 2>&1 | head -160
@@ -96,6 +105,15 @@ aws logs describe-log-groups --region "$REGION" --log-group-name-prefix "/aws/ap
   dump_apprunner_group "$g" "$LINES_PER_GROUP"
 done
 echo "::endgroup::"
+
+DB_BACKUP_FN="$(aws cloudformation describe-stacks --stack-name "$STACK" --region "$REGION" \
+  --query "Stacks[0].Outputs[?OutputKey=='DbBackupFunctionName'].OutputValue" --output text 2>/dev/null | awk 'NF{print; exit}')"
+if [[ -n "$DB_BACKUP_FN" && "$DB_BACKUP_FN" != "None" ]]; then
+  echo "::group::DbBackupFn CloudWatch (/aws/lambda/${DB_BACKUP_FN})"
+  aws logs tail "/aws/lambda/${DB_BACKUP_FN}" --region "$REGION" --since "$LOG_SINCE" --format short --no-follow 2>/dev/null | tail -n 200 || \
+    echo "(no recent logs — invoke may have failed before Lambda started, or IAM lacks logs:FilterLogEvents)"
+  echo "::endgroup::"
+fi
 
 echo "::group::Lambda / custom resource log groups (prefix /aws/lambda/ — newest 20)"
 aws logs describe-log-groups --region "$REGION" --log-group-name-prefix "/aws/lambda/" \

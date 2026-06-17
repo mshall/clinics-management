@@ -115,66 +115,74 @@ export const handler = async () => {
 
     const ses = new SESClient({ region });
     const subject = `Kiorly clinics DB backup ${stamp} (pre-deploy)`;
+    let emailed = false;
+    let emailError;
 
-    if (gzBuffer.length <= MAX_ATTACHMENT_BYTES) {
-      const raw = buildRawEmail({
-        from,
-        to,
-        subject,
-        text: [
-          "Automated PostgreSQL backup taken before an AWS deployment.",
-          "",
-          `Database: ${dbname}`,
-          `Host: ${host}`,
-          `Size: ${(gzBuffer.length / 1024).toFixed(1)} KiB (gzip)`,
-          "",
-          "The dump is attached. Restore locally with:",
-          `  gunzip -c ${attachmentName} | psql "$DATABASE_URL"`,
-        ].join("\n"),
-        attachmentName,
-        attachmentBuffer: gzBuffer,
-      });
-      await ses.send(
-        new SendRawEmailCommand({
-          Source: from,
-          Destinations: [to],
-          RawMessage: { Data: raw },
-        }),
-      );
-    } else {
-      const downloadUrl = await getSignedUrl(
-        s3,
-        new GetObjectCommand({ Bucket: bucket, Key: s3Key }),
-        { expiresIn: 7 * 24 * 3600 },
-      );
-      await ses.send(
-        new SendRawEmailCommand({
-          Source: from,
-          Destinations: [to],
-          RawMessage: {
-            Data: Buffer.from(
-              [
-                `From: ${from}`,
-                `To: ${to}`,
-                `Subject: ${subject} (download link)`,
-                "MIME-Version: 1.0",
-                "Content-Type: text/plain; charset=UTF-8",
-                "",
-                "Automated PostgreSQL backup taken before an AWS deployment.",
-                "",
-                `Database: ${dbname}`,
-                `Host: ${host}`,
-                `Size: ${(gzBuffer.length / (1024 * 1024)).toFixed(2)} MiB (gzip) — too large for email attachment.`,
-                "",
-                "Download (valid 7 days):",
-                downloadUrl,
-                "",
-                `S3: s3://${bucket}/${s3Key}`,
-              ].join("\r\n"),
-            ),
-          },
-        }),
-      );
+    try {
+      if (gzBuffer.length <= MAX_ATTACHMENT_BYTES) {
+        const raw = buildRawEmail({
+          from,
+          to,
+          subject,
+          text: [
+            "Automated PostgreSQL backup taken before an AWS deployment.",
+            "",
+            `Database: ${dbname}`,
+            `Host: ${host}`,
+            `Size: ${(gzBuffer.length / 1024).toFixed(1)} KiB (gzip)`,
+            "",
+            "The dump is attached. Restore locally with:",
+            `  gunzip -c ${attachmentName} | psql "$DATABASE_URL"`,
+          ].join("\n"),
+          attachmentName,
+          attachmentBuffer: gzBuffer,
+        });
+        await ses.send(
+          new SendRawEmailCommand({
+            Source: from,
+            Destinations: [to],
+            RawMessage: { Data: raw },
+          }),
+        );
+      } else {
+        const downloadUrl = await getSignedUrl(
+          s3,
+          new GetObjectCommand({ Bucket: bucket, Key: s3Key }),
+          { expiresIn: 7 * 24 * 3600 },
+        );
+        await ses.send(
+          new SendRawEmailCommand({
+            Source: from,
+            Destinations: [to],
+            RawMessage: {
+              Data: Buffer.from(
+                [
+                  `From: ${from}`,
+                  `To: ${to}`,
+                  `Subject: ${subject} (download link)`,
+                  "MIME-Version: 1.0",
+                  "Content-Type: text/plain; charset=UTF-8",
+                  "",
+                  "Automated PostgreSQL backup taken before an AWS deployment.",
+                  "",
+                  `Database: ${dbname}`,
+                  `Host: ${host}`,
+                  `Size: ${(gzBuffer.length / (1024 * 1024)).toFixed(2)} MiB (gzip) - too large for email attachment.`,
+                  "",
+                  "Download (valid 7 days):",
+                  downloadUrl,
+                  "",
+                  `S3: s3://${bucket}/${s3Key}`,
+                ].join("\r\n"),
+              ),
+            },
+          }),
+        );
+      }
+      emailed = true;
+    } catch (err) {
+      emailError = err instanceof Error ? err.message : String(err);
+      console.warn("SES send failed after S3 backup was stored:", emailError);
     }
 
     return {
@@ -184,7 +192,9 @@ export const handler = async () => {
         bytes: gzBuffer.length,
         s3Key,
         emailedTo: to,
-        attached: gzBuffer.length <= MAX_ATTACHMENT_BYTES,
+        emailed,
+        emailError,
+        attached: emailed && gzBuffer.length <= MAX_ATTACHMENT_BYTES,
       }),
     };
   } finally {

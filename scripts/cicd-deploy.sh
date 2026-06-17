@@ -33,6 +33,8 @@ fi
 # EC2 SecurityGroup GroupDescription must be ASCII-only; fail fast before CloudFormation.
 npm run check:ascii-descriptions
 npm run build
+npx cdk synth --quiet
+npm run check:ascii-descriptions
 
 # In GitHub Actions, emit verbose CDK / construct logging for post-mortem artifacts.
 CDK_DEPLOY_ARGS=(--require-approval never)

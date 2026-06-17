@@ -39,13 +39,21 @@ cat "$OUT"
 echo ""
 
 if grep -q '"FunctionError"' "$INVOKE_META"; then
-  echo "::error::Pre-deploy database backup Lambda failed. Verify SES identity for kiorlyclinics@gmail.com and check CloudWatch logs."
+  echo "::error::Pre-deploy database backup Lambda failed (pg_dump or S3). Check CloudWatch: /aws/lambda/${FN}"
+  aws logs tail "/aws/lambda/${FN}" --region "$AWS_REGION" --since 30m --format short --no-follow 2>/dev/null | tail -n 80 || true
   rm -f "$OUT" "$INVOKE_META"
   exit 1
 fi
 
 if ! grep -q '"ok":true' "$OUT"; then
-  echo "::warning::Backup Lambda returned unexpected payload — review CloudWatch logs for ${FN}"
+  echo "::error::Backup Lambda returned unexpected payload — review CloudWatch logs for ${FN}"
+  aws logs tail "/aws/lambda/${FN}" --region "$AWS_REGION" --since 30m --format short --no-follow 2>/dev/null | tail -n 80 || true
+  rm -f "$OUT" "$INVOKE_META"
+  exit 1
+fi
+
+if grep -q '"emailed":false' "$OUT"; then
+  echo "::warning::Backup stored in S3 but SES email failed. Verify SES identity (DbBackupEmailTo stack output) in AWS Console > SES > Verified identities."
 fi
 
 rm -f "$OUT" "$INVOKE_META"
