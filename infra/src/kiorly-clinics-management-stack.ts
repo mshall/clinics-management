@@ -158,6 +158,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       lifecycleRules: [{ expiration: cdk.Duration.days(30) }],
     });
 
+    // EC2 GroupDescription must be ASCII-only (em-dash / UTF-8 fails CREATE with InvalidRequest).
     const backupLambdaSg = new ec2.SecurityGroup(this, "DbBackupLambdaSg", {
       vpc,
       description: "Pre-deploy pg_dump Lambda - RDS + VPC endpoints",
