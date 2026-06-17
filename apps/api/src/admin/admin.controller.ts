@@ -1,4 +1,4 @@
-import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
@@ -9,6 +9,7 @@ import { isPlatformSuperAdmin } from "../common/platform-super-admin";
 import { AdminService } from "./admin.service";
 import { CreateTenantUserDto } from "./dto/create-tenant-user.dto";
 import { PatchFeatureFlagDto } from "./dto/patch-feature-flag.dto";
+import { PlatformPatchTenantUserDto } from "./dto/platform-patch-tenant-user.dto";
 import { PatchTenantSettingsDto } from "./dto/patch-tenant-settings.dto";
 
 @ApiTags("admin")
@@ -69,6 +70,31 @@ export class AdminController {
     return this.admin.patchTenantSettings(requireTenantId(user), body);
   }
 
+  @Get("users")
+  @ApiOperation({ summary: "List users in the current organization (group admin only)" })
+  @ApiOkResponse()
+  listUsers(
+    @CurrentUser() user: JwtUser,
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string,
+    @Query("q") q?: string,
+  ) {
+    if (user.role !== UserRole.GROUP_ADMIN || !user.tenantId) {
+      throw new ForbiddenException("Only group administrators can list organization users");
+    }
+    return this.admin.listTenantUsers(requireTenantId(user), page, pageSize, q);
+  }
+
+  @Get("users/:userId")
+  @ApiOperation({ summary: "Organization user detail (group admin only)" })
+  @ApiOkResponse()
+  getUser(@CurrentUser() user: JwtUser, @Param("userId") userId: string) {
+    if (user.role !== UserRole.GROUP_ADMIN || !user.tenantId) {
+      throw new ForbiddenException("Only group administrators can view organization users");
+    }
+    return this.admin.getTenantUser(requireTenantId(user), userId);
+  }
+
   @Post("users")
   @ApiOperation({ summary: "Create a user in the current tenant with a fixed platform role (group admin only)" })
   @ApiCreatedResponse()
@@ -77,6 +103,26 @@ export class AdminController {
       throw new ForbiddenException("Only group administrators can create users");
     }
     return this.admin.createTenantUser(requireTenantId(user), body);
+  }
+
+  @Patch("users/:userId")
+  @ApiOperation({ summary: "Update an organization user (group admin only)" })
+  @ApiOkResponse()
+  patchUser(@CurrentUser() user: JwtUser, @Param("userId") userId: string, @Body() body: PlatformPatchTenantUserDto) {
+    if (user.role !== UserRole.GROUP_ADMIN || !user.tenantId) {
+      throw new ForbiddenException("Only group administrators can update organization users");
+    }
+    return this.admin.updateTenantUser(requireTenantId(user), userId, body);
+  }
+
+  @Delete("users/:userId")
+  @ApiOperation({ summary: "Delete an organization user (group admin only)" })
+  @ApiOkResponse()
+  deleteUser(@CurrentUser() user: JwtUser, @Param("userId") userId: string) {
+    if (user.role !== UserRole.GROUP_ADMIN || !user.tenantId) {
+      throw new ForbiddenException("Only group administrators can delete organization users");
+    }
+    return this.admin.deleteTenantUser(requireTenantId(user), userId, user);
   }
 
   @Patch("feature-flags/:key")

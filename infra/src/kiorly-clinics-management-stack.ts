@@ -289,8 +289,8 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
               { name: "DB_SECRET_ARN", value: db.secret!.secretArn },
               // Apply migrations on each deploy so RDS is never missing tables (avoids silent boot + broken API).
               { name: "PRISMA_MIGRATE_ON_BOOT", value: "true" },
-              // Never run the destructive demo seed on AWS — it wipes all tenants. Seed locally with db:setup.
-              { name: "PRISMA_SEED_ON_BOOT", value: "false" },
+              // Idempotent demo seed on boot: empty DB gets full demo; existing data only adds missing demo users.
+              { name: "PRISMA_SEED_ON_BOOT", value: "true" },
               { name: "UPLOAD_STORAGE", value: "s3" },
               { name: "S3_UPLOAD_BUCKET", value: apiUploadsBucket.bucketName },
             ],

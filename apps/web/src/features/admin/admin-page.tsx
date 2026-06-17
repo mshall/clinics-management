@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { useAdminOverviewQuery, useClinicQuery, useClinicsQuery, useTenantsQuery } from "@/lib/api-hooks";
 import { ApiError, apiPatch, apiPost } from "@/lib/http";
 import { cn, columnFilterIncludes } from "@/lib/utils";
-import { formatClinicName, formatUserRole } from "@/lib/locale-display";
+import { formatClinicName } from "@/lib/locale-display";
 import { clinicKindLabel, isRootClinic } from "@/lib/clinic-kind";
 import { useAuthStore } from "@/stores/auth-store";
 import { ClinicFormFields } from "@/features/clinics/clinic-form-fields";
@@ -31,21 +31,8 @@ import {
 import { AdminCreateEmployeePanel } from "./admin-create-employee-panel";
 import { AdminDataExplorerPanel } from "./admin-data-explorer-panel";
 import { AdminGovernancePanel } from "./admin-governance-panel";
+import { AdminOrgUsersPanel } from "./admin-org-users-panel";
 import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel";
-
-const USER_ROLES = [
-  "GROUP_ADMIN",
-  "GROUP_SUPERVISOR",
-  "BRANCH_MANAGER",
-  "PHYSICIAN",
-  "NURSE",
-  "RECEPTIONIST",
-  "CALL_CENTER",
-  "HR_OFFICER",
-  "FINANCE_OFFICER",
-  "CLINIC_ADMIN",
-  "CLINIC_ASSISTANT",
-] as const;
 
 export function AdminPage() {
   const { t, i18n } = useTranslation();
@@ -91,17 +78,6 @@ export function AdminPage() {
   const [tfClinics, setTfClinics] = useState("");
   const [tfRegistered, setTfRegistered] = useState("");
   const [tfPatients, setTfPatients] = useState("");
-
-  const [uEmail, setUEmail] = useState("");
-  const [uPassword, setUPassword] = useState("");
-  const [uName, setUName] = useState("");
-  const [uRole, setURole] = useState<string>("NURSE");
-  const [uClinicIds, setUClinicIds] = useState<string[]>([]);
-  const [userErr, setUserErr] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (uRole !== "CLINIC_ADMIN" && uRole !== "BRANCH_MANAGER") setUClinicIds([]);
-  }, [uRole]);
 
   const onTenantSort = (column: string) => {
     const next = toggleSort(tSortBy, tSortOrder, column);
@@ -207,30 +183,6 @@ export function AdminPage() {
     patchClinicMut.mutate();
   };
 
-  const createUserMut = useMutation({
-    mutationFn: () =>
-      apiPost("/api/v1/admin/users", {
-        email: uEmail.trim(),
-        password: uPassword,
-        displayName: uName.trim(),
-        role: uRole,
-        ...((uRole === "CLINIC_ADMIN" || uRole === "BRANCH_MANAGER") && uClinicIds.length ? { clinicIds: uClinicIds } : {}),
-      }),
-    onSuccess: () => {
-      setUserErr(null);
-      void qc.invalidateQueries({ queryKey: ["users"] });
-      void qc.invalidateQueries({ queryKey: ["admin", "overview"] });
-      setUEmail("");
-      setUPassword("");
-      setUName("");
-      setUClinicIds([]);
-    },
-    onError: (e: unknown) => {
-      if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
-        setUserErr(String((e.body as { message?: unknown }).message));
-      } else setUserErr(e instanceof Error ? e.message : String(e));
-    },
-  });
   const tenantRows = tenants.data?.items ?? [];
   const tTotal = tenants.data?.total ?? 0;
   const tTotalPages = tenants.data?.totalPages ?? 1;
@@ -265,7 +217,7 @@ export function AdminPage() {
     onError: (e: unknown) => console.error(e),
   });
 
-  const [adminSection, setAdminSection] = useState<"clinics" | "organization" | "data" | "governance">("clinics");
+  const [adminSection, setAdminSection] = useState<"clinics" | "users" | "organization" | "data" | "governance">("clinics");
   const [feeDraft, setFeeDraft] = useState("");
   useEffect(() => {
     if (!isPlatformSuperAdmin && adminSection === "data") setAdminSection("clinics");
@@ -326,6 +278,11 @@ export function AdminPage() {
         <Button type="button" size="sm" variant={adminSection === "clinics" ? "default" : "outline"} onClick={() => setAdminSection("clinics")}>
           {t("admin.tabClinics", "Clinics & tenants")}
         </Button>
+        {isGroupAdmin ? (
+          <Button type="button" size="sm" variant={adminSection === "users" ? "default" : "outline"} onClick={() => setAdminSection("users")}>
+            {t("admin.tabOrgUsers", "Organization users")}
+          </Button>
+        ) : null}
         <Button type="button" size="sm" variant={adminSection === "organization" ? "default" : "outline"} onClick={() => setAdminSection("organization")}>
           {t("admin.tabOrganization", "Organization & settings")}
         </Button>
@@ -343,6 +300,8 @@ export function AdminPage() {
 
       {adminSection === "governance" ? (
         <AdminGovernancePanel />
+      ) : adminSection === "users" && isGroupAdmin ? (
+        <AdminOrgUsersPanel />
       ) : adminSection === "data" ? (
         isPlatformSuperAdmin ? (
           <AdminDataExplorerPanel />
@@ -438,84 +397,6 @@ export function AdminPage() {
             </CardContent>
           </Card>
 
-          {isGroupAdmin ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">{t("admin.rbacUser", "Create user (RBAC)")}</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="space-y-2">
-                  <Label required>{t("auth.email")}</Label>
-                  <Input type="email" value={uEmail} onChange={(e) => setUEmail(e.target.value)} autoComplete="off" />
-                </div>
-                <div className="space-y-2">
-                  <Label required>{t("admin.tempPassword", "Temporary password")}</Label>
-                  <Input type="password" value={uPassword} onChange={(e) => setUPassword(e.target.value)} autoComplete="new-password" />
-                </div>
-                <div className="space-y-2">
-                  <Label required>{t("admin.displayName", "Display name")}</Label>
-                  <Input value={uName} onChange={(e) => setUName(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t("profile.roleLabel")}</Label>
-                  <select
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={uRole}
-                    onChange={(e) => setURole(e.target.value)}
-                  >
-                    {USER_ROLES.map((r) => (
-                      <option key={r} value={r}>
-                        {formatUserRole(r, t)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {uRole === "CLINIC_ADMIN" || uRole === "BRANCH_MANAGER" ? (
-                  <div className="space-y-2 sm:col-span-full">
-                    <Label required>{t("admin.clinicAdminScopes")}</Label>
-                    <p className="text-xs text-muted-foreground">{t("admin.clinicAdminScopesHint")}</p>
-                    <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-border p-2">
-                      {clinics.map((c) => (
-                        <label key={c.id} className="flex cursor-pointer items-center gap-2 text-sm">
-                          <input
-                            type="checkbox"
-                            className="size-4 rounded border-input"
-                            checked={uClinicIds.includes(c.id)}
-                            onChange={() =>
-                              setUClinicIds((prev) => (prev.includes(c.id) ? prev.filter((x) => x !== c.id) : [...prev, c.id]))
-                            }
-                          />
-                          <span>
-                            {formatClinicName(c, i18n.language)}{" "}
-                            <span className="text-muted-foreground">({clinicKindLabel(c.kind, t)})</span>
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-                <div className="flex items-end sm:col-span-2">
-                  <Button
-                    type="button"
-                    disabled={
-                      !uEmail.trim() ||
-                      uPassword.length < 8 ||
-                      !uName.trim() ||
-                      createUserMut.isPending ||
-                      ((uRole === "CLINIC_ADMIN" || uRole === "BRANCH_MANAGER") && uClinicIds.length === 0)
-                    }
-                    onClick={() => createUserMut.mutate()}
-                  >
-                    {t("admin.createUser", "Create user")}
-                  </Button>
-                </div>
-                {userErr ? <p className="text-sm text-destructive sm:col-span-full">{userErr}</p> : null}
-                <p className="text-xs text-muted-foreground sm:col-span-full">
-                  {t("admin.rbacHint", "Example: NURSE cannot access Revenue; PHYSICIAN and FINANCE_OFFICER can.")}
-                </p>
-              </CardContent>
-            </Card>
-          ) : null}
         </div>
       ) : null}
 

@@ -1097,7 +1097,12 @@ async function main() {
     await ensureIncrementalSeed(passwordHash);
     return;
   }
-  await seedFreshDatabase(passwordHash);
+  const [tenantCount, userCount] = await Promise.all([prisma.tenant.count(), prisma.user.count()]);
+  if (tenantCount === 0 && userCount === 0) {
+    await seedFreshDatabase(passwordHash);
+    return;
+  }
+  await ensureIncrementalSeed(passwordHash);
 }
 
 main()

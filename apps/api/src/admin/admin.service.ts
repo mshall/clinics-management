@@ -90,10 +90,21 @@ export class AdminService {
     return paginate(items, total, page, pageSize);
   }
 
-  async listTenantUsers(tenantId: string, pageStr?: string, pageSizeStr?: string) {
+  async listTenantUsers(tenantId: string, pageStr?: string, pageSizeStr?: string, qRaw?: string) {
     await this.assertTenantExists(tenantId);
     const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
-    const where = { tenantId };
+    const q = qRaw?.trim() ?? "";
+    const where: Prisma.UserWhereInput = {
+      tenantId,
+      ...(q
+        ? {
+            OR: [
+              { email: { contains: q, mode: "insensitive" } },
+              { displayName: { contains: q, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    };
     const [total, rows] = await Promise.all([
       this.prisma.user.count({ where }),
       this.prisma.user.findMany({
@@ -101,7 +112,9 @@ export class AdminService {
         orderBy: { email: "asc" },
         skip,
         take: pageSize,
-        select: { id: true, email: true, displayName: true, role: true, createdAt: true },
+        include: {
+          clinicAdminScopes: { include: { clinic: { select: { id: true, nameEn: true } } } },
+        },
       }),
     ]);
     const items = rows.map((r) => ({
@@ -110,6 +123,8 @@ export class AdminService {
       displayName: r.displayName,
       role: r.role,
       createdAt: r.createdAt.toISOString(),
+      clinicIds: r.clinicAdminScopes.map((s) => s.clinicId),
+      clinics: r.clinicAdminScopes.map((s) => ({ id: s.clinic.id, nameEn: s.clinic.nameEn })),
     }));
     return paginate(items, total, page, pageSize);
   }
@@ -253,6 +268,32 @@ export class AdminService {
     });
 
     return this.getTenantUser(tenantId, row.id);
+  }
+
+  async deleteTenantUser(tenantId: string, userId: string, actor: JwtUser) {
+    await this.assertTenantExists(tenantId);
+    if (actor.userId === userId) {
+      throw new BadRequestException("You cannot delete your own account");
+    }
+    const existing = await this.prisma.user.findFirst({ where: { id: userId, tenantId } });
+    if (!existing) throw new NotFoundException("User not found");
+    if (existing.role === UserRole.PLATFORM_SUPER_ADMIN) {
+      throw new BadRequestException("Cannot delete platform super administrators");
+    }
+
+    const [encounters, appointments, operations] = await Promise.all([
+      this.prisma.encounter.count({ where: { clinicianId: userId } }),
+      this.prisma.appointment.count({ where: { clinicianId: userId } }),
+      this.prisma.operation.count({ where: { clinicianId: userId } }),
+    ]);
+    if (encounters + appointments + operations > 0) {
+      throw new BadRequestException(
+        "Cannot delete a user linked to encounters, appointments, or operations. Reassign clinical records first.",
+      );
+    }
+
+    await this.prisma.user.delete({ where: { id: userId } });
+    return { ok: true, id: userId };
   }
 
   async auditLogs(tenantId: string, pageStr: string | undefined, pageSizeStr: string | undefined, qRaw: string | undefined, user: JwtUser) {
