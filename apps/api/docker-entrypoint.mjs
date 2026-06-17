@@ -1,6 +1,9 @@
 /**
  * Builds DATABASE_URL from RDS Secrets Manager JSON (host, port, username, password, dbname)
  * when DB_SECRET_ARN is set, optionally runs Prisma migrations, then starts the Nest app.
+ *
+ * App Runner health-checks :3000 immediately. Nest cold start can take 20–40s, so we keep a
+ * lightweight proxy on PORT (3000) and run Nest on NEST_INTERNAL_PORT (3001) until upstream is ready.
  */
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { spawn, spawnSync } from "node:child_process";
@@ -18,7 +21,6 @@ function sleep(ms) {
 function vpceHttpsFromHost(host) {
   if (!host || typeof host !== "string") return undefined;
   let h = host.trim();
-  // Defensive: DnsEntry "HostedZoneId:dnsName" if a deploy path ever passes the pair as host only.
   if (/^Z[a-z0-9]+:(?=vpce-)/i.test(h)) h = h.replace(/^Z[a-z0-9]+:/i, "");
   return h ? `https://${h}` : undefined;
 }
@@ -33,37 +35,14 @@ function createBootHealthServer(port) {
   });
 }
 
-async function listenBootHealth(server, port) {
+async function listenServer(server, port, label) {
   await new Promise((resolve, reject) => {
     server.listen(port, "0.0.0.0", () => {
-      console.error("[boot] boot-time health probe listening on", port);
+      console.error(`[boot] ${label} listening on`, port);
       resolve();
     });
     server.on("error", reject);
   });
-}
-
-async function closeBootHealth(server) {
-  await new Promise((resolve) => {
-    server.close(() => {
-      console.error("[boot] boot-time health probe closed");
-      resolve();
-    });
-  });
-}
-
-async function waitForNestHealth(port, maxMs = 120_000) {
-  const deadline = Date.now() + maxMs;
-  while (Date.now() < deadline) {
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/api/v1/health/live`);
-      if (res.ok) return true;
-    } catch {
-      // Nest still starting
-    }
-    await sleep(500);
-  }
-  return false;
 }
 
 function runSeedInBackground() {
@@ -76,6 +55,33 @@ function runSeedInBackground() {
     detached: true,
   });
   child.unref();
+}
+
+function createUpstreamProxy(publicPort, upstreamPort) {
+  return createServer((req, res) => {
+    const target = `http://127.0.0.1:${upstreamPort}${req.url ?? "/"}`;
+    fetch(target, { method: req.method, headers: req.headers }).then(async (upstream) => {
+      res.statusCode = upstream.status;
+      upstream.headers.forEach((value, key) => {
+        if (key.toLowerCase() === "transfer-encoding") return;
+        res.setHeader(key, value);
+      });
+      const body = Buffer.from(await upstream.arrayBuffer());
+      res.end(body);
+    }).catch(() => {
+      const p = req.url?.split("?")[0] ?? "";
+      const live = req.method === "GET" && p === "/api/v1/health/live";
+      if (live) {
+        res.statusCode = 200;
+        res.setHeader("Content-Type", "application/json; charset=utf-8");
+        res.end(JSON.stringify({ status: "ok", phase: "starting" }));
+        return;
+      }
+      res.statusCode = 503;
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.end(JSON.stringify({ status: "starting" }));
+    });
+  });
 }
 
 const dbSecretArn = process.env.DB_SECRET_ARN;
@@ -99,14 +105,13 @@ if (dbSecretArn) {
       const u = encodeURIComponent(String(j.username ?? ""));
       const p = encodeURIComponent(String(j.password ?? ""));
       const host = j.host ?? j.hostname ?? j.endpoint;
-      const port = j.port ?? 5432;
+      const dbPort = j.port ?? 5432;
       const dbname = j.dbname ?? j.database ?? "postgres";
       if (!host) {
         throw new Error("DB secret JSON missing host/hostname/endpoint");
       }
-      // sslmode=no-verify: RDS may require TLS; slim images often lack RDS CA bundle (require would fail).
-      process.env.DATABASE_URL = `postgresql://${u}:${p}@${host}:${port}/${dbname}?schema=public&sslmode=no-verify`;
-      console.error("[boot] DATABASE_URL built (host/port/db):", host, String(port), dbname);
+      process.env.DATABASE_URL = `postgresql://${u}:${p}@${host}:${dbPort}/${dbname}?schema=public&sslmode=no-verify`;
+      console.error("[boot] DATABASE_URL built (host/port/db):", host, String(dbPort), dbname);
       lastErr = undefined;
       break;
     } catch (e) {
@@ -123,18 +128,14 @@ if (dbSecretArn) {
   }
 }
 
-const port = Number(process.env.PORT ?? "3000");
+const publicPort = Number(process.env.PORT ?? "3000");
+const internalPort = Number(process.env.NEST_INTERNAL_PORT ?? "3001");
 const migrateOnBoot = process.env.PRISMA_MIGRATE_ON_BOOT === "true";
 const seedOnBoot = process.env.PRISMA_SEED_ON_BOOT === "true";
-const needsBootHealth = migrateOnBoot || seedOnBoot;
-let bootHealthServer = null;
-
-if (needsBootHealth) {
-  bootHealthServer = createBootHealthServer(port);
-  await listenBootHealth(bootHealthServer, port);
-}
 
 if (migrateOnBoot) {
+  const bootHealthServer = createBootHealthServer(publicPort);
+  await listenServer(bootHealthServer, publicPort, "migrate-time health probe");
   console.error("[boot] PRISMA_MIGRATE_ON_BOOT=true — running prisma migrate deploy …");
   const migrate = spawnSync("npx", ["prisma", "migrate", "deploy"], {
     stdio: "inherit",
@@ -142,16 +143,12 @@ if (migrateOnBoot) {
     cwd: __dirname,
   });
   const migrateExit = migrate.status ?? 1;
+  await new Promise((resolve) => bootHealthServer.close(() => resolve()));
   if (migrateExit !== 0) {
     console.error("[boot] prisma migrate deploy failed with status", migrateExit);
     process.exit(migrateExit);
   }
   console.error("[boot] prisma migrate deploy completed OK");
-}
-
-if (bootHealthServer) {
-  await closeBootHealth(bootHealthServer);
-  bootHealthServer = null;
 }
 
 const kmsEp = vpceHttpsFromHost(process.env.KMS_VPCE_HOST);
@@ -161,19 +158,27 @@ if (smEpForChild) process.env.AWS_ENDPOINT_URL_SECRETS_MANAGER = smEpForChild;
 if (kmsEp) process.env.AWS_ENDPOINT_URL_KMS = kmsEp;
 if (stsEp) process.env.AWS_ENDPOINT_URL_STS = stsEp;
 
-const mainJs = path.join(__dirname, "dist", "main.js");
-console.error("[boot] spawning Nest", mainJs, "PORT=", process.env.PORT ?? "3000", "NODE_ENV=", process.env.NODE_ENV ?? "");
-const child = spawn(process.execPath, [mainJs], { stdio: "inherit", env: process.env });
+const proxy = createUpstreamProxy(publicPort, internalPort);
+await listenServer(proxy, publicPort, "upstream proxy");
 
-const nestReady = await waitForNestHealth(port);
-if (!nestReady) {
-  console.error("[boot] Nest did not respond on /api/v1/health/live within startup window");
-  process.exit(1);
-}
-console.error("[boot] Nest health/live OK");
+const nestEnv = { ...process.env, PORT: String(internalPort) };
+const mainJs = path.join(__dirname, "dist", "main.js");
+console.error("[boot] spawning Nest", mainJs, "internal PORT=", internalPort);
+const child = spawn(process.execPath, [mainJs], { stdio: "inherit", env: nestEnv });
 
 if (seedOnBoot) {
-  runSeedInBackground();
+  let seeded = false;
+  const seedTimer = setInterval(() => {
+    fetch(`http://127.0.0.1:${internalPort}/api/v1/health/live`)
+      .then((res) => {
+        if (res.ok && !seeded) {
+          seeded = true;
+          clearInterval(seedTimer);
+          runSeedInBackground();
+        }
+      })
+      .catch(() => {});
+  }, 2000);
 }
 
 child.on("exit", (code, signal) => {
