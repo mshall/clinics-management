@@ -20,6 +20,7 @@ else
   npm ci --no-audit --no-fund
 fi
 npm run build -w web
+node scripts/check-boot-proxy-order.mjs
 cd infra
 if [[ "${CI:-}" == "true" ]]; then
   NPM_CONFIG_LOGLEVEL=error npm ci --no-audit --no-fund
