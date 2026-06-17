@@ -5,9 +5,12 @@
  * App Runner health-checks :3000 for the entire boot window. The proxy listens
  * on PORT first (no gap between migrate and Nest), answers /health/live while
  * migrate/seed/Nest warm up, and forwards all traffic once Nest is ready.
+ *
+ * Migrate/seed must use async spawn (never spawnSync): spawnSync blocks the Node
+ * event loop, so the :3000 proxy cannot answer App Runner /health/live probes.
  */
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { createServer, request as httpRequest } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -64,14 +67,21 @@ function createUpstreamProxy(upstreamPort) {
   });
 }
 
-function runMigrateSync() {
-  console.error("[boot] PRISMA_MIGRATE_ON_BOOT=true — running prisma migrate deploy …");
-  const migrate = spawnSync("npx", ["prisma", "migrate", "deploy"], {
-    stdio: "inherit",
-    env: process.env,
-    cwd: __dirname,
+function runChild(command, args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      stdio: "inherit",
+      env: process.env,
+      cwd: __dirname,
+    });
+    child.on("error", reject);
+    child.on("close", (code) => resolve(code ?? 1));
   });
-  const exit = migrate.status ?? 1;
+}
+
+async function runMigrate() {
+  console.error("[boot] PRISMA_MIGRATE_ON_BOOT=true — running prisma migrate deploy …");
+  const exit = await runChild("prisma", ["migrate", "deploy"]);
   if (exit !== 0) {
     console.error("[boot] prisma migrate deploy failed with status", exit);
     process.exit(exit);
@@ -79,15 +89,10 @@ function runMigrateSync() {
   console.error("[boot] prisma migrate deploy completed OK");
 }
 
-function runSeedSync() {
+async function runSeed() {
   const seedScript = path.join(__dirname, "prisma", "seed.ts");
   console.error("[boot] PRISMA_SEED_ON_BOOT=true — running idempotent seed …");
-  const seed = spawnSync("npx", ["tsx", seedScript], {
-    stdio: "inherit",
-    env: process.env,
-    cwd: __dirname,
-  });
-  const exit = seed.status ?? 1;
+  const exit = await runChild("tsx", [seedScript]);
   if (exit !== 0) {
     console.error("[boot] seed failed with status", exit, "— continuing to start API");
   } else {
@@ -154,8 +159,8 @@ if (stsEp) process.env.AWS_ENDPOINT_URL_STS = stsEp;
 const proxy = createUpstreamProxy(internalPort);
 await listenServer(proxy, publicPort, "upstream proxy");
 
-if (migrateOnBoot) runMigrateSync();
-if (seedOnBoot) runSeedSync();
+if (migrateOnBoot) await runMigrate();
+if (seedOnBoot) await runSeed();
 
 const nestEnv = { ...process.env, PORT: String(internalPort) };
 const mainJs = path.join(__dirname, "dist", "main.js");
