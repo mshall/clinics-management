@@ -312,9 +312,8 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
               { name: "DB_SECRET_ARN", value: db.secret!.secretArn },
               // Apply migrations on each deploy so RDS is never missing tables (avoids silent boot + broken API).
               { name: "PRISMA_MIGRATE_ON_BOOT", value: "true" },
-              // Idempotent demo seed on boot: empty DB gets full demo; existing data only adds missing demo users.
-              { name: "PRISMA_SEED_ON_BOOT", value: "true" },
-              { name: "PRISMA_SEED_ENSURE_DEMO_PASSWORDS", value: "true" },
+              // Demo seed via post-deploy DbSeedFn Lambda — boot seed blocks Nest and exceeds App Runner deploy window.
+              { name: "PRISMA_SEED_ON_BOOT", value: "false" },
               { name: "UPLOAD_STORAGE", value: "s3" },
               { name: "S3_UPLOAD_BUCKET", value: apiUploadsBucket.bucketName },
             ],
@@ -334,7 +333,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
         interval: 10,
         timeout: 10,
         healthyThreshold: 1,
-        // migrate + Nest cold start on deploy; seed runs in background after /health/live is up.
+        // migrate + Nest cold start on deploy; demo seed runs in post-deploy DbSeedFn Lambda.
         // App Runner allows UnhealthyThreshold 1-20 only (CFN early validation rejects higher values).
         unhealthyThreshold: 20,
       },
