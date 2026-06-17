@@ -86,6 +86,212 @@ async function ensureSuperAdmin(passwordHash: string) {
   });
 }
 
+type DrAhmedClinicSpec = {
+  slug: string;
+  label: string;
+  nameEn: string;
+  nameAr: string;
+  country: string;
+  city: string;
+  addressEn: string;
+  addressAr: string;
+  locationUrl: string;
+  phone: string;
+  email: string;
+  licenseNumber: string;
+  defaultLanguage: Locale;
+};
+
+async function ensureEmployee(
+  tenantId: string,
+  clinicId: string,
+  employeeNumber: string,
+  data: {
+    firstNameEn: string;
+    lastNameEn: string;
+    email: string | null;
+    phone: string;
+    jobTitle: string;
+    employmentType: EmploymentType;
+    hireDate: Date;
+    salaryBase: number;
+    userId?: string | null;
+  }
+) {
+  const existing = await prisma.employee.findFirst({
+    where: { tenantId, employeeNumber },
+  });
+  if (existing) return existing;
+  return prisma.employee.create({
+    data: {
+      tenantId,
+      clinicId,
+      employeeNumber,
+      ...data,
+    },
+  });
+}
+
+async function ensureClinicStaff(
+  passwordHash: string,
+  tenantId: string,
+  clinic: { id: string },
+  spec: DrAhmedClinicSpec
+) {
+  const { slug, label } = spec;
+  const slugUpper = slug.toUpperCase();
+
+  const branchMgr = await ensureUser(passwordHash, {
+    tenantId,
+    email: `branchmgr.${slug}@drahmedshall.com`,
+    displayName: `${label} — Branch Manager`,
+    role: UserRole.BRANCH_MANAGER,
+  });
+  const clinicAdmin = await ensureUser(passwordHash, {
+    tenantId,
+    email: `clinicadmin.${slug}@drahmedshall.com`,
+    displayName: `${label} — Clinic Admin`,
+    role: UserRole.CLINIC_ADMIN,
+  });
+  const assistant = await ensureUser(passwordHash, {
+    tenantId,
+    email: `assistant.${slug}@drahmedshall.com`,
+    displayName: `${label} — Clinic Assistant`,
+    role: UserRole.CLINIC_ASSISTANT,
+  });
+  const nurse = await ensureUser(passwordHash, {
+    tenantId,
+    email: `nurse.${slug}@drahmedshall.com`,
+    displayName: `${label} — Nurse`,
+    role: UserRole.NURSE,
+  });
+  const receptionist = await ensureUser(passwordHash, {
+    tenantId,
+    email: `receptionist.${slug}@drahmedshall.com`,
+    displayName: `${label} — Receptionist`,
+    role: UserRole.RECEPTIONIST,
+  });
+  const physician = await ensureUser(passwordHash, {
+    tenantId,
+    email: `physician.${slug}@drahmedshall.com`,
+    displayName: `Prof. Dr. Ahmed El Shall — ${label}`,
+    role: UserRole.PHYSICIAN,
+  });
+
+  await prisma.clinicAdminScope.createMany({
+    data: [
+      { tenantId, userId: branchMgr.id, clinicId: clinic.id },
+      { tenantId, userId: clinicAdmin.id, clinicId: clinic.id },
+    ],
+    skipDuplicates: true,
+  });
+
+  await Promise.all([
+    ensureEmployee(tenantId, clinic.id, `AES-BM-${slugUpper}`, {
+      firstNameEn: label,
+      lastNameEn: "Branch Manager",
+      email: branchMgr.email,
+      phone: spec.phone,
+      jobTitle: "Branch Manager",
+      employmentType: EmploymentType.FULL_TIME,
+      hireDate: new Date(2018, 0, 1),
+      salaryBase: 18000,
+      userId: branchMgr.id,
+    }),
+    ensureEmployee(tenantId, clinic.id, `AES-CA-${slugUpper}`, {
+      firstNameEn: label,
+      lastNameEn: "Clinic Admin",
+      email: clinicAdmin.email,
+      phone: spec.phone,
+      jobTitle: "Clinic Administrator",
+      employmentType: EmploymentType.FULL_TIME,
+      hireDate: new Date(2018, 3, 1),
+      salaryBase: 16000,
+      userId: clinicAdmin.id,
+    }),
+    ensureEmployee(tenantId, clinic.id, `AES-AST-${slugUpper}`, {
+      firstNameEn: label,
+      lastNameEn: "Assistant",
+      email: assistant.email,
+      phone: spec.phone,
+      jobTitle: "Clinic Assistant",
+      employmentType: EmploymentType.FULL_TIME,
+      hireDate: new Date(2019, 0, 1),
+      salaryBase: 9000,
+      userId: assistant.id,
+    }),
+    ensureEmployee(tenantId, clinic.id, `AES-NRS-${slugUpper}`, {
+      firstNameEn: label,
+      lastNameEn: "Nurse",
+      email: nurse.email,
+      phone: spec.phone,
+      jobTitle: "Registered Nurse",
+      employmentType: EmploymentType.FULL_TIME,
+      hireDate: new Date(2019, 6, 1),
+      salaryBase: 11000,
+      userId: nurse.id,
+    }),
+    ensureEmployee(tenantId, clinic.id, `AES-REC-${slugUpper}`, {
+      firstNameEn: label,
+      lastNameEn: "Reception",
+      email: receptionist.email,
+      phone: spec.phone,
+      jobTitle: "Receptionist",
+      employmentType: EmploymentType.FULL_TIME,
+      hireDate: new Date(2019, 9, 1),
+      salaryBase: 8500,
+      userId: receptionist.id,
+    }),
+    ensureEmployee(tenantId, clinic.id, `AES-PHYS-${slugUpper}`, {
+      firstNameEn: "Ahmed",
+      lastNameEn: "El Shall",
+      email: physician.email,
+      phone: spec.phone,
+      jobTitle: "Consultant — Chronic Pain & Spine (Non-surgical)",
+      employmentType: EmploymentType.FULL_TIME,
+      hireDate: new Date(2010, 0, 1),
+      salaryBase: 0,
+      userId: physician.id,
+    }),
+  ]);
+}
+
+async function ensureDemoPatientsForClinic(
+  tenantId: string,
+  clinicId: string,
+  slug: string,
+  spec: DrAhmedClinicSpec
+) {
+  const target = 5;
+  const existing = await prisma.patient.count({ where: { tenantId, homeBranchId: clinicId } });
+  if (existing >= target) return;
+
+  const firstNames = ["Fatma", "Mahmoud", "Nadia", "Karim", "Salma"];
+  const lastNames = ["Mostafa", "Abdel Rahman", "Fouad", "Gamal", "Salem"];
+  const firstNamesAr = ["فاطمة", "محمود", "نادية", "كريم", "سلمى"];
+  const lastNamesAr = ["مصطفى", "عبد الرحمن", "فؤاد", "جمال", "سالم"];
+
+  for (let i = existing; i < target; i += 1) {
+    const idx = i + 1;
+    await prisma.patient.create({
+      data: {
+        tenantId,
+        mrn: `AES-${slug.toUpperCase()}-${String(idx).padStart(3, "0")}`,
+        firstNameEn: firstNames[i] ?? `Patient${idx}`,
+        lastNameEn: lastNames[i] ?? spec.label,
+        firstNameAr: firstNamesAr[i] ?? null,
+        lastNameAr: lastNamesAr[i] ?? null,
+        dob: new Date(1970 + i * 3, (i % 12) + 1, (i % 27) + 1),
+        gender: i % 2 === 0 ? Gender.F : Gender.M,
+        phone: spec.phone,
+        email: `patient.${slug}${idx}@demo.example.com`,
+        nationalId: `EG-${slug}-${String(2800101000000 + idx)}`,
+        homeBranchId: clinicId,
+      },
+    });
+  }
+}
+
 async function seedDrAhmedGroup(passwordHash: string) {
   const drAhmedTenant = await (async () => {
     const existing = await prisma.tenant.findFirst({ where: { name: DR_AHMED_TENANT_NAME } });
@@ -100,8 +306,10 @@ async function seedDrAhmedGroup(passwordHash: string) {
     });
   })();
 
-  const clinicSpecs = [
+  const clinicSpecs: DrAhmedClinicSpec[] = [
     {
+      slug: "hel",
+      label: "Heliopolis",
       nameEn: "Heliopolis Clinic — Obour Buildings",
       nameAr: "عيادة مصر الجديدة — عمارات العبور",
       country: "EG",
@@ -117,6 +325,8 @@ async function seedDrAhmedGroup(passwordHash: string) {
       defaultLanguage: Locale.ar,
     },
     {
+      slug: "cmc",
+      label: "Fifth Settlement",
       nameEn: "Fifth Settlement Clinic — CMC",
       nameAr: "عيادة التجمع الخامس — CMC",
       country: "EG",
@@ -132,6 +342,8 @@ async function seedDrAhmedGroup(passwordHash: string) {
       defaultLanguage: Locale.ar,
     },
     {
+      slug: "moh",
+      label: "Mohandessin",
       nameEn: "Mohandessin Clinic",
       nameAr: "عيادة المهندسين",
       country: "EG",
@@ -147,6 +359,8 @@ async function seedDrAhmedGroup(passwordHash: string) {
       defaultLanguage: Locale.ar,
     },
     {
+      slug: "dok",
+      label: "Dokki",
       nameEn: "Capital Hospital Dokki — Contract Clinic",
       nameAr: "مستشفى العاصمة بالدقي — (تعاقدات)",
       country: "EG",
@@ -161,15 +375,16 @@ async function seedDrAhmedGroup(passwordHash: string) {
       licenseNumber: "EG-AES-DOK-001",
       defaultLanguage: Locale.ar,
     },
-  ] as const;
+  ];
 
   const drAhmedClinics = await Promise.all(
     clinicSpecs.map(async (spec) => {
+      const { slug: _slug, label: _label, ...clinicData } = spec;
       const existing = await prisma.clinic.findFirst({
         where: { tenantId: drAhmedTenant.id, licenseNumber: spec.licenseNumber },
       });
       if (existing) return existing;
-      return prisma.clinic.create({ data: { tenantId: drAhmedTenant.id, ...spec } });
+      return prisma.clinic.create({ data: { tenantId: drAhmedTenant.id, ...clinicData } });
     })
   );
 
@@ -180,46 +395,14 @@ async function seedDrAhmedGroup(passwordHash: string) {
     role: UserRole.GROUP_ADMIN,
   });
 
-  const drAhmedPhysician = await ensureUser(passwordHash, {
+  await ensureUser(passwordHash, {
     tenantId: drAhmedTenant.id,
     email: "dr.ahmed@drahmedshall.com",
     displayName: "Prof. Dr. Ahmed El Shall",
     role: UserRole.PHYSICIAN,
   });
 
-  const drAhmedClinicAdmin = await ensureUser(passwordHash, {
-    tenantId: drAhmedTenant.id,
-    email: "clinicadmin@drahmedshall.com",
-    displayName: "Dr Ahmed Shall — Clinic Admin",
-    role: UserRole.CLINIC_ADMIN,
-  });
-
-  const drAhmedBranchMgr = await ensureUser(passwordHash, {
-    tenantId: drAhmedTenant.id,
-    email: "branchmgr@drahmedshall.com",
-    displayName: "Dr Ahmed Shall — Branch Manager",
-    role: UserRole.BRANCH_MANAGER,
-  });
-
   await Promise.all([
-    ensureUser(passwordHash, {
-      tenantId: drAhmedTenant.id,
-      email: "assistant@drahmedshall.com",
-      displayName: "Dr Ahmed Shall — Clinic Assistant",
-      role: UserRole.CLINIC_ASSISTANT,
-    }),
-    ensureUser(passwordHash, {
-      tenantId: drAhmedTenant.id,
-      email: "nurse@drahmedshall.com",
-      displayName: "Dr Ahmed Shall — Nurse",
-      role: UserRole.NURSE,
-    }),
-    ensureUser(passwordHash, {
-      tenantId: drAhmedTenant.id,
-      email: "receptionist@drahmedshall.com",
-      displayName: "Dr Ahmed Shall — Receptionist",
-      role: UserRole.RECEPTIONIST,
-    }),
     ensureUser(passwordHash, {
       tenantId: drAhmedTenant.id,
       email: "callcenter@drahmedshall.com",
@@ -240,35 +423,11 @@ async function seedDrAhmedGroup(passwordHash: string) {
     }),
   ]);
 
-  await prisma.clinicAdminScope.createMany({
-    data: [
-      { tenantId: drAhmedTenant.id, userId: drAhmedClinicAdmin.id, clinicId: drAhmedClinics[0]!.id },
-      { tenantId: drAhmedTenant.id, userId: drAhmedClinicAdmin.id, clinicId: drAhmedClinics[1]!.id },
-      { tenantId: drAhmedTenant.id, userId: drAhmedBranchMgr.id, clinicId: drAhmedClinics[0]!.id },
-    ],
-    skipDuplicates: true,
-  });
-
-  const existingEmployee = await prisma.employee.findFirst({
-    where: { tenantId: drAhmedTenant.id, employeeNumber: "AES-PHYS-001" },
-  });
-  if (!existingEmployee) {
-    await prisma.employee.create({
-      data: {
-        tenantId: drAhmedTenant.id,
-        clinicId: drAhmedClinics[0]!.id,
-        employeeNumber: "AES-PHYS-001",
-        firstNameEn: "Ahmed",
-        lastNameEn: "El Shall",
-        email: drAhmedPhysician.email,
-        phone: "+201019234886",
-        jobTitle: "Consultant — Chronic Pain & Spine (Non-surgical)",
-        employmentType: EmploymentType.FULL_TIME,
-        hireDate: new Date(2010, 0, 1),
-        salaryBase: 0,
-        userId: drAhmedPhysician.id,
-      },
-    });
+  for (let i = 0; i < clinicSpecs.length; i += 1) {
+    const spec = clinicSpecs[i]!;
+    const clinic = drAhmedClinics[i]!;
+    await ensureClinicStaff(passwordHash, drAhmedTenant.id, clinic, spec);
+    await ensureDemoPatientsForClinic(drAhmedTenant.id, clinic.id, spec.slug, spec);
   }
 
   return { tenant: drAhmedTenant, clinics: drAhmedClinics };
@@ -280,8 +439,9 @@ async function ensureIncrementalSeed(passwordHash: string) {
   console.log(
     "Seed OK (existing data preserved) — Dr Ahmed Shall Group:",
     tenant.id,
-    `(${clinics.length} clinics)`,
-    "| ensured demo logins (password: demo): superadmin@kiorly.com, admin@drahmedshall.com, dr.ahmed@drahmedshall.com, clinicadmin@drahmedshall.com, branchmgr@drahmedshall.com, assistant@drahmedshall.com, nurse@drahmedshall.com, receptionist@drahmedshall.com, callcenter@drahmedshall.com, finance@drahmedshall.com, hr@drahmedshall.com"
+    `(${clinics.length} clinics, per-clinic staff ensured)`,
+    "| org logins (password: demo): admin@drahmedshall.com, dr.ahmed@drahmedshall.com, callcenter@drahmedshall.com, finance@drahmedshall.com, hr@drahmedshall.com",
+    "| per clinic (hel/cmc/moh/dok): branchmgr.{slug}, clinicadmin.{slug}, assistant.{slug}, nurse.{slug}, receptionist.{slug}, physician.{slug} @drahmedshall.com"
   );
 }
 
@@ -915,8 +1075,9 @@ async function seedFreshDatabase(passwordHash: string) {
     t0.id,
     "| Dr Ahmed Shall Group:",
     drAhmedTenant.id,
-    `(${drAhmedClinics.length} clinics)`,
-    "| logins (password: demo): superadmin@kiorly.com (platform), admin@kiorly.com, admin@drahmedshall.com, dr.ahmed@drahmedshall.com, clinicadmin@drahmedshall.com, branchmgr@drahmedshall.com, assistant@drahmedshall.com, nurse@drahmedshall.com, receptionist@drahmedshall.com, callcenter@drahmedshall.com, finance@drahmedshall.com, hr@drahmedshall.com, physician@kiorly.com, doctor2@kiorly.com, clinicadmin@kiorly.com, assistant@kiorly.com, nurse@kiorly.com, receptionist@kiorly.com, callcenter@kiorly.com, finance@kiorly.com, branchmgr@kiorly.com"
+    `(${drAhmedClinics.length} clinics, per-clinic staff)`,
+    "| org: admin@drahmedshall.com, dr.ahmed@drahmedshall.com, callcenter@, finance@, hr@ @drahmedshall.com",
+    "| per clinic slug hel/cmc/moh/dok: branchmgr, clinicadmin, assistant, nurse, receptionist, physician @drahmedshall.com (password: demo)"
   );
 
   await ensureSuperAdmin(passwordHash);

@@ -4,7 +4,7 @@ Reference for QA, demos, and onboarding. All seeded accounts use password **`dem
 
 **Load data:** from the repo root run `npm run db:setup -w api` (migrations + seed).
 
-**Idempotent seed:** if demo data already exists (detected via the Kiorly demo tenant), the seed **does not delete or replace** existing rows. It only ensures missing demo accounts (platform super admin and Dr Ahmed Shall role users) are created. A full demo dataset is inserted only on an empty database.
+**Idempotent seed:** if demo data already exists (detected via the Kiorly demo tenant), the seed **does not delete or replace** existing rows. It only ensures missing demo accounts (platform super admin, Dr Ahmed Shall clinics/staff/patients) are created. A full demo dataset is inserted only on an empty database.
 
 **Primary organization:** `Kiorly Clinic Group (Demo)` — 1 HQ clinic + 14 branches (see [Clinic hierarchy](#clinic-hierarchy)).
 
@@ -16,18 +16,37 @@ Reference for QA, demos, and onboarding. All seeded accounts use password **`dem
 
 Professor / consultant in chronic pain, joints, spine, and neuritis (non-surgical) — Cairo University Qasr Al-Aini.
 
-| Email | Password | Role |
-|-------|----------|------|
-| `admin@drahmedshall.com` | `demo` | Group admin |
-| `dr.ahmed@drahmedshall.com` | `demo` | Physician |
-| `clinicadmin@drahmedshall.com` | `demo` | Clinic admin — Heliopolis + Fifth Settlement |
-| `branchmgr@drahmedshall.com` | `demo` | Branch manager — Heliopolis only |
-| `assistant@drahmedshall.com` | `demo` | Clinic assistant |
-| `nurse@drahmedshall.com` | `demo` | Nurse |
-| `receptionist@drahmedshall.com` | `demo` | Receptionist |
-| `callcenter@drahmedshall.com` | `demo` | Call center (org-wide patients & appointments) |
-| `finance@drahmedshall.com` | `demo` | Finance officer |
-| `hr@drahmedshall.com` | `demo` | HR officer |
+### Organization-wide accounts
+
+| Email | Password | Role | Notes |
+|-------|----------|------|-------|
+| `admin@drahmedshall.com` | `demo` | Group admin | Full organization |
+| `dr.ahmed@drahmedshall.com` | `demo` | Physician | All clinics (no single-clinic HR link) |
+| `callcenter@drahmedshall.com` | `demo` | Call center | Org-wide patients & appointments |
+| `finance@drahmedshall.com` | `demo` | Finance officer | Revenue, expenses, reports |
+| `hr@drahmedshall.com` | `demo` | HR officer | HR module |
+
+### Per-clinic accounts
+
+Each clinic has its own staff logins. Replace `{slug}` with **`hel`**, **`cmc`**, **`moh`**, or **`dok`**.
+
+| Email pattern | Role | Clinic scope |
+|---------------|------|--------------|
+| `branchmgr.{slug}@drahmedshall.com` | Branch manager | That clinic only |
+| `clinicadmin.{slug}@drahmedshall.com` | Clinic admin | That clinic only |
+| `assistant.{slug}@drahmedshall.com` | Clinic assistant | — |
+| `nurse.{slug}@drahmedshall.com` | Nurse | — |
+| `receptionist.{slug}@drahmedshall.com` | Receptionist | — |
+| `physician.{slug}@drahmedshall.com` | Physician | Assigned to that clinic (scheduling & encounters) |
+
+| Slug | Clinic | Example reception login |
+|------|--------|-------------------------|
+| `hel` | Heliopolis — Obour Buildings | `receptionist.hel@drahmedshall.com` |
+| `cmc` | Fifth Settlement — CMC | `receptionist.cmc@drahmedshall.com` |
+| `moh` | Mohandessin | `receptionist.moh@drahmedshall.com` |
+| `dok` | Capital Hospital Dokki | `receptionist.dok@drahmedshall.com` |
+
+Each clinic also gets **5 demo patients** (MRN `AES-{SLUG}-001` … `005`) when missing.
 
 **Booking phones (seed):** +201019234886 · +201010027404
 
@@ -191,8 +210,11 @@ Branches are children of HQ (`parentClinicId` → HQ).
 | Reception / operations | `receptionist@kiorly.com` |
 | Call center (org-wide patients & appointments) | `callcenter@kiorly.com` or `callcenter@drahmedshall.com` |
 | Dr Ahmed Shall — group admin | `admin@drahmedshall.com` |
-| Dr Ahmed Shall — clinical workflow | `dr.ahmed@drahmedshall.com` |
-| Dr Ahmed Shall — clinic-scoped admin | `clinicadmin@drahmedshall.com` or `branchmgr@drahmedshall.com` |
+| Dr Ahmed Shall — clinical (all clinics) | `dr.ahmed@drahmedshall.com` |
+| Dr Ahmed Shall — Heliopolis front desk | `receptionist.hel@drahmedshall.com` |
+| Dr Ahmed Shall — CMC physician / scheduling | `physician.cmc@drahmedshall.com` |
+| Dr Ahmed Shall — Mohandessin branch manager | `branchmgr.moh@drahmedshall.com` |
+| Dr Ahmed Shall — Dokki clinic admin | `clinicadmin.dok@drahmedshall.com` |
 
 ---
 
@@ -204,7 +226,8 @@ Branches are children of HQ (`parentClinicId` → HQ).
 | Encounters | 360 (+ 4 demo drafts) |
 | Appointments | 260 |
 | Employees | 17 (+ physicians linked to users) |
-| Organizations | 15 (1 Kiorly demo populated, 1 Dr Ahmed Shall with 4 clinics, 13 shells) |
+| Organizations | 15 (1 Kiorly demo populated, 1 Dr Ahmed with 4 clinics, 13 shells) |
 | Clinics | 19 (Kiorly: 1 HQ + 14 branches; Dr Ahmed: 4 standalone) |
+| Dr Ahmed patients | 5 per clinic (20 total when fully seeded) |
 
 Source of truth for accounts and roles: `apps/api/prisma/seed.ts`.
