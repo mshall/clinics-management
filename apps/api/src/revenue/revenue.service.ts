@@ -12,6 +12,7 @@ import type { RevenueTotalsDto } from "./dto/revenue-totals.dto";
 
 const LEDGER_ROLES: ReadonlySet<UserRole> = new Set([
   UserRole.GROUP_ADMIN,
+  UserRole.GROUP_SUPERVISOR,
   UserRole.BRANCH_MANAGER,
   UserRole.FINANCE_OFFICER,
   UserRole.CLINIC_ADMIN,
@@ -21,6 +22,7 @@ const LEDGER_ROLES: ReadonlySet<UserRole> = new Set([
 
 const POST_REVENUE_ROLES: ReadonlySet<UserRole> = new Set([
   UserRole.GROUP_ADMIN,
+  UserRole.GROUP_SUPERVISOR,
   UserRole.BRANCH_MANAGER,
   UserRole.FINANCE_OFFICER,
   UserRole.CLINIC_ADMIN,

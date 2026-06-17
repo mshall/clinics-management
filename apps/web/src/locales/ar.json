@@ -418,6 +418,7 @@
   "roles": {
     "platform_super_admin": "مدير المنصة الأعلى",
     "group_admin": "مدير المجموعة",
+    "group_supervisor": "مشرف المجموعة",
     "clinic_admin": "مدير العيادة",
     "branch_manager": "مدير الفرع",
     "physician": "طبيب",

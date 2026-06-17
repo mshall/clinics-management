@@ -44,6 +44,7 @@ class PatchExpenseStatusDto {
 
 const EXPENSE_ROLES: Set<UserRole> = new Set([
   UserRole.GROUP_ADMIN,
+  UserRole.GROUP_SUPERVISOR,
   UserRole.CLINIC_ADMIN,
   UserRole.BRANCH_MANAGER,
   UserRole.FINANCE_OFFICER,

@@ -613,7 +613,7 @@ export class EncountersService {
     await this.uploads.deleteObject("encounters", doc.relativePath);
   }
 
-  async finalize(tenantId: string, userId: string, encounterId: string): Promise<EncounterDetailDto> {
+  async finalize(tenantId: string, viewer: JwtUser, encounterId: string): Promise<EncounterDetailDto> {
     const enc = await this.prisma.encounter.findFirst({
       where: { id: encounterId, tenantId },
       include: { medications: true, documents: true },
@@ -622,7 +622,9 @@ export class EncountersService {
     if (enc.status === EncounterStatus.FINALIZED) {
       throw new BadRequestException("Already finalized");
     }
-    if (enc.clinicianId !== userId) {
+    const canFinalizeAny =
+      viewer.role === UserRole.GROUP_SUPERVISOR || viewer.role === UserRole.GROUP_ADMIN;
+    if (!canFinalizeAny && enc.clinicianId !== viewer.userId) {
       throw new ForbiddenException("Only the assigned clinician can finalize this encounter");
     }
     const prescriptionCount = enc.documents.filter((d) => d.kind === EncounterDocumentKind.PRESCRIPTION).length;

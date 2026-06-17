@@ -397,6 +397,13 @@ async function seedDrAhmedGroup(passwordHash: string) {
 
   await ensureUser(passwordHash, {
     tenantId: drAhmedTenant.id,
+    email: "supervisor@drahmedshall.com",
+    displayName: "Dr Ahmed Shall — Group Supervisor",
+    role: UserRole.GROUP_SUPERVISOR,
+  });
+
+  await ensureUser(passwordHash, {
+    tenantId: drAhmedTenant.id,
     email: "dr.ahmed@drahmedshall.com",
     displayName: "Prof. Dr. Ahmed El Shall",
     role: UserRole.PHYSICIAN,
@@ -440,7 +447,7 @@ async function ensureIncrementalSeed(passwordHash: string) {
     "Seed OK (existing data preserved) — Dr Ahmed Shall Group:",
     tenant.id,
     `(${clinics.length} clinics, per-clinic staff ensured)`,
-    "| org logins (password: demo): admin@drahmedshall.com, dr.ahmed@drahmedshall.com, callcenter@drahmedshall.com, finance@drahmedshall.com, hr@drahmedshall.com",
+    "| org logins (password: demo): admin@drahmedshall.com, supervisor@drahmedshall.com, dr.ahmed@drahmedshall.com, callcenter@drahmedshall.com, finance@drahmedshall.com, hr@drahmedshall.com",
     "| per clinic (hel/cmc/moh/dok): branchmgr.{slug}, clinicadmin.{slug}, assistant.{slug}, nurse.{slug}, receptionist.{slug}, physician.{slug} @drahmedshall.com"
   );
 }

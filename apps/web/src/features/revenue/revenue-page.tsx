@@ -35,7 +35,10 @@ export function RevenuePage() {
   const { from, to, setRange, resetToCurrentMonth } = useDateRangeStore();
   const authUser = useAuthStore((s) => s.user);
   const breakdownEnabled =
-    authUser?.role === "group_admin" || authUser?.role === "clinic_admin" || authUser?.role === "branch_manager";
+    authUser?.role === "group_admin" ||
+    authUser?.role === "group_supervisor" ||
+    authUser?.role === "clinic_admin" ||
+    authUser?.role === "branch_manager";
   const bd = useClinicRevenueBreakdownQuery(breakdownEnabled);
 
   const [filterClinicId, setFilterClinicId] = useState("");

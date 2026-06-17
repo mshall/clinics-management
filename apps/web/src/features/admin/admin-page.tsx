@@ -35,6 +35,7 @@ import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel"
 
 const USER_ROLES = [
   "GROUP_ADMIN",
+  "GROUP_SUPERVISOR",
   "BRANCH_MANAGER",
   "PHYSICIAN",
   "NURSE",

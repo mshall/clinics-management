@@ -16,6 +16,7 @@ function resolveClinicianFilter(user: JwtUser, clinicianIdParam?: string): strin
   if (!raw) return undefined;
   if (
     user.role === UserRole.GROUP_ADMIN ||
+    user.role === UserRole.GROUP_SUPERVISOR ||
     user.role === UserRole.BRANCH_MANAGER ||
     user.role === UserRole.FINANCE_OFFICER
   ) {

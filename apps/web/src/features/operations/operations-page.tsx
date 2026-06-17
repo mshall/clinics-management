@@ -40,7 +40,14 @@ import { columnFilterIncludes } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { defaultMonthRange } from "@/stores/date-range-store";
 
-const CREATE_ROLES = new Set(["group_admin", "branch_manager", "clinic_admin", "clinic_assistant", "receptionist"]);
+const CREATE_ROLES = new Set([
+  "group_admin",
+  "group_supervisor",
+  "branch_manager",
+  "clinic_admin",
+  "clinic_assistant",
+  "receptionist",
+]);
 
 function toOperationIso(localDatetime: string): string {
   const d = new Date(localDatetime);

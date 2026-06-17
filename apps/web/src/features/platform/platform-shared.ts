@@ -41,6 +41,7 @@ export type PlatformClinicRow = {
 
 export const ORG_USER_ROLES = [
   "GROUP_ADMIN",
+  "GROUP_SUPERVISOR",
   "CLINIC_ADMIN",
   "BRANCH_MANAGER",
   "PHYSICIAN",

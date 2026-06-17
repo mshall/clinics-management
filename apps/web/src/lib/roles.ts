@@ -1,6 +1,7 @@
 export type DemoRole =
   | "platform_super_admin"
   | "group_admin"
+  | "group_supervisor"
   | "branch_manager"
   | "physician"
   | "nurse"
@@ -15,6 +16,7 @@ export function mapApiRole(role: string): DemoRole {
   const m: Record<string, DemoRole> = {
     PLATFORM_SUPER_ADMIN: "platform_super_admin",
     GROUP_ADMIN: "group_admin",
+    GROUP_SUPERVISOR: "group_supervisor",
     BRANCH_MANAGER: "branch_manager",
     PHYSICIAN: "physician",
     NURSE: "nurse",

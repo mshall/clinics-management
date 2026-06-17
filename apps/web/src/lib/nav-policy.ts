@@ -34,9 +34,22 @@ const FULL: NavItemKey[] = [
   "profile",
 ];
 
+const GROUP_SUPERVISOR_NAV: NavItemKey[] = [
+  "dashboard",
+  "patients",
+  "encounters",
+  "appointments",
+  "operations",
+  "expenses",
+  "revenue",
+  "reports",
+  "profile",
+];
+
 const ROLE_KEYS: Record<DemoRole, NavItemKey[]> = {
   platform_super_admin: ["platform", "platform_organizations", "platform_users", "platform_clinics", "profile"],
   group_admin: FULL,
+  group_supervisor: GROUP_SUPERVISOR_NAV,
   branch_manager: FULL,
   finance_officer: FULL,
   hr_officer: FULL,

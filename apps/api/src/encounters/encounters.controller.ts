@@ -207,6 +207,6 @@ export class EncountersController {
   @ApiOperation({ summary: "Finalize encounter (clinician only; diagnoses + medications policy)" })
   @ApiOkResponse({ type: EncounterDetailDto })
   finalize(@CurrentUser() user: JwtUser, @Param("id") id: string) {
-    return this.encounters.finalize(requireTenantId(user), user.userId, id);
+    return this.encounters.finalize(requireTenantId(user), user, id);
   }
 }

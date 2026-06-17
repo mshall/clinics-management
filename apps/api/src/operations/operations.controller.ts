@@ -47,6 +47,7 @@ const UPLOAD_LIMIT = 15 * 1024 * 1024;
 
 const OPERATIONS_VIEW_ROLES: Set<UserRole> = new Set([
   UserRole.GROUP_ADMIN,
+  UserRole.GROUP_SUPERVISOR,
   UserRole.CLINIC_ADMIN,
   UserRole.BRANCH_MANAGER,
   UserRole.CLINIC_ASSISTANT,
@@ -56,6 +57,7 @@ const OPERATIONS_VIEW_ROLES: Set<UserRole> = new Set([
 
 const OPERATIONS_CREATE_ROLES: Set<UserRole> = new Set([
   UserRole.GROUP_ADMIN,
+  UserRole.GROUP_SUPERVISOR,
   UserRole.CLINIC_ADMIN,
   UserRole.BRANCH_MANAGER,
   UserRole.CLINIC_ASSISTANT,

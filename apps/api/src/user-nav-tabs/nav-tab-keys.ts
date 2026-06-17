@@ -36,8 +36,22 @@ const FULL: string[] = [
   "profile",
 ];
 
+/** Org-wide oversight: clinical & financial data without admin / HR / clinics management. */
+const GROUP_SUPERVISOR_TABS: string[] = [
+  "dashboard",
+  "patients",
+  "encounters",
+  "appointments",
+  "operations",
+  "expenses",
+  "revenue",
+  "reports",
+  "profile",
+];
+
 const ROLE_MAX: Record<UserRole, readonly string[]> = {
   [UserRole.GROUP_ADMIN]: FULL,
+  [UserRole.GROUP_SUPERVISOR]: GROUP_SUPERVISOR_TABS,
   [UserRole.BRANCH_MANAGER]: FULL,
   [UserRole.FINANCE_OFFICER]: FULL,
   [UserRole.HR_OFFICER]: FULL,

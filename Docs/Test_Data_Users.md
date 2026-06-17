@@ -20,7 +20,8 @@ Professor / consultant in chronic pain, joints, spine, and neuritis (non-surgica
 
 | Email | Password | Role | Notes |
 |-------|----------|------|-------|
-| `admin@drahmedshall.com` | `demo` | Group admin | Full organization |
+| `admin@drahmedshall.com` | `demo` | Group admin | Full organization + Admin |
+| `supervisor@drahmedshall.com` | `demo` | Group supervisor | Org-wide patients, appointments, encounters, operations, expenses, revenue, reports (no Admin / HR / Clinics) |
 | `dr.ahmed@drahmedshall.com` | `demo` | Physician | All clinics (no single-clinic HR link) |
 | `callcenter@drahmedshall.com` | `demo` | Call center | Org-wide patients & appointments |
 | `finance@drahmedshall.com` | `demo` | Finance officer | Revenue, expenses, reports |
@@ -210,6 +211,7 @@ Branches are children of HQ (`parentClinicId` → HQ).
 | Reception / operations | `receptionist@kiorly.com` |
 | Call center (org-wide patients & appointments) | `callcenter@kiorly.com` or `callcenter@drahmedshall.com` |
 | Dr Ahmed Shall — group admin | `admin@drahmedshall.com` |
+| Dr Ahmed Shall — group supervisor (performance oversight) | `supervisor@drahmedshall.com` |
 | Dr Ahmed Shall — clinical (all clinics) | `dr.ahmed@drahmedshall.com` |
 | Dr Ahmed Shall — Heliopolis front desk | `receptionist.hel@drahmedshall.com` |
 | Dr Ahmed Shall — CMC physician / scheduling | `physician.cmc@drahmedshall.com` |

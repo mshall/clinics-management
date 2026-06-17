@@ -14,6 +14,7 @@ import { ClinicsService } from "./clinics.service";
 
 const SCHEDULING_ROLES: Set<UserRole> = new Set([
   UserRole.GROUP_ADMIN,
+  UserRole.GROUP_SUPERVISOR,
   UserRole.CLINIC_ADMIN,
   UserRole.BRANCH_MANAGER,
   UserRole.CLINIC_ASSISTANT,

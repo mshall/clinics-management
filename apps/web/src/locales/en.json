@@ -418,6 +418,7 @@
   "roles": {
     "platform_super_admin": "Platform super admin",
     "group_admin": "Group admin",
+    "group_supervisor": "Group supervisor",
     "clinic_admin": "Clinic admin",
     "branch_manager": "Branch manager",
     "physician": "Physician",
