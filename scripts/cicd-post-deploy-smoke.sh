@@ -59,3 +59,30 @@ if ! echo "$body" | grep -q '"accessToken"'; then
 fi
 
 echo "OK  POST /api/v1/auth/login ($DEMO_EMAIL)"
+
+access_token="$(echo "$body" | python3 -c "import sys,json; print(json.load(sys.stdin)['accessToken'])")"
+
+admin_raw="$(curl -sS -w "\n%{http_code}" -X GET "$APP_URL/api/v1/admin/users?page=1&pageSize=5" \
+  -H "Authorization: Bearer $access_token" \
+  -H "Accept: application/json")"
+admin_http="$(echo "$admin_raw" | tail -1)"
+admin_body="$(echo "$admin_raw" | sed '$d')"
+
+if [[ "$admin_http" == "404" ]]; then
+  echo "::error::GET /api/v1/admin/users returned 404 — App Runner may be on a stale rolled-back API image"
+  exit 1
+fi
+
+if [[ "$admin_http" != "200" ]]; then
+  echo "::error::Organization users smoke failed HTTP $admin_http"
+  echo "$admin_body" | head -c 2000
+  exit 1
+fi
+
+admin_total="$(echo "$admin_body" | python3 -c "import sys,json; print(json.load(sys.stdin).get('total',0))" 2>/dev/null || echo 0)"
+if [[ "${admin_total:-0}" -lt 3 ]]; then
+  echo "::error::Expected seeded org users (total=$admin_total) — incremental seed may not have run"
+  exit 1
+fi
+
+echo "OK  GET /api/v1/admin/users (total=$admin_total org users)"

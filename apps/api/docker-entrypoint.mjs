@@ -23,6 +23,35 @@ function vpceHttpsFromHost(host) {
   return h ? `https://${h}` : undefined;
 }
 
+function createBootHealthServer(port) {
+  return createServer((req, res) => {
+    const p = req.url?.split("?")[0] ?? "";
+    const live = req.method === "GET" && p === "/api/v1/health/live";
+    res.statusCode = live ? 200 : 503;
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.end(JSON.stringify(live ? { status: "ok", phase: "boot" } : { status: "starting" }));
+  });
+}
+
+async function listenBootHealth(server, port) {
+  await new Promise((resolve, reject) => {
+    server.listen(port, "0.0.0.0", () => {
+      console.error("[boot] boot-time health probe listening on", port);
+      resolve();
+    });
+    server.on("error", reject);
+  });
+}
+
+async function closeBootHealth(server) {
+  await new Promise((resolve) => {
+    server.close(() => {
+      console.error("[boot] boot-time health probe closed");
+      resolve();
+    });
+  });
+}
+
 const dbSecretArn = process.env.DB_SECRET_ARN;
 if (dbSecretArn) {
   const region =
@@ -68,55 +97,33 @@ if (dbSecretArn) {
   }
 }
 
-if (process.env.PRISMA_MIGRATE_ON_BOOT === "true") {
-  // App Runner health-checks this path immediately; Nest is not listening until migrate finishes.
-  // A short-lived HTTP server keeps checks passing during migrate deploy.
-  const port = Number(process.env.PORT ?? "3000");
-  const server = createServer((req, res) => {
-    const p = req.url?.split("?")[0] ?? "";
-    const live = req.method === "GET" && p === "/api/v1/health/live";
-    res.statusCode = live ? 200 : 503;
-    res.setHeader("Content-Type", "application/json; charset=utf-8");
-    res.end(JSON.stringify(live ? { status: "ok" } : { status: "migrating" }));
-  });
+const port = Number(process.env.PORT ?? "3000");
+const migrateOnBoot = process.env.PRISMA_MIGRATE_ON_BOOT === "true";
+const seedOnBoot = process.env.PRISMA_SEED_ON_BOOT === "true";
+const needsBootHealth = migrateOnBoot || seedOnBoot;
+let bootHealthServer = null;
 
-  await new Promise((resolve, reject) => {
-    server.listen(port, "0.0.0.0", () => {
-      console.error("[boot] migrate-time health probe listening on", port);
-      resolve();
-    });
-    server.on("error", reject);
-  });
-
-  let migrateExit = 0;
-  try {
-    console.error("[boot] PRISMA_MIGRATE_ON_BOOT=true — running prisma migrate deploy …");
-    const cwd = __dirname;
-    const migrate = spawnSync("npx", ["prisma", "migrate", "deploy"], {
-      stdio: "inherit",
-      env: process.env,
-      cwd,
-    });
-    migrateExit = migrate.status ?? 1;
-    if (migrateExit !== 0) {
-      console.error("[boot] prisma migrate deploy failed with status", migrateExit);
-    } else {
-      console.error("[boot] prisma migrate deploy completed OK");
-    }
-  } finally {
-    await new Promise((resolve) => {
-      server.close(() => {
-        console.error("[boot] migrate-time health probe closed");
-        resolve();
-      });
-    });
-  }
-  if (migrateExit !== 0) {
-    process.exit(migrateExit);
-  }
+if (needsBootHealth) {
+  bootHealthServer = createBootHealthServer(port);
+  await listenBootHealth(bootHealthServer, port);
 }
 
-if (process.env.PRISMA_SEED_ON_BOOT === "true") {
+if (migrateOnBoot) {
+  console.error("[boot] PRISMA_MIGRATE_ON_BOOT=true — running prisma migrate deploy …");
+  const migrate = spawnSync("npx", ["prisma", "migrate", "deploy"], {
+    stdio: "inherit",
+    env: process.env,
+    cwd: __dirname,
+  });
+  const migrateExit = migrate.status ?? 1;
+  if (migrateExit !== 0) {
+    console.error("[boot] prisma migrate deploy failed with status", migrateExit);
+    process.exit(migrateExit);
+  }
+  console.error("[boot] prisma migrate deploy completed OK");
+}
+
+if (seedOnBoot) {
   console.error("[boot] PRISMA_SEED_ON_BOOT=true — running idempotent demo seed (add missing only, never overwrite) …");
   const seedScript = path.join(__dirname, "prisma", "seed.ts");
   const seedResult = spawnSync("npx", ["tsx", seedScript], {
@@ -129,6 +136,11 @@ if (process.env.PRISMA_SEED_ON_BOOT === "true") {
   } else {
     console.error("[boot] seed script completed OK");
   }
+}
+
+if (bootHealthServer) {
+  await closeBootHealth(bootHealthServer);
+  bootHealthServer = null;
 }
 
 const kmsEp = vpceHttpsFromHost(process.env.KMS_VPCE_HOST);
