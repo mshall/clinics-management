@@ -82,6 +82,34 @@ if (loadSecretFn && /process\.exit\s*\(\s*1\s*\)/.test(loadSecretFn[0])) {
   failed = true;
 }
 
+if (/^import\s+.*@aws-sdk\//m.test(source)) {
+  console.error(
+    `${entrypointPath}: do not statically import @aws-sdk at module load — dynamic-import after listenServer so :3000 binds before heavy SDK init`,
+  );
+  failed = true;
+}
+
+const migrateFn = source.match(/async function runMigrate[\s\S]*?^}/m);
+if (migrateFn && /process\.exit/.test(migrateFn[0])) {
+  console.error(
+    `${entrypointPath}: migrate must retry without process.exit — a failed prisma migrate deploy must not kill the :3000 proxy`,
+  );
+  failed = true;
+}
+if (/await runMigrate\s*\(\s*\)/.test(mainBody)) {
+  console.error(
+    `${entrypointPath}: main() must call runMigrateWithRetry (or equivalent) — runMigrate process.exit kills App Runner deploys`,
+  );
+  failed = true;
+}
+
+if (!/await listenServer\s*\(\s*proxy[\s\S]*?proxyListening\s*=\s*true/.test(mainBody)) {
+  console.error(
+    `${entrypointPath}: set proxyListening after listenServer so post-boot fatals do not exit before App Runner stabilizes`,
+  );
+  failed = true;
+}
+
 if (failed) {
   process.exit(1);
 }
