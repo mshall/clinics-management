@@ -9,6 +9,14 @@ import { SESClient, SendRawEmailCommand } from "@aws-sdk/client-ses";
 
 const MAX_ATTACHMENT_BYTES = 9 * 1024 * 1024;
 
+/** CDK sets *HOST only (vpce-….vpce.amazonaws.com); SDK needs https URL. */
+function vpceHttpsFromHost(host) {
+  if (!host || typeof host !== "string") return undefined;
+  let h = host.trim();
+  if (/^Z[a-z0-9]+:(?=vpce-)/i.test(h)) h = h.replace(/^Z[a-z0-9]+:/i, "");
+  return h ? `https://${h}` : undefined;
+}
+
 function chunkBase64(buf) {
   const b64 = buf.toString("base64");
   const lines = [];
@@ -57,7 +65,11 @@ export const handler = async () => {
     throw new Error("Missing BACKUP_EMAIL_TO, BACKUP_EMAIL_FROM, BACKUP_BUCKET, or DB_SECRET_ARN");
   }
 
-  const sm = new SecretsManagerClient({ region });
+  const smEndpoint = vpceHttpsFromHost(process.env.SECRETS_MANAGER_VPCE_HOST);
+  const sm = new SecretsManagerClient({
+    region,
+    ...(smEndpoint ? { endpoint: smEndpoint } : {}),
+  });
   const secretOut = await sm.send(new GetSecretValueCommand({ SecretId: secretArn }));
   const j = JSON.parse(secretOut.SecretString ?? "{}");
   const host = j.host ?? j.hostname ?? j.endpoint;
@@ -113,7 +125,11 @@ export const handler = async () => {
       }),
     );
 
-    const ses = new SESClient({ region });
+    const sesEndpoint = vpceHttpsFromHost(process.env.SES_VPCE_HOST);
+    const ses = new SESClient({
+      region,
+      ...(sesEndpoint ? { endpoint: sesEndpoint } : {}),
+    });
     const subject = `Kiorly clinics DB backup ${stamp} (pre-deploy)`;
     let emailed = false;
     let emailError;

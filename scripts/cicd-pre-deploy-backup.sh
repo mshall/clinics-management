@@ -4,6 +4,9 @@ set -euo pipefail
 
 STACK_NAME="${CDK_STACK_NAME:-kiorly-clinics-management}"
 AWS_REGION="${AWS_REGION:-eu-central-1}"
+# When true, a failed backup blocks CDK deploy. Default false so a stale/failing Lambda
+# (e.g. SES not verified yet) does not prevent rolling out infra fixes.
+PRE_DEPLOY_BACKUP_BLOCK_DEPLOY="${PRE_DEPLOY_BACKUP_BLOCK_DEPLOY:-false}"
 
 echo "Pre-deploy backup: stack=${STACK_NAME} region=${AWS_REGION}"
 
@@ -38,22 +41,25 @@ echo "Lambda payload:"
 cat "$OUT"
 echo ""
 
+backup_failed=0
+
 if grep -q '"FunctionError"' "$INVOKE_META"; then
   echo "::error::Pre-deploy database backup Lambda failed (pg_dump or S3). Check CloudWatch: /aws/lambda/${FN}"
   aws logs tail "/aws/lambda/${FN}" --region "$AWS_REGION" --since 30m --format short --no-follow 2>/dev/null | tail -n 80 || true
-  rm -f "$OUT" "$INVOKE_META"
-  exit 1
-fi
-
-if ! grep -q '"ok":true' "$OUT"; then
+  backup_failed=1
+elif ! grep -q '"ok":true' "$OUT"; then
   echo "::error::Backup Lambda returned unexpected payload — review CloudWatch logs for ${FN}"
   aws logs tail "/aws/lambda/${FN}" --region "$AWS_REGION" --since 30m --format short --no-follow 2>/dev/null | tail -n 80 || true
-  rm -f "$OUT" "$INVOKE_META"
-  exit 1
-fi
-
-if grep -q '"emailed":false' "$OUT"; then
+  backup_failed=1
+elif grep -q '"emailed":false' "$OUT"; then
   echo "::warning::Backup stored in S3 but SES email failed. Verify SES identity (DbBackupEmailTo stack output) in AWS Console > SES > Verified identities."
 fi
 
 rm -f "$OUT" "$INVOKE_META"
+
+if [[ "$backup_failed" -eq 1 ]]; then
+  if [[ "$PRE_DEPLOY_BACKUP_BLOCK_DEPLOY" == "true" ]]; then
+    exit 1
+  fi
+  echo "::warning::Pre-deploy backup failed but PRE_DEPLOY_BACKUP_BLOCK_DEPLOY is not true — continuing with CDK deploy."
+fi
