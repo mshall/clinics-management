@@ -42,4 +42,6 @@ if [ "${CI:-}" = "true" ]; then
   export CDK_DEBUG="${CDK_DEBUG:-1}"
   CDK_DEPLOY_ARGS+=(--verbose)
 fi
-npx cdk deploy "${CDK_DEPLOY_ARGS[@]}"
+npx cdk synth "${CDK_DEPLOY_ARGS[@]}"
+npm run check:ascii-cfn
+npx cdk deploy --app cdk.out "${CDK_DEPLOY_ARGS[@]}"

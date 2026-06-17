@@ -251,8 +251,16 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     // App Runner: reference JSON key so JWT_SECRET is a plain string (matches JwtModule + Passport JwtStrategy).
     const jwtSecretFieldArn = `${jwtSecret.secretArn}:jwt::`;
 
+    const apiObservability = new apprunner.CfnObservabilityConfiguration(this, "ApiObservability", {
+      observabilityConfigurationName: "kiorly-api-observability",
+    });
+
     const appRunnerService = new apprunner.CfnService(this, "ApiService", {
       serviceName: `kiorly-api-${cdk.Names.uniqueId(this).slice(-8).toLowerCase()}`,
+      observabilityConfiguration: {
+        observabilityEnabled: true,
+        observabilityConfigurationArn: apiObservability.attrObservabilityConfigurationArn,
+      },
       sourceConfiguration: {
         autoDeploymentsEnabled: false,
         authenticationConfiguration: {
@@ -309,6 +317,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       },
     });
 
+    appRunnerService.node.addDependency(apiObservability);
     appRunnerService.node.addDependency(vpcConnector);
     appRunnerService.node.addDependency(imageAsset);
     appRunnerService.node.addDependency(db);
