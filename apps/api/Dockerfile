@@ -21,7 +21,9 @@ COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 COPY apps/api/prisma ./apps/api/prisma
 COPY apps/api/prisma.config.ts ./apps/api/prisma.config.ts
-COPY apps/api/docker-entrypoint.mjs ./apps/api/docker-entrypoint.mjs
+COPY apps/api/health-sidecar.mjs ./apps/api/health-sidecar.mjs
+COPY apps/api/docker-entrypoint.sh ./apps/api/docker-entrypoint.sh
+COPY apps/api/docker-boot.mjs ./apps/api/docker-boot.mjs
 # Must match prisma major/minor used in package-lock (api devDependency); mismatched CLI breaks `migrate deploy` on boot.
 RUN npm ci --omit=dev && npm install -g prisma@6.19.3 tsx
 COPY --from=build /repo/apps/api/dist ./apps/api/dist
@@ -30,5 +32,6 @@ COPY --from=build /repo/node_modules/.prisma ./node_modules/.prisma
 ENV NODE_ENV=production
 ENV TZ=Europe/Berlin
 WORKDIR /repo/apps/api
+RUN chmod +x docker-entrypoint.sh
 EXPOSE 3000
-ENTRYPOINT ["node", "docker-entrypoint.mjs"]
+ENTRYPOINT ["./docker-entrypoint.sh"]
