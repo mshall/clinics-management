@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useClinicsQuery } from "@/lib/api-hooks";
-import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/http";
+import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from "@/lib/http";
 import { formatClinicName, formatUserRole } from "@/lib/locale-display";
 import type { Paginated } from "@/lib/paginated";
 import { apiErrorMessage, ORG_USER_ROLES } from "@/features/platform/platform-shared";
@@ -46,6 +46,42 @@ export function AdminOrgUsersPanel() {
   const [uRole, setURole] = useState<(typeof ORG_USER_ROLES)[number]>("NURSE");
   const [uClinicIds, setUClinicIds] = useState<string[]>([]);
   const [userErr, setUserErr] = useState<string | null>(null);
+  const [legacyUsersApi, setLegacyUsersApi] = useState(false);
+
+  async function fetchOrgUsers(pageNum: number, size: number, q: string) {
+    const query = q.trim() ? `&q=${encodeURIComponent(q.trim())}` : "";
+    try {
+      const data = await apiGet<Paginated<OrgUserRow>>(
+        `/api/v1/admin/users?page=${pageNum}&pageSize=${size}${query}`,
+      );
+      setLegacyUsersApi(false);
+      return data;
+    } catch (err) {
+      if (!(err instanceof ApiError) || err.status !== 404) throw err;
+      const basic = await apiGet<Paginated<{ id: string; email: string; displayName: string; role: string }>>(
+        `/api/v1/users?page=${pageNum}&pageSize=${size}`,
+      );
+      setLegacyUsersApi(true);
+      const qLower = q.trim().toLowerCase();
+      const filtered = qLower
+        ? basic.items.filter(
+            (u) => u.email.toLowerCase().includes(qLower) || u.displayName.toLowerCase().includes(qLower),
+          )
+        : basic.items;
+      return {
+        items: filtered.map((u) => ({
+          ...u,
+          createdAt: "",
+          clinicIds: [],
+          clinics: [],
+        })),
+        total: qLower ? filtered.length : basic.total,
+        page: basic.page,
+        pageSize: basic.pageSize,
+        totalPages: qLower ? 1 : basic.totalPages,
+      } satisfies Paginated<OrgUserRow>;
+    }
+  }
 
   const editUserId = dialogMode && typeof dialogMode === "object" ? dialogMode.edit : null;
   const isCreate = dialogMode === "create";
@@ -56,10 +92,7 @@ export function AdminOrgUsersPanel() {
 
   const usersQuery = useQuery({
     queryKey: ["admin", "org-users", page, pageSize, search],
-    queryFn: () => {
-      const q = search.trim() ? `&q=${encodeURIComponent(search.trim())}` : "";
-      return apiGet<Paginated<OrgUserRow>>(`/api/v1/admin/users?page=${page}&pageSize=${pageSize}${q}`);
-    },
+    queryFn: () => fetchOrgUsers(page, pageSize, search),
   });
 
   const userDetailQuery = useQuery({
@@ -169,11 +202,19 @@ export function AdminOrgUsersPanel() {
             <CardTitle className="text-base">{t("admin.tabOrgUsers", "Organization users")}</CardTitle>
             <CardDescription>{t("admin.orgUsersHint", "Manage login accounts, roles, and clinic assignments for your organization.")}</CardDescription>
           </div>
-          <Button type="button" onClick={() => { resetCreateForm(); setDialogMode("create"); }}>
+          <Button type="button" disabled={legacyUsersApi} onClick={() => { resetCreateForm(); setDialogMode("create"); }}>
             {t("admin.createUser", "Create user")}
           </Button>
         </CardHeader>
         <CardContent className="space-y-4">
+          {legacyUsersApi ? (
+            <p className="text-sm text-muted-foreground">
+              {t(
+                "admin.orgUsersLegacyApi",
+                "Read-only list — the deployed API is still updating. User management will be available after the next successful deploy.",
+              )}
+            </p>
+          ) : null}
           <div className="max-w-sm space-y-2">
             <Label htmlFor="org-users-search">{t("admin.orgUsersSearch", "Search users")}</Label>
             <Input
