@@ -20,8 +20,9 @@
     "preview": "npm run preview -w web",
     "test:e2e": "npm run test:e2e -w web",
     "test:unit": "npm run test:unit -w api",
-    "infra:synth": "npm run build -w web && npm run synth --prefix infra",
-    "infra:deploy": "npm run build -w web && npm run deploy --prefix infra",
+    "infra:install": "npm ci --prefix infra --no-audit --no-fund",
+    "infra:synth": "npm run build -w web && npm run infra:install && npm run synth --prefix infra",
+    "infra:deploy": "npm run build -w web && npm run infra:install && npm run deploy --prefix infra",
     "infra:deploy:aws": "bash scripts/deploy-aws.sh",
     "infra:deploy:ci": "bash scripts/cicd-deploy.sh"
   },

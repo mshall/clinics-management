@@ -26,6 +26,10 @@ if [[ "${CI:-}" == "true" ]]; then
 else
   npm ci --no-audit --no-fund
 fi
+if [[ ! -d node_modules/aws-cdk-lib ]]; then
+  echo "::error::infra npm ci did not install aws-cdk-lib — CDK TypeScript build will fail."
+  exit 1
+fi
 # EC2 SecurityGroup GroupDescription must be ASCII-only; fail fast before CloudFormation.
 npm run check:ascii-descriptions
 npm run build

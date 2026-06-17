@@ -6,8 +6,10 @@ export CDK_DEFAULT_REGION="${CDK_DEFAULT_REGION:-eu-central-1}"
 export CDK_DEFAULT_ACCOUNT
 CDK_DEFAULT_ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
 cd "$ROOT"
+npm ci --no-audit --no-fund
 npm run build -w web
 cd infra
+npm ci --no-audit --no-fund
 npm run build
 npx cdk bootstrap "aws://${CDK_DEFAULT_ACCOUNT}/${CDK_DEFAULT_REGION}"
 npx cdk deploy --require-approval never
