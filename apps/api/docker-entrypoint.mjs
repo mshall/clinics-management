@@ -14,6 +14,8 @@ import { createServer, request as httpRequest } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+console.error("[boot] entrypoint loaded");
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 function sleep(ms) {
@@ -124,9 +126,11 @@ async function loadDbSecretFromArn(dbSecretArn) {
   if (smEndpoint) {
     console.error("[boot] Secrets Manager client using SECRETS_MANAGER_VPCE_HOST (VPC interface)");
   }
-  const maxAttempts = Number(process.env.DB_SECRET_FETCH_ATTEMPTS ?? "8");
-  let lastErr;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+  // Keep retrying while :3000 proxy answers App Runner liveness — process.exit here caused
+  // ~40s rollbacks when the 8-attempt budget expired during cold VPC endpoint warm-up.
+  let attempt = 0;
+  while (true) {
+    attempt++;
     try {
       const out = await client.send(new GetSecretValueCommand({ SecretId: dbSecretArn }));
       const j = JSON.parse(out.SecretString ?? "{}");
@@ -142,15 +146,10 @@ async function loadDbSecretFromArn(dbSecretArn) {
       console.error("[boot] DATABASE_URL built (host/port/db):", host, String(dbPort), dbname);
       return;
     } catch (e) {
-      lastErr = e;
-      console.error(`DB secret fetch attempt ${attempt}/${maxAttempts} failed:`, e?.message ?? e);
-      if (attempt < maxAttempts) {
-        await sleep(Math.min(10_000, 750 * 2 ** (attempt - 1)));
-      }
+      console.error(`DB secret fetch attempt ${attempt} failed:`, e?.message ?? e);
+      await sleep(Math.min(30_000, 750 * 2 ** Math.min(attempt - 1, 6)));
     }
   }
-  console.error("Failed to load DB secret from Secrets Manager:", lastErr);
-  process.exit(1);
 }
 
 async function main() {
