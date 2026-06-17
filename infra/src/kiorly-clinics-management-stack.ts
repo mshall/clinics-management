@@ -157,6 +157,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       return cdk.Fn.select(1, cdk.Fn.split(":", firstPair));
     };
     const secretsManagerVpceHost = vpceHostnameFromEndpoint(secretsManagerEndpoint);
+    const kmsVpceHost = vpceHostnameFromEndpoint(kmsEndpoint);
     const sesVpceHost = vpceHostnameFromEndpoint(sesEndpoint);
 
     const dbBackupBucket = new s3.Bucket(this, "DbBackupBucket", {
@@ -180,6 +181,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       ec2.Port.tcp(443),
       "Backup Lambda GetSecretValue",
     );
+    kmsEndpoint.connections.allowFrom(backupLambdaSg, ec2.Port.tcp(443), "Backup Lambda KMS decrypt for Secrets Manager");
 
     new ses.EmailIdentity(this, "BackupEmailFromIdentity", {
       identity: ses.Identity.email(backupEmailFrom),
@@ -204,6 +206,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
         BACKUP_BUCKET: dbBackupBucket.bucketName,
         // Isolated subnet has no NAT; explicit VPCE hosts match App Runner docker-entrypoint pattern.
         SECRETS_MANAGER_VPCE_HOST: secretsManagerVpceHost,
+        KMS_VPCE_HOST: kmsVpceHost,
         SES_VPCE_HOST: sesVpceHost,
       },
     });
@@ -216,12 +219,12 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       }),
     );
     dbBackupFn.node.addDependency(db);
+    dbBackupFn.node.addDependency(kmsEndpoint);
     dbBackupFn.node.addDependency(sesEndpoint);
 
     // App Runner tasks often still resolve regional hostnames to public IPs; private DNS for VPCE
     // is not always applied the same as on EC2. Pass VPCE DNS hostnames only (no https://, no zone id)
     // so App Runner env values never embed "HostedZoneId:host" URL quirks.
-    const kmsVpceHost = vpceHostnameFromEndpoint(kmsEndpoint);
     const stsVpceHost = vpceHostnameFromEndpoint(stsEndpoint);
 
     const vpcConnector = new apprunner.CfnVpcConnector(this, "AppRunnerVpcConnector", {

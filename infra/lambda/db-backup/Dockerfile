@@ -1,6 +1,6 @@
 FROM public.ecr.aws/lambda/nodejs:22
 
-RUN dnf install -y postgresql15 gzip && dnf clean all
+RUN dnf install -y postgresql16 gzip && dnf clean all
 
 WORKDIR ${LAMBDA_TASK_ROOT}
 COPY package.json ./

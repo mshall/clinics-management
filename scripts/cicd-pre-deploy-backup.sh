@@ -45,6 +45,13 @@ backup_failed=0
 
 if grep -q '"FunctionError"' "$INVOKE_META"; then
   echo "::error::Pre-deploy database backup Lambda failed (pg_dump or S3). Check CloudWatch: /aws/lambda/${FN}"
+  if command -v jq >/dev/null 2>&1 && [ -s "$OUT" ]; then
+    echo "Lambda error payload:"
+    jq -r '.errorMessage // .errorType // .' "$OUT" 2>/dev/null || cat "$OUT"
+  else
+    cat "$OUT"
+  fi
+  echo ""
   aws logs tail "/aws/lambda/${FN}" --region "$AWS_REGION" --since 30m --format short --no-follow 2>/dev/null | tail -n 80 || true
   backup_failed=1
 elif ! grep -q '"ok":true' "$OUT"; then

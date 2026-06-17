@@ -54,6 +54,22 @@ function buildRawEmail({ from, to, subject, text, attachmentName, attachmentBuff
   return Buffer.from(parts.join("\r\n"));
 }
 
+function runCommand(label, file, args, env) {
+  try {
+    execFileSync(file, args, {
+      env,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  } catch (err) {
+    const e = err;
+    const stderr = e.stderr?.toString?.() ?? "";
+    const stdout = e.stdout?.toString?.() ?? "";
+    throw new Error(
+      `${label} failed (exit ${e.status ?? "?"}): ${e.message}${stderr ? `\nstderr: ${stderr.trim()}` : ""}${stdout ? `\nstdout: ${stdout.trim()}` : ""}`,
+    );
+  }
+}
+
 export const handler = async () => {
   const region = process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "eu-central-1";
   const to = process.env.BACKUP_EMAIL_TO;
@@ -66,11 +82,22 @@ export const handler = async () => {
   }
 
   const smEndpoint = vpceHttpsFromHost(process.env.SECRETS_MANAGER_VPCE_HOST);
+  const kmsEndpoint = vpceHttpsFromHost(process.env.KMS_VPCE_HOST);
+  if (kmsEndpoint) process.env.AWS_ENDPOINT_URL_KMS = kmsEndpoint;
+
+  console.log("Fetching DB credentials from Secrets Manager", { secretArn, smVpce: Boolean(smEndpoint), kmsVpce: Boolean(kmsEndpoint) });
+
   const sm = new SecretsManagerClient({
     region,
     ...(smEndpoint ? { endpoint: smEndpoint } : {}),
   });
-  const secretOut = await sm.send(new GetSecretValueCommand({ SecretId: secretArn }));
+  let secretOut;
+  try {
+    secretOut = await sm.send(new GetSecretValueCommand({ SecretId: secretArn }));
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`GetSecretValue failed: ${msg}`);
+  }
   const j = JSON.parse(secretOut.SecretString ?? "{}");
   const host = j.host ?? j.hostname ?? j.endpoint;
   const port = j.port ?? 5432;
@@ -87,7 +114,9 @@ export const handler = async () => {
   const attachmentName = `kiorly-clinic-db-${stamp}.sql.gz`;
 
   try {
-    execFileSync(
+    console.log("Running pg_dump", { host, port, dbname, username });
+    runCommand(
+      "pg_dump",
       "pg_dump",
       [
         "-h",
@@ -106,24 +135,32 @@ export const handler = async () => {
         sqlPath,
       ],
       {
-        env: { ...process.env, PGPASSWORD: String(password) },
-        stdio: ["ignore", "pipe", "pipe"],
+        ...process.env,
+        PGPASSWORD: String(password),
+        // Match App Runner docker-entrypoint: RDS requires TLS; image has no RDS CA bundle.
+        PGSSLMODE: process.env.PGSSLMODE ?? "no-verify",
       },
     );
-    execFileSync("gzip", ["-f", sqlPath], { stdio: "inherit" });
+    runCommand("gzip", "gzip", ["-f", sqlPath], process.env);
 
     const gzBuffer = readFileSync(gzPath);
     const s3Key = `pre-deploy/${attachmentName}`;
+    console.log("Uploading backup to S3", { bucket, s3Key, bytes: gzBuffer.length });
     const s3 = new S3Client({ region });
-    await s3.send(
-      new PutObjectCommand({
-        Bucket: bucket,
-        Key: s3Key,
-        Body: gzBuffer,
-        ContentType: "application/gzip",
-        ServerSideEncryption: "AES256",
-      }),
-    );
+    try {
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: s3Key,
+          Body: gzBuffer,
+          ContentType: "application/gzip",
+          ServerSideEncryption: "AES256",
+        }),
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new Error(`S3 PutObject failed: ${msg}`);
+    }
 
     const sesEndpoint = vpceHttpsFromHost(process.env.SES_VPCE_HOST);
     const ses = new SESClient({
