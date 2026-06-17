@@ -80,6 +80,23 @@ if [[ "$admin_http" != "200" ]]; then
 fi
 
 admin_total="$(echo "$admin_body" | python3 -c "import sys,json; print(json.load(sys.stdin).get('total',0))" 2>/dev/null || echo 0)"
+if [[ "${admin_http}" == "200" && "${admin_total:-0}" -lt 3 ]]; then
+  echo "WARN  Seeded org users still populating (total=$admin_total) — waiting for background seed …"
+  for i in $(seq 1 18); do
+    sleep 10
+    admin_raw="$(curl -sS -w "\n%{http_code}" -X GET "$APP_URL/api/v1/admin/users?page=1&pageSize=5" \
+      -H "Authorization: Bearer $access_token" \
+      -H "Accept: application/json")"
+    admin_http="$(echo "$admin_raw" | tail -1)"
+    admin_body="$(echo "$admin_raw" | sed '$d')"
+    admin_total="$(echo "$admin_body" | python3 -c "import sys,json; print(json.load(sys.stdin).get('total',0))" 2>/dev/null || echo 0)"
+    if [[ "${admin_total:-0}" -ge 3 ]]; then
+      break
+    fi
+    echo "  seed wait ($i/18) total=$admin_total"
+  done
+fi
+
 if [[ "${admin_total:-0}" -lt 3 ]]; then
   echo "::error::Expected seeded org users (total=$admin_total) — incremental seed may not have run"
   exit 1

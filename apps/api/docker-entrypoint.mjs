@@ -52,6 +52,32 @@ async function closeBootHealth(server) {
   });
 }
 
+async function waitForNestHealth(port, maxMs = 120_000) {
+  const deadline = Date.now() + maxMs;
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/api/v1/health/live`);
+      if (res.ok) return true;
+    } catch {
+      // Nest still starting
+    }
+    await sleep(500);
+  }
+  return false;
+}
+
+function runSeedInBackground() {
+  const seedScript = path.join(__dirname, "prisma", "seed.ts");
+  console.error("[boot] PRISMA_SEED_ON_BOOT=true — scheduling idempotent seed in background …");
+  const child = spawn("npx", ["tsx", seedScript], {
+    stdio: "inherit",
+    env: process.env,
+    cwd: __dirname,
+    detached: true,
+  });
+  child.unref();
+}
+
 const dbSecretArn = process.env.DB_SECRET_ARN;
 if (dbSecretArn) {
   const region =
@@ -123,21 +149,6 @@ if (migrateOnBoot) {
   console.error("[boot] prisma migrate deploy completed OK");
 }
 
-if (seedOnBoot) {
-  console.error("[boot] PRISMA_SEED_ON_BOOT=true — running idempotent demo seed (add missing only, never overwrite) …");
-  const seedScript = path.join(__dirname, "prisma", "seed.ts");
-  const seedResult = spawnSync("npx", ["tsx", seedScript], {
-    stdio: "inherit",
-    env: process.env,
-    cwd: __dirname,
-  });
-  if ((seedResult.status ?? 1) !== 0) {
-    console.error("[boot] seed script failed with status", seedResult.status, "— continuing anyway");
-  } else {
-    console.error("[boot] seed script completed OK");
-  }
-}
-
 if (bootHealthServer) {
   await closeBootHealth(bootHealthServer);
   bootHealthServer = null;
@@ -153,6 +164,18 @@ if (stsEp) process.env.AWS_ENDPOINT_URL_STS = stsEp;
 const mainJs = path.join(__dirname, "dist", "main.js");
 console.error("[boot] spawning Nest", mainJs, "PORT=", process.env.PORT ?? "3000", "NODE_ENV=", process.env.NODE_ENV ?? "");
 const child = spawn(process.execPath, [mainJs], { stdio: "inherit", env: process.env });
+
+const nestReady = await waitForNestHealth(port);
+if (!nestReady) {
+  console.error("[boot] Nest did not respond on /api/v1/health/live within startup window");
+  process.exit(1);
+}
+console.error("[boot] Nest health/live OK");
+
+if (seedOnBoot) {
+  runSeedInBackground();
+}
+
 child.on("exit", (code, signal) => {
   process.exit(code ?? (signal ? 1 : 0));
 });

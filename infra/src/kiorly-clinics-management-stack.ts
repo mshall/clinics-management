@@ -314,8 +314,8 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
         interval: 10,
         timeout: 10,
         healthyThreshold: 1,
-        // ~3.3 minutes of failing checks before NotStabilized (migrate + first Nest listen on cold start).
-        unhealthyThreshold: 20,
+        // migrate + Nest cold start on deploy; seed runs in background after /health/live is up.
+        unhealthyThreshold: 30,
       },
       networkConfiguration: {
         ingressConfiguration: { isPubliclyAccessible: true },
