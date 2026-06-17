@@ -8,7 +8,6 @@
  *
  * Demo seed runs via post-deploy DbSeedFn Lambda (not on App Runner boot).
  */
-import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { spawn } from "node:child_process";
 import { createServer, request as httpRequest } from "node:http";
 import path from "node:path";
@@ -30,6 +29,12 @@ function vpceHttpsFromHost(host) {
   return h ? `https://${h}` : undefined;
 }
 
+function normalizeHealthPath(url) {
+  const raw = url?.split("?")[0] ?? "";
+  if (raw === "/api/v1/health/live" || raw === "/api/v1/health/live/") return "/api/v1/health/live";
+  return raw.replace(/\/+$/, "") || "/";
+}
+
 async function listenServer(server, port, label) {
   await new Promise((resolve, reject) => {
     server.listen(port, "0.0.0.0", () => {
@@ -41,9 +46,8 @@ async function listenServer(server, port, label) {
 }
 
 function isAppRunnerLiveProbe(req) {
-  const p = req.url?.split("?")[0] ?? "";
   const method = req.method ?? "GET";
-  return (method === "GET" || method === "HEAD") && p === "/api/v1/health/live";
+  return (method === "GET" || method === "HEAD") && normalizeHealthPath(req.url) === "/api/v1/health/live";
 }
 
 function respondBoot(res, req) {
@@ -95,13 +99,18 @@ function runChild(command, args) {
 }
 
 async function runMigrate() {
-  console.error("[boot] PRISMA_MIGRATE_ON_BOOT=true — running prisma migrate deploy …");
-  const exit = await runChild("prisma", ["migrate", "deploy"]);
-  if (exit !== 0) {
-    console.error("[boot] prisma migrate deploy failed with status", exit);
-    process.exit(exit);
+  let attempt = 0;
+  while (true) {
+    attempt++;
+    console.error(`[boot] PRISMA_MIGRATE_ON_BOOT=true — prisma migrate deploy (attempt ${attempt}) …`);
+    const exit = await runChild("prisma", ["migrate", "deploy"]);
+    if (exit === 0) {
+      console.error("[boot] prisma migrate deploy completed OK");
+      return;
+    }
+    console.error("[boot] prisma migrate deploy failed with status", exit, "— retrying (proxy keeps /health/live)");
+    await sleep(Math.min(30_000, 5000 * Math.min(attempt, 6)));
   }
-  console.error("[boot] prisma migrate deploy completed OK");
 }
 
 async function runSeed() {
@@ -116,6 +125,7 @@ async function runSeed() {
 }
 
 async function loadDbSecretFromArn(dbSecretArn) {
+  const { GetSecretValueCommand, SecretsManagerClient } = await import("@aws-sdk/client-secrets-manager");
   const region =
     process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "eu-central-1";
   const smEndpoint = vpceHttpsFromHost(process.env.SECRETS_MANAGER_VPCE_HOST);
@@ -158,15 +168,15 @@ async function main() {
   const migrateOnBoot = process.env.PRISMA_MIGRATE_ON_BOOT === "true";
   const seedOnBoot = process.env.PRISMA_SEED_ON_BOOT === "true";
 
+  const proxy = createUpstreamProxy(internalPort);
+  await listenServer(proxy, publicPort, "upstream proxy");
+
   const kmsEp = vpceHttpsFromHost(process.env.KMS_VPCE_HOST);
   const stsEp = vpceHttpsFromHost(process.env.STS_VPCE_HOST);
   const smEpForChild = vpceHttpsFromHost(process.env.SECRETS_MANAGER_VPCE_HOST);
   if (smEpForChild) process.env.AWS_ENDPOINT_URL_SECRETS_MANAGER = smEpForChild;
   if (kmsEp) process.env.AWS_ENDPOINT_URL_KMS = kmsEp;
   if (stsEp) process.env.AWS_ENDPOINT_URL_STS = stsEp;
-
-  const proxy = createUpstreamProxy(internalPort);
-  await listenServer(proxy, publicPort, "upstream proxy");
 
   const dbSecretArn = process.env.DB_SECRET_ARN;
   if (dbSecretArn) {
