@@ -24,7 +24,7 @@
 #    AWS Console > SES (eu-central-1) > Verified identities — click the link sent to
 #    kiorlyclinics@gmail.com (or override with CDK context backupEmailTo=...).
 #    Pre-deploy CI invokes DbBackupFn to pg_dump RDS and email the gzip before each deploy.
-#    App Runner runs PRISMA_SEED_ON_BOOT=true (idempotent — ensures demo users without wiping existing data).
+#    Post-deploy cicd-post-deploy-seed.sh invokes DbSeedFn (idempotent demo users on RDS).
 #
 # 6) Optional — Cursor cloud agent after a failed deploy (opens a PR; same Cursor billing as other agent runs):
 #      Name:  CURSOR_API_KEY

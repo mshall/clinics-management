@@ -1,13 +1,12 @@
 /**
  * Builds DATABASE_URL from RDS Secrets Manager JSON when DB_SECRET_ARN is set,
- * runs Prisma migrate/seed, then starts Nest behind a port-3000 boot proxy.
+ * runs Prisma migrate, then starts Nest behind a port-3000 boot proxy.
  *
- * App Runner health-checks :3000 for the entire boot window. The proxy listens
- * on PORT first (no gap between migrate and Nest), answers /health/live while
- * migrate/seed/Nest warm up, and forwards all traffic once Nest is ready.
+ * App Runner health-checks :3000 for the entire boot window. The proxy MUST
+ * listen on PORT before any VPC/Secrets Manager work — otherwise App Runner sees
+ * connection refused and rolls back in ~40s (matching DB secret retry backoff).
  *
- * Migrate/seed must use async spawn (never spawnSync): spawnSync blocks the Node
- * event loop, so the :3000 proxy cannot answer App Runner /health/live probes.
+ * Demo seed runs via post-deploy DbSeedFn Lambda (not on App Runner boot).
  */
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { spawn } from "node:child_process";
@@ -100,8 +99,7 @@ async function runSeed() {
   }
 }
 
-const dbSecretArn = process.env.DB_SECRET_ARN;
-if (dbSecretArn) {
+async function loadDbSecretFromArn(dbSecretArn) {
   const region =
     process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "eu-central-1";
   const smEndpoint = vpceHttpsFromHost(process.env.SECRETS_MANAGER_VPCE_HOST);
@@ -128,8 +126,7 @@ if (dbSecretArn) {
       }
       process.env.DATABASE_URL = `postgresql://${u}:${p}@${host}:${dbPort}/${dbname}?schema=public&sslmode=no-verify`;
       console.error("[boot] DATABASE_URL built (host/port/db):", host, String(dbPort), dbname);
-      lastErr = undefined;
-      break;
+      return;
     } catch (e) {
       lastErr = e;
       console.error(`DB secret fetch attempt ${attempt}/${maxAttempts} failed:`, e?.message ?? e);
@@ -138,35 +135,45 @@ if (dbSecretArn) {
       }
     }
   }
-  if (lastErr && !process.env.DATABASE_URL) {
-    console.error("Failed to load DB secret from Secrets Manager:", lastErr);
-    process.exit(1);
-  }
+  console.error("Failed to load DB secret from Secrets Manager:", lastErr);
+  process.exit(1);
 }
 
-const publicPort = Number(process.env.PORT ?? "3000");
-const internalPort = Number(process.env.NEST_INTERNAL_PORT ?? "3001");
-const migrateOnBoot = process.env.PRISMA_MIGRATE_ON_BOOT === "true";
-const seedOnBoot = process.env.PRISMA_SEED_ON_BOOT === "true";
+async function main() {
+  const publicPort = Number(process.env.PORT ?? "3000");
+  const internalPort = Number(process.env.NEST_INTERNAL_PORT ?? "3001");
+  const migrateOnBoot = process.env.PRISMA_MIGRATE_ON_BOOT === "true";
+  const seedOnBoot = process.env.PRISMA_SEED_ON_BOOT === "true";
 
-const kmsEp = vpceHttpsFromHost(process.env.KMS_VPCE_HOST);
-const stsEp = vpceHttpsFromHost(process.env.STS_VPCE_HOST);
-const smEpForChild = vpceHttpsFromHost(process.env.SECRETS_MANAGER_VPCE_HOST);
-if (smEpForChild) process.env.AWS_ENDPOINT_URL_SECRETS_MANAGER = smEpForChild;
-if (kmsEp) process.env.AWS_ENDPOINT_URL_KMS = kmsEp;
-if (stsEp) process.env.AWS_ENDPOINT_URL_STS = stsEp;
+  const kmsEp = vpceHttpsFromHost(process.env.KMS_VPCE_HOST);
+  const stsEp = vpceHttpsFromHost(process.env.STS_VPCE_HOST);
+  const smEpForChild = vpceHttpsFromHost(process.env.SECRETS_MANAGER_VPCE_HOST);
+  if (smEpForChild) process.env.AWS_ENDPOINT_URL_SECRETS_MANAGER = smEpForChild;
+  if (kmsEp) process.env.AWS_ENDPOINT_URL_KMS = kmsEp;
+  if (stsEp) process.env.AWS_ENDPOINT_URL_STS = stsEp;
 
-const proxy = createUpstreamProxy(internalPort);
-await listenServer(proxy, publicPort, "upstream proxy");
+  const proxy = createUpstreamProxy(internalPort);
+  await listenServer(proxy, publicPort, "upstream proxy");
 
-if (migrateOnBoot) await runMigrate();
-if (seedOnBoot) await runSeed();
+  const dbSecretArn = process.env.DB_SECRET_ARN;
+  if (dbSecretArn) {
+    await loadDbSecretFromArn(dbSecretArn);
+  }
 
-const nestEnv = { ...process.env, PORT: String(internalPort) };
-const mainJs = path.join(__dirname, "dist", "main.js");
-console.error("[boot] spawning Nest", mainJs, "internal PORT=", internalPort);
-const child = spawn(process.execPath, [mainJs], { stdio: "inherit", env: nestEnv });
+  if (migrateOnBoot) await runMigrate();
+  if (seedOnBoot) await runSeed();
 
-child.on("exit", (code, signal) => {
-  process.exit(code ?? (signal ? 1 : 0));
+  const nestEnv = { ...process.env, PORT: String(internalPort) };
+  const mainJs = path.join(__dirname, "dist", "main.js");
+  console.error("[boot] spawning Nest", mainJs, "internal PORT=", internalPort);
+  const child = spawn(process.execPath, [mainJs], { stdio: "inherit", env: nestEnv });
+
+  child.on("exit", (code, signal) => {
+    process.exit(code ?? (signal ? 1 : 0));
+  });
+}
+
+main().catch((err) => {
+  console.error("[boot] fatal:", err);
+  process.exit(1);
 });
