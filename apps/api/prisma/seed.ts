@@ -59,37 +59,242 @@ const ROLES_CYCLE = [
   UserRole.FINANCE_OFFICER,
 ];
 
-async function main() {
-  await prisma.patientDocument.deleteMany();
-  await prisma.encounterDocument.deleteMany();
-  await prisma.encounterMedication.deleteMany();
-  await prisma.diagnosis.deleteMany();
-  await prisma.attendance.deleteMany();
-  await prisma.leaveRequest.deleteMany();
-  await prisma.appointment.deleteMany();
-  await prisma.encounter.deleteMany();
-  await prisma.employee.deleteMany();
-  await prisma.clinicAdminScope.deleteMany();
-  await prisma.auditLog.deleteMany();
-  await prisma.expense.deleteMany();
-  await prisma.revenueEntry.deleteMany();
-  await prisma.patient.deleteMany();
-  await prisma.user.deleteMany();
-  await prisma.clinic.deleteMany();
-  await prisma.tenant.deleteMany();
-  await prisma.featureFlag.deleteMany();
+const KIORLY_TENANT_NAME = "Kiorly Clinic Group (Demo)";
+const DR_AHMED_TENANT_NAME = "Dr Ahmed Shall Group";
 
-  const passwordHash = bcrypt.hashSync("demo", 10);
+type UserSeed = {
+  tenantId: string | null;
+  email: string;
+  displayName: string;
+  role: UserRole;
+};
 
+async function ensureUser(passwordHash: string, data: UserSeed) {
+  const existing = await prisma.user.findFirst({
+    where: { email: data.email, tenantId: data.tenantId },
+  });
+  if (existing) return existing;
+  return prisma.user.create({ data: { ...data, passwordHash } });
+}
+
+async function ensureSuperAdmin(passwordHash: string) {
+  return ensureUser(passwordHash, {
+    tenantId: null,
+    email: "superadmin@kiorly.com",
+    displayName: "Platform Super Administrator",
+    role: UserRole.PLATFORM_SUPER_ADMIN,
+  });
+}
+
+async function seedDrAhmedGroup(passwordHash: string) {
+  const drAhmedTenant = await (async () => {
+    const existing = await prisma.tenant.findFirst({ where: { name: DR_AHMED_TENANT_NAME } });
+    if (existing) return existing;
+    return prisma.tenant.create({
+      data: {
+        name: DR_AHMED_TENANT_NAME,
+        nameAr: "مجموعة د. أحمد الشال — استشاري علاج الآلام المزمنة والمفاصل والعمود الفقري",
+        baseCurrency: "EGP",
+        defaultLocale: Locale.ar,
+      },
+    });
+  })();
+
+  const clinicSpecs = [
+    {
+      nameEn: "Heliopolis Clinic — Obour Buildings",
+      nameAr: "عيادة مصر الجديدة — عمارات العبور",
+      country: "EG",
+      city: "Heliopolis",
+      addressEn:
+        "35 Obour Buildings, 5th Floor, near Wholesale Market, in front of Metro El-Ma'arad (Land of Exhibitions). Sun–Wed: patients from 4:00 PM, Dr. Ahmed from 5:00 PM. First-come, first-served. Please bring all prior test results.",
+      addressAr:
+        "٣٥ عمارات العبور، الدور الخامس، بجوار جملة ماركت، أمام محطة مترو أرض المعارض. الأحد–الأربعاء: حضور المرضى ٤ مساءً، الدكتور ٥ مساءً. الدخول بأسبقية الحضور. نرجو إحضار كافة الفحوصات.",
+      locationUrl: "https://maps.app.goo.gl/NAaZw15GZHSwWYkM9",
+      phone: "+201019234886",
+      email: "heliopolis@dr-ahmedelshall.com",
+      licenseNumber: "EG-AES-HEL-001",
+      defaultLanguage: Locale.ar,
+    },
+    {
+      nameEn: "Fifth Settlement Clinic — CMC",
+      nameAr: "عيادة التجمع الخامس — CMC",
+      country: "EG",
+      city: "New Cairo",
+      addressEn:
+        "CMC Building, Clinic 309, 3rd Floor, behind Al-Gouna Hospital, N Teseen St, First New Cairo, Cairo Governorate 11835. Mon: patients from 7:00 PM, Dr. Ahmed from 8:00 PM. First-come, first-served.",
+      addressAr:
+        "مبنى CMC، عيادة ٣٠٩، الدور الثالث، خلف مستشفى الجوي، شارع التسعين، التجمع الخامس. يوم الاثنين: حضور المرضى من ٧ مساءً، الدكتور ٨ مساءً. الدخول بأسبقية الحضور.",
+      locationUrl: "https://maps.app.goo.gl/edg1c4Ex6FBR5v6W8",
+      phone: "+201010027404",
+      email: "cmc@dr-ahmedelshall.com",
+      licenseNumber: "EG-AES-CMC-001",
+      defaultLanguage: Locale.ar,
+    },
+    {
+      nameEn: "Mohandessin Clinic",
+      nameAr: "عيادة المهندسين",
+      country: "EG",
+      city: "Mohandessin",
+      addressEn:
+        "42 Syria Street, 4th Floor, above Spinneys, Egyptian Vascular Center. Thu: clinic opens 12:00 PM, Dr. Ahmed from 12:00 PM. First-come, first-served.",
+      addressAr:
+        "٤٢ ش سوريا، الدور الرابع، أعلى سبينيز، المركز المصري للأوعية. الخميس: تفتح العيادة من ١٢ ظهراً، حضور الدكتور ١٢ ظ. الدخول بأسبقية الحضور.",
+      locationUrl: "https://maps.google.com/?q=42+Syria+St,+Mohandessin,+Giza",
+      phone: "+201019234886",
+      email: "mohandessin@dr-ahmedelshall.com",
+      licenseNumber: "EG-AES-MOH-001",
+      defaultLanguage: Locale.ar,
+    },
+    {
+      nameEn: "Capital Hospital Dokki — Contract Clinic",
+      nameAr: "مستشفى العاصمة بالدقي — (تعاقدات)",
+      country: "EG",
+      city: "Dokki",
+      addressEn:
+        "Capital Hospital Dokki, 1st Floor, El Ahrar Street (off Ahmed Abdel Aziz Street). Tue: patients 4:00–6:00 PM. First-come, first-served. Please bring all prior test results.",
+      addressAr:
+        "مستشفى العاصمة بالدقي، الدور الأول، شارع الأحرار المتفرع من شارع البطل أحمد عبد العزيز. يوم الثلاثاء: حضور المرضى ٤–٦ مساءً. الدخول بأسبقية الحضور.",
+      locationUrl: "https://maps.app.goo.gl/ZJ8tXKZdoFrSKn419",
+      phone: "+201010027404",
+      email: "dokki@dr-ahmedelshall.com",
+      licenseNumber: "EG-AES-DOK-001",
+      defaultLanguage: Locale.ar,
+    },
+  ] as const;
+
+  const drAhmedClinics = await Promise.all(
+    clinicSpecs.map(async (spec) => {
+      const existing = await prisma.clinic.findFirst({
+        where: { tenantId: drAhmedTenant.id, licenseNumber: spec.licenseNumber },
+      });
+      if (existing) return existing;
+      return prisma.clinic.create({ data: { tenantId: drAhmedTenant.id, ...spec } });
+    })
+  );
+
+  await ensureUser(passwordHash, {
+    tenantId: drAhmedTenant.id,
+    email: "admin@drahmedshall.com",
+    displayName: "Dr Ahmed Shall Group Admin",
+    role: UserRole.GROUP_ADMIN,
+  });
+
+  const drAhmedPhysician = await ensureUser(passwordHash, {
+    tenantId: drAhmedTenant.id,
+    email: "dr.ahmed@drahmedshall.com",
+    displayName: "Prof. Dr. Ahmed El Shall",
+    role: UserRole.PHYSICIAN,
+  });
+
+  const drAhmedClinicAdmin = await ensureUser(passwordHash, {
+    tenantId: drAhmedTenant.id,
+    email: "clinicadmin@drahmedshall.com",
+    displayName: "Dr Ahmed Shall — Clinic Admin",
+    role: UserRole.CLINIC_ADMIN,
+  });
+
+  const drAhmedBranchMgr = await ensureUser(passwordHash, {
+    tenantId: drAhmedTenant.id,
+    email: "branchmgr@drahmedshall.com",
+    displayName: "Dr Ahmed Shall — Branch Manager",
+    role: UserRole.BRANCH_MANAGER,
+  });
+
+  await Promise.all([
+    ensureUser(passwordHash, {
+      tenantId: drAhmedTenant.id,
+      email: "assistant@drahmedshall.com",
+      displayName: "Dr Ahmed Shall — Clinic Assistant",
+      role: UserRole.CLINIC_ASSISTANT,
+    }),
+    ensureUser(passwordHash, {
+      tenantId: drAhmedTenant.id,
+      email: "nurse@drahmedshall.com",
+      displayName: "Dr Ahmed Shall — Nurse",
+      role: UserRole.NURSE,
+    }),
+    ensureUser(passwordHash, {
+      tenantId: drAhmedTenant.id,
+      email: "receptionist@drahmedshall.com",
+      displayName: "Dr Ahmed Shall — Receptionist",
+      role: UserRole.RECEPTIONIST,
+    }),
+    ensureUser(passwordHash, {
+      tenantId: drAhmedTenant.id,
+      email: "callcenter@drahmedshall.com",
+      displayName: "Dr Ahmed Shall — Call Center",
+      role: UserRole.CALL_CENTER,
+    }),
+    ensureUser(passwordHash, {
+      tenantId: drAhmedTenant.id,
+      email: "finance@drahmedshall.com",
+      displayName: "Dr Ahmed Shall — Finance Officer",
+      role: UserRole.FINANCE_OFFICER,
+    }),
+    ensureUser(passwordHash, {
+      tenantId: drAhmedTenant.id,
+      email: "hr@drahmedshall.com",
+      displayName: "Dr Ahmed Shall — HR Officer",
+      role: UserRole.HR_OFFICER,
+    }),
+  ]);
+
+  await prisma.clinicAdminScope.createMany({
+    data: [
+      { tenantId: drAhmedTenant.id, userId: drAhmedClinicAdmin.id, clinicId: drAhmedClinics[0]!.id },
+      { tenantId: drAhmedTenant.id, userId: drAhmedClinicAdmin.id, clinicId: drAhmedClinics[1]!.id },
+      { tenantId: drAhmedTenant.id, userId: drAhmedBranchMgr.id, clinicId: drAhmedClinics[0]!.id },
+    ],
+    skipDuplicates: true,
+  });
+
+  const existingEmployee = await prisma.employee.findFirst({
+    where: { tenantId: drAhmedTenant.id, employeeNumber: "AES-PHYS-001" },
+  });
+  if (!existingEmployee) {
+    await prisma.employee.create({
+      data: {
+        tenantId: drAhmedTenant.id,
+        clinicId: drAhmedClinics[0]!.id,
+        employeeNumber: "AES-PHYS-001",
+        firstNameEn: "Ahmed",
+        lastNameEn: "El Shall",
+        email: drAhmedPhysician.email,
+        phone: "+201019234886",
+        jobTitle: "Consultant — Chronic Pain & Spine (Non-surgical)",
+        employmentType: EmploymentType.FULL_TIME,
+        hireDate: new Date(2010, 0, 1),
+        salaryBase: 0,
+        userId: drAhmedPhysician.id,
+      },
+    });
+  }
+
+  return { tenant: drAhmedTenant, clinics: drAhmedClinics };
+}
+
+async function ensureIncrementalSeed(passwordHash: string) {
+  await ensureSuperAdmin(passwordHash);
+  const { tenant, clinics } = await seedDrAhmedGroup(passwordHash);
+  console.log(
+    "Seed OK (existing data preserved) — Dr Ahmed Shall Group:",
+    tenant.id,
+    `(${clinics.length} clinics)`,
+    "| ensured demo logins (password: demo): superadmin@kiorly.com, admin@drahmedshall.com, dr.ahmed@drahmedshall.com, clinicadmin@drahmedshall.com, branchmgr@drahmedshall.com, assistant@drahmedshall.com, nurse@drahmedshall.com, receptionist@drahmedshall.com, callcenter@drahmedshall.com, finance@drahmedshall.com, hr@drahmedshall.com"
+  );
+}
+
+async function seedFreshDatabase(passwordHash: string) {
   const tenants = await Promise.all(
     Array.from({ length: 15 }, (_, i) =>
       prisma.tenant.create({
         data: {
           name:
             i === 0
-              ? "Kiorly Clinic Group (Demo)"
+              ? KIORLY_TENANT_NAME
               : i === 1
-                ? "Dr Ahmed Shall Group"
+                ? DR_AHMED_TENANT_NAME
                 : `Shell Organization ${i + 1}`,
           nameAr:
             i === 0
@@ -104,119 +309,7 @@ async function main() {
     )
   );
   const t0 = tenants[0]!;
-  const drAhmedTenant = tenants[1]!;
-
-  const drAhmedClinics = await Promise.all([
-    prisma.clinic.create({
-      data: {
-        tenantId: drAhmedTenant.id,
-        nameEn: "Heliopolis Clinic — Obour Buildings",
-        nameAr: "عيادة مصر الجديدة — عمارات العبور",
-        country: "EG",
-        city: "Heliopolis",
-        addressEn:
-          "35 Obour Buildings, 5th Floor, near Wholesale Market, in front of Metro El-Ma'arad (Land of Exhibitions). Sun–Wed: patients from 4:00 PM, Dr. Ahmed from 5:00 PM. First-come, first-served. Please bring all prior test results.",
-        addressAr:
-          "٣٥ عمارات العبور، الدور الخامس، بجوار جملة ماركت، أمام محطة مترو أرض المعارض. الأحد–الأربعاء: حضور المرضى ٤ مساءً، الدكتور ٥ مساءً. الدخول بأسبقية الحضور. نرجو إحضار كافة الفحوصات.",
-        locationUrl: "https://maps.app.goo.gl/NAaZw15GZHSwWYkM9",
-        phone: "+201019234886",
-        email: "heliopolis@dr-ahmedelshall.com",
-        licenseNumber: "EG-AES-HEL-001",
-        defaultLanguage: Locale.ar,
-      },
-    }),
-    prisma.clinic.create({
-      data: {
-        tenantId: drAhmedTenant.id,
-        nameEn: "Fifth Settlement Clinic — CMC",
-        nameAr: "عيادة التجمع الخامس — CMC",
-        country: "EG",
-        city: "New Cairo",
-        addressEn:
-          "CMC Building, Clinic 309, 3rd Floor, behind Al-Gouna Hospital, N Teseen St, First New Cairo, Cairo Governorate 11835. Mon: patients from 7:00 PM, Dr. Ahmed from 8:00 PM. First-come, first-served.",
-        addressAr:
-          "مبنى CMC، عيادة ٣٠٩، الدور الثالث، خلف مستشفى الجوي، شارع التسعين، التجمع الخامس. يوم الاثنين: حضور المرضى من ٧ مساءً، الدكتور ٨ مساءً. الدخول بأسبقية الحضور.",
-        locationUrl: "https://maps.app.goo.gl/edg1c4Ex6FBR5v6W8",
-        phone: "+201010027404",
-        email: "cmc@dr-ahmedelshall.com",
-        licenseNumber: "EG-AES-CMC-001",
-        defaultLanguage: Locale.ar,
-      },
-    }),
-    prisma.clinic.create({
-      data: {
-        tenantId: drAhmedTenant.id,
-        nameEn: "Mohandessin Clinic",
-        nameAr: "عيادة المهندسين",
-        country: "EG",
-        city: "Mohandessin",
-        addressEn:
-          "42 Syria Street, 4th Floor, above Spinneys, Egyptian Vascular Center. Thu: clinic opens 12:00 PM, Dr. Ahmed from 12:00 PM. First-come, first-served.",
-        addressAr:
-          "٤٢ ش سوريا، الدور الرابع، أعلى سبينيز، المركز المصري للأوعية. الخميس: تفتح العيادة من ١٢ ظهراً، حضور الدكتور ١٢ ظ. الدخول بأسبقية الحضور.",
-        locationUrl: "https://maps.google.com/?q=42+Syria+St,+Mohandessin,+Giza",
-        phone: "+201019234886",
-        email: "mohandessin@dr-ahmedelshall.com",
-        licenseNumber: "EG-AES-MOH-001",
-        defaultLanguage: Locale.ar,
-      },
-    }),
-    prisma.clinic.create({
-      data: {
-        tenantId: drAhmedTenant.id,
-        nameEn: "Capital Hospital Dokki — Contract Clinic",
-        nameAr: "مستشفى العاصمة بالدقي — (تعاقدات)",
-        country: "EG",
-        city: "Dokki",
-        addressEn:
-          "Capital Hospital Dokki, 1st Floor, El Ahrar Street (off Ahmed Abdel Aziz Street). Tue: patients 4:00–6:00 PM. First-come, first-served. Please bring all prior test results.",
-        addressAr:
-          "مستشفى العاصمة بالدقي، الدور الأول، شارع الأحرار المتفرع من شارع البطل أحمد عبد العزيز. يوم الثلاثاء: حضور المرضى ٤–٦ مساءً. الدخول بأسبقية الحضور.",
-        locationUrl: "https://maps.app.goo.gl/ZJ8tXKZdoFrSKn419",
-        phone: "+201010027404",
-        email: "dokki@dr-ahmedelshall.com",
-        licenseNumber: "EG-AES-DOK-001",
-        defaultLanguage: Locale.ar,
-      },
-    }),
-  ]);
-
-  await prisma.user.create({
-    data: {
-      tenantId: drAhmedTenant.id,
-      email: "admin@drahmedshall.com",
-      passwordHash,
-      displayName: "Dr Ahmed Shall Group Admin",
-      role: UserRole.GROUP_ADMIN,
-    },
-  });
-
-  const drAhmedPhysician = await prisma.user.create({
-    data: {
-      tenantId: drAhmedTenant.id,
-      email: "dr.ahmed@drahmedshall.com",
-      passwordHash,
-      displayName: "Prof. Dr. Ahmed El Shall",
-      role: UserRole.PHYSICIAN,
-    },
-  });
-
-  await prisma.employee.create({
-    data: {
-      tenantId: drAhmedTenant.id,
-      clinicId: drAhmedClinics[0]!.id,
-      employeeNumber: "AES-PHYS-001",
-      firstNameEn: "Ahmed",
-      lastNameEn: "El Shall",
-      email: drAhmedPhysician.email,
-      phone: "+201019234886",
-      jobTitle: "Consultant — Chronic Pain & Spine (Non-surgical)",
-      employmentType: EmploymentType.FULL_TIME,
-      hireDate: new Date(2010, 0, 1),
-      salaryBase: 0,
-      userId: drAhmedPhysician.id,
-    },
-  });
+  const { tenant: drAhmedTenant, clinics: drAhmedClinics } = await seedDrAhmedGroup(passwordHash);
 
   const hq = await prisma.clinic.create({
     data: {
@@ -814,27 +907,29 @@ async function main() {
       enabled: i % 3 === 0,
       description: `Demo flag ${i + 1}`,
     })),
+    skipDuplicates: true,
   });
 
   console.log(
-    "Seed OK — main tenant:",
+    "Seed OK (fresh database) — main tenant:",
     t0.id,
     "| Dr Ahmed Shall Group:",
     drAhmedTenant.id,
     `(${drAhmedClinics.length} clinics)`,
-    "| logins (password: demo): superadmin@kiorly.com (platform), admin@kiorly.com, admin@drahmedshall.com, dr.ahmed@drahmedshall.com, physician@kiorly.com, doctor2@kiorly.com, clinicadmin@kiorly.com, assistant@kiorly.com, nurse@kiorly.com, receptionist@kiorly.com, callcenter@kiorly.com, finance@kiorly.com, branchmgr@kiorly.com"
+    "| logins (password: demo): superadmin@kiorly.com (platform), admin@kiorly.com, admin@drahmedshall.com, dr.ahmed@drahmedshall.com, clinicadmin@drahmedshall.com, branchmgr@drahmedshall.com, assistant@drahmedshall.com, nurse@drahmedshall.com, receptionist@drahmedshall.com, callcenter@drahmedshall.com, finance@drahmedshall.com, hr@drahmedshall.com, physician@kiorly.com, doctor2@kiorly.com, clinicadmin@kiorly.com, assistant@kiorly.com, nurse@kiorly.com, receptionist@kiorly.com, callcenter@kiorly.com, finance@kiorly.com, branchmgr@kiorly.com"
   );
 
-  await prisma.user.deleteMany({ where: { email: "superadmin@kiorly.com", tenantId: null } });
-  await prisma.user.create({
-    data: {
-      tenantId: null,
-      email: "superadmin@kiorly.com",
-      passwordHash,
-      displayName: "Platform Super Administrator",
-      role: UserRole.PLATFORM_SUPER_ADMIN,
-    },
-  });
+  await ensureSuperAdmin(passwordHash);
+}
+
+async function main() {
+  const passwordHash = bcrypt.hashSync("demo", 10);
+  const existingKiorly = await prisma.tenant.findFirst({ where: { name: KIORLY_TENANT_NAME } });
+  if (existingKiorly) {
+    await ensureIncrementalSeed(passwordHash);
+    return;
+  }
+  await seedFreshDatabase(passwordHash);
 }
 
 main()

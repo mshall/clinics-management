@@ -4,6 +4,8 @@ Reference for QA, demos, and onboarding. All seeded accounts use password **`dem
 
 **Load data:** from the repo root run `npm run db:setup -w api` (migrations + seed).
 
+**Idempotent seed:** if demo data already exists (detected via the Kiorly demo tenant), the seed **does not delete or replace** existing rows. It only ensures missing demo accounts (platform super admin and Dr Ahmed Shall role users) are created. A full demo dataset is inserted only on an empty database.
+
 **Primary organization:** `Kiorly Clinic Group (Demo)` — 1 HQ clinic + 14 branches (see [Clinic hierarchy](#clinic-hierarchy)).
 
 **Additional organizations:** seed creates **Dr Ahmed Shall Group** (4 Cairo clinics, EGP) and 13 empty shell tenants (`Shell Organization 3` … `Shell Organization 15`) with no users; use the platform admin UI to inspect or manage them.
@@ -18,6 +20,14 @@ Professor / consultant in chronic pain, joints, spine, and neuritis (non-surgica
 |-------|----------|------|
 | `admin@drahmedshall.com` | `demo` | Group admin |
 | `dr.ahmed@drahmedshall.com` | `demo` | Physician |
+| `clinicadmin@drahmedshall.com` | `demo` | Clinic admin — Heliopolis + Fifth Settlement |
+| `branchmgr@drahmedshall.com` | `demo` | Branch manager — Heliopolis only |
+| `assistant@drahmedshall.com` | `demo` | Clinic assistant |
+| `nurse@drahmedshall.com` | `demo` | Nurse |
+| `receptionist@drahmedshall.com` | `demo` | Receptionist |
+| `callcenter@drahmedshall.com` | `demo` | Call center (org-wide patients & appointments) |
+| `finance@drahmedshall.com` | `demo` | Finance officer |
+| `hr@drahmedshall.com` | `demo` | HR officer |
 
 **Booking phones (seed):** +201019234886 · +201010027404
 
@@ -179,7 +189,10 @@ Branches are children of HQ (`parentClinicId` → HQ).
 | Finance ledger | `finance@kiorly.com` |
 | HR | `staff7@kiorly.com` |
 | Reception / operations | `receptionist@kiorly.com` |
-| Call center (org-wide patients & appointments) | `callcenter@kiorly.com` |
+| Call center (org-wide patients & appointments) | `callcenter@kiorly.com` or `callcenter@drahmedshall.com` |
+| Dr Ahmed Shall — group admin | `admin@drahmedshall.com` |
+| Dr Ahmed Shall — clinical workflow | `dr.ahmed@drahmedshall.com` |
+| Dr Ahmed Shall — clinic-scoped admin | `clinicadmin@drahmedshall.com` or `branchmgr@drahmedshall.com` |
 
 ---
 
