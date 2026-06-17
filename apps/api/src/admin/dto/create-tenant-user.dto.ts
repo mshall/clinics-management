@@ -25,7 +25,7 @@ export class CreateTenantUserDto {
 
   @ApiPropertyOptional({
     description:
-      "When role is CLINIC_ADMIN or BRANCH_MANAGER, assign one or more clinics (and branches) this user may operate within (same scope table).",
+      "Assign one or more clinics. Required for clinic administrator and branch manager; optional for other roles.",
     type: [String],
   })
   @IsOptional()

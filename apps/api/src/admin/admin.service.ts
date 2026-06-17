@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { Prisma, UserRole } from "@prisma/client";
+import { EmploymentType, Prisma, UserRole } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
@@ -15,6 +15,32 @@ import {
   resolveVisibleClinicIds,
   type OrgHierarchyNode,
 } from "./org-hierarchy";
+
+const CLINIC_SCOPE_ROLES = new Set<UserRole>([UserRole.CLINIC_ADMIN, UserRole.BRANCH_MANAGER]);
+
+const CLINIC_EMPLOYEE_ROLES = new Set<UserRole>([
+  UserRole.CLINIC_ADMIN,
+  UserRole.BRANCH_MANAGER,
+  UserRole.PHYSICIAN,
+  UserRole.NURSE,
+  UserRole.RECEPTIONIST,
+  UserRole.CLINIC_ASSISTANT,
+]);
+
+type ClinicSummary = { id: string; nameEn: string };
+
+function mapUserClinicAssignments(
+  scopes: { clinicId: string; clinic: ClinicSummary }[],
+  employee: { clinicId: string; clinic: ClinicSummary } | null,
+): { clinicIds: string[]; clinics: ClinicSummary[] } {
+  const byId = new Map<string, ClinicSummary>();
+  for (const s of scopes) byId.set(s.clinic.id, s.clinic);
+  if (employee?.clinic && !byId.has(employee.clinic.id)) {
+    byId.set(employee.clinic.id, employee.clinic);
+  }
+  const clinics = [...byId.values()];
+  return { clinicIds: clinics.map((c) => c.id), clinics };
+}
 
 @Injectable()
 export class AdminService {
@@ -114,24 +140,127 @@ export class AdminService {
         take: pageSize,
         include: {
           clinicAdminScopes: { include: { clinic: { select: { id: true, nameEn: true } } } },
+          employee: { include: { clinic: { select: { id: true, nameEn: true } } } },
         },
       }),
     ]);
-    const items = rows.map((r) => ({
-      id: r.id,
-      email: r.email,
-      displayName: r.displayName,
-      role: r.role,
-      createdAt: r.createdAt.toISOString(),
-      clinicIds: r.clinicAdminScopes.map((s) => s.clinicId),
-      clinics: r.clinicAdminScopes.map((s) => ({ id: s.clinic.id, nameEn: s.clinic.nameEn })),
-    }));
+    const items = rows.map((r) => {
+      const clinics = mapUserClinicAssignments(r.clinicAdminScopes, r.employee);
+      return {
+        id: r.id,
+        email: r.email,
+        displayName: r.displayName,
+        role: r.role,
+        createdAt: r.createdAt.toISOString(),
+        ...clinics,
+      };
+    });
     return paginate(items, total, page, pageSize);
   }
 
   private async assertTenantExists(tenantId: string) {
     const row = await this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true } });
     if (!row) throw new NotFoundException("Organization not found");
+  }
+
+  private jobTitleForRole(role: UserRole): string {
+    switch (role) {
+      case UserRole.PHYSICIAN:
+        return "Physician";
+      case UserRole.NURSE:
+        return "Nurse";
+      case UserRole.RECEPTIONIST:
+        return "Receptionist";
+      case UserRole.CLINIC_ASSISTANT:
+        return "Clinic Assistant";
+      case UserRole.BRANCH_MANAGER:
+        return "Branch Manager";
+      case UserRole.CLINIC_ADMIN:
+        return "Clinic Administrator";
+      default:
+        return "Staff";
+    }
+  }
+
+  private async nextEmployeeNumber(tx: Prisma.TransactionClient, tenantId: string): Promise<string> {
+    const rows = await tx.employee.findMany({
+      where: { tenantId, employeeNumber: { startsWith: "EMP-" } },
+      select: { employeeNumber: true },
+    });
+    let max = 0;
+    for (const r of rows) {
+      const m = /^EMP-(\d+)$/i.exec(r.employeeNumber.trim());
+      if (m) max = Math.max(max, Number.parseInt(m[1], 10));
+    }
+    return `EMP-${max + 1}`;
+  }
+
+  private async assertClinicIdsBelongToTenant(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    clinicIds: string[],
+  ): Promise<void> {
+    for (const cid of clinicIds) {
+      const c = await tx.clinic.findFirst({ where: { id: cid, tenantId } });
+      if (!c) throw new BadRequestException(`Invalid clinicId: ${cid}`);
+    }
+  }
+
+  private async syncClinicAdminScopes(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    userId: string,
+    clinicIds: string[],
+  ): Promise<void> {
+    await tx.clinicAdminScope.deleteMany({ where: { tenantId, userId } });
+    if (!clinicIds.length) return;
+    await this.assertClinicIdsBelongToTenant(tx, tenantId, clinicIds);
+    await tx.clinicAdminScope.createMany({
+      data: clinicIds.map((clinicId) => ({ tenantId, userId, clinicId })),
+      skipDuplicates: true,
+    });
+  }
+
+  private async syncLinkedEmployeeClinic(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    user: { id: string; email: string; displayName: string; role: UserRole },
+    primaryClinicId: string | null,
+  ): Promise<void> {
+    if (!CLINIC_EMPLOYEE_ROLES.has(user.role)) return;
+    const existing = await tx.employee.findFirst({ where: { userId: user.id } });
+    if (!primaryClinicId) {
+      if (existing) {
+        await tx.employee.update({ where: { id: existing.id }, data: { userId: null } });
+      }
+      return;
+    }
+    const parts = user.displayName.trim().split(/\s+/);
+    const firstNameEn = parts[0] ?? user.displayName;
+    const lastNameEn = parts.slice(1).join(" ") || "Staff";
+    if (existing) {
+      await tx.employee.update({
+        where: { id: existing.id },
+        data: { clinicId: primaryClinicId, email: user.email, userId: user.id },
+      });
+      return;
+    }
+    await tx.employee.create({
+      data: {
+        tenantId,
+        clinicId: primaryClinicId,
+        userId: user.id,
+        employeeNumber: await this.nextEmployeeNumber(tx, tenantId),
+        firstNameEn,
+        lastNameEn,
+        email: user.email,
+        phone: "+0000000000",
+        jobTitle: this.jobTitleForRole(user.role),
+        employmentType: EmploymentType.FULL_TIME,
+        hireDate: new Date(),
+        salaryBase: 0,
+      },
+    });
   }
 
   async listFeatureFlags() {
@@ -151,13 +280,11 @@ export class AdminService {
     }
     const existing = await this.prisma.user.findFirst({ where: { tenantId, email } });
     if (existing) throw new BadRequestException("Email already in use for this organization");
-    if (dto.role === UserRole.CLINIC_ADMIN || dto.role === UserRole.BRANCH_MANAGER) {
-      const ids = dto.clinicIds ?? [];
-      if (!ids.length) {
-        throw new BadRequestException("clinicIds is required when creating a clinic administrator or branch manager");
-      }
+    if (CLINIC_SCOPE_ROLES.has(dto.role) && !(dto.clinicIds?.length ?? 0)) {
+      throw new BadRequestException("clinicIds is required when creating a clinic administrator or branch manager");
     }
     const passwordHash = bcrypt.hashSync(dto.password, 10);
+    const clinicIds = dto.clinicIds ?? [];
     const row = await this.prisma.$transaction(async (tx) => {
       const u = await tx.user.create({
         data: {
@@ -168,19 +295,9 @@ export class AdminService {
           role: dto.role,
         },
       });
-      if ((dto.role === UserRole.CLINIC_ADMIN || dto.role === UserRole.BRANCH_MANAGER) && dto.clinicIds?.length) {
-        for (const cid of dto.clinicIds) {
-          const c = await tx.clinic.findFirst({ where: { id: cid, tenantId } });
-          if (!c) throw new BadRequestException(`Invalid clinicId: ${cid}`);
-        }
-        await tx.clinicAdminScope.createMany({
-          data: dto.clinicIds.map((clinicId) => ({
-            tenantId,
-            userId: u.id,
-            clinicId,
-          })),
-          skipDuplicates: true,
-        });
+      if (clinicIds.length) {
+        await this.syncClinicAdminScopes(tx, tenantId, u.id, clinicIds);
+        await this.syncLinkedEmployeeClinic(tx, tenantId, u, clinicIds[0] ?? null);
       }
       return u;
     });
@@ -200,9 +317,11 @@ export class AdminService {
       include: {
         tenant: { select: { id: true, name: true } },
         clinicAdminScopes: { include: { clinic: { select: { id: true, nameEn: true } } } },
+        employee: { include: { clinic: { select: { id: true, nameEn: true } } } },
       },
     });
     if (!row) throw new NotFoundException("User not found");
+    const clinics = mapUserClinicAssignments(row.clinicAdminScopes, row.employee);
     return {
       id: row.id,
       tenantId: row.tenantId,
@@ -211,8 +330,7 @@ export class AdminService {
       displayName: row.displayName,
       role: row.role,
       createdAt: row.createdAt.toISOString(),
-      clinicIds: row.clinicAdminScopes.map((s) => s.clinicId),
-      clinics: row.clinicAdminScopes.map((s) => ({ id: s.clinic.id, nameEn: s.clinic.nameEn })),
+      ...clinics,
     };
   }
 
@@ -249,19 +367,10 @@ export class AdminService {
       });
 
       if (dto.clinicIds !== undefined) {
-        await tx.clinicAdminScope.deleteMany({ where: { tenantId, userId } });
-        if (dto.clinicIds.length && (nextRole === UserRole.CLINIC_ADMIN || nextRole === UserRole.BRANCH_MANAGER)) {
-          for (const cid of dto.clinicIds) {
-            const c = await tx.clinic.findFirst({ where: { id: cid, tenantId } });
-            if (!c) throw new BadRequestException(`Invalid clinicId: ${cid}`);
-          }
-          await tx.clinicAdminScope.createMany({
-            data: dto.clinicIds.map((clinicId) => ({ tenantId, userId, clinicId })),
-            skipDuplicates: true,
-          });
-        }
-      } else if (dto.role !== undefined && nextRole !== UserRole.CLINIC_ADMIN && nextRole !== UserRole.BRANCH_MANAGER) {
-        await tx.clinicAdminScope.deleteMany({ where: { tenantId, userId } });
+        await this.syncClinicAdminScopes(tx, tenantId, userId, dto.clinicIds);
+        await this.syncLinkedEmployeeClinic(tx, tenantId, u, dto.clinicIds[0] ?? null);
+      } else if (dto.role !== undefined && !CLINIC_EMPLOYEE_ROLES.has(nextRole)) {
+        await this.syncLinkedEmployeeClinic(tx, tenantId, u, null);
       }
 
       return u;

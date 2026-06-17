@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcryptjs";
 import { isPlatformSuperAdmin } from "../common/platform-super-admin";
@@ -89,6 +89,30 @@ export class AuthService {
         platformSuperAdmin,
       },
     };
+  }
+
+  async changePassword(
+    userId: string,
+    tenantId: string | null,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    const user = await this.prisma.user.findFirst({
+      where: tenantId != null ? { id: userId, tenantId } : { id: userId, tenantId: null },
+      select: { id: true, passwordHash: true },
+    });
+    if (!user) throw new UnauthorizedException();
+    if (!passwordMatches(currentPassword, user.passwordHash)) {
+      throw new BadRequestException("Current password is incorrect");
+    }
+    if (passwordMatches(newPassword, user.passwordHash)) {
+      throw new BadRequestException("New password must be different from the current password");
+    }
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: bcrypt.hashSync(newPassword, 10) },
+    });
+    return { ok: true as const };
   }
 
   async me(userId: string, tenantId: string | null) {

@@ -133,7 +133,7 @@ export function AdminOrgUsersPanel() {
         password: uPassword,
         displayName: uName.trim(),
         role: uRole,
-        ...((uRole === "CLINIC_ADMIN" || uRole === "BRANCH_MANAGER") && uClinicIds.length ? { clinicIds: uClinicIds } : {}),
+        ...(uClinicIds.length ? { clinicIds: uClinicIds } : {}),
       }),
     onSuccess: () => {
       setUserErr(null);
@@ -153,7 +153,7 @@ export function AdminOrgUsersPanel() {
         role: uRole,
       };
       if (uPassword.length >= 8) body.password = uPassword;
-      if (uRole === "CLINIC_ADMIN" || uRole === "BRANCH_MANAGER") body.clinicIds = uClinicIds;
+      body.clinicIds = uClinicIds;
       return apiPatch(`/api/v1/admin/users/${editUserId}`, body);
     },
     onSuccess: () => {
@@ -177,10 +177,10 @@ export function AdminOrgUsersPanel() {
     onError: (e: unknown) => setUserErr(apiErrorMessage(e)),
   });
 
-  const needsClinics = uRole === "CLINIC_ADMIN" || uRole === "BRANCH_MANAGER";
+  const requiresClinicAssignment = uRole === "CLINIC_ADMIN" || uRole === "BRANCH_MANAGER";
   const canSaveCreate =
-    uEmail.trim() && uPassword.length >= 8 && uName.trim() && (!needsClinics || uClinicIds.length > 0);
-  const canSaveEdit = uEmail.trim() && uName.trim() && (!needsClinics || uClinicIds.length > 0);
+    uEmail.trim() && uPassword.length >= 8 && uName.trim() && (!requiresClinicAssignment || uClinicIds.length > 0);
+  const canSaveEdit = uEmail.trim() && uName.trim() && (!requiresClinicAssignment || uClinicIds.length > 0);
 
   const clinicLabel = useMemo(
     () => (row: OrgUserRow) =>
@@ -239,7 +239,7 @@ export function AdminOrgUsersPanel() {
                       <th className="px-3 py-2 text-start">{t("admin.displayName")}</th>
                       <th className="px-3 py-2 text-start">{t("auth.email")}</th>
                       <th className="px-3 py-2 text-start">{t("admin.role", "Role")}</th>
-                      <th className="px-3 py-2 text-start">{t("admin.clinicAdminScopes")}</th>
+                      <th className="px-3 py-2 text-start">{t("admin.assignedClinics", "Assigned clinics")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -308,10 +308,7 @@ export function AdminOrgUsersPanel() {
                 <select
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={uRole}
-                  onChange={(e) => {
-                    setURole(e.target.value as (typeof ORG_USER_ROLES)[number]);
-                    setUClinicIds([]);
-                  }}
+                  onChange={(e) => setURole(e.target.value as (typeof ORG_USER_ROLES)[number])}
                 >
                   {ORG_USER_ROLES.map((r) => (
                     <option key={r} value={r}>
@@ -320,10 +317,19 @@ export function AdminOrgUsersPanel() {
                   ))}
                 </select>
               </div>
-              {needsClinics ? (
+              {clinics.length ? (
                 <div className="space-y-2 md:col-span-2">
-                  <Label required>{t("admin.clinicAdminScopes")}</Label>
-                  <p className="text-xs text-muted-foreground">{t("admin.clinicAdminScopesHint")}</p>
+                  <Label required={requiresClinicAssignment}>
+                    {t("admin.assignedClinics", "Assigned clinics")}
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {requiresClinicAssignment
+                      ? t("admin.assignedClinicsRequiredHint", "Select at least one clinic for this role.")
+                      : t(
+                          "admin.assignedClinicsOptionalHint",
+                          "Optional — assign the clinic or branch this user primarily works at.",
+                        )}
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {clinics.map((c) => {
                       const on = uClinicIds.includes(c.id);

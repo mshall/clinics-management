@@ -404,7 +404,16 @@
     "subtitle": "Your account in this organization.",
     "about": "About",
     "aboutPlaceholder": "Tell colleagues about your focus areas and languages — demo placeholder text.",
-    "roleLabel": "Role"
+    "roleLabel": "Role",
+    "changePasswordTitle": "Change password",
+    "changePasswordHint": "Update the password you use to sign in to this account.",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "updatePassword": "Update password",
+    "passwordChanged": "Password updated successfully.",
+    "passwordMinLength": "New password must be at least 8 characters.",
+    "passwordMismatch": "New password and confirmation do not match."
   },
   "doctorRevenue": {
     "subtitle": "Revenue from completed encounters and other ledger rows tied to you (not appointments). Use the reporting period bar above to change dates; demo data spans the current and prior two months after a fresh seed.",
@@ -805,6 +814,9 @@
     "auditDetailTitle": "Audit entry",
     "clinicAdminScopes": "Clinics for this administrator",
     "clinicAdminScopesHint": "Select at least one clinic when role is Clinic administrator.",
+    "assignedClinics": "Assigned clinics",
+    "assignedClinicsRequiredHint": "Select at least one clinic for clinic administrator or branch manager.",
+    "assignedClinicsOptionalHint": "Optional — assign the clinic or branch this user primarily works at.",
     "auditColAction": "Action",
     "auditColWhen": "Time",
     "auditColActor": "Employee",

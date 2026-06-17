@@ -259,20 +259,29 @@ export class PlatformAdminService {
         include: {
           tenant: { select: { id: true, name: true } },
           clinicAdminScopes: { include: { clinic: { select: { id: true, nameEn: true } } } },
+          employee: { include: { clinic: { select: { id: true, nameEn: true } } } },
         },
       }),
     ]);
-    const items = rows.map((r) => ({
-      id: r.id,
-      tenantId: r.tenantId,
-      tenantName: r.tenant?.name ?? "—",
-      email: r.email,
-      displayName: r.displayName,
-      role: r.role,
-      createdAt: r.createdAt.toISOString(),
-      clinicIds: r.clinicAdminScopes.map((s) => s.clinicId),
-      clinics: r.clinicAdminScopes.map((s) => ({ id: s.clinic.id, nameEn: s.clinic.nameEn })),
-    }));
+    const items = rows.map((r) => {
+      const byId = new Map<string, { id: string; nameEn: string }>();
+      for (const s of r.clinicAdminScopes) byId.set(s.clinic.id, s.clinic);
+      if (r.employee?.clinic && !byId.has(r.employee.clinic.id)) {
+        byId.set(r.employee.clinic.id, r.employee.clinic);
+      }
+      const clinics = [...byId.values()];
+      return {
+        id: r.id,
+        tenantId: r.tenantId,
+        tenantName: r.tenant?.name ?? "—",
+        email: r.email,
+        displayName: r.displayName,
+        role: r.role,
+        createdAt: r.createdAt.toISOString(),
+        clinicIds: clinics.map((c) => c.id),
+        clinics,
+      };
+    });
     return paginate(items, total, page, pageSize);
   }
 

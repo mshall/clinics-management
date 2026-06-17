@@ -404,7 +404,16 @@
     "subtitle": "حسابك في هذه المنظمة.",
     "about": "نبذة",
     "aboutPlaceholder": "عرّف زملاءك بمجالات تركيزك ولغاتك — نص تجريبي.",
-    "roleLabel": "الدور"
+    "roleLabel": "الدور",
+    "changePasswordTitle": "تغيير كلمة المرور",
+    "changePasswordHint": "حدّث كلمة المرور التي تستخدمها لتسجيل الدخول إلى هذا الحساب.",
+    "currentPassword": "كلمة المرور الحالية",
+    "newPassword": "كلمة المرور الجديدة",
+    "confirmPassword": "تأكيد كلمة المرور الجديدة",
+    "updatePassword": "تحديث كلمة المرور",
+    "passwordChanged": "تم تحديث كلمة المرور بنجاح.",
+    "passwordMinLength": "يجب أن تتكون كلمة المرور الجديدة من 8 أحرف على الأقل.",
+    "passwordMismatch": "كلمة المرور الجديدة والتأكيد غير متطابقتين."
   },
   "doctorRevenue": {
     "subtitle": "إيرادات الزيارات المكتملة وقيود أخرى مرتبطة بك (وليس المواعيد). استخدم شريط فترة التقارير أعلاه لتغيير التواريخ.",
@@ -805,6 +814,9 @@
     "auditDetailTitle": "سجل التدقيق",
     "clinicAdminScopes": "عيادات هذا المدير",
     "clinicAdminScopesHint": "اختر عيادة واحدة على الأقل عندما يكون الدور مدير عيادة.",
+    "assignedClinics": "العيادات المعيّنة",
+    "assignedClinicsRequiredHint": "اختر عيادة واحدة على الأقل لمدير العيادة أو مدير الفرع.",
+    "assignedClinicsOptionalHint": "اختياري — عيّن العيادة أو الفرع الذي يعمل فيه المستخدم أساساً.",
     "auditColAction": "الإجراء",
     "auditColWhen": "الوقت",
     "auditColActor": "الموظف",

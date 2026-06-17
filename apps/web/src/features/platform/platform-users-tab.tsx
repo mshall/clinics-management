@@ -107,7 +107,7 @@ export function PlatformUsersTab() {
         password: uPassword,
         displayName: uName.trim(),
         role: uRole,
-        ...((uRole === "CLINIC_ADMIN" || uRole === "BRANCH_MANAGER") && uClinicIds.length ? { clinicIds: uClinicIds } : {}),
+        ...(uClinicIds.length ? { clinicIds: uClinicIds } : {}),
       }),
     onSuccess: () => {
       setUserErr(null);
@@ -126,7 +126,7 @@ export function PlatformUsersTab() {
         role: uRole,
       };
       if (uPassword.length >= 8) body.password = uPassword;
-      if (uRole === "CLINIC_ADMIN" || uRole === "BRANCH_MANAGER") body.clinicIds = uClinicIds;
+      body.clinicIds = uClinicIds;
       return apiPatch(
         `/api/v1/admin/platform/tenants/${editSelection!.tenantId}/users/${editSelection!.userId}`,
         body,
@@ -142,10 +142,10 @@ export function PlatformUsersTab() {
     onError: (e: unknown) => setUserErr(apiErrorMessage(e)),
   });
 
-  const needsClinics = uRole === "CLINIC_ADMIN" || uRole === "BRANCH_MANAGER";
+  const requiresClinicAssignment = uRole === "CLINIC_ADMIN" || uRole === "BRANCH_MANAGER";
   const canSaveCreate =
-    uTenantId && uEmail.trim() && uPassword.length >= 8 && uName.trim() && (!needsClinics || uClinicIds.length > 0);
-  const canSaveEdit = uEmail.trim() && uName.trim() && (!needsClinics || uClinicIds.length > 0);
+    uTenantId && uEmail.trim() && uPassword.length >= 8 && uName.trim() && (!requiresClinicAssignment || uClinicIds.length > 0);
+  const canSaveEdit = uEmail.trim() && uName.trim() && (!requiresClinicAssignment || uClinicIds.length > 0);
 
   const clinicLabel = useMemo(
     () => (row: PlatformUserRow) => (row.clinics.length ? row.clinics.map((c) => c.nameEn).join(", ") : "—"),
@@ -290,10 +290,7 @@ export function PlatformUsersTab() {
                 <select
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={uRole}
-                  onChange={(e) => {
-                    setURole(e.target.value as (typeof ORG_USER_ROLES)[number]);
-                    setUClinicIds([]);
-                  }}
+                  onChange={(e) => setURole(e.target.value as (typeof ORG_USER_ROLES)[number])}
                 >
                   {ORG_USER_ROLES.map((r) => (
                     <option key={r} value={r}>
@@ -302,12 +299,18 @@ export function PlatformUsersTab() {
                   ))}
                 </select>
               </div>
-              {needsClinics ? (
+              {activeTenantId ? (
                 <div className="space-y-2 md:col-span-2">
-                  <Label required>{t("platform.assignClinics")}</Label>
-                  {!activeTenantId ? (
-                    <p className="text-sm text-muted-foreground">{t("platform.tabs.pickOrgFirst")}</p>
-                  ) : clinicsQuery.isPending ? (
+                  <Label required={requiresClinicAssignment}>{t("platform.assignClinics")}</Label>
+                  <p className="text-xs text-muted-foreground">
+                    {requiresClinicAssignment
+                      ? t("admin.assignedClinicsRequiredHint", "Select at least one clinic for this role.")
+                      : t(
+                          "admin.assignedClinicsOptionalHint",
+                          "Optional — assign the clinic or branch this user primarily works at.",
+                        )}
+                  </p>
+                  {clinicsQuery.isPending ? (
                     <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
@@ -328,6 +331,8 @@ export function PlatformUsersTab() {
                     </div>
                   )}
                 </div>
+              ) : isCreate ? (
+                <p className="text-sm text-muted-foreground md:col-span-2">{t("platform.tabs.pickOrgFirst")}</p>
               ) : null}
               <div className="md:col-span-2 flex flex-wrap gap-2 pt-2">
                 <Button
