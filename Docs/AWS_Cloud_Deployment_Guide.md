@@ -61,7 +61,7 @@ Users
    npx prisma migrate deploy
    ```
 
-5. **Seeding:** run `npx prisma db seed` **only** on local/dev machines (`npm run db:setup -w api`). **AWS App Runner sets `PRISMA_SEED_ON_BOOT=false`** so deploys apply migrations only and **never** run the destructive demo seed.
+5. **Seeding:** App Runner sets `PRISMA_SEED_ON_BOOT=true`. On **first boot** (empty RDS) the seed inserts the full demo dataset once. On **every later deploy** it runs in **incremental** mode only: existing tenants, users, patients, and clinical data are **never deleted or overwritten**; missing demo accounts (super admin, Kiorly logins, Dr Ahmed Shall group) are added if absent. For local dev use `npm run db:setup -w api`.
 
 6. **Pre-deploy backups:** CI invokes a VPC Lambda (`DbBackupFn`) before each CDK deploy. It `pg_dump`s PostgreSQL, emails a `.sql.gz` attachment to `kiorlyclinics@gmail.com` (or `-c backupEmailTo=...`), and stores a copy in S3. **Verify the SES email identity** (inbox link from AWS) before the first backup. RDS automated backups are retained **7 days**.
 

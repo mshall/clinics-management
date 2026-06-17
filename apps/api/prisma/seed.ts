@@ -73,6 +73,7 @@ async function ensureUser(passwordHash: string, data: UserSeed) {
   const existing = await prisma.user.findFirst({
     where: { email: data.email, tenantId: data.tenantId },
   });
+  // Never overwrite existing accounts (password, role, display name) — AWS re-deploy must stay non-destructive.
   if (existing) return existing;
   return prisma.user.create({ data: { ...data, passwordHash } });
 }
@@ -84,6 +85,63 @@ async function ensureSuperAdmin(passwordHash: string) {
     displayName: "Platform Super Administrator",
     role: UserRole.PLATFORM_SUPER_ADMIN,
   });
+}
+
+/** True when any tenant/user/clinic/patient row exists — used to skip destructive fresh seed on AWS re-deploy. */
+async function hasAnyDatabaseContent(): Promise<boolean> {
+  const [tenants, users, clinics, patients] = await Promise.all([
+    prisma.tenant.count(),
+    prisma.user.count(),
+    prisma.clinic.count(),
+    prisma.patient.count(),
+  ]);
+  return tenants > 0 || users > 0 || clinics > 0 || patients > 0;
+}
+
+/** Ensure Kiorly demo login accounts when the demo tenant already exists; never updates existing users. */
+async function ensureKiorlyDemoUsers(passwordHash: string, tenantId: string) {
+  const kiorlyUsers: UserSeed[] = [
+    { tenantId, email: "admin@kiorly.com", displayName: "Group Administrator", role: UserRole.GROUP_ADMIN },
+    { tenantId, email: "physician@kiorly.com", displayName: "Dr. Demo Physician", role: UserRole.PHYSICIAN },
+    { tenantId, email: "doctor2@kiorly.com", displayName: "Dr. Second Physician", role: UserRole.PHYSICIAN },
+    { tenantId, email: "clinicadmin@kiorly.com", displayName: "Demo Clinic Administrator", role: UserRole.CLINIC_ADMIN },
+    { tenantId, email: "assistant@kiorly.com", displayName: "Demo Clinic Assistant", role: UserRole.CLINIC_ASSISTANT },
+    { tenantId, email: "nurse@kiorly.com", displayName: "Demo Nurse", role: UserRole.NURSE },
+    { tenantId, email: "receptionist@kiorly.com", displayName: "Demo Receptionist", role: UserRole.RECEPTIONIST },
+    { tenantId, email: "callcenter@kiorly.com", displayName: "Demo Call Center", role: UserRole.CALL_CENTER },
+    { tenantId, email: "finance@kiorly.com", displayName: "Demo Finance Officer", role: UserRole.FINANCE_OFFICER },
+    { tenantId, email: "branchmgr@kiorly.com", displayName: "Demo Branch Manager", role: UserRole.BRANCH_MANAGER },
+  ];
+  for (let i = 0; i < 15; i += 1) {
+    if (i === 0 || i === 1) continue;
+    kiorlyUsers.push({
+      tenantId,
+      email: `staff${i + 1}@kiorly.com`,
+      displayName: `Demo User ${i + 1}`,
+      role: ROLES_CYCLE[i] ?? UserRole.RECEPTIONIST,
+    });
+  }
+
+  const ensured = await Promise.all(kiorlyUsers.map((u) => ensureUser(passwordHash, u)));
+
+  const hq = await prisma.clinic.findFirst({
+    where: { tenantId, licenseNumber: "DHA-DEMO-001" },
+  });
+  const firstBranch = hq
+    ? await prisma.clinic.findFirst({
+        where: { tenantId, parentClinicId: hq.id },
+        orderBy: { nameEn: "asc" },
+      })
+    : null;
+  const clinicAdmin = ensured.find((u) => u.email === "clinicadmin@kiorly.com");
+  const branchMgr = ensured.find((u) => u.email === "branchmgr@kiorly.com");
+  const scopeRows: { tenantId: string; userId: string; clinicId: string }[] = [];
+  if (clinicAdmin && hq) scopeRows.push({ tenantId, userId: clinicAdmin.id, clinicId: hq.id });
+  if (clinicAdmin && firstBranch) scopeRows.push({ tenantId, userId: clinicAdmin.id, clinicId: firstBranch.id });
+  if (branchMgr && hq) scopeRows.push({ tenantId, userId: branchMgr.id, clinicId: hq.id });
+  if (scopeRows.length) {
+    await prisma.clinicAdminScope.createMany({ data: scopeRows, skipDuplicates: true });
+  }
 }
 
 type DrAhmedClinicSpec = {
@@ -273,10 +331,13 @@ async function ensureDemoPatientsForClinic(
 
   for (let i = existing; i < target; i += 1) {
     const idx = i + 1;
+    const mrn = `AES-${slug.toUpperCase()}-${String(idx).padStart(3, "0")}`;
+    const already = await prisma.patient.findFirst({ where: { tenantId, mrn } });
+    if (already) continue;
     await prisma.patient.create({
       data: {
         tenantId,
-        mrn: `AES-${slug.toUpperCase()}-${String(idx).padStart(3, "0")}`,
+        mrn,
         firstNameEn: firstNames[i] ?? `Patient${idx}`,
         lastNameEn: lastNames[i] ?? spec.label,
         firstNameAr: firstNamesAr[i] ?? null,
@@ -442,17 +503,30 @@ async function seedDrAhmedGroup(passwordHash: string) {
 
 async function ensureIncrementalSeed(passwordHash: string) {
   await ensureSuperAdmin(passwordHash);
+
+  const kiorlyTenant = await prisma.tenant.findFirst({ where: { name: KIORLY_TENANT_NAME } });
+  if (kiorlyTenant) {
+    await ensureKiorlyDemoUsers(passwordHash, kiorlyTenant.id);
+  }
+
   const { tenant, clinics } = await seedDrAhmedGroup(passwordHash);
   console.log(
-    "Seed OK (existing data preserved) — Dr Ahmed Shall Group:",
+    "Seed OK (incremental — existing rows preserved, only missing demo records added) — Dr Ahmed Shall Group:",
     tenant.id,
     `(${clinics.length} clinics, per-clinic staff ensured)`,
+    kiorlyTenant ? `| Kiorly demo users ensured for tenant ${kiorlyTenant.id}` : "",
     "| org logins (password: demo): admin@drahmedshall.com, supervisor@drahmedshall.com, dr.ahmed@drahmedshall.com, callcenter@drahmedshall.com, finance@drahmedshall.com, hr@drahmedshall.com",
     "| per clinic (hel/cmc/moh/dok): branchmgr.{slug}, clinicadmin.{slug}, assistant.{slug}, nurse.{slug}, receptionist.{slug}, physician.{slug} @drahmedshall.com"
   );
 }
 
 async function seedFreshDatabase(passwordHash: string) {
+  if (await hasAnyDatabaseContent()) {
+    console.log("Seed: database is not empty — skipping fresh seed, running incremental ensure only.");
+    await ensureIncrementalSeed(passwordHash);
+    return;
+  }
+
   const tenants = await Promise.all(
     Array.from({ length: 15 }, (_, i) =>
       prisma.tenant.create({
@@ -1092,17 +1166,17 @@ async function seedFreshDatabase(passwordHash: string) {
 
 async function main() {
   const passwordHash = bcrypt.hashSync("demo", 10);
-  const existingKiorly = await prisma.tenant.findFirst({ where: { name: KIORLY_TENANT_NAME } });
-  if (existingKiorly) {
+
+  if (await hasAnyDatabaseContent()) {
+    console.log(
+      "Seed: existing database content detected — incremental ensure only (no deletes, no password/role overwrites).",
+    );
     await ensureIncrementalSeed(passwordHash);
     return;
   }
-  const [tenantCount, userCount] = await Promise.all([prisma.tenant.count(), prisma.user.count()]);
-  if (tenantCount === 0 && userCount === 0) {
-    await seedFreshDatabase(passwordHash);
-    return;
-  }
-  await ensureIncrementalSeed(passwordHash);
+
+  console.log("Seed: empty database — inserting full demo dataset once.");
+  await seedFreshDatabase(passwordHash);
 }
 
 main()

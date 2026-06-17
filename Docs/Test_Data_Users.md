@@ -4,7 +4,7 @@ Reference for QA, demos, and onboarding. All seeded accounts use password **`dem
 
 **Load data:** from the repo root run `npm run db:setup -w api` (migrations + seed).
 
-**Idempotent seed:** if demo data already exists (detected via the Kiorly demo tenant), the seed **does not delete or replace** existing rows. It only ensures missing demo accounts (platform super admin, Dr Ahmed Shall clinics/staff/patients) are created. A full demo dataset is inserted only on an empty database.
+**Idempotent seed:** if **any** database content already exists (tenants, users, clinics, or patients), the seed **does not delete or replace** existing rows and **never resets passwords** on accounts that already exist. It only ensures missing demo records (platform super admin, Kiorly login accounts, Dr Ahmed Shall clinics/staff/patients) are created. A full demo dataset is inserted **only** on a completely empty database.
 
 **Primary organization:** `Kiorly Clinic Group (Demo)` — 1 HQ clinic + 14 branches (see [Clinic hierarchy](#clinic-hierarchy)).
 
