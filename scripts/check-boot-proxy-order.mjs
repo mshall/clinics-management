@@ -12,27 +12,31 @@ const entry = readFileSync(entryPath, "utf8");
 
 let failed = false;
 
-const mainFn = entry.match(/async function main\(\)[\s\S]*?^}/m)?.[0] ?? "";
-if (!mainFn) {
-  console.error(`${entryPath}: missing async function main()`);
+const listenIdx = entry.indexOf("proxy.listen(publicPort");
+const listenReadyIdx = entry.indexOf("await listenReady");
+const secretCallIdx = entry.indexOf("await loadDbSecretFromArn");
+const migrateCallIdx = entry.indexOf("await runMigrate");
+
+if (listenIdx < 0) {
+  console.error(`${entryPath}: must call proxy.listen(publicPort) before async boot work`);
   failed = true;
 } else {
-  const listenIdx = mainFn.indexOf("await listenServer(proxy, publicPort");
-  const secretCallIdx = mainFn.indexOf("await loadDbSecretFromArn");
-  const migrateCallIdx = mainFn.indexOf("await runMigrate");
-  if (listenIdx < 0) {
-    console.error(`${entryPath}: main() must await listenServer on PORT`);
+  if (secretCallIdx >= 0 && listenIdx > secretCallIdx) {
+    console.error(`${entryPath}: must listen on PORT before loadDbSecretFromArn`);
     failed = true;
-  } else {
-    if (secretCallIdx >= 0 && listenIdx > secretCallIdx) {
-      console.error(`${entryPath}: must listen on PORT before loadDbSecretFromArn`);
-      failed = true;
-    }
-    if (migrateCallIdx >= 0 && listenIdx > migrateCallIdx) {
-      console.error(`${entryPath}: must listen on PORT before runMigrate`);
-      failed = true;
-    }
   }
+  if (migrateCallIdx >= 0 && listenIdx > migrateCallIdx) {
+    console.error(`${entryPath}: must listen on PORT before runMigrate`);
+    failed = true;
+  }
+}
+
+if (listenReadyIdx < 0) {
+  console.error(`${entryPath}: main() must await listenReady before secret/migrate`);
+  failed = true;
+} else if (secretCallIdx >= 0 && listenReadyIdx > secretCallIdx) {
+  console.error(`${entryPath}: must await listenReady before loadDbSecretFromArn`);
+  failed = true;
 }
 
 if (/^import\s+.*@aws-sdk\/client-secrets-manager/m.test(entry)) {
@@ -45,13 +49,21 @@ if (/process\.exit\s*\(\s*1\s*\)/.test(entry)) {
   failed = true;
 }
 
-if (!/method === "GET" \|\| method === "HEAD"/.test(entry)) {
+if (
+  !/method === "GET" \|\| method === "HEAD"/.test(entry) &&
+  !/method !== "GET" && method !== "HEAD"/.test(entry)
+) {
   console.error(`${entryPath}: must accept HEAD for App Runner liveness`);
   failed = true;
 }
 
 if (!/\/api\/v1\/health\/live\/"/.test(entry)) {
   console.error(`${entryPath}: must accept trailing slash on /api/v1/health/live/`);
+  failed = true;
+}
+
+if (!/probePath === "\/"/.test(entry)) {
+  console.error(`${entryPath}: must accept "/" for App Runner env-update health probes`);
   failed = true;
 }
 

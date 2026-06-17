@@ -1,5 +1,5 @@
 /**
- * App Runner boot: bind :3000 immediately, then secret → migrate → Nest on NEST_INTERNAL_PORT.
+ * App Runner boot: bind :3000 on PID 1 immediately, then secret → migrate → Nest on NEST_INTERNAL_PORT.
  * Demo seed runs via post-deploy DbSeedFn Lambda (PRISMA_SEED_ON_BOOT=false).
  */
 import { spawn } from "node:child_process";
@@ -10,6 +10,8 @@ import { fileURLToPath } from "node:url";
 console.error("[boot] entrypoint loaded");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const publicPort = Number(process.env.PORT ?? "3000");
+const internalPort = Number(process.env.NEST_INTERNAL_PORT ?? "3001");
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -30,7 +32,12 @@ function normalizeHealthPath(url) {
 
 function isAppRunnerLiveProbe(req) {
   const method = req.method ?? "GET";
-  return (method === "GET" || method === "HEAD") && normalizeHealthPath(req.url) === "/api/v1/health/live";
+  if (method !== "GET" && method !== "HEAD") return false;
+  const probePath = normalizeHealthPath(req.url);
+  if (probePath === "/api/v1/health/live") return true;
+  // App Runner may probe "/" on image/env updates even when HealthCheck Path is configured.
+  if (probePath === "/" || probePath === "/health") return true;
+  return false;
 }
 
 function respondBoot(res, req) {
@@ -42,16 +49,6 @@ function respondBoot(res, req) {
     return;
   }
   res.end(JSON.stringify(live ? { status: "ok", phase: "starting" } : { status: "starting" }));
-}
-
-async function listenServer(server, port, label) {
-  await new Promise((resolve, reject) => {
-    server.listen(port, "0.0.0.0", () => {
-      console.error(`[boot] ${label} listening on`, port);
-      resolve();
-    });
-    server.on("error", reject);
-  });
 }
 
 function createUpstreamProxy(upstreamPort) {
@@ -78,6 +75,25 @@ function createUpstreamProxy(upstreamPort) {
     else req.pipe(upstreamReq);
   });
 }
+
+const proxy = createUpstreamProxy(internalPort);
+const listenReady = new Promise((resolve, reject) => {
+  proxy.listen(publicPort, "0.0.0.0", () => {
+    console.error("[boot] boot proxy listening on", publicPort);
+    resolve();
+  });
+  proxy.on("error", (err) => {
+    console.error("[boot] boot proxy listen error:", err.message);
+    reject(err);
+  });
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("[boot] uncaughtException (keeping proxy up):", err);
+});
+process.on("unhandledRejection", (err) => {
+  console.error("[boot] unhandledRejection (keeping proxy up):", err);
+});
 
 function runChild(command, args) {
   return new Promise((resolve) => {
@@ -140,11 +156,7 @@ async function loadDbSecretFromArn(dbSecretArn) {
 }
 
 async function main() {
-  const publicPort = Number(process.env.PORT ?? "3000");
-  const internalPort = Number(process.env.NEST_INTERNAL_PORT ?? "3001");
-
-  const proxy = createUpstreamProxy(internalPort);
-  await listenServer(proxy, publicPort, "boot proxy");
+  await listenReady;
 
   const kmsEp = vpceHttpsFromHost(process.env.KMS_VPCE_HOST);
   const stsEp = vpceHttpsFromHost(process.env.STS_VPCE_HOST);
