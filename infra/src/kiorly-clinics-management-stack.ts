@@ -271,6 +271,9 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       assumedBy: new iam.ServicePrincipal("tasks.apprunner.amazonaws.com"),
       description: "Runtime access to Secrets Manager for DB + JWT",
     });
+    instanceRole.addManagedPolicy(
+      iam.ManagedPolicy.fromAwsManagedPolicyName("AWSXRayDaemonWriteAccess"),
+    );
     db.secret!.grantRead(instanceRole);
     jwtSecret.grantRead(instanceRole);
     apiUploadsBucket.grantReadWrite(instanceRole);
