@@ -26,6 +26,8 @@ if [[ "${CI:-}" == "true" ]]; then
 else
   npm ci --no-audit --no-fund
 fi
+# EC2 SecurityGroup GroupDescription must be ASCII-only; fail fast before CloudFormation.
+npm run check:ascii-descriptions
 npm run build
 
 # In GitHub Actions, emit verbose CDK / construct logging for post-mortem artifacts.
