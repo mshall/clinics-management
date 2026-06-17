@@ -12,16 +12,11 @@ import * as rds from "aws-cdk-lib/aws-rds";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
-import * as ses from "aws-cdk-lib/aws-ses";
 import type { Construct } from "constructs";
 
 export interface KiorlyClinicsManagementStackProps extends cdk.StackProps {
   /** AWS region for VPC/RDS/App Runner (Frankfurt = eu-central-1). */
   deploymentRegion: string;
-  /** Email address for pre-deploy DB backup notifications (SES must verify this identity). */
-  backupEmailTo?: string;
-  /** SES From address; defaults to backupEmailTo when omitted. */
-  backupEmailFrom?: string;
 }
 
 export class KiorlyClinicsManagementStack extends cdk.Stack {
@@ -29,14 +24,6 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     super(scope, id, props);
 
     const { deploymentRegion } = props;
-    const backupEmailTo =
-      props.backupEmailTo ??
-      (this.node.tryGetContext("backupEmailTo") as string | undefined) ??
-      "kiorlyclinics@gmail.com";
-    const backupEmailFrom =
-      props.backupEmailFrom ??
-      (this.node.tryGetContext("backupEmailFrom") as string | undefined) ??
-      backupEmailTo;
 
     const vpc = new ec2.Vpc(this, "Vpc", {
       maxAzs: 2,
@@ -144,12 +131,6 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     });
     stsEndpoint.connections.allowFrom(connectorSg, ec2.Port.tcp(443), "AWS SDK credential chain");
 
-    const sesEndpoint = vpc.addInterfaceEndpoint("SesEndpoint", {
-      service: ec2.InterfaceVpcEndpointAwsService.SES,
-      subnets: awsApiEndpointSubnets,
-      privateDnsEnabled: true,
-    });
-
     // DnsEntries[0] is "HostedZoneId:dnsName" — take the dnsName segment only.
     const vpceHostnameFromEndpoint = (endpoint: ec2.InterfaceVpcEndpoint) => {
       const cfn = endpoint.node.defaultChild as ec2.CfnVPCEndpoint;
@@ -158,69 +139,20 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     };
     const secretsManagerVpceHost = vpceHostnameFromEndpoint(secretsManagerEndpoint);
     const kmsVpceHost = vpceHostnameFromEndpoint(kmsEndpoint);
-    const sesVpceHost = vpceHostnameFromEndpoint(sesEndpoint);
-
-    const dbBackupBucket = new s3.Bucket(this, "DbBackupBucket", {
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-      encryption: s3.BucketEncryption.S3_MANAGED,
-      enforceSSL: true,
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
-      lifecycleRules: [{ expiration: cdk.Duration.days(30) }],
-    });
 
     // EC2 GroupDescription must be ASCII-only (em-dash / UTF-8 fails CREATE with InvalidRequest).
-    const backupLambdaSg = new ec2.SecurityGroup(this, "DbBackupLambdaSg", {
+    const dbSeedLambdaSg = new ec2.SecurityGroup(this, "DbSeedLambdaSg", {
       vpc,
-      description: "Pre-deploy pg_dump Lambda - RDS + VPC endpoints",
+      description: "Post-deploy Prisma seed Lambda - RDS + VPC endpoints",
       allowAllOutbound: true,
     });
-    db.connections.allowFrom(backupLambdaSg, ec2.Port.tcp(5432), "Pre-deploy backup Lambda to PostgreSQL");
-    sesEndpoint.connections.allowFrom(backupLambdaSg, ec2.Port.tcp(443), "Backup Lambda to SES");
+    db.connections.allowFrom(dbSeedLambdaSg, ec2.Port.tcp(5432), "Post-deploy seed Lambda to PostgreSQL");
     secretsManagerEndpoint.connections.allowFrom(
-      backupLambdaSg,
+      dbSeedLambdaSg,
       ec2.Port.tcp(443),
-      "Backup Lambda GetSecretValue",
+      "Seed Lambda GetSecretValue",
     );
-    kmsEndpoint.connections.allowFrom(backupLambdaSg, ec2.Port.tcp(443), "Backup Lambda KMS decrypt for Secrets Manager");
-
-    new ses.EmailIdentity(this, "BackupEmailFromIdentity", {
-      identity: ses.Identity.email(backupEmailFrom),
-    });
-    if (backupEmailFrom.toLowerCase() !== backupEmailTo.toLowerCase()) {
-      new ses.EmailIdentity(this, "BackupEmailToIdentity", {
-        identity: ses.Identity.email(backupEmailTo),
-      });
-    }
-
-    const dbBackupFn = new lambda.DockerImageFunction(this, "DbBackupFn", {
-      code: lambda.DockerImageCode.fromImageAsset(path.join(__dirname, "..", "lambda", "db-backup")),
-      timeout: cdk.Duration.minutes(10),
-      memorySize: 1024,
-      vpc,
-      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
-      securityGroups: [backupLambdaSg],
-      environment: {
-        DB_SECRET_ARN: db.secret!.secretArn,
-        BACKUP_EMAIL_TO: backupEmailTo,
-        BACKUP_EMAIL_FROM: backupEmailFrom,
-        BACKUP_BUCKET: dbBackupBucket.bucketName,
-        // Isolated subnet has no NAT; explicit VPCE hosts match App Runner docker-entrypoint pattern.
-        SECRETS_MANAGER_VPCE_HOST: secretsManagerVpceHost,
-        KMS_VPCE_HOST: kmsVpceHost,
-        SES_VPCE_HOST: sesVpceHost,
-      },
-    });
-    db.secret!.grantRead(dbBackupFn);
-    dbBackupBucket.grantReadWrite(dbBackupFn);
-    dbBackupFn.addToRolePolicy(
-      new iam.PolicyStatement({
-        actions: ["ses:SendRawEmail", "ses:SendEmail"],
-        resources: ["*"],
-      }),
-    );
-    dbBackupFn.node.addDependency(db);
-    dbBackupFn.node.addDependency(kmsEndpoint);
-    dbBackupFn.node.addDependency(sesEndpoint);
+    kmsEndpoint.connections.allowFrom(dbSeedLambdaSg, ec2.Port.tcp(443), "Seed Lambda KMS decrypt for Secrets Manager");
 
     const dbSeedFn = new lambda.DockerImageFunction(this, "DbSeedFn", {
       code: lambda.DockerImageCode.fromImageAsset(path.join(__dirname, "..", ".."), {
@@ -231,7 +163,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       memorySize: 2048,
       vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
-      securityGroups: [backupLambdaSg],
+      securityGroups: [dbSeedLambdaSg],
       environment: {
         DB_SECRET_ARN: db.secret!.secretArn,
         SECRETS_MANAGER_VPCE_HOST: secretsManagerVpceHost,
@@ -476,19 +408,9 @@ function handler(event) {
       value: db.secret!.secretArn,
     });
 
-    new cdk.CfnOutput(this, "DbBackupFunctionName", {
-      value: dbBackupFn.functionName,
-      description: "Pre-deploy pg_dump Lambda (emails backup before CI deploy)",
-    });
-
     new cdk.CfnOutput(this, "DbSeedFunctionName", {
       value: dbSeedFn.functionName,
       description: "Post-deploy idempotent Prisma seed Lambda (ensures demo org users on RDS)",
-    });
-
-    new cdk.CfnOutput(this, "DbBackupEmailTo", {
-      value: backupEmailTo,
-      description: "Verify this address in SES (inbox link) before backup emails succeed",
     });
 
     new cdk.CfnOutput(this, "RegionNote", {

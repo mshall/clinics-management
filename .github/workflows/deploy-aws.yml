@@ -18,13 +18,9 @@
 #      Name:  AWS_DEPLOY_ROLE_ARN
 #      Value: arn:aws:iam::990597228737:role/GitHubAction-AssumeRole
 #    (Trust policy must allow this repo, e.g. repo:mshall/kiorly-clinics-management:* — see IAM OIDC role.)
-#    The deploy role also needs lambda:InvokeFunction on the stack's DbBackupFn (or lambda:InvokeFunction on *).
+#    The deploy role also needs lambda:InvokeFunction on the stack's DbSeedFn (or lambda:InvokeFunction on *).
 #
-# 5) After the first deploy with the backup Lambda, verify SES email identity:
-#    AWS Console > SES (eu-central-1) > Verified identities — click the link sent to
-#    kiorlyclinics@gmail.com (or override with CDK context backupEmailTo=...).
-#    Pre-deploy CI invokes DbBackupFn to pg_dump RDS and email the gzip before each deploy.
-#    Post-deploy cicd-post-deploy-seed.sh invokes DbSeedFn (idempotent demo users on RDS).
+# 5) Post-deploy cicd-post-deploy-seed.sh invokes DbSeedFn (idempotent demo users on RDS).
 #
 # 6) Optional — Cursor cloud agent after a failed deploy (opens a PR; same Cursor billing as other agent runs):
 #      Name:  CURSOR_API_KEY
@@ -106,11 +102,6 @@ jobs:
       # CDK DockerImageAsset runs `docker build` during deploy; Buildx avoids flaky default builder.
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
-
-      - name: Pre-deploy database backup (email)
-        env:
-          CI: true
-        run: bash scripts/cicd-pre-deploy-backup.sh
 
       - name: Deploy CDK stack (full log capture, CDK verbose in CI)
         env:

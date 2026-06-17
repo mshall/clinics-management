@@ -24,9 +24,8 @@ aws cloudformation describe-stacks --stack-name "$STACK" --region "$REGION" \
   --query 'Stacks[0].{Name:StackName,Status:StackStatus,Reason:StackStatusReason}' --output table 2>&1
 if [[ "$STACK_STATUS" == UPDATE_COMPLETE || "$STACK_STATUS" == CREATE_COMPLETE ]]; then
   echo ""
-  echo "NOTE: Stack is ${STACK_STATUS}. If deploy-full.log is missing, the job likely failed in"
-  echo "  'Pre-deploy database backup' (before CDK deploy), not in CloudFormation."
-  echo "  FAILED/ROLLBACK events below may be from earlier deploy attempts (e.g. fixed ASCII SG description)."
+  echo "NOTE: Stack is ${STACK_STATUS}. If deploy-full.log is missing, the job likely failed before"
+  echo "  the CDK deploy step finished. FAILED/ROLLBACK events below may be from earlier attempts."
 fi
 echo "::endgroup::"
 
@@ -106,11 +105,11 @@ aws logs describe-log-groups --region "$REGION" --log-group-name-prefix "/aws/ap
 done
 echo "::endgroup::"
 
-DB_BACKUP_FN="$(aws cloudformation describe-stacks --stack-name "$STACK" --region "$REGION" \
-  --query "Stacks[0].Outputs[?OutputKey=='DbBackupFunctionName'].OutputValue" --output text 2>/dev/null | awk 'NF{print; exit}')"
-if [[ -n "$DB_BACKUP_FN" && "$DB_BACKUP_FN" != "None" ]]; then
-  echo "::group::DbBackupFn CloudWatch (/aws/lambda/${DB_BACKUP_FN})"
-  aws logs tail "/aws/lambda/${DB_BACKUP_FN}" --region "$REGION" --since "$LOG_SINCE" --format short --no-follow 2>/dev/null | tail -n 200 || \
+DB_SEED_FN="$(aws cloudformation describe-stacks --stack-name "$STACK" --region "$REGION" \
+  --query "Stacks[0].Outputs[?OutputKey=='DbSeedFunctionName'].OutputValue" --output text 2>/dev/null | awk 'NF{print; exit}')"
+if [[ -n "$DB_SEED_FN" && "$DB_SEED_FN" != "None" ]]; then
+  echo "::group::DbSeedFn CloudWatch (/aws/lambda/${DB_SEED_FN})"
+  aws logs tail "/aws/lambda/${DB_SEED_FN}" --region "$REGION" --since "$LOG_SINCE" --format short --no-follow 2>/dev/null | tail -n 200 || \
     echo "(no recent logs — invoke may have failed before Lambda started, or IAM lacks logs:FilterLogEvents)"
   echo "::endgroup::"
 fi
