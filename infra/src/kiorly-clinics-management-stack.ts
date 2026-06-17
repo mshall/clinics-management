@@ -315,7 +315,8 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
         timeout: 10,
         healthyThreshold: 1,
         // migrate + Nest cold start on deploy; seed runs in background after /health/live is up.
-        unhealthyThreshold: 30,
+        // App Runner allows UnhealthyThreshold <= 20 (200s at 10s interval).
+        unhealthyThreshold: 20,
       },
       networkConfiguration: {
         ingressConfiguration: { isPubliclyAccessible: true },
