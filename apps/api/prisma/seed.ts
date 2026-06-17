@@ -74,7 +74,10 @@ async function ensureUser(passwordHash: string, data: UserSeed) {
     where: { email: data.email, tenantId: data.tenantId },
   });
   if (existing) {
-    if (process.env.PRISMA_SEED_ENSURE_DEMO_PASSWORDS === "true") {
+    const ensureDemoPasswords =
+      process.env.PRISMA_SEED_ENSURE_DEMO_PASSWORDS === "true" ||
+      process.env.NODE_ENV !== "production";
+    if (ensureDemoPasswords) {
       let matchesDemo = false;
       try {
         matchesDemo = bcrypt.compareSync("demo", existing.passwordHash);
