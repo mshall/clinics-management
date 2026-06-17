@@ -1,12 +1,13 @@
 /**
- * App Runner boot: load DB secret, migrate, start Nest on NEST_INTERNAL_PORT.
- * Liveness on PORT is handled by health-sidecar.mjs (started by docker-entrypoint.sh).
- * When Nest is up, replace the sidecar with a proxy on PORT → Nest.
+ * App Runner boot: bind :3000 immediately, then secret → migrate → Nest on NEST_INTERNAL_PORT.
+ * Demo seed runs via post-deploy DbSeedFn Lambda (PRISMA_SEED_ON_BOOT=false).
  */
 import { spawn } from "node:child_process";
 import { createServer, request as httpRequest } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+console.error("[boot] entrypoint loaded");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -27,9 +28,55 @@ function normalizeHealthPath(url) {
   return raw.replace(/\/+$/, "") || "/";
 }
 
-function isLiveProbe(req) {
+function isAppRunnerLiveProbe(req) {
   const method = req.method ?? "GET";
   return (method === "GET" || method === "HEAD") && normalizeHealthPath(req.url) === "/api/v1/health/live";
+}
+
+function respondBoot(res, req) {
+  const live = isAppRunnerLiveProbe(req);
+  res.statusCode = live ? 200 : 503;
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  if (req.method === "HEAD") {
+    res.end();
+    return;
+  }
+  res.end(JSON.stringify(live ? { status: "ok", phase: "starting" } : { status: "starting" }));
+}
+
+async function listenServer(server, port, label) {
+  await new Promise((resolve, reject) => {
+    server.listen(port, "0.0.0.0", () => {
+      console.error(`[boot] ${label} listening on`, port);
+      resolve();
+    });
+    server.on("error", reject);
+  });
+}
+
+function createUpstreamProxy(upstreamPort) {
+  return createServer((req, res) => {
+    if (isAppRunnerLiveProbe(req)) {
+      respondBoot(res, req);
+      return;
+    }
+    const upstreamReq = httpRequest(
+      {
+        hostname: "127.0.0.1",
+        port: upstreamPort,
+        path: req.url,
+        method: req.method,
+        headers: { ...req.headers, host: `127.0.0.1:${upstreamPort}` },
+      },
+      (upstreamRes) => {
+        res.writeHead(upstreamRes.statusCode ?? 502, upstreamRes.headers);
+        upstreamRes.pipe(res);
+      },
+    );
+    upstreamReq.on("error", () => respondBoot(res, req));
+    if (req.method === "GET" || req.method === "HEAD") upstreamReq.end();
+    else req.pipe(upstreamReq);
+  });
 }
 
 function runChild(command, args) {
@@ -57,7 +104,7 @@ async function runMigrate() {
       console.error("[boot] prisma migrate deploy completed OK");
       return;
     }
-    console.error("[boot] migrate failed with status", exit, "— retrying");
+    console.error("[boot] migrate failed with status", exit, "— retrying (proxy keeps /health/live)");
     await sleep(Math.min(30_000, 5000 * Math.min(attempt, 6)));
   }
 }
@@ -92,93 +139,12 @@ async function loadDbSecretFromArn(dbSecretArn) {
   }
 }
 
-function waitForNestLive(upstreamPort, maxMs) {
-  const deadline = Date.now() + maxMs;
-  return new Promise((resolve) => {
-    const tick = () => {
-      const req = httpRequest(
-        {
-          hostname: "127.0.0.1",
-          port: upstreamPort,
-          path: "/api/v1/health/live",
-          method: "GET",
-          timeout: 4000,
-        },
-        (res) => {
-          res.resume();
-          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) resolve(true);
-          else if (Date.now() < deadline) setTimeout(tick, 1500);
-          else resolve(false);
-        },
-      );
-      req.on("error", () => {
-        if (Date.now() < deadline) setTimeout(tick, 1500);
-        else resolve(false);
-      });
-      req.end();
-    };
-    tick();
-  });
-}
-
-function createProxy(upstreamPort) {
-  return createServer((req, res) => {
-    const upstreamReq = httpRequest(
-      {
-        hostname: "127.0.0.1",
-        port: upstreamPort,
-        path: req.url,
-        method: req.method,
-        headers: { ...req.headers, host: `127.0.0.1:${upstreamPort}` },
-      },
-      (upstreamRes) => {
-        res.writeHead(upstreamRes.statusCode ?? 502, upstreamRes.headers);
-        upstreamRes.pipe(res);
-      },
-    );
-    upstreamReq.on("error", () => {
-      if (isLiveProbe(req)) {
-        res.statusCode = 200;
-        res.setHeader("Content-Type", "application/json; charset=utf-8");
-        if (req.method === "HEAD") res.end();
-        else res.end(JSON.stringify({ status: "ok", phase: "starting" }));
-        return;
-      }
-      res.statusCode = 503;
-      res.setHeader("Content-Type", "application/json; charset=utf-8");
-      res.end(JSON.stringify({ status: "starting" }));
-    });
-    if (req.method === "GET" || req.method === "HEAD") upstreamReq.end();
-    else req.pipe(upstreamReq);
-  });
-}
-
-async function handoffToProxy(publicPort, upstreamPort) {
-  const sidecarPid = Number(process.env.HEALTH_SIDECAR_PID ?? "0");
-  if (sidecarPid > 0) {
-    try {
-      process.kill(sidecarPid, "SIGTERM");
-      console.error("[boot] stopped health sidecar pid", sidecarPid);
-    } catch {
-      /* already gone */
-    }
-    await sleep(300);
-  }
-
-  const proxy = createProxy(upstreamPort);
-  await new Promise((resolve, reject) => {
-    proxy.listen(publicPort, "0.0.0.0", () => {
-      console.error("[boot] API proxy listening on", publicPort, "→", upstreamPort);
-      resolve();
-    });
-    proxy.on("error", reject);
-  });
-}
-
-async function boot() {
-  console.error("[boot] docker-boot.mjs starting");
+async function main() {
   const publicPort = Number(process.env.PORT ?? "3000");
   const internalPort = Number(process.env.NEST_INTERNAL_PORT ?? "3001");
+
+  const proxy = createUpstreamProxy(internalPort);
+  await listenServer(proxy, publicPort, "boot proxy");
 
   const kmsEp = vpceHttpsFromHost(process.env.KMS_VPCE_HOST);
   const stsEp = vpceHttpsFromHost(process.env.STS_VPCE_HOST);
@@ -199,7 +165,10 @@ async function boot() {
     console.error("[boot] spawning Nest", mainJs, "PORT=", internalPort);
     const child = spawn(process.execPath, [mainJs], { stdio: "inherit", env: nestEnv });
     child.on("exit", (code, signal) => {
-      if (code === 0 && !signal) return;
+      if (code === 0 && !signal) {
+        console.error("[boot] Nest exited cleanly — boot proxy keeps /health/live");
+        return;
+      }
       nestRestarts++;
       console.error("[boot] Nest exited code=", code, "signal=", signal, "restart=", nestRestarts);
       if (nestRestarts <= 5) setTimeout(spawnNest, 2000);
@@ -207,16 +176,8 @@ async function boot() {
   }
 
   spawnNest();
-
-  const nestUp = await waitForNestLive(internalPort, 240_000);
-  if (!nestUp) {
-    console.error("[boot] Nest did not become live in time — health sidecar stays on :3000");
-    return;
-  }
-
-  await handoffToProxy(publicPort, internalPort);
 }
 
-boot().catch((err) => {
-  console.error("[boot] docker-boot error (health sidecar remains on :3000):", err);
+main().catch((err) => {
+  console.error("[boot] fatal (boot proxy stays up if already listening):", err);
 });
