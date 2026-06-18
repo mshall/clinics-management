@@ -7,7 +7,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-console.log("[boot] entrypoint pid=", process.pid);
+
+// Flush immediately — App Runner may tear down failed revisions before stdout buffers drain.
+process.stderr.write(`[boot] entrypoint pid=${process.pid}\n`);
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -32,6 +34,7 @@ function isLiveProbe(req) {
   if (method !== "GET" && method !== "HEAD") return false;
   const probePath = normalizeHealthPath(req.url);
   if (probePath === "/api/v1/health/live" || probePath === "/health/live") return true;
+  // App Runner deploy probes vary during image/env rollouts even when HealthCheck Path is set.
   if (probePath === "/" || probePath === "/health") return true;
   return false;
 }
@@ -43,7 +46,7 @@ function respondLive(res, req) {
     res.end();
     return;
   }
-  res.end(JSON.stringify({ status: "ok", phase: "starting" }));
+  res.end(JSON.stringify({ status: "ok" }));
 }
 
 function createProxy(upstreamPort) {
@@ -85,7 +88,7 @@ async function listenForever(server, port) {
     try {
       await new Promise((resolve, reject) => {
         server.listen(port, "0.0.0.0", () => {
-          console.log("[boot] listening on", port);
+          process.stderr.write(`[boot] listening on ${port}\n`);
           resolve();
         });
         server.once("error", reject);
@@ -120,10 +123,10 @@ async function runMigrate() {
   let attempt = 0;
   while (true) {
     attempt++;
-    console.log(`[boot] prisma migrate deploy (attempt ${attempt}) …`);
+    console.error(`[boot] prisma migrate deploy (attempt ${attempt}) …`);
     const exit = await runChild("npx", ["prisma", "migrate", "deploy"]);
     if (exit === 0) {
-      console.log("[boot] prisma migrate deploy completed OK");
+      console.error("[boot] prisma migrate deploy completed OK");
       return;
     }
     console.error("[boot] migrate failed with status", exit, "— retrying");
@@ -156,7 +159,7 @@ async function loadDbSecretFromArn(dbSecretArn) {
       const dbname = j.dbname ?? j.database ?? "postgres";
       if (!host) throw new Error("DB secret JSON missing host");
       process.env.DATABASE_URL = `postgresql://${u}:${p}@${host}:${dbPort}/${dbname}?schema=public&sslmode=no-verify`;
-      console.log("[boot] DATABASE_URL built (host/port/db):", host, String(dbPort), dbname);
+      console.error("[boot] DATABASE_URL built (host/port/db):", host, String(dbPort), dbname);
       return;
     } catch (e) {
       console.error(`[boot] DB secret fetch attempt ${attempt} failed:`, e?.message ?? e);
@@ -167,7 +170,7 @@ async function loadDbSecretFromArn(dbSecretArn) {
   }
 }
 
-async function bootWorker(publicPort, internalPort) {
+async function bootWorker(internalPort) {
   const kmsEp = vpceHttpsFromHost(process.env.KMS_VPCE_HOST);
   const stsEp = vpceHttpsFromHost(process.env.STS_VPCE_HOST);
   const smEp = vpceHttpsFromHost(process.env.SECRETS_MANAGER_VPCE_HOST);
@@ -184,7 +187,7 @@ async function bootWorker(publicPort, internalPort) {
   let nestRestarts = 0;
 
   function spawnNest() {
-    console.log("[boot] spawning Nest", mainJs, "PORT=", internalPort);
+    console.error("[boot] spawning Nest", mainJs, "PORT=", internalPort);
     const child = spawn(process.execPath, [mainJs], { stdio: "inherit", env: nestEnv });
     child.on("exit", (code, signal) => {
       if (code === 0 && !signal) return;
@@ -202,7 +205,7 @@ async function main() {
   const internalPort = Number(process.env.NEST_INTERNAL_PORT ?? "3001");
   const proxy = createProxy(internalPort);
   await listenForever(proxy, publicPort);
-  bootWorker(publicPort, internalPort).catch((err) => {
+  bootWorker(internalPort).catch((err) => {
     console.error("[boot] worker error (proxy stays on :3000):", err?.message ?? err);
   });
 }
