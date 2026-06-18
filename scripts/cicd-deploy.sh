@@ -33,6 +33,7 @@ if [[ ! -d node_modules/aws-cdk-lib ]]; then
 fi
 # EC2 SecurityGroup GroupDescription must be ASCII-only; fail fast before CloudFormation.
 npm run check:ascii-descriptions
+npm run check:lambda-dockerfiles
 npm run build
 npx cdk synth --quiet
 npm run check:ascii-descriptions

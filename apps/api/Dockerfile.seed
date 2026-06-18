@@ -16,6 +16,7 @@ RUN npx prisma generate
 # Lambda container images: AWS base image + handler CMD (RIC). Do not override LAMBDA_TASK_ROOT (/var/task).
 FROM public.ecr.aws/lambda/nodejs:22
 RUN dnf install -y openssl ca-certificates && dnf clean all
+RUN npm install -g prisma@6.19.3 tsx@4.19.2
 COPY --from=build /repo/node_modules ${LAMBDA_TASK_ROOT}/node_modules
 COPY --from=build /repo/apps/api/prisma ${LAMBDA_TASK_ROOT}/prisma
 COPY --from=build /repo/apps/api/prisma.config.ts ${LAMBDA_TASK_ROOT}/prisma.config.ts

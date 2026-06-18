@@ -6,10 +6,11 @@
     "watch": "tsc -w",
     "cdk": "cdk",
     "check:ascii-descriptions": "node scripts/check-ascii-descriptions.mjs",
+    "check:lambda-dockerfiles": "node scripts/check-lambda-dockerfiles.mjs",
     "check:ascii-cfn": "node scripts/check-ascii-cfn-template.mjs",
     "check:boot-proxy-order": "node ../scripts/check-boot-proxy-order.mjs",
-    "synth": "npm run check:ascii-descriptions && npm run check:boot-proxy-order && npm run build && cdk synth && npm run check:ascii-cfn",
-    "deploy": "npm run check:ascii-descriptions && npm run check:boot-proxy-order && npm run build && cdk synth && npm run check:ascii-cfn && cdk deploy --app cdk.out --require-approval never"
+    "synth": "npm run check:ascii-descriptions && npm run check:lambda-dockerfiles && npm run check:boot-proxy-order && npm run build && cdk synth && npm run check:ascii-cfn",
+    "deploy": "npm run check:ascii-descriptions && npm run check:lambda-dockerfiles && npm run check:boot-proxy-order && npm run build && cdk synth && npm run check:ascii-cfn && cdk deploy --app cdk.out --require-approval never"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

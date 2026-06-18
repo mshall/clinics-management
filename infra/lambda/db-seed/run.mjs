@@ -144,7 +144,7 @@ export async function handler() {
   return { ok: true };
 }
 
-// Local/CI: `node run-seed.mjs`. Lambda: Dockerfile.seed CMD ["run-seed.handler"] on the AWS base image.
+// Local/CI: `node infra/lambda/db-seed/run.mjs`. Lambda: Dockerfile.seed copies this to /var/task/index.mjs with CMD ["index.handler"].
 if (!process.env.AWS_LAMBDA_RUNTIME_API) {
   handler()
     .then((out) => {
