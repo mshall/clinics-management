@@ -71,7 +71,7 @@ admin_body="$(echo "$admin_raw" | sed '$d')"
 admin_total="$(echo "$admin_body" | python3 -c "import sys,json; print(json.load(sys.stdin).get('total',0))" 2>/dev/null || echo 0)"
 if [[ "$admin_http" == "404" ]]; then
   echo "WARN  GET /api/v1/admin/users returned 404 — checking /users fallback …"
-  users_raw="$(curl -sS -w "\n%{http_code}" -X GET "$APP_URL/api/v1/users?page=1&pageSize=200" \
+  users_raw="$(curl -sS -w "\n%{http_code}" -X GET "$APP_URL/api/v1/users?page=1&pageSize=5" \
     -H "Authorization: Bearer $access_token" \
     -H "Accept: application/json")"
   users_http="$(echo "$users_raw" | tail -1)"
