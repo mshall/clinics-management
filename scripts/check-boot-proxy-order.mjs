@@ -34,8 +34,23 @@ if (/^import\s+.*@aws-sdk\/client-secrets-manager/m.test(entry)) {
   failed = true;
 }
 
-if (!/probePath === "\/"/.test(entry)) {
-  console.error(`${entryPath}: must treat "/" as App Runner deploy probe`);
+if (!/method !== "GET" && method !== "HEAD"/.test(entry)) {
+  console.error(`${entryPath}: must accept HEAD for App Runner liveness`);
+  failed = true;
+}
+
+if (!/\/api\/v1\/health\/live\/"/.test(entry)) {
+  console.error(`${entryPath}: must normalize /api/v1/health/live deploy probe`);
+  failed = true;
+}
+
+if (!/\/health\/live\/"/.test(entry) || !/probePath === "\/health\/live"/.test(entry)) {
+  console.error(`${entryPath}: must treat /health/live as App Runner deploy probe (503 if proxied)`);
+  failed = true;
+}
+
+if (!/probePath === "\/"/.test(entry) || !/probePath === "\/health"/.test(entry)) {
+  console.error(`${entryPath}: must treat "/" and "/health" as App Runner deploy probes`);
   failed = true;
 }
 
