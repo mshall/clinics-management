@@ -238,7 +238,6 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
             runtimeEnvironmentVariables: [
               { name: "NODE_ENV", value: "production" },
               { name: "PORT", value: "3000" },
-              { name: "HOSTNAME", value: "0.0.0.0" },
               { name: "NEST_INTERNAL_PORT", value: "3001" },
               { name: "SWAGGER_ENABLED", value: "false" },
               { name: "TZ", value: "Europe/Berlin" },
@@ -266,9 +265,11 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
         instanceRoleArn: instanceRole.roleArn,
       },
       healthCheckConfiguration: {
-        protocol: "TCP",
+        // Match the stable revision (HTTP + /api/v1/health/live). Deploy probes also hit /health/live and "/".
+        protocol: "HTTP",
+        path: "/api/v1/health/live",
         interval: 10,
-        timeout: 10,
+        timeout: 5,
         healthyThreshold: 1,
         unhealthyThreshold: 20,
       },
