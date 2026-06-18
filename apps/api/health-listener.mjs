@@ -23,7 +23,12 @@ function normalizeHealthPath(url) {
 
 function isAppRunnerLiveProbe(req) {
   const method = req.method ?? "GET";
-  return (method === "GET" || method === "HEAD") && normalizeHealthPath(req.url) === "/api/v1/health/live";
+  if (method !== "GET" && method !== "HEAD") return false;
+  const probePath = normalizeHealthPath(req.url);
+  if (probePath === "/api/v1/health/live") return true;
+  // App Runner may probe "/" on image/env updates even when HealthCheck Path is configured.
+  if (probePath === "/" || probePath === "/health") return true;
+  return false;
 }
 
 function respondLive(res, req) {
@@ -56,6 +61,10 @@ const server = createServer((req, res) => {
   );
   upstreamReq.on("error", () => {
     if (res.headersSent) return;
+    if (isAppRunnerLiveProbe(req)) {
+      respondLive(res, req);
+      return;
+    }
     res.statusCode = 503;
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     res.end(JSON.stringify({ status: "starting" }));

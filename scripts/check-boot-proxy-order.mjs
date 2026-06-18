@@ -28,13 +28,18 @@ if (listenIdx < 0) {
   failed = true;
 }
 
-if (!/method === "GET" \|\| method === "HEAD"/.test(listener)) {
+if (!/method !== "GET" && method !== "HEAD"/.test(listener)) {
   console.error(`${listenerPath}: must accept HEAD for App Runner liveness`);
   failed = true;
 }
 
 if (!/\/api\/v1\/health\/live\/"/.test(listener)) {
   console.error(`${listenerPath}: must accept trailing slash on /api/v1/health/live/`);
+  failed = true;
+}
+
+if (!/probePath === "\/"/.test(listener) || !/probePath === "\/health"/.test(listener)) {
+  console.error(`${listenerPath}: must treat "/" and "/health" as App Runner deploy probes`);
   failed = true;
 }
 
