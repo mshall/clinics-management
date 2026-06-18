@@ -18,15 +18,16 @@ RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
-COPY --from=build /repo/node_modules ./node_modules
 COPY apps/api/prisma ./apps/api/prisma
 COPY apps/api/prisma.config.ts ./apps/api/prisma.config.ts
-COPY apps/api/docker-entrypoint.cjs ./apps/api/docker-entrypoint.cjs
-RUN npm install -g prisma@6.19.3
+COPY apps/api/docker-entrypoint.mjs ./apps/api/docker-entrypoint.mjs
+COPY apps/api/docker-boot.mjs ./apps/api/docker-boot.mjs
+RUN npm ci --omit=dev && npm install -g prisma@6.19.3
 COPY --from=build /repo/apps/api/dist ./apps/api/dist
+COPY --from=build /repo/node_modules/.prisma ./node_modules/.prisma
 
 ENV NODE_ENV=production
 ENV TZ=Europe/Berlin
 WORKDIR /repo/apps/api
 EXPOSE 3000
-ENTRYPOINT ["node", "docker-entrypoint.cjs"]
+ENTRYPOINT ["node", "docker-entrypoint.mjs"]

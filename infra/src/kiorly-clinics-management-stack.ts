@@ -265,9 +265,11 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
         instanceRoleArn: instanceRole.roleArn,
       },
       healthCheckConfiguration: {
-        protocol: "TCP",
+        // Match the stable revision (HTTP + /api/v1/health/live). Deploy probes also hit /health/live and "/".
+        protocol: "HTTP",
+        path: "/api/v1/health/live",
         interval: 10,
-        timeout: 10,
+        timeout: 5,
         healthyThreshold: 1,
         unhealthyThreshold: 20,
       },
