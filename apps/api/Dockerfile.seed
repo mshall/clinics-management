@@ -6,7 +6,6 @@ RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
-# Include devDependencies (tsx, prisma CLI) — this image is not the runtime API bundle.
 RUN npm ci && npm install -g prisma@6.19.3
 COPY apps/api/prisma ./apps/api/prisma
 COPY apps/api/prisma.config.ts ./apps/api/prisma.config.ts
@@ -14,17 +13,12 @@ WORKDIR /repo/apps/api
 ENV DATABASE_URL="postgresql://build:build@127.0.0.1:5432/build?schema=public"
 RUN npx prisma generate
 
-# Lambda container images must use the AWS base image + handler CMD (RIC). Plain `node run-seed.mjs`
-# calls process.exit() which Lambda reports as Runtime.ExitError even when seed succeeded.
+# Lambda container images: AWS base image + handler CMD (RIC). Do not override LAMBDA_TASK_ROOT (/var/task).
 FROM public.ecr.aws/lambda/nodejs:22
 RUN dnf install -y openssl ca-certificates && dnf clean all
-ENV LAMBDA_TASK_ROOT=/repo/apps/api
-WORKDIR ${LAMBDA_TASK_ROOT}
-COPY --from=build /repo/node_modules /repo/node_modules
-COPY --from=build /repo/package.json /repo/package-lock.json /repo/
-COPY --from=build /repo/apps/api/package.json /repo/apps/api/
-COPY --from=build /repo/apps/api/prisma ./prisma
-COPY --from=build /repo/apps/api/prisma.config.ts ./prisma.config.ts
+COPY --from=build /repo/node_modules ${LAMBDA_TASK_ROOT}/node_modules
+COPY --from=build /repo/apps/api/prisma ${LAMBDA_TASK_ROOT}/prisma
+COPY --from=build /repo/apps/api/prisma.config.ts ${LAMBDA_TASK_ROOT}/prisma.config.ts
 COPY infra/lambda/db-seed/run.mjs ${LAMBDA_TASK_ROOT}/index.mjs
-ENV PATH="/repo/node_modules/.bin:/usr/local/bin:${PATH}"
+ENV PATH="${LAMBDA_TASK_ROOT}/node_modules/.bin:/usr/local/bin:${PATH}"
 CMD ["index.handler"]

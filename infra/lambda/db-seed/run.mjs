@@ -97,7 +97,7 @@ function runMigrateDeploy() {
 
 function runSeedScript() {
   const seedScript = path.join(__dirname, "prisma", "seed.ts");
-  const binDir = path.join(__dirname, "..", "..", "node_modules", ".bin");
+  const binDir = path.join(__dirname, "node_modules", ".bin");
   const env = {
     ...process.env,
     PATH: `${binDir}:/usr/local/bin:${process.env.PATH ?? ""}`,
