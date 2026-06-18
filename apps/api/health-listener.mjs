@@ -18,6 +18,7 @@ console.log("[boot] health-listener starting pid=", process.pid);
 function normalizeHealthPath(url) {
   const raw = url?.split("?")[0] ?? "";
   if (raw === "/api/v1/health/live" || raw === "/api/v1/health/live/") return "/api/v1/health/live";
+  if (raw === "/health/live" || raw === "/health/live/") return "/health/live";
   return raw.replace(/\/+$/, "") || "/";
 }
 
@@ -25,7 +26,7 @@ function isAppRunnerLiveProbe(req) {
   const method = req.method ?? "GET";
   if (method !== "GET" && method !== "HEAD") return false;
   const probePath = normalizeHealthPath(req.url);
-  if (probePath === "/api/v1/health/live") return true;
+  if (probePath === "/api/v1/health/live" || probePath === "/health/live") return true;
   // App Runner may probe "/" on image/env updates even when HealthCheck Path is configured.
   if (probePath === "/" || probePath === "/health") return true;
   return false;
