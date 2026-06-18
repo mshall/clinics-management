@@ -40,12 +40,16 @@ async function buildDatabaseUrl() {
 
 function runSql(label, sql) {
   console.log(`[db-seed] ${label} …`);
-  const result = spawnSync("npx", ["prisma", "db", "execute", "--stdin"], {
-    encoding: "utf8",
-    input: sql,
-    env: process.env,
-    cwd: __dirname,
-  });
+  const result = spawnSync(
+    "npx",
+    ["prisma", "db", "execute", "--stdin", "--schema", "prisma/schema.prisma"],
+    {
+      encoding: "utf8",
+      input: sql,
+      env: process.env,
+      cwd: __dirname,
+    },
+  );
   if (result.stdout) console.log(result.stdout);
   if (result.stderr) console.error(result.stderr);
   if (result.error) {

@@ -12,25 +12,21 @@ COPY apps/api ./apps/api
 ENV DATABASE_URL="postgresql://build:build@127.0.0.1:5432/build?schema=public"
 RUN npm run build -w api
 
-FROM deps AS prod-deps
-RUN npm ci --omit=dev
-
 FROM node:22-bookworm-slim AS runner
 WORKDIR /repo
 RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
-COPY --from=prod-deps /repo/node_modules ./node_modules
-COPY --from=build /repo/node_modules/.prisma ./node_modules/.prisma
 COPY apps/api/prisma ./apps/api/prisma
 COPY apps/api/prisma.config.ts ./apps/api/prisma.config.ts
-COPY apps/api/docker-entrypoint.cjs ./apps/api/docker-entrypoint.cjs
+COPY apps/api/docker-entrypoint.mjs ./apps/api/docker-entrypoint.mjs
+RUN npm ci --omit=dev && npm install -g prisma@6.19.3 tsx
 COPY --from=build /repo/apps/api/dist ./apps/api/dist
-RUN npm install -g prisma@6.19.3
+COPY --from=build /repo/node_modules/.prisma ./node_modules/.prisma
 
 ENV NODE_ENV=production
 ENV TZ=Europe/Berlin
 WORKDIR /repo/apps/api
 EXPOSE 3000
-ENTRYPOINT ["node", "docker-entrypoint.cjs"]
+ENTRYPOINT ["node", "docker-entrypoint.mjs"]
