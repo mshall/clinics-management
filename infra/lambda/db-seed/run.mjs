@@ -144,7 +144,7 @@ export async function handler() {
   return { ok: true };
 }
 
-// `node run-seed.mjs` for local/CI; Lambda runtime invokes the exported handler instead.
+// Local/CI: `node run-seed.mjs`. Lambda: Dockerfile.seed CMD ["run-seed.handler"] on the AWS base image.
 if (!process.env.AWS_LAMBDA_RUNTIME_API) {
   handler()
     .then((out) => {
