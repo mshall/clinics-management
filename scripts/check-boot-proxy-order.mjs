@@ -13,8 +13,8 @@ if (!/createBootHealthServer|createServer\(\(req, res\)/.test(entry)) {
   failed = true;
 }
 
-if (!/listenHealthServer|server\.listen\(port, "0\.0\.0\.0"/.test(entry)) {
-  console.error(`${entryPath}: must bind health listener on 0.0.0.0:PORT before migrate`);
+if (!/await listenHealthServer\(bootHealthServer\)/.test(entry)) {
+  console.error(`${entryPath}: must bind health listener before secret fetch / migrate`);
   failed = true;
 }
 

@@ -1,6 +1,5 @@
 /**
- * App Runner boot (matches stable AWS revision): health on PORT during secret/migrate,
- * then Nest on PORT 3000. Migrations stay on boot so deploy config matches production.
+ * App Runner boot: bind PORT immediately (before secret/migrate), then Nest on PORT.
  */
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { spawn, spawnSync } from "node:child_process";
@@ -9,6 +8,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const port = Number(process.env.PORT ?? "3000");
 
 process.stderr.write(`[boot] entrypoint pid=${process.pid}\n`);
 
@@ -49,7 +49,7 @@ function respondLive(res, req) {
   res.end(JSON.stringify({ status: "ok" }));
 }
 
-function createBootHealthServer(port) {
+function createBootHealthServer() {
   return createServer((req, res) => {
     if (isLiveProbe(req)) {
       respondLive(res, req);
@@ -61,7 +61,7 @@ function createBootHealthServer(port) {
   });
 }
 
-async function listenHealthServer(server, port) {
+async function listenHealthServer(server) {
   await new Promise((resolve, reject) => {
     server.listen(port, "0.0.0.0", () => {
       process.stderr.write(`[boot] health listener on ${port}\n`);
@@ -76,6 +76,9 @@ async function closeHealthServer(server) {
     server.close(() => resolve());
   });
 }
+
+const bootHealthServer = createBootHealthServer();
+await listenHealthServer(bootHealthServer);
 
 const dbSecretArn = process.env.DB_SECRET_ARN;
 if (dbSecretArn) {
@@ -115,13 +118,7 @@ if (dbSecretArn) {
   }
 }
 
-const port = Number(process.env.PORT ?? "3000");
-let bootHealthServer;
-
 if (process.env.PRISMA_MIGRATE_ON_BOOT === "true") {
-  bootHealthServer = createBootHealthServer(port);
-  await listenHealthServer(bootHealthServer, port);
-
   let migrateExit = 0;
   try {
     console.error("[boot] PRISMA_MIGRATE_ON_BOOT=true — running prisma migrate deploy …");
@@ -137,9 +134,7 @@ if (process.env.PRISMA_MIGRATE_ON_BOOT === "true") {
       console.error("[boot] prisma migrate deploy completed OK");
     }
   } finally {
-    await closeHealthServer(bootHealthServer);
-    bootHealthServer = undefined;
-    console.error("[boot] migrate-time health listener closed");
+    /* health listener stays up through migrate */
   }
   if (migrateExit !== 0) {
     process.exit(migrateExit);
@@ -167,6 +162,9 @@ const smEpForChild = vpceHttpsFromHost(process.env.SECRETS_MANAGER_VPCE_HOST);
 if (smEpForChild) process.env.AWS_ENDPOINT_URL_SECRETS_MANAGER = smEpForChild;
 if (kmsEp) process.env.AWS_ENDPOINT_URL_KMS = kmsEp;
 if (stsEp) process.env.AWS_ENDPOINT_URL_STS = stsEp;
+
+await closeHealthServer(bootHealthServer);
+console.error("[boot] boot health listener closed — starting Nest");
 
 const mainJs = path.join(__dirname, "dist", "main.js");
 console.error("[boot] spawning Nest", mainJs, "PORT=", port);

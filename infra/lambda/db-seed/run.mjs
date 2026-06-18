@@ -144,11 +144,15 @@ export async function handler() {
   return { ok: true };
 }
 
-handler()
-  .then((out) => {
-    if (!out.ok) process.exit(out.exit ?? 1);
-  })
-  .catch((err) => {
-    console.error("[db-seed] unhandled:", err);
-    process.exit(1);
-  });
+// `node run-seed.mjs` for local/CI; Lambda runtime invokes the exported handler instead.
+if (!process.env.AWS_LAMBDA_RUNTIME_API) {
+  handler()
+    .then((out) => {
+      if (!out.ok) process.exit(out.exit ?? 1);
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error("[db-seed] unhandled:", err);
+      process.exit(1);
+    });
+}

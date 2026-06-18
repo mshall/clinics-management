@@ -222,8 +222,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     const appRunnerService = new apprunner.CfnService(this, "ApiService", {
       serviceName: `kiorly-api-${cdk.Names.uniqueId(this).slice(-8).toLowerCase()}`,
       observabilityConfiguration: {
-        observabilityEnabled: true,
-        observabilityConfigurationArn: apiObservability.attrObservabilityConfigurationArn,
+        observabilityEnabled: false,
       },
       sourceConfiguration: {
         autoDeploymentsEnabled: false,
