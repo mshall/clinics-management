@@ -2,7 +2,11 @@
 
 Reference for QA, demos, and onboarding. All seeded accounts use password **`demo`** unless noted.
 
-**Load data:** from the repo root run `npm run db:setup -w api` (migrations + seed).
+**Load data (local):** from the repo root run `npm run db:setup -w api` (migrations + seed).
+
+**Load data (AWS):** each successful [Deploy to AWS](https://github.com/mshall/clinics-management/actions/workflows/deploy-aws.yml) run invokes the **DbSeedFn** Lambda (`scripts/cicd-post-deploy-seed.sh`) after CDK deploy. It runs `prisma migrate deploy`, repairs enum values if needed, then the **idempotent** seed — safe on non-empty RDS.
+
+**Live demo (AWS):** [https://d92iz83i79c05.cloudfront.net](https://d92iz83i79c05.cloudfront.net) — sign in with any account below (password **`demo`**). After seed, **Dr Ahmed Shall Group** exposes **30 organization users** in **Admin → Organization users** (`GET /api/v1/admin/users`); smoke tests expect `total ≥ 30`.
 
 **Idempotent seed:** if **any** database content already exists (tenants, users, clinics, or patients), the seed **does not delete or replace** existing rows and **never resets passwords** on accounts that already exist. It only ensures missing demo records (platform super admin, Kiorly login accounts, Dr Ahmed Shall clinics/staff/patients) are created. A full demo dataset is inserted **only** on a completely empty database.
 
@@ -15,6 +19,8 @@ Reference for QA, demos, and onboarding. All seeded accounts use password **`dem
 ## Dr Ahmed Shall Group (seeded)
 
 Professor / consultant in chronic pain, joints, spine, and neuritis (non-surgical) — Cairo University Qasr Al-Aini.
+
+**User count (organization):** **30** accounts — 6 org-wide roles below + 6 staff roles × 4 clinics (`hel`, `cmc`, `moh`, `dok`). All belong to tenant **Dr Ahmed Shall Group** and appear in **Admin → Organization users** when signed in as `admin@drahmedshall.com`.
 
 ### Organization-wide accounts
 

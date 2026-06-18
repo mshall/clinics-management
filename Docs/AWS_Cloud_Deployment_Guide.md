@@ -61,9 +61,9 @@ Users
    npx prisma migrate deploy
    ```
 
-5. **Seeding:** App Runner sets `PRISMA_SEED_ON_BOOT=true`. On **first boot** (empty RDS) the seed inserts the full demo dataset once. On **every later deploy** it runs in **incremental** mode only: existing tenants, users, patients, and clinical data are **never deleted or overwritten**; missing demo accounts (super admin, Kiorly logins, Dr Ahmed Shall group) are added if absent. For local dev use `npm run db:setup -w api`.
+5. **Seeding:** After each CDK deploy, CI invokes the **DbSeedFn** VPC Lambda (`scripts/cicd-post-deploy-seed.sh`): `prisma migrate deploy`, optional enum repair, then **idempotent** demo seed. App Runner does **not** run seed on boot (`PRISMA_SEED_ON_BOOT=false`). Existing rows are never deleted; missing demo accounts (super admin, Kiorly logins, Dr Ahmed Shall group — **30 org users**) are added if absent. For local dev use `npm run db:setup -w api`. Account reference: [`Docs/Test_Data_Users.md`](./Test_Data_Users.md).
 
-6. **Pre-deploy backups:** CI invokes a VPC Lambda (`DbBackupFn`) before each CDK deploy. It `pg_dump`s PostgreSQL, emails a `.sql.gz` attachment to `kiorlyclinics@gmail.com` (or `-c backupEmailTo=...`), and stores a copy in S3. **Verify the SES email identity** (inbox link from AWS) before the first backup. RDS automated backups are retained **7 days**.
+6. **RDS automated backups** are retained **7 days** (pre-deploy email/pg_dump Lambda is disabled in CI).
 
 ---
 

@@ -200,7 +200,7 @@ npm run dev
 - **API:** [http://localhost:3000](http://localhost:3000)
 - **Swagger:** [http://localhost:3000/docs](http://localhost:3000/docs)
 
-After `db:setup`, use the **demo seed users** below (password **`demo`** for every account). Additional mixed-role staff accounts `staff3@kiorly.com` … `staff15@kiorly.com` are also created; see `apps/api/prisma/seed.ts` for exact role assignment.
+After `db:setup`, use the **demo seed users** below (password **`demo`** for every account). Full list, AWS demo URL, and role matrix: **[`Docs/Test_Data_Users.md`](Docs/Test_Data_Users.md)**. Additional mixed-role staff accounts `staff3@kiorly.com` … `staff15@kiorly.com` are also created; see `apps/api/prisma/seed.ts` for exact role assignment.
 
 | Email | Display name (seed) | Role |
 |--------|----------------------|------|
@@ -328,9 +328,10 @@ Use **Amazon Lightsail** (fixed monthly) **or** one **EC2** instance (e.g. **t4g
 
 ## Documentation
 
+- **Test users & passwords (QA / demos):** [`Docs/Test_Data_Users.md`](Docs/Test_Data_Users.md)
 - Product / requirements context: `Docs/Clinic_Management_System_PRD.md`
 - Technical RFC (if present): `Docs/Clinic_Management_System_RFC.md`
-- AWS deployment (RDS, ECS/Fargate, S3/CloudFront, checklist): `Docs/AWS_Cloud_Deployment_Guide.md`
+- AWS deployment (RDS, App Runner, S3/CloudFront, checklist): `Docs/AWS_Cloud_Deployment_Guide.md`
 
 ---
 
