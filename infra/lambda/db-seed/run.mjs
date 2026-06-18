@@ -38,6 +38,39 @@ async function buildDatabaseUrl() {
   return `postgresql://${u}:${p}@${host}:${dbPort}/${dbname}?schema=public&sslmode=no-verify`;
 }
 
+function runSql(label, sql) {
+  console.log(`[db-seed] ${label} …`);
+  const result = spawnSync("npx", ["prisma", "db", "execute", "--stdin"], {
+    encoding: "utf8",
+    input: sql,
+    env: process.env,
+    cwd: __dirname,
+  });
+  if (result.stdout) console.log(result.stdout);
+  if (result.stderr) console.error(result.stderr);
+  if (result.error) {
+    console.error(`${label} spawn error:`, result.error);
+    return { ok: false, exit: 1, detail: result.error.message };
+  }
+  const exit = result.status ?? 1;
+  if (exit !== 0) {
+    return { ok: false, exit, detail: result.stderr?.slice(-2000) ?? `${label} failed` };
+  }
+  return { ok: true };
+}
+
+function repairEnumValues() {
+  return runSql(
+    "repair UserRole enum values on RDS",
+    `ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'CLINIC_ADMIN';
+ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'CLINIC_ASSISTANT';
+ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'PLATFORM_SUPER_ADMIN';
+ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'CALL_CENTER';
+ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'GROUP_SUPERVISOR';
+`,
+  );
+}
+
 function runMigrateDeploy() {
   console.log("[db-seed] running prisma migrate deploy …");
   const result = spawnSync("npx", ["prisma", "migrate", "deploy"], {
@@ -91,6 +124,11 @@ export async function handler() {
   if (!migrate.ok) {
     console.error("[db-seed] migrate failed:", migrate.detail ?? migrate.exit);
     return migrate;
+  }
+  const repair = repairEnumValues();
+  if (!repair.ok) {
+    console.error("[db-seed] enum repair failed:", repair.detail ?? repair.exit);
+    return repair;
   }
   console.log("[db-seed] running prisma seed …");
   const out = runSeedScript();

@@ -160,7 +160,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
         platform: ecr_assets.Platform.LINUX_AMD64,
       }),
       timeout: cdk.Duration.minutes(15),
-      memorySize: 2048,
+      memorySize: 3008,
       vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
       securityGroups: [dbSeedLambdaSg],
@@ -238,6 +238,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
             runtimeEnvironmentVariables: [
               { name: "NODE_ENV", value: "production" },
               { name: "PORT", value: "3000" },
+              { name: "HOSTNAME", value: "0.0.0.0" },
               { name: "NEST_INTERNAL_PORT", value: "3001" },
               { name: "SWAGGER_ENABLED", value: "false" },
               { name: "TZ", value: "Europe/Berlin" },
