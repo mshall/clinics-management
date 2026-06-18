@@ -7,12 +7,14 @@ WORKDIR /repo
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
-RUN npm ci && npm install -g prisma@6.19.3
+RUN npm ci && npm install -g prisma@6.19.3 tsx@4.19.2
 COPY apps/api/prisma ./apps/api/prisma
 COPY apps/api/prisma.config.ts ./apps/api/prisma.config.ts
 WORKDIR /repo/apps/api
 ENV DATABASE_URL="postgresql://build:build@127.0.0.1:5432/build?schema=public"
-RUN npx prisma generate
+RUN npx prisma generate \
+  && ENGINE="../../node_modules/@prisma/engines/schema-engine-rhel-openssl-3.0.x" \
+  && test -x "$ENGINE" || (echo "missing Lambda schema-engine: $ENGINE" && ls -la ../../node_modules/@prisma/engines/ && exit 1)
 
 FROM public.ecr.aws/lambda/nodejs:22
 RUN dnf install -y openssl ca-certificates && dnf clean all

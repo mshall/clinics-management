@@ -1,5 +1,8 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // DbSeedFn Lambda runs on Amazon Linux 2023 (rhel-openssl-3.0.x). Include explicitly so
+  // prisma generate on Debian (App Runner / CI) still ships the schema-engine that migrate needs.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
