@@ -15,12 +15,16 @@ const boot = readFileSync(bootPath, "utf8");
 let failed = false;
 
 const listenIdx = listener.indexOf("server.listen(publicPort");
+const awaitListenIdx = listener.indexOf("await listenOnPort()");
 const spawnBootIdx = listener.indexOf("spawn(process.execPath, [bootScript]");
 if (listenIdx < 0) {
   console.error(`${listenerPath}: must call server.listen on PORT`);
   failed = true;
-} else if (spawnBootIdx >= 0 && listenIdx > spawnBootIdx) {
-  console.error(`${listenerPath}: must listen on PORT before spawning docker-boot.mjs`);
+} else if (awaitListenIdx < 0) {
+  console.error(`${listenerPath}: must await listenOnPort() before spawning docker-boot.mjs`);
+  failed = true;
+} else if (spawnBootIdx >= 0 && spawnBootIdx < awaitListenIdx) {
+  console.error(`${listenerPath}: must await PORT bind before spawning docker-boot.mjs`);
   failed = true;
 }
 
