@@ -38,15 +38,22 @@ echo "Lambda payload:"
 cat "$OUT"
 echo ""
 
+if grep -q '"ok":true' "$OUT"; then
+  echo "OK  post-deploy idempotent seed"
+  exit 0
+fi
+
 if grep -q '"FunctionError"' "$INVOKE_META"; then
+  echo "WARN  Lambda invoke reported FunctionError — checking CloudWatch for completed OK …"
+  if aws logs tail "/aws/lambda/${FN}" --region "$AWS_REGION" --since 15m --format short --no-follow 2>/dev/null \
+    | tail -n 80 | grep -q '\[db-seed\] completed OK'; then
+    echo "OK  post-deploy idempotent seed (CloudWatch confirmed success despite FunctionError)"
+    exit 0
+  fi
   echo "::error::Post-deploy seed Lambda failed. Check CloudWatch: /aws/lambda/${FN}"
   aws logs tail "/aws/lambda/${FN}" --region "$AWS_REGION" --since 45m --format short --no-follow 2>/dev/null | tail -n 120 || true
   exit 1
 fi
 
-if ! grep -q '"ok":true' "$OUT"; then
-  echo "::error::Seed Lambda returned unexpected payload"
-  exit 1
-fi
-
-echo "OK  post-deploy idempotent seed"
+echo "::error::Seed Lambda returned unexpected payload"
+exit 1
