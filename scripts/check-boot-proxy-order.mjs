@@ -3,34 +3,46 @@ import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const entryPath = join(dirname(fileURLToPath(import.meta.url)), "..", "apps", "api", "docker-entrypoint.mjs");
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const entryPath = join(root, "apps", "api", "docker-entrypoint.mjs");
+const bootPath = join(root, "apps", "api", "docker-boot.mjs");
 const entry = readFileSync(entryPath, "utf8");
+const boot = readFileSync(bootPath, "utf8");
 
 let failed = false;
 
-const mainFn = entry.match(/async function main\(\)[\s\S]*?^}/m)?.[0] ?? "";
-const listenIdx = mainFn.indexOf("await listenForever(proxy, publicPort)");
-const workerIdx = mainFn.indexOf("bootWorker(");
+const listenIdx = entry.indexOf("server.listen(publicPort");
+const spawnBootIdx = entry.indexOf('spawn(process.execPath, [bootScript]');
 if (listenIdx < 0) {
-  console.error(`${entryPath}: main() must await listenForever on PORT first`);
+  console.error(`${entryPath}: must call server.listen on PORT synchronously`);
   failed = true;
-} else if (workerIdx >= 0 && workerIdx < listenIdx) {
-  console.error(`${entryPath}: must bind PORT before bootWorker`);
-  failed = true;
-}
-
-if (/process\.exit\s*\(\s*1\s*\)/.test(entry)) {
-  console.error(`${entryPath}: must not process.exit(1) during boot`);
+} else if (spawnBootIdx >= 0 && spawnBootIdx < listenIdx) {
+  console.error(`${entryPath}: must bind PORT before spawning docker-boot.mjs`);
   failed = true;
 }
 
-if (!/runChild\("npx", \["prisma", "migrate", "deploy"\]\)/.test(entry)) {
-  console.error(`${entryPath}: runMigrate must use npx prisma migrate deploy`);
+if (/async function main\s*\(/m.test(entry)) {
+  console.error(`${entryPath}: must not defer listen behind async main()`);
   failed = true;
 }
 
-if (/^import\s+.*@aws-sdk\/client-secrets-manager/m.test(entry)) {
-  console.error(`${entryPath}: use dynamic import for @aws-sdk/client-secrets-manager`);
+for (const [label, src] of [
+  ["entrypoint", entry],
+  ["docker-boot", boot],
+]) {
+  if (/process\.exit\s*\(\s*1\s*\)/.test(src)) {
+    console.error(`${label}: must not process.exit(1) during boot`);
+    failed = true;
+  }
+}
+
+if (!/runChild\("prisma", \["migrate", "deploy"\]\)/.test(boot)) {
+  console.error(`${bootPath}: runMigrate must use global prisma migrate deploy`);
+  failed = true;
+}
+
+if (/^import\s+.*@aws-sdk\/client-secrets-manager/m.test(boot)) {
+  console.error(`${bootPath}: use dynamic import for @aws-sdk/client-secrets-manager`);
   failed = true;
 }
 
@@ -45,7 +57,7 @@ if (!/\/api\/v1\/health\/live\/"/.test(entry)) {
 }
 
 if (!/\/health\/live\/"/.test(entry) || !/probePath === "\/health\/live"/.test(entry)) {
-  console.error(`${entryPath}: must treat /health/live as App Runner deploy probe (503 if proxied)`);
+  console.error(`${entryPath}: must treat /health/live as App Runner deploy probe`);
   failed = true;
 }
 

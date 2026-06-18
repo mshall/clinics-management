@@ -269,7 +269,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
         protocol: "HTTP",
         path: "/api/v1/health/live",
         interval: 10,
-        timeout: 10,
+        timeout: 5,
         healthyThreshold: 1,
         unhealthyThreshold: 20,
       },
