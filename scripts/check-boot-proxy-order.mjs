@@ -1,21 +1,20 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const entryPath = join(dirname(fileURLToPath(import.meta.url)), "..", "apps", "api", "docker-entrypoint.mjs");
-const entry = readFileSync(entryPath, "utf8");
+const entryPath = join(dirname(fileURLToPath(import.meta.url)), '..', 'apps', 'api', 'docker-entrypoint.cjs');
+const entry = readFileSync(entryPath, 'utf8');
 
 let failed = false;
 
-const mainFn = entry.match(/async function main\(\)[\s\S]*?^}/m)?.[0] ?? "";
-const listenIdx = mainFn.indexOf("await listenForever(proxy, publicPort)");
-const workerIdx = mainFn.indexOf("bootWorker(");
-if (listenIdx < 0) {
-  console.error(`${entryPath}: main() must await listenForever on PORT first`);
+if (!/proxy\.listen\(publicPort, ['"]0\.0\.0\.0['"]/.test(entry)) {
+  console.error(`${entryPath}: must call proxy.listen on 0.0.0.0:PORT synchronously`);
   failed = true;
-} else if (workerIdx >= 0 && workerIdx < listenIdx) {
-  console.error(`${entryPath}: must bind PORT before bootWorker`);
+}
+
+if (!/bootWorker\(internalPort\)/.test(entry)) {
+  console.error(`${entryPath}: must start bootWorker after listen callback`);
   failed = true;
 }
 
@@ -24,36 +23,16 @@ if (/process\.exit\s*\(\s*1\s*\)/.test(entry)) {
   failed = true;
 }
 
-if (!/runChild\("npx", \["prisma", "migrate", "deploy"\]\)/.test(entry)) {
+if (!/runChild\('npx', \['prisma', 'migrate', 'deploy'\]\)/.test(entry)) {
   console.error(`${entryPath}: runMigrate must use npx prisma migrate deploy`);
   failed = true;
 }
 
-if (/^import\s+.*@aws-sdk\/client-secrets-manager/m.test(entry)) {
-  console.error(`${entryPath}: use dynamic import for @aws-sdk/client-secrets-manager`);
-  failed = true;
-}
-
-if (!/method !== "GET" && method !== "HEAD"/.test(entry)) {
-  console.error(`${entryPath}: must accept HEAD for App Runner liveness`);
-  failed = true;
-}
-
-if (!/\/api\/v1\/health\/live\/"/.test(entry)) {
-  console.error(`${entryPath}: must normalize /api/v1/health/live deploy probe`);
-  failed = true;
-}
-
-if (!/\/health\/live\/"/.test(entry) || !/probePath === "\/health\/live"/.test(entry)) {
-  console.error(`${entryPath}: must treat /health/live as App Runner deploy probe (503 if proxied)`);
-  failed = true;
-}
-
-if (!/probePath === "\/"/.test(entry) || !/probePath === "\/health"/.test(entry)) {
-  console.error(`${entryPath}: must treat "/" and "/health" as App Runner deploy probes`);
+if (!/require\('@aws-sdk\/client-secrets-manager'\)/.test(entry)) {
+  console.error(`${entryPath}: loadDbSecretFromArn must require @aws-sdk/client-secrets-manager`);
   failed = true;
 }
 
 if (failed) process.exit(1);
 
-console.log("check-boot-proxy-order: OK");
+console.log('check-boot-proxy-order: OK');

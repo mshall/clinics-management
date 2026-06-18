@@ -46,4 +46,10 @@ fi
 npx cdk synth "${CDK_DEPLOY_ARGS[@]}"
 npm run check:ascii-cfn
 npx cdk deploy --app cdk.out "${CDK_DEPLOY_ARGS[@]}"
-bash "$ROOT/scripts/cicd-wait-apprunner-deploy.sh"
+APPRUNNER_OK=0
+bash "$ROOT/scripts/cicd-wait-apprunner-deploy.sh" || APPRUNNER_OK=1
+bash "$ROOT/scripts/cicd-post-deploy-seed.sh"
+if [[ "$APPRUNNER_OK" -ne 0 ]]; then
+  echo "::error::App Runner UPDATE_SERVICE did not succeed — seed ran but API image may be rolled back"
+  exit 1
+fi

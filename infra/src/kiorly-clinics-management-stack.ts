@@ -247,8 +247,8 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
               { name: "KMS_VPCE_HOST", value: kmsVpceHost },
               { name: "STS_VPCE_HOST", value: stsVpceHost },
               { name: "DB_SECRET_ARN", value: db.secret!.secretArn },
-              // Apply migrations on each deploy so RDS is never missing tables (avoids silent boot + broken API).
-              { name: "PRISMA_MIGRATE_ON_BOOT", value: "true" },
+              // Migrations run in post-deploy DbSeedFn (migrate + seed) so boot stays fast for App Runner health.
+              { name: "PRISMA_MIGRATE_ON_BOOT", value: "false" },
               // Demo seed via post-deploy DbSeedFn Lambda — boot seed blocks Nest and exceeds App Runner deploy window.
               { name: "PRISMA_SEED_ON_BOOT", value: "false" },
               { name: "UPLOAD_STORAGE", value: "s3" },
@@ -265,9 +265,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
         instanceRoleArn: instanceRole.roleArn,
       },
       healthCheckConfiguration: {
-        // Match the stable revision (HTTP + /api/v1/health/live). Deploy probes also hit /health/live and "/".
-        protocol: "HTTP",
-        path: "/api/v1/health/live",
+        protocol: "TCP",
         interval: 10,
         timeout: 10,
         healthyThreshold: 1,

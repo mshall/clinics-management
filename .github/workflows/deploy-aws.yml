@@ -103,7 +103,8 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Deploy CDK stack (full log capture, CDK verbose in CI)
+      - id: deploy
+        name: Deploy CDK stack (full log capture, CDK verbose in CI)
         env:
           CI: true
         run: |
@@ -120,9 +121,15 @@ jobs:
           if-no-files-found: warn
 
       - name: Post-deploy seed (demo users)
+        if: always() && steps.deploy.outcome != 'skipped'
         env:
           CI: true
-        run: bash scripts/cicd-post-deploy-seed.sh
+        run: |
+          if grep -q 'OK  post-deploy idempotent seed' deploy-full.log 2>/dev/null; then
+            echo "Seed already completed inside Deploy CDK stack step"
+            exit 0
+          fi
+          bash scripts/cicd-post-deploy-seed.sh
 
       - name: Post-deploy smoke (health + login)
         env:

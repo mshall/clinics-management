@@ -38,6 +38,26 @@ async function buildDatabaseUrl() {
   return `postgresql://${u}:${p}@${host}:${dbPort}/${dbname}?schema=public&sslmode=no-verify`;
 }
 
+function runMigrateDeploy() {
+  console.log("[db-seed] running prisma migrate deploy …");
+  const result = spawnSync("npx", ["prisma", "migrate", "deploy"], {
+    encoding: "utf8",
+    env: process.env,
+    cwd: __dirname,
+  });
+  if (result.stdout) console.log(result.stdout);
+  if (result.stderr) console.error(result.stderr);
+  if (result.error) {
+    console.error("migrate spawn error:", result.error);
+    return { ok: false, exit: 1, detail: result.error.message };
+  }
+  const exit = result.status ?? 1;
+  if (exit !== 0) {
+    return { ok: false, exit, detail: result.stderr?.slice(-2000) ?? "migrate deploy failed" };
+  }
+  return { ok: true };
+}
+
 function runSeedScript() {
   const seedScript = path.join(__dirname, "prisma", "seed.ts");
   const binDir = path.join(__dirname, "..", "..", "node_modules", ".bin");
@@ -67,6 +87,11 @@ export async function handler() {
   console.log("[db-seed] loading DATABASE_URL from Secrets Manager …");
   process.env.DATABASE_URL = await buildDatabaseUrl();
   process.env.PRISMA_SEED_ENSURE_DEMO_PASSWORDS = process.env.PRISMA_SEED_ENSURE_DEMO_PASSWORDS ?? "true";
+  const migrate = runMigrateDeploy();
+  if (!migrate.ok) {
+    console.error("[db-seed] migrate failed:", migrate.detail ?? migrate.exit);
+    return migrate;
+  }
   console.log("[db-seed] running prisma seed …");
   const out = runSeedScript();
   if (!out.ok) {
