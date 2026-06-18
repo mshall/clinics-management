@@ -1,8 +1,9 @@
 # One-shot idempotent Prisma seed (Lambda / CI). Build from repo root:
 #   docker build -f apps/api/Dockerfile.seed .
-FROM node:22-bookworm-slim
+FROM public.ecr.aws/lambda/nodejs:22
+
 WORKDIR /repo
-RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN dnf install -y openssl ca-certificates && dnf clean all
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
@@ -14,5 +15,7 @@ WORKDIR /repo/apps/api
 ENV DATABASE_URL="postgresql://build:build@127.0.0.1:5432/build?schema=public"
 RUN npx prisma generate
 COPY infra/lambda/db-seed/run.mjs ./run-seed.mjs
+ENV LAMBDA_TASK_ROOT=/repo/apps/api
 ENV PATH="/repo/node_modules/.bin:/usr/local/bin:${PATH}"
-CMD ["node", "run-seed.mjs"]
+# Lambda invokes exported handler; do not run the script as a plain node entrypoint.
+CMD ["run-seed.handler"]

@@ -1,10 +1,9 @@
 /**
- * App Runner boot (matches stable AWS revision): health on PORT during secret/migrate,
- * then Nest on PORT 3000. Migrations stay on boot so deploy config matches production.
+ * App Runner PID 1: bind PORT on 0.0.0.0 immediately (health probes succeed during
+ * secret fetch / migrate), then Nest on NEST_INTERNAL_PORT with reverse proxy on PORT.
  */
-import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
-import { spawn, spawnSync } from "node:child_process";
-import { createServer } from "node:http";
+import { spawn } from "node:child_process";
+import { createServer, request as httpRequest } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -49,46 +48,82 @@ function respondLive(res, req) {
   res.end(JSON.stringify({ status: "ok" }));
 }
 
-function createBootHealthServer(port) {
+function createProxy(upstreamPort) {
   return createServer((req, res) => {
     if (isLiveProbe(req)) {
       respondLive(res, req);
       return;
     }
-    res.statusCode = 503;
-    res.setHeader("Content-Type", "application/json; charset=utf-8");
-    res.end(JSON.stringify({ status: "starting" }));
-  });
-}
-
-async function listenHealthServer(server, port) {
-  await new Promise((resolve, reject) => {
-    server.listen(port, "0.0.0.0", () => {
-      process.stderr.write(`[boot] health listener on ${port}\n`);
-      resolve();
+    const upstreamReq = httpRequest(
+      {
+        hostname: "127.0.0.1",
+        port: upstreamPort,
+        path: req.url,
+        method: req.method,
+        headers: { ...req.headers, host: `127.0.0.1:${upstreamPort}` },
+      },
+      (upstreamRes) => {
+        res.writeHead(upstreamRes.statusCode || 502, upstreamRes.headers);
+        upstreamRes.pipe(res);
+      },
+    );
+    upstreamReq.on("error", () => {
+      if (res.headersSent) return;
+      if (isLiveProbe(req)) {
+        respondLive(res, req);
+        return;
+      }
+      res.statusCode = 503;
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.end(JSON.stringify({ status: "starting" }));
     });
-    server.on("error", reject);
+    if (req.method === "GET" || req.method === "HEAD") upstreamReq.end();
+    else req.pipe(upstreamReq);
   });
 }
 
-async function closeHealthServer(server) {
-  await new Promise((resolve) => {
-    server.close(() => resolve());
+function runChild(command, args) {
+  return new Promise((resolve) => {
+    const child = spawn(command, args, {
+      stdio: "inherit",
+      env: process.env,
+      cwd: __dirname,
+    });
+    child.on("error", (err) => {
+      console.error("[boot] spawn error:", command, err?.message ?? err);
+      resolve(127);
+    });
+    child.on("close", (code) => resolve(code ?? 1));
   });
 }
 
-const dbSecretArn = process.env.DB_SECRET_ARN;
-if (dbSecretArn) {
-  const region = process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "eu-central-1";
-  const smEndpoint = vpceHttpsFromHost(process.env.SECRETS_MANAGER_VPCE_HOST);
-  const client = new SecretsManagerClient({
-    region,
-    ...(smEndpoint ? { endpoint: smEndpoint } : {}),
-  });
-  const maxAttempts = Number(process.env.DB_SECRET_FETCH_ATTEMPTS ?? "12");
-  let lastErr;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+async function runMigrate() {
+  let attempt = 0;
+  while (true) {
+    attempt++;
+    console.error(`[boot] prisma migrate deploy (attempt ${attempt}) …`);
+    const exit = await runChild("npx", ["prisma", "migrate", "deploy"]);
+    if (exit === 0) {
+      console.error("[boot] prisma migrate deploy completed OK");
+      return;
+    }
+    console.error("[boot] migrate failed with status", exit, "— retrying");
+    await sleep(Math.min(30_000, 5000 * Math.min(attempt, 6)));
+  }
+}
+
+async function loadDbSecretFromArn(dbSecretArn) {
+  const { GetSecretValueCommand, SecretsManagerClient } = await import("@aws-sdk/client-secrets-manager");
+  let attempt = 0;
+  while (true) {
+    attempt++;
     try {
+      const region = process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "eu-central-1";
+      const smEndpoint = vpceHttpsFromHost(process.env.SECRETS_MANAGER_VPCE_HOST);
+      const client = new SecretsManagerClient({
+        region,
+        ...(smEndpoint ? { endpoint: smEndpoint } : {}),
+      });
       const out = await client.send(new GetSecretValueCommand({ SecretId: dbSecretArn }));
       const j = JSON.parse(out.SecretString ?? "{}");
       const u = encodeURIComponent(String(j.username ?? ""));
@@ -96,82 +131,58 @@ if (dbSecretArn) {
       const host = j.host ?? j.hostname ?? j.endpoint;
       const dbPort = j.port ?? 5432;
       const dbname = j.dbname ?? j.database ?? "postgres";
-      if (!host) throw new Error("DB secret JSON missing host/hostname/endpoint");
+      if (!host) throw new Error("DB secret JSON missing host");
       process.env.DATABASE_URL = `postgresql://${u}:${p}@${host}:${dbPort}/${dbname}?schema=public&sslmode=no-verify`;
       console.error("[boot] DATABASE_URL built (host/port/db):", host, String(dbPort), dbname);
-      lastErr = undefined;
-      break;
+      return;
     } catch (e) {
-      lastErr = e;
-      console.error(`[boot] DB secret fetch attempt ${attempt}/${maxAttempts} failed:`, e?.message ?? e);
-      if (attempt < maxAttempts) {
-        await sleep(Math.min(10_000, 750 * 2 ** (attempt - 1)));
-      }
+      console.error(`[boot] DB secret fetch attempt ${attempt} failed:`, e?.message ?? e);
+      await sleep(Math.min(30_000, 750 * 2 ** Math.min(attempt - 1, 6)));
     }
-  }
-  if (lastErr && !process.env.DATABASE_URL) {
-    console.error("[boot] Failed to load DB secret from Secrets Manager:", lastErr);
-    process.exit(1);
   }
 }
 
-const port = Number(process.env.PORT ?? "3000");
-let bootHealthServer;
+async function bootWorker(internalPort) {
+  const kmsEp = vpceHttpsFromHost(process.env.KMS_VPCE_HOST);
+  const stsEp = vpceHttpsFromHost(process.env.STS_VPCE_HOST);
+  const smEp = vpceHttpsFromHost(process.env.SECRETS_MANAGER_VPCE_HOST);
+  if (smEp) process.env.AWS_ENDPOINT_URL_SECRETS_MANAGER = smEp;
+  if (kmsEp) process.env.AWS_ENDPOINT_URL_KMS = kmsEp;
+  if (stsEp) process.env.AWS_ENDPOINT_URL_STS = stsEp;
 
-if (process.env.PRISMA_MIGRATE_ON_BOOT === "true") {
-  bootHealthServer = createBootHealthServer(port);
-  await listenHealthServer(bootHealthServer, port);
+  const dbSecretArn = process.env.DB_SECRET_ARN;
+  if (dbSecretArn) await loadDbSecretFromArn(dbSecretArn);
+  if (process.env.PRISMA_MIGRATE_ON_BOOT === "true") await runMigrate();
 
-  let migrateExit = 0;
-  try {
-    console.error("[boot] PRISMA_MIGRATE_ON_BOOT=true — running prisma migrate deploy …");
-    const migrate = spawnSync("npx", ["prisma", "migrate", "deploy"], {
-      stdio: "inherit",
-      env: process.env,
-      cwd: __dirname,
+  const mainJs = path.join(__dirname, "dist", "main.js");
+  const nestEnv = { ...process.env, PORT: String(internalPort), LISTEN_HOST: "127.0.0.1" };
+  let nestRestarts = 0;
+
+  function spawnNest() {
+    console.error("[boot] spawning Nest", mainJs, "PORT=", internalPort);
+    const child = spawn(process.execPath, [mainJs], { stdio: "inherit", env: nestEnv });
+    child.on("exit", (code, signal) => {
+      if (code === 0 && !signal) return;
+      nestRestarts++;
+      console.error("[boot] Nest exited code=", code, "signal=", signal, "restart=", nestRestarts);
+      if (nestRestarts <= 5) setTimeout(spawnNest, 2000);
     });
-    migrateExit = migrate.status ?? 1;
-    if (migrateExit !== 0) {
-      console.error("[boot] prisma migrate deploy failed with status", migrateExit);
-    } else {
-      console.error("[boot] prisma migrate deploy completed OK");
-    }
-  } finally {
-    await closeHealthServer(bootHealthServer);
-    bootHealthServer = undefined;
-    console.error("[boot] migrate-time health listener closed");
   }
-  if (migrateExit !== 0) {
-    process.exit(migrateExit);
-  }
+
+  spawnNest();
 }
 
-if (process.env.PRISMA_SEED_ON_BOOT === "true") {
-  console.error("[boot] PRISMA_SEED_ON_BOOT=true — running seed script …");
-  const seedScript = path.join(__dirname, "prisma", "seed.ts");
-  const seedResult = spawnSync("npx", ["tsx", seedScript], {
-    stdio: "inherit",
-    env: process.env,
-    cwd: __dirname,
+const publicPort = Number(process.env.PORT ?? "3000");
+const internalPort = Number(process.env.NEST_INTERNAL_PORT ?? "3001");
+const proxy = createProxy(internalPort);
+
+proxy.listen(publicPort, "0.0.0.0", () => {
+  process.stderr.write(`[boot] listening on ${publicPort}\n`);
+  bootWorker(internalPort).catch((err) => {
+    console.error("[boot] worker error (proxy stays on :3000):", err?.message ?? err);
   });
-  if ((seedResult.status ?? 1) !== 0) {
-    console.error("[boot] seed script failed with status", seedResult.status, "— continuing anyway");
-  } else {
-    console.error("[boot] seed script completed OK");
-  }
-}
+});
 
-const kmsEp = vpceHttpsFromHost(process.env.KMS_VPCE_HOST);
-const stsEp = vpceHttpsFromHost(process.env.STS_VPCE_HOST);
-const smEpForChild = vpceHttpsFromHost(process.env.SECRETS_MANAGER_VPCE_HOST);
-if (smEpForChild) process.env.AWS_ENDPOINT_URL_SECRETS_MANAGER = smEpForChild;
-if (kmsEp) process.env.AWS_ENDPOINT_URL_KMS = kmsEp;
-if (stsEp) process.env.AWS_ENDPOINT_URL_STS = stsEp;
-
-const mainJs = path.join(__dirname, "dist", "main.js");
-console.error("[boot] spawning Nest", mainJs, "PORT=", port);
-const child = spawn(process.execPath, [mainJs], { stdio: "inherit", env: process.env });
-child.on("exit", (code, signal) => {
-  console.error("[boot] Nest exited code=", code, "signal=", signal);
-  process.exit(code ?? (signal ? 1 : 0));
+proxy.on("error", (err) => {
+  console.error("[boot] proxy error (keeping process alive):", err?.message ?? err);
 });

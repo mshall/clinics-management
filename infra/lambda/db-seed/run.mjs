@@ -143,12 +143,3 @@ export async function handler() {
   console.log("[db-seed] completed OK");
   return { ok: true };
 }
-
-handler()
-  .then((out) => {
-    if (!out.ok) process.exit(out.exit ?? 1);
-  })
-  .catch((err) => {
-    console.error("[db-seed] unhandled:", err);
-    process.exit(1);
-  });

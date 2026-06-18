@@ -8,18 +8,23 @@ const entry = readFileSync(entryPath, "utf8");
 
 let failed = false;
 
-if (!/createBootHealthServer|createServer\(\(req, res\)/.test(entry)) {
-  console.error(`${entryPath}: must expose a health HTTP listener during boot/migrate`);
+if (!/proxy\.listen\(publicPort, "0\.0\.0\.0"/.test(entry)) {
+  console.error(`${entryPath}: must call proxy.listen on 0.0.0.0:PORT synchronously`);
   failed = true;
 }
 
-if (!/listenHealthServer|server\.listen\(port, "0\.0\.0\.0"/.test(entry)) {
-  console.error(`${entryPath}: must bind health listener on 0.0.0.0:PORT before migrate`);
+if (!/bootWorker\(internalPort\)/.test(entry)) {
+  console.error(`${entryPath}: must start bootWorker after listen callback`);
   failed = true;
 }
 
-if (!/spawn\(process\.execPath, \[mainJs\]/.test(entry)) {
-  console.error(`${entryPath}: must spawn Nest from dist/main.js`);
+if (/process\.exit\s*\(\s*1\s*\)/.test(entry)) {
+  console.error(`${entryPath}: must not process.exit(1) during boot`);
+  failed = true;
+}
+
+if (!/runChild\("npx", \["prisma", "migrate", "deploy"\]\)/.test(entry)) {
+  console.error(`${entryPath}: runMigrate must use npx prisma migrate deploy`);
   failed = true;
 }
 

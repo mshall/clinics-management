@@ -238,6 +238,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
             runtimeEnvironmentVariables: [
               { name: "NODE_ENV", value: "production" },
               { name: "PORT", value: "3000" },
+              { name: "NEST_INTERNAL_PORT", value: "3001" },
               { name: "SWAGGER_ENABLED", value: "false" },
               { name: "TZ", value: "Europe/Berlin" },
               { name: "AWS_REGION", value: deploymentRegion },
@@ -246,8 +247,8 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
               { name: "KMS_VPCE_HOST", value: kmsVpceHost },
               { name: "STS_VPCE_HOST", value: stsVpceHost },
               { name: "DB_SECRET_ARN", value: db.secret!.secretArn },
-              // Match stable App Runner revision: migrate on boot with interim health listener in entrypoint.
-              { name: "PRISMA_MIGRATE_ON_BOOT", value: "true" },
+              // Migrations run in post-deploy DbSeedFn so boot stays fast; proxy on :3000 answers health during secret fetch.
+              { name: "PRISMA_MIGRATE_ON_BOOT", value: "false" },
               // Demo seed via post-deploy DbSeedFn Lambda — boot seed blocks Nest and exceeds App Runner deploy window.
               { name: "PRISMA_SEED_ON_BOOT", value: "false" },
               { name: "UPLOAD_STORAGE", value: "s3" },
