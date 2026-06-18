@@ -3,6 +3,7 @@
  */
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -95,12 +96,20 @@ function runMigrateDeploy() {
   return { ok: true };
 }
 
+function nodeModulesBinDirs() {
+  const candidates = [
+    path.join(__dirname, "node_modules", ".bin"),
+    path.join(__dirname, "..", "..", "node_modules", ".bin"),
+  ];
+  return candidates.filter((dir) => existsSync(dir));
+}
+
 function runSeedScript() {
   const seedScript = path.join(__dirname, "prisma", "seed.ts");
-  const binDir = path.join(__dirname, "..", "..", "node_modules", ".bin");
+  const binDirs = nodeModulesBinDirs();
   const env = {
     ...process.env,
-    PATH: `${binDir}:/usr/local/bin:${process.env.PATH ?? ""}`,
+    PATH: `${binDirs.join(path.delimiter)}:/usr/local/bin:${process.env.PATH ?? ""}`,
   };
   const result = spawnSync("npx", ["tsx", seedScript], {
     encoding: "utf8",

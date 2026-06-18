@@ -16,15 +16,16 @@ RUN npx prisma generate
 
 # Lambda container images must use the AWS base image + handler CMD (RIC). Plain `node run-seed.mjs`
 # calls process.exit() which Lambda reports as Runtime.ExitError even when seed succeeded.
+# Copy handler + deps into ${LAMBDA_TASK_ROOT} (/var/task). Do not override LAMBDA_TASK_ROOT —
+# the runtime resolves CMD modules from that path only.
 FROM public.ecr.aws/lambda/nodejs:22
 RUN dnf install -y openssl ca-certificates && dnf clean all
-ENV LAMBDA_TASK_ROOT=/repo/apps/api
+COPY --from=build /repo/node_modules ${LAMBDA_TASK_ROOT}/node_modules
+COPY --from=build /repo/apps/api/package.json ${LAMBDA_TASK_ROOT}/package.json
+COPY --from=build /repo/apps/api/prisma ${LAMBDA_TASK_ROOT}/prisma
+COPY --from=build /repo/apps/api/prisma.config.ts ${LAMBDA_TASK_ROOT}/prisma.config.ts
+COPY infra/lambda/db-seed/run.mjs ${LAMBDA_TASK_ROOT}/run-seed.mjs
+RUN node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync(process.env.LAMBDA_TASK_ROOT+'/package.json','utf8'));p.type='module';fs.writeFileSync(process.env.LAMBDA_TASK_ROOT+'/package.json',JSON.stringify(p,null,2));"
 WORKDIR ${LAMBDA_TASK_ROOT}
-COPY --from=build /repo/node_modules /repo/node_modules
-COPY --from=build /repo/package.json /repo/package-lock.json /repo/
-COPY --from=build /repo/apps/api/package.json /repo/apps/api/
-COPY --from=build /repo/apps/api/prisma ./prisma
-COPY --from=build /repo/apps/api/prisma.config.ts ./prisma.config.ts
-COPY infra/lambda/db-seed/run.mjs ./run-seed.mjs
-ENV PATH="/repo/node_modules/.bin:/usr/local/bin:${PATH}"
+ENV PATH="${LAMBDA_TASK_ROOT}/node_modules/.bin:/usr/local/bin:${PATH}"
 CMD ["run-seed.handler"]
