@@ -144,11 +144,8 @@ export async function handler() {
   return { ok: true };
 }
 
-// Dockerfile.seed CMD is `node run-seed.mjs` — run handler when executed as the main module.
-const isMain =
-  process.argv[1] &&
-  path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
-if (isMain) {
+// Local/CI: `node run-seed.mjs`. Lambda: Dockerfile.seed CMD ["run-seed.handler"] on the AWS base image.
+if (!process.env.AWS_LAMBDA_RUNTIME_API) {
   handler()
     .then((out) => {
       if (!out.ok) process.exit(out.exit ?? 1);
