@@ -38,6 +38,11 @@ if (!/\/api\/v1\/health\/live\/"/.test(listener)) {
   failed = true;
 }
 
+if (!/\/health\/live\/"/.test(listener) || !/probePath === "\/health\/live"/.test(listener)) {
+  console.error(`${listenerPath}: must treat /health/live as App Runner deploy probe (returns 503 if proxied)`);
+  failed = true;
+}
+
 if (!/probePath === "\/"/.test(listener) || !/probePath === "\/health"/.test(listener)) {
   console.error(`${listenerPath}: must treat "/" and "/health" as App Runner deploy probes`);
   failed = true;
