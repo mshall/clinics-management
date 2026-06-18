@@ -25,6 +25,6 @@ COPY --from=build /repo/package.json /repo/package-lock.json /repo/
 COPY --from=build /repo/apps/api/package.json /repo/apps/api/
 COPY --from=build /repo/apps/api/prisma ./prisma
 COPY --from=build /repo/apps/api/prisma.config.ts ./prisma.config.ts
-COPY infra/lambda/db-seed/run.mjs ./run-seed.mjs
+COPY infra/lambda/db-seed/run.mjs ${LAMBDA_TASK_ROOT}/index.mjs
 ENV PATH="/repo/node_modules/.bin:/usr/local/bin:${PATH}"
-CMD ["run-seed.handler"]
+CMD ["index.handler"]
