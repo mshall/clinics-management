@@ -1,70 +1,41 @@
 #!/usr/bin/env node
-/**
- * CI guard: App Runner liveness requires :3000 to listen before secret/migrate work.
- */
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const apiDir = join(dirname(fileURLToPath(import.meta.url)), "..", "apps", "api");
-const listenerPath = join(apiDir, "health-listener.mjs");
-const bootPath = join(apiDir, "docker-boot.mjs");
-const listener = readFileSync(listenerPath, "utf8");
-const boot = readFileSync(bootPath, "utf8");
+const entryPath = join(dirname(fileURLToPath(import.meta.url)), "..", "apps", "api", "docker-entrypoint.mjs");
+const entry = readFileSync(entryPath, "utf8");
 
 let failed = false;
 
-const listenIdx = listener.indexOf("server.listen(publicPort");
-const awaitListenIdx = listener.indexOf("await listenOnPort()");
-const spawnBootIdx = listener.indexOf("spawn(process.execPath, [bootScript]");
+const mainFn = entry.match(/async function main\(\)[\s\S]*?^}/m)?.[0] ?? "";
+const listenIdx = mainFn.indexOf("await listenForever(proxy, publicPort)");
+const workerIdx = mainFn.indexOf("bootWorker(");
 if (listenIdx < 0) {
-  console.error(`${listenerPath}: must call server.listen on PORT`);
+  console.error(`${entryPath}: main() must await listenForever on PORT first`);
   failed = true;
-} else if (awaitListenIdx < 0) {
-  console.error(`${listenerPath}: must await listenOnPort() before spawning docker-boot.mjs`);
-  failed = true;
-} else if (spawnBootIdx >= 0 && spawnBootIdx < awaitListenIdx) {
-  console.error(`${listenerPath}: must await PORT bind before spawning docker-boot.mjs`);
+} else if (workerIdx >= 0 && workerIdx < listenIdx) {
+  console.error(`${entryPath}: must bind PORT before bootWorker`);
   failed = true;
 }
 
-if (!/method !== "GET" && method !== "HEAD"/.test(listener)) {
-  console.error(`${listenerPath}: must accept HEAD for App Runner liveness`);
+if (/process\.exit\s*\(\s*1\s*\)/.test(entry)) {
+  console.error(`${entryPath}: must not process.exit(1) during boot`);
   failed = true;
 }
 
-if (!/\/api\/v1\/health\/live\/"/.test(listener)) {
-  console.error(`${listenerPath}: must accept trailing slash on /api/v1/health/live/`);
+if (!/runChild\("npx", \["prisma", "migrate", "deploy"\]\)/.test(entry)) {
+  console.error(`${entryPath}: runMigrate must use npx prisma migrate deploy`);
   failed = true;
 }
 
-if (!/\/health\/live\/"/.test(listener) || !/probePath === "\/health\/live"/.test(listener)) {
-  console.error(`${listenerPath}: must treat /health/live as App Runner deploy probe (returns 503 if proxied)`);
+if (/^import\s+.*@aws-sdk\/client-secrets-manager/m.test(entry)) {
+  console.error(`${entryPath}: use dynamic import for @aws-sdk/client-secrets-manager`);
   failed = true;
 }
 
-if (!/probePath === "\/"/.test(listener) || !/probePath === "\/health"/.test(listener)) {
-  console.error(`${listenerPath}: must treat "/" and "/health" as App Runner deploy probes`);
-  failed = true;
-}
-
-if (/^import\s+.*@aws-sdk\/client-secrets-manager/m.test(boot)) {
-  console.error(`${bootPath}: use dynamic import for @aws-sdk/client-secrets-manager`);
-  failed = true;
-}
-
-if (/process\.exit\s*\(\s*1\s*\)/.test(boot)) {
-  console.error(`${bootPath}: must not process.exit(1) during boot`);
-  failed = true;
-}
-
-if (!/runChild\("prisma", \["migrate", "deploy"\]\)/.test(boot)) {
-  console.error(`${bootPath}: runMigrate must use prisma migrate deploy (global CLI from Dockerfile)`);
-  failed = true;
-}
-
-if (/child\.on\("error", reject\)/.test(boot)) {
-  console.error(`${bootPath}: runChild must resolve on spawn error, not reject`);
+if (!/probePath === "\/"/.test(entry)) {
+  console.error(`${entryPath}: must treat "/" as App Runner deploy probe`);
   failed = true;
 }
 

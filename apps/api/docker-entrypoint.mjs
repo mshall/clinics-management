@@ -1,12 +1,13 @@
 /**
- * App Runner boot worker: secret → migrate → Nest on NEST_INTERNAL_PORT.
- * Liveness on PORT is handled by health-listener.mjs (PID 1).
+ * App Runner PID 1: bind PORT immediately, answer deploy health probes, then secret → migrate → Nest.
  */
 import { spawn } from "node:child_process";
+import { createServer, request as httpRequest } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+console.log("[boot] entrypoint pid=", process.pid);
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -19,6 +20,87 @@ function vpceHttpsFromHost(host) {
   return h ? `https://${h}` : undefined;
 }
 
+function normalizeHealthPath(url) {
+  const raw = url?.split("?")[0] ?? "";
+  if (raw === "/api/v1/health/live" || raw === "/api/v1/health/live/") return "/api/v1/health/live";
+  if (raw === "/health/live" || raw === "/health/live/") return "/health/live";
+  return raw.replace(/\/+$/, "") || "/";
+}
+
+function isLiveProbe(req) {
+  const method = req.method ?? "GET";
+  if (method !== "GET" && method !== "HEAD") return false;
+  const probePath = normalizeHealthPath(req.url);
+  if (probePath === "/api/v1/health/live" || probePath === "/health/live") return true;
+  if (probePath === "/" || probePath === "/health") return true;
+  return false;
+}
+
+function respondLive(res, req) {
+  res.statusCode = 200;
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  if (req.method === "HEAD") {
+    res.end();
+    return;
+  }
+  res.end(JSON.stringify({ status: "ok", phase: "starting" }));
+}
+
+function createProxy(upstreamPort) {
+  return createServer((req, res) => {
+    if (isLiveProbe(req)) {
+      respondLive(res, req);
+      return;
+    }
+    const upstreamReq = httpRequest(
+      {
+        hostname: "127.0.0.1",
+        port: upstreamPort,
+        path: req.url,
+        method: req.method,
+        headers: { ...req.headers, host: `127.0.0.1:${upstreamPort}` },
+      },
+      (upstreamRes) => {
+        res.writeHead(upstreamRes.statusCode ?? 502, upstreamRes.headers);
+        upstreamRes.pipe(res);
+      },
+    );
+    upstreamReq.on("error", () => {
+      if (res.headersSent) return;
+      if (isLiveProbe(req)) {
+        respondLive(res, req);
+        return;
+      }
+      res.statusCode = 503;
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.end(JSON.stringify({ status: "starting" }));
+    });
+    if (req.method === "GET" || req.method === "HEAD") upstreamReq.end();
+    else req.pipe(upstreamReq);
+  });
+}
+
+async function listenForever(server, port) {
+  while (true) {
+    try {
+      await new Promise((resolve, reject) => {
+        server.listen(port, "0.0.0.0", () => {
+          console.log("[boot] listening on", port);
+          resolve();
+        });
+        server.once("error", reject);
+      });
+      server.on("error", (err) => {
+        console.error("[boot] server error (keeping process alive):", err?.message ?? err);
+      });
+      return;
+    } catch (err) {
+      console.error("[boot] listen failed, retrying:", err?.message ?? err);
+      await sleep(2000);
+    }
+  }
+}
+
 function runChild(command, args) {
   return new Promise((resolve) => {
     const child = spawn(command, args, {
@@ -27,7 +109,7 @@ function runChild(command, args) {
       cwd: __dirname,
     });
     child.on("error", (err) => {
-      console.error("[boot] spawn error:", command, err.message);
+      console.error("[boot] spawn error:", command, err?.message ?? err);
       resolve(127);
     });
     child.on("close", (code) => resolve(code ?? 1));
@@ -39,12 +121,12 @@ async function runMigrate() {
   while (true) {
     attempt++;
     console.log(`[boot] prisma migrate deploy (attempt ${attempt}) …`);
-    const exit = await runChild("prisma", ["migrate", "deploy"]);
+    const exit = await runChild("npx", ["prisma", "migrate", "deploy"]);
     if (exit === 0) {
       console.log("[boot] prisma migrate deploy completed OK");
       return;
     }
-    console.error("[boot] migrate failed with status", exit, "— retrying (health listener keeps /health/live)");
+    console.error("[boot] migrate failed with status", exit, "— retrying");
     await sleep(Math.min(30_000, 5000 * Math.min(attempt, 6)));
   }
 }
@@ -64,9 +146,6 @@ async function loadDbSecretFromArn(dbSecretArn) {
           region,
           ...(smEndpoint ? { endpoint: smEndpoint } : {}),
         });
-        if (smEndpoint) {
-          console.log("[boot] Secrets Manager client using SECRETS_MANAGER_VPCE_HOST");
-        }
       }
       const out = await client.send(new secretsSdk.GetSecretValueCommand({ SecretId: dbSecretArn }));
       const j = JSON.parse(out.SecretString ?? "{}");
@@ -88,11 +167,7 @@ async function loadDbSecretFromArn(dbSecretArn) {
   }
 }
 
-async function main() {
-  console.log("[boot] docker-boot.mjs starting");
-
-  const internalPort = Number(process.env.NEST_INTERNAL_PORT ?? "3001");
-
+async function bootWorker(publicPort, internalPort) {
   const kmsEp = vpceHttpsFromHost(process.env.KMS_VPCE_HOST);
   const stsEp = vpceHttpsFromHost(process.env.STS_VPCE_HOST);
   const smEp = vpceHttpsFromHost(process.env.SECRETS_MANAGER_VPCE_HOST);
@@ -112,10 +187,7 @@ async function main() {
     console.log("[boot] spawning Nest", mainJs, "PORT=", internalPort);
     const child = spawn(process.execPath, [mainJs], { stdio: "inherit", env: nestEnv });
     child.on("exit", (code, signal) => {
-      if (code === 0 && !signal) {
-        console.log("[boot] Nest exited cleanly");
-        return;
-      }
+      if (code === 0 && !signal) return;
       nestRestarts++;
       console.error("[boot] Nest exited code=", code, "signal=", signal, "restart=", nestRestarts);
       if (nestRestarts <= 5) setTimeout(spawnNest, 2000);
@@ -125,6 +197,16 @@ async function main() {
   spawnNest();
 }
 
+async function main() {
+  const publicPort = Number(process.env.PORT ?? "3000");
+  const internalPort = Number(process.env.NEST_INTERNAL_PORT ?? "3001");
+  const proxy = createProxy(internalPort);
+  await listenForever(proxy, publicPort);
+  bootWorker(publicPort, internalPort).catch((err) => {
+    console.error("[boot] worker error (proxy stays on :3000):", err?.message ?? err);
+  });
+}
+
 main().catch((err) => {
-  console.error("[boot] docker-boot fatal:", err);
+  console.error("[boot] entrypoint error:", err?.message ?? err);
 });

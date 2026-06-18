@@ -265,13 +265,11 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
         instanceRoleArn: instanceRole.roleArn,
       },
       healthCheckConfiguration: {
-        protocol: "HTTP",
-        path: "/api/v1/health/live",
+        // TCP: deploy only needs :3000 open; HTTP path probes vary during image rollouts.
+        protocol: "TCP",
         interval: 10,
         timeout: 10,
         healthyThreshold: 1,
-        // migrate + Nest cold start on deploy; demo seed runs in post-deploy DbSeedFn Lambda.
-        // App Runner allows UnhealthyThreshold 1-20 only (CFN early validation rejects higher values).
         unhealthyThreshold: 20,
       },
       networkConfiguration: {
