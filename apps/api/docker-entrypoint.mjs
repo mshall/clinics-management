@@ -121,7 +121,7 @@ async function runMigrate() {
   while (true) {
     attempt++;
     console.log(`[boot] prisma migrate deploy (attempt ${attempt}) …`);
-    const exit = await runChild("npx", ["prisma", "migrate", "deploy"]);
+    const exit = await runChild("prisma", ["migrate", "deploy"]);
     if (exit === 0) {
       console.log("[boot] prisma migrate deploy completed OK");
       return;

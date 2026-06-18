@@ -24,8 +24,18 @@ if (/process\.exit\s*\(\s*1\s*\)/.test(entry)) {
   failed = true;
 }
 
-if (!/runChild\("npx", \["prisma", "migrate", "deploy"\]\)/.test(entry)) {
-  console.error(`${entryPath}: runMigrate must use npx prisma migrate deploy`);
+if (!/runChild\("prisma", \["migrate", "deploy"\]\)/.test(entry)) {
+  console.error(`${entryPath}: runMigrate must use global prisma migrate deploy`);
+  failed = true;
+}
+
+if (!/listenForever\(/.test(entry) || !/listen failed, retrying/.test(entry)) {
+  console.error(`${entryPath}: must retry PORT bind (listenForever) instead of exiting on EADDRINUSE`);
+  failed = true;
+}
+
+if (!/probePath === "\/health\/live"/.test(entry)) {
+  console.error(`${entryPath}: must treat /health/live as deploy probe (200 during boot)`);
   failed = true;
 }
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # CloudFormation can report ApiService UPDATE_COMPLETE while App Runner is still rolling
 # out the new image — list-operations may show ROLLBACK_SUCCEEDED ~40s later when health
-# checks fail (HEAD /health/live → 503, nothing on :3000 during secret fetch, etc.).
+# checks fail (~41s ROLLBACK_SUCCEEDED: HTTP path probes, process.exit on bind error, or :3000 closed).
 set -euo pipefail
 
 STACK_NAME="${STACK_NAME:-kiorly-clinics-management}"
