@@ -64,19 +64,37 @@ const server = createServer((req, res) => {
   else req.pipe(upstreamReq);
 });
 
-server.listen(publicPort, "0.0.0.0", () => {
-  console.log("[boot] health listener listening on", publicPort);
-});
+async function listenOnPort() {
+  await new Promise((resolve, reject) => {
+    server.listen(publicPort, "0.0.0.0", () => {
+      console.log("[boot] health listener listening on", publicPort);
+      resolve();
+    });
+    server.on("error", reject);
+  });
+}
 
-server.on("error", (err) => {
-  console.error("[boot] health listener error:", err?.message ?? err);
-});
+async function main() {
+  await listenOnPort();
 
-const bootScript = path.join(__dirname, "docker-boot.mjs");
-const bootChild = spawn(process.execPath, [bootScript], { stdio: "inherit", env: process.env });
-bootChild.on("error", (err) => {
-  console.error("[boot] docker-boot spawn error:", err?.message ?? err);
-});
-bootChild.on("exit", (code, signal) => {
-  console.log("[boot] docker-boot exited code=", code, "signal=", signal, "— health listener stays on", publicPort);
+  const bootScript = path.join(__dirname, "docker-boot.mjs");
+  const bootChild = spawn(process.execPath, [bootScript], { stdio: "inherit", env: process.env });
+  bootChild.on("error", (err) => {
+    console.error("[boot] docker-boot spawn error:", err?.message ?? err);
+  });
+  bootChild.on("exit", (code, signal) => {
+    console.log(
+      "[boot] docker-boot exited code=",
+      code,
+      "signal=",
+      signal,
+      "— health listener stays on",
+      publicPort,
+    );
+  });
+}
+
+main().catch((err) => {
+  console.error("[boot] health-listener fatal:", err?.message ?? err);
+  process.exit(1);
 });
