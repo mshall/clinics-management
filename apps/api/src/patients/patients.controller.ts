@@ -87,7 +87,7 @@ export class PatientsController {
 
   @Post("bulk-delete")
   @HttpCode(200)
-  @ApiOperation({ summary: "Soft-delete multiple patients (group admin only)" })
+  @ApiOperation({ summary: "Soft-delete multiple patients (group admin, clinic admin, assistant, or branch manager)" })
   @ApiOkResponse({ description: "{ ok: true, deleted: number }" })
   bulkDelete(@CurrentUser() user: JwtUser, @Body() body: BulkDeletePatientsDto) {
     return this.patients.softDeleteMany(requireTenantId(user), body, user);
@@ -186,7 +186,7 @@ export class PatientsController {
 
   @Delete(":id")
   @HttpCode(200)
-  @ApiOperation({ summary: "Soft-delete a patient (group admin only)" })
+  @ApiOperation({ summary: "Soft-delete a patient (group admin, clinic admin, assistant, or branch manager)" })
   @ApiOkResponse({ description: "{ ok: true }" })
   delete(@CurrentUser() user: JwtUser, @Param("id") id: string) {
     return this.patients.softDelete(requireTenantId(user), id, user);

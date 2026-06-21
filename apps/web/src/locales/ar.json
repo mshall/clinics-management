@@ -113,6 +113,8 @@
     "noVitals": "لم تُسجَّل علامات حيوية بعد.",
     "editPatient": "تعديل المريض",
     "editPatientTitle": "تعديل المريض",
+    "deletePatient": "حذف المريض",
+    "deleteConfirm": "حذف {{name}} ({{mrn}})؟ سيتم إزالته من السجل.",
     "uploadPhoto": "رفع صورة",
     "photoHint": "صورة اختيارية للملف (JPEG/PNG).",
     "attachDocuments": "المستندات",

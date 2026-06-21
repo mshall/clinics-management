@@ -31,6 +31,13 @@ const ALLOWED_PATIENT_DOC_MIME = new Set(["application/pdf", "image/jpeg", "imag
 
 type PatientDocFile = { buffer: Buffer; originalname: string; mimetype: string; size: number };
 
+const PATIENT_DELETE_ROLES: ReadonlySet<UserRole> = new Set([
+  UserRole.GROUP_ADMIN,
+  UserRole.CLINIC_ADMIN,
+  UserRole.CLINIC_ASSISTANT,
+  UserRole.BRANCH_MANAGER,
+]);
+
 export interface PatientListQuery {
   search?: string;
   mrn?: string;
@@ -476,10 +483,14 @@ export class PatientsService {
     return this.uploads.getReadStream("patients", storageKey);
   }
 
-  async softDelete(tenantId: string, id: string, user: JwtUser): Promise<{ ok: true }> {
-    if (user.role !== UserRole.GROUP_ADMIN) {
-      throw new ForbiddenException("Only group administrators can delete patients");
+  private async assertCanDeletePatient(user: JwtUser): Promise<void> {
+    if (!PATIENT_DELETE_ROLES.has(user.role)) {
+      throw new ForbiddenException("You are not allowed to delete patients");
     }
+  }
+
+  async softDelete(tenantId: string, id: string, user: JwtUser): Promise<{ ok: true }> {
+    await this.assertCanDeletePatient(user);
     await this.getById(tenantId, id, user);
     await this.prisma.patient.update({
       where: { id },
@@ -489,9 +500,7 @@ export class PatientsService {
   }
 
   async softDeleteMany(tenantId: string, dto: BulkDeletePatientsDto, user: JwtUser): Promise<{ ok: true; deleted: number }> {
-    if (user.role !== UserRole.GROUP_ADMIN) {
-      throw new ForbiddenException("Only group administrators can delete patients");
-    }
+    await this.assertCanDeletePatient(user);
     const scopeIds = await fetchPatientListClinicScopeIds(this.prisma, tenantId, user);
     const now = new Date();
     let deleted = 0;

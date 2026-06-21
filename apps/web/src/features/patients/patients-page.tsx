@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { CreateActionButton } from "@/components/create-action-button";
@@ -13,11 +14,12 @@ import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import type { PatientDto } from "@/lib/api-schema";
 import { useClinicsQuery, usePatientsQuery } from "@/lib/api-hooks";
-import { ApiError, apiPost, apiPostFormData } from "@/lib/http";
+import { ApiError, apiDelete, apiPost, apiPostFormData } from "@/lib/http";
 import { columnFilterIncludes } from "@/lib/utils";
 import { formatGender } from "@/lib/locale-display";
 import { formatClinicName } from "@/lib/locale-display";
 import { useAuthStore } from "@/stores/auth-store";
+import { canDeletePatient } from "@/lib/patient-edit-policy";
 import {
   PendingDocumentAttachments,
   pendingDocumentDescription,
@@ -97,6 +99,7 @@ export function PatientsPage() {
 
   const { data: clinics = [] } = useClinicsQuery();
   const authRole = useAuthStore((s) => s.user?.role);
+  const canDelete = canDeletePatient(authRole);
   const singleManagedClinic = clinics.length === 1 ? clinics[0]! : null;
   const defaultHomeBranchId = singleManagedClinic?.id ?? clinics[0]?.id ?? "";
   const [open, setOpen] = useState(false);
@@ -218,6 +221,30 @@ export function PatientsPage() {
       } else setFormErr(e instanceof Error ? e.message : String(e));
     },
   });
+
+  const deleteMut = useMutation({
+    mutationFn: (patientId: string) => apiDelete(`/api/v1/patients/${patientId}`),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["patients"] });
+      void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
+      void qc.invalidateQueries({ queryKey: ["admin", "org-patients"] });
+    },
+  });
+
+  const handleDeletePatient = (patient: PatientDto, e: MouseEvent | KeyboardEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const name =
+      i18n.language === "ar" && patient.firstNameAr
+        ? `${patient.firstNameAr} ${patient.lastNameAr ?? ""}`.trim()
+        : `${patient.firstNameEn} ${patient.lastNameEn}`.trim();
+    const msg = t("patients.deleteConfirm", "Delete {{name}} ({{mrn}})? They will be removed from the registry.", {
+      name,
+      mrn: patient.mrn,
+    });
+    if (!window.confirm(msg)) return;
+    deleteMut.mutate(patient.id);
+  };
 
   return (
     <div className="space-y-6">
@@ -477,6 +504,9 @@ export function PatientsPage() {
                   />
                   <FilterTh label={t("patients.email")} value={pfEmail} onChange={setPfEmail} />
                   <FilterTh label={t("patients.branch")} value={pfBranch} onChange={setPfBranch} />
+                  {canDelete ? (
+                    <th className="px-3 py-2 text-end">{t("common.actions", "Actions")}</th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
@@ -514,18 +544,33 @@ export function PatientsPage() {
                     <td className="px-3 py-2 ltr-nums">{p.dob ?? t("common.notAvailable", "—")}</td>
                     <td className="max-w-[10rem] truncate px-3 py-2 text-xs text-muted-foreground">{p.email ?? "—"}</td>
                     <td className="px-3 py-2 text-muted-foreground">{p.homeBranch}</td>
+                    {canDelete ? (
+                      <td className="px-3 py-2 text-end">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          aria-label={t("patients.deletePatient", "Delete patient")}
+                          disabled={deleteMut.isPending}
+                          onClick={(e) => handleDeletePatient(p, e)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
                 {items.length === 0 && !isFetching ? (
                   <tr>
-                    <td colSpan={6} className="px-3 py-8 text-center text-muted-foreground">
+                    <td colSpan={canDelete ? 7 : 6} className="px-3 py-8 text-center text-muted-foreground">
                       {t("patients.empty")}
                     </td>
                   </tr>
                 ) : null}
                 {items.length > 0 && filteredPatients.length === 0 && !isFetching ? (
                   <tr>
-                    <td colSpan={6} className="px-3 py-8 text-center text-muted-foreground">
+                    <td colSpan={canDelete ? 7 : 6} className="px-3 py-8 text-center text-muted-foreground">
                       {t("patients.noColMatch", "No rows match the column filters.")}
                     </td>
                   </tr>

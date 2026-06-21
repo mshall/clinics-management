@@ -113,6 +113,8 @@
     "noVitals": "No vitals captured yet.",
     "editPatient": "Edit patient",
     "editPatientTitle": "Edit patient",
+    "deletePatient": "Delete patient",
+    "deleteConfirm": "Delete {{name}} ({{mrn}})? They will be removed from the registry.",
     "photoHint": "Optional profile photo (JPEG/PNG).",
     "attachDocuments": "Documents",
     "addDocument": "Add a document",
