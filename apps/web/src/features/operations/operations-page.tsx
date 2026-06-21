@@ -11,6 +11,7 @@ import {
 } from "@/components/medications-prescription-draft-panel";
 import {
   PendingDocumentAttachments,
+  pendingDocumentDescription,
   pendingDocumentValidationMessage,
   validatePendingDocuments,
   type PendingDocumentRow,
@@ -405,7 +406,7 @@ export function OperationsPage() {
         const fd = new FormData();
         fd.append("file", row.file);
         fd.append("kind", "ATTACHMENT");
-        fd.append("description", row.description.trim());
+        fd.append("description", pendingDocumentDescription(row, t));
         await apiPostFormData(`/api/v1/operations/${op.id}/documents`, fd);
       }
 

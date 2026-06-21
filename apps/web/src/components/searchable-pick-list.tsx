@@ -26,6 +26,8 @@ interface SearchablePickListProps {
   /** Message shown while waiting for minimum search length. */
   idleMessage?: string;
   className?: string;
+  /** Show invalid styling (red border) for required-field feedback */
+  invalid?: boolean;
 }
 
 export function SearchablePickList({
@@ -41,6 +43,7 @@ export function SearchablePickList({
   minSearchLength = 0,
   idleMessage = "Start typing to search.",
   className,
+  invalid,
 }: SearchablePickListProps) {
   const uid = useId();
   const listboxId = `${uid}-listbox`;
@@ -118,7 +121,8 @@ export function SearchablePickList({
             "flex h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-1 text-start text-sm shadow-sm transition-colors",
             "hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             !displayText && "text-muted-foreground",
-            disabled && "cursor-not-allowed opacity-50"
+            disabled && "cursor-not-allowed opacity-50",
+            invalid && "border-destructive ring-1 ring-destructive",
           )}
           onClick={() => {
             if (disabled) return;
@@ -135,7 +139,7 @@ export function SearchablePickList({
           <Input
             ref={inputRef}
             id={inputId}
-            className="ltr-nums"
+            className={cn("ltr-nums", invalid && "border-destructive ring-1 ring-destructive")}
             placeholder={searchPlaceholder}
             value={q}
             disabled={disabled}

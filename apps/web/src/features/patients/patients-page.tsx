@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -20,20 +19,17 @@ import { formatGender } from "@/lib/locale-display";
 import { formatClinicName } from "@/lib/locale-display";
 import { useAuthStore } from "@/stores/auth-store";
 import {
+  PendingDocumentAttachments,
+  pendingDocumentDescription,
+  pendingDocumentValidationMessage,
+  validatePendingDocuments,
+  type PendingDocumentRow,
+} from "@/components/pending-document-attachments";
+import {
   PATIENT_ACQUISITION_CHANNELS,
   patientAcquisitionLabel,
   type PatientAcquisitionChannel,
 } from "@/lib/patient-acquisition";
-
-type PendingPatientDocument = {
-  id: string;
-  file: File | null;
-  description: string;
-};
-
-function emptyPendingDocument(): PendingPatientDocument {
-  return { id: crypto.randomUUID(), file: null, description: "" };
-}
 
 export function PatientsPage() {
   const { t, i18n } = useTranslation();
@@ -116,7 +112,7 @@ export function PatientsPage() {
   const [nationalId, setNationalId] = useState("");
   const [nationalIdDocFile, setNationalIdDocFile] = useState<File | null>(null);
   const [homeBranchId, setHomeBranchId] = useState("");
-  const [docRows, setDocRows] = useState<PendingPatientDocument[]>([]);
+  const [docRows, setDocRows] = useState<PendingDocumentRow[]>([]);
   const [acquisitionChannel, setAcquisitionChannel] = useState<PatientAcquisitionChannel | "">("");
   const [acquisitionReferralName, setAcquisitionReferralName] = useState("");
   const [acquisitionOtherDetail, setAcquisitionOtherDetail] = useState("");
@@ -152,14 +148,9 @@ export function PatientsPage() {
     if (!lastNameAr.trim()) {
       return t("patients.errorLastNameAr", "Arabic last name is required.");
     }
-    for (const row of docRows) {
-      if (row.file && !row.description.trim()) {
-        return t("patients.errorDocDescriptionRequired", "Each attached document needs a description.");
-      }
-      if (row.description.trim() && !row.file) {
-        return t("patients.errorDocFileRequired", "Choose a file for each document description.");
-      }
-    }
+    const docValidation = validatePendingDocuments(docRows);
+    const docMsg = pendingDocumentValidationMessage(docValidation, t);
+    if (docMsg) return docMsg;
     if (acquisitionChannel === "DOCTOR_REFERRAL" && !acquisitionReferralName.trim()) {
       return t("patients.errorExplainMoreRequired", "Explain more is required.");
     }
@@ -206,7 +197,7 @@ export function PatientsPage() {
         if (!row.file) continue;
         const fd = new FormData();
         fd.append("file", row.file);
-        fd.append("description", row.description.trim());
+        fd.append("description", pendingDocumentDescription(row, t));
         await apiPostFormData(`/api/v1/patients/${patient.id}/documents`, fd);
       }
       return patient;
@@ -335,72 +326,11 @@ export function PatientsPage() {
                 )}
               </div>
 
-              <div className="space-y-3 border-t border-border pt-3">
-                <div className="flex items-center justify-between gap-2">
-                  <Label>{t("patients.attachDocuments", "Documents")}</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="gap-1 text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
-                    onClick={() => setDocRows((rows) => [...rows, emptyPendingDocument()])}
-                  >
-                    <Plus className="h-4 w-4 text-emerald-600" />
-                    {t("patients.addDocument", "Add a document")}
-                  </Button>
-                </div>
-                {docRows.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">{t("patients.documentsOptionalHint", "Optional — attach files with a description for each.")}</p>
-                ) : (
-                  <div className="space-y-3">
-                    {docRows.map((row, index) => (
-                      <div key={row.id} className="space-y-2 rounded-md border border-border p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {t("patients.documentN", "Document {{n}}", { n: index + 1 })}
-                          </span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 shrink-0 text-muted-foreground"
-                            aria-label={t("common.remove", "Remove")}
-                            onClick={() => setDocRows((rows) => rows.filter((r) => r.id !== row.id))}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <div className="space-y-2">
-                          <Label required>{t("patients.documentDescription", "Description")}</Label>
-                          <Input
-                            value={row.description}
-                            onChange={(e) =>
-                              setDocRows((rows) =>
-                                rows.map((r) => (r.id === row.id ? { ...r, description: e.target.value } : r)),
-                              )
-                            }
-                            placeholder={t("patients.documentDescriptionPh", "e.g. Lab results, referral letter…")}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label required>{t("patients.documentFile", "File")}</Label>
-                          <Input
-                            className="cursor-pointer text-sm"
-                            type="file"
-                            accept="application/pdf,image/*"
-                            onChange={(e) =>
-                              setDocRows((rows) =>
-                                rows.map((r) => (r.id === row.id ? { ...r, file: e.target.files?.[0] ?? null } : r)),
-                              )
-                            }
-                          />
-                          {row.file ? <p className="text-xs text-muted-foreground ltr-nums">{row.file.name}</p> : null}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <PendingDocumentAttachments
+                className="space-y-3 border-t border-border pt-3"
+                rows={docRows}
+                onChange={setDocRows}
+              />
 
               <div className="space-y-2 border-t border-border pt-3">
                 <Label>{t("patients.howDidTheyFindUs", "How did they find us?")}</Label>

@@ -37,6 +37,7 @@ import { ApiError, apiPost } from "@/lib/http";
 import { formatEncounterStatus, formatClinicName, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
 import { columnFilterIncludes } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { ENCOUNTER_VISIT_TYPES, formatVisitType } from "@/lib/visit-types";
 import { defaultEncounterListRange, defaultMonthRange } from "@/stores/date-range-store";
 import { useAuthStore } from "@/stores/auth-store";
@@ -148,6 +149,7 @@ export function EncountersListPage() {
   const [createVisitFee, setCreateVisitFee] = useState("");
   const [createClinicianId, setCreateClinicianId] = useState("");
   const [createErr, setCreateErr] = useState<string | null>(null);
+  const [createFieldErrors, setCreateFieldErrors] = useState<Set<string>>(() => new Set());
   const [aptPickerSearch, setAptPickerSearch] = useState("");
   const [debouncedAptPicker, setDebouncedAptPicker] = useState("");
   useEffect(() => {
@@ -234,9 +236,29 @@ export function EncountersListPage() {
     setDebouncedAptPicker("");
     setSelectedAppointmentId("");
     setCreateClinicianId("");
+    setCreateFieldErrors(new Set());
     setAcquisitionValues(emptyPatientAcquisitionFormValues());
     setCreateOpen(true);
   };
+
+  const createFieldInvalid = (key: string) => createFieldErrors.has(key);
+
+  const collectCreateFieldErrors = (): Set<string> => {
+    const errors = new Set<string>();
+    if (patientRegistryTotal === 0) return errors;
+    if (!createPatientId.trim()) errors.add("patient");
+    if (!isPhysician && !createClinicianId.trim()) errors.add("clinician");
+    if (!createClinicId.trim()) errors.add("clinic");
+    if (!createVisitType.trim()) errors.add("visitType");
+    return errors;
+  };
+
+  const createFormIncomplete =
+    patientRegistryTotal === 0 ||
+    !createPatientId.trim() ||
+    !createClinicId.trim() ||
+    !createVisitType.trim() ||
+    (!isPhysician && !createClinicianId.trim());
 
   const createMut = useMutation({
     mutationFn: () => {
@@ -275,6 +297,41 @@ export function EncountersListPage() {
       } else setCreateErr(e instanceof Error ? e.message : String(e));
     },
   });
+
+  const handleCreateEncounter = () => {
+    if (createMut.isPending || patientRegistryTotal === 0) return;
+
+    const fieldErrors = collectCreateFieldErrors();
+    if (fieldErrors.size > 0) {
+      setCreateFieldErrors(fieldErrors);
+      setCreateErr(
+        t(
+          "encounters.errorRequiredFields",
+          "Fill in all required fields highlighted below.",
+        ),
+      );
+      return;
+    }
+
+    const acquisitionError = validatePatientAcquisitionForm(acquisitionValues, t);
+    if (acquisitionError) {
+      setCreateErr(acquisitionError);
+      return;
+    }
+
+    setCreateFieldErrors(new Set());
+    setCreateErr(null);
+    createMut.mutate();
+  };
+
+  const clearCreateFieldError = (key: string) => {
+    setCreateFieldErrors((prev) => {
+      if (!prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -319,9 +376,11 @@ export function EncountersListPage() {
                   <SearchablePickList
                     items={dialogPatientItems}
                     value={createPatientId}
+                    invalid={createFieldInvalid("patient")}
                     onValueChange={(v) => {
                       setCreatePatientId(v);
                       setSelectedAppointmentId("");
+                      clearCreateFieldError("patient");
                     }}
                     onSearchQueryChange={setPatientSearch}
                     searchPlaceholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
@@ -377,12 +436,16 @@ export function EncountersListPage() {
                 </div>
                 {!isPhysician ? (
                   <div className="space-y-2">
-                    <Label>{t("encounters.attendingPhysician")}</Label>
+                    <Label required>{t("encounters.attendingPhysician")}</Label>
                     <p className="text-xs text-muted-foreground">{t("encounters.attendingPhysicianHint")}</p>
                     <SearchablePickList
                       items={doctorPickItems}
                       value={createClinicianId}
-                      onValueChange={setCreateClinicianId}
+                      invalid={createFieldInvalid("clinician")}
+                      onValueChange={(v) => {
+                        setCreateClinicianId(v);
+                        clearCreateFieldError("clinician");
+                      }}
                       searchPlaceholder={t("appointments.pickPhysician")}
                       placeholder={t("encounters.attendingPhysician")}
                       emptyMessage={t("encounters.noDoctors", "No doctor accounts in this organization.")}
@@ -395,9 +458,15 @@ export function EncountersListPage() {
                 <div className="space-y-2">
                   <Label required>{t("encounters.clinic", "Clinic")}</Label>
                   <select
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className={cn(
+                      "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
+                      createFieldInvalid("clinic") && "border-destructive ring-1 ring-destructive",
+                    )}
                     value={createClinicId}
-                    onChange={(e) => setCreateClinicId(e.target.value)}
+                    onChange={(e) => {
+                      setCreateClinicId(e.target.value);
+                      clearCreateFieldError("clinic");
+                    }}
                   >
                     {clinics.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -409,9 +478,15 @@ export function EncountersListPage() {
                 <div className="space-y-2">
                   <Label required>{t("encounters.visitType")}</Label>
                   <select
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className={cn(
+                      "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
+                      createFieldInvalid("visitType") && "border-destructive ring-1 ring-destructive",
+                    )}
                     value={createVisitType}
-                    onChange={(e) => setCreateVisitType(e.target.value)}
+                    onChange={(e) => {
+                      setCreateVisitType(e.target.value);
+                      clearCreateFieldError("visitType");
+                    }}
                   >
                     {ENCOUNTER_VISIT_TYPES.map((vt) => (
                       <option key={vt} value={vt}>
@@ -441,25 +516,10 @@ export function EncountersListPage() {
                 />
                 <CreateActionButton
                   type="button"
-                  disabled={
-                    patientRegistryTotal === 0 ||
-                    !createPatientId ||
-                    !createClinicId ||
-                    !createVisitType.trim() ||
-                    createMut.isPending ||
-                    (!isPhysician &&
-                      !createClinicianId.trim() &&
-                      !selectedAppointmentId.trim())
-                  }
-                  onClick={() => {
-                    const acquisitionError = validatePatientAcquisitionForm(acquisitionValues, t);
-                    if (acquisitionError) {
-                      setCreateErr(acquisitionError);
-                      return;
-                    }
-                    setCreateErr(null);
-                    createMut.mutate();
-                  }}
+                  aria-disabled={createFormIncomplete || createMut.isPending}
+                  className={cn((createFormIncomplete || createMut.isPending) && "opacity-50")}
+                  disabled={createMut.isPending || patientRegistryTotal === 0}
+                  onClick={handleCreateEncounter}
                 >
                   {t("encounters.createAndOpen", "Create & open")}
                 </CreateActionButton>
