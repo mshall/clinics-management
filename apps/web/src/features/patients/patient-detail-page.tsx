@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PatientEditDialog } from "@/components/patient-edit-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -18,6 +19,7 @@ import { formatEncounterStatus, localeForLanguage } from "@/lib/locale-display";
 import { patientAcquisitionDisplay, type PatientAcquisitionChannel } from "@/lib/patient-acquisition";
 import type { PatientDocumentDto } from "@/lib/api-schema";
 import { showNavItem } from "@/lib/nav-policy";
+import { canEditPatientDetails } from "@/lib/patient-edit-policy";
 import { useAuthStore } from "@/stores/auth-store";
 
 export function PatientDetailPage() {
@@ -28,6 +30,8 @@ export function PatientDetailPage() {
   const role = useAuthStore((s) => s.user?.role);
   const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
   const canViewEncounters = showNavItem(role, "encounters", navTabKeys);
+  const canEditPatient = canEditPatientDetails(role);
+  const [editOpen, setEditOpen] = useState(false);
   const { data: patient, isPending, isError, error } = usePatientQuery(id);
   const [encPage, setEncPage] = useState(1);
   const [encPageSize, setEncPageSize] = useState(10);
@@ -178,6 +182,11 @@ export function PatientDetailPage() {
               <Button asChild variant="outline">
                 <Link to="/patients">{t("patients.backToList")}</Link>
               </Button>
+              {canEditPatient ? (
+                <Button type="button" variant="outline" onClick={() => setEditOpen(true)}>
+                  {t("patients.editPatient", "Edit patient")}
+                </Button>
+              ) : null}
               {canViewEncounters ? (
                 <Button
                   type="button"
@@ -414,6 +423,9 @@ export function PatientDetailPage() {
           </CardContent>
         </Card>
       </div>
+      ) : null}
+      {canEditPatient ? (
+        <PatientEditDialog patient={patient} open={editOpen} onOpenChange={setEditOpen} />
       ) : null}
     </div>
   );

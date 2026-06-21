@@ -111,6 +111,8 @@
     "personalDetails": "التفاصيل الشخصية",
     "vitalsHistory": "سجل العلامات الحيوية",
     "noVitals": "لم تُسجَّل علامات حيوية بعد.",
+    "editPatient": "تعديل المريض",
+    "editPatientTitle": "تعديل المريض",
     "uploadPhoto": "رفع صورة",
     "photoHint": "صورة اختيارية للملف (JPEG/PNG).",
     "attachDocuments": "المستندات",
