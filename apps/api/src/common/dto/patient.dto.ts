@@ -20,8 +20,8 @@ export class PatientDto {
   @ApiPropertyOptional({ nullable: true, type: String })
   lastNameAr!: string | null;
 
-  @ApiProperty({ example: "1988-03-12" })
-  dob!: string;
+  @ApiPropertyOptional({ nullable: true, example: "1988-03-12", type: String })
+  dob!: string | null;
 
   @ApiProperty({ enum: ["M", "F", "OTHER", "UNKNOWN"] })
   gender!: string;

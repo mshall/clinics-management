@@ -431,8 +431,8 @@ export class AdminDataExplorerService {
         const firstNameEn = String(body.firstNameEn ?? "").trim();
         const lastNameEn = String(body.lastNameEn ?? "").trim();
         const dob = body.dob ? new Date(String(body.dob)) : null;
-        if (!mrn || !firstNameEn || !lastNameEn || !dob || Number.isNaN(dob.getTime())) {
-          throw new BadRequestException("patients require mrn, firstNameEn, lastNameEn, dob (ISO)");
+        if (!mrn || !firstNameEn || !lastNameEn || (body.dob != null && body.dob !== "" && (!dob || Number.isNaN(dob.getTime())))) {
+          throw new BadRequestException("patients require mrn, firstNameEn, lastNameEn; dob is optional (ISO when provided)");
         }
         const gender = String(body.gender ?? "UNKNOWN") as Gender;
         if (!Object.values(Gender).includes(gender)) throw new BadRequestException("Invalid gender");
@@ -722,7 +722,10 @@ export class AdminDataExplorerService {
         if (body.lastNameEn !== undefined) data.lastNameEn = String(body.lastNameEn).trim();
         if (body.firstNameAr !== undefined) data.firstNameAr = body.firstNameAr === null ? null : String(body.firstNameAr);
         if (body.lastNameAr !== undefined) data.lastNameAr = body.lastNameAr === null ? null : String(body.lastNameAr);
-        if (body.dob !== undefined) data.dob = new Date(String(body.dob));
+        if (body.dob !== undefined) {
+          data.dob =
+            body.dob === null || String(body.dob).trim() === "" ? null : new Date(String(body.dob));
+        }
         if (body.gender !== undefined) {
           const g = String(body.gender) as Gender;
           if (!Object.values(Gender).includes(g)) throw new BadRequestException("Invalid gender");

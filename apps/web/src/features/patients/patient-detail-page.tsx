@@ -198,7 +198,10 @@ export function PatientDetailPage() {
             <CardTitle className="text-base">{t("patients.personalDetails")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <Row label={t("patients.dob")} value={<span className="ltr-nums">{patient.dob}</span>} />
+            <Row
+              label={t("patients.dob")}
+              value={<span className="ltr-nums">{patient.dob ?? t("common.notAvailable", "—")}</span>}
+            />
             <Separator />
             <Row label={t("patients.gender")} value={<span className="uppercase">{patient.gender}</span>} />
             <Separator />

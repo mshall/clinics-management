@@ -38,9 +38,12 @@ export class CreatePatientDto extends PatientAcquisitionFieldsDto {
   @MaxLength(120)
   lastNameAr!: string;
 
-  @ApiProperty({ example: "1988-03-12" })
+  @ApiPropertyOptional({ example: "1988-03-12" })
+  @Transform(({ value }) => (typeof value === "string" && !value.trim() ? undefined : value))
+  @IsOptional()
+  @ValidateIf((_, v) => v !== undefined && v !== null && String(v).trim() !== "")
   @IsDateString()
-  dob!: string;
+  dob?: string;
 
   @ApiProperty({ enum: Gender })
   @IsEnum(Gender)

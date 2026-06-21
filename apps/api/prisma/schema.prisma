@@ -239,7 +239,7 @@ model Patient {
   lastNameEn   String
   firstNameAr  String?
   lastNameAr   String?
-  dob          DateTime
+  dob          DateTime?
   gender       Gender
   phone        String
   email        String?

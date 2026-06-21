@@ -170,7 +170,7 @@ export function PatientsPage() {
         lastNameEn,
         firstNameAr: firstNameAr.trim(),
         lastNameAr: lastNameAr.trim(),
-        dob,
+        ...(dob.trim() ? { dob: dob.trim() } : {}),
         gender,
         phone,
         email: email.trim() || undefined,
@@ -251,7 +251,7 @@ export function PatientsPage() {
                 <Input value={lastNameAr} onChange={(e) => setLastNameAr(e.target.value)} dir="rtl" />
               </div>
               <div className="space-y-2">
-                <Label required>{t("patients.dob")}</Label>
+                <Label>{t("patients.dob")}</Label>
                 <Input className="ltr-nums" type="date" value={dob} onChange={(e) => setDob(e.target.value)} />
               </div>
               <div className="space-y-2">
@@ -381,7 +381,6 @@ export function PatientsPage() {
                   !lastNameEn ||
                   !firstNameAr.trim() ||
                   !lastNameAr.trim() ||
-                  !dob ||
                   !phone ||
                   createMut.isPending
                 }
@@ -510,7 +509,7 @@ export function PatientsPage() {
                         {formatGender(p.gender, t)}
                       </span>
                     </td>
-                    <td className="px-3 py-2 ltr-nums">{p.dob}</td>
+                    <td className="px-3 py-2 ltr-nums">{p.dob ?? t("common.notAvailable", "—")}</td>
                     <td className="max-w-[10rem] truncate px-3 py-2 text-xs text-muted-foreground">{p.email ?? "—"}</td>
                     <td className="px-3 py-2 text-muted-foreground">{p.homeBranch}</td>
                   </tr>

@@ -79,7 +79,7 @@ export class PatientsService {
     lastNameEn: string;
     firstNameAr: string | null;
     lastNameAr: string | null;
-    dob: Date;
+    dob: Date | null;
     gender: string;
     phone: string;
     email: string | null;
@@ -109,12 +109,10 @@ export class PatientsService {
     dto.firstNameAr = p.firstNameAr;
     dto.lastNameAr = p.lastNameAr;
     const dob = p.dob instanceof Date && !Number.isNaN(p.dob.getTime()) ? p.dob : null;
-    if (!dob) {
+    if (p.dob != null && !dob) {
       this.logger.error(`Patient ${p.id} has invalid dob; fix data in DB`);
-      dto.dob = "1900-01-01";
-    } else {
-      dto.dob = dob.toISOString().slice(0, 10);
     }
+    dto.dob = dob ? dob.toISOString().slice(0, 10) : null;
     dto.gender = p.gender as PatientDto["gender"];
     dto.phone = p.phone;
     dto.email = p.email;
@@ -299,7 +297,7 @@ export class PatientsService {
         lastNameEn: dto.lastNameEn,
         firstNameAr: dto.firstNameAr.trim(),
         lastNameAr: dto.lastNameAr.trim(),
-        dob: new Date(dto.dob),
+        dob: dto.dob?.trim() ? new Date(dto.dob) : null,
         gender: dto.gender,
         phone: dto.phone,
         email: dto.email?.trim() || null,
@@ -340,7 +338,7 @@ export class PatientsService {
     if (dto.lastNameEn !== undefined) data.lastNameEn = dto.lastNameEn;
     if (dto.firstNameAr !== undefined) data.firstNameAr = dto.firstNameAr ?? null;
     if (dto.lastNameAr !== undefined) data.lastNameAr = dto.lastNameAr ?? null;
-    if (dto.dob !== undefined) data.dob = new Date(dto.dob);
+    if (dto.dob !== undefined) data.dob = dto.dob?.trim() ? new Date(dto.dob) : null;
     if (dto.gender !== undefined) data.gender = dto.gender;
     if (dto.phone !== undefined) data.phone = dto.phone;
     if (dto.email !== undefined) data.email = dto.email?.trim() || null;

@@ -3,6 +3,7 @@ import type { components } from "@/lib/openapi-types.gen";
 export type { components, paths, webhooks } from "@/lib/openapi-types.gen";
 
 export type PatientDto = components["schemas"]["PatientDto"] & {
+  dob?: string | null;
   homeBranchId?: string | null;
   nationalId?: string | null;
   hasNationalIdDoc?: boolean;

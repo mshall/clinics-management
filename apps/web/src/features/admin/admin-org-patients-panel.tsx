@@ -26,7 +26,7 @@ import { apiErrorMessage } from "@/features/platform/platform-shared";
 
 type DialogMode = null | "create" | { edit: string };
 
-function dobInputValue(iso: string | undefined): string {
+function dobInputValue(iso: string | null | undefined): string {
   if (!iso) return "";
   return iso.slice(0, 10);
 }
@@ -118,7 +118,6 @@ export function AdminOrgPatientsPanel() {
     if (!lastNameAr.trim()) {
       return t("patients.errorLastNameAr", "Arabic last name is required.");
     }
-    if (!dob) return t("patients.errorDobRequired", "Date of birth is required.");
     if (!phone.trim()) return t("patients.errorPhoneRequired", "Phone is required.");
     return validatePatientAcquisitionForm(acquisition, t);
   };
@@ -128,7 +127,7 @@ export function AdminOrgPatientsPanel() {
     lastNameEn: lastNameEn.trim(),
     firstNameAr: firstNameAr.trim(),
     lastNameAr: lastNameAr.trim(),
-    dob,
+    ...(dob.trim() ? { dob } : {}),
     gender,
     phone: phone.trim(),
     email: email.trim() || undefined,
@@ -209,7 +208,6 @@ export function AdminOrgPatientsPanel() {
     lastNameEn.trim() &&
     firstNameAr.trim() &&
     lastNameAr.trim() &&
-    dob &&
     phone.trim();
 
   const homeBranchLabel = useMemo(
@@ -388,7 +386,7 @@ export function AdminOrgPatientsPanel() {
                           <td className="px-3 py-2">{formatPatientEnglishName(row)}</td>
                           <td className="px-3 py-2 ltr-nums">{row.phone}</td>
                           <td className="px-3 py-2">{homeBranchLabel(row)}</td>
-                          <td className="px-3 py-2 ltr-nums">{dobInputValue(row.dob)}</td>
+                          <td className="px-3 py-2 ltr-nums">{dobInputValue(row.dob) || t("common.notAvailable", "—")}</td>
                           <td className="px-3 py-2 text-end">
                             <Button type="button" size="sm" variant="outline" onClick={() => setDialogMode({ edit: row.id })}>
                               {t("common.edit", "Edit")}
@@ -445,7 +443,7 @@ export function AdminOrgPatientsPanel() {
                 <Input value={lastNameAr} onChange={(e) => setLastNameAr(e.target.value)} dir="rtl" />
               </div>
               <div className="space-y-2">
-                <Label required>{t("patients.dob")}</Label>
+                <Label>{t("patients.dob")}</Label>
                 <Input className="ltr-nums" type="date" value={dob} onChange={(e) => setDob(e.target.value)} />
               </div>
               <div className="space-y-2">
