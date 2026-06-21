@@ -83,13 +83,6 @@ export function PendingDocumentAttachments({
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraRowId, setCameraRowId] = useState<string | null>(null);
 
-  const openCameraForNewRow = () => {
-    const row = emptyPendingDocumentRow();
-    onChange((prev) => [...prev, row]);
-    setCameraRowId(row.id);
-    setCameraOpen(true);
-  };
-
   const handleCameraOpenChange = (open: boolean) => {
     if (!open && cameraRowId) {
       const rowId = cameraRowId;
@@ -119,29 +112,16 @@ export function PendingDocumentAttachments({
     <div className={className}>
       <div className="flex items-center justify-between gap-2">
         <Label>{t("patients.attachDocuments", "Documents")}</Label>
-        <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="gap-1 text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
-            onClick={() => onChange((prev) => [...prev, emptyPendingDocumentRow()])}
-          >
-            <Plus className="h-4 w-4 text-emerald-600" />
-            {t("patients.addDocument", "Add a document")}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="h-8 w-8 shrink-0 text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
-            aria-label={t("patients.captureWithCamera", "Capture with camera")}
-            title={t("patients.captureWithCamera", "Capture with camera")}
-            onClick={openCameraForNewRow}
-          >
-            <Camera className="h-4 w-4 text-emerald-600" />
-          </Button>
-        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="gap-1 text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
+          onClick={() => onChange((prev) => [...prev, emptyPendingDocumentRow()])}
+        >
+          <Plus className="h-4 w-4 text-emerald-600" />
+          {t("patients.addDocument", "Add a document")}
+        </Button>
       </div>
       {rows.length === 0 ? (
         <p className="mt-2 text-xs text-muted-foreground">
