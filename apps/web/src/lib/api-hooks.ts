@@ -24,6 +24,7 @@ import type {
 } from "@/lib/api-types";
 import { ApiError, apiGet } from "@/lib/http";
 import type { PatientClinicalDocumentsDto } from "@/lib/patient-document-category";
+import type { PatientPhoneConflictResponse } from "@/lib/patient-phone-conflict";
 import type { Paginated } from "@/lib/paginated";
 import { useAuthStore } from "@/stores/auth-store";
 import { defaultMonthRange, useDateRangeStore } from "@/stores/date-range-store";
@@ -133,6 +134,24 @@ export function usePatientClinicalDocumentsQuery(patientId: string | undefined) 
     queryKey: ["patient", patientId, "clinical-documents"],
     queryFn: () => apiGet<PatientClinicalDocumentsDto>(`/api/v1/patients/${patientId}/clinical-documents`),
     enabled: Boolean(patientId) && hasToken,
+  });
+}
+
+export function usePatientPhoneConflictQuery(
+  phone: string,
+  excludePatientId?: string,
+  options?: { enabled?: boolean },
+) {
+  const hasToken = useHasAuthToken();
+  const trimmed = phone.trim();
+  const enabled = (options?.enabled !== false) && hasToken && trimmed.length > 0;
+  const q = new URLSearchParams();
+  q.set("phone", trimmed);
+  if (excludePatientId?.trim()) q.set("excludePatientId", excludePatientId.trim());
+  return useQuery({
+    queryKey: ["patients", "phone-conflict", trimmed, excludePatientId ?? ""],
+    queryFn: () => apiGet<PatientPhoneConflictResponse>(`/api/v1/patients/phone-conflict?${q.toString()}`),
+    enabled,
   });
 }
 

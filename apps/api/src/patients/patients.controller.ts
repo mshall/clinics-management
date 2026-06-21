@@ -33,6 +33,7 @@ import { PatientDocumentDto } from "../common/dto/patient-document.dto";
 import { CreatePatientDto } from "./dto/create-patient.dto";
 import { UpdatePatientDto } from "./dto/update-patient.dto";
 import { BulkDeletePatientsDto } from "./dto/bulk-delete-patients.dto";
+import { PatientPhoneConflictDto } from "./dto/patient-phone-conflict.dto";
 import { PatientsService } from "./patients.service";
 
 const PATIENT_DOC_UPLOAD_LIMIT = 15 * 1024 * 1024;
@@ -91,6 +92,22 @@ export class PatientsController {
   @ApiOkResponse({ description: "{ ok: true, deleted: number }" })
   bulkDelete(@CurrentUser() user: JwtUser, @Body() body: BulkDeletePatientsDto) {
     return this.patients.softDeleteMany(requireTenantId(user), body, user);
+  }
+
+  @Get("phone-conflict")
+  @ApiOperation({ summary: "Check whether a phone number is already registered to another patient" })
+  @ApiOkResponse({ type: PatientPhoneConflictDto })
+  checkPhoneConflict(
+    @CurrentUser() user: JwtUser,
+    @Query("phone") phone?: string,
+    @Query("excludePatientId") excludePatientId?: string,
+  ) {
+    return this.patients.checkPhoneConflict(
+      requireTenantId(user),
+      phone ?? "",
+      user,
+      excludePatientId?.trim() || undefined,
+    );
   }
 
   @Get(":id/national-id-document")

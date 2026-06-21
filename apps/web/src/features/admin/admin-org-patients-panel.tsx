@@ -9,6 +9,7 @@ import {
   validatePatientAcquisitionForm,
   type PatientAcquisitionFormValues,
 } from "@/components/patient-acquisition-fields";
+import { PatientPhoneField } from "@/components/patient-phone-field";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,11 @@ import { formatClinicName } from "@/lib/locale-display";
 import type { Paginated } from "@/lib/paginated";
 import { formatPatientEnglishName } from "@/lib/patient-display";
 import { apiErrorMessage } from "@/features/platform/platform-shared";
+import {
+  parsePhoneConflictFromError,
+  phoneConflictMessage,
+  type PatientPhoneConflictPatient,
+} from "@/lib/patient-phone-conflict";
 
 type DialogMode = null | "create" | { edit: string };
 
@@ -48,6 +54,7 @@ export function AdminOrgPatientsPanel() {
   const [dob, setDob] = useState("");
   const [gender, setGender] = useState("M");
   const [phone, setPhone] = useState("");
+  const [phoneConflict, setPhoneConflict] = useState<PatientPhoneConflictPatient | null>(null);
   const [email, setEmail] = useState("");
   const [nationalId, setNationalId] = useState("");
   const [homeBranchId, setHomeBranchId] = useState("");
@@ -80,6 +87,7 @@ export function AdminOrgPatientsPanel() {
     setDob("");
     setGender("M");
     setPhone("");
+    setPhoneConflict(null);
     setEmail("");
     setNationalId("");
     setHomeBranchId("");
@@ -90,6 +98,7 @@ export function AdminOrgPatientsPanel() {
   const closeDialog = () => {
     setDialogMode(null);
     setFormErr(null);
+    setPhoneConflict(null);
   };
 
   useEffect(() => {
@@ -102,6 +111,7 @@ export function AdminOrgPatientsPanel() {
     setDob(dobInputValue(p.dob));
     setGender(p.gender ?? "M");
     setPhone(p.phone);
+    setPhoneConflict(null);
     setEmail(p.email ?? "");
     setNationalId(p.nationalId ?? "");
     setHomeBranchId(p.homeBranchId ?? "");
@@ -140,6 +150,9 @@ export function AdminOrgPatientsPanel() {
     mutationFn: () => {
       const err = validateForm();
       if (err) throw new Error(err);
+      if (phoneConflict) {
+        throw new Error(phoneConflictMessage(phoneConflict, t, i18n.language));
+      }
       return apiPost<PatientDto>("/api/v1/patients", buildBody());
     },
     onSuccess: () => {
@@ -149,13 +162,24 @@ export function AdminOrgPatientsPanel() {
       void qc.invalidateQueries({ queryKey: ["patients"] });
       void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
     },
-    onError: (e: unknown) => setFormErr(apiErrorMessage(e)),
+    onError: (e: unknown) => {
+      const conflict = parsePhoneConflictFromError(e);
+      if (conflict) {
+        setPhoneConflict(conflict);
+        setFormErr(phoneConflictMessage(conflict, t, i18n.language));
+        return;
+      }
+      setFormErr(apiErrorMessage(e));
+    },
   });
 
   const patchMut = useMutation({
     mutationFn: () => {
       const err = validateForm();
       if (err) throw new Error(err);
+      if (phoneConflict) {
+        throw new Error(phoneConflictMessage(phoneConflict, t, i18n.language));
+      }
       return apiPatch<PatientDto>(`/api/v1/patients/${editPatientId}`, buildBody());
     },
     onSuccess: () => {
@@ -166,7 +190,15 @@ export function AdminOrgPatientsPanel() {
       void qc.invalidateQueries({ queryKey: ["patient", editPatientId] });
       void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
     },
-    onError: (e: unknown) => setFormErr(apiErrorMessage(e)),
+    onError: (e: unknown) => {
+      const conflict = parsePhoneConflictFromError(e);
+      if (conflict) {
+        setPhoneConflict(conflict);
+        setFormErr(phoneConflictMessage(conflict, t, i18n.language));
+        return;
+      }
+      setFormErr(apiErrorMessage(e));
+    },
   });
 
   const deleteMut = useMutation({
@@ -208,7 +240,8 @@ export function AdminOrgPatientsPanel() {
     lastNameEn.trim() &&
     firstNameAr.trim() &&
     lastNameAr.trim() &&
-    phone.trim();
+    phone.trim() &&
+    !phoneConflict;
 
   const homeBranchLabel = useMemo(
     () => (row: PatientDto) => {
@@ -457,10 +490,16 @@ export function AdminOrgPatientsPanel() {
                   <option value="F">{t("patients.genderF")}</option>
                 </select>
               </div>
-              <div className="space-y-2">
-                <Label required>{t("patients.phone")}</Label>
-                <Input className="ltr-nums" value={phone} onChange={(e) => setPhone(e.target.value)} />
-              </div>
+              <PatientPhoneField
+                value={phone}
+                onChange={(next) => {
+                  setPhone(next);
+                  setPhoneConflict(null);
+                }}
+                excludePatientId={editPatientId ?? undefined}
+                enabled={dialogOpen}
+                onConflictChange={setPhoneConflict}
+              />
               <div className="space-y-2">
                 <Label>
                   {t("patients.nationalId")}{" "}

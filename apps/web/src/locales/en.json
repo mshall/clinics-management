@@ -175,6 +175,10 @@
     "errorExplainMoreRequired": "Explain more is required.",
     "errorFirstNameAr": "Arabic first name is required.",
     "errorLastNameAr": "Arabic last name is required.",
+    "errorPhoneRequired": "Phone is required.",
+    "errorPhoneInUse": "Another patient already uses this phone number: {{name}} ({{mrn}}).",
+    "viewExistingPatient": "View patient",
+    "checkingPhone": "Checking phone number…",
     "photoOptional": "Profile photo is optional."
   },
   "encounters": {

@@ -33,6 +33,8 @@ import {
   classifyPatientDocumentDescription,
   patientCategoryToClinicalKind,
 } from "./patient-document-category";
+import { MIN_PHONE_DIGITS, normalizePhoneDigits } from "./patient-phone";
+import type { PatientPhoneConflictDto, PatientPhoneConflictPatientDto } from "./dto/patient-phone-conflict.dto";
 
 const MAX_PATIENT_DOC_BYTES = 15 * 1024 * 1024;
 const ALLOWED_PATIENT_DOC_MIME = new Set(["application/pdf", "image/jpeg", "image/png", "image/gif", "image/webp"]);
@@ -291,6 +293,86 @@ export class PatientsService {
     }
   }
 
+  private patientPhoneConflictSelect = {
+    id: true,
+    mrn: true,
+    phone: true,
+    firstNameEn: true,
+    lastNameEn: true,
+    firstNameAr: true,
+    lastNameAr: true,
+  } as const;
+
+  private mapPhoneConflictPatient(p: {
+    id: string;
+    mrn: string;
+    firstNameEn: string;
+    lastNameEn: string;
+    firstNameAr: string | null;
+    lastNameAr: string | null;
+  }): PatientPhoneConflictPatientDto {
+    return {
+      id: p.id,
+      mrn: p.mrn,
+      firstNameEn: p.firstNameEn,
+      lastNameEn: p.lastNameEn,
+      firstNameAr: p.firstNameAr,
+      lastNameAr: p.lastNameAr,
+    };
+  }
+
+  private async findPatientByPhone(
+    tenantId: string,
+    phone: string,
+    excludePatientId?: string,
+  ): Promise<PatientPhoneConflictPatientDto | null> {
+    const trimmed = phone.trim();
+    const digits = normalizePhoneDigits(trimmed);
+    if (digits.length < MIN_PHONE_DIGITS) return null;
+
+    const whereBase: Prisma.PatientWhereInput = {
+      tenantId,
+      deletedAt: null,
+      ...(excludePatientId ? { NOT: { id: excludePatientId } } : {}),
+    };
+
+    const exact = await this.prisma.patient.findFirst({
+      where: { ...whereBase, phone: { equals: trimmed, mode: "insensitive" } },
+      select: this.patientPhoneConflictSelect,
+    });
+    if (exact) return this.mapPhoneConflictPatient(exact);
+
+    const tail = digits.length >= 9 ? digits.slice(-9) : digits;
+    const candidates = await this.prisma.patient.findMany({
+      where: { ...whereBase, phone: { contains: tail } },
+      select: this.patientPhoneConflictSelect,
+      take: 50,
+    });
+    const match = candidates.find((p) => normalizePhoneDigits(p.phone) === digits);
+    return match ? this.mapPhoneConflictPatient(match) : null;
+  }
+
+  private throwPhoneInUse(existing: PatientPhoneConflictPatientDto): never {
+    throw new BadRequestException({
+      message: "phone already in use",
+      code: "PHONE_IN_USE",
+      existingPatient: existing,
+    });
+  }
+
+  async checkPhoneConflict(
+    tenantId: string,
+    phone: string,
+    user: JwtUser,
+    excludePatientId?: string,
+  ): Promise<PatientPhoneConflictDto> {
+    if (excludePatientId) {
+      await this.getById(tenantId, excludePatientId, user);
+    }
+    const patient = await this.findPatientByPhone(tenantId, phone, excludePatientId);
+    return patient ? { conflict: true, patient } : { conflict: false };
+  }
+
   async create(tenantId: string, dto: CreatePatientDto, user: JwtUser): Promise<PatientDto> {
     await this.assertHomeBranchInScope(tenantId, user, dto.homeBranchId ?? null);
     validatePatientAcquisition(dto);
@@ -307,6 +389,9 @@ export class PatientsService {
       });
       if (clash) throw new BadRequestException("nationalId already in use");
     }
+    const phone = dto.phone.trim();
+    const phoneClash = await this.findPatientByPhone(tenantId, phone);
+    if (phoneClash) this.throwPhoneInUse(phoneClash);
     const mrn = await this.nextMrn(tenantId);
     const row = await this.prisma.patient.create({
       data: {
@@ -318,7 +403,7 @@ export class PatientsService {
         lastNameAr: dto.lastNameAr.trim(),
         dob: dto.dob?.trim() ? new Date(dto.dob) : null,
         gender: dto.gender,
-        phone: dto.phone,
+        phone,
         email: dto.email?.trim() || null,
         nationalId,
         ...patientAcquisitionUpdateData(dto),
@@ -359,7 +444,12 @@ export class PatientsService {
     if (dto.lastNameAr !== undefined) data.lastNameAr = dto.lastNameAr ?? null;
     if (dto.dob !== undefined) data.dob = dto.dob?.trim() ? new Date(dto.dob) : null;
     if (dto.gender !== undefined) data.gender = dto.gender;
-    if (dto.phone !== undefined) data.phone = dto.phone;
+    if (dto.phone !== undefined) {
+      const phone = dto.phone.trim();
+      const phoneClash = await this.findPatientByPhone(tenantId, phone, id);
+      if (phoneClash) this.throwPhoneInUse(phoneClash);
+      data.phone = phone;
+    }
     if (dto.email !== undefined) data.email = dto.email?.trim() || null;
     if (dto.nationalId !== undefined) data.nationalId = nextNational ?? null;
     if (dto.homeBranchId !== undefined) data.homeBranch = dto.homeBranchId ? { connect: { id: dto.homeBranchId } } : { disconnect: true };

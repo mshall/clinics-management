@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { PatientPhoneField } from "@/components/patient-phone-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -35,6 +36,11 @@ import {
   patientAcquisitionLabel,
   type PatientAcquisitionChannel,
 } from "@/lib/patient-acquisition";
+import {
+  parsePhoneConflictFromError,
+  phoneConflictMessage,
+  type PatientPhoneConflictPatient,
+} from "@/lib/patient-phone-conflict";
 
 export function PatientsPage() {
   const { t, i18n } = useTranslation();
@@ -115,6 +121,7 @@ export function PatientsPage() {
   const [dob, setDob] = useState("");
   const [gender, setGender] = useState("M");
   const [phone, setPhone] = useState("");
+  const [phoneConflict, setPhoneConflict] = useState<PatientPhoneConflictPatient | null>(null);
   const [email, setEmail] = useState("");
   const [nationalId, setNationalId] = useState("");
   const [nationalIdDocFile, setNationalIdDocFile] = useState<File | null>(null);
@@ -134,6 +141,7 @@ export function PatientsPage() {
     setDob("");
     setGender("M");
     setPhone("");
+    setPhoneConflict(null);
     setEmail("");
     setNationalId("");
     setNationalIdDocFile(null);
@@ -185,6 +193,10 @@ export function PatientsPage() {
       showFormError(validationError);
       return;
     }
+    if (phoneConflict) {
+      showFormError(phoneConflictMessage(phoneConflict, t, i18n.language));
+      return;
+    }
     setDocInvalidRowIds(new Set());
     setFormErr(null);
     createMut.mutate();
@@ -202,7 +214,7 @@ export function PatientsPage() {
         lastNameAr: lastNameAr.trim(),
         ...(dob.trim() ? { dob: dob.trim() } : {}),
         gender,
-        phone,
+        phone: phone.trim(),
         email: email.trim() || undefined,
         nationalId: nationalId.trim() || undefined,
         homeBranchId: homeBranchId || undefined,
@@ -248,6 +260,12 @@ export function PatientsPage() {
       void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
     },
     onError: (e: unknown) => {
+      const conflict = parsePhoneConflictFromError(e);
+      if (conflict) {
+        setPhoneConflict(conflict);
+        showFormError(phoneConflictMessage(conflict, t, i18n.language));
+        return;
+      }
       showFormError(apiErrorMessage(e));
     },
   });
@@ -326,10 +344,15 @@ export function PatientsPage() {
                   <option value="F">{t("patients.genderF")}</option>
                 </select>
               </div>
-              <div className="space-y-2">
-                <Label required>{t("patients.phone")}</Label>
-                <Input className="ltr-nums" value={phone} onChange={(e) => setPhone(e.target.value)} />
-              </div>
+              <PatientPhoneField
+                value={phone}
+                onChange={(next) => {
+                  setPhone(next);
+                  setPhoneConflict(null);
+                }}
+                enabled={open}
+                onConflictChange={setPhoneConflict}
+              />
               <div className="space-y-2">
                 <Label>
                   {t("patients.nationalId")}{" "}
@@ -453,6 +476,7 @@ export function PatientsPage() {
                   !firstNameAr.trim() ||
                   !lastNameAr.trim() ||
                   !phone ||
+                  Boolean(phoneConflict) ||
                   createMut.isPending
                 }
                 onClick={handleSubmitRegister}

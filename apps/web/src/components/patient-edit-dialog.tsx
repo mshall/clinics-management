@@ -5,6 +5,7 @@ import {
   PatientAcquisitionFields,
   type PatientAcquisitionFormValues,
 } from "@/components/patient-acquisition-fields";
+import { PatientPhoneField } from "@/components/patient-phone-field";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,11 @@ import {
 } from "@/lib/patient-form-utils";
 import { apiErrorMessage } from "@/features/platform/platform-shared";
 import { apiPatch } from "@/lib/http";
+import {
+  parsePhoneConflictFromError,
+  phoneConflictMessage,
+  type PatientPhoneConflictPatient,
+} from "@/lib/patient-phone-conflict";
 import { formatClinicName } from "@/lib/locale-display";
 
 type PatientEditDialogProps = {
@@ -33,18 +39,23 @@ export function PatientEditDialog({ patient, open, onOpenChange }: PatientEditDi
   const qc = useQueryClient();
   const { data: clinics = [] } = useClinicsQuery();
   const [formErr, setFormErr] = useState<string | null>(null);
+  const [phoneConflict, setPhoneConflict] = useState<PatientPhoneConflictPatient | null>(null);
   const [values, setValues] = useState<PatientDemographicsFormValues>(() => patientToDemographicsForm(patient));
 
   useEffect(() => {
     if (!open) return;
     setValues(patientToDemographicsForm(patient));
     setFormErr(null);
+    setPhoneConflict(null);
   }, [open, patient]);
 
   const patchMut = useMutation({
     mutationFn: () => {
       const err = validatePatientDemographicsForm(values, t);
       if (err) throw new Error(err);
+      if (phoneConflict) {
+        throw new Error(phoneConflictMessage(phoneConflict, t, i18n.language));
+      }
       return apiPatch<PatientDto>(`/api/v1/patients/${patient.id}`, demographicsFormToPatchBody(values));
     },
     onSuccess: () => {
@@ -55,7 +66,15 @@ export function PatientEditDialog({ patient, open, onOpenChange }: PatientEditDi
       void qc.invalidateQueries({ queryKey: ["admin", "org-patients"] });
       void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
     },
-    onError: (e: unknown) => setFormErr(apiErrorMessage(e)),
+    onError: (e: unknown) => {
+      const conflict = parsePhoneConflictFromError(e);
+      if (conflict) {
+        setPhoneConflict(conflict);
+        setFormErr(phoneConflictMessage(conflict, t, i18n.language));
+        return;
+      }
+      setFormErr(apiErrorMessage(e));
+    },
   });
 
   const setAcquisition = (acquisition: PatientAcquisitionFormValues) => {
@@ -124,14 +143,16 @@ export function PatientEditDialog({ patient, open, onOpenChange }: PatientEditDi
               <option value="F">{t("patients.genderF")}</option>
             </select>
           </div>
-          <div className="space-y-2">
-            <Label required>{t("patients.phone")}</Label>
-            <Input
-              className="ltr-nums"
-              value={values.phone}
-              onChange={(e) => setValues((prev) => ({ ...prev, phone: e.target.value }))}
-            />
-          </div>
+          <PatientPhoneField
+            value={values.phone}
+            onChange={(phone) => {
+              setValues((prev) => ({ ...prev, phone }));
+              setPhoneConflict(null);
+            }}
+            excludePatientId={patient.id}
+            enabled={open}
+            onConflictChange={setPhoneConflict}
+          />
           <div className="space-y-2">
             <Label optional>{t("patients.nationalId")}</Label>
             <Input
@@ -167,7 +188,7 @@ export function PatientEditDialog({ patient, open, onOpenChange }: PatientEditDi
           </div>
           <PatientAcquisitionFields values={values.acquisition} onChange={setAcquisition} />
           <div className="flex flex-wrap gap-2 pt-2">
-            <Button type="button" disabled={!canSave || patchMut.isPending} onClick={() => patchMut.mutate()}>
+            <Button type="button" disabled={!canSave || Boolean(phoneConflict) || patchMut.isPending} onClick={() => patchMut.mutate()}>
               {t("common.save", "Save")}
             </Button>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

@@ -176,6 +176,10 @@
     "errorExplainMoreRequired": "حقل «اشرح أكثر» مطلوب.",
     "errorFirstNameAr": "الاسم الأول بالعربية مطلوب.",
     "errorLastNameAr": "اسم العائلة بالعربية مطلوب.",
+    "errorPhoneRequired": "رقم الهاتف مطلوب.",
+    "errorPhoneInUse": "مريض آخر مسجّل بنفس رقم الهاتف: {{name}} ({{mrn}}).",
+    "viewExistingPatient": "عرض المريض",
+    "checkingPhone": "جاري التحقق من رقم الهاتف…",
     "photoOptional": "صورة الملف الشخصي اختيارية."
   },
   "encounters": {
