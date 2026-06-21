@@ -6,7 +6,7 @@ Reference for QA, demos, and onboarding. All seeded accounts use password **`dem
 
 **Load data (AWS):** each successful [Deploy to AWS](https://github.com/mshall/clinics-management/actions/workflows/deploy-aws.yml) run invokes the **DbSeedFn** Lambda (`scripts/cicd-post-deploy-seed.sh`) after CDK deploy. It runs `prisma migrate deploy`, repairs enum values if needed, then the **idempotent** seed — safe on non-empty RDS.
 
-**Live demo (AWS):** [https://d92iz83i79c05.cloudfront.net](https://d92iz83i79c05.cloudfront.net) — sign in with any account below (password **`demo`**). After seed, **Dr Ahmed Shall Group** exposes **30 organization users** in **Admin → Organization users** (`GET /api/v1/admin/users`); smoke tests expect `total ≥ 30`.
+**Live demo (AWS):** [https://d92iz83i79c05.cloudfront.net](https://d92iz83i79c05.cloudfront.net) — sign in with any account below (password **`demo`**). Uses **CloudFront** for SPA + `/api/*` to **App Runner** (see [`AWS_Cloud_Deployment_Guide.md`](./AWS_Cloud_Deployment_Guide.md)). After seed, **Dr Ahmed Shall Group** exposes **30 organization users** in **Admin → Organization users** (`GET /api/v1/admin/users`); smoke tests expect `total ≥ 30`.
 
 **Idempotent seed:** if **any** database content already exists (tenants, users, clinics, or patients), the seed **does not delete or replace** existing rows and **never resets passwords** on accounts that already exist. It only ensures missing demo records (platform super admin, Kiorly login accounts, Dr Ahmed Shall clinics/staff/patients) are created. A full demo dataset is inserted **only** on a completely empty database.
 
@@ -207,6 +207,12 @@ Branches are children of HQ (`parentClinicId` → HQ).
 
 | Goal | Login |
 |------|--------|
+| Register patient with documents + camera | `assistant@kiorly.com` or `receptionist@kiorly.com` → **Patients → New patient** |
+| Phone duplicate warning (use existing patient phone) | Same as above — enter a phone already on another patient |
+| Patient profile clinical docs (labs / radiology / Rx / other) | Open any patient → scroll to document sections; upload at registration or via encounter |
+| Edit patient demographics | `assistant@kiorly.com`, `clinicadmin@kiorly.com`, `branchmgr@kiorly.com`, or `admin@kiorly.com` → patient profile → **Edit patient** |
+| Delete patient (confirm dialog) | Same roles as edit → **Patients** list → delete action |
+| Bulk delete patients (org admin) | `admin@kiorly.com` → **Admin → Organization patients** |
 | Create tenants, clinics, org users (no org membership) | `superadmin@kiorly.com` |
 | Platform data explorer + all tenants (legacy) | `admin@kiorly.com` + `PLATFORM_SUPER_ADMIN_EMAILS` |
 | Organization settings & create clinic | `admin@kiorly.com` |
@@ -230,12 +236,15 @@ Branches are children of HQ (`parentClinicId` → HQ).
 
 | Entity | Approx. count (main tenant) |
 |--------|----------------------------|
-| Patients | 300 (15 named + 285 bulk) |
-| Encounters | 360 (+ 4 demo drafts) |
+| Patients | 300 (15 named + 285 bulk); optional docs at registration |
+| Encounters | 360 (+ 4 demo drafts with meds / documents) |
 | Appointments | 260 |
 | Employees | 17 (+ physicians linked to users) |
 | Organizations | 15 (1 Kiorly demo populated, 1 Dr Ahmed with 4 clinics, 13 shells) |
 | Clinics | 19 (Kiorly: 1 HQ + 14 branches; Dr Ahmed: 4 standalone) |
 | Dr Ahmed patients | 5 per clinic (20 total when fully seeded) |
+| Patient documents | Registration uploads + encounter lab/radiology/Rx files (see profile **clinical document** sections) |
+
+**Patient phone rule:** only one active patient per organization per normalized phone number; API `GET /api/v1/patients/phone-conflict?phone=...`.
 
 Source of truth for accounts and roles: `apps/api/prisma/seed.ts`.

@@ -4,10 +4,10 @@
 | Field | Value |
 |---|---|
 | **Document Title** | Clinic Management System – Product Requirements Document |
-| **Version** | 1.0 (Draft) |
-| **Status** | For Review |
+| **Version** | 1.1 |
+| **Status** | Living document (aligned with `main` as of June 2026) |
 | **Author** | Product / Engineering |
-| **Last Updated** | May 2026 |
+| **Last Updated** | June 2026 |
 | **Related Documents** | Technical RFC (separate), UX Wireframes (separate), Compliance Matrix (separate) |
 
 ---
@@ -117,6 +117,45 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 - **Visit fee** is set on **encounter** creation (tenant default in administration); amounts greater than zero create a `VISIT_FEE` revenue ledger line. Appointments do not store a fee.
 - **Physician experience:** The web app exposes **Appointments** in the main navigation for physicians. List and detail APIs return only appointments where the JWT user is the **attending clinician**; physicians may only **book** appointments as themselves. The appointments ledger table highlights **clinic** (localized name) for at-a-glance branch context.
 - **Clinic administrator:** Appointment lists are limited to clinics in the administrator’s **scope**; detail and mutations outside that scope are denied.
+
+### 6.1b Patient registry & profile (current build)
+
+**Registration (Patients → New patient)**
+- Required: English/Arabic names (Arabic first and last required), gender, phone. **Date of birth is optional.**
+- **Phone uniqueness:** Each phone number may belong to only one active patient per organization. While typing, the form checks for conflicts, highlights the phone field, shows the existing patient’s name/MRN, and links to their profile; **Create patient** stays disabled until resolved.
+- Optional: email, national ID, national ID scan (PDF/image), home branch, **how did they find us?** (social, website, doctor referral with name, other with free text).
+- Optional **attached documents** at registration: type **Lab results**, **Radiology**, **Prescription**, or **Other** (custom description); multiple photos/files per row; in-browser **camera capture** on supported devices.
+
+**Patient list & administration**
+- Search/filter by MRN, phone, name, national ID, gender; column filters; pagination and sort.
+- **Soft delete** (single or bulk) for **Group Admin**, **Clinic Admin**, **Clinic Assistant**, and **Branch Manager** (with confirm dialog in the UI).
+- **Group Admin** also manages patients under **Administration → Organization patients** (create/edit, bulk delete, filters).
+
+**Patient profile**
+- Demographics, optional national ID download, acquisition source, local profile photo (browser storage).
+- **Vitals history** and **encounters** list (role-gated) with pagination.
+- **Clinical document sections:** **Lab results**, **Radiology**, **Prescriptions**, and **Other documents** — aggregated from registration uploads and encounter documents, with in-app **view** (images/PDF) and **download** where applicable; encounter-sourced items link back to the visit.
+- **Edit patient** (demographics dialog) for Group Admin, Clinic Admin, Clinic Assistant, and Branch Manager — includes the same phone conflict check on save.
+- **New encounter** shortcut from profile (when encounters nav is allowed).
+
+**API highlights:** `GET /patients/phone-conflict`, `GET /patients/:id/clinical-documents`, document upload/download endpoints, `PATCH /patients/:id`, `POST /patients/bulk-delete`.
+
+### 6.1c Encounters & clinical documents (current build)
+
+- Encounter editor: SOAP fields, structured vitals, ICD-10 diagnoses, medications, **lab / radiology / prescription** document uploads per visit, optional **generate prescription** image from manual meds, finalize workflow.
+- **Mandatory attending doctor** validation and field highlighting on save when required data is missing.
+- Patient profile clinical sections roll up encounter documents by kind across all visits the user is allowed to see (respecting physician/clinic scope).
+
+### 6.1d Organization administration (current build)
+
+Beyond tenant settings and clinic directory, **Group Admin** (and platform break-glass where configured) can use:
+- **Organization patients** — full CRUD aligned with the registry.
+- **Organization users** — create users; **bulk delete** selected or filtered users.
+- **Data explorer** — read/write on allowlisted tenant tables (patients, encounters, documents, etc.).
+- **SQL export** — selectable entity subsets for backup/analysis.
+- **Governance / audit** — org-wide audit log tail for administrators.
+
+See [`Test_Data_Users.md`](./Test_Data_Users.md) for demo logins and QA scenarios.
 
 ### 6.2 Multi-Branch Support
 

@@ -4,10 +4,10 @@
 | Field | Value |
 |---|---|
 | **Document Title** | Clinic Management System – Technical RFC |
-| **Version** | 1.0 (Draft) |
-| **Status** | For Engineering Review |
-| **Related** | Clinic Management System PRD v1.0 |
-| **Last Updated** | May 2026 |
+| **Version** | 1.1 |
+| **Status** | Living document (aligned with `main` as of June 2026) |
+| **Related** | Clinic Management System PRD v1.1 |
+| **Last Updated** | June 2026 |
 
 ---
 
@@ -38,6 +38,7 @@ We adopt a **modular monolith** for the backend rather than microservices in v1.
 - Polyglot stacks.
 - Self-hosted Kubernetes.
 - Custom ML infrastructure.
+- **React Native mobile app** — not present in this repository yet; web is responsive.
 
 ## 3. Technology Stack
 
@@ -46,57 +47,58 @@ We adopt a **modular monolith** for the backend rather than microservices in v1.
 | Backend Framework | **NestJS (TypeScript)** | Opinionated, modular, DI-based, microservice-ready, large ecosystem, excellent docs — easiest framework for new Node engineers to contribute to safely |
 | API Style | REST + OpenAPI 3 (generated) | Universally understood; GraphQL deferred to v2 if needed |
 | ORM | **Prisma** | Best-in-class DX, type-safe queries, declarative migrations, easy onboarding |
-| Database | **PostgreSQL 16 (Amazon RDS)** | Mature RDBMS, strong JSON support, row-level security, multi-AZ |
-| Cache / Queues | Redis (Amazon ElastiCache) + BullMQ | Background jobs, rate limiting, session/token blacklist |
-| Object Storage | Amazon S3 | Attachments, prescriptions, payslips, logos |
+| Database | **PostgreSQL 16 (Amazon RDS in prod; Docker locally)** | Mature RDBMS, strong JSON support, multi-AZ capable |
+| Cache / Queues | Redis (Docker locally) | Available in compose; ElastiCache optional for prod scale |
+| Object Storage | **Amazon S3 (production)** / local `uploads/` (development) | Attachments, prescriptions, patient documents, logos — `UPLOAD_STORAGE=s3` on App Runner |
 | Auth | JWT (short-lived) + refresh tokens, optional OIDC SSO | Stateless API auth; SSO for enterprise tenants |
 | Frontend Web | **React 18 + Vite + TypeScript** | Fast DX, modern tooling |
 | State Mgmt | TanStack Query + Zustand | Server state and lightweight client state |
 | UI Library | shadcn/ui + Tailwind CSS + Radix | Accessible, themeable, RTL-friendly |
 | i18n | i18next + react-i18next | EN/AR with RTL |
-| Mobile | **React Native (Expo, TypeScript)** | One codebase iOS + Android, OTA updates via EAS |
-| Mobile UI | Tamagui or NativeBase | Theming and RTL |
-| Infra-as-Code | **AWS CDK (TypeScript)** | Matches the stack, type-safe infra |
-| Container Runtime | Docker → **ECS Fargate** | Simpler than EKS, fits "single unit" goal |
-| CDN / Web hosting | CloudFront + S3 (web), CloudFront + ECS (API) | Standard AWS pattern |
-| CI/CD | GitHub Actions | Native, low friction |
-| Observability | OpenTelemetry → Grafana Cloud (metrics, logs, traces) | Aligns with prior platform direction |
-| Secrets | AWS Secrets Manager + SSM Parameter Store | Managed, audited |
+| Mobile | **Deferred** | RFC target was React Native; not shipped in this repo |
+| Infra-as-Code | **AWS CDK (TypeScript)** in `infra/` | Matches the stack, type-safe infra; **deployed today** |
+| Container Runtime | **AWS App Runner** (API) + **CloudFront** (SPA + `/api/*`) | No ALB/NAT in cost-optimized stack; ECS Fargate remains an alternative |
+| CDN / Web hosting | CloudFront + S3 (web assets) | Single HTTPS origin for SPA and API path routing |
+| CI/CD | GitHub Actions (`deploy-aws.yml`, `pr-synth-build.yml`) | OIDC to AWS; push to `main` deploys |
+| Observability | CloudWatch (App Runner logs); X-Ray hook on instance role | Grafana Cloud optional per PRD |
+| Secrets | AWS Secrets Manager (JWT, RDS) | Injected into App Runner / seed Lambda |
 | Email/SMS | Amazon SES + SNS (or third party) | Managed |
+| Monorepo | **npm workspaces** (`apps/api`, `apps/web`) | Turborepo/pnpm described in early RFC drafts; current repo uses npm |
 
 ## 4. Repository Structure (Monorepo)
 
-We use a **Turborepo + pnpm workspaces** monorepo so backend, web, mobile, and shared packages live and ship together.
+The repository uses **npm workspaces** (not Turborepo/pnpm in the current tree):
 
 ```
-clinic-platform/
+kiorly-clinics-management/
 ├── apps/
-│   ├── api/                  # NestJS backend (single deployable)
-│   ├── web/                  # React web admin & clinical UI
-│   └── mobile/               # React Native (Expo) app
-├── packages/
-│   ├── shared-types/         # Shared TS types (DTOs, enums)
-│   ├── shared-validation/    # Zod schemas reused on FE/BE
-│   ├── shared-i18n/          # EN/AR translation keys
-│   ├── ui-web/               # Shared web components
-│   └── eslint-config/        # Lint rules incl. module-boundary rules
-├── infra/
-│   ├── cdk/                  # AWS CDK app (TypeScript)
-│   ├── docker/               # Dockerfiles, docker-compose.yml
-│   └── scripts/              # Deploy, seed, migration helpers
-├── .github/workflows/        # CI/CD pipelines
-├── turbo.json                # Turborepo pipeline config
-├── pnpm-workspace.yaml
-└── package.json
+│   ├── api/                  # NestJS backend (Prisma, JWT, Swagger)
+│   └── web/                  # React + Vite SPA (EN/AR)
+├── infra/                    # AWS CDK app (App Runner, RDS, CloudFront, S3)
+│   ├── src/kiorly-clinics-management-stack.ts
+│   └── lambda/db-seed/       # Post-deploy idempotent seed
+├── Docs/                     # PRD, RFC, deployment guide, test users
+├── scripts/                  # Dev ports, CI seed helpers
+├── .github/workflows/        # deploy-aws.yml, pr-synth-build.yml
+├── docker-compose.yml        # Local Postgres + Redis
+└── package.json              # Root scripts: dev, build, db:setup
 ```
 
 A new engineer clones the repo and runs:
 
 ```bash
-pnpm install
-pnpm dev          # starts api + web + db + redis via docker-compose
-pnpm test
-pnpm deploy:dev   # deploys the entire platform to a dev AWS account
+npm install
+cp apps/api/.env.example apps/api/.env   # adjust DATABASE_URL if needed
+npm run db:up
+npm run db:setup
+npm run dev          # API :3000 + Vite :5173 via concurrently
+```
+
+Production deploy (see [`AWS_Cloud_Deployment_Guide.md`](./AWS_Cloud_Deployment_Guide.md)):
+
+```bash
+npm run build
+cd infra && npx cdk deploy   # or push to main → GitHub Actions
 ```
 
 ## 5. High-Level Architecture
@@ -220,21 +222,30 @@ POST   /roles                          # custom role
 
 #### 6.2.4 PatientsModule
 
-**Entities:** `Patient`, `PatientConsent`, `PatientIdentifier` (national ID, passport, MRN).
+**Entities:** `Patient`, `PatientDocument`, national ID scan fields, acquisition channel fields; encounter documents are owned by `EncountersModule` but surfaced on the patient profile via aggregation.
 
-**Endpoints:**
+**Implemented endpoints (`/api/v1/patients`):**
 ```
+GET    /patients                         # paginated list + filters
 POST   /patients
-GET    /patients?search=...
+GET    /patients/phone-conflict          # ?phone=&excludePatientId= — live duplicate check
+POST   /patients/bulk-delete             # soft-delete many (role-gated)
 GET    /patients/:id
 PATCH  /patients/:id
-POST   /patients/:id/consents
-GET    /patients/:id/timeline          # cross-branch encounters per consent
+DELETE /patients/:id                     # soft-delete (role-gated)
+GET    /patients/:id/clinical-documents  # labs, radiology, prescriptions, other
+POST   /patients/:id/documents           # multipart: file + description (category label)
+GET    /patients/:id/documents/:documentId
+POST   /patients/:id/national-id-document
+GET    /patients/:id/national-id-document
 ```
 
 **Notes:**
-- Patients are **tenant-scoped, not branch-scoped**. Cross-branch access requires consent records.
-- Soft-delete (anonymization) supported for right-to-erasure where applicable.
+- Patients are **tenant-scoped**. `mrn` and `nationalId` are unique per tenant when set; **phone** is unique per tenant via normalized digit comparison (enforced on create/update and exposed through `phone-conflict`).
+- `dob` is optional. Arabic first/last names required at registration in the current UI.
+- Registration documents store a **description** (localized category label or free text for “Other”); clinical sections classify by that label plus encounter `EncounterDocument.kind` (`LAB`, `RADIOLOGY`, `PRESCRIPTION`).
+- Soft-delete via `deletedAt`; bulk delete for org administrators and clinic staff roles listed in `PATIENT_DELETE_ROLES`.
+- Cross-branch encounter documents on the profile respect the same physician/clinic scope as encounter lists.
 
 #### 6.2.5 EhrModule
 
@@ -679,17 +690,22 @@ model Clinic {
 model Patient {
   id          String   @id @default(cuid())
   tenantId    String
-  mrn         String   @unique
+  mrn         String
   firstNameEn String
   lastNameEn  String
   firstNameAr String?
   lastNameAr  String?
-  dob         DateTime
+  dob         DateTime?   // optional
   gender      Gender
-  phone       String
+  phone       String      // unique per tenant (application-level, digit-normalized)
   email       String?
+  nationalId  String?
+  nationalIdDocRelativePath String?
+  acquisitionChannel        PatientAcquisitionChannel?
+  homeBranchId String?
+  deletedAt   DateTime?   // soft delete
+  documents   PatientDocument[]
   encounters  Encounter[]
-  consents    PatientConsent[]
 }
 
 model Encounter {
@@ -799,22 +815,22 @@ model AuditLog {
 ### 9.2 App Structure
 ```
 apps/web/src/
-├── app/                      # routes, layouts
-├── features/                 # feature-sliced (mirrors backend modules)
+├── app/                      # router
+├── features/                 # feature-sliced pages
 │   ├── auth/
 │   ├── clinics/
-│   ├── patients/
-│   ├── ehr/
-│   ├── prescriptions/
+│   ├── patients/             # list, register dialog, detail + clinical docs
+│   ├── encounters/
+│   ├── appointments/
 │   ├── revenue/
 │   ├── expenses/
 │   ├── reports/
 │   ├── hr/
-│   └── admin/
-├── components/               # shared UI
-├── hooks/
-├── lib/                      # api client, i18n, auth
-└── styles/
+│   ├── admin/                # org patients, users, data explorer, audit
+│   └── platform/             # platform super-admin
+├── components/               # shared UI (patient-phone-field, clinical docs, …)
+├── lib/                      # api-hooks, http, nav-policy, locales
+└── stores/
 ```
 
 ### 9.3 RTL Strategy
@@ -823,35 +839,18 @@ apps/web/src/
 - Visual regression tests run in both directions in CI.
 
 ### 9.4 Key Screens
-- Login + MFA.
-- Group Admin: Dashboard, Tenants, Branches, Users, Feature Flags.
-- Branch Manager: Branch Dashboard, Staff, Expenses, Reports.
-- Clinician: Patient search, **Appointments** (own schedule), Encounter editor (split pane: history + active note), Prescription pad, doctor-scoped revenue; appointments and encounters lists show a prominent **clinic** column (localized).
-- Reception: Appointments, Check-in.
-- HR: Employees, Attendance, Leave, Payroll.
-- Reports: navigable report catalog with filters, charts, and export buttons.
+- Login (+ MFA when enabled).
+- Group Admin: Dashboard, Admin (clinics, settings, org patients/users, data explorer, governance/audit), Reports.
+- Branch Manager / Clinic Admin: scoped operations, patient edit/delete, staff onboarding where permitted.
+- Clinician: Patient search, **Appointments** (own schedule), Encounter editor (SOAP, vitals, labs/radiology/Rx uploads, meds, finalize), doctor-scoped revenue.
+- Reception / Assistant: Patients (register with documents + phone check), appointments, encounters, operations.
+- HR: Employees, Attendance, Leave.
+- **Patient profile:** demographics, vitals history, encounters, **lab / radiology / prescription / other document** sections with viewer.
+- Platform Super Admin: `/platform` — create orgs, clinics, users (no clinical modules).
 
-## 10. Mobile (React Native) — `apps/mobile`
+## 10. Mobile (React Native) — deferred
 
-### 10.1 Stack
-- Expo SDK (managed workflow).
-- React Native 0.74+, TypeScript strict.
-- Expo Router for navigation.
-- Same TanStack Query, Zustand, Zod, generated API client as the web.
-- Tamagui for theming + RTL.
-- `expo-localization` and `i18next` with the same shared bundle as web.
-- `expo-notifications` for push.
-- `expo-secure-store` for tokens.
-
-### 10.2 v1 Mobile Scope
-- Clinician: view today's appointments, view patient summary, write quick encounter notes, write prescription.
-- Branch Manager: view daily KPIs (revenue today, appointments fill rate, staff present).
-- Employee: clock in/out, submit leave request, view payslips.
-
-### 10.3 Distribution
-- EAS Build for iOS/Android binaries.
-- EAS Update for OTA delivery of JS bundles between native releases.
-- Code signing and store credentials in EAS-managed secrets.
+The RFC originally scoped **Expo/React Native** for v1 clinician flows. That app is **not in this repository**; the responsive web SPA covers current production use. Revisit mobile when patient portal or offline capture becomes a priority.
 
 ## 11. Cross-Cutting Concerns
 
@@ -900,20 +899,18 @@ This module is a first-class part of the codebase: `infra/` is reviewed, tested,
 
 ```bash
 # one-time
-pnpm install
-cp .env.example .env
-pnpm db:up               # docker compose up postgres redis localstack
-pnpm db:migrate
-pnpm db:seed
+npm install
+cp apps/api/.env.example apps/api/.env
+npm run db:up               # docker compose: postgres + redis
+npm run db:setup            # prisma generate, migrate, seed
 
 # every day
-pnpm dev                 # runs api, web, worker concurrently with hot reload
-pnpm mobile              # runs expo for the mobile app
-pnpm test
-pnpm lint
+npm run dev                 # api + web concurrently
+npm run build
+npm run lint
 ```
 
-`docker-compose.yml` provides Postgres 16, Redis 7, LocalStack (S3 + SES + SNS), Mailhog. Engineers never need real AWS credentials to develop.
+`docker-compose.yml` provides Postgres 16 and Redis locally. File uploads default to **`uploads/`** on disk (`UPLOAD_STORAGE` unset or `local`).
 
 ### 13.2 Container Image
 
@@ -979,45 +976,48 @@ Under the hood, `pnpm deploy:<env>`:
 - Default dashboards provisioned as code (`infra/observability/dashboards/*.json`).
 - Alerts: 5xx rate > 1%, p95 latency > 1s, DB CPU > 80%, queue depth > threshold, deploy failure.
 
-## 14. AWS Deployment Architecture
+## 14. AWS Deployment Architecture (implemented)
 
-> **Operational guide:** For a step-by-step AWS checklist (RDS, ECS/Fargate, S3/CloudFront, env vars, migrations), see `Docs/AWS_Cloud_Deployment_Guide.md` in this repository.
+> **Operational guide:** Step-by-step checklist, env vars, and troubleshooting: [`Docs/AWS_Cloud_Deployment_Guide.md`](./AWS_Cloud_Deployment_Guide.md).
+
+The **`infra/`** CDK stack (`KiorlyClinicsManagementStack`) deploys to **`eu-central-1`** (Frankfurt) by default. GitHub Actions workflow **`.github/workflows/deploy-aws.yml`** runs on push to **`main`** (OIDC role `AWS_DEPLOY_ROLE_ARN`).
 
 ```
-                   Route 53
-                      │
-              ┌───────┴───────┐
-              ▼               ▼
-        CloudFront       CloudFront
-        (web bucket)     (api edge)
-              │               │
-              ▼               ▼
-           S3 (web)        WAF + ALB
-                              │
-                       ┌──────┴──────┐
-                       ▼             ▼
-                  ECS Fargate    ECS Fargate
-                  (API service)  (Worker service)
-                       │             │
-                       └──────┬──────┘
-                              │
-                  ┌───────────┼─────────────┬───────────┐
-                  ▼           ▼             ▼           ▼
-                 RDS      ElastiCache       S3       SES/SNS
-                Postgres    Redis        (files)
-                Multi-AZ
+                         Route 53 (optional custom domain)
+                                    │
+                                    ▼
+                           CloudFront Distribution
+                    ┌───────────────┴────────────────┐
+                    │                                │
+             S3 (web SPA)                    /api/* behavior
+         + viewer-request fn                  HTTPS to App Runner
+         (SPA deep links)                         │
+                    │                              ▼
+                    │                    App Runner (Nest API)
+                    │                    VPC connector → RDS
+                    │                    S3 uploads bucket
+                    └──────── same AppUrl ─────────┘
+
+Post-deploy: Lambda DbSeedFn (idempotent demo seed on RDS)
 ```
 
-**Sizing for v1 (one prod region):**
-- ECS API: 2 tasks (0.5 vCPU / 1 GB), autoscale to 8 on CPU/RPS.
-- ECS Worker: 2 tasks (0.5 vCPU / 1 GB), autoscale to 6 on queue depth.
-- RDS: `db.t4g.medium` Multi-AZ, gp3 100 GB, autoscaling storage.
-- Redis: `cache.t4g.micro`, single shard, replica enabled.
-- Backups: RDS automated, 14 days retention; S3 cross-region replication for files.
+**Stack contents (summary):**
+| Resource | Role |
+|----------|------|
+| VPC | Public + isolated DB subnets; **no NAT** (cost control) |
+| RDS PostgreSQL 16 | Private; `db.t4g.micro`; 7-day backups |
+| App Runner | API container from `apps/api/Dockerfile`; health `/api/v1/health/live` |
+| S3 | Web static assets + **API uploads** (`UPLOAD_STORAGE=s3`) |
+| CloudFront | One HTTPS URL for SPA and `/api/*` (avoids CORS split-brain) |
+| Secrets Manager | JWT + RDS credentials |
+| VPC endpoints | Secrets Manager, KMS, STS for connector/Lambda without NAT |
+| DbSeedFn | Docker Lambda runs `prisma migrate deploy` + idempotent seed after deploy |
 
-**Disaster Recovery:**
-- Daily snapshot replication to a secondary region.
-- IaC enables rebuild of the topology in the secondary region within RTO 4h.
+**Runtime flags (App Runner):** `PRISMA_MIGRATE_ON_BOOT=true`, `PRISMA_SEED_ON_BOOT=false` (seed via Lambda), `SWAGGER_ENABLED=false`, `TZ=Europe/Berlin`.
+
+**Alternative architectures** (ECS Fargate + ALB, Lightsail single VM) remain valid for teams who prefer them; they are **not** what the checked-in CDK stack deploys today.
+
+**Disaster recovery:** RDS automated backups (7 days in current stack); cross-region replication and multi-AZ are upgrade paths documented in the PRD NFRs.
 
 ## 15. CI/CD (GitHub Actions)
 

@@ -1,186 +1,247 @@
 # AWS cloud deployment guide
 
-This document describes how to deploy the **Clinics Management** monorepo (NestJS API in `apps/api`, React SPA in `apps/web`, PostgreSQL via Prisma) to **Amazon Web Services**. It complements the high-level cost tiers in the root [`README.md`](../README.md) and the architecture notes in [`Clinic_Management_System_RFC.md`](./Clinic_Management_System_RFC.md).
+This document describes how the **Clinics Management** monorepo is deployed to **Amazon Web Services** today, and how to run or adapt that setup. It complements the root [`README.md`](../README.md) cost tiers and [`Clinic_Management_System_RFC.md`](./Clinic_Management_System_RFC.md) architecture notes.
 
-**Scope:** A practical, **minimum viable production** layout you can grow later (RDS, containerized API, static web on S3 + CloudFront). This is not a full security or compliance audit; engage your own review for PHI/PII and regional regulations.
+**Repository:** [github.com/mshall/clinics-management](https://github.com/mshall/clinics-management)
+
+**Scope:** The **checked-in CDK stack** (`infra/`) — not a generic ECS tutorial. For PHI/PII and regional regulations, perform your own compliance review.
 
 ---
 
 ## 1. What you are deploying
 
-| Component | Artifact | AWS home (recommended) |
-|-----------|----------|-------------------------|
-| PostgreSQL schema + data | Prisma migrations (`apps/api/prisma/migrations`) | **Amazon RDS for PostgreSQL** |
-| REST API (`/api/v1`, optional `/docs`) | `apps/api` → `dist/` | **ECS Fargate** behind an **Application Load Balancer**, or a single **EC2 / Lightsail** VM |
-| Web SPA | `apps/web/dist` | **S3** + **CloudFront** (or static files on the same VM as the API) |
-| File uploads (encounters, expenses, HR) | Local `uploads/` tree today | **Amazon EFS** mounted into ECS tasks, or **S3** with a future code change |
+| Component | Artifact | AWS home (current stack) |
+|-----------|----------|---------------------------|
+| PostgreSQL schema + data | Prisma migrations (`apps/api/prisma/migrations`) | **Amazon RDS for PostgreSQL 16** (private subnets) |
+| REST API (`/api/v1`, health at `/api/v1/health/live`) | `apps/api/Dockerfile` → ECR via CDK asset | **AWS App Runner** (VPC egress to RDS) |
+| Web SPA | `apps/web/dist` | **S3** origin behind **CloudFront** |
+| User uploads (patients, encounters, expenses, HR) | Blob storage abstraction in API | **Amazon S3** (`UPLOAD_STORAGE=s3`, `S3_UPLOAD_BUCKET`) |
+| Demo / QA seed on RDS | `apps/api/prisma/seed.ts` | **DbSeedFn** Lambda (post-deploy, idempotent) |
+
+**Single public URL:** CloudFront serves the SPA and proxies **`/api/*`** to App Runner on the **same hostname** (no separate `VITE_API_URL` required in production builds when using this pattern).
+
+**Live demo (after deploy):** CloudFront URL from stack output `AppUrl` — see [`Test_Data_Users.md`](./Test_Data_Users.md) (e.g. `https://d92iz83i79c05.cloudfront.net` when that distribution is active).
 
 ---
 
-## 2. Prerequisites
-
-- AWS account with IAM users/roles following least privilege.
-- A **region** chosen and used consistently (e.g. `me-south-1` or `eu-central-1`).
-- **Docker** (optional but recommended) to build the API image locally before push to **ECR**.
-- **Node.js 20+** for local `npm run build` and `npx prisma migrate deploy`.
-- **Domain + TLS**: **ACM** certificate in `us-east-1` if you use CloudFront (ACM for ALB can be in the workload region).
-
----
-
-## 3. Reference architecture (recommended)
+## 2. Architecture (implemented)
 
 ```
-Users
-  │
-  ├─► CloudFront (HTTPS) ──► S3 bucket (web SPA: index.html + assets)
-  │
-  └─► ALB (HTTPS) ──► ECS Fargate service (Nest API containers)
-                           │
-                           ├──► RDS PostgreSQL (private subnets)
-                           └──► (optional) EFS for uploads/  OR  S3 (future)
+Users ──HTTPS──► CloudFront (AppUrl)
+                    │
+        ┌───────────┴────────────┐
+        │                        │
+   S3 (SPA assets)         /api/* → App Runner (Nest API)
+   + CloudFront Function          │
+   (SPA path rewrite)              ├──► RDS PostgreSQL (isolated subnets)
+                                  └──► S3 ApiUploadsBucket
+
+CI/CD (push main) ──► build web + api image ──► cdk deploy ──► invoke DbSeedFn
 ```
 
-- **CloudFront** serves the SPA and can forward `/api/*` to the ALB **or** you point the SPA to a separate API hostname via `VITE_API_URL` at build time (typical).
-- **ALB** terminates TLS for the API, runs health checks on `/api/v1` or a dedicated health route.
-- **RDS** lives in **private subnets**; security group allows **only** the ECS service security group on port **5432**.
-- **Secrets** (`JWT_SECRET`, `DATABASE_URL`, etc.) in **AWS Secrets Manager** (or SSM Parameter Store **SecureString**); injected as environment variables in the task definition.
-- **Optional:** `PLATFORM_SUPER_ADMIN_EMAILS` — comma-separated operator emails allowed to call **all-tenants** admin APIs and the **data explorer**. Omit or leave empty so organization administrators never receive those capabilities in production unless you designate explicit break-glass accounts.
+**Design choices in this stack:**
+- **Region:** `eu-central-1` (Frankfurt); DB timezone `Europe/Berlin`; API `TZ=Europe/Berlin`.
+- **No NAT gateway** — App Runner VPC connector + **interface VPC endpoints** (Secrets Manager, KMS, STS) to avoid NAT cost.
+- **No ALB** — App Runner is the compute target; CloudFront talks to App Runner’s HTTPS URL via a custom resource that parses the origin host.
+- **Migrations on boot** — `PRISMA_MIGRATE_ON_BOOT=true` on App Runner; interim health listener in Docker entrypoint during migrate.
+- **Seed off boot** — `PRISMA_SEED_ON_BOOT=false` so App Runner stabilizes within deploy timeouts; **`scripts/cicd-post-deploy-seed.sh`** invokes **DbSeedFn** after CDK succeeds.
+
+Source: `infra/src/kiorly-clinics-management-stack.ts`.
 
 ---
 
-## 4. Database (RDS)
+## 3. Prerequisites
 
-1. Create a **PostgreSQL** RDS instance (start with `db.t4g.micro` or similar for non-production).
-2. Create database + user matching your connection string (or use the master user only for dev).
-3. **Security groups:** allow inbound 5432 from the API security group only.
-4. From your laptop or a bastion with network access to RDS:
-
-   ```bash
-   cd apps/api
-   export DATABASE_URL="postgresql://USER:PASS@RDS_ENDPOINT:5432/DBNAME?schema=public"
-   npx prisma migrate deploy
-   ```
-
-5. **Seeding:** After each CDK deploy, CI invokes the **DbSeedFn** VPC Lambda (`scripts/cicd-post-deploy-seed.sh`): `prisma migrate deploy`, optional enum repair, then **idempotent** demo seed. App Runner does **not** run seed on boot (`PRISMA_SEED_ON_BOOT=false`). Existing rows are never deleted; missing demo accounts (super admin, Kiorly logins, Dr Ahmed Shall group — **30 org users**) are added if absent. For local dev use `npm run db:setup -w api`. Account reference: [`Docs/Test_Data_Users.md`](./Test_Data_Users.md).
-
-6. **RDS automated backups** are retained **7 days** (pre-deploy email/pg_dump Lambda is disabled in CI).
+- AWS account; **OIDC** trust for GitHub Actions (see `.github/workflows/deploy-aws.yml` header comments).
+- **Node.js 20+**, **npm**, **Docker** (CDK builds API/seed images).
+- One-time: `npx cdk bootstrap aws://ACCOUNT_ID/eu-central-1` from `infra/`.
+- GitHub secret **`AWS_DEPLOY_ROLE_ARN`** with permission to deploy the stack and invoke DbSeedFn.
 
 ---
 
-## 5. API container (ECS Fargate + ECR)
+## 4. Deploy via GitHub Actions (recommended)
 
-### 5.1 Build and push an image
+Workflow: **`.github/workflows/deploy-aws.yml`**
 
-1. Create an **ECR** repository, e.g. `kiorly-clinics-management-api`.
-2. Build the API image (you can adapt the existing Dockerfile under `infra/docker` if present, or add a multi-stage Dockerfile that runs `npm run build -w api` and starts `node dist/main.js`).
-3. Authenticate Docker to ECR, **tag**, and **push** the image.
+| Trigger | Action |
+|---------|--------|
+| Push to **`main`** | Build API + web → `cdk deploy` → post-deploy seed |
+| **workflow_dispatch** | Same, manual |
 
-### 5.2 Task definition
+Steps (summary):
+1. `npm ci`, `npm run build -w web`, Prisma generate.
+2. `npm run infra:deploy` (or equivalent CDK deploy script in repo).
+3. `scripts/cicd-post-deploy-seed.sh` — invokes **DbSeedFn** with `PRISMA_SEED_ENSURE_DEMO_PASSWORDS=true`.
 
-- **Image:** ECR URI + tag (often the git SHA).
-- **CPU / memory:** start small (e.g. 0.25 vCPU / 512 MB) and increase if p95 latency or memory pressure warrants.
-- **Environment variables** (non-secret): `PORT=3000`, `NODE_ENV=production`, `SWAGGER_ENABLED=false`.
-- **Secrets:** map Secrets Manager ARNs to env vars (`DATABASE_URL`, `JWT_SECRET`).
-- **Optional non-secret:** `PLATFORM_SUPER_ADMIN_EMAILS` if you use platform-only admin tools; prefer a dedicated secret only if you do not want the value visible in plain task env (then read from Secrets Manager into the same variable name).
-- **Logging:** `awslogs` driver to a CloudWatch log group.
-
-### 5.3 Service + ALB
-
-- Target group: **HTTP** (or HTTPS if terminating on ALB) pointing to container port **3000** (or your `PORT`).
-- Health check path: e.g. `GET /api/v1` if it returns 200, or add a lightweight `/health` in the API and use that.
-- **Auto scaling** (optional): scale on CPU / request count after you have metrics.
+PR validation: **`.github/workflows/pr-synth-build.yml`** runs CDK synth without AWS credentials.
 
 ---
 
-## 6. Web SPA (S3 + CloudFront)
+## 5. Deploy locally (CDK)
 
-1. **Build** with the public API URL baked in:
+From repository root:
 
-   ```bash
-   cd apps/web
-   VITE_API_URL="https://api.yourdomain.com" npm run build
-   ```
+```bash
+npm ci
+npm run build -w web
+npm run build -w api   # if your pipeline builds before CDK
+cd infra
+npm ci
+npx cdk deploy
+```
 
-2. Upload **`dist/`** contents to an **S3** bucket (no public ACL; origin access via **Origin Access Control**).
-3. Create a **CloudFront** distribution:
-   - Default root object: `index.html`
-   - **SPA routing:** add a custom error response for **403/404** → `/index.html` with **200** so client-side routes work.
-4. **CORS:** If the browser calls `https://api...` from `https://app...`, enable CORS on the Nest app for those origins (allowed origin list), or serve API and web under one domain via CloudFront path-based routing.
+Note stack outputs:
+- **`AppUrl`** — give users this HTTPS URL.
+- **`AppRunnerServiceUrl`** — direct App Runner URL (debug only).
+- **`DbSecretArn`**, **`DbSeedFunctionName`**.
+
+If CloudFormation stack is **`ROLLBACK_COMPLETE`**, delete the stack in the AWS console before redeploying.
 
 ---
 
-## 7. Environment variables (checklist)
+## 6. Database (RDS)
+
+- Engine: **PostgreSQL 16**, instance **db.t4g.micro**, **20 GB** gp3 (autoscale to 100 GB).
+- **Private** subnets; credentials in **Secrets Manager** (`DB_SECRET_ARN` on App Runner / seed Lambda).
+- **Backup retention:** 7 days (stack default).
+- **Multi-AZ:** false in cost-optimized stack (enable for production hardening).
+
+**Manual migrate** (bastion or Session Manager port-forward):
+
+```bash
+export DATABASE_URL="postgresql://..."   # from Secrets Manager
+cd apps/api
+npx prisma migrate deploy
+```
+
+---
+
+## 7. API container (App Runner)
+
+- **Image:** Built from repo root, `apps/api/Dockerfile`, **linux/amd64**.
+- **Port:** 3000; health check **`GET /api/v1/health/live`**.
+- **CPU / memory:** 1 vCPU, 2 GB (stack default — supports migrate-on-boot).
+- **Secrets:** `JWT_SECRET` from Secrets Manager JSON key `jwt`.
+- **Environment (non-secret):**
+
+| Variable | Production value (stack) |
+|----------|-------------------------|
+| `NODE_ENV` | `production` |
+| `PORT` | `3000` |
+| `SWAGGER_ENABLED` | `false` |
+| `DB_SECRET_ARN` | RDS secret ARN |
+| `UPLOAD_STORAGE` | `s3` |
+| `S3_UPLOAD_BUCKET` | ApiUploadsBucket name |
+| `PRISMA_MIGRATE_ON_BOOT` | `true` |
+| `PRISMA_SEED_ON_BOOT` | `false` |
+| `TZ` | `Europe/Berlin` |
+| `SECRETS_MANAGER_VPCE_HOST` / `KMS_VPCE_HOST` / `STS_VPCE_HOST` | VPC endpoint DNS names |
+
+**Optional:** `PLATFORM_SUPER_ADMIN_EMAILS` — comma-separated emails for break-glass org admin tools (data explorer, all-tenants list). Prefer dedicated **`superadmin@kiorly.com`** (`PLATFORM_SUPER_ADMIN` role) for platform operations.
+
+---
+
+## 8. Web SPA (S3 + CloudFront)
+
+Production build is bundled into CDK **`BucketDeployment`** (`apps/web/dist`).
+
+- **Same-origin API:** CloudFront behavior **`/api/*`** → App Runner; SPA uses relative `/api/v1/...` (empty `VITE_API_URL`).
+- **SPA routing:** CloudFront **Function** rewrites extension-less paths to `/index.html` **only on the S3 behavior** — not on `/api/*` (prevents API JSON being replaced by HTML).
+
+Local build check:
+
+```bash
+cd apps/web
+npm run build
+# Optional split-origin preview:
+VITE_API_URL="https://YOUR_APP_URL" npm run build
+```
+
+---
+
+## 9. Post-deploy seed & demo users
+
+**DbSeedFn** runs idempotent seed:
+- Does **not** wipe existing data or reset passwords on existing accounts.
+- Ensures demo orgs, users, clinics, patients when missing.
+- Documented accounts: [`Test_Data_Users.md`](./Test_Data_Users.md).
+
+Re-invoke manually:
+
+```bash
+aws lambda invoke --function-name <DbSeedFunctionName> /tmp/seed-out.json
+```
+
+---
+
+## 10. File uploads
+
+| Environment | Storage |
+|-------------|---------|
+| Local dev | `uploads/` directory (`UPLOAD_STORAGE` unset / `local`) |
+| App Runner prod | **S3** bucket from stack; IAM on App Runner instance role |
+
+Supported in product: patient registration documents, national ID scan, encounter lab/radiology/prescription files, expense proofs, employee ID docs.
+
+---
+
+## 11. Environment variables (checklist)
 
 ### API (runtime)
 
 | Variable | Required | Notes |
 |----------|----------|--------|
-| `DATABASE_URL` | Yes | RDS connection string; use TLS query params if you enable RDS encryption in transit. |
-| `JWT_SECRET` | Yes | Long random string; rotate with a planned logout of all sessions. |
-| `PORT` | No | Default `3000` inside the container; ALB target must match. |
-| `SWAGGER_ENABLED` | No | Set `false` in production unless you protect `/docs` behind auth/VPN. |
+| `DATABASE_URL` | Yes* | *App Runner resolves from `DB_SECRET_ARN` in Docker entrypoint |
+| `JWT_SECRET` | Yes | Secrets Manager |
+| `UPLOAD_STORAGE` | Prod | `s3` |
+| `S3_UPLOAD_BUCKET` | Prod | Upload bucket name |
+| `PORT` | No | Default `3000` |
+| `SWAGGER_ENABLED` | No | `false` in production |
+| `PLATFORM_SUPER_ADMIN_EMAILS` | No | Break-glass org admin tooling |
 
 ### Web (build time)
 
 | Variable | Description |
 |----------|-------------|
-| `VITE_API_URL` | Public base URL of the API (e.g. `https://api.example.com`). Empty means same-origin `/api` (requires reverse proxy or CloudFront routing). |
+| `VITE_API_URL` | Only if API is on a **different origin** than the SPA. Empty = same-origin `/api`. |
 
 ---
 
-## 8. Migrations and releases
+## 12. Observability & backups
 
-1. **CI pipeline** (e.g. GitHub Actions): run tests → build Docker image → push to ECR → **register new task definition revision** → **update ECS service** (rolling deploy).
-2. **Migrations:** run `prisma migrate deploy` as a **one-off ECS task** or **CodeDeploy hook** *before* or *in lockstep with* the new task revision—pick a strategy your team agrees on (common: migrate first, then deploy API).
-3. **Rollback:** keep the previous task definition revision; roll back the service if the new tasks fail health checks.
-
----
-
-## 9. uploads / durable files
-
-The API currently writes under **`uploads/`** on the local filesystem. On ECS:
-
-- **EFS:** mount a volume at the same path the app expects (configure `uploads` root in config if needed), **or**
-- **S3:** longer-term improvement—upload handler streams to S3 and stores keys in Postgres.
-
-For **Lightsail / single EC2**, attach a **persistent block volume** and mount it where `uploads/` lives.
+- **App Runner / Lambda logs** → CloudWatch Logs.
+- **RDS** enhanced monitoring optional; **7-day** automated backups in default stack.
+- **Alarms:** add CloudWatch alarms for 5xx, unhealthy targets, RDS storage (not all wired in minimal stack).
 
 ---
 
-## 10. Observability and backups
+## 13. Alternative paths (not the default CDK stack)
 
-- **CloudWatch:** container logs, ALB access logs, RDS enhanced monitoring (optional).
-- **Alarms:** 5xx rate, target health, RDS free storage, CPU.
-- **RDS:** enable **automated backups** with retention ≥ 7 days for anything beyond a toy environment.
-- **S3 versioning** (optional) on the web bucket for quick rollbacks of bad deploys.
+These remain valid if you outgrow App Runner or need different compliance posture:
 
----
-
-## 11. Simpler path: one Lightsail or EC2 instance
-
-If you want the **lowest operational surface**:
-
-- One VM with **Docker Compose** (Postgres + API) or Postgres on RDS + API on the VM.
-- **Nginx** or **Caddy** reverse proxy: TLS, static `dist/`, proxy `/api` to Nest.
-- **Certbot** or Caddy for Let’s Encrypt.
-
-See **Option A** in the main README for trade-offs and rough cost order-of-magnitude.
+| Option | Summary |
+|--------|---------|
+| **ECS Fargate + ALB** | More control, higher baseline cost; see RFC §14 alternatives |
+| **Lightsail / single EC2** | Cheapest ops surface; Postgres on VM or small RDS |
+| **Split API hostname** | Build web with `VITE_API_URL`; configure CORS on API |
 
 ---
 
-## 12. Security reminders
+## 14. Security reminders
 
-- Never commit production `.env` files.
-- Restrict **SSH** to known IPs; prefer **SSM Session Manager** instead of open port 22.
-- **WAF** on CloudFront / ALB if you expose public endpoints.
-- Review **CORS**, **rate limiting**, and **JWT expiry** before going live.
+- Never commit production `.env` or Secrets Manager values.
+- Restrict **SSH**; prefer **SSM Session Manager** for break-glass DB access.
+- Add **WAF** on CloudFront for public endpoints when going live with real PHI.
+- Review **JWT expiry**, **CORS**, and **RBAC** before production cutover.
+- Rotate **JWT_SECRET** with a planned session logout strategy.
 
 ---
 
-## 13. Related documents
+## 15. Related documents
 
-- [`README.md`](../README.md) — local setup, env tables, cost tiers.
-- [`Clinic_Management_System_RFC.md`](./Clinic_Management_System_RFC.md) — broader platform architecture.
-- [`Clinic_Management_System_PRD.md`](./Clinic_Management_System_PRD.md) — product scope and roles.
+- [`README.md`](../README.md) — local setup, npm scripts, env tables.
+- [`Clinic_Management_System_RFC.md`](./Clinic_Management_System_RFC.md) — platform architecture and module map.
+- [`Clinic_Management_System_PRD.md`](./Clinic_Management_System_PRD.md) — product scope and implemented patient/clinical features.
+- [`Test_Data_Users.md`](./Test_Data_Users.md) — demo logins and QA matrix.
 
-When this repository gains **CDK or Terraform** modules, link them here and shorten this guide to “run `cd infra && …`”.
+**Infrastructure code:** `infra/src/kiorly-clinics-management-stack.ts`, `apps/api/Dockerfile`, `apps/api/Dockerfile.seed`.
