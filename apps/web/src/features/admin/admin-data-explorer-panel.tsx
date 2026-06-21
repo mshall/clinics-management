@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ApiError, apiDelete, apiGet, apiPatch, apiPost } from "@/lib/http";
+import { ApiError, apiDelete, apiFetchBlob, apiGet, apiPatch, apiPost } from "@/lib/http";
 
 type ExplorerOps = { list: boolean; get: boolean; create: boolean; patch: boolean; delete: boolean };
 
@@ -47,6 +47,7 @@ export function AdminDataExplorerPanel() {
   const [createOpen, setCreateOpen] = useState(false);
   const [createJson, setCreateJson] = useState("{}");
   const [formError, setFormError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const catalogQ = useQuery({
     queryKey: ["admin", "data-explorer", "catalog"],
@@ -143,6 +144,24 @@ export function AdminDataExplorerPanel() {
     }
   }
 
+  async function downloadSqlExport() {
+    setExporting(true);
+    setFormError(null);
+    try {
+      const { blob } = await apiFetchBlob("/api/v1/admin/data-explorer/export/sql");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "organization-export.sql";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: unknown) {
+      setFormError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e));
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <Card>
@@ -177,6 +196,9 @@ export function AdminDataExplorerPanel() {
                 ))}
               </select>
             </div>
+            <Button type="button" variant="outline" disabled={exporting} onClick={() => void downloadSqlExport()}>
+              {exporting ? t("common.loading") : t("admin.dataExplorerExportSql", "Export all as SQL")}
+            </Button>
             {meta?.ops.create ? (
               <Button type="button" variant="secondary" onClick={() => { setFormError(null); setCreateOpen(true); }}>
                 {t("admin.dataExplorerAddRow", "Add row (JSON)")}

@@ -221,8 +221,8 @@ export function AdminPage() {
   const [adminSection, setAdminSection] = useState<"clinics" | "users" | "patients" | "organization" | "data" | "governance">("clinics");
   const [feeDraft, setFeeDraft] = useState("");
   useEffect(() => {
-    if (!isPlatformSuperAdmin && adminSection === "data") setAdminSection("clinics");
-  }, [isPlatformSuperAdmin, adminSection]);
+    if (!isPlatformSuperAdmin && !isGroupAdmin && adminSection === "data") setAdminSection("clinics");
+  }, [isPlatformSuperAdmin, isGroupAdmin, adminSection]);
   useEffect(() => {
     const v = overview.data?.currentTenant?.defaultVisitFee;
     if (v != null && Number.isFinite(Number(v))) setFeeDraft(String(v));
@@ -292,7 +292,7 @@ export function AdminPage() {
         <Button type="button" size="sm" variant={adminSection === "organization" ? "default" : "outline"} onClick={() => setAdminSection("organization")}>
           {t("admin.tabOrganization", "Organization & settings")}
         </Button>
-        {isPlatformSuperAdmin ? (
+        {isGroupAdmin || isPlatformSuperAdmin ? (
           <Button type="button" size="sm" variant={adminSection === "data" ? "default" : "outline"} onClick={() => setAdminSection("data")}>
             {t("admin.tabDataExplorer", "Data explorer")}
           </Button>
@@ -311,7 +311,7 @@ export function AdminPage() {
       ) : adminSection === "patients" && isGroupAdmin ? (
         <AdminOrgPatientsPanel />
       ) : adminSection === "data" ? (
-        isPlatformSuperAdmin ? (
+        isGroupAdmin || isPlatformSuperAdmin ? (
           <AdminDataExplorerPanel />
         ) : null
       ) : adminSection === "organization" ? (

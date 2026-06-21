@@ -32,6 +32,7 @@ import { PatientDto } from "../common/dto/patient.dto";
 import { PatientDocumentDto } from "../common/dto/patient-document.dto";
 import { CreatePatientDto } from "./dto/create-patient.dto";
 import { UpdatePatientDto } from "./dto/update-patient.dto";
+import { BulkDeletePatientsDto } from "./dto/bulk-delete-patients.dto";
 import { PatientsService } from "./patients.service";
 
 const PATIENT_DOC_UPLOAD_LIMIT = 15 * 1024 * 1024;
@@ -82,6 +83,14 @@ export class PatientsController {
   @ApiCreatedResponse({ type: PatientDto })
   create(@CurrentUser() user: JwtUser, @Body() body: CreatePatientDto) {
     return this.patients.create(requireTenantId(user), body, user);
+  }
+
+  @Post("bulk-delete")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Soft-delete multiple patients (group admin only)" })
+  @ApiOkResponse({ description: "{ ok: true, deleted: number }" })
+  bulkDelete(@CurrentUser() user: JwtUser, @Body() body: BulkDeletePatientsDto) {
+    return this.patients.softDeleteMany(requireTenantId(user), body, user);
   }
 
   @Get(":id/national-id-document")

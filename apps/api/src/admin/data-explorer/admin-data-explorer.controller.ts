@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import type { Response } from "express";
 import { CurrentUser } from "../../auth/current-user.decorator";
 import { JwtAuthGuard } from "../../auth/jwt-auth.guard";
 import type { JwtUser } from "../../auth/jwt-user";
@@ -13,10 +14,21 @@ export class AdminDataExplorerController {
   constructor(private readonly explorer: AdminDataExplorerService) {}
 
   @Get("tables")
-  @ApiOperation({ summary: "List allowlisted tables and supported operations (group admin only)" })
+  @ApiOperation({ summary: "List allowlisted tables and supported operations (group admin or platform super admin)" })
   @ApiOkResponse()
-  tables() {
-    return this.explorer.catalog();
+  tables(@CurrentUser() user: JwtUser) {
+    return this.explorer.catalog(user);
+  }
+
+  @Get("export/sql")
+  @ApiOperation({ summary: "Download organization data as a single SQL file (group admin or platform super admin)" })
+  @ApiOkResponse({ description: "SQL script with INSERT statements for this organization" })
+  async exportSql(@CurrentUser() user: JwtUser, @Res() res: Response) {
+    const sql = await this.explorer.exportSql(user);
+    const tenantId = user.tenantId ?? "org";
+    res.setHeader("Content-Type", "application/sql; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="kiorly-org-${tenantId}-export.sql"`);
+    res.send(sql);
   }
 
   @Get(":table")

@@ -13,9 +13,14 @@ import {
   UserRole,
 } from "@prisma/client";
 import type { JwtUser } from "../../auth/jwt-user";
-import { isPlatformSuperAdmin } from "../../common/platform-super-admin";
 import { paginate, parsePageParams } from "../../common/pagination";
 import { PrismaService } from "../../prisma/prisma.service";
+import {
+  assertDataExplorerAccess,
+  assertExplorerTenant,
+  isDataExplorerPlatformOperator,
+} from "./data-explorer-access";
+import { generateTenantSqlExport } from "./tenant-sql-export";
 
 /** URL-safe table keys (allowlisted). */
 export const DATA_EXPLORER_TABLES = [
@@ -34,24 +39,16 @@ export const DATA_EXPLORER_TABLES = [
   "user_nav_tab_grants",
   "diagnoses",
   "encounter_medications",
+  "encounter_documents",
+  "patient_documents",
+  "operations",
+  "operation_documents",
+  "operation_medications",
   "attendances",
   "leave_requests",
 ] as const;
 
 export type DataExplorerTable = (typeof DATA_EXPLORER_TABLES)[number];
-
-function assertExplorerTenant(user: JwtUser): string {
-  if (user.tenantId != null) return user.tenantId;
-  throw new ForbiddenException(
-    "Data explorer requires organization membership; platform operators should use /admin/platform APIs",
-  );
-}
-
-function assertPlatformSuperAdmin(user: JwtUser): void {
-  if (!isPlatformSuperAdmin(user)) {
-    throw new ForbiddenException("Only platform super administrators can use the data explorer");
-  }
-}
 
 function isTableKey(s: string): s is DataExplorerTable {
   return (DATA_EXPLORER_TABLES as readonly string[]).includes(s);
@@ -83,33 +80,49 @@ export function serializeRow(row: unknown): unknown {
 export class AdminDataExplorerService {
   constructor(private readonly prisma: PrismaService) {}
 
-  catalog() {
-    return {
-      tables: [
-        { key: "feature_flags", label: "Feature flags", scope: "global", ops: { list: true, get: true, create: false, patch: true, delete: false } },
-        { key: "tenants", label: "Tenant (this org)", scope: "current", ops: { list: true, get: true, create: false, patch: true, delete: false } },
-        { key: "users", label: "Users", scope: "tenant", ops: { list: true, get: true, create: false, patch: true, delete: false } },
-        { key: "clinics", label: "Clinics", scope: "tenant", ops: { list: true, get: true, create: false, patch: true, delete: false } },
-        { key: "patients", label: "Patients", scope: "tenant", ops: { list: true, get: true, create: true, patch: true, delete: false } },
-        { key: "employees", label: "Employees", scope: "tenant", ops: { list: true, get: true, create: false, patch: true, delete: false } },
-        { key: "appointments", label: "Appointments", scope: "tenant", ops: { list: true, get: true, create: false, patch: true, delete: false } },
-        { key: "encounters", label: "Encounters", scope: "tenant", ops: { list: true, get: true, create: false, patch: true, delete: false } },
-        { key: "expenses", label: "Expenses", scope: "tenant", ops: { list: true, get: true, create: true, patch: true, delete: true } },
-        { key: "revenue_entries", label: "Revenue entries", scope: "tenant", ops: { list: true, get: true, create: true, patch: true, delete: true } },
-        { key: "audit_logs", label: "Audit logs", scope: "tenant", ops: { list: true, get: true, create: false, patch: false, delete: false } },
-        { key: "clinic_admin_scopes", label: "Clinic admin scopes", scope: "tenant", ops: { list: true, get: true, create: true, patch: false, delete: true } },
-        { key: "user_nav_tab_grants", label: "User nav tab grants", scope: "tenant", ops: { list: true, get: true, create: true, patch: true, delete: true } },
-        { key: "diagnoses", label: "Diagnoses", scope: "tenant", ops: { list: true, get: true, create: true, patch: true, delete: true } },
-        { key: "encounter_medications", label: "Encounter medications", scope: "tenant", ops: { list: true, get: true, create: true, patch: true, delete: true } },
-        { key: "attendances", label: "Attendance", scope: "tenant", ops: { list: true, get: true, create: true, patch: true, delete: true } },
-        { key: "leave_requests", label: "Leave requests", scope: "tenant", ops: { list: true, get: true, create: true, patch: true, delete: true } },
-      ],
-    };
+  catalog(user: JwtUser) {
+    const platform = isDataExplorerPlatformOperator(user);
+    const tables = [
+      ...(platform
+        ? [{ key: "feature_flags", label: "Feature flags", scope: "global", ops: { list: true, get: true, create: false, patch: true, delete: false } }]
+        : []),
+      { key: "tenants", label: "Tenant (this org)", scope: "current", ops: { list: true, get: true, create: false, patch: true, delete: false } },
+      { key: "users", label: "Users", scope: "tenant", ops: { list: true, get: true, create: false, patch: true, delete: false } },
+      { key: "clinics", label: "Clinics", scope: "tenant", ops: { list: true, get: true, create: false, patch: true, delete: false } },
+      { key: "patients", label: "Patients", scope: "tenant", ops: { list: true, get: true, create: true, patch: true, delete: false } },
+      { key: "patient_documents", label: "Patient documents", scope: "tenant", ops: { list: true, get: true, create: false, patch: false, delete: false } },
+      { key: "employees", label: "Employees", scope: "tenant", ops: { list: true, get: true, create: false, patch: true, delete: false } },
+      { key: "appointments", label: "Appointments", scope: "tenant", ops: { list: true, get: true, create: false, patch: true, delete: false } },
+      { key: "encounters", label: "Encounters", scope: "tenant", ops: { list: true, get: true, create: false, patch: true, delete: false } },
+      { key: "encounter_documents", label: "Encounter documents", scope: "tenant", ops: { list: true, get: true, create: false, patch: false, delete: false } },
+      { key: "operations", label: "Operations", scope: "tenant", ops: { list: true, get: true, create: false, patch: false, delete: false } },
+      { key: "operation_documents", label: "Operation documents", scope: "tenant", ops: { list: true, get: true, create: false, patch: false, delete: false } },
+      { key: "operation_medications", label: "Operation medications", scope: "tenant", ops: { list: true, get: true, create: false, patch: false, delete: false } },
+      { key: "expenses", label: "Expenses", scope: "tenant", ops: { list: true, get: true, create: true, patch: true, delete: true } },
+      { key: "revenue_entries", label: "Revenue entries", scope: "tenant", ops: { list: true, get: true, create: true, patch: true, delete: true } },
+      { key: "audit_logs", label: "Audit logs", scope: "tenant", ops: { list: true, get: true, create: false, patch: false, delete: false } },
+      { key: "clinic_admin_scopes", label: "Clinic admin scopes", scope: "tenant", ops: { list: true, get: true, create: true, patch: false, delete: true } },
+      { key: "user_nav_tab_grants", label: "User nav tab grants", scope: "tenant", ops: { list: true, get: true, create: true, patch: true, delete: true } },
+      { key: "diagnoses", label: "Diagnoses", scope: "tenant", ops: { list: true, get: true, create: true, patch: true, delete: true } },
+      { key: "encounter_medications", label: "Encounter medications", scope: "tenant", ops: { list: true, get: true, create: true, patch: true, delete: true } },
+      { key: "attendances", label: "Attendance", scope: "tenant", ops: { list: true, get: true, create: true, patch: true, delete: true } },
+      { key: "leave_requests", label: "Leave requests", scope: "tenant", ops: { list: true, get: true, create: true, patch: true, delete: true } },
+    ];
+    return { tables };
+  }
+
+  async exportSql(user: JwtUser): Promise<string> {
+    assertDataExplorerAccess(user);
+    const tenantId = assertExplorerTenant(user);
+    return generateTenantSqlExport(this.prisma, tenantId);
   }
 
   async list(user: JwtUser, table: string, pageStr?: string, pageSizeStr?: string) {
-    assertPlatformSuperAdmin(user);
+    assertDataExplorerAccess(user);
     if (!isTableKey(table)) throw new BadRequestException("Unknown table");
+    if (table === "feature_flags" && !isDataExplorerPlatformOperator(user)) {
+      throw new ForbiddenException("Feature flags are platform-only");
+    }
     const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
     const tenantId = assertExplorerTenant(user);
 
@@ -166,6 +179,14 @@ export class AdminDataExplorerService {
         ]);
         return paginate(rows.map((r) => serializeRow(r) as object), total, page, pageSize);
       }
+      case "patient_documents": {
+        const where = { tenantId };
+        const [total, rows] = await Promise.all([
+          this.prisma.patientDocument.count({ where }),
+          this.prisma.patientDocument.findMany({ where, orderBy: { createdAt: "desc" }, skip, take: pageSize }),
+        ]);
+        return paginate(rows.map((r) => serializeRow(r) as object), total, page, pageSize);
+      }
       case "employees": {
         const where = { tenantId };
         const [total, rows] = await Promise.all([
@@ -187,6 +208,38 @@ export class AdminDataExplorerService {
         const [total, rows] = await Promise.all([
           this.prisma.encounter.count({ where }),
           this.prisma.encounter.findMany({ where, orderBy: { updatedAt: "desc" }, skip, take: pageSize }),
+        ]);
+        return paginate(rows.map((r) => serializeRow(r) as object), total, page, pageSize);
+      }
+      case "encounter_documents": {
+        const where = { tenantId };
+        const [total, rows] = await Promise.all([
+          this.prisma.encounterDocument.count({ where }),
+          this.prisma.encounterDocument.findMany({ where, orderBy: { createdAt: "desc" }, skip, take: pageSize }),
+        ]);
+        return paginate(rows.map((r) => serializeRow(r) as object), total, page, pageSize);
+      }
+      case "operations": {
+        const where = { tenantId };
+        const [total, rows] = await Promise.all([
+          this.prisma.operation.count({ where }),
+          this.prisma.operation.findMany({ where, orderBy: { operationDate: "desc" }, skip, take: pageSize }),
+        ]);
+        return paginate(rows.map((r) => serializeRow(r) as object), total, page, pageSize);
+      }
+      case "operation_documents": {
+        const where = { tenantId };
+        const [total, rows] = await Promise.all([
+          this.prisma.operationDocument.count({ where }),
+          this.prisma.operationDocument.findMany({ where, orderBy: { createdAt: "desc" }, skip, take: pageSize }),
+        ]);
+        return paginate(rows.map((r) => serializeRow(r) as object), total, page, pageSize);
+      }
+      case "operation_medications": {
+        const where = { tenantId };
+        const [total, rows] = await Promise.all([
+          this.prisma.operationMedication.count({ where }),
+          this.prisma.operationMedication.findMany({ where, orderBy: { createdAt: "desc" }, skip, take: pageSize }),
         ]);
         return paginate(rows.map((r) => serializeRow(r) as object), total, page, pageSize);
       }
@@ -280,8 +333,11 @@ export class AdminDataExplorerService {
   }
 
   async getOne(user: JwtUser, table: string, id: string) {
-    assertPlatformSuperAdmin(user);
+    assertDataExplorerAccess(user);
     if (!isTableKey(table)) throw new BadRequestException("Unknown table");
+    if (table === "feature_flags" && !isDataExplorerPlatformOperator(user)) {
+      throw new ForbiddenException("Feature flags are platform-only");
+    }
     const tenantId = assertExplorerTenant(user);
     const row = await this.findOneRaw(table, id, tenantId);
     if (!row) throw new NotFoundException("Row not found");
@@ -302,12 +358,22 @@ export class AdminDataExplorerService {
         return this.prisma.clinic.findFirst({ where: { id, tenantId } });
       case "patients":
         return this.prisma.patient.findFirst({ where: { id, tenantId } });
+      case "patient_documents":
+        return this.prisma.patientDocument.findFirst({ where: { id, tenantId } });
       case "employees":
         return this.prisma.employee.findFirst({ where: { id, tenantId } });
       case "appointments":
         return this.prisma.appointment.findFirst({ where: { id, tenantId } });
       case "encounters":
         return this.prisma.encounter.findFirst({ where: { id, tenantId } });
+      case "encounter_documents":
+        return this.prisma.encounterDocument.findFirst({ where: { id, tenantId } });
+      case "operations":
+        return this.prisma.operation.findFirst({ where: { id, tenantId } });
+      case "operation_documents":
+        return this.prisma.operationDocument.findFirst({ where: { id, tenantId } });
+      case "operation_medications":
+        return this.prisma.operationMedication.findFirst({ where: { id, tenantId } });
       case "expenses":
         return this.prisma.expense.findFirst({ where: { id, tenantId } });
       case "revenue_entries":
@@ -336,7 +402,7 @@ export class AdminDataExplorerService {
   }
 
   async create(user: JwtUser, table: string, body: Record<string, unknown>) {
-    assertPlatformSuperAdmin(user);
+    assertDataExplorerAccess(user);
     if (!isTableKey(table)) throw new BadRequestException("Unknown table");
     const tenantId = assertExplorerTenant(user);
 
@@ -551,7 +617,7 @@ export class AdminDataExplorerService {
   }
 
   async patch(user: JwtUser, table: string, id: string, body: Record<string, unknown>) {
-    assertPlatformSuperAdmin(user);
+    assertDataExplorerAccess(user);
     if (!isTableKey(table)) throw new BadRequestException("Unknown table");
     const tenantId = assertExplorerTenant(user);
     await this.getOne(user, table, id);
@@ -827,7 +893,7 @@ export class AdminDataExplorerService {
   }
 
   async remove(user: JwtUser, table: string, id: string) {
-    assertPlatformSuperAdmin(user);
+    assertDataExplorerAccess(user);
     if (!isTableKey(table)) throw new BadRequestException("Unknown table");
     const tenantId = assertExplorerTenant(user);
     await this.getOne(user, table, id);

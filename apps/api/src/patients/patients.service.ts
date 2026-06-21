@@ -24,6 +24,7 @@ import {
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { CreatePatientDto } from "./dto/create-patient.dto";
 import type { UpdatePatientDto } from "./dto/update-patient.dto";
+import type { BulkDeletePatientsDto } from "./dto/bulk-delete-patients.dto";
 
 const MAX_PATIENT_DOC_BYTES = 15 * 1024 * 1024;
 const ALLOWED_PATIENT_DOC_MIME = new Set(["application/pdf", "image/jpeg", "image/png", "image/gif", "image/webp"]);
@@ -487,5 +488,36 @@ export class PatientsService {
       data: { deletedAt: new Date() },
     });
     return { ok: true };
+  }
+
+  async softDeleteMany(tenantId: string, dto: BulkDeletePatientsDto, user: JwtUser): Promise<{ ok: true; deleted: number }> {
+    if (user.role !== UserRole.GROUP_ADMIN) {
+      throw new ForbiddenException("Only group administrators can delete patients");
+    }
+    const scopeIds = await fetchPatientListClinicScopeIds(this.prisma, tenantId, user);
+    const now = new Date();
+    let deleted = 0;
+
+    if (dto.all) {
+      const where = this.buildWhere(tenantId, { search: dto.search }, scopeIds);
+      const result = await this.prisma.patient.updateMany({
+        where: { ...where, deletedAt: null },
+        data: { deletedAt: now },
+      });
+      deleted = result.count;
+    } else {
+      const ids = [...new Set((dto.ids ?? []).map((id) => id.trim()).filter(Boolean))];
+      if (!ids.length) throw new BadRequestException("ids required unless all=true");
+      for (const id of ids) {
+        await this.getById(tenantId, id, user);
+      }
+      const result = await this.prisma.patient.updateMany({
+        where: { tenantId, id: { in: ids }, deletedAt: null },
+        data: { deletedAt: now },
+      });
+      deleted = result.count;
+    }
+
+    return { ok: true, deleted };
   }
 }

@@ -52,6 +52,8 @@ export function AdminOrgPatientsPanel() {
   const [nationalId, setNationalId] = useState("");
   const [homeBranchId, setHomeBranchId] = useState("");
   const [acquisition, setAcquisition] = useState<PatientAcquisitionFormValues>(emptyPatientAcquisitionFormValues());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [selectAllMatching, setSelectAllMatching] = useState(false);
 
   const editPatientId = dialogMode && typeof dialogMode === "object" ? dialogMode.edit : null;
   const isCreate = dialogMode === "create";
@@ -179,6 +181,29 @@ export function AdminOrgPatientsPanel() {
     onError: (e: unknown) => setFormErr(apiErrorMessage(e)),
   });
 
+  const bulkDeleteMut = useMutation({
+    mutationFn: () => {
+      if (selectAllMatching) {
+        return apiPost<{ ok: true; deleted: number }>("/api/v1/patients/bulk-delete", {
+          all: true,
+          search: search.trim() || undefined,
+        });
+      }
+      return apiPost<{ ok: true; deleted: number }>("/api/v1/patients/bulk-delete", { ids: [...selectedIds] });
+    },
+    onSuccess: () => {
+      setSelectedIds(new Set());
+      setSelectAllMatching(false);
+      void qc.invalidateQueries({ queryKey: ["admin", "org-patients"] });
+      void qc.invalidateQueries({ queryKey: ["patients"] });
+      void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
+    },
+    onError: (e: unknown) => {
+      if (e instanceof ApiError) alert(e.message);
+      else alert(e instanceof Error ? e.message : String(e));
+    },
+  });
+
   const canSave =
     firstNameEn.trim() &&
     lastNameEn.trim() &&
@@ -202,6 +227,43 @@ export function AdminOrgPatientsPanel() {
   const total = patientsQuery.data?.total ?? 0;
   const totalPages = patientsQuery.data?.totalPages ?? 1;
 
+  const pageIds = useMemo(() => rows.map((r) => r.id), [rows]);
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
+  const somePageSelected = pageIds.some((id) => selectedIds.has(id));
+  const selectedCount = selectAllMatching ? total : selectedIds.size;
+
+  const toggleRow = (id: string, on: boolean) => {
+    setSelectAllMatching(false);
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const togglePageAll = () => {
+    if (allPageSelected) {
+      setSelectAllMatching(false);
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        pageIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        pageIds.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+  };
+
+  useEffect(() => {
+    setSelectAllMatching(false);
+    setSelectedIds(new Set());
+  }, [page, pageSize, search]);
+
   return (
     <div className="space-y-6">
       <Card>
@@ -212,15 +274,32 @@ export function AdminOrgPatientsPanel() {
               {t("admin.orgPatientsHint", "Register, update, and remove patient records across your organization.")}
             </CardDescription>
           </div>
-          <Button
-            type="button"
-            onClick={() => {
-              resetCreateForm();
-              setDialogMode("create");
-            }}
-          >
-            {t("admin.createPatient", "Create patient")}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              onClick={() => {
+                resetCreateForm();
+                setDialogMode("create");
+              }}
+            >
+              {t("admin.createPatient", "Create patient")}
+            </Button>
+            {selectedCount > 0 ? (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={bulkDeleteMut.isPending}
+                onClick={() => {
+                  const msg = selectAllMatching
+                    ? t("admin.orgPatientsBulkDeleteAllConfirm", "Delete all {{count}} patients matching this search?", { count: total })
+                    : t("admin.orgPatientsBulkDeleteConfirm", "Delete {{count}} selected patients?", { count: selectedCount });
+                  if (window.confirm(msg)) bulkDeleteMut.mutate();
+                }}
+              >
+                {t("admin.orgPatientsBulkDelete", "Delete selected ({{count}})", { count: selectedCount })}
+              </Button>
+            ) : null}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {patientsQuery.isError ? (
@@ -245,10 +324,40 @@ export function AdminOrgPatientsPanel() {
             <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : (
             <>
+              {allPageSelected && total > rows.length ? (
+                <p className="text-sm text-muted-foreground">
+                  {selectAllMatching ? (
+                    <>
+                      {t("admin.orgPatientsAllMatchingSelected", "All {{count}} patients matching this search are selected.", { count: total })}{" "}
+                      <button type="button" className="underline" onClick={() => { setSelectAllMatching(false); setSelectedIds(new Set()); }}>
+                        {t("admin.orgPatientsClearSelection", "Clear selection")}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {t("admin.orgPatientsSelectAllPrompt", "All {{count}} patients on this page are selected.", { count: rows.length })}{" "}
+                      <button type="button" className="font-medium underline" onClick={() => setSelectAllMatching(true)}>
+                        {t("admin.orgPatientsSelectAllMatching", "Select all {{count}} matching patients", { count: total })}
+                      </button>
+                    </>
+                  )}
+                </p>
+              ) : null}
               <ResponsiveTable>
                 <table className="w-full min-w-[720px] text-sm">
                   <thead className="bg-muted/60">
                     <tr>
+                      <th className="w-10 px-3 py-2">
+                        <input
+                          type="checkbox"
+                          aria-label={t("admin.orgPatientsSelectAllPage", "Select all on this page")}
+                          checked={allPageSelected}
+                          ref={(el) => {
+                            if (el) el.indeterminate = somePageSelected && !allPageSelected;
+                          }}
+                          onChange={togglePageAll}
+                        />
+                      </th>
                       <th className="px-3 py-2 text-start">{t("patients.mrn", "MRN")}</th>
                       <th className="px-3 py-2 text-start">{t("admin.displayName")}</th>
                       <th className="px-3 py-2 text-start">{t("patients.phone")}</th>
@@ -260,13 +369,21 @@ export function AdminOrgPatientsPanel() {
                   <tbody>
                     {rows.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">
+                        <td colSpan={7} className="px-3 py-6 text-center text-muted-foreground">
                           {t("admin.orgPatientsEmpty", "No patients match your search.")}
                         </td>
                       </tr>
                     ) : (
                       rows.map((row) => (
                         <tr key={row.id} className="border-t">
+                          <td className="px-3 py-2">
+                            <input
+                              type="checkbox"
+                              aria-label={t("admin.orgPatientsSelectRow", "Select patient")}
+                              checked={selectAllMatching || selectedIds.has(row.id)}
+                              onChange={(e) => toggleRow(row.id, e.target.checked)}
+                            />
+                          </td>
                           <td className="px-3 py-2 ltr-nums">{row.mrn}</td>
                           <td className="px-3 py-2">{formatPatientEnglishName(row)}</td>
                           <td className="px-3 py-2 ltr-nums">{row.phone}</td>
