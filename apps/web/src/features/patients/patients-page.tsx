@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent } fro
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { CreateActionButton } from "@/components/create-action-button";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -49,6 +50,7 @@ export function PatientsPage() {
   const [pfDob, setPfDob] = useState("");
   const [pfEmail, setPfEmail] = useState("");
   const [pfBranch, setPfBranch] = useState("");
+  const [patientToDelete, setPatientToDelete] = useState<PatientDto | null>(null);
 
   const query = useMemo(
     () => ({
@@ -225,6 +227,7 @@ export function PatientsPage() {
   const deleteMut = useMutation({
     mutationFn: (patientId: string) => apiDelete(`/api/v1/patients/${patientId}`),
     onSuccess: () => {
+      setPatientToDelete(null);
       void qc.invalidateQueries({ queryKey: ["patients"] });
       void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
       void qc.invalidateQueries({ queryKey: ["admin", "org-patients"] });
@@ -234,17 +237,14 @@ export function PatientsPage() {
   const handleDeletePatient = (patient: PatientDto, e: MouseEvent | KeyboardEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const name =
-      i18n.language === "ar" && patient.firstNameAr
-        ? `${patient.firstNameAr} ${patient.lastNameAr ?? ""}`.trim()
-        : `${patient.firstNameEn} ${patient.lastNameEn}`.trim();
-    const msg = t("patients.deleteConfirm", "Delete {{name}} ({{mrn}})? They will be removed from the registry.", {
-      name,
-      mrn: patient.mrn,
-    });
-    if (!window.confirm(msg)) return;
-    deleteMut.mutate(patient.id);
+    setPatientToDelete(patient);
   };
+
+  const deletePatientName = patientToDelete
+    ? i18n.language === "ar" && patientToDelete.firstNameAr
+      ? `${patientToDelete.firstNameAr} ${patientToDelete.lastNameAr ?? ""}`.trim()
+      : `${patientToDelete.firstNameEn} ${patientToDelete.lastNameEn}`.trim()
+    : "";
 
   return (
     <div className="space-y-6">
@@ -592,6 +592,25 @@ export function PatientsPage() {
           />
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={patientToDelete != null}
+        onOpenChange={(open) => {
+          if (!open && !deleteMut.isPending) setPatientToDelete(null);
+        }}
+        title={t("patients.deleteConfirmTitle", "Delete patient?")}
+        description={t(
+          "patients.deleteConfirmBody",
+          "Delete {{name}} ({{mrn}})? They will be removed from the registry.",
+          { name: deletePatientName, mrn: patientToDelete?.mrn ?? "" },
+        )}
+        confirmLabel={t("patients.deleteConfirmAction", "Delete patient")}
+        cancelLabel={t("common.cancel", "Cancel")}
+        pending={deleteMut.isPending}
+        onConfirm={() => {
+          if (patientToDelete) deleteMut.mutate(patientToDelete.id);
+        }}
+      />
     </div>
   );
 }
