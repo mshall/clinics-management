@@ -194,11 +194,13 @@ export function PatientsPage() {
         await apiPostFormData<PatientDto>(`/api/v1/patients/${patient.id}/national-id-document`, fd);
       }
       for (const row of docRows) {
-        if (!row.file) continue;
-        const fd = new FormData();
-        fd.append("file", row.file);
-        fd.append("description", pendingDocumentDescription(row, t));
-        await apiPostFormData(`/api/v1/patients/${patient.id}/documents`, fd);
+        const description = pendingDocumentDescription(row, t);
+        for (const file of row.files) {
+          const fd = new FormData();
+          fd.append("file", file);
+          fd.append("description", description);
+          await apiPostFormData(`/api/v1/patients/${patient.id}/documents`, fd);
+        }
       }
       return patient;
     },
@@ -251,7 +253,7 @@ export function PatientsPage() {
                 <Input value={lastNameAr} onChange={(e) => setLastNameAr(e.target.value)} dir="rtl" />
               </div>
               <div className="space-y-2">
-                <Label>{t("patients.dob")}</Label>
+                <Label optional>{t("patients.dob")}</Label>
                 <Input className="ltr-nums" type="date" value={dob} onChange={(e) => setDob(e.target.value)} />
               </div>
               <div className="space-y-2">

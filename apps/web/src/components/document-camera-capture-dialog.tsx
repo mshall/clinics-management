@@ -16,6 +16,7 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
   const streamRef = useRef<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [captureCount, setCaptureCount] = useState(0);
 
   const stopStream = useCallback(() => {
     for (const track of streamRef.current?.getTracks() ?? []) {
@@ -30,6 +31,7 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
     if (!open) {
       stopStream();
       setCameraError(null);
+      setCaptureCount(0);
       return;
     }
 
@@ -58,7 +60,9 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
         }
       } catch {
         if (!cancelled) {
-          setCameraError(t("patients.cameraPermissionDenied", "Could not access the camera. Check permissions and try again."));
+          setCameraError(
+            t("patients.cameraPermissionDenied", "Could not access the camera. Check permissions and try again."),
+          );
         }
       }
     })();
@@ -87,7 +91,7 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
         if (!blob) return;
         const file = new File([blob], `camera-capture-${Date.now()}.jpg`, { type: "image/jpeg" });
         onCapture(file);
-        onOpenChange(false);
+        setCaptureCount((n) => n + 1);
       },
       "image/jpeg",
       0.92,
@@ -101,6 +105,12 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
           <DialogTitle>{t("patients.captureDocument", "Capture document")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            {t(
+              "patients.captureMultipleHint",
+              "Take one or more photos for this document. Tap Done when finished.",
+            )}
+          </p>
           {cameraError ? (
             <p className="text-sm text-destructive">{cameraError}</p>
           ) : (
@@ -108,9 +118,14 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
               <video ref={videoRef} className="aspect-[4/3] w-full object-cover" playsInline muted />
             </div>
           )}
+          {captureCount > 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {t("patients.photosCapturedCount", "{{count}} photo(s) captured", { count: captureCount })}
+            </p>
+          ) : null}
           <div className="flex flex-wrap justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              {t("common.cancel", "Cancel")}
+              {captureCount > 0 ? t("common.done", "Done") : t("common.cancel", "Cancel")}
             </Button>
             <Button type="button" disabled={!ready || Boolean(cameraError)} className="gap-1" onClick={capture}>
               <Camera className="h-4 w-4" />

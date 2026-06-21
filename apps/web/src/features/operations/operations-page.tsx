@@ -402,12 +402,14 @@ export function OperationsPage() {
       });
 
       for (const row of docRows) {
-        if (!row.file) continue;
-        const fd = new FormData();
-        fd.append("file", row.file);
-        fd.append("kind", "ATTACHMENT");
-        fd.append("description", pendingDocumentDescription(row, t));
-        await apiPostFormData(`/api/v1/operations/${op.id}/documents`, fd);
+        const description = pendingDocumentDescription(row, t);
+        for (const file of row.files) {
+          const fd = new FormData();
+          fd.append("file", file);
+          fd.append("kind", "ATTACHMENT");
+          fd.append("description", description);
+          await apiPostFormData(`/api/v1/operations/${op.id}/documents`, fd);
+        }
       }
 
       if (medTab !== "none") {

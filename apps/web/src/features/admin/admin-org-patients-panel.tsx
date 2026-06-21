@@ -443,7 +443,7 @@ export function AdminOrgPatientsPanel() {
                 <Input value={lastNameAr} onChange={(e) => setLastNameAr(e.target.value)} dir="rtl" />
               </div>
               <div className="space-y-2">
-                <Label>{t("patients.dob")}</Label>
+                <Label optional>{t("patients.dob")}</Label>
                 <Input className="ltr-nums" type="date" value={dob} onChange={(e) => setDob(e.target.value)} />
               </div>
               <div className="space-y-2">

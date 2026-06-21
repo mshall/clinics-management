@@ -1,4 +1,4 @@
-import { Camera, Plus, Trash2 } from "lucide-react";
+import { Camera, Plus, Trash2, X } from "lucide-react";
 import { useState, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { DocumentCameraCaptureDialog } from "@/components/document-camera-capture-dialog";
@@ -18,13 +18,13 @@ export const PATIENT_DOCUMENT_CATEGORIES: PatientDocumentCategory[] = [
 
 export type PendingDocumentRow = {
   id: string;
-  file: File | null;
+  files: File[];
   category: PatientDocumentCategory | "";
   otherDetail: string;
 };
 
 export function emptyPendingDocumentRow(): PendingDocumentRow {
-  return { id: crypto.randomUUID(), file: null, category: "", otherDetail: "" };
+  return { id: crypto.randomUUID(), files: [], category: "", otherDetail: "" };
 }
 
 export function patientDocumentCategoryLabel(
@@ -54,13 +54,13 @@ export function pendingDocumentDescription(
 
 export function validatePendingDocuments(rows: PendingDocumentRow[]): string | null {
   for (const row of rows) {
-    const hasFile = Boolean(row.file);
+    const hasFiles = row.files.length > 0;
     const hasCategory = Boolean(row.category);
     const hasOther = row.category === "OTHER" ? Boolean(row.otherDetail.trim()) : true;
-    if (!hasFile && !hasCategory && !row.otherDetail.trim()) continue;
-    if (hasFile && !hasCategory) return "doc_category_required";
+    if (!hasFiles && !hasCategory && !row.otherDetail.trim()) continue;
+    if (hasFiles && !hasCategory) return "doc_category_required";
     if (hasCategory && row.category === "OTHER" && !hasOther) return "doc_other_required";
-    if (hasCategory && !hasFile) return "doc_file_required";
+    if (hasCategory && !hasFiles) return "doc_file_required";
   }
   return null;
 }
@@ -84,25 +84,24 @@ export function PendingDocumentAttachments({
   const [cameraRowId, setCameraRowId] = useState<string | null>(null);
 
   const handleCameraOpenChange = (open: boolean) => {
-    if (!open && cameraRowId) {
-      const rowId = cameraRowId;
-      onChange((prev) => {
-        const row = prev.find((r) => r.id === rowId);
-        if (row && !row.file && !row.category && !row.otherDetail.trim()) {
-          return prev.filter((r) => r.id !== rowId);
-        }
-        return prev;
-      });
-      setCameraRowId(null);
-    }
+    if (!open) setCameraRowId(null);
     setCameraOpen(open);
   };
 
   const handleCapture = (file: File) => {
     if (!cameraRowId) return;
     const rowId = cameraRowId;
-    onChange((prev) => prev.map((r) => (r.id === rowId ? { ...r, file } : r)));
-    setCameraRowId(null);
+    onChange((prev) =>
+      prev.map((r) => (r.id === rowId ? { ...r, files: [...r.files, file] } : r)),
+    );
+  };
+
+  const removeFile = (rowId: string, fileIndex: number) => {
+    onChange((prev) =>
+      prev.map((r) =>
+        r.id === rowId ? { ...r, files: r.files.filter((_, i) => i !== fileIndex) } : r,
+      ),
+    );
   };
 
   const invalidClass = (rowId: string, field: "category" | "other" | "file") =>
@@ -134,6 +133,9 @@ export function PendingDocumentAttachments({
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-medium text-muted-foreground">
                   {t("patients.documentN", "Document {{n}}", { n: index + 1 })}
+                  {row.files.length > 1
+                    ? ` · ${t("patients.documentFileCount", "{{count}} files", { count: row.files.length })}`
+                    : null}
                 </span>
                 <Button
                   type="button"
@@ -194,12 +196,18 @@ export function PendingDocumentAttachments({
                   <Input
                     className={cn("cursor-pointer text-sm flex-1 min-w-[12rem]", invalidClass(row.id, "file"))}
                     type="file"
+                    multiple
                     accept="application/pdf,image/jpeg,image/png,image/webp,image/gif,text/plain"
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const picked = [...(e.target.files ?? [])];
+                      if (picked.length === 0) return;
                       onChange((prev) =>
-                        prev.map((r) => (r.id === row.id ? { ...r, file: e.target.files?.[0] ?? null } : r)),
-                      )
-                    }
+                        prev.map((r) =>
+                          r.id === row.id ? { ...r, files: [...r.files, ...picked] } : r,
+                        ),
+                      );
+                      e.target.value = "";
+                    }}
                   />
                   <Button
                     type="button"
@@ -215,7 +223,28 @@ export function PendingDocumentAttachments({
                     {t("patients.captureWithCamera", "Capture with camera")}
                   </Button>
                 </div>
-                {row.file ? <p className="text-xs text-muted-foreground ltr-nums">{row.file.name}</p> : null}
+                {row.files.length > 0 ? (
+                  <ul className="space-y-1">
+                    {row.files.map((file, fileIndex) => (
+                      <li
+                        key={`${file.name}-${file.lastModified}-${fileIndex}`}
+                        className="flex items-center justify-between gap-2 rounded-md bg-muted/40 px-2 py-1 text-xs"
+                      >
+                        <span className="min-w-0 truncate ltr-nums text-muted-foreground">{file.name}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 shrink-0"
+                          aria-label={t("common.remove", "Remove")}
+                          onClick={() => removeFile(row.id, fileIndex)}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </div>
             </div>
           ))}
