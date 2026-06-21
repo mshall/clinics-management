@@ -835,6 +835,8 @@
     "tabOrganization": "المنظمة والإعدادات",
     "tabGovernance": "الحوكمة والتدقيق",
     "governanceSubtitle": "سجل تدقيق قابل للبحث ضمن نطاق صلاحياتك.",
+    "governanceSubtitleOrg": "سجل تدقيق قابل للبحث لكل إجراءات المستخدمين في منظمتك، بما في ذلك نشاطك كمسؤول.",
+    "auditSearchPh": "الإجراء، المورد، اسم المستخدم، أو البريد…",
     "auditSearch": "بحث الإجراءات أو الموارد أو الأشخاص",
     "auditDetailTitle": "سجل التدقيق",
     "clinicAdminScopes": "عيادات هذا المدير",

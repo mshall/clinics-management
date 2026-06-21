@@ -33,7 +33,7 @@ export class AdminController {
 
   @Get("audit-logs")
   @ApiOperation({
-    summary: "Paginated audit log (super admin: full tenant; clinic admin: actions tied to assigned clinics)",
+    summary: "Paginated audit log for the organization (group admin: all actions; clinic admin: assigned clinics)",
   })
   @ApiOkResponse()
   auditLogs(

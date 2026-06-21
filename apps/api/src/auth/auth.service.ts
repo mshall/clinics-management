@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcryptjs";
 import { isPlatformSuperAdmin } from "../common/platform-super-admin";
+import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
 
 function normalizeLoginEmail(raw: string): string {
@@ -33,7 +34,8 @@ function passwordMatches(password: string, passwordHash: string | null | undefin
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly jwt: JwtService
+    private readonly jwt: JwtService,
+    private readonly audit: AuditService,
   ) {}
 
   private async navTabKeysForUser(tenantId: string, userId: string): Promise<string[] | null> {
@@ -76,6 +78,8 @@ export class AuthService {
       email: user.email,
       role: user.role,
     });
+
+    void this.audit.recordLogin(user, user.email);
 
     return {
       accessToken,

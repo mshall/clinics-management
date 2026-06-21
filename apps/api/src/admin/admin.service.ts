@@ -481,7 +481,7 @@ export class AdminService {
         orderBy: { createdAt: "desc" },
         skip,
         take: pageSize,
-        include: { actor: { select: { displayName: true, email: true } } },
+        include: { actor: { select: { displayName: true, email: true, role: true } } },
       }),
     ]);
     const items = rows.map((r) => ({
@@ -493,6 +493,7 @@ export class AdminService {
       createdAt: r.createdAt.toISOString(),
       actorDisplayName: r.actor?.displayName ?? null,
       actorEmail: r.actor?.email ?? null,
+      actorRole: r.actor?.role ?? null,
       metadata: r.metadata === null ? null : (r.metadata as Record<string, unknown>),
     }));
     return paginate(items, total, page, pageSize);

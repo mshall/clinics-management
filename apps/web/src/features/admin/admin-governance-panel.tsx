@@ -8,13 +8,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { useAdminAuditLogsQuery } from "@/lib/api-hooks";
 import type { AdminAuditLogItemDto } from "@/lib/api-types";
-import { localeForLanguage } from "@/lib/locale-display";
+import { localeForLanguage, formatUserRole } from "@/lib/locale-display";
 import { ClinicNavTabsPanel } from "./clinic-nav-tabs-panel";
 
 export function AdminGovernancePanel() {
   const { t, i18n } = useTranslation();
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(25);
   const [qDraft, setQDraft] = useState("");
   const [qApplied, setQApplied] = useState("");
   const [detail, setDetail] = useState<AdminAuditLogItemDto | null>(null);
@@ -40,7 +40,12 @@ export function AdminGovernancePanel() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{t("admin.tabGovernance")}</CardTitle>
-          <CardDescription>{t("admin.governanceSubtitle")}</CardDescription>
+          <CardDescription>
+            {t(
+              "admin.governanceSubtitleOrg",
+              "Searchable audit trail of every user action in your organization, including your own admin activity.",
+            )}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex flex-wrap items-end gap-2">
@@ -52,6 +57,7 @@ export function AdminGovernancePanel() {
                 id="audit-q"
                 value={qDraft}
                 onChange={(e) => setQDraft(e.target.value)}
+                placeholder={t("admin.auditSearchPh", "Action, resource, user name, or email…")}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     setPage(1);
@@ -79,9 +85,10 @@ export function AdminGovernancePanel() {
             <table className="w-full min-w-[720px] text-sm">
               <thead className="bg-muted/60">
                 <tr>
-                  <th className="px-3 py-2 text-start font-medium">{t("admin.auditColAction", "Action")}</th>
                   <th className="px-3 py-2 text-start font-medium">{t("admin.auditColWhen", "Time")}</th>
-                  <th className="px-3 py-2 text-start font-medium">{t("admin.auditColActor", "Employee")}</th>
+                  <th className="px-3 py-2 text-start font-medium">{t("admin.auditColActor", "User")}</th>
+                  <th className="px-3 py-2 text-start font-medium">{t("admin.auditColAction", "Action")}</th>
+                  <th className="px-3 py-2 text-start font-medium">{t("admin.auditColResource", "Resource")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -99,16 +106,28 @@ export function AdminGovernancePanel() {
                     }}
                     onClick={() => setDetail(r)}
                   >
-                    <td className="px-3 py-2 font-medium">{r.action}</td>
-                    <td className="px-3 py-2 text-muted-foreground ltr-nums">
+                    <td className="px-3 py-2 text-muted-foreground ltr-nums whitespace-nowrap">
                       {new Date(r.createdAt).toLocaleString(localeForLanguage(i18n.language))}
                     </td>
-                    <td className="px-3 py-2">{r.actorDisplayName ?? r.actorEmail ?? "—"}</td>
+                    <td className="px-3 py-2">
+                      <div className="font-medium">{r.actorDisplayName ?? r.actorEmail ?? "—"}</div>
+                      {r.actorEmail && r.actorDisplayName ? (
+                        <div className="text-xs text-muted-foreground">{r.actorEmail}</div>
+                      ) : null}
+                      {r.actorRole ? (
+                        <div className="text-xs text-muted-foreground">{formatUserRole(r.actorRole, t)}</div>
+                      ) : null}
+                    </td>
+                    <td className="px-3 py-2 font-medium">{r.action}</td>
+                    <td className="px-3 py-2 text-muted-foreground">
+                      {r.resource}
+                      {r.resourceId ? <span className="block font-mono text-xs ltr-nums">{r.resourceId.slice(0, 12)}…</span> : null}
+                    </td>
                   </tr>
                 ))}
                 {!audit.isPending && !rows.length ? (
                   <tr>
-                    <td colSpan={3} className="px-3 py-6 text-center text-muted-foreground">
+                    <td colSpan={4} className="px-3 py-6 text-center text-muted-foreground">
                       {t("admin.auditEmpty", "No audit rows match your filters.")}
                     </td>
                   </tr>
@@ -151,8 +170,9 @@ export function AdminGovernancePanel() {
               </p>
               <p className="ltr-nums text-muted-foreground">{new Date(detail.createdAt).toISOString()}</p>
               <p>
-                <span className="text-muted-foreground">{t("admin.auditColActor", "Employee")}: </span>
+                <span className="text-muted-foreground">{t("admin.auditColActor", "User")}: </span>
                 {detail.actorDisplayName ?? "—"} ({detail.actorEmail ?? "—"})
+                {detail.actorRole ? ` · ${formatUserRole(detail.actorRole, t)}` : ""}
               </p>
               {detail.clinicId ? (
                 <p className="font-mono text-xs text-muted-foreground">

@@ -247,6 +247,7 @@ export interface AdminAuditLogItemDto {
   createdAt: string;
   actorDisplayName: string | null;
   actorEmail: string | null;
+  actorRole?: string | null;
   metadata: Record<string, unknown> | null;
 }
 
