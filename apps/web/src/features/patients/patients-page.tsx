@@ -346,11 +346,9 @@ export function PatientsPage() {
               </div>
               <PatientPhoneField
                 value={phone}
-                onChange={(next) => {
-                  setPhone(next);
-                  setPhoneConflict(null);
-                }}
+                onChange={setPhone}
                 enabled={open}
+                externalConflict={phoneConflict}
                 onConflictChange={setPhoneConflict}
               />
               <div className="space-y-2">

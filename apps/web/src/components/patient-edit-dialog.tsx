@@ -145,12 +145,10 @@ export function PatientEditDialog({ patient, open, onOpenChange }: PatientEditDi
           </div>
           <PatientPhoneField
             value={values.phone}
-            onChange={(phone) => {
-              setValues((prev) => ({ ...prev, phone }));
-              setPhoneConflict(null);
-            }}
+            onChange={(phone) => setValues((prev) => ({ ...prev, phone }))}
             excludePatientId={patient.id}
             enabled={open}
+            externalConflict={phoneConflict}
             onConflictChange={setPhoneConflict}
           />
           <div className="space-y-2">

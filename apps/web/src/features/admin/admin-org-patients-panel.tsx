@@ -492,12 +492,10 @@ export function AdminOrgPatientsPanel() {
               </div>
               <PatientPhoneField
                 value={phone}
-                onChange={(next) => {
-                  setPhone(next);
-                  setPhoneConflict(null);
-                }}
+                onChange={setPhone}
                 excludePatientId={editPatientId ?? undefined}
                 enabled={dialogOpen}
+                externalConflict={phoneConflict}
                 onConflictChange={setPhoneConflict}
               />
               <div className="space-y-2">
