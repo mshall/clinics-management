@@ -276,3 +276,20 @@ export interface ReportsMonthlySeriesDto {
   months: number;
   items: ReportsMonthlySeriesItemDto[];
 }
+
+export interface ReportsPatientAcquisitionItemDto {
+  channel: string;
+  count: number;
+  percent: number;
+}
+
+export interface ReportsPatientAcquisitionDto {
+  period: {
+    from: string;
+    to: string;
+    start: string;
+    end: string;
+  };
+  total: number;
+  items: ReportsPatientAcquisitionItemDto[];
+}

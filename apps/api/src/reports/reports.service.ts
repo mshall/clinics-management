@@ -1,5 +1,12 @@
 import { Injectable } from "@nestjs/common";
-import { EncounterStatus, ExpenseStatus, Prisma, RevenueStatus, UserRole } from "@prisma/client";
+import {
+  EncounterStatus,
+  ExpenseStatus,
+  PatientAcquisitionChannel,
+  Prisma,
+  RevenueStatus,
+  UserRole,
+} from "@prisma/client";
 import { formatLocalYmd, resolveReportingRange } from "../common/reporting-range";
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
@@ -122,5 +129,55 @@ export class ReportsService {
     }
 
     return { months: monthCount, items: buckets };
+  }
+
+  /**
+   * Count new patient registrations by acquisition channel (how they found us) in a date range.
+   */
+  async patientAcquisitionBreakdown(tenantId: string, fromStr?: string, toStr?: string) {
+    const { start, end } = resolveReportingRange(fromStr, toStr);
+
+    const rows = await this.prisma.patient.groupBy({
+      by: ["acquisitionChannel"],
+      where: {
+        tenantId,
+        deletedAt: null,
+        createdAt: { gte: start, lte: end },
+      },
+      _count: { id: true },
+    });
+
+    const countByChannel = new Map<string, number>();
+    for (const row of rows) {
+      const key = row.acquisitionChannel ?? "UNKNOWN";
+      countByChannel.set(key, row._count.id);
+    }
+
+    const channels = [...Object.values(PatientAcquisitionChannel), "UNKNOWN"] as const;
+    let total = 0;
+    for (const count of countByChannel.values()) total += count;
+
+    const items = channels
+      .map((channel) => {
+        const count = countByChannel.get(channel) ?? 0;
+        return {
+          channel,
+          count,
+          percent: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
+        };
+      })
+      .filter((row) => row.count > 0)
+      .sort((a, b) => b.count - a.count);
+
+    return {
+      period: {
+        from: formatLocalYmd(start),
+        to: formatLocalYmd(end),
+        start: start.toISOString(),
+        end: end.toISOString(),
+      },
+      total,
+      items,
+    };
   }
 }

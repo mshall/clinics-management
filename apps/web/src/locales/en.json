@@ -731,7 +731,15 @@
     "growthExplorerHintLive": "Monthly series from finalized encounters, posted revenue, and patient registrations in your organization.",
     "months": "Months of history",
     "newPatients": "New patients",
-    "visits": "Visits"
+    "visits": "Visits",
+    "acquisitionTitle": "How patients found us",
+    "acquisitionHint": "Registration acquisition channels for new patients in the selected date range ({{from}} → {{to}}).",
+    "acquisitionEmpty": "No patient registrations with acquisition data in this period.",
+    "acquisitionTotal": "{{count}} registrations in range",
+    "acquisitionChannel": "Channel",
+    "acquisitionCount": "Patients",
+    "acquisitionShare": "Share",
+    "acquisitionUnknown": "Not specified"
   },
   "platform": {
     "title": "Platform administration",

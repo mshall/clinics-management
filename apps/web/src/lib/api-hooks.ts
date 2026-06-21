@@ -19,6 +19,7 @@ import type {
   LeaveRequestDto,
   RevenueEntryDto,
   ReportsMonthlySeriesDto,
+  ReportsPatientAcquisitionDto,
   TenantListItemDto,
   UserListItemDto,
 } from "@/lib/api-types";
@@ -660,6 +661,16 @@ export function useReportsMonthlySeriesQuery(months: number) {
   return useQuery({
     queryKey: ["reports", "monthly-series", m, viewerId, viewerRole],
     queryFn: () => apiGet<ReportsMonthlySeriesDto>(`/api/v1/reports/monthly-series?months=${m}`),
+  });
+}
+
+export function useReportsPatientAcquisitionQuery(from: string, to: string) {
+  const viewerId = useAuthStore((s) => s.user?.id ?? "");
+  const q = new URLSearchParams({ from, to });
+  return useQuery({
+    queryKey: ["reports", "patient-acquisition", from, to, viewerId],
+    queryFn: () => apiGet<ReportsPatientAcquisitionDto>(`/api/v1/reports/patient-acquisition?${q.toString()}`),
+    enabled: Boolean(from && to),
   });
 }
 

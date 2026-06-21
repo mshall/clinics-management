@@ -732,7 +732,15 @@
     "growthExplorerHintLive": "سلسلة شهرية من الزيارات المُنهية والإيرادات المُرحّلة وتسجيل المرضى في منظمتك.",
     "months": "أشهر السجل",
     "newPatients": "مرضى جدد",
-    "visits": "زيارات"
+    "visits": "زيارات",
+    "acquisitionTitle": "كيف وجدنا المرضى",
+    "acquisitionHint": "قنوات اكتساب المرضى عند التسجيل في نطاق التاريخ المحدد ({{from}} → {{to}}).",
+    "acquisitionEmpty": "لا توجد تسجيلات مرضى ببيانات اكتساب في هذه الفترة.",
+    "acquisitionTotal": "{{count}} تسجيل في النطاق",
+    "acquisitionChannel": "القناة",
+    "acquisitionCount": "المرضى",
+    "acquisitionShare": "النسبة",
+    "acquisitionUnknown": "غير محدد"
   },
   "platform": {
     "title": "إدارة المنصة",

@@ -26,4 +26,11 @@ export class ReportsController {
   monthlySeries(@CurrentUser() user: JwtUser, @Query("months") months?: string) {
     return this.reports.monthlySeries(requireTenantId(user), months, user);
   }
+
+  @Get("patient-acquisition")
+  @ApiOperation({ summary: "New patient registrations grouped by acquisition channel (how they found us)" })
+  @ApiOkResponse()
+  patientAcquisition(@CurrentUser() user: JwtUser, @Query("from") from?: string, @Query("to") to?: string) {
+    return this.reports.patientAcquisitionBreakdown(requireTenantId(user), from, to);
+  }
 }
