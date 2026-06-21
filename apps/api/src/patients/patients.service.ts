@@ -6,13 +6,17 @@ import {
   Logger,
   NotFoundException,
 } from "@nestjs/common";
-import { Gender, PatientAcquisitionChannel, Prisma, UserRole } from "@prisma/client";
+import { Gender, EncounterDocumentKind, PatientAcquisitionChannel, Prisma, UserRole } from "@prisma/client";
 import { randomUUID } from "crypto";
 import * as path from "node:path";
 import type { JwtUser } from "../auth/jwt-user";
-import { fetchPatientListClinicScopeIds } from "../common/clinic-scope";
+import { fetchPatientListClinicScopeIds, CLINIC_SCOPE_ROLES, fetchPhysicianNetworkClinicIds } from "../common/clinic-scope";
 import { PatientDto } from "../common/dto/patient.dto";
 import { PatientDocumentDto } from "../common/dto/patient-document.dto";
+import {
+  PatientClinicalDocumentItemDto,
+  PatientClinicalDocumentsDto,
+} from "../common/dto/patient-clinical-document.dto";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
@@ -25,6 +29,10 @@ import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-b
 import type { CreatePatientDto } from "./dto/create-patient.dto";
 import type { UpdatePatientDto } from "./dto/update-patient.dto";
 import type { BulkDeletePatientsDto } from "./dto/bulk-delete-patients.dto";
+import {
+  classifyPatientDocumentDescription,
+  patientCategoryToClinicalKind,
+} from "./patient-document-category";
 
 const MAX_PATIENT_DOC_BYTES = 15 * 1024 * 1024;
 const ALLOWED_PATIENT_DOC_MIME = new Set(["application/pdf", "image/jpeg", "image/png", "image/gif", "image/webp"]);
@@ -37,6 +45,10 @@ const PATIENT_DELETE_ROLES: ReadonlySet<UserRole> = new Set([
   UserRole.CLINIC_ASSISTANT,
   UserRole.BRANCH_MANAGER,
 ]);
+
+function isPhysicianRole(role: UserRole | undefined): boolean {
+  return role === UserRole.PHYSICIAN;
+}
 
 export interface PatientListQuery {
   search?: string;
@@ -481,6 +493,108 @@ export class PatientsService {
 
   openDocumentReadStream(storageKey: string) {
     return this.uploads.getReadStream("patients", storageKey);
+  }
+
+  async listClinicalDocuments(
+    tenantId: string,
+    patientId: string,
+    user: JwtUser,
+  ): Promise<PatientClinicalDocumentsDto> {
+    await this.getById(tenantId, patientId, user);
+
+    const labs: PatientClinicalDocumentItemDto[] = [];
+    const radiology: PatientClinicalDocumentItemDto[] = [];
+    const prescriptions: PatientClinicalDocumentItemDto[] = [];
+    const other: PatientClinicalDocumentItemDto[] = [];
+
+    const push = (kind: "LAB" | "RADIOLOGY" | "PRESCRIPTION", item: PatientClinicalDocumentItemDto) => {
+      if (kind === "LAB") labs.push(item);
+      else if (kind === "RADIOLOGY") radiology.push(item);
+      else prescriptions.push(item);
+    };
+
+    const patientDocs = await this.prisma.patientDocument.findMany({
+      where: { tenantId, patientId },
+      orderBy: { createdAt: "desc" },
+    });
+    for (const doc of patientDocs) {
+      const category = classifyPatientDocumentDescription(doc.description);
+      const item: PatientClinicalDocumentItemDto = {
+        id: doc.id,
+        source: "patient",
+        description: doc.description,
+        originalFileName: doc.originalFileName,
+        mimeType: doc.mimeType,
+        sizeBytes: doc.sizeBytes,
+        createdAt: doc.createdAt.toISOString(),
+      };
+      if (!category) {
+        other.push(item);
+        continue;
+      }
+      const kind = patientCategoryToClinicalKind(category);
+      push(kind, item);
+    }
+
+    const encounterWhere: Prisma.EncounterWhereInput = { tenantId, patientId };
+    if (isPhysicianRole(user.role)) {
+      encounterWhere.clinicianId = user.userId;
+      const net = await fetchPhysicianNetworkClinicIds(this.prisma, tenantId, user.userId);
+      if (!net.length) {
+        return { labs, radiology, prescriptions, other };
+      }
+      encounterWhere.clinicId = { in: net };
+    } else if (CLINIC_SCOPE_ROLES.has(user.role)) {
+      const scopes = await this.prisma.clinicAdminScope.findMany({
+        where: { tenantId, userId: user.userId },
+        select: { clinicId: true },
+      });
+      const ids = scopes.map((s) => s.clinicId);
+      if (!ids.length) {
+        return { labs, radiology, prescriptions, other };
+      }
+      encounterWhere.clinicId = { in: ids };
+    }
+
+    const encounterDocs = await this.prisma.encounterDocument.findMany({
+      where: {
+        tenantId,
+        encounter: encounterWhere,
+        kind: { in: [EncounterDocumentKind.LAB, EncounterDocumentKind.RADIOLOGY, EncounterDocumentKind.PRESCRIPTION] },
+      },
+      include: {
+        encounter: { select: { id: true, visitType: true, updatedAt: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    for (const doc of encounterDocs) {
+      const kind =
+        doc.kind === EncounterDocumentKind.LAB
+          ? "LAB"
+          : doc.kind === EncounterDocumentKind.RADIOLOGY
+            ? "RADIOLOGY"
+            : "PRESCRIPTION";
+      push(kind, {
+        id: doc.id,
+        source: "encounter",
+        encounterId: doc.encounter.id,
+        encounterVisitType: doc.encounter.visitType,
+        originalFileName: doc.originalFileName,
+        mimeType: doc.mimeType,
+        sizeBytes: doc.sizeBytes,
+        createdAt: doc.createdAt.toISOString(),
+      });
+    }
+
+    const byDateDesc = (a: PatientClinicalDocumentItemDto, b: PatientClinicalDocumentItemDto) =>
+      b.createdAt.localeCompare(a.createdAt);
+    labs.sort(byDateDesc);
+    radiology.sort(byDateDesc);
+    prescriptions.sort(byDateDesc);
+    other.sort(byDateDesc);
+
+    return { labs, radiology, prescriptions, other };
   }
 
   private async assertCanDeletePatient(user: JwtUser): Promise<void> {

@@ -1,8 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
@@ -15,17 +16,18 @@ import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import type { PatientDto } from "@/lib/api-schema";
 import { useClinicsQuery, usePatientsQuery } from "@/lib/api-hooks";
-import { ApiError, apiDelete, apiPost, apiPostFormData } from "@/lib/http";
+import { apiDelete, apiPost, apiPostFormData } from "@/lib/http";
 import { columnFilterIncludes } from "@/lib/utils";
 import { formatGender } from "@/lib/locale-display";
 import { formatClinicName } from "@/lib/locale-display";
 import { useAuthStore } from "@/stores/auth-store";
 import { canDeletePatient } from "@/lib/patient-edit-policy";
+import { apiErrorMessage } from "@/features/platform/platform-shared";
 import {
   PendingDocumentAttachments,
+  collectPendingDocumentFieldErrors,
   pendingDocumentDescription,
   pendingDocumentValidationMessage,
-  validatePendingDocuments,
   type PendingDocumentRow,
 } from "@/components/pending-document-attachments";
 import {
@@ -121,6 +123,8 @@ export function PatientsPage() {
   const [acquisitionChannel, setAcquisitionChannel] = useState<PatientAcquisitionChannel | "">("");
   const [acquisitionReferralName, setAcquisitionReferralName] = useState("");
   const [acquisitionOtherDetail, setAcquisitionOtherDetail] = useState("");
+  const [docInvalidRowIds, setDocInvalidRowIds] = useState<Set<string>>(() => new Set());
+  const formErrRef = useRef<HTMLParagraphElement>(null);
 
   const resetForm = () => {
     setFirstNameEn("");
@@ -138,6 +142,7 @@ export function PatientsPage() {
     setAcquisitionChannel("");
     setAcquisitionReferralName("");
     setAcquisitionOtherDetail("");
+    setDocInvalidRowIds(new Set());
   };
 
   useEffect(() => {
@@ -153,8 +158,9 @@ export function PatientsPage() {
     if (!lastNameAr.trim()) {
       return t("patients.errorLastNameAr", "Arabic last name is required.");
     }
-    const docValidation = validatePendingDocuments(docRows);
-    const docMsg = pendingDocumentValidationMessage(docValidation, t);
+    const docValidation = collectPendingDocumentFieldErrors(docRows);
+    setDocInvalidRowIds(docValidation.invalidRowIds);
+    const docMsg = pendingDocumentValidationMessage(docValidation.code, t);
     if (docMsg) return docMsg;
     if (acquisitionChannel === "DOCTOR_REFERRAL" && !acquisitionReferralName.trim()) {
       return t("patients.errorExplainMoreRequired", "Explain more is required.");
@@ -163,6 +169,25 @@ export function PatientsPage() {
       return t("patients.errorExplainMoreRequired", "Explain more is required.");
     }
     return null;
+  };
+
+  const showFormError = (message: string) => {
+    setFormErr(message);
+    toast.error(message);
+    window.requestAnimationFrame(() => {
+      formErrRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  };
+
+  const handleSubmitRegister = () => {
+    const validationError = validateForm();
+    if (validationError) {
+      showFormError(validationError);
+      return;
+    }
+    setDocInvalidRowIds(new Set());
+    setFormErr(null);
+    createMut.mutate();
   };
 
   const createMut = useMutation({
@@ -199,7 +224,11 @@ export function PatientsPage() {
         await apiPostFormData<PatientDto>(`/api/v1/patients/${patient.id}/national-id-document`, fd);
       }
       for (const row of docRows) {
+        if (row.files.length === 0) continue;
         const description = pendingDocumentDescription(row, t);
+        if (!description.trim()) {
+          throw new Error(t("patients.errorDocCategoryRequired", "Each attached document needs a type."));
+        }
         for (const file of row.files) {
           const fd = new FormData();
           fd.append("file", file);
@@ -211,16 +240,15 @@ export function PatientsPage() {
     },
     onSuccess: () => {
       setFormErr(null);
+      setDocInvalidRowIds(new Set());
       setOpen(false);
       resetForm();
+      toast.success(t("patients.createSuccess", "Patient registered."));
       void qc.invalidateQueries({ queryKey: ["patients"] });
       void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
     },
     onError: (e: unknown) => {
-      if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
-        const msg = (e.body as { message?: string | string[] }).message;
-        setFormErr(Array.isArray(msg) ? msg.join(", ") : String(msg));
-      } else setFormErr(e instanceof Error ? e.message : String(e));
+      showFormError(apiErrorMessage(e));
     },
   });
 
@@ -262,7 +290,11 @@ export function PatientsPage() {
               <DialogTitle>{t("patients.registerTitle")}</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col gap-3 pt-1">
-              {formErr ? <p className="text-sm text-destructive">{formErr}</p> : null}
+              {formErr ? (
+                <p ref={formErrRef} className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                  {formErr}
+                </p>
+              ) : null}
               <div className="space-y-2">
                 <Label required>{t("patients.firstNameEn")}</Label>
                 <Input value={firstNameEn} onChange={(e) => setFirstNameEn(e.target.value)} autoComplete="given-name" />
@@ -358,7 +390,11 @@ export function PatientsPage() {
               <PendingDocumentAttachments
                 className="space-y-3 border-t border-border pt-3"
                 rows={docRows}
-                onChange={setDocRows}
+                invalidRowIds={docInvalidRowIds}
+                onChange={(next) => {
+                  setDocRows(next);
+                  setDocInvalidRowIds(new Set());
+                }}
               />
 
               <div className="space-y-2 border-t border-border pt-3">
@@ -402,6 +438,12 @@ export function PatientsPage() {
                 </div>
               ) : null}
 
+              {formErr ? (
+                <p className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                  {formErr}
+                </p>
+              ) : null}
+
               <CreateActionButton
                 type="button"
                 className="mt-2"
@@ -413,15 +455,7 @@ export function PatientsPage() {
                   !phone ||
                   createMut.isPending
                 }
-                onClick={() => {
-                  const validationError = validateForm();
-                  if (validationError) {
-                    setFormErr(validationError);
-                    return;
-                  }
-                  setFormErr(null);
-                  createMut.mutate();
-                }}
+                onClick={handleSubmitRegister}
               >
                 {t("patients.submitRegister")}
               </CreateActionButton>

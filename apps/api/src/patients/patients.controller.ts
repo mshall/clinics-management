@@ -192,6 +192,13 @@ export class PatientsController {
     return this.patients.softDelete(requireTenantId(user), id, user);
   }
 
+  @Get(":id/clinical-documents")
+  @ApiOperation({ summary: "List lab, radiology, prescription, and other documents for a patient" })
+  @ApiOkResponse({ description: "Grouped clinical documents from registration and encounters" })
+  listClinicalDocuments(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.patients.listClinicalDocuments(requireTenantId(user), id, user);
+  }
+
   @Get(":id")
   @ApiOperation({ summary: "Get patient by id" })
   @ApiOkResponse({ type: PatientDto })

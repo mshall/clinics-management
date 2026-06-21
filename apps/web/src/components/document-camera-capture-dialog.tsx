@@ -97,8 +97,13 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg" aria-describedby={undefined}>
+    <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
+      <DialogContent
+        className="max-w-lg"
+        aria-describedby={undefined}
+        onCloseAutoFocus={(event) => event.preventDefault()}
+        onPointerDownOutside={(event) => event.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>{t("patients.captureDocument", "Capture document")}</DialogTitle>
         </DialogHeader>

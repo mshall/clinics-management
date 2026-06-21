@@ -7,6 +7,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PatientEditDialog } from "@/components/patient-edit-dialog";
+import { PatientClinicalDocuments } from "@/components/patient-clinical-documents";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -17,7 +18,6 @@ import type { EncounterDetailDto } from "@/lib/api-types";
 import { apiFetchBlob, apiPost } from "@/lib/http";
 import { formatEncounterStatus, localeForLanguage } from "@/lib/locale-display";
 import { patientAcquisitionDisplay, type PatientAcquisitionChannel } from "@/lib/patient-acquisition";
-import type { PatientDocumentDto } from "@/lib/api-schema";
 import { showNavItem } from "@/lib/nav-policy";
 import { canEditPatientDetails } from "@/lib/patient-edit-policy";
 import { useAuthStore } from "@/stores/auth-store";
@@ -258,43 +258,6 @@ export function PatientDetailPage() {
                 </span>
               }
             />
-            {(patient.documents?.length ?? 0) > 0 ? (
-              <>
-                <Separator />
-                <div className="space-y-2">
-                  <span className="text-muted-foreground">{t("patients.attachDocuments", "Documents")}</span>
-                  <ul className="space-y-2">
-                    {(patient.documents as PatientDocumentDto[]).map((doc) => (
-                      <li
-                        key={doc.id}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
-                      >
-                        <div className="min-w-0">
-                          <p className="font-medium">{doc.description}</p>
-                          <p className="truncate text-xs text-muted-foreground ltr-nums">{doc.originalFileName}</p>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="shrink-0"
-                          onClick={async () => {
-                            const { blob } = await apiFetchBlob(
-                              `/api/v1/patients/${patient.id}/documents/${doc.id}`,
-                            );
-                            const url = URL.createObjectURL(blob);
-                            window.open(url, "_blank", "noopener,noreferrer");
-                            window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-                          }}
-                        >
-                          {t("patients.downloadDocument", "Download")}
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </>
-            ) : null}
           </CardContent>
         </Card>
         {canViewEncounters ? (
@@ -362,6 +325,8 @@ export function PatientDetailPage() {
         </Card>
         ) : null}
       </div>
+
+      <PatientClinicalDocuments patientId={patient.id} />
 
       {canViewEncounters ? (
       <div className="grid gap-4">

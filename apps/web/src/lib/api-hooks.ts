@@ -23,6 +23,7 @@ import type {
   UserListItemDto,
 } from "@/lib/api-types";
 import { ApiError, apiGet } from "@/lib/http";
+import type { PatientClinicalDocumentsDto } from "@/lib/patient-document-category";
 import type { Paginated } from "@/lib/paginated";
 import { useAuthStore } from "@/stores/auth-store";
 import { defaultMonthRange, useDateRangeStore } from "@/stores/date-range-store";
@@ -123,6 +124,15 @@ export function usePatientQuery(id: string | undefined) {
     queryKey: ["patient", id],
     queryFn: () => apiGet<PatientDto>(`/api/v1/patients/${id}`),
     enabled: Boolean(id) && hasToken,
+  });
+}
+
+export function usePatientClinicalDocumentsQuery(patientId: string | undefined) {
+  const hasToken = useHasAuthToken();
+  return useQuery({
+    queryKey: ["patient", patientId, "clinical-documents"],
+    queryFn: () => apiGet<PatientClinicalDocumentsDto>(`/api/v1/patients/${patientId}/clinical-documents`),
+    enabled: Boolean(patientId) && hasToken,
   });
 }
 

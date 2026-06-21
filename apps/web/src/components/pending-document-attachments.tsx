@@ -53,16 +53,34 @@ export function pendingDocumentDescription(
 }
 
 export function validatePendingDocuments(rows: PendingDocumentRow[]): string | null {
+  return collectPendingDocumentFieldErrors(rows).code;
+}
+
+export function collectPendingDocumentFieldErrors(rows: PendingDocumentRow[]): {
+  code: string | null;
+  invalidRowIds: Set<string>;
+} {
+  const invalidRowIds = new Set<string>();
   for (const row of rows) {
     const hasFiles = row.files.length > 0;
     const hasCategory = Boolean(row.category);
     const hasOther = row.category === "OTHER" ? Boolean(row.otherDetail.trim()) : true;
     if (!hasFiles && !hasCategory && !row.otherDetail.trim()) continue;
-    if (hasFiles && !hasCategory) return "doc_category_required";
-    if (hasCategory && row.category === "OTHER" && !hasOther) return "doc_other_required";
-    if (hasCategory && !hasFiles) return "doc_file_required";
+    if (hasFiles && !hasCategory) {
+      invalidRowIds.add(`${row.id}:category`);
+      invalidRowIds.add(`${row.id}:file`);
+      return { code: "doc_category_required", invalidRowIds };
+    }
+    if (hasCategory && row.category === "OTHER" && !hasOther) {
+      invalidRowIds.add(`${row.id}:other`);
+      return { code: "doc_other_required", invalidRowIds };
+    }
+    if (hasCategory && !hasFiles) {
+      invalidRowIds.add(`${row.id}:file`);
+      return { code: "doc_file_required", invalidRowIds };
+    }
   }
-  return null;
+  return { code: null, invalidRowIds };
 }
 
 type PendingDocumentAttachmentsProps = {
