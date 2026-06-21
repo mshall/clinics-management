@@ -4,11 +4,11 @@
 | Field | Value |
 |---|---|
 | **Document Title** | Clinic Management System – Product Requirements Document |
-| **Version** | 1.1 |
+| **Version** | 1.2 |
 | **Status** | Living document (aligned with `main` as of June 2026) |
 | **Author** | Product / Engineering |
 | **Last Updated** | June 2026 |
-| **Related Documents** | Technical RFC (separate), UX Wireframes (separate), Compliance Matrix (separate) |
+| **Related Documents** | [`Clinic_Management_System_RFC.md`](./Clinic_Management_System_RFC.md), [`AWS_Cloud_Deployment_Guide.md`](./AWS_Cloud_Deployment_Guide.md), [`Test_Data_Users.md`](./Test_Data_Users.md) |
 
 ---
 
@@ -16,7 +16,11 @@
 
 The Clinic Management System (CMS) is a multi-tenant, multi-branch SaaS platform that enables healthcare organizations to operate clinical, administrative, financial, and human-resource functions from a single source of truth. It combines an Electronic Health Record (EHR) with prescription management, multi-branch governance, expense tracking, HR, and bilingual (English/Arabic) experiences.
 
-The product targets clinic groups that operate one or more parent clinics with sister or sub-branches, and need centralized oversight without sacrificing per-branch autonomy. The MVP focuses on operational efficiency, data integrity, and a clean clinical workflow; later phases extend into analytics, patient self-service, and integrations with external systems (labs, pharmacies, insurance, national health IDs).
+The product targets clinic groups that operate one or more parent clinics with sister or sub-branches, and need centralized oversight without sacrificing per-branch autonomy.
+
+**Tenancy (decided):** The platform is **multi-tenant SaaS**. One deployed application serves many **organizations (tenants)** on shared infrastructure. Each clinic group is a tenant; users authenticate into exactly one tenant (except the platform operator account). See [§3.4 Tenancy & deployment model](#34-tenancy--deployment-model).
+
+The MVP focuses on operational efficiency, data integrity, and a clean clinical workflow; later phases extend into analytics, patient self-service, and integrations with external systems (labs, pharmacies, insurance, national health IDs).
 
 ## 2. Problem Statement
 
@@ -47,31 +51,78 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 - Telemedicine video infrastructure (planned for v2).
 - Insurance claims adjudication engine (basic claims only in v1).
 - Pharmacy POS / retail dispensing.
+- **Dedicated single-tenant deployment per customer as the default product SKU** (supported as an enterprise hosting option, not the primary model).
+
+### 3.4 Tenancy & deployment model
+
+| Concept | Definition |
+|---|---|
+| **Platform** | One SaaS product instance (e.g. AWS stack in `eu-central-1`) operated by Kiorly / the software vendor. |
+| **Tenant (organization)** | One clinic **group** — customers who subscribe. Has its own users, clinics, patients, ledger, and settings. Identified by `tenantId` on all business data. |
+| **Clinic / branch** | A site within a tenant (HQ parent or branch). Not a separate tenant. |
+| **Platform Super Admin** | Vendor operator with **no** `tenantId`; provisions new tenants on the shared platform. |
+
+**Decision: multi-tenant SaaS (not one deployment per clinic group by default).**
+
+| Model | Description | Status |
+|---|---|---|
+| **Multi-tenant SaaS (default)** | Shared PostgreSQL schema; every row scoped by `tenantId`; many organizations on one App Runner + RDS stack. Platform admin creates tenants via `/platform`. | **Implemented** |
+| **Dedicated single-tenant** | Same codebase, separate AWS stack and database for one customer only (one tenant populated). Stronger isolation for enterprise contracts. | **Supported as hosting option**, not separate product fork |
+| **Single-tenant per VM** | Customer runs their own copy on Lightsail/EC2. | Documented in AWS guide; ops responsibility on customer |
+
+**Isolation guarantees (current build):**
+- JWT carries `tenantId`; API handlers reject cross-tenant access.
+- Unique constraints are **per tenant** (MRN, national ID, phone).
+- Platform APIs (`/admin/platform/*`) are restricted to `PLATFORM_SUPER_ADMIN`.
+- Org-scoped admins never see another tenant’s data unless break-glass email allowlist is configured for support tooling.
+
+**Future hardening (not required for MVP):** PostgreSQL row-level security (RLS), per-tenant encryption keys, dedicated DB per enterprise tenant.
 
 ## 4. Target Users & Personas
 
 | Persona | Role | Primary Needs |
 |---|---|---|
-| **Group Administrator** | Owns the parent clinic and oversees branches | Provision branches, view consolidated KPIs, manage permissions |
-| **Branch Manager** | Runs a single clinic or branch | Manage staff, expenses, schedules, daily operations |
-| **Physician / Clinician** | Sees patients, own schedule (appointments as clinician), encounters, revenue attributed to them | Fast EHR entry, prescription safety, history at a glance |
+| **Platform Super Administrator** | SaaS operator (no tenant) | Create organizations, clinics, and initial users on the shared platform |
+| **Group Administrator** | Owns the clinic group | Branches, users, org settings, org-wide patients, governance |
+| **Group Supervisor** | Org-wide oversight | Patients, appointments, encounters, operations, finance views (no Admin/HR) |
+| **Branch Manager** | Runs assigned clinic(s) | Staff, expenses, schedules, scoped operations |
+| **Clinic Administrator** | Scoped to assigned clinics | Same as branch manager patterns; clinic-scoped API filters |
+| **Clinic Assistant** | Front office / clinical support | Patient registration, appointments, encounters, operations |
+| **Physician / Clinician** | Clinical care | Own schedule, encounters, prescriptions, doctor revenue |
 | **Nurse / Medical Assistant** | Supports clinical workflow | Vitals capture, triage, appointment prep |
-| **Receptionist / Front Desk** | Patient intake and scheduling | Registration, appointment booking, billing |
-| **HR Officer** | Manages employees | Onboarding, attendance, leave, payroll inputs |
-| **Finance Officer** | Tracks expenses and revenue | Expense entry, salary management, financial reports |
+| **Receptionist / Front Desk** | Patient intake and scheduling | Registration, appointment booking |
+| **Call Center** | Remote booking | Org-wide patients & appointments (read/book) |
+| **HR Officer** | Manages employees | Onboarding, attendance, leave |
+| **Finance Officer** | Tracks money | Expense entry, revenue, reports |
 | **Patient (Indirect, v2)** | Receives care | View records, prescriptions, appointments |
 
 ## 5. Scope
 
 ### 5.1 In Scope (v1)
-- Electronic Health Record with prescription module.
-- Multi-branch architecture with parent/sub-clinic relationships.
-- Expense tracking (Salaries, Materials, Utilities, Other).
-- HR module (employees, attendance, leave, payroll inputs).
-- Admin dashboard for clinic and branch onboarding.
+
+**Platform & tenancy**
+- **Multi-tenant SaaS** with platform super-admin onboarding (organizations, clinics, users).
+- Shared-schema isolation by `tenantId`; optional dedicated deployment for enterprise (hosting pattern).
+
+**Clinical & patients (implemented on `main`)**
+- Patient registry with bilingual names, optional DOB, **unique phone per tenant**, national ID, acquisition tracking, registration documents (camera capture), edit/delete (role-gated).
+- Patient profile: vitals history, encounters, **clinical document sections** (labs, radiology, prescriptions, other).
+- Encounters: SOAP, vitals, ICD-10 diagnoses, medications, lab/radiology/Rx uploads, generate prescription image, finalize workflow.
+- Appointments: schedule, status lifecycle, physician/clinic scope.
+- Surgical **operations** module (schedule, balance, documents, revenue linkage).
+
+**Financial & HR**
+- Expense tracking with proof uploads; revenue ledger (visit fees, manual entries, operations); reports/monthly series.
+- HR: employees, attendance, leave; employee ID document upload.
+
+**Administration**
+- Organization settings, clinics (parent/branch), users, feature flags, audit log.
+- Org patients CRUD, bulk patient delete, bulk user delete, data explorer, SQL export (group admin / break-glass).
+
+**Experience**
 - Bilingual UI (English / Arabic with RTL).
-- Role-based access control.
-- Audit trail for clinical and financial changes.
+- Role-based access control and clinic scope for admins/physicians.
+- Responsive web SPA (no native mobile app in repo).
 
 ### 5.2 Out of Scope (v1)
 - Patient mobile app.
@@ -84,7 +135,9 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 
 ### 6.1 Electronic Health Record (EHR)
 
-**Patient Record**
+> **Legend:** Bullets in **Patient Record**, **Prescriptions**, and **Clinical Safeguards** below describe the **full EHR product vision**. Subsections **6.1a–6.1f** describe what is **shipped** in the current web/API build.
+
+**Patient Record (roadmap)**
 - Unique patient ID per group (visible across branches that the patient consents to).
 - Demographics: name (EN/AR), DOB, gender, national ID/passport, contact, address, emergency contact.
 - Medical history: allergies, chronic conditions, family history, surgical history, social history.
@@ -95,8 +148,7 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 - Procedures with CPT coding (configurable).
 - Visit timeline showing all encounters across branches (with consent rules).
 
-**Prescriptions**
-- Add / edit / discontinue prescriptions tied to an encounter.
+**Prescriptions (roadmap)**
 - Drug catalog (sourced from configurable list; v2 integrates with national drug registries).
 - Per-prescription fields: drug name, strength, dosage form, route, frequency, duration, quantity, refills, instructions (EN/AR).
 - Drug–drug interaction check (basic ruleset in v1, full clinical engine in v2).
@@ -105,8 +157,7 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 - Print prescription with clinic letterhead, doctor signature/stamp, both languages.
 - Digital prescription PDF download.
 
-**Clinical Safeguards**
-- Required fields enforced before saving an encounter.
+**Clinical Safeguards (roadmap)**
 - Amendments recorded with reason and timestamp; original retained.
 - Doctor authentication required for finalizing notes and prescriptions.
 
@@ -157,13 +208,29 @@ Beyond tenant settings and clinic directory, **Group Admin** (and platform break
 
 See [`Test_Data_Users.md`](./Test_Data_Users.md) for demo logins and QA scenarios.
 
+### 6.1e Operations (current build)
+
+- Schedule **operations** (procedures) per clinic with patient, clinician, date, cost, down payment, and balance.
+- Status workflow posts or voids linked **revenue** when completed or cancelled.
+- Attach documents and medications per operation (similar patterns to encounters).
+- Physicians see only operations where they are the assigned clinician; clinic-scoped roles see assigned clinics.
+
+### 6.1f Platform tenancy (current build)
+
+- **`PLATFORM_SUPER_ADMIN`** user (`tenantId: null`) uses the **Platform** tab only: create/list/edit organizations, clinics under any tenant, users, feature flags.
+- Each **organization** has independent base currency, locale, default visit fee, clinics, and user directory.
+- Demo seed includes multiple tenants (Kiorly demo, Dr Ahmed Shall Group, shell orgs) on one database — see [`Test_Data_Users.md`](./Test_Data_Users.md).
+- Production deployment: single CloudFront URL, App Runner API, RDS — see [`AWS_Cloud_Deployment_Guide.md`](./AWS_Cloud_Deployment_Guide.md).
+
 ### 6.2 Multi-Branch Support
 
-- Group structure: one **Parent Clinic** owns multiple **Branches** (also called sister or sub-clinics).
-- Each branch has its own staff roster, schedule, expenses, inventory, and financial books.
-- Patient records are owned at the group level; branch access is governed by consent and role.
-- Group-level reports roll up branch data; branch-level views are scoped to that branch.
-- A user may have different roles at different branches.
+- **Tenant** = clinic group. **Clinic** = parent HQ or branch within that tenant.
+- Group structure: one **Parent Clinic** may own multiple **Branches** (sister or sub-clinics); branches may also be modeled as standalone roots under the tenant (flat layout).
+- Each branch has its own staff roster, schedule, expenses, and financial attribution by `clinicId`.
+- **Patient records are tenant-scoped** (shared across all branches in the organization). Branch visibility for operations is enforced by **role and clinic scope**, not separate patient registries per branch.
+- Group-level reports roll up branch data; branch-level views filter by clinic.
+- A user may hold different roles or clinic assignments within the same tenant.
+- **Patient consent for cross-branch sharing** — product vision; not a separate consent module in the current build.
 
 ### 6.3 Expense Management
 
@@ -199,16 +266,15 @@ Reporting: monthly/quarterly/annual expense by branch, by category, group consol
 
 ### 6.6 Admin Dashboard
 
-- Provision a new **Parent Clinic** (group).
-- Add **Sister/Sub Clinics** under a parent.
-- Manage users, roles, and permissions across the group.
-- View group-level KPIs: total patients, encounters, revenue, expenses, headcount.
-- **Organization administrators** use the full admin experience except **platform-only** tools (cross-tenant directory and raw **data explorer**), which are gated separately for designated platform operators.
-- Manage subscription / licensing (if SaaS billing is in scope).
+- Manage **clinics** (parent/branch) **within the signed-in organization** (tenant).
+- Manage users, roles, clinic assignments, optional **nav tab grants**, and feature flags.
+- View group-level KPIs: patients, encounters, revenue, expenses, headcount (dashboard + reports).
+- **Group administrators** use organization admin tabs; **platform-only** tools (cross-tenant directory, provisioning) require `PLATFORM_SUPER_ADMIN`; raw **data explorer** also available to group admin and break-glass allowlist emails.
+- Subscription / licensing billing integration — future SaaS commercial layer.
 
 ### 6.6.0 Platform super administration
 
-A dedicated **Platform Super Administrator** operates outside any organization (`tenantId` null, role `PLATFORM_SUPER_ADMIN`). This account is used by the SaaS operator to onboard new clinic groups on the platform.
+A dedicated **Platform Super Administrator** operates **outside any organization** (`tenantId: null`, role `PLATFORM_SUPER_ADMIN`). This is the **SaaS vendor** account used to onboard paying clinic groups onto the **shared multi-tenant** instance.
 
 | Capability | Description |
 |---|---|
@@ -253,24 +319,19 @@ When adding a clinic (parent or branch), the following fields are captured:
 
 ### 6.8 Roles & Permissions
 
-Default roles (customizable):
-- Group Admin (full access across the group).
-- Branch Manager (full access within assigned branches).
-- Physician.
-- Nurse.
-- Receptionist.
-- HR Officer.
-- Finance Officer.
-- Auditor (read-only).
+**Implemented roles** (`UserRole` enum): Platform Super Admin, Group Admin, Group Supervisor, Branch Manager, Clinic Admin, Clinic Assistant, Physician, Nurse, Receptionist, Call Center, HR Officer, Finance Officer.
 
-Permissions are matrix-based (resource × action) and assignable to custom roles.
+Authorization model:
+- **Role-based** checks in services and controllers (e.g. physician sees own encounters; clinic admin filtered by `ClinicAdminScope`).
+- Optional **nav tab grants** per user to hide/show main navigation areas.
+- Custom permission matrix / auditor role — roadmap; not fully implemented as configurable CASL matrix.
 
 ### 6.9 Audit & Compliance
 
-- Append-only audit log for all create/update/delete actions on clinical and financial data.
-- Login history per user.
-- Configurable data retention.
-- Patient consent management for cross-branch record access.
+- **Audit log** records administrative and sensitive actions (org audit tail in Admin).
+- Login via JWT; session in SPA until logout or expiry.
+- Soft-delete for patients (retain row with `deletedAt`).
+- Configurable data retention, login history export, formal patient consent module — roadmap.
 
 ## 7. Non-Functional Requirements
 
@@ -279,7 +340,8 @@ Permissions are matrix-based (resource × action) and assignable to custom roles
 | **Performance** | P95 page load < 2s on broadband; encounter save < 1s |
 | **Availability** | 99.9% monthly uptime target |
 | **Scalability** | Support 500 branches and 5M patients per tenant in v1 design |
-| **Security** | TLS 1.2+, encryption at rest, RBAC, MFA for admins, secrets management |
+| **Security** | TLS 1.2+, encryption at rest, RBAC, MFA for admins (roadmap), secrets in AWS Secrets Manager |
+| **Multi-tenancy** | Shared schema with application-level `tenantId` isolation; unique business keys per tenant; platform admin segregated |
 | **Compliance** | Alignment with applicable health-data regulations in target markets (e.g., DHA/MOH in UAE, HIPAA-equivalent controls); data residency configurable per tenant |
 | **Backup & DR** | Daily backups, point-in-time recovery, RPO ≤ 1h, RTO ≤ 4h |
 | **Accessibility** | WCAG 2.1 AA |
@@ -288,6 +350,9 @@ Permissions are matrix-based (resource × action) and assignable to custom roles
 
 ## 8. User Stories (Representative Sample)
 
+- *As a Platform Super Administrator*, I want to create a new organization with a group admin in one step so the customer can sign in immediately on the shared SaaS instance.
+- *As a Receptionist*, I want immediate feedback when a phone number already belongs to another patient so I do not create duplicate records.
+- *As a Call Center agent*, I want to search and book appointments across the organization so I can serve patients remotely.
 - *As a Group Admin*, I want to onboard a new sub-clinic in one form so that branches can go live quickly.
 - *As a Physician*, I want to see the patient's full history from any branch so that my decisions are informed.
 - *As a Physician*, I want drug–allergy alerts at prescription time so that I avoid harm.
@@ -311,12 +376,13 @@ Permissions are matrix-based (resource × action) and assignable to custom roles
 - Clinics have basic broadband and modern browsers.
 - Each branch has at least one designated administrator.
 - Drug catalog and ICD-10 reference data can be licensed or sourced.
+- **Default production hosting** is AWS (CDK stack: CloudFront, S3, App Runner, RDS PostgreSQL) in `eu-central-1`, multi-tenant by default.
 
 **Dependencies**
-- Cloud hosting environment (TBD per tenant requirements).
-- SMS / email provider for notifications.
+- AWS account and GitHub Actions OIDC for deploy (see [`AWS_Cloud_Deployment_Guide.md`](./AWS_Cloud_Deployment_Guide.md)).
+- SMS / email provider for notifications (not wired in current build).
 - Mapping provider for location links validation.
-- Identity provider for SSO (optional).
+- Identity provider for SSO (optional; JWT login implemented).
 
 **Constraints**
 - Regulatory data residency may require region-specific deployments.
@@ -330,44 +396,63 @@ Permissions are matrix-based (resource × action) and assignable to custom roles
 | RTL/Arabic UX defects after release | Medium | Medium | Native Arabic QA from sprint one; bilingual design reviews |
 | Data migration from legacy systems | High | High | Standard import templates; migration toolkit; pilot before full cutover |
 | Low clinician adoption | High | Medium | Co-design with practicing clinicians; usability testing each milestone |
-| Cross-branch data leakage | High | Low | Strict tenancy isolation; consent enforcement; security review |
+| Cross-branch data leakage | High | Low | Application `tenantId` checks on every query; unique keys per tenant; security review; optional RLS later |
 
 ## 12. Release Plan (Phased)
 
-**Phase 1 – MVP (Months 1–4)**
-- Clinic onboarding, multi-branch core.
-- EHR (encounters, prescriptions, basic vitals).
-- Expense tracking.
-- HR core (directory, attendance, leave).
-- Bilingual UI.
-- Admin dashboard, RBAC, audit log.
+### 12.1 Delivered on `main` (June 2026)
 
-**Phase 2 – Operational Depth (Months 5–8)**
-- Payroll exports and payslips.
-- Advanced clinical features (drug interaction engine, lab orders, imaging attachments).
-- Reporting and dashboards.
-- Patient consent workflows.
+| Area | Status |
+|---|---|
+| Multi-tenant SaaS + platform super admin | Shipped |
+| Clinics (parent/branch), users, RBAC, nav tab grants | Shipped |
+| Patients (registry, phone uniqueness, clinical doc sections, soft delete) | Shipped |
+| Appointments, encounters (SOAP, vitals, ICD-10, meds, documents, Rx image) | Shipped |
+| Operations (schedule, balance, revenue linkage) | Shipped |
+| Expenses, revenue ledger, reports/monthly charts | Shipped |
+| HR (employees, attendance, leave) | Shipped |
+| Admin (org patients/users, data explorer, SQL export, audit) | Shipped |
+| Bilingual EN/AR web SPA | Shipped |
+| AWS deploy (App Runner + RDS + CloudFront + S3 uploads) | Shipped |
 
-**Phase 3 – Ecosystem (Months 9–12)**
-- Patient portal.
-- Telemedicine.
-- Insurance claims.
-- Lab and pharmacy integrations.
-- Mobile apps.
+### 12.2 Roadmap
 
-## 13. Open Questions
+**Phase 2 – Operational depth**
+- Payroll exports and payslips; biometric attendance hooks.
+- Advanced clinical features (drug interaction engine, structured lab orders, DICOM).
+- Patient consent workflows; configurable permission matrix.
+- MFA for admins; refresh tokens; Redis rate limiting.
 
-1. Which markets define the v1 launch? (Compliance and language defaults depend on this.)
-2. Will the platform be single-tenant per clinic group or multi-tenant SaaS?
-3. Is offline-capable mode required for branches with unreliable connectivity?
-4. What is the preferred drug catalog source per market?
-5. Will SSO with hospital identity providers be required at launch?
-6. Is there a preferred payroll system to integrate with first?
+**Phase 3 – Ecosystem**
+- Patient portal; telemedicine; insurance claims.
+- Lab and pharmacy integrations; native mobile apps.
+- Per-tenant billing / subscription management.
+
+## 13. Decisions & open questions
+
+### 13.1 Resolved decisions
+
+| # | Question | Decision |
+|---|---|---|
+| 1 | Single-tenant per clinic group vs multi-tenant SaaS? | **Multi-tenant SaaS** on shared infrastructure; dedicated stack optional for enterprise. See [§3.4](#34-tenancy--deployment-model). |
+| 2 | Default cloud hosting? | **AWS CDK** — CloudFront, S3, App Runner, RDS (`eu-central-1`). |
+
+### 13.2 Open questions
+
+1. Which markets define the next commercial launch? (Compliance and language defaults depend on this.)
+2. Is offline-capable mode required for branches with unreliable connectivity?
+3. What is the preferred drug catalog source per market?
+4. Will SSO with hospital identity providers be required at launch?
+5. Is there a preferred payroll system to integrate with first?
+6. When is patient-facing portal/app in scope (v1.5 vs v2)?
 
 ## 14. Glossary
 
-- **Parent Clinic** – The top-level clinic entity that owns one or more branches.
-- **Branch / Sister Clinic / Sub Clinic** – A clinic operated under a parent clinic.
+- **Tenant / Organization** – A clinic group customer on the SaaS platform; all business data is scoped by `tenantId`.
+- **Multi-tenant SaaS** – One application deployment serving many tenants on shared DB and compute, with logical isolation.
+- **Platform operator** – Vendor staff using `PLATFORM_SUPER_ADMIN` to provision tenants (not a customer role).
+- **Parent Clinic** – The top-level clinic entity within a tenant that may own one or more branches.
+- **Branch / Sister Clinic / Sub Clinic** – A clinic site within a tenant (may reference a parent clinic).
 - **Encounter** – A single clinical visit/interaction between a patient and clinician.
 - **EHR** – Electronic Health Record.
 - **RBAC** – Role-Based Access Control.

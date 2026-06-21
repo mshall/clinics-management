@@ -4,16 +4,16 @@
 | Field | Value |
 |---|---|
 | **Document Title** | Clinic Management System – Technical RFC |
-| **Version** | 1.1 |
+| **Version** | 1.2 |
 | **Status** | Living document (aligned with `main` as of June 2026) |
-| **Related** | Clinic Management System PRD v1.1 |
+| **Related** | [`Clinic_Management_System_PRD.md`](./Clinic_Management_System_PRD.md) v1.2 |
 | **Last Updated** | June 2026 |
 
 ---
 
 ## 1. Overview
 
-This RFC describes the technical architecture and implementation plan for the Clinic Management System (CMS) defined in the PRD. The platform is a multi-tenant, multi-branch SaaS for clinic groups, with EHR, prescriptions, expenses, HR, bilingual UI, and a parent/sub-clinic governance model.
+This RFC describes the technical architecture and implementation of the Clinic Management System (CMS) defined in the PRD v1.2. The platform is a **multi-tenant SaaS** for clinic groups: one deployed stack serves many organizations (`tenantId`), each with multi-branch clinics, EHR workflows, expenses, HR, and bilingual UI.
 
 The defining engineering constraints for v1:
 
@@ -50,7 +50,7 @@ We adopt a **modular monolith** for the backend rather than microservices in v1.
 | Database | **PostgreSQL 16 (Amazon RDS in prod; Docker locally)** | Mature RDBMS, strong JSON support, multi-AZ capable |
 | Cache / Queues | Redis (Docker locally) | Available in compose; ElastiCache optional for prod scale |
 | Object Storage | **Amazon S3 (production)** / local `uploads/` (development) | Attachments, prescriptions, patient documents, logos — `UPLOAD_STORAGE=s3` on App Runner |
-| Auth | JWT (short-lived) + refresh tokens, optional OIDC SSO | Stateless API auth; SSO for enterprise tenants |
+| Auth | **JWT (symmetric `JWT_SECRET`)** via `@nestjs/jwt`; **bcryptjs** password hashes | Implemented: `POST /auth/login`, `GET /auth/me`, `PATCH /auth/me/password`. Refresh tokens, MFA, OIDC SSO — roadmap |
 | Frontend Web | **React 18 + Vite + TypeScript** | Fast DX, modern tooling |
 | State Mgmt | TanStack Query + Zustand | Server state and lightweight client state |
 | UI Library | shadcn/ui + Tailwind CSS + Radix | Accessible, themeable, RTL-friendly |
@@ -103,122 +103,157 @@ cd infra && npx cdk deploy   # or push to main → GitHub Actions
 
 ## 5. High-Level Architecture
 
-```
-            ┌────────────────────────────────────────────┐
-            │                CloudFront (CDN)            │
-            └──────────────┬───────────────┬─────────────┘
-                           │               │
-                  ┌────────▼────┐    ┌─────▼────────┐
-                  │  S3 (web)   │    │  ALB → ECS   │
-                  │  static UI  │    │  Fargate API │
-                  └─────────────┘    └──────┬───────┘
-                                            │
-                ┌──────────────┬────────────┼─────────────┬────────────┐
-                │              │            │             │            │
-        ┌───────▼─────┐ ┌──────▼────┐ ┌─────▼─────┐ ┌─────▼─────┐ ┌────▼──────┐
-        │ RDS (Postgres)│ ElastiCache │   S3      │   SES/SNS │ Secrets    │
-        │  Multi-AZ    │ │  Redis    │ │ Files    │ │  Notif   │ │ Manager   │
-        └──────────────┘ └───────────┘ └──────────┘ └──────────┘ └───────────┘
+**Implemented production topology** (see [§14](#14-aws-deployment-architecture-implemented)):
 
-        Mobile (RN/Expo) ─────► CloudFront (API) ─► ALB ─► ECS Fargate
+```
+                         Route 53 (optional custom domain)
+                                    │
+                                    ▼
+                           CloudFront Distribution
+                    ┌───────────────┴────────────────┐
+                    │                                │
+             S3 (web SPA)                    /api/* behavior
+         + viewer-request fn                  HTTPS to App Runner
+         (SPA deep links)                         │
+                    │                              ▼
+                    │                    App Runner (NestJS API)
+                    │                    VPC connector → RDS PostgreSQL
+                    │                    S3 uploads (`UPLOAD_STORAGE=s3`)
+                    └──────── same AppUrl ─────────┘
+
+Post-deploy: Lambda DbSeedFn (idempotent migrate + seed on RDS)
 ```
 
-The API is a single NestJS process that exposes REST + OpenAPI. Background jobs run as a separate ECS service from the same image (different start command), consuming BullMQ queues backed by Redis.
+The API is a **single NestJS process** on App Runner exposing REST + OpenAPI at `/api/v1`. There is **no separate worker service** in the deployed stack today; long-running jobs (notifications, materialized-view refresh) are roadmap items.
+
+Local development: `docker-compose.yml` provides Postgres 16 and Redis; API + Vite run via `npm run dev`.
+
+### 5.1 Multi-tenancy architecture (implemented)
+
+| Layer | Mechanism |
+|---|---|
+| **Data model** | Shared PostgreSQL schema; `tenantId` column on tenant-owned tables (patients, clinics, encounters, ledger, etc.). |
+| **Provisioning** | `PLATFORM_SUPER_ADMIN` (`tenantId: null`) creates organizations via `/admin/platform/tenants`. |
+| **Request scoping** | JWT payload includes `tenantId` (null only for platform admin). Controllers call `requireTenantId(user)` and services add `where: { tenantId }`. |
+| **Platform APIs** | `/admin/platform/*` restricted to platform super admin; org APIs under `/admin/*`, `/clinics`, `/patients`, etc. require a tenant JWT. |
+| **Uniqueness** | Business keys (MRN, national ID, phone) unique **per tenant**, not globally. |
+| **Clinic scope** | `CLINIC_ADMIN` / `BRANCH_MANAGER` filtered via `ClinicAdminScope`; physicians filtered by `clinicianId` on encounters/appointments/operations. |
+| **Defense in depth** | PostgreSQL **RLS** policies described in [§7](#7-data-model-prisma--postgresql) are **not enabled** yet; isolation is application-enforced. |
+
+**Enterprise option:** Deploy a **dedicated stack** (same CDK app) with one tenant populated — logical single-tenant, separate RDS. Not a code fork.
 
 ## 6. Backend Module Catalog
 
-NestJS modules map 1:1 to product concerns. Each module owns its entities, services, controllers, DTOs, and migrations. Cross-module access is only allowed through public service interfaces — enforced by `eslint-plugin-boundaries`.
+NestJS modules in `apps/api/src/app.module.ts` map to product concerns. Cross-module access should go through injected services; `eslint-plugin-boundaries` is the long-term enforcement target.
 
-### 6.1 Module Map
+> **Legend:** [§6.1](#61-module-map-implemented) lists **shipped** modules. [§6.2](#62-module-specifications) mixes **implemented** endpoint notes with **roadmap** specs retained for modules not yet in the repo (Billing, Notifications, etc.).
 
-| # | Module | Responsibility |
+### 6.1 Module Map (implemented)
+
+| Module | Path | Responsibility |
 |---|---|---|
-| 1 | `IdentityModule` | Authentication, tokens, sessions, MFA, password policies, SSO |
-| 2 | `TenancyModule` | Tenants (clinic groups), parent clinics, branches, onboarding |
-| 3 | `UsersModule` | Users, roles, permissions (RBAC) |
-| 4 | `PatientsModule` | Patient demographics, consent, group-level identity |
-| 5 | `EhrModule` | Encounters, vitals, diagnoses, procedures, attachments |
-| 6 | `PrescriptionsModule` | Drug catalog, prescriptions, interaction checks |
-| 7 | `SchedulingModule` | Working hours, appointments, slots |
-| 8 | `ExpensesModule` | Expense entries, categories, vendors |
-| 9 | `RevenueModule` | All income streams: visits, surgeries, materials, procedures |
-| 10 | `HrModule` | Employees, attendance, leave, payroll inputs |
-| 11 | `BillingModule` | Invoices, payments (light v1) |
-| 12 | `ReportingModule` | Income vs expenses, growth charts, operational dashboards, exports |
-| 13 | `LocalizationModule` | Translation keys, locale resolution |
-| 14 | `NotificationsModule` | Email, SMS, in-app, expiring license alerts |
-| 15 | `FilesModule` | S3 uploads, presigned URLs, AV scanning hook |
-| 16 | `AuditModule` | Append-only audit log, change-data capture |
-| 17 | `AdminModule` | Group admin operations, tenant provisioning |
-| 18 | `HealthModule` | Liveness, readiness, build info |
+| `AuthModule` | `auth/` | Login, JWT, `/auth/me`, password change |
+| `PatientsModule` | `patients/` | Registry, documents, phone conflict, clinical-documents aggregation |
+| `ClinicsModule` | `clinics/` | Clinic CRUD, physicians, scheduling helpers |
+| `EncountersModule` | `encounters/` | Encounters, vitals, diagnoses, medications, documents, finalize |
+| `AppointmentsModule` | `appointments/` | Appointment lifecycle, physician/clinic scope |
+| `OperationsModule` | `operations/` | Surgical/procedure scheduling, balance, revenue hooks |
+| `ExpensesModule` | `expenses/` | Expense entries, proof uploads, approval status |
+| `RevenueModule` | `revenue/` | Revenue ledger, visit fees, manual entries, totals |
+| `HrModule` | `hr/` | Employees, attendance, leave, ID documents |
+| `AdminModule` | `admin/` | Org overview, audit, platform admin, data explorer, org patients/users |
+| `ReportsModule` | `reports/` | Monthly visit/revenue/patient charts |
+| `DashboardModule` | `dashboard/` | Group KPI overview |
+| `UsersModule` | `users/` | Tenant user directory |
+| `UserNavTabsModule` | `user-nav-tabs/` | Per-user navigation grants |
+| `AuditModule` | `audit/` | Audit log writes |
+| `StorageModule` | `storage/` | Local disk or S3 upload/download |
+| `HealthModule` | `health/` | Liveness/readiness |
+| `PrismaModule` | `prisma/` | Database client |
+
+**Not in `app.module.ts` (roadmap):** separate `PrescriptionsModule`, `BillingModule`, `NotificationsModule`, `LocalizationModule` (i18n is web-only today), BullMQ worker, CASL ability factory.
+
+### 6.1.1 Aspirational module map (roadmap)
+
+Early RFC drafts grouped concerns differently. When extracting services later, these boundaries remain useful:
+
+| Module | Responsibility |
+|---|---|
+| `PrescriptionsModule` | Standalone drug catalog, interaction engine, Rx PDF service |
+| `BillingModule` | Invoices, payments, insurance claims |
+| `NotificationsModule` | Email, SMS, in-app, license expiry |
+| `ReportingModule` (advanced) | Materialized views, warehouse export, scheduled jobs |
 
 ### 6.2 Module Specifications
 
 Each module spec below lists primary entities, key endpoints (illustrative, not exhaustive), and notable design notes.
 
-#### 6.2.1 IdentityModule
+#### 6.2.1 AuthModule *(implemented)*
 
-**Entities:** `User` (shared with UsersModule), `RefreshToken`, `MfaSecret`, `LoginAttempt`.
+**Entities:** `User` (shared with `UsersModule` / Prisma).
 
 **Endpoints:**
 ```
 POST   /auth/login
-POST   /auth/refresh
-POST   /auth/logout
-POST   /auth/mfa/enroll
-POST   /auth/mfa/verify
-POST   /auth/password/reset/request
-POST   /auth/password/reset/confirm
 GET    /auth/me
+PATCH  /auth/me/password
 ```
 
 **Notes:**
-- Argon2id for password hashing.
-- Access token TTL 15 min; refresh token TTL 30 days, rotated on use, stored hashed.
-- MFA via TOTP; required for Group Admins and Finance Officers.
-- Optional OIDC SSO per tenant, configured by Group Admin.
-- Brute-force protection via Redis-backed rate limiter (`ThrottlerGuard`).
+- Password hashing: **bcryptjs** (`bcrypt.compareSync` / hash on password change).
+- Access token: JWT signed with **`JWT_SECRET`** (symmetric); payload includes `sub`, `tenantId`, `email`, `role`.
+- Login response includes optional `navTabKeys` from `UserNavTabGrant`.
+- Platform super admin detected via role + email allowlist helper (`isPlatformSuperAdmin`).
+- **Roadmap:** refresh tokens, Argon2id, MFA/TOTP, OIDC SSO, Redis-backed `ThrottlerGuard`.
 
-#### 6.2.2 TenancyModule
+#### 6.2.2 ClinicsModule + Admin platform *(implemented)*
 
-**Entities:** `Tenant` (clinic group), `Clinic` (parent or branch), `ClinicSpeciality`, `ClinicWorkingHours`.
+**Entities:** `Tenant`, `Clinic`, `ClinicPhysician`, `ClinicAdminScope`, working hours and speciality fields on `Clinic`.
 
-**Key fields on `Clinic`:** `nameEn`, `nameAr`, `logoUrl`, `country`, `city`, `addressEn`, `addressAr`, `locationUrl`, `phone`, `email`, `licenseNumber`, `parentClinicId` (nullable), `defaultLanguage`, `tenantId`.
-
-**Endpoints:**
+**Org-scoped endpoints (`/clinics`):**
 ```
-POST   /admin/tenants                  # provision a new clinic group
-POST   /clinics                        # add parent clinic
-POST   /clinics/:id/branches           # add sister/sub clinic
-GET    /clinics                        # list within tenant
+GET    /clinics
+POST   /clinics                        # parent or branch (parentClinicId optional)
 GET    /clinics/:id
 PATCH  /clinics/:id
-POST   /clinics/:id/logo               # upload logo (returns presigned URL)
+GET    /clinics/:id/physicians
+POST   /clinics/:id/physicians
+GET    /clinics/physicians/scheduling
+```
+
+**Platform endpoints (`/admin/platform`, `PLATFORM_SUPER_ADMIN` only):**
+```
+GET    /admin/platform/overview
+GET    /admin/platform/tenants
+POST   /admin/platform/tenants         # create org + optional HQ clinic + group admin
+GET    /admin/platform/tenants/:tenantId
+PATCH  /admin/platform/tenants/:tenantId
+POST   /admin/platform/tenants/:tenantId/clinics
+POST   /admin/platform/tenants/:tenantId/users
+GET    /admin/platform/feature-flags
+PATCH  /admin/platform/feature-flags/:key
 ```
 
 **Notes:**
-- Multi-tenancy is **shared database, shared schema, tenant_id on every row** with row-level security policies in PostgreSQL as a defense in depth.
-- Hierarchy modeled with self-referential `parentClinicId`. Branch tree depth capped (e.g., 2) to keep reporting predictable.
-- Specialities reference a `SpecialityCatalog` (seeded master list).
+- Multi-tenancy: **shared database, shared schema**, `tenantId` on every business row; enforced in services (RLS optional later).
+- Hierarchy via nullable `parentClinicId` on `Clinic`.
+- Org settings and audit: `/admin/overview`, `/admin/audit-logs`, org patient/user bulk tools under `/admin/...`.
 
-#### 6.2.3 UsersModule
+#### 6.2.3 UsersModule *(implemented)*
 
-**Entities:** `User`, `Role`, `Permission`, `UserClinicRole` (a user can hold different roles at different clinics).
+**Entities:** `User`, `ClinicAdminScope`, `UserNavTabGrant`.
 
 **Endpoints:**
 ```
-POST   /users                          # invite user
-GET    /users
-PATCH  /users/:id
-POST   /users/:id/clinics/:clinicId/roles
-DELETE /users/:id/clinics/:clinicId/roles/:roleId
-GET    /roles
-POST   /roles                          # custom role
+GET    /users                          # tenant directory (paginated)
 ```
 
+Org admin user CRUD and bulk delete live under **`/admin/users`** (see `AdminModule`).
+
 **Notes:**
-- Permissions are matrix-based: `(resource, action)` pairs (e.g., `prescription:create`, `expense:approve`).
-- Authorization implemented as a NestJS `CaslAbilityFactory` integrated with `@Casl/ability` for declarative checks.
+- Authorization is **role-based** in services/controllers (`UserRole` enum), not a configurable CASL matrix.
+- Clinic admins and branch managers are scoped via `ClinicAdminScope` rows.
+- **Roadmap:** custom roles, `(resource, action)` permission matrix, `@CheckAbility` decorators.
 
 #### 6.2.4 PatientsModule
 
@@ -247,61 +282,81 @@ GET    /patients/:id/national-id-document
 - Soft-delete via `deletedAt`; bulk delete for org administrators and clinic staff roles listed in `PATIENT_DELETE_ROLES`.
 - Cross-branch encounter documents on the profile respect the same physician/clinic scope as encounter lists.
 
-#### 6.2.5 EhrModule
+#### 6.2.5 EncountersModule *(implemented)*
 
-**Entities:** `Encounter`, `Vital`, `Diagnosis` (ICD-10), `Procedure` (CPT), `Attachment`, `EncounterAmendment`.
+**Entities:** `Encounter`, `Vital`, `Diagnosis`, `EncounterMedication`, `EncounterDocument` (`kind`: `LAB` | `RADIOLOGY` | `PRESCRIPTION`).
 
 **Endpoints:**
 ```
+GET    /encounters                     # paginated; physician/clinic scoped
 POST   /encounters
 GET    /encounters/:id
-PATCH  /encounters/:id                 # while in DRAFT
+PATCH  /encounters/:id                 # while DRAFT
 POST   /encounters/:id/finalize
-POST   /encounters/:id/amend           # post-finalize, with reason
-POST   /encounters/:id/vitals
-POST   /encounters/:id/attachments
+POST   /encounters/:id/diagnoses
+POST   /encounters/:id/medications
+POST   /encounters/:id/documents       # multipart upload (LAB | RADIOLOGY | PRESCRIPTION)
+GET    /encounters/:id/documents/:docId/file
+DELETE /encounters/:id/documents/:docId
 ```
 
 **Notes:**
-- Encounters have a status machine: `DRAFT → FINALIZED → AMENDED`.
-- Finalization requires authenticated clinician (re-prompt password or step-up MFA for high-risk actions).
-- Amendments do not destroy data; they append a new revision and link to the prior one.
-- ICD-10 and CPT catalogs ship as seed data; updateable per tenant.
+- Status machine: `DRAFT → FINALIZED` (amend flow partial / roadmap).
+- Finalizing posts `VISIT_FEE` revenue when fee > 0; may complete linked appointment.
+- Prescriptions in v1 are **encounter medications + optional generated Rx image + PRESCRIPTION documents** — not a separate prescriptions service.
+- ICD-10 codes stored on diagnoses; drug interaction checks — roadmap.
 
-#### 6.2.6 PrescriptionsModule
+#### 6.2.6 PrescriptionsModule *(roadmap — not a separate Nest module)*
 
-**Entities:** `Drug` (catalog), `Prescription`, `PrescriptionItem`, `InteractionRule`, `AllergyAlert`.
+Prescription behavior lives in **`EncountersModule`** and patient clinical-document aggregation today. A future standalone module would add drug catalog search, interaction rules, and bilingual PDF templates.
 
-**Endpoints:**
+**Target endpoints (not all implemented):**
 ```
 GET    /drugs?search=...
 POST   /encounters/:id/prescriptions
 GET    /patients/:id/prescriptions
-POST   /prescriptions/:id/discontinue
-GET    /prescriptions/:id/pdf          # bilingual PDF
+GET    /prescriptions/:id/pdf
 ```
 
-**Notes:**
-- Drug–allergy and basic drug–drug interaction checks run server-side at create time and surface warnings with override + reason.
-- Bilingual PDF generated via a `PdfRenderer` service using Handlebars templates with RTL-aware layout.
-- v2: integrate with national drug registries.
+#### 6.2.7 AppointmentsModule *(implemented)*
 
-#### 6.2.7 SchedulingModule
-
-**Entities:** `WorkingHours`, `Appointment`, `Slot`.
+**Entities:** `Appointment` (status: Scheduled, Confirmed, Cancelled, Completed).
 
 **Endpoints:**
 ```
-GET    /clinics/:id/availability
+GET    /appointments
 POST   /appointments
+GET    /appointments/:id
 PATCH  /appointments/:id
 POST   /appointments/:id/cancel
 ```
 
 **Notes:**
-- Booking guarded by a Postgres advisory lock on `(clinicId, clinicianId, slotStart)` to prevent double-booking under concurrency.
+- Physicians see only appointments where they are the attending clinician.
+- Clinic admins filtered by `ClinicAdminScope`.
+- Linking to encounters moves status toward Confirmed/Completed per PRD §6.1a.
 
-#### 6.2.8 ExpensesModule
+#### 6.2.7a OperationsModule *(implemented)*
+
+**Entities:** `Operation`, operation documents, operation medications; links to `RevenueEntry` on completion.
+
+**Endpoints (illustrative):**
+```
+GET    /operations
+GET    /operations/outstanding-balances
+POST   /operations
+PATCH  /operations/:id
+POST   /operations/:id/status
+POST   /operations/:id/documents
+POST   /operations/:id/medications
+GET    /operations/:id/documents/:docId/file
+```
+
+**Notes:**
+- Completing an operation posts revenue; cancelling voids linked revenue.
+- Physician scope matches encounters/appointments patterns.
+
+#### 6.2.8 ExpensesModule *(roadmap details — module implemented with subset)*
 
 **Entities:** `Expense`, `ExpenseCategory`, `Vendor`, `ExpenseAttachment`.
 
@@ -786,17 +841,16 @@ model AuditLog {
 
 **Indexing strategy:** every analytical query path (revenue by date, expenses by date, encounters by clinic-date) has a supporting composite index. Reporting materialized views own additional indexes appropriate to their access patterns.
 
-**Row-Level Security:** PostgreSQL RLS policies enforce `tenantId = current_setting('app.tenant_id')::text` on all tables. Connection middleware sets the GUC at the start of each request from the validated JWT.
+**Row-Level Security (roadmap):** PostgreSQL RLS policies (`tenantId = current_setting('app.tenant_id')`) are documented as defense-in-depth but **not enabled** in the current deployment. All tenant isolation is enforced in application code via `requireTenantId` and explicit `where` clauses.
 
 ## 8. API Conventions
 
 - **Versioning:** path-based, `/api/v1/...`.
-- **Pagination:** cursor-based for lists (`?cursor=&limit=`), with `nextCursor` in response.
-- **Filtering:** explicit query params, never opaque expression languages.
-- **Errors:** RFC 7807 `application/problem+json` with `code`, `title`, `detail`, `traceId`.
-- **Idempotency:** all unsafe POSTs accept an `Idempotency-Key` header; results cached for 24h in Redis.
-- **OpenAPI:** auto-generated from NestJS decorators; published as a static asset and consumed by frontends to generate typed clients (`openapi-typescript-codegen`).
-- **Rate Limits:** per-IP and per-user, enforced by Redis-backed throttler.
+- **Pagination:** offset/page-based for most list endpoints (`page`, `pageSize`, `total`).
+- **Errors:** NestJS exceptions + Swagger-documented shapes; RFC 7807 problem+json — partial/roadmap.
+- **Idempotency:** `Idempotency-Key` header — roadmap (not implemented globally).
+- **OpenAPI:** Swagger at `/api/docs` when `SWAGGER_ENABLED=true` (local/dev); disabled on App Runner prod.
+- **Rate Limits:** Redis-backed throttler — roadmap.
 - **RBAC list/detail scope (implemented):** `PHYSICIAN` JWTs restrict **encounters** and **appointments** lists and detail/mutation endpoints to rows where `clinicianId` matches the authenticated user; `POST /appointments` rejects a physician attempting to book on behalf of another clinician. `CLINIC_ADMIN` JWTs restrict appointments (and encounters, where applicable) to clinics listed in `ClinicAdminScope`. Web navigation mirrors these capabilities via `apps/web/src/lib/nav-policy.ts` and TanStack Query keys include the viewer identity to avoid cross-user cache bleed on shared browsers.
 
 ## 9. Frontend (Web) — `apps/web`
@@ -854,46 +908,62 @@ The RFC originally scoped **Expo/React Native** for v1 clinician flows. That app
 
 ## 11. Cross-Cutting Concerns
 
-### 11.1 Authorization
-- `CaslAbilityFactory` builds an ability set from `(role × clinicId)` assignments per request.
-- Controllers use `@CheckAbility(action, subject)` decorator; service layer re-checks for defense in depth.
+### 11.1 Authorization *(implemented)*
 
-### 11.2 Tenancy
-- Single-line tenant guard sets `tenantId` from JWT into `AsyncLocalStorage`; every Prisma query goes through middleware that injects it as a `where` clause + sets the Postgres GUC for RLS.
+- **`UserRole` enum** on JWT (`PLATFORM_SUPER_ADMIN`, `GROUP_ADMIN`, `GROUP_SUPERVISOR`, `BRANCH_MANAGER`, `CLINIC_ADMIN`, `CLINIC_ASSISTANT`, `PHYSICIAN`, `NURSE`, `RECEPTIONIST`, `CALL_CENTER`, `HR_OFFICER`, `FINANCE_OFFICER`).
+- Services enforce rules explicitly (e.g. `PATIENT_DELETE_ROLES`, physician-only encounter lists, clinic scope via `ClinicAdminScope`).
+- Web navigation mirrors API scope in `apps/web/src/lib/nav-policy.ts`.
+- **Roadmap:** `CaslAbilityFactory`, configurable permission matrix, `@CheckAbility` decorators.
+
+### 11.2 Tenancy *(implemented)*
+
+- `requireTenantId(user)` throws if JWT has no tenant (platform admin cannot call org-scoped patient/encounter APIs without impersonation — not implemented).
+- Every tenant-scoped Prisma query includes `tenantId` in `where`.
+- Platform routes under `/admin/platform/*` use separate guards for `PLATFORM_SUPER_ADMIN`.
+- **Roadmap:** Postgres RLS + `SET app.tenant_id` per connection; tenant impersonation for support.
 
 ### 11.3 Logging & Tracing
-- Pino for structured logs (JSON), one line per request with traceId.
-- OpenTelemetry SDK auto-instruments HTTP, Prisma, Redis, BullMQ.
-- Exporter to OTLP → Grafana Cloud (logs, metrics, traces unified).
+
+- **Implemented:** NestJS default logging; App Runner → CloudWatch log group.
+- **Roadmap:** Pino JSON logs, OpenTelemetry → Grafana Cloud.
 
 ### 11.4 Error Handling
-- Global `HttpExceptionFilter` produces RFC 7807 responses, redacts internals, logs with traceId.
-- Domain errors use typed error classes that map to HTTP statuses centrally.
+
+- Global exception filters return HTTP status + message; domain `BadRequestException` / `UnauthorizedException` used throughout.
+- **Roadmap:** RFC 7807 filter with redaction policy.
 
 ### 11.5 Configuration
-- `@nestjs/config` with Zod-validated schema; refuses to boot on missing/invalid config.
-- All secrets pulled from AWS Secrets Manager at boot via a small loader.
 
-### 11.6 Background Jobs
-- BullMQ queues: `notifications`, `reports`, `payroll`, `revenue-postings`, `audit-archive`, `expiry-checks`.
-- Same Docker image, different `CMD` (`node dist/worker.js`), separate ECS service with its own scaling rules.
+- `@nestjs/config` reads `.env` locally; App Runner injects env from CDK (Secrets Manager for `JWT_SECRET`, `DATABASE_URL`).
+- Boot fails if required DB/JWT config missing when accessed.
+
+### 11.6 Background Jobs *(roadmap)*
+
+- BullMQ queues (`notifications`, `reports`, `payroll`, …) and a separate worker container were in early RFC drafts.
+- **Not deployed:** no ECS worker, no BullMQ consumer in this repo today. Report charts query live data via `ReportsModule`.
 
 ## 12. Security
 
-- TLS terminated at CloudFront and ALB; HSTS preloaded.
-- WAF in front of CloudFront and ALB with managed rules + custom rate-based rules.
-- Argon2id for passwords; MFA TOTP for privileged roles.
-- JWT signed with rotating asymmetric keys (KMS-managed).
-- All PII fields encrypted at rest by RDS storage encryption; sensitive columns (national ID, MRN) additionally encrypted application-side using KMS envelope encryption.
-- File uploads scanned for malware before being marked READY.
-- Quarterly dependency audits via `pnpm audit` and Snyk in CI.
-- Secret scanning in CI (Gitleaks).
-- Penetration testing scheduled before each major release.
-- Backups encrypted; restore drills quarterly.
+| Control | Status |
+|---|---|
+| TLS (CloudFront + App Runner) | **Implemented** |
+| JWT auth on protected routes | **Implemented** |
+| bcrypt password hashing | **Implemented** |
+| Secrets in AWS Secrets Manager (JWT, RDS) | **Implemented** (App Runner) |
+| RDS storage encryption | **Implemented** (AWS default) |
+| Tenant isolation in application layer | **Implemented** |
+| S3 uploads via API (presigned/streaming) | **Implemented** |
+| MFA, refresh tokens, Argon2id | Roadmap |
+| WAF on CloudFront | Roadmap |
+| Application-side column encryption (national ID) | Roadmap |
+| Malware scan on upload | Roadmap |
+| KMS asymmetric JWT signing | Roadmap |
 
-## 13. Project Setup & DevOps Module
+Operational practices: dependency updates via npm; restore drills and pen tests per release policy — not automated in CI beyond `pr-synth-build.yml` synthesis check.
 
-This module is a first-class part of the codebase: `infra/` is reviewed, tested, and shipped with the same rigor as application code. Goal: any engineer can stand up a complete environment with one command, and any release goes out with one click.
+## 13. Project Setup & DevOps
+
+Local and CI/CD paths below reflect **what the repository runs today**. [§14](#14-aws-deployment-architecture-implemented) is the authoritative AWS topology (App Runner, not ECS).
 
 ### 13.1 Local Development
 
@@ -905,76 +975,56 @@ npm run db:up               # docker compose: postgres + redis
 npm run db:setup            # prisma generate, migrate, seed
 
 # every day
-npm run dev                 # api + web concurrently
+npm run dev                 # api :3000 + web :5173 via concurrently
 npm run build
 npm run lint
 ```
 
-`docker-compose.yml` provides Postgres 16 and Redis locally. File uploads default to **`uploads/`** on disk (`UPLOAD_STORAGE` unset or `local`).
+`docker-compose.yml` provides Postgres 16 and Redis. File uploads default to **`uploads/`** on disk (`UPLOAD_STORAGE` unset or `local`).
 
 ### 13.2 Container Image
 
-A single multi-stage Dockerfile at `infra/docker/api.Dockerfile` produces one image used for both the API and the worker. Stages:
+Multi-stage Dockerfile at **`apps/api/Dockerfile`** (not `infra/docker/`). Used by App Runner and the DbSeed Lambda build. Seed image: `apps/api/Dockerfile.seed`.
 
-1. **deps** — `pnpm install --frozen-lockfile`.
-2. **build** — `pnpm turbo run build --filter=api`.
-3. **runtime** — distroless Node 20, non-root user, only `dist/` and `node_modules`.
+On deploy, GitHub Actions builds and pushes to ECR; App Runner pulls by tag (commit SHA / `latest` per workflow).
 
-Image is tagged with the commit SHA and pushed to Amazon ECR.
+### 13.3 Infrastructure as Code
 
-### 13.3 Infrastructure as Code (AWS CDK, TypeScript)
+Single CDK stack: **`infra/src/kiorly-clinics-management-stack.ts`** (`KiorlyClinicsManagementStack`). No multi-stack ECS/ALB split.
 
-`infra/cdk/` contains the entire AWS topology. Stacks:
-
-| Stack | Contents |
+| Resource | Role |
 |---|---|
-| `NetworkStack` | VPC, public/private subnets across 2 AZs, NAT, security groups |
-| `DataStack` | RDS Postgres (Multi-AZ), ElastiCache Redis, S3 buckets (files, web, logs), KMS keys |
-| `ApiStack` | ECR repository, ECS cluster, Fargate service for API, Fargate service for worker, ALB, target groups, autoscaling |
-| `WebStack` | S3 bucket for built web assets, CloudFront distribution, ACM cert, Route 53 record |
-| `EdgeStack` | CloudFront for API, WAF Web ACL, custom domain |
-| `ObservabilityStack` | Log groups, CloudWatch alarms, SNS topic for paging, OTel collector config |
-| `SecretsStack` | Secrets Manager entries provisioned (values populated out of band) |
-| `CiStack` | OIDC provider for GitHub Actions, deployment IAM role |
+| VPC | Public + isolated DB subnets; **no NAT** |
+| RDS PostgreSQL 16 | Private; migrations on App Runner boot or Lambda seed |
+| App Runner | Nest API; `PRISMA_MIGRATE_ON_BOOT=true` |
+| S3 | Web static assets + API uploads |
+| CloudFront | Single HTTPS origin (SPA + `/api/*`) |
+| Secrets Manager | JWT + RDS credentials |
+| DbSeedFn Lambda | Post-deploy idempotent migrate + seed |
 
-Each environment (`dev`, `staging`, `prod`) is a CDK app context. A pull-request preview environment is a parameterized mini-stack reusing `dev`'s shared resources where safe.
+Deploy: `cd infra && npx cdk deploy` or push to **`main`** → `.github/workflows/deploy-aws.yml` (OIDC `AWS_DEPLOY_ROLE_ARN`).
 
-### 13.4 One-Command Deploy
+See [`AWS_Cloud_Deployment_Guide.md`](./AWS_Cloud_Deployment_Guide.md) for env vars and troubleshooting.
 
-```bash
-# initial bootstrap (one-time per AWS account/region)
-pnpm cdk:bootstrap
+### 13.4 Database Migrations
 
-# any time
-pnpm deploy:dev          # builds, pushes image, runs migrations, deploys all stacks
-pnpm deploy:staging
-pnpm deploy:prod         # gated by manual approval in CI
-```
+- Prisma Migrate in `apps/api/prisma/migrations/`.
+- **Local:** `npm run db:setup` / `prisma migrate dev`.
+- **AWS:** `PRISMA_MIGRATE_ON_BOOT=true` on App Runner; Lambda seed runs `migrate deploy` + seed after deploy.
 
-Under the hood, `pnpm deploy:<env>`:
-1. Runs unit + integration tests.
-2. Builds the Docker image and pushes to ECR with the commit SHA tag.
-3. Runs `prisma migrate deploy` against the target DB via a one-shot ECS task with VPC access (no DB exposure to the public internet).
-4. Deploys the CDK stacks; ECS performs a rolling blue/green via CodeDeploy.
-5. Invalidates CloudFront for the web bucket.
-6. Posts release notes + Grafana dashboard link to Slack.
+### 13.5 Configuration & Secrets
 
-### 13.5 Database Migrations
-- Authored with Prisma Migrate, reviewed in PR.
-- Forward-only migrations; rollbacks via compensating migrations.
-- Pre-deploy migration step uses an ECS one-shot task; the API service is only updated after migrations succeed.
+- Local: `apps/api/.env` (`DATABASE_URL`, `JWT_SECRET`, optional `UPLOAD_STORAGE`, `AWS_*` for S3 dev).
+- AWS: CDK injects secrets from Secrets Manager into App Runner; web build gets API URL at deploy time.
 
-### 13.6 Configuration & Secrets
-- Non-secret config in SSM Parameter Store, namespaced `/cms/<env>/<key>`.
-- Secrets in Secrets Manager, namespaced `/cms/<env>/secret/<key>`.
-- ECS task definition pulls both at startup; no secrets in environment variables in plain text.
+### 13.6 Observability
 
-### 13.7 Observability
-- Container logs → CloudWatch → forwarded to Grafana Cloud Logs.
-- Metrics via OpenTelemetry → OTLP → Grafana Cloud Metrics + Prometheus.
-- Traces via OTLP → Grafana Tempo.
-- Default dashboards provisioned as code (`infra/observability/dashboards/*.json`).
-- Alerts: 5xx rate > 1%, p95 latency > 1s, DB CPU > 80%, queue depth > threshold, deploy failure.
+- App Runner logs → CloudWatch.
+- **Roadmap:** Grafana Cloud, OTel, WAF alarms, Slack deploy notifications.
+
+### 13.7 Alternative architectures (not checked in)
+
+ECS Fargate + ALB + ElastiCache + separate worker service, Lightsail single VM, and multi-environment CDK apps (`dev`/`staging`/`prod` stacks) remain valid options documented in early drafts and the AWS guide — they are **not** what `deploy-aws.yml` deploys by default.
 
 ## 14. AWS Deployment Architecture (implemented)
 
@@ -1023,78 +1073,81 @@ Post-deploy: Lambda DbSeedFn (idempotent demo seed on RDS)
 
 Workflows in `.github/workflows/`:
 
-| Workflow | Trigger | Steps |
+| Workflow | Trigger | Purpose |
 |---|---|---|
-| `ci.yml` | PR | install, lint, type-check, unit + integration tests, build all apps |
-| `e2e.yml` | PR (label `run-e2e`) | spin up ephemeral env, run Playwright suite |
-| `deploy-dev.yml` | push to `main` | build image, push to ECR, run migrations, deploy `dev` stacks |
-| `deploy-staging.yml` | manual | promote a `dev` image SHA to `staging` |
-| `deploy-prod.yml` | manual + approval | promote `staging` image SHA to `prod`, blue/green |
-| `nightly.yml` | cron | dependency scan, Snyk, container scan, secret scan |
+| `deploy-aws.yml` | Push to `main` (and manual `workflow_dispatch`) | Build API Docker image → ECR; build web → S3; `cdk deploy`; invoke DbSeed Lambda |
+| `pr-synth-build.yml` | Pull requests | CDK synth + build smoke (no AWS deploy) |
 
-Authentication to AWS uses **GitHub OIDC** — no long-lived access keys.
+Authentication to AWS uses **GitHub OIDC** (`AWS_DEPLOY_ROLE_ARN` secret). There is no separate `ci.yml`, `e2e.yml`, or multi-env promote pipeline in this repo yet — add before hardening production release gates.
 
 ## 16. Environments
 
-| Env | Purpose | Data | Access |
-|---|---|---|---|
-| `local` | Developer machines | Synthetic seed | Engineer |
-| `dev` | Continuous integration target | Synthetic, refreshed weekly | All engineers |
-| `staging` | Pre-prod validation, demos | Anonymized prod snapshot (quarterly) | Engineers + product + design |
-| `prod` | Real customers | Real data | Operations + on-call |
-| `pr-<id>` | Per-PR preview | Synthetic | PR author + reviewers |
+| Env | Purpose | How |
+|---|---|---|
+| `local` | Developer machines | Docker Postgres + `npm run dev` |
+| `aws` (single stack) | Shared demo/production target | CDK deploy to `eu-central-1`; one CloudFront URL |
+
+**Roadmap:** named `dev` / `staging` / `prod` stacks, PR preview environments, anonymized staging snapshots.
 
 ## 17. Testing Strategy
 
-- **Unit tests** (Jest): every service, every domain rule, every reducer. Target 80%+ on critical modules (Identity, Tenancy, EHR, Revenue, Reporting).
-- **Integration tests** (Jest + Testcontainers): controllers against a real Postgres + Redis. Target every endpoint.
-- **Contract tests:** OpenAPI schema diff in CI; breaking changes blocked unless versioned.
-- **E2E tests** (Playwright): top user journeys on the web app — login, add branch, create patient, write prescription, view report.
-- **Mobile E2E** (Detox or Maestro): critical clinician flows.
-- **Load tests** (k6): pre-release smoke against staging — auth, encounter create, report fetch.
-- **Migration tests:** every migration runs forward and is verified against a snapshot of the prior schema.
+- **Unit / integration tests:** Jest in `apps/api` (run via root `npm test` where configured).
+- **Web:** Vite build + TypeScript check in CI synth workflow.
+- **E2E (Playwright), load tests (k6), mobile E2E:** roadmap — not wired in default GitHub Actions.
+- **Migration tests:** manual/PR review; run `prisma migrate deploy` against local Docker before merge.
 
 ## 18. Seed & Reference Data
 
 The demo tenant in `apps/api/prisma/seed.ts` creates named accounts (e.g. `admin@kiorly.com`, `physician@kiorly.com`, `doctor2@kiorly.com`, `clinicadmin@kiorly.com`, `assistant@kiorly.com`, `nurse@kiorly.com`, `receptionist@kiorly.com`, `finance@kiorly.com`, `branchmgr@kiorly.com`) with a shared password documented in the repository **README** — use these for manual QA of role-specific navigation and API scope.
 
-Shipped as code under `apps/api/prisma/seed/`:
-- ICD-10 (subset by speciality, configurable).
-- CPT (subset).
-- Speciality catalog (GP, Pediatrics, Dermatology, Dentistry, Cardiology, etc.).
-- Default revenue and expense categories.
-- Default service catalog with placeholder pricing per speciality.
-- Default roles and permissions.
-- Default i18n bundles (EN/AR).
+Shipped as code under `apps/api/prisma/seed.ts` (and related seed helpers):
 
-Seed runs on `dev` and on first boot of a new tenant.
+- Demo tenants (multi-tenant on one DB), clinics, users per role — see [`Test_Data_Users.md`](./Test_Data_Users.md).
+- Default revenue/expense categories, visit fees, sample patients/encounters where applicable.
+
+Seed runs locally via `npm run db:setup` and on AWS via **DbSeedFn** Lambda after deploy (`PRISMA_SEED_ON_BOOT=false` on App Runner to avoid double-seed).
+
+**Roadmap seed catalogs:** full ICD-10/CPT subsets, speciality master list, default i18n bundles in DB.
 
 ## 19. Risks & Tradeoffs
 
 | Decision | Tradeoff |
 |---|---|
-| Modular monolith over microservices | Slightly less independent scaling now, vastly less operational overhead — extraction path preserved |
-| Prisma over TypeORM | Better DX, slightly less control on advanced SQL — mitigated by `$queryRaw` for hot paths |
-| Materialized views for reporting | Slight staleness, dramatically simpler than a separate warehouse for v1 |
-| Single image for API + worker | Slightly larger image, much simpler deploy story |
-| ECS Fargate over EKS | Less flexibility, much less operational burden |
-| Shared-schema multi-tenancy | Cheaper, requires disciplined RLS — defense in depth applied |
-| Bilingual from day one | Initial overhead, avoids painful retrofit |
+| Modular monolith over microservices | Simpler deploy now; module folders preserve extraction path |
+| Prisma over raw SQL | DX and migrations; hot paths can use `$queryRaw` |
+| Live queries for reports (no MV yet) | Always fresh; may need materialized views or warehouse at scale |
+| App Runner over ECS Fargate | Less ops surface; fewer knobs for custom networking |
+| Shared-schema multi-tenancy | Cost-efficient SaaS; requires disciplined `tenantId` filtering (RLS optional later) |
+| bcrypt + symmetric JWT (v1) | Fast to ship; upgrade path to Argon2id + asymmetric keys |
+| Bilingual web from day one | Upfront i18n cost; avoids Arabic retrofit |
+| Single CloudFront origin | No CORS split-brain; simpler client config |
 
-## 20. Open Questions
+## 20. Decisions & open questions
+
+### 20.1 Resolved
+
+| Question | Decision |
+|---|---|
+| Single-tenant per clinic group vs multi-tenant SaaS? | **Multi-tenant SaaS** on shared RDS; dedicated stack optional for enterprise. See PRD §3.4 and RFC §5.1. |
+| Primary AWS compute pattern? | **App Runner + CloudFront + S3 + RDS** (`KiorlyClinicsManagementStack`). |
+
+### 20.2 Open
 
 1. Do we need patient-facing access (portal/app) in v1.5 or v2?
 2. Which insurance providers are in scope for direct integration?
 3. National drug registry source per launch market?
-4. Will reporting cohorts ever require a true warehouse (Redshift/Snowflake) or are materialized views sufficient long-term?
+4. Will reporting cohorts require a warehouse (Redshift/Snowflake) or are live queries + materialized views sufficient?
 5. Do we need offline-capable mobile for low-connectivity branches?
 6. Multi-region active-active or active-passive for prod?
+7. When to enable Postgres RLS as defense-in-depth?
 
 ## 21. Glossary
 
-- **Modular Monolith** — A single deployable application internally partitioned into strictly separated modules.
-- **RLS** — PostgreSQL Row-Level Security.
-- **OIDC** — OpenID Connect, used here for both SSO and GitHub-to-AWS auth.
-- **OTel** — OpenTelemetry, vendor-neutral observability standard.
-- **EAS** — Expo Application Services, for building and shipping React Native apps.
-- **MV** — Materialized View, a precomputed query result stored as a table.
+- **Tenant** — Clinic group organization; all business rows scoped by `tenantId`.
+- **Multi-tenant SaaS** — One deployment serving many tenants on shared infrastructure.
+- **Platform Super Admin** — Vendor operator with `tenantId: null` provisioning organizations.
+- **Modular Monolith** — Single deployable NestJS app with bounded modules.
+- **RLS** — PostgreSQL Row-Level Security (planned, not enabled).
+- **App Runner** — AWS managed container service used for the API in production.
+- **OIDC** — OpenID Connect; used for GitHub Actions → AWS deploy role.
+- **EAS** — Expo Application Services (mobile roadmap).
