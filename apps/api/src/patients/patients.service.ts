@@ -6,7 +6,7 @@ import {
   Logger,
   NotFoundException,
 } from "@nestjs/common";
-import { Gender, PatientAcquisitionChannel, Prisma } from "@prisma/client";
+import { Gender, PatientAcquisitionChannel, Prisma, UserRole } from "@prisma/client";
 import { randomUUID } from "crypto";
 import * as path from "node:path";
 import type { JwtUser } from "../auth/jwt-user";
@@ -475,5 +475,17 @@ export class PatientsService {
 
   openDocumentReadStream(storageKey: string) {
     return this.uploads.getReadStream("patients", storageKey);
+  }
+
+  async softDelete(tenantId: string, id: string, user: JwtUser): Promise<{ ok: true }> {
+    if (user.role !== UserRole.GROUP_ADMIN) {
+      throw new ForbiddenException("Only group administrators can delete patients");
+    }
+    await this.getById(tenantId, id, user);
+    await this.prisma.patient.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+    return { ok: true };
   }
 }

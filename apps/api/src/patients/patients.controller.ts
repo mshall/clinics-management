@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -171,6 +173,14 @@ export class PatientsController {
   @ApiOkResponse({ type: PatientDto })
   update(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: UpdatePatientDto) {
     return this.patients.update(requireTenantId(user), id, body, user);
+  }
+
+  @Delete(":id")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Soft-delete a patient (group admin only)" })
+  @ApiOkResponse({ description: "{ ok: true }" })
+  delete(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.patients.softDelete(requireTenantId(user), id, user);
   }
 
   @Get(":id")

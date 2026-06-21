@@ -31,6 +31,7 @@ import {
 import { AdminCreateEmployeePanel } from "./admin-create-employee-panel";
 import { AdminDataExplorerPanel } from "./admin-data-explorer-panel";
 import { AdminGovernancePanel } from "./admin-governance-panel";
+import { AdminOrgPatientsPanel } from "./admin-org-patients-panel";
 import { AdminOrgUsersPanel } from "./admin-org-users-panel";
 import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel";
 
@@ -217,7 +218,7 @@ export function AdminPage() {
     onError: (e: unknown) => console.error(e),
   });
 
-  const [adminSection, setAdminSection] = useState<"clinics" | "users" | "organization" | "data" | "governance">("clinics");
+  const [adminSection, setAdminSection] = useState<"clinics" | "users" | "patients" | "organization" | "data" | "governance">("clinics");
   const [feeDraft, setFeeDraft] = useState("");
   useEffect(() => {
     if (!isPlatformSuperAdmin && adminSection === "data") setAdminSection("clinics");
@@ -279,9 +280,14 @@ export function AdminPage() {
           {t("admin.tabClinics", "Clinics & tenants")}
         </Button>
         {isGroupAdmin ? (
-          <Button type="button" size="sm" variant={adminSection === "users" ? "default" : "outline"} onClick={() => setAdminSection("users")}>
-            {t("admin.tabOrgUsers", "Organization users")}
-          </Button>
+          <>
+            <Button type="button" size="sm" variant={adminSection === "users" ? "default" : "outline"} onClick={() => setAdminSection("users")}>
+              {t("admin.tabOrgUsers", "Organization users")}
+            </Button>
+            <Button type="button" size="sm" variant={adminSection === "patients" ? "default" : "outline"} onClick={() => setAdminSection("patients")}>
+              {t("admin.tabOrgPatients", "Organization patients")}
+            </Button>
+          </>
         ) : null}
         <Button type="button" size="sm" variant={adminSection === "organization" ? "default" : "outline"} onClick={() => setAdminSection("organization")}>
           {t("admin.tabOrganization", "Organization & settings")}
@@ -302,6 +308,8 @@ export function AdminPage() {
         <AdminGovernancePanel />
       ) : adminSection === "users" && isGroupAdmin ? (
         <AdminOrgUsersPanel />
+      ) : adminSection === "patients" && isGroupAdmin ? (
+        <AdminOrgPatientsPanel />
       ) : adminSection === "data" ? (
         isPlatformSuperAdmin ? (
           <AdminDataExplorerPanel />
