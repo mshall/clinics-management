@@ -21,10 +21,11 @@ export class AdminDataExplorerController {
   }
 
   @Get("export/sql")
-  @ApiOperation({ summary: "Download organization data as a single SQL file (group admin or platform super admin)" })
-  @ApiOkResponse({ description: "SQL script with INSERT statements for this organization" })
-  async exportSql(@CurrentUser() user: JwtUser, @Res() res: Response) {
-    const sql = await this.explorer.exportSql(user);
+  @ApiOperation({ summary: "Download selected organization entities as a single SQL file" })
+  @ApiOkResponse({ description: "SQL script with INSERT statements for selected entities" })
+  async exportSql(@CurrentUser() user: JwtUser, @Res() res: Response, @Query("tables") tables?: string) {
+    const tableList = tables?.split(",").map((t) => t.trim()).filter(Boolean);
+    const sql = await this.explorer.exportSql(user, tableList);
     const tenantId = user.tenantId ?? "org";
     res.setHeader("Content-Type", "application/sql; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename="kiorly-org-${tenantId}-export.sql"`);

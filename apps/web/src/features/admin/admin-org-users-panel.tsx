@@ -47,6 +47,8 @@ export function AdminOrgUsersPanel() {
   const [uClinicIds, setUClinicIds] = useState<string[]>([]);
   const [userErr, setUserErr] = useState<string | null>(null);
   const [legacyUsersApi, setLegacyUsersApi] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [selectAllMatching, setSelectAllMatching] = useState(false);
 
   async function fetchLegacyOrgUsers(pageNum: number, size: number, q: string): Promise<Paginated<OrgUserRow>> {
     const qParam = q.trim() ? `&q=${encodeURIComponent(q.trim())}` : "";
@@ -192,6 +194,41 @@ export function AdminOrgUsersPanel() {
     onError: (e: unknown) => setUserErr(apiErrorMessage(e)),
   });
 
+  const bulkDeleteMut = useMutation({
+    mutationFn: () => {
+      if (selectAllMatching) {
+        return apiPost<{ ok: true; deleted: number; failed: { id: string; message: string }[] }>(
+          "/api/v1/admin/users/bulk-delete",
+          { all: true, search: search.trim() || undefined },
+        );
+      }
+      return apiPost<{ ok: true; deleted: number; failed: { id: string; message: string }[] }>(
+        "/api/v1/admin/users/bulk-delete",
+        { ids: [...selectedIds] },
+      );
+    },
+    onSuccess: (result) => {
+      setSelectedIds(new Set());
+      setSelectAllMatching(false);
+      void qc.invalidateQueries({ queryKey: ["admin"] });
+      void qc.invalidateQueries({ queryKey: ["users"] });
+      void qc.invalidateQueries({ queryKey: ["org-hierarchy"] });
+      if (result.failed.length > 0) {
+        const lines = result.failed.slice(0, 5).map((f) => `${f.id.slice(0, 8)}…: ${f.message}`);
+        alert(
+          t("admin.orgUsersBulkDeletePartial", "Deleted {{deleted}} user(s). {{failed}} could not be deleted:\n{{details}}", {
+            deleted: result.deleted,
+            failed: result.failed.length,
+            details: lines.join("\n"),
+          }),
+        );
+      }
+    },
+    onError: (e: unknown) => {
+      alert(apiErrorMessage(e));
+    },
+  });
+
   const requiresClinicAssignment = uRole === "CLINIC_ADMIN" || uRole === "BRANCH_MANAGER";
   const canSaveCreate =
     uEmail.trim() && uPassword.length >= 8 && uName.trim() && (!requiresClinicAssignment || uClinicIds.length > 0);
@@ -209,6 +246,50 @@ export function AdminOrgUsersPanel() {
   const total = usersQuery.data?.total ?? 0;
   const totalPages = usersQuery.data?.totalPages ?? 1;
 
+  const selectablePageIds = useMemo(
+    () => rows.filter((r) => r.id !== authUser?.id).map((r) => r.id),
+    [rows, authUser?.id],
+  );
+  const allPageSelected =
+    selectablePageIds.length > 0 && selectablePageIds.every((id) => selectedIds.has(id) || selectAllMatching);
+  const somePageSelected = selectablePageIds.some((id) => selectedIds.has(id) || selectAllMatching);
+  const selectedCount = selectAllMatching
+    ? Math.max(0, total - (authUser?.id && rows.some((r) => r.id === authUser.id) ? 1 : 0))
+    : selectedIds.size;
+
+  const toggleRow = (id: string, on: boolean) => {
+    if (id === authUser?.id) return;
+    setSelectAllMatching(false);
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const togglePageAll = () => {
+    if (allPageSelected) {
+      setSelectAllMatching(false);
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        selectablePageIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        selectablePageIds.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+  };
+
+  useEffect(() => {
+    setSelectAllMatching(false);
+    setSelectedIds(new Set());
+  }, [page, pageSize, search]);
+
   return (
     <div className="space-y-6">
       <Card>
@@ -217,9 +298,26 @@ export function AdminOrgUsersPanel() {
             <CardTitle className="text-base">{t("admin.tabOrgUsers", "Organization users")}</CardTitle>
             <CardDescription>{t("admin.orgUsersHint", "Manage login accounts, roles, and clinic assignments for your organization.")}</CardDescription>
           </div>
-          <Button type="button" disabled={legacyUsersApi} onClick={() => { resetCreateForm(); setDialogMode("create"); }}>
-            {t("admin.createUser", "Create user")}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" disabled={legacyUsersApi} onClick={() => { resetCreateForm(); setDialogMode("create"); }}>
+              {t("admin.createUser", "Create user")}
+            </Button>
+            {!legacyUsersApi && selectedCount > 0 ? (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={bulkDeleteMut.isPending}
+                onClick={() => {
+                  const msg = selectAllMatching
+                    ? t("admin.orgUsersBulkDeleteAllConfirm", "Delete all {{count}} users matching this search?", { count: selectedCount })
+                    : t("admin.orgUsersBulkDeleteConfirm", "Delete {{count}} selected users?", { count: selectedCount });
+                  if (window.confirm(msg)) bulkDeleteMut.mutate();
+                }}
+              >
+                {t("admin.orgUsersBulkDelete", "Delete selected ({{count}})", { count: selectedCount })}
+              </Button>
+            ) : null}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {legacyUsersApi ? (
@@ -260,29 +358,101 @@ export function AdminOrgUsersPanel() {
             <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : (
             <>
+              {!legacyUsersApi && allPageSelected && selectablePageIds.length > 0 && total > rows.length ? (
+                <p className="text-sm text-muted-foreground">
+                  {selectAllMatching ? (
+                    <>
+                      {t("admin.orgUsersAllMatchingSelected", "All {{count}} users matching this search are selected.", { count: selectedCount })}{" "}
+                      <button type="button" className="underline" onClick={() => { setSelectAllMatching(false); setSelectedIds(new Set()); }}>
+                        {t("admin.orgUsersClearSelection", "Clear selection")}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {t("admin.orgUsersSelectAllPrompt", "All {{count}} users on this page are selected.", { count: selectablePageIds.length })}{" "}
+                      <button type="button" className="font-medium underline" onClick={() => setSelectAllMatching(true)}>
+                        {t("admin.orgUsersSelectAllMatching", "Select all {{count}} matching users", { count: total - (authUser?.id ? 1 : 0) })}
+                      </button>
+                    </>
+                  )}
+                </p>
+              ) : null}
               <ResponsiveTable>
                 <table className="w-full min-w-[640px] text-sm">
                   <thead className="bg-muted/60">
                     <tr>
+                      {!legacyUsersApi ? (
+                        <th className="w-10 px-3 py-2">
+                          <input
+                            type="checkbox"
+                            aria-label={t("admin.orgUsersSelectAllPage", "Select all on this page")}
+                            checked={allPageSelected}
+                            disabled={selectablePageIds.length === 0}
+                            ref={(el) => {
+                              if (el) el.indeterminate = somePageSelected && !allPageSelected;
+                            }}
+                            onChange={togglePageAll}
+                          />
+                        </th>
+                      ) : null}
                       <th className="px-3 py-2 text-start">{t("admin.displayName")}</th>
                       <th className="px-3 py-2 text-start">{t("auth.email")}</th>
                       <th className="px-3 py-2 text-start">{t("admin.role", "Role")}</th>
                       <th className="px-3 py-2 text-start">{t("admin.assignedClinics", "Assigned clinics")}</th>
+                      {!legacyUsersApi ? (
+                        <th className="px-3 py-2 text-end">{t("common.actions", "Actions")}</th>
+                      ) : null}
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((row) => (
+                    {rows.map((row) => {
+                      const isSelf = row.id === authUser?.id;
+                      const checked = selectAllMatching ? !isSelf : selectedIds.has(row.id);
+                      return (
                       <tr
                         key={row.id}
-                        className="cursor-pointer border-t border-border hover:bg-muted/40"
-                        onClick={() => setDialogMode({ edit: row.id })}
+                        className="border-t border-border hover:bg-muted/40"
                       >
-                        <td className="px-3 py-2">{row.displayName}</td>
-                        <td className="px-3 py-2">{row.email}</td>
-                        <td className="px-3 py-2">{formatUserRole(row.role, t)}</td>
-                        <td className="px-3 py-2 text-muted-foreground">{clinicLabel(row)}</td>
+                        {!legacyUsersApi ? (
+                          <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              aria-label={t("admin.orgUsersSelectRow", "Select user")}
+                              checked={checked}
+                              disabled={isSelf}
+                              onChange={(e) => toggleRow(row.id, e.target.checked)}
+                            />
+                          </td>
+                        ) : null}
+                        <td className="cursor-pointer px-3 py-2" onClick={() => setDialogMode({ edit: row.id })}>{row.displayName}</td>
+                        <td className="cursor-pointer px-3 py-2" onClick={() => setDialogMode({ edit: row.id })}>{row.email}</td>
+                        <td className="cursor-pointer px-3 py-2" onClick={() => setDialogMode({ edit: row.id })}>{formatUserRole(row.role, t)}</td>
+                        <td className="cursor-pointer px-3 py-2 text-muted-foreground" onClick={() => setDialogMode({ edit: row.id })}>{clinicLabel(row)}</td>
+                        {!legacyUsersApi ? (
+                          <td className="px-3 py-2 text-end whitespace-nowrap">
+                            <Button type="button" size="sm" variant="outline" onClick={() => setDialogMode({ edit: row.id })}>
+                              {t("common.edit", "Edit")}
+                            </Button>
+                            {!isSelf ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="text-destructive"
+                                disabled={deleteMut.isPending}
+                                onClick={() => {
+                                  if (window.confirm(t("admin.orgUsersDeleteConfirm", "Delete this user? This cannot be undone."))) {
+                                    deleteMut.mutate(row.id);
+                                  }
+                                }}
+                              >
+                                {t("common.delete", "Delete")}
+                              </Button>
+                            ) : null}
+                          </td>
+                        ) : null}
                       </tr>
-                    ))}
+                    );})}
                   </tbody>
                 </table>
               </ResponsiveTable>

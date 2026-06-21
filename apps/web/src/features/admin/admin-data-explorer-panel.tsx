@@ -16,6 +16,7 @@ export type DataExplorerTableMeta = {
   key: string;
   label: string;
   scope: string;
+  exportable?: boolean;
   ops: ExplorerOps;
 };
 
@@ -48,6 +49,7 @@ export function AdminDataExplorerPanel() {
   const [createJson, setCreateJson] = useState("{}");
   const [formError, setFormError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [exportKeys, setExportKeys] = useState<Set<string>>(() => new Set());
 
   const catalogQ = useQuery({
     queryKey: ["admin", "data-explorer", "catalog"],
@@ -71,6 +73,20 @@ export function AdminDataExplorerPanel() {
     if (!catalogQ.data?.tables.length || table) return;
     setTable(catalogQ.data.tables[0]?.key ?? "");
   }, [catalogQ.data, table]);
+
+  const exportableTables = useMemo(
+    () => (catalogQ.data?.tables ?? []).filter((x) => x.exportable !== false),
+    [catalogQ.data?.tables],
+  );
+
+  useEffect(() => {
+    if (!exportableTables.length) return;
+    setExportKeys(new Set(exportableTables.map((x) => x.key)));
+  }, [exportableTables]);
+
+  const allExportSelected =
+    exportableTables.length > 0 && exportableTables.every((x) => exportKeys.has(x.key));
+  const someExportSelected = exportableTables.some((x) => exportKeys.has(x.key));
 
   const columns = useMemo(() => {
     const first = listQ.data?.items[0];
@@ -145,10 +161,15 @@ export function AdminDataExplorerPanel() {
   }
 
   async function downloadSqlExport() {
+    if (exportKeys.size === 0) {
+      setFormError(t("admin.dataExplorerExportNone", "Select at least one entity to export."));
+      return;
+    }
     setExporting(true);
     setFormError(null);
     try {
-      const { blob } = await apiFetchBlob("/api/v1/admin/data-explorer/export/sql");
+      const qs = encodeURIComponent([...exportKeys].join(","));
+      const { blob } = await apiFetchBlob(`/api/v1/admin/data-explorer/export/sql?tables=${qs}`);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -162,8 +183,73 @@ export function AdminDataExplorerPanel() {
     }
   }
 
+  function toggleExportKey(key: string, on: boolean) {
+    setExportKeys((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  }
+
+  function toggleExportAll(on: boolean) {
+    if (on) setExportKeys(new Set(exportableTables.map((x) => x.key)));
+    else setExportKeys(new Set());
+  }
+
   return (
     <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t("admin.dataExplorerExportTitle", "SQL export")}</CardTitle>
+          <CardDescription>
+            {t(
+              "admin.dataExplorerExportHint",
+              "Choose which entities to include, then download one SQL file. Run Prisma migrations on the target PostgreSQL database before importing with psql.",
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={allExportSelected}
+                ref={(el) => {
+                  if (el) el.indeterminate = someExportSelected && !allExportSelected;
+                }}
+                onChange={(e) => toggleExportAll(e.target.checked)}
+              />
+              {t("admin.dataExplorerExportSelectAll", "Select all entities")}
+            </label>
+            <span className="text-xs text-muted-foreground">
+              {t("admin.dataExplorerExportSelectedCount", "{{count}} selected", { count: exportKeys.size })}
+            </span>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {exportableTables.map((x) => (
+              <label key={x.key} className="flex cursor-pointer items-start gap-2 rounded-md border border-border px-3 py-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={exportKeys.has(x.key)}
+                  onChange={(e) => toggleExportKey(x.key, e.target.checked)}
+                />
+                <span>
+                  <span className="font-medium">{x.label}</span>
+                  <span className="block text-xs text-muted-foreground ltr-nums">{x.key}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+          <Button type="button" disabled={exporting || exportKeys.size === 0} onClick={() => void downloadSqlExport()}>
+            {exporting
+              ? t("common.loading")
+              : t("admin.dataExplorerExportSql", "Export selected as SQL ({{count}})", { count: exportKeys.size })}
+          </Button>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{t("admin.dataExplorerTitle", "Data explorer")}</CardTitle>
@@ -196,9 +282,6 @@ export function AdminDataExplorerPanel() {
                 ))}
               </select>
             </div>
-            <Button type="button" variant="outline" disabled={exporting} onClick={() => void downloadSqlExport()}>
-              {exporting ? t("common.loading") : t("admin.dataExplorerExportSql", "Export all as SQL")}
-            </Button>
             {meta?.ops.create ? (
               <Button type="button" variant="secondary" onClick={() => { setFormError(null); setCreateOpen(true); }}>
                 {t("admin.dataExplorerAddRow", "Add row (JSON)")}

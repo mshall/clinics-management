@@ -20,7 +20,7 @@ import {
   assertExplorerTenant,
   isDataExplorerPlatformOperator,
 } from "./data-explorer-access";
-import { generateTenantSqlExport } from "./tenant-sql-export";
+import { generateTenantSqlExport, SQL_EXPORT_ENTITY_KEYS } from "./tenant-sql-export";
 
 /** URL-safe table keys (allowlisted). */
 export const DATA_EXPLORER_TABLES = [
@@ -107,14 +107,33 @@ export class AdminDataExplorerService {
       { key: "encounter_medications", label: "Encounter medications", scope: "tenant", ops: { list: true, get: true, create: true, patch: true, delete: true } },
       { key: "attendances", label: "Attendance", scope: "tenant", ops: { list: true, get: true, create: true, patch: true, delete: true } },
       { key: "leave_requests", label: "Leave requests", scope: "tenant", ops: { list: true, get: true, create: true, patch: true, delete: true } },
-    ];
+    ].map((entry) => ({
+      ...entry,
+      exportable:
+        entry.key === "feature_flags" ||
+        (SQL_EXPORT_ENTITY_KEYS as readonly string[]).includes(entry.key),
+    }));
     return { tables };
   }
 
-  async exportSql(user: JwtUser): Promise<string> {
+  async exportSql(user: JwtUser, tables?: string[]): Promise<string> {
     assertDataExplorerAccess(user);
     const tenantId = assertExplorerTenant(user);
-    return generateTenantSqlExport(this.prisma, tenantId);
+    const resolved = tables?.filter(Boolean);
+    if (resolved?.length === 0) {
+      throw new BadRequestException("Select at least one entity to export");
+    }
+    try {
+      return await generateTenantSqlExport(this.prisma, tenantId, {
+        tables: resolved,
+        allowFeatureFlags: isDataExplorerPlatformOperator(user),
+      });
+    } catch (e) {
+      if (e instanceof Error && e.message === "No exportable entities selected") {
+        throw new BadRequestException(e.message);
+      }
+      throw e;
+    }
   }
 
   async list(user: JwtUser, table: string, pageStr?: string, pageSizeStr?: string) {

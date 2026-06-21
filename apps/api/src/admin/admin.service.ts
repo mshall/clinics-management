@@ -9,6 +9,7 @@ import type { JwtUser } from "../auth/jwt-user";
 import type { CreateTenantUserDto } from "./dto/create-tenant-user.dto";
 import type { PlatformPatchTenantUserDto } from "./dto/platform-patch-tenant-user.dto";
 import type { PatchTenantSettingsDto } from "./dto/patch-tenant-settings.dto";
+import type { BulkDeleteUsersDto } from "./dto/bulk-delete-users.dto";
 import {
   buildPlatformHierarchy,
   buildTenantHierarchy,
@@ -119,18 +120,7 @@ export class AdminService {
   async listTenantUsers(tenantId: string, pageStr?: string, pageSizeStr?: string, qRaw?: string) {
     await this.assertTenantExists(tenantId);
     const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
-    const q = qRaw?.trim() ?? "";
-    const where: Prisma.UserWhereInput = {
-      tenantId,
-      ...(q
-        ? {
-            OR: [
-              { email: { contains: q, mode: "insensitive" } },
-              { displayName: { contains: q, mode: "insensitive" } },
-            ],
-          }
-        : {}),
-    };
+    const where = this.buildTenantUserWhere(tenantId, qRaw);
     const [total, rows] = await Promise.all([
       this.prisma.user.count({ where }),
       this.prisma.user.findMany({
@@ -156,6 +146,21 @@ export class AdminService {
       };
     });
     return paginate(items, total, page, pageSize);
+  }
+
+  private buildTenantUserWhere(tenantId: string, qRaw?: string): Prisma.UserWhereInput {
+    const q = qRaw?.trim() ?? "";
+    return {
+      tenantId,
+      ...(q
+        ? {
+            OR: [
+              { email: { contains: q, mode: "insensitive" } },
+              { displayName: { contains: q, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    };
   }
 
   private async assertTenantExists(tenantId: string) {
@@ -403,6 +408,42 @@ export class AdminService {
 
     await this.prisma.user.delete({ where: { id: userId } });
     return { ok: true, id: userId };
+  }
+
+  async deleteTenantUsersBulk(tenantId: string, dto: BulkDeleteUsersDto, actor: JwtUser) {
+    await this.assertTenantExists(tenantId);
+    let ids: string[];
+    if (dto.all) {
+      const rows = await this.prisma.user.findMany({
+        where: this.buildTenantUserWhere(tenantId, dto.search),
+        select: { id: true },
+      });
+      ids = rows.map((r) => r.id);
+    } else {
+      ids = [...new Set((dto.ids ?? []).map((id) => id.trim()).filter(Boolean))];
+      if (!ids.length) throw new BadRequestException("ids required unless all=true");
+    }
+
+    ids = ids.filter((id) => id !== actor.userId);
+    let deleted = 0;
+    const failed: { id: string; message: string }[] = [];
+
+    for (const id of ids) {
+      try {
+        await this.deleteTenantUser(tenantId, id, actor);
+        deleted += 1;
+      } catch (e) {
+        const message =
+          e instanceof BadRequestException || e instanceof NotFoundException
+            ? String(e.message)
+            : e instanceof Error
+              ? e.message
+              : "Delete failed";
+        failed.push({ id, message });
+      }
+    }
+
+    return { ok: true, deleted, failed };
   }
 
   async auditLogs(tenantId: string, pageStr: string | undefined, pageSizeStr: string | undefined, qRaw: string | undefined, user: JwtUser) {

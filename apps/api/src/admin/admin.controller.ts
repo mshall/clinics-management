@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, ForbiddenException, Get, HttpCode, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
@@ -8,6 +8,7 @@ import { requireTenantId } from "../auth/require-tenant";
 import { isPlatformSuperAdmin } from "../common/platform-super-admin";
 import { AdminService } from "./admin.service";
 import { CreateTenantUserDto } from "./dto/create-tenant-user.dto";
+import { BulkDeleteUsersDto } from "./dto/bulk-delete-users.dto";
 import { PatchFeatureFlagDto } from "./dto/patch-feature-flag.dto";
 import { PlatformPatchTenantUserDto } from "./dto/platform-patch-tenant-user.dto";
 import { PatchTenantSettingsDto } from "./dto/patch-tenant-settings.dto";
@@ -103,6 +104,17 @@ export class AdminController {
       throw new ForbiddenException("Only group administrators can create users");
     }
     return this.admin.createTenantUser(requireTenantId(user), body);
+  }
+
+  @Post("users/bulk-delete")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Delete multiple organization users (group admin only)" })
+  @ApiOkResponse({ description: "{ ok: true, deleted: number, failed: { id, message }[] }" })
+  bulkDeleteUsers(@CurrentUser() user: JwtUser, @Body() body: BulkDeleteUsersDto) {
+    if (user.role !== UserRole.GROUP_ADMIN || !user.tenantId) {
+      throw new ForbiddenException("Only group administrators can delete organization users");
+    }
+    return this.admin.deleteTenantUsersBulk(requireTenantId(user), body, user);
   }
 
   @Patch("users/:userId")
