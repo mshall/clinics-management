@@ -108,6 +108,16 @@ function patientsQs(p: PatientsListParams): URLSearchParams {
   return q;
 }
 
+export function patientsListQueryKey(params: PatientsListParams) {
+  const q = patientsQs(params);
+  return ["patients", Object.fromEntries(q.entries())] as const;
+}
+
+export function fetchPatientsList(params: PatientsListParams) {
+  const q = patientsQs(params);
+  return apiGet<Paginated<PatientDto>>(`/api/v1/patients?${q.toString()}`);
+}
+
 export function usePatientsQuery(params: PatientsListParams) {
   const hasToken = useHasAuthToken();
   const { enabled = true, ...listParams } = params;

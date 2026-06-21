@@ -16,7 +16,7 @@ import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/s
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import type { PatientDto } from "@/lib/api-schema";
-import { useClinicsQuery, usePatientsQuery } from "@/lib/api-hooks";
+import { useClinicsQuery, fetchPatientsList, patientsListQueryKey, usePatientsQuery } from "@/lib/api-hooks";
 import { apiDelete, apiPost, apiPostFormData } from "@/lib/http";
 import { columnFilterIncludes } from "@/lib/utils";
 import { formatGender } from "@/lib/locale-display";
@@ -250,14 +250,37 @@ export function PatientsPage() {
       }
       return patient;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       setFormErr(null);
       setDocInvalidRowIds(new Set());
       setOpen(false);
       resetForm();
       toast.success(t("patients.createSuccess", "Patient registered."));
-      void qc.invalidateQueries({ queryKey: ["patients"] });
-      void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
+
+      setPfMrn("");
+      setPfName("");
+      setPfGender("");
+      setPfDob("");
+      setPfEmail("");
+      setPfBranch("");
+      setQuickSearch("");
+      setPage(1);
+      setSortBy("createdAt");
+      setSortOrder("desc");
+
+      const listParams = {
+        page: 1,
+        pageSize,
+        sortBy: "createdAt",
+        sortOrder: "desc" as const,
+        search: "",
+      };
+      await qc.fetchQuery({
+        queryKey: patientsListQueryKey(listParams),
+        queryFn: () => fetchPatientsList(listParams),
+      });
+      await qc.invalidateQueries({ queryKey: ["patients"] });
+      await qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
     },
     onError: (e: unknown) => {
       const conflict = parsePhoneConflictFromError(e);
@@ -674,6 +697,10 @@ export function PatientsPage() {
 function useDebouncedValue<T>(value: T, ms: number): T {
   const [v, setV] = useState(value);
   useEffect(() => {
+    if (typeof value === "string" && value.trim() === "") {
+      setV(value);
+      return;
+    }
     const id = window.setTimeout(() => setV(value), ms);
     return () => window.clearTimeout(id);
   }, [value, ms]);

@@ -72,8 +72,14 @@ export function AdminOrgPatientsPanel() {
   const patientsQuery = useQuery({
     queryKey: ["admin", "org-patients", page, pageSize, search],
     queryFn: () => {
-      const q = search.trim() ? `&search=${encodeURIComponent(search.trim())}` : "";
-      return apiGet<Paginated<PatientDto>>(`/api/v1/patients?page=${page}&pageSize=${pageSize}${q}`);
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(pageSize),
+        sortBy: "createdAt",
+        sortOrder: "desc",
+      });
+      if (search.trim()) params.set("search", search.trim());
+      return apiGet<Paginated<PatientDto>>(`/api/v1/patients?${params.toString()}`);
     },
   });
 
@@ -155,12 +161,27 @@ export function AdminOrgPatientsPanel() {
       }
       return apiPost<PatientDto>("/api/v1/patients", buildBody());
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       setFormErr(null);
       closeDialog();
-      void qc.invalidateQueries({ queryKey: ["admin", "org-patients"] });
-      void qc.invalidateQueries({ queryKey: ["patients"] });
-      void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
+      setSearch("");
+      setPage(1);
+      setSelectedIds(new Set());
+      setSelectAllMatching(false);
+
+      const params = new URLSearchParams({
+        page: "1",
+        pageSize: String(pageSize),
+        sortBy: "createdAt",
+        sortOrder: "desc",
+      });
+      await qc.fetchQuery({
+        queryKey: ["admin", "org-patients", 1, pageSize, ""],
+        queryFn: () => apiGet<Paginated<PatientDto>>(`/api/v1/patients?${params.toString()}`),
+      });
+      await qc.invalidateQueries({ queryKey: ["admin", "org-patients"] });
+      await qc.invalidateQueries({ queryKey: ["patients"] });
+      await qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
     },
     onError: (e: unknown) => {
       const conflict = parsePhoneConflictFromError(e);
