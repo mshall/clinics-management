@@ -280,7 +280,7 @@ export interface ReportsMonthlySeriesDto {
 export interface ReportsPatientAcquisitionItemDto {
   channel: string;
   count: number;
-  percent: number;
+  sharePercent: number;
 }
 
 export interface ReportsPatientAcquisitionDto {

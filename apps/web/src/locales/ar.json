@@ -45,7 +45,8 @@
     "from": "من",
     "to": "إلى",
     "apply": "تطبيق",
-    "resetMonth": "هذا الشهر"
+    "resetMonth": "هذا الشهر",
+    "invalid": "أدخل نطاق تاريخ صالحاً (من قبل أو يساوي إلى)."
   },
   "dashboard": {
     "title": "نظرة عامة",
@@ -735,7 +736,7 @@
     "visits": "زيارات",
     "acquisitionTitle": "كيف وجدنا المرضى",
     "acquisitionHint": "قنوات اكتساب المرضى عند التسجيل في نطاق التاريخ المحدد ({{from}} → {{to}}).",
-    "acquisitionEmpty": "لا توجد تسجيلات مرضى ببيانات اكتساب في هذه الفترة.",
+    "acquisitionEmpty": "لا توجد تسجيلات مرضى في هذه الفترة.",
     "acquisitionTotal": "{{count}} تسجيل في النطاق",
     "acquisitionChannel": "القناة",
     "acquisitionCount": "المرضى",

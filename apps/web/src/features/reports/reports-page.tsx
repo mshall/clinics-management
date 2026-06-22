@@ -48,13 +48,17 @@ export function ReportsPage() {
 
   const acquisitionChartData = useMemo(() => {
     return (acquisition.data?.items ?? []).map((item) => ({
-      ...item,
+      channel: item.channel,
+      count: item.count,
+      sharePercent: item.sharePercent,
       label:
         item.channel === "UNKNOWN"
           ? t("reports.acquisitionUnknown", "Not specified")
           : patientAcquisitionLabel(item.channel as PatientAcquisitionChannel, t),
     }));
   }, [acquisition.data?.items, t]);
+
+  const acquisitionTotal = acquisition.data?.total ?? 0;
 
   const money = (n: number) =>
     new Intl.NumberFormat(localeForLanguage(i18n.language), {
@@ -190,15 +194,15 @@ export function ReportsPage() {
             </p>
           ) : acquisition.isPending ? (
             <p className="text-sm text-muted-foreground">{t("common.loading", "Loading…")}</p>
-          ) : acquisitionChartData.length === 0 ? (
+          ) : acquisitionTotal === 0 ? (
             <p className="text-sm text-muted-foreground">
-              {t("reports.acquisitionEmpty", "No patient registrations with acquisition data in this period.")}
+              {t("reports.acquisitionEmpty", "No patient registrations in this period.")}
             </p>
           ) : (
             <>
               <p className="text-sm text-muted-foreground ltr-nums">
                 {t("reports.acquisitionTotal", "{{count}} registrations in range", {
-                  count: acquisition.data?.total ?? 0,
+                  count: acquisitionTotal,
                 })}
               </p>
               <div className="grid gap-6 lg:grid-cols-2">
@@ -221,7 +225,12 @@ export function ReportsPage() {
                           <Cell key={index} fill={ACQUISITION_CHART_COLORS[index % ACQUISITION_CHART_COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value: number, _name, props) => [value, props.payload.label]} />
+                      <Tooltip
+                        formatter={(value: number, _name, item) => [
+                          value,
+                          (item as { payload?: { label?: string } })?.payload?.label ?? "",
+                        ]}
+                      />
                       <Legend />
                     </PieChart>
                   </ResponsiveContainer>
@@ -256,7 +265,7 @@ export function ReportsPage() {
                       <tr key={row.channel} className="border-t">
                         <td className="px-3 py-2">{row.label}</td>
                         <td className="px-3 py-2 ltr-nums">{row.count}</td>
-                        <td className="px-3 py-2 ltr-nums">{row.percent}%</td>
+                        <td className="px-3 py-2 ltr-nums">{row.sharePercent}%</td>
                       </tr>
                     ))}
                   </tbody>

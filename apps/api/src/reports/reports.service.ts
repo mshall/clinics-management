@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import {
   EncounterStatus,
   ExpenseStatus,
@@ -7,7 +7,7 @@ import {
   RevenueStatus,
   UserRole,
 } from "@prisma/client";
-import { formatLocalYmd, resolveReportingRange } from "../common/reporting-range";
+import { formatLocalYmd, resolveLedgerListingRange, resolveReportingRange } from "../common/reporting-range";
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -135,27 +135,35 @@ export class ReportsService {
    * Count new patient registrations by acquisition channel (how they found us) in a date range.
    */
   async patientAcquisitionBreakdown(tenantId: string, fromStr?: string, toStr?: string) {
-    const { start, end } = resolveReportingRange(fromStr, toStr);
+    const { start, end } = resolveLedgerListingRange(fromStr, toStr);
 
-    const rows = await this.prisma.patient.groupBy({
-      by: ["acquisitionChannel"],
-      where: {
-        tenantId,
-        deletedAt: null,
-        createdAt: { gte: start, lte: end },
-      },
-      _count: { id: true },
-    });
+    let patients: { acquisitionChannel: PatientAcquisitionChannel | null }[];
+    try {
+      patients = await this.prisma.patient.findMany({
+        where: {
+          tenantId,
+          deletedAt: null,
+          createdAt: { gte: start, lte: end },
+        },
+        select: { acquisitionChannel: true },
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && (err.code === "P2022" || err.code === "P2010")) {
+        throw new BadRequestException(
+          "Patient acquisition reporting is unavailable until database migrations are applied (acquisitionChannel column).",
+        );
+      }
+      throw err;
+    }
 
     const countByChannel = new Map<string, number>();
-    for (const row of rows) {
+    for (const row of patients) {
       const key = row.acquisitionChannel ?? "UNKNOWN";
-      countByChannel.set(key, row._count.id);
+      countByChannel.set(key, (countByChannel.get(key) ?? 0) + 1);
     }
 
     const channels = [...Object.values(PatientAcquisitionChannel), "UNKNOWN"] as const;
-    let total = 0;
-    for (const count of countByChannel.values()) total += count;
+    const total = patients.length;
 
     const items = channels
       .map((channel) => {
@@ -163,7 +171,7 @@ export class ReportsService {
         return {
           channel,
           count,
-          percent: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
+          sharePercent: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
         };
       })
       .filter((row) => row.count > 0)

@@ -1,9 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { sanitizeReportingRange } from "@/lib/reporting-range";
 import { useDateRangeStore } from "@/stores/date-range-store";
 
 export function DateRangeBar() {
@@ -19,7 +21,13 @@ export function DateRangeBar() {
   }, [from, to]);
 
   const apply = () => {
-    setRange(draftFrom, draftTo);
+    const next = sanitizeReportingRange(draftFrom, draftTo);
+    if (next.from !== draftFrom.trim() || next.to !== draftTo.trim()) {
+      toast.error(t("dateRange.invalid", "Enter a valid from/to date range (from on or before to)."));
+      setDraftFrom(next.from);
+      setDraftTo(next.to);
+    }
+    setRange(next.from, next.to);
     void qc.invalidateQueries();
   };
 

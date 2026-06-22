@@ -29,6 +29,7 @@ import type { PatientPhoneConflictResponse } from "@/lib/patient-phone-conflict"
 import type { Paginated } from "@/lib/paginated";
 import { useAuthStore } from "@/stores/auth-store";
 import { defaultMonthRange, useDateRangeStore } from "@/stores/date-range-store";
+import { sanitizeReportingRange } from "@/lib/reporting-range";
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -666,11 +667,11 @@ export function useReportsMonthlySeriesQuery(months: number) {
 
 export function useReportsPatientAcquisitionQuery(from: string, to: string) {
   const viewerId = useAuthStore((s) => s.user?.id ?? "");
-  const q = new URLSearchParams({ from, to });
+  const range = sanitizeReportingRange(from, to);
+  const q = new URLSearchParams({ from: range.from, to: range.to });
   return useQuery({
-    queryKey: ["reports", "patient-acquisition", from, to, viewerId],
+    queryKey: ["reports", "patient-acquisition", range.from, range.to, viewerId],
     queryFn: () => apiGet<ReportsPatientAcquisitionDto>(`/api/v1/reports/patient-acquisition?${q.toString()}`),
-    enabled: Boolean(from && to),
   });
 }
 

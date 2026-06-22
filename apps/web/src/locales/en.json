@@ -45,7 +45,8 @@
     "from": "From",
     "to": "To",
     "apply": "Apply",
-    "resetMonth": "This month"
+    "resetMonth": "This month",
+    "invalid": "Enter a valid from/to date range (from on or before to)."
   },
   "dashboard": {
     "title": "Overview",
@@ -734,7 +735,7 @@
     "visits": "Visits",
     "acquisitionTitle": "How patients found us",
     "acquisitionHint": "Registration acquisition channels for new patients in the selected date range ({{from}} → {{to}}).",
-    "acquisitionEmpty": "No patient registrations with acquisition data in this period.",
+    "acquisitionEmpty": "No patient registrations in this period.",
     "acquisitionTotal": "{{count}} registrations in range",
     "acquisitionChannel": "Channel",
     "acquisitionCount": "Patients",
