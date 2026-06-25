@@ -1,5 +1,12 @@
-import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
-import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type WheelEvent } from "react";
+import { ChevronLeft, ChevronRight, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type WheelEvent,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -7,20 +14,51 @@ import { cn } from "@/lib/utils";
 const MIN_SCALE = 0.25;
 const MAX_SCALE = 5;
 const ZOOM_STEP = 0.25;
+const SWIPE_THRESHOLD_PX = 48;
+
+type Point = { x: number; y: number };
 
 type ZoomableImageProps = {
   src: string;
   alt: string;
   className?: string;
   viewportClassName?: string;
+  loading?: boolean;
+  onPrevious?: () => void;
+  onNext?: () => void;
+  canPrevious?: boolean;
+  canNext?: boolean;
+  slideLabel?: string;
 };
 
-export function ZoomableImage({ src, alt, className, viewportClassName }: ZoomableImageProps) {
+function pointerDistance(a: Point, b: Point): number {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+export function ZoomableImage({
+  src,
+  alt,
+  className,
+  viewportClassName,
+  loading = false,
+  onPrevious,
+  onNext,
+  canPrevious = Boolean(onPrevious),
+  canNext = Boolean(onNext),
+  slideLabel,
+}: ZoomableImageProps) {
   const { t } = useTranslation();
   const viewportRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ pointerId: number; startX: number; startY: number; originX: number; originY: number } | null>(
-    null,
-  );
+  const pointersRef = useRef<Map<number, Point>>(new Map());
+  const pinchRef = useRef<{ startDistance: number; startScale: number } | null>(null);
+  const singlePointerRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+    mode: "pan" | "swipe";
+  } | null>(null);
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
 
@@ -33,6 +71,9 @@ export function ZoomableImage({ src, alt, className, viewportClassName }: Zoomab
 
   useEffect(() => {
     resetView();
+    pointersRef.current.clear();
+    pinchRef.current = null;
+    singlePointerRef.current = null;
   }, [src, resetView]);
 
   const zoomBy = useCallback((delta: number) => {
@@ -45,43 +86,133 @@ export function ZoomableImage({ src, alt, className, viewportClassName }: Zoomab
     zoomBy(delta);
   };
 
+  const syncPinch = () => {
+    const points = [...pointersRef.current.values()];
+    if (points.length !== 2 || !pinchRef.current) return;
+    const distance = pointerDistance(points[0]!, points[1]!);
+    const next = pinchRef.current.startScale * (distance / pinchRef.current.startDistance);
+    setScale(clampScale(Number(next.toFixed(2))));
+  };
+
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (scale <= 1) return;
-    dragRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      originX: position.x,
-      originY: position.y,
-    };
+    if (loading) return;
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     event.currentTarget.setPointerCapture(event.pointerId);
+
+    if (pointersRef.current.size === 1) {
+      singlePointerRef.current = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        originX: position.x,
+        originY: position.y,
+        mode: scale > 1 ? "pan" : "swipe",
+      };
+      pinchRef.current = null;
+    } else if (pointersRef.current.size === 2) {
+      const [a, b] = [...pointersRef.current.values()];
+      pinchRef.current = { startDistance: pointerDistance(a!, b!), startScale: scale };
+      singlePointerRef.current = null;
+    }
   };
 
   const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const drag = dragRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
-    setPosition({
-      x: drag.originX + (event.clientX - drag.startX),
-      y: drag.originY + (event.clientY - drag.startY),
-    });
+    if (!pointersRef.current.has(event.pointerId)) return;
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    if (pointersRef.current.size === 2) {
+      syncPinch();
+      return;
+    }
+
+    const single = singlePointerRef.current;
+    if (!single || single.pointerId !== event.pointerId) return;
+
+    if (single.mode === "pan" && scale > 1) {
+      setPosition({
+        x: single.originX + (event.clientX - single.startX),
+        y: single.originY + (event.clientY - single.startY),
+      });
+    }
   };
 
-  const onPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (dragRef.current?.pointerId === event.pointerId) {
-      dragRef.current = null;
+  const finishPointer = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const single = singlePointerRef.current;
+    if (single?.pointerId === event.pointerId && single.mode === "swipe" && scale <= 1 && !loading) {
+      const dx = event.clientX - single.startX;
+      const dy = event.clientY - single.startY;
+      if (Math.abs(dx) >= SWIPE_THRESHOLD_PX && Math.abs(dx) > Math.abs(dy) * 1.2) {
+        if (dx < 0 && canNext) onNext?.();
+        else if (dx > 0 && canPrevious) onPrevious?.();
+      }
+    }
+
+    pointersRef.current.delete(event.pointerId);
+    if (pointersRef.current.size < 2) pinchRef.current = null;
+    if (pointersRef.current.size === 1) {
+      const remaining = [...pointersRef.current.entries()][0];
+      if (remaining) {
+        const [pointerId, point] = remaining;
+        singlePointerRef.current = {
+          pointerId,
+          startX: point.x,
+          startY: point.y,
+          originX: position.x,
+          originY: position.y,
+          mode: scale > 1 ? "pan" : "swipe",
+        };
+      }
+    } else {
+      singlePointerRef.current = null;
+    }
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
   };
 
+  const showGalleryNav = Boolean(onPrevious || onNext);
+
   return (
     <div className={cn("flex flex-col gap-3", className)}>
       <div className="flex flex-wrap items-center justify-center gap-2">
+        {showGalleryNav ? (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              aria-label={t("common.previousImage", "Previous image")}
+              disabled={!canPrevious || loading}
+              onClick={onPrevious}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            {slideLabel ? (
+              <span className="min-w-[4.5rem] text-center text-xs text-muted-foreground ltr-nums">{slideLabel}</span>
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              aria-label={t("common.nextImage", "Next image")}
+              disabled={!canNext || loading}
+              onClick={onNext}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <span className="hidden h-6 w-px bg-border sm:inline" aria-hidden />
+          </>
+        ) : null}
         <Button
           type="button"
           variant="outline"
           size="icon"
           className="h-8 w-8"
           aria-label={t("common.zoomOut", "Zoom out")}
+          disabled={loading}
           onClick={() => zoomBy(-ZOOM_STEP)}
         >
           <ZoomOut className="h-4 w-4" />
@@ -92,6 +223,7 @@ export function ZoomableImage({ src, alt, className, viewportClassName }: Zoomab
           size="icon"
           className="h-8 w-8"
           aria-label={t("common.zoomReset", "Reset zoom")}
+          disabled={loading}
           onClick={resetView}
         >
           <RotateCcw className="h-4 w-4" />
@@ -102,36 +234,80 @@ export function ZoomableImage({ src, alt, className, viewportClassName }: Zoomab
           size="icon"
           className="h-8 w-8"
           aria-label={t("common.zoomIn", "Zoom in")}
+          disabled={loading}
           onClick={() => zoomBy(ZOOM_STEP)}
         >
           <ZoomIn className="h-4 w-4" />
         </Button>
         <span className="text-xs text-muted-foreground ltr-nums">{Math.round(scale * 100)}%</span>
       </div>
-      <div
-        ref={viewportRef}
-        className={cn(
-          "flex min-h-[50vh] touch-none items-center justify-center overflow-hidden rounded-md border border-border bg-muted/20",
-          scale > 1 ? "cursor-grab active:cursor-grabbing" : "cursor-default",
-          viewportClassName,
-        )}
-        onWheel={onWheel}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-      >
-        <img
-          src={src}
-          alt={alt}
-          draggable={false}
-          className="max-h-[70vh] max-w-full select-none object-contain transition-transform duration-75"
-          style={{
-            transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-            transformOrigin: "center center",
-          }}
-        />
+      <div className="relative">
+        {showGalleryNav ? (
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon"
+              className="absolute start-2 top-1/2 z-10 h-9 w-9 -translate-y-1/2 shadow-md"
+              aria-label={t("common.previousImage", "Previous image")}
+              disabled={!canPrevious || loading}
+              onClick={onPrevious}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon"
+              className="absolute end-2 top-1/2 z-10 h-9 w-9 -translate-y-1/2 shadow-md"
+              aria-label={t("common.nextImage", "Next image")}
+              disabled={!canNext || loading}
+              onClick={onNext}
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </>
+        ) : null}
+        <div
+          ref={viewportRef}
+          className={cn(
+            "flex min-h-[50vh] items-center justify-center overflow-hidden rounded-md border border-border bg-muted/20 touch-none select-none",
+            scale > 1 ? "cursor-grab active:cursor-grabbing" : "cursor-default",
+            viewportClassName,
+          )}
+          style={{ touchAction: "none" }}
+          onWheel={onWheel}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={finishPointer}
+          onPointerCancel={finishPointer}
+        >
+          {loading ? (
+            <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+          ) : (
+            <img
+              src={src}
+              alt={alt}
+              draggable={false}
+              className="max-h-[70vh] max-w-full object-contain"
+              style={{
+                transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+                transformOrigin: "center center",
+                willChange: "transform",
+              }}
+            />
+          )}
+        </div>
       </div>
+      {showGalleryNav ? (
+        <p className="text-center text-xs text-muted-foreground">
+          {t("common.gallerySwipeHint", "Swipe left or right, or use the arrows, to browse images. Pinch to zoom.")}
+        </p>
+      ) : (
+        <p className="text-center text-xs text-muted-foreground">
+          {t("common.pinchZoomHint", "Pinch to zoom. Drag when zoomed in.")}
+        </p>
+      )}
     </div>
   );
 }

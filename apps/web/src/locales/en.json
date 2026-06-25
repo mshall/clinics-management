@@ -1047,6 +1047,11 @@
     "menu": "Menu",
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
-    "zoomReset": "Reset zoom"
+    "zoomReset": "Reset zoom",
+    "previousImage": "Previous image",
+    "nextImage": "Next image",
+    "slideNOfM": "{{current}} / {{total}}",
+    "gallerySwipeHint": "Swipe left or right, or use the arrows, to browse images. Pinch to zoom.",
+    "pinchZoomHint": "Pinch to zoom. Drag when zoomed in."
   }
 }

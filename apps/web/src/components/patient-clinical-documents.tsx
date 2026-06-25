@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { usePatientClinicalDocumentsQuery } from "@/lib/api-hooks";
 import type { PatientClinicalDocumentItem } from "@/lib/patient-document-category";
 import { apiFetchBlob } from "@/lib/http";
-import { resolveViewerContentType } from "@/lib/image-mime";
+import { isImageViewerContent, resolveViewerContentType } from "@/lib/image-mime";
 import { apiErrorMessage } from "@/features/platform/platform-shared";
 import { localeForLanguage } from "@/lib/locale-display";
 
@@ -19,30 +19,38 @@ type PatientClinicalDocumentsProps = {
 };
 
 type ViewerState = {
-  fileName: string;
-  url: string;
-  contentType: string;
+  items: PatientClinicalDocumentItem[];
+  index: number;
+  urls: Record<string, string>;
+  contentTypes: Record<string, string>;
+  loading: boolean;
 };
+
+function clinicalDocKey(doc: PatientClinicalDocumentItem): string {
+  return `${doc.source}:${doc.id}`;
+}
 
 export function PatientClinicalDocuments({ patientId }: PatientClinicalDocumentsProps) {
   const { t, i18n } = useTranslation();
   const { data, isPending } = usePatientClinicalDocumentsQuery(patientId);
   const [viewer, setViewer] = useState<ViewerState | null>(null);
-  const viewerUrlRef = useRef<string | null>(null);
+  const viewerUrlsRef = useRef<Record<string, string>>({});
+
+  const revokeAllViewerUrls = () => {
+    for (const url of Object.values(viewerUrlsRef.current)) {
+      URL.revokeObjectURL(url);
+    }
+    viewerUrlsRef.current = {};
+  };
 
   useEffect(() => {
     return () => {
-      if (viewerUrlRef.current) {
-        URL.revokeObjectURL(viewerUrlRef.current);
-      }
+      revokeAllViewerUrls();
     };
   }, []);
 
   const closeViewer = () => {
-    if (viewerUrlRef.current) {
-      URL.revokeObjectURL(viewerUrlRef.current);
-      viewerUrlRef.current = null;
-    }
+    revokeAllViewerUrls();
     setViewer(null);
   };
 
@@ -51,20 +59,54 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
       ? `/api/v1/encounters/${doc.encounterId}/documents/${doc.id}/file`
       : `/api/v1/patients/${patientId}/documents/${doc.id}`;
 
-  const openDocument = async (doc: PatientClinicalDocumentItem) => {
+  const loadSlide = async (items: PatientClinicalDocumentItem[], index: number, existing?: ViewerState) => {
+    const doc = items[index];
+    if (!doc) return;
+    const key = clinicalDocKey(doc);
+    if (existing?.urls[key]) {
+      setViewer({ ...existing, items, index, loading: false });
+      return;
+    }
+
+    setViewer({
+      items,
+      index,
+      urls: existing?.urls ?? {},
+      contentTypes: existing?.contentTypes ?? {},
+      loading: true,
+    });
+
     try {
       const { blob, contentType } = await apiFetchBlob(documentPath(doc));
       const url = URL.createObjectURL(blob);
-      if (viewerUrlRef.current) URL.revokeObjectURL(viewerUrlRef.current);
-      viewerUrlRef.current = url;
-      setViewer({
-        fileName: doc.originalFileName,
-        url,
-        contentType: resolveViewerContentType(contentType, doc.originalFileName, doc.mimeType),
-      });
+      viewerUrlsRef.current[key] = url;
+      const resolved = resolveViewerContentType(contentType, doc.originalFileName, doc.mimeType);
+      setViewer((prev) => ({
+        items,
+        index,
+        loading: false,
+        urls: { ...(prev?.urls ?? {}), [key]: url },
+        contentTypes: { ...(prev?.contentTypes ?? {}), [key]: resolved },
+      }));
     } catch (e: unknown) {
+      setViewer((prev) => (prev ? { ...prev, loading: false } : prev));
       toast.error(apiErrorMessage(e));
     }
+  };
+
+  const openDocument = async (doc: PatientClinicalDocumentItem, sectionItems: PatientClinicalDocumentItem[]) => {
+    const imageItems = sectionItems.filter((item) => isImageViewerContent(item.mimeType, item.originalFileName));
+    const isImage = isImageViewerContent(doc.mimeType, doc.originalFileName);
+    const galleryItems = isImage && imageItems.length > 0 ? imageItems : [doc];
+    const index = galleryItems.findIndex((item) => item.source === doc.source && item.id === doc.id);
+    revokeAllViewerUrls();
+    await loadSlide(galleryItems, index >= 0 ? index : 0);
+  };
+
+  const goToSlide = (nextIndex: number) => {
+    if (!viewer) return;
+    if (nextIndex < 0 || nextIndex >= viewer.items.length) return;
+    void loadSlide(viewer.items, nextIndex, viewer);
   };
 
   const downloadDocument = async (doc: PatientClinicalDocumentItem) => {
@@ -141,7 +183,7 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
                   locale={locale}
                   showDownload={showDownload}
                   emphasizeDescription={false}
-                  onView={(doc) => void openDocument(doc)}
+                  onView={(doc) => void openDocument(doc, items)}
                   onDownload={(doc) => void downloadDocument(doc)}
                 />
                 <PatientClinicalSectionUpload patientId={patientId} category={category} />
@@ -166,21 +208,42 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
               locale={locale}
               showDownload
               emphasizeDescription
-              onView={(doc) => void openDocument(doc)}
+              onView={(doc) => void openDocument(doc, otherItems)}
               onDownload={(doc) => void downloadDocument(doc)}
             />
             <PatientClinicalSectionUpload patientId={patientId} category="OTHER" />
           </CardContent>
         </Card>
       </div>
-      {viewer ? (
-        <DocumentViewerOverlay
-          fileName={viewer.fileName}
-          url={viewer.url}
-          contentType={viewer.contentType}
-          onClose={closeViewer}
-        />
-      ) : null}
+      {viewer ? (() => {
+        const current = viewer.items[viewer.index];
+        if (!current) return null;
+        const key = clinicalDocKey(current);
+        const isGallery =
+          viewer.items.length > 1 &&
+          viewer.items.every((item) => isImageViewerContent(item.mimeType, item.originalFileName));
+        return (
+          <DocumentViewerOverlay
+            fileName={current.originalFileName}
+            url={viewer.urls[key] ?? ""}
+            contentType={viewer.contentTypes[key] ?? current.mimeType}
+            loading={viewer.loading}
+            onClose={closeViewer}
+            gallery={
+              isGallery
+                ? {
+                    index: viewer.index,
+                    total: viewer.items.length,
+                    onPrevious: () => goToSlide(viewer.index - 1),
+                    onNext: () => goToSlide(viewer.index + 1),
+                    canPrevious: viewer.index > 0,
+                    canNext: viewer.index < viewer.items.length - 1,
+                  }
+                : undefined
+            }
+          />
+        );
+      })() : null}
     </>
   );
 }

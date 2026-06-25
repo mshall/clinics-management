@@ -4,12 +4,23 @@ import { Button } from "@/components/ui/button";
 import { ZoomableImage } from "@/components/zoomable-image";
 import { isImageViewerContent, isPdfViewerContent, resolveViewerContentType } from "@/lib/image-mime";
 
+export type DocumentGalleryNavigation = {
+  index: number;
+  total: number;
+  onPrevious: () => void;
+  onNext: () => void;
+  canPrevious: boolean;
+  canNext: boolean;
+};
+
 type DocumentViewerOverlayProps = {
   fileName: string;
   url: string;
   contentType: string;
   onClose: () => void;
   headerActions?: ReactNode;
+  loading?: boolean;
+  gallery?: DocumentGalleryNavigation;
 };
 
 export function DocumentViewerOverlay({
@@ -18,11 +29,21 @@ export function DocumentViewerOverlay({
   contentType,
   onClose,
   headerActions,
+  loading = false,
+  gallery,
 }: DocumentViewerOverlayProps) {
   const { t } = useTranslation();
   const resolvedType = resolveViewerContentType(contentType, fileName);
   const showImage = isImageViewerContent(resolvedType, fileName);
   const showPdf = isPdfViewerContent(resolvedType, fileName);
+
+  const slideLabel =
+    gallery && gallery.total > 1
+      ? t("common.slideNOfM", "{{current}} / {{total}}", {
+          current: gallery.index + 1,
+          total: gallery.total,
+        })
+      : undefined;
 
   return (
     <div
@@ -46,7 +67,17 @@ export function DocumentViewerOverlay({
         </div>
         <div className="max-h-[calc(90vh-3rem)] overflow-auto p-4">
           {showImage ? (
-            <ZoomableImage key={url} src={url} alt={fileName} />
+            <ZoomableImage
+              key={url || fileName}
+              src={url}
+              alt={fileName}
+              loading={loading || !url}
+              slideLabel={slideLabel}
+              onPrevious={gallery?.canPrevious ? gallery.onPrevious : undefined}
+              onNext={gallery?.canNext ? gallery.onNext : undefined}
+              canPrevious={gallery?.canPrevious}
+              canNext={gallery?.canNext}
+            />
           ) : showPdf ? (
             <iframe title={fileName} src={url} className="h-[70vh] w-full rounded border" />
           ) : (
