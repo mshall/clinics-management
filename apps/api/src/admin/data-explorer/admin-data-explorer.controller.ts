@@ -32,6 +32,25 @@ export class AdminDataExplorerController {
     res.send(sql);
   }
 
+  @Get("export/documents")
+  @ApiOperation({ summary: "Download uploaded files linked to selected organization entities as a ZIP archive" })
+  @ApiOkResponse({ description: "ZIP archive of documents from object storage with manifest.json" })
+  async exportDocuments(@CurrentUser() user: JwtUser, @Res() res: Response, @Query("tables") tables?: string) {
+    const tableList = tables?.split(",").map((t) => t.trim()).filter(Boolean);
+    const archive = await this.explorer.exportDocumentsArchive(user, tableList);
+    const tenantId = user.tenantId ?? "org";
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", `attachment; filename="kiorly-org-${tenantId}-documents.zip"`);
+    archive.on("error", (err: Error) => {
+      if (!res.headersSent) {
+        res.status(500).json({ message: err.message });
+      } else {
+        res.end();
+      }
+    });
+    archive.pipe(res);
+  }
+
   @Get(":table")
   @ApiOperation({ summary: "Paginated rows for an allowlisted table" })
   @ApiOkResponse()

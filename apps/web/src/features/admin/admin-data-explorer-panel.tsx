@@ -49,6 +49,7 @@ export function AdminDataExplorerPanel() {
   const [createJson, setCreateJson] = useState("{}");
   const [formError, setFormError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [exportingDocuments, setExportingDocuments] = useState(false);
   const [exportKeys, setExportKeys] = useState<Set<string>>(() => new Set());
 
   const catalogQ = useQuery({
@@ -183,6 +184,29 @@ export function AdminDataExplorerPanel() {
     }
   }
 
+  async function downloadDocumentsExport() {
+    if (exportKeys.size === 0) {
+      setFormError(t("admin.dataExplorerExportNone", "Select at least one entity to export."));
+      return;
+    }
+    setExportingDocuments(true);
+    setFormError(null);
+    try {
+      const qs = encodeURIComponent([...exportKeys].join(","));
+      const { blob } = await apiFetchBlob(`/api/v1/admin/data-explorer/export/documents?tables=${qs}`);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "organization-documents.zip";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: unknown) {
+      setFormError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e));
+    } finally {
+      setExportingDocuments(false);
+    }
+  }
+
   function toggleExportKey(key: string, on: boolean) {
     setExportKeys((prev) => {
       const next = new Set(prev);
@@ -201,11 +225,11 @@ export function AdminDataExplorerPanel() {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t("admin.dataExplorerExportTitle", "SQL export")}</CardTitle>
+          <CardTitle className="text-base">{t("admin.dataExplorerExportTitle", "Organization export")}</CardTitle>
           <CardDescription>
             {t(
               "admin.dataExplorerExportHint",
-              "Choose which entities to include, then download one SQL file. Run Prisma migrations on the target PostgreSQL database before importing with psql.",
+              "Choose which entities to include. Download SQL for database import, or a ZIP of all uploaded documents (S3/local files) linked to those entities. Run Prisma migrations on the target PostgreSQL database before importing SQL with psql.",
             )}
           </CardDescription>
         </CardHeader>
@@ -242,11 +266,29 @@ export function AdminDataExplorerPanel() {
               </label>
             ))}
           </div>
-          <Button type="button" disabled={exporting || exportKeys.size === 0} onClick={() => void downloadSqlExport()}>
-            {exporting
-              ? t("common.loading")
-              : t("admin.dataExplorerExportSql", "Export selected as SQL ({{count}})", { count: exportKeys.size })}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" disabled={exporting || exportKeys.size === 0} onClick={() => void downloadSqlExport()}>
+              {exporting
+                ? t("common.loading")
+                : t("admin.dataExplorerExportSql", "Export selected as SQL ({{count}})", { count: exportKeys.size })}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={exportingDocuments || exportKeys.size === 0}
+              onClick={() => void downloadDocumentsExport()}
+            >
+              {exportingDocuments
+                ? t("common.loading")
+                : t("admin.dataExplorerExportDocuments", "Download documents ZIP ({{count}})", { count: exportKeys.size })}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {t(
+              "admin.dataExplorerExportDocumentsHint",
+              "The ZIP includes patient, encounter, employee, expense, and operation files from object storage, plus manifest.json mapping each file to its database record.",
+            )}
+          </p>
         </CardContent>
       </Card>
 

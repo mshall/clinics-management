@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import {
   AppointmentStatus,
   AttendanceStatus,
@@ -15,11 +15,13 @@ import {
 import type { JwtUser } from "../../auth/jwt-user";
 import { paginate, parsePageParams } from "../../common/pagination";
 import { PrismaService } from "../../prisma/prisma.service";
+import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../../storage/upload-blob.storage";
 import {
   assertDataExplorerAccess,
   assertExplorerTenant,
   isDataExplorerPlatformOperator,
 } from "./data-explorer-access";
+import { createTenantDocumentsArchive } from "./tenant-documents-export";
 import { generateTenantSqlExport, SQL_EXPORT_ENTITY_KEYS } from "./tenant-sql-export";
 
 /** URL-safe table keys (allowlisted). */
@@ -78,7 +80,10 @@ export function serializeRow(row: unknown): unknown {
 
 @Injectable()
 export class AdminDataExplorerService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
+  ) {}
 
   catalog(user: JwtUser) {
     const platform = isDataExplorerPlatformOperator(user);
@@ -126,6 +131,25 @@ export class AdminDataExplorerService {
     try {
       return await generateTenantSqlExport(this.prisma, tenantId, {
         tables: resolved,
+        allowFeatureFlags: isDataExplorerPlatformOperator(user),
+      });
+    } catch (e) {
+      if (e instanceof Error && e.message === "No exportable entities selected") {
+        throw new BadRequestException(e.message);
+      }
+      throw e;
+    }
+  }
+
+  async exportDocumentsArchive(user: JwtUser, tables?: string[]) {
+    assertDataExplorerAccess(user);
+    const tenantId = assertExplorerTenant(user);
+    const resolved = tables?.filter(Boolean);
+    if (resolved?.length === 0) {
+      throw new BadRequestException("Select at least one entity to export");
+    }
+    try {
+      return await createTenantDocumentsArchive(this.prisma, this.uploads, tenantId, resolved, {
         allowFeatureFlags: isDataExplorerPlatformOperator(user),
       });
     } catch (e) {
