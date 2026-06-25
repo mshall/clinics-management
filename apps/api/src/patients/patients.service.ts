@@ -41,11 +41,13 @@ const ALLOWED_PATIENT_DOC_MIME = new Set(["application/pdf", "image/jpeg", "imag
 
 type PatientDocFile = { buffer: Buffer; originalname: string; mimetype: string; size: number };
 
-const PATIENT_DELETE_ROLES: ReadonlySet<UserRole> = new Set([
+const PATIENT_MANAGE_ROLES: ReadonlySet<UserRole> = new Set([
   UserRole.GROUP_ADMIN,
+  UserRole.GROUP_SUPERVISOR,
   UserRole.CLINIC_ADMIN,
   UserRole.CLINIC_ASSISTANT,
   UserRole.BRANCH_MANAGER,
+  UserRole.CALL_CENTER,
 ]);
 
 function isPhysicianRole(role: UserRole | undefined): boolean {
@@ -414,7 +416,14 @@ export class PatientsService {
     return this.map(row);
   }
 
+  private async assertCanManagePatient(user: JwtUser): Promise<void> {
+    if (!PATIENT_MANAGE_ROLES.has(user.role)) {
+      throw new ForbiddenException("You are not allowed to modify patients");
+    }
+  }
+
   async update(tenantId: string, id: string, dto: UpdatePatientDto, user: JwtUser): Promise<PatientDto> {
+    await this.assertCanManagePatient(user);
     await this.getById(tenantId, id, user);
     validatePatientAcquisition(dto);
     const existing = await this.prisma.patient.findFirst({
@@ -688,9 +697,7 @@ export class PatientsService {
   }
 
   private async assertCanDeletePatient(user: JwtUser): Promise<void> {
-    if (!PATIENT_DELETE_ROLES.has(user.role)) {
-      throw new ForbiddenException("You are not allowed to delete patients");
-    }
+    await this.assertCanManagePatient(user);
   }
 
   async softDelete(tenantId: string, id: string, user: JwtUser): Promise<{ ok: true }> {

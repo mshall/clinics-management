@@ -1,11 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { PatientEditDialog } from "@/components/patient-edit-dialog";
 import { PatientPhoneField } from "@/components/patient-phone-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +23,7 @@ import { columnFilterIncludes } from "@/lib/utils";
 import { formatGender } from "@/lib/locale-display";
 import { formatClinicName } from "@/lib/locale-display";
 import { useAuthStore } from "@/stores/auth-store";
-import { canDeletePatient } from "@/lib/patient-edit-policy";
+import { canManagePatientsInList } from "@/lib/patient-edit-policy";
 import { apiErrorMessage } from "@/features/platform/platform-shared";
 import {
   PendingDocumentAttachments,
@@ -59,6 +60,7 @@ export function PatientsPage() {
   const [pfEmail, setPfEmail] = useState("");
   const [pfBranch, setPfBranch] = useState("");
   const [patientToDelete, setPatientToDelete] = useState<PatientDto | null>(null);
+  const [patientToEdit, setPatientToEdit] = useState<PatientDto | null>(null);
 
   const query = useMemo(
     () => ({
@@ -109,7 +111,7 @@ export function PatientsPage() {
 
   const { data: clinics = [] } = useClinicsQuery();
   const authRole = useAuthStore((s) => s.user?.role);
-  const canDelete = canDeletePatient(authRole);
+  const canManagePatients = canManagePatientsInList(authRole);
   const singleManagedClinic = clinics.length === 1 ? clinics[0]! : null;
   const defaultHomeBranchId = singleManagedClinic?.id ?? clinics[0]?.id ?? "";
   const [open, setOpen] = useState(false);
@@ -302,6 +304,12 @@ export function PatientsPage() {
       void qc.invalidateQueries({ queryKey: ["admin", "org-patients"] });
     },
   });
+
+  const handleEditPatient = (patient: PatientDto, e: MouseEvent | KeyboardEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setPatientToEdit(patient);
+  };
 
   const handleDeletePatient = (patient: PatientDto, e: MouseEvent | KeyboardEvent) => {
     e.preventDefault();
@@ -583,7 +591,7 @@ export function PatientsPage() {
                   />
                   <FilterTh label={t("patients.email")} value={pfEmail} onChange={setPfEmail} />
                   <FilterTh label={t("patients.branch")} value={pfBranch} onChange={setPfBranch} />
-                  {canDelete ? (
+                  {canManagePatients ? (
                     <th className="px-3 py-2 text-end">{t("common.actions", "Actions")}</th>
                   ) : null}
                 </tr>
@@ -623,33 +631,45 @@ export function PatientsPage() {
                     <td className="px-3 py-2 ltr-nums">{p.dob ?? t("common.notAvailable", "—")}</td>
                     <td className="max-w-[10rem] truncate px-3 py-2 text-xs text-muted-foreground">{p.email ?? "—"}</td>
                     <td className="px-3 py-2 text-muted-foreground">{p.homeBranch}</td>
-                    {canDelete ? (
+                    {canManagePatients ? (
                       <td className="px-3 py-2 text-end">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          aria-label={t("patients.deletePatient", "Delete patient")}
-                          disabled={deleteMut.isPending}
-                          onClick={(e) => handleDeletePatient(p, e)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            aria-label={t("patients.editPatient", "Edit patient")}
+                            onClick={(e) => handleEditPatient(p, e)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            aria-label={t("patients.deletePatient", "Delete patient")}
+                            disabled={deleteMut.isPending}
+                            onClick={(e) => handleDeletePatient(p, e)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </td>
                     ) : null}
                   </tr>
                 ))}
                 {items.length === 0 && !isFetching ? (
                   <tr>
-                    <td colSpan={canDelete ? 7 : 6} className="px-3 py-8 text-center text-muted-foreground">
+                    <td colSpan={canManagePatients ? 7 : 6} className="px-3 py-8 text-center text-muted-foreground">
                       {t("patients.empty")}
                     </td>
                   </tr>
                 ) : null}
                 {items.length > 0 && filteredPatients.length === 0 && !isFetching ? (
                   <tr>
-                    <td colSpan={canDelete ? 7 : 6} className="px-3 py-8 text-center text-muted-foreground">
+                    <td colSpan={canManagePatients ? 7 : 6} className="px-3 py-8 text-center text-muted-foreground">
                       {t("patients.noColMatch", "No rows match the column filters.")}
                     </td>
                   </tr>
@@ -690,6 +710,16 @@ export function PatientsPage() {
           if (patientToDelete) deleteMut.mutate(patientToDelete.id);
         }}
       />
+
+      {patientToEdit ? (
+        <PatientEditDialog
+          patient={patientToEdit}
+          open={Boolean(patientToEdit)}
+          onOpenChange={(open) => {
+            if (!open) setPatientToEdit(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
