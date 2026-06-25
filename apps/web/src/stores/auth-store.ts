@@ -78,6 +78,18 @@ export const useAuthStore = create<AuthState>()(
       name: "cms-auth",
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({ accessToken: s.accessToken, user: s.user }),
-    }
+      merge: (persisted, current) => {
+        const p = persisted as Partial<AuthState> | undefined;
+        if (!p?.user) return { ...current, ...p };
+        return {
+          ...current,
+          ...p,
+          user: {
+            ...p.user,
+            role: mapApiRole(String(p.user.role)),
+          },
+        };
+      },
+    },
   )
 );

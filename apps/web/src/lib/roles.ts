@@ -13,6 +13,8 @@ export type DemoRole =
   | "clinic_assistant";
 
 export function mapApiRole(role: string): DemoRole {
+  const trimmed = role.trim();
+  const key = trimmed.toUpperCase();
   const m: Record<string, DemoRole> = {
     PLATFORM_SUPER_ADMIN: "platform_super_admin",
     GROUP_ADMIN: "group_admin",
@@ -27,5 +29,8 @@ export function mapApiRole(role: string): DemoRole {
     CLINIC_ADMIN: "clinic_admin",
     CLINIC_ASSISTANT: "clinic_assistant",
   };
-  return m[role] ?? "physician";
+  if (m[key]) return m[key];
+  const slugs = new Set(Object.values(m));
+  if (slugs.has(trimmed as DemoRole)) return trimmed as DemoRole;
+  return "physician";
 }
