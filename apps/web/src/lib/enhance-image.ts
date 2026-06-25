@@ -5,9 +5,9 @@ const picaInstance = pica();
 export type ImageEnhanceProfile = "document" | "avatar" | "general";
 
 const PROFILES: Record<ImageEnhanceProfile, { minLongEdge: number; maxLongEdge: number }> = {
-  document: { minLongEdge: 1920, maxLongEdge: 2560 },
-  avatar: { minLongEdge: 512, maxLongEdge: 1024 },
-  general: { minLongEdge: 1600, maxLongEdge: 2560 },
+  document: { minLongEdge: 2400, maxLongEdge: 3200 },
+  avatar: { minLongEdge: 768, maxLongEdge: 1280 },
+  general: { minLongEdge: 2000, maxLongEdge: 3200 },
 };
 
 const JPEG_QUALITY = 0.92;
@@ -21,7 +21,7 @@ function computeTargetSize(
   width: number,
   height: number,
   profile: ImageEnhanceProfile,
-): { width: number; height: number; needsProcessing: boolean } {
+): { width: number; height: number } {
   const { minLongEdge, maxLongEdge } = PROFILES[profile];
   const longEdge = Math.max(width, height);
   let scale = 1;
@@ -34,10 +34,8 @@ function computeTargetSize(
 
   const targetWidth = Math.max(1, Math.round(width * scale));
   const targetHeight = Math.max(1, Math.round(height * scale));
-  const needsProcessing =
-    targetWidth !== width || targetHeight !== height || longEdge < minLongEdge;
 
-  return { width: targetWidth, height: targetHeight, needsProcessing };
+  return { width: targetWidth, height: targetHeight };
 }
 
 async function loadImageFromFile(file: File): Promise<HTMLImageElement> {
@@ -84,8 +82,7 @@ export async function enhanceImageFile(
     const naturalHeight = img.naturalHeight || img.height;
     if (!naturalWidth || !naturalHeight) return file;
 
-    const { width, height, needsProcessing } = computeTargetSize(naturalWidth, naturalHeight, profile);
-    if (!needsProcessing) return file;
+    const { width, height } = computeTargetSize(naturalWidth, naturalHeight, profile);
 
     const from = document.createElement("canvas");
     from.width = naturalWidth;
@@ -99,9 +96,9 @@ export async function enhanceImageFile(
     to.height = height;
 
     await picaInstance.resize(from, to, {
-      unsharpAmount: 80,
-      unsharpRadius: 0.6,
-      unsharpThreshold: 2,
+      unsharpAmount: 120,
+      unsharpRadius: 0.75,
+      unsharpThreshold: 1,
     });
 
     const preservePng = file.type === "image/png";

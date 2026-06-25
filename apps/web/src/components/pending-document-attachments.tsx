@@ -5,7 +5,6 @@ import { DocumentCameraCaptureDialog } from "@/components/document-camera-captur
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { enhanceImageFiles } from "@/lib/enhance-image";
 import { cn } from "@/lib/utils";
 
 export type PatientDocumentCategory = "LAB_RESULTS" | "RADIOLOGY" | "PRESCRIPTION" | "OTHER";
@@ -220,15 +219,11 @@ export function PendingDocumentAttachments({
                     onChange={(e) => {
                       const picked = [...(e.target.files ?? [])];
                       if (picked.length === 0) return;
-                      const rowId = row.id;
-                      void (async () => {
-                        const enhanced = await enhanceImageFiles(picked, "document");
-                        onChange((prev) =>
-                          prev.map((r) =>
-                            r.id === rowId ? { ...r, files: [...r.files, ...enhanced] } : r,
-                          ),
-                        );
-                      })();
+                      onChange((prev) =>
+                        prev.map((r) =>
+                          r.id === row.id ? { ...r, files: [...r.files, ...picked] } : r,
+                        ),
+                      );
                       e.target.value = "";
                     }}
                   />

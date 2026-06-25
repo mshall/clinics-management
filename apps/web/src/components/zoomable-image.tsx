@@ -1,5 +1,5 @@
 import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
-import { useCallback, useRef, useState, type PointerEvent as ReactPointerEvent, type WheelEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type WheelEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -30,6 +30,10 @@ export function ZoomableImage({ src, alt, className, viewportClassName }: Zoomab
     setScale(1);
     setPosition({ x: 0, y: 0 });
   }, []);
+
+  useEffect(() => {
+    resetView();
+  }, [src, resetView]);
 
   const zoomBy = useCallback((delta: number) => {
     setScale((current) => clampScale(Number((current + delta).toFixed(2))));

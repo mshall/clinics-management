@@ -4,11 +4,13 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { DocumentViewerOverlay } from "@/components/document-viewer-overlay";
+import { PatientClinicalSectionUpload } from "@/components/patient-clinical-section-upload";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePatientClinicalDocumentsQuery } from "@/lib/api-hooks";
 import type { PatientClinicalDocumentItem } from "@/lib/patient-document-category";
 import { apiFetchBlob } from "@/lib/http";
+import { resolveViewerContentType } from "@/lib/image-mime";
 import { apiErrorMessage } from "@/features/platform/platform-shared";
 import { localeForLanguage } from "@/lib/locale-display";
 
@@ -58,7 +60,7 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
       setViewer({
         fileName: doc.originalFileName,
         url,
-        contentType: contentType || doc.mimeType,
+        contentType: resolveViewerContentType(contentType, doc.originalFileName, doc.mimeType),
       });
     } catch (e: unknown) {
       toast.error(apiErrorMessage(e));
@@ -88,6 +90,7 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
   const clinicalSections = [
     {
       key: "labs" as const,
+      category: "LAB_RESULTS" as const,
       icon: FlaskConical,
       iconClass: "text-emerald-600",
       title: t("patients.clinicalLabs", "Lab results"),
@@ -97,6 +100,7 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
     },
     {
       key: "radiology" as const,
+      category: "RADIOLOGY" as const,
       icon: ScanLine,
       iconClass: "text-sky-600",
       title: t("patients.clinicalRadiology", "Radiology"),
@@ -106,6 +110,7 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
     },
     {
       key: "prescriptions" as const,
+      category: "PRESCRIPTION" as const,
       icon: Pill,
       iconClass: "text-violet-600",
       title: t("patients.clinicalPrescriptions", "Prescriptions"),
@@ -121,7 +126,7 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
     <>
       <div className="space-y-4">
         <div className="grid gap-4 lg:grid-cols-3">
-          {clinicalSections.map(({ key, icon: Icon, iconClass, title, hint, items, showDownload }) => (
+          {clinicalSections.map(({ key, category, icon: Icon, iconClass, title, hint, items, showDownload }) => (
             <Card key={key}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
@@ -139,6 +144,7 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
                   onView={(doc) => void openDocument(doc)}
                   onDownload={(doc) => void downloadDocument(doc)}
                 />
+                <PatientClinicalSectionUpload patientId={patientId} category={category} />
               </CardContent>
             </Card>
           ))}
@@ -151,7 +157,7 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
               {t("patients.clinicalOther", "Other documents")}
             </CardTitle>
             <CardDescription>
-              {t("patients.clinicalOtherHint", "Miscellaneous documents attached at registration.")}
+              {t("patients.clinicalOtherHint", "Miscellaneous documents attached at registration or from the profile.")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -163,6 +169,7 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
               onView={(doc) => void openDocument(doc)}
               onDownload={(doc) => void downloadDocument(doc)}
             />
+            <PatientClinicalSectionUpload patientId={patientId} category="OTHER" />
           </CardContent>
         </Card>
       </div>

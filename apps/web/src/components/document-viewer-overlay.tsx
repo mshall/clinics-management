@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { ZoomableImage } from "@/components/zoomable-image";
+import { isImageViewerContent, isPdfViewerContent, resolveViewerContentType } from "@/lib/image-mime";
 
 type DocumentViewerOverlayProps = {
   fileName: string;
@@ -19,6 +20,9 @@ export function DocumentViewerOverlay({
   headerActions,
 }: DocumentViewerOverlayProps) {
   const { t } = useTranslation();
+  const resolvedType = resolveViewerContentType(contentType, fileName);
+  const showImage = isImageViewerContent(resolvedType, fileName);
+  const showPdf = isPdfViewerContent(resolvedType, fileName);
 
   return (
     <div
@@ -41,9 +45,9 @@ export function DocumentViewerOverlay({
           </div>
         </div>
         <div className="max-h-[calc(90vh-3rem)] overflow-auto p-4">
-          {contentType.startsWith("image/") ? (
-            <ZoomableImage src={url} alt={fileName} />
-          ) : contentType.includes("pdf") ? (
+          {showImage ? (
+            <ZoomableImage key={url} src={url} alt={fileName} />
+          ) : showPdf ? (
             <iframe title={fileName} src={url} className="h-[70vh] w-full rounded border" />
           ) : (
             <a href={url} download={fileName} className="text-primary underline">
