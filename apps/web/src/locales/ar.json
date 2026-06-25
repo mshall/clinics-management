@@ -750,7 +750,13 @@
     "acquisitionChannel": "القناة",
     "acquisitionCount": "المرضى",
     "acquisitionShare": "النسبة",
-    "acquisitionUnknown": "غير محدد"
+    "acquisitionUnknown": "غير محدد",
+    "acquisitionPatientsTitle": "المرضى — {{channel}}",
+    "acquisitionPatientsHint": "{{from}} → {{to}} · انقر على رقم الملف أو الاسم لفتح ملف المريض.",
+    "acquisitionPatientsEmpty": "لا يوجد مرضى يطابقون هذه الفلاتر.",
+    "acquisitionDetail": "التفاصيل",
+    "registeredAt": "تاريخ التسجيل",
+    "acquisitionRowHint": "انقر على صف القناة لعرض المرضى."
   },
   "platform": {
     "title": "إدارة المنصة",

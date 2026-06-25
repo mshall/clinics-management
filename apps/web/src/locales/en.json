@@ -749,7 +749,13 @@
     "acquisitionChannel": "Channel",
     "acquisitionCount": "Patients",
     "acquisitionShare": "Share",
-    "acquisitionUnknown": "Not specified"
+    "acquisitionUnknown": "Not specified",
+    "acquisitionPatientsTitle": "Patients — {{channel}}",
+    "acquisitionPatientsHint": "{{from}} → {{to}} · Click MRN or name to open the patient profile.",
+    "acquisitionPatientsEmpty": "No patients match these filters.",
+    "acquisitionDetail": "Details",
+    "registeredAt": "Registered",
+    "acquisitionRowHint": "Click a channel row to view patients."
   },
   "platform": {
     "title": "Platform administration",

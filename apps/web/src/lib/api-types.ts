@@ -293,3 +293,21 @@ export interface ReportsPatientAcquisitionDto {
   total: number;
   items: ReportsPatientAcquisitionItemDto[];
 }
+
+export interface ReportsPatientAcquisitionPatientDto {
+  id: string;
+  mrn: string;
+  firstNameEn: string;
+  lastNameEn: string;
+  firstNameAr: string | null;
+  lastNameAr: string | null;
+  phone: string;
+  email: string | null;
+  dob: string | null;
+  gender: string;
+  homeBranch: string | null;
+  acquisitionChannel: string | null;
+  acquisitionReferralName: string | null;
+  acquisitionOtherDetail: string | null;
+  createdAt: string;
+}

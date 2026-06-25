@@ -17,6 +17,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { AcquisitionChannelPatientsDialog } from "@/components/acquisition-channel-patients-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,6 +43,7 @@ export function ReportsPage() {
   const { t, i18n } = useTranslation();
   const { from, to } = useDateRangeStore();
   const [horizon, setHorizon] = useState(12);
+  const [selectedChannel, setSelectedChannel] = useState<{ channel: string; label: string } | null>(null);
   const series = useReportsMonthlySeriesQuery(horizon);
   const acquisition = useReportsPatientAcquisitionQuery(from, to);
   const chartData = useMemo(() => series.data?.items ?? [], [series.data?.items]);
@@ -251,6 +253,7 @@ export function ReportsPage() {
                   </ResponsiveContainer>
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground">{t("reports.acquisitionRowHint", "Click a channel row to view patients.")}</p>
               <div className="overflow-x-auto rounded-md border">
                 <table className="w-full min-w-[420px] text-sm">
                   <thead className="bg-muted/60">
@@ -262,7 +265,19 @@ export function ReportsPage() {
                   </thead>
                   <tbody>
                     {acquisitionChartData.map((row) => (
-                      <tr key={row.channel} className="border-t">
+                      <tr
+                        key={row.channel}
+                        role="button"
+                        tabIndex={0}
+                        className="cursor-pointer border-t transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
+                        onClick={() => setSelectedChannel({ channel: row.channel, label: row.label })}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setSelectedChannel({ channel: row.channel, label: row.label });
+                          }
+                        }}
+                      >
                         <td className="px-3 py-2">{row.label}</td>
                         <td className="px-3 py-2 ltr-nums">{row.count}</td>
                         <td className="px-3 py-2 ltr-nums">{row.sharePercent}%</td>
@@ -275,6 +290,17 @@ export function ReportsPage() {
           )}
         </CardContent>
       </Card>
+
+      <AcquisitionChannelPatientsDialog
+        open={selectedChannel != null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedChannel(null);
+        }}
+        channel={selectedChannel?.channel ?? ""}
+        channelLabel={selectedChannel?.label ?? ""}
+        from={from}
+        to={to}
+      />
     </div>
   );
 }

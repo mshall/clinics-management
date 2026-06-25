@@ -27,6 +27,42 @@ export class ReportsController {
     return this.reports.monthlySeries(requireTenantId(user), months, user);
   }
 
+  @Get("patient-acquisition/patients")
+  @ApiOperation({ summary: "Paginated patients for one acquisition channel in a date range" })
+  @ApiOkResponse()
+  patientAcquisitionPatients(
+    @CurrentUser() user: JwtUser,
+    @Query("channel") channel?: string,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("search") search?: string,
+    @Query("mrn") mrn?: string,
+    @Query("name") name?: string,
+    @Query("phone") phone?: string,
+    @Query("branch") branch?: string,
+    @Query("detail") detail?: string,
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string,
+    @Query("sortBy") sortBy?: string,
+    @Query("sortOrder") sortOrder?: string,
+  ) {
+    return this.reports.patientAcquisitionPatients(requireTenantId(user), {
+      channel: channel ?? "",
+      from,
+      to,
+      search,
+      mrn,
+      name,
+      phone,
+      branch,
+      detail,
+      page,
+      pageSize,
+      sortBy,
+      sortOrder,
+    });
+  }
+
   @Get("patient-acquisition")
   @ApiOperation({ summary: "New patient registrations grouped by acquisition channel (how they found us)" })
   @ApiOkResponse()

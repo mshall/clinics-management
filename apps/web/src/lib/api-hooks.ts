@@ -20,6 +20,7 @@ import type {
   RevenueEntryDto,
   ReportsMonthlySeriesDto,
   ReportsPatientAcquisitionDto,
+  ReportsPatientAcquisitionPatientDto,
   TenantListItemDto,
   UserListItemDto,
 } from "@/lib/api-types";
@@ -672,6 +673,51 @@ export function useReportsPatientAcquisitionQuery(from: string, to: string) {
   return useQuery({
     queryKey: ["reports", "patient-acquisition", range.from, range.to, viewerId],
     queryFn: () => apiGet<ReportsPatientAcquisitionDto>(`/api/v1/reports/patient-acquisition?${q.toString()}`),
+  });
+}
+
+export type PatientAcquisitionPatientsListParams = {
+  page: number;
+  pageSize: number;
+  sortBy: string;
+  sortOrder: string;
+  mrn?: string;
+  name?: string;
+  phone?: string;
+  branch?: string;
+  detail?: string;
+};
+
+export function useReportsPatientAcquisitionPatientsQuery(
+  channel: string | null,
+  from: string,
+  to: string,
+  params: PatientAcquisitionPatientsListParams,
+) {
+  const viewerId = useAuthStore((s) => s.user?.id ?? "");
+  const range = sanitizeReportingRange(from, to);
+  return useQuery({
+    queryKey: ["reports", "patient-acquisition", "patients", channel, range.from, range.to, params, viewerId],
+    enabled: Boolean(channel),
+    queryFn: () => {
+      const q = new URLSearchParams({
+        channel: channel!,
+        from: range.from,
+        to: range.to,
+        page: String(params.page),
+        pageSize: String(params.pageSize),
+        sortBy: params.sortBy,
+        sortOrder: params.sortOrder,
+      });
+      if (params.mrn?.trim()) q.set("mrn", params.mrn.trim());
+      if (params.name?.trim()) q.set("name", params.name.trim());
+      if (params.phone?.trim()) q.set("phone", params.phone.trim());
+      if (params.branch?.trim()) q.set("branch", params.branch.trim());
+      if (params.detail?.trim()) q.set("detail", params.detail.trim());
+      return apiGet<Paginated<ReportsPatientAcquisitionPatientDto>>(
+        `/api/v1/reports/patient-acquisition/patients?${q.toString()}`,
+      );
+    },
   });
 }
 

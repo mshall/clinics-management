@@ -9,7 +9,25 @@ import {
 } from "@prisma/client";
 import { formatLocalYmd, resolveLedgerListingRange, resolveReportingRange } from "../common/reporting-range";
 import type { JwtUser } from "../auth/jwt-user";
+import { pickSortField, parseSortOrder } from "../common/list-sort";
+import { paginate, parsePageParams } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
+
+export interface PatientAcquisitionPatientsQuery {
+  channel: string;
+  from?: string;
+  to?: string;
+  search?: string;
+  mrn?: string;
+  name?: string;
+  phone?: string;
+  branch?: string;
+  detail?: string;
+  page?: string;
+  pageSize?: string;
+  sortBy?: string;
+  sortOrder?: string;
+}
 
 @Injectable()
 export class ReportsService {
@@ -187,5 +205,126 @@ export class ReportsService {
       total,
       items,
     };
+  }
+
+  async patientAcquisitionPatients(tenantId: string, q: PatientAcquisitionPatientsQuery) {
+    const channel = q.channel?.trim();
+    if (!channel) throw new BadRequestException("channel is required");
+
+    const { start, end } = resolveLedgerListingRange(q.from, q.to);
+    const and: Prisma.PatientWhereInput[] = [];
+
+    if (channel === "UNKNOWN") {
+      and.push({ acquisitionChannel: null });
+    } else if ((Object.values(PatientAcquisitionChannel) as string[]).includes(channel)) {
+      and.push({ acquisitionChannel: channel as PatientAcquisitionChannel });
+    } else {
+      throw new BadRequestException("Invalid acquisition channel");
+    }
+
+    const search = q.search?.trim();
+    if (search) {
+      and.push({
+        OR: [
+          { mrn: { contains: search, mode: "insensitive" } },
+          { firstNameEn: { contains: search, mode: "insensitive" } },
+          { lastNameEn: { contains: search, mode: "insensitive" } },
+          { firstNameAr: { contains: search, mode: "insensitive" } },
+          { lastNameAr: { contains: search, mode: "insensitive" } },
+          { phone: { contains: search, mode: "insensitive" } },
+        ],
+      });
+    }
+
+    const mrn = q.mrn?.trim();
+    if (mrn) and.push({ mrn: { contains: mrn, mode: "insensitive" } });
+
+    const name = q.name?.trim();
+    if (name) {
+      and.push({
+        OR: [
+          { firstNameEn: { contains: name, mode: "insensitive" } },
+          { lastNameEn: { contains: name, mode: "insensitive" } },
+          { firstNameAr: { contains: name, mode: "insensitive" } },
+          { lastNameAr: { contains: name, mode: "insensitive" } },
+        ],
+      });
+    }
+
+    const phone = q.phone?.trim();
+    if (phone) and.push({ phone: { contains: phone, mode: "insensitive" } });
+
+    const branch = q.branch?.trim();
+    if (branch) {
+      and.push({ homeBranch: { is: { nameEn: { contains: branch, mode: "insensitive" } } } });
+    }
+
+    const detail = q.detail?.trim();
+    if (detail) {
+      and.push({
+        OR: [
+          { acquisitionReferralName: { contains: detail, mode: "insensitive" } },
+          { acquisitionOtherDetail: { contains: detail, mode: "insensitive" } },
+        ],
+      });
+    }
+
+    const where: Prisma.PatientWhereInput = {
+      tenantId,
+      deletedAt: null,
+      createdAt: { gte: start, lte: end },
+      AND: and,
+    };
+
+    const { page, pageSize, skip } = parsePageParams(q.page, q.pageSize);
+    const sortField = pickSortField(
+      q.sortBy,
+      ["mrn", "firstNameEn", "lastNameEn", "createdAt", "dob", "phone"] as const,
+      "createdAt",
+    );
+    const sortDir = parseSortOrder(q.sortOrder);
+
+    try {
+      const [total, rows] = await Promise.all([
+        this.prisma.patient.count({ where }),
+        this.prisma.patient.findMany({
+          where,
+          skip,
+          take: pageSize,
+          orderBy: { [sortField]: sortDir },
+          include: { homeBranch: { select: { nameEn: true } } },
+        }),
+      ]);
+
+      const items = rows.map((p) => {
+        const dob = p.dob instanceof Date && !Number.isNaN(p.dob.getTime()) ? p.dob : null;
+        return {
+          id: p.id,
+          mrn: p.mrn,
+          firstNameEn: p.firstNameEn,
+          lastNameEn: p.lastNameEn,
+          firstNameAr: p.firstNameAr,
+          lastNameAr: p.lastNameAr,
+          phone: p.phone,
+          email: p.email,
+          dob: dob ? dob.toISOString().slice(0, 10) : null,
+          gender: p.gender,
+          homeBranch: p.homeBranch?.nameEn ?? null,
+          acquisitionChannel: p.acquisitionChannel,
+          acquisitionReferralName: p.acquisitionReferralName,
+          acquisitionOtherDetail: p.acquisitionOtherDetail,
+          createdAt: p.createdAt.toISOString(),
+        };
+      });
+
+      return paginate(items, total, page, pageSize);
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && (err.code === "P2022" || err.code === "P2010")) {
+        throw new BadRequestException(
+          "Patient acquisition reporting is unavailable until database migrations are applied (acquisitionChannel column).",
+        );
+      }
+      throw err;
+    }
   }
 }
