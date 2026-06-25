@@ -1015,7 +1015,7 @@
     "dataExplorerTitle": "Data explorer",
     "dataExplorerExportSql": "Export selected as SQL ({{count}})",
     "dataExplorerExportDocuments": "Download documents ZIP ({{count}})",
-    "dataExplorerExportDocumentsHint": "The ZIP includes patient, encounter, employee, expense, and operation files from object storage, plus manifest.json mapping each file to its database record.",
+    "dataExplorerExportDocumentsHint": "The ZIP includes patient, encounter, employee, expense, and operation files from local disk (localhost) or S3 (production), plus manifest.json mapping each file to its database record.",
     "dataExplorerExportTitle": "Organization export",
     "dataExplorerExportHint": "Choose which entities to include. Download SQL for database import, or a ZIP of all uploaded documents linked to those entities. Run Prisma migrations on the target PostgreSQL database before importing SQL with psql.",
     "dataExplorerExportSelectAll": "Select all entities",

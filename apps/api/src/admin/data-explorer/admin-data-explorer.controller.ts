@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpException, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import { CurrentUser } from "../../auth/current-user.decorator";
@@ -37,18 +37,31 @@ export class AdminDataExplorerController {
   @ApiOkResponse({ description: "ZIP archive of documents from object storage with manifest.json" })
   async exportDocuments(@CurrentUser() user: JwtUser, @Res() res: Response, @Query("tables") tables?: string) {
     const tableList = tables?.split(",").map((t) => t.trim()).filter(Boolean);
-    const archive = await this.explorer.exportDocumentsArchive(user, tableList);
-    const tenantId = user.tenantId ?? "org";
-    res.setHeader("Content-Type", "application/zip");
-    res.setHeader("Content-Disposition", `attachment; filename="kiorly-org-${tenantId}-documents.zip"`);
-    archive.on("error", (err: Error) => {
-      if (!res.headersSent) {
-        res.status(500).json({ message: err.message });
-      } else {
+    try {
+      const archive = await this.explorer.exportDocumentsArchive(user, tableList);
+      const tenantId = user.tenantId ?? "org";
+      res.setHeader("Content-Type", "application/zip");
+      res.setHeader("Content-Disposition", `attachment; filename="kiorly-org-${tenantId}-documents.zip"`);
+      archive.on("error", (err: Error) => {
+        if (!res.headersSent) {
+          res.status(500).json({ message: err.message });
+        } else {
+          res.end();
+        }
+      });
+      archive.pipe(res);
+    } catch (e: unknown) {
+      if (res.headersSent) {
         res.end();
+        return;
       }
-    });
-    archive.pipe(res);
+      if (e instanceof HttpException) {
+        res.status(e.getStatus()).json(e.getResponse());
+        return;
+      }
+      const message = e instanceof Error ? e.message : "Document export failed";
+      res.status(500).json({ message });
+    }
   }
 
   @Get(":table")

@@ -1,4 +1,4 @@
-import type { Archiver } from "archiver";
+import { ZipArchive } from "archiver";
 import type { PrismaService } from "../../prisma/prisma.service";
 import type { UploadBlobStorage } from "../../storage/upload-blob.storage";
 import type { UploadKind } from "../../storage/upload-kind";
@@ -57,6 +57,19 @@ function safeFileName(name: string): string {
 
 function dedupeKey(kind: UploadKind, relativePath: string): string {
   return `${kind}:${relativePath}`;
+}
+
+async function readUploadBuffer(
+  uploads: UploadBlobStorage,
+  kind: UploadKind,
+  relativePath: string,
+): Promise<Buffer> {
+  const stream = await uploads.getReadStream(kind, relativePath);
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
 }
 
 export async function collectTenantDocumentEntries(
@@ -243,7 +256,7 @@ export async function createTenantDocumentsArchive(
   tenantId: string,
   requestedTables: string[] | undefined,
   opts: { allowFeatureFlags: boolean },
-): Promise<Archiver> {
+): Promise<ZipArchive> {
   const { entries, selectedEntities } = await collectTenantDocumentEntries(prisma, tenantId, requestedTables, opts);
   const manifest: TenantDocumentManifest = {
     tenantId,
@@ -253,16 +266,13 @@ export async function createTenantDocumentsArchive(
     skipped: [],
   };
 
-  const archive = (require("archiver") as (
-    format: string,
-    options?: { zlib?: { level?: number } },
-  ) => Archiver)("zip", { zlib: { level: 9 } });
+  const archive = new ZipArchive({ zlib: { level: 9 } });
 
   for (const entry of entries) {
     try {
       await uploads.assertExists(entry.kind, entry.relativePath);
-      const stream = await uploads.getReadStream(entry.kind, entry.relativePath);
-      archive.append(stream, { name: entry.zipPath });
+      const body = await readUploadBuffer(uploads, entry.kind, entry.relativePath);
+      archive.append(body, { name: entry.zipPath });
       manifest.files.push({
         zipPath: entry.zipPath,
         originalFileName: entry.originalFileName,

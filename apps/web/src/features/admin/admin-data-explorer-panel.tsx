@@ -286,7 +286,7 @@ export function AdminDataExplorerPanel() {
           <p className="text-xs text-muted-foreground">
             {t(
               "admin.dataExplorerExportDocumentsHint",
-              "The ZIP includes patient, encounter, employee, expense, and operation files from object storage, plus manifest.json mapping each file to its database record.",
+              "The ZIP includes patient, encounter, employee, expense, and operation files from local disk (localhost) or S3 (production), plus manifest.json mapping each file to its database record.",
             )}
           </p>
         </CardContent>
