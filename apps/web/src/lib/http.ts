@@ -120,11 +120,16 @@ export async function apiPut<T>(path: string, body: unknown): Promise<T> {
   return (await res.json()) as T;
 }
 
-export async function apiPostFormData<T>(path: string, formData: FormData): Promise<T> {
+export async function apiPostFormData<T>(
+  path: string,
+  formData: FormData,
+  options?: { enhance?: boolean },
+): Promise<T> {
   const token = useAuthStore.getState().accessToken;
   const headers: Record<string, string> = { Accept: "application/json" };
   if (token) headers.Authorization = `Bearer ${token}`;
-  const body = await enhanceFormDataImages(formData, "document");
+  const body =
+    options?.enhance === false ? formData : await enhanceFormDataImages(formData, "document");
   const res = await fetch(apiUrl(path), {
     method: "POST",
     headers,

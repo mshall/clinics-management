@@ -633,6 +633,77 @@ export class PatientsService {
     return { ok: true };
   }
 
+  async cropDocument(
+    tenantId: string,
+    patientId: string,
+    documentId: string,
+    user: JwtUser,
+    file?: PatientDocFile,
+  ): Promise<{ ok: true; id: string; originalFileName: string; mimeType: string; sizeBytes: number }> {
+    await this.assertCanManagePatient(user);
+    await this.getById(tenantId, patientId, user);
+    if (!file?.buffer?.length) throw new BadRequestException("File is required");
+    if (file.size > MAX_PATIENT_DOC_BYTES) throw new BadRequestException("File too large (max 15MB)");
+    const mime = file.mimetype || "application/octet-stream";
+    if (!mime.startsWith("image/")) throw new BadRequestException("Only image documents can be cropped");
+
+    const doc = await this.prisma.patientDocument.findFirst({
+      where: { id: documentId, patientId, tenantId },
+    });
+    if (!doc) throw new NotFoundException("Document not found");
+
+    await this.uploads.put("patients", doc.relativePath, file.buffer, mime);
+    const updated = await this.prisma.patientDocument.update({
+      where: { id: documentId },
+      data: { mimeType: mime, sizeBytes: file.size },
+    });
+    return {
+      ok: true,
+      id: updated.id,
+      originalFileName: updated.originalFileName,
+      mimeType: updated.mimeType,
+      sizeBytes: updated.sizeBytes,
+    };
+  }
+
+  async cropEncounterDocumentForPatient(
+    tenantId: string,
+    patientId: string,
+    encounterId: string,
+    documentId: string,
+    user: JwtUser,
+    file?: PatientDocFile,
+  ): Promise<{ ok: true; id: string; originalFileName: string; mimeType: string; sizeBytes: number }> {
+    await this.assertCanManagePatient(user);
+    await this.getById(tenantId, patientId, user);
+    if (!file?.buffer?.length) throw new BadRequestException("File is required");
+    if (file.size > MAX_PATIENT_DOC_BYTES) throw new BadRequestException("File too large (max 15MB)");
+    const mime = file.mimetype || "application/octet-stream";
+    if (!mime.startsWith("image/")) throw new BadRequestException("Only image documents can be cropped");
+
+    const enc = await this.prisma.encounter.findFirst({
+      where: { id: encounterId, tenantId, patientId },
+    });
+    if (!enc) throw new NotFoundException("Encounter not found");
+    const doc = await this.prisma.encounterDocument.findFirst({
+      where: { id: documentId, encounterId, tenantId },
+    });
+    if (!doc) throw new NotFoundException("Document not found");
+
+    await this.uploads.put("encounters", doc.relativePath, file.buffer, mime);
+    const updated = await this.prisma.encounterDocument.update({
+      where: { id: documentId },
+      data: { mimeType: mime, sizeBytes: file.size },
+    });
+    return {
+      ok: true,
+      id: updated.id,
+      originalFileName: updated.originalFileName,
+      mimeType: updated.mimeType,
+      sizeBytes: updated.sizeBytes,
+    };
+  }
+
   async listClinicalDocuments(
     tenantId: string,
     patientId: string,

@@ -225,6 +225,78 @@ export class PatientsController {
     );
   }
 
+  @Post(":id/documents/:documentId/crop")
+  @ApiOperation({ summary: "Crop and replace a patient-attached image document" })
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        file: { type: "string", format: "binary" },
+        cropX: { type: "number" },
+        cropY: { type: "number" },
+        cropWidth: { type: "number" },
+        cropHeight: { type: "number" },
+      },
+      required: ["file"],
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor("file", {
+      storage: memoryStorage(),
+      limits: { fileSize: PATIENT_DOC_UPLOAD_LIMIT },
+    }),
+  )
+  @ApiOkResponse({ description: "{ ok: true, id, originalFileName, mimeType, sizeBytes }" })
+  cropDocument(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Param("documentId") documentId: string,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.patients.cropDocument(requireTenantId(user), id, documentId, user, file);
+  }
+
+  @Post(":id/encounter-documents/:encounterId/:documentId/crop")
+  @ApiOperation({ summary: "Crop and replace an encounter image document from the patient profile" })
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        file: { type: "string", format: "binary" },
+        cropX: { type: "number" },
+        cropY: { type: "number" },
+        cropWidth: { type: "number" },
+        cropHeight: { type: "number" },
+      },
+      required: ["file"],
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor("file", {
+      storage: memoryStorage(),
+      limits: { fileSize: PATIENT_DOC_UPLOAD_LIMIT },
+    }),
+  )
+  @ApiOkResponse({ description: "{ ok: true, id, originalFileName, mimeType, sizeBytes }" })
+  cropEncounterDocument(
+    @CurrentUser() user: JwtUser,
+    @Param("id") patientId: string,
+    @Param("encounterId") encounterId: string,
+    @Param("documentId") documentId: string,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.patients.cropEncounterDocumentForPatient(
+      requireTenantId(user),
+      patientId,
+      encounterId,
+      documentId,
+      user,
+      file,
+    );
+  }
+
   @Patch(":id")
   @ApiOperation({ summary: "Update patient demographics" })
   @ApiOkResponse({ type: PatientDto })

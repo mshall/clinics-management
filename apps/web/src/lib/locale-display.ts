@@ -110,3 +110,24 @@ export function formatLeaveType(type: string, t: TFunction): string {
 export function localeForLanguage(language: string): string {
   return language === "ar" ? "ar-AE" : "en-AE";
 }
+
+/** Whole years from an ISO date (YYYY-MM-DD) to today; null if invalid or in the future. */
+export function calculateAgeFromDob(dobIso: string, refDate: Date = new Date()): number | null {
+  const trimmed = dobIso.trim();
+  if (!trimmed) return null;
+  const dob = new Date(trimmed.includes("T") ? trimmed : `${trimmed}T12:00:00`);
+  if (Number.isNaN(dob.getTime())) return null;
+
+  let age = refDate.getFullYear() - dob.getFullYear();
+  const monthDiff = refDate.getMonth() - dob.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && refDate.getDate() < dob.getDate())) {
+    age -= 1;
+  }
+  return age >= 0 ? age : null;
+}
+
+export function formatPatientDob(dobIso: string, locale: string): string {
+  const dob = new Date(dobIso.includes("T") ? dobIso : `${dobIso}T12:00:00`);
+  if (Number.isNaN(dob.getTime())) return dobIso;
+  return dob.toLocaleDateString(locale);
+}

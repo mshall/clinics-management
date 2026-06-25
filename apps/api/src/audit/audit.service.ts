@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
 
-const SKIP_PATH_PREFIXES = ["health/", "dashboards/", "reports/"];
+const SKIP_PATH_PREFIXES = ["health/"];
 
 const RESOURCE_NAMES: Record<string, string> = {
   patients: "Patient",
@@ -31,23 +31,95 @@ function resourceFromPath(parts: string[]): string {
     const sub = parts[1] ?? "admin";
     return RESOURCE_NAMES[sub] ?? sub.replace(/-/g, " ");
   }
+  if (parts.includes("encounter-documents")) return "EncounterDocument";
+  if (parts.includes("documents")) return "Document";
   return RESOURCE_NAMES[parts[0] ?? ""] ?? (parts[0] ?? "Unknown").replace(/-/g, " ");
-}
-
-function actionFromRequest(method: string, parts: string[], resource: string): string {
-  const last = parts[parts.length - 1] ?? "";
-  const resourceToken = resource.replace(/\s+/g, "_").toUpperCase();
-  if (parts.includes("login")) return "LOGIN";
-  if (last === "bulk-delete") return `BULK_DELETE_${resourceToken}`;
-  if (method === "POST") return `CREATE_${resourceToken}`;
-  if (method === "PATCH") return `UPDATE_${resourceToken}`;
-  if (method === "DELETE") return `DELETE_${resourceToken}`;
-  if (method === "PUT") return `UPDATE_${resourceToken}`;
-  return `${method}_${resourceToken}`;
 }
 
 function looksLikeId(segment: string): boolean {
   return /^[a-z0-9]{20,}$/i.test(segment);
+}
+
+function actionFromRequest(method: string, parts: string[]): string {
+  const m = method.toUpperCase();
+  const last = parts[parts.length - 1] ?? "";
+  const root = parts[0] ?? "resource";
+
+  if (parts.includes("login")) return "LOGIN";
+  if (last === "bulk-delete") return `BULK_DELETE_${root.toUpperCase()}`;
+  if (last === "crop") return parts.includes("encounter-documents") ? "CROP_ENCOUNTER_DOCUMENT" : "CROP_PATIENT_DOCUMENT";
+  if (last === "finalize") return "FINALIZE_ENCOUNTER";
+
+  if (parts.includes("encounter-documents")) {
+    if (m === "DELETE") return "DELETE_ENCOUNTER_DOCUMENT";
+  }
+
+  if (parts.includes("national-id-document")) {
+    if (m === "POST") return "UPLOAD_NATIONAL_ID_DOCUMENT";
+    if (m === "GET") return "VIEW_NATIONAL_ID_DOCUMENT";
+  }
+
+  if (parts.includes("documents")) {
+    const documentsIdx = parts.indexOf("documents");
+    const segmentAfterDocuments = parts[documentsIdx + 1];
+    if (m === "POST" && last === "documents") {
+      return root === "encounters" ? "UPLOAD_ENCOUNTER_DOCUMENT" : "UPLOAD_PATIENT_DOCUMENT";
+    }
+    if (m === "DELETE" && looksLikeId(last)) {
+      return root === "encounters" ? "DELETE_ENCOUNTER_DOCUMENT" : "DELETE_PATIENT_DOCUMENT";
+    }
+    if (m === "GET" && (last === "file" || (looksLikeId(last) && segmentAfterDocuments === last))) {
+      return root === "encounters" ? "VIEW_ENCOUNTER_DOCUMENT" : "VIEW_PATIENT_DOCUMENT";
+    }
+  }
+
+  if (m === "GET" && parts.length === 2 && looksLikeId(parts[1]!)) {
+    const viewActions: Record<string, string> = {
+      patients: "VIEW_PATIENT",
+      encounters: "VIEW_ENCOUNTER",
+      appointments: "VIEW_APPOINTMENT",
+      operations: "VIEW_OPERATION",
+      expenses: "VIEW_EXPENSE",
+      revenue: "VIEW_REVENUE",
+      clinics: "VIEW_CLINIC",
+      users: "VIEW_USER",
+    };
+    if (viewActions[root]) return viewActions[root]!;
+  }
+
+  if (m === "GET" && last === "clinical-documents" && root === "patients") {
+    return "VIEW_PATIENT_CLINICAL_DOCUMENTS";
+  }
+
+  const resourceToken = resourceFromPath(parts).replace(/\s+/g, "_").toUpperCase();
+  if (m === "POST") return `CREATE_${resourceToken}`;
+  if (m === "PATCH") return `UPDATE_${resourceToken}`;
+  if (m === "DELETE") return `DELETE_${resourceToken}`;
+  if (m === "PUT") return `UPDATE_${resourceToken}`;
+  if (m === "GET") return `VIEW_${resourceToken}`;
+  return `${m}_${resourceToken}`;
+}
+
+function shouldAuditGet(path: string): boolean {
+  const parts = path.split("/").filter(Boolean);
+  if (!parts.length) return false;
+  if (parts.includes("national-id-document")) return true;
+  if (lastSegmentIsClinicalDocumentsList(parts)) return true;
+  if (parts.includes("documents")) {
+    const documentsIdx = parts.indexOf("documents");
+    const after = parts[documentsIdx + 1];
+    if (after && looksLikeId(after)) return true;
+  }
+  if (parts.length === 2 && looksLikeId(parts[1]!)) {
+    return ["patients", "encounters", "appointments", "operations", "expenses", "revenue", "clinics", "users"].includes(
+      parts[0]!,
+    );
+  }
+  return false;
+}
+
+function lastSegmentIsClinicalDocumentsList(parts: string[]): boolean {
+  return parts[parts.length - 1] === "clinical-documents" && parts[parts.length - 2] !== undefined;
 }
 
 function pickResourceId(parts: string[], response: unknown): string | null {
@@ -96,14 +168,17 @@ export class AuditService {
     response: unknown,
   ): Promise<void> {
     if (!user?.tenantId || !user.userId) return;
-    if (["GET", "HEAD", "OPTIONS"].includes(method.toUpperCase())) return;
 
     const path = rawPath.split("?")[0].replace(/^\/api\/v1\/?/, "");
     if (!path || SKIP_PATH_PREFIXES.some((p) => path.startsWith(p))) return;
 
+    const m = method.toUpperCase();
+    const isRead = ["GET", "HEAD", "OPTIONS"].includes(m);
+    if (isRead && !shouldAuditGet(path)) return;
+
     const parts = path.split("/").filter(Boolean);
     const resource = resourceFromPath(parts);
-    const action = actionFromRequest(method.toUpperCase(), parts, resource);
+    const action = actionFromRequest(m, parts);
     const resourceId = pickResourceId(parts, response);
     const clinicId = pickClinicId(body, response);
 
@@ -114,7 +189,7 @@ export class AuditService {
       action,
       resource,
       resourceId,
-      metadata: safeMetadata(method.toUpperCase(), path, body),
+      metadata: safeMetadata(m, path, body),
     });
   }
 

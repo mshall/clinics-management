@@ -17,7 +17,7 @@ import { useClinicsQuery, useEncountersQuery, usePatientQuery } from "@/lib/api-
 import type { EncounterDetailDto } from "@/lib/api-types";
 import { apiFetchBlob, apiPost } from "@/lib/http";
 import { enhanceImageFile } from "@/lib/enhance-image";
-import { formatEncounterStatus, localeForLanguage } from "@/lib/locale-display";
+import { formatEncounterStatus, calculateAgeFromDob, formatPatientDob, localeForLanguage } from "@/lib/locale-display";
 import { patientAcquisitionDisplay, type PatientAcquisitionChannel } from "@/lib/patient-acquisition";
 import { showNavItem } from "@/lib/nav-policy";
 import { canEditPatientDetails } from "@/lib/patient-edit-policy";
@@ -145,6 +145,9 @@ export function PatientDetailPage() {
       ? `${patient.firstNameAr} ${patient.lastNameAr ?? ""}`
       : `${patient.firstNameEn} ${patient.lastNameEn}`;
 
+  const locale = localeForLanguage(i18n.language);
+  const patientAge = patient.dob ? calculateAgeFromDob(patient.dob) : null;
+
   return (
     <div className="space-y-6">
       <Card>
@@ -211,7 +214,21 @@ export function PatientDetailPage() {
           <CardContent className="space-y-2 text-sm">
             <Row
               label={t("patients.dob")}
-              value={<span className="ltr-nums">{patient.dob ?? t("common.notAvailable", "—")}</span>}
+              value={
+                patient.dob ? (
+                  <span className="ltr-nums">
+                    {formatPatientDob(patient.dob, locale)}
+                    {patientAge != null ? (
+                      <span className="text-muted-foreground">
+                        {" · "}
+                        {t("patients.ageYears", "{{age}} years", { age: patientAge })}
+                      </span>
+                    ) : null}
+                  </span>
+                ) : (
+                  t("common.notAvailable", "—")
+                )
+              }
             />
             <Separator />
             <Row label={t("patients.gender")} value={<span className="uppercase">{patient.gender}</span>} />

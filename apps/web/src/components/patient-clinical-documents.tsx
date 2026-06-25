@@ -3,15 +3,17 @@ import { Download, Eye, FileText, FlaskConical, Pill, ScanLine, Trash2 } from "l
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import type { PixelCrop } from "react-image-crop";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DocumentViewerOverlay } from "@/components/document-viewer-overlay";
+import { ImageCropDialog } from "@/components/image-crop-dialog";
 import { PatientClinicalSectionUpload } from "@/components/patient-clinical-section-upload";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePatientClinicalDocumentsQuery } from "@/lib/api-hooks";
 import type { PatientClinicalDocumentItem } from "@/lib/patient-document-category";
-import { apiDelete, apiFetchBlob } from "@/lib/http";
+import { apiDelete, apiFetchBlob, apiPostFormData } from "@/lib/http";
 import { isImageViewerContent, resolveViewerContentType } from "@/lib/image-mime";
 import { apiErrorMessage } from "@/features/platform/platform-shared";
 import { localeForLanguage } from "@/lib/locale-display";
@@ -42,10 +44,11 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const role = useAuthStore((s) => s.user?.role);
-  const canDelete = canEditPatientDetails(role);
+  const canManage = canEditPatientDetails(role);
   const { data, isPending } = usePatientClinicalDocumentsQuery(patientId);
   const [viewer, setViewer] = useState<ViewerState | null>(null);
   const [docToDelete, setDocToDelete] = useState<PatientClinicalDocumentItem | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
   const viewerUrlsRef = useRef<Record<string, string>>({});
 
   const revokeAllViewerUrls = () => {
@@ -76,6 +79,11 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
       ? `/api/v1/patients/${patientId}/encounter-documents/${doc.encounterId}/${doc.id}`
       : `/api/v1/patients/${patientId}/documents/${doc.id}`;
 
+  const cropDocumentPath = (doc: PatientClinicalDocumentItem) =>
+    doc.source === "encounter" && doc.encounterId
+      ? `/api/v1/patients/${patientId}/encounter-documents/${doc.encounterId}/${doc.id}/crop`
+      : `/api/v1/patients/${patientId}/documents/${doc.id}/crop`;
+
   const deleteMutation = useMutation({
     mutationFn: (doc: PatientClinicalDocumentItem) => apiDelete(deleteDocumentPath(doc)),
     onSuccess: async (_data, doc) => {
@@ -93,6 +101,36 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
         const nextIndex = Math.min(deletedIndex >= 0 ? deletedIndex : viewer.index, remaining.length - 1);
         revokeAllViewerUrls();
         await loadSlide(remaining, nextIndex);
+      }
+    },
+    onError: (e: unknown) => toast.error(apiErrorMessage(e)),
+  });
+
+  const cropMutation = useMutation({
+    mutationFn: async ({
+      doc,
+      file,
+      crop,
+    }: {
+      doc: PatientClinicalDocumentItem;
+      file: File;
+      crop: PixelCrop;
+    }) => {
+      const fd = new FormData();
+      fd.set("file", file, file.name);
+      fd.set("cropX", String(Math.round(crop.x)));
+      fd.set("cropY", String(Math.round(crop.y)));
+      fd.set("cropWidth", String(Math.round(crop.width)));
+      fd.set("cropHeight", String(Math.round(crop.height)));
+      return apiPostFormData(cropDocumentPath(doc), fd, { enhance: false });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["patient", patientId, "clinical-documents"] });
+      toast.success(t("patients.clinicalDocCropped", "Image cropped and saved."));
+      setCropOpen(false);
+      if (viewer) {
+        revokeAllViewerUrls();
+        await loadSlide(viewer.items, viewer.index);
       }
     },
     onError: (e: unknown) => toast.error(apiErrorMessage(e)),
@@ -226,7 +264,7 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
                   locale={locale}
                   showDownload={showDownload}
                   emphasizeDescription={false}
-                  canDelete={canDelete}
+                  canDelete={canManage}
                   onView={(doc) => void openDocument(doc, items)}
                   onDownload={(doc) => void downloadDocument(doc)}
                   onDelete={requestDelete}
@@ -253,7 +291,7 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
               locale={locale}
               showDownload
               emphasizeDescription
-              canDelete={canDelete}
+              canDelete={canManage}
               onView={(doc) => void openDocument(doc, otherItems)}
               onDownload={(doc) => void downloadDocument(doc)}
               onDelete={requestDelete}
@@ -269,6 +307,12 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
         const isGallery =
           viewer.items.length > 1 &&
           viewer.items.every((item) => isImageViewerContent(item.mimeType, item.originalFileName));
+        const resolvedType = resolveViewerContentType(
+          viewer.contentTypes[key] ?? current.mimeType,
+          current.originalFileName,
+          current.mimeType,
+        );
+        const canCropImage = canManage && isImageViewerContent(resolvedType, current.originalFileName);
         return (
           <DocumentViewerOverlay
             fileName={current.originalFileName}
@@ -276,8 +320,11 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
             contentType={viewer.contentTypes[key] ?? current.mimeType}
             loading={viewer.loading}
             onClose={closeViewer}
+            canCrop={canCropImage}
+            cropPending={cropMutation.isPending}
+            onCrop={() => setCropOpen(true)}
             headerActions={
-              canDelete ? (
+              canManage ? (
                 <Button
                   type="button"
                   variant="destructive"
@@ -302,6 +349,27 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
                   }
                 : undefined
             }
+          />
+        );
+      })() : null}
+
+      {viewer && cropOpen ? (() => {
+        const current = viewer.items[viewer.index];
+        if (!current) return null;
+        const key = clinicalDocKey(current);
+        const url = viewer.urls[key];
+        if (!url) return null;
+        return (
+          <ImageCropDialog
+            open={cropOpen}
+            onOpenChange={setCropOpen}
+            imageUrl={url}
+            fileName={current.originalFileName}
+            contentType={viewer.contentTypes[key] ?? current.mimeType}
+            pending={cropMutation.isPending}
+            onApply={async (file, crop) => {
+              await cropMutation.mutateAsync({ doc: current, file, crop });
+            }}
           />
         );
       })() : null}

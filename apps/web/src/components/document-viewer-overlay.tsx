@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Crop } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { ZoomableImage } from "@/components/zoomable-image";
@@ -21,6 +22,9 @@ type DocumentViewerOverlayProps = {
   headerActions?: ReactNode;
   loading?: boolean;
   gallery?: DocumentGalleryNavigation;
+  canCrop?: boolean;
+  onCrop?: () => void;
+  cropPending?: boolean;
 };
 
 export function DocumentViewerOverlay({
@@ -31,6 +35,9 @@ export function DocumentViewerOverlay({
   headerActions,
   loading = false,
   gallery,
+  canCrop = false,
+  onCrop,
+  cropPending = false,
 }: DocumentViewerOverlayProps) {
   const { t } = useTranslation();
   const resolvedType = resolveViewerContentType(contentType, fileName);
@@ -59,6 +66,12 @@ export function DocumentViewerOverlay({
         <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2">
           <p className="min-w-0 truncate text-sm font-medium">{fileName}</p>
           <div className="flex shrink-0 items-center gap-2">
+            {canCrop && onCrop ? (
+              <Button type="button" variant="outline" size="sm" disabled={loading || cropPending} onClick={onCrop}>
+                <Crop className="h-4 w-4" />
+                <span className="ms-1">{t("patients.cropDocument", "Crop")}</span>
+              </Button>
+            ) : null}
             {headerActions}
             <Button type="button" variant="secondary" size="sm" onClick={onClose}>
               {t("common.close")}
