@@ -24,6 +24,7 @@ import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { DocumentViewerOverlay } from "@/components/document-viewer-overlay";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1085,35 +1086,12 @@ export function EncounterDetailPage() {
       </div>
 
       {viewer ? (
-        <div
-          role="dialog"
-          aria-modal
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-          onClick={closeViewer}
-        >
-          <div
-            className="relative max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-lg border border-border bg-card shadow-lg"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-border px-4 py-2">
-              <p className="truncate text-sm font-medium">{viewer.doc.originalFileName}</p>
-              <Button type="button" variant="secondary" size="sm" onClick={closeViewer}>
-                {t("common.close")}
-              </Button>
-            </div>
-            <div className="max-h-[calc(90vh-3rem)] overflow-auto p-4">
-              {viewer.contentType.startsWith("image/") ? (
-                <img src={viewer.url} alt="" className="mx-auto max-h-[70vh] max-w-full object-contain" />
-              ) : viewer.contentType.includes("pdf") ? (
-                <iframe title={viewer.doc.originalFileName} src={viewer.url} className="h-[70vh] w-full rounded border" />
-              ) : (
-                <a href={viewer.url} download={viewer.doc.originalFileName} className="text-primary underline">
-                  {t("encounters.downloadFile")}
-                </a>
-              )}
-            </div>
-          </div>
-        </div>
+        <DocumentViewerOverlay
+          fileName={viewer.doc.originalFileName}
+          url={viewer.url}
+          contentType={viewer.contentType}
+          onClose={closeViewer}
+        />
       ) : null}
     </div>
   );

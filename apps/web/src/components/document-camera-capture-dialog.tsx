@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { enhanceImageFile } from "@/lib/enhance-image";
 
 type DocumentCameraCaptureDialogProps = {
   open: boolean;
@@ -16,6 +17,7 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
   const streamRef = useRef<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [capturing, setCapturing] = useState(false);
 
   const stopStream = useCallback(() => {
     for (const track of streamRef.current?.getTracks() ?? []) {
@@ -42,7 +44,11 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
       }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" } },
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
           audio: false,
         });
         if (cancelled) {
@@ -73,7 +79,7 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
 
   const capture = () => {
     const video = videoRef.current;
-    if (!video || !ready) return;
+    if (!video || !ready || capturing) return;
     const w = video.videoWidth;
     const h = video.videoHeight;
     if (!w || !h) return;
@@ -83,13 +89,22 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
     canvas.height = h;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
+    setCapturing(true);
     ctx.drawImage(video, 0, 0, w, h);
     canvas.toBlob(
       (blob) => {
-        if (!blob) return;
-        const file = new File([blob], `camera-capture-${Date.now()}.jpg`, { type: "image/jpeg" });
-        onCapture(file);
-        onOpenChange(false);
+        void (async () => {
+          try {
+            if (!blob) return;
+            const raw = new File([blob], `camera-capture-${Date.now()}.jpg`, { type: "image/jpeg" });
+            const file = await enhanceImageFile(raw, "document");
+            onCapture(file);
+            onOpenChange(false);
+          } finally {
+            setCapturing(false);
+          }
+        })();
       },
       "image/jpeg",
       0.92,
@@ -119,9 +134,14 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t("common.cancel", "Cancel")}
             </Button>
-            <Button type="button" disabled={!ready || Boolean(cameraError)} className="gap-1" onClick={capture}>
+            <Button
+              type="button"
+              disabled={!ready || Boolean(cameraError) || capturing}
+              className="gap-1"
+              onClick={capture}
+            >
               <Camera className="h-4 w-4" />
-              {t("patients.takePhoto", "Take photo")}
+              {capturing ? t("common.loading") : t("patients.takePhoto", "Take photo")}
             </Button>
           </div>
         </div>

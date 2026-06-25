@@ -1,4 +1,5 @@
 import { apiUrl } from "@/lib/api-url";
+import { enhanceFormDataImages } from "@/lib/enhance-image";
 import { useAuthStore } from "@/stores/auth-store";
 
 export class ApiError extends Error {
@@ -123,10 +124,11 @@ export async function apiPostFormData<T>(path: string, formData: FormData): Prom
   const token = useAuthStore.getState().accessToken;
   const headers: Record<string, string> = { Accept: "application/json" };
   if (token) headers.Authorization = `Bearer ${token}`;
+  const body = await enhanceFormDataImages(formData, "document");
   const res = await fetch(apiUrl(path), {
     method: "POST",
     headers,
-    body: formData,
+    body,
   });
   if (res.status === 401) {
     useAuthStore.getState().signOut();

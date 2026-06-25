@@ -1029,6 +1029,9 @@
     "hide": "Hide",
     "retry": "Retry",
     "to": "To",
-    "menu": "Menu"
+    "menu": "Menu",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomReset": "Reset zoom"
   }
 }
