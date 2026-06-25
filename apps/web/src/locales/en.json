@@ -73,6 +73,7 @@
     "searchPlaceholder": "Name, MRN, phone, national ID…",
     "nationalId": "National ID / SSN",
     "nationalIdDocument": "National ID / SSN scan (optional)",
+    "nationalIdPassportDocument": "National ID / SSN / Passport",
     "nationalIdDocumentHint": "PDF or image, max 15 MB. Stored securely on the server.",
     "downloadNationalIdDoc": "Download scan",
     "advancedSearch": "Advanced search",

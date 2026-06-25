@@ -22,7 +22,7 @@ export function isClinicalCategoryDocument(description: string): boolean {
 
 export interface PatientClinicalDocumentItem {
   id: string;
-  source: "patient" | "encounter";
+  source: "patient" | "encounter" | "nationalId";
   encounterId?: string;
   encounterVisitType?: string;
   description?: string;
@@ -30,6 +30,37 @@ export interface PatientClinicalDocumentItem {
   mimeType: string;
   sizeBytes: number;
   createdAt: string;
+}
+
+export const NATIONAL_ID_CLINICAL_DOCUMENT_ID = "national-id";
+
+export function isIdentityDocumentDescription(description: string): boolean {
+  const trimmed = description.trim().toLowerCase();
+  const labels = [
+    "national id / ssn / passport",
+    "national id / ssn",
+    "national id",
+    "ssn",
+    "passport",
+    "id / passport",
+    "بطاقة الهوية / الضمان / جواز",
+    "بطاقة الهوية",
+    "جواز السفر",
+  ];
+  return labels.some((label) => trimmed === label || trimmed.includes(label));
+}
+
+export function clinicalDocumentDisplayDescription(
+  doc: PatientClinicalDocumentItem,
+  t: (key: string, fallback: string) => string,
+): string | undefined {
+  if (doc.source === "nationalId") {
+    return t("patients.nationalIdPassportDocument", "National ID / SSN / Passport");
+  }
+  if (doc.description && isIdentityDocumentDescription(doc.description)) {
+    return t("patients.nationalIdPassportDocument", "National ID / SSN / Passport");
+  }
+  return doc.description;
 }
 
 export interface PatientClinicalDocumentsDto {

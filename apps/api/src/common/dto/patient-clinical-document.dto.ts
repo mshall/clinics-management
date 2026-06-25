@@ -4,8 +4,8 @@ export class PatientClinicalDocumentItemDto {
   @ApiProperty()
   id!: string;
 
-  @ApiProperty({ enum: ["patient", "encounter"] })
-  source!: "patient" | "encounter";
+  @ApiProperty({ enum: ["patient", "encounter", "nationalId"] })
+  source!: "patient" | "encounter" | "nationalId";
 
   @ApiPropertyOptional()
   encounterId?: string;

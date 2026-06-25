@@ -31,6 +31,7 @@ import type { UpdatePatientDto } from "./dto/update-patient.dto";
 import type { BulkDeletePatientsDto } from "./dto/bulk-delete-patients.dto";
 import {
   classifyPatientDocumentDescription,
+  NATIONAL_ID_CLINICAL_DOCUMENT_ID,
   patientCategoryToClinicalKind,
 } from "./patient-document-category";
 import { MIN_PHONE_DIGITS, normalizePhoneDigits } from "./patient-phone";
@@ -711,6 +712,16 @@ export class PatientsService {
   ): Promise<PatientClinicalDocumentsDto> {
     await this.getById(tenantId, patientId, user);
 
+    const patientRow = await this.prisma.patient.findFirst({
+      where: { id: patientId, tenantId, deletedAt: null },
+      select: {
+        nationalIdDocRelativePath: true,
+        nationalIdDocOriginalName: true,
+        nationalIdDocMimeType: true,
+        updatedAt: true,
+      },
+    });
+
     const labs: PatientClinicalDocumentItemDto[] = [];
     const radiology: PatientClinicalDocumentItemDto[] = [];
     const prescriptions: PatientClinicalDocumentItemDto[] = [];
@@ -746,13 +757,15 @@ export class PatientsService {
     }
 
     const encounterWhere: Prisma.EncounterWhereInput = { tenantId, patientId };
+    let loadEncounterDocs = true;
     if (isPhysicianRole(user.role)) {
       encounterWhere.clinicianId = user.userId;
       const net = await fetchPhysicianNetworkClinicIds(this.prisma, tenantId, user.userId);
       if (!net.length) {
-        return { labs, radiology, prescriptions, other };
+        loadEncounterDocs = false;
+      } else {
+        encounterWhere.clinicId = { in: net };
       }
-      encounterWhere.clinicId = { in: net };
     } else if (CLINIC_SCOPE_ROLES.has(user.role)) {
       const scopes = await this.prisma.clinicAdminScope.findMany({
         where: { tenantId, userId: user.userId },
@@ -760,41 +773,46 @@ export class PatientsService {
       });
       const ids = scopes.map((s) => s.clinicId);
       if (!ids.length) {
-        return { labs, radiology, prescriptions, other };
+        loadEncounterDocs = false;
+      } else {
+        encounterWhere.clinicId = { in: ids };
       }
-      encounterWhere.clinicId = { in: ids };
     }
 
-    const encounterDocs = await this.prisma.encounterDocument.findMany({
-      where: {
-        tenantId,
-        encounter: encounterWhere,
-        kind: { in: [EncounterDocumentKind.LAB, EncounterDocumentKind.RADIOLOGY, EncounterDocumentKind.PRESCRIPTION] },
-      },
-      include: {
-        encounter: { select: { id: true, visitType: true, updatedAt: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
-    for (const doc of encounterDocs) {
-      const kind =
-        doc.kind === EncounterDocumentKind.LAB
-          ? "LAB"
-          : doc.kind === EncounterDocumentKind.RADIOLOGY
-            ? "RADIOLOGY"
-            : "PRESCRIPTION";
-      push(kind, {
-        id: doc.id,
-        source: "encounter",
-        encounterId: doc.encounter.id,
-        encounterVisitType: doc.encounter.visitType,
-        originalFileName: doc.originalFileName,
-        mimeType: doc.mimeType,
-        sizeBytes: doc.sizeBytes,
-        createdAt: doc.createdAt.toISOString(),
+    if (loadEncounterDocs) {
+      const encounterDocs = await this.prisma.encounterDocument.findMany({
+        where: {
+          tenantId,
+          encounter: encounterWhere,
+          kind: { in: [EncounterDocumentKind.LAB, EncounterDocumentKind.RADIOLOGY, EncounterDocumentKind.PRESCRIPTION] },
+        },
+        include: {
+          encounter: { select: { id: true, visitType: true, updatedAt: true } },
+        },
+        orderBy: { createdAt: "desc" },
       });
+
+      for (const doc of encounterDocs) {
+        const kind =
+          doc.kind === EncounterDocumentKind.LAB
+            ? "LAB"
+            : doc.kind === EncounterDocumentKind.RADIOLOGY
+              ? "RADIOLOGY"
+              : "PRESCRIPTION";
+        push(kind, {
+          id: doc.id,
+          source: "encounter",
+          encounterId: doc.encounter.id,
+          encounterVisitType: doc.encounter.visitType,
+          originalFileName: doc.originalFileName,
+          mimeType: doc.mimeType,
+          sizeBytes: doc.sizeBytes,
+          createdAt: doc.createdAt.toISOString(),
+        });
+      }
     }
+
+    this.appendNationalIdDocumentToOther(patientRow, other);
 
     const byDateDesc = (a: PatientClinicalDocumentItemDto, b: PatientClinicalDocumentItemDto) =>
       b.createdAt.localeCompare(a.createdAt);
@@ -804,6 +822,33 @@ export class PatientsService {
     other.sort(byDateDesc);
 
     return { labs, radiology, prescriptions, other };
+  }
+
+  private appendNationalIdDocumentToOther(
+    patientRow: {
+      nationalIdDocRelativePath: string | null;
+      nationalIdDocOriginalName: string | null;
+      nationalIdDocMimeType: string | null;
+      updatedAt: Date;
+    } | null,
+    other: PatientClinicalDocumentItemDto[],
+  ): void {
+    if (
+      !patientRow?.nationalIdDocRelativePath ||
+      !patientRow.nationalIdDocOriginalName ||
+      !patientRow.nationalIdDocMimeType
+    ) {
+      return;
+    }
+    other.push({
+      id: NATIONAL_ID_CLINICAL_DOCUMENT_ID,
+      source: "nationalId",
+      description: "National ID / SSN / Passport",
+      originalFileName: patientRow.nationalIdDocOriginalName,
+      mimeType: patientRow.nationalIdDocMimeType,
+      sizeBytes: 0,
+      createdAt: patientRow.updatedAt.toISOString(),
+    });
   }
 
   private async assertCanDeletePatient(user: JwtUser): Promise<void> {

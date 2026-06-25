@@ -16,6 +16,24 @@ export function classifyPatientDocumentDescription(description: string): Patient
   return null;
 }
 
+export const NATIONAL_ID_CLINICAL_DOCUMENT_ID = "national-id";
+
+export function isIdentityDocumentDescription(description: string): boolean {
+  const trimmed = description.trim().toLowerCase();
+  const labels = [
+    "national id / ssn / passport",
+    "national id / ssn",
+    "national id",
+    "ssn",
+    "passport",
+    "id / passport",
+    "بطاقة الهوية / الضمان / جواز",
+    "بطاقة الهوية",
+    "جواز السفر",
+  ];
+  return labels.some((label) => trimmed === label || trimmed.includes(label));
+}
+
 export function patientCategoryToClinicalKind(
   category: PatientDocumentCategoryKind,
 ): "LAB" | "RADIOLOGY" | "PRESCRIPTION" {

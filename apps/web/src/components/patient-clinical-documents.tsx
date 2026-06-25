@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePatientClinicalDocumentsQuery } from "@/lib/api-hooks";
 import type { PatientClinicalDocumentItem } from "@/lib/patient-document-category";
+import { clinicalDocumentDisplayDescription } from "@/lib/patient-document-category";
 import { apiDelete, apiFetchBlob, apiPostFormData } from "@/lib/http";
 import { isImageViewerContent, resolveViewerContentType } from "@/lib/image-mime";
 import { apiErrorMessage } from "@/features/platform/platform-shared";
@@ -69,10 +70,17 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
     setViewer(null);
   };
 
-  const documentPath = (doc: PatientClinicalDocumentItem) =>
-    doc.source === "encounter" && doc.encounterId
+  const documentPath = (doc: PatientClinicalDocumentItem) => {
+    if (doc.source === "nationalId") {
+      return `/api/v1/patients/${patientId}/national-id-document`;
+    }
+    return doc.source === "encounter" && doc.encounterId
       ? `/api/v1/encounters/${doc.encounterId}/documents/${doc.id}/file`
       : `/api/v1/patients/${patientId}/documents/${doc.id}`;
+  };
+
+  const canManageDocument = (doc: PatientClinicalDocumentItem) =>
+    canManage && doc.source !== "nationalId";
 
   const deleteDocumentPath = (doc: PatientClinicalDocumentItem) =>
     doc.source === "encounter" && doc.encounterId
@@ -264,7 +272,7 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
                   locale={locale}
                   showDownload={showDownload}
                   emphasizeDescription={false}
-                  canDelete={canManage}
+                  canManageDocument={canManageDocument}
                   onView={(doc) => void openDocument(doc, items)}
                   onDownload={(doc) => void downloadDocument(doc)}
                   onDelete={requestDelete}
@@ -291,7 +299,7 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
               locale={locale}
               showDownload
               emphasizeDescription
-              canDelete={canManage}
+              canManageDocument={canManageDocument}
               onView={(doc) => void openDocument(doc, otherItems)}
               onDownload={(doc) => void downloadDocument(doc)}
               onDelete={requestDelete}
@@ -312,7 +320,7 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
           current.originalFileName,
           current.mimeType,
         );
-        const canCropImage = canManage && isImageViewerContent(resolvedType, current.originalFileName);
+        const canCropImage = canManageDocument(current) && isImageViewerContent(resolvedType, current.originalFileName);
         return (
           <DocumentViewerOverlay
             fileName={current.originalFileName}
@@ -324,7 +332,7 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
             cropPending={cropMutation.isPending}
             onCrop={() => setCropOpen(true)}
             headerActions={
-              canManage ? (
+              canManageDocument(current) ? (
                 <Button
                   type="button"
                   variant="destructive"
@@ -401,7 +409,7 @@ function DocumentList({
   locale,
   showDownload,
   emphasizeDescription,
-  canDelete,
+  canManageDocument,
   onView,
   onDownload,
   onDelete,
@@ -410,7 +418,7 @@ function DocumentList({
   locale: string;
   showDownload: boolean;
   emphasizeDescription: boolean;
-  canDelete: boolean;
+  canManageDocument: (doc: PatientClinicalDocumentItem) => boolean;
   onView: (doc: PatientClinicalDocumentItem) => void;
   onDownload: (doc: PatientClinicalDocumentItem) => void;
   onDelete: (doc: PatientClinicalDocumentItem) => void;
@@ -423,16 +431,19 @@ function DocumentList({
 
   return (
     <ul className="space-y-2 text-sm">
-      {items.map((doc) => (
+      {items.map((doc) => {
+        const displayDescription = clinicalDocumentDisplayDescription(doc, t);
+        const showIdentityLabel = emphasizeDescription && Boolean(displayDescription);
+        return (
         <li
           key={`${doc.source}-${doc.id}`}
           className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
         >
           <div className="min-w-0 flex-1">
-            {emphasizeDescription && doc.description ? (
-              <p className="font-medium">{doc.description}</p>
+            {showIdentityLabel ? (
+              <p className="font-medium">{displayDescription}</p>
             ) : null}
-            <p className={emphasizeDescription && doc.description ? "truncate text-xs text-muted-foreground ltr-nums" : "truncate font-medium"}>
+            <p className={showIdentityLabel ? "truncate text-xs text-muted-foreground ltr-nums" : "truncate font-medium"}>
               {doc.originalFileName}
             </p>
             <p className="text-xs text-muted-foreground ltr-nums">
@@ -448,8 +459,8 @@ function DocumentList({
                   visitType: doc.encounterVisitType ?? t("encounters.title", "Encounter"),
                 })}
               </Link>
-            ) : !emphasizeDescription && doc.description ? (
-              <p className="truncate text-xs text-muted-foreground">{doc.description}</p>
+            ) : !emphasizeDescription && displayDescription ? (
+              <p className="truncate text-xs text-muted-foreground">{displayDescription}</p>
             ) : null}
           </div>
           <div className="flex shrink-0 flex-wrap gap-1">
@@ -463,7 +474,7 @@ function DocumentList({
                 <span className="ms-1">{t("patients.downloadDocument", "Download")}</span>
               </Button>
             ) : null}
-            {canDelete ? (
+            {canManageDocument(doc) ? (
               <Button type="button" variant="outline" size="sm" onClick={() => onDelete(doc)}>
                 <Trash2 className="h-4 w-4 text-destructive" />
                 <span className="ms-1">{t("patients.deleteDocument", "Delete")}</span>
@@ -471,7 +482,8 @@ function DocumentList({
             ) : null}
           </div>
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 }

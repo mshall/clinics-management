@@ -73,6 +73,7 @@
     "searchPlaceholder": "اسم، رقم ملف، هاتف، هوية وطنية…",
     "nationalId": "الهوية الوطنية / الضمان",
     "nationalIdDocument": "صورة الهوية / الضمان (اختياري)",
+    "nationalIdPassportDocument": "بطاقة الهوية / الضمان / جواز السفر",
     "nationalIdDocumentHint": "PDF أو صورة، بحد أقصى 15 ميجابايت. تُخزَّن بأمان على الخادم.",
     "downloadNationalIdDoc": "تنزيل الصورة",
     "advancedSearch": "بحث متقدم",
