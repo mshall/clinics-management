@@ -1,18 +1,22 @@
-import { Download, Eye, FileText, FlaskConical, Pill, ScanLine } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Download, Eye, FileText, FlaskConical, Pill, ScanLine, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DocumentViewerOverlay } from "@/components/document-viewer-overlay";
 import { PatientClinicalSectionUpload } from "@/components/patient-clinical-section-upload";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePatientClinicalDocumentsQuery } from "@/lib/api-hooks";
 import type { PatientClinicalDocumentItem } from "@/lib/patient-document-category";
-import { apiFetchBlob } from "@/lib/http";
+import { apiDelete, apiFetchBlob } from "@/lib/http";
 import { isImageViewerContent, resolveViewerContentType } from "@/lib/image-mime";
 import { apiErrorMessage } from "@/features/platform/platform-shared";
 import { localeForLanguage } from "@/lib/locale-display";
+import { canEditPatientDetails } from "@/lib/patient-edit-policy";
+import { useAuthStore } from "@/stores/auth-store";
 
 type PatientClinicalDocumentsProps = {
   patientId: string;
@@ -30,10 +34,18 @@ function clinicalDocKey(doc: PatientClinicalDocumentItem): string {
   return `${doc.source}:${doc.id}`;
 }
 
+function isSameClinicalDoc(a: PatientClinicalDocumentItem, b: PatientClinicalDocumentItem): boolean {
+  return a.source === b.source && a.id === b.id;
+}
+
 export function PatientClinicalDocuments({ patientId }: PatientClinicalDocumentsProps) {
   const { t, i18n } = useTranslation();
+  const queryClient = useQueryClient();
+  const role = useAuthStore((s) => s.user?.role);
+  const canDelete = canEditPatientDetails(role);
   const { data, isPending } = usePatientClinicalDocumentsQuery(patientId);
   const [viewer, setViewer] = useState<ViewerState | null>(null);
+  const [docToDelete, setDocToDelete] = useState<PatientClinicalDocumentItem | null>(null);
   const viewerUrlsRef = useRef<Record<string, string>>({});
 
   const revokeAllViewerUrls = () => {
@@ -58,6 +70,33 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
     doc.source === "encounter" && doc.encounterId
       ? `/api/v1/encounters/${doc.encounterId}/documents/${doc.id}/file`
       : `/api/v1/patients/${patientId}/documents/${doc.id}`;
+
+  const deleteDocumentPath = (doc: PatientClinicalDocumentItem) =>
+    doc.source === "encounter" && doc.encounterId
+      ? `/api/v1/patients/${patientId}/encounter-documents/${doc.encounterId}/${doc.id}`
+      : `/api/v1/patients/${patientId}/documents/${doc.id}`;
+
+  const deleteMutation = useMutation({
+    mutationFn: (doc: PatientClinicalDocumentItem) => apiDelete(deleteDocumentPath(doc)),
+    onSuccess: async (_data, doc) => {
+      await queryClient.invalidateQueries({ queryKey: ["patient", patientId, "clinical-documents"] });
+      toast.success(t("patients.clinicalDocDeleted", "Document deleted."));
+      setDocToDelete(null);
+
+      if (viewer) {
+        const remaining = viewer.items.filter((item) => !isSameClinicalDoc(item, doc));
+        if (remaining.length === 0) {
+          closeViewer();
+          return;
+        }
+        const deletedIndex = viewer.items.findIndex((item) => isSameClinicalDoc(item, doc));
+        const nextIndex = Math.min(deletedIndex >= 0 ? deletedIndex : viewer.index, remaining.length - 1);
+        revokeAllViewerUrls();
+        await loadSlide(remaining, nextIndex);
+      }
+    },
+    onError: (e: unknown) => toast.error(apiErrorMessage(e)),
+  });
 
   const loadSlide = async (items: PatientClinicalDocumentItem[], index: number, existing?: ViewerState) => {
     const doc = items[index];
@@ -123,6 +162,10 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
     }
   };
 
+  const requestDelete = (doc: PatientClinicalDocumentItem) => {
+    setDocToDelete(doc);
+  };
+
   if (isPending) {
     return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;
   }
@@ -183,8 +226,10 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
                   locale={locale}
                   showDownload={showDownload}
                   emphasizeDescription={false}
+                  canDelete={canDelete}
                   onView={(doc) => void openDocument(doc, items)}
                   onDownload={(doc) => void downloadDocument(doc)}
+                  onDelete={requestDelete}
                 />
                 <PatientClinicalSectionUpload patientId={patientId} category={category} />
               </CardContent>
@@ -208,8 +253,10 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
               locale={locale}
               showDownload
               emphasizeDescription
+              canDelete={canDelete}
               onView={(doc) => void openDocument(doc, otherItems)}
               onDownload={(doc) => void downloadDocument(doc)}
+              onDelete={requestDelete}
             />
             <PatientClinicalSectionUpload patientId={patientId} category="OTHER" />
           </CardContent>
@@ -229,6 +276,20 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
             contentType={viewer.contentTypes[key] ?? current.mimeType}
             loading={viewer.loading}
             onClose={closeViewer}
+            headerActions={
+              canDelete ? (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => requestDelete(current)}
+                  disabled={deleteMutation.isPending}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span className="ms-1">{t("patients.deleteDocument", "Delete")}</span>
+                </Button>
+              ) : undefined
+            }
             gallery={
               isGallery
                 ? {
@@ -244,6 +305,25 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
           />
         );
       })() : null}
+
+      <ConfirmDialog
+        open={docToDelete != null}
+        onOpenChange={(open) => {
+          if (!open && !deleteMutation.isPending) setDocToDelete(null);
+        }}
+        title={t("patients.deleteClinicalDocTitle", "Delete document?")}
+        description={t(
+          "patients.deleteClinicalDocBody",
+          'Delete "{{name}}"? This cannot be undone.',
+          { name: docToDelete?.originalFileName ?? "" },
+        )}
+        confirmLabel={t("patients.deleteClinicalDocAction", "Delete document")}
+        cancelLabel={t("common.cancel", "Cancel")}
+        pending={deleteMutation.isPending}
+        onConfirm={() => {
+          if (docToDelete) deleteMutation.mutate(docToDelete);
+        }}
+      />
     </>
   );
 }
@@ -253,15 +333,19 @@ function DocumentList({
   locale,
   showDownload,
   emphasizeDescription,
+  canDelete,
   onView,
   onDownload,
+  onDelete,
 }: {
   items: PatientClinicalDocumentItem[];
   locale: string;
   showDownload: boolean;
   emphasizeDescription: boolean;
+  canDelete: boolean;
   onView: (doc: PatientClinicalDocumentItem) => void;
   onDownload: (doc: PatientClinicalDocumentItem) => void;
+  onDelete: (doc: PatientClinicalDocumentItem) => void;
 }) {
   const { t } = useTranslation();
 
@@ -300,7 +384,7 @@ function DocumentList({
               <p className="truncate text-xs text-muted-foreground">{doc.description}</p>
             ) : null}
           </div>
-          <div className="flex shrink-0 gap-1">
+          <div className="flex shrink-0 flex-wrap gap-1">
             <Button type="button" variant="outline" size="sm" onClick={() => onView(doc)}>
               <Eye className="h-4 w-4" />
               <span className="ms-1">{t("encounters.viewDoc", "View")}</span>
@@ -309,6 +393,12 @@ function DocumentList({
               <Button type="button" variant="outline" size="sm" onClick={() => onDownload(doc)}>
                 <Download className="h-4 w-4" />
                 <span className="ms-1">{t("patients.downloadDocument", "Download")}</span>
+              </Button>
+            ) : null}
+            {canDelete ? (
+              <Button type="button" variant="outline" size="sm" onClick={() => onDelete(doc)}>
+                <Trash2 className="h-4 w-4 text-destructive" />
+                <span className="ms-1">{t("patients.deleteDocument", "Delete")}</span>
               </Button>
             ) : null}
           </div>

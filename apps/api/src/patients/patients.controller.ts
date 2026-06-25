@@ -194,6 +194,37 @@ export class PatientsController {
     });
   }
 
+  @Delete(":id/documents/:documentId")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Remove a patient-attached document" })
+  @ApiOkResponse({ description: "{ ok: true }" })
+  removeDocument(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Param("documentId") documentId: string,
+  ) {
+    return this.patients.removeDocument(requireTenantId(user), id, documentId, user);
+  }
+
+  @Delete(":id/encounter-documents/:encounterId/:documentId")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Remove an encounter document from the patient profile" })
+  @ApiOkResponse({ description: "{ ok: true }" })
+  removeEncounterDocument(
+    @CurrentUser() user: JwtUser,
+    @Param("id") patientId: string,
+    @Param("encounterId") encounterId: string,
+    @Param("documentId") documentId: string,
+  ) {
+    return this.patients.removeEncounterDocumentForPatient(
+      requireTenantId(user),
+      patientId,
+      encounterId,
+      documentId,
+      user,
+    );
+  }
+
   @Patch(":id")
   @ApiOperation({ summary: "Update patient demographics" })
   @ApiOkResponse({ type: PatientDto })

@@ -594,6 +594,45 @@ export class PatientsService {
     return this.uploads.getReadStream("patients", storageKey);
   }
 
+  async removeDocument(
+    tenantId: string,
+    patientId: string,
+    documentId: string,
+    user: JwtUser,
+  ): Promise<{ ok: true }> {
+    await this.assertCanManagePatient(user);
+    await this.getById(tenantId, patientId, user);
+    const doc = await this.prisma.patientDocument.findFirst({
+      where: { id: documentId, patientId, tenantId },
+    });
+    if (!doc) throw new NotFoundException("Document not found");
+    await this.prisma.patientDocument.delete({ where: { id: documentId } });
+    await this.uploads.deleteObject("patients", doc.relativePath).catch(() => undefined);
+    return { ok: true };
+  }
+
+  async removeEncounterDocumentForPatient(
+    tenantId: string,
+    patientId: string,
+    encounterId: string,
+    documentId: string,
+    user: JwtUser,
+  ): Promise<{ ok: true }> {
+    await this.assertCanManagePatient(user);
+    await this.getById(tenantId, patientId, user);
+    const enc = await this.prisma.encounter.findFirst({
+      where: { id: encounterId, tenantId, patientId },
+    });
+    if (!enc) throw new NotFoundException("Encounter not found");
+    const doc = await this.prisma.encounterDocument.findFirst({
+      where: { id: documentId, encounterId, tenantId },
+    });
+    if (!doc) throw new NotFoundException("Document not found");
+    await this.prisma.encounterDocument.delete({ where: { id: documentId } });
+    await this.uploads.deleteObject("encounters", doc.relativePath).catch(() => undefined);
+    return { ok: true };
+  }
+
   async listClinicalDocuments(
     tenantId: string,
     patientId: string,
