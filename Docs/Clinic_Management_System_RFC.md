@@ -4,16 +4,16 @@
 | Field | Value |
 |---|---|
 | **Document Title** | Clinic Management System – Technical RFC |
-| **Version** | 1.2 |
+| **Version** | 1.3 |
 | **Status** | Living document (aligned with `main` as of June 2026) |
-| **Related** | [`Clinic_Management_System_PRD.md`](./Clinic_Management_System_PRD.md) v1.2 |
+| **Related** | [`Clinic_Management_System_PRD.md`](./Clinic_Management_System_PRD.md) v1.3 |
 | **Last Updated** | June 2026 |
 
 ---
 
 ## 1. Overview
 
-This RFC describes the technical architecture and implementation of the Clinic Management System (CMS) defined in the PRD v1.2. The platform is a **multi-tenant SaaS** for clinic groups: one deployed stack serves many organizations (`tenantId`), each with multi-branch clinics, EHR workflows, expenses, HR, and bilingual UI.
+This RFC describes the technical architecture and implementation of the Clinic Management System (CMS) defined in the PRD v1.3. The platform is a **multi-tenant SaaS** for clinic groups: one deployed stack serves many organizations (`tenantId`), each with multi-branch clinics, EHR workflows, expenses, HR, and bilingual UI.
 
 The defining engineering constraints for v1:
 
@@ -268,9 +268,13 @@ POST   /patients/bulk-delete             # soft-delete many (role-gated)
 GET    /patients/:id
 PATCH  /patients/:id
 DELETE /patients/:id                     # soft-delete (role-gated)
-GET    /patients/:id/clinical-documents  # labs, radiology, prescriptions, other
+GET    /patients/:id/clinical-documents  # labs, radiology, prescriptions, other (+ nationalId in other)
 POST   /patients/:id/documents           # multipart: file + description (category label)
 GET    /patients/:id/documents/:documentId
+DELETE /patients/:id/documents/:documentId
+POST   /patients/:id/documents/:documentId/crop   # multipart cropped image; replaces stored blob
+DELETE /patients/:id/encounter-documents/:encounterId/:documentId
+POST   /patients/:id/encounter-documents/:encounterId/:documentId/crop
 POST   /patients/:id/national-id-document
 GET    /patients/:id/national-id-document
 ```
@@ -279,8 +283,10 @@ GET    /patients/:id/national-id-document
 - Patients are **tenant-scoped**. `mrn` and `nationalId` are unique per tenant when set; **phone** is unique per tenant via normalized digit comparison (enforced on create/update and exposed through `phone-conflict`).
 - `dob` is optional. Arabic first/last names required at registration in the current UI.
 - Registration documents store a **description** (localized category label or free text for “Other”); clinical sections classify by that label plus encounter `EncounterDocument.kind` (`LAB`, `RADIOLOGY`, `PRESCRIPTION`).
-- Soft-delete via `deletedAt`; bulk delete for org administrators and clinic staff roles listed in `PATIENT_DELETE_ROLES`.
+- **`listClinicalDocuments`** appends the patient’s national ID scan to **`other[]`** with synthetic id `national-id` and `source: "nationalId"` (read-only in UI — no delete/crop).
+- Soft-delete via `deletedAt`; bulk delete and single delete for roles in `PATIENT_MANAGE_ROLES` (Group Admin, Group Supervisor, Call Center, Clinic Admin, Clinic Assistant, Branch Manager).
 - Cross-branch encounter documents on the profile respect the same physician/clinic scope as encounter lists.
+- Document blobs stored via `UploadBlobStorage` (`uploads/` locally or S3 in production); crop replaces the blob in place and updates metadata.
 
 #### 6.2.5 EncountersModule *(implemented)*
 
@@ -645,14 +651,17 @@ GET    /files/:id                      # presigned GET URL with short TTL
 
 #### 6.2.16 AuditModule
 
-**Entities:** `AuditLog` (append-only, partitioned by month).
+**Entities:** `AuditLog` (append-only rows per tenant).
 
-**Captured for every mutation:** `tenantId`, `userId`, `clinicId`, `action`, `resourceType`, `resourceId`, `before` (JSON), `after` (JSON), `ip`, `userAgent`, `requestId`, `timestamp`.
+**Implementation (shipped):**
+- NestJS **HTTP interceptor** calls `AuditService.recordFromHttp` after authenticated tenant requests.
+- **Mutations** are logged broadly; **GET** requests are logged only for sensitive reads (patient/encounter/appointment/operation/expense/revenue/clinic/user detail, clinical-documents list, document file download, national ID download).
+- **Action names** are derived from method + path, e.g. `VIEW_PATIENT`, `VIEW_PATIENT_CLINICAL_DOCUMENTS`, `VIEW_PATIENT_DOCUMENT`, `UPLOAD_PATIENT_DOCUMENT`, `DELETE_ENCOUNTER_DOCUMENT`, `CROP_PATIENT_DOCUMENT`, `LOGIN`.
+- Each row stores: `tenantId`, `actorId`, optional `clinicId`, `action`, `resource`, `resourceId`, `metadata` (method, path, sanitized body), `createdAt`.
 
 **Notes:**
-- Implemented as a NestJS interceptor + Prisma middleware. No module needs to remember to log — it's automatic.
-- Tamper-evidence: each row's hash chains to the previous row's hash within the partition.
-- Immutable from the application; only platform admins with break-glass access can read raw partitions.
+- Org admins tail logs via `GET /admin/audit-logs` (Governance UI).
+- Hash-chaining partitions and immutable storage — roadmap; current table is application-append-only.
 
 #### 6.2.17 AdminModule
 
@@ -687,9 +696,21 @@ POST   /admin/platform/tenants/:tenantId/users
 
 Legacy org-scoped platform tools (`GET /admin/tenants`, `/admin/data-explorer/*`) remain available to **GROUP_ADMIN** users listed in `PLATFORM_SUPER_ADMIN_EMAILS`.
 
-**HR employee creation:** `POST /hr/employees` and ID-document upload require an allowed role (`GROUP_ADMIN`, `CLINIC_ADMIN`, `HR_OFFICER`, `BRANCH_MANAGER`). `CLINIC_ADMIN` may only assign employees to clinics in `ClinicAdminScope`.
+**Data explorer (group admin / break-glass):**
+```
+GET    /admin/data-explorer/tables
+GET    /admin/data-explorer/:table
+GET    /admin/data-explorer/export/sql?tables=...       # PostgreSQL INSERT dump for selected entities
+GET    /admin/data-explorer/export/documents?tables=... # ZIP of blobs from UploadBlobStorage + manifest.json
+```
+
+Document ZIP export (`tenant-documents-export.ts`) collects file paths from: patients (national ID scan), `patient_documents`, `encounter_documents`, employees (ID doc), expenses (proof), `operation_documents`. Works with **local** `uploads/` and **S3** (`readUploadBuffer`); uses `archiver` v8 `ZipArchive` API.
 
 **Reports (live charts):** `GET /reports/monthly-series?months=N` returns per-calendar-month aggregates: finalized encounter counts (`finalizedAt` in month), sum of **posted** revenue (`postedAt` in month), and new patients (`createdAt` in month). Physicians receive the same shape scoped to their encounters/revenue rows only.
+
+**Patient acquisition:** `GET /reports/patient-acquisition?from=&to=` (channel counts); `GET /reports/patient-acquisition/patients?channel=&from=&to=` (paginated drill-down list for the Reports UI dialog).
+
+**HR employee creation:** `POST /hr/employees` and ID-document upload require an allowed role (`GROUP_ADMIN`, `CLINIC_ADMIN`, `HR_OFFICER`, `BRANCH_MANAGER`). `CLINIC_ADMIN` may only assign employees to clinics in `ClinicAdminScope`.
 
 #### 6.2.18 HealthModule
 

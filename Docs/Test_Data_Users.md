@@ -27,9 +27,9 @@ Professor / consultant in chronic pain, joints, spine, and neuritis (non-surgica
 | Email | Password | Role | Notes |
 |-------|----------|------|-------|
 | `admin@drahmedshall.com` | `demo` | Group admin | Full organization + Admin |
-| `supervisor@drahmedshall.com` | `demo` | Group supervisor | Org-wide patients, appointments, encounters, operations, expenses, revenue, reports (no Admin / HR / Clinics) |
+| `supervisor@drahmedshall.com` | `demo` | Group supervisor | Org-wide patients (edit/delete), appointments, encounters, operations, expenses, revenue, reports (no Admin / HR / Clinics) |
 | `dr.ahmed@drahmedshall.com` | `demo` | Physician | All clinics (no single-clinic HR link) |
-| `callcenter@drahmedshall.com` | `demo` | Call center | Org-wide patients & appointments |
+| `callcenter@drahmedshall.com` | `demo` | Call center | Org-wide patients (edit/delete) & appointments |
 | `finance@drahmedshall.com` | `demo` | Finance officer | Revenue, expenses, reports |
 | `hr@drahmedshall.com` | `demo` | HR officer | HR module |
 
@@ -209,9 +209,16 @@ Branches are children of HQ (`parentClinicId` → HQ).
 |------|--------|
 | Register patient with documents + camera | `assistant@kiorly.com` or `receptionist@kiorly.com` → **Patients → New patient** |
 | Phone duplicate warning (use existing patient phone) | Same as above — enter a phone already on another patient |
-| Patient profile clinical docs (labs / radiology / Rx / other) | Open any patient → scroll to document sections; upload at registration or via encounter |
-| Edit patient demographics | `assistant@kiorly.com`, `clinicadmin@kiorly.com`, `branchmgr@kiorly.com`, or `admin@kiorly.com` → patient profile → **Edit patient** |
+| Patient profile age from DOB | Open any patient with DOB set — header shows date + calculated age |
+| Patient profile clinical docs (labs / radiology / Rx / other) | Open any patient → scroll to document sections; upload at registration, via encounter, or **+ Add** on profile |
+| National ID / passport in **Other documents** | Register or edit patient with national ID scan → profile **Other documents** shows read-only entry |
+| Document viewer: zoom, swipe gallery, crop, delete | Open an image doc from profile → pinch/drag zoom, arrows between images; **Crop** / **Delete** with confirm (not on national ID) |
+| Edit patient demographics | `assistant@kiorly.com`, `clinicadmin@kiorly.com`, `branchmgr@kiorly.com`, `callcenter@kiorly.com`, `supervisor@drahmedshall.com`, or `admin@kiorly.com` → patient profile → **Edit patient** |
 | Delete patient (confirm dialog) | Same roles as edit → **Patients** list → delete action |
+| Reports → acquisition channel → patient list | `finance@kiorly.com` or `admin@kiorly.com` → **Reports** → click a channel row |
+| Audit trail (document view / crop / delete) | Perform action as any role → **Admin → Governance & audit** as `admin@kiorly.com` |
+| Data explorer — SQL export | `admin@kiorly.com` + `PLATFORM_SUPER_ADMIN_EMAILS` → **Admin → Data explorer** → **Download SQL** |
+| Data explorer — documents ZIP (local or S3) | Same as SQL → select entities → **Download documents ZIP**; verify `manifest.json` inside ZIP |
 | Bulk delete patients (org admin) | `admin@kiorly.com` → **Admin → Organization patients** |
 | Create tenants, clinics, org users (no org membership) | `superadmin@kiorly.com` |
 | Platform data explorer + all tenants (legacy) | `admin@kiorly.com` + `PLATFORM_SUPER_ADMIN_EMAILS` |
@@ -221,7 +228,7 @@ Branches are children of HQ (`parentClinicId` → HQ).
 | Finance ledger | `finance@kiorly.com` |
 | HR | `staff7@kiorly.com` |
 | Reception / operations | `receptionist@kiorly.com` |
-| Call center (org-wide patients & appointments) | `callcenter@kiorly.com` or `callcenter@drahmedshall.com` |
+| Call center (org-wide patients edit/delete & appointments) | `callcenter@kiorly.com` or `callcenter@drahmedshall.com` |
 | Dr Ahmed Shall — group admin | `admin@drahmedshall.com` |
 | Dr Ahmed Shall — group supervisor (performance oversight) | `supervisor@drahmedshall.com` |
 | Dr Ahmed Shall — clinical (all clinics) | `dr.ahmed@drahmedshall.com` |

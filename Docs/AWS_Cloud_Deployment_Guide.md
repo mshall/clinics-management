@@ -183,6 +183,8 @@ aws lambda invoke --function-name <DbSeedFunctionName> /tmp/seed-out.json
 
 Supported in product: patient registration documents, national ID scan, encounter lab/radiology/prescription files, expense proofs, employee ID docs.
 
+**Data explorer documents ZIP:** Group admins (with data explorer access) can download a ZIP of all blobs linked to selected DB entities. The API reads from the same storage backend as uploads — local `uploads/` in dev, **S3** in App Runner — and includes `manifest.json` listing each file’s DB source and zip path. Empty selections produce a ZIP with `README.txt` only.
+
 ---
 
 ## 11. Environment variables (checklist)

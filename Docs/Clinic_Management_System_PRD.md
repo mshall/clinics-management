@@ -4,7 +4,7 @@
 | Field | Value |
 |---|---|
 | **Document Title** | Clinic Management System – Product Requirements Document |
-| **Version** | 1.2 |
+| **Version** | 1.3 |
 | **Status** | Living document (aligned with `main` as of June 2026) |
 | **Author** | Product / Engineering |
 | **Last Updated** | June 2026 |
@@ -105,8 +105,8 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 - Shared-schema isolation by `tenantId`; optional dedicated deployment for enterprise (hosting pattern).
 
 **Clinical & patients (implemented on `main`)**
-- Patient registry with bilingual names, optional DOB, **unique phone per tenant**, national ID, acquisition tracking, registration documents (camera capture), edit/delete (role-gated).
-- Patient profile: vitals history, encounters, **clinical document sections** (labs, radiology, prescriptions, other).
+- Patient registry with bilingual names, optional DOB (**calculated age on profile**), **unique phone per tenant**, national ID, acquisition tracking, registration documents (camera capture), edit/delete (role-gated — includes **Call Center** and **Group Supervisor**).
+- Patient profile: vitals history, encounters, **clinical document sections** (labs, radiology, prescriptions, other) with **in-app viewer** (pinch zoom, swipe/gallery navigation), **crop** (confirm before replace), and **delete** (confirm dialog); national ID / SSN / passport scan surfaced in **Other documents**.
 - Encounters: SOAP, vitals, ICD-10 diagnoses, medications, lab/radiology/Rx uploads, generate prescription image, finalize workflow.
 - Appointments: schedule, status lifecycle, physician/clinic scope.
 - Surgical **operations** module (schedule, balance, documents, revenue linkage).
@@ -117,7 +117,8 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 
 **Administration**
 - Organization settings, clinics (parent/branch), users, feature flags, audit log.
-- Org patients CRUD, bulk patient delete, bulk user delete, data explorer, SQL export (group admin / break-glass).
+- Org patients CRUD, bulk patient delete, bulk user delete, data explorer, **SQL export** and **documents ZIP export** (group admin / break-glass).
+- Expanded **audit trail** for patient/encounter views, clinical document list/view/upload/delete/crop (visible in Governance).
 
 **Experience**
 - Bilingual UI (English / Arabic with RTL).
@@ -179,17 +180,19 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 
 **Patient list & administration**
 - Search/filter by MRN, phone, name, national ID, gender; column filters; pagination and sort.
-- **Soft delete** (single or bulk) for **Group Admin**, **Clinic Admin**, **Clinic Assistant**, and **Branch Manager** (with confirm dialog in the UI).
+- **Soft delete** (single or bulk) for **Group Admin**, **Group Supervisor**, **Call Center**, **Clinic Admin**, **Clinic Assistant**, and **Branch Manager** (with confirm dialog in the UI).
 - **Group Admin** also manages patients under **Administration → Organization patients** (create/edit, bulk delete, filters).
 
 **Patient profile**
-- Demographics, optional national ID download, acquisition source, local profile photo (browser storage).
+- Demographics with **calculated age** when date of birth is set (e.g. `15/05/1990 · 35 years`), optional national ID download, acquisition source, local profile photo (browser storage).
 - **Vitals history** and **encounters** list (role-gated) with pagination.
-- **Clinical document sections:** **Lab results**, **Radiology**, **Prescriptions**, and **Other documents** — aggregated from registration uploads and encounter documents, with in-app **view** (images/PDF) and **download** where applicable; encounter-sourced items link back to the visit.
-- **Edit patient** (demographics dialog) for Group Admin, Clinic Admin, Clinic Assistant, and Branch Manager — includes the same phone conflict check on save.
+- **Clinical document sections:** **Lab results**, **Radiology**, **Prescriptions**, and **Other documents** — aggregated from registration uploads, encounter documents, and the **national ID / SSN / passport scan** (shown in **Other** with `source: nationalId`; not deletable/croppable from the profile). Per-section **+ Add** uploads from the profile.
+- In-app **document viewer:** images support **pinch zoom**, **swipe** (or arrow controls) for multi-image galleries, **download**, **crop** (confirmation before replacing the stored file), and **delete** (confirmation dialog) for patient and encounter documents except the national-ID scan.
+- Encounter-sourced items link back to the visit.
+- **Edit patient** (demographics dialog) for Group Admin, Group Supervisor, Call Center, Clinic Admin, Clinic Assistant, and Branch Manager — includes the same phone conflict check on save.
 - **New encounter** shortcut from profile (when encounters nav is allowed).
 
-**API highlights:** `GET /patients/phone-conflict`, `GET /patients/:id/clinical-documents`, document upload/download endpoints, `PATCH /patients/:id`, `POST /patients/bulk-delete`.
+**API highlights:** `GET /patients/phone-conflict`, `GET /patients/:id/clinical-documents`, document upload/download/delete/crop endpoints (patient and encounter paths), `PATCH /patients/:id`, `POST /patients/bulk-delete`.
 
 ### 6.1c Encounters & clinical documents (current build)
 
@@ -204,7 +207,8 @@ Beyond tenant settings and clinic directory, **Group Admin** (and platform break
 - **Organization users** — create users; **bulk delete** selected or filtered users.
 - **Data explorer** — read/write on allowlisted tenant tables (patients, encounters, documents, etc.).
 - **SQL export** — selectable entity subsets for backup/analysis.
-- **Governance / audit** — org-wide audit log tail for administrators.
+- **Documents ZIP export** — downloads uploaded blobs (patient/encounter/operation documents, national ID scans, expense proofs, employee ID docs) from local disk or S3 into a ZIP with `manifest.json`; entity filter mirrors SQL export.
+- **Governance / audit** — org-wide audit log tail for administrators (includes views of patients/encounters, clinical document list/view/upload/delete/crop, and other sensitive reads).
 
 See [`Test_Data_Users.md`](./Test_Data_Users.md) for demo logins and QA scenarios.
 
@@ -295,6 +299,7 @@ A dedicated **Platform Super Administrator** operates **outside any organization
 ### 6.6.1 Reports & analytics
 
 - The **Reports** area charts **visit volume** (finalized encounters), **posted revenue**, and **new patient registrations** per calendar month from live ledger and patient data—not illustrative placeholders.
+- **Patient acquisition** breakdown (how patients found the clinic) with date range filter; each channel row is **clickable** to open a paginated patient list dialog for that channel and period.
 
 ### 6.7 Clinic Onboarding Form
 
@@ -323,12 +328,13 @@ When adding a clinic (parent or branch), the following fields are captured:
 
 Authorization model:
 - **Role-based** checks in services and controllers (e.g. physician sees own encounters; clinic admin filtered by `ClinicAdminScope`).
+- **Patient create/edit/delete** (list and profile): Group Admin, Group Supervisor, Call Center, Clinic Admin, Clinic Assistant, Branch Manager (`PATIENT_MANAGE_ROLES` on API).
 - Optional **nav tab grants** per user to hide/show main navigation areas.
 - Custom permission matrix / auditor role — roadmap; not fully implemented as configurable CASL matrix.
 
 ### 6.9 Audit & Compliance
 
-- **Audit log** records administrative and sensitive actions (org audit tail in Admin).
+- **Audit log** records administrative and sensitive actions plus selected reads (patient/encounter detail, clinical documents list, document view/download, national ID view) and document mutations (upload, delete, crop). Org admins review entries under **Admin → Governance & audit**.
 - Login via JWT; session in SPA until logout or expiry.
 - Soft-delete for patients (retain row with `deletedAt`).
 - Configurable data retention, login history export, formal patient consent module — roadmap.
@@ -406,12 +412,13 @@ Authorization model:
 |---|---|
 | Multi-tenant SaaS + platform super admin | Shipped |
 | Clinics (parent/branch), users, RBAC, nav tab grants | Shipped |
-| Patients (registry, phone uniqueness, clinical doc sections, soft delete) | Shipped |
+| Patients (registry, phone uniqueness, age from DOB, clinical doc viewer/crop/delete, national ID in Other, soft delete) | Shipped |
+| Reports (monthly charts, acquisition channel drill-down) | Shipped |
 | Appointments, encounters (SOAP, vitals, ICD-10, meds, documents, Rx image) | Shipped |
 | Operations (schedule, balance, revenue linkage) | Shipped |
 | Expenses, revenue ledger, reports/monthly charts | Shipped |
 | HR (employees, attendance, leave) | Shipped |
-| Admin (org patients/users, data explorer, SQL export, audit) | Shipped |
+| Admin (org patients/users, data explorer, SQL + documents ZIP export, expanded audit) | Shipped |
 | Bilingual EN/AR web SPA | Shipped |
 | AWS deploy (App Runner + RDS + CloudFront + S3 uploads) | Shipped |
 
