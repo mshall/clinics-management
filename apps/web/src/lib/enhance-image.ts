@@ -2,15 +2,19 @@ import pica from "pica";
 
 const picaInstance = pica();
 
-export type ImageEnhanceProfile = "document" | "avatar" | "general";
+export type ImageEnhanceProfile = "document" | "camera" | "avatar" | "general";
 
-const PROFILES: Record<ImageEnhanceProfile, { minLongEdge: number; maxLongEdge: number }> = {
-  document: { minLongEdge: 2400, maxLongEdge: 3200 },
-  avatar: { minLongEdge: 768, maxLongEdge: 1280 },
-  general: { minLongEdge: 2000, maxLongEdge: 3200 },
+const PROFILES: Record<
+  ImageEnhanceProfile,
+  { minLongEdge: number; maxLongEdge: number; unsharpAmount: number; unsharpRadius: number }
+> = {
+  document: { minLongEdge: 2800, maxLongEdge: 4096, unsharpAmount: 140, unsharpRadius: 0.8 },
+  camera: { minLongEdge: 3200, maxLongEdge: 4096, unsharpAmount: 180, unsharpRadius: 0.85 },
+  avatar: { minLongEdge: 768, maxLongEdge: 1280, unsharpAmount: 100, unsharpRadius: 0.6 },
+  general: { minLongEdge: 2000, maxLongEdge: 3200, unsharpAmount: 120, unsharpRadius: 0.75 },
 };
 
-const JPEG_QUALITY = 0.92;
+const JPEG_QUALITY = 0.96;
 
 export function isEnhanceableImage(file: File): boolean {
   if (!file.type.startsWith("image/")) return false;
@@ -20,9 +24,9 @@ export function isEnhanceableImage(file: File): boolean {
 function computeTargetSize(
   width: number,
   height: number,
-  profile: ImageEnhanceProfile,
+  limits: { minLongEdge: number; maxLongEdge: number },
 ): { width: number; height: number } {
-  const { minLongEdge, maxLongEdge } = PROFILES[profile];
+  const { minLongEdge, maxLongEdge } = limits;
   const longEdge = Math.max(width, height);
   let scale = 1;
 
@@ -75,6 +79,7 @@ export async function enhanceImageFile(
   profile: ImageEnhanceProfile = "document",
 ): Promise<File> {
   if (!isEnhanceableImage(file)) return file;
+  if (profile === "document" && file.name.startsWith("document-capture-")) return file;
 
   try {
     const img = await loadImageFromFile(file);
@@ -82,33 +87,50 @@ export async function enhanceImageFile(
     const naturalHeight = img.naturalHeight || img.height;
     if (!naturalWidth || !naturalHeight) return file;
 
-    const { width, height } = computeTargetSize(naturalWidth, naturalHeight, profile);
+    const { minLongEdge, maxLongEdge, unsharpAmount, unsharpRadius } = PROFILES[profile];
+    const { width, height } = computeTargetSize(naturalWidth, naturalHeight, {
+      minLongEdge,
+      maxLongEdge,
+    });
 
     const from = document.createElement("canvas");
     from.width = naturalWidth;
     from.height = naturalHeight;
     const fromCtx = from.getContext("2d");
     if (!fromCtx) return file;
+
+    if (profile === "camera" || profile === "document") {
+      fromCtx.filter = "contrast(1.06) brightness(1.03)";
+    }
     fromCtx.drawImage(img, 0, 0);
+    fromCtx.filter = "none";
 
     const to = document.createElement("canvas");
     to.width = width;
     to.height = height;
 
     await picaInstance.resize(from, to, {
-      unsharpAmount: 120,
-      unsharpRadius: 0.75,
+      unsharpAmount,
+      unsharpRadius,
       unsharpThreshold: 1,
     });
 
     const preservePng = file.type === "image/png";
     const mime = preservePng ? "image/png" : file.type === "image/webp" ? "image/webp" : "image/jpeg";
-    const quality = mime === "image/jpeg" ? JPEG_QUALITY : mime === "image/webp" ? 0.9 : 1;
+    const quality = mime === "image/jpeg" ? JPEG_QUALITY : mime === "image/webp" ? 0.92 : 1;
 
     return await canvasToFile(to, outputName(file.name, mime), mime, quality);
   } catch {
     return file;
   }
+}
+
+/** Sharpen and upscale a camera capture; marks filename so upload won't re-process. */
+export async function enhanceCameraCaptureFile(file: File): Promise<File> {
+  const enhanced = await enhanceImageFile(file, "camera");
+  const mime = enhanced.type || "image/jpeg";
+  const ext = mime === "image/png" ? ".png" : mime === "image/webp" ? ".webp" : ".jpg";
+  return new File([enhanced], `document-capture-${Date.now()}${ext}`, { type: mime });
 }
 
 export async function enhanceImageFiles(

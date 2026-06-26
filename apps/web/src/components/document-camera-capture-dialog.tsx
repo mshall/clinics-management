@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { captureStillPhoto, openCameraStream } from "@/lib/camera-capture";
+import { enhanceCameraCaptureFile } from "@/lib/enhance-image";
 
 type DocumentCameraCaptureDialogProps = {
   open: boolean;
@@ -16,6 +18,7 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
   const streamRef = useRef<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [processing, setProcessing] = useState(false);
 
   const stopStream = useCallback(() => {
     for (const track of streamRef.current?.getTracks() ?? []) {
@@ -30,25 +33,15 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
     if (!open) {
       stopStream();
       setCameraError(null);
+      setProcessing(false);
       return;
     }
 
     let cancelled = false;
 
     void (async () => {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        setCameraError(t("patients.cameraUnavailable", "Camera is not available in this browser."));
-        return;
-      }
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: "environment" },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-          },
-          audio: false,
-        });
+        const stream = await openCameraStream();
         if (cancelled) {
           for (const track of stream.getTracks()) track.stop();
           return;
@@ -60,10 +53,14 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
           await video.play();
           setReady(true);
         }
-      } catch {
+      } catch (error) {
         if (!cancelled) {
+          const unavailable =
+            error instanceof Error && error.message.toLowerCase().includes("not available");
           setCameraError(
-            t("patients.cameraPermissionDenied", "Could not access the camera. Check permissions and try again."),
+            unavailable
+              ? t("patients.cameraUnavailable", "Camera is not available in this browser.")
+              : t("patients.cameraPermissionDenied", "Could not access the camera. Check permissions and try again."),
           );
         }
       }
@@ -75,33 +72,26 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
     };
   }, [open, stopStream, t]);
 
-  const capture = () => {
+  const capture = async () => {
     const video = videoRef.current;
-    if (!video || !ready) return;
-    const w = video.videoWidth;
-    const h = video.videoHeight;
-    if (!w || !h) return;
+    const stream = streamRef.current;
+    if (!video || !stream || !ready || processing) return;
 
-    const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.drawImage(video, 0, 0, w, h);
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) return;
-        const file = new File([blob], `camera-capture-${Date.now()}.jpg`, { type: "image/jpeg" });
-        onCapture(file);
-        onOpenChange(false);
-      },
-      "image/jpeg",
-      0.92,
-    );
+    setProcessing(true);
+    try {
+      const raw = await captureStillPhoto(stream, video);
+      const enhanced = await enhanceCameraCaptureFile(raw);
+      onCapture(enhanced);
+      onOpenChange(false);
+    } catch {
+      setCameraError(t("patients.cameraCaptureFailed", "Could not capture the photo. Try again."));
+    } finally {
+      setProcessing(false);
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
+    <Dialog open={open} onOpenChange={(next) => !processing && onOpenChange(next)} modal={false}>
       <DialogContent
         className="max-w-lg"
         aria-describedby={undefined}
@@ -116,16 +106,31 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
             <p className="text-sm text-destructive">{cameraError}</p>
           ) : (
             <div className="overflow-hidden rounded-md border border-border bg-black">
-              <video ref={videoRef} className="aspect-[4/3] w-full object-cover" playsInline muted />
+              <video
+                ref={videoRef}
+                className="aspect-[4/3] w-full object-contain"
+                playsInline
+                muted
+              />
             </div>
           )}
+          {processing ? (
+            <p className="text-center text-sm text-muted-foreground">
+              {t("patients.enhancingCapture", "Enhancing photo quality…")}
+            </p>
+          ) : null}
           <div className="flex flex-wrap justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" disabled={processing} onClick={() => onOpenChange(false)}>
               {t("common.cancel", "Cancel")}
             </Button>
-            <Button type="button" disabled={!ready || Boolean(cameraError)} className="gap-1" onClick={capture}>
+            <Button
+              type="button"
+              disabled={!ready || Boolean(cameraError) || processing}
+              className="gap-1"
+              onClick={() => void capture()}
+            >
               <Camera className="h-4 w-4" />
-              {t("patients.takePhoto", "Take photo")}
+              {processing ? t("common.loading", "Loading…") : t("patients.takePhoto", "Take photo")}
             </Button>
           </div>
         </div>

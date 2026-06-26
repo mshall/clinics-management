@@ -174,6 +174,8 @@
     "documentFileCount": "{{count}} files",
     "cameraUnavailable": "Camera is not available in this browser.",
     "cameraPermissionDenied": "Could not access the camera. Check permissions and try again.",
+    "cameraCaptureFailed": "Could not capture the photo. Try again.",
+    "enhancingCapture": "Enhancing photo quality…",
     "documentFile": "File",
     "downloadDocument": "Download",
     "cameThrough": "Came through",
@@ -1065,10 +1067,11 @@
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
     "zoomReset": "Reset zoom",
+    "flipHorizontal": "Flip horizontally",
     "previousImage": "Previous image",
     "nextImage": "Next image",
     "slideNOfM": "{{current}} / {{total}}",
     "gallerySwipeHint": "Swipe left or right, or use the arrows, to browse images. Pinch to zoom.",
-    "pinchZoomHint": "Pinch to zoom. Drag when zoomed in."
+    "pinchZoomHint": "Pinch to zoom. Drag when zoomed in. Click zoom % to reset."
   }
 }

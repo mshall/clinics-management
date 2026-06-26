@@ -175,6 +175,8 @@
     "documentFileCount": "{{count}} ملفات",
     "cameraUnavailable": "الكاميرا غير متاحة في هذا المتصفح.",
     "cameraPermissionDenied": "تعذّر الوصول إلى الكاميرا. تحقق من الأذونات وحاول مرة أخرى.",
+    "cameraCaptureFailed": "تعذّر التقاط الصورة. حاول مرة أخرى.",
+    "enhancingCapture": "جاري تحسين جودة الصورة…",
     "documentFile": "الملف",
     "downloadDocument": "تنزيل",
     "cameThrough": "كيف وصل إلينا",
@@ -1066,10 +1068,11 @@
     "zoomIn": "تكبير",
     "zoomOut": "تصغير",
     "zoomReset": "إعادة ضبط التكبير",
+    "flipHorizontal": "قلب أفقي",
     "previousImage": "الصورة السابقة",
     "nextImage": "الصورة التالية",
     "slideNOfM": "{{current}} / {{total}}",
     "gallerySwipeHint": "اسحب يميناً أو يساراً أو استخدم الأسهم للتنقل. قرّب أو بعّد للتكبير.",
-    "pinchZoomHint": "قرّب أو بعّد للتكبير. اسحب عند التكبير."
+    "pinchZoomHint": "قرّب أو بعّد للتكبير. اسحب عند التكبير. انقر على نسبة التكبير لإعادة الضبط."
   }
 }

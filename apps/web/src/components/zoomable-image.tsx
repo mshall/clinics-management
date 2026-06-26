@@ -1,9 +1,10 @@
-import { ChevronLeft, ChevronRight, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
+import { ChevronLeft, ChevronRight, FlipHorizontal, ZoomIn, ZoomOut } from "lucide-react";
 import {
   useCallback,
   useEffect,
   useRef,
   useState,
+  type MouseEvent,
   type PointerEvent as ReactPointerEvent,
   type WheelEvent,
 } from "react";
@@ -61,12 +62,14 @@ export function ZoomableImage({
   } | null>(null);
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [flipped, setFlipped] = useState(false);
 
   const clampScale = (value: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, value));
 
   const resetView = useCallback(() => {
     setScale(1);
     setPosition({ x: 0, y: 0 });
+    setFlipped(false);
   }, []);
 
   useEffect(() => {
@@ -75,6 +78,10 @@ export function ZoomableImage({
     pinchRef.current = null;
     singlePointerRef.current = null;
   }, [src, resetView]);
+
+  const stopToolbarClick = (event: MouseEvent) => {
+    event.stopPropagation();
+  };
 
   const zoomBy = useCallback((delta: number) => {
     setScale((current) => clampScale(Number((current + delta).toFixed(2))));
@@ -213,7 +220,10 @@ export function ZoomableImage({
           className="h-8 w-8"
           aria-label={t("common.zoomOut", "Zoom out")}
           disabled={loading}
-          onClick={() => zoomBy(-ZOOM_STEP)}
+          onClick={(event) => {
+            stopToolbarClick(event);
+            zoomBy(-ZOOM_STEP);
+          }}
         >
           <ZoomOut className="h-4 w-4" />
         </Button>
@@ -221,12 +231,16 @@ export function ZoomableImage({
           type="button"
           variant="outline"
           size="icon"
-          className="h-8 w-8"
-          aria-label={t("common.zoomReset", "Reset zoom")}
+          className={cn("h-8 w-8", flipped && "border-primary text-primary")}
+          aria-label={t("common.flipHorizontal", "Flip horizontally")}
+          aria-pressed={flipped}
           disabled={loading}
-          onClick={resetView}
+          onClick={(event) => {
+            stopToolbarClick(event);
+            setFlipped((current) => !current);
+          }}
         >
-          <RotateCcw className="h-4 w-4" />
+          <FlipHorizontal className="h-4 w-4" />
         </Button>
         <Button
           type="button"
@@ -235,11 +249,26 @@ export function ZoomableImage({
           className="h-8 w-8"
           aria-label={t("common.zoomIn", "Zoom in")}
           disabled={loading}
-          onClick={() => zoomBy(ZOOM_STEP)}
+          onClick={(event) => {
+            stopToolbarClick(event);
+            zoomBy(ZOOM_STEP);
+          }}
         >
           <ZoomIn className="h-4 w-4" />
         </Button>
-        <span className="text-xs text-muted-foreground ltr-nums">{Math.round(scale * 100)}%</span>
+        <button
+          type="button"
+          className="min-w-[3rem] rounded px-1 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline disabled:pointer-events-none disabled:opacity-50 ltr-nums"
+          aria-label={t("common.zoomReset", "Reset zoom")}
+          title={t("common.zoomReset", "Reset zoom")}
+          disabled={loading}
+          onClick={(event) => {
+            stopToolbarClick(event);
+            resetView();
+          }}
+        >
+          {Math.round(scale * 100)}%
+        </button>
       </div>
       <div className="relative">
         {showGalleryNav ? (
@@ -291,7 +320,7 @@ export function ZoomableImage({
               draggable={false}
               className="max-h-[70vh] max-w-full object-contain"
               style={{
-                transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+                transform: `translate(${position.x}px, ${position.y}px) scale(${flipped ? -scale : scale}, ${scale})`,
                 transformOrigin: "center center",
                 willChange: "transform",
               }}
@@ -305,7 +334,7 @@ export function ZoomableImage({
         </p>
       ) : (
         <p className="text-center text-xs text-muted-foreground">
-          {t("common.pinchZoomHint", "Pinch to zoom. Drag when zoomed in.")}
+          {t("common.pinchZoomHint", "Pinch to zoom. Drag when zoomed in. Click zoom % to reset.")}
         </p>
       )}
     </div>
