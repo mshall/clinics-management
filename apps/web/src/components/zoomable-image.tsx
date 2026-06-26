@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, FlipHorizontal, ZoomIn, ZoomOut } from "lucide-react";
+import { ChevronLeft, ChevronRight, RotateCcw, RotateCw, ZoomIn, ZoomOut } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -62,14 +62,14 @@ export function ZoomableImage({
   } | null>(null);
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [flipped, setFlipped] = useState(false);
+  const [rotation, setRotation] = useState(0);
 
   const clampScale = (value: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, value));
 
   const resetView = useCallback(() => {
     setScale(1);
     setPosition({ x: 0, y: 0 });
-    setFlipped(false);
+    setRotation(0);
   }, []);
 
   useEffect(() => {
@@ -85,6 +85,10 @@ export function ZoomableImage({
 
   const zoomBy = useCallback((delta: number) => {
     setScale((current) => clampScale(Number((current + delta).toFixed(2))));
+  }, []);
+
+  const rotateBy = useCallback((delta: number) => {
+    setRotation((current) => (current + delta + 360) % 360);
   }, []);
 
   const onWheel = (event: WheelEvent<HTMLDivElement>) => {
@@ -231,16 +235,29 @@ export function ZoomableImage({
           type="button"
           variant="outline"
           size="icon"
-          className={cn("h-8 w-8", flipped && "border-primary text-primary")}
-          aria-label={t("common.flipHorizontal", "Flip horizontally")}
-          aria-pressed={flipped}
+          className="h-8 w-8"
+          aria-label={t("common.flipLeft", "Flip left")}
           disabled={loading}
           onClick={(event) => {
             stopToolbarClick(event);
-            setFlipped((current) => !current);
+            rotateBy(-90);
           }}
         >
-          <FlipHorizontal className="h-4 w-4" />
+          <RotateCcw className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-8 w-8"
+          aria-label={t("common.flipRight", "Flip right")}
+          disabled={loading}
+          onClick={(event) => {
+            stopToolbarClick(event);
+            rotateBy(90);
+          }}
+        >
+          <RotateCw className="h-4 w-4" />
         </Button>
         <Button
           type="button"
@@ -320,7 +337,7 @@ export function ZoomableImage({
               draggable={false}
               className="max-h-[70vh] max-w-full object-contain"
               style={{
-                transform: `translate(${position.x}px, ${position.y}px) scale(${flipped ? -scale : scale}, ${scale})`,
+                transform: `translate(${position.x}px, ${position.y}px) rotate(${rotation}deg) scale(${scale})`,
                 transformOrigin: "center center",
                 willChange: "transform",
               }}
@@ -334,7 +351,7 @@ export function ZoomableImage({
         </p>
       ) : (
         <p className="text-center text-xs text-muted-foreground">
-          {t("common.pinchZoomHint", "Pinch to zoom. Drag when zoomed in. Click zoom % to reset.")}
+          {t("common.pinchZoomHint", "Pinch to zoom. Drag when zoomed in. Use flip left/right to rotate. Click zoom % to reset.")}
         </p>
       )}
     </div>

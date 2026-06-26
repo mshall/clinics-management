@@ -1068,10 +1068,12 @@
     "zoomOut": "Zoom out",
     "zoomReset": "Reset zoom",
     "flipHorizontal": "Flip horizontally",
+    "flipLeft": "Flip left",
+    "flipRight": "Flip right",
     "previousImage": "Previous image",
     "nextImage": "Next image",
     "slideNOfM": "{{current}} / {{total}}",
     "gallerySwipeHint": "Swipe left or right, or use the arrows, to browse images. Pinch to zoom.",
-    "pinchZoomHint": "Pinch to zoom. Drag when zoomed in. Click zoom % to reset."
+    "pinchZoomHint": "Pinch to zoom. Drag when zoomed in. Use flip left/right to rotate. Click zoom % to reset."
   }
 }
