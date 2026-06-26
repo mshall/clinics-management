@@ -1,41 +1,39 @@
 import type { PixelCrop } from "react-image-crop";
 
-function loadImageElement(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error("Failed to load image"));
-    img.src = src;
-  });
-}
-
+/**
+ * react-image-crop reports pixelCrop in CSS pixels relative to the displayed
+ * <img> size; drawImage needs coordinates in the image's natural resolution.
+ */
 export async function getCroppedImageFile(
-  imageSrc: string,
+  imageElement: HTMLImageElement,
   pixelCrop: PixelCrop,
   fileName: string,
   mimeType = "image/jpeg",
 ): Promise<File> {
-  const image = await loadImageElement(imageSrc);
+  const { naturalWidth, naturalHeight, width: displayWidth, height: displayHeight } = imageElement;
+  if (!naturalWidth || !naturalHeight || !displayWidth || !displayHeight) {
+    throw new Error("Image is not loaded");
+  }
+
+  const scaleX = naturalWidth / displayWidth;
+  const scaleY = naturalHeight / displayHeight;
+
+  const cropX = pixelCrop.x * scaleX;
+  const cropY = pixelCrop.y * scaleY;
+  const cropWidth = pixelCrop.width * scaleX;
+  const cropHeight = pixelCrop.height * scaleY;
+
   const canvas = document.createElement("canvas");
-  const width = Math.max(1, Math.round(pixelCrop.width));
-  const height = Math.max(1, Math.round(pixelCrop.height));
+  const width = Math.max(1, Math.round(cropWidth));
+  const height = Math.max(1, Math.round(cropHeight));
   canvas.width = width;
   canvas.height = height;
 
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas not supported");
 
-  ctx.drawImage(
-    image,
-    pixelCrop.x,
-    pixelCrop.y,
-    pixelCrop.width,
-    pixelCrop.height,
-    0,
-    0,
-    width,
-    height,
-  );
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(imageElement, cropX, cropY, cropWidth, cropHeight, 0, 0, width, height);
 
   const quality = mimeType === "image/jpeg" ? 0.92 : mimeType === "image/webp" ? 0.9 : 1;
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, mimeType, quality));

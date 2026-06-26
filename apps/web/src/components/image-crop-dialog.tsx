@@ -61,8 +61,10 @@ export function ImageCropDialog({
 
   const confirmApply = async () => {
     if (!pixelCrop) return;
+    const img = imgRef.current;
+    if (!img) return;
     const mime = cropMimeTypeForFileName(fileName, contentType);
-    const file = await getCroppedImageFile(imageUrl, pixelCrop, fileName, mime);
+    const file = await getCroppedImageFile(img, pixelCrop, fileName, mime);
     await onApply(file, pixelCrop);
     setConfirmOpen(false);
   };
