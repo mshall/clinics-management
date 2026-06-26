@@ -4,7 +4,7 @@
 | Field | Value |
 |---|---|
 | **Document Title** | Clinic Management System – Product Requirements Document |
-| **Version** | 1.3 |
+| **Version** | 1.4 |
 | **Status** | Living document (aligned with `main` as of June 2026) |
 | **Author** | Product / Engineering |
 | **Last Updated** | June 2026 |
@@ -20,7 +20,7 @@ The product targets clinic groups that operate one or more parent clinics with s
 
 **Tenancy (decided):** The platform is **multi-tenant SaaS**. One deployed application serves many **organizations (tenants)** on shared infrastructure. Each clinic group is a tenant; users authenticate into exactly one tenant (except the platform operator account). See [§3.4 Tenancy & deployment model](#34-tenancy--deployment-model).
 
-The MVP focuses on operational efficiency, data integrity, and a clean clinical workflow; later phases extend into analytics, patient self-service, and integrations with external systems (labs, pharmacies, insurance, national health IDs).
+The MVP focuses on operational efficiency, data integrity, and a clean clinical workflow; later phases extend into analytics, patient self-service, and integrations with external systems (labs, pharmacies, insurance, national health IDs). A phased **international expansion roadmap** (quick wins through multi-market execution) is defined in [§13](#13-international-expansion-roadmap).
 
 ## 2. Problem Statement
 
@@ -435,16 +435,273 @@ Authorization model:
 - Lab and pharmacy integrations; native mobile apps.
 - Per-tenant billing / subscription management.
 
-## 13. Decisions & open questions
+See [§13 International Expansion Roadmap](#13-international-expansion-roadmap) for the phased plan to enter new countries (quick wins through full multi-market execution).
 
-### 13.1 Resolved decisions
+## 13. International Expansion Roadmap
+
+This section defines how the platform expands from its current MENA-focused outpatient SaaS (bilingual EN/AR, multi-tenant, audit-ready) into additional countries without forking the product. Work is organized in **five phases** — from low-risk quick wins through full multi-market execution.
+
+### 13.1 Strategic model
+
+International expansion is delivered in three layers on top of the existing core (patients, encounters, appointments, documents, finance, HR, audit):
+
+| Layer | Description | Examples |
+|---|---|---|
+| **Core** | Shipped monolith capabilities shared by all tenants | EHR, RBAC, multi-branch, reports, data explorer |
+| **Country pack** | Configurable rules and defaults selected at tenant/clinic onboarding | ID formats, tax/VAT, locale, holidays, diagnosis code set, legal consent text |
+| **Connectors** | Integrations with external systems per market | Insurers, labs (FHIR), payments, SMS/WhatsApp, national health networks |
+
+**Principle:** One codebase, many markets — country packs and connectors replace separate regional products.
+
+**Initial expansion corridor (recommended sequence):** Egypt (current) → GCC (UAE / KSA) → North Africa (Maghreb) → EU (GDPR-first market) → additional regions as sales motion matures.
+
+**Explicit non-goals for this roadmap:** Hospital inpatient (wards, ICU, OR scheduling), insurance adjudication engines built before a market sales motion exists, and per-country code forks.
+
+### 13.2 Phase overview
+
+| Phase | Horizon | Theme | Outcome |
+|---|---|---|---|
+| **0 — Quick wins** | 0–3 months | Polish and config on current stack | Demo-ready for adjacent markets without new infrastructure |
+| **A — Country packs** | 3–9 months | Compliance and localization foundation | Legally sellable in first new country with regional hosting option |
+| **B — Channels & revenue** | 9–18 months | Patient touchpoints and payments | Clinics can collect money and communicate with patients digitally |
+| **C — Clinical & integrations** | 18–30 months | Local clinical standards and ecosystem | Competitive with incumbent EHRs in target markets |
+| **D — Full execution** | 30–36+ months | Scale, enterprise, and breadth | Multi-region SaaS with subscription billing and migration tooling |
+
+Phases are **sequential in priority** but may overlap in engineering once Phase A infrastructure is in place.
+
+---
+
+### 13.3 Phase 0 — Quick wins (0–3 months)
+
+Low engineering risk; extends what already exists on `main`. Unblocks sales conversations and pilot clinics in nearby markets.
+
+| # | Feature | Description | Depends on |
+|---|---|---|---|
+| 0.1 | **Tenant country & locale profile** | Persist primary country, default language, date/number formats, and week-start day on tenant settings (extend existing currency/locale fields). | Current org settings |
+| 0.2 | **Configurable ID types** | Replace single `nationalId` with `idType` + `idValue` (passport, national ID, residency card, NHS number, etc.) and country-specific validation rules. | Patient registry |
+| 0.3 | **Phone validation by country** | E.164 normalization with country-aware length/prefix rules; keep per-tenant phone uniqueness. | Existing phone-conflict API |
+| 0.4 | **Branch timezone** | Store IANA timezone per clinic; appointment and operation times display in branch local time. | Clinics model |
+| 0.5 | **Hijri calendar display** | Optional Hijri alongside Gregorian on DOB, appointments, and reports (UI toggle per user or tenant). | Localization (§6.5) |
+| 0.6 | **Third language framework** | Server-driven i18n bundles (start with **French** for Maghreb expansion); no hard-coded web strings for new locales. | Web i18next |
+| 0.7 | **Public holiday calendar** | Country holiday sets applied to scheduling (non-blocking warnings on booking). | Branch country |
+| 0.8 | **Audit log export** | CSV/JSON export of governance audit tail for compliance demos and regulator requests. | Audit module |
+| 0.9 | **Patient import template** | Spreadsheet template + bulk import API for migration from Excel/legacy systems. | Org patients CRUD |
+| 0.10 | **Address format hints** | Country-driven address field labels and optional required fields (e.g. governorate, emirate, postal code). | Clinic onboarding form |
+
+**Exit criteria:** A pilot clinic in a second country can register patients, schedule visits, and pass a basic compliance demo using config only (no new AWS region required).
+
+---
+
+### 13.4 Phase A — Country packs & compliance foundation (3–9 months)
+
+Establishes the legal and operational base to **sell and host** in a first international market (target: one GCC country or EU member state).
+
+#### A.1 Regulatory & data residency
+
+| # | Feature | Description |
+|---|---|---|
+| A.1.1 | **Regional AWS stacks** | Deploy isolated stack per region (DB + blob storage + API); tenant bound to region at creation; document in AWS guide. |
+| A.1.2 | **Data retention policies** | Configurable minimum retention and scheduled purge/export for soft-deleted records per tenant jurisdiction. |
+| A.1.3 | **Patient consent module** | Capture consent for treatment, cross-branch record sharing, marketing communications, and research; versioned consent text per country pack. |
+| A.1.4 | **Right to erasure workflow** | GDPR-style deletion request flow with admin review, audit trail, and legal-hold exception. |
+| A.1.5 | **DPA / subprocessors documentation** | Published subprocessor list and standard contractual templates for enterprise buyers. |
+| A.1.6 | **MFA for administrators** | TOTP or email OTP for Group Admin and platform operators. |
+| A.1.7 | **SSO (OIDC / SAML)** | Enterprise identity provider login for clinic groups. |
+
+#### A.2 Financial localization
+
+| # | Feature | Description |
+|---|---|---|
+| A.2.1 | **VAT / GST / sales tax fields** | Tax registration number, rate, and tax line on invoices and expense entries per country pack. |
+| A.2.2 | **Multi-currency reporting** | Group rollup when branches use different currencies; exchange-rate snapshot on revenue entries. |
+| A.2.3 | **Compliant invoice numbering** | Sequential, gapless invoice IDs per branch/country with required legal footer fields. |
+
+#### A.3 Platform mechanics
+
+| # | Feature | Description |
+|---|---|---|
+| A.3.1 | **Country onboarding wizard** | Platform admin or self-serve flow: pick country → preload locale, tax, ID rules, holidays, consent templates, default diagnosis set. |
+| A.3.2 | **Feature flags per tenant / region** | Enable claims, portal, or integrations per market without code deploys. |
+| A.3.3 | **PostgreSQL RLS (optional hardening)** | Row-level security as defense-in-depth alongside application `tenantId` checks. |
+
+**Exit criteria:** First paying tenant in a new region runs on in-region infrastructure with consent, retention, MFA, and tax-ready invoicing.
+
+---
+
+### 13.5 Phase B — Patient channels & revenue (9–18 months)
+
+Features clinics **pay for** — reduce no-shows, accelerate cash collection, and unlock insured-patient workflows.
+
+#### B.1 Patient-facing
+
+| # | Feature | Description |
+|---|---|---|
+| B.1.1 | **Patient portal (web)** | View appointments, lab/Rx documents (policy-gated), pay balance, update contact info. |
+| B.1.2 | **Online booking widget** | Embeddable schedule for clinic websites; ties into acquisition channel tracking (§6.6.1). |
+| B.1.3 | **Appointment notifications** | SMS and/or **WhatsApp** reminders, confirmations, and cancellations; channel preference per patient. |
+| B.1.4 | **Queue / walk-in token** | Optional front-desk queue for high-volume outpatient markets. |
+
+#### B.2 Payments
+
+| # | Feature | Description |
+|---|---|---|
+| B.2.1 | **Regional payment gateways** | Adapters: Tap/HyperPay (GCC), PayMob/Fawry (Egypt), Stripe (EU/US) — card and local methods. |
+| B.2.2 | **Patient balance & checkout** | Pay visit fee or operation balance online; receipt with fiscal QR where required (e.g. some GCC markets). |
+| B.2.3 | **Bank reconciliation hooks** | Import bank statements; match to revenue ledger entries. |
+
+#### B.3 Insurance (first market)
+
+| # | Feature | Description |
+|---|---|---|
+| B.3.1 | **Payer directory** | Insurers, plans, copay rules, pre-authorization flags per country pack. |
+| B.3.2 | **Claims file generation** | Export claims in first target format (e.g. DHA e-claims UAE or NPHIES KSA). |
+| B.3.3 | **Eligibility check (manual → API)** | Start with staff-entered coverage; evolve to real-time API where payer supports it. |
+
+**Exit criteria:** Pilot clinic collects online payment, sends WhatsApp reminders, and submits at least one insurance claim in the first target country.
+
+---
+
+### 13.6 Phase C — Clinical depth & ecosystem integrations (18–30 months)
+
+Differentiators against local incumbents; requires country packs and connectors from Phase A/B.
+
+#### C.1 Clinical standards
+
+| # | Feature | Description |
+|---|---|---|
+| C.1.1 | **Diagnosis code sets per market** | ICD-10-CM (US), ICD-10-AM (AU), SNOMED CT (UK/NHS), MOH lists (GCC); selectable per country pack. |
+| C.1.2 | **Drug catalogs per country** | RxNorm (US), DM+D (UK), local formularies (Egypt, KSA, UAE); search at prescribing time. |
+| C.1.3 | **Drug–drug interaction checks** | Rules engine on selected catalog; alert in encounter editor. |
+| C.1.4 | **Structured lab orders** | Order catalog, status workflow, result ingestion (manual upload → structured). |
+| C.1.5 | **Specialty clinical templates** | Dermatology, dental, physiotherapy, pain clinic — configurable forms beyond SOAP. |
+| C.1.6 | **Pediatric growth charts & units** | Metric/imperial toggle; age-based reference ranges by region. |
+
+#### C.2 Integrations
+
+| # | Feature | Description |
+|---|---|---|
+| C.2.1 | **HL7 FHIR lab adapter** | Receive structured results; attach to patient clinical documents. |
+| C.2.2 | **National health network connectors** | NABIDH (Dubai), NPHIES (KSA), and similar — patient demographics and encounter summaries where mandated. |
+| C.2.3 | **E-prescribing** | Electronic Rx transmission to pharmacies where legally supported. |
+| C.2.4 | **DICOM / imaging** | PACS link or in-browser DICOM viewer for radiology documents. |
+| C.2.5 | **Telemedicine** | Video visit scheduling, consent, and encounter linkage (third-party provider integration). |
+
+**Exit criteria:** At least one live lab or national-network integration in production; e-prescribing pilot in one country.
+
+---
+
+### 13.7 Phase D — Full multi-market execution (30–36+ months)
+
+Operational maturity to run many countries on one product line.
+
+#### D.1 Workforce & operations
+
+| # | Feature | Description |
+|---|---|---|
+| D.1.1 | **Payroll rules by country** | Tax withholding, social insurance, end-of-service (GCC), payslip legal fields; export to external payroll where required. |
+| D.1.2 | **Medical license tracking** | Credential expiry alerts (DHA, SCFHS, GMC, state boards). |
+| D.1.3 | **Biometric / geo attendance** | Audit-friendly clock-in for visa and labor compliance. |
+| D.1.4 | **Offline / low-connectivity mode** | Cached read and queued writes for unreliable networks (see open question §14.2). |
+
+#### D.2 Platform & commercial
+
+| # | Feature | Description |
+|---|---|---|
+| D.2.1 | **White-label & custom domains** | Clinic group branding on portal and patient communications. |
+| D.2.2 | **Subscription & usage billing** | Per-branch, per-clinician, or per-encounter metering for SaaS revenue. |
+| D.2.3 | **Migration toolkit** | Automated import from competitor EHRs and national ID bulk verification APIs. |
+| D.2.4 | **Multi-region operations playbook** | Runbooks, monitoring, and support tiers per region; break-glass access policies. |
+| D.2.5 | **Additional insurance markets** | US (X12/837), EU private insurers, expanded GCC — one adapter per sales priority. |
+| D.2.6 | **Native mobile apps (iOS / Android)** | Staff and/or patient apps sharing API with web SPA. |
+
+**Exit criteria:** Three or more countries in production on regional stacks; subscription billing live; at least two insurance connectors and one national health network connector operational.
+
+---
+
+### 13.8 Roadmap dependency graph
+
+```mermaid
+flowchart TB
+  subgraph today [Shipped today]
+    CORE[Core EHR + Admin + EN/AR]
+  end
+
+  subgraph p0 [Phase 0 — Quick wins]
+    Q1[Country/locale config]
+    Q2[ID & phone validation]
+    Q3[Timezone & Hijri]
+    Q4[i18n + import templates]
+  end
+
+  subgraph pA [Phase A — Country packs]
+    A1[Regional hosting]
+    A2[Consent & retention]
+    A3[MFA / SSO]
+    A4[Tax & invoicing]
+  end
+
+  subgraph pB [Phase B — Channels]
+    B1[Patient portal]
+    B2[SMS / WhatsApp]
+    B3[Payments]
+    B4[Insurance v1]
+  end
+
+  subgraph pC [Phase C — Clinical]
+    C1[Code sets & drug catalogs]
+    C2[FHIR labs]
+    C3[E-Rx & DICOM]
+    C4[Telemedicine]
+  end
+
+  subgraph pD [Phase D — Scale]
+    D1[Payroll by country]
+    D2[White-label & billing]
+    D3[Multi-market insurance]
+    D4[Mobile apps]
+  end
+
+  CORE --> p0
+  p0 --> pA
+  pA --> pB
+  pB --> pC
+  pA --> pC
+  pC --> pD
+  pB --> pD
+```
+
+### 13.9 Alignment with §12.2 product roadmap
+
+| §12.2 item | International roadmap phase |
+|---|---|
+| MFA; refresh tokens; Redis rate limiting | Phase A (A.1.6–A.1.7) |
+| Patient consent workflows; permission matrix | Phase A (A.1.3) |
+| Payroll exports; biometric attendance | Phase D (D.1.1, D.1.3) |
+| Drug interaction engine; structured lab orders; DICOM | Phase C (C.1.3–C.1.4, C.2.4) |
+| Patient portal; telemedicine; insurance claims | Phase B–C (B.1, B.3, C.2.5) |
+| Lab and pharmacy integrations; mobile apps | Phase C–D (C.2, D.2.6) |
+| Per-tenant billing / subscription | Phase D (D.2.2) |
+
+### 13.10 Risks specific to international expansion
+
+| Risk | Mitigation |
+|---|---|
+| Building insurance before product–market fit in a country | One payer adapter per active sales pipeline; manual export fallback remains |
+| Regulatory surprise in new market | Legal review gate before Phase A exit; country pack owned by product + legal |
+| Translation quality | Native-speaker review for each new locale; no machine-only release |
+| Regional ops cost | Start with one additional AWS region; dedicated stack only for enterprise contracts |
+| Scope creep into inpatient hospital EMR | Stay outpatient clinic focus; partner for hospital deals |
+
+## 14. Decisions & open questions
+
+### 14.1 Resolved decisions
 
 | # | Question | Decision |
 |---|---|---|
 | 1 | Single-tenant per clinic group vs multi-tenant SaaS? | **Multi-tenant SaaS** on shared infrastructure; dedicated stack optional for enterprise. See [§3.4](#34-tenancy--deployment-model). |
 | 2 | Default cloud hosting? | **AWS CDK** — CloudFront, S3, App Runner, RDS (`eu-central-1`). |
 
-### 13.2 Open questions
+### 14.2 Open questions
 
 1. Which markets define the next commercial launch? (Compliance and language defaults depend on this.)
 2. Is offline-capable mode required for branches with unreliable connectivity?
@@ -453,7 +710,7 @@ Authorization model:
 5. Is there a preferred payroll system to integrate with first?
 6. When is patient-facing portal/app in scope (v1.5 vs v2)?
 
-## 14. Glossary
+## 15. Glossary
 
 - **Tenant / Organization** – A clinic group customer on the SaaS platform; all business data is scoped by `tenantId`.
 - **Multi-tenant SaaS** – One application deployment serving many tenants on shared DB and compute, with logical isolation.
@@ -464,3 +721,5 @@ Authorization model:
 - **EHR** – Electronic Health Record.
 - **RBAC** – Role-Based Access Control.
 - **RTL** – Right-To-Left text direction (used for Arabic).
+- **Country pack** – Configurable bundle of locale, tax, ID validation, holidays, consent text, and clinical code defaults for a target market (see [§13.1](#131-strategic-model)).
+- **Connector** – Market-specific integration adapter (insurer, lab, payment gateway, messaging, national health network) plugged into the core platform.

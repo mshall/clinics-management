@@ -6,14 +6,14 @@
 | **Document Title** | Clinic Management System – Technical RFC |
 | **Version** | 1.3 |
 | **Status** | Living document (aligned with `main` as of June 2026) |
-| **Related** | [`Clinic_Management_System_PRD.md`](./Clinic_Management_System_PRD.md) v1.3 |
+| **Related** | [`Clinic_Management_System_PRD.md`](./Clinic_Management_System_PRD.md) v1.4 |
 | **Last Updated** | June 2026 |
 
 ---
 
 ## 1. Overview
 
-This RFC describes the technical architecture and implementation of the Clinic Management System (CMS) defined in the PRD v1.3. The platform is a **multi-tenant SaaS** for clinic groups: one deployed stack serves many organizations (`tenantId`), each with multi-branch clinics, EHR workflows, expenses, HR, and bilingual UI.
+This RFC describes the technical architecture and implementation of the Clinic Management System (CMS) defined in the PRD v1.4. The platform is a **multi-tenant SaaS** for clinic groups: one deployed stack serves many organizations (`tenantId`), each with multi-branch clinics, EHR workflows, expenses, HR, and bilingual UI.
 
 The defining engineering constraints for v1:
 
