@@ -413,7 +413,12 @@
     "statusCheckedIn": "تم تسجيل الحضور",
     "statusDraftToast": "الحالة: {{status}}. انقر حفظ للتطبيق.",
     "statusQuickHint": "اختر حالة أدناه ثم انقر حفظ. إكمال الموعد يطلب تأكيداً أولاً.",
-    "statusWithSave": "أو اختر من القائمة (مثل الاختصارات)"
+    "statusWithSave": "أو اختر من القائمة (مثل الاختصارات)",
+    "delete": "حذف",
+    "deleteConfirmTitle": "حذف الموعد؟",
+    "deleteConfirmBody": "حذف هذا الحجز لـ {{patient}} نهائياً؟ لا يمكن التراجع.",
+    "deleteConfirmAction": "حذف الموعد",
+    "deleteSuccess": "تم حذف الموعد."
   },
   "clinics": {
     "title": "العيادات والفروع",

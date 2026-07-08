@@ -412,7 +412,12 @@
     "statusCheckedIn": "Checked in",
     "statusDraftToast": "Status: {{status}}. Click Save to apply.",
     "statusQuickHint": "Choose a status below, then click Save to apply. Marking completed asks for confirmation first.",
-    "statusWithSave": "Or choose from the list (same as shortcuts)"
+    "statusWithSave": "Or choose from the list (same as shortcuts)",
+    "delete": "Delete",
+    "deleteConfirmTitle": "Delete appointment?",
+    "deleteConfirmBody": "Permanently delete this booking for {{patient}}? This cannot be undone.",
+    "deleteConfirmAction": "Delete appointment",
+    "deleteSuccess": "Appointment deleted."
   },
   "clinics": {
     "title": "Clinics & branches",

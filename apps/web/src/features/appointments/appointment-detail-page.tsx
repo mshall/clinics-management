@@ -1,9 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { AppointmentStatusBadge, appointmentStatusClassName } from "@/components/appointment-status-badge";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,10 +14,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAppointmentQuery, useClinicsQuery, usePatientQuery, usePatientsQuery, useUsersQuery } from "@/lib/api-hooks";
 import type { AppointmentDto } from "@/lib/api-types";
-import { ApiError, apiPatch } from "@/lib/http";
+import { ApiError, apiDelete, apiPatch } from "@/lib/http";
+import { canDeleteAppointment } from "@/lib/appointment-delete-policy";
 import { patientToPickListItem } from "@/lib/patient-display";
 import { formatClinicName } from "@/lib/locale-display";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth-store";
 
 function toDatetimeLocalValue(iso: string): string {
   const d = new Date(iso);
@@ -36,6 +40,9 @@ function isAppointmentStatusCode(s: string): s is AppointmentStatusCode {
 
 export function AppointmentDetailPage() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
+  const authUser = useAuthStore((s) => s.user);
+  const canDelete = canDeleteAppointment(authUser?.role);
   const { id } = useParams();
   const qc = useQueryClient();
   const { data: apt, isPending, isError, error } = useAppointmentQuery(id);
@@ -69,6 +76,7 @@ export function AppointmentDetailPage() {
   const [status, setStatus] = useState("");
   const [formErr, setFormErr] = useState<string | null>(null);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!apt) return;
@@ -158,6 +166,26 @@ export function AppointmentDetailPage() {
     },
   });
 
+  const deleteMut = useMutation({
+    mutationFn: () => apiDelete(`/api/v1/appointments/${id}`),
+    onSuccess: () => {
+      setDeleteDialogOpen(false);
+      void qc.invalidateQueries({ queryKey: ["appointments"] });
+      void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
+      toast.success(t("appointments.deleteSuccess", "Appointment deleted."));
+      navigate("/appointments");
+    },
+    onError: (e: unknown) => {
+      const msg =
+        e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body
+          ? String((e.body as { message?: unknown }).message)
+          : e instanceof Error
+            ? e.message
+            : String(e);
+      toast.error(msg);
+    },
+  });
+
   const onSave = () => {
     if (!id || readOnly) return;
     const start = new Date(startsLocal);
@@ -206,6 +234,23 @@ export function AppointmentDetailPage() {
 
   return (
     <div className="space-y-6">
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          if (!open && !deleteMut.isPending) setDeleteDialogOpen(false);
+        }}
+        title={t("appointments.deleteConfirmTitle", "Delete appointment?")}
+        description={t(
+          "appointments.deleteConfirmBody",
+          "Permanently delete this booking for {{patient}}? This cannot be undone.",
+          { patient: apt.patientName?.trim() || t("appointments.patient", "Patient") },
+        )}
+        confirmLabel={t("appointments.deleteConfirmAction", "Delete appointment")}
+        cancelLabel={t("common.cancel", "Cancel")}
+        pending={deleteMut.isPending}
+        onConfirm={() => deleteMut.mutate()}
+      />
+
       <Dialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen}>
         <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
           <DialogHeader>
@@ -256,7 +301,22 @@ export function AppointmentDetailPage() {
           </p>
           <p className="text-xs text-muted-foreground ltr-nums">{t("appointments.referenceId", "Reference")}: {apt.id}</p>
         </div>
-        <AppointmentStatusBadge status={apt.status} />
+        <div className="flex flex-wrap items-center gap-2">
+          {canDelete ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="text-destructive hover:text-destructive"
+              disabled={deleteMut.isPending}
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              <Trash2 className="me-2 h-4 w-4" />
+              {t("appointments.delete", "Delete")}
+            </Button>
+          ) : null}
+          <AppointmentStatusBadge status={apt.status} />
+        </div>
       </div>
 
       {formErr ? <p className="text-sm text-destructive">{formErr}</p> : null}

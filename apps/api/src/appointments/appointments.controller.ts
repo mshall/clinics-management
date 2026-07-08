@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from "@nestjs/swagger";
 import { AppointmentStatus } from "@prisma/client";
 import { IsEnum } from "class-validator";
@@ -86,5 +86,12 @@ export class AppointmentsController {
   @ApiOkResponse({ type: AppointmentDto })
   update(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: UpdateAppointmentDto) {
     return this.appointments.update(requireTenantId(user), id, body, user);
+  }
+
+  @Delete(":id")
+  @ApiOperation({ summary: "Delete appointment (group admin, supervisor, call center)" })
+  @ApiOkResponse({ description: "{ ok: true, id }" })
+  remove(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.appointments.delete(requireTenantId(user), id, user);
   }
 }

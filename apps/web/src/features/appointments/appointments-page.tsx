@@ -1,9 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { ResponsiveTable } from "@/components/responsive-table";
@@ -15,7 +17,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAppointmentsQuery, useClinicsQuery, usePatientQuery, usePatientsQuery, useUsersQuery } from "@/lib/api-hooks";
-import { ApiError, apiPost } from "@/lib/http";
+import { canDeleteAppointment } from "@/lib/appointment-delete-policy";
+import { ApiError, apiDelete, apiPost } from "@/lib/http";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
 import { formatClinicName, formatClinicNameFields, formatUserRole, localeForLanguage } from "@/lib/locale-display";
 import { columnFilterIncludes } from "@/lib/utils";
@@ -33,6 +36,7 @@ export function AppointmentsPage() {
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
   const isPhysician = authUser?.role === "physician";
+  const canDelete = canDeleteAppointment(authUser?.role);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [sortBy, setSortBy] = useState("startsAt");
@@ -135,6 +139,9 @@ export function AppointmentsPage() {
   const [end, setEnd] = useState("");
   const [formErr, setFormErr] = useState<string | null>(null);
   const [bookOk, setBookOk] = useState<string | null>(null);
+  const [appointmentToDelete, setAppointmentToDelete] = useState<{ id: string; patientName?: string | null } | null>(
+    null,
+  );
 
   const [bookPatientSearch, setBookPatientSearch] = useState("");
   const [debouncedBookPatient, setDebouncedBookPatient] = useState("");
@@ -214,6 +221,27 @@ export function AppointmentsPage() {
       } else setFormErr(e instanceof Error ? e.message : String(e));
     },
   });
+
+  const deleteMut = useMutation({
+    mutationFn: (appointmentId: string) => apiDelete(`/api/v1/appointments/${appointmentId}`),
+    onSuccess: () => {
+      setAppointmentToDelete(null);
+      void qc.invalidateQueries({ queryKey: ["appointments"] });
+      void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
+      toast.success(t("appointments.deleteSuccess", "Appointment deleted."));
+    },
+    onError: (e: unknown) => {
+      const msg =
+        e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body
+          ? String((e.body as { message?: unknown }).message)
+          : e instanceof Error
+            ? e.message
+            : String(e);
+      toast.error(msg);
+    },
+  });
+
+  const listColSpan = canDelete ? 5 : 4;
 
   return (
     <div className="space-y-6">
@@ -474,19 +502,24 @@ export function AppointmentsPage() {
                     filterValue={afStatus}
                     onFilterChange={setAfStatus}
                   />
+                  {canDelete ? (
+                    <th className="px-3 py-2 text-end text-xs font-medium text-muted-foreground">
+                      {t("common.actions", "Actions")}
+                    </th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
                 {isPending ? (
                   <tr>
-                    <td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">
+                    <td colSpan={listColSpan} className="px-3 py-8 text-center text-muted-foreground">
                       {t("common.loading")}
                     </td>
                   </tr>
                 ) : null}
                 {!isPending && rows.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">
+                    <td colSpan={listColSpan} className="px-3 py-8 text-center text-muted-foreground">
                       {isPhysician
                         ? t("appointments.myEmpty", "No appointments assigned to you in this period.")
                         : t("appointments.empty", "No appointments found.")}
@@ -544,12 +577,31 @@ export function AppointmentsPage() {
                       <td className="px-3 py-2">
                         <AppointmentStatusBadge status={a.status} />
                       </td>
+                      {canDelete ? (
+                        <td className="px-3 py-2 text-end">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            aria-label={t("appointments.delete", "Delete")}
+                            disabled={deleteMut.isPending}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setAppointmentToDelete({ id: a.id, patientName: a.patientName });
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      ) : null}
                     </tr>
                     );
                   })}
                 {!isPending && rows.length > 0 && filteredAppointments.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">
+                    <td colSpan={listColSpan} className="px-3 py-8 text-center text-muted-foreground">
                       {t("patients.noColMatch", "No rows match the column filters.")}
                     </td>
                   </tr>
@@ -571,6 +623,28 @@ export function AppointmentsPage() {
           />
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={appointmentToDelete != null}
+        onOpenChange={(open) => {
+          if (!open && !deleteMut.isPending) setAppointmentToDelete(null);
+        }}
+        title={t("appointments.deleteConfirmTitle", "Delete appointment?")}
+        description={t(
+          "appointments.deleteConfirmBody",
+          "Permanently delete this booking for {{patient}}? This cannot be undone.",
+          {
+            patient:
+              appointmentToDelete?.patientName?.trim() || t("appointments.patient", "Patient"),
+          },
+        )}
+        confirmLabel={t("appointments.deleteConfirmAction", "Delete appointment")}
+        cancelLabel={t("common.cancel", "Cancel")}
+        pending={deleteMut.isPending}
+        onConfirm={() => {
+          if (appointmentToDelete) deleteMut.mutate(appointmentToDelete.id);
+        }}
+      />
     </div>
   );
 }

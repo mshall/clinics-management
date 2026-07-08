@@ -26,6 +26,12 @@ function isPhysicianRole(role: UserRole | undefined): boolean {
   return role === UserRole.PHYSICIAN || String(role) === "PHYSICIAN";
 }
 
+const APPOINTMENT_DELETE_ROLES: ReadonlySet<UserRole> = new Set([
+  UserRole.GROUP_ADMIN,
+  UserRole.GROUP_SUPERVISOR,
+  UserRole.CALL_CENTER,
+]);
+
 @Injectable()
 export class AppointmentsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -332,5 +338,21 @@ export class AppointmentsService {
       include: appointmentDtoInclude,
     });
     return this.mapRow(row);
+  }
+
+  private assertCanDeleteAppointment(viewer: JwtUser): void {
+    if (!APPOINTMENT_DELETE_ROLES.has(viewer.role)) {
+      throw new ForbiddenException(
+        "Only group administrators, supervisors, and call center staff can delete appointments",
+      );
+    }
+  }
+
+  async delete(tenantId: string, id: string, viewer: JwtUser): Promise<{ ok: true; id: string }> {
+    this.assertCanDeleteAppointment(viewer);
+    const existing = await this.prisma.appointment.findFirst({ where: { id, tenantId } });
+    if (!existing) throw new NotFoundException("Appointment not found");
+    await this.prisma.appointment.delete({ where: { id } });
+    return { ok: true, id };
   }
 }
