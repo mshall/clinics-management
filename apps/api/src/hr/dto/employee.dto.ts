@@ -43,4 +43,13 @@ export class EmployeeDto {
 
   @ApiProperty({ description: "Whether an ID / passport document was uploaded" })
   hasIdDoc!: boolean;
+
+  @ApiPropertyOptional({ nullable: true, description: "Linked login account display name" })
+  linkedUserDisplayName!: string | null;
+
+  @ApiPropertyOptional({ nullable: true, description: "Linked login account role" })
+  linkedUserRole!: string | null;
+
+  @ApiProperty({ description: "Whether the linked login account has a profile picture" })
+  hasUserAvatar!: boolean;
 }

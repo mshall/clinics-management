@@ -65,6 +65,15 @@ export class HrController {
     return this.hr.listEmployees(requireTenantId(user), user, page, pageSize, search, clinicId, nameFilter, clinicFilter, sortBy, sortOrder);
   }
 
+  @Get("employees/:id/avatar")
+  @ApiOperation({ summary: "Download linked login account profile picture (if any)" })
+  @ApiOkResponse({ description: "Binary image stream" })
+  async getEmployeeUserAvatar(@CurrentUser() user: JwtUser, @Param("id") id: string): Promise<StreamableFile> {
+    const meta = await this.hr.getEmployeeUserAvatarMeta(requireTenantId(user), id, user);
+    const stream = await this.hr.openEmployeeUserAvatarReadStream(meta.storageKey);
+    return new StreamableFile(stream, { type: meta.mimeType });
+  }
+
   @Get("employees/:id/id-document")
   @ApiOperation({ summary: "Download employee ID / passport attachment (if any)" })
   @ApiOkResponse({ description: "Binary file stream" })

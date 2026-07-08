@@ -107,6 +107,9 @@ export interface EmployeeDto {
   hireDate: string;
   salaryBase: number;
   userId: string | null;
+  linkedUserDisplayName?: string | null;
+  linkedUserRole?: string | null;
+  hasUserAvatar?: boolean;
 }
 
 export interface AttendanceDto {

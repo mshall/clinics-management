@@ -15,6 +15,11 @@ import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from "@/lib/http";
 import { formatClinicName, formatUserRole } from "@/lib/locale-display";
 import type { Paginated } from "@/lib/paginated";
 import { apiErrorMessage, isClinicRequiredUserRole, isOrgWideUserRole, ORG_USER_ROLES } from "@/features/platform/platform-shared";
+import {
+  getOrgUserCreateMissingLabels,
+  orgUserCreateFormReady,
+  ORG_USER_PASSWORD_MIN_LENGTH,
+} from "@/features/platform/org-user-form-validation";
 import { AdminOrgUserDeleteConfirmDialog, type OrgUserDeleteTarget } from "@/features/admin/admin-org-user-delete-confirm-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useAuthStore } from "@/stores/auth-store";
@@ -253,11 +258,16 @@ export function AdminOrgUsersPanel() {
 
   const requiresClinicAssignment = isClinicRequiredUserRole(uRole);
   const showClinicAssignment = !isOrgWideUserRole(uRole) && clinics.length > 0;
-  const canSaveCreate =
-    Boolean(uEmail.trim()) &&
-    uPassword.length >= 8 &&
-    Boolean(uName.trim()) &&
-    (!requiresClinicAssignment || uClinicIds.length > 0);
+  const createFormValues = {
+    email: uEmail,
+    password: uPassword,
+    displayName: uName,
+    role: uRole,
+    clinicIds: uClinicIds,
+  };
+  const canSaveCreate = orgUserCreateFormReady(createFormValues);
+  const createMissingLabels = isCreate ? getOrgUserCreateMissingLabels(createFormValues, t) : [];
+  const passwordTooShort = isCreate && uPassword.length > 0 && uPassword.length < ORG_USER_PASSWORD_MIN_LENGTH;
   const canSaveEdit =
     Boolean(uEmail.trim()) && Boolean(uName.trim()) && (!requiresClinicAssignment || uClinicIds.length > 0);
 
@@ -523,6 +533,11 @@ export function AdminOrgUsersPanel() {
                   placeholder={isEdit ? t("platform.leaveBlankPassword", "Leave blank to keep current") : undefined}
                   requirePromptToEdit={isEdit}
                 />
+                {isCreate ? (
+                  <p className={`text-xs ${passwordTooShort ? "text-destructive" : "text-muted-foreground"}`}>
+                    {t("admin.orgUserPasswordMinHint", "Temporary password must be at least 8 characters.")}
+                  </p>
+                ) : null}
               </div>
               <div className="space-y-2">
                 <Label required>{t("admin.displayName")}</Label>
@@ -588,6 +603,13 @@ export function AdminOrgUsersPanel() {
                 >
                   {isEdit ? t("common.save", "Save") : t("admin.createUser", "Create user")}
                 </Button>
+                {isCreate && !canSaveCreate && createMissingLabels.length > 0 ? (
+                  <p className="w-full text-xs text-muted-foreground">
+                    {t("admin.orgUserCreateMissingHint", "Complete the required fields to enable Create user: {{fields}}.", {
+                      fields: createMissingLabels.join(", "),
+                    })}
+                  </p>
+                ) : null}
                 {isEdit && editUserId && editUserId !== authUser?.id ? (
                   <Button
                     type="button"

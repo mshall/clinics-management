@@ -83,6 +83,7 @@ export class HrService {
     userId: string | null;
     idDocRelativePath?: string | null;
     clinic?: { nameEn: string } | null;
+    user?: { displayName: string; role: string; avatarRelativePath: string | null } | null;
   }): EmployeeDto {
     return {
       id: e.id,
@@ -99,6 +100,9 @@ export class HrService {
       salaryBase: Number(e.salaryBase),
       userId: e.userId,
       hasIdDoc: Boolean(e.idDocRelativePath),
+      linkedUserDisplayName: e.user?.displayName ?? null,
+      linkedUserRole: e.user?.role ?? null,
+      hasUserAvatar: Boolean(e.user?.avatarRelativePath),
     };
   }
 
@@ -214,7 +218,10 @@ export class HrService {
   async getEmployee(tenantId: string, id: string, viewer: JwtUser): Promise<EmployeeDto> {
     const row = await this.prisma.employee.findFirst({
       where: { id, tenantId },
-      include: { clinic: { select: { nameEn: true } } },
+      include: {
+        clinic: { select: { nameEn: true } },
+        user: { select: { displayName: true, role: true, avatarRelativePath: true } },
+      },
     });
     if (!row) throw new NotFoundException("Employee not found");
     await this.assertClinicAdminCanUseClinic(tenantId, viewer, row.clinicId);
@@ -347,6 +354,30 @@ export class HrService {
 
   openEmployeeIdDocumentReadStream(storageKey: string) {
     return this.uploads.getReadStream("employees", storageKey);
+  }
+
+  async getEmployeeUserAvatarMeta(
+    tenantId: string,
+    employeeId: string,
+    viewer: JwtUser,
+  ): Promise<{ storageKey: string; mimeType: string }> {
+    const emp = await this.prisma.employee.findFirst({
+      where: { id: employeeId, tenantId },
+      include: { user: { select: { avatarRelativePath: true, avatarMimeType: true } } },
+    });
+    if (!emp) throw new NotFoundException("Employee not found");
+    await this.assertClinicAdminCanUseClinic(tenantId, viewer, emp.clinicId);
+    const avatarPath = emp.user?.avatarRelativePath;
+    if (!avatarPath) throw new NotFoundException("No profile picture for this employee");
+    await this.uploads.assertExists("users", avatarPath);
+    return {
+      storageKey: avatarPath,
+      mimeType: emp.user?.avatarMimeType || "image/jpeg",
+    };
+  }
+
+  openEmployeeUserAvatarReadStream(storageKey: string) {
+    return this.uploads.getReadStream("users", storageKey);
   }
 
   async listAttendance(

@@ -13,6 +13,7 @@ import { EncountersListPage } from "@/features/encounters/encounters-list-page";
 import { ExpensesPage } from "@/features/expenses/expenses-page";
 import { OperationsPage } from "@/features/operations/operations-page";
 import { EmployeeDetailPage } from "@/features/hr/employee-detail-page";
+import { EmployeeProfilePage } from "@/features/hr/employee-profile-page";
 import { HrPage } from "@/features/hr/hr-page";
 import { PatientDetailPage } from "@/features/patients/patient-detail-page";
 import { PatientsPage } from "@/features/patients/patients-page";
@@ -55,6 +56,7 @@ export const router = createBrowserRouter([
       { path: "profile", element: <ProfileGate /> },
       { path: "hr", element: <NavGate tab="hr"><HrPage /></NavGate> },
       { path: "hr/employees/:id", element: <NavGate tab="hr"><EmployeeDetailPage /></NavGate> },
+      { path: "hr/employees/:id/profile", element: <NavGate tab="hr"><EmployeeProfilePage /></NavGate> },
       { path: "reports", element: <NavGate tab="reports"><ReportsPage /></NavGate> },
       {
         path: "platform",

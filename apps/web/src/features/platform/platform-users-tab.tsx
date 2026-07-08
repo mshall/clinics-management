@@ -11,7 +11,12 @@ import { ResponsiveTable } from "@/components/responsive-table";
 import { apiGet, apiPatch, apiPost } from "@/lib/http";
 import { formatUserRole } from "@/lib/locale-display";
 import type { Paginated } from "@/lib/paginated";
-import { apiErrorMessage, isClinicRequiredUserRole, ORG_USER_ROLES, type PlatformUserRow, type TenantRow } from "@/features/platform/platform-shared";
+import { apiErrorMessage, isClinicRequiredUserRole, isOrgWideUserRole, ORG_USER_ROLES, type PlatformUserRow, type TenantRow } from "@/features/platform/platform-shared";
+import {
+  getOrgUserCreateMissingLabels,
+  orgUserCreateFormReady,
+  ORG_USER_PASSWORD_MIN_LENGTH,
+} from "@/features/platform/org-user-form-validation";
 import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel";
 
 type UserDetail = PlatformUserRow;
@@ -79,6 +84,12 @@ export function PlatformUsersTab() {
     setUPassword("");
   }, [isEdit, userDetailQuery.data]);
 
+  useEffect(() => {
+    if (isOrgWideUserRole(uRole)) {
+      setUClinicIds([]);
+    }
+  }, [uRole]);
+
   const resetCreateForm = () => {
     setUTenantId("");
     setUEmail("");
@@ -143,12 +154,18 @@ export function PlatformUsersTab() {
   });
 
   const requiresClinicAssignment = isClinicRequiredUserRole(uRole);
-  const canSaveCreate =
-    Boolean(uTenantId) &&
-    Boolean(uEmail.trim()) &&
-    uPassword.length >= 8 &&
-    Boolean(uName.trim()) &&
-    (!requiresClinicAssignment || uClinicIds.length > 0);
+  const showClinicAssignment = !isOrgWideUserRole(uRole) && Boolean(activeTenantId);
+  const createFormValues = {
+    email: uEmail,
+    password: uPassword,
+    displayName: uName,
+    role: uRole,
+    clinicIds: uClinicIds,
+    tenantId: uTenantId,
+  };
+  const canSaveCreate = orgUserCreateFormReady(createFormValues, { requireTenant: true });
+  const createMissingLabels = isCreate ? getOrgUserCreateMissingLabels(createFormValues, t, { requireTenant: true }) : [];
+  const passwordTooShort = isCreate && uPassword.length > 0 && uPassword.length < ORG_USER_PASSWORD_MIN_LENGTH;
   const canSaveEdit =
     Boolean(uEmail.trim()) && Boolean(uName.trim()) && (!requiresClinicAssignment || uClinicIds.length > 0);
 
@@ -285,6 +302,11 @@ export function PlatformUsersTab() {
                   placeholder={isEdit ? t("platform.leaveBlankPassword") : undefined}
                   requirePromptToEdit={isEdit}
                 />
+                {isCreate ? (
+                  <p className={`text-xs ${passwordTooShort ? "text-destructive" : "text-muted-foreground"}`}>
+                    {t("admin.orgUserPasswordMinHint", "Temporary password must be at least 8 characters.")}
+                  </p>
+                ) : null}
               </div>
               <div className="space-y-2">
                 <Label required>{t("admin.displayName")}</Label>
@@ -304,7 +326,7 @@ export function PlatformUsersTab() {
                   ))}
                 </select>
               </div>
-              {activeTenantId ? (
+              {showClinicAssignment ? (
                 <div className="space-y-2 md:col-span-2">
                   <Label required={requiresClinicAssignment}>{t("platform.assignClinics")}</Label>
                   <p className="text-xs text-muted-foreground">
@@ -336,7 +358,14 @@ export function PlatformUsersTab() {
                     </div>
                   )}
                 </div>
-              ) : isCreate ? (
+              ) : isOrgWideUserRole(uRole) ? (
+                <p className="text-xs text-muted-foreground md:col-span-2">
+                  {t(
+                    "admin.orgWideRoleClinicHint",
+                    "This role works across the whole organization — no clinic assignment is required.",
+                  )}
+                </p>
+              ) : isCreate && !uTenantId ? (
                 <p className="text-sm text-muted-foreground md:col-span-2">{t("platform.tabs.pickOrgFirst")}</p>
               ) : null}
               <div className="md:col-span-2 flex flex-wrap gap-2 pt-2">
@@ -347,6 +376,13 @@ export function PlatformUsersTab() {
                 >
                   {isEdit ? t("platform.saveUser") : t("platform.createUserBtn")}
                 </Button>
+                {isCreate && !canSaveCreate && createMissingLabels.length > 0 ? (
+                  <p className="w-full text-xs text-muted-foreground">
+                    {t("admin.orgUserCreateMissingHint", "Complete the required fields to enable Create user: {{fields}}.", {
+                      fields: createMissingLabels.join(", "),
+                    })}
+                  </p>
+                ) : null}
                 <Button type="button" variant="outline" onClick={closeDialog}>
                   {t("common.cancel")}
                 </Button>

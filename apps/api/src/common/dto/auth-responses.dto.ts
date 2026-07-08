@@ -28,6 +28,9 @@ export class AuthUserDto {
     description: "True for PLATFORM_SUPER_ADMIN role or when email is listed in PLATFORM_SUPER_ADMIN_EMAILS",
   })
   platformSuperAdmin?: boolean;
+
+  @ApiPropertyOptional({ description: "Whether the user uploaded a profile picture" })
+  hasAvatar?: boolean;
 }
 
 export class LoginResponseDto {

@@ -1,9 +1,19 @@
-import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
+import { UserRole } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
+import { randomUUID } from "crypto";
+import * as path from "path";
+import type { Readable } from "stream";
 import { isPlatformSuperAdmin } from "../common/platform-super-admin";
 import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
+
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+const ALLOWED_AVATAR_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+
+type AvatarFile = { buffer: Buffer; originalname: string; mimetype: string; size: number };
 
 function normalizeLoginEmail(raw: string): string {
   return raw.normalize("NFKC").trim().toLowerCase();
@@ -36,6 +46,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly audit: AuditService,
+    @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
   ) {}
 
   private async navTabKeysForUser(tenantId: string, userId: string): Promise<string[] | null> {
@@ -45,6 +56,29 @@ export class AuthService {
     if (!row) return null;
     const arr = Array.isArray(row.tabKeys) ? (row.tabKeys as unknown[]).map((x) => String(x)) : [];
     return arr.length ? arr : null;
+  }
+
+  private mapAuthUser(user: {
+    id: string;
+    tenantId: string | null;
+    email: string;
+    displayName: string;
+    role: UserRole;
+    avatarRelativePath?: string | null;
+  }, navTabKeys: string[] | null) {
+    return {
+      id: user.id,
+      tenantId: user.tenantId,
+      email: user.email,
+      displayName: user.displayName,
+      role: user.role,
+      navTabKeys,
+      platformSuperAdmin: isPlatformSuperAdmin({
+        email: user.email,
+        role: user.role,
+      }),
+      hasAvatar: Boolean(user.avatarRelativePath),
+    };
   }
 
   async login(email: string, password: string) {
@@ -59,6 +93,7 @@ export class AuthService {
         displayName: true,
         role: true,
         passwordHash: true,
+        avatarRelativePath: true,
       },
     });
     const user = candidates.find((u) => passwordMatches(password, u.passwordHash));
@@ -74,24 +109,11 @@ export class AuthService {
     const navTabKeys =
       user.tenantId != null ? await this.navTabKeysForUser(user.tenantId, user.id) : null;
 
-    const platformSuperAdmin = isPlatformSuperAdmin({
-      email: user.email,
-      role: user.role,
-    });
-
     void this.audit.recordLogin(user, user.email);
 
     return {
       accessToken,
-      user: {
-        id: user.id,
-        tenantId: user.tenantId,
-        email: user.email,
-        displayName: user.displayName,
-        role: user.role,
-        navTabKeys,
-        platformSuperAdmin,
-      },
+      user: this.mapAuthUser(user, navTabKeys),
     };
   }
 
@@ -126,17 +148,70 @@ export class AuthService {
     if (!user) throw new UnauthorizedException();
     const navTabKeys =
       user.tenantId != null ? await this.navTabKeysForUser(user.tenantId, userId) : null;
+    return this.mapAuthUser(user, navTabKeys);
+  }
+
+  async attachMyAvatar(
+    userId: string,
+    tenantId: string | null,
+    file?: AvatarFile,
+  ): Promise<{ ok: true; hasAvatar: true }> {
+    const user = await this.prisma.user.findFirst({
+      where: tenantId != null ? { id: userId, tenantId } : { id: userId, tenantId: null },
+      select: { id: true, tenantId: true, avatarRelativePath: true },
+    });
+    if (!user) throw new UnauthorizedException();
+    if (!file?.buffer?.length) throw new BadRequestException("File is required");
+    if (file.size > MAX_AVATAR_BYTES) throw new BadRequestException("File too large (max 5MB)");
+    const mime = file.mimetype || "application/octet-stream";
+    if (!ALLOWED_AVATAR_MIME.has(mime)) throw new BadRequestException(`Unsupported file type: ${mime}`);
+
+    const scope = user.tenantId ?? "platform";
+    const docId = randomUUID();
+    const base = path.basename(file.originalname || "avatar").replace(/[^\w.\-]+/g, "_").slice(0, 80) || "avatar";
+    const relativePath = `${scope}/${user.id}/${docId}-${base}`;
+    await this.uploads.put("users", relativePath, file.buffer, mime);
+
+    if (user.avatarRelativePath) {
+      await this.uploads.deleteObject("users", user.avatarRelativePath).catch(() => undefined);
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { avatarRelativePath: relativePath, avatarMimeType: mime },
+    });
+    return { ok: true, hasAvatar: true };
+  }
+
+  async getMyAvatarMeta(userId: string, tenantId: string | null): Promise<{ mimeType: string; storageKey: string }> {
+    const user = await this.prisma.user.findFirst({
+      where: tenantId != null ? { id: userId, tenantId } : { id: userId, tenantId: null },
+      select: { avatarRelativePath: true, avatarMimeType: true },
+    });
+    if (!user?.avatarRelativePath) throw new NotFoundException("Avatar not found");
     return {
-      id: user.id,
-      tenantId: user.tenantId,
-      email: user.email,
-      displayName: user.displayName,
-      role: user.role,
-      navTabKeys,
-      platformSuperAdmin: isPlatformSuperAdmin({
-        email: user.email,
-        role: user.role,
-      }),
+      mimeType: user.avatarMimeType || "image/jpeg",
+      storageKey: user.avatarRelativePath,
     };
+  }
+
+  async openAvatarReadStream(storageKey: string): Promise<Readable> {
+    return this.uploads.getReadStream("users", storageKey);
+  }
+
+  async removeMyAvatar(userId: string, tenantId: string | null): Promise<{ ok: true; hasAvatar: false }> {
+    const user = await this.prisma.user.findFirst({
+      where: tenantId != null ? { id: userId, tenantId } : { id: userId, tenantId: null },
+      select: { id: true, avatarRelativePath: true },
+    });
+    if (!user) throw new UnauthorizedException();
+    if (user.avatarRelativePath) {
+      await this.uploads.deleteObject("users", user.avatarRelativePath).catch(() => undefined);
+    }
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { avatarRelativePath: null, avatarMimeType: null },
+    });
+    return { ok: true, hasAvatar: false };
   }
 }

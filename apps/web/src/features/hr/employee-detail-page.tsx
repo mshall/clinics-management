@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
+import { Trash2, UserCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -141,7 +141,7 @@ export function EmployeeDetailPage() {
       <div className="space-y-4">
         <p className="text-destructive">{error instanceof Error ? error.message : t("common.error")}</p>
         <Button variant="outline" asChild>
-          <Link to="/hr">{t("hr.backToHr", "Back to HR")}</Link>
+          <Link to="/hr?tab=employees">{t("hr.backToEmployees", "Back to employees")}</Link>
         </Button>
       </div>
     );
@@ -171,15 +171,22 @@ export function EmployeeDetailPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <Button variant="ghost" className="mb-2 h-auto px-0 text-muted-foreground" asChild>
-            <Link to="/hr">← {t("hr.backToHr", "Back to HR")}</Link>
+            <Link to="/hr?tab=employees">← {t("hr.backToEmployees", "Back to employees")}</Link>
           </Button>
           <h1 className="text-2xl font-bold tracking-tight">
             {emp.firstNameEn} {emp.lastNameEn}
           </h1>
           <p className="text-muted-foreground font-mono text-sm ltr-nums">{emp.employeeNumber}</p>
         </div>
-        {canManage ? (
-          <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" asChild>
+            <Link to={`/hr/employees/${emp.id}/profile`}>
+              <UserCircle className="me-2 h-4 w-4" />
+              {t("hr.viewEmployeeProfile", "Employee profile")}
+            </Link>
+          </Button>
+          {canManage ? (
+            <>
             <Button type="button" variant="outline" onClick={() => setEditing((v) => !v)}>
               {editing ? t("common.cancel", "Cancel") : t("common.edit", "Edit")}
             </Button>
@@ -194,8 +201,9 @@ export function EmployeeDetailPage() {
               <Trash2 className="me-2 h-4 w-4" />
               {t("common.delete", "Delete")}
             </Button>
-          </div>
-        ) : null}
+            </>
+          ) : null}
+        </div>
       </div>
 
       <Card>

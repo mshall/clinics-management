@@ -73,6 +73,46 @@ export function isOrgWideUserRole(role: string): boolean {
   return (ORG_WIDE_USER_ROLES as readonly string[]).includes(role);
 }
 
+export const ORG_USER_PASSWORD_MIN_LENGTH = 8;
+
+export type OrgUserCreateField =
+  | "tenant"
+  | "email"
+  | "displayName"
+  | "password"
+  | "passwordMinLength"
+  | "clinics";
+
+export type OrgUserCreateFormInput = {
+  email: string;
+  password: string;
+  displayName: string;
+  role: string;
+  clinicIds: string[];
+  tenantId?: string;
+};
+
+export function getOrgUserCreateMissingFields(
+  values: OrgUserCreateFormInput,
+  opts?: { requireTenant?: boolean },
+): OrgUserCreateField[] {
+  const missing: OrgUserCreateField[] = [];
+  if (opts?.requireTenant && !values.tenantId?.trim()) missing.push("tenant");
+  if (!values.email.trim()) missing.push("email");
+  if (!values.displayName.trim()) missing.push("displayName");
+  if (!values.password.trim()) missing.push("password");
+  else if (values.password.length < ORG_USER_PASSWORD_MIN_LENGTH) missing.push("passwordMinLength");
+  if (isClinicRequiredUserRole(values.role) && values.clinicIds.length === 0) missing.push("clinics");
+  return missing;
+}
+
+export function canCreateOrgUser(
+  values: OrgUserCreateFormInput,
+  opts?: { requireTenant?: boolean },
+): boolean {
+  return getOrgUserCreateMissingFields(values, opts).length === 0;
+}
+
 export function apiErrorMessage(e: unknown): string {
   if (e instanceof ApiError) return e.message;
   return e instanceof Error ? e.message : String(e);

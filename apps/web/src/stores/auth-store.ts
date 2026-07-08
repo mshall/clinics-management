@@ -17,6 +17,7 @@ export interface AuthUser {
   navTabKeys?: string[] | null;
   /** Legacy email gate: data explorer on Admin, not platform routes */
   platformSuperAdmin?: boolean;
+  hasAvatar?: boolean;
 }
 
 interface AuthState {
@@ -24,10 +25,11 @@ interface AuthState {
   user: AuthUser | null;
   setSession: (
     accessToken: string,
-    user: Omit<AuthUser, "role"> & { role: string; navTabKeys?: string[] | null; platformSuperAdmin?: boolean }
+    user: Omit<AuthUser, "role"> & { role: string; navTabKeys?: string[] | null; platformSuperAdmin?: boolean; hasAvatar?: boolean }
   ) => void;
   signOut: () => void;
   refreshSessionFromServer: () => Promise<void>;
+  setHasAvatar: (hasAvatar: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -46,9 +48,12 @@ export const useAuthStore = create<AuthState>()(
             role: mapApiRole(raw.role),
             navTabKeys: raw.navTabKeys !== undefined ? raw.navTabKeys : undefined,
             platformSuperAdmin: Boolean(raw.platformSuperAdmin),
+            hasAvatar: Boolean(raw.hasAvatar),
           },
         }),
       signOut: () => set({ accessToken: null, user: null }),
+      setHasAvatar: (hasAvatar) =>
+        set((state) => (state.user ? { user: { ...state.user, hasAvatar } } : state)),
       refreshSessionFromServer: async () => {
         const token = get().accessToken;
         if (!token) return;
@@ -70,6 +75,7 @@ export const useAuthStore = create<AuthState>()(
             role: mapApiRole(me.role),
             navTabKeys: me.navTabKeys ?? null,
             platformSuperAdmin: Boolean(me.platformSuperAdmin),
+            hasAvatar: Boolean((me as { hasAvatar?: boolean }).hasAvatar),
           },
         });
       },

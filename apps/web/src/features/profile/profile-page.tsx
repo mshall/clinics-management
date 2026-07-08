@@ -1,37 +1,27 @@
-import { KeyRound, LayoutGrid, Mail, Shield } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Camera, KeyRound, LayoutGrid, Mail, Shield } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { ImageCropDialog } from "@/components/image-crop-dialog";
 import { PasswordInput } from "@/components/password-input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { enhanceImageFile } from "@/lib/enhance-image";
 import { formatUserRole } from "@/lib/locale-display";
-import { ApiError, apiPatch } from "@/lib/http";
+import { ApiError, apiPatch, apiPostFormData } from "@/lib/http";
+import { avatarGradient, profileInitials } from "@/lib/profile-avatar";
+import { useAuthenticatedImage } from "@/lib/use-authenticated-image";
 import { useAuthStore } from "@/stores/auth-store";
-
-function profileInitials(displayName: string | undefined): string {
-  if (!displayName) return "?";
-  return displayName
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
-
-function avatarGradient(seed: string): string {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) | 0;
-  const hue = Math.abs(hash) % 360;
-  return `linear-gradient(135deg, hsl(${hue} 65% 45%) 0%, hsl(${(hue + 40) % 360} 70% 35%) 100%)`;
-}
 
 export function ProfilePage() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
+  const setHasAvatar = useAuthStore((s) => s.setHasAvatar);
+  const refreshSessionFromServer = useAuthStore((s) => s.refreshSessionFromServer);
 
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -39,6 +29,17 @@ export function ProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordErr, setPasswordErr] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const [avatarVersion, setAvatarVersion] = useState(0);
+  const [cropOpen, setCropOpen] = useState(false);
+  const [cropImageUrl, setCropImageUrl] = useState<string | null>(null);
+  const [cropFileName, setCropFileName] = useState("avatar.jpg");
+  const [cropContentType, setCropContentType] = useState<string | undefined>();
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const avatarApiPath = user?.hasAvatar ? `/api/v1/auth/me/avatar?v=${avatarVersion}` : null;
+  const { url: avatarUrl, loading: avatarLoading } = useAuthenticatedImage(avatarApiPath, Boolean(user?.hasAvatar));
 
   const initials = profileInitials(user?.displayName);
   const coverStyle = useMemo(
@@ -66,6 +67,50 @@ export function ProfilePage() {
   function closePasswordDialog() {
     setPasswordOpen(false);
     resetPasswordForm();
+  }
+
+  function clearCropState() {
+    if (cropImageUrl) URL.revokeObjectURL(cropImageUrl);
+    setCropImageUrl(null);
+    setCropOpen(false);
+  }
+
+  async function handleAvatarFile(file: File | null) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error(t("profile.avatarImageOnly", "Please choose an image file."));
+      return;
+    }
+    clearCropState();
+    setCropFileName(file.name || "avatar.jpg");
+    setCropContentType(file.type);
+    setCropImageUrl(URL.createObjectURL(file));
+    setCropOpen(true);
+  }
+
+  async function applyAvatarCrop(file: File) {
+    setAvatarUploading(true);
+    try {
+      const enhanced = await enhanceImageFile(file, "avatar");
+      const fd = new FormData();
+      fd.append("file", enhanced);
+      await apiPostFormData("/api/v1/auth/me/avatar", fd, { enhance: false });
+      setHasAvatar(true);
+      setAvatarVersion((v) => v + 1);
+      await refreshSessionFromServer();
+      clearCropState();
+      toast.success(t("profile.avatarUpdated", "Profile picture updated."));
+    } catch (err) {
+      const msg =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : t("common.error");
+      toast.error(msg);
+    } finally {
+      setAvatarUploading(false);
+    }
   }
 
   async function handleChangePassword(e: React.FormEvent) {
@@ -113,12 +158,39 @@ export function ProfilePage() {
           <CardContent className="relative px-4 pb-6 pt-0 sm:px-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div className="-mt-14 flex flex-col gap-3 sm:-mt-16 sm:flex-row sm:items-end">
-                <div
-                  className="flex size-28 shrink-0 items-center justify-center rounded-full border-4 border-card text-3xl font-bold text-white shadow-lg sm:size-32"
-                  style={avatarStyle}
-                  aria-hidden
-                >
-                  {initials}
+                <div className="relative shrink-0">
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={user?.displayName ?? t("profile.avatarAlt", "Profile picture")}
+                      className="size-28 rounded-full border-4 border-card object-cover shadow-lg sm:size-32"
+                    />
+                  ) : (
+                    <div
+                      className="flex size-28 shrink-0 items-center justify-center rounded-full border-4 border-card text-3xl font-bold text-white shadow-lg sm:size-32"
+                      style={avatarStyle}
+                      aria-hidden
+                    >
+                      {avatarLoading && user?.hasAvatar ? "…" : initials}
+                    </div>
+                  )}
+                  <label
+                    className="absolute bottom-1 end-1 cursor-pointer rounded-full border border-border bg-background p-2 shadow-sm transition-colors hover:bg-muted"
+                    title={t("profile.changeAvatar", "Change profile picture")}
+                  >
+                    <Camera className="size-4" aria-hidden />
+                    <Input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      className="hidden"
+                      disabled={avatarUploading}
+                      onChange={(e) => {
+                        void handleAvatarFile(e.target.files?.[0] ?? null);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
                 </div>
                 <div className="min-w-0 space-y-1 pb-1 sm:pb-2">
                   <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{user?.displayName ?? "—"}</h1>
@@ -131,6 +203,9 @@ export function ProfilePage() {
                       {formatUserRole(user.role, t)}
                     </Badge>
                   ) : null}
+                  <p className="text-xs text-muted-foreground">
+                    {t("profile.avatarHint", "Tap the camera icon to upload or change your profile picture.")}
+                  </p>
                 </div>
               </div>
 
@@ -200,6 +275,21 @@ export function ProfilePage() {
           </CardContent>
         </Card>
       </div>
+
+      {cropImageUrl ? (
+        <ImageCropDialog
+          open={cropOpen}
+          onOpenChange={(open) => {
+            if (!open && !avatarUploading) clearCropState();
+            else setCropOpen(open);
+          }}
+          imageUrl={cropImageUrl}
+          fileName={cropFileName}
+          contentType={cropContentType}
+          pending={avatarUploading}
+          onApply={applyAvatarCrop}
+        />
+      ) : null}
 
       <Dialog
         open={passwordOpen}

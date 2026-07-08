@@ -149,6 +149,8 @@ model User {
   passwordHash String
   displayName  String
   role         UserRole
+  avatarRelativePath String?
+  avatarMimeType     String?
   employee     Employee?
   encounters   Encounter[]    @relation("EncounterClinician")
   appointments Appointment[] @relation("AppointmentClinician")

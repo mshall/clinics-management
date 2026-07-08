@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
@@ -34,6 +34,13 @@ import { useAuthStore } from "@/stores/auth-store";
 
 type Tab = "summary" | "employees" | "attendance" | "leave";
 
+const HR_TABS: Tab[] = ["summary", "employees", "attendance", "leave"];
+
+function parseHrTab(value: string | null): Tab {
+  if (value && HR_TABS.includes(value as Tab)) return value as Tab;
+  return "summary";
+}
+
 const EMP_TYPE_VALUES = ["FULL_TIME", "PART_TIME", "CONTRACTOR", "LOCUM"] as const;
 
 export function HrPage() {
@@ -47,11 +54,16 @@ export function HrPage() {
     [t],
   );
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
   const canManage = canManageEmployees(authUser?.role);
   const { data: clinics = [] } = useClinicsQuery();
-  const [tab, setTab] = useState<Tab>("summary");
+  const [tab, setTab] = useState<Tab>(() => parseHrTab(searchParams.get("tab")));
+
+  useEffect(() => {
+    setTab(parseHrTab(searchParams.get("tab")));
+  }, [searchParams]);
   const summary = useHrSummaryQuery();
   const employeesPick = useEmployeesQuery({ page: 1, pageSize: 100 });
   const pickEmployees = employeesPick.data?.items ?? [];
@@ -374,7 +386,15 @@ export function HrPage() {
 
       <div className="flex flex-wrap gap-2">
         {tabs.map((x) => (
-          <Button key={x.id} size="sm" variant={tab === x.id ? "default" : "outline"} onClick={() => setTab(x.id)}>
+          <Button
+            key={x.id}
+            size="sm"
+            variant={tab === x.id ? "default" : "outline"}
+            onClick={() => {
+              setTab(x.id);
+              setSearchParams(x.id === "summary" ? {} : { tab: x.id }, { replace: true });
+            }}
+          >
             {x.label}
           </Button>
         ))}

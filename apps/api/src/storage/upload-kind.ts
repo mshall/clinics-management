@@ -1,2 +1,2 @@
 /** Object namespace under `uploads/<kind>/` locally or `<kind>/` prefix in S3. */
-export type UploadKind = "encounters" | "expenses" | "employees" | "patients" | "operations";
+export type UploadKind = "encounters" | "expenses" | "employees" | "patients" | "operations" | "users";
