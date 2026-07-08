@@ -16,6 +16,7 @@ import {
 import { randomUUID } from "crypto";
 import * as path from "path";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
+import { assertOrgClinicalDeleteRole } from "../common/org-clinical-delete-roles";
 import { resolveLedgerListingRange } from "../common/reporting-range";
 import { paginate, parsePageParams } from "../common/pagination";
 import type { JwtUser } from "../auth/jwt-user";
@@ -62,12 +63,6 @@ type EncounterRow = Prisma.EncounterGetPayload<{ include: typeof encounterInclud
 function isPhysicianRole(role: UserRole | undefined): boolean {
   return role === UserRole.PHYSICIAN || String(role) === "PHYSICIAN";
 }
-
-const ENCOUNTER_DELETE_ROLES: ReadonlySet<UserRole> = new Set([
-  UserRole.GROUP_ADMIN,
-  UserRole.GROUP_SUPERVISOR,
-  UserRole.CALL_CENTER,
-]);
 
 function assertPhysicianEncounterAccess(viewer: JwtUser | undefined, encounter: { clinicianId: string }): void {
   if (viewer && isPhysicianRole(viewer.role) && encounter.clinicianId !== viewer.userId) {
@@ -668,11 +663,7 @@ export class EncountersService {
   }
 
   private assertCanDeleteEncounter(viewer: JwtUser): void {
-    if (!ENCOUNTER_DELETE_ROLES.has(viewer.role)) {
-      throw new ForbiddenException(
-        "Only group administrators, supervisors, and call center staff can delete encounters",
-      );
-    }
+    assertOrgClinicalDeleteRole(viewer, "encounters");
   }
 
   async delete(tenantId: string, id: string, viewer: JwtUser): Promise<{ ok: true; id: string }> {

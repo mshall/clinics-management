@@ -3,6 +3,7 @@ import { AppointmentStatus, EncounterStatus, Prisma, UserRole } from "@prisma/cl
 import type { JwtUser } from "../auth/jwt-user";
 import { CLINIC_SCOPE_ROLES, fetchPhysicianNetworkClinicIds } from "../common/clinic-scope";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
+import { assertOrgClinicalDeleteRole } from "../common/org-clinical-delete-roles";
 import { paginate, parsePageParams } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
 import type { CreateAppointmentDto } from "./dto/create-appointment.dto";
@@ -25,12 +26,6 @@ type AppointmentRow = Prisma.AppointmentGetPayload<{ include: typeof appointment
 function isPhysicianRole(role: UserRole | undefined): boolean {
   return role === UserRole.PHYSICIAN || String(role) === "PHYSICIAN";
 }
-
-const APPOINTMENT_DELETE_ROLES: ReadonlySet<UserRole> = new Set([
-  UserRole.GROUP_ADMIN,
-  UserRole.GROUP_SUPERVISOR,
-  UserRole.CALL_CENTER,
-]);
 
 @Injectable()
 export class AppointmentsService {
@@ -341,11 +336,7 @@ export class AppointmentsService {
   }
 
   private assertCanDeleteAppointment(viewer: JwtUser): void {
-    if (!APPOINTMENT_DELETE_ROLES.has(viewer.role)) {
-      throw new ForbiddenException(
-        "Only group administrators, supervisors, and call center staff can delete appointments",
-      );
-    }
+    assertOrgClinicalDeleteRole(viewer, "appointments");
   }
 
   async delete(tenantId: string, id: string, viewer: JwtUser): Promise<{ ok: true; id: string }> {
