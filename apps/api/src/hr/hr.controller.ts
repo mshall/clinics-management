@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, StreamableFile, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, StreamableFile, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import {
   ApiBearerAuth,
   ApiBody,
@@ -23,6 +23,7 @@ import { CreateLeaveRequestDto } from "./dto/create-leave-request.dto";
 import { AttendanceDto } from "./dto/attendance.dto";
 import { EmployeeDto } from "./dto/employee.dto";
 import { LeaveRequestDto } from "./dto/leave-request.dto";
+import { UpdateEmployeeDto } from "./dto/update-employee.dto";
 import { HrService } from "./hr.service";
 
 const ID_DOC_UPLOAD_LIMIT = 15 * 1024 * 1024;
@@ -88,6 +89,20 @@ export class HrController {
   @ApiCreatedResponse({ type: EmployeeDto })
   createEmployee(@CurrentUser() user: JwtUser, @Body() body: CreateEmployeeDto) {
     return this.hr.createEmployee(requireTenantId(user), body, user);
+  }
+
+  @Patch("employees/:id")
+  @ApiOperation({ summary: "Update employee (HR, group admin, clinic admin, branch manager)" })
+  @ApiOkResponse({ type: EmployeeDto })
+  updateEmployee(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: UpdateEmployeeDto) {
+    return this.hr.updateEmployee(requireTenantId(user), id, body, user);
+  }
+
+  @Delete("employees/:id")
+  @ApiOperation({ summary: "Delete employee (HR, group admin, clinic admin, branch manager)" })
+  @ApiOkResponse({ description: "{ ok: true, id }" })
+  removeEmployee(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.hr.deleteEmployee(requireTenantId(user), id, user);
   }
 
   @Post("employees/:id/id-document")

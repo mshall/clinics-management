@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { PasswordInput } from "@/components/password-input";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
@@ -14,6 +15,8 @@ import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from "@/lib/http";
 import { formatClinicName, formatUserRole } from "@/lib/locale-display";
 import type { Paginated } from "@/lib/paginated";
 import { apiErrorMessage, isClinicRequiredUserRole, isOrgWideUserRole, ORG_USER_ROLES } from "@/features/platform/platform-shared";
+import { AdminOrgUserDeleteConfirmDialog, type OrgUserDeleteTarget } from "@/features/admin/admin-org-user-delete-confirm-dialog";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useAuthStore } from "@/stores/auth-store";
 
 type OrgUserRow = {
@@ -49,6 +52,8 @@ export function AdminOrgUsersPanel() {
   const [legacyUsersApi, setLegacyUsersApi] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [selectAllMatching, setSelectAllMatching] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<OrgUserDeleteTarget | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   async function fetchLegacyOrgUsers(pageNum: number, size: number, q: string): Promise<Paginated<OrgUserRow>> {
     const qParam = q.trim() ? `&q=${encodeURIComponent(q.trim())}` : "";
@@ -192,12 +197,18 @@ export function AdminOrgUsersPanel() {
   const deleteMut = useMutation({
     mutationFn: (userId: string) => apiDelete(`/api/v1/admin/users/${userId}`),
     onSuccess: () => {
+      setUserToDelete(null);
       closeDialog();
       void qc.invalidateQueries({ queryKey: ["admin"] });
       void qc.invalidateQueries({ queryKey: ["users"] });
       void qc.invalidateQueries({ queryKey: ["org-hierarchy"] });
+      toast.success(t("admin.orgUsersDeleteSuccess", "User deleted."));
     },
-    onError: (e: unknown) => setUserErr(apiErrorMessage(e)),
+    onError: (e: unknown) => {
+      const msg = apiErrorMessage(e);
+      setUserErr(msg);
+      toast.error(msg);
+    },
   });
 
   const bulkDeleteMut = useMutation({
@@ -214,6 +225,7 @@ export function AdminOrgUsersPanel() {
       );
     },
     onSuccess: (result) => {
+      setBulkDeleteOpen(false);
       setSelectedIds(new Set());
       setSelectAllMatching(false);
       void qc.invalidateQueries({ queryKey: ["admin"] });
@@ -221,17 +233,21 @@ export function AdminOrgUsersPanel() {
       void qc.invalidateQueries({ queryKey: ["org-hierarchy"] });
       if (result.failed.length > 0) {
         const lines = result.failed.slice(0, 5).map((f) => `${f.id.slice(0, 8)}…: ${f.message}`);
-        alert(
+        toast.error(
           t("admin.orgUsersBulkDeletePartial", "Deleted {{deleted}} user(s). {{failed}} could not be deleted:\n{{details}}", {
             deleted: result.deleted,
             failed: result.failed.length,
             details: lines.join("\n"),
           }),
         );
+      } else {
+        toast.success(
+          t("admin.orgUsersBulkDeleteSuccess", "Deleted {{count}} user(s).", { count: result.deleted }),
+        );
       }
     },
     onError: (e: unknown) => {
-      alert(apiErrorMessage(e));
+      toast.error(apiErrorMessage(e));
     },
   });
 
@@ -318,12 +334,7 @@ export function AdminOrgUsersPanel() {
                 type="button"
                 variant="destructive"
                 disabled={bulkDeleteMut.isPending}
-                onClick={() => {
-                  const msg = selectAllMatching
-                    ? t("admin.orgUsersBulkDeleteAllConfirm", "Delete all {{count}} users matching this search?", { count: selectedCount })
-                    : t("admin.orgUsersBulkDeleteConfirm", "Delete {{count}} selected users?", { count: selectedCount });
-                  if (window.confirm(msg)) bulkDeleteMut.mutate();
-                }}
+                onClick={() => setBulkDeleteOpen(true)}
               >
                 {t("admin.orgUsersBulkDelete", "Delete selected ({{count}})", { count: selectedCount })}
               </Button>
@@ -451,11 +462,16 @@ export function AdminOrgUsersPanel() {
                                 variant="ghost"
                                 className="text-destructive"
                                 disabled={deleteMut.isPending}
-                                onClick={() => {
-                                  if (window.confirm(t("admin.orgUsersDeleteConfirm", "Delete this user? This cannot be undone."))) {
-                                    deleteMut.mutate(row.id);
-                                  }
-                                }}
+                                onClick={() =>
+                                  setUserToDelete({
+                                    id: row.id,
+                                    displayName: row.displayName,
+                                    email: row.email,
+                                    role: row.role,
+                                    clinics: row.clinics,
+                                    clinicLabel: clinicLabel(row),
+                                  })
+                                }
                               >
                                 {t("common.delete", "Delete")}
                               </Button>
@@ -578,8 +594,16 @@ export function AdminOrgUsersPanel() {
                     variant="destructive"
                     disabled={deleteMut.isPending}
                     onClick={() => {
-                      if (window.confirm(t("admin.orgUsersDeleteConfirm", "Delete this user? This cannot be undone."))) {
-                        deleteMut.mutate(editUserId);
+                      if (editUserId) {
+                        const u = userDetailQuery.data;
+                        setUserToDelete({
+                          id: editUserId,
+                          displayName: u?.displayName ?? uName,
+                          email: u?.email ?? uEmail,
+                          role: u?.role ?? uRole,
+                          clinics: u?.clinics ?? [],
+                          clinicLabel: u ? clinicLabel(u) : undefined,
+                        });
                       }
                     }}
                   >
@@ -595,6 +619,43 @@ export function AdminOrgUsersPanel() {
           )}
         </DialogContent>
       </Dialog>
+
+      <AdminOrgUserDeleteConfirmDialog
+        open={userToDelete != null}
+        onOpenChange={(open) => {
+          if (!open && !deleteMut.isPending) setUserToDelete(null);
+        }}
+        user={userToDelete}
+        pending={deleteMut.isPending}
+        onConfirm={() => {
+          if (userToDelete) deleteMut.mutate(userToDelete.id);
+        }}
+      />
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onOpenChange={(open) => {
+          if (!open && !bulkDeleteMut.isPending) setBulkDeleteOpen(false);
+        }}
+        title={t("admin.orgUsersBulkDeleteTitle", "Delete selected users?")}
+        description={
+          selectAllMatching
+            ? t(
+                "admin.orgUsersBulkDeleteAllConfirm",
+                "Delete all {{count}} users matching this search? This cannot be undone.",
+                { count: selectedCount },
+              )
+            : t(
+                "admin.orgUsersBulkDeleteConfirm",
+                "Delete {{count}} selected users? This cannot be undone.",
+                { count: selectedCount },
+              )
+        }
+        confirmLabel={t("admin.orgUsersBulkDeleteAction", "Delete users")}
+        cancelLabel={t("common.cancel", "Cancel")}
+        pending={bulkDeleteMut.isPending}
+        onConfirm={() => bulkDeleteMut.mutate()}
+      />
     </div>
   );
 }

@@ -17,6 +17,7 @@ import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-b
 import type { CreateAttendanceDto } from "./dto/create-attendance.dto";
 import type { CreateEmployeeDto } from "./dto/create-employee.dto";
 import type { CreateLeaveRequestDto } from "./dto/create-leave-request.dto";
+import type { UpdateEmployeeDto } from "./dto/update-employee.dto";
 import type { AttendanceDto } from "./dto/attendance.dto";
 import type { EmployeeDto } from "./dto/employee.dto";
 import type { LeaveRequestDto } from "./dto/leave-request.dto";
@@ -277,6 +278,57 @@ export class HrService {
       include: { clinic: { select: { nameEn: true } } },
     });
     return this.mapEmployee(row);
+  }
+
+  async updateEmployee(tenantId: string, id: string, dto: UpdateEmployeeDto, viewer: JwtUser): Promise<EmployeeDto> {
+    this.assertCanManageEmployees(viewer);
+    const existing = await this.prisma.employee.findFirst({ where: { id, tenantId } });
+    if (!existing) throw new NotFoundException("Employee not found");
+    await this.assertClinicAdminCanUseClinic(tenantId, viewer, existing.clinicId);
+
+    const clinicId = dto.clinicId?.trim();
+    if (clinicId && clinicId !== existing.clinicId) {
+      await this.assertClinicAdminCanUseClinic(tenantId, viewer, clinicId);
+      const clinic = await this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId } });
+      if (!clinic) throw new BadRequestException("Invalid clinicId");
+    }
+
+    let phone: string | undefined;
+    if (dto.phone !== undefined) {
+      phone = dto.phone.replace(/\D/g, "");
+      if (phone.length < 8) throw new BadRequestException("Phone must contain at least 8 digits");
+    }
+
+    const row = await this.prisma.employee.update({
+      where: { id },
+      data: {
+        ...(clinicId ? { clinicId } : {}),
+        ...(dto.firstNameEn !== undefined ? { firstNameEn: dto.firstNameEn } : {}),
+        ...(dto.lastNameEn !== undefined ? { lastNameEn: dto.lastNameEn } : {}),
+        ...(dto.email !== undefined ? { email: dto.email || null } : {}),
+        ...(phone !== undefined ? { phone } : {}),
+        ...(dto.jobTitle !== undefined ? { jobTitle: dto.jobTitle } : {}),
+        ...(dto.employmentType !== undefined ? { employmentType: dto.employmentType } : {}),
+        ...(dto.hireDate !== undefined ? { hireDate: new Date(dto.hireDate) } : {}),
+        ...(dto.salaryBase !== undefined ? { salaryBase: dto.salaryBase } : {}),
+      },
+      include: { clinic: { select: { nameEn: true } } },
+    });
+    return this.mapEmployee(row);
+  }
+
+  async deleteEmployee(tenantId: string, id: string, viewer: JwtUser): Promise<{ ok: true; id: string }> {
+    this.assertCanManageEmployees(viewer);
+    const emp = await this.prisma.employee.findFirst({ where: { id, tenantId } });
+    if (!emp) throw new NotFoundException("Employee not found");
+    await this.assertClinicAdminCanUseClinic(tenantId, viewer, emp.clinicId);
+
+    const idDocPath = emp.idDocRelativePath;
+    await this.prisma.employee.delete({ where: { id } });
+    if (idDocPath) {
+      await this.uploads.deleteObject("employees", idDocPath).catch(() => undefined);
+    }
+    return { ok: true, id };
   }
 
   async getEmployeeIdDocumentMeta(

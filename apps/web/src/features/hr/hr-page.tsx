@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
@@ -13,18 +15,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAttendanceQuery, useEmployeesQuery, useHrSummaryQuery, useLeaveRequestsQuery } from "@/lib/api-hooks";
-import { apiPatch, apiPost } from "@/lib/http";
+import { useAttendanceQuery, useClinicsQuery, useEmployeesQuery, useHrSummaryQuery, useLeaveRequestsQuery } from "@/lib/api-hooks";
+import type { EmployeeDto } from "@/lib/api-types";
+import { EmployeeDeleteConfirmDialog, type EmployeeDeleteTarget } from "@/features/hr/employee-delete-confirm-dialog";
+import { canManageEmployees } from "@/lib/employee-manage-policy";
+import { ApiError, apiDelete, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { columnFilterIncludes } from "@/lib/utils";
 import {
   formatAttendanceStatus,
   formatClinicNameFields,
   formatLeaveStatus,
   formatLeaveType,
+  formatEmploymentType,
+  formatClinicName,
   localeForLanguage,
 } from "@/lib/locale-display";
+import { useAuthStore } from "@/stores/auth-store";
 
 type Tab = "summary" | "employees" | "attendance" | "leave";
+
+const EMP_TYPE_VALUES = ["FULL_TIME", "PART_TIME", "CONTRACTOR", "LOCUM"] as const;
 
 export function HrPage() {
   const { t, i18n } = useTranslation();
@@ -38,6 +48,9 @@ export function HrPage() {
   );
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const authUser = useAuthStore((s) => s.user);
+  const canManage = canManageEmployees(authUser?.role);
+  const { data: clinics = [] } = useClinicsQuery();
   const [tab, setTab] = useState<Tab>("summary");
   const summary = useHrSummaryQuery();
   const employeesPick = useEmployeesQuery({ page: 1, pageSize: 100 });
@@ -140,6 +153,27 @@ export function HrPage() {
   const empTotalPages = employees.data?.totalPages ?? 1;
 
   const [leaveReqOpen, setLeaveReqOpen] = useState(false);
+  const [createEmpOpen, setCreateEmpOpen] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState<EmployeeDeleteTarget | null>(null);
+  const [empClinic, setEmpClinic] = useState("");
+  const [empFn, setEmpFn] = useState("");
+  const [empLn, setEmpLn] = useState("");
+  const [empEmail, setEmpEmail] = useState("");
+  const [empPhone, setEmpPhone] = useState("");
+  const [empTitle, setEmpTitle] = useState("Staff");
+  const [empType, setEmpType] = useState("FULL_TIME");
+  const [empSalary, setEmpSalary] = useState("9000");
+  const [empIdDocFile, setEmpIdDocFile] = useState<File | null>(null);
+  const [createEmpErr, setCreateEmpErr] = useState<string | null>(null);
+
+  const clinicItems: PickListItem[] = useMemo(
+    () => clinics.map((c) => ({ value: c.id, label: formatClinicName(c, i18n.language) })),
+    [clinics, i18n.language],
+  );
+  const empTypeItems: PickListItem[] = useMemo(
+    () => EMP_TYPE_VALUES.map((value) => ({ value, label: formatEmploymentType(value, t) })),
+    [t],
+  );
 
   const [attEmp, setAttEmp] = useState("");
   const [attDate, setAttDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -178,6 +212,70 @@ export function HrPage() {
       apiPatch(`/api/v1/hr/leave-requests/${id}/status`, { status }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["hr"] }),
   });
+
+  const createEmpMut = useMutation({
+    mutationFn: async () => {
+      const emp = await apiPost<EmployeeDto>("/api/v1/hr/employees", {
+        clinicId: empClinic,
+        firstNameEn: empFn.trim(),
+        lastNameEn: empLn.trim(),
+        email: empEmail.trim() || undefined,
+        phone: empPhone.replace(/\D/g, ""),
+        jobTitle: empTitle.trim(),
+        employmentType: empType,
+        hireDate: new Date().toISOString().slice(0, 10),
+        salaryBase: Number.parseFloat(empSalary),
+      });
+      if (empIdDocFile) {
+        const fd = new FormData();
+        fd.append("file", empIdDocFile);
+        await apiPostFormData<EmployeeDto>(`/api/v1/hr/employees/${emp.id}/id-document`, fd);
+      }
+      return emp;
+    },
+    onSuccess: (emp) => {
+      setCreateEmpErr(null);
+      setCreateEmpOpen(false);
+      setEmpFn("");
+      setEmpLn("");
+      setEmpEmail("");
+      setEmpPhone("");
+      setEmpClinic("");
+      setEmpIdDocFile(null);
+      void qc.invalidateQueries({ queryKey: ["hr"] });
+      toast.success(t("hr.employeeCreated", "Employee created."));
+      navigate(`/hr/employees/${emp.id}`);
+    },
+    onError: (e: unknown) => {
+      const msg =
+        e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body
+          ? String((e.body as { message?: unknown }).message)
+          : e instanceof Error
+            ? e.message
+            : String(e);
+      setCreateEmpErr(msg);
+      toast.error(msg);
+    },
+  });
+
+  const deleteEmpMut = useMutation({
+    mutationFn: (employeeId: string) => apiDelete(`/api/v1/hr/employees/${employeeId}`),
+    onSuccess: () => {
+      setEmployeeToDelete(null);
+      void qc.invalidateQueries({ queryKey: ["hr"] });
+      toast.success(t("hr.deleteSuccess", "Employee deleted."));
+    },
+    onError: (e: unknown) => {
+      const msg =
+        e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body
+          ? String((e.body as { message?: unknown }).message)
+          : e instanceof Error
+            ? e.message
+            : String(e);
+      toast.error(msg);
+    },
+  });
+
 
   const money = (n: number) =>
     new Intl.NumberFormat(localeForLanguage(i18n.language), { style: "currency", currency: "AED" }).format(n);
@@ -316,14 +414,96 @@ export function HrPage() {
           <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
             <div>
               <CardTitle className="text-base">{t("hr.employees")}</CardTitle>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {t("hr.addEmployeeInAdmin", "New hires are registered under")}{" "}
-                <Link to="/admin" className="font-medium text-primary underline-offset-4 hover:underline">
-                  {t("nav.admin", "Administration")}
-                </Link>
-                {t("hr.addEmployeeInAdminSuffix", " → Organization & settings.")}
-              </p>
+              <p className="mt-1 text-sm text-muted-foreground">{t("hr.employeesSubtitle", "Manage employees, attendance, and leave for your organization.")}</p>
             </div>
+            {canManage ? (
+              <Dialog open={createEmpOpen} onOpenChange={setCreateEmpOpen}>
+                <DialogTrigger asChild>
+                  <CreateActionButton type="button">{t("hr.addEmployee")}</CreateActionButton>
+                </DialogTrigger>
+                <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto" aria-describedby={undefined}>
+                  <DialogHeader>
+                    <DialogTitle>{t("hr.addEmployee")}</DialogTitle>
+                  </DialogHeader>
+                  <div className="grid gap-3 pt-2 sm:grid-cols-2">
+                    {createEmpErr ? <p className="text-sm text-destructive sm:col-span-full">{createEmpErr}</p> : null}
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label required>{t("hr.clinic")}</Label>
+                      <SearchablePickList
+                        items={clinicItems}
+                        value={empClinic}
+                        onValueChange={setEmpClinic}
+                        searchPlaceholder={t("appointments.filterClinic", "Type clinic name…")}
+                        placeholder={t("hr.pickClinic")}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label required>{t("hr.firstName")}</Label>
+                      <Input value={empFn} onChange={(e) => setEmpFn(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label required>{t("hr.lastName")}</Label>
+                      <Input value={empLn} onChange={(e) => setEmpLn(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t("hr.email")}</Label>
+                      <Input type="email" value={empEmail} onChange={(e) => setEmpEmail(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label required>{t("hr.phone")}</Label>
+                      <Input
+                        className="ltr-nums"
+                        inputMode="numeric"
+                        value={empPhone}
+                        onChange={(e) => setEmpPhone(e.target.value.replace(/\D/g, "").slice(0, 20))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t("hr.jobTitle")}</Label>
+                      <Input value={empTitle} onChange={(e) => setEmpTitle(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t("hr.employmentType")}</Label>
+                      <SearchablePickList
+                        items={empTypeItems}
+                        value={empType}
+                        onValueChange={setEmpType}
+                        searchPlaceholder={t("hr.filterEmpType")}
+                        placeholder={t("hr.employmentType")}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t("hr.salaryBase")}</Label>
+                      <Input className="ltr-nums" type="number" value={empSalary} onChange={(e) => setEmpSalary(e.target.value)} />
+                    </div>
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label>{t("hr.idDocument")}</Label>
+                      <Input
+                        className="cursor-pointer text-sm"
+                        type="file"
+                        accept="application/pdf,image/*"
+                        onChange={(e) => setEmpIdDocFile(e.target.files?.[0] ?? null)}
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <CreateActionButton
+                        type="button"
+                        disabled={
+                          !empClinic ||
+                          !empFn.trim() ||
+                          !empLn.trim() ||
+                          empPhone.replace(/\D/g, "").length < 8 ||
+                          createEmpMut.isPending
+                        }
+                        onClick={() => createEmpMut.mutate()}
+                      >
+                        {t("hr.saveEmployee")}
+                      </CreateActionButton>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            ) : null}
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex justify-end">
@@ -385,6 +565,11 @@ export function HrPage() {
                       filterValue={ecfSalary}
                       onFilterChange={setEcfSalary}
                     />
+                    {canManage ? (
+                      <th className="px-2 py-2 text-end text-xs font-medium text-muted-foreground">
+                        {t("common.actions", "Actions")}
+                      </th>
+                    ) : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -411,6 +596,36 @@ export function HrPage() {
                       </td>
                       <td className="px-2 py-2 text-muted-foreground">{e.jobTitle}</td>
                       <td className="px-2 py-2 ltr-nums">{money(e.salaryBase)}</td>
+                      {canManage ? (
+                        <td className="px-2 py-2 text-end">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            aria-label={t("common.delete", "Delete")}
+                            disabled={deleteEmpMut.isPending}
+                            onClick={(ev) => {
+                              ev.preventDefault();
+                              ev.stopPropagation();
+                              setEmployeeToDelete({
+                                id: e.id,
+                                employeeNumber: e.employeeNumber,
+                                firstNameEn: e.firstNameEn,
+                                lastNameEn: e.lastNameEn,
+                                clinicId: e.clinicId,
+                                clinicNameEn: e.clinicNameEn,
+                                jobTitle: e.jobTitle,
+                                employmentType: e.employmentType,
+                                hireDate: e.hireDate,
+                                salaryBase: e.salaryBase,
+                              });
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>
@@ -431,6 +646,18 @@ export function HrPage() {
           </CardContent>
         </Card>
       ) : null}
+
+      <EmployeeDeleteConfirmDialog
+        open={employeeToDelete != null}
+        onOpenChange={(open) => {
+          if (!open && !deleteEmpMut.isPending) setEmployeeToDelete(null);
+        }}
+        employee={employeeToDelete}
+        pending={deleteEmpMut.isPending}
+        onConfirm={() => {
+          if (employeeToDelete) deleteEmpMut.mutate(employeeToDelete.id);
+        }}
+      />
 
       {tab === "attendance" ? (
         <Card>
