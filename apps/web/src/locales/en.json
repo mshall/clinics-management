@@ -415,6 +415,7 @@
     "statusWithSave": "Or choose from the list (same as shortcuts)",
     "delete": "Delete",
     "deleteConfirmTitle": "Delete appointment?",
+    "deleteConfirmIntro": "This booking will be permanently removed. This action cannot be undone.",
     "deleteConfirmBody": "Permanently delete this booking for {{patient}}? This cannot be undone.",
     "deleteConfirmAction": "Delete appointment",
     "deleteSuccess": "Appointment deleted."

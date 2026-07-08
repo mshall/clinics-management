@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
-import { ConfirmDialog } from "@/components/confirm-dialog";
+import { AppointmentDeleteConfirmDialog, type AppointmentDeleteTarget } from "@/features/appointments/appointment-delete-confirm-dialog";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { ResponsiveTable } from "@/components/responsive-table";
@@ -139,9 +139,7 @@ export function AppointmentsPage() {
   const [end, setEnd] = useState("");
   const [formErr, setFormErr] = useState<string | null>(null);
   const [bookOk, setBookOk] = useState<string | null>(null);
-  const [appointmentToDelete, setAppointmentToDelete] = useState<{ id: string; patientName?: string | null } | null>(
-    null,
-  );
+  const [appointmentToDelete, setAppointmentToDelete] = useState<AppointmentDeleteTarget | null>(null);
 
   const [bookPatientSearch, setBookPatientSearch] = useState("");
   const [debouncedBookPatient, setDebouncedBookPatient] = useState("");
@@ -589,7 +587,19 @@ export function AppointmentsPage() {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              setAppointmentToDelete({ id: a.id, patientName: a.patientName });
+                              setAppointmentToDelete({
+                                id: a.id,
+                                patientName: a.patientName,
+                                patientMrn: a.patientMrn,
+                                startsAt: a.startsAt,
+                                endsAt: a.endsAt,
+                                clinicianName: a.clinicianName,
+                                status: a.status,
+                                clinicId: a.clinicId,
+                                clinicNameEn: a.clinicNameEn,
+                                clinicNameAr: a.clinicNameAr,
+                                clinicLabel,
+                              });
                             }}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -624,22 +634,12 @@ export function AppointmentsPage() {
         </CardContent>
       </Card>
 
-      <ConfirmDialog
+      <AppointmentDeleteConfirmDialog
         open={appointmentToDelete != null}
         onOpenChange={(open) => {
           if (!open && !deleteMut.isPending) setAppointmentToDelete(null);
         }}
-        title={t("appointments.deleteConfirmTitle", "Delete appointment?")}
-        description={t(
-          "appointments.deleteConfirmBody",
-          "Permanently delete this booking for {{patient}}? This cannot be undone.",
-          {
-            patient:
-              appointmentToDelete?.patientName?.trim() || t("appointments.patient", "Patient"),
-          },
-        )}
-        confirmLabel={t("appointments.deleteConfirmAction", "Delete appointment")}
-        cancelLabel={t("common.cancel", "Cancel")}
+        appointment={appointmentToDelete}
         pending={deleteMut.isPending}
         onConfirm={() => {
           if (appointmentToDelete) deleteMut.mutate(appointmentToDelete.id);

@@ -416,6 +416,7 @@
     "statusWithSave": "أو اختر من القائمة (مثل الاختصارات)",
     "delete": "حذف",
     "deleteConfirmTitle": "حذف الموعد؟",
+    "deleteConfirmIntro": "سيُزال هذا الحجز نهائياً. لا يمكن التراجع عن هذا الإجراء.",
     "deleteConfirmBody": "حذف هذا الحجز لـ {{patient}} نهائياً؟ لا يمكن التراجع.",
     "deleteConfirmAction": "حذف الموعد",
     "deleteSuccess": "تم حذف الموعد."

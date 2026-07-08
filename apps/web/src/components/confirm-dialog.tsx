@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { CircleX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,6 +14,7 @@ type ConfirmDialogProps = {
   onConfirm: () => void;
   pending?: boolean;
   variant?: "destructive" | "default";
+  details?: ReactNode;
 };
 
 export function ConfirmDialog({
@@ -25,6 +27,7 @@ export function ConfirmDialog({
   onConfirm,
   pending = false,
   variant = "destructive",
+  details,
 }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -58,6 +61,9 @@ export function ConfirmDialog({
           <p id="confirm-dialog-description" className="text-sm leading-relaxed text-muted-foreground">
             {description}
           </p>
+          {details ? (
+            <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm">{details}</div>
+          ) : null}
           <div className="flex flex-wrap justify-end gap-2 pt-1">
             <Button type="button" variant="outline" disabled={pending} onClick={() => onOpenChange(false)}>
               {cancelLabel}

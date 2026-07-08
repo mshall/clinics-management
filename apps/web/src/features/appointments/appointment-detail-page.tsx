@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { AppointmentStatusBadge, appointmentStatusClassName } from "@/components/appointment-status-badge";
-import { ConfirmDialog } from "@/components/confirm-dialog";
+import { AppointmentDeleteConfirmDialog } from "@/features/appointments/appointment-delete-confirm-dialog";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -234,19 +234,25 @@ export function AppointmentDetailPage() {
 
   return (
     <div className="space-y-6">
-      <ConfirmDialog
+      <AppointmentDeleteConfirmDialog
         open={deleteDialogOpen}
-        onOpenChange={(open) => {
-          if (!open && !deleteMut.isPending) setDeleteDialogOpen(false);
-        }}
-        title={t("appointments.deleteConfirmTitle", "Delete appointment?")}
-        description={t(
-          "appointments.deleteConfirmBody",
-          "Permanently delete this booking for {{patient}}? This cannot be undone.",
-          { patient: apt.patientName?.trim() || t("appointments.patient", "Patient") },
-        )}
-        confirmLabel={t("appointments.deleteConfirmAction", "Delete appointment")}
-        cancelLabel={t("common.cancel", "Cancel")}
+        onOpenChange={setDeleteDialogOpen}
+        appointment={
+          apt
+            ? {
+                id: apt.id,
+                patientName: apt.patientName,
+                patientMrn: apt.patientMrn,
+                startsAt: apt.startsAt,
+                endsAt: apt.endsAt,
+                clinicianName: apt.clinicianName,
+                status: apt.status,
+                clinicId: apt.clinicId,
+                clinicNameEn: apt.clinicNameEn,
+                clinicNameAr: apt.clinicNameAr,
+              }
+            : null
+        }
         pending={deleteMut.isPending}
         onConfirm={() => deleteMut.mutate()}
       />
