@@ -63,6 +63,12 @@ function isPhysicianRole(role: UserRole | undefined): boolean {
   return role === UserRole.PHYSICIAN || String(role) === "PHYSICIAN";
 }
 
+const ENCOUNTER_DELETE_ROLES: ReadonlySet<UserRole> = new Set([
+  UserRole.GROUP_ADMIN,
+  UserRole.GROUP_SUPERVISOR,
+  UserRole.CALL_CENTER,
+]);
+
 function assertPhysicianEncounterAccess(viewer: JwtUser | undefined, encounter: { clinicianId: string }): void {
   if (viewer && isPhysicianRole(viewer.role) && encounter.clinicianId !== viewer.userId) {
     throw new ForbiddenException("You can only work on encounters assigned to you");
@@ -659,5 +665,54 @@ export class EncountersService {
       return updated;
     });
     return this.mapEncounter(row);
+  }
+
+  private assertCanDeleteEncounter(viewer: JwtUser): void {
+    if (!ENCOUNTER_DELETE_ROLES.has(viewer.role)) {
+      throw new ForbiddenException(
+        "Only group administrators, supervisors, and call center staff can delete encounters",
+      );
+    }
+  }
+
+  async delete(tenantId: string, id: string, viewer: JwtUser): Promise<{ ok: true; id: string }> {
+    this.assertCanDeleteEncounter(viewer);
+    const enc = await this.prisma.encounter.findFirst({
+      where: { id, tenantId },
+      include: { documents: true },
+    });
+    if (!enc) throw new NotFoundException("Encounter not found");
+
+    const documentPaths = enc.documents.map((d) => d.relativePath);
+    const appointmentId = enc.appointmentId;
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.revenueEntry.deleteMany({ where: { tenantId, encounterId: id } });
+      await tx.encounter.delete({ where: { id } });
+
+      if (appointmentId) {
+        const otherEnc = await tx.encounter.findFirst({
+          where: { tenantId, appointmentId, id: { not: id } },
+        });
+        if (!otherEnc) {
+          const apt = await tx.appointment.findFirst({ where: { id: appointmentId, tenantId } });
+          if (
+            apt &&
+            (apt.status === AppointmentStatus.CHECKED_IN || apt.status === AppointmentStatus.COMPLETED)
+          ) {
+            await tx.appointment.update({
+              where: { id: appointmentId },
+              data: { status: AppointmentStatus.CONFIRMED },
+            });
+          }
+        }
+      }
+    });
+
+    await Promise.all(
+      documentPaths.map((path) => this.uploads.deleteObject("encounters", path).catch(() => undefined)),
+    );
+
+    return { ok: true, id };
   }
 }

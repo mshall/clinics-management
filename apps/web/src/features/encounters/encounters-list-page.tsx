@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
 import {
   emptyPatientAcquisitionFormValues,
@@ -33,7 +35,9 @@ import {
 } from "@/lib/api-hooks";
 import type { AppointmentDto, EncounterDetailDto } from "@/lib/api-types";
 import { appointmentStatusLabel } from "@/components/appointment-status-badge";
-import { ApiError, apiPost } from "@/lib/http";
+import { ApiError, apiDelete, apiPost } from "@/lib/http";
+import { canDeleteEncounter } from "@/lib/encounter-delete-policy";
+import { EncounterDeleteConfirmDialog, type EncounterDeleteTarget } from "@/features/encounters/encounter-delete-confirm-dialog";
 import { formatEncounterStatus, formatClinicName, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
 import { columnFilterIncludes } from "@/lib/utils";
@@ -48,6 +52,7 @@ export function EncountersListPage() {
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
   const isPhysician = authUser?.role === "physician";
+  const canDelete = canDeleteEncounter(authUser?.role);
   const initialRange = useMemo(() => defaultEncounterListRange(), []);
   const [from, setFrom] = useState(initialRange.from);
   const [to, setTo] = useState(initialRange.to);
@@ -108,6 +113,7 @@ export function EncountersListPage() {
   const [efPatient, setEfPatient] = useState("");
   const [efUpdated, setEfUpdated] = useState("");
   const [draftOnly, setDraftOnly] = useState(false);
+  const [encounterToDelete, setEncounterToDelete] = useState<EncounterDeleteTarget | null>(null);
 
   const patientLabel = useMemo(() => {
     const m = new Map<string, string>();
@@ -297,6 +303,29 @@ export function EncountersListPage() {
       } else setCreateErr(e instanceof Error ? e.message : String(e));
     },
   });
+
+  const deleteMut = useMutation({
+    mutationFn: (encounterId: string) => apiDelete(`/api/v1/encounters/${encounterId}`),
+    onSuccess: () => {
+      setEncounterToDelete(null);
+      void qc.invalidateQueries({ queryKey: ["encounters"] });
+      void qc.invalidateQueries({ queryKey: ["appointments"] });
+      void qc.invalidateQueries({ queryKey: ["revenue"] });
+      void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
+      toast.success(t("encounters.deleteSuccess", "Encounter deleted."));
+    },
+    onError: (e: unknown) => {
+      const msg =
+        e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body
+          ? String((e.body as { message?: unknown }).message)
+          : e instanceof Error
+            ? e.message
+            : String(e);
+      toast.error(msg);
+    },
+  });
+
+  const listColSpan = canDelete ? 6 : 5;
 
   const handleCreateEncounter = () => {
     if (createMut.isPending || patientRegistryTotal === 0) return;
@@ -666,12 +695,17 @@ export function EncountersListPage() {
                     filterValue={efUpdated}
                     onFilterChange={setEfUpdated}
                   />
+                  {canDelete ? (
+                    <th className="px-3 py-2 text-end text-xs font-medium text-muted-foreground">
+                      {t("common.actions", "Actions")}
+                    </th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
                 {isPending ? (
                   <tr>
-                    <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">
+                    <td colSpan={listColSpan} className="px-3 py-8 text-center text-muted-foreground">
                       {t("common.loading")}
                     </td>
                   </tr>
@@ -722,18 +756,54 @@ export function EncountersListPage() {
                       <td className="px-3 py-2 ltr-nums text-xs text-muted-foreground">
                         {new Date(e.updatedAt).toLocaleString(localeForLanguage(i18n.language))}
                       </td>
+                      {canDelete ? (
+                        <td className="px-3 py-2 text-end">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            aria-label={t("encounters.delete", "Delete")}
+                            disabled={deleteMut.isPending}
+                            onClick={(ev) => {
+                              ev.preventDefault();
+                              ev.stopPropagation();
+                              setEncounterToDelete({
+                                id: e.id,
+                                patientName: e.patientName,
+                                patientMrn: e.patientMrn,
+                                status: e.status,
+                                visitType: e.visitType,
+                                clinicId: e.clinicId,
+                                clinicNameEn: e.clinicNameEn,
+                                clinicNameAr: e.clinicNameAr,
+                                clinicLabel: formatClinicNameFields(
+                                  e.clinicNameEn,
+                                  e.clinicNameAr,
+                                  i18n.language,
+                                ),
+                                createdAt: e.createdAt,
+                                updatedAt: e.updatedAt,
+                                visitFeeAmount: e.visitFeeAmount,
+                              });
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 {!isPending && data.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">
+                    <td colSpan={listColSpan} className="px-3 py-8 text-center text-muted-foreground">
                       {t("encounters.empty")}
                     </td>
                   </tr>
                 ) : null}
                 {!isPending && data.length > 0 && filteredEncounters.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">
+                    <td colSpan={listColSpan} className="px-3 py-8 text-center text-muted-foreground">
                       {t("patients.noColMatch", "No rows match the column filters.")}
                     </td>
                   </tr>
@@ -755,6 +825,18 @@ export function EncountersListPage() {
           />
         </CardContent>
       </Card>
+
+      <EncounterDeleteConfirmDialog
+        open={encounterToDelete != null}
+        onOpenChange={(open) => {
+          if (!open && !deleteMut.isPending) setEncounterToDelete(null);
+        }}
+        encounter={encounterToDelete}
+        pending={deleteMut.isPending}
+        onConfirm={() => {
+          if (encounterToDelete) deleteMut.mutate(encounterToDelete.id);
+        }}
+      />
     </div>
   );
 }

@@ -340,6 +340,11 @@
     "vitalsBp": "BP",
     "vitalsTemp": "Temp",
     "vitalsWtHt": "Wt/Ht",
+    "delete": "Delete",
+    "deleteConfirmTitle": "Delete encounter?",
+    "deleteConfirmIntro": "This visit record and its clinical data will be permanently removed. This action cannot be undone.",
+    "deleteConfirmAction": "Delete encounter",
+    "deleteSuccess": "Encounter deleted.",
     "visitTypes": {
       "office_visit": "Office visit",
       "follow_up": "Follow-up",

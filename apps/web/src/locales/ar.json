@@ -341,6 +341,11 @@
     "vitalsBp": "ضغط",
     "vitalsTemp": "حرارة",
     "vitalsWtHt": "وزن/طول",
+    "delete": "حذف",
+    "deleteConfirmTitle": "حذف الزيارة؟",
+    "deleteConfirmIntro": "سيُزال سجل هذه الزيارة وبياناتها السريرية نهائياً. لا يمكن التراجع عن هذا الإجراء.",
+    "deleteConfirmAction": "حذف الزيارة",
+    "deleteSuccess": "تم حذف الزيارة.",
     "visitTypes": {
       "office_visit": "زيارة عيادة",
       "follow_up": "متابعة",

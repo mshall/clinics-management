@@ -209,4 +209,11 @@ export class EncountersController {
   finalize(@CurrentUser() user: JwtUser, @Param("id") id: string) {
     return this.encounters.finalize(requireTenantId(user), user, id);
   }
+
+  @Delete(":id")
+  @ApiOperation({ summary: "Delete encounter (group admin, supervisor, call center)" })
+  @ApiOkResponse({ description: "{ ok: true, id }" })
+  remove(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.encounters.delete(requireTenantId(user), id, user);
+  }
 }

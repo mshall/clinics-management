@@ -22,7 +22,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { DocumentViewerOverlay } from "@/components/document-viewer-overlay";
 import { Badge } from "@/components/ui/badge";
@@ -33,12 +33,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { EncounterDeleteConfirmDialog } from "@/features/encounters/encounter-delete-confirm-dialog";
 import { resolvePatientListLabel } from "@/lib/patient-display";
 import { ENCOUNTER_VISIT_TYPES, formatVisitType } from "@/lib/visit-types";
 import { useAuthStore } from "@/stores/auth-store";
 import { useEncounterQuery } from "@/lib/api-hooks";
 import type { EncounterDetailDto, EncounterDocumentDto } from "@/lib/api-types";
 import { ApiError, apiDelete, apiFetchBlob, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
+import { canDeleteEncounter } from "@/lib/encounter-delete-policy";
 import { formatEncounterStatus, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
 import { generatePrescriptionPng } from "@/lib/prescription-image";
 import { cn } from "@/lib/utils";
@@ -83,9 +85,11 @@ type MedTab = "none" | "manual" | "prescription";
 
 export function EncounterDetailPage() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const { id } = useParams();
   const qc = useQueryClient();
   const user = useAuthStore((s) => s.user);
+  const canDelete = canDeleteEncounter(user?.role);
   const { data: enc, isPending, isError, error } = useEncounterQuery(id);
 
   const [visitType, setVisitType] = useState("");
@@ -108,6 +112,7 @@ export function EncounterDetailPage() {
   const [medTab, setMedTab] = useState<MedTab>("manual");
   const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false);
   const [noMedsConfirmOpen, setNoMedsConfirmOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [viewer, setViewer] = useState<{ doc: EncounterDocumentDto; url: string; contentType: string } | null>(null);
   const viewerUrlRef = useRef<string | null>(null);
   const replaceFileRef = useRef<HTMLInputElement>(null);
@@ -401,6 +406,23 @@ export function EncounterDetailPage() {
     },
   });
 
+  const deleteMut = useMutation({
+    mutationFn: () => apiDelete(`/api/v1/encounters/${id}`),
+    onSuccess: () => {
+      setDeleteDialogOpen(false);
+      void qc.invalidateQueries({ queryKey: ["encounters"] });
+      void qc.invalidateQueries({ queryKey: ["appointments"] });
+      void qc.invalidateQueries({ queryKey: ["revenue"] });
+      void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
+      if (enc?.patientId) {
+        void qc.invalidateQueries({ queryKey: ["patient", enc.patientId] });
+      }
+      toast.success(t("encounters.deleteSuccess", "Encounter deleted."));
+      navigate("/encounters");
+    },
+    onError: (e: unknown) => toast.error(apiErrorMessage(e)),
+  });
+
   if (isPending || !id) {
     return <p className="text-muted-foreground">{t("common.loading")}</p>;
   }
@@ -431,6 +453,30 @@ export function EncounterDetailPage() {
 
   return (
     <div className="space-y-6">
+      <EncounterDeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        encounter={
+          enc
+            ? {
+                id: enc.id,
+                patientName: enc.patientName,
+                patientMrn: enc.patientMrn,
+                status: enc.status,
+                visitType: enc.visitType,
+                clinicId: enc.clinicId,
+                clinicNameEn: enc.clinicNameEn,
+                clinicNameAr: enc.clinicNameAr,
+                createdAt: enc.createdAt,
+                updatedAt: enc.updatedAt,
+                visitFeeAmount: enc.visitFeeAmount,
+              }
+            : null
+        }
+        pending={deleteMut.isPending}
+        onConfirm={() => deleteMut.mutate()}
+      />
+
       <Dialog open={finalizeDialogOpen} onOpenChange={setFinalizeDialogOpen}>
         <DialogContent
           className="gap-0 overflow-hidden border-amber-200 p-0 sm:max-w-md dark:border-amber-900/60"
@@ -560,6 +606,19 @@ export function EncounterDetailPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {canDelete ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="text-destructive hover:text-destructive"
+              disabled={deleteMut.isPending}
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              <Trash2 className="me-2 h-4 w-4" />
+              {t("encounters.delete", "Delete")}
+            </Button>
+          ) : null}
           <Button asChild variant="outline">
             <Link to="/encounters">{t("encounters.backList")}</Link>
           </Button>
