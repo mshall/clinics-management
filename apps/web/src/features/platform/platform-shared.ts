@@ -53,6 +53,26 @@ export const ORG_USER_ROLES = [
   "CLINIC_ASSISTANT",
 ] as const;
 
+/** Roles scoped to assigned clinic(s) — at least one clinic required on create/edit. */
+export const CLINIC_REQUIRED_USER_ROLES = ["CLINIC_ADMIN", "BRANCH_MANAGER"] as const;
+
+/** Organization-wide roles — no clinic assignment required or shown. */
+export const ORG_WIDE_USER_ROLES = [
+  "GROUP_ADMIN",
+  "GROUP_SUPERVISOR",
+  "CALL_CENTER",
+  "HR_OFFICER",
+  "FINANCE_OFFICER",
+] as const;
+
+export function isClinicRequiredUserRole(role: string): boolean {
+  return (CLINIC_REQUIRED_USER_ROLES as readonly string[]).includes(role);
+}
+
+export function isOrgWideUserRole(role: string): boolean {
+  return (ORG_WIDE_USER_ROLES as readonly string[]).includes(role);
+}
+
 export function apiErrorMessage(e: unknown): string {
   if (e instanceof ApiError) return e.message;
   return e instanceof Error ? e.message : String(e);

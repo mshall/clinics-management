@@ -922,6 +922,7 @@
     "assignedClinics": "Assigned clinics",
     "assignedClinicsRequiredHint": "Select at least one clinic for clinic administrator or branch manager.",
     "assignedClinicsOptionalHint": "Optional — assign the clinic or branch this user primarily works at.",
+    "orgWideRoleClinicHint": "This role works across the whole organization — no clinic assignment is required.",
     "auditColAction": "Action",
     "auditColWhen": "Time",
     "auditColActor": "Employee",

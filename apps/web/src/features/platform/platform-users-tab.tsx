@@ -11,7 +11,7 @@ import { ResponsiveTable } from "@/components/responsive-table";
 import { apiGet, apiPatch, apiPost } from "@/lib/http";
 import { formatUserRole } from "@/lib/locale-display";
 import type { Paginated } from "@/lib/paginated";
-import { apiErrorMessage, ORG_USER_ROLES, type PlatformUserRow, type TenantRow } from "@/features/platform/platform-shared";
+import { apiErrorMessage, isClinicRequiredUserRole, ORG_USER_ROLES, type PlatformUserRow, type TenantRow } from "@/features/platform/platform-shared";
 import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel";
 
 type UserDetail = PlatformUserRow;
@@ -142,10 +142,15 @@ export function PlatformUsersTab() {
     onError: (e: unknown) => setUserErr(apiErrorMessage(e)),
   });
 
-  const requiresClinicAssignment = uRole === "CLINIC_ADMIN" || uRole === "BRANCH_MANAGER";
+  const requiresClinicAssignment = isClinicRequiredUserRole(uRole);
   const canSaveCreate =
-    uTenantId && uEmail.trim() && uPassword.length >= 8 && uName.trim() && (!requiresClinicAssignment || uClinicIds.length > 0);
-  const canSaveEdit = uEmail.trim() && uName.trim() && (!requiresClinicAssignment || uClinicIds.length > 0);
+    Boolean(uTenantId) &&
+    Boolean(uEmail.trim()) &&
+    uPassword.length >= 8 &&
+    Boolean(uName.trim()) &&
+    (!requiresClinicAssignment || uClinicIds.length > 0);
+  const canSaveEdit =
+    Boolean(uEmail.trim()) && Boolean(uName.trim()) && (!requiresClinicAssignment || uClinicIds.length > 0);
 
   const clinicLabel = useMemo(
     () => (row: PlatformUserRow) => (row.clinics.length ? row.clinics.map((c) => c.nameEn).join(", ") : "—"),

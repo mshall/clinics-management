@@ -13,7 +13,7 @@ import { useClinicsQuery } from "@/lib/api-hooks";
 import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from "@/lib/http";
 import { formatClinicName, formatUserRole } from "@/lib/locale-display";
 import type { Paginated } from "@/lib/paginated";
-import { apiErrorMessage, ORG_USER_ROLES } from "@/features/platform/platform-shared";
+import { apiErrorMessage, isClinicRequiredUserRole, isOrgWideUserRole, ORG_USER_ROLES } from "@/features/platform/platform-shared";
 import { useAuthStore } from "@/stores/auth-store";
 
 type OrgUserRow = {
@@ -128,6 +128,12 @@ export function AdminOrgUsersPanel() {
     setUPassword("");
   }, [isEdit, userDetailQuery.data]);
 
+  useEffect(() => {
+    if (isOrgWideUserRole(uRole)) {
+      setUClinicIds([]);
+    }
+  }, [uRole]);
+
   const resetCreateForm = () => {
     setUEmail("");
     setUPassword("");
@@ -229,10 +235,15 @@ export function AdminOrgUsersPanel() {
     },
   });
 
-  const requiresClinicAssignment = uRole === "CLINIC_ADMIN" || uRole === "BRANCH_MANAGER";
+  const requiresClinicAssignment = isClinicRequiredUserRole(uRole);
+  const showClinicAssignment = !isOrgWideUserRole(uRole) && clinics.length > 0;
   const canSaveCreate =
-    uEmail.trim() && uPassword.length >= 8 && uName.trim() && (!requiresClinicAssignment || uClinicIds.length > 0);
-  const canSaveEdit = uEmail.trim() && uName.trim() && (!requiresClinicAssignment || uClinicIds.length > 0);
+    Boolean(uEmail.trim()) &&
+    uPassword.length >= 8 &&
+    Boolean(uName.trim()) &&
+    (!requiresClinicAssignment || uClinicIds.length > 0);
+  const canSaveEdit =
+    Boolean(uEmail.trim()) && Boolean(uName.trim()) && (!requiresClinicAssignment || uClinicIds.length > 0);
 
   const clinicLabel = useMemo(
     () => (row: OrgUserRow) =>
@@ -515,7 +526,7 @@ export function AdminOrgUsersPanel() {
                   ))}
                 </select>
               </div>
-              {clinics.length ? (
+              {showClinicAssignment ? (
                 <div className="space-y-2 md:col-span-2">
                   <Label required={requiresClinicAssignment}>
                     {t("admin.assignedClinics", "Assigned clinics")}
@@ -545,6 +556,13 @@ export function AdminOrgUsersPanel() {
                     })}
                   </div>
                 </div>
+              ) : isOrgWideUserRole(uRole) ? (
+                <p className="text-xs text-muted-foreground md:col-span-2">
+                  {t(
+                    "admin.orgWideRoleClinicHint",
+                    "This role works across the whole organization — no clinic assignment is required.",
+                  )}
+                </p>
               ) : null}
               <div className="flex flex-wrap gap-2 pt-2 md:col-span-2">
                 <Button

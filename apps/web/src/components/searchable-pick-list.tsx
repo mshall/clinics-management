@@ -25,6 +25,8 @@ interface SearchablePickListProps {
   minSearchLength?: number;
   /** Message shown while waiting for minimum search length. */
   idleMessage?: string;
+  /** Label fallback when `value` is set but not present in `items` (e.g. server search lists). */
+  selectedItem?: PickListItem | null;
   className?: string;
   /** Show invalid styling (red border) for required-field feedback */
   invalid?: boolean;
@@ -42,6 +44,7 @@ export function SearchablePickList({
   onSearchQueryChange,
   minSearchLength = 0,
   idleMessage = "Start typing to search.",
+  selectedItem,
   className,
   invalid,
 }: SearchablePickListProps) {
@@ -54,18 +57,25 @@ export function SearchablePickList({
   const [q, setQ] = useState("");
 
   const filtered = useMemo(() => {
-    if (!localFilter) return items;
+    const base = !localFilter
+      ? selectedItem && value && !items.some((i) => i.value === value)
+        ? [selectedItem, ...items]
+        : items
+      : items;
+    if (!localFilter) return base;
     const t = q.trim().toLowerCase();
-    if (!t) return items;
-    return items.filter(
+    if (!t) return base;
+    return base.filter(
       (i) =>
         i.label.toLowerCase().includes(t) ||
         (i.hint?.toLowerCase().includes(t) ?? false) ||
         i.value.toLowerCase().includes(t)
     );
-  }, [items, q, localFilter]);
+  }, [items, q, localFilter, selectedItem, value]);
 
-  const selectedLabel = items.find((i) => i.value === value)?.label;
+  const selectedLabel =
+    items.find((i) => i.value === value)?.label ??
+    (selectedItem?.value === value ? selectedItem.label : undefined);
   const displayText = selectedLabel ?? (value ? value.slice(0, 8) : null);
   const meetsMinSearch = q.trim().length >= minSearchLength;
 

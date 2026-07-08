@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
@@ -13,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAppointmentsQuery, useClinicsQuery, usePatientsQuery, useUsersQuery } from "@/lib/api-hooks";
+import { useAppointmentsQuery, useClinicsQuery, usePatientQuery, usePatientsQuery, useUsersQuery } from "@/lib/api-hooks";
 import { ApiError, apiPost } from "@/lib/http";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
 import { formatClinicName, formatClinicNameFields, formatUserRole, localeForLanguage } from "@/lib/locale-display";
@@ -137,6 +138,7 @@ export function AppointmentsPage() {
 
   const [bookPatientSearch, setBookPatientSearch] = useState("");
   const [debouncedBookPatient, setDebouncedBookPatient] = useState("");
+  const [selectedBookPatientItem, setSelectedBookPatientItem] = useState<PickListItem | null>(null);
   useEffect(() => {
     const tid = window.setTimeout(() => setDebouncedBookPatient(bookPatientSearch), 280);
     return () => window.clearTimeout(tid);
@@ -152,6 +154,20 @@ export function AppointmentsPage() {
     () => bookPatients.map((p) => patientToPickListItem(p)),
     [bookPatients]
   );
+  const selectedBookPatientMissing = Boolean(
+    patientId && !bookPatientItems.some((p) => p.value === patientId),
+  );
+  const { data: selectedBookPatientDetail } = usePatientQuery(
+    showBookPanel && selectedBookPatientMissing ? patientId : undefined,
+  );
+  const bookPatientSelectedItem = useMemo((): PickListItem | null => {
+    if (!patientId) return null;
+    const fromList = bookPatientItems.find((p) => p.value === patientId);
+    if (fromList) return fromList;
+    if (selectedBookPatientItem?.value === patientId) return selectedBookPatientItem;
+    if (selectedBookPatientDetail) return patientToPickListItem(selectedBookPatientDetail);
+    return null;
+  }, [patientId, bookPatientItems, selectedBookPatientItem, selectedBookPatientDetail]);
 
   const clinicItems: PickListItem[] = useMemo(
     () => clinics.map((c) => ({ value: c.id, label: formatClinicName(c, i18n.language) })),
@@ -179,8 +195,11 @@ export function AppointmentsPage() {
     },
     onSuccess: () => {
       setFormErr(null);
-      setBookOk(t("appointments.bookedOk", "Appointment created."));
+      const message = t("appointments.bookedOk", "Appointment created.");
+      setBookOk(message);
+      toast.success(message);
       setPatientId("");
+      setSelectedBookPatientItem(null);
       setBookPatientSearch("");
       setDebouncedBookPatient("");
       setStart("");
@@ -356,7 +375,12 @@ export function AppointmentsPage() {
               <SearchablePickList
                 items={bookPatientItems}
                 value={patientId}
-                onValueChange={setPatientId}
+                selectedItem={bookPatientSelectedItem}
+                onValueChange={(id) => {
+                  setPatientId(id);
+                  const item = bookPatientItems.find((p) => p.value === id);
+                  if (item) setSelectedBookPatientItem(item);
+                }}
                 onSearchQueryChange={setBookPatientSearch}
                 searchPlaceholder={t("encounters.patientSearchPlaceholder")}
                 placeholder={t("appointments.pick")}
