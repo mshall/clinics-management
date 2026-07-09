@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import * as path from "path";
 import type { JwtUser } from "../auth/jwt-user";
 import { fetchClinicScopeIds } from "../common/clinic-scope";
+import { canAdminEditCompletedOperation } from "../common/operation-admin-roles";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { resolveReportingRange } from "../common/reporting-range";
@@ -330,6 +331,35 @@ export class OperationsService {
       .map((r) => this.mapRow(r));
   }
 
+  private operationRevenueDescription(patientName: string, clinicianName: string): string {
+    return `Operation · ${patientName} · ${clinicianName}`;
+  }
+
+  private async resolveNamesForOperation(
+    tenantId: string,
+    patientId: string,
+    clinicianId: string,
+  ): Promise<{ patientName: string; clinicianName: string }> {
+    const [patient, clinician] = await Promise.all([
+      this.prisma.patient.findFirst({
+        where: { id: patientId, tenantId },
+        select: { firstNameEn: true, lastNameEn: true },
+      }),
+      this.prisma.user.findFirst({
+        where: { id: clinicianId, tenantId },
+        select: {
+          displayName: true,
+          employee: { select: { firstNameEn: true, lastNameEn: true } },
+        },
+      }),
+    ]);
+    const patientName = patient
+      ? `${patient.firstNameEn} ${patient.lastNameEn}`.trim()
+      : patientId;
+    const clinicianName = this.clinicianDisplayName(clinician) ?? clinicianId;
+    return { patientName, clinicianName };
+  }
+
   async update(tenantId: string, id: string, dto: UpdateOperationDto, viewer: JwtUser): Promise<OperationDto> {
     const existing = await this.prisma.operation.findFirst({
       where: { id, tenantId },
@@ -338,8 +368,15 @@ export class OperationsService {
     if (!existing) throw new NotFoundException("Operation not found");
     await this.assertOperationAccess(viewer, existing);
 
-    if (existing.status !== OperationStatus.SCHEDULED) {
-      throw new BadRequestException("Only scheduled operations can be edited");
+    if (existing.status === OperationStatus.CANCELLED) {
+      throw new BadRequestException("Cancelled operations cannot be edited");
+    }
+
+    if (existing.status === OperationStatus.COMPLETED) {
+      if (!canAdminEditCompletedOperation(viewer.role)) {
+        throw new ForbiddenException("Only administrators can edit completed operations");
+      }
+      return this.updateCompletedAsAdmin(tenantId, id, existing, dto, viewer);
     }
 
     const totalCost = dto.totalCost ?? Number(existing.totalCost);
@@ -365,6 +402,34 @@ export class OperationsService {
       throw new BadRequestException("Paid amount cannot be negative");
     }
 
+    const fields = await this.resolveOperationUpdateFields(tenantId, existing, dto, viewer);
+
+    const row = await this.prisma.operation.update({
+      where: { id },
+      data: {
+        ...fields,
+        totalCost,
+        downPayment,
+        paidAmount,
+        ...(dto.noMedications !== undefined ? { noMedications: dto.noMedications } : {}),
+      },
+      include: operationInclude,
+    });
+    return this.mapRow(row);
+  }
+
+  private async resolveOperationUpdateFields(
+    tenantId: string,
+    existing: OperationRow,
+    dto: UpdateOperationDto,
+    viewer: JwtUser,
+  ): Promise<{
+    clinicId: string;
+    patientId: string;
+    clinicianId: string;
+    operationDate: Date;
+    comments: string | null;
+  }> {
     let clinicId = existing.clinicId;
     if (dto.clinicId?.trim()) {
       const clinic = await this.prisma.clinic.findFirst({
@@ -406,20 +471,59 @@ export class OperationsService {
       operationDate = d;
     }
 
-    const row = await this.prisma.operation.update({
-      where: { id },
-      data: {
-        clinicId,
-        patientId,
-        clinicianId,
-        operationDate,
-        totalCost,
-        downPayment,
-        paidAmount,
-        comments: dto.comments !== undefined ? dto.comments.trim() || null : existing.comments,
-        ...(dto.noMedications !== undefined ? { noMedications: dto.noMedications } : {}),
-      },
-      include: operationInclude,
+    return {
+      clinicId,
+      patientId,
+      clinicianId,
+      operationDate,
+      comments: dto.comments !== undefined ? dto.comments.trim() || null : existing.comments,
+    };
+  }
+
+  private async updateCompletedAsAdmin(
+    tenantId: string,
+    id: string,
+    existing: OperationRow,
+    dto: UpdateOperationDto,
+    viewer: JwtUser,
+  ): Promise<OperationDto> {
+    const totalCost = dto.totalCost ?? Number(existing.totalCost);
+    const downPayment = dto.downPayment ?? Number(existing.downPayment);
+    if (totalCost <= 0) {
+      throw new BadRequestException("Operation total cost must be greater than zero");
+    }
+    if (downPayment > totalCost) {
+      throw new BadRequestException("Down payment cannot exceed total cost");
+    }
+
+    const fields = await this.resolveOperationUpdateFields(tenantId, existing, dto, viewer);
+    const { patientName, clinicianName } = await this.resolveNamesForOperation(
+      tenantId,
+      fields.patientId,
+      fields.clinicianId,
+    );
+    const description = this.operationRevenueDescription(patientName, clinicianName);
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      await tx.revenueEntry.updateMany({
+        where: { tenantId, operationId: id, status: RevenueStatus.POSTED },
+        data: {
+          clinicId: fields.clinicId,
+          description,
+          grossAmount: totalCost,
+          netAmount: totalCost,
+        },
+      });
+      return tx.operation.update({
+        where: { id },
+        data: {
+          ...fields,
+          totalCost,
+          downPayment,
+          paidAmount: totalCost,
+        },
+        include: operationInclude,
+      });
     });
     return this.mapRow(row);
   }

@@ -573,6 +573,8 @@
     "balanceDue": "Balance (AED)",
     "edit": "Edit",
     "editTitle": "Edit operation",
+    "editCompletedTitle": "Edit completed operation",
+    "editCompletedHint": "Administrator correction — you can update details and re-assign the performing doctor. Linked revenue is updated automatically.",
     "updated": "Operation updated.",
     "saveChanges": "Save changes",
     "errorPrescriptionRequired": "Upload a prescription or generate one from manual medications."

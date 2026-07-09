@@ -213,7 +213,7 @@ export class OperationsController {
   }
 
   @Patch(":id")
-  @ApiOperation({ summary: "Edit a scheduled operation" })
+  @ApiOperation({ summary: "Edit a scheduled operation, or correct a completed operation (admin only)" })
   @ApiOkResponse({ type: OperationDto })
   update(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: UpdateOperationDto) {
     this.assertStatusAccess(user);

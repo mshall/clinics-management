@@ -35,6 +35,7 @@ import {
 } from "@/lib/api-hooks";
 import type { OperationDto } from "@/lib/api-types";
 import { ApiError, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
+import { canAdminEditCompletedOperation } from "@/lib/operation-admin-policy";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
 import { formatClinicName, localeForLanguage } from "@/lib/locale-display";
 import { columnFilterIncludes } from "@/lib/utils";
@@ -61,6 +62,7 @@ export function OperationsPage() {
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
   const canCreate = authUser?.role ? CREATE_ROLES.has(authUser.role) : false;
+  const canAdminEditCompleted = canAdminEditCompletedOperation(authUser?.role);
   const isPhysician = authUser?.role === "physician";
 
   const initialRange = useMemo(() => defaultMonthRange(), []);
@@ -372,6 +374,8 @@ export function OperationsPage() {
       setEditFormErr(null);
       setEditOp(null);
       void qc.invalidateQueries({ queryKey: ["operations"] });
+      void qc.invalidateQueries({ queryKey: ["revenue"] });
+      void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
     },
     onError: (e: unknown) => {
       if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
@@ -577,10 +581,22 @@ export function OperationsPage() {
       <Dialog open={editOp != null} onOpenChange={(open) => !open && setEditOp(null)}>
         <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto" aria-describedby={undefined}>
           <DialogHeader>
-            <DialogTitle>{t("operations.editTitle", "Edit operation")}</DialogTitle>
+            <DialogTitle>
+              {editOp?.status === "COMPLETED"
+                ? t("operations.editCompletedTitle", "Edit completed operation")
+                : t("operations.editTitle", "Edit operation")}
+            </DialogTitle>
           </DialogHeader>
           {editOp ? (
             <div className="space-y-4">
+              {editOp.status === "COMPLETED" ? (
+                <p className="text-sm text-muted-foreground">
+                  {t(
+                    "operations.editCompletedHint",
+                    "Administrator correction — you can update details and re-assign the performing doctor. Linked revenue is updated automatically.",
+                  )}
+                </p>
+              ) : null}
               <div className="space-y-1">
                 <Label htmlFor="edit-op-date" required>{t("operations.operationDate", "Operation date")}</Label>
                 <Input
@@ -1070,6 +1086,16 @@ export function OperationsPage() {
                                   {t("operations.markCancelled", "Cancel")}
                                 </Button>
                               </div>
+                            ) : o.status === "COMPLETED" && canAdminEditCompleted ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                disabled={statusMut.isPending || editMut.isPending}
+                                onClick={() => openEdit(o)}
+                              >
+                                {t("operations.edit", "Edit")}
+                              </Button>
                             ) : (
                               <span className="text-xs text-muted-foreground">—</span>
                             )}
