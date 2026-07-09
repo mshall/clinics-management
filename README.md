@@ -93,9 +93,15 @@ Typical flows:
 
 ### Admin
 
-- **Tabs:** clinics & tenants vs organization & settings.
-- Current tenant overview, **default appointment fee**, audit tail, **feature flags**, user creation (group admin).
-- Clinic creation (parent/branch), clinic directory, **all tenants** list (platform-style listing).
+- **Tabs:** clinics & tenants, **organization users**, organization patients, organization & settings, governance (group admin).
+- **Organization users:** search by email or display name, **filter by role**, create/edit/delete users, clinic assignment, bulk delete.
+- Current tenant overview, **default visit fee**, audit tail, **feature flags**, clinic creation (parent/branch), clinic directory.
+- **All tenants** list and **data explorer** for platform super admin / break-glass group admin (see [Test_Data_Users.md](Docs/Test_Data_Users.md)).
+
+### Profile & HR
+
+- **Profile:** any signed-in user can upload a profile picture (crop + server storage).
+- **HR:** employees list; employee HR record; **employee profile** view with back navigation to the list and HR record.
 
 ### API & developer experience
 
@@ -328,10 +334,11 @@ Use **Amazon Lightsail** (fixed monthly) **or** one **EC2** instance (e.g. **t4g
 
 ## Documentation
 
+- **Documentation index:** [`Docs/README.md`](Docs/README.md)
 - **Test users & passwords (QA / demos):** [`Docs/Test_Data_Users.md`](Docs/Test_Data_Users.md)
-- Product / requirements context: `Docs/Clinic_Management_System_PRD.md`
-- Technical RFC (if present): `Docs/Clinic_Management_System_RFC.md`
-- AWS deployment (RDS, App Runner, S3/CloudFront, checklist): `Docs/AWS_Cloud_Deployment_Guide.md`
+- Product / requirements context: [`Docs/Clinic_Management_System_PRD.md`](Docs/Clinic_Management_System_PRD.md)
+- Technical RFC: [`Docs/Clinic_Management_System_RFC.md`](Docs/Clinic_Management_System_RFC.md)
+- AWS deployment (RDS, App Runner, S3/CloudFront, checklist): [`Docs/AWS_Cloud_Deployment_Guide.md`](Docs/AWS_Cloud_Deployment_Guide.md)
 
 ---
 

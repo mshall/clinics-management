@@ -46,6 +46,7 @@ export function AdminOrgUsersPanel() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
 
   const [uEmail, setUEmail] = useState("");
@@ -60,7 +61,7 @@ export function AdminOrgUsersPanel() {
   const [userToDelete, setUserToDelete] = useState<OrgUserDeleteTarget | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
-  async function fetchLegacyOrgUsers(pageNum: number, size: number, q: string): Promise<Paginated<OrgUserRow>> {
+  async function fetchLegacyOrgUsers(pageNum: number, size: number, q: string, role: string): Promise<Paginated<OrgUserRow>> {
     const qParam = q.trim() ? `&q=${encodeURIComponent(q.trim())}` : "";
     const first = await apiGet<Paginated<OrgUserRow>>(
       `/api/v1/users?page=1&pageSize=${Math.max(size, 100)}${qParam}`,
@@ -74,6 +75,7 @@ export function AdminOrgUsersPanel() {
         items.push(...next.items);
       }
     }
+    if (role) items = items.filter((u) => u.role === role);
     const start = (pageNum - 1) * size;
     const pageItems = items.slice(start, start + size).map((u) => ({
       id: u.id,
@@ -84,7 +86,7 @@ export function AdminOrgUsersPanel() {
       clinicIds: u.clinicIds ?? [],
       clinics: u.clinics ?? [],
     }));
-    const total = q.trim() ? pageItems.length : first.total;
+    const total = q.trim() || role ? items.length : first.total;
     const totalPages = Math.max(1, Math.ceil(total / size));
     return {
       items: pageItems,
@@ -95,18 +97,19 @@ export function AdminOrgUsersPanel() {
     };
   }
 
-  async function fetchOrgUsers(pageNum: number, size: number, q: string) {
+  async function fetchOrgUsers(pageNum: number, size: number, q: string, role: string) {
     const query = q.trim() ? `&q=${encodeURIComponent(q.trim())}` : "";
+    const roleQuery = role ? `&role=${encodeURIComponent(role)}` : "";
     try {
       const data = await apiGet<Paginated<OrgUserRow>>(
-        `/api/v1/admin/users?page=${pageNum}&pageSize=${size}${query}`,
+        `/api/v1/admin/users?page=${pageNum}&pageSize=${size}${query}${roleQuery}`,
       );
       setLegacyUsersApi(false);
       return data;
     } catch (err) {
       if (!(err instanceof ApiError) || err.status !== 404) throw err;
       setLegacyUsersApi(true);
-      return fetchLegacyOrgUsers(pageNum, size, q);
+      return fetchLegacyOrgUsers(pageNum, size, q, role);
     }
   }
 
@@ -118,8 +121,8 @@ export function AdminOrgUsersPanel() {
   const { data: clinics = [] } = useClinicsQuery();
 
   const usersQuery = useQuery({
-    queryKey: ["admin", "org-users", page, pageSize, search],
-    queryFn: () => fetchOrgUsers(page, pageSize, search),
+    queryKey: ["admin", "org-users", page, pageSize, search, roleFilter],
+    queryFn: () => fetchOrgUsers(page, pageSize, search, roleFilter),
   });
 
   const userDetailQuery = useQuery({
@@ -221,7 +224,11 @@ export function AdminOrgUsersPanel() {
       if (selectAllMatching) {
         return apiPost<{ ok: true; deleted: number; failed: { id: string; message: string }[] }>(
           "/api/v1/admin/users/bulk-delete",
-          { all: true, search: search.trim() || undefined },
+          {
+            all: true,
+            search: search.trim() || undefined,
+            role: roleFilter || undefined,
+          },
         );
       }
       return apiPost<{ ok: true; deleted: number; failed: { id: string; message: string }[] }>(
@@ -325,7 +332,7 @@ export function AdminOrgUsersPanel() {
   useEffect(() => {
     setSelectAllMatching(false);
     setSelectedIds(new Set());
-  }, [page, pageSize, search]);
+  }, [page, pageSize, search, roleFilter]);
 
   return (
     <div className="space-y-6">
@@ -373,17 +380,38 @@ export function AdminOrgUsersPanel() {
                 : t("common.error")}
             </p>
           ) : null}
-          <div className="max-w-sm space-y-2">
-            <Label htmlFor="org-users-search">{t("admin.orgUsersSearch", "Search users")}</Label>
-            <Input
-              id="org-users-search"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              placeholder={t("admin.orgUsersSearchPh", "Email or display name…")}
-            />
+          <div className="grid max-w-2xl gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="org-users-search">{t("admin.orgUsersSearch", "Search users")}</Label>
+              <Input
+                id="org-users-search"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                placeholder={t("admin.orgUsersSearchPh", "Email or display name…")}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="org-users-role-filter">{t("admin.role", "Role")}</Label>
+              <select
+                id="org-users-role-filter"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={roleFilter}
+                onChange={(e) => {
+                  setRoleFilter(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">{t("admin.orgUsersRoleAll", "All roles")}</option>
+                {ORG_USER_ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {formatUserRole(r, t)}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {usersQuery.isPending ? (

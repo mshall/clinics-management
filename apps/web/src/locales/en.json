@@ -978,6 +978,7 @@
     "orgUsersHint": "Manage login accounts, roles, and clinic assignments for your organization.",
     "orgUsersSearch": "Search users",
     "orgUsersSearchPh": "Email or display name…",
+    "orgUsersRoleAll": "All roles",
     "orgUsersEdit": "Edit user",
     "orgUsersDeleteConfirm": "Delete this user? This cannot be undone.",
     "orgUsersDeleteConfirmTitle": "Delete user?",

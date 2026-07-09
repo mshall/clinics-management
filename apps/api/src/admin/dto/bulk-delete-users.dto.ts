@@ -20,4 +20,9 @@ export class BulkDeleteUsersDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @ApiPropertyOptional({ description: "Same role filter as user list when all=true (UserRole enum)" })
+  @IsOptional()
+  @IsString()
+  role?: string;
 }

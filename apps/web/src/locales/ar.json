@@ -979,6 +979,7 @@
     "orgUsersHint": "إدارة حسابات الدخول والأدوار وتعيين العيادات لمنظمتك.",
     "orgUsersSearch": "بحث المستخدمين",
     "orgUsersSearchPh": "البريد أو الاسم المعروض…",
+    "orgUsersRoleAll": "جميع الأدوار",
     "orgUsersEdit": "تعديل مستخدم",
     "orgUsersDeleteConfirm": "حذف هذا المستخدم؟ لا يمكن التراجع.",
     "orgUsersDeleteConfirmTitle": "حذف المستخدم؟",

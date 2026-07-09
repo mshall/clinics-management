@@ -22,6 +22,8 @@ Professor / consultant in chronic pain, joints, spine, and neuritis (non-surgica
 
 **User count (organization):** **30** accounts — 6 org-wide roles below + 6 staff roles × 4 clinics (`hel`, `cmc`, `moh`, `dok`). All belong to tenant **Dr Ahmed Shall Group** and appear in **Admin → Organization users** when signed in as `admin@drahmedshall.com`.
 
+**Organization users UI:** search by **email** or **display name**, and filter by **role** (dropdown). Example: choose **Group supervisor** to list only `supervisor@drahmedshall.com`; choose **Nurse** to see all `nurse.{slug}@…` accounts. API: `GET /api/v1/admin/users?q=&role=GROUP_SUPERVISOR`.
+
 ### Organization-wide accounts
 
 | Email | Password | Role | Notes |
@@ -119,7 +121,7 @@ Without this variable, `admin@kiorly.com` still has **organization** admin (belo
 
 ### Group Admin without platform flag
 
-Any user with role `GROUP_ADMIN` in an organization gets the organization admin tabs (clinics, settings, governance, create users) but **not** data explorer or cross-tenant tenant list unless their email is in `PLATFORM_SUPER_ADMIN_EMAILS`.
+Any user with role `GROUP_ADMIN` in an organization gets the organization admin tabs (clinics, **organization users** with search + role filter, organization patients, settings, governance, create users) but **not** data explorer or cross-tenant tenant list unless their email is in `PLATFORM_SUPER_ADMIN_EMAILS`.
 
 ---
 
@@ -220,6 +222,9 @@ Branches are children of HQ (`parentClinicId` → HQ).
 | Data explorer — SQL export | `admin@kiorly.com` + `PLATFORM_SUPER_ADMIN_EMAILS` → **Admin → Data explorer** → **Download SQL** |
 | Data explorer — documents ZIP (local or S3) | Same as SQL → select entities → **Download documents ZIP**; verify `manifest.json` inside ZIP |
 | Bulk delete patients (org admin) | `admin@kiorly.com` → **Admin → Organization patients** |
+| Filter org users by role | `admin@drahmedshall.com` → **Admin → Organization users** → Role dropdown (e.g. Group supervisor, Nurse) |
+| Upload profile picture | Any user → **Profile** → camera icon on avatar |
+| HR employee profile | `hr@drahmedshall.com` or `admin@drahmedshall.com` → **HR → Employees** → row → **Employee profile** |
 | Create tenants, clinics, org users (no org membership) | `superadmin@kiorly.com` |
 | Platform data explorer + all tenants (legacy) | `admin@kiorly.com` + `PLATFORM_SUPER_ADMIN_EMAILS` |
 | Organization settings & create clinic | `admin@kiorly.com` |

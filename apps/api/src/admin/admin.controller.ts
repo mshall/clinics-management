@@ -79,11 +79,12 @@ export class AdminController {
     @Query("page") page?: string,
     @Query("pageSize") pageSize?: string,
     @Query("q") q?: string,
+    @Query("role") role?: string,
   ) {
     if (user.role !== UserRole.GROUP_ADMIN || !user.tenantId) {
       throw new ForbiddenException("Only group administrators can list organization users");
     }
-    return this.admin.listTenantUsers(requireTenantId(user), page, pageSize, q);
+    return this.admin.listTenantUsers(requireTenantId(user), page, pageSize, q, role);
   }
 
   @Get("users/:userId")

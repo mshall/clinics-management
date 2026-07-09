@@ -117,10 +117,10 @@ export class AdminService {
     return paginate(items, total, page, pageSize);
   }
 
-  async listTenantUsers(tenantId: string, pageStr?: string, pageSizeStr?: string, qRaw?: string) {
+  async listTenantUsers(tenantId: string, pageStr?: string, pageSizeStr?: string, qRaw?: string, roleRaw?: string) {
     await this.assertTenantExists(tenantId);
     const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
-    const where = this.buildTenantUserWhere(tenantId, qRaw);
+    const where = this.buildTenantUserWhere(tenantId, { q: qRaw, role: this.parseTenantUserRoleFilter(roleRaw) });
     const [total, rows] = await Promise.all([
       this.prisma.user.count({ where }),
       this.prisma.user.findMany({
@@ -148,10 +148,21 @@ export class AdminService {
     return paginate(items, total, page, pageSize);
   }
 
-  private buildTenantUserWhere(tenantId: string, qRaw?: string): Prisma.UserWhereInput {
-    const q = qRaw?.trim() ?? "";
+  private parseTenantUserRoleFilter(roleRaw?: string): UserRole | undefined {
+    const role = roleRaw?.trim();
+    if (!role) return undefined;
+    if ((Object.values(UserRole) as string[]).includes(role)) return role as UserRole;
+    return undefined;
+  }
+
+  private buildTenantUserWhere(
+    tenantId: string,
+    filters?: { q?: string; role?: UserRole },
+  ): Prisma.UserWhereInput {
+    const q = filters?.q?.trim() ?? "";
     return {
       tenantId,
+      ...(filters?.role ? { role: filters.role } : {}),
       ...(q
         ? {
             OR: [
@@ -415,7 +426,10 @@ export class AdminService {
     let ids: string[];
     if (dto.all) {
       const rows = await this.prisma.user.findMany({
-        where: this.buildTenantUserWhere(tenantId, dto.search),
+        where: this.buildTenantUserWhere(tenantId, {
+          q: dto.search,
+          role: this.parseTenantUserRoleFilter(dto.role),
+        }),
         select: { id: true },
       });
       ids = rows.map((r) => r.id);
