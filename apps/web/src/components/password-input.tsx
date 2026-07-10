@@ -1,6 +1,7 @@
 import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -28,23 +29,36 @@ export function PasswordInput({
   const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
   const [unlocked, setUnlocked] = useState(!requirePromptToEdit);
-
-  function requestUnlock() {
-    if (window.confirm(t("platform.confirmRevealPassword"))) {
-      setUnlocked(true);
-      setVisible(true);
-    }
-  }
+  const [unlockConfirmOpen, setUnlockConfirmOpen] = useState(false);
 
   if (requirePromptToEdit && !unlocked) {
     return (
-      <div className={cn("flex flex-wrap items-center gap-2", className)}>
-        <Input id={id} value="••••••••" disabled className="max-w-[12rem]" />
-        <Button type="button" variant="outline" size="sm" onClick={requestUnlock}>
-          {t("platform.changePassword")}
-        </Button>
-        <p className="w-full text-xs text-muted-foreground">{t("platform.passwordNotRetrievable")}</p>
-      </div>
+      <>
+        <div className={cn("flex flex-wrap items-center gap-2", className)}>
+          <Input id={id} value="••••••••" disabled className="max-w-[12rem]" />
+          <Button type="button" variant="outline" size="sm" onClick={() => setUnlockConfirmOpen(true)}>
+            {t("platform.changePassword")}
+          </Button>
+          <p className="w-full text-xs text-muted-foreground">{t("platform.passwordNotRetrievable")}</p>
+        </div>
+        <ConfirmDialog
+          open={unlockConfirmOpen}
+          onOpenChange={setUnlockConfirmOpen}
+          variant="default"
+          title={t("platform.confirmRevealPasswordTitle", "Set a new password?")}
+          description={t(
+            "platform.confirmRevealPassword",
+            "Stored passwords are encrypted and cannot be viewed. Confirm to set a new password for this user.",
+          )}
+          confirmLabel={t("platform.confirmRevealPasswordAction", "Set new password")}
+          cancelLabel={t("common.cancel", "Cancel")}
+          onConfirm={() => {
+            setUnlockConfirmOpen(false);
+            setUnlocked(true);
+            setVisible(true);
+          }}
+        />
+      </>
     );
   }
 

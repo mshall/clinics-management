@@ -234,8 +234,8 @@ export function AdminPage() {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["admin", "overview"] }),
     onError: (e: unknown) => {
       if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
-        alert(String((e.body as { message?: unknown }).message));
-      } else alert(e instanceof Error ? e.message : String(e));
+        toast.error(String((e.body as { message?: unknown }).message));
+      } else toast.error(e instanceof Error ? e.message : String(e));
     },
   });
 
@@ -360,7 +360,7 @@ export function AdminPage() {
                       onClick={() => {
                         toggleFlag.mutate({ key: f.key, enabled: !f.enabled }, {
                           onError: (e) => {
-                            if (e instanceof ApiError) alert(e.message);
+                            if (e instanceof ApiError) toast.error(e.message);
                           },
                         });
                       }}

@@ -5,6 +5,7 @@ import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/s
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { DocumentViewerOverlay } from "@/components/document-viewer-overlay";
 import { CreateActionButton } from "@/components/create-action-button";
 import { Badge } from "@/components/ui/badge";
@@ -176,8 +177,7 @@ export function ExpensesPage() {
       viewerUrlRef.current = url;
       setProofViewer({ filename: filename?.trim() || "expense-proof", url, contentType });
     } catch (e) {
-      if (e instanceof ApiError) alert(e.message);
-      else alert(e instanceof Error ? e.message : String(e));
+      toast.error(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -194,8 +194,7 @@ export function ExpensesPage() {
       a.remove();
       URL.revokeObjectURL(url);
     } catch (e) {
-      if (e instanceof ApiError) alert(e.message);
-      else alert(e instanceof Error ? e.message : String(e));
+      toast.error(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e));
     }
   };
 

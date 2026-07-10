@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,7 @@ export function AdminDataExplorerPanel() {
   const [exporting, setExporting] = useState(false);
   const [exportingDocuments, setExportingDocuments] = useState(false);
   const [exportKeys, setExportKeys] = useState<Set<string>>(() => new Set());
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const catalogQ = useQuery({
     queryKey: ["admin", "data-explorer", "catalog"],
@@ -125,6 +127,7 @@ export function AdminDataExplorerPanel() {
   const deleteMut = useMutation({
     mutationFn: (id: string) => apiDelete(`/api/v1/admin/data-explorer/${encodeURIComponent(table)}/${encodeURIComponent(id)}`),
     onSuccess: async () => {
+      setDeleteTargetId(null);
       await qc.invalidateQueries({ queryKey: ["admin", "data-explorer", "list", table] });
     },
   });
@@ -392,9 +395,7 @@ export function AdminDataExplorerPanel() {
                               size="sm"
                               className="h-7 text-xs text-destructive"
                               disabled={deleteMut.isPending}
-                              onClick={() => {
-                                if (window.confirm(t("admin.dataExplorerDeleteConfirm", "Delete this row?"))) deleteMut.mutate(id);
-                              }}
+                              onClick={() => setDeleteTargetId(id)}
                             >
                               {t("common.delete", "Delete")}
                             </Button>
@@ -474,6 +475,21 @@ export function AdminDataExplorerPanel() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={deleteTargetId != null}
+        onOpenChange={(open) => {
+          if (!open && !deleteMut.isPending) setDeleteTargetId(null);
+        }}
+        title={t("admin.dataExplorerDeleteTitle", "Delete row?")}
+        description={t("admin.dataExplorerDeleteConfirm", "Delete this row?")}
+        confirmLabel={t("common.delete", "Delete")}
+        cancelLabel={t("common.cancel", "Cancel")}
+        pending={deleteMut.isPending}
+        onConfirm={() => {
+          if (deleteTargetId) deleteMut.mutate(deleteTargetId);
+        }}
+      />
     </div>
   );
 }

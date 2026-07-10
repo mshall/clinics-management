@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { CircleX } from "lucide-react";
+import { CircleX, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,7 @@ type ConfirmDialogProps = {
   pending?: boolean;
   variant?: "destructive" | "default";
   details?: ReactNode;
+  icon?: ReactNode;
 };
 
 export function ConfirmDialog({
@@ -28,7 +29,9 @@ export function ConfirmDialog({
   pending = false,
   variant = "destructive",
   details,
+  icon,
 }: ConfirmDialogProps) {
+  const iconNode = icon ?? (variant === "destructive" ? <CircleX className="h-5 w-5" aria-hidden /> : <Lock className="h-5 w-5" aria-hidden />);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -52,7 +55,7 @@ export function ConfirmDialog({
                   : "bg-muted text-foreground ring-muted",
               )}
             >
-              <CircleX className="h-5 w-5" aria-hidden />
+              {iconNode}
             </div>
             <DialogTitle className="text-start text-xl">{title}</DialogTitle>
           </DialogHeader>

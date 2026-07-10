@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
   emptyPatientAcquisitionFormValues,
   PatientAcquisitionFields,
@@ -61,6 +63,8 @@ export function AdminOrgPatientsPanel() {
   const [acquisition, setAcquisition] = useState<PatientAcquisitionFormValues>(emptyPatientAcquisitionFormValues());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [selectAllMatching, setSelectAllMatching] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [deletePatientOpen, setDeletePatientOpen] = useState(false);
 
   const editPatientId = dialogMode && typeof dialogMode === "object" ? dialogMode.edit : null;
   const isCreate = dialogMode === "create";
@@ -225,6 +229,7 @@ export function AdminOrgPatientsPanel() {
   const deleteMut = useMutation({
     mutationFn: (patientId: string) => apiDelete(`/api/v1/patients/${patientId}`),
     onSuccess: () => {
+      setDeletePatientOpen(false);
       closeDialog();
       void qc.invalidateQueries({ queryKey: ["admin", "org-patients"] });
       void qc.invalidateQueries({ queryKey: ["patients"] });
@@ -244,6 +249,7 @@ export function AdminOrgPatientsPanel() {
       return apiPost<{ ok: true; deleted: number }>("/api/v1/patients/bulk-delete", { ids: [...selectedIds] });
     },
     onSuccess: () => {
+      setBulkDeleteOpen(false);
       setSelectedIds(new Set());
       setSelectAllMatching(false);
       void qc.invalidateQueries({ queryKey: ["admin", "org-patients"] });
@@ -251,8 +257,7 @@ export function AdminOrgPatientsPanel() {
       void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
     },
     onError: (e: unknown) => {
-      if (e instanceof ApiError) alert(e.message);
-      else alert(e instanceof Error ? e.message : String(e));
+      toast.error(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e));
     },
   });
 
@@ -341,12 +346,7 @@ export function AdminOrgPatientsPanel() {
                 type="button"
                 variant="destructive"
                 disabled={bulkDeleteMut.isPending}
-                onClick={() => {
-                  const msg = selectAllMatching
-                    ? t("admin.orgPatientsBulkDeleteAllConfirm", "Delete all {{count}} patients matching this search?", { count: total })
-                    : t("admin.orgPatientsBulkDeleteConfirm", "Delete {{count}} selected patients?", { count: selectedCount });
-                  if (window.confirm(msg)) bulkDeleteMut.mutate();
-                }}
+                onClick={() => setBulkDeleteOpen(true)}
               >
                 {t("admin.orgPatientsBulkDelete", "Delete selected ({{count}})", { count: selectedCount })}
               </Button>
@@ -562,11 +562,7 @@ export function AdminOrgPatientsPanel() {
                     type="button"
                     variant="destructive"
                     disabled={deleteMut.isPending}
-                    onClick={() => {
-                      if (window.confirm(t("admin.orgPatientsDeleteConfirm", "Delete this patient? They will be removed from the registry."))) {
-                        deleteMut.mutate(editPatientId);
-                      }
-                    }}
+                    onClick={() => setDeletePatientOpen(true)}
                   >
                     {t("common.delete", "Delete")}
                   </Button>
@@ -579,6 +575,38 @@ export function AdminOrgPatientsPanel() {
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onOpenChange={(open) => {
+          if (!open && !bulkDeleteMut.isPending) setBulkDeleteOpen(false);
+        }}
+        title={t("admin.orgPatientsBulkDeleteTitle", "Delete selected patients?")}
+        description={
+          selectAllMatching
+            ? t("admin.orgPatientsBulkDeleteAllConfirm", "Delete all {{count}} patients matching this search?", { count: total })
+            : t("admin.orgPatientsBulkDeleteConfirm", "Delete {{count}} selected patients?", { count: selectedCount })
+        }
+        confirmLabel={t("admin.orgPatientsBulkDeleteAction", "Delete patients")}
+        cancelLabel={t("common.cancel", "Cancel")}
+        pending={bulkDeleteMut.isPending}
+        onConfirm={() => bulkDeleteMut.mutate()}
+      />
+
+      <ConfirmDialog
+        open={deletePatientOpen && Boolean(editPatientId)}
+        onOpenChange={(open) => {
+          if (!open && !deleteMut.isPending) setDeletePatientOpen(false);
+        }}
+        title={t("admin.orgPatientsDeleteTitle", "Delete patient?")}
+        description={t("admin.orgPatientsDeleteConfirm", "Delete this patient? They will be removed from the registry.")}
+        confirmLabel={t("common.delete", "Delete")}
+        cancelLabel={t("common.cancel", "Cancel")}
+        pending={deleteMut.isPending}
+        onConfirm={() => {
+          if (editPatientId) deleteMut.mutate(editPatientId);
+        }}
+      />
     </div>
   );
 }

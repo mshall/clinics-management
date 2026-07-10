@@ -1,6 +1,7 @@
 import { Ban, FileText, FileUp, Pill, Printer } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -253,8 +254,7 @@ export function MedicationsPrescriptionDraftPanel({
                       onClick={() => {
                         const ok = printPrescriptionImage(generatedPreview, t("encounters.generatedPrescription"));
                         if (!ok) {
-                          // eslint-disable-next-line no-alert
-                          alert(t("encounters.printBlocked", "Allow pop-ups to print the prescription."));
+                          toast.error(t("encounters.printBlocked", "Allow pop-ups to print the prescription."));
                         }
                       }}
                     >
