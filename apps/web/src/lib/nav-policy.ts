@@ -74,6 +74,35 @@ const ROLE_KEYS: Record<DemoRole, NavItemKey[]> = {
   clinic_assistant: ["patients", "appointments", "encounters", "operations", "expenses", "revenue", "profile"],
 };
 
+/** Tenant organization roles used when unioning all assignable sidebar permissions. */
+const ORG_RBAC_ROLES: DemoRole[] = [
+  "group_admin",
+  "group_supervisor",
+  "branch_manager",
+  "finance_officer",
+  "hr_officer",
+  "clinic_admin",
+  "clinic_assistant",
+  "physician",
+  "nurse",
+  "receptionist",
+  "call_center",
+];
+
+export function organizationNavKeySet(): Set<NavItemKey> {
+  const out = new Set<NavItemKey>();
+  for (const role of ORG_RBAC_ROLES) {
+    for (const key of navKeysForRole(role)) out.add(key);
+  }
+  return out;
+}
+
+/** Every sidebar permission that exists anywhere in the organization (stable order). */
+export function organizationNavOrderedKeys(): NavItemKey[] {
+  const org = organizationNavKeySet();
+  return HOME_PRIORITY.filter((k) => org.has(k));
+}
+
 export function navKeysForRole(role: DemoRole | undefined): Set<NavItemKey> {
   if (!role) return new Set();
   return new Set(ROLE_KEYS[role] ?? FULL);
@@ -86,12 +115,10 @@ export function roleNavKeysForRole(
 ): Set<NavItemKey> {
   if (!role) return new Set();
   if (roleNavTabKeys?.length) {
-    const base = navKeysForRole(role);
+    const org = organizationNavKeySet();
     const out = new Set<NavItemKey>();
     for (const k of roleNavTabKeys) {
-      if ((NAV_ITEM_PATH as Record<string, string>)[k] !== undefined && base.has(k as NavItemKey)) {
-        out.add(k as NavItemKey);
-      }
+      if (org.has(k as NavItemKey)) out.add(k as NavItemKey);
     }
     out.add("profile");
     return out;

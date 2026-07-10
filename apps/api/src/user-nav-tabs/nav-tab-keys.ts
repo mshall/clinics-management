@@ -87,6 +87,17 @@ export function maxNavTabsForRole(role: UserRole): Set<string> {
   return new Set(ROLE_MAX[role] ?? FULL);
 }
 
+/** Union of every sidebar tab used by any tenant role (excludes platform-only tabs). */
+const ORGANIZATION_NAV_TABS = new Set([...FULL, "doctor_revenue"]);
+
+export function maxNavTabsForOrganization(): Set<string> {
+  return ORGANIZATION_NAV_TABS;
+}
+
+export function organizationNavTabKeys(): string[] {
+  return [...ORGANIZATION_NAV_TABS].sort((a, b) => a.localeCompare(b));
+}
+
 /** Global role defaults (before tenant override). */
 export function defaultNavTabsForRole(role: UserRole): string[] {
   return [...maxNavTabsForRole(role)].sort((a, b) => a.localeCompare(b));

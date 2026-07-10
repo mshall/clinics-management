@@ -974,7 +974,7 @@
     "feeAmount": "Amount (base currency)",
     "saveFee": "Save",
     "rbacTitle": "Role-based access (RBAC)",
-    "rbacSubtitle": "Customize which sidebar sections each role and user can access in this organization. User grants cannot exceed their role permissions.",
+    "rbacSubtitle": "All organization permissions are listed below. Only the selected role or user’s current access is checked; tick or untick extras, then save.",
     "rbacRoleSection": "Permissions by role",
     "rbacRoleHint": "Applies to every user with the selected role unless they have a personal override.",
     "rbacPickRole": "Role",

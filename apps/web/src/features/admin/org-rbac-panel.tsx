@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useUsersQuery } from "@/lib/api-hooks";
 import { ApiError, apiGet, apiPut } from "@/lib/http";
 import type { NavItemKey } from "@/lib/nav-policy";
-import { orderedNavKeysForRole, navKeysForRole, roleNavKeysForRole } from "@/lib/nav-policy";
+import { navKeysForRole, organizationNavOrderedKeys, roleNavKeysForRole } from "@/lib/nav-policy";
 import { mapApiRole } from "@/lib/roles";
 import { formatUserRole } from "@/lib/locale-display";
 import type { DemoRole } from "@/lib/roles";
@@ -61,27 +61,36 @@ function NavTabChecklist({
   draft,
   onToggle,
   disabled,
+  allowedKeys,
 }: {
   orderedKeys: NavItemKey[];
   draft: Set<NavItemKey>;
   onToggle: (key: NavItemKey) => void;
   disabled?: boolean;
+  /** When set, tabs outside this set cannot be toggled (e.g. user grants within role limits). */
+  allowedKeys?: Set<NavItemKey>;
 }) {
   const { t } = useTranslation();
   return (
     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-      {orderedKeys.map((key) => (
-        <label key={key} className="flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2 text-sm">
+      {orderedKeys.map((key) => {
+        const locked = key !== "profile" && allowedKeys != null && !allowedKeys.has(key);
+        return (
+        <label
+          key={key}
+          className={`flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm ${locked ? "opacity-50" : "cursor-pointer"}`}
+        >
           <input
             type="checkbox"
             className="size-4 rounded border-input"
             checked={draft.has(key)}
-            disabled={key === "profile" || disabled}
+            disabled={key === "profile" || disabled || locked}
             onChange={() => onToggle(key)}
           />
           <span>{t(NAV_I18N[key])}</span>
         </label>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -102,13 +111,10 @@ export function OrgRbacPanel() {
     enabled: isGroupAdmin && Boolean(roleTarget),
   });
 
+  const organizationOrderedKeys = useMemo(() => organizationNavOrderedKeys(), []);
+
   const roleGrantFingerprint = roleGrantQ.data ? JSON.stringify(roleGrantQ.data.tabKeys ?? null) : "";
-  /** All tabs this role may have (platform max) — checklist always shows the full set. */
-  const rolePlatformOrderedKeys = useMemo(
-    () => (roleTarget ? orderedNavKeysForRole(roleTarget, null) : []),
-    [roleTarget],
-  );
-  const roleBaseKeys = useMemo(
+  const rolePlatformDefaults = useMemo(
     () => (roleTarget ? navKeysForRole(roleTarget) : new Set<NavItemKey>()),
     [roleTarget],
   );
@@ -121,16 +127,16 @@ export function OrgRbacPanel() {
     if (!roleGrantQ.isSuccess) return;
     const saved = roleGrantQ.data?.tabKeys;
     if (saved == null || saved.length === 0) {
-      setRoleDraft(new Set(rolePlatformOrderedKeys));
+      setRoleDraft(new Set(rolePlatformDefaults));
       return;
     }
     const next = new Set<NavItemKey>();
     for (const k of saved) {
-      if (roleBaseKeys.has(k as NavItemKey)) next.add(k as NavItemKey);
+      if (organizationOrderedKeys.includes(k as NavItemKey)) next.add(k as NavItemKey);
     }
     next.add("profile");
     setRoleDraft(next);
-  }, [roleTarget, roleGrantFingerprint, roleGrantQ.isSuccess, roleGrantQ.data?.tabKeys, rolePlatformOrderedKeys, roleBaseKeys]);
+  }, [roleTarget, roleGrantFingerprint, roleGrantQ.isSuccess, roleGrantQ.data?.tabKeys, rolePlatformDefaults, organizationOrderedKeys]);
 
   const saveRoleMut = useMutation({
     mutationFn: (tabKeys: string[]) =>
@@ -175,10 +181,6 @@ export function OrgRbacPanel() {
     () => (userTargetRole ? roleNavKeysForRole(userTargetRole, userRoleGrantQ.data?.tabKeys) : new Set<NavItemKey>()),
     [userTargetRole, userRoleGrantQ.data?.tabKeys],
   );
-  const userOrderedKeys = useMemo(
-    () => (userTargetRole ? orderedNavKeysForRole(userTargetRole, userRoleGrantQ.data?.tabKeys) : []),
-    [userTargetRole, userRoleGrantQ.data?.tabKeys],
-  );
 
   const userPickItems: PickListItem[] = useMemo(
     () =>
@@ -202,15 +204,15 @@ export function OrgRbacPanel() {
       return;
     }
     if (!userTargetRole || !userGrantQ.isSuccess) return;
-    const base = roleNavKeysForRole(userTargetRole, userRoleGrantQ.data?.tabKeys);
+    const roleEffective = roleNavKeysForRole(userTargetRole, userRoleGrantQ.data?.tabKeys);
     const raw = userGrantQ.data.tabKeys;
     if (raw == null || raw.length === 0) {
-      setUserDraft(new Set(base));
+      setUserDraft(new Set(roleEffective));
       return;
     }
     const next = new Set<NavItemKey>();
     for (const k of raw) {
-      if (base.has(k as NavItemKey)) next.add(k as NavItemKey);
+      if (roleEffective.has(k as NavItemKey)) next.add(k as NavItemKey);
     }
     next.add("profile");
     setUserDraft(next);
@@ -252,8 +254,8 @@ export function OrgRbacPanel() {
 
   const roleIsFullDefault =
     roleTarget &&
-    roleDraft.size === roleBaseKeys.size &&
-    [...roleBaseKeys].every((k) => roleDraft.has(k));
+    roleDraft.size === rolePlatformDefaults.size &&
+    [...rolePlatformDefaults].every((k) => roleDraft.has(k));
 
   const userIsFullRole =
     userTargetRole &&
@@ -306,7 +308,7 @@ export function OrgRbacPanel() {
                   <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
                 ) : roleGrantQ.isSuccess ? (
                   <NavTabChecklist
-                    orderedKeys={rolePlatformOrderedKeys}
+                    orderedKeys={organizationOrderedKeys}
                     draft={roleDraft}
                     onToggle={toggleRole}
                   />
@@ -350,7 +352,7 @@ export function OrgRbacPanel() {
             <p className="text-xs text-muted-foreground">
               {t(
                 "admin.rbacUserHint",
-                "Grant or restrict extra sidebar tabs for a specific user within their role limits. Profile always stays on.",
+                "Grant or restrict tabs for a specific user. Grayed-out items are not allowed for their role — expand the role permissions first.",
               )}
             </p>
           </div>
@@ -386,9 +388,10 @@ export function OrgRbacPanel() {
                 <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
               ) : userGrantQ.isSuccess ? (
                 <NavTabChecklist
-                  orderedKeys={userOrderedKeys}
+                  orderedKeys={organizationOrderedKeys}
                   draft={userDraft}
                   onToggle={toggleUser}
+                  allowedKeys={userRoleBase}
                 />
               ) : null}
               <p className="text-xs text-muted-foreground">

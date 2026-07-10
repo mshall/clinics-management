@@ -5,7 +5,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import {
   defaultNavTabsForRole,
   isFullRoleNav,
-  maxNavTabsForRole,
+  maxNavTabsForOrganization,
   parseStoredNavTabKeys,
   sanitizeNavTabKeysForRole,
 } from "./nav-tab-keys";
@@ -59,8 +59,8 @@ export class TenantRoleNavTabsService {
       throw new NotFoundException("Role cannot be customized for this organization");
     }
 
-    const globalMax = [...maxNavTabsForRole(role)];
-    const sanitized = sanitizeNavTabKeysForRole(role, tabKeys, globalMax);
+    const orgMax = [...maxNavTabsForOrganization()];
+    const sanitized = sanitizeNavTabKeysForRole(role, tabKeys, orgMax);
     if (isFullRoleNav(role, sanitized, defaultNavTabsForRole(role))) {
       await this.prisma.tenantRoleNavTabGrant.deleteMany({ where: { tenantId, role } });
       return { tabKeys: null };
