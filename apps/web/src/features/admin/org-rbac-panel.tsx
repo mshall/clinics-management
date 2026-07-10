@@ -1,13 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useUsersQuery } from "@/lib/api-hooks";
 import { ApiError, apiGet, apiPut } from "@/lib/http";
 import type { NavItemKey } from "@/lib/nav-policy";
-import { orderedNavKeysForRole, roleNavKeysForRole } from "@/lib/nav-policy";
+import { orderedNavKeysForRole, navKeysForRole, roleNavKeysForRole } from "@/lib/nav-policy";
 import { mapApiRole } from "@/lib/roles";
 import { formatUserRole } from "@/lib/locale-display";
 import type { DemoRole } from "@/lib/roles";
@@ -102,24 +103,34 @@ export function OrgRbacPanel() {
   });
 
   const roleGrantFingerprint = roleGrantQ.data ? JSON.stringify(roleGrantQ.data.tabKeys ?? null) : "";
+  /** All tabs this role may have (platform max) — checklist always shows the full set. */
+  const rolePlatformOrderedKeys = useMemo(
+    () => (roleTarget ? orderedNavKeysForRole(roleTarget, null) : []),
+    [roleTarget],
+  );
   const roleBaseKeys = useMemo(
-    () => (roleTarget ? roleNavKeysForRole(roleTarget, roleGrantQ.data?.tabKeys) : new Set<NavItemKey>()),
-    [roleTarget, roleGrantFingerprint, roleGrantQ.data?.tabKeys],
-  );
-  const roleOrderedKeys = useMemo(
-    () => (roleTarget ? orderedNavKeysForRole(roleTarget, roleGrantQ.data?.tabKeys) : []),
-    [roleTarget, roleGrantFingerprint, roleGrantQ.data?.tabKeys],
+    () => (roleTarget ? navKeysForRole(roleTarget) : new Set<NavItemKey>()),
+    [roleTarget],
   );
 
   useEffect(() => {
-    setRoleDraft(new Set());
-  }, [roleTarget]);
-
-  useEffect(() => {
-    if (!roleTarget || !roleGrantQ.isSuccess) return;
-    const base = roleNavKeysForRole(roleTarget, roleGrantQ.data?.tabKeys);
-    setRoleDraft(new Set(base));
-  }, [roleTarget, roleGrantFingerprint, roleGrantQ.isSuccess, roleGrantQ.data?.tabKeys]);
+    if (!roleTarget) {
+      setRoleDraft(new Set());
+      return;
+    }
+    if (!roleGrantQ.isSuccess) return;
+    const saved = roleGrantQ.data?.tabKeys;
+    if (saved == null || saved.length === 0) {
+      setRoleDraft(new Set(rolePlatformOrderedKeys));
+      return;
+    }
+    const next = new Set<NavItemKey>();
+    for (const k of saved) {
+      if (roleBaseKeys.has(k as NavItemKey)) next.add(k as NavItemKey);
+    }
+    next.add("profile");
+    setRoleDraft(next);
+  }, [roleTarget, roleGrantFingerprint, roleGrantQ.isSuccess, roleGrantQ.data?.tabKeys, rolePlatformOrderedKeys, roleBaseKeys]);
 
   const saveRoleMut = useMutation({
     mutationFn: (tabKeys: string[]) =>
@@ -169,14 +180,28 @@ export function OrgRbacPanel() {
     [userTargetRole, userRoleGrantQ.data?.tabKeys],
   );
 
+  const userPickItems: PickListItem[] = useMemo(
+    () =>
+      pickableUsers.map((u) => ({
+        value: u.id,
+        label: u.displayName,
+        hint: `${u.email} · ${formatUserRole(mapApiRole(u.role), t)}`,
+      })),
+    [pickableUsers, t],
+  );
+  const userSelectedItem = useMemo((): PickListItem | null => {
+    if (!userTargetId) return null;
+    return userPickItems.find((i) => i.value === userTargetId) ?? null;
+  }, [userTargetId, userPickItems]);
+
   const userGrantFingerprint = userGrantQ.data ? JSON.stringify(userGrantQ.data.tabKeys ?? null) : "";
 
   useEffect(() => {
-    setUserDraft(new Set());
-  }, [userTargetId]);
-
-  useEffect(() => {
-    if (!userTargetId || !userTargetRole || !userGrantQ.isSuccess) return;
+    if (!userTargetId) {
+      setUserDraft(new Set());
+      return;
+    }
+    if (!userTargetRole || !userGrantQ.isSuccess) return;
     const base = roleNavKeysForRole(userTargetRole, userRoleGrantQ.data?.tabKeys);
     const raw = userGrantQ.data.tabKeys;
     if (raw == null || raw.length === 0) {
@@ -189,7 +214,7 @@ export function OrgRbacPanel() {
     }
     next.add("profile");
     setUserDraft(next);
-  }, [userTargetId, userTargetRole, userGrantFingerprint, userGrantQ.isSuccess, userRoleGrantQ.data?.tabKeys]);
+  }, [userTargetId, userTargetRole, userGrantFingerprint, userGrantQ.isSuccess, userGrantQ.data?.tabKeys, userRoleGrantQ.data?.tabKeys]);
 
   const saveUserMut = useMutation({
     mutationFn: (tabKeys: string[]) => apiPut<{ tabKeys: string[] | null }>(`/api/v1/user-nav-tabs/${userTargetId}`, { tabKeys }),
@@ -277,13 +302,15 @@ export function OrgRbacPanel() {
             {roleErr ? <p className="text-sm text-destructive">{roleErr}</p> : null}
             {roleTarget ? (
               <div className="space-y-3">
-                {roleGrantQ.isPending ? <p className="text-sm text-muted-foreground">{t("common.loading")}</p> : null}
-                <NavTabChecklist
-                  orderedKeys={roleOrderedKeys}
-                  draft={roleDraft}
-                  onToggle={toggleRole}
-                  disabled={roleGrantQ.isPending}
-                />
+                {roleGrantQ.isPending ? (
+                  <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+                ) : roleGrantQ.isSuccess ? (
+                  <NavTabChecklist
+                    orderedKeys={rolePlatformOrderedKeys}
+                    draft={roleDraft}
+                    onToggle={toggleRole}
+                  />
+                ) : null}
                 <p className="text-xs text-muted-foreground">
                   {roleIsFullDefault || !roleGrantQ.isSuccess
                     ? t("admin.rbacRoleFullHint", "Saving with all role tabs checked restores platform defaults for this role.")
@@ -328,23 +355,23 @@ export function OrgRbacPanel() {
             </p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="rbac-user">{t("admin.navTabsUser", "User")}</Label>
-            <select
-              id="rbac-user"
-              className="flex h-10 w-full max-w-md rounded-md border border-input bg-background px-3 py-2 text-sm"
+            <Label>{t("admin.navTabsUser", "User")}</Label>
+            <SearchablePickList
+              items={userPickItems}
               value={userTargetId}
-              onChange={(e) => {
-                setUserTargetId(e.target.value);
+              selectedItem={userSelectedItem}
+              onValueChange={(id) => {
+                setUserTargetId(id);
                 setUserErr(null);
               }}
-            >
-              <option value="">{t("admin.navTabsPickUser", "Select a user…")}</option>
-              {pickableUsers.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.displayName} ({u.email}) · {formatUserRole(mapApiRole(u.role), t)}
-                </option>
-              ))}
-            </select>
+              searchPlaceholder={t("admin.rbacUserSearchPlaceholder", "Type name, email, or role…")}
+              placeholder={t("admin.navTabsPickUser", "Select a user…")}
+              emptyMessage={usersQ.isPending ? t("common.loading") : t("admin.rbacNoUsersMatch", "No users match.")}
+              localFilter
+              minSearchLength={1}
+              idleMessage={t("admin.rbacUserSearchIdle", "Start typing to filter users by name, email, or role.")}
+              disabled={usersQ.isPending}
+            />
           </div>
           {usersQ.isError ? (
             <p className="text-sm text-destructive">{usersQ.error instanceof Error ? usersQ.error.message : t("common.error")}</p>
@@ -355,13 +382,15 @@ export function OrgRbacPanel() {
           {userErr ? <p className="text-sm text-destructive">{userErr}</p> : null}
           {userTargetId && userTargetRole ? (
             <div className="space-y-3">
-              {userGrantQ.isPending ? <p className="text-sm text-muted-foreground">{t("common.loading")}</p> : null}
-              <NavTabChecklist
-                orderedKeys={userOrderedKeys}
-                draft={userDraft}
-                onToggle={toggleUser}
-                disabled={userGrantQ.isPending}
-              />
+              {userGrantQ.isPending ? (
+                <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+              ) : userGrantQ.isSuccess ? (
+                <NavTabChecklist
+                  orderedKeys={userOrderedKeys}
+                  draft={userDraft}
+                  onToggle={toggleUser}
+                />
+              ) : null}
               <p className="text-xs text-muted-foreground">
                 {userIsFullRole || !userGrantQ.isSuccess
                   ? t("admin.navTabsFullRoleHint", "Saving with all tabs checked removes the custom override.")
