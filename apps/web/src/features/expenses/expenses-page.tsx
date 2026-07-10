@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { DocumentViewerOverlay } from "@/components/document-viewer-overlay";
 import { CreateActionButton } from "@/components/create-action-button";
+import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +27,8 @@ import {
   localeForLanguage,
 } from "@/lib/locale-display";
 import { defaultMonthRange } from "@/stores/date-range-store";
+import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
+import { collectExpenseSubmitIssues } from "@/lib/create-form-validation";
 
 export function ExpensesPage() {
   const { t, i18n } = useTranslation();
@@ -90,7 +93,7 @@ export function ExpensesPage() {
   const proofInputRef = useRef<HTMLInputElement>(null);
   const viewerUrlRef = useRef<string | null>(null);
   const [proofViewer, setProofViewer] = useState<{ filename: string; url: string; contentType: string } | null>(null);
-  const [formErr, setFormErr] = useState<string | null>(null);
+  const validation = useValidationIssuesDialog({ intent: "submit" });
   const [efCategory, setEfCategory] = useState("");
   const [efVendor, setEfVendor] = useState("");
   const [efAmount, setEfAmount] = useState("");
@@ -118,7 +121,7 @@ export function ExpensesPage() {
       return apiPostFormData<unknown>("/api/v1/expenses", fd);
     },
     onSuccess: () => {
-      setFormErr(null);
+      validation.clear();
       void qc.invalidateQueries({ queryKey: ["expenses"] });
       void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
       setAmount("");
@@ -127,11 +130,18 @@ export function ExpensesPage() {
       if (proofInputRef.current) proofInputRef.current.value = "";
     },
     onError: (e: unknown) => {
-      if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
-        setFormErr(String((e.body as { message?: unknown }).message));
-      } else setFormErr(e instanceof Error ? e.message : String(e));
+      validation.showError(e);
     },
   });
+
+  const handleSubmitExpense = () => {
+    const issues = collectExpenseSubmitIssues({ clinicId, amount, proofFile }, t);
+    if (issues.length > 0) {
+      validation.showIssues(issues);
+      return;
+    }
+    createMut.mutate();
+  };
 
   const statusMut = useMutation({
     mutationFn: ({ id, status }: { id: string; status: "APPROVED" | "REJECTED" }) =>
@@ -200,6 +210,7 @@ export function ExpensesPage() {
 
   return (
     <div className="space-y-6">
+      <ValidationIssuesDialog {...validation.dialogProps} />
       {proofViewer ? (
         <DocumentViewerOverlay
           fileName={proofViewer.filename}
@@ -352,12 +363,12 @@ export function ExpensesPage() {
                 const f = e.target.files?.[0] ?? null;
                 const max = 15 * 1024 * 1024;
                 if (f && f.size > max) {
-                  setFormErr(t("expenses.proofTooLarge", "File is too large (max 15 MB)."));
+                  validation.showIssues([t("expenses.proofTooLarge", "File is too large (max 15 MB).")]);
                   setProofFile(null);
                   e.target.value = "";
                   return;
                 }
-                setFormErr(null);
+                validation.clear();
                 setProofFile(f);
               }}
             />
@@ -371,13 +382,13 @@ export function ExpensesPage() {
           <div className="flex items-end">
             <CreateActionButton
               type="button"
-              disabled={!clinicId || !amount || createMut.isPending}
-              onClick={() => createMut.mutate()}
+              disabled={createMut.isPending}
+              onClick={handleSubmitExpense}
             >
               {t("expenses.submit")}
             </CreateActionButton>
           </div>
-          {formErr ? <p className="text-sm text-destructive sm:col-span-full">{formErr}</p> : null}
+          {validation.formErr ? <p className="text-sm text-destructive sm:col-span-full">{validation.formErr}</p> : null}
         </CardContent>
       </Card>
 

@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
+import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { ResponsiveTable } from "@/components/responsive-table";
@@ -31,6 +32,12 @@ import {
   localeForLanguage,
 } from "@/lib/locale-display";
 import { useAuthStore } from "@/stores/auth-store";
+import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
+import {
+  collectAttendanceCreateIssues,
+  collectEmployeeCreateIssues,
+  collectLeaveCreateIssues,
+} from "@/lib/create-form-validation";
 
 type Tab = "summary" | "employees" | "attendance" | "leave";
 
@@ -176,7 +183,9 @@ export function HrPage() {
   const [empType, setEmpType] = useState("FULL_TIME");
   const [empSalary, setEmpSalary] = useState("9000");
   const [empIdDocFile, setEmpIdDocFile] = useState<File | null>(null);
-  const [createEmpErr, setCreateEmpErr] = useState<string | null>(null);
+  const empValidation = useValidationIssuesDialog({ intent: "create" });
+  const attValidation = useValidationIssuesDialog({ intent: "create" });
+  const leaveValidation = useValidationIssuesDialog({ intent: "create" });
 
   const clinicItems: PickListItem[] = useMemo(
     () => clinics.map((c) => ({ value: c.id, label: formatClinicName(c, i18n.language) })),
@@ -201,7 +210,13 @@ export function HrPage() {
         employeeId: attEmp,
         workDate: attDate,
       }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["hr", "attendance"] }),
+    onSuccess: () => {
+      attValidation.clear();
+      void qc.invalidateQueries({ queryKey: ["hr", "attendance"] });
+    },
+    onError: (e: unknown) => {
+      attValidation.showError(e);
+    },
   });
 
   const createLeave = useMutation({
@@ -213,9 +228,13 @@ export function HrPage() {
         endDate: leaveEnd,
       }),
     onSuccess: () => {
+      leaveValidation.clear();
       void qc.invalidateQueries({ queryKey: ["hr", "leave"] });
       void qc.invalidateQueries({ queryKey: ["hr"] });
       setLeaveReqOpen(false);
+    },
+    onError: (e: unknown) => {
+      leaveValidation.showError(e);
     },
   });
 
@@ -246,7 +265,7 @@ export function HrPage() {
       return emp;
     },
     onSuccess: (emp) => {
-      setCreateEmpErr(null);
+      empValidation.clear();
       setCreateEmpOpen(false);
       setEmpFn("");
       setEmpLn("");
@@ -259,14 +278,7 @@ export function HrPage() {
       navigate(`/hr/employees/${emp.id}`);
     },
     onError: (e: unknown) => {
-      const msg =
-        e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body
-          ? String((e.body as { message?: unknown }).message)
-          : e instanceof Error
-            ? e.message
-            : String(e);
-      setCreateEmpErr(msg);
-      toast.error(msg);
+      empValidation.showError(e);
     },
   });
 
@@ -288,6 +300,36 @@ export function HrPage() {
     },
   });
 
+
+  const handleCreateEmployee = () => {
+    const issues = collectEmployeeCreateIssues(
+      { clinicId: empClinic, firstName: empFn, lastName: empLn, phone: empPhone, salary: empSalary },
+      t,
+    );
+    if (issues.length > 0) {
+      empValidation.showIssues(issues);
+      return;
+    }
+    createEmpMut.mutate();
+  };
+
+  const handleCreateAttendance = () => {
+    const issues = collectAttendanceCreateIssues({ employeeId: attEmp }, t);
+    if (issues.length > 0) {
+      attValidation.showIssues(issues);
+      return;
+    }
+    createAtt.mutate();
+  };
+
+  const handleCreateLeave = () => {
+    const issues = collectLeaveCreateIssues({ employeeId: leaveEmp }, t);
+    if (issues.length > 0) {
+      leaveValidation.showIssues(issues);
+      return;
+    }
+    createLeave.mutate();
+  };
 
   const money = (n: number) =>
     new Intl.NumberFormat(localeForLanguage(i18n.language), { style: "currency", currency: "AED" }).format(n);
@@ -379,6 +421,9 @@ export function HrPage() {
 
   return (
     <div className="space-y-6">
+      <ValidationIssuesDialog {...empValidation.dialogProps} />
+      <ValidationIssuesDialog {...attValidation.dialogProps} />
+      <ValidationIssuesDialog {...leaveValidation.dialogProps} />
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("hr.title")}</h1>
         <p className="text-muted-foreground">{t("hr.subtitle")}</p>
@@ -446,7 +491,7 @@ export function HrPage() {
                     <DialogTitle>{t("hr.addEmployee")}</DialogTitle>
                   </DialogHeader>
                   <div className="grid gap-3 pt-2 sm:grid-cols-2">
-                    {createEmpErr ? <p className="text-sm text-destructive sm:col-span-full">{createEmpErr}</p> : null}
+                    {empValidation.formErr ? <p className="text-sm text-destructive sm:col-span-full">{empValidation.formErr}</p> : null}
                     <div className="space-y-2 sm:col-span-2">
                       <Label required>{t("hr.clinic")}</Label>
                       <SearchablePickList
@@ -508,14 +553,8 @@ export function HrPage() {
                     <div className="sm:col-span-2">
                       <CreateActionButton
                         type="button"
-                        disabled={
-                          !empClinic ||
-                          !empFn.trim() ||
-                          !empLn.trim() ||
-                          empPhone.replace(/\D/g, "").length < 8 ||
-                          createEmpMut.isPending
-                        }
-                        onClick={() => createEmpMut.mutate()}
+                        disabled={createEmpMut.isPending}
+                        onClick={handleCreateEmployee}
                       >
                         {t("hr.saveEmployee")}
                       </CreateActionButton>
@@ -703,10 +742,11 @@ export function HrPage() {
                   <Label>{t("hr.workDate")}</Label>
                   <Input className="ltr-nums" type="date" value={attDate} onChange={(e) => setAttDate(e.target.value)} />
                 </div>
-                <CreateActionButton type="button" disabled={!attEmp || createAtt.isPending} onClick={() => createAtt.mutate()}>
+                <CreateActionButton type="button" disabled={createAtt.isPending} onClick={handleCreateAttendance}>
                   {t("hr.submitAttendance")}
                 </CreateActionButton>
               </div>
+              {attValidation.formErr ? <p className="text-sm text-destructive">{attValidation.formErr}</p> : null}
             </div>
             <div>
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
@@ -868,9 +908,10 @@ export function HrPage() {
                     <Label>{t("hr.end")}</Label>
                     <Input className="ltr-nums" type="date" value={leaveEnd} onChange={(e) => setLeaveEnd(e.target.value)} />
                   </div>
-                  <CreateActionButton type="button" disabled={!leaveEmp || createLeave.isPending} onClick={() => createLeave.mutate()}>
+                  <CreateActionButton type="button" disabled={createLeave.isPending} onClick={handleCreateLeave}>
                     {t("hr.submitLeave")}
                   </CreateActionButton>
+                  {leaveValidation.formErr ? <p className="text-sm text-destructive">{leaveValidation.formErr}</p> : null}
                 </div>
               </DialogContent>
             </Dialog>

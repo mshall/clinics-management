@@ -3,12 +3,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import {
   emptyPatientAcquisitionFormValues,
   PatientAcquisitionFields,
   patientAcquisitionFormToBody,
   patientAcquisitionFormValuesFromPatient,
-  validatePatientAcquisitionForm,
   type PatientAcquisitionFormValues,
 } from "@/components/patient-acquisition-fields";
 import { PatientPhoneField } from "@/components/patient-phone-field";
@@ -26,6 +26,8 @@ import { formatClinicName } from "@/lib/locale-display";
 import type { Paginated } from "@/lib/paginated";
 import { formatPatientEnglishName } from "@/lib/patient-display";
 import { apiErrorMessage } from "@/features/platform/platform-shared";
+import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
+import { collectPatientDemographicsValidationIssues } from "@/lib/patient-form-utils";
 import {
   parsePhoneConflictFromError,
   phoneConflictMessage,
@@ -70,6 +72,7 @@ export function AdminOrgPatientsPanel() {
   const isCreate = dialogMode === "create";
   const isEdit = Boolean(editPatientId);
   const dialogOpen = isCreate || isEdit;
+  const validation = useValidationIssuesDialog({ intent: isCreate ? "create" : "save" });
 
   const { data: clinics = [] } = useClinicsQuery();
 
@@ -128,18 +131,26 @@ export function AdminOrgPatientsPanel() {
     setAcquisition(patientAcquisitionFormValuesFromPatient(p));
   }, [isEdit, patientDetailQuery.data]);
 
-  const validateForm = (): string | null => {
-    if (!firstNameEn.trim() || !lastNameEn.trim()) {
-      return t("patients.errorNameRequired", "English first and last name are required.");
+  const buildDemographicsValues = () => ({
+    firstNameEn,
+    lastNameEn,
+    firstNameAr,
+    lastNameAr,
+    dob,
+    gender,
+    phone,
+    email,
+    nationalId,
+    homeBranchId,
+    acquisition,
+  });
+
+  const collectFormIssues = (): string[] => {
+    const issues = collectPatientDemographicsValidationIssues(buildDemographicsValues(), t);
+    if (phoneConflict) {
+      issues.push(phoneConflictMessage(phoneConflict, t, i18n.language));
     }
-    if (!firstNameAr.trim()) {
-      return t("patients.errorFirstNameAr", "Arabic first name is required.");
-    }
-    if (!lastNameAr.trim()) {
-      return t("patients.errorLastNameAr", "Arabic last name is required.");
-    }
-    if (!phone.trim()) return t("patients.errorPhoneRequired", "Phone is required.");
-    return validatePatientAcquisitionForm(acquisition, t);
+    return issues;
   };
 
   const buildBody = (): Record<string, string | undefined> => ({
@@ -157,14 +168,7 @@ export function AdminOrgPatientsPanel() {
   });
 
   const createMut = useMutation({
-    mutationFn: () => {
-      const err = validateForm();
-      if (err) throw new Error(err);
-      if (phoneConflict) {
-        throw new Error(phoneConflictMessage(phoneConflict, t, i18n.language));
-      }
-      return apiPost<PatientDto>("/api/v1/patients", buildBody());
-    },
+    mutationFn: () => apiPost<PatientDto>("/api/v1/patients", buildBody()),
     onSuccess: async () => {
       setFormErr(null);
       closeDialog();
@@ -195,18 +199,12 @@ export function AdminOrgPatientsPanel() {
         return;
       }
       setFormErr(apiErrorMessage(e));
+      validation.showError(e);
     },
   });
 
   const patchMut = useMutation({
-    mutationFn: () => {
-      const err = validateForm();
-      if (err) throw new Error(err);
-      if (phoneConflict) {
-        throw new Error(phoneConflictMessage(phoneConflict, t, i18n.language));
-      }
-      return apiPatch<PatientDto>(`/api/v1/patients/${editPatientId}`, buildBody());
-    },
+    mutationFn: () => apiPatch<PatientDto>(`/api/v1/patients/${editPatientId}`, buildBody()),
     onSuccess: () => {
       setFormErr(null);
       closeDialog();
@@ -223,6 +221,7 @@ export function AdminOrgPatientsPanel() {
         return;
       }
       setFormErr(apiErrorMessage(e));
+      validation.showError(e);
     },
   });
 
@@ -261,13 +260,16 @@ export function AdminOrgPatientsPanel() {
     },
   });
 
-  const canSave =
-    firstNameEn.trim() &&
-    lastNameEn.trim() &&
-    firstNameAr.trim() &&
-    lastNameAr.trim() &&
-    phone.trim() &&
-    !phoneConflict;
+  const handleSavePatient = () => {
+    if (isCreate ? createMut.isPending : patchMut.isPending) return;
+    const issues = collectFormIssues();
+    if (issues.length > 0) {
+      validation.showIssues(issues);
+      return;
+    }
+    if (isCreate) createMut.mutate();
+    else patchMut.mutate();
+  };
 
   const homeBranchLabel = useMemo(
     () => (row: PatientDto) => {
@@ -552,8 +554,8 @@ export function AdminOrgPatientsPanel() {
               <div className="flex flex-wrap gap-2 pt-2">
                 <Button
                   type="button"
-                  disabled={!canSave || (isCreate ? createMut.isPending : patchMut.isPending)}
-                  onClick={() => (isCreate ? createMut.mutate() : patchMut.mutate())}
+                  disabled={isCreate ? createMut.isPending : patchMut.isPending}
+                  onClick={handleSavePatient}
                 >
                   {isEdit ? t("common.save", "Save") : t("admin.createPatient", "Create patient")}
                 </Button>
@@ -607,6 +609,8 @@ export function AdminOrgPatientsPanel() {
           if (editPatientId) deleteMut.mutate(editPatientId);
         }}
       />
+
+      <ValidationIssuesDialog {...validation.dialogProps} />
     </div>
   );
 }

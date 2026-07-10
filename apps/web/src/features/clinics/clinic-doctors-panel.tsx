@@ -2,12 +2,15 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CreateActionButton } from "@/components/create-action-button";
+import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAvailableClinicPhysiciansQuery, useClinicPhysiciansQuery } from "@/lib/api-hooks";
-import { ApiError, apiDelete, apiPost } from "@/lib/http";
+import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
+import { collectClinicDoctorAssignIssues } from "@/lib/create-form-validation";
+import { apiDelete, apiPost } from "@/lib/http";
 import { useAuthStore } from "@/stores/auth-store";
 
 const MANAGE_ROLES = new Set(["group_admin", "branch_manager", "clinic_admin"]);
@@ -59,7 +62,19 @@ export function ClinicDoctorsPanel({ clinicId }: { clinicId: string }) {
     },
   });
 
-  const [formErr, setFormErr] = useState<string | null>(null);
+  const validation = useValidationIssuesDialog({ intent: "create" });
+
+  const handleAssign = () => {
+    if (addMut.isPending) return;
+    const issues = collectClinicDoctorAssignIssues({ userId: pickUserId }, t);
+    if (issues.length > 0) {
+      validation.showIssues(issues);
+      return;
+    }
+    addMut.mutate(pickUserId, {
+      onError: (e: unknown) => validation.showError(e),
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -92,20 +107,11 @@ export function ClinicDoctorsPanel({ clinicId }: { clinicId: string }) {
                 minSearchLength={0}
                 idleMessage={t("operations.doctorSearchIdle", "Type a name or pick from the list.")}
               />
-              {formErr ? <p className="text-sm text-destructive">{formErr}</p> : null}
+              {validation.formErr ? <p className="text-sm text-destructive">{validation.formErr}</p> : null}
               <CreateActionButton
                 type="button"
-                disabled={!pickUserId || addMut.isPending}
-                onClick={() => {
-                  setFormErr(null);
-                  addMut.mutate(pickUserId, {
-                    onError: (e: unknown) => {
-                      if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
-                        setFormErr(String((e.body as { message?: unknown }).message));
-                      } else setFormErr(e instanceof Error ? e.message : String(e));
-                    },
-                  });
-                }}
+                disabled={addMut.isPending}
+                onClick={handleAssign}
               >
                 {t("clinics.assignDoctorAction", "Assign to clinic")}
               </CreateActionButton>
@@ -165,6 +171,7 @@ export function ClinicDoctorsPanel({ clinicId }: { clinicId: string }) {
           )}
         </CardContent>
       </Card>
+      <ValidationIssuesDialog {...validation.dialogProps} />
     </div>
   );
 }

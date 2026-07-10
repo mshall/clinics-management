@@ -5,12 +5,12 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
+import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import {
   emptyPatientAcquisitionFormValues,
   PatientAcquisitionFields,
   patientAcquisitionFormToBody,
   patientAcquisitionFormValuesFromPatient,
-  validatePatientAcquisitionForm,
   type PatientAcquisitionFormValues,
 } from "@/components/patient-acquisition-fields";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
@@ -45,6 +45,8 @@ import { cn } from "@/lib/utils";
 import { ENCOUNTER_VISIT_TYPES, formatVisitType } from "@/lib/visit-types";
 import { defaultEncounterListRange, defaultMonthRange } from "@/stores/date-range-store";
 import { useAuthStore } from "@/stores/auth-store";
+import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
+import { collectEncounterCreateIssues } from "@/lib/create-form-validation";
 
 export function EncountersListPage() {
   const { t, i18n } = useTranslation();
@@ -154,7 +156,7 @@ export function EncountersListPage() {
   const [createVisitType, setCreateVisitType] = useState<string>(ENCOUNTER_VISIT_TYPES[0] ?? "Office visit");
   const [createVisitFee, setCreateVisitFee] = useState("");
   const [createClinicianId, setCreateClinicianId] = useState("");
-  const [createErr, setCreateErr] = useState<string | null>(null);
+  const validation = useValidationIssuesDialog({ intent: "create" });
   const [createFieldErrors, setCreateFieldErrors] = useState<Set<string>>(() => new Set());
   const [aptPickerSearch, setAptPickerSearch] = useState("");
   const [debouncedAptPicker, setDebouncedAptPicker] = useState("");
@@ -237,7 +239,7 @@ export function EncountersListPage() {
     setCreateVisitType(ENCOUNTER_VISIT_TYPES[0] ?? "Office visit");
     const d = adminOv.data?.currentTenant?.defaultVisitFee;
     setCreateVisitFee(d != null && Number.isFinite(Number(d)) ? String(d) : "");
-    setCreateErr(null);
+    validation.clear();
     setAptPickerSearch("");
     setDebouncedAptPicker("");
     setSelectedAppointmentId("");
@@ -259,18 +261,8 @@ export function EncountersListPage() {
     return errors;
   };
 
-  const createFormIncomplete =
-    patientRegistryTotal === 0 ||
-    !createPatientId.trim() ||
-    !createClinicId.trim() ||
-    !createVisitType.trim() ||
-    (!isPhysician && !createClinicianId.trim());
-
   const createMut = useMutation({
     mutationFn: () => {
-      const acquisitionError = validatePatientAcquisitionForm(acquisitionValues, t);
-      if (acquisitionError) throw new Error(acquisitionError);
-
       const body: Record<string, unknown> = {
         clinicId: createClinicId,
         patientId: createPatientId,
@@ -288,7 +280,7 @@ export function EncountersListPage() {
       return apiPost<EncounterDetailDto>("/api/v1/encounters", body);
     },
     onSuccess: (enc) => {
-      setCreateErr(null);
+      validation.clear();
       setCreateOpen(false);
       void qc.invalidateQueries({ queryKey: ["encounters"] });
       void qc.invalidateQueries({ queryKey: ["patient", enc.patientId] });
@@ -298,9 +290,7 @@ export function EncountersListPage() {
       navigate(`/encounters/${enc.id}`);
     },
     onError: (e: unknown) => {
-      if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
-        setCreateErr(String((e.body as { message?: unknown }).message));
-      } else setCreateErr(e instanceof Error ? e.message : String(e));
+      validation.showError(e);
     },
   });
 
@@ -328,28 +318,28 @@ export function EncountersListPage() {
   const listColSpan = canDelete ? 6 : 5;
 
   const handleCreateEncounter = () => {
-    if (createMut.isPending || patientRegistryTotal === 0) return;
+    if (createMut.isPending) return;
 
-    const fieldErrors = collectCreateFieldErrors();
-    if (fieldErrors.size > 0) {
-      setCreateFieldErrors(fieldErrors);
-      setCreateErr(
-        t(
-          "encounters.errorRequiredFields",
-          "Fill in all required fields highlighted below.",
-        ),
-      );
-      return;
-    }
-
-    const acquisitionError = validatePatientAcquisitionForm(acquisitionValues, t);
-    if (acquisitionError) {
-      setCreateErr(acquisitionError);
+    const issues = collectEncounterCreateIssues(
+      {
+        patientRegistryTotal,
+        patientId: createPatientId,
+        clinicianId: createClinicianId,
+        clinicId: createClinicId,
+        visitType: createVisitType,
+        isPhysician,
+        acquisition: acquisitionValues,
+      },
+      t,
+    );
+    if (issues.length > 0) {
+      setCreateFieldErrors(collectCreateFieldErrors());
+      validation.showIssues(issues);
       return;
     }
 
     setCreateFieldErrors(new Set());
-    setCreateErr(null);
+    validation.clear();
     createMut.mutate();
   };
 
@@ -364,6 +354,7 @@ export function EncountersListPage() {
 
   return (
     <div className="space-y-6">
+      <ValidationIssuesDialog {...validation.dialogProps} />
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("encounters.listTitle")}</h1>
@@ -395,7 +386,7 @@ export function EncountersListPage() {
                 <DialogTitle>{t("encounters.createEncounterTitle", "Create encounter")}</DialogTitle>
               </DialogHeader>
               <div className="grid gap-3 pt-1">
-                {createErr ? <p className="text-sm text-destructive">{createErr}</p> : null}
+                {validation.formErr ? <p className="text-sm text-destructive">{validation.formErr}</p> : null}
                 {patientRegistryTotal === 0 ? (
                   <p className="text-sm text-muted-foreground">{t("encounters.noPatientsRegistered", "Register a patient first.")}</p>
                 ) : null}
@@ -545,9 +536,7 @@ export function EncountersListPage() {
                 />
                 <CreateActionButton
                   type="button"
-                  aria-disabled={createFormIncomplete || createMut.isPending}
-                  className={cn((createFormIncomplete || createMut.isPending) && "opacity-50")}
-                  disabled={createMut.isPending || patientRegistryTotal === 0}
+                  disabled={createMut.isPending}
                   onClick={handleCreateEncounter}
                 >
                   {t("encounters.createAndOpen", "Create & open")}

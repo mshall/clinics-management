@@ -41,10 +41,8 @@ import { formatClinicName, localeForLanguage } from "@/lib/locale-display";
 import { columnFilterIncludes } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { defaultMonthRange } from "@/stores/date-range-store";
-import {
-  collectOperationCreateValidationIssues,
-  errorToValidationIssues,
-} from "@/features/operations/operation-form-validation";
+import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
+import { collectOperationCreateValidationIssues } from "@/features/operations/operation-form-validation";
 
 const CREATE_ROLES = new Set([
   "group_admin",
@@ -125,8 +123,7 @@ export function OperationsPage() {
   const [comments, setComments] = useState("");
   const [formErr, setFormErr] = useState<string | null>(null);
   const [createOk, setCreateOk] = useState<string | null>(null);
-  const [createValidationOpen, setCreateValidationOpen] = useState(false);
-  const [createValidationIssues, setCreateValidationIssues] = useState<string[]>([]);
+  const createValidation = useValidationIssuesDialog({ intent: "create" });
   const [docInvalidRowIds, setDocInvalidRowIds] = useState<Set<string>>(() => new Set());
   const [docRows, setDocRows] = useState<PendingDocumentRow[]>([]);
   const [medTab, setMedTab] = useState<MedTab>("none");
@@ -210,8 +207,7 @@ export function OperationsPage() {
     setComments("");
     setDocRows([]);
     setDocInvalidRowIds(new Set());
-    setCreateValidationOpen(false);
-    setCreateValidationIssues([]);
+    createValidation.clear();
     const medReset = resetMedicationsPrescriptionDraft();
     setMedTab(medReset.medTab);
     setMedications(medReset.medications);
@@ -417,10 +413,8 @@ export function OperationsPage() {
   });
 
   const showCreateValidationIssues = (issues: string[], invalidDocRowIds = new Set<string>()) => {
-    setCreateValidationIssues(issues);
     setDocInvalidRowIds(invalidDocRowIds);
-    setFormErr(issues.join(" "));
-    setCreateValidationOpen(true);
+    createValidation.showIssues(issues);
   };
 
   const createMut = useMutation({
@@ -477,7 +471,7 @@ export function OperationsPage() {
     },
     onError: (e: unknown) => {
       setCreateOk(null);
-      showCreateValidationIssues(errorToValidationIssues(e));
+      createValidation.showError(e);
     },
   });
 
@@ -511,17 +505,7 @@ export function OperationsPage() {
 
   return (
     <div className="space-y-6">
-      <ValidationIssuesDialog
-        open={createValidationOpen}
-        onOpenChange={setCreateValidationOpen}
-        title={t("operations.createValidationTitle", "Cannot save operation yet")}
-        description={t(
-          "operations.createValidationDescription",
-          "Fix the items below, then try saving again.",
-        )}
-        issues={createValidationIssues}
-        dismissLabel={t("common.close", "Close")}
-      />
+      <ValidationIssuesDialog {...createValidation.dialogProps} />
       <Dialog
         open={completeConfirmOp != null}
         onOpenChange={(open) => {

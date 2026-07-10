@@ -3,9 +3,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
+import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
+import { collectOrgSettingsIssues } from "@/lib/create-form-validation";
 import { apiGet, apiPatch } from "@/lib/http";
 import { apiErrorMessage, type TenantDetail } from "@/features/platform/platform-shared";
 
@@ -26,6 +29,7 @@ export function PlatformOrgSettingsPanel({
   const [editLocale, setEditLocale] = useState("en");
   const [editVisitFee, setEditVisitFee] = useState("");
   const [settingsErr, setSettingsErr] = useState<string | null>(null);
+  const validation = useValidationIssuesDialog({ intent: "save" });
 
   const detailQuery = useQuery({
     queryKey: ["platform", "tenant", normalizedTenantId],
@@ -57,16 +61,10 @@ export function PlatformOrgSettingsPanel({
     return body;
   }, [editCurrency, editLocale, editName, editNameAr, editVisitFee]);
 
-  const validationErrors = useMemo(() => {
-    const errors: string[] = [];
-    if (!normalizedTenantId) {
-      errors.push(t("platform.errorOrgNotSelected", "No organization selected."));
-    }
-    if (!editName.trim()) {
-      errors.push(t("platform.errorOrgNameEn", "Organization name (English) is required."));
-    }
-    return errors;
-  }, [editName, normalizedTenantId, t]);
+  const validationErrors = useMemo(
+    () => collectOrgSettingsIssues({ tenantId: normalizedTenantId, nameEn: editName }, t),
+    [editName, normalizedTenantId, t],
+  );
 
   const patchMut = useMutation({
     mutationFn: () =>
@@ -78,19 +76,21 @@ export function PlatformOrgSettingsPanel({
       void qc.invalidateQueries({ queryKey: ["org-hierarchy"] });
       onSaved?.();
     },
-    onError: (e: unknown) => setSettingsErr(apiErrorMessage(e)),
+    onError: (e: unknown) => {
+      setSettingsErr(apiErrorMessage(e));
+      validation.showError(e);
+    },
   });
 
   const handleSave = () => {
     if (patchMut.isPending) return;
-    if (validationErrors.length > 0) {
-      toast.error(t("platform.orgSettingsValidationTitle", "Fix the form before saving organization settings"), {
-        description: validationErrors.join("\n"),
-      });
+    const issues = validationErrors;
+    if (issues.length > 0) {
+      validation.showIssues(issues);
       return;
     }
     if (detailQuery.isError) {
-      toast.error(apiErrorMessage(detailQuery.error));
+      validation.showError(detailQuery.error);
       return;
     }
     patchMut.mutate();
@@ -101,6 +101,7 @@ export function PlatformOrgSettingsPanel({
   }
 
   return (
+    <>
     <div className="rounded-md border border-border p-4">
       <h3 className="mb-3 text-sm font-semibold">{t("platform.orgSettings")}</h3>
       {detailQuery.isPending ? (
@@ -150,5 +151,7 @@ export function PlatformOrgSettingsPanel({
         </div>
       )}
     </div>
+    <ValidationIssuesDialog {...validation.dialogProps} />
+    </>
   );
 }

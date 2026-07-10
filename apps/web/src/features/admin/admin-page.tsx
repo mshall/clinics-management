@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Navigate } from "react-router-dom";
 import type { PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
+import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
+import { collectClinicFormIssues } from "@/lib/create-form-validation";
 import { useAdminOverviewQuery, useClinicQuery, useClinicsQuery, useTenantsQuery } from "@/lib/api-hooks";
 import { ApiError, apiPatch, apiPost } from "@/lib/http";
 import { cn, columnFilterIncludes } from "@/lib/utils";
@@ -24,7 +27,6 @@ import {
   clinicDetailToForm,
   clinicFormToCreatePayload,
   clinicFormToPatchPayload,
-  collectClinicFormErrors,
   emptyClinicForm,
   type ClinicFormValues,
 } from "@/features/clinics/clinic-form-utils";
@@ -61,11 +63,11 @@ export function AdminPage() {
 
   const [selectedClinicId, setSelectedClinicId] = useState<string | null>(null);
   const [editClinicForm, setEditClinicForm] = useState<ClinicFormValues>(emptyClinicForm());
-  const [editClinicErr, setEditClinicErr] = useState<string | null>(null);
   const selectedClinicDetail = useClinicQuery(selectedClinicId ?? undefined);
 
   const [addClinicForm, setAddClinicForm] = useState<ClinicFormValues>(emptyClinicForm());
-  const [clinicErr, setClinicErr] = useState<string | null>(null);
+  const createClinicValidation = useValidationIssuesDialog({ intent: "create" });
+  const patchClinicValidation = useValidationIssuesDialog({ intent: "save" });
 
   const [cfNameEn, setCfNameEn] = useState("");
   const [cfNameAr, setCfNameAr] = useState("");
@@ -126,48 +128,38 @@ export function AdminPage() {
   useEffect(() => {
     if (!selectedClinicId || !selectedClinicDetail.data) return;
     setEditClinicForm(clinicDetailToForm(selectedClinicDetail.data));
-    setEditClinicErr(null);
+    patchClinicValidation.clear();
   }, [selectedClinicId, selectedClinicDetail.data]);
 
   const patchClinicMut = useMutation({
     mutationFn: () =>
       apiPatch(`/api/v1/clinics/${selectedClinicId}`, clinicFormToPatchPayload(editClinicForm)),
     onSuccess: () => {
-      setEditClinicErr(null);
+      patchClinicValidation.clear();
       setSelectedClinicId(null);
       void qc.invalidateQueries({ queryKey: ["clinics"] });
       void qc.invalidateQueries({ queryKey: ["org-hierarchy"] });
     },
-    onError: (e: unknown) => {
-      if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
-        setEditClinicErr(String((e.body as { message?: unknown }).message));
-      } else setEditClinicErr(e instanceof Error ? e.message : String(e));
-    },
+    onError: (e: unknown) => patchClinicValidation.showError(e),
   });
 
   const createClinicMut = useMutation({
     mutationFn: () => apiPost("/api/v1/clinics", clinicFormToCreatePayload(addClinicForm)),
     onSuccess: () => {
-      setClinicErr(null);
+      createClinicValidation.clear();
       resetClinicForm();
       setAddClinicOpen(false);
       void qc.invalidateQueries({ queryKey: ["clinics"] });
       void qc.invalidateQueries({ queryKey: ["org-hierarchy"] });
     },
-    onError: (e: unknown) => {
-      if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
-        setClinicErr(String((e.body as { message?: unknown }).message));
-      } else setClinicErr(e instanceof Error ? e.message : String(e));
-    },
+    onError: (e: unknown) => createClinicValidation.showError(e),
   });
 
   const handleCreateClinic = () => {
     if (createClinicMut.isPending) return;
-    const errors = collectClinicFormErrors(addClinicForm, t);
-    if (errors.length > 0) {
-      toast.error(t("admin.clinicValidationTitle", "Complete the required clinic fields"), {
-        description: errors.join("\n"),
-      });
+    const issues = collectClinicFormIssues(addClinicForm, t);
+    if (issues.length > 0) {
+      createClinicValidation.showIssues(issues);
       return;
     }
     createClinicMut.mutate();
@@ -175,11 +167,9 @@ export function AdminPage() {
 
   const handlePatchClinic = () => {
     if (patchClinicMut.isPending) return;
-    const errors = collectClinicFormErrors(editClinicForm, t);
-    if (errors.length > 0) {
-      toast.error(t("admin.clinicValidationTitle", "Complete the required clinic fields"), {
-        description: errors.join("\n"),
-      });
+    const issues = collectClinicFormIssues(editClinicForm, t);
+    if (issues.length > 0) {
+      patchClinicValidation.showIssues(issues);
       return;
     }
     patchClinicMut.mutate();
@@ -392,7 +382,7 @@ export function AdminPage() {
             onOpenChange={(o) => {
               setAddClinicOpen(o);
               if (!o) {
-                setClinicErr(null);
+                createClinicValidation.clear();
                 resetClinicForm();
               }
             }}
@@ -408,7 +398,9 @@ export function AdminPage() {
                 showStructureEditor
                 parentClinicItems={parentClinicPickItems}
               />
-              {clinicErr ? <p className="text-sm text-destructive">{clinicErr}</p> : null}
+              {createClinicValidation.formErr ? (
+                <p className="text-sm text-destructive">{createClinicValidation.formErr}</p>
+              ) : null}
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <Button type="button" variant="outline" onClick={() => setAddClinicOpen(false)}>
                   {t("common.cancel")}
@@ -555,7 +547,9 @@ export function AdminPage() {
                 currentKind={selectedClinicDetail.data?.kind}
                 branchCount={editBranchCount}
               />
-              {editClinicErr ? <p className="text-sm text-destructive">{editClinicErr}</p> : null}
+              {patchClinicValidation.formErr ? (
+                <p className="text-sm text-destructive">{patchClinicValidation.formErr}</p>
+              ) : null}
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
@@ -669,6 +663,8 @@ export function AdminPage() {
       ) : null}
         </div>
       ) : null}
+      <ValidationIssuesDialog {...createClinicValidation.dialogProps} />
+      <ValidationIssuesDialog {...patchClinicValidation.dialogProps} />
     </div>
   );
 }

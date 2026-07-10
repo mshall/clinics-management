@@ -5,6 +5,7 @@ import {
   PatientAcquisitionFields,
   type PatientAcquisitionFormValues,
 } from "@/components/patient-acquisition-fields";
+import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { PatientPhoneField } from "@/components/patient-phone-field";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,12 +14,12 @@ import { Label } from "@/components/ui/label";
 import type { PatientDto } from "@/lib/api-schema";
 import { useClinicsQuery } from "@/lib/api-hooks";
 import {
-  canSavePatientDemographicsForm,
+  collectPatientDemographicsValidationIssues,
   demographicsFormToPatchBody,
   patientToDemographicsForm,
-  validatePatientDemographicsForm,
   type PatientDemographicsFormValues,
 } from "@/lib/patient-form-utils";
+import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { apiErrorMessage } from "@/features/platform/platform-shared";
 import { apiPatch } from "@/lib/http";
 import {
@@ -41,6 +42,7 @@ export function PatientEditDialog({ patient, open, onOpenChange }: PatientEditDi
   const [formErr, setFormErr] = useState<string | null>(null);
   const [phoneConflict, setPhoneConflict] = useState<PatientPhoneConflictPatient | null>(null);
   const [values, setValues] = useState<PatientDemographicsFormValues>(() => patientToDemographicsForm(patient));
+  const validation = useValidationIssuesDialog({ intent: "save" });
 
   useEffect(() => {
     if (!open) return;
@@ -50,16 +52,11 @@ export function PatientEditDialog({ patient, open, onOpenChange }: PatientEditDi
   }, [open, patient]);
 
   const patchMut = useMutation({
-    mutationFn: () => {
-      const err = validatePatientDemographicsForm(values, t);
-      if (err) throw new Error(err);
-      if (phoneConflict) {
-        throw new Error(phoneConflictMessage(phoneConflict, t, i18n.language));
-      }
-      return apiPatch<PatientDto>(`/api/v1/patients/${patient.id}`, demographicsFormToPatchBody(values));
-    },
+    mutationFn: () =>
+      apiPatch<PatientDto>(`/api/v1/patients/${patient.id}`, demographicsFormToPatchBody(values)),
     onSuccess: () => {
       setFormErr(null);
+      validation.clear();
       onOpenChange(false);
       void qc.invalidateQueries({ queryKey: ["patient", patient.id] });
       void qc.invalidateQueries({ queryKey: ["patients"] });
@@ -74,16 +71,29 @@ export function PatientEditDialog({ patient, open, onOpenChange }: PatientEditDi
         return;
       }
       setFormErr(apiErrorMessage(e));
+      validation.showError(e);
     },
   });
+
+  const handleSave = () => {
+    if (patchMut.isPending) return;
+    const issues = collectPatientDemographicsValidationIssues(values, t);
+    if (phoneConflict) {
+      issues.push(phoneConflictMessage(phoneConflict, t, i18n.language));
+    }
+    if (issues.length > 0) {
+      validation.showIssues(issues);
+      return;
+    }
+    patchMut.mutate();
+  };
 
   const setAcquisition = (acquisition: PatientAcquisitionFormValues) => {
     setValues((prev) => ({ ...prev, acquisition }));
   };
 
-  const canSave = canSavePatientDemographicsForm(values);
-
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto" aria-describedby={undefined}>
         <DialogHeader>
@@ -186,7 +196,7 @@ export function PatientEditDialog({ patient, open, onOpenChange }: PatientEditDi
           </div>
           <PatientAcquisitionFields values={values.acquisition} onChange={setAcquisition} />
           <div className="flex flex-wrap gap-2 pt-2">
-            <Button type="button" disabled={!canSave || Boolean(phoneConflict) || patchMut.isPending} onClick={() => patchMut.mutate()}>
+            <Button type="button" disabled={patchMut.isPending} onClick={handleSave}>
               {t("common.save", "Save")}
             </Button>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
@@ -196,5 +206,7 @@ export function PatientEditDialog({ patient, open, onOpenChange }: PatientEditDi
         </div>
       </DialogContent>
     </Dialog>
+    <ValidationIssuesDialog {...validation.dialogProps} />
+    </>
   );
 }

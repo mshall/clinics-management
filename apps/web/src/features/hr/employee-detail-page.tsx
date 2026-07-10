@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
+import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { EmployeeDeleteConfirmDialog } from "@/features/hr/employee-delete-confirm-dialog";
+import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
+import { collectEmployeeCreateIssues } from "@/lib/create-form-validation";
 import { useClinicsQuery, useEmployeeQuery } from "@/lib/api-hooks";
 import type { EmployeeDto } from "@/lib/api-types";
 import { canManageEmployees } from "@/lib/employee-manage-policy";
@@ -45,6 +48,7 @@ export function EmployeeDetailPage() {
   const [salaryBase, setSalaryBase] = useState("");
   const [idDocFile, setIdDocFile] = useState<File | null>(null);
   const [formErr, setFormErr] = useState<string | null>(null);
+  const validation = useValidationIssuesDialog({ intent: "save" });
 
   useEffect(() => {
     if (!emp) return;
@@ -109,7 +113,7 @@ export function EmployeeDetailPage() {
             ? e.message
             : String(e);
       setFormErr(msg);
-      toast.error(msg);
+      validation.showError(e);
     },
   });
 
@@ -131,6 +135,19 @@ export function EmployeeDetailPage() {
       toast.error(msg);
     },
   });
+
+  const handleSaveEmployee = () => {
+    if (saveMut.isPending) return;
+    const issues = collectEmployeeCreateIssues(
+      { clinicId, firstName, lastName, phone, salary: salaryBase },
+      t,
+    );
+    if (issues.length > 0) {
+      validation.showIssues(issues);
+      return;
+    }
+    saveMut.mutate();
+  };
 
   if (isPending) {
     return <p className="text-muted-foreground">{t("common.loading")}</p>;
@@ -281,14 +298,8 @@ export function EmployeeDetailPage() {
               <div className="flex flex-wrap gap-2 sm:col-span-2">
                 <Button
                   type="button"
-                  disabled={
-                    !clinicId ||
-                    !firstName.trim() ||
-                    !lastName.trim() ||
-                    phone.replace(/\D/g, "").length < 8 ||
-                    saveMut.isPending
-                  }
-                  onClick={() => saveMut.mutate()}
+                  disabled={saveMut.isPending}
+                  onClick={handleSaveEmployee}
                 >
                   {t("common.save", "Save")}
                 </Button>
@@ -338,6 +349,7 @@ export function EmployeeDetailPage() {
           )}
         </CardContent>
       </Card>
+      <ValidationIssuesDialog {...validation.dialogProps} />
     </div>
   );
 }

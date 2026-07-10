@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CreateActionButton } from "@/components/create-action-button";
+import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
@@ -12,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useClinicsQuery, useClinicRevenueBreakdownQuery, usePayableOperationsQuery, useRevenueQuery, useRevenueTotalsQuery } from "@/lib/api-hooks";
 import type { RevenueEntryDto } from "@/lib/api-types";
-import { ApiError, apiPost } from "@/lib/http";
+import { apiPost } from "@/lib/http";
 import { columnFilterIncludes } from "@/lib/utils";
 import {
   formatClinicName,
@@ -24,6 +25,8 @@ import {
 } from "@/lib/locale-display";
 import { useDateRangeStore } from "@/stores/date-range-store";
 import { useAuthStore } from "@/stores/auth-store";
+import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
+import { collectRevenueSubmitIssues } from "@/lib/create-form-validation";
 
 function clinicDisplayName(r: RevenueEntryDto, lng: string): string {
   return formatClinicNameFields(r.clinicNameEn, r.clinicNameAr, lng, r.clinicId);
@@ -78,7 +81,7 @@ export function RevenuePage() {
   const [operationId, setOperationId] = useState("");
   const [gross, setGross] = useState("");
   const [vatPercent, setVatPercent] = useState("");
-  const [formErr, setFormErr] = useState<string | null>(null);
+  const validation = useValidationIssuesDialog({ intent: "submit" });
   const [rfCategory, setRfCategory] = useState("");
   const [rfNet, setRfNet] = useState("");
   const [rfPosted, setRfPosted] = useState("");
@@ -118,7 +121,7 @@ export function RevenuePage() {
       return apiPost<unknown>("/api/v1/revenue", payload);
     },
     onSuccess: () => {
-      setFormErr(null);
+      validation.clear();
       void qc.invalidateQueries({ queryKey: ["revenue"] });
       void qc.invalidateQueries({ queryKey: ["operations"] });
       void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
@@ -127,11 +130,27 @@ export function RevenuePage() {
       setOperationId("");
     },
     onError: (e: unknown) => {
-      if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
-        setFormErr(String((e.body as { message?: unknown }).message));
-      } else setFormErr(e instanceof Error ? e.message : String(e));
+      validation.showError(e);
     },
   });
+
+  const handleSubmitRevenue = () => {
+    const issues = collectRevenueSubmitIssues(
+      {
+        clinicId,
+        operationId,
+        operationClinicId: selectedOperation?.clinicId,
+        gross,
+        paymentExceedsBalance,
+      },
+      t,
+    );
+    if (issues.length > 0) {
+      validation.showIssues(issues);
+      return;
+    }
+    createMut.mutate();
+  };
 
   const money = (n: number) =>
     new Intl.NumberFormat(localeForLanguage(i18n.language), { style: "currency", currency: "AED" }).format(n);
@@ -168,6 +187,7 @@ export function RevenuePage() {
 
   return (
     <div className="space-y-6">
+      <ValidationIssuesDialog {...validation.dialogProps} />
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("revenue.title")}</h1>
         <p className="text-muted-foreground">{t("revenue.subtitle")}</p>
@@ -419,23 +439,13 @@ export function RevenuePage() {
           <div className="flex items-end">
             <CreateActionButton
               type="button"
-              disabled={
-                !(operationId ? selectedOperation?.clinicId : clinicId) ||
-                !gross ||
-                createMut.isPending ||
-                paymentExceedsBalance
-              }
-              onClick={() => createMut.mutate()}
+              disabled={createMut.isPending}
+              onClick={handleSubmitRevenue}
             >
               {t("revenue.submit")}
             </CreateActionButton>
           </div>
-          {paymentExceedsBalance ? (
-            <p className="text-sm text-destructive sm:col-span-full">
-              {t("revenue.operationBalanceHint", { amount: money(operationBalance), defaultValue: "Remaining balance: {{amount}}" })}
-            </p>
-          ) : null}
-          {formErr ? <p className="text-sm text-destructive sm:col-span-full">{formErr}</p> : null}
+          {validation.formErr ? <p className="text-sm text-destructive sm:col-span-full">{validation.formErr}</p> : null}
         </CardContent>
       </Card>
 

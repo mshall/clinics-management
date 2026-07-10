@@ -7,6 +7,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PatientEditDialog } from "@/components/patient-edit-dialog";
+import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { PatientClinicalDocuments } from "@/components/patient-clinical-documents";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,8 @@ import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { useClinicsQuery, useEncountersQuery, usePatientQuery } from "@/lib/api-hooks";
 import type { EncounterDetailDto } from "@/lib/api-types";
+import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
+import { collectQuickEncounterIssues } from "@/lib/create-form-validation";
 import { apiFetchBlob, apiPost } from "@/lib/http";
 import { enhanceImageFile } from "@/lib/enhance-image";
 import { formatEncounterStatus, calculateAgeFromDob, formatPatientDob, localeForLanguage } from "@/lib/locale-display";
@@ -80,6 +83,7 @@ export function PatientDetailPage() {
   const { data: clinics = [] } = useClinicsQuery();
 
   const defaultClinicId = patient?.homeBranchId ?? clinics[0]?.id ?? "";
+  const encounterValidation = useValidationIssuesDialog({ intent: "create" });
 
   const createEncounter = useMutation({
     mutationFn: () =>
@@ -97,10 +101,18 @@ export function PatientDetailPage() {
       void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
       navigate(`/encounters/${enc.id}`);
     },
-    onError: (e: unknown) => {
-      console.error(e);
-    },
+    onError: (e: unknown) => encounterValidation.showError(e),
   });
+
+  const handleCreateEncounter = () => {
+    if (createEncounter.isPending) return;
+    const issues = collectQuickEncounterIssues({ clinicId: defaultClinicId }, t);
+    if (issues.length > 0) {
+      encounterValidation.showIssues(issues);
+      return;
+    }
+    createEncounter.mutate();
+  };
 
   useEffect(() => {
     if (!avatarKey) return;
@@ -196,8 +208,8 @@ export function PatientDetailPage() {
               {canViewEncounters ? (
                 <Button
                   type="button"
-                  disabled={!defaultClinicId || createEncounter.isPending}
-                  onClick={() => createEncounter.mutate()}
+                  disabled={createEncounter.isPending}
+                  onClick={handleCreateEncounter}
                 >
                   {t("patients.newEncounter")}
                 </Button>
@@ -412,6 +424,7 @@ export function PatientDetailPage() {
       {canEditPatient ? (
         <PatientEditDialog patient={patient} open={editOpen} onOpenChange={setEditOpen} />
       ) : null}
+      <ValidationIssuesDialog {...encounterValidation.dialogProps} />
     </div>
   );
 }

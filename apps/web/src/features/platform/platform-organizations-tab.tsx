@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
+import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { PasswordInput } from "@/components/password-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,8 +15,8 @@ import { clinicFormToCreatePayload, emptyClinicForm, hasPartialClinicForm, isCli
 import { PlatformOrgSettingsPanel } from "@/features/platform/platform-org-settings-panel";
 import { apiErrorMessage, type TenantRow } from "@/features/platform/platform-shared";
 import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel";
+import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { apiGet, apiPost } from "@/lib/http";
-import { cn } from "@/lib/utils";
 import type { Paginated } from "@/lib/paginated";
 
 type DialogMode = null | "create" | { edit: string };
@@ -37,6 +37,7 @@ export function PlatformOrganizationsTab() {
   const [hqForm, setHqForm] = useState<ClinicFormValues>(emptyClinicForm());
   const [createOrgWithHq, setCreateOrgWithHq] = useState(false);
   const [tenantErr, setTenantErr] = useState<string | null>(null);
+  const validation = useValidationIssuesDialog({ intent: "create" });
 
   const tenantsQuery = useQuery({
     queryKey: ["platform", "tenants"],
@@ -88,7 +89,10 @@ export function PlatformOrganizationsTab() {
       void qc.invalidateQueries({ queryKey: ["platform"] });
       void qc.invalidateQueries({ queryKey: ["org-hierarchy"] });
     },
-    onError: (e: unknown) => setTenantErr(apiErrorMessage(e)),
+    onError: (e: unknown) => {
+      setTenantErr(apiErrorMessage(e));
+      validation.showError(e);
+    },
   });
 
   const passwordTooShort = gaPassword.length > 0 && gaPassword.length < 8;
@@ -124,16 +128,11 @@ export function PlatformOrganizationsTab() {
     return errors;
   }, [gaEmail, gaName, gaPassword, partialClinic, t, tenantName, tenantNameAr]);
 
-  const canCreateOrg = collectCreateOrgErrors().length === 0;
-
   const handleCreateOrg = () => {
     if (createTenantMut.isPending) return;
-    const errors = collectCreateOrgErrors();
-    if (errors.length > 0) {
-      toast.error(t("platform.createOrgValidationTitle", "Complete the form to create the organization"), {
-        description: errors.join("\n"),
-        duration: 8000,
-      });
+    const issues = collectCreateOrgErrors();
+    if (issues.length > 0) {
+      validation.showIssues(issues);
       return;
     }
     createTenantMut.mutate();
@@ -269,7 +268,6 @@ export function PlatformOrganizationsTab() {
               <Button
                 type="button"
                 disabled={createTenantMut.isPending}
-                className={cn(!canCreateOrg && !createTenantMut.isPending && "opacity-60")}
                 onClick={handleCreateOrg}
               >
                 {t("platform.createOrgBtn")}
@@ -287,6 +285,8 @@ export function PlatformOrganizationsTab() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ValidationIssuesDialog {...validation.dialogProps} />
 
       <Dialog open={Boolean(editTenantId)} onOpenChange={(open) => !open && closeDialog()}>
         <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto" aria-describedby={undefined}>

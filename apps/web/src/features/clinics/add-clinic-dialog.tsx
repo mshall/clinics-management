@@ -1,15 +1,17 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import type { PickListItem } from "@/components/searchable-pick-list";
+import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { useClinicsQuery } from "@/lib/api-hooks";
-import { ApiError, apiPost } from "@/lib/http";
+import { collectClinicFormIssues } from "@/lib/create-form-validation";
+import { apiPost } from "@/lib/http";
 import { formatClinicName } from "@/lib/locale-display";
 import { ClinicFormFields } from "./clinic-form-fields";
-import { clinicFormToCreatePayload, collectClinicFormErrors, emptyClinicForm } from "./clinic-form-utils";
+import { clinicFormToCreatePayload, emptyClinicForm } from "./clinic-form-utils";
 import { isRootClinic } from "@/lib/clinic-kind";
 
 type AddClinicDialogProps = {
@@ -23,7 +25,7 @@ export function AddClinicDialog({ open, onOpenChange }: AddClinicDialogProps) {
   const { data: clinics = [] } = useClinicsQuery();
 
   const [form, setForm] = useState(emptyClinicForm());
-  const [clinicErr, setClinicErr] = useState<string | null>(null);
+  const validation = useValidationIssuesDialog({ intent: "create" });
 
   const parentClinicPickItems: PickListItem[] = useMemo(
     () =>
@@ -31,42 +33,35 @@ export function AddClinicDialog({ open, onOpenChange }: AddClinicDialogProps) {
     [clinics, i18n.language],
   );
 
-  const collectErrors = useCallback(() => collectClinicFormErrors(form, t), [form, t]);
-
   const createClinicMut = useMutation({
     mutationFn: () => apiPost("/api/v1/clinics", clinicFormToCreatePayload(form)),
     onSuccess: () => {
-      setClinicErr(null);
+      validation.clear();
       void qc.invalidateQueries({ queryKey: ["clinics"] });
       setForm(emptyClinicForm());
       onOpenChange(false);
     },
-    onError: (e: unknown) => {
-      if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
-        setClinicErr(String((e.body as { message?: unknown }).message));
-      } else setClinicErr(e instanceof Error ? e.message : String(e));
-    },
+    onError: (e: unknown) => validation.showError(e),
   });
 
   const handleSave = () => {
     if (createClinicMut.isPending) return;
-    const errors = collectErrors();
-    if (errors.length > 0) {
-      toast.error(t("admin.clinicValidationTitle", "Complete the required clinic fields"), {
-        description: errors.join("\n"),
-      });
+    const issues = collectClinicFormIssues(form, t);
+    if (issues.length > 0) {
+      validation.showIssues(issues);
       return;
     }
     createClinicMut.mutate();
   };
 
   return (
+    <>
     <Dialog
       open={open}
       onOpenChange={(o) => {
         onOpenChange(o);
         if (!o) {
-          setClinicErr(null);
+          validation.clear();
           setForm(emptyClinicForm());
         }
       }}
@@ -82,7 +77,7 @@ export function AddClinicDialog({ open, onOpenChange }: AddClinicDialogProps) {
           showParentPicker
           parentClinicItems={parentClinicPickItems}
         />
-        {clinicErr ? <p className="text-sm text-destructive">{clinicErr}</p> : null}
+        {validation.formErr ? <p className="text-sm text-destructive">{validation.formErr}</p> : null}
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             {t("common.cancel", "Cancel")}
@@ -93,5 +88,7 @@ export function AddClinicDialog({ open, onOpenChange }: AddClinicDialogProps) {
         </div>
       </DialogContent>
     </Dialog>
+    <ValidationIssuesDialog {...validation.dialogProps} />
+    </>
   );
 }

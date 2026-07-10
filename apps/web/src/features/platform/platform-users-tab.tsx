@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PasswordInput } from "@/components/password-input";
+import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,11 +14,11 @@ import { formatUserRole } from "@/lib/locale-display";
 import type { Paginated } from "@/lib/paginated";
 import { apiErrorMessage, isClinicRequiredUserRole, isOrgWideUserRole, ORG_USER_ROLES, type PlatformUserRow, type TenantRow } from "@/features/platform/platform-shared";
 import {
-  getOrgUserCreateMissingLabels,
-  orgUserCreateFormReady,
   ORG_USER_PASSWORD_MIN_LENGTH,
 } from "@/features/platform/org-user-form-validation";
 import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel";
+import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
+import { collectOrgUserCreateIssues } from "@/lib/create-form-validation";
 
 type UserDetail = PlatformUserRow;
 type DialogMode = null | "create" | { edit: { userId: string; tenantId: string } };
@@ -36,6 +37,7 @@ export function PlatformUsersTab() {
   const [uRole, setURole] = useState<(typeof ORG_USER_ROLES)[number]>("CLINIC_ADMIN");
   const [uClinicIds, setUClinicIds] = useState<string[]>([]);
   const [userErr, setUserErr] = useState<string | null>(null);
+  const createValidation = useValidationIssuesDialog({ intent: "create" });
 
   const editSelection = dialogMode && typeof dialogMode === "object" ? dialogMode.edit : null;
   const isCreate = dialogMode === "create";
@@ -126,7 +128,10 @@ export function PlatformUsersTab() {
       void qc.invalidateQueries({ queryKey: ["platform"] });
       void qc.invalidateQueries({ queryKey: ["org-hierarchy"] });
     },
-    onError: (e: unknown) => setUserErr(apiErrorMessage(e)),
+    onError: (e: unknown) => {
+      setUserErr(apiErrorMessage(e));
+      createValidation.showError(e);
+    },
   });
 
   const patchMut = useMutation({
@@ -163,11 +168,24 @@ export function PlatformUsersTab() {
     clinicIds: uClinicIds,
     tenantId: uTenantId,
   };
-  const canSaveCreate = orgUserCreateFormReady(createFormValues, { requireTenant: true });
-  const createMissingLabels = isCreate ? getOrgUserCreateMissingLabels(createFormValues, t, { requireTenant: true }) : [];
   const passwordTooShort = isCreate && uPassword.length > 0 && uPassword.length < ORG_USER_PASSWORD_MIN_LENGTH;
   const canSaveEdit =
     Boolean(uEmail.trim()) && Boolean(uName.trim()) && (!requiresClinicAssignment || uClinicIds.length > 0);
+
+  const handleCreateUser = () => {
+    if (createMut.isPending) return;
+    const issues = collectOrgUserCreateIssues(createFormValues, t, { requireTenant: true });
+    if (issues.length > 0) {
+      createValidation.showIssues(issues);
+      return;
+    }
+    createMut.mutate();
+  };
+
+  const handleSaveUser = () => {
+    if (patchMut.isPending) return;
+    patchMut.mutate();
+  };
 
   const clinicLabel = useMemo(
     () => (row: PlatformUserRow) => (row.clinics.length ? row.clinics.map((c) => c.nameEn).join(", ") : "—"),
@@ -371,18 +389,11 @@ export function PlatformUsersTab() {
               <div className="md:col-span-2 flex flex-wrap gap-2 pt-2">
                 <Button
                   type="button"
-                  disabled={isCreate ? !canSaveCreate || createMut.isPending : !canSaveEdit || patchMut.isPending}
-                  onClick={() => (isCreate ? createMut.mutate() : patchMut.mutate())}
+                  disabled={isCreate ? createMut.isPending : !canSaveEdit || patchMut.isPending}
+                  onClick={() => (isCreate ? handleCreateUser() : handleSaveUser())}
                 >
                   {isEdit ? t("platform.saveUser") : t("platform.createUserBtn")}
                 </Button>
-                {isCreate && !canSaveCreate && createMissingLabels.length > 0 ? (
-                  <p className="w-full text-xs text-muted-foreground">
-                    {t("admin.orgUserCreateMissingHint", "Complete the required fields to enable Create user: {{fields}}.", {
-                      fields: createMissingLabels.join(", "),
-                    })}
-                  </p>
-                ) : null}
                 <Button type="button" variant="outline" onClick={closeDialog}>
                   {t("common.cancel")}
                 </Button>
@@ -392,6 +403,7 @@ export function PlatformUsersTab() {
           )}
         </DialogContent>
       </Dialog>
+      <ValidationIssuesDialog {...createValidation.dialogProps} />
     </div>
   );
 }

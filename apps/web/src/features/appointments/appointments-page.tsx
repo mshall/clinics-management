@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
+import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { AppointmentDeleteConfirmDialog, type AppointmentDeleteTarget } from "@/features/appointments/appointment-delete-confirm-dialog";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
@@ -23,6 +24,8 @@ import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-di
 import { formatClinicName, formatClinicNameFields, formatUserRole, localeForLanguage } from "@/lib/locale-display";
 import { columnFilterIncludes } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
+import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
+import { collectAppointmentCreateIssues } from "@/lib/create-form-validation";
 
 function toAppointmentIso(localDatetime: string): string {
   const d = new Date(localDatetime);
@@ -137,7 +140,7 @@ export function AppointmentsPage() {
   }, [authUser?.role, authUser?.id]);
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
-  const [formErr, setFormErr] = useState<string | null>(null);
+  const validation = useValidationIssuesDialog({ intent: "create" });
   const [bookOk, setBookOk] = useState<string | null>(null);
   const [appointmentToDelete, setAppointmentToDelete] = useState<AppointmentDeleteTarget | null>(null);
 
@@ -183,13 +186,23 @@ export function AppointmentsPage() {
     [physicians, t],
   );
 
+  const handleCreateAppointment = () => {
+    const issues = collectAppointmentCreateIssues({ clinicId, patientId, clinicianId, start, end }, t);
+    if (issues.length > 0) {
+      validation.showIssues(issues);
+      return;
+    }
+    validation.clear();
+    setBookOk(null);
+    createMut.mutate();
+  };
+
   const createMut = useMutation({
     mutationFn: () => {
-      if (!clinicId || !patientId || !clinicianId) throw new Error("Select clinic, patient, and clinician.");
-      if (!start?.trim() || !end?.trim()) throw new Error("Start and end date/time are required.");
+      const issues = collectAppointmentCreateIssues({ clinicId, patientId, clinicianId, start, end }, t);
+      if (issues.length > 0) throw new Error(issues.join(" "));
       const startsAt = toAppointmentIso(start);
       const endsAt = toAppointmentIso(end);
-      if (new Date(endsAt) <= new Date(startsAt)) throw new Error("End must be after start.");
       return apiPost("/api/v1/appointments", {
         clinicId,
         patientId,
@@ -199,7 +212,7 @@ export function AppointmentsPage() {
       });
     },
     onSuccess: () => {
-      setFormErr(null);
+      validation.clear();
       const message = t("appointments.bookedOk", "Appointment created.");
       setBookOk(message);
       toast.success(message);
@@ -214,9 +227,7 @@ export function AppointmentsPage() {
     },
     onError: (e: unknown) => {
       setBookOk(null);
-      if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
-        setFormErr(String((e.body as { message?: unknown }).message));
-      } else setFormErr(e instanceof Error ? e.message : String(e));
+      validation.showError(e);
     },
   });
 
@@ -243,6 +254,7 @@ export function AppointmentsPage() {
 
   return (
     <div className="space-y-6">
+      <ValidationIssuesDialog {...validation.dialogProps} />
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
           {isPhysician ? t("appointments.myTitle", "My appointments") : t("appointments.title")}
@@ -384,7 +396,7 @@ export function AppointmentsPage() {
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             {bookOk ? <p className="text-sm text-emerald-600 sm:col-span-full dark:text-emerald-400">{bookOk}</p> : null}
-            {formErr ? <p className="text-sm text-destructive sm:col-span-full">{formErr}</p> : null}
+            {validation.formErr ? <p className="text-sm text-destructive sm:col-span-full">{validation.formErr}</p> : null}
             <div className="space-y-2 sm:col-span-2">
               <Label required>{t("appointments.clinic")}</Label>
               <SearchablePickList
@@ -440,12 +452,8 @@ export function AppointmentsPage() {
             <div className="flex flex-wrap items-end gap-2 sm:col-span-2">
               <CreateActionButton
                 type="button"
-                disabled={!clinicId || !patientId || !clinicianId || !start || !end || createMut.isPending}
-                onClick={() => {
-                  setFormErr(null);
-                  setBookOk(null);
-                  createMut.mutate();
-                }}
+                disabled={createMut.isPending}
+                onClick={handleCreateAppointment}
               >
                 {t("appointments.create")}
               </CreateActionButton>

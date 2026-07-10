@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CreateActionButton } from "@/components/create-action-button";
+import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,8 +10,10 @@ import { Label } from "@/components/ui/label";
 import { useClinicsQuery } from "@/lib/api-hooks";
 import { useAuthStore } from "@/stores/auth-store";
 import type { EmployeeDto } from "@/lib/api-types";
-import { ApiError, apiPost, apiPostFormData } from "@/lib/http";
+import { apiPost, apiPostFormData } from "@/lib/http";
 import { formatClinicName, formatEmploymentType } from "@/lib/locale-display";
+import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
+import { collectEmployeeCreateIssues } from "@/lib/create-form-validation";
 
 const EMP_TYPE_VALUES = ["FULL_TIME", "PART_TIME", "CONTRACTOR", "LOCUM"] as const;
 
@@ -40,7 +43,7 @@ export function AdminCreateEmployeePanel() {
   const [empTitle, setEmpTitle] = useState("Staff");
   const [empType, setEmpType] = useState("FULL_TIME");
   const [empSalary, setEmpSalary] = useState("9000");
-  const [formErr, setFormErr] = useState<string | null>(null);
+  const validation = useValidationIssuesDialog({ intent: "create" });
   const [empIdDocFile, setEmpIdDocFile] = useState<File | null>(null);
 
   const createEmp = useMutation({
@@ -64,7 +67,7 @@ export function AdminCreateEmployeePanel() {
       return emp;
     },
     onSuccess: () => {
-      setFormErr(null);
+      validation.clear();
       setEmpIdDocFile(null);
       setEmpFn("");
       setEmpLn("");
@@ -74,14 +77,26 @@ export function AdminCreateEmployeePanel() {
       void qc.invalidateQueries({ queryKey: ["hr"] });
     },
     onError: (e: unknown) => {
-      if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
-        setFormErr(String((e.body as { message?: unknown }).message));
-      } else setFormErr(e instanceof Error ? e.message : String(e));
+      validation.showError(e);
     },
   });
 
+  const handleCreateEmployee = () => {
+    const issues = collectEmployeeCreateIssues(
+      { clinicId: empClinic, firstName: empFn, lastName: empLn, phone: empPhone, salary: empSalary },
+      t,
+    );
+    if (issues.length > 0) {
+      validation.showIssues(issues);
+      return;
+    }
+    createEmp.mutate();
+  };
+
   return (
-    <Card>
+    <>
+      <ValidationIssuesDialog {...validation.dialogProps} />
+      <Card>
       <CardHeader>
         <CardTitle className="text-base">{t("admin.createEmployee", "Create employee")}</CardTitle>
         <CardDescription>
@@ -93,7 +108,7 @@ export function AdminCreateEmployeePanel() {
       </CardHeader>
       <CardContent>
         <div className="grid gap-3 sm:grid-cols-2">
-          {formErr ? <p className="text-sm text-destructive sm:col-span-full">{formErr}</p> : null}
+          {validation.formErr ? <p className="text-sm text-destructive sm:col-span-full">{validation.formErr}</p> : null}
           <div className="space-y-2 sm:col-span-2">
             <Label required>{t("hr.clinic")}</Label>
             {singleManagedClinic ? (
@@ -165,8 +180,8 @@ export function AdminCreateEmployeePanel() {
           <div className="flex items-end sm:col-span-2">
             <CreateActionButton
               type="button"
-              disabled={!empClinic || !empFn || !empLn || empPhone.replace(/\D/g, "").length < 8 || createEmp.isPending}
-              onClick={() => createEmp.mutate()}
+              disabled={createEmp.isPending}
+              onClick={handleCreateEmployee}
             >
               {t("hr.saveEmployee")}
             </CreateActionButton>
@@ -174,5 +189,6 @@ export function AdminCreateEmployeePanel() {
         </div>
       </CardContent>
     </Card>
+    </>
   );
 }

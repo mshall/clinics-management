@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
+import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { PatientEditDialog } from "@/components/patient-edit-dialog";
 import { PatientPhoneField } from "@/components/patient-phone-field";
@@ -27,9 +28,7 @@ import { canManagePatientsInList } from "@/lib/patient-edit-policy";
 import { apiErrorMessage } from "@/features/platform/platform-shared";
 import {
   PendingDocumentAttachments,
-  collectPendingDocumentFieldErrors,
   pendingDocumentDescription,
-  pendingDocumentValidationMessage,
   type PendingDocumentRow,
 } from "@/components/pending-document-attachments";
 import {
@@ -42,6 +41,8 @@ import {
   phoneConflictMessage,
   type PatientPhoneConflictPatient,
 } from "@/lib/patient-phone-conflict";
+import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
+import { collectPatientRegisterValidationIssues } from "@/lib/create-form-validation";
 
 export function PatientsPage() {
   const { t, i18n } = useTranslation();
@@ -115,7 +116,6 @@ export function PatientsPage() {
   const singleManagedClinic = clinics.length === 1 ? clinics[0]! : null;
   const defaultHomeBranchId = singleManagedClinic?.id ?? clinics[0]?.id ?? "";
   const [open, setOpen] = useState(false);
-  const [formErr, setFormErr] = useState<string | null>(null);
   const [firstNameEn, setFirstNameEn] = useState("");
   const [lastNameEn, setLastNameEn] = useState("");
   const [firstNameAr, setFirstNameAr] = useState("");
@@ -134,6 +134,7 @@ export function PatientsPage() {
   const [acquisitionOtherDetail, setAcquisitionOtherDetail] = useState("");
   const [docInvalidRowIds, setDocInvalidRowIds] = useState<Set<string>>(() => new Set());
   const formErrRef = useRef<HTMLParagraphElement>(null);
+  const validation = useValidationIssuesDialog({ intent: "create" });
 
   const resetForm = () => {
     setFirstNameEn("");
@@ -161,53 +162,73 @@ export function PatientsPage() {
     }
   }, [open, defaultHomeBranchId]);
 
-  const validateForm = (): string | null => {
-    if (!firstNameAr.trim()) {
-      return t("patients.errorFirstNameAr", "Arabic first name is required.");
-    }
-    if (!lastNameAr.trim()) {
-      return t("patients.errorLastNameAr", "Arabic last name is required.");
-    }
-    const docValidation = collectPendingDocumentFieldErrors(docRows);
-    setDocInvalidRowIds(docValidation.invalidRowIds);
-    const docMsg = pendingDocumentValidationMessage(docValidation.code, t);
-    if (docMsg) return docMsg;
-    if (acquisitionChannel === "DOCTOR_REFERRAL" && !acquisitionReferralName.trim()) {
-      return t("patients.errorExplainMoreRequired", "Explain more is required.");
-    }
-    if (acquisitionChannel === "OTHER" && !acquisitionOtherDetail.trim()) {
-      return t("patients.errorExplainMoreRequired", "Explain more is required.");
-    }
-    return null;
-  };
-
-  const showFormError = (message: string) => {
-    setFormErr(message);
-    toast.error(message);
+  const showFormError = (issues: string[], invalidDocRowIds = new Set<string>()) => {
+    setDocInvalidRowIds(invalidDocRowIds);
+    validation.showIssues(issues);
     window.requestAnimationFrame(() => {
       formErrRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     });
   };
 
   const handleSubmitRegister = () => {
-    const validationError = validateForm();
-    if (validationError) {
-      showFormError(validationError);
+    const result = collectPatientRegisterValidationIssues(
+      {
+        firstNameEn,
+        lastNameEn,
+        firstNameAr,
+        lastNameAr,
+        dob,
+        gender,
+        phone,
+        email,
+        nationalId,
+        homeBranchId,
+        acquisition: {
+          channel: acquisitionChannel,
+          referralName: acquisitionReferralName,
+          otherDetail: acquisitionOtherDetail,
+        },
+        docRows,
+      },
+      t,
+    );
+    if (result.issues.length > 0) {
+      showFormError(result.issues, result.invalidDocRowIds);
       return;
     }
     if (phoneConflict) {
-      showFormError(phoneConflictMessage(phoneConflict, t, i18n.language));
+      showFormError([phoneConflictMessage(phoneConflict, t, i18n.language)]);
       return;
     }
     setDocInvalidRowIds(new Set());
-    setFormErr(null);
+    validation.clear();
     createMut.mutate();
   };
 
   const createMut = useMutation({
     mutationFn: async () => {
-      const validationError = validateForm();
-      if (validationError) throw new Error(validationError);
+      const result = collectPatientRegisterValidationIssues(
+        {
+          firstNameEn,
+          lastNameEn,
+          firstNameAr,
+          lastNameAr,
+          dob,
+          gender,
+          phone,
+          email,
+          nationalId,
+          homeBranchId,
+          acquisition: {
+            channel: acquisitionChannel,
+            referralName: acquisitionReferralName,
+            otherDetail: acquisitionOtherDetail,
+          },
+          docRows,
+        },
+        t,
+      );
+      if (result.issues.length > 0) throw new Error(result.issues.join(" "));
 
       const body: Record<string, string | undefined> = {
         firstNameEn,
@@ -253,7 +274,7 @@ export function PatientsPage() {
       return patient;
     },
     onSuccess: async () => {
-      setFormErr(null);
+      validation.clear();
       setDocInvalidRowIds(new Set());
       setOpen(false);
       resetForm();
@@ -288,10 +309,10 @@ export function PatientsPage() {
       const conflict = parsePhoneConflictFromError(e);
       if (conflict) {
         setPhoneConflict(conflict);
-        showFormError(phoneConflictMessage(conflict, t, i18n.language));
+        showFormError([phoneConflictMessage(conflict, t, i18n.language)]);
         return;
       }
-      showFormError(apiErrorMessage(e));
+      showFormError([apiErrorMessage(e)]);
     },
   });
 
@@ -325,6 +346,7 @@ export function PatientsPage() {
 
   return (
     <div className="space-y-6">
+      <ValidationIssuesDialog {...validation.dialogProps} />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("patients.title")}</h1>
@@ -339,9 +361,9 @@ export function PatientsPage() {
               <DialogTitle>{t("patients.registerTitle")}</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col gap-3 pt-1">
-              {formErr ? (
+              {validation.formErr ? (
                 <p ref={formErrRef} className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                  {formErr}
+                  {validation.formErr}
                 </p>
               ) : null}
               <div className="space-y-2">
@@ -490,24 +512,16 @@ export function PatientsPage() {
                 </div>
               ) : null}
 
-              {formErr ? (
+              {validation.formErr ? (
                 <p className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                  {formErr}
+                  {validation.formErr}
                 </p>
               ) : null}
 
               <CreateActionButton
                 type="button"
                 className="mt-2"
-                disabled={
-                  !firstNameEn ||
-                  !lastNameEn ||
-                  !firstNameAr.trim() ||
-                  !lastNameAr.trim() ||
-                  !phone ||
-                  Boolean(phoneConflict) ||
-                  createMut.isPending
-                }
+                disabled={createMut.isPending}
                 onClick={handleSubmitRegister}
               >
                 {t("patients.submitRegister")}

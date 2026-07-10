@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import type { PickListItem } from "@/components/searchable-pick-list";
+import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,13 +14,14 @@ import {
   clinicDetailToForm,
   clinicFormToCreatePayload,
   clinicFormToPatchPayload,
-  collectClinicFormErrors,
   emptyClinicForm,
   type ClinicFormValues,
 } from "@/features/clinics/clinic-form-utils";
-import { apiErrorMessage, type PlatformClinicRow, type TenantRow } from "@/features/platform/platform-shared";
+import { type PlatformClinicRow, type TenantRow } from "@/features/platform/platform-shared";
 import { isRootClinic, clinicKindLabel } from "@/lib/clinic-kind";
 import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel";
+import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
+import { collectClinicFormIssues } from "@/lib/create-form-validation";
 import { apiGet, apiPatch, apiPost } from "@/lib/http";
 import type { Paginated } from "@/lib/paginated";
 
@@ -45,12 +46,12 @@ export function PlatformClinicsTab() {
 
   const [createTenantId, setCreateTenantId] = useState("");
   const [form, setForm] = useState<ClinicFormValues>(emptyClinicForm());
-  const [clErr, setClErr] = useState<string | null>(null);
 
   const editSelection = dialogMode && typeof dialogMode === "object" ? dialogMode.edit : null;
   const isCreate = dialogMode === "create";
   const isEdit = Boolean(editSelection);
   const dialogOpen = isCreate || isEdit;
+  const validation = useValidationIssuesDialog({ intent: isCreate ? "create" : "save" });
 
   const tenantsQuery = useQuery({
     queryKey: ["platform", "tenants"],
@@ -115,7 +116,7 @@ export function PlatformClinicsTab() {
   const resetCreate = () => {
     setCreateTenantId("");
     setForm(emptyClinicForm());
-    setClErr(null);
+    validation.clear();
   };
 
   const openCreate = () => {
@@ -125,18 +126,18 @@ export function PlatformClinicsTab() {
 
   const closeDialog = () => {
     setDialogMode(null);
-    setClErr(null);
+    validation.clear();
   };
 
   const createMut = useMutation({
     mutationFn: () => apiPost(`/api/v1/admin/platform/tenants/${createTenantId}/clinics`, clinicFormToCreatePayload(form)),
     onSuccess: () => {
-      setClErr(null);
+      validation.clear();
       closeDialog();
       void qc.invalidateQueries({ queryKey: ["platform"] });
       void qc.invalidateQueries({ queryKey: ["org-hierarchy"] });
     },
-    onError: (e: unknown) => setClErr(apiErrorMessage(e)),
+    onError: (e: unknown) => validation.showError(e),
   });
 
   const patchMut = useMutation({
@@ -146,30 +147,23 @@ export function PlatformClinicsTab() {
         clinicFormToPatchPayload(form),
       ),
     onSuccess: () => {
-      setClErr(null);
+      validation.clear();
       closeDialog();
       void qc.invalidateQueries({ queryKey: ["platform"] });
       void qc.invalidateQueries({ queryKey: ["org-hierarchy"] });
     },
-    onError: (e: unknown) => setClErr(apiErrorMessage(e)),
+    onError: (e: unknown) => validation.showError(e),
   });
 
   const editRow = editSelection ? clinicRows.find((c) => c.id === editSelection.clinicId) : null;
 
-  const collectErrors = useCallback(() => {
-    if (isCreate) {
-      return collectClinicFormErrors(form, t, { requireTenant: true, tenantId: createTenantId });
-    }
-    return collectClinicFormErrors(form, t);
-  }, [createTenantId, form, isCreate, t]);
-
   const handleSave = () => {
     if (createMut.isPending || patchMut.isPending) return;
-    const errors = collectErrors();
-    if (errors.length > 0) {
-      toast.error(t("admin.clinicValidationTitle", "Complete the required clinic fields"), {
-        description: errors.join("\n"),
-      });
+    const issues = isCreate
+      ? collectClinicFormIssues(form, t, { requireTenant: true, tenantId: createTenantId })
+      : collectClinicFormIssues(form, t);
+    if (issues.length > 0) {
+      validation.showIssues(issues);
       return;
     }
     if (isCreate) createMut.mutate();
@@ -327,11 +321,12 @@ export function PlatformClinicsTab() {
                   </div>
                 </>
               )}
-              {clErr ? <p className="text-sm text-destructive">{clErr}</p> : null}
+              {validation.formErr ? <p className="text-sm text-destructive">{validation.formErr}</p> : null}
             </div>
           )}
         </DialogContent>
       </Dialog>
+      <ValidationIssuesDialog {...validation.dialogProps} />
     </div>
   );
 }

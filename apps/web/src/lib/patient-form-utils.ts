@@ -45,19 +45,30 @@ export function validatePatientDemographicsForm(
   values: PatientDemographicsFormValues,
   t: (key: string, fallback: string) => string,
 ): string | null {
+  const issues = collectPatientDemographicsValidationIssues(values, t);
+  return issues[0] ?? null;
+}
+
+export function collectPatientDemographicsValidationIssues(
+  values: PatientDemographicsFormValues,
+  t: (key: string, fallback: string) => string,
+): string[] {
+  const issues: string[] = [];
   if (!values.firstNameEn.trim() || !values.lastNameEn.trim()) {
-    return t("patients.errorNameRequired", "English first and last name are required.");
+    issues.push(t("patients.errorNameRequired", "English first and last name are required."));
   }
   if (!values.firstNameAr.trim()) {
-    return t("patients.errorFirstNameAr", "Arabic first name is required.");
+    issues.push(t("patients.errorFirstNameAr", "Arabic first name is required."));
   }
   if (!values.lastNameAr.trim()) {
-    return t("patients.errorLastNameAr", "Arabic last name is required.");
+    issues.push(t("patients.errorLastNameAr", "Arabic last name is required."));
   }
   if (!values.phone.trim()) {
-    return t("patients.errorPhoneRequired", "Phone is required.");
+    issues.push(t("patients.errorPhoneRequired", "Phone is required."));
   }
-  return validatePatientAcquisitionForm(values.acquisition, t);
+  const acquisitionError = validatePatientAcquisitionForm(values.acquisition, t);
+  if (acquisitionError) issues.push(acquisitionError);
+  return issues;
 }
 
 export function demographicsFormToPatchBody(

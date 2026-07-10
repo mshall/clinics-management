@@ -5,7 +5,8 @@ import {
   pendingDocumentValidationMessage,
   type PendingDocumentRow,
 } from "@/components/pending-document-attachments";
-import { ApiError } from "@/lib/http";
+
+export { errorToValidationIssues } from "@/lib/form-validation";
 
 export type OperationCreateValidationInput = {
   patientId: string;
@@ -81,18 +82,4 @@ export function collectOperationCreateValidationIssues(
   }
 
   return { issues, invalidDocRowIds };
-}
-
-export function errorToValidationIssues(error: unknown): string[] {
-  if (error instanceof ApiError) {
-    const msg = error.message.trim();
-    if (!msg) return [error.message];
-    if (msg.includes("; ")) return msg.split("; ").map((part) => part.trim()).filter(Boolean);
-    return [msg];
-  }
-  if (error instanceof Error) {
-    const msg = error.message.trim();
-    return msg ? [msg] : [String(error)];
-  }
-  return [String(error)];
 }

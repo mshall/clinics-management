@@ -16,13 +16,14 @@ import { formatClinicName, formatUserRole } from "@/lib/locale-display";
 import type { Paginated } from "@/lib/paginated";
 import { apiErrorMessage, isClinicRequiredUserRole, isOrgWideUserRole, ORG_USER_ROLES } from "@/features/platform/platform-shared";
 import {
-  getOrgUserCreateMissingLabels,
-  orgUserCreateFormReady,
   ORG_USER_PASSWORD_MIN_LENGTH,
 } from "@/features/platform/org-user-form-validation";
 import { AdminOrgUserDeleteConfirmDialog, type OrgUserDeleteTarget } from "@/features/admin/admin-org-user-delete-confirm-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { useAuthStore } from "@/stores/auth-store";
+import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
+import { collectOrgUserCreateIssues } from "@/lib/create-form-validation";
 
 type OrgUserRow = {
   id: string;
@@ -60,6 +61,7 @@ export function AdminOrgUsersPanel() {
   const [selectAllMatching, setSelectAllMatching] = useState(false);
   const [userToDelete, setUserToDelete] = useState<OrgUserDeleteTarget | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const createValidation = useValidationIssuesDialog({ intent: "create" });
 
   async function fetchLegacyOrgUsers(pageNum: number, size: number, q: string, role: string): Promise<Paginated<OrgUserRow>> {
     const qParam = q.trim() ? `&q=${encodeURIComponent(q.trim())}` : "";
@@ -178,7 +180,10 @@ export function AdminOrgUsersPanel() {
       void qc.invalidateQueries({ queryKey: ["users"] });
       void qc.invalidateQueries({ queryKey: ["org-hierarchy"] });
     },
-    onError: (e: unknown) => setUserErr(apiErrorMessage(e)),
+    onError: (e: unknown) => {
+      setUserErr(apiErrorMessage(e));
+      createValidation.showError(e);
+    },
   });
 
   const patchMut = useMutation({
@@ -272,11 +277,24 @@ export function AdminOrgUsersPanel() {
     role: uRole,
     clinicIds: uClinicIds,
   };
-  const canSaveCreate = orgUserCreateFormReady(createFormValues);
-  const createMissingLabels = isCreate ? getOrgUserCreateMissingLabels(createFormValues, t) : [];
   const passwordTooShort = isCreate && uPassword.length > 0 && uPassword.length < ORG_USER_PASSWORD_MIN_LENGTH;
   const canSaveEdit =
     Boolean(uEmail.trim()) && Boolean(uName.trim()) && (!requiresClinicAssignment || uClinicIds.length > 0);
+
+  const handleCreateUser = () => {
+    if (createMut.isPending) return;
+    const issues = collectOrgUserCreateIssues(createFormValues, t);
+    if (issues.length > 0) {
+      createValidation.showIssues(issues);
+      return;
+    }
+    createMut.mutate();
+  };
+
+  const handleSaveUser = () => {
+    if (patchMut.isPending) return;
+    patchMut.mutate();
+  };
 
   const clinicLabel = useMemo(
     () => (row: OrgUserRow) =>
@@ -626,18 +644,11 @@ export function AdminOrgUsersPanel() {
               <div className="flex flex-wrap gap-2 pt-2 md:col-span-2">
                 <Button
                   type="button"
-                  disabled={isCreate ? !canSaveCreate || createMut.isPending : !canSaveEdit || patchMut.isPending}
-                  onClick={() => (isCreate ? createMut.mutate() : patchMut.mutate())}
+                  disabled={isCreate ? createMut.isPending : !canSaveEdit || patchMut.isPending}
+                  onClick={() => (isCreate ? handleCreateUser() : handleSaveUser())}
                 >
                   {isEdit ? t("common.save", "Save") : t("admin.createUser", "Create user")}
                 </Button>
-                {isCreate && !canSaveCreate && createMissingLabels.length > 0 ? (
-                  <p className="w-full text-xs text-muted-foreground">
-                    {t("admin.orgUserCreateMissingHint", "Complete the required fields to enable Create user: {{fields}}.", {
-                      fields: createMissingLabels.join(", "),
-                    })}
-                  </p>
-                ) : null}
                 {isEdit && editUserId && editUserId !== authUser?.id ? (
                   <Button
                     type="button"
@@ -706,6 +717,8 @@ export function AdminOrgUsersPanel() {
         pending={bulkDeleteMut.isPending}
         onConfirm={() => bulkDeleteMut.mutate()}
       />
+
+      <ValidationIssuesDialog {...createValidation.dialogProps} />
     </div>
   );
 }
