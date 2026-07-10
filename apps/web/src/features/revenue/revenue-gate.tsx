@@ -7,6 +7,7 @@ import { RevenuePage } from "./revenue-page";
 export function RevenueGate() {
   const role = useAuthStore((s) => s.user?.role);
   const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
-  if (!canViewRevenue(role) || !showNavItem(role, "revenue", navTabKeys)) return <Navigate to="/" replace />;
+  const roleNavTabKeys = useAuthStore((s) => s.user?.roleNavTabKeys);
+  if (!canViewRevenue(role) || !showNavItem(role, "revenue", navTabKeys, roleNavTabKeys)) return <Navigate to="/" replace />;
   return <RevenuePage />;
 }

@@ -3,10 +3,14 @@ import { UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
 import { isFullRoleNav, sanitizeNavTabKeysForRole } from "./nav-tab-keys";
+import { TenantRoleNavTabsService } from "./tenant-role-nav-tabs.service";
 
 @Injectable()
 export class UserNavTabsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tenantRoleNav: TenantRoleNavTabsService,
+  ) {}
 
   private assertCanManage(actor: JwtUser, target: { id: string; role: UserRole; tenantId: string | null }): void {
     if (actor.tenantId == null || target.tenantId !== actor.tenantId) throw new ForbiddenException();
@@ -37,8 +41,9 @@ export class UserNavTabsService {
     if (!target) throw new NotFoundException("User not found");
     this.assertCanManage(actor, target);
 
-    const sanitized = sanitizeNavTabKeysForRole(target.role, tabKeys);
-    if (isFullRoleNav(target.role, sanitized)) {
+    const roleBase = await this.tenantRoleNav.effectiveRoleBaseForUser(tenantId, target.role);
+    const sanitized = sanitizeNavTabKeysForRole(target.role, tabKeys, roleBase);
+    if (isFullRoleNav(target.role, sanitized, roleBase)) {
       await this.prisma.userNavTabGrant.deleteMany({ where: { tenantId, userId: targetUserId } });
       return { tabKeys: null };
     }

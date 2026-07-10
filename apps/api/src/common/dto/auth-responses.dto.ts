@@ -25,6 +25,13 @@ export class AuthUserDto {
   navTabKeys?: string[] | null;
 
   @ApiPropertyOptional({
+    description: "Organization override for this user's role sidebar tabs; omit or null = platform role defaults",
+    type: [String],
+    nullable: true,
+  })
+  roleNavTabKeys?: string[] | null;
+
+  @ApiPropertyOptional({
     description: "True for PLATFORM_SUPER_ADMIN role or when email is listed in PLATFORM_SUPER_ADMIN_EMAILS",
   })
   platformSuperAdmin?: boolean;

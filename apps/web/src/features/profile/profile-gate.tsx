@@ -6,6 +6,7 @@ import { ProfilePage } from "./profile-page";
 export function ProfileGate() {
   const role = useAuthStore((s) => s.user?.role);
   const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
-  if (!showNavItem(role, "profile", navTabKeys)) return <Navigate to="/" replace />;
+  const roleNavTabKeys = useAuthStore((s) => s.user?.roleNavTabKeys);
+  if (!showNavItem(role, "profile", navTabKeys, roleNavTabKeys)) return <Navigate to="/" replace />;
   return <ProfilePage />;
 }

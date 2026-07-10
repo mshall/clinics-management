@@ -30,7 +30,8 @@ export function PatientDetailPage() {
   const qc = useQueryClient();
   const role = useAuthStore((s) => s.user?.role);
   const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
-  const canViewEncounters = showNavItem(role, "encounters", navTabKeys);
+  const roleNavTabKeys = useAuthStore((s) => s.user?.roleNavTabKeys);
+  const canViewEncounters = showNavItem(role, "encounters", navTabKeys, roleNavTabKeys);
   const canEditPatient = canEditPatientDetails(role);
   const [editOpen, setEditOpen] = useState(false);
   const { data: patient, isPending, isError, error } = usePatientQuery(id);

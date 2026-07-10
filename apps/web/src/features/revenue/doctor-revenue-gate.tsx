@@ -6,6 +6,7 @@ import { DoctorRevenuePage } from "./doctor-revenue-page";
 export function DoctorRevenueGate() {
   const role = useAuthStore((s) => s.user?.role);
   const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
-  if (!showNavItem(role, "doctor_revenue", navTabKeys)) return <Navigate to="/" replace />;
+  const roleNavTabKeys = useAuthStore((s) => s.user?.roleNavTabKeys);
+  if (!showNavItem(role, "doctor_revenue", navTabKeys, roleNavTabKeys)) return <Navigate to="/" replace />;
   return <DoctorRevenuePage />;
 }

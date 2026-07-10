@@ -36,6 +36,7 @@ export type GroupOverviewKpisDto = components["schemas"]["GroupOverviewKpisDto"]
 export type LoginResponseDto = components["schemas"]["LoginResponseDto"];
 export type AuthUserDto = components["schemas"]["AuthUserDto"] & {
   navTabKeys?: string[] | null;
+  roleNavTabKeys?: string[] | null;
   platformSuperAdmin?: boolean;
   hasAvatar?: boolean;
 };

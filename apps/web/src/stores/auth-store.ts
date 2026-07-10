@@ -15,6 +15,8 @@ export interface AuthUser {
   role: DemoRole;
   /** Subset of tabs from clinic/group admin; undefined/null = full role menu */
   navTabKeys?: string[] | null;
+  /** Organization override for this user's role; undefined/null = platform role defaults */
+  roleNavTabKeys?: string[] | null;
   /** Legacy email gate: data explorer on Admin, not platform routes */
   platformSuperAdmin?: boolean;
   hasAvatar?: boolean;
@@ -25,7 +27,7 @@ interface AuthState {
   user: AuthUser | null;
   setSession: (
     accessToken: string,
-    user: Omit<AuthUser, "role"> & { role: string; navTabKeys?: string[] | null; platformSuperAdmin?: boolean; hasAvatar?: boolean }
+    user: Omit<AuthUser, "role"> & { role: string; navTabKeys?: string[] | null; roleNavTabKeys?: string[] | null; platformSuperAdmin?: boolean; hasAvatar?: boolean }
   ) => void;
   signOut: () => void;
   refreshSessionFromServer: () => Promise<void>;
@@ -47,6 +49,7 @@ export const useAuthStore = create<AuthState>()(
             displayName: raw.displayName,
             role: mapApiRole(raw.role),
             navTabKeys: raw.navTabKeys !== undefined ? raw.navTabKeys : undefined,
+            roleNavTabKeys: raw.roleNavTabKeys !== undefined ? raw.roleNavTabKeys : undefined,
             platformSuperAdmin: Boolean(raw.platformSuperAdmin),
             hasAvatar: Boolean(raw.hasAvatar),
           },
@@ -74,6 +77,7 @@ export const useAuthStore = create<AuthState>()(
             displayName: me.displayName,
             role: mapApiRole(me.role),
             navTabKeys: me.navTabKeys ?? null,
+            roleNavTabKeys: me.roleNavTabKeys ?? null,
             platformSuperAdmin: Boolean(me.platformSuperAdmin),
             hasAvatar: Boolean((me as { hasAvatar?: boolean }).hasAvatar),
           },

@@ -52,7 +52,7 @@ export function LoginPage() {
 
   if (user && token) {
     const from = (location.state as { from?: string } | null)?.from;
-    const to = resolvePostLoginPath(user.role, user.navTabKeys, from);
+    const to = resolvePostLoginPath(user.role, user.navTabKeys, from, user.roleNavTabKeys);
     return <Navigate to={to} replace />;
   }
 
@@ -66,7 +66,7 @@ export function LoginPage() {
       setSession(res.accessToken, res.user);
       const from = (location.state as { from?: string } | null)?.from;
       const { user: signedIn } = useAuthStore.getState();
-      navigate(resolvePostLoginPath(signedIn?.role, signedIn?.navTabKeys, from), { replace: true });
+      navigate(resolvePostLoginPath(signedIn?.role, signedIn?.navTabKeys, from, signedIn?.roleNavTabKeys), { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : t("auth.signIn"));
     } finally {

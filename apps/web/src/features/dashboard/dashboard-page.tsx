@@ -42,7 +42,8 @@ export function DashboardPage() {
   const { t, i18n } = useTranslation();
   const role = useAuthStore((s) => s.user?.role);
   const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
-  const home = defaultHomeForRole(role, navTabKeys);
+  const roleNavTabKeys = useAuthStore((s) => s.user?.roleNavTabKeys);
+  const home = defaultHomeForRole(role, navTabKeys, roleNavTabKeys);
   const { data, isPending, isError, error } = useDashboardKpisQuery();
 
   if (home !== "/") {

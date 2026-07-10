@@ -33,6 +33,7 @@ import { AdminDataExplorerPanel } from "./admin-data-explorer-panel";
 import { AdminGovernancePanel } from "./admin-governance-panel";
 import { AdminOrgPatientsPanel } from "./admin-org-patients-panel";
 import { AdminOrgUsersPanel } from "./admin-org-users-panel";
+import { OrgRbacPanel } from "./org-rbac-panel";
 import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel";
 
 export function AdminPage() {
@@ -264,7 +265,11 @@ export function AdminPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t("admin.title")}</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          {overview.data?.currentTenant?.name
+            ? `${overview.data.currentTenant.name} ${t("admin.title")}`
+            : t("admin.title")}
+        </h1>
         <p className="text-muted-foreground">{t("admin.subtitle")}</p>
       </div>
 
@@ -316,45 +321,6 @@ export function AdminPage() {
         ) : null
       ) : adminSection === "organization" ? (
         <div className="space-y-6">
-          <AdminCreateEmployeePanel />
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">{t("admin.currentOrg")}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <p>
-                  <span className="text-muted-foreground">{t("admin.name")}: </span>
-                  {overview.data?.currentTenant?.name ?? "—"}
-                </p>
-                {isPlatformRole ? (
-                  <p className="ltr-nums">
-                    <span className="text-muted-foreground">{t("admin.tenantsRegistered")}: </span>
-                    {overview.data?.registeredTenants ?? "—"}
-                  </p>
-                ) : null}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">{t("admin.auditTail")}</CardTitle>
-              </CardHeader>
-              <CardContent className="max-h-64 space-y-2 overflow-y-auto text-xs">
-                {(overview.data?.recentAudit ?? []).map((a) => (
-                  <div key={a.id} className="rounded border border-border px-2 py-1.5">
-                    <span className="font-medium">{a.action}</span>{" "}
-                    <span className="text-muted-foreground">
-                      {a.resource} {a.resourceId ? `· ${a.resourceId.slice(0, 8)}…` : ""}
-                    </span>
-                    <div className="text-muted-foreground ltr-nums">{new Date(a.createdAt).toLocaleString()}</div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-
           {isGroupAdmin ? (
             <Card>
               <CardHeader>
@@ -371,6 +337,8 @@ export function AdminPage() {
               </CardContent>
             </Card>
           ) : null}
+
+          {isGroupAdmin ? <OrgRbacPanel /> : null}
 
           <Card>
             <CardHeader>

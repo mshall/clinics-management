@@ -31,6 +31,7 @@ import {
   useClinicsQuery,
   useOperationsQuery,
   usePatientsQuery,
+  usePatientQuery,
   useSchedulingPhysiciansQuery,
 } from "@/lib/api-hooks";
 import type { OperationDto } from "@/lib/api-types";
@@ -258,9 +259,8 @@ export function OperationsPage() {
     setEditDoctorSearch("");
   };
 
-  const editSchedulingClinicId = editClinicId || singleManagedClinic?.id || "";
+
   const { data: editPhysicians = [], isPending: editPhysiciansPending } = useSchedulingPhysiciansQuery({
-    clinicId: editSchedulingClinicId || undefined,
     search: debouncedEditDoctor.trim() || undefined,
     enabled: editOp != null,
   });
@@ -271,6 +271,7 @@ export function OperationsPage() {
     enabled: editOp != null,
   });
   const editPatients = editPatData?.items ?? [];
+  const { data: editPatientDetail } = usePatientQuery(editOp ? editPatientId : undefined);
   const editPatientItems: PickListItem[] = useMemo(
     () => editPatients.map((p) => patientToPickListItem(p)),
     [editPatients]
@@ -279,6 +280,28 @@ export function OperationsPage() {
     () => editPhysicians.map((d) => ({ value: d.userId, label: d.displayName, hint: d.email ?? undefined })),
     [editPhysicians]
   );
+  const editPatientSelectedItem = useMemo((): PickListItem | null => {
+    if (!editPatientId) return null;
+    const fromList = editPatientItems.find((p) => p.value === editPatientId);
+    if (fromList) return fromList;
+    if (editPatientDetail) return patientToPickListItem(editPatientDetail);
+    if (editOp) {
+      const resolved = resolvePatientListLabel({
+        patientId: editOp.patientId,
+        patientMrn: editOp.patientMrn,
+        patientName: editOp.patientName,
+      });
+      if (!resolved.isIdFallback) return { value: editPatientId, label: resolved.text };
+    }
+    return null;
+  }, [editPatientId, editPatientItems, editPatientDetail, editOp]);
+  const editPhysicianSelectedItem = useMemo((): PickListItem | null => {
+    if (!editClinicianId) return null;
+    const fromList = editPhysicianItems.find((d) => d.value === editClinicianId);
+    if (fromList) return fromList;
+    if (editOp?.clinicianName) return { value: editClinicianId, label: editOp.clinicianName };
+    return null;
+  }, [editClinicianId, editPhysicianItems, editOp?.clinicianName]);
 
   useEffect(() => {
     if (singleManagedClinic) {
@@ -632,6 +655,7 @@ export function OperationsPage() {
                 <SearchablePickList
                   items={editPatientItems}
                   value={editPatientId}
+                  selectedItem={editPatientSelectedItem}
                   onValueChange={setEditPatientId}
                   onSearchQueryChange={setEditPatientSearch}
                   searchPlaceholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
@@ -649,6 +673,7 @@ export function OperationsPage() {
                 <SearchablePickList
                   items={editPhysicianItems}
                   value={editClinicianId}
+                  selectedItem={editPhysicianSelectedItem}
                   onValueChange={setEditClinicianId}
                   onSearchQueryChange={setEditDoctorSearch}
                   searchPlaceholder={t("appointments.filterPhysician", "Type physician name…")}

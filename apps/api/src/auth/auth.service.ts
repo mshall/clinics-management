@@ -8,6 +8,7 @@ import type { Readable } from "stream";
 import { isPlatformSuperAdmin } from "../common/platform-super-admin";
 import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { TenantRoleNavTabsService } from "../user-nav-tabs/tenant-role-nav-tabs.service";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
@@ -46,6 +47,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly audit: AuditService,
+    private readonly tenantRoleNav: TenantRoleNavTabsService,
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
   ) {}
 
@@ -65,7 +67,7 @@ export class AuthService {
     displayName: string;
     role: UserRole;
     avatarRelativePath?: string | null;
-  }, navTabKeys: string[] | null) {
+  }, navTabKeys: string[] | null, roleNavTabKeys: string[] | null) {
     return {
       id: user.id,
       tenantId: user.tenantId,
@@ -73,6 +75,7 @@ export class AuthService {
       displayName: user.displayName,
       role: user.role,
       navTabKeys,
+      roleNavTabKeys,
       platformSuperAdmin: isPlatformSuperAdmin({
         email: user.email,
         role: user.role,
@@ -108,12 +111,14 @@ export class AuthService {
 
     const navTabKeys =
       user.tenantId != null ? await this.navTabKeysForUser(user.tenantId, user.id) : null;
+    const roleNavTabKeys =
+      user.tenantId != null ? await this.tenantRoleNav.roleNavTabKeysForTenantUser(user.tenantId, user.role) : null;
 
     void this.audit.recordLogin(user, user.email);
 
     return {
       accessToken,
-      user: this.mapAuthUser(user, navTabKeys),
+      user: this.mapAuthUser(user, navTabKeys, roleNavTabKeys),
     };
   }
 
@@ -148,7 +153,9 @@ export class AuthService {
     if (!user) throw new UnauthorizedException();
     const navTabKeys =
       user.tenantId != null ? await this.navTabKeysForUser(user.tenantId, userId) : null;
-    return this.mapAuthUser(user, navTabKeys);
+    const roleNavTabKeys =
+      user.tenantId != null ? await this.tenantRoleNav.roleNavTabKeysForTenantUser(user.tenantId, user.role) : null;
+    return this.mapAuthUser(user, navTabKeys, roleNavTabKeys);
   }
 
   async attachMyAvatar(

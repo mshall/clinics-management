@@ -79,6 +79,26 @@ export function navKeysForRole(role: DemoRole | undefined): Set<NavItemKey> {
   return new Set(ROLE_KEYS[role] ?? FULL);
 }
 
+/** Organization role override when set; otherwise platform role defaults. */
+export function roleNavKeysForRole(
+  role: DemoRole | undefined,
+  roleNavTabKeys?: string[] | null,
+): Set<NavItemKey> {
+  if (!role) return new Set();
+  if (roleNavTabKeys?.length) {
+    const base = navKeysForRole(role);
+    const out = new Set<NavItemKey>();
+    for (const k of roleNavTabKeys) {
+      if ((NAV_ITEM_PATH as Record<string, string>)[k] !== undefined && base.has(k as NavItemKey)) {
+        out.add(k as NavItemKey);
+      }
+    }
+    out.add("profile");
+    return out;
+  }
+  return navKeysForRole(role);
+}
+
 /** Route path for each tab (used for default landing when dashboard is hidden). */
 export const NAV_ITEM_PATH: Record<NavItemKey, string> = {
   platform: "/platform",
@@ -121,9 +141,9 @@ const HOME_PRIORITY: NavItemKey[] = [
 ];
 
 /** Role tab keys in a stable sidebar order (for admin pickers). */
-export function orderedNavKeysForRole(role: DemoRole | undefined): NavItemKey[] {
+export function orderedNavKeysForRole(role: DemoRole | undefined, roleNavTabKeys?: string[] | null): NavItemKey[] {
   if (!role) return [];
-  const set = navKeysForRole(role);
+  const set = roleNavKeysForRole(role, roleNavTabKeys);
   return HOME_PRIORITY.filter((k) => set.has(k));
 }
 
@@ -131,8 +151,12 @@ export function orderedNavKeysForRole(role: DemoRole | undefined): NavItemKey[] 
  * When a clinic/group admin assigns a subset of tabs, the effective menu is the
  * intersection of role defaults and the stored grant (always includes `profile`).
  */
-export function effectiveNavKeys(role: DemoRole | undefined, navTabKeys: string[] | null | undefined): Set<NavItemKey> {
-  const base = navKeysForRole(role);
+export function effectiveNavKeys(
+  role: DemoRole | undefined,
+  navTabKeys: string[] | null | undefined,
+  roleNavTabKeys?: string[] | null,
+): Set<NavItemKey> {
+  const base = roleNavKeysForRole(role, roleNavTabKeys);
   if (!navTabKeys?.length) return base;
   const grant = new Set(
     navTabKeys.filter((k): k is NavItemKey => (NAV_ITEM_PATH as Record<string, string>)[k] !== undefined && base.has(k as NavItemKey))
@@ -148,15 +172,20 @@ export function effectiveNavKeys(role: DemoRole | undefined, navTabKeys: string[
 export function showNavItem(
   role: DemoRole | undefined,
   key: NavItemKey,
-  navTabKeys?: string[] | null
+  navTabKeys?: string[] | null,
+  roleNavTabKeys?: string[] | null,
 ): boolean {
-  return effectiveNavKeys(role, navTabKeys).has(key);
+  return effectiveNavKeys(role, navTabKeys, roleNavTabKeys).has(key);
 }
 
 /** Landing path after sign-in when the dashboard is not in the role menu. */
-export function defaultHomeForRole(role: DemoRole | undefined, navTabKeys?: string[] | null): string {
+export function defaultHomeForRole(
+  role: DemoRole | undefined,
+  navTabKeys?: string[] | null,
+  roleNavTabKeys?: string[] | null,
+): string {
   if (!role) return "/";
-  const keys = effectiveNavKeys(role, navTabKeys);
+  const keys = effectiveNavKeys(role, navTabKeys, roleNavTabKeys);
   for (const k of HOME_PRIORITY) {
     if (keys.has(k)) return NAV_ITEM_PATH[k];
   }
@@ -184,10 +213,11 @@ export function resolvePostLoginPath(
   role: DemoRole | undefined,
   navTabKeys: string[] | null | undefined,
   from?: string | null,
+  roleNavTabKeys?: string[] | null,
 ): string {
-  const home = defaultHomeForRole(role, navTabKeys);
+  const home = defaultHomeForRole(role, navTabKeys, roleNavTabKeys);
   if (!from || from === "/login") return home;
   const key = navKeyForPath(from);
-  if (!key || !effectiveNavKeys(role, navTabKeys).has(key)) return home;
+  if (!key || !effectiveNavKeys(role, navTabKeys, roleNavTabKeys).has(key)) return home;
   return from;
 }

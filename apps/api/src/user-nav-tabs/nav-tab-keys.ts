@@ -87,16 +87,32 @@ export function maxNavTabsForRole(role: UserRole): Set<string> {
   return new Set(ROLE_MAX[role] ?? FULL);
 }
 
+/** Global role defaults (before tenant override). */
+export function defaultNavTabsForRole(role: UserRole): string[] {
+  return [...maxNavTabsForRole(role)].sort((a, b) => a.localeCompare(b));
+}
+
+export function parseStoredNavTabKeys(raw: unknown): string[] | null {
+  const arr = Array.isArray(raw) ? (raw as unknown[]).map((x) => String(x)) : [];
+  return arr.length ? arr : null;
+}
+
+/** Tenant override when present; otherwise global role defaults. */
+export function effectiveRoleNavTabs(role: UserRole, tenantGrant: string[] | null | undefined): string[] {
+  if (tenantGrant?.length) return tenantGrant;
+  return defaultNavTabsForRole(role);
+}
+
 /** Intersect requested keys with role max, enforce `profile`, drop unknown keys. */
-export function sanitizeNavTabKeysForRole(role: UserRole, requested: string[]): string[] {
-  const max = maxNavTabsForRole(role);
+export function sanitizeNavTabKeysForRole(role: UserRole, requested: string[], roleBase?: string[] | null): string[] {
+  const max = roleBase?.length ? new Set(roleBase) : maxNavTabsForRole(role);
   const uniq = [...new Set(requested.map((k) => k.trim()).filter((k) => VALID_NAV_TAB_KEYS.has(k) && max.has(k)))];
   if (!uniq.includes("profile")) uniq.push("profile");
   return uniq.sort((a, b) => a.localeCompare(b));
 }
 
-export function isFullRoleNav(role: UserRole, keys: string[]): boolean {
-  const max = maxNavTabsForRole(role);
+export function isFullRoleNav(role: UserRole, keys: string[], roleBase?: string[] | null): boolean {
+  const max = roleBase?.length ? new Set(roleBase) : maxNavTabsForRole(role);
   if (keys.length !== max.size) return false;
   return keys.every((k) => max.has(k));
 }
