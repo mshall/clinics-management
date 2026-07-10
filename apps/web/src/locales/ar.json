@@ -578,6 +578,17 @@
     "editCompletedHint": "تصحيح إداري — يمكنك تحديث التفاصيل وإعادة تعيين الطبيب المنفّذ. يتم تحديث الإيراد المرتبط تلقائياً.",
     "updated": "تم تحديث العملية.",
     "saveChanges": "حفظ التغييرات",
+    "createValidationTitle": "لا يمكن حفظ العملية بعد",
+    "createValidationDescription": "أصلح العناصر أدناه ثم حاول الحفظ مرة أخرى.",
+    "errorPatientRequired": "اختر المريض.",
+    "errorDoctorRequired": "اختر الطبيب المنفّذ.",
+    "errorDateRequired": "أدخل تاريخ ووقت العملية.",
+    "errorDateInvalid": "أدخل تاريخاً ووقتاً صالحين للعملية.",
+    "errorTotalRequired": "أدخل التكلفة الإجمالية.",
+    "errorTotalInvalid": "أدخل مبلغاً صالحاً للتكلفة الإجمالية.",
+    "errorTotalNegative": "لا يمكن أن تكون التكلفة الإجمالية سالبة.",
+    "errorDownInvalid": "أدخل مبلغاً صالحاً للدفعة المقدمة.",
+    "errorDownNegative": "لا يمكن أن تكون الدفعة المقدمة سالبة.",
     "errorPrescriptionRequired": "ارفع وصفة طبية أو أنشئ واحدة من الأدوية اليدوية."
   },
   "expenses": {

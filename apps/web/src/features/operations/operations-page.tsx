@@ -3,6 +3,7 @@ import { Lock } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CreateActionButton } from "@/components/create-action-button";
+import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import {
   MedicationsPrescriptionDraftPanel,
   resetMedicationsPrescriptionDraft,
@@ -12,8 +13,6 @@ import {
 import {
   PendingDocumentAttachments,
   pendingDocumentDescription,
-  pendingDocumentValidationMessage,
-  validatePendingDocuments,
   type PendingDocumentRow,
 } from "@/components/pending-document-attachments";
 import { OperationStatusBadge } from "@/components/operation-status-badge";
@@ -42,6 +41,10 @@ import { formatClinicName, localeForLanguage } from "@/lib/locale-display";
 import { columnFilterIncludes } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { defaultMonthRange } from "@/stores/date-range-store";
+import {
+  collectOperationCreateValidationIssues,
+  errorToValidationIssues,
+} from "@/features/operations/operation-form-validation";
 
 const CREATE_ROLES = new Set([
   "group_admin",
@@ -122,6 +125,9 @@ export function OperationsPage() {
   const [comments, setComments] = useState("");
   const [formErr, setFormErr] = useState<string | null>(null);
   const [createOk, setCreateOk] = useState<string | null>(null);
+  const [createValidationOpen, setCreateValidationOpen] = useState(false);
+  const [createValidationIssues, setCreateValidationIssues] = useState<string[]>([]);
+  const [docInvalidRowIds, setDocInvalidRowIds] = useState<Set<string>>(() => new Set());
   const [docRows, setDocRows] = useState<PendingDocumentRow[]>([]);
   const [medTab, setMedTab] = useState<MedTab>("none");
   const [medications, setMedications] = useState<PendingMedication[]>([]);
@@ -203,6 +209,9 @@ export function OperationsPage() {
     setDownPayment("");
     setComments("");
     setDocRows([]);
+    setDocInvalidRowIds(new Set());
+    setCreateValidationOpen(false);
+    setCreateValidationIssues([]);
     const medReset = resetMedicationsPrescriptionDraft();
     setMedTab(medReset.medTab);
     setMedications(medReset.medications);
@@ -407,16 +416,15 @@ export function OperationsPage() {
     },
   });
 
+  const showCreateValidationIssues = (issues: string[], invalidDocRowIds = new Set<string>()) => {
+    setCreateValidationIssues(issues);
+    setDocInvalidRowIds(invalidDocRowIds);
+    setFormErr(issues.join(" "));
+    setCreateValidationOpen(true);
+  };
+
   const createMut = useMutation({
     mutationFn: async () => {
-      const docValidation = validatePendingDocuments(docRows);
-      const docMsg = pendingDocumentValidationMessage(docValidation, t);
-      if (docMsg) throw new Error(docMsg);
-
-      if (medTab === "prescription" && !prescriptionFile && !generatedPrescriptionFile) {
-        throw new Error(t("operations.errorPrescriptionRequired", "Upload a prescription or generate one from manual medications."));
-      }
-
       const op = await apiPost<OperationDto>("/api/v1/operations", {
         patientId,
         clinicianId,
@@ -469,11 +477,33 @@ export function OperationsPage() {
     },
     onError: (e: unknown) => {
       setCreateOk(null);
-      if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
-        setFormErr(String((e.body as { message?: unknown }).message));
-      } else setFormErr(e instanceof Error ? e.message : String(e));
+      showCreateValidationIssues(errorToValidationIssues(e));
     },
   });
+
+  const handleCreateClick = () => {
+    const validation = collectOperationCreateValidationIssues(
+      {
+        patientId,
+        clinicianId,
+        operationDate,
+        totalCost,
+        downPayment,
+        docRows,
+        medTab,
+        prescriptionFile,
+        generatedPrescriptionFile,
+      },
+      t,
+    );
+    if (validation.issues.length > 0) {
+      showCreateValidationIssues(validation.issues, validation.invalidDocRowIds);
+      return;
+    }
+    setFormErr(null);
+    setDocInvalidRowIds(new Set());
+    createMut.mutate();
+  };
 
   const loc = localeForLanguage(i18n.language);
   const money = (n: number) =>
@@ -481,6 +511,17 @@ export function OperationsPage() {
 
   return (
     <div className="space-y-6">
+      <ValidationIssuesDialog
+        open={createValidationOpen}
+        onOpenChange={setCreateValidationOpen}
+        title={t("operations.createValidationTitle", "Cannot save operation yet")}
+        description={t(
+          "operations.createValidationDescription",
+          "Fix the items below, then try saving again.",
+        )}
+        issues={createValidationIssues}
+        dismissLabel={t("common.close", "Close")}
+      />
       <Dialog
         open={completeConfirmOp != null}
         onOpenChange={(open) => {
@@ -932,7 +973,14 @@ export function OperationsPage() {
 
               <fieldset className="space-y-3 rounded-lg border border-border p-4">
                 <legend className="px-1 text-sm font-medium">{t("patients.attachDocuments", "Documents")}</legend>
-                <PendingDocumentAttachments rows={docRows} onChange={setDocRows} />
+                <PendingDocumentAttachments
+                  rows={docRows}
+                  onChange={(next) => {
+                    setDocRows(next);
+                    if (docInvalidRowIds.size > 0) setDocInvalidRowIds(new Set());
+                  }}
+                  invalidRowIds={docInvalidRowIds.size > 0 ? docInvalidRowIds : undefined}
+                />
               </fieldset>
 
               <fieldset className="space-y-3 rounded-lg border border-border p-4">
@@ -954,15 +1002,8 @@ export function OperationsPage() {
               {createOk ? <p className="text-sm text-emerald-600">{createOk}</p> : null}
               <CreateActionButton
                 type="button"
-                disabled={
-                  createMut.isPending ||
-                  !patientId ||
-                  !clinicianId ||
-                  !operationDate ||
-                  !totalCost.trim() ||
-                  Number.isNaN(Number.parseFloat(totalCost))
-                }
-                onClick={() => createMut.mutate()}
+                disabled={createMut.isPending}
+                onClick={handleCreateClick}
               >
                 {t("operations.save", "Save operation")}
               </CreateActionButton>

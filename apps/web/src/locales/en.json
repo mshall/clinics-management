@@ -577,6 +577,17 @@
     "editCompletedHint": "Administrator correction — you can update details and re-assign the performing doctor. Linked revenue is updated automatically.",
     "updated": "Operation updated.",
     "saveChanges": "Save changes",
+    "createValidationTitle": "Cannot save operation yet",
+    "createValidationDescription": "Fix the items below, then try saving again.",
+    "errorPatientRequired": "Select a patient.",
+    "errorDoctorRequired": "Select the performing doctor.",
+    "errorDateRequired": "Enter the operation date and time.",
+    "errorDateInvalid": "Enter a valid operation date and time.",
+    "errorTotalRequired": "Enter the total cost.",
+    "errorTotalInvalid": "Enter a valid total cost amount.",
+    "errorTotalNegative": "Total cost cannot be negative.",
+    "errorDownInvalid": "Enter a valid down payment amount.",
+    "errorDownNegative": "Down payment cannot be negative.",
     "errorPrescriptionRequired": "Upload a prescription or generate one from manual medications."
   },
   "expenses": {
