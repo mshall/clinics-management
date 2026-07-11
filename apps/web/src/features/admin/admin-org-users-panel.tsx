@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { PasswordInput } from "@/components/password-input";
 import { ResponsiveTable } from "@/components/responsive-table";
@@ -14,6 +15,7 @@ import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { Label } from "@/components/ui/label";
 import { useClinicsQuery } from "@/lib/api-hooks";
 import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from "@/lib/http";
+import { formatEmployeeName } from "@/lib/employee-display";
 import { formatClinicName, formatUserRole } from "@/lib/locale-display";
 import type { Paginated } from "@/lib/paginated";
 import { apiErrorMessage, isClinicRequiredUserRole, isOrgWideUserRole, ORG_USER_ROLES } from "@/features/platform/platform-shared";
@@ -35,6 +37,10 @@ type OrgUserRow = {
   createdAt: string;
   clinicIds: string[];
   clinics: { id: string; nameEn: string }[];
+  employeeId: string | null;
+  employeeNumber: string | null;
+  employeeFirstNameEn: string | null;
+  employeeLastNameEn: string | null;
 };
 
 type UserDetail = OrgUserRow & { tenantId: string | null; tenantName: string | null };
@@ -89,6 +95,10 @@ export function AdminOrgUsersPanel() {
       createdAt: u.createdAt ?? "",
       clinicIds: u.clinicIds ?? [],
       clinics: u.clinics ?? [],
+      employeeId: u.employeeId ?? null,
+      employeeNumber: u.employeeNumber ?? null,
+      employeeFirstNameEn: u.employeeFirstNameEn ?? null,
+      employeeLastNameEn: u.employeeLastNameEn ?? null,
     }));
     const total = q.trim() || role ? items.length : first.total;
     const totalPages = Math.max(1, Math.ceil(total / size));
@@ -306,6 +316,23 @@ export function AdminOrgUsersPanel() {
     [i18n.language, t],
   );
 
+  const employeeLabel = useMemo(
+    () => (row: OrgUserRow) => {
+      if (!row.employeeId || !row.employeeNumber) {
+        return t("admin.orgUsersNoEmployee", "Not linked");
+      }
+      const name = formatEmployeeName(
+        {
+          firstNameEn: row.employeeFirstNameEn ?? "",
+          lastNameEn: row.employeeLastNameEn ?? "",
+        },
+        i18n.language,
+      );
+      return name ? `${row.employeeNumber} · ${name}` : row.employeeNumber;
+    },
+    [i18n.language, t],
+  );
+
   const rows = usersQuery.data?.items ?? [];
   const total = usersQuery.data?.total ?? 0;
   const totalPages = usersQuery.data?.totalPages ?? 1;
@@ -478,6 +505,7 @@ export function AdminOrgUsersPanel() {
                       <th className="px-3 py-2 text-start">{t("admin.displayName")}</th>
                       <th className="px-3 py-2 text-start">{t("auth.email")}</th>
                       <th className="px-3 py-2 text-start">{t("admin.role", "Role")}</th>
+                      <th className="px-3 py-2 text-start">{t("admin.orgUsersHrEmployee", "HR employee")}</th>
                       <th className="px-3 py-2 text-start">{t("admin.assignedClinics", "Assigned clinics")}</th>
                       {!legacyUsersApi ? (
                         <th className="px-3 py-2 text-end">{t("common.actions", "Actions")}</th>
@@ -507,6 +535,18 @@ export function AdminOrgUsersPanel() {
                         <td className="cursor-pointer px-3 py-2" onClick={() => setDialogMode({ edit: row.id })}>{row.displayName}</td>
                         <td className="cursor-pointer px-3 py-2" onClick={() => setDialogMode({ edit: row.id })}>{row.email}</td>
                         <td className="cursor-pointer px-3 py-2" onClick={() => setDialogMode({ edit: row.id })}>{formatUserRole(row.role, t)}</td>
+                        <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                          {row.employeeId ? (
+                            <Link
+                              to={`/hr/employees/${row.employeeId}`}
+                              className="font-mono text-xs text-primary underline-offset-4 hover:underline ltr-nums"
+                            >
+                              {employeeLabel(row)}
+                            </Link>
+                          ) : (
+                            <span className="text-muted-foreground">{employeeLabel(row)}</span>
+                          )}
+                        </td>
                         <td className="cursor-pointer px-3 py-2 text-muted-foreground" onClick={() => setDialogMode({ edit: row.id })}>{clinicLabel(row)}</td>
                         {!legacyUsersApi ? (
                           <td className="px-3 py-2 text-end whitespace-nowrap">

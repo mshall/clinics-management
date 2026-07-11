@@ -43,7 +43,7 @@ import { formatEncounterStatus, formatClinicName, formatClinicNameFields, locale
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
 import { resolvePickListSelectedItem, useDebouncedPickListSearch } from "@/lib/pick-list-utils";
 import { physicianToPickListItem } from "@/lib/physician-display";
-import { nativeSelectClassName } from "@/lib/form-control-styles";
+import { nativeSelectClassName, searchLedgerActionsClassName, searchLedgerLayoutClassName } from "@/lib/form-control-styles";
 import { columnFilterIncludes } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { ENCOUNTER_VISIT_TYPES, formatVisitType } from "@/lib/visit-types";
@@ -155,6 +155,7 @@ export function EncountersListPage() {
   const [createVisitType, setCreateVisitType] = useState<string>(ENCOUNTER_VISIT_TYPES[0] ?? "Office visit");
   const [createVisitFee, setCreateVisitFee] = useState("");
   const [createClinicianId, setCreateClinicianId] = useState("");
+  const [pinnedPatientItem, setPinnedPatientItem] = useState<PickListItem | null>(null);
   const [pinnedClinicianItem, setPinnedClinicianItem] = useState<PickListItem | null>(null);
   const doctorPickSearch = useDebouncedPickListSearch();
   const validation = useValidationIssuesDialog({ intent: "create" });
@@ -171,9 +172,10 @@ export function EncountersListPage() {
       resolvePickListSelectedItem(
         createPatientId,
         dialogPatientItems,
+        pinnedPatientItem,
         selectedPatient ? patientToPickListItem(selectedPatient) : null,
       ),
-    [createPatientId, dialogPatientItems, selectedPatient],
+    [createPatientId, dialogPatientItems, pinnedPatientItem, selectedPatient],
   );
   useEffect(() => {
     if (!createOpen) return;
@@ -249,6 +251,7 @@ export function EncountersListPage() {
   const openCreateDialog = () => {
     patientPickSearch.resetSearch();
     setCreatePatientId("");
+    setPinnedPatientItem(null);
     setCreateClinicId(clinics[0]?.id ?? "");
     setCreateVisitType(ENCOUNTER_VISIT_TYPES[0] ?? "Office visit");
     const d = adminOv.data?.currentTenant?.defaultVisitFee;
@@ -418,6 +421,8 @@ export function EncountersListPage() {
                       setCreatePatientId(v);
                       setSelectedAppointmentId("");
                       clearCreateFieldError("patient");
+                      const item = dialogPatientItems.find((p) => p.value === v);
+                      if (item) setPinnedPatientItem(item);
                     }}
                     onSearchQueryChange={patientPickSearch.setSearch}
                     onOpen={patientPickSearch.resetSearch}
@@ -596,10 +601,11 @@ export function EncountersListPage() {
         <CardHeader>
           <CardTitle className="text-base">{t("encounters.searchLedger", "Search encounters")}</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-wrap items-end gap-4">
-          <div className="space-y-2 min-w-[12rem] flex-1">
+        <CardContent className={searchLedgerLayoutClassName}>
+          <div className="space-y-2 min-w-0">
             <Label>{t("encounters.patientNameSearch", "Patient name or MRN")}</Label>
             <SearchInput
+              className="w-full"
               value={ledgerPatientQuery}
               placeholder={t("encounters.patientNameSearchPh", "Filter by patient…")}
               onChange={(e) => {
@@ -608,51 +614,53 @@ export function EncountersListPage() {
               }}
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 min-w-0">
             <Label>{t("encounters.from", "From")}</Label>
-            <Input className="ltr-nums" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
+            <Input className="ltr-nums w-full" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 min-w-0">
             <Label>{t("encounters.to", "To")}</Label>
-            <Input className="ltr-nums" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
+            <Input className="ltr-nums w-full" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
           </div>
-          <Button
-            type="button"
-            variant={draftOnly ? "default" : "outline"}
-            size="sm"
-            onClick={() => {
-              setDraftOnly((v) => !v);
-              setPage(1);
-            }}
-          >
-            {t("encounters.showDraftOnly")}
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              const r = defaultEncounterListRange();
-              setFrom(r.from);
-              setTo(r.to);
-              setPage(1);
-            }}
-          >
-            {t("encounters.lastTwelveMonths", "Last 12 months")}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const r = defaultMonthRange();
-              setFrom(r.from);
-              setTo(r.to);
-              setPage(1);
-            }}
-          >
-            {t("encounters.thisMonth", "This month")}
-          </Button>
+          <div className={searchLedgerActionsClassName}>
+            <Button
+              type="button"
+              variant={draftOnly ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                setDraftOnly((v) => !v);
+                setPage(1);
+              }}
+            >
+              {t("encounters.showDraftOnly")}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                const r = defaultEncounterListRange();
+                setFrom(r.from);
+                setTo(r.to);
+                setPage(1);
+              }}
+            >
+              {t("encounters.lastTwelveMonths", "Last 12 months")}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const r = defaultMonthRange();
+                setFrom(r.from);
+                setTo(r.to);
+                setPage(1);
+              }}
+            >
+              {t("encounters.thisMonth", "This month")}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

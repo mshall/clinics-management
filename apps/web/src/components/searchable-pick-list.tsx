@@ -49,6 +49,7 @@ type PanelRect = {
 
 const PANEL_MAX_HEIGHT = 224;
 const DEFAULT_PREVIEW_COUNT = 4;
+const OUTSIDE_LISTEN_DELAY_MS = 80;
 
 function measurePanelRect(anchor: HTMLElement): PanelRect {
   const rect = anchor.getBoundingClientRect();
@@ -82,6 +83,20 @@ function scheduleMobileFocus(el: HTMLInputElement | null | undefined): void {
   });
 }
 
+function resolveItemLabel(
+  pickValue: string,
+  items: PickListItem[],
+  selectedItem: PickListItem | null | undefined,
+  pinnedItem: PickListItem | null,
+): string | null {
+  if (!pickValue.trim()) return null;
+  const fromList = items.find((i) => i.value === pickValue);
+  if (fromList) return fromList.label;
+  if (selectedItem?.value === pickValue) return selectedItem.label;
+  if (pinnedItem?.value === pickValue) return pinnedItem.label;
+  return null;
+}
+
 export function SearchablePickList({
   items,
   value,
@@ -111,6 +126,21 @@ export function SearchablePickList({
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [panelRect, setPanelRect] = useState<PanelRect | null>(null);
+  const [pinnedItem, setPinnedItem] = useState<PickListItem | null>(null);
+
+  useEffect(() => {
+    if (!value.trim()) {
+      setPinnedItem(null);
+      return;
+    }
+    setPinnedItem((prev) => {
+      const resolved =
+        items.find((i) => i.value === value) ??
+        (selectedItem?.value === value ? selectedItem : null) ??
+        (prev?.value === value ? prev : null);
+      return resolved ?? prev;
+    });
+  }, [value, items, selectedItem]);
 
   const filtered = useMemo(() => {
     const base = !localFilter
@@ -121,10 +151,7 @@ export function SearchablePickList({
     return filterPickListItems(base, q);
   }, [items, q, localFilter, selectedItem, value]);
 
-  const selectedLabel =
-    items.find((i) => i.value === value)?.label ??
-    (selectedItem?.value === value ? selectedItem.label : undefined);
-  const displayText = selectedLabel ?? null;
+  const displayText = resolveItemLabel(value, items, selectedItem, pinnedItem);
   const trimmedQ = q.trim();
   const isSearching = trimmedQ.length > 0;
   const meetsMinSearch = trimmedQ.length >= minSearchLength;
@@ -138,20 +165,25 @@ export function SearchablePickList({
   }, [open, isSearching, meetsMinSearch, filtered, previewCount]);
 
   const pick = useCallback(
-    (next: string) => {
+    (next: string, item?: PickListItem) => {
+      const resolved =
+        item ??
+        items.find((i) => i.value === next) ??
+        (selectedItem?.value === next ? selectedItem : null);
+      if (resolved) setPinnedItem(resolved);
       onValueChange(next);
       setQ("");
       onSearchQueryChange?.("");
       setOpen(false);
     },
-    [onValueChange, onSearchQueryChange],
+    [items, onValueChange, onSearchQueryChange, selectedItem],
   );
 
   const handlePick = useCallback(
-    (next: string) => {
+    (next: string, item: PickListItem) => {
       if (disabled || pickingRef.current) return;
       pickingRef.current = true;
-      pick(next);
+      pick(next, item);
       window.setTimeout(() => {
         pickingRef.current = false;
       }, 0);
@@ -187,8 +219,11 @@ export function SearchablePickList({
       listenOutsideRef.current = false;
       return;
     }
-    listenOutsideRef.current = true;
+    listenOutsideRef.current = false;
     updatePanelRect();
+    const enableOutsideTimer = window.setTimeout(() => {
+      listenOutsideRef.current = true;
+    }, OUTSIDE_LISTEN_DELAY_MS);
     const vv = window.visualViewport;
     vv?.addEventListener("resize", updatePanelRect);
     vv?.addEventListener("scroll", updatePanelRect);
@@ -197,6 +232,7 @@ export function SearchablePickList({
     const focusTimer = window.setTimeout(() => scheduleMobileFocus(inputRef.current), 0);
     return () => {
       listenOutsideRef.current = false;
+      window.clearTimeout(enableOutsideTimer);
       window.clearTimeout(focusTimer);
       vv?.removeEventListener("resize", updatePanelRect);
       vv?.removeEventListener("scroll", updatePanelRect);
@@ -225,7 +261,7 @@ export function SearchablePickList({
     };
   }, [open, closeWithoutPick]);
 
-  const closedPlaceholder = displayText ?? placeholder;
+  const hasSelection = Boolean(displayText);
 
   const listbox =
     open && panelRect
@@ -265,12 +301,16 @@ export function SearchablePickList({
                   onPointerDown={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    handlePick(i.value);
+                  }}
+                  onPointerUp={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handlePick(i.value, i);
                   }}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    handlePick(i.value);
+                    handlePick(i.value, i);
                   }}
                 >
                   <span className="font-medium">{i.label}</span>
@@ -284,7 +324,7 @@ export function SearchablePickList({
       : null;
 
   return (
-    <div ref={rootRef} data-pick-list-root className={cn("relative space-y-1", className)}>
+    <div ref={rootRef} data-pick-list-root className={cn("relative", className)}>
       <div className="relative">
         <Input
           ref={inputRef}
@@ -297,12 +337,14 @@ export function SearchablePickList({
           spellCheck={false}
           enterKeyHint="search"
           inputMode="text"
+          readOnly={!open && hasSelection}
           className={cn(
             "h-11 touch-manipulation pe-9",
             invalid && "border-destructive ring-1 ring-destructive",
+            !open && hasSelection && "text-foreground",
           )}
-          placeholder={open ? searchPlaceholder : closedPlaceholder}
-          value={open ? q : ""}
+          placeholder={open ? searchPlaceholder : placeholder}
+          value={open ? q : (displayText ?? "")}
           disabled={disabled}
           onFocus={() => {
             if (!open) openForSearch();
@@ -338,11 +380,6 @@ export function SearchablePickList({
         />
       </div>
       {listbox}
-      {!open && displayText ? (
-        <p className="text-xs text-muted-foreground">
-          {placeholder}: <span className="font-medium text-foreground">{displayText}</span>
-        </p>
-      ) : null}
     </div>
   );
 }

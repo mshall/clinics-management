@@ -995,6 +995,8 @@
     "clinicAdminScopes": "عيادات هذا المدير",
     "clinicAdminScopesHint": "اختر عيادة واحدة على الأقل عندما يكون الدور مدير عيادة.",
     "assignedClinics": "العيادات المعيّنة",
+    "orgUsersHrEmployee": "موظف الموارد البشرية",
+    "orgUsersNoEmployee": "غير مرتبط",
     "assignedClinicsRequiredHint": "اختر عيادة واحدة على الأقل لمدير العيادة أو مدير الفرع.",
     "assignedClinicsOptionalHint": "اختياري — عيّن العيادة أو الفرع الذي يعمل فيه المستخدم أساساً.",
     "orgWideRoleClinicHint": "هذا الدور يعمل على مستوى المنظمة بالكامل — لا يلزم تعيين عيادة.",

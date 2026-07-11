@@ -1,10 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma, UserRole } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
-import {
-  CLINIC_EMPLOYEE_ROLES,
-  syncLinkedEmployeeClinic,
-} from "../common/clinic-staff-employee";
+import { ensureUserEmployeeRecord } from "../common/clinic-staff-employee";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { fetchClinicScopeIds } from "../common/clinic-scope";
@@ -25,9 +22,40 @@ const CLINIC_SCOPE_ROLES = new Set<UserRole>([UserRole.CLINIC_ADMIN, UserRole.BR
 
 type ClinicSummary = { id: string; nameEn: string };
 
+type LinkedEmployeeSummary = {
+  employeeId: string | null;
+  employeeNumber: string | null;
+  employeeFirstNameEn: string | null;
+  employeeLastNameEn: string | null;
+};
+
+function mapLinkedEmployee(
+  employee: {
+    id: string;
+    employeeNumber: string;
+    firstNameEn: string;
+    lastNameEn: string;
+  } | null,
+): LinkedEmployeeSummary {
+  if (!employee) {
+    return {
+      employeeId: null,
+      employeeNumber: null,
+      employeeFirstNameEn: null,
+      employeeLastNameEn: null,
+    };
+  }
+  return {
+    employeeId: employee.id,
+    employeeNumber: employee.employeeNumber,
+    employeeFirstNameEn: employee.firstNameEn,
+    employeeLastNameEn: employee.lastNameEn,
+  };
+}
+
 function mapUserClinicAssignments(
   scopes: { clinicId: string; clinic: ClinicSummary }[],
-  employee: { clinicId: string; clinic: ClinicSummary } | null,
+  employee: { clinic: ClinicSummary } | null,
 ): { clinicIds: string[]; clinics: ClinicSummary[] } {
   const byId = new Map<string, ClinicSummary>();
   for (const s of scopes) byId.set(s.clinic.id, s.clinic);
@@ -125,7 +153,15 @@ export class AdminService {
         take: pageSize,
         include: {
           clinicAdminScopes: { include: { clinic: { select: { id: true, nameEn: true } } } },
-          employee: { include: { clinic: { select: { id: true, nameEn: true } } } },
+          employee: {
+            select: {
+              id: true,
+              employeeNumber: true,
+              firstNameEn: true,
+              lastNameEn: true,
+              clinic: { select: { id: true, nameEn: true } },
+            },
+          },
         },
       }),
     ]);
@@ -138,6 +174,7 @@ export class AdminService {
         role: r.role,
         createdAt: r.createdAt.toISOString(),
         ...clinics,
+        ...mapLinkedEmployee(r.employee),
       };
     });
     return paginate(items, total, page, pageSize);
@@ -234,26 +271,11 @@ export class AdminService {
       });
       if (clinicIds.length) {
         await this.syncClinicAdminScopes(tx, tenantId, u.id, clinicIds);
-        await syncLinkedEmployeeClinic(tx, tenantId, u, clinicIds[0] ?? null);
-      } else if (CLINIC_EMPLOYEE_ROLES.has(dto.role)) {
-        const clinic = await tx.clinic.findFirst({
-          where: { tenantId },
-          orderBy: { nameEn: "asc" },
-          select: { id: true },
-        });
-        if (clinic) {
-          await syncLinkedEmployeeClinic(tx, tenantId, u, clinic.id);
-        }
       }
+      await ensureUserEmployeeRecord(tx, tenantId, u, clinicIds[0] ?? null);
       return u;
     });
-    return {
-      id: row.id,
-      tenantId: row.tenantId,
-      email: row.email,
-      displayName: row.displayName,
-      role: row.role,
-    };
+    return this.getTenantUser(tenantId, row.id);
   }
 
   async getTenantUser(tenantId: string, userId: string) {
@@ -263,7 +285,15 @@ export class AdminService {
       include: {
         tenant: { select: { id: true, name: true } },
         clinicAdminScopes: { include: { clinic: { select: { id: true, nameEn: true } } } },
-        employee: { include: { clinic: { select: { id: true, nameEn: true } } } },
+        employee: {
+          select: {
+            id: true,
+            employeeNumber: true,
+            firstNameEn: true,
+            lastNameEn: true,
+            clinic: { select: { id: true, nameEn: true } },
+          },
+        },
       },
     });
     if (!row) throw new NotFoundException("User not found");
@@ -277,6 +307,7 @@ export class AdminService {
       role: row.role,
       createdAt: row.createdAt.toISOString(),
       ...clinics,
+      ...mapLinkedEmployee(row.employee),
     };
   }
 
@@ -314,9 +345,16 @@ export class AdminService {
 
       if (dto.clinicIds !== undefined) {
         await this.syncClinicAdminScopes(tx, tenantId, userId, dto.clinicIds);
-        await syncLinkedEmployeeClinic(tx, tenantId, u, dto.clinicIds[0] ?? null);
-      } else if (dto.role !== undefined && !CLINIC_EMPLOYEE_ROLES.has(nextRole)) {
-        await syncLinkedEmployeeClinic(tx, tenantId, u, null);
+      }
+
+      const shouldSyncEmployee =
+        dto.clinicIds !== undefined ||
+        dto.role !== undefined ||
+        dto.email !== undefined ||
+        dto.displayName !== undefined;
+      if (shouldSyncEmployee) {
+        const primaryClinic = dto.clinicIds !== undefined ? (dto.clinicIds[0] ?? null) : undefined;
+        await ensureUserEmployeeRecord(tx, tenantId, u, primaryClinic);
       }
 
       return u;
