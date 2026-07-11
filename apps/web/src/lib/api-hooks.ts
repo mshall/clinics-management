@@ -209,6 +209,7 @@ export function useSchedulingPhysiciansQuery(params: {
     queryKey: ["clinicians", "scheduling", clinicId ?? "", search ?? ""],
     queryFn: () => apiGet<ClinicPhysicianDto[]>(`/api/v1/clinics/physicians/scheduling?${q.toString()}`),
     enabled: enabled && hasToken,
+    placeholderData: (previous) => previous,
   });
 }
 

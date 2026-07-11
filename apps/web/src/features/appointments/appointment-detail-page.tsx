@@ -79,7 +79,7 @@ export function AppointmentDetailPage() {
   });
   const patients = patData?.items ?? [];
 
-  const { data: physicians = [], isPending: physiciansPending } = useSchedulingPhysiciansQuery({
+  const { data: physicians = [], isFetching: physiciansFetching } = useSchedulingPhysiciansQuery({
     clinicId: clinicId || undefined,
     search: debouncedDoctorSearch.trim() || undefined,
     enabled: Boolean(apt && !readOnly),
@@ -433,7 +433,9 @@ export function AppointmentDetailPage() {
                 searchPlaceholder={t("appointments.filterPhysician", "Type physician name, Arabic name, or email…")}
                 placeholder={t("appointments.pickPhysician")}
                 emptyMessage={
-                  physiciansPending ? t("common.loading") : t("appointments.noPhysicians", "No physicians found.")
+                  physiciansFetching && physicianItems.length === 0
+                    ? t("common.loading")
+                    : t("appointments.noPhysicians", "No physicians found.")
                 }
                 localFilter={false}
                 minSearchLength={0}

@@ -41,11 +41,19 @@ type PanelRect = {
   placement: "below" | "above";
 };
 
-const PANEL_MAX_HEIGHT = 192;
+const PANEL_MAX_HEIGHT = 224;
+
+function prefersCoarsePointer(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(pointer: coarse)").matches;
+}
 
 function measurePanelRect(anchor: HTMLElement): PanelRect {
   const rect = anchor.getBoundingClientRect();
-  const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+  const vv = window.visualViewport;
+  const viewportHeight = vv?.height ?? window.innerHeight;
+  const offsetTop = vv?.offsetTop ?? 0;
+  const offsetLeft = vv?.offsetLeft ?? 0;
   const spaceBelow = viewportHeight - rect.bottom - 8;
   const spaceAbove = rect.top - 8;
   const placement = spaceBelow < PANEL_MAX_HEIGHT && spaceAbove > spaceBelow ? "above" : "below";
@@ -53,9 +61,10 @@ function measurePanelRect(anchor: HTMLElement): PanelRect {
     PANEL_MAX_HEIGHT,
     Math.max(120, placement === "below" ? spaceBelow : spaceAbove),
   );
+  const rawTop = placement === "below" ? rect.bottom + 4 : rect.top - maxHeight - 4;
   return {
-    top: placement === "below" ? rect.bottom + 4 : rect.top - maxHeight - 4,
-    left: rect.left,
+    top: rawTop + offsetTop,
+    left: rect.left + offsetLeft,
     width: rect.width,
     maxHeight,
     placement,
@@ -84,9 +93,12 @@ export function SearchablePickList({
   const rootRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listenOutsideRef = useRef(false);
+  const pickingRef = useRef(false);
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [panelRect, setPanelRect] = useState<PanelRect | null>(null);
+  const skipAutofocus = useMemo(() => prefersCoarsePointer(), []);
 
   const filtered = useMemo(() => {
     const base = !localFilter
@@ -121,6 +133,18 @@ export function SearchablePickList({
     [onValueChange, onSearchQueryChange],
   );
 
+  const handlePick = useCallback(
+    (next: string) => {
+      if (disabled || pickingRef.current) return;
+      pickingRef.current = true;
+      pick(next);
+      window.setTimeout(() => {
+        pickingRef.current = false;
+      }, 0);
+    },
+    [disabled, pick],
+  );
+
   const closeWithoutPick = useCallback(() => {
     setOpen(false);
     setQ("");
@@ -136,8 +160,10 @@ export function SearchablePickList({
   useEffect(() => {
     if (!open) {
       setPanelRect(null);
+      listenOutsideRef.current = false;
       return;
     }
+    listenOutsideRef.current = true;
     updatePanelRect();
     const vv = window.visualViewport;
     vv?.addEventListener("resize", updatePanelRect);
@@ -145,6 +171,7 @@ export function SearchablePickList({
     window.addEventListener("resize", updatePanelRect);
     window.addEventListener("scroll", updatePanelRect, true);
     return () => {
+      listenOutsideRef.current = false;
       vv?.removeEventListener("resize", updatePanelRect);
       vv?.removeEventListener("scroll", updatePanelRect);
       window.removeEventListener("resize", updatePanelRect);
@@ -154,12 +181,8 @@ export function SearchablePickList({
 
   useEffect(() => {
     if (!open) return;
-    let listen = false;
-    const raf = window.requestAnimationFrame(() => {
-      listen = true;
-    });
     const onDocPointerDown = (e: PointerEvent) => {
-      if (!listen) return;
+      if (!listenOutsideRef.current) return;
       const target = e.target as Node;
       if (rootRef.current?.contains(target)) return;
       if (panelRef.current?.contains(target)) return;
@@ -171,20 +194,19 @@ export function SearchablePickList({
     document.addEventListener("pointerdown", onDocPointerDown, true);
     document.addEventListener("keydown", onKey);
     return () => {
-      window.cancelAnimationFrame(raf);
       document.removeEventListener("pointerdown", onDocPointerDown, true);
       document.removeEventListener("keydown", onKey);
     };
   }, [open, closeWithoutPick]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || skipAutofocus) return;
     const raf = window.requestAnimationFrame(() => {
       inputRef.current?.focus({ preventScroll: true });
       updatePanelRect();
     });
     return () => window.cancelAnimationFrame(raf);
-  }, [open, updatePanelRect]);
+  }, [open, skipAutofocus, updatePanelRect]);
 
   const listbox =
     open && panelRect
@@ -193,15 +215,16 @@ export function SearchablePickList({
             ref={panelRef}
             id={listboxId}
             role="listbox"
+            data-pick-list-panel
             style={{
               position: "fixed",
               top: panelRect.top,
               left: panelRect.left,
               width: panelRect.width,
               maxHeight: panelRect.maxHeight,
-              zIndex: 9999,
+              zIndex: 10001,
             }}
-            className="overflow-auto overscroll-contain rounded-md border border-border bg-background shadow-lg [-webkit-overflow-scrolling:touch]"
+            className="overflow-auto overscroll-contain rounded-md border border-border bg-background shadow-lg [-webkit-overflow-scrolling:touch] [touch-action:manipulation]"
           >
             {!meetsMinSearch ? (
               <p className="px-3 py-2 text-xs text-muted-foreground">{idleMessage}</p>
@@ -216,13 +239,18 @@ export function SearchablePickList({
                   aria-selected={value === i.value}
                   disabled={disabled}
                   className={cn(
-                    "flex w-full min-h-11 flex-col gap-0.5 border-b border-border px-3 py-2.5 text-start text-sm last:border-b-0 hover:bg-muted/60 active:bg-muted/80 disabled:opacity-50 touch-manipulation",
+                    "flex w-full min-h-11 cursor-pointer flex-col gap-0.5 border-b border-border px-3 py-2.5 text-start text-sm last:border-b-0 hover:bg-muted/60 active:bg-muted/80 disabled:opacity-50 touch-manipulation [-webkit-tap-highlight-color:transparent]",
                     value === i.value && "bg-muted/80",
                   )}
                   onPointerDown={(e) => {
                     e.preventDefault();
-                    if (disabled) return;
-                    pick(i.value);
+                    e.stopPropagation();
+                    handlePick(i.value);
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handlePick(i.value);
                   }}
                 >
                   <span className="font-medium">{i.label}</span>
@@ -236,7 +264,7 @@ export function SearchablePickList({
       : null;
 
   return (
-    <div ref={rootRef} className={cn("relative space-y-1", className)}>
+    <div ref={rootRef} data-pick-list-root className={cn("relative space-y-1", className)}>
       {!open ? (
         <button
           type="button"
@@ -244,15 +272,12 @@ export function SearchablePickList({
           aria-haspopup="listbox"
           aria-expanded={false}
           className={cn(
-            "flex h-11 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-1 text-start text-sm shadow-sm transition-colors touch-manipulation",
+            "flex h-11 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-1 text-start text-sm shadow-sm transition-colors touch-manipulation [-webkit-tap-highlight-color:transparent]",
             "hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             !displayText && "text-muted-foreground",
             disabled && "cursor-not-allowed opacity-50",
             invalid && "border-destructive ring-1 ring-destructive",
           )}
-          onPointerDown={(e) => {
-            e.preventDefault();
-          }}
           onClick={() => {
             if (disabled) return;
             setOpen(true);
@@ -273,12 +298,20 @@ export function SearchablePickList({
           autoCapitalize="off"
           spellCheck={false}
           enterKeyHint="search"
-          className={cn("h-11", invalid && "border-destructive ring-1 ring-destructive")}
+          readOnly={skipAutofocus && !q}
+          className={cn("h-11 touch-manipulation", invalid && "border-destructive ring-1 ring-destructive")}
           placeholder={searchPlaceholder}
           value={q}
           disabled={disabled}
+          onFocus={() => {
+            if (skipAutofocus && inputRef.current?.readOnly) {
+              inputRef.current.readOnly = false;
+            }
+            updatePanelRect();
+          }}
           onChange={(e) => {
             const v = e.target.value;
+            if (inputRef.current?.readOnly) inputRef.current.readOnly = false;
             setQ(v);
             onSearchQueryChange?.(v);
           }}

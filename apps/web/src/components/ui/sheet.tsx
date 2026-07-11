@@ -2,6 +2,7 @@ import * as SheetPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
+import { isPickListPortalTarget } from "@/lib/pick-list-portal";
 import { cn } from "@/lib/utils";
 
 function SheetCloseLabel() {
@@ -34,6 +35,15 @@ const SheetContent = React.forwardRef<
     <SheetOverlay />
     <SheetPrimitive.Content
       ref={ref}
+      onPointerDownOutside={(e) => {
+        if (isPickListPortalTarget(e.target)) e.preventDefault();
+      }}
+      onFocusOutside={(e) => {
+        if (isPickListPortalTarget(e.target)) e.preventDefault();
+      }}
+      onInteractOutside={(e) => {
+        if (isPickListPortalTarget(e.target)) e.preventDefault();
+      }}
       className={cn(
         "fixed inset-y-0 z-50 flex h-full w-[min(100%,20rem)] flex-col border border-border bg-card shadow-lg start-0",
         className

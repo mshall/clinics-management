@@ -170,7 +170,7 @@ export function AppointmentsPage() {
     return () => window.clearTimeout(tid);
   }, [bookDoctorSearch]);
   const schedulingClinicId = clinicId || selectedBookPatient?.homeBranchId || "";
-  const { data: physicians = [], isPending: physiciansPending } = useSchedulingPhysiciansQuery({
+  const { data: physicians = [], isFetching: physiciansFetching } = useSchedulingPhysiciansQuery({
     clinicId: schedulingClinicId || undefined,
     search: debouncedBookDoctor.trim() || undefined,
     enabled: showBookPanel && !isPhysician,
@@ -427,7 +427,7 @@ export function AppointmentsPage() {
           <CardHeader>
             <CardTitle className="text-base">{t("appointments.book")}</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
+          <CardContent className="grid gap-4 overflow-visible sm:grid-cols-2">
             {bookOk ? <p className="text-sm text-emerald-600 sm:col-span-full dark:text-emerald-400">{bookOk}</p> : null}
             {validation.formErr ? <p className="text-sm text-destructive sm:col-span-full">{validation.formErr}</p> : null}
             <div className="space-y-2 sm:col-span-2">
@@ -478,7 +478,9 @@ export function AppointmentsPage() {
                 searchPlaceholder={t("appointments.filterPhysician", "Type physician name, Arabic name, or email…")}
                 placeholder={t("appointments.pickPhysician")}
                 emptyMessage={
-                  physiciansPending ? t("common.loading") : t("appointments.noPhysicians", "No physicians found.")
+                  physiciansFetching && physicianItems.length === 0
+                    ? t("common.loading")
+                    : t("appointments.noPhysicians", "No physicians found.")
                 }
                 localFilter={false}
                 minSearchLength={0}

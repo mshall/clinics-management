@@ -2,6 +2,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
+import { isPickListPortalTarget } from "@/lib/pick-list-portal";
 import { cn } from "@/lib/utils";
 
 function DialogCloseLabel() {
@@ -34,6 +35,15 @@ const DialogContent = React.forwardRef<
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
+      onPointerDownOutside={(e) => {
+        if (isPickListPortalTarget(e.target)) e.preventDefault();
+      }}
+      onFocusOutside={(e) => {
+        if (isPickListPortalTarget(e.target)) e.preventDefault();
+      }}
+      onInteractOutside={(e) => {
+        if (isPickListPortalTarget(e.target)) e.preventDefault();
+      }}
       className={cn(
         "fixed left-1/2 top-1/2 z-50 grid w-[min(100%-2rem,28rem)] max-h-[min(90dvh,40rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto overscroll-contain border border-border bg-card p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg touch-manipulation",
         className

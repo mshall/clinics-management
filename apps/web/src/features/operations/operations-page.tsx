@@ -164,7 +164,7 @@ export function OperationsPage() {
     [bookPatients, patients, patientId],
   );
   const effectiveSchedulingClinicId = schedulingClinicId || selectedPatient?.homeBranchId || "";
-  const { data: physicians = [], isPending: physiciansPending } = useSchedulingPhysiciansQuery({
+  const { data: physicians = [], isFetching: physiciansFetching } = useSchedulingPhysiciansQuery({
     clinicId: effectiveSchedulingClinicId || undefined,
     search: debouncedDoctorSearch.trim() || undefined,
     enabled: showCreatePanel,
@@ -300,7 +300,7 @@ export function OperationsPage() {
   };
 
 
-  const { data: editPhysicians = [], isPending: editPhysiciansPending } = useSchedulingPhysiciansQuery({
+  const { data: editPhysicians = [], isFetching: editPhysiciansFetching } = useSchedulingPhysiciansQuery({
     search: debouncedEditDoctor.trim() || undefined,
     enabled: editOp != null,
   });
@@ -733,7 +733,9 @@ export function OperationsPage() {
                   searchPlaceholder={t("appointments.filterPhysician", "Type physician name…")}
                   placeholder={t("operations.selectDoctor", "Select doctor")}
                   emptyMessage={
-                    editPhysiciansPending ? t("common.loading") : t("operations.noDoctors", "No physicians found.")
+                    editPhysiciansFetching && editPhysicianItems.length === 0
+                      ? t("common.loading")
+                      : t("operations.noDoctors", "No physicians found.")
                   }
                   localFilter={false}
                   minSearchLength={0}
@@ -930,7 +932,9 @@ export function OperationsPage() {
                       searchPlaceholder={t("appointments.filterPhysician", "Type physician name, Arabic name, or email…")}
                       placeholder={t("operations.selectDoctor", "Select doctor")}
                       emptyMessage={
-                        physiciansPending ? t("common.loading") : t("operations.noDoctors", "No physicians found.")
+                        physiciansFetching && physicianItems.length === 0
+                          ? t("common.loading")
+                          : t("operations.noDoctors", "No physicians found.")
                       }
                       localFilter={false}
                       minSearchLength={0}

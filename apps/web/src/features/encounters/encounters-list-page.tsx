@@ -215,7 +215,7 @@ export function EncountersListPage() {
     pageSize: 30,
     enabled: aptPickerEnabled,
   });
-  const { data: usersForDoctors } = useSchedulingPhysiciansQuery({
+  const { data: usersForDoctors, isFetching: doctorsFetching } = useSchedulingPhysiciansQuery({
     clinicId: createClinicId || undefined,
     search: debouncedDoctorSearch.trim() || undefined,
     enabled: createOpen && !isPhysician,
@@ -414,7 +414,7 @@ export function EncountersListPage() {
             {t("encounters.newEncounter", "New encounter")}
           </CreateActionButton>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-            <DialogContent className="max-h-[min(90dvh,40rem)] overflow-y-auto overscroll-contain" aria-describedby={undefined}>
+            <DialogContent className="max-h-[min(90dvh,40rem)] overflow-y-auto overflow-x-visible overscroll-contain" aria-describedby={undefined}>
               <DialogHeader>
                 <DialogTitle>{t("encounters.createEncounterTitle", "Create encounter")}</DialogTitle>
               </DialogHeader>
@@ -511,7 +511,11 @@ export function EncountersListPage() {
                       onSearchQueryChange={setDoctorSearch}
                       searchPlaceholder={t("appointments.filterPhysician", "Type physician name, Arabic name, or email…")}
                       placeholder={t("encounters.attendingPhysician")}
-                      emptyMessage={t("encounters.noDoctors", "No doctor accounts in this organization.")}
+                      emptyMessage={
+                        doctorsFetching && doctorPickItems.length === 0
+                          ? t("common.loading")
+                          : t("encounters.noDoctors", "No doctor accounts in this organization.")
+                      }
                       localFilter={false}
                       minSearchLength={0}
                       idleMessage={t("operations.doctorSearchIdle", "Type a name or pick from the list.")}
