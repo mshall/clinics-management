@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { focusTextInput } from "@/lib/focus-input";
 import { cn } from "@/lib/utils";
 
 export interface PickListItem {
@@ -22,10 +23,12 @@ interface SearchablePickListProps {
   localFilter?: boolean;
   /** When the search box changes (while open); use with `localFilter={false}` for server-driven lists. */
   onSearchQueryChange?: (query: string) => void;
-  /** Minimum typed chars before options are shown while open. */
+  /** Minimum typed chars before the full result list is shown while open. */
   minSearchLength?: number;
-  /** Message shown while waiting for minimum search length. */
+  /** Message shown while waiting for minimum search length and no preview rows exist. */
   idleMessage?: string;
+  /** How many options to show immediately on open before `minSearchLength` is met (0 disables). */
+  previewCount?: number;
   /** Label fallback when `value` is set but not present in `items` (e.g. server search lists). */
   selectedItem?: PickListItem | null;
   className?: string;
@@ -42,11 +45,7 @@ type PanelRect = {
 };
 
 const PANEL_MAX_HEIGHT = 224;
-
-function prefersCoarsePointer(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.matchMedia("(pointer: coarse)").matches;
-}
+const DEFAULT_PREVIEW_COUNT = 4;
 
 function measurePanelRect(anchor: HTMLElement): PanelRect {
   const rect = anchor.getBoundingClientRect();
@@ -83,6 +82,7 @@ export function SearchablePickList({
   onSearchQueryChange,
   minSearchLength = 0,
   idleMessage = "Start typing to search.",
+  previewCount = DEFAULT_PREVIEW_COUNT,
   selectedItem,
   className,
   invalid,
@@ -98,7 +98,6 @@ export function SearchablePickList({
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [panelRect, setPanelRect] = useState<PanelRect | null>(null);
-  const skipAutofocus = useMemo(() => prefersCoarsePointer(), []);
 
   const filtered = useMemo(() => {
     const base = !localFilter
@@ -121,7 +120,17 @@ export function SearchablePickList({
     items.find((i) => i.value === value)?.label ??
     (selectedItem?.value === value ? selectedItem.label : undefined);
   const displayText = selectedLabel ?? null;
-  const meetsMinSearch = q.trim().length >= minSearchLength;
+  const trimmedQ = q.trim();
+  const isSearching = trimmedQ.length > 0;
+  const meetsMinSearch = trimmedQ.length >= minSearchLength;
+  const showingPreview = open && (!isSearching || !meetsMinSearch) && previewCount > 0 && filtered.length > 0;
+
+  const listItems = useMemo(() => {
+    if (!open) return [];
+    if (isSearching && meetsMinSearch) return filtered;
+    if (previewCount > 0 && filtered.length > 0) return filtered.slice(0, previewCount);
+    return [];
+  }, [open, isSearching, meetsMinSearch, filtered, previewCount]);
 
   const pick = useCallback(
     (next: string) => {
@@ -157,6 +166,17 @@ export function SearchablePickList({
     setPanelRect(measurePanelRect(anchor));
   }, []);
 
+  const openForSearch = useCallback(() => {
+    if (disabled) return;
+    setOpen(true);
+    setQ("");
+    onSearchQueryChange?.("");
+    window.requestAnimationFrame(() => {
+      focusTextInput(inputRef.current);
+      updatePanelRect();
+    });
+  }, [disabled, onSearchQueryChange, updatePanelRect]);
+
   useEffect(() => {
     if (!open) {
       setPanelRect(null);
@@ -170,8 +190,10 @@ export function SearchablePickList({
     vv?.addEventListener("scroll", updatePanelRect);
     window.addEventListener("resize", updatePanelRect);
     window.addEventListener("scroll", updatePanelRect, true);
+    const focusTimer = window.setTimeout(() => focusTextInput(inputRef.current), 0);
     return () => {
       listenOutsideRef.current = false;
+      window.clearTimeout(focusTimer);
       vv?.removeEventListener("resize", updatePanelRect);
       vv?.removeEventListener("scroll", updatePanelRect);
       window.removeEventListener("resize", updatePanelRect);
@@ -199,14 +221,7 @@ export function SearchablePickList({
     };
   }, [open, closeWithoutPick]);
 
-  useEffect(() => {
-    if (!open || skipAutofocus) return;
-    const raf = window.requestAnimationFrame(() => {
-      inputRef.current?.focus({ preventScroll: true });
-      updatePanelRect();
-    });
-    return () => window.cancelAnimationFrame(raf);
-  }, [open, skipAutofocus, updatePanelRect]);
+  const inputValue = open ? q : (displayText ?? "");
 
   const listbox =
     open && panelRect
@@ -226,12 +241,13 @@ export function SearchablePickList({
             }}
             className="overflow-auto overscroll-contain rounded-md border border-border bg-background shadow-lg [-webkit-overflow-scrolling:touch] [touch-action:manipulation]"
           >
-            {!meetsMinSearch ? (
-              <p className="px-3 py-2 text-xs text-muted-foreground">{idleMessage}</p>
-            ) : filtered.length === 0 ? (
-              <p className="px-3 py-2 text-xs text-muted-foreground">{emptyMessage}</p>
+            {showingPreview && (minSearchLength > 0 || !isSearching) ? (
+              <p className="border-b border-border px-3 py-1.5 text-xs text-muted-foreground">{idleMessage}</p>
+            ) : null}
+            {listItems.length === 0 ? (
+              <p className="px-3 py-2 text-xs text-muted-foreground">{showingPreview ? emptyMessage : idleMessage}</p>
             ) : (
-              filtered.map((i, idx) => (
+              listItems.map((i, idx) => (
                 <button
                   key={`${i.value}::${idx}`}
                   type="button"
@@ -265,60 +281,43 @@ export function SearchablePickList({
 
   return (
     <div ref={rootRef} data-pick-list-root className={cn("relative space-y-1", className)}>
-      {!open ? (
-        <button
-          type="button"
-          disabled={disabled}
-          aria-haspopup="listbox"
-          aria-expanded={false}
-          className={cn(
-            "flex h-11 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-1 text-start text-sm shadow-sm transition-colors touch-manipulation [-webkit-tap-highlight-color:transparent]",
-            "hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            !displayText && "text-muted-foreground",
-            disabled && "cursor-not-allowed opacity-50",
-            invalid && "border-destructive ring-1 ring-destructive",
-          )}
-          onClick={() => {
-            if (disabled) return;
-            setOpen(true);
-            setQ("");
-            onSearchQueryChange?.("");
-          }}
-        >
-          <span className="min-w-0 flex-1 truncate">{displayText ?? placeholder}</span>
-          <ChevronDown className="size-4 shrink-0 opacity-50" aria-hidden />
-        </button>
-      ) : (
+      <div className="relative">
         <Input
           ref={inputRef}
           id={inputId}
+          type="text"
           dir="auto"
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"
           spellCheck={false}
           enterKeyHint="search"
-          readOnly={skipAutofocus && !q}
-          className={cn("h-11 touch-manipulation", invalid && "border-destructive ring-1 ring-destructive")}
-          placeholder={searchPlaceholder}
-          value={q}
+          inputMode="search"
+          className={cn(
+            "h-11 touch-manipulation pe-9",
+            invalid && "border-destructive ring-1 ring-destructive",
+            !open && displayText && "text-foreground",
+          )}
+          placeholder={open ? searchPlaceholder : placeholder}
+          value={inputValue}
           disabled={disabled}
           onFocus={() => {
-            if (skipAutofocus && inputRef.current?.readOnly) {
-              inputRef.current.readOnly = false;
-            }
-            updatePanelRect();
+            if (!open) openForSearch();
+            else updatePanelRect();
+          }}
+          onPointerDown={() => {
+            if (!open) openForSearch();
           }}
           onChange={(e) => {
+            if (!open) setOpen(true);
             const v = e.target.value;
-            if (inputRef.current?.readOnly) inputRef.current.readOnly = false;
             setQ(v);
             onSearchQueryChange?.(v);
           }}
           aria-autocomplete="list"
-          aria-controls={listboxId}
+          aria-controls={open ? listboxId : undefined}
           role="combobox"
-          aria-expanded
+          aria-expanded={open}
           onKeyDown={(e) => {
             if (e.key === "Escape") {
               e.stopPropagation();
@@ -326,7 +325,11 @@ export function SearchablePickList({
             }
           }}
         />
-      )}
+        <ChevronDown
+          className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 shrink-0 opacity-50"
+          aria-hidden
+        />
+      </div>
       {listbox}
       {!open ? (
         <p className="text-xs text-muted-foreground">

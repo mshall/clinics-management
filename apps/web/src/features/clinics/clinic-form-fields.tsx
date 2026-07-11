@@ -147,7 +147,7 @@ export function ClinicFormFields({
         </Label>
         <textarea
           id={`${idPrefix}-addressEn`}
-          className="flex min-h-[88px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          className="flex min-h-[88px] w-full touch-manipulation rounded-md border border-input bg-background px-3 py-2 text-base sm:text-sm"
           value={values.addressEn}
           onChange={(e) => onChange({ addressEn: e.target.value })}
           placeholder={t("admin.addressEnPh", "Street, building, area…")}
@@ -160,7 +160,7 @@ export function ClinicFormFields({
         </Label>
         <textarea
           id={`${idPrefix}-addressAr`}
-          className="flex min-h-[88px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          className="flex min-h-[88px] w-full touch-manipulation rounded-md border border-input bg-background px-3 py-2 text-base sm:text-sm"
           value={values.addressAr}
           onChange={(e) => onChange({ addressAr: e.target.value })}
           dir="rtl"

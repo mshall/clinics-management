@@ -534,7 +534,7 @@ export function AppointmentDetailPage() {
           <div className="space-y-2 sm:col-span-2">
             <Label>{t("appointments.notes", "Notes")}</Label>
             <textarea
-              className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex min-h-[100px] w-full touch-manipulation rounded-md border border-input bg-background px-3 py-2 text-base disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
               value={notes}
               disabled={readOnly}
               onChange={(e) => setNotes(e.target.value)}

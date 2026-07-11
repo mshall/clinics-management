@@ -75,7 +75,7 @@ export function SortableTh({
       <div className={cn("space-y-1", centered && "flex flex-col items-stretch")}>
         {sortButton}
         <Input
-          className={cn("h-8 text-xs", centered && "text-center")}
+          className={cn("h-8 text-base sm:text-xs", centered && "text-center")}
           value={filterValue}
           onChange={(e) => onFilterChange(e.target.value)}
           placeholder="…"
@@ -121,7 +121,7 @@ export function FilterTh({
       <div className={cn("space-y-1", centered && "flex flex-col items-stretch")}>
         {filterColumnLabelRow(label, centered)}
         <Input
-          className={cn("h-8 text-xs", centered && "text-center")}
+          className={cn("h-8 text-base sm:text-xs", centered && "text-center")}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="…"
