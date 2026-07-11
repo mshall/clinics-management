@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -32,6 +33,35 @@ interface SearchablePickListProps {
   invalid?: boolean;
 }
 
+type PanelRect = {
+  top: number;
+  left: number;
+  width: number;
+  maxHeight: number;
+  placement: "below" | "above";
+};
+
+const PANEL_MAX_HEIGHT = 192;
+
+function measurePanelRect(anchor: HTMLElement): PanelRect {
+  const rect = anchor.getBoundingClientRect();
+  const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+  const spaceBelow = viewportHeight - rect.bottom - 8;
+  const spaceAbove = rect.top - 8;
+  const placement = spaceBelow < PANEL_MAX_HEIGHT && spaceAbove > spaceBelow ? "above" : "below";
+  const maxHeight = Math.min(
+    PANEL_MAX_HEIGHT,
+    Math.max(120, placement === "below" ? spaceBelow : spaceAbove),
+  );
+  return {
+    top: placement === "below" ? rect.bottom + 4 : rect.top - maxHeight - 4,
+    left: rect.left,
+    width: rect.width,
+    maxHeight,
+    placement,
+  };
+}
+
 export function SearchablePickList({
   items,
   value,
@@ -52,9 +82,11 @@ export function SearchablePickList({
   const listboxId = `${uid}-listbox`;
   const inputId = `${uid}-input`;
   const rootRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
+  const [panelRect, setPanelRect] = useState<PanelRect | null>(null);
 
   const filtered = useMemo(() => {
     const base = !localFilter
@@ -69,14 +101,14 @@ export function SearchablePickList({
       (i) =>
         i.label.toLowerCase().includes(t) ||
         (i.hint?.toLowerCase().includes(t) ?? false) ||
-        i.value.toLowerCase().includes(t)
+        i.value.toLowerCase().includes(t),
     );
   }, [items, q, localFilter, selectedItem, value]);
 
   const selectedLabel =
     items.find((i) => i.value === value)?.label ??
     (selectedItem?.value === value ? selectedItem.label : undefined);
-  const displayText = selectedLabel ?? (value ? value.slice(0, 8) : null);
+  const displayText = selectedLabel ?? null;
   const meetsMinSearch = q.trim().length >= minSearchLength;
 
   const pick = useCallback(
@@ -86,7 +118,7 @@ export function SearchablePickList({
       onSearchQueryChange?.("");
       setOpen(false);
     },
-    [onValueChange, onSearchQueryChange]
+    [onValueChange, onSearchQueryChange],
   );
 
   const closeWithoutPick = useCallback(() => {
@@ -95,11 +127,42 @@ export function SearchablePickList({
     onSearchQueryChange?.("");
   }, [onSearchQueryChange]);
 
+  const updatePanelRect = useCallback(() => {
+    const anchor = inputRef.current ?? rootRef.current;
+    if (!anchor) return;
+    setPanelRect(measurePanelRect(anchor));
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      setPanelRect(null);
+      return;
+    }
+    updatePanelRect();
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", updatePanelRect);
+    vv?.addEventListener("scroll", updatePanelRect);
+    window.addEventListener("resize", updatePanelRect);
+    window.addEventListener("scroll", updatePanelRect, true);
+    return () => {
+      vv?.removeEventListener("resize", updatePanelRect);
+      vv?.removeEventListener("scroll", updatePanelRect);
+      window.removeEventListener("resize", updatePanelRect);
+      window.removeEventListener("scroll", updatePanelRect, true);
+    };
+  }, [open, updatePanelRect]);
+
   useEffect(() => {
     if (!open) return;
+    let listen = false;
+    const raf = window.requestAnimationFrame(() => {
+      listen = true;
+    });
     const onDocPointerDown = (e: PointerEvent) => {
-      const el = rootRef.current;
-      if (!el || el.contains(e.target as Node)) return;
+      if (!listen) return;
+      const target = e.target as Node;
+      if (rootRef.current?.contains(target)) return;
+      if (panelRef.current?.contains(target)) return;
       closeWithoutPick();
     };
     const onKey = (e: KeyboardEvent) => {
@@ -108,6 +171,7 @@ export function SearchablePickList({
     document.addEventListener("pointerdown", onDocPointerDown, true);
     document.addEventListener("keydown", onKey);
     return () => {
+      window.cancelAnimationFrame(raf);
       document.removeEventListener("pointerdown", onDocPointerDown, true);
       document.removeEventListener("keydown", onKey);
     };
@@ -115,64 +179,29 @@ export function SearchablePickList({
 
   useEffect(() => {
     if (!open) return;
-    const t = window.requestAnimationFrame(() => inputRef.current?.focus());
-    return () => window.cancelAnimationFrame(t);
-  }, [open]);
+    const raf = window.requestAnimationFrame(() => {
+      inputRef.current?.focus({ preventScroll: true });
+      updatePanelRect();
+    });
+    return () => window.cancelAnimationFrame(raf);
+  }, [open, updatePanelRect]);
 
-  return (
-    <div ref={rootRef} className={cn("relative space-y-1", className)}>
-      {!open ? (
-        <button
-          type="button"
-          disabled={disabled}
-          aria-haspopup="listbox"
-          aria-expanded={false}
-          className={cn(
-            "flex h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-1 text-start text-sm shadow-sm transition-colors",
-            "hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            !displayText && "text-muted-foreground",
-            disabled && "cursor-not-allowed opacity-50",
-            invalid && "border-destructive ring-1 ring-destructive",
-          )}
-          onClick={() => {
-            if (disabled) return;
-            setOpen(true);
-            setQ("");
-            onSearchQueryChange?.("");
-          }}
-        >
-          <span className="min-w-0 flex-1 truncate">{displayText ?? placeholder}</span>
-          <ChevronDown className="size-4 shrink-0 opacity-50" aria-hidden />
-        </button>
-      ) : (
-        <>
-          <Input
-            ref={inputRef}
-            id={inputId}
-            className={cn("ltr-nums", invalid && "border-destructive ring-1 ring-destructive")}
-            placeholder={searchPlaceholder}
-            value={q}
-            disabled={disabled}
-            onChange={(e) => {
-              const v = e.target.value;
-              setQ(v);
-              onSearchQueryChange?.(v);
-            }}
-            aria-autocomplete="list"
-            aria-controls={listboxId}
-            role="combobox"
-            aria-expanded
-            onKeyDown={(e) => {
-              if (e.key === "Escape") {
-                e.stopPropagation();
-                closeWithoutPick();
-              }
-            }}
-          />
+  const listbox =
+    open && panelRect
+      ? createPortal(
           <div
+            ref={panelRef}
             id={listboxId}
             role="listbox"
-            className="absolute left-0 right-0 top-full z-50 mt-1 max-h-44 overflow-auto rounded-md border border-border bg-background shadow-md"
+            style={{
+              position: "fixed",
+              top: panelRect.top,
+              left: panelRect.left,
+              width: panelRect.width,
+              maxHeight: panelRect.maxHeight,
+              zIndex: 9999,
+            }}
+            className="overflow-auto overscroll-contain rounded-md border border-border bg-background shadow-lg [-webkit-overflow-scrolling:touch]"
           >
             {!meetsMinSearch ? (
               <p className="px-3 py-2 text-xs text-muted-foreground">{idleMessage}</p>
@@ -187,28 +216,88 @@ export function SearchablePickList({
                   aria-selected={value === i.value}
                   disabled={disabled}
                   className={cn(
-                    "flex w-full flex-col gap-0.5 border-b border-border px-3 py-2 text-start text-sm last:border-b-0 hover:bg-muted/60 disabled:opacity-50",
-                    value === i.value && "bg-muted/80"
+                    "flex w-full min-h-11 flex-col gap-0.5 border-b border-border px-3 py-2.5 text-start text-sm last:border-b-0 hover:bg-muted/60 active:bg-muted/80 disabled:opacity-50 touch-manipulation",
+                    value === i.value && "bg-muted/80",
                   )}
-                  onMouseDown={(e) => {
+                  onPointerDown={(e) => {
                     e.preventDefault();
-                  }}
-                  onClick={() => {
                     if (disabled) return;
                     pick(i.value);
                   }}
                 >
                   <span className="font-medium">{i.label}</span>
-                  {i.hint ? <span className="text-xs text-muted-foreground ltr-nums">{i.hint}</span> : null}
+                  {i.hint ? <span className="text-xs text-muted-foreground">{i.hint}</span> : null}
                 </button>
               ))
             )}
-          </div>
-        </>
+          </div>,
+          document.body,
+        )
+      : null;
+
+  return (
+    <div ref={rootRef} className={cn("relative space-y-1", className)}>
+      {!open ? (
+        <button
+          type="button"
+          disabled={disabled}
+          aria-haspopup="listbox"
+          aria-expanded={false}
+          className={cn(
+            "flex h-11 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-1 text-start text-sm shadow-sm transition-colors touch-manipulation",
+            "hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            !displayText && "text-muted-foreground",
+            disabled && "cursor-not-allowed opacity-50",
+            invalid && "border-destructive ring-1 ring-destructive",
+          )}
+          onPointerDown={(e) => {
+            e.preventDefault();
+          }}
+          onClick={() => {
+            if (disabled) return;
+            setOpen(true);
+            setQ("");
+            onSearchQueryChange?.("");
+          }}
+        >
+          <span className="min-w-0 flex-1 truncate">{displayText ?? placeholder}</span>
+          <ChevronDown className="size-4 shrink-0 opacity-50" aria-hidden />
+        </button>
+      ) : (
+        <Input
+          ref={inputRef}
+          id={inputId}
+          dir="auto"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          enterKeyHint="search"
+          className={cn("h-11", invalid && "border-destructive ring-1 ring-destructive")}
+          placeholder={searchPlaceholder}
+          value={q}
+          disabled={disabled}
+          onChange={(e) => {
+            const v = e.target.value;
+            setQ(v);
+            onSearchQueryChange?.(v);
+          }}
+          aria-autocomplete="list"
+          aria-controls={listboxId}
+          role="combobox"
+          aria-expanded
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              e.stopPropagation();
+              closeWithoutPick();
+            }
+          }}
+        />
       )}
+      {listbox}
       {!open ? (
         <p className="text-xs text-muted-foreground">
-          {value ? (
+          {displayText ? (
             <>
               {placeholder}: <span className="font-medium text-foreground">{displayText}</span>
             </>

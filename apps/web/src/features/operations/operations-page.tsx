@@ -130,6 +130,7 @@ export function OperationsPage() {
   const [medications, setMedications] = useState<PendingMedication[]>([]);
   const [prescriptionFile, setPrescriptionFile] = useState<File | null>(null);
   const [generatedPrescriptionFile, setGeneratedPrescriptionFile] = useState<File | null>(null);
+  const [pinnedPhysicianItem, setPinnedPhysicianItem] = useState<PickListItem | null>(null);
 
   const [bookPatientSearch, setBookPatientSearch] = useState("");
   const [debouncedBookPatient, setDebouncedBookPatient] = useState("");
@@ -146,11 +147,6 @@ export function OperationsPage() {
   }, [doctorSearch]);
 
   const schedulingClinicId = clinicId || singleManagedClinic?.id || "";
-  const { data: physicians = [], isPending: physiciansPending } = useSchedulingPhysiciansQuery({
-    clinicId: schedulingClinicId || undefined,
-    search: debouncedDoctorSearch.trim() || undefined,
-    enabled: showCreatePanel,
-  });
 
   const { data: bookPatData, isPending: bookPatientsPending } = usePatientsQuery({
     search: debouncedBookPatient.trim() || undefined,
@@ -159,24 +155,60 @@ export function OperationsPage() {
     enabled: showCreatePanel,
   });
   const bookPatients = bookPatData?.items ?? [];
-  const bookPatientItems: PickListItem[] = useMemo(
-    () => bookPatients.map((p) => patientToPickListItem(p)),
-    [bookPatients]
-  );
-
-  const physicianItems: PickListItem[] = useMemo(
-    () => physicians.map((d) => ({ value: d.userId, label: d.displayName, hint: d.email ?? undefined })),
-    [physicians]
-  );
-
   const selectedPatient = useMemo(
     () => bookPatients.find((p) => p.id === patientId) ?? patients.find((p) => p.id === patientId),
     [bookPatients, patients, patientId],
   );
+  const effectiveSchedulingClinicId = schedulingClinicId || selectedPatient?.homeBranchId || "";
+  const { data: physicians = [], isPending: physiciansPending } = useSchedulingPhysiciansQuery({
+    clinicId: effectiveSchedulingClinicId || undefined,
+    search: debouncedDoctorSearch.trim() || undefined,
+    enabled: showCreatePanel,
+  });
+
+  const bookPatientItems: PickListItem[] = useMemo(
+    () => bookPatients.map((p) => patientToPickListItem(p)),
+    [bookPatients],
+  );
+
+  const physicianItems: PickListItem[] = useMemo(
+    () => physicians.map((d) => ({ value: d.userId, label: d.displayName, hint: d.email ?? undefined })),
+    [physicians],
+  );
+
+  const createPatientMissingFromList = Boolean(
+    patientId && !bookPatientItems.some((p) => p.value === patientId),
+  );
+  const { data: createPatientDetail } = usePatientQuery(
+    showCreatePanel && createPatientMissingFromList ? patientId : undefined,
+  );
+  const bookPatientSelectedItem = useMemo((): PickListItem | null => {
+    if (!patientId) return null;
+    const fromList = bookPatientItems.find((p) => p.value === patientId);
+    if (fromList) return fromList;
+    if (selectedPatient) return patientToPickListItem(selectedPatient);
+    if (createPatientDetail) return patientToPickListItem(createPatientDetail);
+    return null;
+  }, [patientId, bookPatientItems, selectedPatient, createPatientDetail]);
+
   const selectedPhysician = useMemo(
     () => physicians.find((d) => d.userId === clinicianId),
     [physicians, clinicianId],
   );
+  const bookPhysicianSelectedItem = useMemo((): PickListItem | null => {
+    if (!clinicianId) return null;
+    if (pinnedPhysicianItem?.value === clinicianId) return pinnedPhysicianItem;
+    const fromList = physicianItems.find((d) => d.value === clinicianId);
+    if (fromList) return fromList;
+    if (selectedPhysician) {
+      return {
+        value: selectedPhysician.userId,
+        label: selectedPhysician.displayName,
+        hint: selectedPhysician.email ?? undefined,
+      };
+    }
+    return null;
+  }, [clinicianId, pinnedPhysicianItem, physicianItems, selectedPhysician]);
   const selectedClinic = useMemo(() => {
     const id = schedulingClinicId || selectedPatient?.homeBranchId || clinics[0]?.id;
     return clinics.find((c) => c.id === id) ?? clinics[0];
@@ -199,6 +231,7 @@ export function OperationsPage() {
     setBookPatientSearch("");
     setDebouncedBookPatient("");
     setClinicianId("");
+    setPinnedPhysicianItem(null);
     setDoctorSearch("");
     setDebouncedDoctorSearch("");
     setOperationDate("");
@@ -876,6 +909,7 @@ export function OperationsPage() {
                     <SearchablePickList
                       items={bookPatientItems}
                       value={patientId}
+                      selectedItem={bookPatientSelectedItem}
                       onValueChange={setPatientId}
                       onSearchQueryChange={setBookPatientSearch}
                       searchPlaceholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
@@ -896,7 +930,12 @@ export function OperationsPage() {
                     <SearchablePickList
                       items={physicianItems}
                       value={clinicianId}
-                      onValueChange={setClinicianId}
+                      selectedItem={bookPhysicianSelectedItem}
+                      onValueChange={(id) => {
+                        setClinicianId(id);
+                        const item = physicianItems.find((d) => d.value === id);
+                        if (item) setPinnedPhysicianItem(item);
+                      }}
                       onSearchQueryChange={setDoctorSearch}
                       searchPlaceholder={t("appointments.filterPhysician", "Type physician name…")}
                       placeholder={t("operations.selectDoctor", "Select doctor")}
