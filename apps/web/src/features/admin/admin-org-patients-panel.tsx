@@ -17,6 +17,7 @@ import { TablePagination } from "@/components/table-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { SearchInput } from "@/components/search-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useClinicsQuery, usePatientQuery } from "@/lib/api-hooks";
@@ -363,7 +364,7 @@ export function AdminOrgPatientsPanel() {
           ) : null}
           <div className="max-w-sm space-y-2">
             <Label htmlFor="org-patients-search">{t("admin.orgPatientsSearch", "Search patients")}</Label>
-            <Input
+            <SearchInput
               id="org-patients-search"
               value={search}
               onChange={(e) => {

@@ -453,6 +453,7 @@ export function AppointmentsPage() {
                   if (item) setSelectedBookPatientItem(item);
                 }}
                 onSearchQueryChange={setBookPatientSearch}
+                onOpen={() => setDebouncedBookPatient("")}
                 searchPlaceholder={t("encounters.patientSearchPlaceholder")}
                 placeholder={t("appointments.pick")}
                 emptyMessage={
@@ -475,6 +476,7 @@ export function AppointmentsPage() {
                   if (item) setPinnedPhysicianItem(item);
                 }}
                 onSearchQueryChange={setBookDoctorSearch}
+                onOpen={() => setDebouncedBookDoctor("")}
                 searchPlaceholder={t("appointments.filterPhysician", "Type physician name, Arabic name, or email…")}
                 placeholder={t("appointments.pickPhysician")}
                 emptyMessage={

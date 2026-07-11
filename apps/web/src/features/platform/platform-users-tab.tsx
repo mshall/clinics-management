@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ResponsiveTable } from "@/components/responsive-table";
+import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { apiGet, apiPatch, apiPost } from "@/lib/http";
 import { formatUserRole } from "@/lib/locale-display";
 import type { Paginated } from "@/lib/paginated";
@@ -225,7 +226,7 @@ export function PlatformUsersTab() {
           <div className="min-w-[12rem] max-w-xs space-y-2">
             <Label>{t("platform.tabs.filterOrg")}</Label>
             <select
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className={nativeSelectClassName}
               value={filterTenantId}
               onChange={(e) => setFilterTenantId(e.target.value)}
             >

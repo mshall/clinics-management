@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { SearchInput } from "@/components/search-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
@@ -437,6 +438,7 @@ export function EncountersListPage() {
                       clearCreateFieldError("patient");
                     }}
                     onSearchQueryChange={setPatientSearch}
+                    onOpen={() => setDebouncedPatientSearch("")}
                     searchPlaceholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
                     placeholder={t("encounters.pickPatient", "Pick patient")}
                     emptyMessage={dialogPatientsPending ? t("common.loading") : t("encounters.noPatientsMatch", "No patients match.")}
@@ -469,6 +471,7 @@ export function EncountersListPage() {
                       }
                     }}
                     onSearchQueryChange={setAptPickerSearch}
+                    onOpen={() => setDebouncedAptPicker("")}
                     searchPlaceholder={t("encounters.appointmentSearchPlaceholder", "Type at least 2 characters or pick a patient first…")}
                     placeholder={t("encounters.linkedAppointment", "Booked appointment (optional)")}
                     emptyMessage={aptPickerPending ? t("common.loading") : t("encounters.noBookableAppointments", "No matching open appointments.")}
@@ -509,6 +512,7 @@ export function EncountersListPage() {
                         if (item) setPinnedClinicianItem(item);
                       }}
                       onSearchQueryChange={setDoctorSearch}
+                      onOpen={() => setDebouncedDoctorSearch("")}
                       searchPlaceholder={t("appointments.filterPhysician", "Type physician name, Arabic name, or email…")}
                       placeholder={t("encounters.attendingPhysician")}
                       emptyMessage={
@@ -613,7 +617,7 @@ export function EncountersListPage() {
         <CardContent className="flex flex-wrap items-end gap-4">
           <div className="space-y-2 min-w-[12rem] flex-1">
             <Label>{t("encounters.patientNameSearch", "Patient name or MRN")}</Label>
-            <Input
+            <SearchInput
               value={ledgerPatientQuery}
               placeholder={t("encounters.patientNameSearchPh", "Filter by patient…")}
               onChange={(e) => {

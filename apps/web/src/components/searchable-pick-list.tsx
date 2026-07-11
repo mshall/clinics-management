@@ -23,6 +23,8 @@ interface SearchablePickListProps {
   localFilter?: boolean;
   /** When the search box changes (while open); use with `localFilter={false}` for server-driven lists. */
   onSearchQueryChange?: (query: string) => void;
+  /** Called when the dropdown opens — use to prefetch server lists without waiting for debounce. */
+  onOpen?: () => void;
   /** Minimum typed chars before the full result list is shown while open. */
   minSearchLength?: number;
   /** Message shown while waiting for minimum search length and no preview rows exist. */
@@ -70,6 +72,13 @@ function measurePanelRect(anchor: HTMLElement): PanelRect {
   };
 }
 
+function scheduleMobileFocus(el: HTMLInputElement | null | undefined): void {
+  window.requestAnimationFrame(() => {
+    focusTextInput(el);
+    window.requestAnimationFrame(() => focusTextInput(el));
+  });
+}
+
 export function SearchablePickList({
   items,
   value,
@@ -80,6 +89,7 @@ export function SearchablePickList({
   disabled,
   localFilter = true,
   onSearchQueryChange,
+  onOpen,
   minSearchLength = 0,
   idleMessage = "Start typing to search.",
   previewCount = DEFAULT_PREVIEW_COUNT,
@@ -171,11 +181,10 @@ export function SearchablePickList({
     setOpen(true);
     setQ("");
     onSearchQueryChange?.("");
-    window.requestAnimationFrame(() => {
-      focusTextInput(inputRef.current);
-      updatePanelRect();
-    });
-  }, [disabled, onSearchQueryChange, updatePanelRect]);
+    onOpen?.();
+    scheduleMobileFocus(inputRef.current);
+    updatePanelRect();
+  }, [disabled, onOpen, onSearchQueryChange, updatePanelRect]);
 
   useEffect(() => {
     if (!open) {
@@ -190,7 +199,7 @@ export function SearchablePickList({
     vv?.addEventListener("scroll", updatePanelRect);
     window.addEventListener("resize", updatePanelRect);
     window.addEventListener("scroll", updatePanelRect, true);
-    const focusTimer = window.setTimeout(() => focusTextInput(inputRef.current), 0);
+    const focusTimer = window.setTimeout(() => scheduleMobileFocus(inputRef.current), 0);
     return () => {
       listenOutsideRef.current = false;
       window.clearTimeout(focusTimer);
@@ -221,7 +230,7 @@ export function SearchablePickList({
     };
   }, [open, closeWithoutPick]);
 
-  const inputValue = open ? q : (displayText ?? "");
+  const closedPlaceholder = displayText ?? placeholder;
 
   const listbox =
     open && panelRect
@@ -296,20 +305,23 @@ export function SearchablePickList({
           className={cn(
             "h-11 touch-manipulation pe-9",
             invalid && "border-destructive ring-1 ring-destructive",
-            !open && displayText && "text-foreground",
           )}
-          placeholder={open ? searchPlaceholder : placeholder}
-          value={inputValue}
+          placeholder={open ? searchPlaceholder : closedPlaceholder}
+          value={open ? q : ""}
           disabled={disabled}
           onFocus={() => {
             if (!open) openForSearch();
             else updatePanelRect();
           }}
-          onPointerDown={() => {
+          onClick={() => {
             if (!open) openForSearch();
+            else scheduleMobileFocus(inputRef.current);
           }}
           onChange={(e) => {
-            if (!open) setOpen(true);
+            if (!open) {
+              setOpen(true);
+              onOpen?.();
+            }
             const v = e.target.value;
             setQ(v);
             onSearchQueryChange?.(v);
@@ -331,15 +343,9 @@ export function SearchablePickList({
         />
       </div>
       {listbox}
-      {!open ? (
+      {!open && displayText ? (
         <p className="text-xs text-muted-foreground">
-          {displayText ? (
-            <>
-              {placeholder}: <span className="font-medium text-foreground">{displayText}</span>
-            </>
-          ) : (
-            placeholder
-          )}
+          {placeholder}: <span className="font-medium text-foreground">{displayText}</span>
         </p>
       ) : null}
     </div>

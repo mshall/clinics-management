@@ -12,6 +12,7 @@ import { PatientPhoneField } from "@/components/patient-phone-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { SearchInput } from "@/components/search-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
@@ -556,7 +557,7 @@ export function PatientsPage() {
           {isError ? (
             <p className="text-sm text-destructive">{error instanceof Error ? error.message : t("common.error")}</p>
           ) : null}
-          <Input
+          <SearchInput
             value={quickSearch}
             onChange={(e) => setQuickSearch(e.target.value)}
             placeholder={t("patients.searchPlaceholder")}

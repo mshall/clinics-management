@@ -454,37 +454,37 @@ export function AdminPage() {
                   <th className="align-top px-2 py-2 text-start">
                     <div className="space-y-1">
                       <span className="text-xs font-medium text-muted-foreground">{t("admin.clinicCol", "Clinic (EN)")}</span>
-                      <Input className="h-8 text-xs" value={cfNameEn} onChange={(e) => setCfNameEn(e.target.value)} placeholder="…" />
+                      <Input className="h-8 text-base sm:text-xs" value={cfNameEn} onChange={(e) => setCfNameEn(e.target.value)} placeholder="…" />
                     </div>
                   </th>
                   <th className="align-top px-2 py-2 text-start">
                     <div className="space-y-1">
                       <span className="text-xs font-medium text-muted-foreground">{t("admin.parentClinicCol", "Parent clinic")}</span>
-                      <Input className="h-8 text-xs" value={cfParent} onChange={(e) => setCfParent(e.target.value)} placeholder="…" />
+                      <Input className="h-8 text-base sm:text-xs" value={cfParent} onChange={(e) => setCfParent(e.target.value)} placeholder="…" />
                     </div>
                   </th>
                   <th className="align-top px-2 py-2 text-start">
                     <div className="space-y-1">
                       <span className="text-xs font-medium text-muted-foreground">{t("admin.nameAr", "Name (AR)")}</span>
-                      <Input className="h-8 text-xs" value={cfNameAr} onChange={(e) => setCfNameAr(e.target.value)} placeholder="…" />
+                      <Input className="h-8 text-base sm:text-xs" value={cfNameAr} onChange={(e) => setCfNameAr(e.target.value)} placeholder="…" />
                     </div>
                   </th>
                   <th className="align-top px-2 py-2 text-start">
                     <div className="space-y-1">
                       <span className="text-xs font-medium text-muted-foreground">{t("admin.city", "City")}</span>
-                      <Input className="h-8 text-xs" value={cfCity} onChange={(e) => setCfCity(e.target.value)} placeholder="…" />
+                      <Input className="h-8 text-base sm:text-xs" value={cfCity} onChange={(e) => setCfCity(e.target.value)} placeholder="…" />
                     </div>
                   </th>
                   <th className="align-top px-2 py-2 text-start">
                     <div className="space-y-1">
                       <span className="text-xs font-medium text-muted-foreground">{t("admin.country", "Country")}</span>
-                      <Input className="h-8 text-xs" value={cfCountry} onChange={(e) => setCfCountry(e.target.value)} placeholder="…" />
+                      <Input className="h-8 text-base sm:text-xs" value={cfCountry} onChange={(e) => setCfCountry(e.target.value)} placeholder="…" />
                     </div>
                   </th>
                   <th className="align-top px-2 py-2 text-start">
                     <div className="space-y-1">
                       <span className="text-xs font-medium text-muted-foreground">{t("admin.kind", "Kind")}</span>
-                      <Input className="h-8 text-xs" value={cfKind} onChange={(e) => setCfKind(e.target.value)} placeholder="parent / branch" />
+                      <Input className="h-8 text-base sm:text-xs" value={cfKind} onChange={(e) => setCfKind(e.target.value)} placeholder="parent / branch" />
                     </div>
                   </th>
                 </tr>

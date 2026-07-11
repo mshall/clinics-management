@@ -5,7 +5,7 @@ import { TablePagination } from "@/components/table-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/search-input";
 import { useAdminAuditLogsQuery } from "@/lib/api-hooks";
 import type { AdminAuditLogItemDto } from "@/lib/api-types";
 import { localeForLanguage, formatUserRole } from "@/lib/locale-display";
@@ -51,7 +51,7 @@ export function AdminGovernancePanel() {
               <label className="text-sm font-medium" htmlFor="audit-q">
                 {t("admin.auditSearch")}
               </label>
-              <Input
+              <SearchInput
                 id="audit-q"
                 value={qDraft}
                 onChange={(e) => setQDraft(e.target.value)}

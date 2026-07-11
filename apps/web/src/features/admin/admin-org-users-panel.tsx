@@ -8,7 +8,9 @@ import { TablePagination } from "@/components/table-pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { SearchInput } from "@/components/search-input";
 import { Input } from "@/components/ui/input";
+import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { Label } from "@/components/ui/label";
 import { useClinicsQuery } from "@/lib/api-hooks";
 import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from "@/lib/http";
@@ -401,7 +403,7 @@ export function AdminOrgUsersPanel() {
           <div className="grid max-w-2xl gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="org-users-search">{t("admin.orgUsersSearch", "Search users")}</Label>
-              <Input
+              <SearchInput
                 id="org-users-search"
                 value={search}
                 onChange={(e) => {
@@ -415,7 +417,7 @@ export function AdminOrgUsersPanel() {
               <Label htmlFor="org-users-role-filter">{t("admin.role", "Role")}</Label>
               <select
                 id="org-users-role-filter"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className={nativeSelectClassName}
                 value={roleFilter}
                 onChange={(e) => {
                   setRoleFilter(e.target.value);

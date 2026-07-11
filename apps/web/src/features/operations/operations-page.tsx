@@ -712,6 +712,7 @@ export function OperationsPage() {
                   selectedItem={editPatientSelectedItem}
                   onValueChange={setEditPatientId}
                   onSearchQueryChange={setEditPatientSearch}
+                  onOpen={() => setDebouncedEditPatient("")}
                   searchPlaceholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
                   placeholder={t("operations.selectPatient", "Select patient")}
                   emptyMessage={
@@ -730,6 +731,7 @@ export function OperationsPage() {
                   selectedItem={editPhysicianSelectedItem}
                   onValueChange={setEditClinicianId}
                   onSearchQueryChange={setEditDoctorSearch}
+                  onOpen={() => setDebouncedEditDoctor("")}
                   searchPlaceholder={t("appointments.filterPhysician", "Type physician name…")}
                   placeholder={t("operations.selectDoctor", "Select doctor")}
                   emptyMessage={
@@ -904,6 +906,7 @@ export function OperationsPage() {
                       selectedItem={bookPatientSelectedItem}
                       onValueChange={setPatientId}
                       onSearchQueryChange={setBookPatientSearch}
+                      onOpen={() => setDebouncedBookPatient("")}
                       searchPlaceholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
                       placeholder={t("operations.selectPatient", "Select patient")}
                       emptyMessage={
@@ -929,6 +932,7 @@ export function OperationsPage() {
                         if (item) setPinnedPhysicianItem(item);
                       }}
                       onSearchQueryChange={setDoctorSearch}
+                      onOpen={() => setDebouncedDoctorSearch("")}
                       searchPlaceholder={t("appointments.filterPhysician", "Type physician name, Arabic name, or email…")}
                       placeholder={t("operations.selectDoctor", "Select doctor")}
                       emptyMessage={
