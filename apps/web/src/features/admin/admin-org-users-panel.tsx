@@ -227,6 +227,7 @@ export function AdminOrgUsersPanel() {
       void qc.invalidateQueries({ queryKey: ["admin"] });
       void qc.invalidateQueries({ queryKey: ["users"] });
       void qc.invalidateQueries({ queryKey: ["org-hierarchy"] });
+      void qc.invalidateQueries({ queryKey: ["hr"] });
       toast.success(t("admin.orgUsersDeleteSuccess", "User deleted."));
     },
     onError: (e: unknown) => {
@@ -260,6 +261,7 @@ export function AdminOrgUsersPanel() {
       void qc.invalidateQueries({ queryKey: ["admin"] });
       void qc.invalidateQueries({ queryKey: ["users"] });
       void qc.invalidateQueries({ queryKey: ["org-hierarchy"] });
+      void qc.invalidateQueries({ queryKey: ["hr"] });
       if (result.failed.length > 0) {
         const lines = result.failed.slice(0, 5).map((f) => `${f.id.slice(0, 8)}…: ${f.message}`);
         toast.error(

@@ -290,6 +290,7 @@ export function HrPage() {
     onSuccess: () => {
       setEmployeeToDelete(null);
       void qc.invalidateQueries({ queryKey: ["hr"] });
+      void qc.invalidateQueries({ queryKey: ["admin", "org-users"] });
       toast.success(t("hr.deleteSuccess", "Employee deleted."));
     },
     onError: (e: unknown) => {
@@ -595,11 +596,11 @@ export function HrPage() {
               </Button>
             </div>
             <ResponsiveTable>
-              <table className="w-full min-w-[720px] text-sm">
+              <table className="w-full min-w-[640px] text-sm">
                 <thead className="bg-muted/60">
                   <tr>
                     <SortableTh
-                      label="#"
+                      label={t("hr.employeeId", "Employee ID")}
                       column="employeeNumber"
                       sortBy={empSortBy}
                       sortOrder={empSortOrder}
@@ -607,7 +608,6 @@ export function HrPage() {
                       filterValue={ecfNum}
                       onFilterChange={setEcfNum}
                     />
-                    <FilterTh className="text-start" label={t("hr.clinic")} value={ecfClinic} onChange={setEcfClinic} />
                     <SortableTh
                       label={t("hr.name")}
                       column="lastNameEn"
@@ -626,6 +626,7 @@ export function HrPage() {
                       filterValue={ecfTitle}
                       onFilterChange={setEcfTitle}
                     />
+                    <FilterTh className="text-start" label={t("hr.clinic")} value={ecfClinic} onChange={setEcfClinic} />
                     <SortableTh
                       label={t("hr.salaryBase")}
                       column="salaryBase"
@@ -657,14 +658,12 @@ export function HrPage() {
                         }
                       }}
                     >
-                      <td className="px-2 py-2 font-mono text-xs">{e.employeeNumber}</td>
-                      <td className="px-2 py-2 text-start align-middle text-muted-foreground">
-                        {formatClinicNameFields(e.clinicNameEn, null, i18n.language)}
-                      </td>
-                      <td className="px-2 py-2">
-                        {formatEmployeeName(e, i18n.language)}
-                      </td>
+                      <td className="px-2 py-2 font-mono text-xs ltr-nums">{e.employeeNumber}</td>
+                      <td className="px-2 py-2">{formatEmployeeName(e, i18n.language)}</td>
                       <td className="px-2 py-2 text-muted-foreground">{e.jobTitle}</td>
+                      <td className="px-2 py-2 text-start align-middle text-muted-foreground">
+                        {formatClinicNameFields(e.clinicNameEn, e.clinicNameAr ?? null, i18n.language)}
+                      </td>
                       <td className="px-2 py-2 ltr-nums">{money(e.salaryBase)}</td>
                       {canManage ? (
                         <td className="px-2 py-2 text-end">

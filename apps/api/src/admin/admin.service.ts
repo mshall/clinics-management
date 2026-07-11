@@ -1,11 +1,16 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma, UserRole } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { ensureUserEmployeeRecord } from "../common/clinic-staff-employee";
+import {
+  assertTenantUserDeletable,
+  deleteEmployeeForUser,
+} from "../common/user-employee-cascade";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { fetchClinicScopeIds } from "../common/clinic-scope";
 import { PrismaService } from "../prisma/prisma.service";
+import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { JwtUser } from "../auth/jwt-user";
 import type { CreateTenantUserDto } from "./dto/create-tenant-user.dto";
 import type { PlatformPatchTenantUserDto } from "./dto/platform-patch-tenant-user.dto";
@@ -68,7 +73,10 @@ function mapUserClinicAssignments(
 
 @Injectable()
 export class AdminService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
+  ) {}
 
   async overview(currentTenantId: string) {
     const [tenant, tenantCount, flags, recentAudit] = await Promise.all([
@@ -365,27 +373,21 @@ export class AdminService {
 
   async deleteTenantUser(tenantId: string, userId: string, actor: JwtUser) {
     await this.assertTenantExists(tenantId);
-    if (actor.userId === userId) {
-      throw new BadRequestException("You cannot delete your own account");
-    }
     const existing = await this.prisma.user.findFirst({ where: { id: userId, tenantId } });
     if (!existing) throw new NotFoundException("User not found");
     if (existing.role === UserRole.PLATFORM_SUPER_ADMIN) {
       throw new BadRequestException("Cannot delete platform super administrators");
     }
 
-    const [encounters, appointments, operations] = await Promise.all([
-      this.prisma.encounter.count({ where: { clinicianId: userId } }),
-      this.prisma.appointment.count({ where: { clinicianId: userId } }),
-      this.prisma.operation.count({ where: { clinicianId: userId } }),
-    ]);
-    if (encounters + appointments + operations > 0) {
-      throw new BadRequestException(
-        "Cannot delete a user linked to encounters, appointments, or operations. Reassign clinical records first.",
-      );
+    const idDocPath = await this.prisma.$transaction(async (tx) => {
+      await assertTenantUserDeletable(tx, userId, { actorUserId: actor.userId });
+      const { idDocRelativePath } = await deleteEmployeeForUser(tx, tenantId, userId);
+      await tx.user.delete({ where: { id: userId } });
+      return idDocRelativePath;
+    });
+    if (idDocPath) {
+      await this.uploads.deleteObject("employees", idDocPath).catch(() => undefined);
     }
-
-    await this.prisma.user.delete({ where: { id: userId } });
     return { ok: true, id: userId };
   }
 

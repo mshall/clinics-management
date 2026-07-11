@@ -11,6 +11,9 @@ export class EmployeeDto {
   @ApiPropertyOptional({ nullable: true, description: "Clinic display name when joined in list/detail" })
   clinicNameEn!: string | null;
 
+  @ApiPropertyOptional({ nullable: true })
+  clinicNameAr!: string | null;
+
   @ApiProperty()
   employeeNumber!: string;
 

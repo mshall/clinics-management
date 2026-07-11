@@ -129,6 +129,7 @@ export function EmployeeDetailPage() {
     onSuccess: () => {
       setDeleteOpen(false);
       void qc.invalidateQueries({ queryKey: ["hr"] });
+      void qc.invalidateQueries({ queryKey: ["admin", "org-users"] });
       toast.success(t("hr.deleteSuccess", "Employee deleted."));
       navigate("/hr");
     },

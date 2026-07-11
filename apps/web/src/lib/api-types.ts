@@ -96,6 +96,7 @@ export interface EmployeeDto {
   id: string;
   clinicId: string;
   clinicNameEn?: string | null;
+  clinicNameAr?: string | null;
   hasIdDoc?: boolean;
   employeeNumber: string;
   firstNameEn: string;

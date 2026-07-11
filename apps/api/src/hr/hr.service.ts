@@ -10,6 +10,7 @@ import { randomUUID } from "crypto";
 import * as path from "path";
 import type { JwtUser } from "../auth/jwt-user";
 import { ensureClinicStaffEmployeeRecords } from "../common/clinic-staff-employee";
+import { deleteUserLinkedToEmployee } from "../common/user-employee-cascade";
 import { CLINIC_SCOPE_ROLES, fetchClinicScopeIds } from "../common/clinic-scope";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
@@ -85,13 +86,14 @@ export class HrService {
     salaryBase: { toString(): string };
     userId: string | null;
     idDocRelativePath?: string | null;
-    clinic?: { nameEn: string } | null;
+    clinic?: { nameEn: string; nameAr: string } | null;
     user?: { displayName: string; role: string; avatarRelativePath: string | null } | null;
   }): EmployeeDto {
     return {
       id: e.id,
       clinicId: e.clinicId,
       clinicNameEn: e.clinic?.nameEn ?? null,
+      clinicNameAr: e.clinic?.nameAr ?? null,
       employeeNumber: e.employeeNumber,
       firstNameEn: e.firstNameEn,
       lastNameEn: e.lastNameEn,
@@ -231,7 +233,7 @@ export class HrService {
         skip,
         take: pageSize,
         include: {
-          clinic: { select: { nameEn: true } },
+          clinic: { select: { nameEn: true, nameAr: true } },
           user: { select: { displayName: true, role: true, avatarRelativePath: true } },
         },
       }),
@@ -243,7 +245,7 @@ export class HrService {
     const row = await this.prisma.employee.findFirst({
       where: { id, tenantId },
       include: {
-        clinic: { select: { nameEn: true } },
+        clinic: { select: { nameEn: true, nameAr: true } },
         user: { select: { displayName: true, role: true, avatarRelativePath: true } },
       },
     });
@@ -280,7 +282,7 @@ export class HrService {
       });
       const withClinic = await this.prisma.employee.findFirst({
         where: { id: row.id },
-        include: { clinic: { select: { nameEn: true } } },
+        include: { clinic: { select: { nameEn: true, nameAr: true } } },
       });
       return this.mapEmployee(withClinic!);
     } catch {
@@ -308,7 +310,7 @@ export class HrService {
         idDocOriginalName: file.originalname || base,
         idDocMimeType: mime,
       },
-      include: { clinic: { select: { nameEn: true } } },
+      include: { clinic: { select: { nameEn: true, nameAr: true } } },
     });
     return this.mapEmployee(row);
   }
@@ -347,7 +349,7 @@ export class HrService {
         ...(dto.hireDate !== undefined ? { hireDate: new Date(dto.hireDate) } : {}),
         ...(dto.salaryBase !== undefined ? { salaryBase: dto.salaryBase } : {}),
       },
-      include: { clinic: { select: { nameEn: true } } },
+      include: { clinic: { select: { nameEn: true, nameAr: true } } },
     });
     return this.mapEmployee(row);
   }
@@ -359,7 +361,13 @@ export class HrService {
     await this.assertClinicAdminCanUseClinic(tenantId, viewer, emp.clinicId);
 
     const idDocPath = emp.idDocRelativePath;
-    await this.prisma.employee.delete({ where: { id } });
+    const linkedUserId = emp.userId;
+    await this.prisma.$transaction(async (tx) => {
+      await tx.employee.delete({ where: { id } });
+      if (linkedUserId) {
+        await deleteUserLinkedToEmployee(tx, tenantId, linkedUserId, viewer.userId);
+      }
+    });
     if (idDocPath) {
       await this.uploads.deleteObject("employees", idDocPath).catch(() => undefined);
     }
@@ -457,7 +465,7 @@ export class HrService {
               lastNameEn: true,
               firstNameAr: true,
               lastNameAr: true,
-              clinic: { select: { nameEn: true } },
+              clinic: { select: { nameEn: true, nameAr: true } },
             },
           },
         },
@@ -474,7 +482,7 @@ export class HrService {
   async createAttendance(tenantId: string, dto: CreateAttendanceDto): Promise<AttendanceDto> {
     const existing = await this.prisma.employee.findFirst({
       where: { id: dto.employeeId, tenantId },
-      include: { clinic: { select: { nameEn: true } } },
+      include: { clinic: { select: { nameEn: true, nameAr: true } } },
     });
     if (!existing) throw new BadRequestException("Invalid employeeId");
     const row = await this.prisma.attendance.create({
