@@ -18,6 +18,7 @@ export type OperationCreateValidationInput = {
   medTab: MedTab;
   prescriptionFile: File | null;
   generatedPrescriptionFile: File | null;
+  hasExistingPrescription?: boolean;
 };
 
 export type OperationCreateValidationResult = {
@@ -72,7 +73,7 @@ export function collectOperationCreateValidationIssues(
     invalidDocRowIds = docValidation.invalidRowIds;
   }
 
-  if (input.medTab === "prescription" && !input.prescriptionFile && !input.generatedPrescriptionFile) {
+  if (input.medTab === "prescription" && !input.prescriptionFile && !input.generatedPrescriptionFile && !input.hasExistingPrescription) {
     issues.push(
       t(
         "operations.errorPrescriptionRequired",

@@ -21,6 +21,7 @@ import { resolveLedgerListingRange } from "../common/reporting-range";
 import { paginate, parsePageParams } from "../common/pagination";
 import type { JwtUser } from "../auth/jwt-user";
 import { CLINIC_SCOPE_ROLES, fetchPhysicianNetworkClinicIds } from "../common/clinic-scope";
+import { resolveClinicCurrency } from "../common/clinic-currency";
 import { PrismaService } from "../prisma/prisma.service";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { AddDiagnosisDto } from "./dto/add-diagnosis.dto";
@@ -351,6 +352,7 @@ export class EncountersService {
       }
 
       if (visitFeeAmount > 0) {
+        const currency = await resolveClinicCurrency(tx, tenantId, dto.clinicId);
         await tx.revenueEntry.create({
           data: {
             tenantId,
@@ -361,7 +363,7 @@ export class EncountersService {
             grossAmount: visitFeeAmount,
             taxAmount: 0,
             netAmount: visitFeeAmount,
-            currency: tenant.baseCurrency,
+            currency,
             postedAt: new Date(),
             status: RevenueStatus.POSTED,
           },

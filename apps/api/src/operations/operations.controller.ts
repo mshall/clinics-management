@@ -35,6 +35,7 @@ import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { CreateOperationDto } from "./dto/create-operation.dto";
 import { OperationDto } from "./dto/operation.dto";
+import { OperationDetailDto } from "./dto/operation-detail.dto";
 import {
   AddOperationMedicationDto,
   OperationDocumentDto,
@@ -143,6 +144,14 @@ export class OperationsController {
     return this.operations.create(requireTenantId(user), body, user);
   }
 
+  @Get(":id")
+  @ApiOperation({ summary: "Get operation with medications and documents" })
+  @ApiOkResponse({ type: OperationDetailDto })
+  getOne(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    this.assertViewAccess(user);
+    return this.operations.getOne(requireTenantId(user), id, user);
+  }
+
   @Get(":id/documents/:docId/file")
   @ApiOperation({ summary: "Stream operation document (inline display)" })
   @ApiOkResponse({ description: "Binary file stream" })
@@ -210,6 +219,18 @@ export class OperationsController {
   ) {
     this.assertCreateAccess(user);
     return this.operations.addMedication(requireTenantId(user), id, body, user);
+  }
+
+  @Post(":id/reset-clinical")
+  @ApiOperation({ summary: "Clear medications and optionally prescription documents (scheduled operations only)" })
+  @ApiOkResponse({ description: "Clinical data cleared" })
+  resetClinical(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Body() body?: { clearPrescription?: boolean },
+  ) {
+    this.assertCreateAccess(user);
+    return this.operations.resetClinical(requireTenantId(user), id, user, body);
   }
 
   @Patch(":id")

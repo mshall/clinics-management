@@ -28,12 +28,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   useClinicsQuery,
+  useOperationQuery,
   useOperationsQuery,
   usePatientsQuery,
   usePatientQuery,
   useSchedulingPhysiciansQuery,
 } from "@/lib/api-hooks";
-import type { OperationDto } from "@/lib/api-types";
+import type { OperationDetailDto, OperationDocumentDto, OperationDto } from "@/lib/api-types";
 import { ApiError, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { canAdminEditCompletedOperation } from "@/lib/operation-admin-policy";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
@@ -62,6 +63,40 @@ function toOperationIso(localDatetime: string): string {
   const d = new Date(localDatetime);
   if (Number.isNaN(d.getTime())) throw new Error("Invalid date or time");
   return d.toISOString();
+}
+
+function clinicCurrencyCode(
+  clinics: Array<{ id: string; defaultCurrency?: string }>,
+  clinicId: string | undefined,
+): string {
+  if (!clinicId) return "AED";
+  return clinics.find((c) => c.id === clinicId)?.defaultCurrency ?? "AED";
+}
+
+function operationDetailToMedState(detail: OperationDetailDto): {
+  medTab: MedTab;
+  medications: PendingMedication[];
+  hasExistingPrescription: boolean;
+  existingAttachments: OperationDocumentDto[];
+} {
+  const existingAttachments = detail.documents.filter((d) => d.kind === "ATTACHMENT");
+  const hasExistingPrescription = detail.documents.some((d) => d.kind === "PRESCRIPTION");
+  const medications = detail.medications.map((m) => ({
+    id: crypto.randomUUID(),
+    drugName: m.drugName,
+    dosage: m.dosage ?? "",
+    frequency: m.frequency ?? "",
+  }));
+  if (detail.noMedications) {
+    return { medTab: "none", medications: [], hasExistingPrescription: false, existingAttachments };
+  }
+  if (hasExistingPrescription) {
+    return { medTab: "prescription", medications, hasExistingPrescription: true, existingAttachments };
+  }
+  if (medications.length > 0) {
+    return { medTab: "manual", medications, hasExistingPrescription: false, existingAttachments };
+  }
+  return { medTab: "none", medications: [], hasExistingPrescription: false, existingAttachments };
 }
 
 export function OperationsPage() {
@@ -203,6 +238,7 @@ export function OperationsPage() {
     const id = schedulingClinicId || selectedPatient?.homeBranchId || clinics[0]?.id;
     return clinics.find((c) => c.id === id) ?? clinics[0];
   }, [schedulingClinicId, selectedPatient?.homeBranchId, clinics]);
+  const createCurrency = clinicCurrencyCode(clinics, selectedClinic?.id);
 
   const prescriptionContext = useMemo(
     () => ({
@@ -256,10 +292,41 @@ export function OperationsPage() {
   const [editComments, setEditComments] = useState("");
   const [editClinicId, setEditClinicId] = useState("");
   const [editFormErr, setEditFormErr] = useState<string | null>(null);
+  const [editDocRows, setEditDocRows] = useState<PendingDocumentRow[]>([]);
+  const [editDocInvalidRowIds, setEditDocInvalidRowIds] = useState<Set<string>>(() => new Set());
+  const [editMedTab, setEditMedTab] = useState<MedTab>("none");
+  const [editMedications, setEditMedications] = useState<PendingMedication[]>([]);
+  const [editPrescriptionFile, setEditPrescriptionFile] = useState<File | null>(null);
+  const [editGeneratedPrescriptionFile, setEditGeneratedPrescriptionFile] = useState<File | null>(null);
+  const [editHadExistingPrescription, setEditHadExistingPrescription] = useState(false);
+  const [editExistingAttachments, setEditExistingAttachments] = useState<OperationDocumentDto[]>([]);
+  const [editDetailLoadedId, setEditDetailLoadedId] = useState<string | null>(null);
+  const editValidation = useValidationIssuesDialog({ intent: "save" });
   const editPatientPickSearch = useDebouncedPickListSearch();
   const editDoctorPickSearch = useDebouncedPickListSearch();
 
+  const resetEditClinicalForm = () => {
+    setEditDocRows([]);
+    setEditDocInvalidRowIds(new Set());
+    setEditHadExistingPrescription(false);
+    setEditExistingAttachments([]);
+    setEditDetailLoadedId(null);
+    editValidation.clear();
+    const medReset = resetMedicationsPrescriptionDraft();
+    setEditMedTab(medReset.medTab);
+    setEditMedications(medReset.medications);
+    setEditPrescriptionFile(medReset.prescriptionFile);
+    setEditGeneratedPrescriptionFile(medReset.generatedPrescriptionFile);
+  };
+
+  const closeEditDialog = () => {
+    setEditOp(null);
+    resetEditClinicalForm();
+    setEditFormErr(null);
+  };
+
   const openEdit = (o: OperationDto) => {
+    resetEditClinicalForm();
     setEditOp(o);
     setEditPatientId(o.patientId);
     setEditClinicianId(o.clinicianId);
@@ -275,8 +342,26 @@ export function OperationsPage() {
     editDoctorPickSearch.resetSearch();
   };
 
+  const editIsScheduled = editOp?.status === "SCHEDULED";
+  const { data: editOpDetail, isPending: editOpDetailPending } = useOperationQuery(
+    editIsScheduled ? editOp?.id : undefined,
+  );
+  const editCurrency = clinicCurrencyCode(clinics, editClinicId || editOp?.clinicId);
+
+  useEffect(() => {
+    if (!editIsScheduled || !editOpDetail || editDetailLoadedId === editOpDetail.id) return;
+    const medState = operationDetailToMedState(editOpDetail);
+    setEditMedTab(medState.medTab);
+    setEditMedications(medState.medications);
+    setEditHadExistingPrescription(medState.hasExistingPrescription);
+    setEditExistingAttachments(medState.existingAttachments);
+    setEditPrescriptionFile(null);
+    setEditGeneratedPrescriptionFile(null);
+    setEditDetailLoadedId(editOpDetail.id);
+  }, [editIsScheduled, editOpDetail, editDetailLoadedId]);
 
   const { data: editPhysicians = [], isFetching: editPhysiciansFetching } = useSchedulingPhysiciansQuery({
+    clinicId: editClinicId || editOp?.clinicId || undefined,
     search: editDoctorPickSearch.debounced.trim() || undefined,
     enabled: editOp != null,
   });
@@ -319,6 +404,27 @@ export function OperationsPage() {
     return null;
   }, [editClinicianId, editPhysicianItems, editOp?.clinicianName]);
 
+  const editSelectedClinic = useMemo(
+    () => clinics.find((c) => c.id === (editClinicId || editOp?.clinicId)),
+    [clinics, editClinicId, editOp?.clinicId],
+  );
+  const editPrescriptionContext = useMemo(
+    () => ({
+      clinicName: editSelectedClinic ? formatClinicName(editSelectedClinic, i18n.language) : "—",
+      patientName: editPatientSelectedItem?.label ?? "—",
+      patientMrn: editOpDetail?.patientMrn ?? editOp?.patientMrn,
+      physicianName: editPhysicianSelectedItem?.label ?? null,
+    }),
+    [
+      editSelectedClinic,
+      editPatientSelectedItem,
+      editOpDetail?.patientMrn,
+      editOp?.patientMrn,
+      editPhysicianSelectedItem,
+      i18n.language,
+    ],
+  );
+
   useEffect(() => {
     if (singleManagedClinic) {
       setClinicId(singleManagedClinic.id);
@@ -357,6 +463,7 @@ export function OperationsPage() {
     setCompleteFormErr(null);
   };
 
+  const completeCurrency = clinicCurrencyCode(clinics, completeConfirmOp?.clinicId);
   const completeBalance = completeConfirmOp
     ? Math.max(0, completeConfirmOp.balanceDue ?? completeConfirmOp.totalCost - (completeConfirmOp.paidAmount ?? completeConfirmOp.downPayment))
     : 0;
@@ -397,9 +504,9 @@ export function OperationsPage() {
   });
 
   const editMut = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       if (!editOp) throw new Error("No operation selected");
-      return apiPatch<OperationDto>(`/api/v1/operations/${editOp.id}`, {
+      const op = await apiPatch<OperationDto>(`/api/v1/operations/${editOp.id}`, {
         patientId: editPatientId,
         clinicianId: editClinicianId,
         operationDate: toOperationIso(editOperationDate),
@@ -407,12 +514,59 @@ export function OperationsPage() {
         downPayment: editDownPayment.trim() ? Number.parseFloat(editDownPayment) : 0,
         comments: editComments.trim() || undefined,
         clinicId: editClinicId || undefined,
+        ...(editIsScheduled ? { noMedications: editMedTab === "none" } : {}),
       });
+
+      if (!editIsScheduled) return op;
+
+      const keepExistingPrescription =
+        editMedTab === "prescription" &&
+        editHadExistingPrescription &&
+        !editPrescriptionFile &&
+        !editGeneratedPrescriptionFile;
+
+      await apiPost(`/api/v1/operations/${editOp.id}/reset-clinical`, {
+        clearPrescription: !keepExistingPrescription,
+      });
+
+      for (const row of editDocRows) {
+        const description = pendingDocumentDescription(row, t);
+        for (const file of row.files) {
+          const fd = new FormData();
+          fd.append("file", file);
+          fd.append("kind", "ATTACHMENT");
+          fd.append("description", description);
+          await apiPostFormData(`/api/v1/operations/${editOp.id}/documents`, fd);
+        }
+      }
+
+      if (editMedTab !== "none") {
+        for (const m of editMedications) {
+          await apiPost(`/api/v1/operations/${editOp.id}/medications`, {
+            drugName: m.drugName,
+            dosage: m.dosage.trim() || undefined,
+            frequency: m.frequency.trim() || undefined,
+          });
+        }
+        const rxFile =
+          editMedTab === "prescription"
+            ? editPrescriptionFile ?? editGeneratedPrescriptionFile
+            : editGeneratedPrescriptionFile;
+        if (rxFile) {
+          const fd = new FormData();
+          fd.append("file", rxFile);
+          fd.append("kind", "PRESCRIPTION");
+          await apiPostFormData(`/api/v1/operations/${editOp.id}/documents`, fd);
+        }
+      }
+
+      return op;
     },
     onSuccess: () => {
       setEditFormErr(null);
-      setEditOp(null);
+      closeEditDialog();
       void qc.invalidateQueries({ queryKey: ["operations"] });
+      void qc.invalidateQueries({ queryKey: ["operation"] });
       void qc.invalidateQueries({ queryKey: ["revenue"] });
       void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
     },
@@ -422,6 +576,40 @@ export function OperationsPage() {
       } else setEditFormErr(e instanceof Error ? e.message : String(e));
     },
   });
+
+  const showEditValidationIssues = (issues: string[], invalidDocRowIds = new Set<string>()) => {
+    setEditDocInvalidRowIds(invalidDocRowIds);
+    editValidation.showIssues(issues);
+  };
+
+  const handleEditClick = () => {
+    if (!editOp) return;
+    if (editIsScheduled) {
+      const validation = collectOperationCreateValidationIssues(
+        {
+          patientId: editPatientId,
+          clinicianId: editClinicianId,
+          operationDate: editOperationDate,
+          totalCost: editTotalCost,
+          downPayment: editDownPayment,
+          docRows: editDocRows,
+          medTab: editMedTab,
+          prescriptionFile: editPrescriptionFile,
+          generatedPrescriptionFile: editGeneratedPrescriptionFile,
+          hasExistingPrescription: editHadExistingPrescription,
+        },
+        t,
+      );
+      if (validation.issues.length > 0) {
+        showEditValidationIssues(validation.issues, validation.invalidDocRowIds);
+        return;
+      }
+      setEditDocInvalidRowIds(new Set());
+      editValidation.clear();
+    }
+    setEditFormErr(null);
+    editMut.mutate();
+  };
 
   const showCreateValidationIssues = (issues: string[], invalidDocRowIds = new Set<string>()) => {
     setDocInvalidRowIds(invalidDocRowIds);
@@ -513,6 +701,10 @@ export function OperationsPage() {
   const loc = localeForLanguage(i18n.language);
   const money = (n: number) =>
     n.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const listCurrency = clinicCurrencyCode(
+    clinics,
+    filterClinicId || singleManagedClinic?.id || rows[0]?.clinicId,
+  );
 
   return (
     <div className="space-y-6">
@@ -555,15 +747,15 @@ export function OperationsPage() {
                 </p>
                 <div className="grid gap-1 rounded-md border border-border bg-muted/30 p-3 text-muted-foreground">
                   <p>
-                    {t("operations.totalCost", "Total cost (AED)")}:{" "}
+                    {t("operations.totalCost", "Total cost ({{currency}})", { currency: completeCurrency })}:{" "}
                     <span className="font-medium text-foreground">{money(completeConfirmOp.totalCost)}</span>
                   </p>
                   <p>
-                    {t("operations.downPayment", "Down payment (AED)")}:{" "}
+                    {t("operations.downPayment", "Down payment ({{currency}})", { currency: completeCurrency })}:{" "}
                     <span className="font-medium text-foreground">{money(completeConfirmOp.downPayment)}</span>
                   </p>
                   <p>
-                    {t("operations.paidAmount", "Paid (AED)")}:{" "}
+                    {t("operations.paidAmount", "Paid ({{currency}})", { currency: completeCurrency })}:{" "}
                     <span className="font-medium text-foreground">{money(completeConfirmOp.paidAmount ?? 0)}</span>
                   </p>
                   <p className="font-medium text-foreground">
@@ -573,7 +765,9 @@ export function OperationsPage() {
                 {completeBalance > 0.001 ? (
                   <div className="space-y-1">
                     <Label htmlFor="complete-collection" required>
-                      {t("operations.collectRemaining", "Amount collected now (AED)")}
+                      {t("operations.collectRemaining", "Amount collected now ({{currency}})", {
+                        currency: completeCurrency,
+                      })}
                     </Label>
                     <Input
                       id="complete-collection"
@@ -598,8 +792,8 @@ export function OperationsPage() {
                 <p className="text-xs text-muted-foreground">
                   {t(
                     "operations.confirmCompleteRevenueNote",
-                    "On completion, {{amount}} AED will be added to clinic revenue.",
-                    { amount: money(completeConfirmOp.totalCost) }
+                    "On completion, {{amount}} {{currency}} will be added to clinic revenue.",
+                    { amount: money(completeConfirmOp.totalCost), currency: completeCurrency }
                   )}
                 </p>
               </div>
@@ -637,8 +831,12 @@ export function OperationsPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={editOp != null} onOpenChange={(open) => !open && setEditOp(null)}>
-        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto" aria-describedby={undefined}>
+      <ValidationIssuesDialog {...editValidation.dialogProps} />
+      <Dialog open={editOp != null} onOpenChange={(open) => !open && closeEditDialog()}>
+        <DialogContent
+          className={`max-h-[90vh] overflow-y-auto ${editIsScheduled ? "max-w-2xl" : "max-w-lg"}`}
+          aria-describedby={undefined}
+        >
           <DialogHeader>
             <DialogTitle>
               {editOp?.status === "COMPLETED"
@@ -655,6 +853,9 @@ export function OperationsPage() {
                     "Administrator correction — you can update details and re-assign the performing doctor. Linked revenue is updated automatically.",
                   )}
                 </p>
+              ) : null}
+              {editIsScheduled && editOpDetailPending ? (
+                <p className="text-sm text-muted-foreground">{t("common.loading", "Loading…")}</p>
               ) : null}
               <div className="space-y-1">
                 <Label htmlFor="edit-op-date" required>{t("operations.operationDate", "Operation date")}</Label>
@@ -722,7 +923,9 @@ export function OperationsPage() {
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <Label htmlFor="edit-op-total" required>{t("operations.totalCost", "Total cost (AED)")}</Label>
+                  <Label htmlFor="edit-op-total" required>
+                    {t("operations.totalCost", "Total cost ({{currency}})", { currency: editCurrency })}
+                  </Label>
                   <Input
                     id="edit-op-total"
                     className="ltr-nums"
@@ -733,7 +936,9 @@ export function OperationsPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="edit-op-down">{t("operations.downPayment", "Down payment (AED)")}</Label>
+                  <Label htmlFor="edit-op-down">
+                    {t("operations.downPayment", "Down payment ({{currency}})", { currency: editCurrency })}
+                  </Label>
                   <Input
                     id="edit-op-down"
                     className="ltr-nums"
@@ -746,8 +951,10 @@ export function OperationsPage() {
               </div>
               {(editOp.paidAmount ?? 0) > 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  {t("operations.paidAmount", "Paid (AED)")}: {money(editOp.paidAmount ?? 0)} ·{" "}
-                  {t("operations.balanceDue", "Balance (AED)")}: {money(editOp.balanceDue ?? 0)}
+                  {t("operations.paidAmount", "Paid ({{currency}})", { currency: editCurrency })}:{" "}
+                  {money(editOp.paidAmount ?? 0)} ·{" "}
+                  {t("operations.balanceDue", "Balance ({{currency}})", { currency: editCurrency })}:{" "}
+                  {money(editOp.balanceDue ?? 0)}
                 </p>
               ) : null}
               <div className="space-y-1">
@@ -757,24 +964,73 @@ export function OperationsPage() {
                   rows={3}
                   value={editComments}
                   onChange={(e) => setEditComments(e.target.value)}
+                  placeholder={t("operations.commentsPlaceholder", "Notes about the procedure…")}
                 />
               </div>
+              {editIsScheduled && !editOpDetailPending ? (
+                <>
+                  {editExistingAttachments.length > 0 ? (
+                    <div className="space-y-2 rounded-lg border border-border p-3">
+                      <p className="text-sm font-medium">{t("operations.existingDocuments", "Saved documents")}</p>
+                      <ul className="space-y-1 text-sm text-muted-foreground">
+                        {editExistingAttachments.map((doc) => (
+                          <li key={doc.id}>{doc.description || doc.originalFileName}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  <fieldset className="space-y-3 rounded-lg border border-border p-4">
+                    <legend className="px-1 text-sm font-medium">{t("patients.attachDocuments", "Documents")}</legend>
+                    <PendingDocumentAttachments
+                      rows={editDocRows}
+                      onChange={(next) => {
+                        setEditDocRows(next);
+                        if (editDocInvalidRowIds.size > 0) setEditDocInvalidRowIds(new Set());
+                      }}
+                      invalidRowIds={editDocInvalidRowIds.size > 0 ? editDocInvalidRowIds : undefined}
+                    />
+                  </fieldset>
+                  <fieldset className="space-y-3 rounded-lg border border-border p-4">
+                    <legend className="px-1 text-sm font-medium">{t("encounters.medications")}</legend>
+                    {editHadExistingPrescription && editMedTab === "prescription" && !editPrescriptionFile ? (
+                      <p className="text-xs text-muted-foreground">
+                        {t(
+                          "operations.existingPrescriptionHint",
+                          "A prescription is already on file. Upload a new file to replace it.",
+                        )}
+                      </p>
+                    ) : null}
+                    <MedicationsPrescriptionDraftPanel
+                      medTab={editMedTab}
+                      onMedTabChange={setEditMedTab}
+                      medications={editMedications}
+                      onMedicationsChange={setEditMedications}
+                      prescriptionFile={editPrescriptionFile}
+                      onPrescriptionFileChange={setEditPrescriptionFile}
+                      generatedPrescriptionFile={editGeneratedPrescriptionFile}
+                      onGeneratedPrescriptionFileChange={setEditGeneratedPrescriptionFile}
+                      prescriptionContext={editPrescriptionContext}
+                    />
+                  </fieldset>
+                </>
+              ) : null}
               {editFormErr ? <p className="text-sm text-destructive">{editFormErr}</p> : null}
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setEditOp(null)} disabled={editMut.isPending}>
+                <Button type="button" variant="outline" onClick={closeEditDialog} disabled={editMut.isPending}>
                   {t("common.cancel", "Cancel")}
                 </Button>
                 <Button
                   type="button"
                   disabled={
                     editMut.isPending ||
+                    (editIsScheduled && editOpDetailPending) ||
                     !editPatientId ||
                     !editClinicianId ||
                     !editOperationDate ||
                     !editTotalCost.trim() ||
                     Number.isNaN(Number.parseFloat(editTotalCost))
                   }
-                  onClick={() => editMut.mutate()}
+                  onClick={handleEditClick}
                 >
                   {t("operations.saveChanges", "Save changes")}
                 </Button>
@@ -928,7 +1184,9 @@ export function OperationsPage() {
                 <legend className="px-1 text-sm font-medium">{t("operations.sectionPayment", "Cost & payment")}</legend>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-1">
-                    <Label htmlFor="op-total" required>{t("operations.totalCost", "Total cost (AED)")}</Label>
+                    <Label htmlFor="op-total" required>
+                      {t("operations.totalCost", "Total cost ({{currency}})", { currency: createCurrency })}
+                    </Label>
                     <Input
                       id="op-total"
                       className="ltr-nums bg-background"
@@ -941,7 +1199,9 @@ export function OperationsPage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="op-down">{t("operations.downPayment", "Down payment (AED)")}</Label>
+                    <Label htmlFor="op-down">
+                      {t("operations.downPayment", "Down payment ({{currency}})", { currency: createCurrency })}
+                    </Label>
                     <Input
                       id="op-down"
                       className="ltr-nums bg-background"
@@ -1048,7 +1308,7 @@ export function OperationsPage() {
                       onChange={setEfDoctor}
                     />
                     <SortableTh
-                      label={t("operations.totalCost", "Total cost (AED)")}
+                      label={t("operations.totalCost", "Total cost ({{currency}})", { currency: listCurrency })}
                       column="totalCost"
                       sortBy={sortBy}
                       sortOrder={sortOrder}
@@ -1057,7 +1317,7 @@ export function OperationsPage() {
                       onFilterChange={setEfTotal}
                     />
                     <SortableTh
-                      label={t("operations.downPayment", "Down payment (AED)")}
+                      label={t("operations.downPayment", "Down payment ({{currency}})", { currency: listCurrency })}
                       column="downPayment"
                       sortBy={sortBy}
                       sortOrder={sortOrder}
@@ -1065,8 +1325,12 @@ export function OperationsPage() {
                       filterValue={efDown}
                       onFilterChange={setEfDown}
                     />
-                    <th className="px-3 py-2 text-start font-medium">{t("operations.paidAmount", "Paid (AED)")}</th>
-                    <th className="px-3 py-2 text-start font-medium">{t("operations.balanceDue", "Balance (AED)")}</th>
+                    <th className="px-3 py-2 text-start font-medium">
+                      {t("operations.paidAmount", "Paid ({{currency}})", { currency: listCurrency })}
+                    </th>
+                    <th className="px-3 py-2 text-start font-medium">
+                      {t("operations.balanceDue", "Balance ({{currency}})", { currency: listCurrency })}
+                    </th>
                     <SortableTh
                       label={t("operations.status", "Status")}
                       column="status"

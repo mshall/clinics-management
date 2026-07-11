@@ -51,4 +51,7 @@ export class ClinicDetailDto {
 
   @ApiProperty()
   defaultLanguage!: string;
+
+  @ApiProperty({ description: "Default currency for appointments, encounters, and operations at this clinic" })
+  defaultCurrency!: string;
 }

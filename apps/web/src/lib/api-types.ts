@@ -199,6 +199,32 @@ export interface OperationDto {
   createdAt: string;
 }
 
+export interface OperationMedicationDto {
+  id: string;
+  drugName: string;
+  dosage: string | null;
+  route: string | null;
+  frequency: string | null;
+  duration: string | null;
+  instructions: string | null;
+}
+
+export interface OperationDocumentDto {
+  id: string;
+  kind: string;
+  description: string | null;
+  originalFileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+
+export interface OperationDetailDto extends OperationDto {
+  noMedications: boolean;
+  medications: OperationMedicationDto[];
+  documents: OperationDocumentDto[];
+}
+
 export interface ClinicPhysicianDto {
   userId: string;
   displayName: string;
@@ -270,6 +296,7 @@ export interface ClinicDetailDto {
   email: string;
   licenseNumber: string;
   defaultLanguage: string;
+  defaultCurrency: string;
 }
 
 export interface AdminAuditLogItemDto {

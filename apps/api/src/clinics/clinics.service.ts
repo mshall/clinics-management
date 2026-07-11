@@ -6,6 +6,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import type { CreateClinicDto } from "./dto/create-clinic.dto";
 import type { PatchClinicDto } from "./dto/patch-clinic.dto";
 import type { ClinicDetailDto } from "./dto/clinic-detail.dto";
+import { isBaseCurrency } from "../common/base-currencies";
 import type { ClinicPhysicianDto } from "./dto/clinic-physician.dto";
 import type { ClinicKind } from "./clinic-kind";
 import { resolveClinicKind } from "./clinic-kind";
@@ -20,6 +21,7 @@ export interface ClinicDto {
   country: string;
   kind: ClinicKind;
   logoUrl: string | null;
+  defaultCurrency: string;
 }
 
 @Injectable()
@@ -458,6 +460,7 @@ export class ClinicsService {
       email: row.email,
       licenseNumber: row.licenseNumber,
       defaultLanguage: row.defaultLanguage,
+      defaultCurrency: row.defaultCurrency,
     };
   }
 
@@ -491,6 +494,7 @@ export class ClinicsService {
       country: c.country,
       kind: resolveClinicKind(c.parentClinicId, c._count.branches),
       logoUrl: c.logoUrl ?? null,
+      defaultCurrency: c.defaultCurrency,
     }));
   }
 
@@ -522,6 +526,15 @@ export class ClinicsService {
 
     const logoUrl = dto.logoUrl?.trim() || null;
 
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { baseCurrency: true },
+    });
+    const defaultCurrency =
+      dto.defaultCurrency?.trim() && isBaseCurrency(dto.defaultCurrency.trim())
+        ? dto.defaultCurrency.trim()
+        : tenant?.baseCurrency ?? "AED";
+
     const row = await this.prisma.clinic.create({
       data: {
         tenantId,
@@ -537,6 +550,7 @@ export class ClinicsService {
         email,
         licenseNumber,
         logoUrl,
+        defaultCurrency,
       },
       include: { parent: { select: { nameEn: true } } },
     });
@@ -551,6 +565,7 @@ export class ClinicsService {
       country: row.country,
       kind: resolveClinicKind(row.parentClinicId, 0),
       logoUrl: row.logoUrl ?? null,
+      defaultCurrency: row.defaultCurrency,
     };
   }
 
@@ -592,6 +607,12 @@ export class ClinicsService {
     if (dto.email !== undefined) data.email = dto.email.trim().toLowerCase();
     if (dto.licenseNumber !== undefined) data.licenseNumber = dto.licenseNumber.trim();
     if (dto.logoUrl !== undefined) data.logoUrl = dto.logoUrl.trim() || null;
+    if (dto.defaultCurrency !== undefined) {
+      if (!isBaseCurrency(dto.defaultCurrency.trim())) {
+        throw new BadRequestException("Invalid default currency");
+      }
+      data.defaultCurrency = dto.defaultCurrency.trim();
+    }
     if (!Object.keys(data).length) throw new BadRequestException("No supported fields to update");
 
     const row = await this.prisma.clinic.update({
@@ -621,6 +642,7 @@ export class ClinicsService {
       email: row.email,
       licenseNumber: row.licenseNumber,
       defaultLanguage: row.defaultLanguage,
+      defaultCurrency: row.defaultCurrency,
     };
   }
 }

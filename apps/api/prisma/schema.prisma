@@ -228,6 +228,7 @@ model Clinic {
   email            String
   licenseNumber    String
   defaultLanguage  Locale          @default(en)
+  defaultCurrency  String          @default("AED")
   patientsHome     Patient[]       @relation("PatientHomeBranch")
   encounters       Encounter[]
   revenueEntries   RevenueEntry[]

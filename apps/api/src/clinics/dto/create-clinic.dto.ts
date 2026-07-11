@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
-import { Allow, IsEmail, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import { Allow, IsEmail, IsIn, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import { BASE_CURRENCIES } from "../../common/base-currencies";
 
 export class CreateClinicDto {
   /**
@@ -82,4 +83,10 @@ export class CreateClinicDto {
   @IsString()
   @MaxLength(500)
   logoUrl?: string;
+
+  @ApiPropertyOptional({ default: "AED", enum: BASE_CURRENCIES, description: "Default currency for fees at this clinic" })
+  @IsOptional()
+  @IsString()
+  @IsIn(BASE_CURRENCIES)
+  defaultCurrency?: string;
 }

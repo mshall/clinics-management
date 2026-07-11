@@ -12,6 +12,7 @@ export type ClinicFormValues = {
   phone: string;
   email: string;
   licenseNumber: string;
+  defaultCurrency: string;
 };
 
 export function emptyClinicForm(): ClinicFormValues {
@@ -29,6 +30,7 @@ export function emptyClinicForm(): ClinicFormValues {
     phone: "",
     email: "",
     licenseNumber: "",
+    defaultCurrency: "AED",
   };
 }
 
@@ -95,6 +97,7 @@ export function clinicFormToPatchPayload(v: ClinicFormValues) {
     phone: v.phone.trim() || undefined,
     email: v.email.trim() || undefined,
     licenseNumber: v.licenseNumber.trim() || undefined,
+    defaultCurrency: v.defaultCurrency.trim() || "AED",
   };
   if (v.clinicPlacement === "standalone") {
     body.parentClinicId = null;
@@ -117,6 +120,7 @@ export function clinicFormToCreatePayload(v: ClinicFormValues, opts?: { includeP
     phone: v.phone.trim() || undefined,
     email: v.email.trim() || undefined,
     licenseNumber: v.licenseNumber.trim() || undefined,
+    defaultCurrency: v.defaultCurrency.trim() || "AED",
   };
   if (v.clinicPlacement === "branch" && opts?.includeParent !== false && v.parentClinicId.trim()) {
     body.parentClinicId = v.parentClinicId.trim();
@@ -137,6 +141,7 @@ export function clinicDetailToForm(d: {
   phone?: string;
   email?: string;
   licenseNumber: string;
+  defaultCurrency?: string;
 }): ClinicFormValues {
   return {
     clinicPlacement: d.parentClinicId ? "branch" : "standalone",
@@ -152,5 +157,6 @@ export function clinicDetailToForm(d: {
     phone: d.phone ?? "",
     email: d.email ?? "",
     licenseNumber: d.licenseNumber,
+    defaultCurrency: d.defaultCurrency ?? "AED",
   };
 }

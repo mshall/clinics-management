@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import * as path from "path";
 import type { JwtUser } from "../auth/jwt-user";
 import { fetchClinicScopeIds } from "../common/clinic-scope";
+import { resolveClinicCurrency } from "../common/clinic-currency";
 import { canAdminEditCompletedOperation } from "../common/operation-admin-roles";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
@@ -13,6 +14,7 @@ import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-b
 import type { AddOperationMedicationDto, OperationDocumentDto, OperationMedicationDto } from "./dto/operation-clinical.dto";
 import type { CreateOperationDto } from "./dto/create-operation.dto";
 import type { OperationDto } from "./dto/operation.dto";
+import type { OperationDetailDto } from "./dto/operation-detail.dto";
 import type { UpdateOperationDto } from "./dto/update-operation.dto";
 
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
@@ -198,6 +200,68 @@ export class OperationsService {
     const scopeIds = await fetchClinicScopeIds(this.prisma, viewer.tenantId, viewer);
     if (scopeIds !== null && !scopeIds.includes(row.clinicId)) {
       throw new ForbiddenException("This operation is outside your assigned clinics");
+    }
+  }
+
+  private mapDetailRow(
+    row: OperationRow & {
+      noMedications: boolean;
+      medications: Array<{
+        id: string;
+        drugName: string;
+        dosage: string | null;
+        route: string | null;
+        frequency: string | null;
+        duration: string | null;
+        instructions: string | null;
+      }>;
+      documents: Array<{
+        id: string;
+        kind: OperationDocumentKind;
+        description: string | null;
+        originalFileName: string;
+        mimeType: string;
+        sizeBytes: number;
+        createdAt: Date;
+      }>;
+    },
+  ): OperationDetailDto {
+    return {
+      ...this.mapRow(row),
+      noMedications: row.noMedications,
+      medications: row.medications.map((m) => this.mapMed(m)),
+      documents: row.documents.map((d) => this.mapDoc(d)),
+    };
+  }
+
+  async getOne(tenantId: string, id: string, viewer: JwtUser): Promise<OperationDetailDto> {
+    const row = await this.prisma.operation.findFirst({
+      where: { id, tenantId },
+      include: {
+        ...operationInclude,
+        medications: { orderBy: { createdAt: "asc" } },
+        documents: { orderBy: { createdAt: "asc" } },
+      },
+    });
+    if (!row) throw new NotFoundException("Operation not found");
+    await this.assertOperationAccess(viewer, row);
+    return this.mapDetailRow(row);
+  }
+
+  async resetClinical(
+    tenantId: string,
+    operationId: string,
+    viewer: JwtUser,
+    opts?: { clearPrescription?: boolean },
+  ): Promise<void> {
+    const op = await this.prisma.operation.findFirst({ where: { id: operationId, tenantId } });
+    if (!op) throw new NotFoundException("Operation not found");
+    await this.assertOperationAccess(viewer, op);
+    this.ensureEditableStatus(op.status);
+
+    await this.prisma.operationMedication.deleteMany({ where: { tenantId, operationId } });
+    if (opts?.clearPrescription !== false) {
+      await this.deletePrescriptionDocuments(tenantId, operationId);
     }
   }
 
@@ -600,13 +664,15 @@ export class OperationsService {
         throw new BadRequestException("Operation total cost must be greater than zero to complete");
       }
 
+      const currency = await resolveClinicCurrency(this.prisma, tenantId, existing.clinicId);
+
       if (remaining > 0.001) {
         if (collectionAmount === undefined || collectionAmount <= 0) {
           throw new BadRequestException("Collect the remaining balance before completing this operation");
         }
         if (Math.abs(collectionAmount - remaining) > 0.001) {
           throw new BadRequestException(
-            `Collected amount must equal the remaining balance (${remaining.toFixed(2)} AED)`
+            `Collected amount must equal the remaining balance (${remaining.toFixed(2)} ${currency})`
           );
         }
       }
@@ -631,7 +697,7 @@ export class OperationsService {
             grossAmount: total,
             taxAmount: 0,
             netAmount: total,
-            currency: "AED",
+            currency,
             postedAt: new Date(),
             status: RevenueStatus.POSTED,
           },

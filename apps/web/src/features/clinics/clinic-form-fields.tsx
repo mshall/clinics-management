@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { MIDDLE_EAST_COUNTRY_OPTIONS } from "@/lib/middle-east-countries";
 import { clinicKindLabel, type ClinicKind } from "@/lib/clinic-kind";
 import type { ClinicFormValues } from "./clinic-form-utils";
@@ -204,6 +205,20 @@ export function ClinicFormFields({
             />
           </div>
         ) : null}
+      </div>
+      <div className="space-y-2 sm:col-span-2">
+        <Label htmlFor={`${idPrefix}-default-currency`}>{t("admin.defaultCurrency", "Default currency")}</Label>
+        <BaseCurrencySelect
+          id={`${idPrefix}-default-currency`}
+          value={values.defaultCurrency}
+          onChange={(v) => onChange({ defaultCurrency: v })}
+        />
+        <p className="text-xs text-muted-foreground">
+          {t(
+            "admin.defaultCurrencyHint",
+            "Fees for appointments, encounters, and operations at this clinic use this currency.",
+          )}
+        </p>
       </div>
       <div className="space-y-2">
         <Label htmlFor={`${idPrefix}-phone`}>{t("admin.phone", "Phone")}</Label>

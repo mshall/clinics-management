@@ -23,6 +23,7 @@ export type PatientDocumentDto = {
 };
 export type ClinicDto = components["schemas"]["ClinicDto"] & {
   parentNameEn?: string | null;
+  defaultCurrency?: string;
 };
 /** OpenAPI snapshot + fields added in API after last codegen */
 export type GroupOverviewKpisDto = components["schemas"]["GroupOverviewKpisDto"] & {

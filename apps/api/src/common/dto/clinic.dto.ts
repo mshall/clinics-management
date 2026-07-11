@@ -27,4 +27,7 @@ export class ClinicDto {
 
   @ApiPropertyOptional({ nullable: true })
   logoUrl!: string | null;
+
+  @ApiProperty({ description: "Default currency for fees at this clinic" })
+  defaultCurrency!: string;
 }

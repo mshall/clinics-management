@@ -15,6 +15,7 @@ import type {
   EncounterMedicationDto,
   ExpenseDto,
   OperationDto,
+  OperationDetailDto,
   HrSummaryDto,
   LeaveRequestDto,
   RevenueEntryDto,
@@ -407,6 +408,15 @@ export function useOperationsQuery(params: OperationsListParams) {
       params.sortOrder,
     ],
     queryFn: () => apiGet<Paginated<OperationDto>>(`/api/v1/operations?${q.toString()}`),
+  });
+}
+
+export function useOperationQuery(id: string | undefined) {
+  const hasToken = useHasAuthToken();
+  return useQuery({
+    queryKey: ["operation", id],
+    queryFn: () => apiGet<OperationDetailDto>(`/api/v1/operations/${id}`),
+    enabled: Boolean(id) && hasToken,
   });
 }
 
