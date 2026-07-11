@@ -9,6 +9,7 @@ import { AttendanceStatus, LeaveStatus, Prisma, UserRole } from "@prisma/client"
 import { randomUUID } from "crypto";
 import * as path from "path";
 import type { JwtUser } from "../auth/jwt-user";
+import { ensureClinicStaffEmployeeRecords } from "../common/clinic-staff-employee";
 import { CLINIC_SCOPE_ROLES, fetchClinicScopeIds } from "../common/clinic-scope";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
@@ -179,6 +180,7 @@ export class HrService {
     sortByStr?: string,
     sortOrderStr?: string
   ) {
+    await ensureClinicStaffEmployeeRecords(this.prisma, tenantId);
     const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, viewer);
     if (scopeIds !== null && !scopeIds.length) {
       const { page, pageSize } = parsePageParams(pageStr, pageSizeStr);
@@ -210,6 +212,8 @@ export class HrService {
           { firstNameAr: { contains: nameFilter, mode: "insensitive" } },
           { lastNameAr: { contains: nameFilter, mode: "insensitive" } },
           { email: { contains: nameFilter, mode: "insensitive" } },
+          { user: { is: { displayName: { contains: nameFilter, mode: "insensitive" } } } },
+          { user: { is: { email: { contains: nameFilter, mode: "insensitive" } } } },
         ],
       });
     }
@@ -226,7 +230,10 @@ export class HrService {
         orderBy: { [sortField]: sortDir },
         skip,
         take: pageSize,
-        include: { clinic: { select: { nameEn: true } } },
+        include: {
+          clinic: { select: { nameEn: true } },
+          user: { select: { displayName: true, role: true, avatarRelativePath: true } },
+        },
       }),
     ]);
     return paginate(rows.map((r) => this.mapEmployee(r)), total, page, pageSize);
@@ -565,6 +572,7 @@ export class HrService {
   }
 
   async hrSummary(tenantId: string) {
+    await ensureClinicStaffEmployeeRecords(this.prisma, tenantId);
     const [employeeCount, monthlyPayroll, pendingLeave] = await Promise.all([
       this.prisma.employee.count({ where: { tenantId } }),
       this.prisma.employee.aggregate({

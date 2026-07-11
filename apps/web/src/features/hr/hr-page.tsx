@@ -81,7 +81,7 @@ export function HrPage() {
   );
 
   const [empPage, setEmpPage] = useState(1);
-  const [empPs, setEmpPs] = useState(10);
+  const [empPs, setEmpPs] = useState(25);
   const [empSortBy, setEmpSortBy] = useState("lastNameEn");
   const [empSortOrder, setEmpSortOrder] = useState<SortOrder>("asc");
 

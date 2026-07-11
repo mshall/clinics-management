@@ -220,11 +220,39 @@ export class ClinicsService {
     });
     if (!physician) throw new BadRequestException("User must be a physician in your organization");
 
-    const existing = await this.prisma.employee.findFirst({
+    const existingAtClinic = await this.prisma.employee.findFirst({
       where: { tenantId, clinicId, userId: physician.id },
       include: { user: { select: { id: true, displayName: true, email: true } } },
     });
-    if (existing?.user) return this.mapPhysicianEmployee(existing as typeof existing & { user: NonNullable<typeof existing.user> });
+    if (existingAtClinic?.user) {
+      return this.mapPhysicianEmployee(existingAtClinic as typeof existingAtClinic & { user: NonNullable<typeof existingAtClinic.user> });
+    }
+
+    const existingLinked = await this.prisma.employee.findFirst({
+      where: { tenantId, userId: physician.id },
+      include: { user: { select: { id: true, displayName: true, email: true } } },
+    });
+    if (existingLinked?.user) {
+      const row = await this.prisma.employee.update({
+        where: { id: existingLinked.id },
+        data: { clinicId, email: physician.email },
+        include: { user: { select: { id: true, displayName: true, email: true } } },
+      });
+      return this.mapPhysicianEmployee(row as typeof row & { user: NonNullable<typeof row.user> });
+    }
+
+    const existingStub = await this.prisma.employee.findFirst({
+      where: { tenantId, clinicId, userId: null, email: physician.email },
+      include: { user: { select: { id: true, displayName: true, email: true } } },
+    });
+    if (existingStub) {
+      const row = await this.prisma.employee.update({
+        where: { id: existingStub.id },
+        data: { userId: physician.id },
+        include: { user: { select: { id: true, displayName: true, email: true } } },
+      });
+      return this.mapPhysicianEmployee(row as typeof row & { user: NonNullable<typeof row.user> });
+    }
 
     const parts = physician.displayName.trim().split(/\s+/);
     const firstNameEn = parts[0] ?? "Physician";
@@ -260,7 +288,10 @@ export class ClinicsService {
       where: { tenantId, clinicId, userId, user: { is: { role: UserRole.PHYSICIAN } } },
     });
     if (!row) throw new NotFoundException("Physician is not assigned to this clinic");
-    await this.prisma.employee.delete({ where: { id: row.id } });
+    await this.prisma.employee.update({
+      where: { id: row.id },
+      data: { userId: null },
+    });
   }
 
   /** Roster for scheduling (operations, appointments) — scoped to clinic when provided. */

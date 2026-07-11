@@ -1,6 +1,10 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { EmploymentType, Prisma, UserRole } from "@prisma/client";
+import { Prisma, UserRole } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
+import {
+  CLINIC_EMPLOYEE_ROLES,
+  syncLinkedEmployeeClinic,
+} from "../common/clinic-staff-employee";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { fetchClinicScopeIds } from "../common/clinic-scope";
@@ -18,15 +22,6 @@ import {
 } from "./org-hierarchy";
 
 const CLINIC_SCOPE_ROLES = new Set<UserRole>([UserRole.CLINIC_ADMIN, UserRole.BRANCH_MANAGER]);
-
-const CLINIC_EMPLOYEE_ROLES = new Set<UserRole>([
-  UserRole.CLINIC_ADMIN,
-  UserRole.BRANCH_MANAGER,
-  UserRole.PHYSICIAN,
-  UserRole.NURSE,
-  UserRole.RECEPTIONIST,
-  UserRole.CLINIC_ASSISTANT,
-]);
 
 type ClinicSummary = { id: string; nameEn: string };
 
@@ -179,38 +174,6 @@ export class AdminService {
     if (!row) throw new NotFoundException("Organization not found");
   }
 
-  private jobTitleForRole(role: UserRole): string {
-    switch (role) {
-      case UserRole.PHYSICIAN:
-        return "Physician";
-      case UserRole.NURSE:
-        return "Nurse";
-      case UserRole.RECEPTIONIST:
-        return "Receptionist";
-      case UserRole.CLINIC_ASSISTANT:
-        return "Clinic Assistant";
-      case UserRole.BRANCH_MANAGER:
-        return "Branch Manager";
-      case UserRole.CLINIC_ADMIN:
-        return "Clinic Administrator";
-      default:
-        return "Staff";
-    }
-  }
-
-  private async nextEmployeeNumber(tx: Prisma.TransactionClient, tenantId: string): Promise<string> {
-    const rows = await tx.employee.findMany({
-      where: { tenantId, employeeNumber: { startsWith: "EMP-" } },
-      select: { employeeNumber: true },
-    });
-    let max = 0;
-    for (const r of rows) {
-      const m = /^EMP-(\d+)$/i.exec(r.employeeNumber.trim());
-      if (m) max = Math.max(max, Number.parseInt(m[1], 10));
-    }
-    return `EMP-${max + 1}`;
-  }
-
   private async assertClinicIdsBelongToTenant(
     tx: Prisma.TransactionClient,
     tenantId: string,
@@ -234,48 +197,6 @@ export class AdminService {
     await tx.clinicAdminScope.createMany({
       data: clinicIds.map((clinicId) => ({ tenantId, userId, clinicId })),
       skipDuplicates: true,
-    });
-  }
-
-  private async syncLinkedEmployeeClinic(
-    tx: Prisma.TransactionClient,
-    tenantId: string,
-    user: { id: string; email: string; displayName: string; role: UserRole },
-    primaryClinicId: string | null,
-  ): Promise<void> {
-    if (!CLINIC_EMPLOYEE_ROLES.has(user.role)) return;
-    const existing = await tx.employee.findFirst({ where: { userId: user.id } });
-    if (!primaryClinicId) {
-      if (existing) {
-        await tx.employee.update({ where: { id: existing.id }, data: { userId: null } });
-      }
-      return;
-    }
-    const parts = user.displayName.trim().split(/\s+/);
-    const firstNameEn = parts[0] ?? user.displayName;
-    const lastNameEn = parts.slice(1).join(" ") || "Staff";
-    if (existing) {
-      await tx.employee.update({
-        where: { id: existing.id },
-        data: { clinicId: primaryClinicId, email: user.email, userId: user.id },
-      });
-      return;
-    }
-    await tx.employee.create({
-      data: {
-        tenantId,
-        clinicId: primaryClinicId,
-        userId: user.id,
-        employeeNumber: await this.nextEmployeeNumber(tx, tenantId),
-        firstNameEn,
-        lastNameEn,
-        email: user.email,
-        phone: "+0000000000",
-        jobTitle: this.jobTitleForRole(user.role),
-        employmentType: EmploymentType.FULL_TIME,
-        hireDate: new Date(),
-        salaryBase: 0,
-      },
     });
   }
 
@@ -313,7 +234,16 @@ export class AdminService {
       });
       if (clinicIds.length) {
         await this.syncClinicAdminScopes(tx, tenantId, u.id, clinicIds);
-        await this.syncLinkedEmployeeClinic(tx, tenantId, u, clinicIds[0] ?? null);
+        await syncLinkedEmployeeClinic(tx, tenantId, u, clinicIds[0] ?? null);
+      } else if (CLINIC_EMPLOYEE_ROLES.has(dto.role)) {
+        const clinic = await tx.clinic.findFirst({
+          where: { tenantId },
+          orderBy: { nameEn: "asc" },
+          select: { id: true },
+        });
+        if (clinic) {
+          await syncLinkedEmployeeClinic(tx, tenantId, u, clinic.id);
+        }
       }
       return u;
     });
@@ -384,9 +314,9 @@ export class AdminService {
 
       if (dto.clinicIds !== undefined) {
         await this.syncClinicAdminScopes(tx, tenantId, userId, dto.clinicIds);
-        await this.syncLinkedEmployeeClinic(tx, tenantId, u, dto.clinicIds[0] ?? null);
+        await syncLinkedEmployeeClinic(tx, tenantId, u, dto.clinicIds[0] ?? null);
       } else if (dto.role !== undefined && !CLINIC_EMPLOYEE_ROLES.has(nextRole)) {
-        await this.syncLinkedEmployeeClinic(tx, tenantId, u, null);
+        await syncLinkedEmployeeClinic(tx, tenantId, u, null);
       }
 
       return u;
