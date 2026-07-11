@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CreateActionButton } from "@/components/create-action-button";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAvailableClinicPhysiciansQuery, useClinicPhysiciansQuery } from "@/lib/api-hooks";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectClinicDoctorAssignIssues } from "@/lib/create-form-validation";
-import { resolvePickListSelectedItem } from "@/lib/pick-list-utils";
+import { resolvePickListSelectedItem, useDebouncedPickListSearch } from "@/lib/pick-list-utils";
 import { physicianToPickListItem } from "@/lib/physician-display";
 import { apiDelete, apiPost } from "@/lib/http";
 import { useAuthStore } from "@/stores/auth-store";
@@ -27,16 +27,11 @@ export function ClinicDoctorsPanel({ clinicId }: { clinicId: string }) {
   const [addOpen, setAddOpen] = useState(false);
   const [pickUserId, setPickUserId] = useState("");
   const [pinnedPhysicianItem, setPinnedPhysicianItem] = useState<PickListItem | null>(null);
-  const [addSearch, setAddSearch] = useState("");
-  const [debouncedAddSearch, setDebouncedAddSearch] = useState("");
-  useEffect(() => {
-    const tid = window.setTimeout(() => setDebouncedAddSearch(addSearch), 280);
-    return () => window.clearTimeout(tid);
-  }, [addSearch]);
+  const addPickSearch = useDebouncedPickListSearch();
 
   const { data: available = [], isPending: availPending } = useAvailableClinicPhysiciansQuery(
     clinicId,
-    debouncedAddSearch.trim() || undefined,
+    addPickSearch.debounced.trim() || undefined,
     addOpen && canManage
   );
 
@@ -56,8 +51,7 @@ export function ClinicDoctorsPanel({ clinicId }: { clinicId: string }) {
     onSuccess: () => {
       setPickUserId("");
       setPinnedPhysicianItem(null);
-      setAddSearch("");
-      setDebouncedAddSearch("");
+      addPickSearch.resetSearch();
       setAddOpen(false);
       void qc.invalidateQueries({ queryKey: ["clinic", clinicId, "physicians"] });
       void qc.invalidateQueries({ queryKey: ["clinicians", "scheduling"] });
@@ -112,8 +106,8 @@ export function ClinicDoctorsPanel({ clinicId }: { clinicId: string }) {
                   const item = availableItems.find((d) => d.value === id);
                   if (item) setPinnedPhysicianItem(item);
                 }}
-                onSearchQueryChange={setAddSearch}
-                onOpen={() => setDebouncedAddSearch("")}
+                onSearchQueryChange={addPickSearch.setSearch}
+                onOpen={addPickSearch.resetSearch}
                 searchPlaceholder={t("appointments.filterPhysician", "Type physician name, Arabic name, or email…")}
                 placeholder={t("clinics.pickDoctor", "Select physician")}
                 emptyMessage={

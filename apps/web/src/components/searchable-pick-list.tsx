@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { focusTextInput } from "@/lib/focus-input";
+import { filterPickListItems } from "@/lib/pick-list-utils";
 import { cn } from "@/lib/utils";
 
 export interface PickListItem {
@@ -57,7 +58,9 @@ function measurePanelRect(anchor: HTMLElement): PanelRect {
   const offsetLeft = vv?.offsetLeft ?? 0;
   const spaceBelow = viewportHeight - rect.bottom - 8;
   const spaceAbove = rect.top - 8;
-  const placement = spaceBelow < PANEL_MAX_HEIGHT && spaceAbove > spaceBelow ? "above" : "below";
+  const keyboardLikely = viewportHeight < window.innerHeight * 0.75;
+  const placement =
+    keyboardLikely || (spaceBelow < PANEL_MAX_HEIGHT && spaceAbove > spaceBelow) ? "above" : "below";
   const maxHeight = Math.min(
     PANEL_MAX_HEIGHT,
     Math.max(120, placement === "below" ? spaceBelow : spaceAbove),
@@ -115,15 +118,7 @@ export function SearchablePickList({
         ? [selectedItem, ...items]
         : items
       : items;
-    if (!localFilter) return base;
-    const t = q.trim().toLowerCase();
-    if (!t) return base;
-    return base.filter(
-      (i) =>
-        i.label.toLowerCase().includes(t) ||
-        (i.hint?.toLowerCase().includes(t) ?? false) ||
-        i.value.toLowerCase().includes(t),
-    );
+    return filterPickListItems(base, q);
   }, [items, q, localFilter, selectedItem, value]);
 
   const selectedLabel =
@@ -301,7 +296,7 @@ export function SearchablePickList({
           autoCapitalize="off"
           spellCheck={false}
           enterKeyHint="search"
-          inputMode="search"
+          inputMode="text"
           className={cn(
             "h-11 touch-manipulation pe-9",
             invalid && "border-destructive ring-1 ring-destructive",

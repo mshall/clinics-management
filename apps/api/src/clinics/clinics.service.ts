@@ -294,7 +294,22 @@ export class ClinicsService {
     });
   }
 
-  /** Roster for scheduling (operations, appointments) — scoped to clinic when provided. */
+  private mapPhysicianFromUser(u: { id: string; displayName: string; email: string }): ClinicPhysicianDto {
+    const parts = u.displayName.trim().split(/\s+/);
+    return {
+      userId: u.id,
+      displayName: u.displayName,
+      email: u.email,
+      employeeId: "",
+      jobTitle: null,
+      firstNameEn: parts[0] ?? u.displayName,
+      lastNameEn: parts.length > 1 ? parts.slice(1).join(" ") : "",
+      firstNameAr: null,
+      lastNameAr: null,
+    };
+  }
+
+  /** Roster for scheduling (operations, appointments) — all org physicians; clinicId prioritizes matches. */
   async listSchedulingPhysicians(
     tenantId: string,
     user: JwtUser,
@@ -305,33 +320,93 @@ export class ClinicsService {
       throw new ForbiddenException("You do not have permission to list physicians");
     }
 
-    if (clinicId?.trim()) {
-      return this.listClinicPhysicians(tenantId, clinicId.trim(), user, search);
+    const clinicFilter = clinicId?.trim();
+    if (clinicFilter) {
+      await this.assertClinicVisible(tenantId, clinicFilter, user);
     }
 
     const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
-    const searchFilter = this.physicianSearchFilter(search);
-    const rows = await this.prisma.employee.findMany({
-      where: {
-        tenantId,
-        userId: { not: null },
-        user: { is: { role: UserRole.PHYSICIAN } },
-        ...(scopeIds !== null ? { clinicId: { in: scopeIds } } : {}),
-        ...(searchFilter ?? {}),
+    const q = search?.trim();
+
+    const searchOr: Prisma.UserWhereInput[] | undefined = q
+      ? [
+          { displayName: { contains: q, mode: "insensitive" } },
+          { email: { contains: q, mode: "insensitive" } },
+          {
+            employee: {
+              is: {
+                OR: [
+                  { firstNameEn: { contains: q, mode: "insensitive" } },
+                  { lastNameEn: { contains: q, mode: "insensitive" } },
+                  { firstNameAr: { contains: q, mode: "insensitive" } },
+                  { lastNameAr: { contains: q, mode: "insensitive" } },
+                  { email: { contains: q, mode: "insensitive" } },
+                ],
+              },
+            },
+          },
+        ]
+      : undefined;
+
+    const userWhere: Prisma.UserWhereInput = {
+      tenantId,
+      role: UserRole.PHYSICIAN,
+      ...(searchOr ? { OR: searchOr } : {}),
+      ...(scopeIds !== null
+        ? {
+            OR: [{ employee: { is: null } }, { employee: { is: { clinicId: { in: scopeIds } } } }],
+          }
+        : {}),
+    };
+
+    const users = await this.prisma.user.findMany({
+      where: userWhere,
+      include: {
+        employee: {
+          select: {
+            id: true,
+            clinicId: true,
+            jobTitle: true,
+            firstNameEn: true,
+            lastNameEn: true,
+            firstNameAr: true,
+            lastNameAr: true,
+            email: true,
+          },
+        },
       },
-      include: { user: { select: { id: true, displayName: true, email: true } } },
-      orderBy: [{ firstNameEn: "asc" }, { lastNameEn: "asc" }],
-      take: 100,
+      orderBy: { displayName: "asc" },
+      take: 150,
     });
 
+    const atClinic: ClinicPhysicianDto[] = [];
+    const other: ClinicPhysicianDto[] = [];
     const seen = new Set<string>();
-    const out: ClinicPhysicianDto[] = [];
-    for (const r of rows) {
-      if (!r.user || seen.has(r.user.id)) continue;
-      seen.add(r.user.id);
-      out.push(this.mapPhysicianEmployee(r as typeof r & { user: NonNullable<typeof r.user> }));
+
+    for (const u of users) {
+      if (seen.has(u.id)) continue;
+      seen.add(u.id);
+      const dto = u.employee
+        ? this.mapPhysicianEmployee({
+            id: u.employee.id,
+            jobTitle: u.employee.jobTitle,
+            firstNameEn: u.employee.firstNameEn,
+            lastNameEn: u.employee.lastNameEn,
+            firstNameAr: u.employee.firstNameAr,
+            lastNameAr: u.employee.lastNameAr,
+            email: u.employee.email,
+            user: { id: u.id, displayName: u.displayName, email: u.email },
+          })
+        : this.mapPhysicianFromUser(u);
+
+      if (clinicFilter && u.employee?.clinicId === clinicFilter) {
+        atClinic.push(dto);
+      } else {
+        other.push(dto);
+      }
     }
-    return out;
+
+    return [...atClinic, ...other].slice(0, 100);
   }
 
   private async nextPhysicianEmployeeNumber(tenantId: string): Promise<string> {

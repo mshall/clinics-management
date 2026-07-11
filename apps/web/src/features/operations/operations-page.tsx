@@ -41,6 +41,7 @@ import { formatClinicianDisplayName } from "@/lib/employee-display";
 import { physicianToPickListItem } from "@/lib/physician-display";
 import { formatClinicName, localeForLanguage } from "@/lib/locale-display";
 import { columnFilterIncludes } from "@/lib/utils";
+import { useDebouncedPickListSearch } from "@/lib/pick-list-utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { defaultMonthRange } from "@/stores/date-range-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
@@ -136,24 +137,13 @@ export function OperationsPage() {
   const [generatedPrescriptionFile, setGeneratedPrescriptionFile] = useState<File | null>(null);
   const [pinnedPhysicianItem, setPinnedPhysicianItem] = useState<PickListItem | null>(null);
 
-  const [bookPatientSearch, setBookPatientSearch] = useState("");
-  const [debouncedBookPatient, setDebouncedBookPatient] = useState("");
-  useEffect(() => {
-    const tid = window.setTimeout(() => setDebouncedBookPatient(bookPatientSearch), 280);
-    return () => window.clearTimeout(tid);
-  }, [bookPatientSearch]);
-
-  const [doctorSearch, setDoctorSearch] = useState("");
-  const [debouncedDoctorSearch, setDebouncedDoctorSearch] = useState("");
-  useEffect(() => {
-    const tid = window.setTimeout(() => setDebouncedDoctorSearch(doctorSearch), 280);
-    return () => window.clearTimeout(tid);
-  }, [doctorSearch]);
+  const bookPatientPickSearch = useDebouncedPickListSearch();
+  const bookDoctorPickSearch = useDebouncedPickListSearch();
 
   const schedulingClinicId = clinicId || singleManagedClinic?.id || "";
 
   const { data: bookPatData, isPending: bookPatientsPending } = usePatientsQuery({
-    search: debouncedBookPatient.trim() || undefined,
+    search: bookPatientPickSearch.debounced.trim() || undefined,
     page: 1,
     pageSize: 100,
     enabled: showCreatePanel,
@@ -166,7 +156,7 @@ export function OperationsPage() {
   const effectiveSchedulingClinicId = schedulingClinicId || selectedPatient?.homeBranchId || "";
   const { data: physicians = [], isFetching: physiciansFetching } = useSchedulingPhysiciansQuery({
     clinicId: effectiveSchedulingClinicId || undefined,
-    search: debouncedDoctorSearch.trim() || undefined,
+    search: bookDoctorPickSearch.debounced.trim() || undefined,
     enabled: showCreatePanel,
   });
 
@@ -230,12 +220,10 @@ export function OperationsPage() {
 
   const resetCreateForm = () => {
     setPatientId("");
-    setBookPatientSearch("");
-    setDebouncedBookPatient("");
+    bookPatientPickSearch.resetSearch();
     setClinicianId("");
     setPinnedPhysicianItem(null);
-    setDoctorSearch("");
-    setDebouncedDoctorSearch("");
+    bookDoctorPickSearch.resetSearch();
     setOperationDate("");
     setTotalCost("");
     setDownPayment("");
@@ -268,20 +256,8 @@ export function OperationsPage() {
   const [editComments, setEditComments] = useState("");
   const [editClinicId, setEditClinicId] = useState("");
   const [editFormErr, setEditFormErr] = useState<string | null>(null);
-  const [editPatientSearch, setEditPatientSearch] = useState("");
-  const [debouncedEditPatient, setDebouncedEditPatient] = useState("");
-  const [editDoctorSearch, setEditDoctorSearch] = useState("");
-  const [debouncedEditDoctor, setDebouncedEditDoctor] = useState("");
-
-  useEffect(() => {
-    const tid = window.setTimeout(() => setDebouncedEditPatient(editPatientSearch), 280);
-    return () => window.clearTimeout(tid);
-  }, [editPatientSearch]);
-
-  useEffect(() => {
-    const tid = window.setTimeout(() => setDebouncedEditDoctor(editDoctorSearch), 280);
-    return () => window.clearTimeout(tid);
-  }, [editDoctorSearch]);
+  const editPatientPickSearch = useDebouncedPickListSearch();
+  const editDoctorPickSearch = useDebouncedPickListSearch();
 
   const openEdit = (o: OperationDto) => {
     setEditOp(o);
@@ -295,17 +271,17 @@ export function OperationsPage() {
     setEditDownPayment(String(o.downPayment));
     setEditComments(o.comments ?? "");
     setEditFormErr(null);
-    setEditPatientSearch("");
-    setEditDoctorSearch("");
+    editPatientPickSearch.resetSearch();
+    editDoctorPickSearch.resetSearch();
   };
 
 
   const { data: editPhysicians = [], isFetching: editPhysiciansFetching } = useSchedulingPhysiciansQuery({
-    search: debouncedEditDoctor.trim() || undefined,
+    search: editDoctorPickSearch.debounced.trim() || undefined,
     enabled: editOp != null,
   });
   const { data: editPatData, isPending: editPatientsPending } = usePatientsQuery({
-    search: debouncedEditPatient.trim() || undefined,
+    search: editPatientPickSearch.debounced.trim() || undefined,
     page: 1,
     pageSize: 100,
     enabled: editOp != null,
@@ -711,8 +687,8 @@ export function OperationsPage() {
                   value={editPatientId}
                   selectedItem={editPatientSelectedItem}
                   onValueChange={setEditPatientId}
-                  onSearchQueryChange={setEditPatientSearch}
-                  onOpen={() => setDebouncedEditPatient("")}
+                  onSearchQueryChange={editPatientPickSearch.setSearch}
+                  onOpen={editPatientPickSearch.resetSearch}
                   searchPlaceholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
                   placeholder={t("operations.selectPatient", "Select patient")}
                   emptyMessage={
@@ -730,8 +706,8 @@ export function OperationsPage() {
                   value={editClinicianId}
                   selectedItem={editPhysicianSelectedItem}
                   onValueChange={setEditClinicianId}
-                  onSearchQueryChange={setEditDoctorSearch}
-                  onOpen={() => setDebouncedEditDoctor("")}
+                  onSearchQueryChange={editDoctorPickSearch.setSearch}
+                  onOpen={editDoctorPickSearch.resetSearch}
                   searchPlaceholder={t("appointments.filterPhysician", "Type physician name…")}
                   placeholder={t("operations.selectDoctor", "Select doctor")}
                   emptyMessage={
@@ -905,8 +881,8 @@ export function OperationsPage() {
                       value={patientId}
                       selectedItem={bookPatientSelectedItem}
                       onValueChange={setPatientId}
-                      onSearchQueryChange={setBookPatientSearch}
-                      onOpen={() => setDebouncedBookPatient("")}
+                      onSearchQueryChange={bookPatientPickSearch.setSearch}
+                      onOpen={bookPatientPickSearch.resetSearch}
                       searchPlaceholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
                       placeholder={t("operations.selectPatient", "Select patient")}
                       emptyMessage={
@@ -931,8 +907,8 @@ export function OperationsPage() {
                         const item = physicianItems.find((d) => d.value === id);
                         if (item) setPinnedPhysicianItem(item);
                       }}
-                      onSearchQueryChange={setDoctorSearch}
-                      onOpen={() => setDebouncedDoctorSearch("")}
+                      onSearchQueryChange={bookDoctorPickSearch.setSearch}
+                      onOpen={bookDoctorPickSearch.resetSearch}
                       searchPlaceholder={t("appointments.filterPhysician", "Type physician name, Arabic name, or email…")}
                       placeholder={t("operations.selectDoctor", "Select doctor")}
                       emptyMessage={

@@ -18,6 +18,7 @@ import { canDeleteAppointment } from "@/lib/appointment-delete-policy";
 import { patientToPickListItem } from "@/lib/patient-display";
 import { resolvePickListSelectedItem } from "@/lib/pick-list-utils";
 import { formatClinicianDisplayName } from "@/lib/employee-display";
+import { useDebouncedPickListSearch } from "@/lib/pick-list-utils";
 import { physicianToPickListItem } from "@/lib/physician-display";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { DatetimeLocalField } from "@/components/datetime-local-field";
@@ -57,22 +58,11 @@ export function AppointmentDetailPage() {
   const [patientId, setPatientId] = useState("");
   const [clinicianId, setClinicianId] = useState("");
   const [pinnedClinicianItem, setPinnedClinicianItem] = useState<PickListItem | null>(null);
-  const [doctorSearch, setDoctorSearch] = useState("");
-  const [debouncedDoctorSearch, setDebouncedDoctorSearch] = useState("");
-  useEffect(() => {
-    const tid = window.setTimeout(() => setDebouncedDoctorSearch(doctorSearch), 280);
-    return () => window.clearTimeout(tid);
-  }, [doctorSearch]);
-
-  const [patientPickerSearch, setPatientPickerSearch] = useState("");
-  const [debouncedPatientSearch, setDebouncedPatientSearch] = useState("");
-  useEffect(() => {
-    const tid = window.setTimeout(() => setDebouncedPatientSearch(patientPickerSearch), 280);
-    return () => window.clearTimeout(tid);
-  }, [patientPickerSearch]);
+  const doctorPickSearch = useDebouncedPickListSearch();
+  const patientPickSearch = useDebouncedPickListSearch();
 
   const { data: patData } = usePatientsQuery({
-    search: debouncedPatientSearch.trim() || undefined,
+    search: patientPickSearch.debounced.trim() || undefined,
     page: 1,
     pageSize: 150,
     enabled: Boolean(apt && !readOnly),
@@ -81,7 +71,7 @@ export function AppointmentDetailPage() {
 
   const { data: physicians = [], isFetching: physiciansFetching } = useSchedulingPhysiciansQuery({
     clinicId: clinicId || undefined,
-    search: debouncedDoctorSearch.trim() || undefined,
+    search: doctorPickSearch.debounced.trim() || undefined,
     enabled: Boolean(apt && !readOnly),
   });
 
@@ -404,8 +394,8 @@ export function AppointmentDetailPage() {
               value={patientId}
               selectedItem={patientSelectedItem}
               onValueChange={setPatientId}
-              onSearchQueryChange={(q) => setPatientPickerSearch(q)}
-              onOpen={() => setDebouncedPatientSearch("")}
+              onSearchQueryChange={patientPickSearch.setSearch}
+              onOpen={patientPickSearch.resetSearch}
               disabled={readOnly}
               searchPlaceholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
               placeholder={t("appointments.pick")}
@@ -429,8 +419,8 @@ export function AppointmentDetailPage() {
                   const item = physicianItems.find((d) => d.value === id);
                   if (item) setPinnedClinicianItem(item);
                 }}
-                onSearchQueryChange={setDoctorSearch}
-                onOpen={() => setDebouncedDoctorSearch("")}
+                onSearchQueryChange={doctorPickSearch.setSearch}
+                onOpen={doctorPickSearch.resetSearch}
                 disabled={readOnly}
                 searchPlaceholder={t("appointments.filterPhysician", "Type physician name, Arabic name, or email…")}
                 placeholder={t("appointments.pickPhysician")}

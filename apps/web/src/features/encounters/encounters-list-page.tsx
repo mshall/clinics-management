@@ -41,7 +41,7 @@ import { canDeleteEncounter } from "@/lib/encounter-delete-policy";
 import { EncounterDeleteConfirmDialog, type EncounterDeleteTarget } from "@/features/encounters/encounter-delete-confirm-dialog";
 import { formatEncounterStatus, formatClinicName, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
-import { resolvePickListSelectedItem } from "@/lib/pick-list-utils";
+import { resolvePickListSelectedItem, useDebouncedPickListSearch } from "@/lib/pick-list-utils";
 import { physicianToPickListItem } from "@/lib/physician-display";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { columnFilterIncludes } from "@/lib/utils";
@@ -92,14 +92,9 @@ export function EncountersListPage() {
 
   const { data: patData } = usePatientsQuery({ page: 1, pageSize: 200 });
   const [createOpen, setCreateOpen] = useState(false);
-  const [patientSearch, setPatientSearch] = useState("");
-  const [debouncedPatientSearch, setDebouncedPatientSearch] = useState("");
-  useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedPatientSearch(patientSearch), 280);
-    return () => window.clearTimeout(timer);
-  }, [patientSearch]);
+  const patientPickSearch = useDebouncedPickListSearch();
   const { data: dialogPatData, isPending: dialogPatientsPending } = usePatientsQuery({
-    search: debouncedPatientSearch.trim() || undefined,
+    search: patientPickSearch.debounced.trim() || undefined,
     page: 1,
     pageSize: 100,
     enabled: createOpen,
@@ -161,20 +156,10 @@ export function EncountersListPage() {
   const [createVisitFee, setCreateVisitFee] = useState("");
   const [createClinicianId, setCreateClinicianId] = useState("");
   const [pinnedClinicianItem, setPinnedClinicianItem] = useState<PickListItem | null>(null);
-  const [doctorSearch, setDoctorSearch] = useState("");
-  const [debouncedDoctorSearch, setDebouncedDoctorSearch] = useState("");
-  useEffect(() => {
-    const tid = window.setTimeout(() => setDebouncedDoctorSearch(doctorSearch), 280);
-    return () => window.clearTimeout(tid);
-  }, [doctorSearch]);
+  const doctorPickSearch = useDebouncedPickListSearch();
   const validation = useValidationIssuesDialog({ intent: "create" });
   const [createFieldErrors, setCreateFieldErrors] = useState<Set<string>>(() => new Set());
-  const [aptPickerSearch, setAptPickerSearch] = useState("");
-  const [debouncedAptPicker, setDebouncedAptPicker] = useState("");
-  useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedAptPicker(aptPickerSearch), 320);
-    return () => window.clearTimeout(timer);
-  }, [aptPickerSearch]);
+  const aptPickSearch = useDebouncedPickListSearch();
   const [selectedAppointmentId, setSelectedAppointmentId] = useState("");
   const [pinnedAppointmentItem, setPinnedAppointmentItem] = useState<PickListItem | null>(null);
   const [acquisitionValues, setAcquisitionValues] = useState<PatientAcquisitionFormValues>(
@@ -202,13 +187,13 @@ export function EncountersListPage() {
   }, [createOpen, createPatientId, selectedPatient]);
 
   const aptPickerEnabled =
-    createOpen && (Boolean(createPatientId.trim()) || debouncedAptPicker.trim().length >= 2);
+    createOpen && (Boolean(createPatientId.trim()) || aptPickSearch.debounced.trim().length >= 2);
   const { data: aptPickerData, isPending: aptPickerPending } = useAppointmentsQuery({
     patientSearch:
       createPatientId.trim().length > 0
         ? undefined
-        : debouncedAptPicker.trim().length >= 2
-          ? debouncedAptPicker.trim()
+        : aptPickSearch.debounced.trim().length >= 2
+          ? aptPickSearch.debounced.trim()
           : undefined,
     patientId: createPatientId.trim() || undefined,
     bookableOnly: true,
@@ -218,7 +203,7 @@ export function EncountersListPage() {
   });
   const { data: usersForDoctors, isFetching: doctorsFetching } = useSchedulingPhysiciansQuery({
     clinicId: createClinicId || undefined,
-    search: debouncedDoctorSearch.trim() || undefined,
+    search: doctorPickSearch.debounced.trim() || undefined,
     enabled: createOpen && !isPhysician,
   });
   const doctorPickItems: PickListItem[] = useMemo(
@@ -262,22 +247,19 @@ export function EncountersListPage() {
   }, [createOpen, adminOv.data?.currentTenant?.defaultVisitFee]);
 
   const openCreateDialog = () => {
-    setPatientSearch("");
-    setDebouncedPatientSearch("");
+    patientPickSearch.resetSearch();
     setCreatePatientId("");
     setCreateClinicId(clinics[0]?.id ?? "");
     setCreateVisitType(ENCOUNTER_VISIT_TYPES[0] ?? "Office visit");
     const d = adminOv.data?.currentTenant?.defaultVisitFee;
     setCreateVisitFee(d != null && Number.isFinite(Number(d)) ? String(d) : "");
     validation.clear();
-    setAptPickerSearch("");
-    setDebouncedAptPicker("");
+    aptPickSearch.resetSearch();
     setSelectedAppointmentId("");
     setPinnedAppointmentItem(null);
     setCreateClinicianId("");
     setPinnedClinicianItem(null);
-    setDoctorSearch("");
-    setDebouncedDoctorSearch("");
+    doctorPickSearch.resetSearch();
     setCreateFieldErrors(new Set());
     setAcquisitionValues(emptyPatientAcquisitionFormValues());
     setCreateOpen(true);
@@ -437,8 +419,8 @@ export function EncountersListPage() {
                       setSelectedAppointmentId("");
                       clearCreateFieldError("patient");
                     }}
-                    onSearchQueryChange={setPatientSearch}
-                    onOpen={() => setDebouncedPatientSearch("")}
+                    onSearchQueryChange={patientPickSearch.setSearch}
+                    onOpen={patientPickSearch.resetSearch}
                     searchPlaceholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
                     placeholder={t("encounters.pickPatient", "Pick patient")}
                     emptyMessage={dialogPatientsPending ? t("common.loading") : t("encounters.noPatientsMatch", "No patients match.")}
@@ -470,8 +452,8 @@ export function EncountersListPage() {
                         setCreateClinicianId(row.clinicianId);
                       }
                     }}
-                    onSearchQueryChange={setAptPickerSearch}
-                    onOpen={() => setDebouncedAptPicker("")}
+                    onSearchQueryChange={aptPickSearch.setSearch}
+                    onOpen={aptPickSearch.resetSearch}
                     searchPlaceholder={t("encounters.appointmentSearchPlaceholder", "Type at least 2 characters or pick a patient first…")}
                     placeholder={t("encounters.linkedAppointment", "Booked appointment (optional)")}
                     emptyMessage={aptPickerPending ? t("common.loading") : t("encounters.noBookableAppointments", "No matching open appointments.")}
@@ -511,8 +493,8 @@ export function EncountersListPage() {
                         const item = doctorPickItems.find((d) => d.value === v);
                         if (item) setPinnedClinicianItem(item);
                       }}
-                      onSearchQueryChange={setDoctorSearch}
-                      onOpen={() => setDebouncedDoctorSearch("")}
+                      onSearchQueryChange={doctorPickSearch.setSearch}
+                      onOpen={doctorPickSearch.resetSearch}
                       searchPlaceholder={t("appointments.filterPhysician", "Type physician name, Arabic name, or email…")}
                       placeholder={t("encounters.attendingPhysician")}
                       emptyMessage={

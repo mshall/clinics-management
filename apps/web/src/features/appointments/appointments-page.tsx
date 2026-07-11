@@ -24,6 +24,7 @@ import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-di
 import { physicianToPickListItem } from "@/lib/physician-display";
 import { formatClinicName, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
 import { columnFilterIncludes } from "@/lib/utils";
+import { useDebouncedPickListSearch } from "@/lib/pick-list-utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectAppointmentCreateIssues } from "@/lib/create-form-validation";
@@ -144,16 +145,9 @@ export function AppointmentsPage() {
   const [bookOk, setBookOk] = useState<string | null>(null);
   const [appointmentToDelete, setAppointmentToDelete] = useState<AppointmentDeleteTarget | null>(null);
 
-  const [bookPatientSearch, setBookPatientSearch] = useState("");
-  const [debouncedBookPatient, setDebouncedBookPatient] = useState("");
-  const [selectedBookPatientItem, setSelectedBookPatientItem] = useState<PickListItem | null>(null);
-  useEffect(() => {
-    const tid = window.setTimeout(() => setDebouncedBookPatient(bookPatientSearch), 280);
-    return () => window.clearTimeout(tid);
-  }, [bookPatientSearch]);
-
+  const bookPatientPickSearch = useDebouncedPickListSearch();
   const { data: bookPatData, isPending: bookPatientsPending } = usePatientsQuery({
-    search: debouncedBookPatient.trim() || undefined,
+    search: bookPatientPickSearch.debounced.trim() || undefined,
     page: 1,
     pageSize: 100,
     enabled: showBookPanel,
@@ -163,16 +157,12 @@ export function AppointmentsPage() {
     () => bookPatients.find((p) => p.id === patientId),
     [bookPatients, patientId],
   );
-  const [bookDoctorSearch, setBookDoctorSearch] = useState("");
-  const [debouncedBookDoctor, setDebouncedBookDoctor] = useState("");
-  useEffect(() => {
-    const tid = window.setTimeout(() => setDebouncedBookDoctor(bookDoctorSearch), 280);
-    return () => window.clearTimeout(tid);
-  }, [bookDoctorSearch]);
+  const [selectedBookPatientItem, setSelectedBookPatientItem] = useState<PickListItem | null>(null);
+  const bookDoctorPickSearch = useDebouncedPickListSearch();
   const schedulingClinicId = clinicId || selectedBookPatient?.homeBranchId || "";
   const { data: physicians = [], isFetching: physiciansFetching } = useSchedulingPhysiciansQuery({
     clinicId: schedulingClinicId || undefined,
-    search: debouncedBookDoctor.trim() || undefined,
+    search: bookDoctorPickSearch.debounced.trim() || undefined,
     enabled: showBookPanel && !isPhysician,
   });
   const bookPatientItems: PickListItem[] = useMemo(
@@ -247,12 +237,10 @@ export function AppointmentsPage() {
       toast.success(message);
       setPatientId("");
       setSelectedBookPatientItem(null);
-      setBookPatientSearch("");
-      setDebouncedBookPatient("");
+      bookPatientPickSearch.resetSearch();
       setClinicianId(authUser?.role === "physician" && authUser.id ? authUser.id : "");
       setPinnedPhysicianItem(null);
-      setBookDoctorSearch("");
-      setDebouncedBookDoctor("");
+      bookDoctorPickSearch.resetSearch();
       setStart("");
       setEnd("");
       void qc.invalidateQueries({ queryKey: ["appointments"] });
@@ -452,8 +440,8 @@ export function AppointmentsPage() {
                   const item = bookPatientItems.find((p) => p.value === id);
                   if (item) setSelectedBookPatientItem(item);
                 }}
-                onSearchQueryChange={setBookPatientSearch}
-                onOpen={() => setDebouncedBookPatient("")}
+                onSearchQueryChange={bookPatientPickSearch.setSearch}
+                onOpen={bookPatientPickSearch.resetSearch}
                 searchPlaceholder={t("encounters.patientSearchPlaceholder")}
                 placeholder={t("appointments.pick")}
                 emptyMessage={
@@ -475,8 +463,8 @@ export function AppointmentsPage() {
                   const item = physicianItems.find((d) => d.value === id);
                   if (item) setPinnedPhysicianItem(item);
                 }}
-                onSearchQueryChange={setBookDoctorSearch}
-                onOpen={() => setDebouncedBookDoctor("")}
+                onSearchQueryChange={bookDoctorPickSearch.setSearch}
+                onOpen={bookDoctorPickSearch.resetSearch}
                 searchPlaceholder={t("appointments.filterPhysician", "Type physician name, Arabic name, or email…")}
                 placeholder={t("appointments.pickPhysician")}
                 emptyMessage={
