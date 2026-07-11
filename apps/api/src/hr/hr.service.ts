@@ -40,6 +40,12 @@ const EMPLOYEE_MANAGE_ROLES = new Set<UserRole>([
   UserRole.BRANCH_MANAGER,
 ]);
 
+const EMPLOYEE_DELETE_ROLES = new Set<UserRole>([
+  UserRole.GROUP_ADMIN,
+  UserRole.CLINIC_ADMIN,
+  UserRole.BRANCH_MANAGER,
+]);
+
 @Injectable()
 export class HrService {
   constructor(
@@ -50,6 +56,12 @@ export class HrService {
   private assertCanManageEmployees(viewer: JwtUser): void {
     if (!EMPLOYEE_MANAGE_ROLES.has(viewer.role)) {
       throw new ForbiddenException("You do not have permission to manage employees");
+    }
+  }
+
+  private assertCanDeleteEmployee(viewer: JwtUser): void {
+    if (!EMPLOYEE_DELETE_ROLES.has(viewer.role)) {
+      throw new ForbiddenException("Only administrators can delete employees");
     }
   }
 
@@ -636,7 +648,7 @@ export class HrService {
   }
 
   async deleteEmployee(tenantId: string, id: string, viewer: JwtUser): Promise<{ ok: true; id: string }> {
-    this.assertCanManageEmployees(viewer);
+    this.assertCanDeleteEmployee(viewer);
     const emp = await this.prisma.employee.findFirst({ where: { id, tenantId } });
     if (!emp) throw new NotFoundException("Employee not found");
     await this.assertClinicAdminCanUseClinic(tenantId, viewer, emp.clinicId);

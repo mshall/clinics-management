@@ -21,7 +21,7 @@ import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog"
 import { collectEmployeeCreateIssues } from "@/lib/create-form-validation";
 import { useClinicsQuery, useEmployeeQuery } from "@/lib/api-hooks";
 import type { EmployeeDto } from "@/lib/api-types";
-import { canManageEmployees } from "@/lib/employee-manage-policy";
+import { canDeleteEmployees, canManageEmployees } from "@/lib/employee-manage-policy";
 import { ApiError, apiDelete, apiFetchBlob, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { formatClinicName, formatClinicNameFields, formatEmploymentType, formatUserRole, localeForLanguage } from "@/lib/locale-display";
 import { formatEmployeeName } from "@/lib/employee-display";
@@ -35,6 +35,7 @@ export function EmployeeDetailPage() {
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
   const canManage = canManageEmployees(authUser?.role);
+  const canDelete = canDeleteEmployees(authUser?.role);
   const { id } = useParams();
   const { data: emp, isPending, isError, error } = useEmployeeQuery(id);
   const { data: clinics = [] } = useClinicsQuery();
@@ -189,7 +190,7 @@ export function EmployeeDetailPage() {
     onSuccess: () => {
       setReactivateOpen(false);
       void qc.invalidateQueries({ queryKey: ["hr"] });
-      toast.success(t("hr.reactivateSuccess", "Employee reactivated."));
+      toast.success(t("hr.rehireSuccess", "Employee re-hired."));
     },
     onError: (e: unknown) => {
       const msg =
@@ -333,7 +334,7 @@ export function EmployeeDetailPage() {
                   onClick={() => setReactivateOpen(true)}
                 >
                   <UserCheck className="me-2 h-4 w-4" />
-                  {t("hr.reactivate", "Reactivate")}
+                  {t("hr.rehire", "Re-hire")}
                 </Button>
               ) : (
                 <Button
@@ -351,17 +352,19 @@ export function EmployeeDetailPage() {
                   {editing ? t("common.cancel", "Cancel") : t("common.edit", "Edit")}
                 </Button>
               ) : null}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="text-destructive hover:text-destructive"
-                disabled={deleteMut.isPending}
-                onClick={() => setDeleteOpen(true)}
-              >
-                <Trash2 className="me-2 h-4 w-4" />
-                {t("common.delete", "Delete")}
-              </Button>
+              {canDelete ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  disabled={deleteMut.isPending}
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  <Trash2 className="me-2 h-4 w-4" />
+                  {t("common.delete", "Delete")}
+                </Button>
+              ) : null}
             </>
           ) : null}
         </div>

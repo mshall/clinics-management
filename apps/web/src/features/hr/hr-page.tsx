@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { MoreHorizontal, Trash2, UserX } from "lucide-react";
+import { MoreHorizontal, Trash2, UserCheck, UserX } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -20,6 +20,7 @@ import { useAttendanceQuery, useClinicsQuery, useEmployeesQuery, useHrSummaryQue
 import type { EmployeeDto } from "@/lib/api-types";
 import { EmployeeDeleteConfirmDialog, type EmployeeDeleteTarget } from "@/features/hr/employee-delete-confirm-dialog";
 import { EmployeeDeactivateConfirmDialog } from "@/features/hr/employee-deactivate-confirm-dialog";
+import { EmployeeReactivateDialog } from "@/features/hr/employee-reactivate-dialog";
 import { isClinicRequiredUserRole, isOrgWideUserRole } from "@/features/platform/platform-shared";
 import {
   DropdownMenu,
@@ -27,7 +28,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { canManageEmployees } from "@/lib/employee-manage-policy";
+import { canDeleteEmployees, canManageEmployees } from "@/lib/employee-manage-policy";
 import { ApiError, apiDelete, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { columnFilterIncludes } from "@/lib/utils";
 import {
@@ -76,6 +77,7 @@ export function HrPage() {
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
   const canManage = canManageEmployees(authUser?.role);
+  const canDelete = canDeleteEmployees(authUser?.role);
   const { data: clinics = [] } = useClinicsQuery();
   const [tab, setTab] = useState<Tab>(() => parseHrTab(searchParams.get("tab")));
 
@@ -182,6 +184,7 @@ export function HrPage() {
   const [createEmpOpen, setCreateEmpOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<EmployeeDeleteTarget | null>(null);
   const [employeeToDeactivate, setEmployeeToDeactivate] = useState<EmployeeDeleteTarget | null>(null);
+  const [employeeToReactivate, setEmployeeToReactivate] = useState<EmployeeDto | null>(null);
   const [empClinic, setEmpClinic] = useState("");
   const [empAssignedClinicIds, setEmpAssignedClinicIds] = useState<string[]>([]);
   const [empLinkedUserId, setEmpLinkedUserId] = useState("");
@@ -370,6 +373,25 @@ export function HrPage() {
       setEmployeeToDeactivate(null);
       void qc.invalidateQueries({ queryKey: ["hr"] });
       toast.success(t("hr.deactivateSuccess", "Employee deactivated."));
+    },
+    onError: (e: unknown) => {
+      const msg =
+        e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body
+          ? String((e.body as { message?: unknown }).message)
+          : e instanceof Error
+            ? e.message
+            : String(e);
+      toast.error(msg);
+    },
+  });
+
+  const reactivateEmpMut = useMutation({
+    mutationFn: ({ employeeId, startDate }: { employeeId: string; startDate: string }) =>
+      apiPost<EmployeeDto>(`/api/v1/hr/employees/${employeeId}/reactivate`, { startDate }),
+    onSuccess: () => {
+      setEmployeeToReactivate(null);
+      void qc.invalidateQueries({ queryKey: ["hr"] });
+      toast.success(t("hr.rehireSuccess", "Employee re-hired."));
     },
     onError: (e: unknown) => {
       const msg =
@@ -892,7 +914,7 @@ export function HrPage() {
                                 size="icon"
                                 className="h-8 w-8"
                                 aria-label={t("hr.employeeActions", "Employee actions")}
-                                disabled={deleteEmpMut.isPending || deactivateEmpMut.isPending}
+                                disabled={deleteEmpMut.isPending || deactivateEmpMut.isPending || reactivateEmpMut.isPending}
                                 onClick={(ev) => {
                                   ev.preventDefault();
                                   ev.stopPropagation();
@@ -911,14 +933,21 @@ export function HrPage() {
                                   <UserX className="me-2 h-4 w-4" />
                                   {t("hr.deactivate", "Deactivate")}
                                 </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem onSelect={() => setEmployeeToReactivate(e)}>
+                                  <UserCheck className="me-2 h-4 w-4" />
+                                  {t("hr.rehire", "Re-hire")}
+                                </DropdownMenuItem>
+                              )}
+                              {canDelete ? (
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onSelect={() => setEmployeeToDelete(employeeRowToTarget(e, i18n.language))}
+                                >
+                                  <Trash2 className="me-2 h-4 w-4" />
+                                  {t("common.delete", "Delete")}
+                                </DropdownMenuItem>
                               ) : null}
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                onSelect={() => setEmployeeToDelete(employeeRowToTarget(e, i18n.language))}
-                              >
-                                <Trash2 className="me-2 h-4 w-4" />
-                                {t("common.delete", "Delete")}
-                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </td>
@@ -943,6 +972,31 @@ export function HrPage() {
           </CardContent>
         </Card>
       ) : null}
+
+      <EmployeeReactivateDialog
+        open={employeeToReactivate != null}
+        onOpenChange={(open) => {
+          if (!open && !reactivateEmpMut.isPending) setEmployeeToReactivate(null);
+        }}
+        employee={
+          employeeToReactivate
+            ? {
+                employeeNumber: employeeToReactivate.employeeNumber,
+                firstNameEn: employeeToReactivate.firstNameEn,
+                lastNameEn: employeeToReactivate.lastNameEn,
+                firstNameAr: employeeToReactivate.firstNameAr,
+                lastNameAr: employeeToReactivate.lastNameAr,
+                resignationDate: employeeToReactivate.resignationDate,
+              }
+            : null
+        }
+        pending={reactivateEmpMut.isPending}
+        onConfirm={(startDate) => {
+          if (employeeToReactivate) {
+            reactivateEmpMut.mutate({ employeeId: employeeToReactivate.id, startDate });
+          }
+        }}
+      />
 
       <EmployeeDeleteConfirmDialog
         open={employeeToDelete != null}

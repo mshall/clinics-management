@@ -55,6 +55,9 @@ export class OperationDto {
   @ApiProperty()
   balanceDue!: number;
 
+  @ApiProperty({ description: "Currency amounts are recorded in (may differ from clinic default)" })
+  feeCurrency!: string;
+
   @ApiPropertyOptional()
   comments!: string | null;
 

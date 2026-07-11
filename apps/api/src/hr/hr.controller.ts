@@ -119,7 +119,7 @@ export class HrController {
   }
 
   @Delete("employees/:id")
-  @ApiOperation({ summary: "Delete employee (HR, group admin, clinic admin, branch manager)" })
+  @ApiOperation({ summary: "Delete employee (group admin, clinic admin, branch manager only)" })
   @ApiOkResponse({ description: "{ ok: true, id }" })
   removeEmployee(@CurrentUser() user: JwtUser, @Param("id") id: string) {
     return this.hr.deleteEmployee(requireTenantId(user), id, user);

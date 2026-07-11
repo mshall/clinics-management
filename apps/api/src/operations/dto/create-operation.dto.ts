@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsBoolean, IsDateString, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
+import { IsBoolean, IsDateString, IsIn, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
+import { BASE_CURRENCIES } from "../../common/base-currencies";
 
 export class CreateOperationDto {
   @ApiProperty()
@@ -40,4 +41,13 @@ export class CreateOperationDto {
   @IsOptional()
   @IsBoolean()
   noMedications?: boolean;
+
+  @ApiPropertyOptional({
+    enum: BASE_CURRENCIES,
+    description: "Currency the patient pays in; defaults to the clinic default currency",
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(BASE_CURRENCIES)
+  feeCurrency?: string;
 }

@@ -3,6 +3,7 @@ import { Lock } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CreateActionButton } from "@/components/create-action-button";
+import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import {
   MedicationsPrescriptionDraftPanel,
@@ -160,6 +161,7 @@ export function OperationsPage() {
   const [operationDate, setOperationDate] = useState("");
   const [totalCost, setTotalCost] = useState("");
   const [downPayment, setDownPayment] = useState("");
+  const [feeCurrency, setFeeCurrency] = useState("AED");
   const [comments, setComments] = useState("");
   const [formErr, setFormErr] = useState<string | null>(null);
   const [createOk, setCreateOk] = useState<string | null>(null);
@@ -240,6 +242,10 @@ export function OperationsPage() {
   }, [schedulingClinicId, selectedPatient?.homeBranchId, clinics]);
   const createCurrency = clinicCurrencyCode(clinics, selectedClinic?.id);
 
+  useEffect(() => {
+    if (showCreatePanel) setFeeCurrency(createCurrency);
+  }, [showCreatePanel, createCurrency]);
+
   const prescriptionContext = useMemo(
     () => ({
       clinicName: selectedClinic ? formatClinicName(selectedClinic, i18n.language) : "—",
@@ -263,6 +269,7 @@ export function OperationsPage() {
     setOperationDate("");
     setTotalCost("");
     setDownPayment("");
+    setFeeCurrency(createCurrency);
     setComments("");
     setDocRows([]);
     setDocInvalidRowIds(new Set());
@@ -289,6 +296,7 @@ export function OperationsPage() {
   const [editOperationDate, setEditOperationDate] = useState("");
   const [editTotalCost, setEditTotalCost] = useState("");
   const [editDownPayment, setEditDownPayment] = useState("");
+  const [editFeeCurrency, setEditFeeCurrency] = useState("AED");
   const [editComments, setEditComments] = useState("");
   const [editClinicId, setEditClinicId] = useState("");
   const [editFormErr, setEditFormErr] = useState<string | null>(null);
@@ -336,6 +344,7 @@ export function OperationsPage() {
     setEditOperationDate(local);
     setEditTotalCost(String(o.totalCost));
     setEditDownPayment(String(o.downPayment));
+    setEditFeeCurrency(o.feeCurrency ?? clinicCurrencyCode(clinics, o.clinicId));
     setEditComments(o.comments ?? "");
     setEditFormErr(null);
     editPatientPickSearch.resetSearch();
@@ -346,7 +355,7 @@ export function OperationsPage() {
   const { data: editOpDetail, isPending: editOpDetailPending } = useOperationQuery(
     editIsScheduled ? editOp?.id : undefined,
   );
-  const editCurrency = clinicCurrencyCode(clinics, editClinicId || editOp?.clinicId);
+  const editClinicDefaultCurrency = clinicCurrencyCode(clinics, editClinicId || editOp?.clinicId);
 
   useEffect(() => {
     if (!editIsScheduled || !editOpDetail || editDetailLoadedId === editOpDetail.id) return;
@@ -357,8 +366,9 @@ export function OperationsPage() {
     setEditExistingAttachments(medState.existingAttachments);
     setEditPrescriptionFile(null);
     setEditGeneratedPrescriptionFile(null);
+    setEditFeeCurrency(editOpDetail.feeCurrency ?? editClinicDefaultCurrency);
     setEditDetailLoadedId(editOpDetail.id);
-  }, [editIsScheduled, editOpDetail, editDetailLoadedId]);
+  }, [editIsScheduled, editOpDetail, editDetailLoadedId, editClinicDefaultCurrency]);
 
   const { data: editPhysicians = [], isFetching: editPhysiciansFetching } = useSchedulingPhysiciansQuery({
     clinicId: editClinicId || editOp?.clinicId || undefined,
@@ -463,7 +473,7 @@ export function OperationsPage() {
     setCompleteFormErr(null);
   };
 
-  const completeCurrency = clinicCurrencyCode(clinics, completeConfirmOp?.clinicId);
+  const completeCurrency = completeConfirmOp?.feeCurrency ?? clinicCurrencyCode(clinics, completeConfirmOp?.clinicId);
   const completeBalance = completeConfirmOp
     ? Math.max(0, completeConfirmOp.balanceDue ?? completeConfirmOp.totalCost - (completeConfirmOp.paidAmount ?? completeConfirmOp.downPayment))
     : 0;
@@ -514,6 +524,7 @@ export function OperationsPage() {
         downPayment: editDownPayment.trim() ? Number.parseFloat(editDownPayment) : 0,
         comments: editComments.trim() || undefined,
         clinicId: editClinicId || undefined,
+        feeCurrency: editFeeCurrency,
         ...(editIsScheduled ? { noMedications: editMedTab === "none" } : {}),
       });
 
@@ -627,6 +638,7 @@ export function OperationsPage() {
         comments: comments.trim() || undefined,
         clinicId: schedulingClinicId || undefined,
         noMedications: medTab === "none",
+        feeCurrency,
       });
 
       for (const row of docRows) {
@@ -871,6 +883,7 @@ export function OperationsPage() {
                     onChange={(e) => {
                       setEditClinicId(e.target.value);
                       setEditClinicianId("");
+                      setEditFeeCurrency(clinicCurrencyCode(clinics, e.target.value));
                     }}
                   >
                     {clinics.map((c) => (
@@ -924,7 +937,7 @@ export function OperationsPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1">
                   <Label htmlFor="edit-op-total" required>
-                    {t("operations.totalCost", "Total cost ({{currency}})", { currency: editCurrency })}
+                    {t("operations.totalCost", "Total cost ({{currency}})", { currency: editFeeCurrency })}
                   </Label>
                   <Input
                     id="edit-op-total"
@@ -937,7 +950,7 @@ export function OperationsPage() {
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="edit-op-down">
-                    {t("operations.downPayment", "Down payment ({{currency}})", { currency: editCurrency })}
+                    {t("operations.downPayment", "Down payment ({{currency}})", { currency: editFeeCurrency })}
                   </Label>
                   <Input
                     id="edit-op-down"
@@ -948,12 +961,27 @@ export function OperationsPage() {
                     onChange={(e) => setEditDownPayment(e.target.value)}
                   />
                 </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <Label htmlFor="edit-op-fee-currency">{t("operations.paymentCurrency", "Payment currency")}</Label>
+                  <BaseCurrencySelect
+                    id="edit-op-fee-currency"
+                    value={editFeeCurrency}
+                    onChange={setEditFeeCurrency}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t(
+                      "operations.paymentCurrencyHint",
+                      "Defaults to the clinic currency ({{currency}}). Choose another if the patient paid in a different currency.",
+                      { currency: editClinicDefaultCurrency },
+                    )}
+                  </p>
+                </div>
               </div>
               {(editOp.paidAmount ?? 0) > 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  {t("operations.paidAmount", "Paid ({{currency}})", { currency: editCurrency })}:{" "}
+                  {t("operations.paidAmount", "Paid ({{currency}})", { currency: editFeeCurrency })}:{" "}
                   {money(editOp.paidAmount ?? 0)} ·{" "}
-                  {t("operations.balanceDue", "Balance ({{currency}})", { currency: editCurrency })}:{" "}
+                  {t("operations.balanceDue", "Balance ({{currency}})", { currency: editFeeCurrency })}:{" "}
                   {money(editOp.balanceDue ?? 0)}
                 </p>
               ) : null}
@@ -1110,6 +1138,7 @@ export function OperationsPage() {
                         onChange={(e) => {
                           setClinicId(e.target.value);
                           setClinicianId("");
+                          setFeeCurrency(clinicCurrencyCode(clinics, e.target.value || undefined));
                         }}
                       >
                         <option value="">{t("operations.autoClinic", "Patient home branch")}</option>
@@ -1185,7 +1214,7 @@ export function OperationsPage() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-1">
                     <Label htmlFor="op-total" required>
-                      {t("operations.totalCost", "Total cost ({{currency}})", { currency: createCurrency })}
+                      {t("operations.totalCost", "Total cost ({{currency}})", { currency: feeCurrency })}
                     </Label>
                     <Input
                       id="op-total"
@@ -1200,7 +1229,7 @@ export function OperationsPage() {
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="op-down">
-                      {t("operations.downPayment", "Down payment ({{currency}})", { currency: createCurrency })}
+                      {t("operations.downPayment", "Down payment ({{currency}})", { currency: feeCurrency })}
                     </Label>
                     <Input
                       id="op-down"
@@ -1213,6 +1242,17 @@ export function OperationsPage() {
                       placeholder="0.00"
                     />
                   </div>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="op-fee-currency">{t("operations.paymentCurrency", "Payment currency")}</Label>
+                  <BaseCurrencySelect id="op-fee-currency" value={feeCurrency} onChange={setFeeCurrency} />
+                  <p className="text-xs text-muted-foreground">
+                    {t(
+                      "operations.paymentCurrencyHint",
+                      "Defaults to the clinic currency ({{currency}}). Choose another if the patient paid in a different currency.",
+                      { currency: createCurrency },
+                    )}
+                  </p>
                 </div>
               </fieldset>
 
@@ -1377,8 +1417,12 @@ export function OperationsPage() {
                             )}
                           </td>
                           <td className="px-3 py-2 align-top">{formatClinicianDisplayName(o, i18n.language)}</td>
-                          <td className="px-3 py-2 align-top">{money(o.totalCost)}</td>
-                          <td className="px-3 py-2 align-top">{money(o.downPayment)}</td>
+                          <td className="px-3 py-2 align-top ltr-nums">
+                            {money(o.totalCost)} {o.feeCurrency ?? listCurrency}
+                          </td>
+                          <td className="px-3 py-2 align-top ltr-nums">
+                            {money(o.downPayment)} {o.feeCurrency ?? listCurrency}
+                          </td>
                           <td className="px-3 py-2 align-top">{money(o.paidAmount ?? 0)}</td>
                           <td className="px-3 py-2 align-top">{money(o.balanceDue ?? o.totalCost - (o.paidAmount ?? 0))}</td>
                           <td className="px-3 py-2 align-top">

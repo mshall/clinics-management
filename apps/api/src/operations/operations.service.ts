@@ -5,6 +5,7 @@ import * as path from "path";
 import type { JwtUser } from "../auth/jwt-user";
 import { fetchClinicScopeIds } from "../common/clinic-scope";
 import { resolveClinicCurrency } from "../common/clinic-currency";
+import { isBaseCurrency } from "../common/base-currencies";
 import { canAdminEditCompletedOperation } from "../common/operation-admin-roles";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
@@ -164,6 +165,19 @@ export class OperationsService {
     return this.clinicianNameParts(clinician).display;
   }
 
+  private async resolveOperationFeeCurrency(
+    tenantId: string,
+    clinicId: string,
+    feeCurrency?: string,
+  ): Promise<string> {
+    if (feeCurrency?.trim()) {
+      const code = feeCurrency.trim();
+      if (!isBaseCurrency(code)) throw new BadRequestException("Invalid fee currency");
+      return code;
+    }
+    return resolveClinicCurrency(this.prisma, tenantId, clinicId);
+  }
+
   private mapRow(row: OperationRow): OperationDto {
     const patient = row.patient;
     const clinicianParts = this.clinicianNameParts(row.clinician ?? null);
@@ -186,6 +200,7 @@ export class OperationsService {
       downPayment: Number(row.downPayment),
       paidAmount: Number(row.paidAmount),
       balanceDue: Math.max(0, Number(row.totalCost) - Number(row.paidAmount)),
+      feeCurrency: row.feeCurrency,
       comments: row.comments,
       status: row.status,
       createdAt: row.createdAt.toISOString(),
@@ -376,6 +391,8 @@ export class OperationsService {
       throw new BadRequestException("Invalid operation date");
     }
 
+    const feeCurrency = await this.resolveOperationFeeCurrency(tenantId, clinicId, dto.feeCurrency);
+
     const row = await this.prisma.operation.create({
       data: {
         tenantId,
@@ -387,6 +404,7 @@ export class OperationsService {
         totalCost: dto.totalCost,
         downPayment,
         paidAmount: downPayment,
+        feeCurrency,
         comments: dto.comments?.trim() || null,
         status: OperationStatus.SCHEDULED,
         noMedications: dto.noMedications ?? false,
@@ -505,6 +523,10 @@ export class OperationsService {
     }
 
     const fields = await this.resolveOperationUpdateFields(tenantId, existing, dto, viewer);
+    const feeCurrency =
+      dto.feeCurrency !== undefined
+        ? await this.resolveOperationFeeCurrency(tenantId, fields.clinicId, dto.feeCurrency)
+        : existing.feeCurrency;
 
     const row = await this.prisma.operation.update({
       where: { id },
@@ -513,6 +535,7 @@ export class OperationsService {
         totalCost,
         downPayment,
         paidAmount,
+        feeCurrency,
         ...(dto.noMedications !== undefined ? { noMedications: dto.noMedications } : {}),
       },
       include: operationInclude,
@@ -599,6 +622,10 @@ export class OperationsService {
     }
 
     const fields = await this.resolveOperationUpdateFields(tenantId, existing, dto, viewer);
+    const feeCurrency =
+      dto.feeCurrency !== undefined
+        ? await this.resolveOperationFeeCurrency(tenantId, fields.clinicId, dto.feeCurrency)
+        : existing.feeCurrency;
     const { patientName, clinicianName } = await this.resolveNamesForOperation(
       tenantId,
       fields.patientId,
@@ -614,6 +641,7 @@ export class OperationsService {
           description,
           grossAmount: totalCost,
           netAmount: totalCost,
+          currency: feeCurrency,
         },
       });
       return tx.operation.update({
@@ -623,6 +651,7 @@ export class OperationsService {
           totalCost,
           downPayment,
           paidAmount: totalCost,
+          feeCurrency,
         },
         include: operationInclude,
       });
@@ -664,7 +693,7 @@ export class OperationsService {
         throw new BadRequestException("Operation total cost must be greater than zero to complete");
       }
 
-      const currency = await resolveClinicCurrency(this.prisma, tenantId, existing.clinicId);
+      const currency = existing.feeCurrency;
 
       if (remaining > 0.001) {
         if (collectionAmount === undefined || collectionAmount <= 0) {

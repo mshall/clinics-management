@@ -50,12 +50,12 @@ export function EmployeeReactivateDialog({
       onOpenChange={(next) => {
         if (!pending) onOpenChange(next);
       }}
-      title={t("hr.reactivateConfirmTitle", "Reactivate employee?")}
+      title={t("hr.rehireConfirmTitle", "Re-hire employee?")}
       description={t(
-        "hr.reactivateConfirmIntro",
-        "A new employment period will start on the date you choose. Previous periods remain in the employment timeline.",
+        "hr.rehireConfirmIntro",
+        "Record a new employment period starting on the re-hire date. Previous periods stay in the employment timeline.",
       )}
-      confirmLabel={t("hr.reactivateConfirmAction", "Reactivate employee")}
+      confirmLabel={t("hr.rehireConfirmAction", "Re-hire employee")}
       cancelLabel={t("common.cancel", "Cancel")}
       pending={pending}
       confirmDisabled={!canConfirm}
@@ -69,7 +69,7 @@ export function EmployeeReactivateDialog({
             <p className="font-medium">{formatEmployeeName(employee, i18n.language)}</p>
             <p className="font-mono text-xs text-muted-foreground ltr-nums">{employee.employeeNumber}</p>
             <div className="space-y-2">
-              <Label required>{t("hr.reactivationDate", "New employment start date")}</Label>
+              <Label required>{t("hr.rehireDate", "Re-hire date")}</Label>
               <Input
                 className="ltr-nums"
                 type="date"

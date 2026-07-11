@@ -194,6 +194,7 @@ export interface OperationDto {
   downPayment: number;
   paidAmount: number;
   balanceDue: number;
+  feeCurrency: string;
   comments: string | null;
   status: string;
   createdAt: string;

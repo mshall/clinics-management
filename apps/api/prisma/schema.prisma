@@ -577,6 +577,7 @@ model Operation {
   totalCost       Decimal  @db.Decimal(14, 2)
   downPayment     Decimal         @default(0) @db.Decimal(14, 2)
   paidAmount      Decimal         @default(0) @db.Decimal(14, 2)
+  feeCurrency     String          @default("AED")
   comments        String?
   status          OperationStatus @default(SCHEDULED)
   noMedications   Boolean         @default(false)
