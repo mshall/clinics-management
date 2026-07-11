@@ -26,6 +26,18 @@ export class AppointmentDto {
   })
   clinicianName!: string | null;
 
+  @ApiPropertyOptional({ nullable: true })
+  clinicianFirstNameEn!: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  clinicianLastNameEn!: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  clinicianFirstNameAr!: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  clinicianLastNameAr!: string | null;
+
   @ApiProperty()
   startsAt!: string;
 

@@ -23,6 +23,18 @@ export class UpdateEmployeeDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  firstNameAr?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  lastNameAr?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsEmail()
   email?: string;
 

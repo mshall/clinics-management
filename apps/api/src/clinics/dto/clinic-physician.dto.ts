@@ -16,6 +16,18 @@ export class ClinicPhysicianDto {
 
   @ApiPropertyOptional()
   jobTitle!: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  firstNameEn!: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  lastNameEn!: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  firstNameAr!: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  lastNameAr!: string | null;
 }
 
 export class AssignClinicPhysicianDto {

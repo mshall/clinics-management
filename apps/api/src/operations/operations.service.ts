@@ -31,7 +31,7 @@ const operationInclude = {
   clinician: {
     select: {
       displayName: true,
-      employee: { select: { firstNameEn: true, lastNameEn: true } },
+      employee: { select: { firstNameEn: true, lastNameEn: true, firstNameAr: true, lastNameAr: true } },
     },
   },
 } as const;
@@ -116,21 +116,55 @@ export class OperationsService {
     await this.prisma.operationMedication.deleteMany({ where: { tenantId, operationId } });
   }
 
-  private clinicianDisplayName(
-    clinician: null | { displayName: string; employee: { firstNameEn: string; lastNameEn: string } | null }
-  ): string | null {
-    if (!clinician) return null;
+  private clinicianNameParts(
+    clinician: null | {
+      displayName: string;
+      employee: { firstNameEn: string; lastNameEn: string; firstNameAr: string | null; lastNameAr: string | null } | null;
+    }
+  ): {
+    firstNameEn: string | null;
+    lastNameEn: string | null;
+    firstNameAr: string | null;
+    lastNameAr: string | null;
+    display: string | null;
+  } {
+    if (!clinician) {
+      return { firstNameEn: null, lastNameEn: null, firstNameAr: null, lastNameAr: null, display: null };
+    }
     const e = clinician.employee;
     if (e) {
-      const n = `${e.firstNameEn ?? ""} ${e.lastNameEn ?? ""}`.trim();
-      if (n) return n;
+      const en = `${e.firstNameEn ?? ""} ${e.lastNameEn ?? ""}`.trim();
+      return {
+        firstNameEn: e.firstNameEn,
+        lastNameEn: e.lastNameEn,
+        firstNameAr: e.firstNameAr,
+        lastNameAr: e.lastNameAr,
+        display: en || clinician.displayName?.trim() || null,
+      };
     }
     const d = clinician.displayName?.trim();
-    return d || null;
+    const parts = d ? d.split(/\s+/) : [];
+    return {
+      firstNameEn: parts[0] ?? d ?? null,
+      lastNameEn: parts.length > 1 ? parts.slice(1).join(" ") : null,
+      firstNameAr: null,
+      lastNameAr: null,
+      display: d || null,
+    };
+  }
+
+  private clinicianDisplayName(
+    clinician: null | {
+      displayName: string;
+      employee: { firstNameEn: string; lastNameEn: string; firstNameAr: string | null; lastNameAr: string | null } | null;
+    }
+  ): string | null {
+    return this.clinicianNameParts(clinician).display;
   }
 
   private mapRow(row: OperationRow): OperationDto {
     const patient = row.patient;
+    const clinicianParts = this.clinicianNameParts(row.clinician ?? null);
     return {
       id: row.id,
       clinicId: row.clinicId,
@@ -140,7 +174,11 @@ export class OperationsService {
       patientMrn: patient?.mrn ?? null,
       patientName: patient ? `${patient.firstNameEn} ${patient.lastNameEn}`.trim() : null,
       clinicianId: row.clinicianId,
-      clinicianName: this.clinicianDisplayName(row.clinician ?? null),
+      clinicianName: clinicianParts.display,
+      clinicianFirstNameEn: clinicianParts.firstNameEn,
+      clinicianLastNameEn: clinicianParts.lastNameEn,
+      clinicianFirstNameAr: clinicianParts.firstNameAr,
+      clinicianLastNameAr: clinicianParts.lastNameAr,
       operationDate: row.operationDate.toISOString(),
       totalCost: Number(row.totalCost),
       downPayment: Number(row.downPayment),
@@ -349,7 +387,7 @@ export class OperationsService {
         where: { id: clinicianId, tenantId },
         select: {
           displayName: true,
-          employee: { select: { firstNameEn: true, lastNameEn: true } },
+          employee: { select: { firstNameEn: true, lastNameEn: true, firstNameAr: true, lastNameAr: true } },
         },
       }),
     ]);

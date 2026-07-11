@@ -31,6 +31,7 @@ import {
   formatClinicName,
   localeForLanguage,
 } from "@/lib/locale-display";
+import { employeeToPickListItem, formatEmployeeName } from "@/lib/employee-display";
 import { useAuthStore } from "@/stores/auth-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import {
@@ -75,12 +76,8 @@ export function HrPage() {
   const employeesPick = useEmployeesQuery({ page: 1, pageSize: 100 });
   const pickEmployees = employeesPick.data?.items ?? [];
   const employeePickItems: PickListItem[] = useMemo(
-    () =>
-      pickEmployees.map((e) => ({
-        value: e.id,
-        label: `${e.employeeNumber} — ${e.firstNameEn} ${e.lastNameEn}`,
-      })),
-    [pickEmployees]
+    () => pickEmployees.map((e) => employeeToPickListItem(e, i18n.language)),
+    [pickEmployees, i18n.language],
   );
 
   const [empPage, setEmpPage] = useState(1);
@@ -177,6 +174,8 @@ export function HrPage() {
   const [empClinic, setEmpClinic] = useState("");
   const [empFn, setEmpFn] = useState("");
   const [empLn, setEmpLn] = useState("");
+  const [empFnAr, setEmpFnAr] = useState("");
+  const [empLnAr, setEmpLnAr] = useState("");
   const [empEmail, setEmpEmail] = useState("");
   const [empPhone, setEmpPhone] = useState("");
   const [empTitle, setEmpTitle] = useState("Staff");
@@ -250,6 +249,8 @@ export function HrPage() {
         clinicId: empClinic,
         firstNameEn: empFn.trim(),
         lastNameEn: empLn.trim(),
+        firstNameAr: empFnAr.trim() || undefined,
+        lastNameAr: empLnAr.trim() || undefined,
         email: empEmail.trim() || undefined,
         phone: empPhone.replace(/\D/g, ""),
         jobTitle: empTitle.trim(),
@@ -269,6 +270,8 @@ export function HrPage() {
       setCreateEmpOpen(false);
       setEmpFn("");
       setEmpLn("");
+      setEmpFnAr("");
+      setEmpLnAr("");
       setEmpEmail("");
       setEmpPhone("");
       setEmpClinic("");
@@ -503,12 +506,20 @@ export function HrPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label required>{t("hr.firstName")}</Label>
+                      <Label required>{t("patients.firstNameEn")}</Label>
                       <Input value={empFn} onChange={(e) => setEmpFn(e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label required>{t("hr.lastName")}</Label>
+                      <Label required>{t("patients.lastNameEn")}</Label>
                       <Input value={empLn} onChange={(e) => setEmpLn(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t("patients.firstNameAr")}</Label>
+                      <Input value={empFnAr} onChange={(e) => setEmpFnAr(e.target.value)} dir="auto" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t("patients.lastNameAr")}</Label>
+                      <Input value={empLnAr} onChange={(e) => setEmpLnAr(e.target.value)} dir="auto" />
                     </div>
                     <div className="space-y-2">
                       <Label>{t("hr.email")}</Label>
@@ -651,7 +662,7 @@ export function HrPage() {
                         {formatClinicNameFields(e.clinicNameEn, null, i18n.language)}
                       </td>
                       <td className="px-2 py-2">
-                        {e.firstNameEn} {e.lastNameEn}
+                        {formatEmployeeName(e, i18n.language)}
                       </td>
                       <td className="px-2 py-2 text-muted-foreground">{e.jobTitle}</td>
                       <td className="px-2 py-2 ltr-nums">{money(e.salaryBase)}</td>
@@ -672,6 +683,8 @@ export function HrPage() {
                                 employeeNumber: e.employeeNumber,
                                 firstNameEn: e.firstNameEn,
                                 lastNameEn: e.lastNameEn,
+                                firstNameAr: e.firstNameAr,
+                                lastNameAr: e.lastNameAr,
                                 clinicId: e.clinicId,
                                 clinicNameEn: e.clinicNameEn,
                                 jobTitle: e.jobTitle,
@@ -835,7 +848,19 @@ export function HrPage() {
                     <tr key={a.id} className="border-t border-border">
                       <td className="px-3 py-2 ltr-nums">{a.workDate}</td>
                       <td className="px-3 py-2">
-                        <span className="font-medium">{a.employeeFullName ?? "—"}</span>
+                        <span className="font-medium">
+                          {a.employeeFirstNameEn || a.employeeLastNameEn
+                            ? formatEmployeeName(
+                                {
+                                  firstNameEn: a.employeeFirstNameEn ?? "",
+                                  lastNameEn: a.employeeLastNameEn ?? "",
+                                  firstNameAr: a.employeeFirstNameAr,
+                                  lastNameAr: a.employeeLastNameAr,
+                                },
+                                i18n.language,
+                              )
+                            : (a.employeeFullName ?? "—")}
+                        </span>
                         <span className="ms-2 font-mono text-xs text-muted-foreground ltr-nums">
                           {a.employeeNumber ?? a.employeeId.slice(0, 8)}
                         </span>

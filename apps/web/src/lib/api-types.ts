@@ -100,6 +100,8 @@ export interface EmployeeDto {
   employeeNumber: string;
   firstNameEn: string;
   lastNameEn: string;
+  firstNameAr?: string | null;
+  lastNameAr?: string | null;
   email: string | null;
   phone: string;
   jobTitle: string;
@@ -117,6 +119,10 @@ export interface AttendanceDto {
   employeeId: string;
   employeeNumber?: string | null;
   employeeFullName?: string | null;
+  employeeFirstNameEn?: string | null;
+  employeeLastNameEn?: string | null;
+  employeeFirstNameAr?: string | null;
+  employeeLastNameAr?: string | null;
   clinicNameEn?: string | null;
   workDate: string;
   clockIn: string | null;
@@ -142,8 +148,12 @@ export interface AppointmentDto {
   clinicNameAr?: string | null;
   patientId: string;
   clinicianId: string;
-  /** Employee first/last (EN) when linked, else user displayName */
+  /** Employee first/last when linked, else user displayName */
   clinicianName?: string | null;
+  clinicianFirstNameEn?: string | null;
+  clinicianLastNameEn?: string | null;
+  clinicianFirstNameAr?: string | null;
+  clinicianLastNameAr?: string | null;
   startsAt: string;
   endsAt: string;
   status: string;
@@ -162,6 +172,10 @@ export interface OperationDto {
   patientName?: string | null;
   clinicianId: string;
   clinicianName?: string | null;
+  clinicianFirstNameEn?: string | null;
+  clinicianLastNameEn?: string | null;
+  clinicianFirstNameAr?: string | null;
+  clinicianLastNameAr?: string | null;
   operationDate: string;
   totalCost: number;
   downPayment: number;
@@ -178,6 +192,10 @@ export interface ClinicPhysicianDto {
   email: string | null;
   employeeId: string;
   jobTitle: string | null;
+  firstNameEn?: string | null;
+  lastNameEn?: string | null;
+  firstNameAr?: string | null;
+  lastNameAr?: string | null;
 }
 
 export interface HrSummaryDto {

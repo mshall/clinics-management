@@ -11,12 +11,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { useAppointmentQuery, useClinicsQuery, usePatientQuery, usePatientsQuery, useUsersQuery } from "@/lib/api-hooks";
+import { useAppointmentQuery, useClinicsQuery, usePatientQuery, usePatientsQuery, useSchedulingPhysiciansQuery } from "@/lib/api-hooks";
 import type { AppointmentDto } from "@/lib/api-types";
 import { ApiError, apiDelete, apiPatch } from "@/lib/http";
 import { canDeleteAppointment } from "@/lib/appointment-delete-policy";
 import { patientToPickListItem } from "@/lib/patient-display";
 import { resolvePickListSelectedItem } from "@/lib/pick-list-utils";
+import { formatClinicianDisplayName } from "@/lib/employee-display";
+import { physicianToPickListItem } from "@/lib/physician-display";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { DatetimeLocalField } from "@/components/datetime-local-field";
 import { formatClinicName } from "@/lib/locale-display";
@@ -49,8 +51,18 @@ export function AppointmentDetailPage() {
   const qc = useQueryClient();
   const { data: apt, isPending, isError, error } = useAppointmentQuery(id);
   const { data: clinics = [] } = useClinicsQuery();
-  const { data: userData } = useUsersQuery({ page: 1, pageSize: 100 });
   const readOnly = apt ? isReadOnlyStatus(apt.status) : false;
+
+  const [clinicId, setClinicId] = useState("");
+  const [patientId, setPatientId] = useState("");
+  const [clinicianId, setClinicianId] = useState("");
+  const [pinnedClinicianItem, setPinnedClinicianItem] = useState<PickListItem | null>(null);
+  const [doctorSearch, setDoctorSearch] = useState("");
+  const [debouncedDoctorSearch, setDebouncedDoctorSearch] = useState("");
+  useEffect(() => {
+    const tid = window.setTimeout(() => setDebouncedDoctorSearch(doctorSearch), 280);
+    return () => window.clearTimeout(tid);
+  }, [doctorSearch]);
 
   const [patientPickerSearch, setPatientPickerSearch] = useState("");
   const [debouncedPatientSearch, setDebouncedPatientSearch] = useState("");
@@ -67,11 +79,12 @@ export function AppointmentDetailPage() {
   });
   const patients = patData?.items ?? [];
 
-  const physicians = (userData?.items ?? []).filter((u) => u.role === "PHYSICIAN");
+  const { data: physicians = [], isPending: physiciansPending } = useSchedulingPhysiciansQuery({
+    clinicId: clinicId || undefined,
+    search: debouncedDoctorSearch.trim() || undefined,
+    enabled: Boolean(apt && !readOnly),
+  });
 
-  const [clinicId, setClinicId] = useState("");
-  const [patientId, setPatientId] = useState("");
-  const [clinicianId, setClinicianId] = useState("");
   const [startsLocal, setStartsLocal] = useState("");
   const [endsLocal, setEndsLocal] = useState("");
   const [notes, setNotes] = useState("");
@@ -148,6 +161,24 @@ export function AppointmentDetailPage() {
       fromApt,
     );
   }, [apt, patientId, patientItems, extraPatient]);
+
+  const physicianItems: PickListItem[] = useMemo(
+    () => physicians.map((d) => physicianToPickListItem(d, i18n.language)),
+    [physicians, i18n.language],
+  );
+  const clinicianSelectedItem = useMemo((): PickListItem | null => {
+    if (!clinicianId) return null;
+    const fromList = physicianItems.find((d) => d.value === clinicianId);
+    if (fromList) return fromList;
+    if (pinnedClinicianItem?.value === clinicianId) return pinnedClinicianItem;
+    if (apt && apt.clinicianId === clinicianId) {
+      const label = formatClinicianDisplayName(apt, i18n.language);
+      return label !== "—" ? { value: clinicianId, label } : null;
+    }
+    const selected = physicians.find((d) => d.userId === clinicianId);
+    if (selected) return physicianToPickListItem(selected, i18n.language);
+    return null;
+  }, [clinicianId, physicianItems, pinnedClinicianItem, apt, physicians, i18n.language]);
 
   const saveMut = useMutation({
     mutationFn: (body: Partial<AppointmentDto> & Record<string, unknown>) =>
@@ -383,18 +414,32 @@ export function AppointmentDetailPage() {
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label required>{t("appointments.clinician")}</Label>
-            <select
-              className={nativeSelectClassName}
-              value={clinicianId}
-              disabled={readOnly}
-              onChange={(e) => setClinicianId(e.target.value)}
-            >
-              {physicians.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.displayName}
-                </option>
-              ))}
-            </select>
+            {readOnly ? (
+              <p className="flex min-h-11 items-center rounded-md border border-input bg-muted/40 px-3 py-2 text-sm">
+                {formatClinicianDisplayName(apt ?? {}, i18n.language)}
+              </p>
+            ) : (
+              <SearchablePickList
+                items={physicianItems}
+                value={clinicianId}
+                selectedItem={clinicianSelectedItem}
+                onValueChange={(id) => {
+                  setClinicianId(id);
+                  const item = physicianItems.find((d) => d.value === id);
+                  if (item) setPinnedClinicianItem(item);
+                }}
+                onSearchQueryChange={setDoctorSearch}
+                disabled={readOnly}
+                searchPlaceholder={t("appointments.filterPhysician", "Type physician name, Arabic name, or email…")}
+                placeholder={t("appointments.pickPhysician")}
+                emptyMessage={
+                  physiciansPending ? t("common.loading") : t("appointments.noPhysicians", "No physicians found.")
+                }
+                localFilter={false}
+                minSearchLength={0}
+                idleMessage={t("operations.doctorSearchIdle", "Type a name or pick from the list.")}
+              />
+            )}
           </div>
           <div className="space-y-2">
             <Label required>{t("appointments.starts")}</Label>

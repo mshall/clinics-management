@@ -61,15 +61,25 @@ export class ClinicsService {
   private mapPhysicianEmployee(e: {
     id: string;
     jobTitle: string;
+    firstNameEn: string;
+    lastNameEn: string;
+    firstNameAr: string | null;
+    lastNameAr: string | null;
+    email: string | null;
     user: { id: string; displayName: string; email: string } | null;
   }): ClinicPhysicianDto {
     const u = e.user!;
+    const enName = `${e.firstNameEn ?? ""} ${e.lastNameEn ?? ""}`.trim();
     return {
       userId: u.id,
-      displayName: u.displayName,
-      email: u.email,
+      displayName: enName || u.displayName,
+      email: u.email ?? e.email,
       employeeId: e.id,
       jobTitle: e.jobTitle,
+      firstNameEn: e.firstNameEn,
+      lastNameEn: e.lastNameEn,
+      firstNameAr: e.firstNameAr,
+      lastNameAr: e.lastNameAr,
     };
   }
 
@@ -80,6 +90,8 @@ export class ClinicsService {
       OR: [
         { firstNameEn: { contains: q, mode: "insensitive" } },
         { lastNameEn: { contains: q, mode: "insensitive" } },
+        { firstNameAr: { contains: q, mode: "insensitive" } },
+        { lastNameAr: { contains: q, mode: "insensitive" } },
         { email: { contains: q, mode: "insensitive" } },
         { user: { is: { displayName: { contains: q, mode: "insensitive" } } } },
         { user: { is: { email: { contains: q, mode: "insensitive" } } } },
@@ -137,6 +149,19 @@ export class ClinicsService {
             OR: [
               { displayName: { contains: q, mode: "insensitive" } },
               { email: { contains: q, mode: "insensitive" } },
+              {
+                employee: {
+                  is: {
+                    OR: [
+                      { firstNameEn: { contains: q, mode: "insensitive" } },
+                      { lastNameEn: { contains: q, mode: "insensitive" } },
+                      { firstNameAr: { contains: q, mode: "insensitive" } },
+                      { lastNameAr: { contains: q, mode: "insensitive" } },
+                      { email: { contains: q, mode: "insensitive" } },
+                    ],
+                  },
+                },
+              },
             ],
           }
         : {}),
@@ -144,17 +169,44 @@ export class ClinicsService {
 
     const users = await this.prisma.user.findMany({
       where: userWhere,
+      include: {
+        employee: {
+          select: {
+            id: true,
+            jobTitle: true,
+            firstNameEn: true,
+            lastNameEn: true,
+            firstNameAr: true,
+            lastNameAr: true,
+            email: true,
+          },
+        },
+      },
       orderBy: { displayName: "asc" },
       take: 50,
     });
 
-    return users.map((u) => ({
-      userId: u.id,
-      displayName: u.displayName,
-      email: u.email,
-      employeeId: "",
-      jobTitle: null,
-    }));
+    return users.map((u) => {
+      const emp = u.employee;
+      if (emp) {
+        return this.mapPhysicianEmployee({
+          ...emp,
+          user: { id: u.id, displayName: u.displayName, email: u.email },
+        } as Parameters<typeof this.mapPhysicianEmployee>[0]);
+      }
+      const parts = u.displayName.trim().split(/\s+/);
+      return {
+        userId: u.id,
+        displayName: u.displayName,
+        email: u.email,
+        employeeId: "",
+        jobTitle: null,
+        firstNameEn: parts[0] ?? u.displayName,
+        lastNameEn: parts.length > 1 ? parts.slice(1).join(" ") : "",
+        firstNameAr: null,
+        lastNameAr: null,
+      };
+    });
   }
 
   async assignPhysician(tenantId: string, clinicId: string, userId: string, viewer: JwtUser): Promise<ClinicPhysicianDto> {
@@ -227,28 +279,17 @@ export class ClinicsService {
     }
 
     const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
-    const q = search?.trim();
+    const searchFilter = this.physicianSearchFilter(search);
     const rows = await this.prisma.employee.findMany({
       where: {
         tenantId,
         userId: { not: null },
-        user: {
-          is: {
-            role: UserRole.PHYSICIAN,
-            ...(q
-              ? {
-                  OR: [
-                    { displayName: { contains: q, mode: "insensitive" } },
-                    { email: { contains: q, mode: "insensitive" } },
-                  ],
-                }
-              : {}),
-          },
-        },
+        user: { is: { role: UserRole.PHYSICIAN } },
         ...(scopeIds !== null ? { clinicId: { in: scopeIds } } : {}),
+        ...(searchFilter ?? {}),
       },
       include: { user: { select: { id: true, displayName: true, email: true } } },
-      orderBy: [{ user: { displayName: "asc" } }],
+      orderBy: [{ firstNameEn: "asc" }, { lastNameEn: "asc" }],
       take: 100,
     });
 

@@ -38,6 +38,8 @@ export function AdminCreateEmployeePanel() {
   }, [singleManagedClinic?.id]);
   const [empFn, setEmpFn] = useState("");
   const [empLn, setEmpLn] = useState("");
+  const [empFnAr, setEmpFnAr] = useState("");
+  const [empLnAr, setEmpLnAr] = useState("");
   const [empEmail, setEmpEmail] = useState("");
   const [empPhone, setEmpPhone] = useState("");
   const [empTitle, setEmpTitle] = useState("Staff");
@@ -52,6 +54,8 @@ export function AdminCreateEmployeePanel() {
         clinicId: empClinic,
         firstNameEn: empFn,
         lastNameEn: empLn,
+        firstNameAr: empFnAr.trim() || undefined,
+        lastNameAr: empLnAr.trim() || undefined,
         email: empEmail || undefined,
         phone: empPhone.replace(/\D/g, ""),
         jobTitle: empTitle,
@@ -71,6 +75,8 @@ export function AdminCreateEmployeePanel() {
       setEmpIdDocFile(null);
       setEmpFn("");
       setEmpLn("");
+      setEmpFnAr("");
+      setEmpLnAr("");
       setEmpEmail("");
       setEmpPhone("");
       setEmpClinic("");
@@ -129,12 +135,20 @@ export function AdminCreateEmployeePanel() {
             )}
           </div>
           <div className="space-y-2">
-            <Label required>{t("hr.firstName")}</Label>
+            <Label required>{t("patients.firstNameEn")}</Label>
             <Input value={empFn} onChange={(e) => setEmpFn(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label required>{t("hr.lastName")}</Label>
+            <Label required>{t("patients.lastNameEn")}</Label>
             <Input value={empLn} onChange={(e) => setEmpLn(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>{t("patients.firstNameAr")}</Label>
+            <Input value={empFnAr} onChange={(e) => setEmpFnAr(e.target.value)} dir="auto" />
+          </div>
+          <div className="space-y-2">
+            <Label>{t("patients.lastNameAr")}</Label>
+            <Input value={empLnAr} onChange={(e) => setEmpLnAr(e.target.value)} dir="auto" />
           </div>
           <div className="space-y-2">
             <Label>{t("hr.email")}</Label>

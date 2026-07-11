@@ -11,13 +11,14 @@ import { useAvailableClinicPhysiciansQuery, useClinicPhysiciansQuery } from "@/l
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectClinicDoctorAssignIssues } from "@/lib/create-form-validation";
 import { resolvePickListSelectedItem } from "@/lib/pick-list-utils";
+import { physicianToPickListItem } from "@/lib/physician-display";
 import { apiDelete, apiPost } from "@/lib/http";
 import { useAuthStore } from "@/stores/auth-store";
 
 const MANAGE_ROLES = new Set(["group_admin", "branch_manager", "clinic_admin"]);
 
 export function ClinicDoctorsPanel({ clinicId }: { clinicId: string }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const role = useAuthStore((s) => s.user?.role);
   const canManage = role ? MANAGE_ROLES.has(role) : false;
@@ -40,8 +41,8 @@ export function ClinicDoctorsPanel({ clinicId }: { clinicId: string }) {
   );
 
   const availableItems: PickListItem[] = useMemo(
-    () => available.map((d) => ({ value: d.userId, label: d.displayName, hint: d.email ?? undefined })),
-    [available]
+    () => available.map((d) => physicianToPickListItem(d, i18n.language)),
+    [available, i18n.language],
   );
 
   const assignPhysicianSelectedItem = useMemo(
@@ -112,7 +113,7 @@ export function ClinicDoctorsPanel({ clinicId }: { clinicId: string }) {
                   if (item) setPinnedPhysicianItem(item);
                 }}
                 onSearchQueryChange={setAddSearch}
-                searchPlaceholder={t("appointments.filterPhysician", "Type physician name…")}
+                searchPlaceholder={t("appointments.filterPhysician", "Type physician name, Arabic name, or email…")}
                 placeholder={t("clinics.pickDoctor", "Select physician")}
                 emptyMessage={
                   availPending ? t("common.loading") : t("clinics.noDoctorsAvailable", "No available physicians.")
@@ -160,7 +161,9 @@ export function ClinicDoctorsPanel({ clinicId }: { clinicId: string }) {
                 <tbody>
                   {assigned.map((d) => (
                     <tr key={d.userId} className="border-t">
-                      <td className="px-3 py-2 font-medium">{d.displayName}</td>
+                      <td className="px-3 py-2 font-medium">
+                        {physicianToPickListItem(d, i18n.language).label}
+                      </td>
                       <td className="px-3 py-2 text-muted-foreground">{d.email ?? "—"}</td>
                       <td className="px-3 py-2 text-muted-foreground">{d.jobTitle ?? "—"}</td>
                       {canManage ? (

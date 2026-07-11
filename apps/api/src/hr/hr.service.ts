@@ -74,6 +74,8 @@ export class HrService {
     employeeNumber: string;
     firstNameEn: string;
     lastNameEn: string;
+    firstNameAr: string | null;
+    lastNameAr: string | null;
     email: string | null;
     phone: string;
     jobTitle: string;
@@ -92,6 +94,8 @@ export class HrService {
       employeeNumber: e.employeeNumber,
       firstNameEn: e.firstNameEn,
       lastNameEn: e.lastNameEn,
+      firstNameAr: e.firstNameAr,
+      lastNameAr: e.lastNameAr,
       email: e.email,
       phone: e.phone,
       jobTitle: e.jobTitle,
@@ -116,13 +120,24 @@ export class HrService {
       status: AttendanceStatus;
       notes: string | null;
     },
-    emp?: { employeeNumber: string; firstNameEn: string; lastNameEn: string; clinic?: { nameEn: string } | null } | null
+    emp?: {
+      employeeNumber: string;
+      firstNameEn: string;
+      lastNameEn: string;
+      firstNameAr: string | null;
+      lastNameAr: string | null;
+      clinic?: { nameEn: string } | null;
+    } | null
   ): AttendanceDto {
     return {
       id: a.id,
       employeeId: a.employeeId,
       employeeNumber: emp?.employeeNumber ?? null,
-      employeeFullName: emp ? `${emp.firstNameEn} ${emp.lastNameEn}` : null,
+      employeeFullName: emp ? `${emp.firstNameEn} ${emp.lastNameEn}`.trim() : null,
+      employeeFirstNameEn: emp?.firstNameEn ?? null,
+      employeeLastNameEn: emp?.lastNameEn ?? null,
+      employeeFirstNameAr: emp?.firstNameAr ?? null,
+      employeeLastNameAr: emp?.lastNameAr ?? null,
       clinicNameEn: emp?.clinic?.nameEn ?? null,
       workDate: a.workDate.toISOString().slice(0, 10),
       clockIn: a.clockIn ? a.clockIn.toISOString() : null,
@@ -192,6 +207,8 @@ export class HrService {
           { employeeNumber: { contains: nameFilter, mode: "insensitive" } },
           { firstNameEn: { contains: nameFilter, mode: "insensitive" } },
           { lastNameEn: { contains: nameFilter, mode: "insensitive" } },
+          { firstNameAr: { contains: nameFilter, mode: "insensitive" } },
+          { lastNameAr: { contains: nameFilter, mode: "insensitive" } },
           { email: { contains: nameFilter, mode: "insensitive" } },
         ],
       });
@@ -244,6 +261,8 @@ export class HrService {
           employeeNumber,
           firstNameEn: dto.firstNameEn,
           lastNameEn: dto.lastNameEn,
+          firstNameAr: dto.firstNameAr?.trim() || null,
+          lastNameAr: dto.lastNameAr?.trim() || null,
           email: dto.email ?? null,
           phone,
           jobTitle: dto.jobTitle,
@@ -312,6 +331,8 @@ export class HrService {
         ...(clinicId ? { clinicId } : {}),
         ...(dto.firstNameEn !== undefined ? { firstNameEn: dto.firstNameEn } : {}),
         ...(dto.lastNameEn !== undefined ? { lastNameEn: dto.lastNameEn } : {}),
+        ...(dto.firstNameAr !== undefined ? { firstNameAr: dto.firstNameAr.trim() || null } : {}),
+        ...(dto.lastNameAr !== undefined ? { lastNameAr: dto.lastNameAr.trim() || null } : {}),
         ...(dto.email !== undefined ? { email: dto.email || null } : {}),
         ...(phone !== undefined ? { phone } : {}),
         ...(dto.jobTitle !== undefined ? { jobTitle: dto.jobTitle } : {}),
@@ -427,6 +448,8 @@ export class HrService {
               employeeNumber: true,
               firstNameEn: true,
               lastNameEn: true,
+              firstNameAr: true,
+              lastNameAr: true,
               clinic: { select: { nameEn: true } },
             },
           },
@@ -461,6 +484,8 @@ export class HrService {
       employeeNumber: existing.employeeNumber,
       firstNameEn: existing.firstNameEn,
       lastNameEn: existing.lastNameEn,
+      firstNameAr: existing.firstNameAr,
+      lastNameAr: existing.lastNameAr,
       clinic: existing.clinic,
     });
   }

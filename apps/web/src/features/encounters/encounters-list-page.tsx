@@ -31,7 +31,7 @@ import {
   useEncountersQuery,
   usePatientQuery,
   usePatientsQuery,
-  useUsersQuery,
+  useSchedulingPhysiciansQuery,
 } from "@/lib/api-hooks";
 import type { AppointmentDto, EncounterDetailDto } from "@/lib/api-types";
 import { appointmentStatusLabel } from "@/components/appointment-status-badge";
@@ -41,6 +41,7 @@ import { EncounterDeleteConfirmDialog, type EncounterDeleteTarget } from "@/feat
 import { formatEncounterStatus, formatClinicName, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
 import { resolvePickListSelectedItem } from "@/lib/pick-list-utils";
+import { physicianToPickListItem } from "@/lib/physician-display";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { columnFilterIncludes } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -159,6 +160,12 @@ export function EncountersListPage() {
   const [createVisitFee, setCreateVisitFee] = useState("");
   const [createClinicianId, setCreateClinicianId] = useState("");
   const [pinnedClinicianItem, setPinnedClinicianItem] = useState<PickListItem | null>(null);
+  const [doctorSearch, setDoctorSearch] = useState("");
+  const [debouncedDoctorSearch, setDebouncedDoctorSearch] = useState("");
+  useEffect(() => {
+    const tid = window.setTimeout(() => setDebouncedDoctorSearch(doctorSearch), 280);
+    return () => window.clearTimeout(tid);
+  }, [doctorSearch]);
   const validation = useValidationIssuesDialog({ intent: "create" });
   const [createFieldErrors, setCreateFieldErrors] = useState<Set<string>>(() => new Set());
   const [aptPickerSearch, setAptPickerSearch] = useState("");
@@ -208,17 +215,14 @@ export function EncountersListPage() {
     pageSize: 30,
     enabled: aptPickerEnabled,
   });
-  const { data: usersForDoctors } = useUsersQuery({ page: 1, pageSize: 200, enabled: createOpen && !isPhysician });
+  const { data: usersForDoctors } = useSchedulingPhysiciansQuery({
+    clinicId: createClinicId || undefined,
+    search: debouncedDoctorSearch.trim() || undefined,
+    enabled: createOpen && !isPhysician,
+  });
   const doctorPickItems: PickListItem[] = useMemo(
-    () =>
-      (usersForDoctors?.items ?? [])
-        .filter((u) => u.role === "PHYSICIAN")
-        .map((u) => ({
-          value: u.id,
-          label: u.displayName,
-          hint: u.email,
-        })),
-    [usersForDoctors?.items]
+    () => (usersForDoctors ?? []).map((d) => physicianToPickListItem(d, i18n.language)),
+    [usersForDoctors, i18n.language],
   );
   const createClinicianSelectedItem = useMemo(
     (): PickListItem | null =>
@@ -271,6 +275,8 @@ export function EncountersListPage() {
     setPinnedAppointmentItem(null);
     setCreateClinicianId("");
     setPinnedClinicianItem(null);
+    setDoctorSearch("");
+    setDebouncedDoctorSearch("");
     setCreateFieldErrors(new Set());
     setAcquisitionValues(emptyPatientAcquisitionFormValues());
     setCreateOpen(true);
@@ -502,12 +508,13 @@ export function EncountersListPage() {
                         const item = doctorPickItems.find((d) => d.value === v);
                         if (item) setPinnedClinicianItem(item);
                       }}
-                      searchPlaceholder={t("appointments.pickPhysician")}
+                      onSearchQueryChange={setDoctorSearch}
+                      searchPlaceholder={t("appointments.filterPhysician", "Type physician name, Arabic name, or email…")}
                       placeholder={t("encounters.attendingPhysician")}
                       emptyMessage={t("encounters.noDoctors", "No doctor accounts in this organization.")}
-                      localFilter
+                      localFilter={false}
                       minSearchLength={0}
-                      idleMessage={t("encounters.pickDoctorIdle", "Pick the attending doctor for this encounter.")}
+                      idleMessage={t("operations.doctorSearchIdle", "Type a name or pick from the list.")}
                     />
                   </div>
                 ) : null}

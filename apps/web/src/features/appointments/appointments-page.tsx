@@ -17,18 +17,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAppointmentsQuery, useClinicsQuery, usePatientQuery, usePatientsQuery, useUsersQuery } from "@/lib/api-hooks";
+import { useAppointmentsQuery, useClinicsQuery, usePatientQuery, usePatientsQuery, useSchedulingPhysiciansQuery } from "@/lib/api-hooks";
 import { canDeleteAppointment } from "@/lib/appointment-delete-policy";
 import { ApiError, apiDelete, apiPost } from "@/lib/http";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
-import { formatClinicName, formatClinicNameFields, formatUserRole, localeForLanguage } from "@/lib/locale-display";
+import { physicianToPickListItem } from "@/lib/physician-display";
+import { formatClinicName, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
 import { columnFilterIncludes } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectAppointmentCreateIssues } from "@/lib/create-form-validation";
 import { DatetimeLocalField } from "@/components/datetime-local-field";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
-import { resolvePickListSelectedItem } from "@/lib/pick-list-utils";
 
 function toAppointmentIso(localDatetime: string): string {
   const d = new Date(localDatetime);
@@ -131,10 +131,6 @@ export function AppointmentsPage() {
     });
   }, [rows, afClinic, afStarts, afPatient, afStatus, i18n.language, patientLabel, clinicById]);
 
-  const { data: userData } = useUsersQuery({ page: 1, pageSize: 100, enabled: showBookPanel && !isPhysician });
-  const users = userData?.items ?? [];
-  const physicians = users.filter((u) => u.role === "PHYSICIAN");
-
   const [clinicId, setClinicId] = useState("");
   const [patientId, setPatientId] = useState("");
   const [clinicianId, setClinicianId] = useState("");
@@ -155,6 +151,7 @@ export function AppointmentsPage() {
     const tid = window.setTimeout(() => setDebouncedBookPatient(bookPatientSearch), 280);
     return () => window.clearTimeout(tid);
   }, [bookPatientSearch]);
+
   const { data: bookPatData, isPending: bookPatientsPending } = usePatientsQuery({
     search: debouncedBookPatient.trim() || undefined,
     page: 1,
@@ -162,6 +159,22 @@ export function AppointmentsPage() {
     enabled: showBookPanel,
   });
   const bookPatients = bookPatData?.items ?? [];
+  const selectedBookPatient = useMemo(
+    () => bookPatients.find((p) => p.id === patientId),
+    [bookPatients, patientId],
+  );
+  const [bookDoctorSearch, setBookDoctorSearch] = useState("");
+  const [debouncedBookDoctor, setDebouncedBookDoctor] = useState("");
+  useEffect(() => {
+    const tid = window.setTimeout(() => setDebouncedBookDoctor(bookDoctorSearch), 280);
+    return () => window.clearTimeout(tid);
+  }, [bookDoctorSearch]);
+  const schedulingClinicId = clinicId || selectedBookPatient?.homeBranchId || "";
+  const { data: physicians = [], isPending: physiciansPending } = useSchedulingPhysiciansQuery({
+    clinicId: schedulingClinicId || undefined,
+    search: debouncedBookDoctor.trim() || undefined,
+    enabled: showBookPanel && !isPhysician,
+  });
   const bookPatientItems: PickListItem[] = useMemo(
     () => bookPatients.map((p) => patientToPickListItem(p)),
     [bookPatients]
@@ -186,13 +199,21 @@ export function AppointmentsPage() {
     [clinics, i18n.language],
   );
   const physicianItems: PickListItem[] = useMemo(
-    () => physicians.map((u) => ({ value: u.id, label: u.displayName, hint: formatUserRole(u.role, t) })),
-    [physicians, t],
+    () => physicians.map((d) => physicianToPickListItem(d, i18n.language)),
+    [physicians, i18n.language],
   );
-  const bookPhysicianSelectedItem = useMemo(
-    (): PickListItem | null => resolvePickListSelectedItem(clinicianId, physicianItems, pinnedPhysicianItem),
-    [clinicianId, physicianItems, pinnedPhysicianItem],
+  const selectedPhysician = useMemo(
+    () => physicians.find((d) => d.userId === clinicianId),
+    [physicians, clinicianId],
   );
+  const bookPhysicianSelectedItem = useMemo((): PickListItem | null => {
+    if (!clinicianId) return null;
+    if (pinnedPhysicianItem?.value === clinicianId) return pinnedPhysicianItem;
+    const fromList = physicianItems.find((d) => d.value === clinicianId);
+    if (fromList) return fromList;
+    if (selectedPhysician) return physicianToPickListItem(selectedPhysician, i18n.language);
+    return null;
+  }, [clinicianId, pinnedPhysicianItem, physicianItems, selectedPhysician, i18n.language]);
 
   const handleCreateAppointment = () => {
     const issues = collectAppointmentCreateIssues({ clinicId, patientId, clinicianId, start, end }, t);
@@ -230,6 +251,8 @@ export function AppointmentsPage() {
       setDebouncedBookPatient("");
       setClinicianId(authUser?.role === "physician" && authUser.id ? authUser.id : "");
       setPinnedPhysicianItem(null);
+      setBookDoctorSearch("");
+      setDebouncedBookDoctor("");
       setStart("");
       setEnd("");
       void qc.invalidateQueries({ queryKey: ["appointments"] });
@@ -451,9 +474,15 @@ export function AppointmentsPage() {
                   const item = physicianItems.find((d) => d.value === id);
                   if (item) setPinnedPhysicianItem(item);
                 }}
-                searchPlaceholder={t("appointments.filterPhysician", "Type physician name…")}
+                onSearchQueryChange={setBookDoctorSearch}
+                searchPlaceholder={t("appointments.filterPhysician", "Type physician name, Arabic name, or email…")}
                 placeholder={t("appointments.pickPhysician")}
-                emptyMessage={t("appointments.noPhysicians", "No physicians found.")}
+                emptyMessage={
+                  physiciansPending ? t("common.loading") : t("appointments.noPhysicians", "No physicians found.")
+                }
+                localFilter={false}
+                minSearchLength={0}
+                idleMessage={t("operations.doctorSearchIdle", "Type a name or pick from the list.")}
               />
             </div>
             <div className="space-y-2">

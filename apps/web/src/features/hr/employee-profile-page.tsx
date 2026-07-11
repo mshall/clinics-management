@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useEmployeeQuery } from "@/lib/api-hooks";
+import { formatEmployeeName } from "@/lib/employee-display";
 import {
   formatClinicNameFields,
   formatEmploymentType,
@@ -21,7 +22,7 @@ export function EmployeeProfilePage() {
   const { id } = useParams();
   const { data: emp, isPending, isError, error } = useEmployeeQuery(id);
 
-  const fullName = emp ? `${emp.firstNameEn} ${emp.lastNameEn}` : "";
+  const fullName = emp ? formatEmployeeName(emp, i18n.language) : "";
   const avatarPath = emp?.hasUserAvatar && id ? `/api/v1/hr/employees/${id}/avatar` : null;
   const { url: avatarUrl, loading: avatarLoading } = useAuthenticatedImage(avatarPath, Boolean(emp?.hasUserAvatar));
 

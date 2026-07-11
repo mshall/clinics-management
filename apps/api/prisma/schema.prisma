@@ -456,6 +456,8 @@ model Employee {
   employeeNumber    String
   firstNameEn       String
   lastNameEn        String
+  firstNameAr       String?
+  lastNameAr        String?
   email             String?
   phone             String
   jobTitle          String

@@ -2,12 +2,15 @@ import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { formatClinicNameFields, formatEmploymentType, localeForLanguage } from "@/lib/locale-display";
+import { formatEmployeeName } from "@/lib/employee-display";
 
 export type EmployeeDeleteTarget = {
   id: string;
   employeeNumber: string;
   firstNameEn: string;
   lastNameEn: string;
+  firstNameAr?: string | null;
+  lastNameAr?: string | null;
   clinicId: string;
   clinicNameEn?: string | null;
   clinicLabel?: string | null;
@@ -65,7 +68,7 @@ export function EmployeeDeleteConfirmDialog({
                   {t("hr.name", "Name")}
                 </dt>
                 <dd className="font-medium text-foreground">
-                  {employee.firstNameEn} {employee.lastNameEn}
+                  {formatEmployeeName(employee, i18n.language)}
                 </dd>
                 <dd className="font-mono text-xs text-muted-foreground ltr-nums">{employee.employeeNumber}</dd>
               </div>

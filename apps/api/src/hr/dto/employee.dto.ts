@@ -21,6 +21,12 @@ export class EmployeeDto {
   lastNameEn!: string;
 
   @ApiPropertyOptional({ nullable: true })
+  firstNameAr!: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  lastNameAr!: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
   email!: string | null;
 
   @ApiProperty()

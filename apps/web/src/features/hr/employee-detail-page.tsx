@@ -21,6 +21,7 @@ import type { EmployeeDto } from "@/lib/api-types";
 import { canManageEmployees } from "@/lib/employee-manage-policy";
 import { ApiError, apiDelete, apiFetchBlob, apiPatch, apiPostFormData } from "@/lib/http";
 import { formatClinicName, formatClinicNameFields, formatEmploymentType, localeForLanguage } from "@/lib/locale-display";
+import { formatEmployeeName } from "@/lib/employee-display";
 import { useAuthStore } from "@/stores/auth-store";
 
 const EMP_TYPE_VALUES = ["FULL_TIME", "PART_TIME", "CONTRACTOR", "LOCUM"] as const;
@@ -40,6 +41,8 @@ export function EmployeeDetailPage() {
   const [clinicId, setClinicId] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [firstNameAr, setFirstNameAr] = useState("");
+  const [lastNameAr, setLastNameAr] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [jobTitle, setJobTitle] = useState("");
@@ -55,6 +58,8 @@ export function EmployeeDetailPage() {
     setClinicId(emp.clinicId);
     setFirstName(emp.firstNameEn);
     setLastName(emp.lastNameEn);
+    setFirstNameAr(emp.firstNameAr ?? "");
+    setLastNameAr(emp.lastNameAr ?? "");
     setEmail(emp.email ?? "");
     setPhone(emp.phone);
     setJobTitle(emp.jobTitle);
@@ -82,6 +87,8 @@ export function EmployeeDetailPage() {
         clinicId,
         firstNameEn: firstName.trim(),
         lastNameEn: lastName.trim(),
+        firstNameAr: firstNameAr.trim() || undefined,
+        lastNameAr: lastNameAr.trim() || undefined,
         email: email.trim() || undefined,
         phone: phone.replace(/\D/g, ""),
         jobTitle: jobTitle.trim(),
@@ -174,6 +181,8 @@ export function EmployeeDetailPage() {
           employeeNumber: emp.employeeNumber,
           firstNameEn: emp.firstNameEn,
           lastNameEn: emp.lastNameEn,
+          firstNameAr: emp.firstNameAr,
+          lastNameAr: emp.lastNameAr,
           clinicId: emp.clinicId,
           clinicNameEn: emp.clinicNameEn,
           jobTitle: emp.jobTitle,
@@ -191,7 +200,7 @@ export function EmployeeDetailPage() {
             <Link to="/hr?tab=employees">← {t("hr.backToEmployees", "Back to employees")}</Link>
           </Button>
           <h1 className="text-2xl font-bold tracking-tight">
-            {emp.firstNameEn} {emp.lastNameEn}
+            {formatEmployeeName(emp, i18n.language)}
           </h1>
           <p className="text-muted-foreground font-mono text-sm ltr-nums">{emp.employeeNumber}</p>
         </div>
@@ -244,12 +253,20 @@ export function EmployeeDetailPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label required>{t("hr.firstName")}</Label>
+                <Label required>{t("patients.firstNameEn")}</Label>
                 <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label required>{t("hr.lastName")}</Label>
+                <Label required>{t("patients.lastNameEn")}</Label>
                 <Input value={lastName} onChange={(e) => setLastName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("patients.firstNameAr")}</Label>
+                <Input value={firstNameAr} onChange={(e) => setFirstNameAr(e.target.value)} dir="auto" />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("patients.lastNameAr")}</Label>
+                <Input value={lastNameAr} onChange={(e) => setLastNameAr(e.target.value)} dir="auto" />
               </div>
               <div className="space-y-2">
                 <Label>{t("hr.email")}</Label>

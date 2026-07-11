@@ -14,6 +14,18 @@ export class AttendanceDto {
   @ApiPropertyOptional({ nullable: true })
   employeeFullName!: string | null;
 
+  @ApiPropertyOptional({ nullable: true })
+  employeeFirstNameEn!: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  employeeLastNameEn!: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  employeeFirstNameAr!: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  employeeLastNameAr!: string | null;
+
   @ApiPropertyOptional({ nullable: true, description: "Employee home clinic (English name)" })
   clinicNameEn!: string | null;
 

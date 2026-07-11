@@ -37,6 +37,8 @@ import type { OperationDto } from "@/lib/api-types";
 import { ApiError, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { canAdminEditCompletedOperation } from "@/lib/operation-admin-policy";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
+import { formatClinicianDisplayName } from "@/lib/employee-display";
+import { physicianToPickListItem } from "@/lib/physician-display";
 import { formatClinicName, localeForLanguage } from "@/lib/locale-display";
 import { columnFilterIncludes } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
@@ -174,8 +176,8 @@ export function OperationsPage() {
   );
 
   const physicianItems: PickListItem[] = useMemo(
-    () => physicians.map((d) => ({ value: d.userId, label: d.displayName, hint: d.email ?? undefined })),
-    [physicians],
+    () => physicians.map((d) => physicianToPickListItem(d, i18n.language)),
+    [physicians, i18n.language],
   );
 
   const createPatientMissingFromList = Boolean(
@@ -203,14 +205,10 @@ export function OperationsPage() {
     const fromList = physicianItems.find((d) => d.value === clinicianId);
     if (fromList) return fromList;
     if (selectedPhysician) {
-      return {
-        value: selectedPhysician.userId,
-        label: selectedPhysician.displayName,
-        hint: selectedPhysician.email ?? undefined,
-      };
+      return physicianToPickListItem(selectedPhysician, i18n.language);
     }
     return null;
-  }, [clinicianId, pinnedPhysicianItem, physicianItems, selectedPhysician]);
+  }, [clinicianId, pinnedPhysicianItem, physicianItems, selectedPhysician, i18n.language]);
   const selectedClinic = useMemo(() => {
     const id = schedulingClinicId || selectedPatient?.homeBranchId || clinics[0]?.id;
     return clinics.find((c) => c.id === id) ?? clinics[0];
@@ -223,7 +221,9 @@ export function OperationsPage() {
         ? `${selectedPatient.firstNameEn} ${selectedPatient.lastNameEn}`.trim()
         : "—",
       patientMrn: selectedPatient?.mrn,
-      physicianName: selectedPhysician?.displayName ?? authUser?.displayName ?? null,
+      physicianName: selectedPhysician
+        ? physicianToPickListItem(selectedPhysician, i18n.language).label
+        : authUser?.displayName ?? null,
     }),
     [selectedClinic, selectedPatient, selectedPhysician, authUser?.displayName, i18n.language],
   );
@@ -317,8 +317,8 @@ export function OperationsPage() {
     [editPatients]
   );
   const editPhysicianItems: PickListItem[] = useMemo(
-    () => editPhysicians.map((d) => ({ value: d.userId, label: d.displayName, hint: d.email ?? undefined })),
-    [editPhysicians]
+    () => editPhysicians.map((d) => physicianToPickListItem(d, i18n.language)),
+    [editPhysicians, i18n.language],
   );
   const editPatientSelectedItem = useMemo((): PickListItem | null => {
     if (!editPatientId) return null;
@@ -927,7 +927,7 @@ export function OperationsPage() {
                         if (item) setPinnedPhysicianItem(item);
                       }}
                       onSearchQueryChange={setDoctorSearch}
-                      searchPlaceholder={t("appointments.filterPhysician", "Type physician name…")}
+                      searchPlaceholder={t("appointments.filterPhysician", "Type physician name, Arabic name, or email…")}
                       placeholder={t("operations.selectDoctor", "Select doctor")}
                       emptyMessage={
                         physiciansPending ? t("common.loading") : t("operations.noDoctors", "No physicians found.")
@@ -1128,7 +1128,7 @@ export function OperationsPage() {
                               patientResolved.text
                             )}
                           </td>
-                          <td className="px-3 py-2 align-top">{o.clinicianName ?? "—"}</td>
+                          <td className="px-3 py-2 align-top">{formatClinicianDisplayName(o, i18n.language)}</td>
                           <td className="px-3 py-2 align-top">{money(o.totalCost)}</td>
                           <td className="px-3 py-2 align-top">{money(o.downPayment)}</td>
                           <td className="px-3 py-2 align-top">{money(o.paidAmount ?? 0)}</td>
