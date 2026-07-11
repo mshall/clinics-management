@@ -40,6 +40,8 @@ import { canDeleteEncounter } from "@/lib/encounter-delete-policy";
 import { EncounterDeleteConfirmDialog, type EncounterDeleteTarget } from "@/features/encounters/encounter-delete-confirm-dialog";
 import { formatEncounterStatus, formatClinicName, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
+import { resolvePickListSelectedItem } from "@/lib/pick-list-utils";
+import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { columnFilterIncludes } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { ENCOUNTER_VISIT_TYPES, formatVisitType } from "@/lib/visit-types";
@@ -103,7 +105,7 @@ export function EncountersListPage() {
   const dialogPatientList = dialogPatData?.items;
   const dialogPatientItems: PickListItem[] = useMemo(
     () => (dialogPatientList ?? []).map((p) => patientToPickListItem(p)),
-    [dialogPatientList]
+    [dialogPatientList],
   );
   const { data: clinics = [] } = useClinicsQuery();
   const data = encData?.items ?? [];
@@ -156,6 +158,7 @@ export function EncountersListPage() {
   const [createVisitType, setCreateVisitType] = useState<string>(ENCOUNTER_VISIT_TYPES[0] ?? "Office visit");
   const [createVisitFee, setCreateVisitFee] = useState("");
   const [createClinicianId, setCreateClinicianId] = useState("");
+  const [pinnedClinicianItem, setPinnedClinicianItem] = useState<PickListItem | null>(null);
   const validation = useValidationIssuesDialog({ intent: "create" });
   const [createFieldErrors, setCreateFieldErrors] = useState<Set<string>>(() => new Set());
   const [aptPickerSearch, setAptPickerSearch] = useState("");
@@ -165,10 +168,20 @@ export function EncountersListPage() {
     return () => window.clearTimeout(timer);
   }, [aptPickerSearch]);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState("");
+  const [pinnedAppointmentItem, setPinnedAppointmentItem] = useState<PickListItem | null>(null);
   const [acquisitionValues, setAcquisitionValues] = useState<PatientAcquisitionFormValues>(
     emptyPatientAcquisitionFormValues(),
   );
   const { data: selectedPatient } = usePatientQuery(createOpen && createPatientId ? createPatientId : undefined);
+  const createPatientSelectedItem = useMemo(
+    (): PickListItem | null =>
+      resolvePickListSelectedItem(
+        createPatientId,
+        dialogPatientItems,
+        selectedPatient ? patientToPickListItem(selectedPatient) : null,
+      ),
+    [createPatientId, dialogPatientItems, selectedPatient],
+  );
   useEffect(() => {
     if (!createOpen) return;
     if (!createPatientId) {
@@ -207,6 +220,11 @@ export function EncountersListPage() {
         })),
     [usersForDoctors?.items]
   );
+  const createClinicianSelectedItem = useMemo(
+    (): PickListItem | null =>
+      resolvePickListSelectedItem(createClinicianId, doctorPickItems, pinnedClinicianItem),
+    [createClinicianId, doctorPickItems, pinnedClinicianItem],
+  );
 
   const aptPickerRows = aptPickerData?.items ?? [];
   const aptPickerItems: PickListItem[] = useMemo(
@@ -216,7 +234,14 @@ export function EncountersListPage() {
         return {
           value: a.id,
           label: `${new Date(a.startsAt).toLocaleString(localeForLanguage(i18n.language))} · ${appointmentStatusLabel(a.status, t)}`,
-          hint: [clinicHint, `${(a.patientName ?? "").trim() || "—"} · ${a.patientMrn ?? a.patientId.slice(0, 8)}`]
+          hint: [clinicHint, (() => {
+            const p = resolvePatientListLabel({
+              patientId: a.patientId,
+              patientMrn: a.patientMrn,
+              patientName: a.patientName,
+            });
+            return p.isIdFallback ? "—" : `${p.text}`;
+          })()]
             .filter(Boolean)
             .join(" · "),
         };
@@ -243,7 +268,9 @@ export function EncountersListPage() {
     setAptPickerSearch("");
     setDebouncedAptPicker("");
     setSelectedAppointmentId("");
+    setPinnedAppointmentItem(null);
     setCreateClinicianId("");
+    setPinnedClinicianItem(null);
     setCreateFieldErrors(new Set());
     setAcquisitionValues(emptyPatientAcquisitionFormValues());
     setCreateOpen(true);
@@ -381,7 +408,7 @@ export function EncountersListPage() {
             {t("encounters.newEncounter", "New encounter")}
           </CreateActionButton>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-            <DialogContent aria-describedby={undefined}>
+            <DialogContent className="max-h-[min(90dvh,40rem)] overflow-y-auto overscroll-contain" aria-describedby={undefined}>
               <DialogHeader>
                 <DialogTitle>{t("encounters.createEncounterTitle", "Create encounter")}</DialogTitle>
               </DialogHeader>
@@ -396,6 +423,7 @@ export function EncountersListPage() {
                   <SearchablePickList
                     items={dialogPatientItems}
                     value={createPatientId}
+                    selectedItem={createPatientSelectedItem}
                     invalid={createFieldInvalid("patient")}
                     onValueChange={(v) => {
                       setCreatePatientId(v);
@@ -422,9 +450,12 @@ export function EncountersListPage() {
                   <SearchablePickList
                     items={aptPickerItems}
                     value={selectedAppointmentId}
+                    selectedItem={pinnedAppointmentItem}
                     onValueChange={(v) => {
                       setSelectedAppointmentId(v);
                       const row = aptPickerRows.find((a) => a.id === v);
+                      const item = aptPickerItems.find((i) => i.value === v) ?? null;
+                      setPinnedAppointmentItem(item);
                       if (row) {
                         setCreatePatientId(row.patientId);
                         setCreateClinicId(row.clinicId);
@@ -447,7 +478,9 @@ export function EncountersListPage() {
                       className="h-8 text-xs"
                       onClick={() => {
                         setSelectedAppointmentId("");
+                        setPinnedAppointmentItem(null);
                         setCreateClinicianId("");
+                        setPinnedClinicianItem(null);
                       }}
                     >
                       {t("encounters.clearAppointment", "Clear appointment link")}
@@ -461,10 +494,13 @@ export function EncountersListPage() {
                     <SearchablePickList
                       items={doctorPickItems}
                       value={createClinicianId}
+                      selectedItem={createClinicianSelectedItem}
                       invalid={createFieldInvalid("clinician")}
                       onValueChange={(v) => {
                         setCreateClinicianId(v);
                         clearCreateFieldError("clinician");
+                        const item = doctorPickItems.find((d) => d.value === v);
+                        if (item) setPinnedClinicianItem(item);
                       }}
                       searchPlaceholder={t("appointments.pickPhysician")}
                       placeholder={t("encounters.attendingPhysician")}
@@ -479,7 +515,7 @@ export function EncountersListPage() {
                   <Label required>{t("encounters.clinic", "Clinic")}</Label>
                   <select
                     className={cn(
-                      "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
+                      nativeSelectClassName,
                       createFieldInvalid("clinic") && "border-destructive ring-1 ring-destructive",
                     )}
                     value={createClinicId}
@@ -499,7 +535,7 @@ export function EncountersListPage() {
                   <Label required>{t("encounters.visitType")}</Label>
                   <select
                     className={cn(
-                      "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
+                      nativeSelectClassName,
                       createFieldInvalid("visitType") && "border-destructive ring-1 ring-destructive",
                     )}
                     value={createVisitType}
@@ -567,7 +603,6 @@ export function EncountersListPage() {
           <div className="space-y-2 min-w-[12rem] flex-1">
             <Label>{t("encounters.patientNameSearch", "Patient name or MRN")}</Label>
             <Input
-              className="ltr-nums"
               value={ledgerPatientQuery}
               placeholder={t("encounters.patientNameSearchPh", "Filter by patient…")}
               onChange={(e) => {
@@ -751,7 +786,7 @@ export function EncountersListPage() {
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            className="text-destructive hover:text-destructive"
                             aria-label={t("encounters.delete", "Delete")}
                             disabled={deleteMut.isPending}
                             onClick={(ev) => {

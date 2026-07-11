@@ -18,6 +18,7 @@ import {
   YAxis,
 } from "recharts";
 import { AcquisitionChannelPatientsDialog } from "@/components/acquisition-channel-patients-dialog";
+import { ResponsiveTable } from "@/components/responsive-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -254,7 +255,7 @@ export function ReportsPage() {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">{t("reports.acquisitionRowHint", "Click a channel row to view patients.")}</p>
-              <div className="overflow-x-auto rounded-md border">
+              <ResponsiveTable className="rounded-md border">
                 <table className="w-full min-w-[420px] text-sm">
                   <thead className="bg-muted/60">
                     <tr className="text-start">
@@ -285,7 +286,7 @@ export function ReportsPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </ResponsiveTable>
             </>
           )}
         </CardContent>

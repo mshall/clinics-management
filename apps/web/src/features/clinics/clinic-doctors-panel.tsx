@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAvailableClinicPhysiciansQuery, useClinicPhysiciansQuery } from "@/lib/api-hooks";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectClinicDoctorAssignIssues } from "@/lib/create-form-validation";
+import { resolvePickListSelectedItem } from "@/lib/pick-list-utils";
 import { apiDelete, apiPost } from "@/lib/http";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -24,6 +25,7 @@ export function ClinicDoctorsPanel({ clinicId }: { clinicId: string }) {
   const { data: assigned = [], isPending } = useClinicPhysiciansQuery(clinicId);
   const [addOpen, setAddOpen] = useState(false);
   const [pickUserId, setPickUserId] = useState("");
+  const [pinnedPhysicianItem, setPinnedPhysicianItem] = useState<PickListItem | null>(null);
   const [addSearch, setAddSearch] = useState("");
   const [debouncedAddSearch, setDebouncedAddSearch] = useState("");
   useEffect(() => {
@@ -42,10 +44,17 @@ export function ClinicDoctorsPanel({ clinicId }: { clinicId: string }) {
     [available]
   );
 
+  const assignPhysicianSelectedItem = useMemo(
+    (): PickListItem | null =>
+      resolvePickListSelectedItem(pickUserId, availableItems, pinnedPhysicianItem),
+    [pickUserId, availableItems, pinnedPhysicianItem],
+  );
+
   const addMut = useMutation({
     mutationFn: (userId: string) => apiPost<unknown>(`/api/v1/clinics/${clinicId}/physicians`, { userId }),
     onSuccess: () => {
       setPickUserId("");
+      setPinnedPhysicianItem(null);
       setAddSearch("");
       setDebouncedAddSearch("");
       setAddOpen(false);
@@ -96,7 +105,12 @@ export function ClinicDoctorsPanel({ clinicId }: { clinicId: string }) {
               <SearchablePickList
                 items={availableItems}
                 value={pickUserId}
-                onValueChange={setPickUserId}
+                selectedItem={assignPhysicianSelectedItem}
+                onValueChange={(id) => {
+                  setPickUserId(id);
+                  const item = availableItems.find((d) => d.value === id);
+                  if (item) setPinnedPhysicianItem(item);
+                }}
                 onSearchQueryChange={setAddSearch}
                 searchPlaceholder={t("appointments.filterPhysician", "Type physician name…")}
                 placeholder={t("clinics.pickDoctor", "Select physician")}

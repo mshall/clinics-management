@@ -27,6 +27,8 @@ import { useDateRangeStore } from "@/stores/date-range-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectRevenueSubmitIssues } from "@/lib/create-form-validation";
+import { nativeSelectClassName } from "@/lib/form-control-styles";
+import { resolvePatientListLabel } from "@/lib/patient-display";
 
 function clinicDisplayName(r: RevenueEntryDto, lng: string): string {
   return formatClinicNameFields(r.clinicNameEn, r.clinicNameAr, lng, r.clinicId);
@@ -239,7 +241,7 @@ export function RevenuePage() {
                 </p>
               ) : (
                 <select
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+                  className={nativeSelectClassName}
                   value={filterClinicId}
                   onChange={(e) => {
                     setFilterClinicId(e.target.value);
@@ -343,7 +345,7 @@ export function RevenuePage() {
           <div className="space-y-2 sm:col-span-2 lg:col-span-6">
             <Label>{t("revenue.linkOperation", "Link to operation (optional)")}</Label>
             <select
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className={nativeSelectClassName}
               value={operationId}
               onChange={(e) => {
                 const id = e.target.value;
@@ -361,7 +363,11 @@ export function RevenuePage() {
             >
               <option value="">{t("revenue.noOperation", "No operation — general revenue")}</option>
               {payableOps.map((o) => {
-                const patient = o.patientName?.trim() || o.patientMrn || o.patientId.slice(0, 8);
+                const patient = resolvePatientListLabel({
+                  patientId: o.patientId,
+                  patientMrn: o.patientMrn,
+                  patientName: o.patientName,
+                }).text;
                 const balance = o.balanceDue ?? o.totalCost - (o.paidAmount ?? 0);
                 return (
                   <option key={o.id} value={o.id}>
@@ -387,7 +393,7 @@ export function RevenuePage() {
               </p>
             ) : (
               <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className={nativeSelectClassName}
                 value={clinicId}
                 onChange={(e) => setClinicId(e.target.value)}
               >
@@ -403,7 +409,7 @@ export function RevenuePage() {
           <div className="space-y-2">
             <Label>{t("revenue.category")}</Label>
             <select
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className={nativeSelectClassName}
               value={operationId ? "OPERATION_PAYMENT" : category}
               onChange={(e) => setCategory(e.target.value)}
               disabled={operationId.length > 0}

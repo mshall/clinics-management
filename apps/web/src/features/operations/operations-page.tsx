@@ -43,6 +43,8 @@ import { useAuthStore } from "@/stores/auth-store";
 import { defaultMonthRange } from "@/stores/date-range-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectOperationCreateValidationIssues } from "@/features/operations/operation-form-validation";
+import { DatetimeLocalField } from "@/components/datetime-local-field";
+import { nativeSelectClassName } from "@/lib/form-control-styles";
 
 const CREATE_ROLES = new Set([
   "group_admin",
@@ -680,20 +682,14 @@ export function OperationsPage() {
               ) : null}
               <div className="space-y-1">
                 <Label htmlFor="edit-op-date" required>{t("operations.operationDate", "Operation date")}</Label>
-                <Input
-                  id="edit-op-date"
-                  className="ltr-nums"
-                  type="datetime-local"
-                  value={editOperationDate}
-                  onChange={(e) => setEditOperationDate(e.target.value)}
-                />
+                <DatetimeLocalField id="edit-op-date" value={editOperationDate} onChange={setEditOperationDate} />
               </div>
               {clinics.length > 1 ? (
                 <div className="space-y-1">
                   <Label htmlFor="edit-op-clinic">{t("operations.clinic", "Clinic")}</Label>
                   <select
                     id="edit-op-clinic"
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                    className={nativeSelectClassName}
                     value={editClinicId}
                     onChange={(e) => {
                       setEditClinicId(e.target.value);
@@ -835,7 +831,7 @@ export function OperationsPage() {
               <Label htmlFor="op-clinic-filter">{t("operations.clinic", "Clinic")}</Label>
               <select
                 id="op-clinic-filter"
-                className="flex h-9 w-full min-w-[180px] rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                className={`${nativeSelectClassName} min-w-[180px]`}
                 value={filterClinicId}
                 onChange={(e) => { setFilterClinicId(e.target.value); setPage(1); }}
               >
@@ -866,20 +862,14 @@ export function OperationsPage() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-1">
                     <Label htmlFor="op-date" required>{t("operations.operationDate", "Operation date")}</Label>
-                    <Input
-                      id="op-date"
-                      className="ltr-nums"
-                      type="datetime-local"
-                      value={operationDate}
-                      onChange={(e) => setOperationDate(e.target.value)}
-                    />
+                    <DatetimeLocalField id="op-date" value={operationDate} onChange={setOperationDate} />
                   </div>
                   {clinics.length > 1 ? (
                     <div className="space-y-1">
                       <Label htmlFor="op-clinic">{t("operations.clinic", "Clinic")}</Label>
                       <select
                         id="op-clinic"
-                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                        className={nativeSelectClassName}
                         value={clinicId}
                         onChange={(e) => {
                           setClinicId(e.target.value);
@@ -1117,12 +1107,12 @@ export function OperationsPage() {
                     filteredRows.map((o) => {
                       const clinic = clinicById.get(o.clinicId);
                       const clinicLabel = clinic ? formatClinicName({ nameEn: clinic.en, nameAr: clinic.ar }, i18n.language) : null;
-                      const patientText = resolvePatientListLabel({
+                      const patientResolved = resolvePatientListLabel({
                         patientId: o.patientId,
                         patientMrn: o.patientMrn,
                         patientName: o.patientName,
                         registryLabel: patientLabel.get(o.patientId),
-                      }).text;
+                      });
                       return (
                         <tr key={o.id} className="border-b last:border-0">
                           <td className="px-3 py-2 align-top">
@@ -1131,7 +1121,13 @@ export function OperationsPage() {
                               <div className="text-xs text-muted-foreground">{clinicLabel}</div>
                             ) : null}
                           </td>
-                          <td className="px-3 py-2 align-top">{patientText}</td>
+                          <td className="px-3 py-2 align-top">
+                            {patientResolved.isIdFallback ? (
+                              <span className="font-mono text-xs text-muted-foreground ltr-nums">{patientResolved.text}</span>
+                            ) : (
+                              patientResolved.text
+                            )}
+                          </td>
                           <td className="px-3 py-2 align-top">{o.clinicianName ?? "—"}</td>
                           <td className="px-3 py-2 align-top">{money(o.totalCost)}</td>
                           <td className="px-3 py-2 align-top">{money(o.downPayment)}</td>

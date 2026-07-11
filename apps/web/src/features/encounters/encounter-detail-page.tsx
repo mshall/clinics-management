@@ -303,9 +303,14 @@ export function EncounterDetailPage() {
     mutationFn: async () => {
       if (!enc || meds.length === 0) throw new Error("No medications");
       const rtl = i18n.language === "ar";
+      const patientResolved = resolvePatientListLabel({
+        patientId: enc.patientId,
+        patientMrn: enc.patientMrn,
+        patientName: enc.patientName,
+      });
       const blob = await generatePrescriptionPng({
         clinicName: formatClinicNameFields(enc.clinicNameEn, enc.clinicNameAr, i18n.language, enc.clinicId),
-        patientName: enc.patientName?.trim() || enc.patientId,
+        patientName: patientResolved.isIdFallback ? (enc.patientMrn?.trim() || t("encounters.patient")) : patientResolved.text,
         patientMrn: enc.patientMrn,
         date: new Date(),
         medications: meds,

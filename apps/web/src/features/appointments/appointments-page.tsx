@@ -26,6 +26,9 @@ import { columnFilterIncludes } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectAppointmentCreateIssues } from "@/lib/create-form-validation";
+import { DatetimeLocalField } from "@/components/datetime-local-field";
+import { nativeSelectClassName } from "@/lib/form-control-styles";
+import { resolvePickListSelectedItem } from "@/lib/pick-list-utils";
 
 function toAppointmentIso(localDatetime: string): string {
   const d = new Date(localDatetime);
@@ -135,6 +138,7 @@ export function AppointmentsPage() {
   const [clinicId, setClinicId] = useState("");
   const [patientId, setPatientId] = useState("");
   const [clinicianId, setClinicianId] = useState("");
+  const [pinnedPhysicianItem, setPinnedPhysicianItem] = useState<PickListItem | null>(null);
   useEffect(() => {
     if (authUser?.role === "physician" && authUser.id) setClinicianId(authUser.id);
   }, [authUser?.role, authUser?.id]);
@@ -185,6 +189,10 @@ export function AppointmentsPage() {
     () => physicians.map((u) => ({ value: u.id, label: u.displayName, hint: formatUserRole(u.role, t) })),
     [physicians, t],
   );
+  const bookPhysicianSelectedItem = useMemo(
+    (): PickListItem | null => resolvePickListSelectedItem(clinicianId, physicianItems, pinnedPhysicianItem),
+    [clinicianId, physicianItems, pinnedPhysicianItem],
+  );
 
   const handleCreateAppointment = () => {
     const issues = collectAppointmentCreateIssues({ clinicId, patientId, clinicianId, start, end }, t);
@@ -220,6 +228,8 @@ export function AppointmentsPage() {
       setSelectedBookPatientItem(null);
       setBookPatientSearch("");
       setDebouncedBookPatient("");
+      setClinicianId(authUser?.role === "physician" && authUser.id ? authUser.id : "");
+      setPinnedPhysicianItem(null);
       setStart("");
       setEnd("");
       void qc.invalidateQueries({ queryKey: ["appointments"] });
@@ -307,7 +317,7 @@ export function AppointmentsPage() {
               <Label htmlFor="phys-apt-status">{t("appointments.status")}</Label>
               <select
                 id="phys-apt-status"
-                className="flex h-9 min-w-[160px] rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                className={`${nativeSelectClassName} min-w-[160px]`}
                 value={fltStatus}
                 onChange={(e) => {
                   setFltStatus(e.target.value);
@@ -435,7 +445,12 @@ export function AppointmentsPage() {
               <SearchablePickList
                 items={physicianItems}
                 value={clinicianId}
-                onValueChange={setClinicianId}
+                selectedItem={bookPhysicianSelectedItem}
+                onValueChange={(id) => {
+                  setClinicianId(id);
+                  const item = physicianItems.find((d) => d.value === id);
+                  if (item) setPinnedPhysicianItem(item);
+                }}
                 searchPlaceholder={t("appointments.filterPhysician", "Type physician name…")}
                 placeholder={t("appointments.pickPhysician")}
                 emptyMessage={t("appointments.noPhysicians", "No physicians found.")}
@@ -443,11 +458,11 @@ export function AppointmentsPage() {
             </div>
             <div className="space-y-2">
               <Label required>{t("appointments.starts")}</Label>
-              <Input className="ltr-nums" type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} />
+              <DatetimeLocalField value={start} onChange={setStart} />
             </div>
             <div className="space-y-2">
               <Label required>{t("appointments.ends")}</Label>
-              <Input className="ltr-nums" type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} />
+              <DatetimeLocalField value={end} onChange={setEnd} />
             </div>
             <div className="flex flex-wrap items-end gap-2 sm:col-span-2">
               <CreateActionButton
@@ -589,7 +604,7 @@ export function AppointmentsPage() {
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            className="text-destructive hover:text-destructive"
                             aria-label={t("appointments.delete", "Delete")}
                             disabled={deleteMut.isPending}
                             onClick={(e) => {
