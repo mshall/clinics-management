@@ -1,12 +1,22 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { EmploymentType } from "@prisma/client";
-import { IsDateString, IsEmail, IsEnum, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
+import { IsArray, IsDateString, IsEmail, IsEnum, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
 import { Type } from "class-transformer";
 
 export class CreateEmployeeDto {
   @ApiProperty()
   @IsString()
   clinicId!: string;
+
+  @ApiPropertyOptional({ type: [String], description: "Additional clinics for physicians (primary is clinicId)" })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  clinicIds?: string[];
+
+  @ApiProperty({ description: "Link to an existing unmapped organization login account" })
+  @IsString()
+  userId!: string;
 
   @ApiProperty()
   @IsString()
@@ -40,10 +50,11 @@ export class CreateEmployeeDto {
   @MaxLength(40)
   phone!: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional({ description: "Derived from linked user role when omitted" })
+  @IsOptional()
   @IsString()
   @MaxLength(120)
-  jobTitle!: string;
+  jobTitle?: string;
 
   @ApiProperty({ enum: EmploymentType })
   @IsEnum(EmploymentType)

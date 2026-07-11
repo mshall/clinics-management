@@ -13,6 +13,7 @@ type ConfirmDialogProps = {
   cancelLabel: string;
   onConfirm: () => void;
   pending?: boolean;
+  confirmDisabled?: boolean;
   variant?: "destructive" | "default";
   details?: ReactNode;
   icon?: ReactNode;
@@ -27,6 +28,7 @@ export function ConfirmDialog({
   cancelLabel,
   onConfirm,
   pending = false,
+  confirmDisabled = false,
   variant = "destructive",
   details,
   icon,
@@ -74,7 +76,7 @@ export function ConfirmDialog({
             <Button
               type="button"
               variant={variant === "destructive" ? "destructive" : "default"}
-              disabled={pending}
+              disabled={pending || confirmDisabled}
               onClick={onConfirm}
             >
               {confirmLabel}

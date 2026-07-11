@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
+import { MoreHorizontal, Trash2, UserX } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -16,9 +16,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAttendanceQuery, useClinicsQuery, useEmployeesQuery, useHrSummaryQuery, useLeaveRequestsQuery } from "@/lib/api-hooks";
+import { useAttendanceQuery, useClinicsQuery, useEmployeesQuery, useHrSummaryQuery, useLeaveRequestsQuery, useUnlinkedUsersQuery } from "@/lib/api-hooks";
 import type { EmployeeDto } from "@/lib/api-types";
 import { EmployeeDeleteConfirmDialog, type EmployeeDeleteTarget } from "@/features/hr/employee-delete-confirm-dialog";
+import { EmployeeDeactivateConfirmDialog } from "@/features/hr/employee-deactivate-confirm-dialog";
+import { isClinicRequiredUserRole, isOrgWideUserRole } from "@/features/platform/platform-shared";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { canManageEmployees } from "@/lib/employee-manage-policy";
 import { ApiError, apiDelete, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { columnFilterIncludes } from "@/lib/utils";
@@ -29,9 +37,11 @@ import {
   formatLeaveType,
   formatEmploymentType,
   formatClinicName,
+  formatUserRole,
   localeForLanguage,
 } from "@/lib/locale-display";
-import { employeeToPickListItem, formatEmployeeName } from "@/lib/employee-display";
+import { employeeToPickListItem, formatEmployeeName, splitDisplayName } from "@/lib/employee-display";
+import { resolvePickListSelectedItem, useDebouncedPickListSearch } from "@/lib/pick-list-utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import {
@@ -73,7 +83,7 @@ export function HrPage() {
     setTab(parseHrTab(searchParams.get("tab")));
   }, [searchParams]);
   const summary = useHrSummaryQuery();
-  const employeesPick = useEmployeesQuery({ page: 1, pageSize: 100 });
+  const employeesPick = useEmployeesQuery({ page: 1, pageSize: 100, recordStatus: "ACTIVE" });
   const pickEmployees = employeesPick.data?.items ?? [];
   const employeePickItems: PickListItem[] = useMemo(
     () => pickEmployees.map((e) => employeeToPickListItem(e, i18n.language)),
@@ -171,14 +181,25 @@ export function HrPage() {
   const [leaveReqOpen, setLeaveReqOpen] = useState(false);
   const [createEmpOpen, setCreateEmpOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<EmployeeDeleteTarget | null>(null);
+  const [employeeToDeactivate, setEmployeeToDeactivate] = useState<EmployeeDeleteTarget | null>(null);
   const [empClinic, setEmpClinic] = useState("");
+  const [empAssignedClinicIds, setEmpAssignedClinicIds] = useState<string[]>([]);
+  const [empLinkedUserId, setEmpLinkedUserId] = useState("");
+  const [empLinkedUserRole, setEmpLinkedUserRole] = useState("");
+  const [pinnedEmpClinicItem, setPinnedEmpClinicItem] = useState<PickListItem | null>(null);
+  const [pinnedEmpTypeItem, setPinnedEmpTypeItem] = useState<PickListItem | null>(null);
+  const [pinnedLinkedUserItem, setPinnedLinkedUserItem] = useState<PickListItem | null>(null);
+  const linkedUserSearch = useDebouncedPickListSearch();
+  const { data: unlinkedUsers = [] } = useUnlinkedUsersQuery(
+    linkedUserSearch.debounced,
+    createEmpOpen,
+  );
   const [empFn, setEmpFn] = useState("");
   const [empLn, setEmpLn] = useState("");
   const [empFnAr, setEmpFnAr] = useState("");
   const [empLnAr, setEmpLnAr] = useState("");
   const [empEmail, setEmpEmail] = useState("");
   const [empPhone, setEmpPhone] = useState("");
-  const [empTitle, setEmpTitle] = useState("Staff");
   const [empType, setEmpType] = useState("FULL_TIME");
   const [empSalary, setEmpSalary] = useState("9000");
   const [empIdDocFile, setEmpIdDocFile] = useState<File | null>(null);
@@ -193,6 +214,30 @@ export function HrPage() {
   const empTypeItems: PickListItem[] = useMemo(
     () => EMP_TYPE_VALUES.map((value) => ({ value, label: formatEmploymentType(value, t) })),
     [t],
+  );
+  const linkedUserItems: PickListItem[] = useMemo(
+    () =>
+      unlinkedUsers.map((u) => ({
+        value: u.id,
+        label: u.displayName,
+        hint: `${u.email} · ${formatUserRole(u.role, t)}`,
+      })),
+    [unlinkedUsers, t],
+  );
+  const linkedUserSelectedItem = useMemo(
+    (): PickListItem | null =>
+      resolvePickListSelectedItem(empLinkedUserId, linkedUserItems, pinnedLinkedUserItem),
+    [empLinkedUserId, linkedUserItems, pinnedLinkedUserItem],
+  );
+  const showClinicAssignment = Boolean(empLinkedUserRole) && !isOrgWideUserRole(empLinkedUserRole) && clinics.length > 0;
+  const requiresClinicAssignment = isClinicRequiredUserRole(empLinkedUserRole);
+  const empClinicSelectedItem = useMemo(
+    (): PickListItem | null => resolvePickListSelectedItem(empClinic, clinicItems, pinnedEmpClinicItem),
+    [empClinic, clinicItems, pinnedEmpClinicItem],
+  );
+  const empTypeSelectedItem = useMemo(
+    (): PickListItem | null => resolvePickListSelectedItem(empType, empTypeItems, pinnedEmpTypeItem),
+    [empType, empTypeItems, pinnedEmpTypeItem],
   );
 
   const [attEmp, setAttEmp] = useState("");
@@ -245,15 +290,21 @@ export function HrPage() {
 
   const createEmpMut = useMutation({
     mutationFn: async () => {
+      const primaryClinicId = showClinicAssignment
+        ? (empAssignedClinicIds[0] ?? "")
+        : empClinic;
       const emp = await apiPost<EmployeeDto>("/api/v1/hr/employees", {
-        clinicId: empClinic,
+        clinicId: primaryClinicId,
+        ...(showClinicAssignment && empAssignedClinicIds.length
+          ? { clinicIds: empAssignedClinicIds }
+          : {}),
+        userId: empLinkedUserId.trim(),
         firstNameEn: empFn.trim(),
         lastNameEn: empLn.trim(),
         firstNameAr: empFnAr.trim() || undefined,
         lastNameAr: empLnAr.trim() || undefined,
         email: empEmail.trim() || undefined,
         phone: empPhone.replace(/\D/g, ""),
-        jobTitle: empTitle.trim(),
         employmentType: empType,
         hireDate: new Date().toISOString().slice(0, 10),
         salaryBase: Number.parseFloat(empSalary),
@@ -275,8 +326,16 @@ export function HrPage() {
       setEmpEmail("");
       setEmpPhone("");
       setEmpClinic("");
+      setEmpAssignedClinicIds([]);
+      setEmpLinkedUserId("");
+      setEmpLinkedUserRole("");
+      setPinnedEmpClinicItem(null);
+      setPinnedEmpTypeItem(null);
+      setPinnedLinkedUserItem(null);
+      linkedUserSearch.resetSearch();
       setEmpIdDocFile(null);
       void qc.invalidateQueries({ queryKey: ["hr"] });
+      void qc.invalidateQueries({ queryKey: ["admin", "org-users"] });
       toast.success(t("hr.employeeCreated", "Employee created."));
       navigate(`/hr/employees/${emp.id}`);
     },
@@ -304,10 +363,41 @@ export function HrPage() {
     },
   });
 
+  const deactivateEmpMut = useMutation({
+    mutationFn: ({ employeeId, resignationDate }: { employeeId: string; resignationDate: string }) =>
+      apiPost<EmployeeDto>(`/api/v1/hr/employees/${employeeId}/deactivate`, { resignationDate }),
+    onSuccess: () => {
+      setEmployeeToDeactivate(null);
+      void qc.invalidateQueries({ queryKey: ["hr"] });
+      toast.success(t("hr.deactivateSuccess", "Employee deactivated."));
+    },
+    onError: (e: unknown) => {
+      const msg =
+        e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body
+          ? String((e.body as { message?: unknown }).message)
+          : e instanceof Error
+            ? e.message
+            : String(e);
+      toast.error(msg);
+    },
+  });
+
 
   const handleCreateEmployee = () => {
+    const primaryClinicId = showClinicAssignment
+      ? (empAssignedClinicIds[0] ?? "")
+      : empClinic;
     const issues = collectEmployeeCreateIssues(
-      { clinicId: empClinic, firstName: empFn, lastName: empLn, phone: empPhone, salary: empSalary },
+      {
+        userId: empLinkedUserId,
+        linkedUserRole: empLinkedUserRole,
+        clinicId: primaryClinicId,
+        assignedClinicIds: empAssignedClinicIds,
+        firstName: empFn,
+        lastName: empLn,
+        phone: empPhone,
+        salary: empSalary,
+      },
       t,
     );
     if (issues.length > 0) {
@@ -490,21 +580,139 @@ export function HrPage() {
                 <DialogTrigger asChild>
                   <CreateActionButton type="button">{t("hr.addEmployee")}</CreateActionButton>
                 </DialogTrigger>
-                <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto" aria-describedby={undefined}>
+                <DialogContent className="max-h-[min(90dvh,40rem)] max-w-2xl overflow-y-auto overflow-x-visible overscroll-contain" aria-describedby={undefined}>
                   <DialogHeader>
                     <DialogTitle>{t("hr.addEmployee")}</DialogTitle>
                   </DialogHeader>
                   <div className="grid gap-3 pt-2 sm:grid-cols-2">
                     {empValidation.formErr ? <p className="text-sm text-destructive sm:col-span-full">{empValidation.formErr}</p> : null}
                     <div className="space-y-2 sm:col-span-2">
-                      <Label required>{t("hr.clinic")}</Label>
+                      <Label required>{t("hr.linkedLoginAccount", "Linked login account")}</Label>
+                      <p className="text-xs text-muted-foreground">
+                        {t(
+                          "hr.linkedLoginAccountRequiredHint",
+                          "Required — pick an organization user created by admin that does not already have an HR employee record.",
+                        )}
+                      </p>
                       <SearchablePickList
-                        items={clinicItems}
-                        value={empClinic}
-                        onValueChange={setEmpClinic}
-                        searchPlaceholder={t("appointments.filterClinic", "Type clinic name…")}
-                        placeholder={t("hr.pickClinic")}
+                        items={linkedUserItems}
+                        value={empLinkedUserId}
+                        selectedItem={linkedUserSelectedItem}
+                        onValueChange={(id) => {
+                          setEmpLinkedUserId(id);
+                          const item = linkedUserItems.find((u) => u.value === id);
+                          const user = unlinkedUsers.find((u) => u.id === id);
+                          if (item) setPinnedLinkedUserItem(item);
+                          if (user) {
+                            setEmpLinkedUserRole(user.role);
+                            setEmpEmail(user.email);
+                            const { firstNameEn, lastNameEn } = splitDisplayName(user.displayName);
+                            setEmpFn(firstNameEn);
+                            setEmpLn(lastNameEn);
+                            if (isOrgWideUserRole(user.role)) {
+                              setEmpAssignedClinicIds([]);
+                            } else {
+                              setEmpAssignedClinicIds([]);
+                              setEmpClinic("");
+                              setPinnedEmpClinicItem(null);
+                            }
+                          }
+                        }}
+                        onSearchQueryChange={linkedUserSearch.setSearch}
+                        onOpen={linkedUserSearch.resetSearch}
+                        searchPlaceholder={t("hr.linkedLoginAccountSearch", "Type name, email, or role…")}
+                        placeholder={t("hr.pickLinkedLoginAccount", "Select login account…")}
+                        emptyMessage={t("hr.noUnlinkedUsers", "No unlinked organization users.")}
+                        localFilter={false}
+                        minSearchLength={0}
+                        idleMessage={t("hr.linkedLoginAccountIdle", "Pick an unlinked user to continue.")}
                       />
+                      {empLinkedUserId ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 text-xs"
+                          onClick={() => {
+                            setEmpLinkedUserId("");
+                            setPinnedLinkedUserItem(null);
+                            setEmpLinkedUserRole("");
+                            setEmpAssignedClinicIds([]);
+                            setEmpClinic("");
+                            setPinnedEmpClinicItem(null);
+                          }}
+                        >
+                          {t("hr.clearLinkedLoginAccount", "Clear linked account")}
+                        </Button>
+                      ) : null}
+                    </div>
+                    {empLinkedUserRole ? (
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label>{t("admin.role", "Role")}</Label>
+                        <Input value={formatUserRole(empLinkedUserRole, t)} readOnly />
+                      </div>
+                    ) : null}
+                    <div className="space-y-2 sm:col-span-2">
+                      {showClinicAssignment ? (
+                        <>
+                          <Label required={requiresClinicAssignment}>
+                            {t("admin.assignedClinics", "Assigned clinics")}
+                          </Label>
+                          <p className="text-xs text-muted-foreground">
+                            {requiresClinicAssignment
+                              ? t(
+                                  "admin.assignedClinicsRequiredHint",
+                                  "Select at least one clinic for clinic administrator or branch manager.",
+                                )
+                              : t(
+                                  "hr.assignedClinicsOptionalHint",
+                                  "Select one or more clinics for this employee, same as organization admin user setup.",
+                                )}
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {clinics.map((c) => {
+                              const on = empAssignedClinicIds.includes(c.id);
+                              return (
+                                <Button
+                                  key={c.id}
+                                  type="button"
+                                  size="sm"
+                                  variant={on ? "default" : "outline"}
+                                  onClick={() => {
+                                    setEmpAssignedClinicIds((ids) => {
+                                      const next = on ? ids.filter((x) => x !== c.id) : [...ids, c.id];
+                                      setEmpClinic(next[0] ?? "");
+                                      return next;
+                                    });
+                                  }}
+                                >
+                                  {formatClinicName(c, i18n.language)}
+                                </Button>
+                              );
+                            })}
+                          </div>
+                        </>
+                      ) : empLinkedUserRole ? (
+                        <>
+                          <Label required>{t("hr.clinic")}</Label>
+                          <SearchablePickList
+                            items={clinicItems}
+                            value={empClinic}
+                            selectedItem={empClinicSelectedItem}
+                            onValueChange={(id) => {
+                              setEmpClinic(id);
+                              const item = clinicItems.find((c) => c.value === id);
+                              if (item) setPinnedEmpClinicItem(item);
+                            }}
+                            searchPlaceholder={t("appointments.filterClinic", "Type clinic name…")}
+                            placeholder={t("hr.pickClinic")}
+                          />
+                        </>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          {t("hr.selectLinkedUserForClinic", "Select a linked login account to assign clinics.")}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label required>{t("patients.firstNameEn")}</Label>
@@ -536,15 +744,16 @@ export function HrPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>{t("hr.jobTitle")}</Label>
-                      <Input value={empTitle} onChange={(e) => setEmpTitle(e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
                       <Label>{t("hr.employmentType")}</Label>
                       <SearchablePickList
                         items={empTypeItems}
                         value={empType}
-                        onValueChange={setEmpType}
+                        selectedItem={empTypeSelectedItem}
+                        onValueChange={(id) => {
+                          setEmpType(id);
+                          const item = empTypeItems.find((x) => x.value === id);
+                          if (item) setPinnedEmpTypeItem(item);
+                        }}
                         searchPlaceholder={t("hr.filterEmpType")}
                         placeholder={t("hr.employmentType")}
                       />
@@ -627,6 +836,9 @@ export function HrPage() {
                       onFilterChange={setEcfTitle}
                     />
                     <FilterTh className="text-start" label={t("hr.clinic")} value={ecfClinic} onChange={setEcfClinic} />
+                    <th className="px-2 py-2 text-start text-xs font-medium text-muted-foreground">
+                      {t("hr.recordStatus", "Status")}
+                    </th>
                     <SortableTh
                       label={t("hr.salaryBase")}
                       column="salaryBase"
@@ -664,37 +876,51 @@ export function HrPage() {
                       <td className="px-2 py-2 text-start align-middle text-muted-foreground">
                         {formatClinicNameFields(e.clinicNameEn, e.clinicNameAr ?? null, i18n.language)}
                       </td>
+                      <td className="px-2 py-2">
+                        <Badge variant={e.recordStatus === "INACTIVE" ? "outline" : "secondary"}>
+                          {t(`hr.recordStatuses.${e.recordStatus}`, e.recordStatus)}
+                        </Badge>
+                      </td>
                       <td className="px-2 py-2 ltr-nums">{money(e.salaryBase)}</td>
                       {canManage ? (
                         <td className="px-2 py-2 text-end">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            aria-label={t("common.delete", "Delete")}
-                            disabled={deleteEmpMut.isPending}
-                            onClick={(ev) => {
-                              ev.preventDefault();
-                              ev.stopPropagation();
-                              setEmployeeToDelete({
-                                id: e.id,
-                                employeeNumber: e.employeeNumber,
-                                firstNameEn: e.firstNameEn,
-                                lastNameEn: e.lastNameEn,
-                                firstNameAr: e.firstNameAr,
-                                lastNameAr: e.lastNameAr,
-                                clinicId: e.clinicId,
-                                clinicNameEn: e.clinicNameEn,
-                                jobTitle: e.jobTitle,
-                                employmentType: e.employmentType,
-                                hireDate: e.hireDate,
-                                salaryBase: e.salaryBase,
-                              });
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                aria-label={t("hr.employeeActions", "Employee actions")}
+                                disabled={deleteEmpMut.isPending || deactivateEmpMut.isPending}
+                                onClick={(ev) => {
+                                  ev.preventDefault();
+                                  ev.stopPropagation();
+                                }}
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" onClick={(ev) => ev.stopPropagation()}>
+                              {e.recordStatus === "ACTIVE" ? (
+                                <DropdownMenuItem
+                                  onSelect={() =>
+                                    setEmployeeToDeactivate(employeeRowToTarget(e, i18n.language))
+                                  }
+                                >
+                                  <UserX className="me-2 h-4 w-4" />
+                                  {t("hr.deactivate", "Deactivate")}
+                                </DropdownMenuItem>
+                              ) : null}
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onSelect={() => setEmployeeToDelete(employeeRowToTarget(e, i18n.language))}
+                              >
+                                <Trash2 className="me-2 h-4 w-4" />
+                                {t("common.delete", "Delete")}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       ) : null}
                     </tr>
@@ -727,6 +953,20 @@ export function HrPage() {
         pending={deleteEmpMut.isPending}
         onConfirm={() => {
           if (employeeToDelete) deleteEmpMut.mutate(employeeToDelete.id);
+        }}
+      />
+
+      <EmployeeDeactivateConfirmDialog
+        open={employeeToDeactivate != null}
+        onOpenChange={(open) => {
+          if (!open && !deactivateEmpMut.isPending) setEmployeeToDeactivate(null);
+        }}
+        employee={employeeToDeactivate}
+        pending={deactivateEmpMut.isPending}
+        onConfirm={(resignationDate) => {
+          if (employeeToDeactivate) {
+            deactivateEmpMut.mutate({ employeeId: employeeToDeactivate.id, resignationDate });
+          }
         }}
       />
 
@@ -1076,4 +1316,22 @@ export function HrPage() {
       ) : null}
     </div>
   );
+}
+
+function employeeRowToTarget(e: EmployeeDto, language: string): EmployeeDeleteTarget {
+  return {
+    id: e.id,
+    employeeNumber: e.employeeNumber,
+    firstNameEn: e.firstNameEn,
+    lastNameEn: e.lastNameEn,
+    firstNameAr: e.firstNameAr,
+    lastNameAr: e.lastNameAr,
+    clinicId: e.clinicId,
+    clinicNameEn: e.clinicNameEn,
+    clinicLabel: formatClinicNameFields(e.clinicNameEn, e.clinicNameAr ?? null, language),
+    jobTitle: e.jobTitle,
+    employmentType: e.employmentType,
+    hireDate: e.hireDate,
+    salaryBase: e.salaryBase,
+  };
 }

@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { EmploymentType } from "@prisma/client";
+import { EmployeeRecordStatus, EmployeeSeparationReason, EmploymentType } from "@prisma/client";
+import { EmployeeEmploymentPeriodDto } from "./employee-employment-period.dto";
 
 export class EmployeeDto {
   @ApiProperty()
@@ -59,6 +60,21 @@ export class EmployeeDto {
   @ApiPropertyOptional({ nullable: true, description: "Linked login account role" })
   linkedUserRole!: string | null;
 
+  @ApiProperty({ type: [String], description: "Clinics assigned to the linked login account" })
+  linkedUserClinicIds!: string[];
+
   @ApiProperty({ description: "Whether the linked login account has a profile picture" })
   hasUserAvatar!: boolean;
+
+  @ApiProperty({ enum: EmployeeRecordStatus })
+  recordStatus!: EmployeeRecordStatus;
+
+  @ApiPropertyOptional({ nullable: true })
+  resignationDate!: string | null;
+
+  @ApiPropertyOptional({ enum: EmployeeSeparationReason, nullable: true })
+  separationReason!: EmployeeSeparationReason | null;
+
+  @ApiProperty({ type: [EmployeeEmploymentPeriodDto] })
+  employmentPeriods!: EmployeeEmploymentPeriodDto[];
 }

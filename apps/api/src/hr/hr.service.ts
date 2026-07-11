@@ -5,12 +5,12 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { AttendanceStatus, LeaveStatus, Prisma, UserRole } from "@prisma/client";
+import { AttendanceStatus, EmployeeRecordStatus, EmployeeSeparationReason, LeaveStatus, Prisma, UserRole } from "@prisma/client";
 import { randomUUID } from "crypto";
 import * as path from "path";
 import type { JwtUser } from "../auth/jwt-user";
-import { ensureClinicStaffEmployeeRecords } from "../common/clinic-staff-employee";
-import { deleteUserLinkedToEmployee } from "../common/user-employee-cascade";
+import { ensureClinicStaffEmployeeRecords, jobTitleForRole } from "../common/clinic-staff-employee";
+import { syncUserClinicAdminScopes, deleteUserLinkedToEmployee } from "../common/user-employee-cascade";
 import { CLINIC_SCOPE_ROLES, fetchClinicScopeIds } from "../common/clinic-scope";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
@@ -20,7 +20,11 @@ import type { CreateAttendanceDto } from "./dto/create-attendance.dto";
 import type { CreateEmployeeDto } from "./dto/create-employee.dto";
 import type { CreateLeaveRequestDto } from "./dto/create-leave-request.dto";
 import type { UpdateEmployeeDto } from "./dto/update-employee.dto";
+import type { UnlinkedUserDto } from "./dto/unlinked-user.dto";
 import type { AttendanceDto } from "./dto/attendance.dto";
+import type { DeactivateEmployeeDto } from "./dto/deactivate-employee.dto";
+import type { EmployeeEmploymentPeriodDto } from "./dto/employee-employment-period.dto";
+import type { ReactivateEmployeeDto } from "./dto/reactivate-employee.dto";
 import type { EmployeeDto } from "./dto/employee.dto";
 import type { LeaveRequestDto } from "./dto/leave-request.dto";
 
@@ -70,6 +74,20 @@ export class HrService {
     return `EMP-${max + 1}`;
   }
 
+  private mapEmploymentPeriod(p: {
+    id: string;
+    startDate: Date;
+    endDate: Date | null;
+    separationReason: EmployeeSeparationReason | null;
+  }): EmployeeEmploymentPeriodDto {
+    return {
+      id: p.id,
+      startDate: p.startDate.toISOString().slice(0, 10),
+      endDate: p.endDate ? p.endDate.toISOString().slice(0, 10) : null,
+      separationReason: p.separationReason,
+    };
+  }
+
   private mapEmployee(e: {
     id: string;
     clinicId: string;
@@ -85,10 +103,25 @@ export class HrService {
     hireDate: Date;
     salaryBase: { toString(): string };
     userId: string | null;
+    recordStatus: EmployeeRecordStatus;
+    resignationDate: Date | null;
+    separationReason: EmployeeSeparationReason | null;
     idDocRelativePath?: string | null;
     clinic?: { nameEn: string; nameAr: string } | null;
-    user?: { displayName: string; role: string; avatarRelativePath: string | null } | null;
+    user?: {
+      displayName: string;
+      role: string;
+      avatarRelativePath: string | null;
+      clinicAdminScopes?: { clinicId: string }[];
+    } | null;
+    employmentPeriods?: {
+      id: string;
+      startDate: Date;
+      endDate: Date | null;
+      separationReason: EmployeeSeparationReason | null;
+    }[];
   }): EmployeeDto {
+    const periods = (e.employmentPeriods ?? []).map((p) => this.mapEmploymentPeriod(p));
     return {
       id: e.id,
       clinicId: e.clinicId,
@@ -109,8 +142,58 @@ export class HrService {
       hasIdDoc: Boolean(e.idDocRelativePath),
       linkedUserDisplayName: e.user?.displayName ?? null,
       linkedUserRole: e.user?.role ?? null,
+      linkedUserClinicIds: this.mapLinkedUserClinicIds(e.user, e.clinicId),
       hasUserAvatar: Boolean(e.user?.avatarRelativePath),
+      recordStatus: e.recordStatus,
+      resignationDate: e.resignationDate ? e.resignationDate.toISOString().slice(0, 10) : null,
+      separationReason: e.separationReason,
+      employmentPeriods: periods,
     };
+  }
+
+  private employeeInclude = {
+    clinic: { select: { nameEn: true, nameAr: true } },
+    user: {
+      select: {
+        displayName: true,
+        role: true,
+        avatarRelativePath: true,
+        clinicAdminScopes: { select: { clinicId: true } },
+      },
+    },
+    employmentPeriods: { orderBy: { startDate: "asc" as const } },
+  } satisfies Prisma.EmployeeInclude;
+
+  private mapLinkedUserClinicIds(
+    user?: { clinicAdminScopes?: { clinicId: string }[] } | null,
+    employeeClinicId?: string,
+  ): string[] {
+    const ids = new Set<string>();
+    for (const s of user?.clinicAdminScopes ?? []) ids.add(s.clinicId);
+    if (employeeClinicId) ids.add(employeeClinicId);
+    return [...ids];
+  }
+
+  private async ensureEmployeeEmploymentPeriods(tenantId: string): Promise<void> {
+    const missing = await this.prisma.employee.findMany({
+      where: { tenantId, employmentPeriods: { none: {} } },
+      select: { id: true, hireDate: true, recordStatus: true, resignationDate: true, separationReason: true },
+      take: 200,
+    });
+    if (!missing.length) return;
+    await this.prisma.$transaction(
+      missing.map((emp) =>
+        this.prisma.employeeEmploymentPeriod.create({
+          data: {
+            employeeId: emp.id,
+            startDate: emp.hireDate,
+            endDate: emp.recordStatus === EmployeeRecordStatus.INACTIVE ? emp.resignationDate : null,
+            separationReason:
+              emp.recordStatus === EmployeeRecordStatus.INACTIVE ? emp.separationReason : null,
+          },
+        }),
+      ),
+    );
   }
 
   private mapAttendance(
@@ -180,9 +263,11 @@ export class HrService {
     nameFilterStr?: string,
     clinicFilterStr?: string,
     sortByStr?: string,
-    sortOrderStr?: string
+    sortOrderStr?: string,
+    recordStatusStr?: string
   ) {
     await ensureClinicStaffEmployeeRecords(this.prisma, tenantId);
+    await this.ensureEmployeeEmploymentPeriods(tenantId);
     const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, viewer);
     if (scopeIds !== null && !scopeIds.length) {
       const { page, pageSize } = parsePageParams(pageStr, pageSizeStr);
@@ -222,6 +307,10 @@ export class HrService {
     if (clinicFilter) {
       and.push({ clinic: { nameEn: { contains: clinicFilter, mode: "insensitive" } } });
     }
+    const recordStatus = recordStatusStr?.trim().toUpperCase();
+    if (recordStatus && (Object.values(EmployeeRecordStatus) as string[]).includes(recordStatus)) {
+      and.push({ recordStatus: recordStatus as EmployeeRecordStatus });
+    }
     const where: Prisma.EmployeeWhereInput = and.length > 1 ? { AND: and } : { tenantId };
     const sortField = pickSortField(sortByStr, ["employeeNumber", "lastNameEn", "hireDate", "salaryBase", "jobTitle"] as const, "lastNameEn");
     const sortDir = parseSortOrder(sortOrderStr);
@@ -232,57 +321,120 @@ export class HrService {
         orderBy: { [sortField]: sortDir },
         skip,
         take: pageSize,
-        include: {
-          clinic: { select: { nameEn: true, nameAr: true } },
-          user: { select: { displayName: true, role: true, avatarRelativePath: true } },
-        },
+        include: this.employeeInclude,
       }),
     ]);
     return paginate(rows.map((r) => this.mapEmployee(r)), total, page, pageSize);
   }
 
   async getEmployee(tenantId: string, id: string, viewer: JwtUser): Promise<EmployeeDto> {
+    await this.ensureEmployeeEmploymentPeriods(tenantId);
     const row = await this.prisma.employee.findFirst({
       where: { id, tenantId },
-      include: {
-        clinic: { select: { nameEn: true, nameAr: true } },
-        user: { select: { displayName: true, role: true, avatarRelativePath: true } },
-      },
+      include: this.employeeInclude,
     });
     if (!row) throw new NotFoundException("Employee not found");
     await this.assertClinicAdminCanUseClinic(tenantId, viewer, row.clinicId);
     return this.mapEmployee(row);
   }
 
+  async listUnlinkedUsers(tenantId: string, viewer: JwtUser, search?: string): Promise<UnlinkedUserDto[]> {
+    this.assertCanManageEmployees(viewer);
+    const q = search?.trim();
+    const rows = await this.prisma.user.findMany({
+      where: {
+        tenantId,
+        role: { not: UserRole.PLATFORM_SUPER_ADMIN },
+        employee: { is: null },
+        ...(q
+          ? {
+              OR: [
+                { email: { contains: q, mode: "insensitive" } },
+                { displayName: { contains: q, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: { displayName: "asc" },
+      take: 100,
+      select: { id: true, email: true, displayName: true, role: true },
+    });
+    return rows;
+  }
+
   async createEmployee(tenantId: string, dto: CreateEmployeeDto, viewer: JwtUser): Promise<EmployeeDto> {
     this.assertCanManageEmployees(viewer);
-    await this.assertClinicAdminCanUseClinic(tenantId, viewer, dto.clinicId);
-    const clinic = await this.prisma.clinic.findFirst({ where: { id: dto.clinicId, tenantId } });
-    if (!clinic) throw new BadRequestException("Invalid clinicId");
+
+    const userId = dto.userId?.trim();
+    if (!userId) throw new BadRequestException("userId is required — link an organization login account");
+
+    const linkedUser = await this.prisma.user.findFirst({
+      where: { id: userId, tenantId },
+      select: { id: true, email: true, displayName: true, role: true },
+    });
+    if (!linkedUser) {
+      throw new BadRequestException("Invalid userId — user not found in this organization");
+    }
+    const alreadyLinked = await this.prisma.employee.findFirst({
+      where: { userId: linkedUser.id },
+      select: { id: true },
+    });
+    if (alreadyLinked) {
+      throw new BadRequestException("This login account is already linked to an employee");
+    }
+
+    const clinicIds = [
+      ...new Set(
+        [dto.clinicId?.trim(), ...(dto.clinicIds ?? []).map((id) => id.trim())].filter(Boolean) as string[],
+      ),
+    ];
+    if (!clinicIds.length) throw new BadRequestException("Clinic is required");
+    const primaryClinicId = clinicIds[0]!;
+    for (const clinicId of clinicIds) {
+      await this.assertClinicAdminCanUseClinic(tenantId, viewer, clinicId);
+      const clinic = await this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId } });
+      if (!clinic) throw new BadRequestException(`Invalid clinicId: ${clinicId}`);
+    }
+
     const phone = dto.phone.replace(/\D/g, "");
     if (phone.length < 8) throw new BadRequestException("Phone must contain at least 8 digits");
     const employeeNumber = await this.nextEmployeeNumber(tenantId);
+    const email = dto.email?.trim() || linkedUser.email || null;
+    const jobTitle = dto.jobTitle?.trim() || jobTitleForRole(linkedUser.role);
     try {
-      const row = await this.prisma.employee.create({
-        data: {
-          tenantId,
-          clinicId: dto.clinicId,
-          employeeNumber,
-          firstNameEn: dto.firstNameEn,
-          lastNameEn: dto.lastNameEn,
-          firstNameAr: dto.firstNameAr?.trim() || null,
-          lastNameAr: dto.lastNameAr?.trim() || null,
-          email: dto.email ?? null,
-          phone,
-          jobTitle: dto.jobTitle,
-          employmentType: dto.employmentType,
-          hireDate: new Date(dto.hireDate),
-          salaryBase: dto.salaryBase,
-        },
+      const row = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.employee.create({
+          data: {
+            tenantId,
+            clinicId: primaryClinicId,
+            userId: linkedUser.id,
+            employeeNumber,
+            firstNameEn: dto.firstNameEn,
+            lastNameEn: dto.lastNameEn,
+            firstNameAr: dto.firstNameAr?.trim() || null,
+            lastNameAr: dto.lastNameAr?.trim() || null,
+            email,
+            phone,
+            jobTitle,
+            employmentType: dto.employmentType,
+            hireDate: new Date(dto.hireDate),
+            salaryBase: dto.salaryBase,
+          },
+        });
+        if (clinicIds.length > 0) {
+          await syncUserClinicAdminScopes(tx, tenantId, linkedUser.id, clinicIds);
+        }
+        await tx.employeeEmploymentPeriod.create({
+          data: {
+            employeeId: created.id,
+            startDate: created.hireDate,
+          },
+        });
+        return created;
       });
       const withClinic = await this.prisma.employee.findFirst({
         where: { id: row.id },
-        include: { clinic: { select: { nameEn: true, nameAr: true } } },
+        include: this.employeeInclude,
       });
       return this.mapEmployee(withClinic!);
     } catch {
@@ -310,19 +462,36 @@ export class HrService {
         idDocOriginalName: file.originalname || base,
         idDocMimeType: mime,
       },
-      include: { clinic: { select: { nameEn: true, nameAr: true } } },
+      include: this.employeeInclude,
     });
     return this.mapEmployee(row);
   }
 
   async updateEmployee(tenantId: string, id: string, dto: UpdateEmployeeDto, viewer: JwtUser): Promise<EmployeeDto> {
     this.assertCanManageEmployees(viewer);
-    const existing = await this.prisma.employee.findFirst({ where: { id, tenantId } });
+    const existing = await this.prisma.employee.findFirst({
+      where: { id, tenantId },
+      include: { user: { select: { id: true, role: true } } },
+    });
     if (!existing) throw new NotFoundException("Employee not found");
     await this.assertClinicAdminCanUseClinic(tenantId, viewer, existing.clinicId);
 
+    const clinicIdsFromDto = dto.clinicIds?.map((cid) => cid.trim()).filter(Boolean);
     const clinicId = dto.clinicId?.trim();
-    if (clinicId && clinicId !== existing.clinicId) {
+    const resolvedClinicIds =
+      clinicIdsFromDto !== undefined
+        ? [...new Set(clinicIdsFromDto)]
+        : clinicId
+          ? [clinicId]
+          : undefined;
+
+    if (resolvedClinicIds?.length) {
+      for (const cid of resolvedClinicIds) {
+        await this.assertClinicAdminCanUseClinic(tenantId, viewer, cid);
+        const clinic = await this.prisma.clinic.findFirst({ where: { id: cid, tenantId } });
+        if (!clinic) throw new BadRequestException(`Invalid clinicId: ${cid}`);
+      }
+    } else if (clinicId && clinicId !== existing.clinicId) {
       await this.assertClinicAdminCanUseClinic(tenantId, viewer, clinicId);
       const clinic = await this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId } });
       if (!clinic) throw new BadRequestException("Invalid clinicId");
@@ -334,24 +503,136 @@ export class HrService {
       if (phone.length < 8) throw new BadRequestException("Phone must contain at least 8 digits");
     }
 
-    const row = await this.prisma.employee.update({
-      where: { id },
-      data: {
-        ...(clinicId ? { clinicId } : {}),
-        ...(dto.firstNameEn !== undefined ? { firstNameEn: dto.firstNameEn } : {}),
-        ...(dto.lastNameEn !== undefined ? { lastNameEn: dto.lastNameEn } : {}),
-        ...(dto.firstNameAr !== undefined ? { firstNameAr: dto.firstNameAr.trim() || null } : {}),
-        ...(dto.lastNameAr !== undefined ? { lastNameAr: dto.lastNameAr.trim() || null } : {}),
-        ...(dto.email !== undefined ? { email: dto.email || null } : {}),
-        ...(phone !== undefined ? { phone } : {}),
-        ...(dto.jobTitle !== undefined ? { jobTitle: dto.jobTitle } : {}),
-        ...(dto.employmentType !== undefined ? { employmentType: dto.employmentType } : {}),
-        ...(dto.hireDate !== undefined ? { hireDate: new Date(dto.hireDate) } : {}),
-        ...(dto.salaryBase !== undefined ? { salaryBase: dto.salaryBase } : {}),
-      },
-      include: { clinic: { select: { nameEn: true, nameAr: true } } },
+    const primaryClinicId = resolvedClinicIds?.[0];
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.employee.update({
+        where: { id },
+        data: {
+          ...(primaryClinicId ? { clinicId: primaryClinicId } : clinicId ? { clinicId } : {}),
+          ...(dto.firstNameEn !== undefined ? { firstNameEn: dto.firstNameEn } : {}),
+          ...(dto.lastNameEn !== undefined ? { lastNameEn: dto.lastNameEn } : {}),
+          ...(dto.firstNameAr !== undefined ? { firstNameAr: dto.firstNameAr.trim() || null } : {}),
+          ...(dto.lastNameAr !== undefined ? { lastNameAr: dto.lastNameAr.trim() || null } : {}),
+          ...(dto.email !== undefined ? { email: dto.email || null } : {}),
+          ...(phone !== undefined ? { phone } : {}),
+          ...(dto.jobTitle !== undefined ? { jobTitle: dto.jobTitle } : {}),
+          ...(dto.employmentType !== undefined ? { employmentType: dto.employmentType } : {}),
+          ...(dto.hireDate !== undefined ? { hireDate: new Date(dto.hireDate) } : {}),
+          ...(dto.salaryBase !== undefined ? { salaryBase: dto.salaryBase } : {}),
+        },
+      });
+      if (existing.userId && resolvedClinicIds !== undefined) {
+        await syncUserClinicAdminScopes(tx, tenantId, existing.userId, resolvedClinicIds);
+      }
     });
-    return this.mapEmployee(row);
+
+    const row = await this.prisma.employee.findFirst({
+      where: { id },
+      include: this.employeeInclude,
+    });
+    return this.mapEmployee(row!);
+  }
+
+  async deactivateEmployee(
+    tenantId: string,
+    id: string,
+    dto: DeactivateEmployeeDto,
+    viewer: JwtUser,
+  ): Promise<EmployeeDto> {
+    this.assertCanManageEmployees(viewer);
+    const emp = await this.prisma.employee.findFirst({
+      where: { id, tenantId },
+      include: { employmentPeriods: { orderBy: { startDate: "desc" } } },
+    });
+    if (!emp) throw new NotFoundException("Employee not found");
+    await this.assertClinicAdminCanUseClinic(tenantId, viewer, emp.clinicId);
+    if (emp.recordStatus === EmployeeRecordStatus.INACTIVE) {
+      throw new BadRequestException("Employee is already inactive");
+    }
+
+    const resignationDate = new Date(dto.resignationDate);
+    const hireDate = emp.hireDate;
+    if (resignationDate < hireDate) {
+      throw new BadRequestException("Resignation date cannot be before hire date");
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      const openPeriod = await tx.employeeEmploymentPeriod.findFirst({
+        where: { employeeId: id, endDate: null },
+        orderBy: { startDate: "desc" },
+      });
+      if (openPeriod) {
+        await tx.employeeEmploymentPeriod.update({
+          where: { id: openPeriod.id },
+          data: { endDate: resignationDate, separationReason: EmployeeSeparationReason.RESIGNATION },
+        });
+      } else {
+        await tx.employeeEmploymentPeriod.create({
+          data: {
+            employeeId: id,
+            startDate: hireDate,
+            endDate: resignationDate,
+            separationReason: EmployeeSeparationReason.RESIGNATION,
+          },
+        });
+      }
+      await tx.employee.update({
+        where: { id },
+        data: {
+          recordStatus: EmployeeRecordStatus.INACTIVE,
+          resignationDate,
+          separationReason: EmployeeSeparationReason.RESIGNATION,
+        },
+      });
+    });
+
+    const row = await this.prisma.employee.findFirst({
+      where: { id },
+      include: this.employeeInclude,
+    });
+    return this.mapEmployee(row!);
+  }
+
+  async reactivateEmployee(
+    tenantId: string,
+    id: string,
+    dto: ReactivateEmployeeDto,
+    viewer: JwtUser,
+  ): Promise<EmployeeDto> {
+    this.assertCanManageEmployees(viewer);
+    const emp = await this.prisma.employee.findFirst({ where: { id, tenantId } });
+    if (!emp) throw new NotFoundException("Employee not found");
+    await this.assertClinicAdminCanUseClinic(tenantId, viewer, emp.clinicId);
+    if (emp.recordStatus !== EmployeeRecordStatus.INACTIVE) {
+      throw new BadRequestException("Employee is already active");
+    }
+
+    const startDate = dto.startDate ? new Date(dto.startDate) : new Date();
+    startDate.setHours(0, 0, 0, 0);
+    if (emp.resignationDate && startDate <= emp.resignationDate) {
+      throw new BadRequestException("Reactivation date must be after the resignation date");
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.employeeEmploymentPeriod.create({
+        data: { employeeId: id, startDate },
+      });
+      await tx.employee.update({
+        where: { id },
+        data: {
+          recordStatus: EmployeeRecordStatus.ACTIVE,
+          resignationDate: null,
+          separationReason: null,
+        },
+      });
+    });
+
+    const row = await this.prisma.employee.findFirst({
+      where: { id },
+      include: this.employeeInclude,
+    });
+    return this.mapEmployee(row!);
   }
 
   async deleteEmployee(tenantId: string, id: string, viewer: JwtUser): Promise<{ ok: true; id: string }> {
@@ -485,6 +766,9 @@ export class HrService {
       include: { clinic: { select: { nameEn: true, nameAr: true } } },
     });
     if (!existing) throw new BadRequestException("Invalid employeeId");
+    if (existing.recordStatus !== EmployeeRecordStatus.ACTIVE) {
+      throw new BadRequestException("Cannot record attendance for an inactive employee");
+    }
     const row = await this.prisma.attendance.create({
       data: {
         employeeId: dto.employeeId,
@@ -554,6 +838,9 @@ export class HrService {
   async createLeaveRequest(tenantId: string, dto: CreateLeaveRequestDto): Promise<LeaveRequestDto> {
     const emp = await this.prisma.employee.findFirst({ where: { id: dto.employeeId, tenantId } });
     if (!emp) throw new BadRequestException("Invalid employeeId");
+    if (emp.recordStatus !== EmployeeRecordStatus.ACTIVE) {
+      throw new BadRequestException("Cannot submit leave for an inactive employee");
+    }
     const row = await this.prisma.leaveRequest.create({
       data: {
         employeeId: dto.employeeId,
@@ -582,9 +869,9 @@ export class HrService {
   async hrSummary(tenantId: string) {
     await ensureClinicStaffEmployeeRecords(this.prisma, tenantId);
     const [employeeCount, monthlyPayroll, pendingLeave] = await Promise.all([
-      this.prisma.employee.count({ where: { tenantId } }),
+      this.prisma.employee.count({ where: { tenantId, recordStatus: EmployeeRecordStatus.ACTIVE } }),
       this.prisma.employee.aggregate({
-        where: { tenantId },
+        where: { tenantId, recordStatus: EmployeeRecordStatus.ACTIVE },
         _sum: { salaryBase: true },
       }),
       this.prisma.leaveRequest.count({

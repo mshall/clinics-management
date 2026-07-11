@@ -1,4 +1,5 @@
 import type { TFunction } from "i18next";
+import { isOrgWideUserRole } from "@/features/platform/platform-shared";
 import {
   collectPendingDocumentFieldErrors,
   pendingDocumentValidationMessage,
@@ -81,16 +82,29 @@ export function collectRevenueSubmitIssues(
 
 export function collectEmployeeCreateIssues(
   input: {
+    userId: string;
+    linkedUserRole: string;
     clinicId: string;
+    assignedClinicIds: string[];
     firstName: string;
     lastName: string;
     phone: string;
     salary: string;
+    requireLinkedUser?: boolean;
   },
   t: TFunction,
 ): string[] {
   const issues: string[] = [];
-  if (!input.clinicId.trim()) issues.push(t("hr.errorClinicRequired", "Select a clinic."));
+  if (input.requireLinkedUser !== false && !input.userId.trim()) {
+    issues.push(t("hr.errorLinkedUserRequired", "Link an organization login account before creating the employee."));
+  }
+  const showClinicAssignment = input.linkedUserRole && !isOrgWideUserRole(input.linkedUserRole);
+  const primaryClinicId = showClinicAssignment
+    ? (input.assignedClinicIds[0] ?? "")
+    : input.clinicId;
+  if (!primaryClinicId.trim()) {
+    issues.push(t("hr.errorClinicRequired", "Select a clinic."));
+  }
   if (!input.firstName.trim()) issues.push(t("hr.errorFirstNameRequired", "First name is required."));
   if (!input.lastName.trim()) issues.push(t("hr.errorLastNameRequired", "Last name is required."));
   const digits = input.phone.replace(/\D/g, "");

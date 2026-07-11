@@ -1,13 +1,19 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { EmploymentType } from "@prisma/client";
 import { Type } from "class-transformer";
-import { IsDateString, IsEmail, IsEnum, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
+import { IsArray, IsDateString, IsEmail, IsEnum, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
 
 export class UpdateEmployeeDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   clinicId?: string;
+
+  @ApiPropertyOptional({ type: [String], description: "Assigned clinics for linked clinic-scoped users (e.g. physicians)" })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  clinicIds?: string[];
 
   @ApiPropertyOptional()
   @IsOptional()

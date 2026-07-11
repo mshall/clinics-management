@@ -510,11 +510,28 @@ export function useHrSummaryQuery() {
   });
 }
 
+export type UnlinkedUserDto = {
+  id: string;
+  email: string;
+  displayName: string;
+  role: string;
+};
+
+export function useUnlinkedUsersQuery(search?: string, enabled = true) {
+  const q = search?.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
+  return useQuery({
+    queryKey: ["hr", "unlinked-users", search ?? ""],
+    queryFn: () => apiGet<UnlinkedUserDto[]>(`/api/v1/hr/unlinked-users${q}`),
+    enabled,
+  });
+}
+
 export interface EmployeesListParams extends PagedRangeParams {
   search?: string;
   clinicId?: string;
   nameFilter?: string;
   clinicFilter?: string;
+  recordStatus?: "ACTIVE" | "INACTIVE";
 }
 
 export function useEmployeesQuery(params: EmployeesListParams = {}) {
@@ -525,6 +542,7 @@ export function useEmployeesQuery(params: EmployeesListParams = {}) {
   if (params.clinicId?.trim()) q.set("clinicId", params.clinicId.trim());
   if (params.nameFilter?.trim()) q.set("nameFilter", params.nameFilter.trim());
   if (params.clinicFilter?.trim()) q.set("clinicFilter", params.clinicFilter.trim());
+  if (params.recordStatus) q.set("recordStatus", params.recordStatus);
   if (params.sortBy) q.set("sortBy", params.sortBy);
   if (params.sortOrder) q.set("sortOrder", params.sortOrder);
   return useQuery({

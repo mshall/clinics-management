@@ -4,9 +4,6 @@ import type { PrismaService } from "../prisma/prisma.service";
 
 type DbClient = Prisma.TransactionClient | PrismaService;
 
-const CLINICAL_DELETE_BLOCK_MESSAGE =
-  "Cannot delete a user linked to encounters, appointments, or operations. Reassign clinical records first.";
-
 export async function assertTenantUserDeletable(
   client: DbClient,
   userId: string,
@@ -29,8 +26,29 @@ export async function assertTenantUserDeletable(
     client.operation.count({ where: { clinicianId: userId } }),
   ]);
   if (encounters + appointments + operations > 0) {
-    throw new BadRequestException(CLINICAL_DELETE_BLOCK_MESSAGE);
+    throw new BadRequestException(
+      "Cannot delete a user linked to encounters, appointments, or operations. Reassign clinical records first.",
+    );
   }
+}
+
+/** Syncs clinic assignment scopes for a tenant user (e.g. physicians with multiple clinics). */
+export async function syncUserClinicAdminScopes(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  userId: string,
+  clinicIds: string[],
+): Promise<void> {
+  await tx.clinicAdminScope.deleteMany({ where: { tenantId, userId } });
+  if (!clinicIds.length) return;
+  for (const cid of clinicIds) {
+    const c = await tx.clinic.findFirst({ where: { id: cid, tenantId } });
+    if (!c) throw new BadRequestException(`Invalid clinicId: ${cid}`);
+  }
+  await tx.clinicAdminScope.createMany({
+    data: clinicIds.map((clinicId) => ({ tenantId, userId, clinicId })),
+    skipDuplicates: true,
+  });
 }
 
 /** Deletes the HR employee row linked to a tenant user, if any. */

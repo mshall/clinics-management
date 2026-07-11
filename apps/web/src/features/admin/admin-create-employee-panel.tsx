@@ -89,7 +89,17 @@ export function AdminCreateEmployeePanel() {
 
   const handleCreateEmployee = () => {
     const issues = collectEmployeeCreateIssues(
-      { clinicId: empClinic, firstName: empFn, lastName: empLn, phone: empPhone, salary: empSalary },
+      {
+        userId: "",
+        linkedUserRole: "",
+        clinicId: empClinic,
+        assignedClinicIds: [],
+        firstName: empFn,
+        lastName: empLn,
+        phone: empPhone,
+        salary: empSalary,
+        requireLinkedUser: false,
+      },
       t,
     );
     if (issues.length > 0) {

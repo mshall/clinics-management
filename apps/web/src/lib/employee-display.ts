@@ -57,3 +57,40 @@ export function formatClinicianDisplayName(input: ClinicianNameFields, language:
   }
   return input.clinicianName?.trim() || "—";
 }
+
+/** Mirrors server `jobTitleForRole` in clinic-staff-employee.ts */
+export function jobTitleForRole(role: string): string {
+  switch (role.toUpperCase()) {
+    case "PHYSICIAN":
+      return "Physician";
+    case "NURSE":
+      return "Nurse";
+    case "RECEPTIONIST":
+      return "Receptionist";
+    case "CLINIC_ASSISTANT":
+      return "Clinic Assistant";
+    case "BRANCH_MANAGER":
+      return "Branch Manager";
+    case "CLINIC_ADMIN":
+      return "Clinic Administrator";
+    case "GROUP_ADMIN":
+      return "Group Administrator";
+    case "GROUP_SUPERVISOR":
+      return "Group Supervisor";
+    case "CALL_CENTER":
+      return "Call Center";
+    case "HR_OFFICER":
+      return "HR Officer";
+    case "FINANCE_OFFICER":
+      return "Finance Officer";
+    default:
+      return "Staff";
+  }
+}
+
+export function splitDisplayName(displayName: string): { firstNameEn: string; lastNameEn: string } {
+  const parts = displayName.trim().split(/\s+/);
+  const firstNameEn = parts[0] ?? displayName;
+  const lastNameEn = parts.slice(1).join(" ") || "Staff";
+  return { firstNameEn, lastNameEn };
+}

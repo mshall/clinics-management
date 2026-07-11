@@ -58,6 +58,15 @@ enum EmploymentType {
   LOCUM
 }
 
+enum EmployeeRecordStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum EmployeeSeparationReason {
+  RESIGNATION
+}
+
 enum LeaveType {
   ANNUAL
   SICK
@@ -464,6 +473,9 @@ model Employee {
   employmentType    EmploymentType
   hireDate          DateTime
   salaryBase        Decimal         @db.Decimal(14, 2)
+  recordStatus      EmployeeRecordStatus      @default(ACTIVE)
+  resignationDate   DateTime?                 @db.Date
+  separationReason  EmployeeSeparationReason?
   userId            String?         @unique
   user              User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   idDocRelativePath String?
@@ -471,12 +483,28 @@ model Employee {
   idDocMimeType     String?
   attendances       Attendance[]
   leaveRequests     LeaveRequest[]
+  employmentPeriods EmployeeEmploymentPeriod[]
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
   @@unique([tenantId, employeeNumber])
   @@index([tenantId])
   @@index([clinicId])
+  @@index([recordStatus])
+}
+
+model EmployeeEmploymentPeriod {
+  id               String                    @id @default(cuid())
+  employeeId       String
+  employee         Employee                  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  startDate        DateTime                  @db.Date
+  endDate          DateTime?                 @db.Date
+  separationReason EmployeeSeparationReason?
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+
+  @@index([employeeId])
+  @@index([employeeId, startDate])
 }
 
 model Attendance {

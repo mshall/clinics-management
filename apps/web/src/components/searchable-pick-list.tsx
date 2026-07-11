@@ -337,11 +337,9 @@ export function SearchablePickList({
           spellCheck={false}
           enterKeyHint="search"
           inputMode="text"
-          readOnly={!open && hasSelection}
           className={cn(
             "h-11 touch-manipulation pe-9",
             invalid && "border-destructive ring-1 ring-destructive",
-            !open && hasSelection && "text-foreground",
           )}
           placeholder={open ? searchPlaceholder : placeholder}
           value={open ? q : (displayText ?? "")}
@@ -368,6 +366,13 @@ export function SearchablePickList({
           role="combobox"
           aria-expanded={open}
           onKeyDown={(e) => {
+            if (!open && hasSelection && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+              openForSearch();
+              setQ(e.key);
+              onSearchQueryChange?.(e.key);
+              e.preventDefault();
+              return;
+            }
             if (e.key === "Escape") {
               e.stopPropagation();
               closeWithoutPick();

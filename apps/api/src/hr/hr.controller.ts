@@ -23,6 +23,9 @@ import { CreateLeaveRequestDto } from "./dto/create-leave-request.dto";
 import { AttendanceDto } from "./dto/attendance.dto";
 import { EmployeeDto } from "./dto/employee.dto";
 import { LeaveRequestDto } from "./dto/leave-request.dto";
+import { UnlinkedUserDto } from "./dto/unlinked-user.dto";
+import { DeactivateEmployeeDto } from "./dto/deactivate-employee.dto";
+import { ReactivateEmployeeDto } from "./dto/reactivate-employee.dto";
 import { UpdateEmployeeDto } from "./dto/update-employee.dto";
 import { HrService } from "./hr.service";
 
@@ -60,9 +63,17 @@ export class HrController {
     @Query("nameFilter") nameFilter?: string,
     @Query("clinicFilter") clinicFilter?: string,
     @Query("sortBy") sortBy?: string,
-    @Query("sortOrder") sortOrder?: string
+    @Query("sortOrder") sortOrder?: string,
+    @Query("recordStatus") recordStatus?: string
   ) {
-    return this.hr.listEmployees(requireTenantId(user), user, page, pageSize, search, clinicId, nameFilter, clinicFilter, sortBy, sortOrder);
+    return this.hr.listEmployees(requireTenantId(user), user, page, pageSize, search, clinicId, nameFilter, clinicFilter, sortBy, sortOrder, recordStatus);
+  }
+
+  @Get("unlinked-users")
+  @ApiOperation({ summary: "List organization login accounts not yet linked to an employee" })
+  @ApiOkResponse({ type: [UnlinkedUserDto] })
+  listUnlinkedUsers(@CurrentUser() user: JwtUser, @Query("search") search?: string) {
+    return this.hr.listUnlinkedUsers(requireTenantId(user), user, search);
   }
 
   @Get("employees/:id/avatar")
@@ -112,6 +123,28 @@ export class HrController {
   @ApiOkResponse({ description: "{ ok: true, id }" })
   removeEmployee(@CurrentUser() user: JwtUser, @Param("id") id: string) {
     return this.hr.deleteEmployee(requireTenantId(user), id, user);
+  }
+
+  @Post("employees/:id/deactivate")
+  @ApiOperation({ summary: "Deactivate employee (resignation)" })
+  @ApiOkResponse({ type: EmployeeDto })
+  deactivateEmployee(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Body() body: DeactivateEmployeeDto,
+  ) {
+    return this.hr.deactivateEmployee(requireTenantId(user), id, body, user);
+  }
+
+  @Post("employees/:id/reactivate")
+  @ApiOperation({ summary: "Reactivate a previously deactivated employee" })
+  @ApiOkResponse({ type: EmployeeDto })
+  reactivateEmployee(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Body() body: ReactivateEmployeeDto,
+  ) {
+    return this.hr.reactivateEmployee(requireTenantId(user), id, body, user);
   }
 
   @Post("employees/:id/id-document")

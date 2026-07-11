@@ -92,6 +92,13 @@ export interface RevenueEntryDto {
   status: string;
 }
 
+export interface EmployeeEmploymentPeriodDto {
+  id: string;
+  startDate: string;
+  endDate: string | null;
+  separationReason: string | null;
+}
+
 export interface EmployeeDto {
   id: string;
   clinicId: string;
@@ -112,7 +119,12 @@ export interface EmployeeDto {
   userId: string | null;
   linkedUserDisplayName?: string | null;
   linkedUserRole?: string | null;
+  linkedUserClinicIds?: string[];
   hasUserAvatar?: boolean;
+  recordStatus: "ACTIVE" | "INACTIVE";
+  resignationDate: string | null;
+  separationReason: string | null;
+  employmentPeriods: EmployeeEmploymentPeriodDto[];
 }
 
 export interface AttendanceDto {
