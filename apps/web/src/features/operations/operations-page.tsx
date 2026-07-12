@@ -838,204 +838,238 @@ export function OperationsPage() {
       <ValidationIssuesDialog {...editValidation.dialogProps} />
       <Dialog open={editOp != null} onOpenChange={(open) => !open && closeEditDialog()}>
         <DialogContent
-          className={`max-h-[90vh] overflow-y-auto ${editIsScheduled ? "max-w-2xl" : "max-w-lg"}`}
+          className="flex w-[min(100%-2rem,48rem)] max-h-[min(90dvh,40rem)] max-w-3xl flex-col gap-0 overflow-hidden p-0 sm:rounded-lg"
           aria-describedby={undefined}
         >
-          <DialogHeader>
+          <DialogHeader className="shrink-0 space-y-1 border-b border-border px-4 py-4 pe-14 sm:px-6">
             <DialogTitle>
               {editOp?.status === "COMPLETED"
                 ? t("operations.editCompletedTitle", "Edit completed operation")
                 : t("operations.editTitle", "Edit operation")}
             </DialogTitle>
+            {editOp?.status === "COMPLETED" ? (
+              <p className="text-sm font-normal text-muted-foreground">
+                {t(
+                  "operations.editCompletedHint",
+                  "Administrator correction — you can update details and re-assign the performing doctor. Linked revenue is updated automatically.",
+                )}
+              </p>
+            ) : null}
           </DialogHeader>
           {editOp ? (
-            <div className="space-y-4">
-              {editOp.status === "COMPLETED" ? (
-                <p className="text-sm text-muted-foreground">
-                  {t(
-                    "operations.editCompletedHint",
-                    "Administrator correction — you can update details and re-assign the performing doctor. Linked revenue is updated automatically.",
-                  )}
-                </p>
-              ) : null}
-              {editIsScheduled && editOpDetailPending ? (
-                <p className="text-sm text-muted-foreground">{t("common.loading", "Loading…")}</p>
-              ) : null}
-              <div className="space-y-1">
-                <Label htmlFor="edit-op-date" required>{t("operations.operationDate", "Operation date")}</Label>
-                <DatetimeLocalField id="edit-op-date" value={editOperationDate} onChange={setEditOperationDate} />
-              </div>
-              {clinics.length > 1 ? (
-                <div className="space-y-1">
-                  <Label htmlFor="edit-op-clinic">{t("operations.clinic", "Clinic")}</Label>
-                  <select
-                    id="edit-op-clinic"
-                    className={nativeSelectClassName}
-                    value={editClinicId}
-                    onChange={(e) => {
-                      setEditClinicId(e.target.value);
-                      setEditClinicianId("");
-                      setEditFeeCurrency(resolveClinicCurrencyCode(clinics, e.target.value));
-                    }}
-                  >
-                    {clinics.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {formatClinicName(c, i18n.language)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : null}
-              <div className="space-y-1">
-                <Label required>{t("operations.patient", "Patient")}</Label>
-                <SearchablePickList
-                  items={editPatientItems}
-                  value={editPatientId}
-                  selectedItem={editPatientSelectedItem}
-                  onValueChange={setEditPatientId}
-                  onSearchQueryChange={editPatientPickSearch.setSearch}
-                  onOpen={editPatientPickSearch.resetSearch}
-                  searchPlaceholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
-                  placeholder={t("operations.selectPatient", "Select patient")}
-                  emptyMessage={
-                    editPatientsPending ? t("common.loading") : t("encounters.noPatientsMatch", "No patients match.")
-                  }
-                  localFilter={false}
-                  minSearchLength={1}
-                  idleMessage={t("encounters.patientSearchIdle", "Start typing to show matching patients.")}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label required>{t("operations.doctor", "Performing doctor")}</Label>
-                <SearchablePickList
-                  items={editPhysicianItems}
-                  value={editClinicianId}
-                  selectedItem={editPhysicianSelectedItem}
-                  onValueChange={setEditClinicianId}
-                  onSearchQueryChange={editDoctorPickSearch.setSearch}
-                  onOpen={editDoctorPickSearch.resetSearch}
-                  searchPlaceholder={t("appointments.filterPhysician", "Type physician name…")}
-                  placeholder={t("operations.selectDoctor", "Select doctor")}
-                  emptyMessage={
-                    editPhysiciansFetching && editPhysicianItems.length === 0
-                      ? t("common.loading")
-                      : t("operations.noDoctors", "No physicians found.")
-                  }
-                  localFilter={false}
-                  minSearchLength={0}
-                  idleMessage={t("operations.doctorSearchIdle", "Type a name or pick from the list.")}
-                />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <Label htmlFor="edit-op-total" required>
-                    {t("operations.totalCost", "Total cost ({{currency}})", { currency: editFeeCurrency })}
-                  </Label>
-                  <Input
-                    id="edit-op-total"
-                    className="ltr-nums"
-                    type="text"
-                    inputMode="decimal"
-                    value={editTotalCost}
-                    onChange={(e) => setEditTotalCost(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="edit-op-down">
-                    {t("operations.downPayment", "Down payment ({{currency}})", { currency: editFeeCurrency })}
-                  </Label>
-                  <Input
-                    id="edit-op-down"
-                    className="ltr-nums"
-                    type="text"
-                    inputMode="decimal"
-                    value={editDownPayment}
-                    onChange={(e) => setEditDownPayment(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <Label htmlFor="edit-op-fee-currency">{t("operations.paymentCurrency", "Payment currency")}</Label>
-                  <BaseCurrencySelect
-                    id="edit-op-fee-currency"
-                    value={editFeeCurrency}
-                    onChange={setEditFeeCurrency}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {t(
-                      "operations.paymentCurrencyHint",
-                      "Defaults to the clinic currency ({{currency}}). Choose another if the patient paid in a different currency.",
-                      { currency: editClinicDefaultCurrency },
-                    )}
-                  </p>
-                </div>
-              </div>
-              {(editOp.paidAmount ?? 0) > 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  {t("operations.paidAmount", "Paid ({{currency}})", { currency: editFeeCurrency })}:{" "}
-                  {money(editOp.paidAmount ?? 0, editFeeCurrency)} ·{" "}
-                  {t("operations.balanceDue", "Balance ({{currency}})", { currency: editFeeCurrency })}:{" "}
-                  {money(editOp.balanceDue ?? 0, editFeeCurrency)}
-                </p>
-              ) : null}
-              <div className="space-y-1">
-                <Label htmlFor="edit-op-comments">{t("operations.comments", "Comments")}</Label>
-                <Textarea
-                  id="edit-op-comments"
-                  rows={3}
-                  value={editComments}
-                  onChange={(e) => setEditComments(e.target.value)}
-                  placeholder={t("operations.commentsPlaceholder", "Notes about the procedure…")}
-                />
-              </div>
-              {editIsScheduled && !editOpDetailPending ? (
-                <>
-                  {editExistingAttachments.length > 0 ? (
-                    <div className="space-y-2 rounded-lg border border-border p-3">
-                      <p className="text-sm font-medium">{t("operations.existingDocuments", "Saved documents")}</p>
-                      <ul className="space-y-1 text-sm text-muted-foreground">
-                        {editExistingAttachments.map((doc) => (
-                          <li key={doc.id}>{doc.description || doc.originalFileName}</li>
-                        ))}
-                      </ul>
+            <>
+              <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
+                {editIsScheduled && editOpDetailPending ? (
+                  <p className="text-sm text-muted-foreground">{t("common.loading", "Loading…")}</p>
+                ) : null}
+
+                <fieldset className="space-y-3 rounded-lg border border-border p-3 sm:p-4">
+                  <legend className="px-1 text-sm font-medium">{t("operations.sectionWhen", "When & where")}</legend>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="edit-op-date" required>
+                        {t("operations.operationDate", "Operation date")}
+                      </Label>
+                      <DatetimeLocalField id="edit-op-date" value={editOperationDate} onChange={setEditOperationDate} />
                     </div>
-                  ) : null}
-                  <fieldset className="space-y-3 rounded-lg border border-border p-4">
-                    <legend className="px-1 text-sm font-medium">{t("patients.attachDocuments", "Documents")}</legend>
-                    <PendingDocumentAttachments
-                      rows={editDocRows}
-                      onChange={(next) => {
-                        setEditDocRows(next);
-                        if (editDocInvalidRowIds.size > 0) setEditDocInvalidRowIds(new Set());
-                      }}
-                      invalidRowIds={editDocInvalidRowIds.size > 0 ? editDocInvalidRowIds : undefined}
-                    />
-                  </fieldset>
-                  <fieldset className="space-y-3 rounded-lg border border-border p-4">
-                    <legend className="px-1 text-sm font-medium">{t("encounters.medications")}</legend>
-                    {editHadExistingPrescription && editMedTab === "prescription" && !editPrescriptionFile ? (
-                      <p className="text-xs text-muted-foreground">
-                        {t(
-                          "operations.existingPrescriptionHint",
-                          "A prescription is already on file. Upload a new file to replace it.",
-                        )}
-                      </p>
+                    {clinics.length > 1 ? (
+                      <div className="space-y-1">
+                        <Label htmlFor="edit-op-clinic">{t("operations.clinic", "Clinic")}</Label>
+                        <select
+                          id="edit-op-clinic"
+                          className={nativeSelectClassName}
+                          value={editClinicId}
+                          onChange={(e) => {
+                            setEditClinicId(e.target.value);
+                            setEditClinicianId("");
+                            setEditFeeCurrency(resolveClinicCurrencyCode(clinics, e.target.value));
+                          }}
+                        >
+                          {clinics.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {formatClinicName(c, i18n.language)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     ) : null}
-                    <MedicationsPrescriptionDraftPanel
-                      medTab={editMedTab}
-                      onMedTabChange={setEditMedTab}
-                      medications={editMedications}
-                      onMedicationsChange={setEditMedications}
-                      prescriptionFile={editPrescriptionFile}
-                      onPrescriptionFileChange={setEditPrescriptionFile}
-                      generatedPrescriptionFile={editGeneratedPrescriptionFile}
-                      onGeneratedPrescriptionFileChange={setEditGeneratedPrescriptionFile}
-                      prescriptionContext={editPrescriptionContext}
+                  </div>
+                </fieldset>
+
+                <fieldset className="space-y-3 rounded-lg border border-border p-3 sm:p-4">
+                  <legend className="px-1 text-sm font-medium">{t("operations.sectionPeople", "Patient & doctor")}</legend>
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <Label required>{t("operations.patient", "Patient")}</Label>
+                      <p className="text-xs text-muted-foreground">
+                        {t("encounters.selectPatientHint", "Search by name or MRN, then choose a row.")}
+                      </p>
+                      <SearchablePickList
+                        items={editPatientItems}
+                        value={editPatientId}
+                        selectedItem={editPatientSelectedItem}
+                        onValueChange={setEditPatientId}
+                        onSearchQueryChange={editPatientPickSearch.setSearch}
+                        onOpen={editPatientPickSearch.resetSearch}
+                        searchPlaceholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
+                        placeholder={t("operations.selectPatient", "Select patient")}
+                        emptyMessage={
+                          editPatientsPending ? t("common.loading") : t("encounters.noPatientsMatch", "No patients match.")
+                        }
+                        localFilter={false}
+                        minSearchLength={1}
+                        idleMessage={t("encounters.patientSearchIdle", "Start typing to show matching patients.")}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label required>{t("operations.doctor", "Performing doctor")}</Label>
+                      <p className="text-xs text-muted-foreground">
+                        {t("operations.doctorHint", "Doctors assigned to the selected clinic. Type a name to filter.")}
+                      </p>
+                      <SearchablePickList
+                        items={editPhysicianItems}
+                        value={editClinicianId}
+                        selectedItem={editPhysicianSelectedItem}
+                        onValueChange={setEditClinicianId}
+                        onSearchQueryChange={editDoctorPickSearch.setSearch}
+                        onOpen={editDoctorPickSearch.resetSearch}
+                        searchPlaceholder={t("appointments.filterPhysician", "Type physician name…")}
+                        placeholder={t("operations.selectDoctor", "Select doctor")}
+                        emptyMessage={
+                          editPhysiciansFetching && editPhysicianItems.length === 0
+                            ? t("common.loading")
+                            : t("operations.noDoctors", "No physicians found.")
+                        }
+                        localFilter={false}
+                        minSearchLength={0}
+                        idleMessage={t("operations.doctorSearchIdle", "Type a name or pick from the list.")}
+                      />
+                    </div>
+                  </div>
+                </fieldset>
+
+                <fieldset className="space-y-3 rounded-lg border border-border p-3 sm:p-4">
+                  <legend className="px-1 text-sm font-medium">{t("operations.sectionPayment", "Cost & payment")}</legend>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="edit-op-total" required>
+                        {t("operations.totalCost", "Total cost ({{currency}})", { currency: editFeeCurrency })}
+                      </Label>
+                      <Input
+                        id="edit-op-total"
+                        className="ltr-nums bg-background"
+                        type="text"
+                        inputMode="decimal"
+                        autoComplete="off"
+                        value={editTotalCost}
+                        onChange={(e) => setEditTotalCost(e.target.value)}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="edit-op-down">
+                        {t("operations.downPayment", "Down payment ({{currency}})", { currency: editFeeCurrency })}
+                      </Label>
+                      <Input
+                        id="edit-op-down"
+                        className="ltr-nums bg-background"
+                        type="text"
+                        inputMode="decimal"
+                        autoComplete="off"
+                        value={editDownPayment}
+                        onChange={(e) => setEditDownPayment(e.target.value)}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-op-fee-currency">{t("operations.paymentCurrency", "Payment currency")}</Label>
+                    <BaseCurrencySelect
+                      id="edit-op-fee-currency"
+                      value={editFeeCurrency}
+                      onChange={setEditFeeCurrency}
                     />
-                  </fieldset>
-                </>
-              ) : null}
-              {editFormErr ? <p className="text-sm text-destructive">{editFormErr}</p> : null}
-              <div className="flex justify-end gap-2">
+                    <p className="text-xs text-muted-foreground">
+                      {t(
+                        "operations.paymentCurrencyHint",
+                        "Defaults to the clinic currency ({{currency}}). Choose another if the patient paid in a different currency.",
+                        { currency: editClinicDefaultCurrency },
+                      )}
+                    </p>
+                  </div>
+                  {(editOp.paidAmount ?? 0) > 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      {t("operations.paidAmount", "Paid ({{currency}})", { currency: editFeeCurrency })}:{" "}
+                      {money(editOp.paidAmount ?? 0, editFeeCurrency)} ·{" "}
+                      {t("operations.balanceDue", "Balance ({{currency}})", { currency: editFeeCurrency })}:{" "}
+                      {money(editOp.balanceDue ?? 0, editFeeCurrency)}
+                    </p>
+                  ) : null}
+                </fieldset>
+
+                <fieldset className="space-y-3 rounded-lg border border-border p-3 sm:p-4">
+                  <legend className="px-1 text-sm font-medium">{t("operations.comments", "Comments")}</legend>
+                  <Textarea
+                    id="edit-op-comments"
+                    className="bg-background"
+                    rows={3}
+                    value={editComments}
+                    onChange={(e) => setEditComments(e.target.value)}
+                    placeholder={t("operations.commentsPlaceholder", "Notes about the procedure…")}
+                  />
+                </fieldset>
+
+                {editIsScheduled && !editOpDetailPending ? (
+                  <>
+                    {editExistingAttachments.length > 0 ? (
+                      <div className="space-y-2 rounded-lg border border-border p-3 sm:p-4">
+                        <p className="text-sm font-medium">{t("operations.existingDocuments", "Saved documents")}</p>
+                        <ul className="space-y-1 text-sm text-muted-foreground">
+                          {editExistingAttachments.map((doc) => (
+                            <li key={doc.id}>{doc.description || doc.originalFileName}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    <fieldset className="space-y-3 rounded-lg border border-border p-3 sm:p-4">
+                      <legend className="px-1 text-sm font-medium">{t("patients.attachDocuments", "Documents")}</legend>
+                      <PendingDocumentAttachments
+                        rows={editDocRows}
+                        onChange={(next) => {
+                          setEditDocRows(next);
+                          if (editDocInvalidRowIds.size > 0) setEditDocInvalidRowIds(new Set());
+                        }}
+                        invalidRowIds={editDocInvalidRowIds.size > 0 ? editDocInvalidRowIds : undefined}
+                      />
+                    </fieldset>
+                    <fieldset className="space-y-3 rounded-lg border border-border p-3 sm:p-4">
+                      <legend className="px-1 text-sm font-medium">{t("encounters.medications")}</legend>
+                      {editHadExistingPrescription && editMedTab === "prescription" && !editPrescriptionFile ? (
+                        <p className="text-xs text-muted-foreground">
+                          {t(
+                            "operations.existingPrescriptionHint",
+                            "A prescription is already on file. Upload a new file to replace it.",
+                          )}
+                        </p>
+                      ) : null}
+                      <MedicationsPrescriptionDraftPanel
+                        medTab={editMedTab}
+                        onMedTabChange={setEditMedTab}
+                        medications={editMedications}
+                        onMedicationsChange={setEditMedications}
+                        prescriptionFile={editPrescriptionFile}
+                        onPrescriptionFileChange={setEditPrescriptionFile}
+                        generatedPrescriptionFile={editGeneratedPrescriptionFile}
+                        onGeneratedPrescriptionFileChange={setEditGeneratedPrescriptionFile}
+                        prescriptionContext={editPrescriptionContext}
+                      />
+                    </fieldset>
+                  </>
+                ) : null}
+
+                {editFormErr ? <p className="text-sm text-destructive">{editFormErr}</p> : null}
+              </div>
+              <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6">
                 <Button type="button" variant="outline" onClick={closeEditDialog} disabled={editMut.isPending}>
                   {t("common.cancel", "Cancel")}
                 </Button>
@@ -1055,7 +1089,7 @@ export function OperationsPage() {
                   {t("operations.saveChanges", "Save changes")}
                 </Button>
               </div>
-            </div>
+            </>
           ) : null}
         </DialogContent>
       </Dialog>
