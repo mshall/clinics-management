@@ -241,6 +241,13 @@ Branches are children of HQ (`parentClinicId` → HQ).
 | Dr Ahmed Shall — CMC physician / scheduling | `physician.cmc@drahmedshall.com` |
 | Dr Ahmed Shall — Mohandessin branch manager | `branchmgr.moh@drahmedshall.com` |
 | Dr Ahmed Shall — Dokki clinic admin | `clinicadmin.dok@drahmedshall.com` |
+| Clinic default currency on fees | `admin@drahmedshall.com` → **Admin → Clinics** → edit clinic → **Default currency** (EGP for Dr Ahmed) |
+| Operation payment currency override | `receptionist@kiorly.com` → **Operations** → create/edit → **Payment currency** |
+| Expense in clinic currency | `finance@kiorly.com` → **Expenses** → amount label shows clinic currency; optional currency selector |
+| Edit scheduled operation (full form) | `receptionist@kiorly.com` → **Operations** → Edit on scheduled row |
+| HR deactivate employee | `hr@drahmedshall.com` → **HR** → employee → Deactivate |
+| HR re-hire employee | `hr@drahmedshall.com` → separated employee → Re-hire (set date) |
+| Admin-only employee delete | `hr@drahmedshall.com` cannot delete; `admin@drahmedshall.com` or `clinicadmin.*` can |
 
 ---
 

@@ -4,10 +4,10 @@
 | Field | Value |
 |---|---|
 | **Document Title** | Clinic Management System – Product Requirements Document |
-| **Version** | 1.4 |
-| **Status** | Living document (aligned with `main` as of June 2026) |
+| **Version** | 1.5 |
+| **Status** | Living document (aligned with `main` as of July 2026) |
 | **Author** | Product / Engineering |
-| **Last Updated** | June 2026 |
+| **Last Updated** | July 2026 |
 | **Related Documents** | [`Clinic_Management_System_RFC.md`](./Clinic_Management_System_RFC.md), [`AWS_Cloud_Deployment_Guide.md`](./AWS_Cloud_Deployment_Guide.md), [`Test_Data_Users.md`](./Test_Data_Users.md) |
 
 ---
@@ -109,11 +109,12 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 - Patient profile: vitals history, encounters, **clinical document sections** (labs, radiology, prescriptions, other) with **in-app viewer** (pinch zoom, swipe/gallery navigation), **crop** (confirm before replace), and **delete** (confirm dialog); national ID / SSN / passport scan surfaced in **Other documents**.
 - Encounters: SOAP, vitals, ICD-10 diagnoses, medications, lab/radiology/Rx uploads, generate prescription image, finalize workflow.
 - Appointments: schedule, status lifecycle, physician/clinic scope.
-- Surgical **operations** module (schedule, balance, documents, revenue linkage).
+- Surgical **operations** module (schedule, balance, documents, medications, revenue linkage, **full scheduled edit** parity with create form).
 
 **Financial & HR**
 - Expense tracking with proof uploads; revenue ledger (visit fees, manual entries, operations); reports/monthly series.
-- HR: employees, attendance, leave; employee ID document upload.
+- **Multi-currency fees** — clinic `defaultCurrency` (EGP, USD, OMR, SAR, AED); per-operation `feeCurrency`; expense currency defaults to clinic with optional override; UI amount labels reflect active currency.
+- HR: employees, attendance, leave; employee ID document upload; **deactivate / re-hire** with employment period history; **permanent delete** restricted to admin roles (not HR officer alone).
 
 **Administration**
 - Organization settings, clinics (parent/branch), users, feature flags, audit log.
@@ -166,7 +167,7 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 
 - **Appointment statuses:** Scheduled (default when booking), Confirmed, Cancelled, Completed. The appointment record is read-only after Completed.
 - **Encounter link:** An optional booked appointment (same patient) may be attached when creating an encounter; linking sets the appointment to **Confirmed**; **finalizing** the encounter sets it to **Completed**.
-- **Visit fee** is set on **encounter** creation (tenant default in administration); amounts greater than zero create a `VISIT_FEE` revenue ledger line. Appointments do not store a fee.
+- **Visit fee** is set on **encounter** creation (tenant default in administration; **display and revenue use the clinic’s `defaultCurrency`**); amounts greater than zero create a `VISIT_FEE` revenue ledger line. Appointments do not store a fee.
 - **Physician experience:** The web app exposes **Appointments** in the main navigation for physicians. List and detail APIs return only appointments where the JWT user is the **attending clinician**; physicians may only **book** appointments as themselves. The appointments ledger table highlights **clinic** (localized name) for at-a-glance branch context.
 - **Clinic administrator:** Appointment lists are limited to clinics in the administrator’s **scope**; detail and mutations outside that scope are denied.
 
@@ -215,16 +216,29 @@ See [`Test_Data_Users.md`](./Test_Data_Users.md) for demo logins and QA scenario
 ### 6.1e Operations (current build)
 
 - Schedule **operations** (procedures) per clinic with patient, clinician, date, cost, down payment, and balance.
-- Status workflow posts or voids linked **revenue** when completed or cancelled.
-- Attach documents and medications per operation (similar patterns to encounters).
+- **`feeCurrency`** per operation (EGP, USD, OMR, SAR, AED) — defaults to the clinic’s **`defaultCurrency`**; revenue posts in the operation currency.
+- Status workflow posts or voids linked **revenue** when completed or cancelled; completion dialog collects remaining balance in the operation currency.
+- Attach documents and medications per operation (same patterns as encounters).
+- **Scheduled edit parity:** edit dialog matches create layout (fieldset sections, two-column grids on desktop, responsive scroll on mobile); `GET /operations/:id` loads clinical detail; `POST /operations/:id/reset-clinical` replaces meds/docs on save.
+- **Completed operation correction:** group/clinic admins may edit fees, patient, clinician, and comments; linked revenue updates automatically.
 - Physicians see only operations where they are the assigned clinician; clinic-scoped roles see assigned clinics.
 
-### 6.1f Platform tenancy (current build)
+### 6.1f Platform tenancy & clinic currency (current build)
 
 - **`PLATFORM_SUPER_ADMIN`** user (`tenantId: null`) uses the **Platform** tab only: create/list/edit organizations, clinics under any tenant, users, feature flags.
 - Each **organization** has independent base currency, locale, default visit fee, clinics, and user directory.
+- Each **clinic** stores **`defaultCurrency`** (one of EGP, USD, OMR, SAR, AED) used for visit fees, expense defaults, and operation defaults unless overridden per operation.
 - Demo seed includes multiple tenants (Kiorly demo, Dr Ahmed Shall Group, shell orgs) on one database — see [`Test_Data_Users.md`](./Test_Data_Users.md).
 - Production deployment: single CloudFront URL, App Runner API, RDS — see [`AWS_Cloud_Deployment_Guide.md`](./AWS_Cloud_Deployment_Guide.md).
+
+### 6.1g HR employee lifecycle (current build)
+
+- **Employee record status:** `ACTIVE` or `SEPARATED` with optional resignation date and separation reason.
+- **Employment periods:** each hire and separation tracked in `EmployeeEmploymentPeriod` (start/end dates, reason); visible on employee detail.
+- **Deactivate:** HR officer and admin roles end the current period and set record to separated (does not delete the row).
+- **Re-hire:** HR officer and admin roles open a dialog with **re-hire date**, start a new employment period, and return the employee to active.
+- **Permanent delete:** only **Group admin**, **Branch manager**, and **Clinic admin** (API `EMPLOYEE_DELETE_ROLES`); HR officer may manage lifecycle but not hard-delete records.
+- New employee onboarding remains under **Administration** for org/clinic admins; HR module is the operational hub for directory, attendance, and leave.
 
 ### 6.2 Multi-Branch Support
 
@@ -244,7 +258,7 @@ Expense categories (extensible):
 - **Utilities** – electricity, water, internet, telecom, rent.
 - **Other** – marketing, maintenance, professional services.
 
-Each expense entry records: branch, category, sub-category, vendor, amount, currency, tax, payment method, date, supporting document (receipt/invoice upload), entered-by user.
+Each expense entry records: branch, category, sub-category, vendor, amount, **currency** (defaults to clinic `defaultCurrency`; EGP, USD, OMR, SAR, AED), tax, payment method, date, supporting document (receipt/invoice upload), entered-by user.
 
 Reporting: monthly/quarterly/annual expense by branch, by category, group consolidation, year-over-year comparison, expense vs. revenue.
 
@@ -321,6 +335,7 @@ When adding a clinic (parent or branch), the following fields are captured:
 | License Number | Text | Yes | Regulatory clinic license |
 | Working Hours | Schedule | Yes | Per day, supports breaks |
 | Default Language | Enum (EN/AR) | Yes | |
+| Default Currency | Enum (EGP/USD/OMR/SAR/AED) | Yes | Drives visit fees, expense defaults, and operation defaults for this clinic |
 
 ### 6.8 Roles & Permissions
 
@@ -362,7 +377,10 @@ Authorization model:
 - *As a Group Admin*, I want to onboard a new sub-clinic in one form so that branches can go live quickly.
 - *As a Physician*, I want to see the patient's full history from any branch so that my decisions are informed.
 - *As a Physician*, I want drug–allergy alerts at prescription time so that I avoid harm.
-- *As a Branch Manager*, I want to see this month's expenses by category so that I can control costs.
+- *As a Branch Manager*, I want each clinic’s default currency on fees and expenses so that financial reports match how we collect payment locally.
+- *As a Receptionist*, I want to record an operation in the currency the patient actually paid (e.g. AED) even when the clinic default is EGP.
+- *As an HR Officer*, I want to re-hire a returning employee with a new start date without creating a duplicate record.
+- *As a Group Admin*, I want to permanently remove test employee records while HR can only deactivate them.
 - *As an HR Officer*, I want automatic alerts before a clinician's medical license expires so that we stay compliant.
 - *As an Arabic-speaking Receptionist*, I want the entire UI in RTL Arabic so that I can work fluently.
 - *As a Finance Officer*, I want to consolidate expenses across all branches so that I can report to ownership.
@@ -406,7 +424,9 @@ Authorization model:
 
 ## 12. Release Plan (Phased)
 
-### 12.1 Delivered on `main` (June 2026)
+### 12.1 Delivered on `main`
+
+#### June 2026 baseline
 
 | Area | Status |
 |---|---|
@@ -422,7 +442,19 @@ Authorization model:
 | Bilingual EN/AR web SPA | Shipped |
 | AWS deploy (App Runner + RDS + CloudFront + S3 uploads) | Shipped |
 
-### 12.2 Roadmap
+#### July 2026 increments
+
+| Area | Status |
+|---|---|
+| Clinic **`defaultCurrency`** (EGP, USD, OMR, SAR, AED) on create/edit | Shipped |
+| Operation **`feeCurrency`** override; revenue in operation currency | Shipped |
+| Expense currency defaults to clinic; optional override on create | Shipped |
+| Dynamic currency labels and `Intl` formatting on encounters, operations, expenses | Shipped |
+| Scheduled operation **edit parity** with create (meds, docs, comments, responsive dialog) | Shipped |
+| HR **deactivate / re-hire** with employment periods; admin-only permanent delete | Shipped |
+| `GET /operations/:id`, `POST /operations/:id/reset-clinical` | Shipped |
+
+### 12.2 Near-term roadmap (engineering backlog)
 
 **Phase 2 – Operational depth**
 - Payroll exports and payslips; biometric attendance hooks.
@@ -435,7 +467,162 @@ Authorization model:
 - Lab and pharmacy integrations; native mobile apps.
 - Per-tenant billing / subscription management.
 
+See [§12.3 Production readiness & recommended feature backlog](#123-production-readiness--recommended-feature-backlog) for the comprehensive feature set to reach a **production-ready, feature-rich** clinic management platform.
+
 See [§13 International Expansion Roadmap](#13-international-expansion-roadmap) for the phased plan to enter new countries (quick wins through full multi-market execution).
+
+### 12.3 Production readiness & recommended feature backlog
+
+This section defines the **target product** for a production-grade, feature-rich clinic management system. Items are grouped by domain and tagged by **priority** for sequencing:
+
+| Tag | Meaning |
+|---|---|
+| **P0** | Required for confident production launch (security, compliance, reliability) |
+| **P1** | High-value differentiators clinics expect from a paid product |
+| **P2** | Competitive parity with regional incumbents |
+| **P3** | Ecosystem scale and enterprise upsell |
+
+#### 12.3.1 Security, compliance & platform hardening
+
+| # | Feature | Priority | Rationale |
+|---|---|---|---|
+| F.1 | **MFA for administrators** (TOTP / email OTP) | P0 | Protect tenant-wide data and platform provisioning |
+| F.2 | **Refresh tokens & session revocation** | P0 | Safer long-lived sessions; forced logout on role change |
+| F.3 | **Rate limiting & abuse protection** (Redis) | P0 | Brute-force login, API scraping, upload floods |
+| F.4 | **PostgreSQL RLS** (defense-in-depth on `tenantId`) | P1 | Extra isolation guarantee for multi-tenant SaaS |
+| F.5 | **Audit log export** (CSV/JSON) + retention policies | P0 | Regulator and customer compliance requests |
+| F.6 | **Patient consent module** (treatment, cross-branch sharing, marketing) | P1 | Required in EU/GCC expansion; versioned consent text |
+| F.7 | **SSO (OIDC / SAML)** for enterprise clinic groups | P1 | Hospital-group IT standard |
+| F.8 | **Break-glass access workflow** with time-bound elevation | P1 | Support without standing super-user access |
+| F.9 | **WAF + bot protection** on CloudFront | P0 | Public SPA/API hardening before real PHI |
+| F.10 | **Automated backup restore drills** + RPO/RTO runbooks | P0 | Prove disaster recovery, not just backup existence |
+
+#### 12.3.2 Clinical depth (EHR excellence)
+
+| # | Feature | Priority | Rationale |
+|---|---|---|---|
+| C.1 | **Structured allergies & adverse reactions** on patient chart | P0 | Safety baseline for prescribing |
+| C.2 | **Drug–drug & drug–allergy interaction alerts** at Rx time | P1 | Clinician trust and liability reduction |
+| C.3 | **Configurable drug catalog** per tenant/country | P1 | Replace free-text meds with searchable formulary |
+| C.4 | **Clinical templates** beyond SOAP (specialty forms) | P1 | Dermatology, dental, physio, pain clinic |
+| C.5 | **Structured lab orders & result ingestion** (manual → HL7 FHIR) | P1 | Close the loop on diagnostics |
+| C.6 | **Problem list & chronic condition registry** | P1 | Longitudinal care across visits |
+| C.7 | **Immunization schedule & vaccine documentation** | P2 | Pediatrics and travel clinics |
+| C.8 | **DICOM / imaging viewer** for radiology attachments | P2 | Replace download-only for imaging |
+| C.9 | **E-prescribing transmission** to pharmacies | P2 | Market-dependent legality |
+| C.10 | **Clinical decision support hooks** (growth charts, pediatric dosing) | P2 | Reduce calculation errors |
+
+#### 12.3.3 Patient access & engagement
+
+| # | Feature | Priority | Rationale |
+|---|---|---|---|
+| P.1 | **Patient portal (web)** — appointments, documents, balances | P1 | Reduce front-desk load; modern expectation |
+| P.2 | **Online booking widget** embeddable on clinic websites | P1 | Acquisition + self-service scheduling |
+| P.3 | **SMS / WhatsApp / email notifications** (reminders, results ready) | P0 | No-show reduction; operational necessity |
+| P.4 | **Two-way messaging** (staff ↔ patient, policy-gated) | P2 | Post-visit follow-up and triage |
+| P.5 | **Waiting room / queue display** with token numbers | P1 | High-volume outpatient markets |
+| P.6 | **Patient satisfaction surveys** after visit finalize | P2 | Quality improvement loop |
+| P.7 | **Family / dependent linking** on one account | P2 | Pediatric and family practice workflows |
+| P.8 | **Native patient mobile app** (iOS / Android) | P3 | Push notifications and loyalty |
+
+#### 12.3.4 Scheduling & operations
+
+| # | Feature | Priority | Rationale |
+|---|---|---|---|
+| O.1 | **Resource scheduling** (rooms, equipment, multiple physicians) | P1 | Beyond single-clinician appointment slots |
+| O.2 | **Recurring appointments & treatment plans** | P1 | Physiotherapy, chronic pain, dialysis-style cadence |
+| O.3 | **Waitlist & automatic slot fill** on cancellation | P2 | Revenue recovery |
+| O.4 | **Branch timezone** per clinic (IANA) | P1 | Multi-city groups (see §13 Phase 0) |
+| O.5 | **Public holiday calendar** warnings on booking | P2 | Reduce scheduling errors |
+| O.6 | **Operation theatre checklist & consent forms** | P2 | Surgical governance |
+| O.7 | **Inventory consumption** linked to operations/encounters | P2 | Cost attribution per procedure |
+
+#### 12.3.5 Financial management & revenue cycle
+
+| # | Feature | Priority | Rationale |
+|---|---|---|---|
+| R.1 | **Patient invoicing & receipt PDF** with clinic letterhead | P0 | Legal and patient-facing documentation |
+| R.2 | **Online payment collection** (visit fee, operation balance) | P1 | Cash-flow acceleration |
+| R.3 | **Payment gateway adapters** (Tap/HyperPay, PayMob, Stripe) | P1 | Regional payment methods |
+| R.4 | **Multi-currency FX reporting** at group level | P1 | Extends current per-clinic currency (shipped) |
+| R.5 | **VAT / tax lines** on revenue and expenses | P1 | GCC and EU compliance |
+| R.6 | **Insurance payer directory & copay rules** | P2 | Insured patient workflows |
+| R.7 | **Claims file generation** (DHA, NPHIES, etc.) | P2 | Market-specific revenue |
+| R.8 | **Accounts receivable aging** (outstanding operation balances dashboard) | P1 | Extends `outstanding-balances` API |
+| R.9 | **Bank reconciliation import** | P2 | Finance officer productivity |
+| R.10 | **Budget vs actual** per branch/category | P2 | Branch manager control |
+| R.11 | **Subscription billing** for SaaS (per branch / per clinician) | P3 | Vendor commercial layer |
+
+#### 12.3.6 HR, payroll & workforce
+
+| # | Feature | Priority | Rationale |
+|---|---|---|---|
+| H.1 | **Payroll run & payslip PDF** with country-specific fields | P1 | Complete the HR → finance loop |
+| H.2 | **Salary expense auto-post** to ledger on payroll lock | P1 | Books stay in sync |
+| H.3 | **Medical license & credential expiry alerts** (T-90/30/7) | P1 | Regulatory compliance |
+| H.4 | **Biometric / geo-fenced attendance** | P2 | Labor law and visa audit trails |
+| H.5 | **Shift scheduling & roster** | P2 | Staff planning beyond leave |
+| H.6 | **Performance review cycles** | P3 | Enterprise HR |
+| H.7 | **Onboarding checklist** (documents, IT access, clinic assignment) | P2 | Reduces admin errors |
+
+*Shipped foundation:* employee directory, attendance, leave, deactivate/re-hire with employment periods, admin-only delete.
+
+#### 12.3.7 Inventory & supplies
+
+| # | Feature | Priority | Rationale |
+|---|---|---|---|
+| I.1 | **Stock catalog** (SKU, unit, reorder level) | P2 | Beyond expense-only materials tracking |
+| I.2 | **Purchase orders & vendor management** | P2 | Procurement workflow |
+| I.3 | **Consumption per encounter/operation** | P2 | True cost per visit |
+| I.4 | **Expiry tracking** (vaccines, consumables) | P2 | Safety and waste reduction |
+| I.5 | **Barcode / QR scanning** on mobile web | P3 | Warehouse and clinic stock counts |
+
+#### 12.3.8 Analytics, reporting & intelligence
+
+| # | Feature | Priority | Rationale |
+|---|---|---|---|
+| A.1 | **Executive dashboard** (P&L, utilization, collection rate) | P1 | Group admin decision support |
+| A.2 | **Physician productivity** (visits, revenue, no-show rate) | P1 | Performance management |
+| A.3 | **Cohort & retention analytics** (new vs returning patients) | P2 | Marketing ROI |
+| A.4 | **Export to Excel / scheduled email reports** | P1 | Finance and ownership reporting |
+| A.5 | **Operational KPI alerts** (revenue drop, expense spike) | P2 | Proactive management |
+| A.6 | **Embedded BI** (Metabase / QuickSight) for enterprise | P3 | Self-serve analytics |
+
+*Shipped foundation:* monthly visit/revenue/patient charts, acquisition channel drill-down, dashboard KPIs.
+
+#### 12.3.9 Integrations & interoperability
+
+| # | Feature | Priority | Rationale |
+|---|---|---|---|
+| X.1 | **HL7 FHIR lab results adapter** | P2 | Structured diagnostics |
+| X.2 | **National health network connectors** (NABIDH, NPHIES) | P2 | Mandated in some GCC markets |
+| X.3 | **Accounting export** (QuickBooks, Xero, local ERP) | P2 | Finance stack fit |
+| X.4 | **Calendar sync** (Google / Outlook) for physicians | P2 | Reduce double-booking |
+| X.5 | **Telemedicine provider integration** | P2 | Video visit without building RTC |
+| X.6 | **Bulk patient import / migration toolkit** | P1 | Onboarding from Excel/legacy EHR |
+| X.7 | **Webhook & REST API keys** for partner integrations | P2 | Ecosystem extensibility |
+
+#### 12.3.10 Experience, accessibility & mobile
+
+| # | Feature | Priority | Rationale |
+|---|---|---|---|
+| E.1 | **Staff native mobile app** (encounters, schedule, vitals) | P2 | Bedside and home-visit workflows |
+| E.2 | **Offline-tolerant mode** (queued writes) | P3 | Unreliable connectivity markets |
+| E.3 | **WCAG 2.1 AA audit & remediation** | P1 | Accessibility compliance |
+| E.4 | **Third language packs** (French for Maghreb, etc.) | P2 | International expansion (§13) |
+| E.5 | **White-label branding** (logo, colors, custom domain) | P3 | Enterprise clinic groups |
+| E.6 | **In-app help & guided onboarding tours** | P1 | Adoption and support cost reduction |
+
+#### 12.3.11 Suggested implementation waves
+
+| Wave | Horizon | Focus | Exit criteria |
+|---|---|---|---|
+| **Wave 1 — Production gate** | 0–4 months | F.1–F.3, F.5, F.9–F.10, P.3, R.1, C.1, E.3, E.6 | Security review passed; notifications live; invoicing PDF; MFA |
+| **Wave 2 — Clinic operations** | 4–10 months | P.1–P.2, P.5, O.1–O.2, R.2–R.5, R.8, H.1–H.3, A.1–A.2, X.6 | Portal + payments pilot; payroll; executive dashboard |
+| **Wave 3 — Clinical & insurance** | 10–18 months | C.2–C.6, R.6–R.7, X.1–X.2, I.1–I.3 | FHIR lab pilot; one insurance connector; formulary |
+| **Wave 4 — Scale & enterprise** | 18–30 months | F.4, F.7, E.1, E.5, R.11, X.3–X.5, A.6 | SSO; white-label; subscription billing; mobile staff app |
+
+This backlog complements [§13 International Expansion Roadmap](#13-international-expansion-roadmap) (country packs and connectors) and should be prioritized per active sales market.
 
 ## 13. International Expansion Roadmap
 
@@ -513,7 +700,7 @@ Establishes the legal and operational base to **sell and host** in a first inter
 | # | Feature | Description |
 |---|---|---|
 | A.2.1 | **VAT / GST / sales tax fields** | Tax registration number, rate, and tax line on invoices and expense entries per country pack. |
-| A.2.2 | **Multi-currency reporting** | Group rollup when branches use different currencies; exchange-rate snapshot on revenue entries. |
+| A.2.2 | **Multi-currency reporting** | Group rollup when branches use different currencies; exchange-rate snapshot on revenue entries. *Per-clinic and per-operation currency (EGP, USD, OMR, SAR, AED) is shipped; FX normalization is backlog §12.3 R.4.* |
 | A.2.3 | **Compliant invoice numbering** | Sequential, gapless invoice IDs per branch/country with required legal footer fields. |
 
 #### A.3 Platform mechanics
@@ -670,17 +857,18 @@ flowchart TB
   pB --> pD
 ```
 
-### 13.9 Alignment with §12.2 product roadmap
+### 13.9 Alignment with §12.2–§12.3 product roadmap
 
-| §12.2 item | International roadmap phase |
+| §12.2 / §12.3 item | International roadmap phase |
 |---|---|
-| MFA; refresh tokens; Redis rate limiting | Phase A (A.1.6–A.1.7) |
-| Patient consent workflows; permission matrix | Phase A (A.1.3) |
-| Payroll exports; biometric attendance | Phase D (D.1.1, D.1.3) |
-| Drug interaction engine; structured lab orders; DICOM | Phase C (C.1.3–C.1.4, C.2.4) |
-| Patient portal; telemedicine; insurance claims | Phase B–C (B.1, B.3, C.2.5) |
-| Lab and pharmacy integrations; mobile apps | Phase C–D (C.2, D.2.6) |
-| Per-tenant billing / subscription | Phase D (D.2.2) |
+| MFA; refresh tokens; Redis rate limiting | Phase A (A.1.6–A.1.7); PRD §12.3 F.1–F.3 |
+| Patient consent workflows; permission matrix | Phase A (A.1.3); PRD §12.3 F.6 |
+| Payroll exports; biometric attendance | Phase D (D.1.1, D.1.3); PRD §12.3 H.1, H.4 |
+| Drug interaction engine; structured lab orders; DICOM | Phase C (C.1.3–C.1.4, C.2.4); PRD §12.3 C.2, C.5, C.8 |
+| Patient portal; telemedicine; insurance claims | Phase B–C (B.1, B.3, C.2.5); PRD §12.3 P.1, R.6–R.7 |
+| Lab and pharmacy integrations; mobile apps | Phase C–D (C.2, D.2.6); PRD §12.3 X.1, E.1 |
+| Per-tenant billing / subscription | Phase D (D.2.2); PRD §12.3 R.11 |
+| Multi-currency FX reporting | Phase A (A.2.2); extends shipped clinic/operation currency |
 
 ### 13.10 Risks specific to international expansion
 
@@ -721,5 +909,7 @@ flowchart TB
 - **EHR** – Electronic Health Record.
 - **RBAC** – Role-Based Access Control.
 - **RTL** – Right-To-Left text direction (used for Arabic).
+- **Default currency** – Per-clinic setting (EGP, USD, OMR, SAR, AED) for visit fees, expense defaults, and operation defaults; operations may override with `feeCurrency`.
 - **Country pack** – Configurable bundle of locale, tax, ID validation, holidays, consent text, and clinical code defaults for a target market (see [§13.1](#131-strategic-model)).
+- **Employment period** – A contiguous hire-to-separation interval on an employee record; re-hire starts a new period.
 - **Connector** – Market-specific integration adapter (insurer, lab, payment gateway, messaging, national health network) plugged into the core platform.

@@ -4,16 +4,16 @@
 | Field | Value |
 |---|---|
 | **Document Title** | Clinic Management System – Technical RFC |
-| **Version** | 1.3 |
-| **Status** | Living document (aligned with `main` as of June 2026) |
-| **Related** | [`Clinic_Management_System_PRD.md`](./Clinic_Management_System_PRD.md) v1.4 |
-| **Last Updated** | June 2026 |
+| **Version** | 1.4 |
+| **Status** | Living document (aligned with `main` as of July 2026) |
+| **Related** | [`Clinic_Management_System_PRD.md`](./Clinic_Management_System_PRD.md) v1.5 |
+| **Last Updated** | July 2026 |
 
 ---
 
 ## 1. Overview
 
-This RFC describes the technical architecture and implementation of the Clinic Management System (CMS) defined in the PRD v1.4. The platform is a **multi-tenant SaaS** for clinic groups: one deployed stack serves many organizations (`tenantId`), each with multi-branch clinics, EHR workflows, expenses, HR, and bilingual UI.
+This RFC describes the technical architecture and implementation of the Clinic Management System (CMS) defined in the PRD v1.5. The platform is a **multi-tenant SaaS** for clinic groups: one deployed stack serves many organizations (`tenantId`), each with multi-branch clinics, EHR workflows, expenses, HR, and bilingual UI.
 
 The defining engineering constraints for v1:
 
@@ -344,23 +344,44 @@ POST   /appointments/:id/cancel
 
 #### 6.2.7a OperationsModule *(implemented)*
 
-**Entities:** `Operation`, operation documents, operation medications; links to `RevenueEntry` on completion.
+**Entities:** `Operation` (`feeCurrency`), operation documents, operation medications; links to `RevenueEntry` on completion.
 
 **Endpoints (illustrative):**
 ```
 GET    /operations
+GET    /operations/:id
 GET    /operations/outstanding-balances
 POST   /operations
 PATCH  /operations/:id
 POST   /operations/:id/status
+POST   /operations/:id/reset-clinical
 POST   /operations/:id/documents
 POST   /operations/:id/medications
 GET    /operations/:id/documents/:docId/file
 ```
 
 **Notes:**
-- Completing an operation posts revenue; cancelling voids linked revenue.
+- Completing an operation posts revenue in **`feeCurrency`** (defaults from clinic `defaultCurrency` via `resolveClinicCurrency()`); cancelling voids linked revenue.
+- Scheduled edit loads detail via `GET :id`; save may call `reset-clinical` to replace medications/documents.
+- Web edit dialog uses the same fieldset layout as create (`operations-page.tsx`).
 - Physician scope matches encounters/appointments patterns.
+
+#### 6.2.7b ExpensesModule *(implemented — currency)*
+
+**Notes:**
+- `POST /expenses` accepts optional `currency` (`BASE_CURRENCIES`: EGP, USD, OMR, SAR, AED).
+- When omitted or invalid, `expenses.service` defaults to the target clinic’s `defaultCurrency`.
+- Proof upload via `multipart/form-data`; approval status via `PATCH .../status`.
+
+#### 6.2.7c ClinicsModule — default currency *(implemented)*
+
+- `Clinic.defaultCurrency` validated against `BASE_CURRENCIES` on create/patch.
+- `resolveClinicCurrency(client, tenantId, clinicId)` falls back: clinic → tenant `baseCurrency` → `AED`.
+- Encounters use clinic currency when posting visit-fee revenue.
+
+**Shared constants:** `apps/api/src/common/base-currencies.ts`, `apps/api/src/common/clinic-currency.ts`.
+
+**Web formatting:** `apps/web/src/lib/money-display.ts` (`resolveClinicCurrencyCode`, `formatMoneyAmount`).
 
 #### 6.2.8 ExpensesModule *(roadmap details — module implemented with subset)*
 
@@ -712,6 +733,15 @@ Document ZIP export (`tenant-documents-export.ts`) collects file paths from: pat
 
 **HR employee creation:** `POST /hr/employees` and ID-document upload require an allowed role (`GROUP_ADMIN`, `CLINIC_ADMIN`, `HR_OFFICER`, `BRANCH_MANAGER`). `CLINIC_ADMIN` may only assign employees to clinics in `ClinicAdminScope`.
 
+**HR lifecycle (implemented):**
+```
+POST   /hr/employees/:id/deactivate
+POST   /hr/employees/:id/reactivate
+DELETE /hr/employees/:id          # GROUP_ADMIN, BRANCH_MANAGER, CLINIC_ADMIN only
+```
+- `Employee.recordStatus` (`ACTIVE` | `SEPARATED`) with `EmployeeEmploymentPeriod` rows (start/end, separation reason).
+- `EMPLOYEE_MANAGE_ROLES` vs `EMPLOYEE_DELETE_ROLES` in `hr.service.ts`; web policy in `employee-manage-policy.ts`.
+
 #### 6.2.18 HealthModule
 
 ```
@@ -753,6 +783,7 @@ model Clinic {
   email           String
   licenseNumber   String
   defaultLanguage Locale   @default(en)
+  defaultCurrency String   @default("AED")  // EGP | USD | OMR | SAR | AED
   specialities    ClinicSpeciality[]
   workingHours    ClinicWorkingHours[]
   parent          Clinic?  @relation("ClinicHierarchy", fields: [parentClinicId], references: [id])
