@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CreateActionButton } from "@/components/create-action-button";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import {
   MedicationsPrescriptionDraftPanel,
@@ -283,6 +284,10 @@ export function OperationsPage() {
   const [completeConfirmOp, setCompleteConfirmOp] = useState<OperationDto | null>(null);
   const [completeCollectionAmount, setCompleteCollectionAmount] = useState("");
   const [completeFormErr, setCompleteFormErr] = useState<string | null>(null);
+  const [completePromptOp, setCompletePromptOp] = useState<OperationDto | null>(null);
+  const [cancelConfirmOp, setCancelConfirmOp] = useState<OperationDto | null>(null);
+  const [editCompleteConfirmOpen, setEditCompleteConfirmOpen] = useState(false);
+  const [pendingCompleteAfterSave, setPendingCompleteAfterSave] = useState(false);
   const [editOp, setEditOp] = useState<OperationDto | null>(null);
   const [editPatientId, setEditPatientId] = useState("");
   const [editClinicianId, setEditClinicianId] = useState("");
@@ -466,6 +471,95 @@ export function OperationsPage() {
     setCompleteFormErr(null);
   };
 
+  const collectEditValidation = () => {
+    if (!editOp) return { issues: [] as string[], invalidDocRowIds: new Set<string>() };
+    if (editIsScheduled) {
+      return collectOperationCreateValidationIssues(
+        {
+          patientId: editPatientId,
+          clinicianId: editClinicianId,
+          operationDate: editOperationDate,
+          totalCost: editTotalCost,
+          downPayment: editDownPayment,
+          docRows: editDocRows,
+          medTab: editMedTab,
+          prescriptionFile: editPrescriptionFile,
+          generatedPrescriptionFile: editGeneratedPrescriptionFile,
+          hasExistingPrescription: editHadExistingPrescription,
+        },
+        t,
+      );
+    }
+    const issues: string[] = [];
+    if (!editPatientId.trim()) issues.push(t("operations.validationPatient", "Select a patient."));
+    if (!editClinicianId.trim()) issues.push(t("operations.validationDoctor", "Select a performing doctor."));
+    if (!editOperationDate.trim()) issues.push(t("operations.validationDate", "Enter the operation date."));
+    if (!editTotalCost.trim() || Number.isNaN(Number.parseFloat(editTotalCost))) {
+      issues.push(t("operations.validationTotalCost", "Enter a valid total cost."));
+    }
+    return { issues, invalidDocRowIds: new Set<string>() };
+  };
+
+  const saveEditOperation = async (): Promise<OperationDto> => {
+    if (!editOp) throw new Error("No operation selected");
+    const op = await apiPatch<OperationDto>(`/api/v1/operations/${editOp.id}`, {
+      patientId: editPatientId,
+      clinicianId: editClinicianId,
+      operationDate: toOperationIso(editOperationDate),
+      totalCost: Number.parseFloat(editTotalCost),
+      downPayment: editDownPayment.trim() ? Number.parseFloat(editDownPayment) : 0,
+      comments: editComments.trim() || undefined,
+      clinicId: editClinicId || undefined,
+      feeCurrency: editFeeCurrency,
+      ...(editIsScheduled ? { noMedications: editMedTab === "none" } : {}),
+    });
+
+    if (!editIsScheduled) return op;
+
+    const keepExistingPrescription =
+      editMedTab === "prescription" &&
+      editHadExistingPrescription &&
+      !editPrescriptionFile &&
+      !editGeneratedPrescriptionFile;
+
+    await apiPost(`/api/v1/operations/${editOp.id}/reset-clinical`, {
+      clearPrescription: !keepExistingPrescription,
+    });
+
+    for (const row of editDocRows) {
+      const description = pendingDocumentDescription(row, t);
+      for (const file of row.files) {
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("kind", "ATTACHMENT");
+        fd.append("description", description);
+        await apiPostFormData(`/api/v1/operations/${editOp.id}/documents`, fd);
+      }
+    }
+
+    if (editMedTab !== "none") {
+      for (const m of editMedications) {
+        await apiPost(`/api/v1/operations/${editOp.id}/medications`, {
+          drugName: m.drugName,
+          dosage: m.dosage.trim() || undefined,
+          frequency: m.frequency.trim() || undefined,
+        });
+      }
+      const rxFile =
+        editMedTab === "prescription"
+          ? editPrescriptionFile ?? editGeneratedPrescriptionFile
+          : editGeneratedPrescriptionFile;
+      if (rxFile) {
+        const fd = new FormData();
+        fd.append("file", rxFile);
+        fd.append("kind", "PRESCRIPTION");
+        await apiPostFormData(`/api/v1/operations/${editOp.id}/documents`, fd);
+      }
+    }
+
+    return op;
+  };
+
   const completeCurrency = completeConfirmOp?.feeCurrency ?? resolveClinicCurrencyCode(clinics, completeConfirmOp?.clinicId);
   const completeBalance = completeConfirmOp
     ? Math.max(0, completeConfirmOp.balanceDue ?? completeConfirmOp.totalCost - (completeConfirmOp.paidAmount ?? completeConfirmOp.downPayment))
@@ -491,10 +585,13 @@ export function OperationsPage() {
         status,
         ...(collectionAmount !== undefined ? { collectionAmount } : {}),
       }),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       setCompleteConfirmOp(null);
       setCompleteCollectionAmount("");
       setCompleteFormErr(null);
+      setCompletePromptOp(null);
+      setCancelConfirmOp(null);
+      if (editOp?.id === variables.id) closeEditDialog();
       void qc.invalidateQueries({ queryKey: ["operations"] });
       void qc.invalidateQueries({ queryKey: ["revenue"] });
       void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
@@ -507,74 +604,24 @@ export function OperationsPage() {
   });
 
   const editMut = useMutation({
-    mutationFn: async () => {
-      if (!editOp) throw new Error("No operation selected");
-      const op = await apiPatch<OperationDto>(`/api/v1/operations/${editOp.id}`, {
-        patientId: editPatientId,
-        clinicianId: editClinicianId,
-        operationDate: toOperationIso(editOperationDate),
-        totalCost: Number.parseFloat(editTotalCost),
-        downPayment: editDownPayment.trim() ? Number.parseFloat(editDownPayment) : 0,
-        comments: editComments.trim() || undefined,
-        clinicId: editClinicId || undefined,
-        feeCurrency: editFeeCurrency,
-        ...(editIsScheduled ? { noMedications: editMedTab === "none" } : {}),
-      });
-
-      if (!editIsScheduled) return op;
-
-      const keepExistingPrescription =
-        editMedTab === "prescription" &&
-        editHadExistingPrescription &&
-        !editPrescriptionFile &&
-        !editGeneratedPrescriptionFile;
-
-      await apiPost(`/api/v1/operations/${editOp.id}/reset-clinical`, {
-        clearPrescription: !keepExistingPrescription,
-      });
-
-      for (const row of editDocRows) {
-        const description = pendingDocumentDescription(row, t);
-        for (const file of row.files) {
-          const fd = new FormData();
-          fd.append("file", file);
-          fd.append("kind", "ATTACHMENT");
-          fd.append("description", description);
-          await apiPostFormData(`/api/v1/operations/${editOp.id}/documents`, fd);
-        }
-      }
-
-      if (editMedTab !== "none") {
-        for (const m of editMedications) {
-          await apiPost(`/api/v1/operations/${editOp.id}/medications`, {
-            drugName: m.drugName,
-            dosage: m.dosage.trim() || undefined,
-            frequency: m.frequency.trim() || undefined,
-          });
-        }
-        const rxFile =
-          editMedTab === "prescription"
-            ? editPrescriptionFile ?? editGeneratedPrescriptionFile
-            : editGeneratedPrescriptionFile;
-        if (rxFile) {
-          const fd = new FormData();
-          fd.append("file", rxFile);
-          fd.append("kind", "PRESCRIPTION");
-          await apiPostFormData(`/api/v1/operations/${editOp.id}/documents`, fd);
-        }
-      }
-
-      return op;
-    },
-    onSuccess: () => {
+    mutationFn: saveEditOperation,
+    onSuccess: (saved) => {
       setEditFormErr(null);
-      closeEditDialog();
       void qc.invalidateQueries({ queryKey: ["operations"] });
       void qc.invalidateQueries({ queryKey: ["operation"] });
       void qc.invalidateQueries({ queryKey: ["revenue"] });
       void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
+      if (pendingCompleteAfterSave) {
+        setPendingCompleteAfterSave(false);
+        closeEditDialog();
+        openCompleteDialog(saved);
+        return;
+      }
+      closeEditDialog();
     },
     onError: (e: unknown) => {
+      setPendingCompleteAfterSave(false);
+      editValidation.showError(e);
       if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
         setEditFormErr(String((e.body as { message?: unknown }).message));
       } else setEditFormErr(e instanceof Error ? e.message : String(e));
@@ -588,32 +635,67 @@ export function OperationsPage() {
 
   const handleEditClick = () => {
     if (!editOp) return;
-    if (editIsScheduled) {
-      const validation = collectOperationCreateValidationIssues(
-        {
-          patientId: editPatientId,
-          clinicianId: editClinicianId,
-          operationDate: editOperationDate,
-          totalCost: editTotalCost,
-          downPayment: editDownPayment,
-          docRows: editDocRows,
-          medTab: editMedTab,
-          prescriptionFile: editPrescriptionFile,
-          generatedPrescriptionFile: editGeneratedPrescriptionFile,
-          hasExistingPrescription: editHadExistingPrescription,
-        },
-        t,
-      );
-      if (validation.issues.length > 0) {
-        showEditValidationIssues(validation.issues, validation.invalidDocRowIds);
-        return;
-      }
-      setEditDocInvalidRowIds(new Set());
-      editValidation.clear();
+    const validation = collectEditValidation();
+    if (validation.issues.length > 0) {
+      showEditValidationIssues(validation.issues, validation.invalidDocRowIds);
+      return;
     }
+    setEditDocInvalidRowIds(new Set());
+    editValidation.clear();
     setEditFormErr(null);
     editMut.mutate();
   };
+
+  const handleEditCompleteClick = () => {
+    if (!editOp || !editIsScheduled) return;
+    const validation = collectEditValidation();
+    if (validation.issues.length > 0) {
+      showEditValidationIssues(validation.issues, validation.invalidDocRowIds);
+      return;
+    }
+    setEditDocInvalidRowIds(new Set());
+    editValidation.clear();
+    setEditFormErr(null);
+    setEditCompleteConfirmOpen(true);
+  };
+
+  const handleConfirmEditComplete = () => {
+    setEditCompleteConfirmOpen(false);
+    setPendingCompleteAfterSave(true);
+    editMut.mutate();
+  };
+
+  const operationSummaryDetails = (o: OperationDto, currency: string) => (
+    <dl className="space-y-2">
+      <div>
+        <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {t("operations.patient", "Patient")}
+        </dt>
+        <dd className="font-medium">
+          {resolvePatientListLabel({
+            patientId: o.patientId,
+            patientMrn: o.patientMrn,
+            patientName: o.patientName,
+            registryLabel: patientLabel.get(o.patientId),
+          }).text}
+        </dd>
+      </div>
+      <div>
+        <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {t("operations.operationDate", "Operation date")}
+        </dt>
+        <dd className="ltr-nums">
+          {new Date(o.operationDate).toLocaleString(localeForLanguage(i18n.language))}
+        </dd>
+      </div>
+      <div>
+        <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {t("operations.totalCost", "Total cost ({{currency}})", { currency })}
+        </dt>
+        <dd className="ltr-nums font-medium">{money(o.totalCost, currency)}</dd>
+      </div>
+    </dl>
+  );
 
   const showCreateValidationIssues = (issues: string[], invalidDocRowIds = new Set<string>()) => {
     setDocInvalidRowIds(invalidDocRowIds);
@@ -836,9 +918,86 @@ export function OperationsPage() {
       </Dialog>
 
       <ValidationIssuesDialog {...editValidation.dialogProps} />
+
+      <ConfirmDialog
+        open={editCompleteConfirmOpen}
+        onOpenChange={(open) => !editMut.isPending && setEditCompleteConfirmOpen(open)}
+        title={t("operations.confirmEditCompleteTitle", "Complete this operation?")}
+        description={t(
+          "operations.confirmEditCompleteBody",
+          "This will save all changes in the form, then mark the operation as completed. You may be asked to record any remaining balance to collect.",
+        )}
+        confirmLabel={t("operations.saveAndComplete", "Save & complete")}
+        cancelLabel={t("common.cancel", "Cancel")}
+        pending={editMut.isPending}
+        variant="default"
+        onConfirm={handleConfirmEditComplete}
+        details={
+          editOp
+            ? operationSummaryDetails(
+                editOp,
+                editFeeCurrency,
+              )
+            : null
+        }
+      />
+
+      <ConfirmDialog
+        open={completePromptOp != null}
+        onOpenChange={(open) => !open && setCompletePromptOp(null)}
+        title={t("operations.confirmCompleteTitle", "Mark operation as completed?")}
+        description={t(
+          "operations.confirmCompleteListBody",
+          "This will mark the operation as completed and post the full cost to clinic revenue. You may be asked to record any remaining balance to collect.",
+        )}
+        confirmLabel={t("operations.markCompleted", "Mark completed")}
+        cancelLabel={t("common.cancel", "Cancel")}
+        variant="default"
+        onConfirm={() => {
+          if (!completePromptOp) return;
+          const op = completePromptOp;
+          setCompletePromptOp(null);
+          openCompleteDialog(op);
+        }}
+        details={
+          completePromptOp
+            ? operationSummaryDetails(
+                completePromptOp,
+                completePromptOp.feeCurrency ?? resolveClinicCurrencyCode(clinics, completePromptOp.clinicId),
+              )
+            : null
+        }
+      />
+
+      <ConfirmDialog
+        open={cancelConfirmOp != null}
+        onOpenChange={(open) => !statusMut.isPending && !open && setCancelConfirmOp(null)}
+        title={t("operations.confirmCancelTitle", "Cancel this operation?")}
+        description={t(
+          "operations.confirmCancelBody",
+          "The operation will be marked as cancelled. Any linked revenue entries will be voided. This cannot be undone.",
+        )}
+        confirmLabel={t("operations.markCancelled", "Cancel operation")}
+        cancelLabel={t("common.back", "Go back")}
+        pending={statusMut.isPending}
+        variant="destructive"
+        onConfirm={() => {
+          if (!cancelConfirmOp) return;
+          statusMut.mutate({ id: cancelConfirmOp.id, status: "CANCELLED" });
+        }}
+        details={
+          cancelConfirmOp
+            ? operationSummaryDetails(
+                cancelConfirmOp,
+                cancelConfirmOp.feeCurrency ?? resolveClinicCurrencyCode(clinics, cancelConfirmOp.clinicId),
+              )
+            : null
+        }
+      />
+
       <Dialog open={editOp != null} onOpenChange={(open) => !open && closeEditDialog()}>
         <DialogContent
-          className="flex w-[min(100%-2rem,48rem)] max-h-[min(90dvh,40rem)] max-w-3xl flex-col gap-0 overflow-hidden p-0 sm:rounded-lg"
+          className="flex w-[min(100%-2rem,70vw)] max-h-[min(88dvh,44rem)] flex-col gap-0 overflow-hidden p-0 sm:rounded-lg"
           aria-describedby={undefined}
         >
           <DialogHeader className="shrink-0 space-y-1 border-b border-border px-4 py-4 pe-14 sm:px-6">
@@ -858,9 +1017,10 @@ export function OperationsPage() {
           </DialogHeader>
           {editOp ? (
             <>
-              <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
+                <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
                 {editIsScheduled && editOpDetailPending ? (
-                  <p className="text-sm text-muted-foreground">{t("common.loading", "Loading…")}</p>
+                  <p className="text-sm text-muted-foreground lg:col-span-2">{t("common.loading", "Loading…")}</p>
                 ) : null}
 
                 <fieldset className="space-y-3 rounded-lg border border-border p-3 sm:p-4">
@@ -1007,7 +1167,7 @@ export function OperationsPage() {
                   ) : null}
                 </fieldset>
 
-                <fieldset className="space-y-3 rounded-lg border border-border p-3 sm:p-4">
+                <fieldset className="space-y-3 rounded-lg border border-border p-3 sm:p-4 lg:col-span-2">
                   <legend className="px-1 text-sm font-medium">{t("operations.comments", "Comments")}</legend>
                   <Textarea
                     id="edit-op-comments"
@@ -1022,7 +1182,7 @@ export function OperationsPage() {
                 {editIsScheduled && !editOpDetailPending ? (
                   <>
                     {editExistingAttachments.length > 0 ? (
-                      <div className="space-y-2 rounded-lg border border-border p-3 sm:p-4">
+                      <div className="space-y-2 rounded-lg border border-border p-3 sm:p-4 lg:col-span-2">
                         <p className="text-sm font-medium">{t("operations.existingDocuments", "Saved documents")}</p>
                         <ul className="space-y-1 text-sm text-muted-foreground">
                           {editExistingAttachments.map((doc) => (
@@ -1031,7 +1191,7 @@ export function OperationsPage() {
                         </ul>
                       </div>
                     ) : null}
-                    <fieldset className="space-y-3 rounded-lg border border-border p-3 sm:p-4">
+                    <fieldset className="space-y-3 rounded-lg border border-border p-3 sm:p-4 lg:col-span-2">
                       <legend className="px-1 text-sm font-medium">{t("patients.attachDocuments", "Documents")}</legend>
                       <PendingDocumentAttachments
                         rows={editDocRows}
@@ -1042,7 +1202,7 @@ export function OperationsPage() {
                         invalidRowIds={editDocInvalidRowIds.size > 0 ? editDocInvalidRowIds : undefined}
                       />
                     </fieldset>
-                    <fieldset className="space-y-3 rounded-lg border border-border p-3 sm:p-4">
+                    <fieldset className="space-y-3 rounded-lg border border-border p-3 sm:p-4 lg:col-span-2">
                       <legend className="px-1 text-sm font-medium">{t("encounters.medications")}</legend>
                       {editHadExistingPrescription && editMedTab === "prescription" && !editPrescriptionFile ? (
                         <p className="text-xs text-muted-foreground">
@@ -1067,12 +1227,45 @@ export function OperationsPage() {
                   </>
                 ) : null}
 
-                {editFormErr ? <p className="text-sm text-destructive">{editFormErr}</p> : null}
+                {editFormErr ? <p className="text-sm text-destructive lg:col-span-2">{editFormErr}</p> : null}
+                </div>
               </div>
-              <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6">
+              <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6">
+                <div className="flex flex-wrap gap-2">
+                  {editIsScheduled ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive"
+                      disabled={editMut.isPending || statusMut.isPending}
+                      onClick={() => editOp && setCancelConfirmOp(editOp)}
+                    >
+                      {t("operations.markCancelled", "Cancel operation")}
+                    </Button>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap justify-end gap-2">
                 <Button type="button" variant="outline" onClick={closeEditDialog} disabled={editMut.isPending}>
                   {t("common.cancel", "Cancel")}
                 </Button>
+                {editIsScheduled ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={
+                      editMut.isPending ||
+                      editOpDetailPending ||
+                      !editPatientId ||
+                      !editClinicianId ||
+                      !editOperationDate ||
+                      !editTotalCost.trim() ||
+                      Number.isNaN(Number.parseFloat(editTotalCost))
+                    }
+                    onClick={handleEditCompleteClick}
+                  >
+                    {t("operations.markCompleted", "Mark completed")}
+                  </Button>
+                ) : null}
                 <Button
                   type="button"
                   disabled={
@@ -1088,6 +1281,7 @@ export function OperationsPage() {
                 >
                   {t("operations.saveChanges", "Save changes")}
                 </Button>
+                </div>
               </div>
             </>
           ) : null}
@@ -1474,7 +1668,7 @@ export function OperationsPage() {
                                   size="sm"
                                   variant="outline"
                                   disabled={statusMut.isPending}
-                                  onClick={() => openCompleteDialog(o)}
+                                  onClick={() => setCompletePromptOp(o)}
                                 >
                                   {t("operations.markCompleted", "Mark completed")}
                                 </Button>
@@ -1484,7 +1678,7 @@ export function OperationsPage() {
                                   variant="ghost"
                                   className="text-destructive hover:text-destructive"
                                   disabled={statusMut.isPending}
-                                  onClick={() => statusMut.mutate({ id: o.id, status: "CANCELLED" })}
+                                  onClick={() => setCancelConfirmOp(o)}
                                 >
                                   {t("operations.markCancelled", "Cancel")}
                                 </Button>

@@ -81,7 +81,7 @@ export class ReportsService {
   }
 
   /**
-   * Calendar-month buckets from live data: finalized visits, posted revenue, new patients.
+   * Calendar-month buckets from live data: finalized visits, posted revenue, expenses, new patients.
    */
   async monthlySeries(tenantId: string, monthsRaw: string | undefined, viewer?: JwtUser) {
     const parsed = Number.parseInt(monthsRaw ?? "12", 10);
@@ -95,6 +95,7 @@ export class ReportsService {
       monthStart: string;
       visits: number;
       revenue: number;
+      expenses: number;
       newPatients: number;
     }[] = [];
 
@@ -122,11 +123,19 @@ export class ReportsService {
           : {}),
       };
 
-      const [visits, revAgg, newPatients] = await Promise.all([
+      const [visits, revAgg, expAgg, newPatients] = await Promise.all([
         this.prisma.encounter.count({ where: encounterWhere }),
         this.prisma.revenueEntry.aggregate({
           where: revenueWhere,
           _sum: { netAmount: true },
+        }),
+        this.prisma.expense.aggregate({
+          where: {
+            tenantId,
+            status: { in: [ExpenseStatus.APPROVED, ExpenseStatus.PENDING] },
+            incurredAt: { gte: monthStart, lte: monthEnd },
+          },
+          _sum: { amount: true },
         }),
         this.prisma.patient.count({
           where: {
@@ -142,6 +151,7 @@ export class ReportsService {
         monthStart: formatLocalYmd(monthStart).slice(0, 7),
         visits,
         revenue: Number(revAgg._sum.netAmount ?? 0),
+        expenses: Number(expAgg._sum.amount ?? 0),
         newPatients,
       });
     }

@@ -110,6 +110,66 @@ export function ReportsPage() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            {t("nav.revenue")} vs {t("nav.expenses")}
+          </CardTitle>
+          <CardDescription>
+            {t(
+              "reports.revenueVsExpensesHint",
+              "Monthly posted revenue and approved/pending expenses from your organization ledger.",
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="h-80">
+          {series.isPending ? (
+            <p className="text-sm text-muted-foreground">{t("common.loading", "Loading…")}</p>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="reportsFillRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(200 85% 32%)" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="hsl(200 85% 32%)" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="reportsFillExpense" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(215 16% 40%)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="hsl(215 16% 40%)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => money(Number(v))} width={72} />
+                <Tooltip
+                  formatter={(value: number, name) => [
+                    money(Number(value)),
+                    name === "revenue" ? t("nav.revenue") : t("nav.expenses"),
+                  ]}
+                />
+                <Legend />
+                <Area
+                  type="monotone"
+                  dataKey="revenue"
+                  name={t("nav.revenue")}
+                  stroke="hsl(200 85% 32%)"
+                  fill="url(#reportsFillRevenue)"
+                  strokeWidth={2}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="expenses"
+                  name={t("nav.expenses")}
+                  stroke="hsl(215 16% 40%)"
+                  fill="url(#reportsFillExpense)"
+                  strokeWidth={2}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>

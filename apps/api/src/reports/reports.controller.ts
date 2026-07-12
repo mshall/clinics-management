@@ -21,7 +21,7 @@ export class ReportsController {
   }
 
   @Get("monthly-series")
-  @ApiOperation({ summary: "Per-month visits (finalized encounters), posted revenue, and new patients" })
+  @ApiOperation({ summary: "Per-month visits, posted revenue, expenses, and new patients" })
   @ApiOkResponse()
   monthlySeries(@CurrentUser() user: JwtUser, @Query("months") months?: string) {
     return this.reports.monthlySeries(requireTenantId(user), months, user);
