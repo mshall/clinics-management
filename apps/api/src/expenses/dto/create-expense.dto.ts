@@ -1,7 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { ExpenseStatus } from "@prisma/client";
-import { IsDateString, IsEnum, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
+import { IsDateString, IsEnum, IsIn, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
 import { Type } from "class-transformer";
+import { BASE_CURRENCIES } from "../../common/base-currencies";
 
 export class CreateExpenseDto {
   @ApiProperty()
@@ -25,10 +26,11 @@ export class CreateExpenseDto {
   @Min(0)
   amount!: number;
 
-  @ApiProperty({ example: "AED" })
+  @ApiPropertyOptional({ example: "AED", enum: BASE_CURRENCIES, description: "Defaults to clinic default currency" })
+  @IsOptional()
   @IsString()
-  @MaxLength(8)
-  currency!: string;
+  @IsIn(BASE_CURRENCIES)
+  currency?: string;
 
   @ApiProperty({ example: "2025-05-01T12:00:00.000Z" })
   @IsDateString()

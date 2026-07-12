@@ -37,11 +37,12 @@ import { EncounterDeleteConfirmDialog } from "@/features/encounters/encounter-de
 import { resolvePatientListLabel } from "@/lib/patient-display";
 import { ENCOUNTER_VISIT_TYPES, formatVisitType } from "@/lib/visit-types";
 import { useAuthStore } from "@/stores/auth-store";
-import { useEncounterQuery } from "@/lib/api-hooks";
+import { useEncounterQuery, useClinicsQuery } from "@/lib/api-hooks";
 import type { EncounterDetailDto, EncounterDocumentDto } from "@/lib/api-types";
 import { ApiError, apiDelete, apiFetchBlob, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { canDeleteEncounter } from "@/lib/encounter-delete-policy";
 import { formatEncounterStatus, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
+import { formatMoneyAmount, resolveClinicCurrencyCode } from "@/lib/money-display";
 import { generatePrescriptionPng } from "@/lib/prescription-image";
 import { cn } from "@/lib/utils";
 
@@ -91,6 +92,8 @@ export function EncounterDetailPage() {
   const user = useAuthStore((s) => s.user);
   const canDelete = canDeleteEncounter(user?.role);
   const { data: enc, isPending, isError, error } = useEncounterQuery(id);
+  const { data: clinics = [] } = useClinicsQuery();
+  const visitFeeCurrency = resolveClinicCurrencyCode(clinics, enc?.clinicId);
 
   const [visitType, setVisitType] = useState("");
   const [chief, setChief] = useState("");
@@ -475,6 +478,7 @@ export function EncounterDetailPage() {
                 createdAt: enc.createdAt,
                 updatedAt: enc.updatedAt,
                 visitFeeAmount: enc.visitFeeAmount,
+                visitFeeCurrency,
               }
             : null
         }
@@ -632,14 +636,14 @@ export function EncounterDetailPage() {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">{t("encounters.visitFee", "Visit fee")}</CardTitle>
+          <CardTitle className="text-base">
+            {t("encounters.visitFee", "Visit fee ({{currency}})", { currency: visitFeeCurrency })}
+          </CardTitle>
           <CardDescription>{t("encounters.visitFeeLockedHint", "Set when this encounter was created.")}</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-lg font-semibold ltr-nums">
-            {new Intl.NumberFormat(localeForLanguage(i18n.language), { style: "currency", currency: "AED" }).format(
-              enc.visitFeeAmount ?? 0
-            )}
+            {formatMoneyAmount(enc.visitFeeAmount ?? 0, visitFeeCurrency, localeForLanguage(i18n.language))}
           </p>
         </CardContent>
       </Card>

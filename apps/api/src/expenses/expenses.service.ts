@@ -13,6 +13,7 @@ import * as path from "path";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { resolveReportingRange } from "../common/reporting-range";
+import { isBaseCurrency } from "../common/base-currencies";
 import { PrismaService } from "../prisma/prisma.service";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { CreateExpenseDto } from "./dto/create-expense.dto";
@@ -122,6 +123,11 @@ export class ExpensesService {
     const clinic = await this.prisma.clinic.findFirst({ where: { id: dto.clinicId, tenantId } });
     if (!clinic) throw new BadRequestException("Invalid clinicId");
 
+    const currency =
+      dto.currency?.trim() && isBaseCurrency(dto.currency.trim())
+        ? dto.currency.trim()
+        : clinic.defaultCurrency;
+
     let row = await this.prisma.expense.create({
       data: {
         tenantId,
@@ -129,7 +135,7 @@ export class ExpensesService {
         category: dto.category,
         vendorName: dto.vendorName ?? null,
         amount: dto.amount,
-        currency: dto.currency,
+        currency,
         incurredAt: new Date(dto.incurredAt),
         status: dto.status ?? ExpenseStatus.PENDING,
       },

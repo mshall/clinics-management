@@ -51,6 +51,7 @@ import { defaultEncounterListRange, defaultMonthRange } from "@/stores/date-rang
 import { useAuthStore } from "@/stores/auth-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectEncounterCreateIssues } from "@/lib/create-form-validation";
+import { resolveClinicCurrencyCode } from "@/lib/money-display";
 
 export function EncountersListPage() {
   const { t, i18n } = useTranslation();
@@ -154,6 +155,7 @@ export function EncountersListPage() {
   const [createClinicId, setCreateClinicId] = useState("");
   const [createVisitType, setCreateVisitType] = useState<string>(ENCOUNTER_VISIT_TYPES[0] ?? "Office visit");
   const [createVisitFee, setCreateVisitFee] = useState("");
+  const createVisitFeeCurrency = resolveClinicCurrencyCode(clinics, createClinicId || clinics[0]?.id);
   const [createClinicianId, setCreateClinicianId] = useState("");
   const [pinnedPatientItem, setPinnedPatientItem] = useState<PickListItem | null>(null);
   const [pinnedClinicianItem, setPinnedClinicianItem] = useState<PickListItem | null>(null);
@@ -554,7 +556,7 @@ export function EncountersListPage() {
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <Label>{t("encounters.visitFee", "Visit fee")}</Label>
+                  <Label>{t("encounters.visitFee", "Visit fee ({{currency}})", { currency: createVisitFeeCurrency })}</Label>
                   <Input
                     className="ltr-nums"
                     type="number"
@@ -564,7 +566,11 @@ export function EncountersListPage() {
                     onChange={(e) => setCreateVisitFee(e.target.value)}
                   />
                   <p className="text-xs text-muted-foreground">
-                    {t("encounters.visitFeeHint", "Default comes from organization settings (admin).")}
+                    {t(
+                      "encounters.visitFeeHint",
+                      "Default comes from clinic settings ({{currency}}).",
+                      { currency: createVisitFeeCurrency },
+                    )}
                   </p>
                 </div>
                 <PatientAcquisitionFields
@@ -814,6 +820,7 @@ export function EncountersListPage() {
                                 createdAt: e.createdAt,
                                 updatedAt: e.updatedAt,
                                 visitFeeAmount: e.visitFeeAmount,
+                                visitFeeCurrency: resolveClinicCurrencyCode(clinics, e.clinicId),
                               });
                             }}
                           >

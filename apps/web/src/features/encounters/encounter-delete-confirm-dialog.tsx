@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { formatClinicNameFields, formatEncounterStatus, localeForLanguage } from "@/lib/locale-display";
+import { formatMoneyAmount } from "@/lib/money-display";
 import { formatVisitType } from "@/lib/visit-types";
 
 export type EncounterDeleteTarget = {
@@ -17,6 +18,7 @@ export type EncounterDeleteTarget = {
   createdAt: string;
   updatedAt?: string | null;
   visitFeeAmount?: number | null;
+  visitFeeCurrency?: string;
 };
 
 type EncounterDeleteConfirmDialogProps = {
@@ -116,8 +118,10 @@ export function EncounterDeleteConfirmDialog({
                   {t("encounters.visitFee", "Visit fee")}
                 </dt>
                 <dd className="ltr-nums">
-                  {new Intl.NumberFormat(locale, { style: "currency", currency: "AED" }).format(
+                  {formatMoneyAmount(
                     encounter.visitFeeAmount,
+                    encounter.visitFeeCurrency ?? "AED",
+                    locale,
                   )}
                 </dd>
               </div>

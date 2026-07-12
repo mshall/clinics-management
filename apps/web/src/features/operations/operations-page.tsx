@@ -42,6 +42,7 @@ import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-di
 import { formatClinicianDisplayName } from "@/lib/employee-display";
 import { physicianToPickListItem } from "@/lib/physician-display";
 import { formatClinicName, localeForLanguage } from "@/lib/locale-display";
+import { formatMoneyAmount, resolveClinicCurrencyCode } from "@/lib/money-display";
 import { columnFilterIncludes } from "@/lib/utils";
 import { useDebouncedPickListSearch } from "@/lib/pick-list-utils";
 import { useAuthStore } from "@/stores/auth-store";
@@ -64,14 +65,6 @@ function toOperationIso(localDatetime: string): string {
   const d = new Date(localDatetime);
   if (Number.isNaN(d.getTime())) throw new Error("Invalid date or time");
   return d.toISOString();
-}
-
-function clinicCurrencyCode(
-  clinics: Array<{ id: string; defaultCurrency?: string }>,
-  clinicId: string | undefined,
-): string {
-  if (!clinicId) return "AED";
-  return clinics.find((c) => c.id === clinicId)?.defaultCurrency ?? "AED";
 }
 
 function operationDetailToMedState(detail: OperationDetailDto): {
@@ -240,7 +233,7 @@ export function OperationsPage() {
     const id = schedulingClinicId || selectedPatient?.homeBranchId || clinics[0]?.id;
     return clinics.find((c) => c.id === id) ?? clinics[0];
   }, [schedulingClinicId, selectedPatient?.homeBranchId, clinics]);
-  const createCurrency = clinicCurrencyCode(clinics, selectedClinic?.id);
+  const createCurrency = resolveClinicCurrencyCode(clinics, selectedClinic?.id);
 
   useEffect(() => {
     if (showCreatePanel) setFeeCurrency(createCurrency);
@@ -344,7 +337,7 @@ export function OperationsPage() {
     setEditOperationDate(local);
     setEditTotalCost(String(o.totalCost));
     setEditDownPayment(String(o.downPayment));
-    setEditFeeCurrency(o.feeCurrency ?? clinicCurrencyCode(clinics, o.clinicId));
+    setEditFeeCurrency(o.feeCurrency ?? resolveClinicCurrencyCode(clinics, o.clinicId));
     setEditComments(o.comments ?? "");
     setEditFormErr(null);
     editPatientPickSearch.resetSearch();
@@ -355,7 +348,7 @@ export function OperationsPage() {
   const { data: editOpDetail, isPending: editOpDetailPending } = useOperationQuery(
     editIsScheduled ? editOp?.id : undefined,
   );
-  const editClinicDefaultCurrency = clinicCurrencyCode(clinics, editClinicId || editOp?.clinicId);
+  const editClinicDefaultCurrency = resolveClinicCurrencyCode(clinics, editClinicId || editOp?.clinicId);
 
   useEffect(() => {
     if (!editIsScheduled || !editOpDetail || editDetailLoadedId === editOpDetail.id) return;
@@ -473,7 +466,7 @@ export function OperationsPage() {
     setCompleteFormErr(null);
   };
 
-  const completeCurrency = completeConfirmOp?.feeCurrency ?? clinicCurrencyCode(clinics, completeConfirmOp?.clinicId);
+  const completeCurrency = completeConfirmOp?.feeCurrency ?? resolveClinicCurrencyCode(clinics, completeConfirmOp?.clinicId);
   const completeBalance = completeConfirmOp
     ? Math.max(0, completeConfirmOp.balanceDue ?? completeConfirmOp.totalCost - (completeConfirmOp.paidAmount ?? completeConfirmOp.downPayment))
     : 0;
@@ -711,12 +704,11 @@ export function OperationsPage() {
   };
 
   const loc = localeForLanguage(i18n.language);
-  const money = (n: number) =>
-    n.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const listCurrency = clinicCurrencyCode(
+  const listCurrency = resolveClinicCurrencyCode(
     clinics,
     filterClinicId || singleManagedClinic?.id || rows[0]?.clinicId,
   );
+  const money = (n: number, currency?: string) => formatMoneyAmount(n, currency ?? listCurrency, loc);
 
   return (
     <div className="space-y-6">
@@ -760,18 +752,18 @@ export function OperationsPage() {
                 <div className="grid gap-1 rounded-md border border-border bg-muted/30 p-3 text-muted-foreground">
                   <p>
                     {t("operations.totalCost", "Total cost ({{currency}})", { currency: completeCurrency })}:{" "}
-                    <span className="font-medium text-foreground">{money(completeConfirmOp.totalCost)}</span>
+                    <span className="font-medium text-foreground">{money(completeConfirmOp.totalCost, completeCurrency)}</span>
                   </p>
                   <p>
                     {t("operations.downPayment", "Down payment ({{currency}})", { currency: completeCurrency })}:{" "}
-                    <span className="font-medium text-foreground">{money(completeConfirmOp.downPayment)}</span>
+                    <span className="font-medium text-foreground">{money(completeConfirmOp.downPayment, completeCurrency)}</span>
                   </p>
                   <p>
                     {t("operations.paidAmount", "Paid ({{currency}})", { currency: completeCurrency })}:{" "}
-                    <span className="font-medium text-foreground">{money(completeConfirmOp.paidAmount ?? 0)}</span>
+                    <span className="font-medium text-foreground">{money(completeConfirmOp.paidAmount ?? 0, completeCurrency)}</span>
                   </p>
                   <p className="font-medium text-foreground">
-                    {t("operations.confirmCompleteRemaining", "Remaining to collect")}: {money(completeBalance)}
+                    {t("operations.confirmCompleteRemaining", "Remaining to collect")}: {money(completeBalance, completeCurrency)}
                   </p>
                 </div>
                 {completeBalance > 0.001 ? (
@@ -792,7 +784,7 @@ export function OperationsPage() {
                         setCompleteCollectionAmount(e.target.value);
                         setCompleteFormErr(null);
                       }}
-                      placeholder={money(completeBalance)}
+                      placeholder={money(completeBalance, completeCurrency)}
                     />
                     {!completeCollectionValid && completeCollectionAmount.trim() ? (
                       <p className="text-xs text-destructive">
@@ -805,7 +797,7 @@ export function OperationsPage() {
                   {t(
                     "operations.confirmCompleteRevenueNote",
                     "On completion, {{amount}} {{currency}} will be added to clinic revenue.",
-                    { amount: money(completeConfirmOp.totalCost), currency: completeCurrency }
+                    { amount: money(completeConfirmOp.totalCost, completeCurrency), currency: completeCurrency }
                   )}
                 </p>
               </div>
@@ -883,7 +875,7 @@ export function OperationsPage() {
                     onChange={(e) => {
                       setEditClinicId(e.target.value);
                       setEditClinicianId("");
-                      setEditFeeCurrency(clinicCurrencyCode(clinics, e.target.value));
+                      setEditFeeCurrency(resolveClinicCurrencyCode(clinics, e.target.value));
                     }}
                   >
                     {clinics.map((c) => (
@@ -980,9 +972,9 @@ export function OperationsPage() {
               {(editOp.paidAmount ?? 0) > 0 ? (
                 <p className="text-xs text-muted-foreground">
                   {t("operations.paidAmount", "Paid ({{currency}})", { currency: editFeeCurrency })}:{" "}
-                  {money(editOp.paidAmount ?? 0)} ·{" "}
+                  {money(editOp.paidAmount ?? 0, editFeeCurrency)} ·{" "}
                   {t("operations.balanceDue", "Balance ({{currency}})", { currency: editFeeCurrency })}:{" "}
-                  {money(editOp.balanceDue ?? 0)}
+                  {money(editOp.balanceDue ?? 0, editFeeCurrency)}
                 </p>
               ) : null}
               <div className="space-y-1">
@@ -1138,7 +1130,7 @@ export function OperationsPage() {
                         onChange={(e) => {
                           setClinicId(e.target.value);
                           setClinicianId("");
-                          setFeeCurrency(clinicCurrencyCode(clinics, e.target.value || undefined));
+                          setFeeCurrency(resolveClinicCurrencyCode(clinics, e.target.value || undefined));
                         }}
                       >
                         <option value="">{t("operations.autoClinic", "Patient home branch")}</option>
@@ -1418,13 +1410,13 @@ export function OperationsPage() {
                           </td>
                           <td className="px-3 py-2 align-top">{formatClinicianDisplayName(o, i18n.language)}</td>
                           <td className="px-3 py-2 align-top ltr-nums">
-                            {money(o.totalCost)} {o.feeCurrency ?? listCurrency}
+                            {money(o.totalCost, o.feeCurrency ?? listCurrency)}
                           </td>
                           <td className="px-3 py-2 align-top ltr-nums">
-                            {money(o.downPayment)} {o.feeCurrency ?? listCurrency}
+                            {money(o.downPayment, o.feeCurrency ?? listCurrency)}
                           </td>
-                          <td className="px-3 py-2 align-top">{money(o.paidAmount ?? 0)}</td>
-                          <td className="px-3 py-2 align-top">{money(o.balanceDue ?? o.totalCost - (o.paidAmount ?? 0))}</td>
+                          <td className="px-3 py-2 align-top">{money(o.paidAmount ?? 0, o.feeCurrency ?? listCurrency)}</td>
+                          <td className="px-3 py-2 align-top">{money(o.balanceDue ?? o.totalCost - (o.paidAmount ?? 0), o.feeCurrency ?? listCurrency)}</td>
                           <td className="px-3 py-2 align-top">
                             <OperationStatusBadge status={o.status ?? "SCHEDULED"} />
                           </td>

@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { DocumentViewerOverlay } from "@/components/document-viewer-overlay";
 import { CreateActionButton } from "@/components/create-action-button";
+import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ import {
 import { defaultMonthRange } from "@/stores/date-range-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectExpenseSubmitIssues } from "@/lib/create-form-validation";
+import { formatMoneyAmount, resolveClinicCurrencyCode } from "@/lib/money-display";
 
 export function ExpensesPage() {
   const { t, i18n } = useTranslation();
@@ -89,6 +91,7 @@ export function ExpensesPage() {
   const [category, setCategory] = useState("UTILITIES");
   const [vendor, setVendor] = useState("");
   const [amount, setAmount] = useState("");
+  const [expenseCurrency, setExpenseCurrency] = useState("AED");
   const [proofFile, setProofFile] = useState<File | null>(null);
   const proofInputRef = useRef<HTMLInputElement>(null);
   const viewerUrlRef = useRef<string | null>(null);
@@ -103,6 +106,13 @@ export function ExpensesPage() {
   const [detail, setDetail] = useState<ExpenseDto | null>(null);
 
   const clinicById = useMemo(() => new Map(clinics.map((c) => [c.id, c])), [clinics]);
+  const createClinicCurrency = resolveClinicCurrencyCode(clinics, clinicId || singleManagedClinic?.id);
+  const displayCurrency = resolveClinicCurrencyCode(clinics, filterClinicId || clinicId || singleManagedClinic?.id);
+
+  useEffect(() => {
+    setExpenseCurrency(createClinicCurrency);
+  }, [createClinicCurrency]);
+
   const clinicLabelForExpense = (e: ExpenseDto) => {
     const c = clinicById.get(e.clinicId);
     return c ? formatClinicName(c, i18n.language) : e.clinicId;
@@ -115,7 +125,7 @@ export function ExpensesPage() {
       fd.append("category", category);
       if (vendor.trim()) fd.append("vendorName", vendor.trim());
       fd.append("amount", String(Number.parseFloat(amount)));
-      fd.append("currency", "AED");
+      fd.append("currency", expenseCurrency);
       fd.append("incurredAt", new Date().toISOString());
       if (proofFile) fd.append("proof", proofFile);
       return apiPostFormData<unknown>("/api/v1/expenses", fd);
@@ -152,17 +162,16 @@ export function ExpensesPage() {
     },
   });
 
-  const money = (n: number) =>
-    new Intl.NumberFormat(localeForLanguage(i18n.language), { style: "currency", currency: "AED" }).format(n);
+  const loc = localeForLanguage(i18n.language);
+  const money = (n: number, currency?: string) => formatMoneyAmount(n, currency ?? displayCurrency, loc);
 
   const filteredExpenses = useMemo(() => {
-    const loc = localeForLanguage(i18n.language);
-    const formatMoney = (x: number) => new Intl.NumberFormat(loc, { style: "currency", currency: "AED" }).format(x);
+    const formatMoney = (x: number, currency: string) => formatMoneyAmount(x, currency, loc);
     return expenses.filter((e) => {
       if (efCategory.trim() && !columnFilterIncludes(formatExpenseCategory(e.category, t), efCategory)) return false;
       if (efVendor.trim() && !columnFilterIncludes(e.vendorName ?? "", efVendor)) return false;
       if (efAmount.trim()) {
-        const hay = `${e.amount} ${formatMoney(e.amount)}`;
+        const hay = `${e.amount} ${formatMoney(e.amount, e.currency)}`;
         if (!columnFilterIncludes(hay, efAmount)) return false;
       }
       if (efStatus.trim() && !columnFilterIncludes(formatExpenseStatus(e.status, t), efStatus)) return false;
@@ -296,7 +305,7 @@ export function ExpensesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1 pb-4 pt-0">
-            <p className="text-lg font-semibold ltr-nums">{money(selectedPeriodTotal)}</p>
+            <p className="text-lg font-semibold ltr-nums">{money(selectedPeriodTotal, displayCurrency)}</p>
             <p className="text-xs text-muted-foreground ltr-nums">
               {from} → {to}
             </p>
@@ -319,7 +328,10 @@ export function ExpensesPage() {
               <select
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={clinicId}
-                onChange={(e) => setClinicId(e.target.value)}
+                onChange={(e) => {
+                  setClinicId(e.target.value);
+                  setExpenseCurrency(resolveClinicCurrencyCode(clinics, e.target.value || undefined));
+                }}
               >
                 <option value="">{t("expenses.pickClinic")}</option>
                 {clinics.map((c) => (
@@ -349,8 +361,17 @@ export function ExpensesPage() {
             <Input value={vendor} onChange={(e) => setVendor(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label required>{t("expenses.amount")}</Label>
+            <Label required>{t("expenses.amount", "Amount ({{currency}})", { currency: expenseCurrency })}</Label>
             <Input className="ltr-nums" value={amount} onChange={(e) => setAmount(e.target.value)} type="number" min="0" step="0.01" />
+          </div>
+          <div className="space-y-2">
+            <Label>{t("expenses.currency", "Currency")}</Label>
+            <BaseCurrencySelect value={expenseCurrency} onChange={setExpenseCurrency} />
+            <p className="text-xs text-muted-foreground">
+              {t("expenses.currencyHint", "Defaults to the clinic currency ({{currency}}).", {
+                currency: createClinicCurrency,
+              })}
+            </p>
           </div>
           <div className="space-y-2 sm:col-span-2 lg:col-span-5">
             <Label>{t("expenses.paymentProof")}</Label>
@@ -492,7 +513,7 @@ export function ExpensesPage() {
                     >
                       <td className="px-3 py-2">{formatExpenseCategory(e.category, t)}</td>
                       <td className="px-3 py-2 text-muted-foreground">{e.vendorName ?? "—"}</td>
-                      <td className="px-3 py-2 ltr-nums">{money(e.amount)}</td>
+                      <td className="px-3 py-2 ltr-nums">{money(e.amount, e.currency)}</td>
                       <td className="px-3 py-2">
                         <Badge
                           variant={e.status === "APPROVED" ? "default" : "secondary"}
@@ -591,7 +612,7 @@ export function ExpensesPage() {
               </div>
               <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
                 <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("expenses.amount")}</dt>
-                <dd className="font-medium ltr-nums">{money(detail.amount)}</dd>
+                <dd className="font-medium ltr-nums">{money(detail.amount, detail.currency)}</dd>
               </div>
               <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
                 <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("expenses.status")}</dt>
