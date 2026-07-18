@@ -244,6 +244,7 @@ export function OperationsPage() {
 
   const prescriptionContext = useMemo(
     () => ({
+      clinicId: selectedClinic?.id ?? (schedulingClinicId || selectedPatient?.homeBranchId || ""),
       clinicName: selectedClinic ? formatClinicName(selectedClinic, i18n.language) : "—",
       patientName: selectedPatient
         ? `${selectedPatient.firstNameEn} ${selectedPatient.lastNameEn}`.trim()
@@ -253,7 +254,7 @@ export function OperationsPage() {
         ? physicianToPickListItem(selectedPhysician, i18n.language).label
         : authUser?.displayName ?? null,
     }),
-    [selectedClinic, selectedPatient, selectedPhysician, authUser?.displayName, i18n.language],
+    [selectedClinic, schedulingClinicId, selectedPatient?.homeBranchId, selectedPatient, selectedPhysician, authUser?.displayName, i18n.language],
   );
 
   const resetCreateForm = () => {
@@ -424,6 +425,7 @@ export function OperationsPage() {
   );
   const editPrescriptionContext = useMemo(
     () => ({
+      clinicId: editClinicId || editOp?.clinicId || "",
       clinicName: editSelectedClinic ? formatClinicName(editSelectedClinic, i18n.language) : "—",
       patientName: editPatientSelectedItem?.label ?? "—",
       patientMrn: editOpDetail?.patientMrn ?? editOp?.patientMrn,
@@ -431,6 +433,8 @@ export function OperationsPage() {
     }),
     [
       editSelectedClinic,
+      editClinicId,
+      editOp?.clinicId,
       editPatientSelectedItem,
       editOpDetail?.patientMrn,
       editOp?.patientMrn,

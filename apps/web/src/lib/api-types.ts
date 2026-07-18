@@ -302,6 +302,9 @@ export interface ClinicDetailDto {
   invoiceBackgroundHex: string;
   invoiceSections: string[];
   hasInvoiceLogo: boolean;
+  hasPrescriptionLogo: boolean;
+  prescriptionHeaderDescriptionEn: string;
+  prescriptionHeaderDescriptionAr: string;
 }
 
 export interface InvoiceLineDto {

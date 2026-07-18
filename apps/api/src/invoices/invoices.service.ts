@@ -432,4 +432,101 @@ export class InvoicesService {
 
     return { clinicId, hasInvoiceLogo: true };
   }
+
+  async patchClinicPrescriptionSettings(
+    tenantId: string,
+    clinicId: string,
+    viewer: JwtUser,
+    body: { prescriptionHeaderDescriptionEn?: string; prescriptionHeaderDescriptionAr?: string },
+  ) {
+    await this.assertClinicInvoiceSettingsAccess(tenantId, clinicId, viewer, true);
+
+    const data: Prisma.ClinicUpdateInput = {};
+    if (body.prescriptionHeaderDescriptionEn !== undefined) {
+      data.prescriptionHeaderDescriptionEn = body.prescriptionHeaderDescriptionEn.trim();
+    }
+    if (body.prescriptionHeaderDescriptionAr !== undefined) {
+      data.prescriptionHeaderDescriptionAr = body.prescriptionHeaderDescriptionAr.trim();
+    }
+    if (!Object.keys(data).length) throw new BadRequestException("No supported fields to update");
+
+    const row = await this.prisma.clinic.update({
+      where: { id: clinicId },
+      data,
+      select: {
+        id: true,
+        prescriptionLogoRelativePath: true,
+        prescriptionHeaderDescriptionEn: true,
+        prescriptionHeaderDescriptionAr: true,
+      },
+    });
+
+    return {
+      clinicId: row.id,
+      hasPrescriptionLogo: Boolean(row.prescriptionLogoRelativePath),
+      prescriptionHeaderDescriptionEn: row.prescriptionHeaderDescriptionEn,
+      prescriptionHeaderDescriptionAr: row.prescriptionHeaderDescriptionAr,
+    };
+  }
+
+  async uploadClinicPrescriptionLogo(
+    tenantId: string,
+    clinicId: string,
+    viewer: JwtUser,
+    file?: Express.Multer.File,
+  ) {
+    await this.assertClinicInvoiceSettingsAccess(tenantId, clinicId, viewer, true);
+    if (!file?.buffer?.length) throw new BadRequestException("File is required");
+    if (file.size > 5 * 1024 * 1024) throw new BadRequestException("File too large (max 5MB)");
+    const mime = file.mimetype || "application/octet-stream";
+    const allowed = new Set(["image/jpeg", "image/png", "image/webp", "image/svg+xml"]);
+    if (!allowed.has(mime)) throw new BadRequestException(`Unsupported file type: ${mime}`);
+
+    const docId = randomUUID();
+    const base =
+      path.basename(file.originalname || "prescription-logo").replace(/[^\w.\-]+/g, "_").slice(0, 120) ||
+      "prescription-logo";
+    const relativePath = `${tenantId}/${clinicId}/rx-${docId}-${base}`;
+    await this.uploads.put("clinics", relativePath, file.buffer, mime);
+
+    await this.prisma.clinic.update({
+      where: { id: clinicId },
+      data: {
+        prescriptionLogoRelativePath: relativePath,
+        prescriptionLogoOriginalName: file.originalname || base,
+        prescriptionLogoMimeType: mime,
+      },
+    });
+
+    return { clinicId, hasPrescriptionLogo: true };
+  }
+
+  async getClinicPrescriptionLogoMeta(
+    tenantId: string,
+    clinicId: string,
+    viewer: JwtUser,
+  ): Promise<{ storageKey: string; mimeType: string; originalFileName: string }> {
+    await this.assertClinicInvoiceSettingsAccess(tenantId, clinicId, viewer, false);
+    const row = await this.prisma.clinic.findFirst({
+      where: { id: clinicId, tenantId },
+      select: {
+        prescriptionLogoRelativePath: true,
+        prescriptionLogoOriginalName: true,
+        prescriptionLogoMimeType: true,
+      },
+    });
+    if (!row?.prescriptionLogoRelativePath || !row.prescriptionLogoOriginalName || !row.prescriptionLogoMimeType) {
+      throw new NotFoundException("No prescription logo uploaded");
+    }
+    await this.uploads.assertExists("clinics", row.prescriptionLogoRelativePath);
+    return {
+      storageKey: row.prescriptionLogoRelativePath,
+      mimeType: row.prescriptionLogoMimeType,
+      originalFileName: row.prescriptionLogoOriginalName,
+    };
+  }
+
+  openClinicPrescriptionLogoReadStream(storageKey: string) {
+    return this.uploads.getReadStream("clinics", storageKey);
+  }
 }

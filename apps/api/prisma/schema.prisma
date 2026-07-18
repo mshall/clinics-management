@@ -236,6 +236,11 @@ model Clinic {
   invoiceLogoMimeType     String?
   invoiceBackgroundColor  String      @default("white")
   invoiceSections         Json        @default("[\"clinicHeader\",\"patientDetails\",\"invoiceMeta\",\"lineItems\",\"totals\",\"footer\"]")
+  prescriptionLogoRelativePath String?
+  prescriptionLogoOriginalName String?
+  prescriptionLogoMimeType     String?
+  prescriptionHeaderDescriptionEn String @default("")
+  prescriptionHeaderDescriptionAr String @default("")
   patientsHome     Patient[]       @relation("PatientHomeBranch")
   encounters       Encounter[]
   revenueEntries   RevenueEntry[]

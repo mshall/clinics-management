@@ -45,6 +45,7 @@ import { canDeleteEncounter } from "@/lib/encounter-delete-policy";
 import { formatEncounterStatus, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
 import { formatMoneyAmount, resolveClinicCurrencyCode } from "@/lib/money-display";
 import { generatePrescriptionPng } from "@/lib/prescription-image";
+import { loadPrescriptionBranding } from "@/lib/prescription-branding";
 import { cn } from "@/lib/utils";
 
 function apiErrorMessage(e: unknown): string {
@@ -313,11 +314,13 @@ export function EncounterDetailPage() {
     mutationFn: async () => {
       if (!enc || meds.length === 0) throw new Error("No medications");
       const rtl = i18n.language === "ar";
+      const locale = rtl ? "ar" : "en";
       const patientResolved = resolvePatientListLabel({
         patientId: enc.patientId,
         patientMrn: enc.patientMrn,
         patientName: enc.patientName,
       });
+      const branding = enc.clinicId ? await loadPrescriptionBranding(enc.clinicId, locale) : undefined;
       const blob = await generatePrescriptionPng({
         clinicName: formatClinicNameFields(enc.clinicNameEn, enc.clinicNameAr, i18n.language, enc.clinicId),
         patientName: patientResolved.isIdFallback ? (enc.patientMrn?.trim() || t("encounters.patient")) : patientResolved.text,
@@ -326,6 +329,7 @@ export function EncounterDetailPage() {
         medications: meds,
         physicianName: user?.displayName,
         rtl,
+        branding,
         labels: {
           title: t("encounters.generatedPrescription"),
           patient: t("encounters.patient"),

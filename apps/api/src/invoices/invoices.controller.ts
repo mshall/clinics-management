@@ -27,6 +27,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { PatchClinicInvoiceSettingsDto } from "../clinics/dto/patch-clinic-invoice-settings.dto";
+import { PatchClinicPrescriptionSettingsDto } from "../clinics/dto/patch-clinic-prescription-settings.dto";
 import { CreateInvoiceDto } from "./dto/create-invoice.dto";
 import { InvoiceDto, InvoiceListItemDto } from "./dto/invoice.dto";
 import { InvoicesService } from "./invoices.service";
@@ -110,6 +111,55 @@ export class InvoicesController {
   async getLogo(@CurrentUser() user: JwtUser, @Param("clinicId") clinicId: string): Promise<StreamableFile> {
     const meta = await this.invoices.getClinicInvoiceLogoMeta(requireTenantId(user), clinicId, user);
     const stream = await this.invoices.openClinicInvoiceLogoReadStream(meta.storageKey);
+    return new StreamableFile(stream, {
+      type: meta.mimeType,
+      disposition: `inline; filename*=UTF-8''${encodeURIComponent(meta.originalFileName)}`,
+    });
+  }
+
+  @Patch("clinics/:clinicId/prescription-settings")
+  @ApiOperation({ summary: "Update clinic prescription header branding (admin roles)" })
+  patchClinicPrescriptionSettings(
+    @CurrentUser() user: JwtUser,
+    @Param("clinicId") clinicId: string,
+    @Body() body: PatchClinicPrescriptionSettingsDto,
+  ) {
+    return this.invoices.patchClinicPrescriptionSettings(requireTenantId(user), clinicId, user, body);
+  }
+
+  @Post("clinics/:clinicId/prescription-logo")
+  @ApiOperation({ summary: "Upload clinic prescription header logo (admin roles)" })
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: { file: { type: "string", format: "binary" } },
+      required: ["file"],
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor("file", {
+      storage: memoryStorage(),
+      limits: { fileSize: LOGO_UPLOAD_LIMIT },
+    }),
+  )
+  uploadPrescriptionLogo(
+    @CurrentUser() user: JwtUser,
+    @Param("clinicId") clinicId: string,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.invoices.uploadClinicPrescriptionLogo(requireTenantId(user), clinicId, user, file);
+  }
+
+  @Get("clinics/:clinicId/prescription-logo")
+  @ApiOperation({ summary: "Download clinic prescription header logo" })
+  @ApiOkResponse({ description: "Binary image stream" })
+  async getPrescriptionLogo(
+    @CurrentUser() user: JwtUser,
+    @Param("clinicId") clinicId: string,
+  ): Promise<StreamableFile> {
+    const meta = await this.invoices.getClinicPrescriptionLogoMeta(requireTenantId(user), clinicId, user);
+    const stream = await this.invoices.openClinicPrescriptionLogoReadStream(meta.storageKey);
     return new StreamableFile(stream, {
       type: meta.mimeType,
       disposition: `inline; filename*=UTF-8''${encodeURIComponent(meta.originalFileName)}`,

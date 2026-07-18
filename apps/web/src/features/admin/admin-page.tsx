@@ -38,6 +38,7 @@ import { AdminOrgUsersPanel } from "./admin-org-users-panel";
 import { OrgRbacPanel } from "./org-rbac-panel";
 import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel";
 import { ClinicInvoiceSettingsPanel } from "@/features/invoices/clinic-invoice-settings-panel";
+import { ClinicPrescriptionSettingsPanel } from "@/features/prescriptions/clinic-prescription-settings-panel";
 
 export function AdminPage() {
   const { t, i18n } = useTranslation();
@@ -550,6 +551,9 @@ export function AdminPage() {
               />
               {selectedClinicDetail.data ? (
                 <ClinicInvoiceSettingsPanel clinicId={selectedClinicDetail.data.id} detail={selectedClinicDetail.data} />
+              ) : null}
+              {selectedClinicDetail.data ? (
+                <ClinicPrescriptionSettingsPanel clinicId={selectedClinicDetail.data.id} detail={selectedClinicDetail.data} />
               ) : null}
               {patchClinicValidation.formErr ? (
                 <p className="text-sm text-destructive">{patchClinicValidation.formErr}</p>

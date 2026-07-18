@@ -21,14 +21,18 @@ export type PrescriptionImageInput = {
   physicianName?: string;
   labels: PrescriptionImageLabels;
   rtl?: boolean;
+  /** Optional clinic header logo and description; when omitted, default template layout is unchanged. */
+  branding?: {
+    logo?: HTMLImageElement | null;
+    headerDescription?: string | null;
+  };
 };
 
-function loadImage(src: string): Promise<HTMLImageElement> {
+export function loadPrescriptionImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    // Same-origin public asset — do not set crossOrigin (breaks load without CORS headers).
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error(`Failed to load prescription template: ${src}`));
+    img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
     img.src = src;
   });
 }
@@ -76,7 +80,7 @@ function formatPrescriptionDate(d: Date): string {
 }
 
 export async function generatePrescriptionPng(input: PrescriptionImageInput): Promise<Blob> {
-  const template = await loadImage(PRESCRIPTION_TEMPLATE_URL);
+  const template = await loadPrescriptionImage(PRESCRIPTION_TEMPLATE_URL);
   const width = template.naturalWidth;
   const height = template.naturalHeight;
   const rtl = input.rtl ?? false;
@@ -89,6 +93,36 @@ export async function generatePrescriptionPng(input: PrescriptionImageInput): Pr
   if (!ctx) throw new Error("Canvas not supported");
 
   ctx.drawImage(template, 0, 0, width, height);
+
+  const branding = input.branding;
+  const hasLogo = Boolean(branding?.logo);
+  const headerDescription = branding?.headerDescription?.trim();
+  if (hasLogo || headerDescription) {
+    const centerX = width / 2;
+    let headerY = 52;
+    ctx.fillStyle = "#334155";
+    ctx.textBaseline = "alphabetic";
+
+    if (branding?.logo) {
+      const maxW = 220;
+      const maxH = 78;
+      const scale = Math.min(maxW / branding.logo.naturalWidth, maxH / branding.logo.naturalHeight, 1);
+      const w = branding.logo.naturalWidth * scale;
+      const h = branding.logo.naturalHeight * scale;
+      ctx.drawImage(branding.logo, centerX - w / 2, headerY, w, h);
+      headerY += h + 14;
+    }
+
+    if (headerDescription) {
+      ctx.font = `500 18px ${fontFamily}`;
+      ctx.direction = rtl ? "rtl" : "ltr";
+      ctx.textAlign = "center";
+      for (const line of wrapText(ctx, headerDescription, width - 140)) {
+        ctx.fillText(line, centerX, headerY);
+        headerY += 24;
+      }
+    }
+  }
 
   ctx.fillStyle = "#1e293b";
   ctx.textBaseline = "alphabetic";

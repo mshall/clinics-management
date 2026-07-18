@@ -11,6 +11,7 @@ import type { ClinicPhysicianDto } from "./dto/clinic-physician.dto";
 import type { ClinicKind } from "./clinic-kind";
 import { resolveClinicKind } from "./clinic-kind";
 import { clinicInvoiceSettingsFromRow } from "../common/invoice-config";
+import { clinicPrescriptionSettingsFromRow } from "../common/prescription-config";
 
 export interface ClinicDto {
   id: string;
@@ -463,6 +464,7 @@ export class ClinicsService {
       defaultLanguage: row.defaultLanguage,
       defaultCurrency: row.defaultCurrency,
       ...clinicInvoiceSettingsFromRow(row),
+      ...clinicPrescriptionSettingsFromRow(row),
     };
   }
 
@@ -646,6 +648,7 @@ export class ClinicsService {
       defaultLanguage: row.defaultLanguage,
       defaultCurrency: row.defaultCurrency,
       ...clinicInvoiceSettingsFromRow(row),
+      ...clinicPrescriptionSettingsFromRow(row),
     };
   }
 }

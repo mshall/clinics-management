@@ -67,4 +67,13 @@ export class ClinicDetailDto {
 
   @ApiProperty({ description: "Whether an invoice logo has been uploaded" })
   hasInvoiceLogo!: boolean;
+
+  @ApiProperty({ description: "Whether a prescription header logo has been uploaded" })
+  hasPrescriptionLogo!: boolean;
+
+  @ApiProperty({ description: "Optional header description on generated prescriptions (English)" })
+  prescriptionHeaderDescriptionEn!: string;
+
+  @ApiProperty({ description: "Optional header description on generated prescriptions (Arabic)" })
+  prescriptionHeaderDescriptionAr!: string;
 }

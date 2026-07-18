@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generatePrescriptionPng } from "@/lib/prescription-image";
+import { loadPrescriptionBranding } from "@/lib/prescription-branding";
 import { cn } from "@/lib/utils";
 
 export type MedTab = "none" | "manual" | "prescription";
@@ -24,6 +25,7 @@ export function emptyPendingMedication(): PendingMedication {
 }
 
 export type PrescriptionContext = {
+  clinicId: string;
   clinicName: string;
   patientName: string;
   patientMrn?: string | null;
@@ -102,6 +104,10 @@ export function MedicationsPrescriptionDraftPanel({
     if (medications.length === 0) return;
     setGenerating(true);
     try {
+      const locale = i18n.language === "ar" ? "ar" : "en";
+      const branding = prescriptionContext.clinicId
+        ? await loadPrescriptionBranding(prescriptionContext.clinicId, locale)
+        : undefined;
       const blob = await generatePrescriptionPng({
         clinicName: prescriptionContext.clinicName,
         patientName: prescriptionContext.patientName,
@@ -117,7 +123,8 @@ export function MedicationsPrescriptionDraftPanel({
           instructions: null,
         })),
         physicianName: prescriptionContext.physicianName ?? undefined,
-        rtl: i18n.language === "ar",
+        rtl: locale === "ar",
+        branding,
         labels: {
           title: t("encounters.generatedPrescription"),
           patient: t("encounters.patient"),
