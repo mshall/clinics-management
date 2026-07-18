@@ -44,6 +44,9 @@ export class AppointmentDto {
   @ApiProperty()
   endsAt!: string;
 
+  @ApiProperty({ description: "Scheduled visit fee for this appointment" })
+  feeAmount!: number;
+
   @ApiProperty({ enum: AppointmentStatus })
   status!: AppointmentStatus;
 

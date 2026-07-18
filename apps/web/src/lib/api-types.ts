@@ -169,6 +169,7 @@ export interface AppointmentDto {
   clinicianLastNameAr?: string | null;
   startsAt: string;
   endsAt: string;
+  feeAmount: number;
   status: string;
   notes: string | null;
   patientMrn?: string | null;

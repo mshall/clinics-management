@@ -5,6 +5,7 @@ import { CLINIC_SCOPE_ROLES, fetchPhysicianNetworkClinicIds } from "../common/cl
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { assertOrgClinicalDeleteRole } from "../common/org-clinical-delete-roles";
 import { paginate, parsePageParams } from "../common/pagination";
+import { syncOpenEncounterVisitFeeFromAppointment } from "../common/visit-fee-ledger";
 import { PrismaService } from "../prisma/prisma.service";
 import type { CreateAppointmentDto } from "./dto/create-appointment.dto";
 import type { AppointmentDto } from "./dto/appointment.dto";
@@ -114,6 +115,7 @@ export class AppointmentsService {
       clinicianLastNameAr: clinicianParts.lastNameAr,
       startsAt: row.startsAt.toISOString(),
       endsAt: row.endsAt.toISOString(),
+      feeAmount: Number(row.feeAmount),
       status: row.status,
       notes: row.notes,
       ...(patient
@@ -279,6 +281,12 @@ export class AppointmentsService {
     const end = new Date(dto.endsAt);
     if (end <= start) throw new BadRequestException("endsAt must be after startsAt");
 
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
+    if (!tenant) throw new BadRequestException("Tenant not found");
+    const defaultFee = Number(tenant.defaultVisitFee);
+    const feeRaw = dto.feeAmount !== undefined && dto.feeAmount !== null ? Number(dto.feeAmount) : defaultFee;
+    const feeAmount = Number.isFinite(feeRaw) && feeRaw >= 0 ? feeRaw : defaultFee;
+
     const row = await this.prisma.appointment.create({
       data: {
         tenantId,
@@ -287,6 +295,7 @@ export class AppointmentsService {
         clinicianId: dto.clinicianId,
         startsAt: start,
         endsAt: end,
+        feeAmount,
         status: dto.status ?? AppointmentStatus.SCHEDULED,
         notes: dto.notes ?? null,
       },
@@ -357,18 +366,35 @@ export class AppointmentsService {
       if (!clinic || !patient || !clinician) throw new BadRequestException("Invalid clinic, patient, or clinician");
     }
 
-    const row = await this.prisma.appointment.update({
-      where: { id },
-      data: {
-        clinicId,
-        patientId,
-        clinicianId,
-        startsAt: dto.startsAt !== undefined ? new Date(dto.startsAt) : undefined,
-        endsAt: dto.endsAt !== undefined ? new Date(dto.endsAt) : undefined,
-        status: dto.status !== undefined ? dto.status : undefined,
-        notes: dto.notes !== undefined ? (dto.notes === "" ? null : dto.notes) : undefined,
-      },
-      include: appointmentDtoInclude,
+    const feeProvided = dto.feeAmount !== undefined && dto.feeAmount !== null;
+    if (feeProvided) {
+      const newFee = Number(dto.feeAmount);
+      if (!Number.isFinite(newFee) || newFee < 0) {
+        throw new BadRequestException("feeAmount must be a non-negative number");
+      }
+    }
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.appointment.update({
+        where: { id },
+        data: {
+          clinicId,
+          patientId,
+          clinicianId,
+          startsAt: dto.startsAt !== undefined ? new Date(dto.startsAt) : undefined,
+          endsAt: dto.endsAt !== undefined ? new Date(dto.endsAt) : undefined,
+          status: dto.status !== undefined ? dto.status : undefined,
+          notes: dto.notes !== undefined ? (dto.notes === "" ? null : dto.notes) : undefined,
+          ...(feeProvided ? { feeAmount: new Prisma.Decimal(String(Number(dto.feeAmount))) } : {}),
+        },
+        include: appointmentDtoInclude,
+      });
+
+      if (feeProvided) {
+        await syncOpenEncounterVisitFeeFromAppointment(tx, tenantId, id, Number(dto.feeAmount));
+      }
+
+      return updated;
     });
     return this.mapRow(row);
   }

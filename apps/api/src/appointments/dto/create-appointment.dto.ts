@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { AppointmentStatus } from "@prisma/client";
-import { IsDateString, IsEnum, IsOptional, IsString, MaxLength } from "class-validator";
+import { IsDateString, IsEnum, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
 
 export class CreateAppointmentDto {
   @ApiProperty()
@@ -22,6 +22,14 @@ export class CreateAppointmentDto {
   @ApiProperty()
   @IsDateString()
   endsAt!: string;
+
+  @ApiPropertyOptional({
+    description: "Scheduled visit fee; defaults to the organization default visit fee",
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  feeAmount?: number;
 
   @ApiPropertyOptional({ enum: AppointmentStatus })
   @IsOptional()

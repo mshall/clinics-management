@@ -10,6 +10,7 @@ import { SearchablePickList, type PickListItem } from "@/components/searchable-p
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAppointmentQuery, useClinicsQuery, usePatientQuery, usePatientsQuery, useSchedulingPhysiciansQuery } from "@/lib/api-hooks";
 import type { AppointmentDto } from "@/lib/api-types";
@@ -22,7 +23,8 @@ import { useDebouncedPickListSearch } from "@/lib/pick-list-utils";
 import { physicianToPickListItem } from "@/lib/physician-display";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { DatetimeLocalField } from "@/components/datetime-local-field";
-import { formatClinicName } from "@/lib/locale-display";
+import { formatClinicName, localeForLanguage } from "@/lib/locale-display";
+import { formatMoneyAmount, resolveClinicCurrencyCode } from "@/lib/money-display";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -78,6 +80,7 @@ export function AppointmentDetailPage() {
   const [startsLocal, setStartsLocal] = useState("");
   const [endsLocal, setEndsLocal] = useState("");
   const [notes, setNotes] = useState("");
+  const [feeAmount, setFeeAmount] = useState("");
   const [status, setStatus] = useState("");
   const [formErr, setFormErr] = useState<string | null>(null);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
@@ -91,8 +94,11 @@ export function AppointmentDetailPage() {
     setStartsLocal(toDatetimeLocalValue(apt.startsAt));
     setEndsLocal(toDatetimeLocalValue(apt.endsAt));
     setNotes(apt.notes ?? "");
+    setFeeAmount(apt.feeAmount != null ? String(apt.feeAmount) : "");
     setStatus(apt.status);
   }, [apt]);
+
+  const feeCurrency = resolveClinicCurrencyCode(clinics, apt?.clinicId);
 
   const statusLabel = (code: string) => {
     if (!isAppointmentStatusCode(code)) return code;
@@ -177,6 +183,7 @@ export function AppointmentDetailPage() {
       setFormErr(null);
       void qc.invalidateQueries({ queryKey: ["appointment", id] });
       void qc.invalidateQueries({ queryKey: ["appointments"] });
+      void qc.invalidateQueries({ queryKey: ["encounters"] });
       const st = typeof variables.status === "string" ? variables.status : undefined;
       if (st) {
         toast.success(
@@ -234,6 +241,14 @@ export function AppointmentDetailPage() {
       toast.error(msg);
       return;
     }
+    const trimmedFee = feeAmount.trim();
+    const parsedFee = trimmedFee === "" ? undefined : Number.parseFloat(trimmedFee);
+    if (parsedFee !== undefined && (!Number.isFinite(parsedFee) || parsedFee < 0)) {
+      const msg = t("appointments.invalidFee", "Enter a valid non-negative scheduled fee.");
+      setFormErr(msg);
+      toast.error(msg);
+      return;
+    }
     saveMut.mutate({
       clinicId,
       patientId,
@@ -242,6 +257,7 @@ export function AppointmentDetailPage() {
       endsAt: end.toISOString(),
       notes: notes.trim() === "" ? "" : notes,
       status,
+      ...(parsedFee !== undefined ? { feeAmount: parsedFee } : {}),
     });
   };
 
@@ -442,6 +458,31 @@ export function AppointmentDetailPage() {
           <div className="space-y-2">
             <Label required>{t("appointments.ends")}</Label>
             <DatetimeLocalField value={endsLocal} disabled={readOnly} onChange={setEndsLocal} />
+          </div>
+          <div className="space-y-2">
+            <Label>{t("appointments.scheduledFee", "Scheduled fee ({{currency}})", { currency: feeCurrency })}</Label>
+            {readOnly ? (
+              <p className="flex min-h-11 items-center rounded-md border border-input bg-muted/40 px-3 py-2 text-sm ltr-nums">
+                {formatMoneyAmount(Number(feeAmount) || 0, feeCurrency, localeForLanguage(i18n.language))}
+              </p>
+            ) : (
+              <>
+                <Input
+                  className="ltr-nums"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={feeAmount}
+                  onChange={(e) => setFeeAmount(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t(
+                    "appointments.scheduledFeeHint",
+                    "If an open encounter is linked, saving also updates that encounter visit fee.",
+                  )}
+                </p>
+              </>
+            )}
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label>{t("appointments.status")}</Label>

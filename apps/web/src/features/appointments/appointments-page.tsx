@@ -17,7 +17,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAppointmentsQuery, useClinicsQuery, usePatientQuery, usePatientsQuery, useSchedulingPhysiciansQuery } from "@/lib/api-hooks";
+import { useAdminOverviewQuery, useAppointmentsQuery, useClinicsQuery, usePatientQuery, usePatientsQuery, useSchedulingPhysiciansQuery } from "@/lib/api-hooks";
+import { resolveClinicCurrencyCode } from "@/lib/money-display";
 import { canDeleteAppointment } from "@/lib/appointment-delete-policy";
 import { ApiError, apiDelete, apiPost } from "@/lib/http";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
@@ -93,6 +94,7 @@ export function AppointmentsPage() {
   const aptTotal = aptData?.total ?? 0;
   const aptTotalPages = aptData?.totalPages ?? 1;
   const { data: clinics = [] } = useClinicsQuery();
+  const adminOv = useAdminOverviewQuery();
   const clinicById = useMemo(() => {
     const m = new Map<string, { en: string; ar: string }>();
     for (const c of clinics) m.set(c.id, { en: c.nameEn, ar: c.nameAr });
@@ -133,6 +135,7 @@ export function AppointmentsPage() {
   }, [rows, afClinic, afStarts, afPatient, afStatus, i18n.language, patientLabel, clinicById]);
 
   const [clinicId, setClinicId] = useState("");
+  const bookFeeCurrency = resolveClinicCurrencyCode(clinics, clinicId);
   const [patientId, setPatientId] = useState("");
   const [clinicianId, setClinicianId] = useState("");
   const [pinnedPhysicianItem, setPinnedPhysicianItem] = useState<PickListItem | null>(null);
@@ -141,6 +144,7 @@ export function AppointmentsPage() {
   }, [authUser?.role, authUser?.id]);
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
+  const [bookFee, setBookFee] = useState("");
   const validation = useValidationIssuesDialog({ intent: "create" });
   const [bookOk, setBookOk] = useState<string | null>(null);
   const [appointmentToDelete, setAppointmentToDelete] = useState<AppointmentDeleteTarget | null>(null);
@@ -205,6 +209,12 @@ export function AppointmentsPage() {
     return null;
   }, [clinicianId, pinnedPhysicianItem, physicianItems, selectedPhysician, i18n.language]);
 
+  useEffect(() => {
+    if (!showBookPanel) return;
+    const d = adminOv.data?.currentTenant?.defaultVisitFee;
+    if (d != null && Number.isFinite(Number(d))) setBookFee(String(d));
+  }, [showBookPanel, adminOv.data?.currentTenant?.defaultVisitFee]);
+
   const handleCreateAppointment = () => {
     const issues = collectAppointmentCreateIssues({ clinicId, patientId, clinicianId, start, end }, t);
     if (issues.length > 0) {
@@ -222,13 +232,19 @@ export function AppointmentsPage() {
       if (issues.length > 0) throw new Error(issues.join(" "));
       const startsAt = toAppointmentIso(start);
       const endsAt = toAppointmentIso(end);
-      return apiPost("/api/v1/appointments", {
+      const body: Record<string, unknown> = {
         clinicId,
         patientId,
         clinicianId,
         startsAt,
         endsAt,
-      });
+      };
+      const trimmedFee = bookFee.trim();
+      if (trimmedFee !== "") {
+        const fee = Number.parseFloat(trimmedFee);
+        if (Number.isFinite(fee) && fee >= 0) body.feeAmount = fee;
+      }
+      return apiPost("/api/v1/appointments", body);
     },
     onSuccess: () => {
       validation.clear();
@@ -243,6 +259,8 @@ export function AppointmentsPage() {
       bookDoctorPickSearch.resetSearch();
       setStart("");
       setEnd("");
+      const d = adminOv.data?.currentTenant?.defaultVisitFee;
+      setBookFee(d != null && Number.isFinite(Number(d)) ? String(d) : "");
       void qc.invalidateQueries({ queryKey: ["appointments"] });
       void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
     },
@@ -484,6 +502,17 @@ export function AppointmentsPage() {
             <div className="space-y-2">
               <Label required>{t("appointments.ends")}</Label>
               <DatetimeLocalField value={end} onChange={setEnd} />
+            </div>
+            <div className="space-y-2">
+              <Label>{t("appointments.scheduledFee", "Scheduled fee ({{currency}})", { currency: bookFeeCurrency })}</Label>
+              <Input
+                className="ltr-nums"
+                type="number"
+                min="0"
+                step="0.01"
+                value={bookFee}
+                onChange={(e) => setBookFee(e.target.value)}
+              />
             </div>
             <div className="flex flex-wrap items-end gap-2 sm:col-span-2">
               <CreateActionButton

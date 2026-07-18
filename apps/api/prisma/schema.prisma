@@ -565,6 +565,7 @@ model Appointment {
   clinician      User              @relation("AppointmentClinician", fields: [clinicianId], references: [id], onDelete: Restrict)
   startsAt       DateTime
   endsAt         DateTime
+  feeAmount      Decimal           @default(0) @db.Decimal(14, 2)
   status         AppointmentStatus @default(SCHEDULED)
   notes          String?
   revenueEntries RevenueEntry[]

@@ -10,7 +10,6 @@ import {
   EncounterDocumentKind,
   EncounterStatus,
   Prisma,
-  RevenueStatus,
   UserRole,
 } from "@prisma/client";
 import { randomUUID } from "crypto";
@@ -21,7 +20,7 @@ import { resolveLedgerListingRange } from "../common/reporting-range";
 import { paginate, parsePageParams } from "../common/pagination";
 import type { JwtUser } from "../auth/jwt-user";
 import { CLINIC_SCOPE_ROLES, fetchPhysicianNetworkClinicIds } from "../common/clinic-scope";
-import { resolveClinicCurrency } from "../common/clinic-currency";
+import { upsertEncounterVisitFeeRevenue } from "../common/visit-fee-ledger";
 import { PrismaService } from "../prisma/prisma.service";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { AddDiagnosisDto } from "./dto/add-diagnosis.dto";
@@ -302,11 +301,9 @@ export class EncountersService {
       const tenant = await tx.tenant.findUnique({ where: { id: tenantId } });
       if (!tenant) throw new BadRequestException("Tenant not found");
       const defaultFee = Number(tenant.defaultVisitFee);
-      const feeRaw =
-        dto.visitFeeAmount !== undefined && dto.visitFeeAmount !== null ? Number(dto.visitFeeAmount) : defaultFee;
-      const visitFeeAmount = Number.isFinite(feeRaw) && feeRaw >= 0 ? feeRaw : defaultFee;
 
       let linkAppointmentId: string | null = null;
+      let linkedAppointmentFee: number | null = null;
       if (appointmentIdOpt) {
         const apt = await tx.appointment.findFirst({
           where: { id: appointmentIdOpt, tenantId, patientId: dto.patientId },
@@ -327,7 +324,17 @@ export class EncountersService {
           throw new BadRequestException("An open encounter is already linked to this appointment");
         }
         linkAppointmentId = appointmentIdOpt;
+        linkedAppointmentFee = Number(apt.feeAmount);
       }
+
+      const visitFeeFromDto =
+        dto.visitFeeAmount !== undefined && dto.visitFeeAmount !== null ? Number(dto.visitFeeAmount) : null;
+      const visitFeeAmount =
+        visitFeeFromDto != null && Number.isFinite(visitFeeFromDto) && visitFeeFromDto >= 0
+          ? visitFeeFromDto
+          : linkedAppointmentFee != null && linkedAppointmentFee >= 0
+            ? linkedAppointmentFee
+            : defaultFee;
 
       const enc = await tx.encounter.create({
         data: {
@@ -347,28 +354,20 @@ export class EncountersService {
       if (linkAppointmentId) {
         await tx.appointment.update({
           where: { id: linkAppointmentId },
-          data: { status: AppointmentStatus.CHECKED_IN },
-        });
-      }
-
-      if (visitFeeAmount > 0) {
-        const currency = await resolveClinicCurrency(tx, tenantId, dto.clinicId);
-        await tx.revenueEntry.create({
           data: {
-            tenantId,
-            clinicId: dto.clinicId,
-            encounterId: enc.id,
-            category: "VISIT_FEE",
-            description: `Visit fee · encounter ${enc.id.slice(0, 8)}…`,
-            grossAmount: visitFeeAmount,
-            taxAmount: 0,
-            netAmount: visitFeeAmount,
-            currency,
-            postedAt: new Date(),
-            status: RevenueStatus.POSTED,
+            status: AppointmentStatus.CHECKED_IN,
+            feeAmount: visitFeeAmount,
           },
         });
       }
+
+      await upsertEncounterVisitFeeRevenue(tx, {
+        tenantId,
+        clinicId: dto.clinicId,
+        encounterId: enc.id,
+        appointmentId: linkAppointmentId,
+        amount: visitFeeAmount,
+      });
 
       if (hasPatientAcquisitionInput(dto)) {
         await tx.patient.update({
@@ -452,42 +451,19 @@ export class EncountersService {
           include: encounterIncludeDef,
         });
 
-        const existingRevenue = await tx.revenueEntry.findFirst({
-          where: { tenantId, encounterId: id, category: "VISIT_FEE" },
+        await upsertEncounterVisitFeeRevenue(tx, {
+          tenantId,
+          clinicId: existing.clinicId,
+          encounterId: id,
+          appointmentId: existing.appointmentId,
+          amount: newFee,
         });
 
-        if (newFee > 0) {
-          const currency = await resolveClinicCurrency(tx, tenantId, existing.clinicId);
-          if (existingRevenue) {
-            await tx.revenueEntry.update({
-              where: { id: existingRevenue.id },
-              data: {
-                grossAmount: newFee,
-                netAmount: newFee,
-                taxAmount: 0,
-                currency,
-                description: `Visit fee · encounter ${id.slice(0, 8)}…`,
-              },
-            });
-          } else {
-            await tx.revenueEntry.create({
-              data: {
-                tenantId,
-                clinicId: existing.clinicId,
-                encounterId: id,
-                category: "VISIT_FEE",
-                description: `Visit fee · encounter ${id.slice(0, 8)}…`,
-                grossAmount: newFee,
-                taxAmount: 0,
-                netAmount: newFee,
-                currency,
-                postedAt: new Date(),
-                status: RevenueStatus.POSTED,
-              },
-            });
-          }
-        } else if (existingRevenue) {
-          await tx.revenueEntry.delete({ where: { id: existingRevenue.id } });
+        if (existing.appointmentId) {
+          await tx.appointment.update({
+            where: { id: existing.appointmentId },
+            data: { feeAmount: new Prisma.Decimal(String(newFee)) },
+          });
         }
 
         return updated;

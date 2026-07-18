@@ -457,6 +457,9 @@ export function EncountersListPage() {
                         setCreatePatientId(row.patientId);
                         setCreateClinicId(row.clinicId);
                         setCreateClinicianId(row.clinicianId);
+                        if (row.feeAmount != null && Number.isFinite(row.feeAmount)) {
+                          setCreateVisitFee(String(row.feeAmount));
+                        }
                       }
                     }}
                     onSearchQueryChange={aptPickSearch.setSearch}
