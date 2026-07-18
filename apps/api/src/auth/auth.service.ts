@@ -88,7 +88,11 @@ export class AuthService {
     const normalized = normalizeLoginEmail(email);
     const variants = loginEmailLookupVariants(normalized);
     const candidates = await this.prisma.user.findMany({
-      where: { email: { in: variants } },
+      where: {
+        email: { in: variants },
+        deletedAt: null,
+        deactivatedAt: null,
+      },
       select: {
         id: true,
         tenantId: true,
@@ -97,10 +101,15 @@ export class AuthService {
         role: true,
         passwordHash: true,
         avatarRelativePath: true,
+        deletedAt: true,
+        deactivatedAt: true,
       },
     });
     const user = candidates.find((u) => passwordMatches(password, u.passwordHash));
     if (!user) throw new UnauthorizedException("Invalid credentials");
+    if (user.deletedAt || user.deactivatedAt) {
+      throw new UnauthorizedException("This account is deactivated or archived");
+    }
 
     const accessToken = this.jwt.sign({
       sub: user.id,

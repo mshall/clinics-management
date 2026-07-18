@@ -34,6 +34,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
           : { id: payload.sub, tenantId: null },
     });
     if (!user) throw new UnauthorizedException();
+    if (user.deletedAt || user.deactivatedAt) throw new UnauthorizedException();
     return {
       userId: user.id,
       tenantId: user.tenantId,

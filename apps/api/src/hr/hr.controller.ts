@@ -64,9 +64,10 @@ export class HrController {
     @Query("clinicFilter") clinicFilter?: string,
     @Query("sortBy") sortBy?: string,
     @Query("sortOrder") sortOrder?: string,
-    @Query("recordStatus") recordStatus?: string
+    @Query("recordStatus") recordStatus?: string,
+    @Query("archived") archived?: string,
   ) {
-    return this.hr.listEmployees(requireTenantId(user), user, page, pageSize, search, clinicId, nameFilter, clinicFilter, sortBy, sortOrder, recordStatus);
+    return this.hr.listEmployees(requireTenantId(user), user, page, pageSize, search, clinicId, nameFilter, clinicFilter, sortBy, sortOrder, recordStatus, archived);
   }
 
   @Get("unlinked-users")
@@ -119,10 +120,21 @@ export class HrController {
   }
 
   @Delete("employees/:id")
-  @ApiOperation({ summary: "Delete employee (group admin, clinic admin, branch manager only)" })
-  @ApiOkResponse({ description: "{ ok: true, id }" })
+  @ApiOperation({ summary: "Archive employee and linked user (soft delete)" })
+  @ApiOkResponse({ description: "{ ok: true, id, archived: true }" })
   removeEmployee(@CurrentUser() user: JwtUser, @Param("id") id: string) {
     return this.hr.deleteEmployee(requireTenantId(user), id, user);
+  }
+
+  @Post("employees/:id/restore")
+  @ApiOperation({ summary: "Restore an archived employee and linked user" })
+  @ApiOkResponse({ type: EmployeeDto })
+  restoreEmployee(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Body() body: ReactivateEmployeeDto,
+  ) {
+    return this.hr.restoreEmployeeRecord(requireTenantId(user), id, body, user);
   }
 
   @Post("employees/:id/deactivate")

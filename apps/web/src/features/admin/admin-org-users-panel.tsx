@@ -35,6 +35,9 @@ type OrgUserRow = {
   displayName: string;
   role: string;
   createdAt: string;
+  deactivatedAt?: string | null;
+  deletedAt?: string | null;
+  archived?: boolean;
   clinicIds: string[];
   clinics: { id: string; nameEn: string }[];
   employeeId: string | null;
@@ -56,6 +59,7 @@ export function AdminOrgUsersPanel() {
   const [pageSize, setPageSize] = useState(20);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
+  const [usersView, setUsersView] = useState<"active" | "archived">("active");
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
 
   const [uEmail, setUEmail] = useState("");
@@ -111,12 +115,13 @@ export function AdminOrgUsersPanel() {
     };
   }
 
-  async function fetchOrgUsers(pageNum: number, size: number, q: string, role: string) {
+  async function fetchOrgUsers(pageNum: number, size: number, q: string, role: string, archived: boolean) {
     const query = q.trim() ? `&q=${encodeURIComponent(q.trim())}` : "";
     const roleQuery = role ? `&role=${encodeURIComponent(role)}` : "";
+    const archivedQuery = archived ? "&archived=true" : "";
     try {
       const data = await apiGet<Paginated<OrgUserRow>>(
-        `/api/v1/admin/users?page=${pageNum}&pageSize=${size}${query}${roleQuery}`,
+        `/api/v1/admin/users?page=${pageNum}&pageSize=${size}${query}${roleQuery}${archivedQuery}`,
       );
       setLegacyUsersApi(false);
       return data;
@@ -135,8 +140,8 @@ export function AdminOrgUsersPanel() {
   const { data: clinics = [] } = useClinicsQuery();
 
   const usersQuery = useQuery({
-    queryKey: ["admin", "org-users", page, pageSize, search, roleFilter],
-    queryFn: () => fetchOrgUsers(page, pageSize, search, roleFilter),
+    queryKey: ["admin", "org-users", usersView, page, pageSize, search, roleFilter],
+    queryFn: () => fetchOrgUsers(page, pageSize, search, roleFilter, usersView === "archived"),
   });
 
   const userDetailQuery = useQuery({
@@ -228,13 +233,52 @@ export function AdminOrgUsersPanel() {
       void qc.invalidateQueries({ queryKey: ["users"] });
       void qc.invalidateQueries({ queryKey: ["org-hierarchy"] });
       void qc.invalidateQueries({ queryKey: ["hr"] });
-      toast.success(t("admin.orgUsersDeleteSuccess", "User deleted."));
+      toast.success(t("admin.orgUsersArchiveSuccess", "User archived."));
     },
     onError: (e: unknown) => {
       const msg = apiErrorMessage(e);
       setUserErr(msg);
       toast.error(msg);
     },
+  });
+
+  const deactivateMut = useMutation({
+    mutationFn: (userId: string) =>
+      apiPost(`/api/v1/admin/users/${userId}/deactivate`, {
+        resignationDate: new Date().toISOString().slice(0, 10),
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["admin"] });
+      void qc.invalidateQueries({ queryKey: ["hr"] });
+      toast.success(t("admin.orgUsersDeactivateSuccess", "User deactivated."));
+    },
+    onError: (e: unknown) => toast.error(apiErrorMessage(e)),
+  });
+
+  const reactivateMut = useMutation({
+    mutationFn: (userId: string) =>
+      apiPost(`/api/v1/admin/users/${userId}/reactivate`, {
+        startDate: new Date().toISOString().slice(0, 10),
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["admin"] });
+      void qc.invalidateQueries({ queryKey: ["hr"] });
+      toast.success(t("admin.orgUsersReactivateSuccess", "User reactivated."));
+    },
+    onError: (e: unknown) => toast.error(apiErrorMessage(e)),
+  });
+
+  const restoreMut = useMutation({
+    mutationFn: (userId: string) =>
+      apiPost(`/api/v1/admin/users/${userId}/restore`, {
+        startDate: new Date().toISOString().slice(0, 10),
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["admin"] });
+      void qc.invalidateQueries({ queryKey: ["hr"] });
+      toast.success(t("admin.orgUsersRestoreSuccess", "User restored."));
+    },
+    onError: (e: unknown) => toast.error(apiErrorMessage(e)),
   });
 
   const bulkDeleteMut = useMutation({
@@ -381,7 +425,10 @@ export function AdminOrgUsersPanel() {
   useEffect(() => {
     setSelectAllMatching(false);
     setSelectedIds(new Set());
-  }, [page, pageSize, search, roleFilter]);
+  }, [page, pageSize, search, roleFilter, usersView]);
+
+  const formatWhen = (iso?: string | null) =>
+    iso ? new Date(iso).toLocaleString() : t("admin.orgUsersNotApplicable", "—");
 
   return (
     <div className="space-y-6">
@@ -392,17 +439,25 @@ export function AdminOrgUsersPanel() {
             <CardDescription>{t("admin.orgUsersHint", "Manage login accounts, roles, and clinic assignments for your organization.")}</CardDescription>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button type="button" disabled={legacyUsersApi} onClick={() => { resetCreateForm(); setDialogMode("create"); }}>
-              {t("admin.createUser", "Create user")}
+            <Button type="button" variant={usersView === "active" ? "default" : "outline"} onClick={() => { setUsersView("active"); setPage(1); }}>
+              {t("admin.orgUsersActiveTab", "Active users")}
             </Button>
-            {!legacyUsersApi && selectedCount > 0 ? (
+            <Button type="button" variant={usersView === "archived" ? "default" : "outline"} onClick={() => { setUsersView("archived"); setPage(1); }}>
+              {t("admin.orgUsersArchivedTab", "Archived users")}
+            </Button>
+            {usersView === "active" ? (
+              <Button type="button" disabled={legacyUsersApi} onClick={() => { resetCreateForm(); setDialogMode("create"); }}>
+                {t("admin.createUser", "Create user")}
+              </Button>
+            ) : null}
+            {!legacyUsersApi && usersView === "active" && selectedCount > 0 ? (
               <Button
                 type="button"
                 variant="destructive"
                 disabled={bulkDeleteMut.isPending}
                 onClick={() => setBulkDeleteOpen(true)}
               >
-                {t("admin.orgUsersBulkDelete", "Delete selected ({{count}})", { count: selectedCount })}
+                {t("admin.orgUsersBulkArchive", "Archive selected ({{count}})", { count: selectedCount })}
               </Button>
             ) : null}
           </div>
@@ -490,7 +545,7 @@ export function AdminOrgUsersPanel() {
                 <table className="w-full min-w-[640px] text-sm">
                   <thead className="bg-muted/60">
                     <tr>
-                      {!legacyUsersApi ? (
+                      {!legacyUsersApi && usersView === "active" ? (
                         <th className="w-10 px-3 py-2">
                           <input
                             type="checkbox"
@@ -509,6 +564,13 @@ export function AdminOrgUsersPanel() {
                       <th className="px-3 py-2 text-start">{t("admin.role", "Role")}</th>
                       <th className="px-3 py-2 text-start">{t("admin.orgUsersHrEmployee", "HR employee")}</th>
                       <th className="px-3 py-2 text-start">{t("admin.assignedClinics", "Assigned clinics")}</th>
+                      {usersView === "archived" ? (
+                        <>
+                          <th className="px-3 py-2 text-start">{t("admin.orgUsersCreatedAt", "Created")}</th>
+                          <th className="px-3 py-2 text-start">{t("admin.orgUsersDeactivatedAt", "Deactivated")}</th>
+                          <th className="px-3 py-2 text-start">{t("admin.orgUsersArchivedAt", "Archived")}</th>
+                        </>
+                      ) : null}
                       {!legacyUsersApi ? (
                         <th className="px-3 py-2 text-end">{t("common.actions", "Actions")}</th>
                       ) : null}
@@ -523,7 +585,7 @@ export function AdminOrgUsersPanel() {
                         key={row.id}
                         className="border-t border-border hover:bg-muted/40"
                       >
-                        {!legacyUsersApi ? (
+                        {!legacyUsersApi && usersView === "active" ? (
                           <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                             <input
                               type="checkbox"
@@ -550,32 +612,77 @@ export function AdminOrgUsersPanel() {
                           )}
                         </td>
                         <td className="cursor-pointer px-3 py-2 text-muted-foreground" onClick={() => setDialogMode({ edit: row.id })}>{clinicLabel(row)}</td>
+                        {usersView === "archived" ? (
+                          <>
+                            <td className="px-3 py-2 text-xs text-muted-foreground ltr-nums">{formatWhen(row.createdAt)}</td>
+                            <td className="px-3 py-2 text-xs text-muted-foreground ltr-nums">{formatWhen(row.deactivatedAt)}</td>
+                            <td className="px-3 py-2 text-xs text-muted-foreground ltr-nums">{formatWhen(row.deletedAt)}</td>
+                          </>
+                        ) : null}
                         {!legacyUsersApi ? (
                           <td className="px-3 py-2 text-end whitespace-nowrap">
-                            <Button type="button" size="sm" variant="outline" onClick={() => setDialogMode({ edit: row.id })}>
-                              {t("common.edit", "Edit")}
-                            </Button>
-                            {!isSelf ? (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                className="text-destructive"
-                                disabled={deleteMut.isPending}
-                                onClick={() =>
-                                  setUserToDelete({
-                                    id: row.id,
-                                    displayName: row.displayName,
-                                    email: row.email,
-                                    role: row.role,
-                                    clinics: row.clinics,
-                                    clinicLabel: clinicLabel(row),
-                                  })
-                                }
-                              >
-                                {t("common.delete", "Delete")}
-                              </Button>
-                            ) : null}
+                            {usersView === "active" ? (
+                              <>
+                                <Button type="button" size="sm" variant="outline" onClick={() => setDialogMode({ edit: row.id })}>
+                                  {t("common.edit", "Edit")}
+                                </Button>
+                                {!isSelf ? (
+                                  <>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      disabled={deactivateMut.isPending}
+                                      onClick={() => deactivateMut.mutate(row.id)}
+                                    >
+                                      {t("admin.deactivateUser", "Deactivate")}
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      className="text-destructive"
+                                      disabled={deleteMut.isPending}
+                                      onClick={() =>
+                                        setUserToDelete({
+                                          id: row.id,
+                                          displayName: row.displayName,
+                                          email: row.email,
+                                          role: row.role,
+                                          clinics: row.clinics,
+                                          clinicLabel: clinicLabel(row),
+                                        })
+                                      }
+                                    >
+                                      {t("admin.archiveUser", "Archive")}
+                                    </Button>
+                                  </>
+                                ) : null}
+                              </>
+                            ) : (
+                              <>
+                                {row.deactivatedAt && !row.deletedAt ? (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={reactivateMut.isPending}
+                                    onClick={() => reactivateMut.mutate(row.id)}
+                                  >
+                                    {t("admin.reactivateUser", "Reactivate")}
+                                  </Button>
+                                ) : null}
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="default"
+                                  disabled={restoreMut.isPending}
+                                  onClick={() => restoreMut.mutate(row.id)}
+                                >
+                                  {t("admin.restoreUser", "Restore")}
+                                </Button>
+                              </>
+                            )}
                           </td>
                         ) : null}
                       </tr>

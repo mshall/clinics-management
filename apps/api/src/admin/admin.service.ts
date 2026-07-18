@@ -3,8 +3,10 @@ import { Prisma, UserRole } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { ensureUserEmployeeRecord } from "../common/clinic-staff-employee";
 import {
-  assertTenantUserDeletable,
-  deleteEmployeeForUser,
+  deactivateUserAccount,
+  reactivateUserAccount,
+  restoreTenantUser,
+  softDeleteTenantUser,
 } from "../common/user-employee-cascade";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
@@ -16,6 +18,8 @@ import type { CreateTenantUserDto } from "./dto/create-tenant-user.dto";
 import type { PlatformPatchTenantUserDto } from "./dto/platform-patch-tenant-user.dto";
 import type { PatchTenantSettingsDto } from "./dto/patch-tenant-settings.dto";
 import type { BulkDeleteUsersDto } from "./dto/bulk-delete-users.dto";
+import type { DeactivateTenantUserDto } from "./dto/deactivate-tenant-user.dto";
+import type { ReactivateTenantUserDto } from "./dto/reactivate-tenant-user.dto";
 import {
   buildPlatformHierarchy,
   buildTenantHierarchy,
@@ -148,10 +152,22 @@ export class AdminService {
     return paginate(items, total, page, pageSize);
   }
 
-  async listTenantUsers(tenantId: string, pageStr?: string, pageSizeStr?: string, qRaw?: string, roleRaw?: string) {
+  async listTenantUsers(
+    tenantId: string,
+    pageStr?: string,
+    pageSizeStr?: string,
+    qRaw?: string,
+    roleRaw?: string,
+    archivedRaw?: string,
+  ) {
     await this.assertTenantExists(tenantId);
     const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
-    const where = this.buildTenantUserWhere(tenantId, { q: qRaw, role: this.parseTenantUserRoleFilter(roleRaw) });
+    const archived = archivedRaw === "true" || archivedRaw === "1";
+    const where = this.buildTenantUserWhere(tenantId, {
+      q: qRaw,
+      role: this.parseTenantUserRoleFilter(roleRaw),
+      archived,
+    });
     const [total, rows] = await Promise.all([
       this.prisma.user.count({ where }),
       this.prisma.user.findMany({
@@ -181,6 +197,9 @@ export class AdminService {
         displayName: r.displayName,
         role: r.role,
         createdAt: r.createdAt.toISOString(),
+        deactivatedAt: r.deactivatedAt?.toISOString() ?? null,
+        deletedAt: r.deletedAt?.toISOString() ?? null,
+        archived: Boolean(r.deletedAt || r.deactivatedAt),
         ...clinics,
         ...mapLinkedEmployee(r.employee),
       };
@@ -197,12 +216,16 @@ export class AdminService {
 
   private buildTenantUserWhere(
     tenantId: string,
-    filters?: { q?: string; role?: UserRole },
+    filters?: { q?: string; role?: UserRole; archived?: boolean },
   ): Prisma.UserWhereInput {
     const q = filters?.q?.trim() ?? "";
+    const archived = filters?.archived === true;
     return {
       tenantId,
       ...(filters?.role ? { role: filters.role } : {}),
+      ...(archived
+        ? { OR: [{ deletedAt: { not: null } }, { deactivatedAt: { not: null } }] }
+        : { deletedAt: null, deactivatedAt: null }),
       ...(q
         ? {
             OR: [
@@ -314,6 +337,9 @@ export class AdminService {
       displayName: row.displayName,
       role: row.role,
       createdAt: row.createdAt.toISOString(),
+      deactivatedAt: row.deactivatedAt?.toISOString() ?? null,
+      deletedAt: row.deletedAt?.toISOString() ?? null,
+      archived: Boolean(row.deletedAt || row.deactivatedAt),
       ...clinics,
       ...mapLinkedEmployee(row.employee),
     };
@@ -376,19 +402,54 @@ export class AdminService {
     const existing = await this.prisma.user.findFirst({ where: { id: userId, tenantId } });
     if (!existing) throw new NotFoundException("User not found");
     if (existing.role === UserRole.PLATFORM_SUPER_ADMIN) {
-      throw new BadRequestException("Cannot delete platform super administrators");
+      throw new BadRequestException("Cannot archive platform super administrators");
+    }
+    if (actor.userId === userId) {
+      throw new BadRequestException("You cannot archive your own account");
     }
 
-    const idDocPath = await this.prisma.$transaction(async (tx) => {
-      await assertTenantUserDeletable(tx, userId, { actorUserId: actor.userId });
-      const { idDocRelativePath } = await deleteEmployeeForUser(tx, tenantId, userId);
-      await tx.user.delete({ where: { id: userId } });
-      return idDocRelativePath;
+    await this.prisma.$transaction(async (tx) => {
+      await softDeleteTenantUser(tx, tenantId, userId, actor.userId);
     });
-    if (idDocPath) {
-      await this.uploads.deleteObject("employees", idDocPath).catch(() => undefined);
+    return { ok: true, id: userId, archived: true };
+  }
+
+  async deactivateTenantUser(tenantId: string, userId: string, dto: DeactivateTenantUserDto, actor: JwtUser) {
+    await this.assertTenantExists(tenantId);
+    const existing = await this.prisma.user.findFirst({ where: { id: userId, tenantId } });
+    if (!existing) throw new NotFoundException("User not found");
+    if (existing.role === UserRole.PLATFORM_SUPER_ADMIN) {
+      throw new BadRequestException("Cannot deactivate platform super administrators");
     }
-    return { ok: true, id: userId };
+    if (actor.userId === userId) {
+      throw new BadRequestException("You cannot deactivate your own account");
+    }
+    const resignationDate = dto.resignationDate ? new Date(dto.resignationDate) : new Date();
+    resignationDate.setHours(0, 0, 0, 0);
+    await this.prisma.$transaction(async (tx) => {
+      await deactivateUserAccount(tx, tenantId, userId, resignationDate);
+    });
+    return this.getTenantUser(tenantId, userId);
+  }
+
+  async reactivateTenantUser(tenantId: string, userId: string, dto: ReactivateTenantUserDto) {
+    await this.assertTenantExists(tenantId);
+    const startDate = dto.startDate ? new Date(dto.startDate) : new Date();
+    startDate.setHours(0, 0, 0, 0);
+    await this.prisma.$transaction(async (tx) => {
+      await reactivateUserAccount(tx, tenantId, userId, startDate);
+    });
+    return this.getTenantUser(tenantId, userId);
+  }
+
+  async restoreTenantUserAccount(tenantId: string, userId: string, dto: ReactivateTenantUserDto) {
+    await this.assertTenantExists(tenantId);
+    const startDate = dto.startDate ? new Date(dto.startDate) : new Date();
+    startDate.setHours(0, 0, 0, 0);
+    await this.prisma.$transaction(async (tx) => {
+      await restoreTenantUser(tx, tenantId, userId, startDate);
+    });
+    return this.getTenantUser(tenantId, userId);
   }
 
   async deleteTenantUsersBulk(tenantId: string, dto: BulkDeleteUsersDto, actor: JwtUser) {

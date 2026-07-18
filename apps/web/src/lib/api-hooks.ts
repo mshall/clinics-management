@@ -544,6 +544,7 @@ export interface EmployeesListParams extends PagedRangeParams {
   nameFilter?: string;
   clinicFilter?: string;
   recordStatus?: "ACTIVE" | "INACTIVE";
+  archived?: boolean;
 }
 
 export function useEmployeesQuery(params: EmployeesListParams = {}) {
@@ -555,6 +556,7 @@ export function useEmployeesQuery(params: EmployeesListParams = {}) {
   if (params.nameFilter?.trim()) q.set("nameFilter", params.nameFilter.trim());
   if (params.clinicFilter?.trim()) q.set("clinicFilter", params.clinicFilter.trim());
   if (params.recordStatus) q.set("recordStatus", params.recordStatus);
+  if (params.archived) q.set("archived", "true");
   if (params.sortBy) q.set("sortBy", params.sortBy);
   if (params.sortOrder) q.set("sortOrder", params.sortOrder);
   return useQuery({

@@ -11,6 +11,8 @@ import { CreateTenantUserDto } from "./dto/create-tenant-user.dto";
 import { BulkDeleteUsersDto } from "./dto/bulk-delete-users.dto";
 import { PatchFeatureFlagDto } from "./dto/patch-feature-flag.dto";
 import { PlatformPatchTenantUserDto } from "./dto/platform-patch-tenant-user.dto";
+import { DeactivateTenantUserDto } from "./dto/deactivate-tenant-user.dto";
+import { ReactivateTenantUserDto } from "./dto/reactivate-tenant-user.dto";
 import { PatchTenantSettingsDto } from "./dto/patch-tenant-settings.dto";
 
 @ApiTags("admin")
@@ -80,11 +82,12 @@ export class AdminController {
     @Query("pageSize") pageSize?: string,
     @Query("q") q?: string,
     @Query("role") role?: string,
+    @Query("archived") archived?: string,
   ) {
     if (user.role !== UserRole.GROUP_ADMIN || !user.tenantId) {
       throw new ForbiddenException("Only group administrators can list organization users");
     }
-    return this.admin.listTenantUsers(requireTenantId(user), page, pageSize, q, role);
+    return this.admin.listTenantUsers(requireTenantId(user), page, pageSize, q, role, archived);
   }
 
   @Get("users/:userId")
@@ -129,13 +132,55 @@ export class AdminController {
   }
 
   @Delete("users/:userId")
-  @ApiOperation({ summary: "Delete an organization user (group admin only)" })
+  @ApiOperation({ summary: "Archive an organization user and linked employee (soft delete, group admin only)" })
   @ApiOkResponse()
   deleteUser(@CurrentUser() user: JwtUser, @Param("userId") userId: string) {
     if (user.role !== UserRole.GROUP_ADMIN || !user.tenantId) {
-      throw new ForbiddenException("Only group administrators can delete organization users");
+      throw new ForbiddenException("Only group administrators can archive organization users");
     }
     return this.admin.deleteTenantUser(requireTenantId(user), userId, user);
+  }
+
+  @Post("users/:userId/deactivate")
+  @ApiOperation({ summary: "Deactivate organization user and linked employee" })
+  @ApiOkResponse()
+  deactivateUser(
+    @CurrentUser() user: JwtUser,
+    @Param("userId") userId: string,
+    @Body() body: DeactivateTenantUserDto,
+  ) {
+    if (user.role !== UserRole.GROUP_ADMIN || !user.tenantId) {
+      throw new ForbiddenException("Only group administrators can deactivate organization users");
+    }
+    return this.admin.deactivateTenantUser(requireTenantId(user), userId, body, user);
+  }
+
+  @Post("users/:userId/reactivate")
+  @ApiOperation({ summary: "Reactivate a deactivated organization user and linked employee" })
+  @ApiOkResponse()
+  reactivateUser(
+    @CurrentUser() user: JwtUser,
+    @Param("userId") userId: string,
+    @Body() body: ReactivateTenantUserDto,
+  ) {
+    if (user.role !== UserRole.GROUP_ADMIN || !user.tenantId) {
+      throw new ForbiddenException("Only group administrators can reactivate organization users");
+    }
+    return this.admin.reactivateTenantUser(requireTenantId(user), userId, body);
+  }
+
+  @Post("users/:userId/restore")
+  @ApiOperation({ summary: "Restore an archived organization user and linked employee" })
+  @ApiOkResponse()
+  restoreUser(
+    @CurrentUser() user: JwtUser,
+    @Param("userId") userId: string,
+    @Body() body: ReactivateTenantUserDto,
+  ) {
+    if (user.role !== UserRole.GROUP_ADMIN || !user.tenantId) {
+      throw new ForbiddenException("Only group administrators can restore organization users");
+    }
+    return this.admin.restoreTenantUserAccount(requireTenantId(user), userId, body);
   }
 
   @Patch("feature-flags/:key")

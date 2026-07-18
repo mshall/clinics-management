@@ -151,8 +151,8 @@ export function EmployeeDetailPage() {
       setDeleteOpen(false);
       void qc.invalidateQueries({ queryKey: ["hr"] });
       void qc.invalidateQueries({ queryKey: ["admin", "org-users"] });
-      toast.success(t("hr.deleteSuccess", "Employee deleted."));
-      navigate("/hr");
+      toast.success(t("hr.archiveSuccess", "Employee archived."));
+      navigate("/hr?tab=employees");
     },
     onError: (e: unknown) => {
       const msg =
@@ -171,6 +171,7 @@ export function EmployeeDetailPage() {
     onSuccess: () => {
       setDeactivateOpen(false);
       void qc.invalidateQueries({ queryKey: ["hr"] });
+      void qc.invalidateQueries({ queryKey: ["admin", "org-users"] });
       toast.success(t("hr.deactivateSuccess", "Employee deactivated."));
     },
     onError: (e: unknown) => {
@@ -190,7 +191,30 @@ export function EmployeeDetailPage() {
     onSuccess: () => {
       setReactivateOpen(false);
       void qc.invalidateQueries({ queryKey: ["hr"] });
+      void qc.invalidateQueries({ queryKey: ["admin", "org-users"] });
       toast.success(t("hr.rehireSuccess", "Employee re-hired."));
+    },
+    onError: (e: unknown) => {
+      const msg =
+        e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body
+          ? String((e.body as { message?: unknown }).message)
+          : e instanceof Error
+            ? e.message
+            : String(e);
+      toast.error(msg);
+    },
+  });
+
+  const restoreMut = useMutation({
+    mutationFn: () =>
+      apiPost<EmployeeDto>(`/api/v1/hr/employees/${id}/restore`, {
+        startDate: new Date().toISOString().slice(0, 10),
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["hr"] });
+      void qc.invalidateQueries({ queryKey: ["admin", "org-users"] });
+      void qc.invalidateQueries({ queryKey: ["employee", id] });
+      toast.success(t("hr.restoreSuccess", "Employee restored."));
     },
     onError: (e: unknown) => {
       const msg =
@@ -314,6 +338,9 @@ export function EmployeeDetailPage() {
             <Badge variant={emp.recordStatus === "INACTIVE" ? "outline" : "secondary"}>
               {t(`hr.recordStatuses.${emp.recordStatus}`, emp.recordStatus)}
             </Badge>
+            {emp.deletedAt ? (
+              <Badge variant="outline">{t("hr.archivedBadge", "Archived")}</Badge>
+            ) : null}
           </div>
           <p className="text-muted-foreground font-mono text-sm ltr-nums">{emp.employeeNumber}</p>
         </div>
@@ -326,45 +353,59 @@ export function EmployeeDetailPage() {
           </Button>
           {canManage ? (
             <>
-              {emp.recordStatus === "INACTIVE" ? (
+              {emp.deletedAt ? (
                 <Button
                   type="button"
                   variant="default"
-                  disabled={reactivateMut.isPending}
-                  onClick={() => setReactivateOpen(true)}
+                  disabled={restoreMut.isPending}
+                  onClick={() => restoreMut.mutate()}
                 >
                   <UserCheck className="me-2 h-4 w-4" />
-                  {t("hr.rehire", "Re-hire")}
+                  {t("hr.restoreEmployee", "Restore")}
                 </Button>
               ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={deactivateMut.isPending}
-                  onClick={() => setDeactivateOpen(true)}
-                >
-                  <UserX className="me-2 h-4 w-4" />
-                  {t("hr.deactivate", "Deactivate")}
-                </Button>
+                <>
+                  {emp.recordStatus === "INACTIVE" ? (
+                    <Button
+                      type="button"
+                      variant="default"
+                      disabled={reactivateMut.isPending}
+                      onClick={() => setReactivateOpen(true)}
+                    >
+                      <UserCheck className="me-2 h-4 w-4" />
+                      {t("hr.rehire", "Re-hire")}
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={deactivateMut.isPending}
+                      onClick={() => setDeactivateOpen(true)}
+                    >
+                      <UserX className="me-2 h-4 w-4" />
+                      {t("hr.deactivate", "Deactivate")}
+                    </Button>
+                  )}
+                  {emp.recordStatus === "ACTIVE" ? (
+                    <Button type="button" variant="outline" onClick={() => setEditing((v) => !v)}>
+                      {editing ? t("common.cancel", "Cancel") : t("common.edit", "Edit")}
+                    </Button>
+                  ) : null}
+                  {canDelete ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      disabled={deleteMut.isPending}
+                      onClick={() => setDeleteOpen(true)}
+                    >
+                      <Trash2 className="me-2 h-4 w-4" />
+                      {t("hr.archiveEmployee", "Archive")}
+                    </Button>
+                  ) : null}
+                </>
               )}
-              {emp.recordStatus === "ACTIVE" ? (
-                <Button type="button" variant="outline" onClick={() => setEditing((v) => !v)}>
-                  {editing ? t("common.cancel", "Cancel") : t("common.edit", "Edit")}
-                </Button>
-              ) : null}
-              {canDelete ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="text-destructive hover:text-destructive"
-                  disabled={deleteMut.isPending}
-                  onClick={() => setDeleteOpen(true)}
-                >
-                  <Trash2 className="me-2 h-4 w-4" />
-                  {t("common.delete", "Delete")}
-                </Button>
-              ) : null}
             </>
           ) : null}
         </div>

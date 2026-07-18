@@ -77,4 +77,22 @@ export class EmployeeDto {
 
   @ApiProperty({ type: [EmployeeEmploymentPeriodDto] })
   employmentPeriods!: EmployeeEmploymentPeriodDto[];
+
+  @ApiProperty()
+  createdAt!: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  deletedAt!: string | null;
+
+  @ApiProperty({ description: "True when inactive or archived" })
+  archived!: boolean;
+
+  @ApiPropertyOptional({ nullable: true })
+  linkedUserCreatedAt!: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  linkedUserDeactivatedAt!: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  linkedUserDeletedAt!: string | null;
 }

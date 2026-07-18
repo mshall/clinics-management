@@ -10,7 +10,13 @@ import { randomUUID } from "crypto";
 import * as path from "path";
 import type { JwtUser } from "../auth/jwt-user";
 import { ensureClinicStaffEmployeeRecords, jobTitleForRole } from "../common/clinic-staff-employee";
-import { syncUserClinicAdminScopes, deleteUserLinkedToEmployee } from "../common/user-employee-cascade";
+import {
+  deactivateUserForEmployee,
+  reactivateUserForEmployee,
+  restoreEmployee,
+  softDeleteLinkedEmployee,
+  syncUserClinicAdminScopes,
+} from "../common/user-employee-cascade";
 import { CLINIC_SCOPE_ROLES, fetchClinicScopeIds } from "../common/clinic-scope";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
@@ -118,12 +124,17 @@ export class HrService {
     recordStatus: EmployeeRecordStatus;
     resignationDate: Date | null;
     separationReason: EmployeeSeparationReason | null;
+    createdAt: Date;
+    deletedAt: Date | null;
     idDocRelativePath?: string | null;
     clinic?: { nameEn: string; nameAr: string } | null;
     user?: {
       displayName: string;
       role: string;
       avatarRelativePath: string | null;
+      createdAt: Date;
+      deactivatedAt: Date | null;
+      deletedAt: Date | null;
       clinicAdminScopes?: { clinicId: string }[];
     } | null;
     employmentPeriods?: {
@@ -159,6 +170,12 @@ export class HrService {
       recordStatus: e.recordStatus,
       resignationDate: e.resignationDate ? e.resignationDate.toISOString().slice(0, 10) : null,
       separationReason: e.separationReason,
+      createdAt: e.createdAt.toISOString(),
+      deletedAt: e.deletedAt?.toISOString() ?? null,
+      archived: Boolean(e.deletedAt || e.recordStatus === EmployeeRecordStatus.INACTIVE),
+      linkedUserCreatedAt: e.user?.createdAt?.toISOString() ?? null,
+      linkedUserDeactivatedAt: e.user?.deactivatedAt?.toISOString() ?? null,
+      linkedUserDeletedAt: e.user?.deletedAt?.toISOString() ?? null,
       employmentPeriods: periods,
     };
   }
@@ -170,6 +187,9 @@ export class HrService {
         displayName: true,
         role: true,
         avatarRelativePath: true,
+        createdAt: true,
+        deactivatedAt: true,
+        deletedAt: true,
         clinicAdminScopes: { select: { clinicId: true } },
       },
     },
@@ -276,7 +296,8 @@ export class HrService {
     clinicFilterStr?: string,
     sortByStr?: string,
     sortOrderStr?: string,
-    recordStatusStr?: string
+    recordStatusStr?: string,
+    archivedStr?: string,
   ) {
     await ensureClinicStaffEmployeeRecords(this.prisma, tenantId);
     await this.ensureEmployeeEmploymentPeriods(tenantId);
@@ -323,6 +344,12 @@ export class HrService {
     if (recordStatus && (Object.values(EmployeeRecordStatus) as string[]).includes(recordStatus)) {
       and.push({ recordStatus: recordStatus as EmployeeRecordStatus });
     }
+    const archived = archivedStr === "true" || archivedStr === "1";
+    if (archived) {
+      and.push({ OR: [{ deletedAt: { not: null } }, { recordStatus: EmployeeRecordStatus.INACTIVE }] });
+    } else {
+      and.push({ deletedAt: null, recordStatus: EmployeeRecordStatus.ACTIVE });
+    }
     const where: Prisma.EmployeeWhereInput = and.length > 1 ? { AND: and } : { tenantId };
     const sortField = pickSortField(sortByStr, ["employeeNumber", "lastNameEn", "hireDate", "salaryBase", "jobTitle"] as const, "lastNameEn");
     const sortDir = parseSortOrder(sortOrderStr);
@@ -356,6 +383,8 @@ export class HrService {
     const rows = await this.prisma.user.findMany({
       where: {
         tenantId,
+        deletedAt: null,
+        deactivatedAt: null,
         role: { not: UserRole.PLATFORM_SUPER_ADMIN },
         employee: { is: null },
         ...(q
@@ -597,6 +626,9 @@ export class HrService {
           separationReason: EmployeeSeparationReason.RESIGNATION,
         },
       });
+      if (emp.userId) {
+        await deactivateUserForEmployee(tx, tenantId, emp.userId, resignationDate);
+      }
     });
 
     const row = await this.prisma.employee.findFirst({
@@ -638,6 +670,9 @@ export class HrService {
           separationReason: null,
         },
       });
+      if (emp.userId) {
+        await reactivateUserForEmployee(tx, tenantId, emp.userId, startDate);
+      }
     });
 
     const row = await this.prisma.employee.findFirst({
@@ -647,24 +682,38 @@ export class HrService {
     return this.mapEmployee(row!);
   }
 
-  async deleteEmployee(tenantId: string, id: string, viewer: JwtUser): Promise<{ ok: true; id: string }> {
+  async deleteEmployee(tenantId: string, id: string, viewer: JwtUser): Promise<{ ok: true; id: string; archived: true }> {
     this.assertCanDeleteEmployee(viewer);
     const emp = await this.prisma.employee.findFirst({ where: { id, tenantId } });
     if (!emp) throw new NotFoundException("Employee not found");
     await this.assertClinicAdminCanUseClinic(tenantId, viewer, emp.clinicId);
 
-    const idDocPath = emp.idDocRelativePath;
-    const linkedUserId = emp.userId;
     await this.prisma.$transaction(async (tx) => {
-      await tx.employee.delete({ where: { id } });
-      if (linkedUserId) {
-        await deleteUserLinkedToEmployee(tx, tenantId, linkedUserId, viewer.userId);
-      }
+      await softDeleteLinkedEmployee(tx, tenantId, id, viewer.userId);
     });
-    if (idDocPath) {
-      await this.uploads.deleteObject("employees", idDocPath).catch(() => undefined);
-    }
-    return { ok: true, id };
+    return { ok: true, id, archived: true };
+  }
+
+  async restoreEmployeeRecord(
+    tenantId: string,
+    id: string,
+    dto: ReactivateEmployeeDto,
+    viewer: JwtUser,
+  ): Promise<EmployeeDto> {
+    this.assertCanManageEmployees(viewer);
+    const emp = await this.prisma.employee.findFirst({ where: { id, tenantId } });
+    if (!emp) throw new NotFoundException("Employee not found");
+    await this.assertClinicAdminCanUseClinic(tenantId, viewer, emp.clinicId);
+    const startDate = dto.startDate ? new Date(dto.startDate) : new Date();
+    startDate.setHours(0, 0, 0, 0);
+    await this.prisma.$transaction(async (tx) => {
+      await restoreEmployee(tx, tenantId, id, startDate, viewer.userId);
+    });
+    const row = await this.prisma.employee.findFirst({
+      where: { id },
+      include: this.employeeInclude,
+    });
+    return this.mapEmployee(row!);
   }
 
   async getEmployeeIdDocumentMeta(

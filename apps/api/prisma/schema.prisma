@@ -175,9 +175,12 @@ model User {
   tenantRoleNavTabGrantsUpdated TenantRoleNavTabGrant[] @relation("TenantRoleNavTabGrantUpdatedBy")
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+  deactivatedAt DateTime?
+  deletedAt     DateTime?
 
   @@unique([tenantId, email])
   @@index([tenantId])
+  @@index([tenantId, deletedAt])
 }
 
 model UserNavTabGrant {
@@ -502,11 +505,13 @@ model Employee {
   employmentPeriods EmployeeEmploymentPeriod[]
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
+  deletedAt         DateTime?
 
   @@unique([tenantId, employeeNumber])
   @@index([tenantId])
   @@index([clinicId])
   @@index([recordStatus])
+  @@index([tenantId, deletedAt])
 }
 
 model EmployeeEmploymentPeriod {

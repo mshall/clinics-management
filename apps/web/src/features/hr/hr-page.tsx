@@ -146,6 +146,7 @@ export function HrPage() {
   const [ecfName, setEcfName] = useState("");
   const [ecfTitle, setEcfTitle] = useState("");
   const [ecfSalary, setEcfSalary] = useState("");
+  const [empView, setEmpView] = useState<"active" | "archived">("active");
   const [acfDate, setAcfDate] = useState("");
   const [acfEmp, setAcfEmp] = useState("");
   const [acfClinic, setAcfClinic] = useState("");
@@ -166,7 +167,7 @@ export function HrPage() {
   }, [ecfClinic]);
   useEffect(() => {
     setEmpPage(1);
-  }, [debouncedNameFilter, debouncedClinicFilter]);
+  }, [debouncedNameFilter, debouncedClinicFilter, empView]);
 
   const employees = useEmployeesQuery({
     page: empPage,
@@ -175,6 +176,7 @@ export function HrPage() {
     clinicFilter: debouncedClinicFilter.trim() || undefined,
     sortBy: empSortBy,
     sortOrder: empSortOrder,
+    archived: empView === "archived",
   });
   const empRows = employees.data?.items ?? [];
   const empTotal = employees.data?.total ?? 0;
@@ -353,7 +355,7 @@ export function HrPage() {
       setEmployeeToDelete(null);
       void qc.invalidateQueries({ queryKey: ["hr"] });
       void qc.invalidateQueries({ queryKey: ["admin", "org-users"] });
-      toast.success(t("hr.deleteSuccess", "Employee deleted."));
+      toast.success(t("hr.archiveSuccess", "Employee archived."));
     },
     onError: (e: unknown) => {
       const msg =
@@ -372,6 +374,7 @@ export function HrPage() {
     onSuccess: () => {
       setEmployeeToDeactivate(null);
       void qc.invalidateQueries({ queryKey: ["hr"] });
+      void qc.invalidateQueries({ queryKey: ["admin", "org-users"] });
       toast.success(t("hr.deactivateSuccess", "Employee deactivated."));
     },
     onError: (e: unknown) => {
@@ -391,6 +394,7 @@ export function HrPage() {
     onSuccess: () => {
       setEmployeeToReactivate(null);
       void qc.invalidateQueries({ queryKey: ["hr"] });
+      void qc.invalidateQueries({ queryKey: ["admin", "org-users"] });
       toast.success(t("hr.rehireSuccess", "Employee re-hired."));
     },
     onError: (e: unknown) => {
@@ -404,6 +408,30 @@ export function HrPage() {
     },
   });
 
+
+  const restoreEmpMut = useMutation({
+    mutationFn: (employeeId: string) =>
+      apiPost<EmployeeDto>(`/api/v1/hr/employees/${employeeId}/restore`, {
+        startDate: new Date().toISOString().slice(0, 10),
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["hr"] });
+      void qc.invalidateQueries({ queryKey: ["admin", "org-users"] });
+      toast.success(t("hr.restoreSuccess", "Employee restored."));
+    },
+    onError: (e: unknown) => {
+      const msg =
+        e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body
+          ? String((e.body as { message?: unknown }).message)
+          : e instanceof Error
+            ? e.message
+            : String(e);
+      toast.error(msg);
+    },
+  });
+
+  const formatEmpWhen = (iso?: string | null) =>
+    iso ? new Date(iso).toLocaleString() : t("hr.notApplicable", "—");
 
   const handleCreateEmployee = () => {
     const primaryClinicId = showClinicAssignment
@@ -596,8 +624,16 @@ export function HrPage() {
             <div>
               <CardTitle className="text-base">{t("hr.employees")}</CardTitle>
               <p className="mt-1 text-sm text-muted-foreground">{t("hr.employeesSubtitle", "Manage employees, attendance, and leave for your organization.")}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant={empView === "active" ? "default" : "outline"} onClick={() => setEmpView("active")}>
+                  {t("hr.activeEmployeesTab", "Active employees")}
+                </Button>
+                <Button type="button" size="sm" variant={empView === "archived" ? "default" : "outline"} onClick={() => setEmpView("archived")}>
+                  {t("hr.archivedEmployeesTab", "Archived employees")}
+                </Button>
+              </div>
             </div>
-            {canManage ? (
+            {canManage && empView === "active" ? (
               <Dialog open={createEmpOpen} onOpenChange={setCreateEmpOpen}>
                 <DialogTrigger asChild>
                   <CreateActionButton type="button">{t("hr.addEmployee")}</CreateActionButton>
@@ -861,6 +897,19 @@ export function HrPage() {
                     <th className="px-2 py-2 text-start text-xs font-medium text-muted-foreground">
                       {t("hr.recordStatus", "Status")}
                     </th>
+                    {empView === "archived" ? (
+                      <>
+                        <th className="px-2 py-2 text-start text-xs font-medium text-muted-foreground">
+                          {t("hr.createdAt", "Created")}
+                        </th>
+                        <th className="px-2 py-2 text-start text-xs font-medium text-muted-foreground">
+                          {t("hr.deactivatedAt", "Deactivated")}
+                        </th>
+                        <th className="px-2 py-2 text-start text-xs font-medium text-muted-foreground">
+                          {t("hr.archivedAt", "Archived")}
+                        </th>
+                      </>
+                    ) : null}
                     <SortableTh
                       label={t("hr.salaryBase")}
                       column="salaryBase"
@@ -903,6 +952,15 @@ export function HrPage() {
                           {t(`hr.recordStatuses.${e.recordStatus}`, e.recordStatus)}
                         </Badge>
                       </td>
+                      {empView === "archived" ? (
+                        <>
+                          <td className="px-2 py-2 text-xs text-muted-foreground ltr-nums">{formatEmpWhen(e.createdAt)}</td>
+                          <td className="px-2 py-2 text-xs text-muted-foreground ltr-nums">
+                            {formatEmpWhen(e.linkedUserDeactivatedAt ?? e.resignationDate)}
+                          </td>
+                          <td className="px-2 py-2 text-xs text-muted-foreground ltr-nums">{formatEmpWhen(e.deletedAt)}</td>
+                        </>
+                      ) : null}
                       <td className="px-2 py-2 ltr-nums">{money(e.salaryBase)}</td>
                       {canManage ? (
                         <td className="px-2 py-2 text-end">
@@ -914,7 +972,7 @@ export function HrPage() {
                                 size="icon"
                                 className="h-8 w-8"
                                 aria-label={t("hr.employeeActions", "Employee actions")}
-                                disabled={deleteEmpMut.isPending || deactivateEmpMut.isPending || reactivateEmpMut.isPending}
+                                disabled={deleteEmpMut.isPending || deactivateEmpMut.isPending || reactivateEmpMut.isPending || restoreEmpMut.isPending}
                                 onClick={(ev) => {
                                   ev.preventDefault();
                                   ev.stopPropagation();
@@ -924,30 +982,50 @@ export function HrPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" onClick={(ev) => ev.stopPropagation()}>
-                              {e.recordStatus === "ACTIVE" ? (
-                                <DropdownMenuItem
-                                  onSelect={() =>
-                                    setEmployeeToDeactivate(employeeRowToTarget(e, i18n.language))
-                                  }
-                                >
-                                  <UserX className="me-2 h-4 w-4" />
-                                  {t("hr.deactivate", "Deactivate")}
-                                </DropdownMenuItem>
+                              {empView === "active" ? (
+                                <>
+                                  {e.recordStatus === "ACTIVE" ? (
+                                    <DropdownMenuItem
+                                      onSelect={() =>
+                                        setEmployeeToDeactivate(employeeRowToTarget(e, i18n.language))
+                                      }
+                                    >
+                                      <UserX className="me-2 h-4 w-4" />
+                                      {t("hr.deactivate", "Deactivate")}
+                                    </DropdownMenuItem>
+                                  ) : (
+                                    <DropdownMenuItem onSelect={() => setEmployeeToReactivate(e)}>
+                                      <UserCheck className="me-2 h-4 w-4" />
+                                      {t("hr.rehire", "Re-hire")}
+                                    </DropdownMenuItem>
+                                  )}
+                                  {canDelete ? (
+                                    <DropdownMenuItem
+                                      className="text-destructive focus:text-destructive"
+                                      onSelect={() => setEmployeeToDelete(employeeRowToTarget(e, i18n.language))}
+                                    >
+                                      <Trash2 className="me-2 h-4 w-4" />
+                                      {t("hr.archiveEmployee", "Archive")}
+                                    </DropdownMenuItem>
+                                  ) : null}
+                                </>
                               ) : (
-                                <DropdownMenuItem onSelect={() => setEmployeeToReactivate(e)}>
-                                  <UserCheck className="me-2 h-4 w-4" />
-                                  {t("hr.rehire", "Re-hire")}
-                                </DropdownMenuItem>
+                                <>
+                                  {e.deletedAt ? (
+                                    <DropdownMenuItem
+                                      onSelect={() => restoreEmpMut.mutate(e.id)}
+                                    >
+                                      <UserCheck className="me-2 h-4 w-4" />
+                                      {t("hr.restoreEmployee", "Restore")}
+                                    </DropdownMenuItem>
+                                  ) : e.recordStatus === "INACTIVE" ? (
+                                    <DropdownMenuItem onSelect={() => setEmployeeToReactivate(e)}>
+                                      <UserCheck className="me-2 h-4 w-4" />
+                                      {t("hr.rehire", "Re-hire")}
+                                    </DropdownMenuItem>
+                                  ) : null}
+                                </>
                               )}
-                              {canDelete ? (
-                                <DropdownMenuItem
-                                  className="text-destructive focus:text-destructive"
-                                  onSelect={() => setEmployeeToDelete(employeeRowToTarget(e, i18n.language))}
-                                >
-                                  <Trash2 className="me-2 h-4 w-4" />
-                                  {t("common.delete", "Delete")}
-                                </DropdownMenuItem>
-                              ) : null}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </td>

@@ -50,12 +50,12 @@ export function EmployeeDeleteConfirmDialog({
       onOpenChange={(next) => {
         if (!pending) onOpenChange(next);
       }}
-      title={t("hr.deleteConfirmTitle", "Delete employee?")}
+      title={t("hr.archiveConfirmTitle", "Archive employee?")}
       description={t(
-        "hr.deleteConfirmIntro",
-        "This employee record and related HR history will be permanently removed. This action cannot be undone.",
+        "hr.archiveConfirmIntro",
+        "This employee record and linked login account will be archived. You can restore them later from Archived employees.",
       )}
-      confirmLabel={t("hr.deleteConfirmAction", "Delete employee")}
+      confirmLabel={t("hr.archiveConfirmAction", "Archive employee")}
       cancelLabel={t("common.cancel", "Cancel")}
       pending={pending}
       onConfirm={onConfirm}

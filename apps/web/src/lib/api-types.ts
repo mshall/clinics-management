@@ -124,6 +124,12 @@ export interface EmployeeDto {
   recordStatus: "ACTIVE" | "INACTIVE";
   resignationDate: string | null;
   separationReason: string | null;
+  createdAt?: string;
+  deletedAt?: string | null;
+  archived?: boolean;
+  linkedUserCreatedAt?: string | null;
+  linkedUserDeactivatedAt?: string | null;
+  linkedUserDeletedAt?: string | null;
   employmentPeriods: EmployeeEmploymentPeriodDto[];
 }
 

@@ -40,12 +40,12 @@ export function AdminOrgUserDeleteConfirmDialog({
       onOpenChange={(next) => {
         if (!pending) onOpenChange(next);
       }}
-      title={t("admin.orgUsersDeleteConfirmTitle", "Delete user?")}
+      title={t("admin.orgUsersArchiveConfirmTitle", "Archive user?")}
       description={t(
-        "admin.orgUsersDeleteConfirmIntro",
-        "This login account will be permanently removed from your organization. This action cannot be undone.",
+        "admin.orgUsersArchiveConfirmIntro",
+        "This login account and its linked HR employee will be archived. You can restore them later from Archived users.",
       )}
-      confirmLabel={t("admin.orgUsersDeleteConfirmAction", "Delete user")}
+      confirmLabel={t("admin.orgUsersArchiveConfirmAction", "Archive user")}
       cancelLabel={t("common.cancel", "Cancel")}
       pending={pending}
       onConfirm={onConfirm}

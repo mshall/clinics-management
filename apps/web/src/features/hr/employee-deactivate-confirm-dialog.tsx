@@ -50,7 +50,7 @@ export function EmployeeDeactivateConfirmDialog({
       title={t("hr.deactivateConfirmTitle", "Deactivate employee?")}
       description={t(
         "hr.deactivateConfirmIntro",
-        "The employee will be marked inactive with a resignation date. Their login account (if linked) is kept. You can reactivate them later to start a new employment period.",
+        "The employee will be marked inactive with a resignation date. Their linked login account will also be deactivated. You can reactivate them later to start a new employment period.",
       )}
       confirmLabel={t("hr.deactivateConfirmAction", "Deactivate employee")}
       cancelLabel={t("common.cancel", "Cancel")}
