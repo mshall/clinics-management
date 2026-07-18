@@ -14,17 +14,45 @@ export class ReportsController {
   constructor(private readonly reports: ReportsService) {}
 
   @Get("profit-loss")
-  @ApiOperation({ summary: "Monthly revenue, expenses, and net profit" })
+  @ApiOperation({ summary: "Revenue, expenses, and net profit for a period (multi-currency)" })
   @ApiOkResponse()
-  profitLoss(@CurrentUser() user: JwtUser, @Query("from") from?: string, @Query("to") to?: string) {
-    return this.reports.profitLoss(requireTenantId(user), from, to, user);
+  profitLoss(
+    @CurrentUser() user: JwtUser,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("clinicId") clinicId?: string,
+  ) {
+    return this.reports.profitLoss(requireTenantId(user), from, to, clinicId, user);
+  }
+
+  @Get("performance")
+  @ApiOperation({ summary: "Organization or clinic performance KPIs for a period" })
+  @ApiOkResponse()
+  performance(
+    @CurrentUser() user: JwtUser,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("clinicId") clinicId?: string,
+  ) {
+    return this.reports.performanceSummary(requireTenantId(user), from, to, clinicId, user);
+  }
+
+  @Get("clinic-breakdown")
+  @ApiOperation({ summary: "Per-clinic revenue, expenses, and operational metrics" })
+  @ApiOkResponse()
+  clinicBreakdown(@CurrentUser() user: JwtUser, @Query("from") from?: string, @Query("to") to?: string) {
+    return this.reports.clinicBreakdown(requireTenantId(user), from, to, user);
   }
 
   @Get("monthly-series")
-  @ApiOperation({ summary: "Per-month visits, posted revenue, expenses, and new patients" })
+  @ApiOperation({ summary: "Per-month visits, posted revenue, expenses, and new patients (multi-currency)" })
   @ApiOkResponse()
-  monthlySeries(@CurrentUser() user: JwtUser, @Query("months") months?: string) {
-    return this.reports.monthlySeries(requireTenantId(user), months, user);
+  monthlySeries(
+    @CurrentUser() user: JwtUser,
+    @Query("months") months?: string,
+    @Query("clinicId") clinicId?: string,
+  ) {
+    return this.reports.monthlySeries(requireTenantId(user), months, clinicId, user);
   }
 
   @Get("patient-acquisition/patients")

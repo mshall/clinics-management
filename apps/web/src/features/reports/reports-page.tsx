@@ -19,16 +19,27 @@ import {
 } from "recharts";
 import { AcquisitionChannelPatientsDialog } from "@/components/acquisition-channel-patients-dialog";
 import { ResponsiveTable } from "@/components/responsive-table";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useReportsMonthlySeriesQuery, useReportsPatientAcquisitionQuery } from "@/lib/api-hooks";
-import { useDateRangeStore } from "@/stores/date-range-store";
-import { localeForLanguage } from "@/lib/locale-display";
+import {
+  useClinicsQuery,
+  useReportsClinicBreakdownQuery,
+  useReportsMonthlySeriesQuery,
+  useReportsPatientAcquisitionQuery,
+  useReportsPerformanceQuery,
+} from "@/lib/api-hooks";
+import type { ReportsMonthlySeriesItemDto } from "@/lib/api-types";
+import { formatClinicName, localeForLanguage } from "@/lib/locale-display";
+import { formatMoneyAmount } from "@/lib/money-display";
 import {
   patientAcquisitionLabel,
   type PatientAcquisitionChannel,
 } from "@/lib/patient-acquisition";
+import { nativeSelectClassName } from "@/lib/form-control-styles";
+import { useAuthStore } from "@/stores/auth-store";
+import { useDateRangeStore } from "@/stores/date-range-store";
 
 const ACQUISITION_CHART_COLORS = [
   "hsl(221 83% 53%)",
@@ -40,14 +51,60 @@ const ACQUISITION_CHART_COLORS = [
   "hsl(215 20% 55%)",
 ];
 
+const CURRENCY_SERIES_COLORS = [
+  { revenue: "hsl(200 85% 32%)", expense: "hsl(200 55% 48%)" },
+  { revenue: "hsl(142 70% 40%)", expense: "hsl(142 45% 52%)" },
+  { revenue: "hsl(38 92% 45%)", expense: "hsl(38 70% 55%)" },
+  { revenue: "hsl(280 65% 50%)", expense: "hsl(280 45% 58%)" },
+  { revenue: "hsl(0 72% 48%)", expense: "hsl(0 50% 58%)" },
+];
+
+function currencyColors(index: number) {
+  return CURRENCY_SERIES_COLORS[index % CURRENCY_SERIES_COLORS.length]!;
+}
+
+function amountForCurrency(rows: { currency: string; amount: number }[], currency: string): number {
+  return rows.find((r) => r.currency === currency)?.amount ?? 0;
+}
+
+function buildCurrencyChartRows(items: ReportsMonthlySeriesItemDto[], currencies: string[]) {
+  return items.map((item) => {
+    const row: Record<string, string | number> = {
+      month: item.month,
+      visits: item.visits,
+      newPatients: item.newPatients,
+    };
+    for (const currency of currencies) {
+      row[`revenue_${currency}`] = amountForCurrency(item.revenueByCurrency, currency);
+      row[`expenses_${currency}`] = amountForCurrency(item.expensesByCurrency, currency);
+    }
+    return row;
+  });
+}
+
 export function ReportsPage() {
   const { t, i18n } = useTranslation();
+  const loc = localeForLanguage(i18n.language);
+  const authUser = useAuthStore((s) => s.user);
+  const isPhysician = authUser?.role === "physician";
   const { from, to } = useDateRangeStore();
   const [horizon, setHorizon] = useState(12);
+  const [scopeClinicId, setScopeClinicId] = useState("");
   const [selectedChannel, setSelectedChannel] = useState<{ channel: string; label: string } | null>(null);
-  const series = useReportsMonthlySeriesQuery(horizon);
+
+  const { data: clinics = [] } = useClinicsQuery();
+  const clinicScopeId = scopeClinicId.trim() || undefined;
+
+  const series = useReportsMonthlySeriesQuery(horizon, clinicScopeId);
+  const performance = useReportsPerformanceQuery(from, to, clinicScopeId);
+  const clinicBreakdown = useReportsClinicBreakdownQuery(from, to, !isPhysician && !clinicScopeId);
   const acquisition = useReportsPatientAcquisitionQuery(from, to);
-  const chartData = useMemo(() => series.data?.items ?? [], [series.data?.items]);
+
+  const currencies = series.data?.currencies ?? performance.data?.byCurrency.map((r) => r.currency) ?? [];
+  const chartData = useMemo(
+    () => buildCurrencyChartRows(series.data?.items ?? [], currencies),
+    [series.data?.items, currencies],
+  );
 
   const acquisitionChartData = useMemo(() => {
     return (acquisition.data?.items ?? []).map((item) => ({
@@ -62,13 +119,18 @@ export function ReportsPage() {
   }, [acquisition.data?.items, t]);
 
   const acquisitionTotal = acquisition.data?.total ?? 0;
+  const scopeLabel =
+    clinicScopeId != null && clinicScopeId !== ""
+      ? formatClinicName(
+          clinics.find((c) => c.id === clinicScopeId) ?? { nameEn: clinicScopeId, nameAr: clinicScopeId },
+          i18n.language,
+        )
+      : t("reports.scopeOrganization", "Organization (all clinics)");
 
-  const money = (n: number) =>
-    new Intl.NumberFormat(localeForLanguage(i18n.language), {
-      style: "currency",
-      currency: "AED",
-      maximumFractionDigits: 0,
-    }).format(n);
+  const money = (n: number, currency: string) => formatMoneyAmount(n, currency, loc);
+
+  const performanceByCurrency = performance.data?.byCurrency ?? [];
+  const breakdownItems = clinicBreakdown.data?.items ?? [];
 
   return (
     <div className="space-y-6">
@@ -82,11 +144,203 @@ export function ReportsPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle className="text-base">{t("reports.scopeTitle", "Report scope")}</CardTitle>
+          <CardDescription>
+            {t(
+              "reports.scopeHint",
+              "View organization-wide performance or focus on a single clinic. Financial charts respect each clinic's currency settings.",
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+            <Label htmlFor="reports-scope">{t("reports.scopeClinic", "Clinic")}</Label>
+            <select
+              id="reports-scope"
+              className={nativeSelectClassName}
+              value={scopeClinicId}
+              onChange={(e) => setScopeClinicId(e.target.value)}
+            >
+              <option value="">{t("reports.scopeAllClinics", "All clinics (organization)")}</option>
+              {clinics.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {formatClinicName(c, i18n.language)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col justify-end text-sm text-muted-foreground sm:col-span-2">
+            <span>
+              {t("reports.scopeCurrent", "Showing")}: <strong className="text-foreground">{scopeLabel}</strong>
+            </span>
+            {performance.data?.baseCurrency ? (
+              <span className="text-xs">
+                {t("reports.orgBaseCurrency", "Organization base currency")}: {performance.data.baseCurrency}
+              </span>
+            ) : null}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t("reports.performanceTitle", "Performance summary")}</CardTitle>
+          <CardDescription>
+            {t("reports.performanceHint", "Key metrics for {{scope}} in the selected date range.", { scope: scopeLabel })}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {performance.isPending ? (
+            <p className="text-sm text-muted-foreground">{t("common.loading", "Loading…")}</p>
+          ) : performance.isError ? (
+            <p className="text-sm text-destructive">
+              {performance.error instanceof Error ? performance.error.message : t("common.error")}
+            </p>
+          ) : (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.visits", "Visits")}</p>
+                  <p className="text-2xl font-semibold ltr-nums">{performance.data?.visits ?? 0}</p>
+                </div>
+                <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    {t("reports.newPatients", "New patients")}
+                  </p>
+                  <p className="text-2xl font-semibold ltr-nums">{performance.data?.newPatients ?? 0}</p>
+                </div>
+                <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    {t("reports.appointmentsCompleted", "Appointments completed")}
+                  </p>
+                  <p className="text-2xl font-semibold ltr-nums">{performance.data?.appointmentsCompleted ?? 0}</p>
+                </div>
+                <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    {t("reports.currenciesActive", "Currencies in period")}
+                  </p>
+                  <p className="text-2xl font-semibold ltr-nums">{performanceByCurrency.length}</p>
+                </div>
+              </div>
+
+              {performanceByCurrency.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t("reports.noFinancialActivity", "No revenue or expenses in this period.")}</p>
+              ) : (
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {performanceByCurrency.map((row) => (
+                    <div key={row.currency} className="rounded-lg border px-4 py-4">
+                      <div className="mb-3 flex items-center gap-2">
+                        <Badge variant="secondary">{row.currency}</Badge>
+                        <span className="text-sm font-medium">{t("reports.plTitle", "Profit & loss")}</span>
+                      </div>
+                      <dl className="grid grid-cols-3 gap-3 text-sm">
+                        <div>
+                          <dt className="text-muted-foreground">{t("reports.revenue", "Revenue")}</dt>
+                          <dd className="font-semibold ltr-nums">{money(row.revenue, row.currency)}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-muted-foreground">{t("reports.expenses", "Expenses")}</dt>
+                          <dd className="font-semibold ltr-nums">{money(row.expenses, row.currency)}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-muted-foreground">{t("reports.netProfit", "Net profit")}</dt>
+                          <dd className={`font-semibold ltr-nums ${row.netProfit < 0 ? "text-destructive" : "text-emerald-700 dark:text-emerald-400"}`}>
+                            {money(row.netProfit, row.currency)}
+                          </dd>
+                        </div>
+                      </dl>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {!isPhysician && !clinicScopeId ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t("reports.clinicBreakdownTitle", "Breakdown by clinic")}</CardTitle>
+            <CardDescription>
+              {t(
+                "reports.clinicBreakdownHint",
+                "Revenue, expenses, and operational metrics for each clinic in the organization for {{from}} → {{to}}.",
+                { from, to },
+              )}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {clinicBreakdown.isPending ? (
+              <p className="text-sm text-muted-foreground">{t("common.loading", "Loading…")}</p>
+            ) : clinicBreakdown.isError ? (
+              <p className="text-sm text-destructive">
+                {clinicBreakdown.error instanceof Error ? clinicBreakdown.error.message : t("common.error")}
+              </p>
+            ) : (
+              <ResponsiveTable className="rounded-md border">
+                <table className="w-full min-w-[960px] text-sm">
+                  <thead className="bg-muted/60">
+                    <tr className="text-start">
+                      <th className="px-3 py-2 font-medium">{t("reports.clinicColumn", "Clinic")}</th>
+                      <th className="px-3 py-2 font-medium ltr-nums">{t("reports.visits", "Visits")}</th>
+                      <th className="px-3 py-2 font-medium ltr-nums">{t("reports.newPatients", "New patients")}</th>
+                      <th className="px-3 py-2 font-medium">{t("reports.financialByCurrency", "Financials by currency")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {breakdownItems.map((row) => (
+                      <tr key={row.clinicId} className="border-t align-top">
+                        <td className="px-3 py-3">
+                          <p className="font-medium">
+                            {formatClinicName(
+                              { nameEn: row.clinicNameEn, nameAr: row.clinicNameAr },
+                              i18n.language,
+                            )}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {t("reports.defaultCurrency", "Default")}: {row.defaultCurrency}
+                          </p>
+                        </td>
+                        <td className="px-3 py-3 ltr-nums">{row.visits}</td>
+                        <td className="px-3 py-3 ltr-nums">{row.newPatients}</td>
+                        <td className="px-3 py-3">
+                          {row.byCurrency.length === 0 ? (
+                            <span className="text-muted-foreground">—</span>
+                          ) : (
+                            <ul className="space-y-2">
+                              {row.byCurrency.map((c) => (
+                                <li key={c.currency} className="rounded-md border border-border/60 bg-muted/20 px-2 py-1.5 text-xs">
+                                  <div className="mb-1 font-medium">{c.currency}</div>
+                                  <div className="grid grid-cols-3 gap-2 ltr-nums">
+                                    <span>{t("reports.revenue", "Revenue")}: {money(c.revenue, c.currency)}</span>
+                                    <span>{t("reports.expenses", "Expenses")}: {money(c.expenses, c.currency)}</span>
+                                    <span className={c.netProfit < 0 ? "text-destructive" : ""}>
+                                      {t("reports.netProfit", "Net")}: {money(c.netProfit, c.currency)}
+                                    </span>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </ResponsiveTable>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <Card>
+        <CardHeader>
           <CardTitle className="text-base">{t("reports.growthExplorer", "Growth explorer")}</CardTitle>
           <CardDescription>
             {t(
               "reports.growthExplorerHintLive",
-              "Monthly series from finalized encounters, posted revenue, and patient registrations in your organization."
+              "Monthly series from finalized encounters, posted revenue, and patient registrations in your organization.",
             )}
           </CardDescription>
         </CardHeader>
@@ -114,61 +368,124 @@ export function ReportsPage() {
         <CardHeader>
           <CardTitle className="text-base">
             {t("nav.revenue")} vs {t("nav.expenses")}
+            {currencies.length === 1 ? ` (${currencies[0]})` : currencies.length > 1 ? t("reports.multiCurrency", " · multi-currency") : ""}
           </CardTitle>
           <CardDescription>
             {t(
               "reports.revenueVsExpensesHint",
-              "Monthly posted revenue and approved/pending expenses from your organization ledger.",
+              "Monthly posted revenue and approved/pending expenses. Amounts are grouped by currency — no FX conversion.",
             )}
           </CardDescription>
         </CardHeader>
-        <CardContent className="h-80">
+        <CardContent className="h-96">
           {series.isPending ? (
             <p className="text-sm text-muted-foreground">{t("common.loading", "Loading…")}</p>
+          ) : currencies.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t("reports.noFinancialActivity", "No revenue or expenses in this period.")}</p>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="reportsFillRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(200 85% 32%)" stopOpacity={0.35} />
-                    <stop offset="95%" stopColor="hsl(200 85% 32%)" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="reportsFillExpense" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(215 16% 40%)" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(215 16% 40%)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => money(Number(v))} width={72} />
+                <YAxis tick={{ fontSize: 11 }} width={88} tickFormatter={(v) => String(v)} />
                 <Tooltip
-                  formatter={(value: number, name) => [
-                    money(Number(value)),
-                    name === "revenue" ? t("nav.revenue") : t("nav.expenses"),
-                  ]}
+                  formatter={(value: number, name: string) => {
+                    const currency = name.split("_").pop() ?? series.data?.baseCurrency ?? "AED";
+                    const kind = name.startsWith("revenue_") ? t("nav.revenue") : t("nav.expenses");
+                    return [money(Number(value), currency), `${kind} (${currency})`];
+                  }}
                 />
                 <Legend />
-                <Area
-                  type="monotone"
-                  dataKey="revenue"
-                  name={t("nav.revenue")}
-                  stroke="hsl(200 85% 32%)"
-                  fill="url(#reportsFillRevenue)"
-                  strokeWidth={2}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="expenses"
-                  name={t("nav.expenses")}
-                  stroke="hsl(215 16% 40%)"
-                  fill="url(#reportsFillExpense)"
-                  strokeWidth={2}
-                />
+                {currencies.map((currency, index) => {
+                  const colors = currencyColors(index);
+                  return (
+                    <Area
+                      key={`rev-${currency}`}
+                      type="monotone"
+                      dataKey={`revenue_${currency}`}
+                      name={`revenue_${currency}`}
+                      stroke={colors.revenue}
+                      fill={colors.revenue}
+                      fillOpacity={0.2}
+                      strokeWidth={2}
+                      stackId={`rev-${currency}`}
+                    />
+                  );
+                })}
+                {currencies.map((currency, index) => {
+                  const colors = currencyColors(index);
+                  return (
+                    <Area
+                      key={`exp-${currency}`}
+                      type="monotone"
+                      dataKey={`expenses_${currency}`}
+                      name={`expenses_${currency}`}
+                      stroke={colors.expense}
+                      fill={colors.expense}
+                      fillOpacity={0.15}
+                      strokeWidth={2}
+                      strokeDasharray="4 4"
+                      stackId={`exp-${currency}`}
+                    />
+                  );
+                })}
               </AreaChart>
             </ResponsiveContainer>
           )}
         </CardContent>
       </Card>
+
+      {currencies.length > 1 ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {currencies.map((currency, index) => {
+            const colors = currencyColors(index);
+            return (
+              <Card key={currency}>
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    {t("reports.chartRevenueByCurrency", "Revenue vs expenses ({{currency}})", { currency })}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                      <YAxis tick={{ fontSize: 11 }} width={72} tickFormatter={(v) => money(Number(v), currency)} />
+                      <Tooltip
+                        formatter={(value: number, name: string) => [
+                          money(Number(value), currency),
+                          name.startsWith("revenue_") ? t("nav.revenue") : t("nav.expenses"),
+                        ]}
+                      />
+                      <Legend />
+                      <Area
+                        type="monotone"
+                        dataKey={`revenue_${currency}`}
+                        name={t("nav.revenue")}
+                        stroke={colors.revenue}
+                        fill={colors.revenue}
+                        fillOpacity={0.25}
+                        strokeWidth={2}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey={`expenses_${currency}`}
+                        name={t("nav.expenses")}
+                        stroke={colors.expense}
+                        fill={colors.expense}
+                        fillOpacity={0.15}
+                        strokeWidth={2}
+                        strokeDasharray="4 4"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
@@ -197,24 +514,36 @@ export function ReportsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{t("reports.chartRevenue", "Posted revenue (AED)")}</CardTitle>
+            <CardTitle className="text-base">
+              {currencies.length === 1
+                ? t("reports.chartRevenueCurrency", "Posted revenue ({{currency}})", { currency: currencies[0] })
+                : t("reports.chartRevenueMulti", "Posted revenue by currency")}
+            </CardTitle>
           </CardHeader>
           <CardContent className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => money(Number(v))} width={72} />
-                <Tooltip formatter={(value: number) => [money(Number(value)), t("reports.revenue", "Revenue")]} />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="revenue"
-                  name={t("reports.revenue", "Revenue")}
-                  stroke="hsl(142 70% 40%)"
-                  strokeWidth={2}
-                  dot
+                <YAxis tick={{ fontSize: 11 }} width={72} tickFormatter={(v) => String(v)} />
+                <Tooltip
+                  formatter={(value: number, name: string) => {
+                    const currency = String(name).replace(/^revenue_/, "");
+                    return [money(Number(value), currency), currency];
+                  }}
                 />
+                <Legend />
+                {currencies.map((currency, index) => (
+                  <Line
+                    key={currency}
+                    type="monotone"
+                    dataKey={`revenue_${currency}`}
+                    name={`revenue_${currency}`}
+                    stroke={currencyColors(index).revenue}
+                    strokeWidth={2}
+                    dot
+                  />
+                ))}
               </LineChart>
             </ResponsiveContainer>
           </CardContent>

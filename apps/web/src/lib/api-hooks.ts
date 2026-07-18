@@ -20,6 +20,8 @@ import type {
   LeaveRequestDto,
   RevenueEntryDto,
   ReportsMonthlySeriesDto,
+  ReportsClinicBreakdownDto,
+  ReportsPerformanceDto,
   ReportsPatientAcquisitionDto,
   ReportsPatientAcquisitionPatientDto,
   TenantListItemDto,
@@ -685,13 +687,39 @@ export function useAdminOverviewQuery() {
   });
 }
 
-export function useReportsMonthlySeriesQuery(months: number) {
+export function useReportsMonthlySeriesQuery(months: number, clinicId?: string) {
   const m = Math.min(36, Math.max(3, Number.isFinite(months) ? months : 12));
   const viewerId = useAuthStore((s) => s.user?.id ?? "");
   const viewerRole = useAuthStore((s) => s.user?.role ?? "");
+  const q = new URLSearchParams({ months: String(m) });
+  if (clinicId?.trim()) q.set("clinicId", clinicId.trim());
   return useQuery({
-    queryKey: ["reports", "monthly-series", m, viewerId, viewerRole],
-    queryFn: () => apiGet<ReportsMonthlySeriesDto>(`/api/v1/reports/monthly-series?months=${m}`),
+    queryKey: ["reports", "monthly-series", m, clinicId ?? "", viewerId, viewerRole],
+    queryFn: () => apiGet<ReportsMonthlySeriesDto>(`/api/v1/reports/monthly-series?${q.toString()}`),
+  });
+}
+
+export function useReportsPerformanceQuery(from: string, to: string, clinicId?: string) {
+  const viewerId = useAuthStore((s) => s.user?.id ?? "");
+  const viewerRole = useAuthStore((s) => s.user?.role ?? "");
+  const range = sanitizeReportingRange(from, to);
+  const q = new URLSearchParams({ from: range.from, to: range.to });
+  if (clinicId?.trim()) q.set("clinicId", clinicId.trim());
+  return useQuery({
+    queryKey: ["reports", "performance", range.from, range.to, clinicId ?? "", viewerId, viewerRole],
+    queryFn: () => apiGet<ReportsPerformanceDto>(`/api/v1/reports/performance?${q.toString()}`),
+  });
+}
+
+export function useReportsClinicBreakdownQuery(from: string, to: string, enabled = true) {
+  const viewerId = useAuthStore((s) => s.user?.id ?? "");
+  const viewerRole = useAuthStore((s) => s.user?.role ?? "");
+  const range = sanitizeReportingRange(from, to);
+  const q = new URLSearchParams({ from: range.from, to: range.to });
+  return useQuery({
+    queryKey: ["reports", "clinic-breakdown", range.from, range.to, viewerId, viewerRole],
+    enabled,
+    queryFn: () => apiGet<ReportsClinicBreakdownDto>(`/api/v1/reports/clinic-breakdown?${q.toString()}`),
   });
 }
 

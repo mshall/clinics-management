@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
 import {
+  AppointmentStatus,
   EncounterStatus,
   ExpenseStatus,
   PatientAcquisitionChannel,
@@ -9,9 +10,18 @@ import {
 } from "@prisma/client";
 import { formatLocalYmd, resolveLedgerListingRange, resolveReportingRange } from "../common/reporting-range";
 import type { JwtUser } from "../auth/jwt-user";
+import { fetchClinicScopeIds } from "../common/clinic-scope";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
+import {
+  buildReportsEncounterWhere,
+  buildReportsExpenseWhere,
+  buildReportsRevenueWhere,
+  mergeCurrencyTotals,
+  sumExpensesByCurrency,
+  sumRevenueByCurrency,
+} from "./reports-aggregation";
 
 export interface PatientAcquisitionPatientsQuery {
   channel: string;
@@ -33,39 +43,45 @@ export interface PatientAcquisitionPatientsQuery {
 export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async profitLoss(tenantId: string, fromStr?: string, toStr?: string, viewer?: JwtUser) {
+  private async resolveScopeClinicIds(tenantId: string, viewer?: JwtUser): Promise<string[] | null> {
+    if (!viewer) return null;
+    return fetchClinicScopeIds(this.prisma, tenantId, viewer);
+  }
+
+  private assertClinicInScope(clinicId: string, scopeClinicIds: string[] | null): void {
+    if (scopeClinicIds == null) return;
+    if (!scopeClinicIds.includes(clinicId)) {
+      throw new ForbiddenException("This clinic is outside your assigned scope");
+    }
+  }
+
+  async profitLoss(
+    tenantId: string,
+    fromStr?: string,
+    toStr?: string,
+    clinicIdStr?: string,
+    viewer?: JwtUser,
+  ) {
     const { start, end } = resolveReportingRange(fromStr, toStr);
+    const clinicId = clinicIdStr?.trim() || null;
+    const scopeClinicIds = await this.resolveScopeClinicIds(tenantId, viewer);
+    if (clinicId) this.assertClinicInScope(clinicId, scopeClinicIds);
 
-    const revenueWhere: Prisma.RevenueEntryWhereInput = {
-      tenantId,
-      status: RevenueStatus.POSTED,
-      postedAt: { gte: start, lte: end },
-      ...(viewer?.role === UserRole.PHYSICIAN
-        ? {
-            encounterId: { not: null },
-            encounter: { is: { clinicianId: viewer.userId } },
-          }
-        : {}),
-    };
+    const revenueWhere = buildReportsRevenueWhere(tenantId, start, end, viewer, clinicId, scopeClinicIds);
+    const expenseWhere = buildReportsExpenseWhere(tenantId, start, end, clinicId, scopeClinicIds);
 
-    const [rev, exp] = await Promise.all([
-      this.prisma.revenueEntry.aggregate({
-        where: revenueWhere,
-        _sum: { netAmount: true },
-      }),
-      this.prisma.expense.aggregate({
-        where: {
-          tenantId,
-          status: { in: [ExpenseStatus.APPROVED, ExpenseStatus.PENDING] },
-          incurredAt: { gte: start, lte: end },
-        },
-        _sum: { amount: true },
-      }),
+    const [revenueByCurrency, expensesByCurrency] = await Promise.all([
+      sumRevenueByCurrency(this.prisma, revenueWhere),
+      sumExpensesByCurrency(this.prisma, expenseWhere),
     ]);
+    const byCurrency = mergeCurrencyTotals(revenueByCurrency, expensesByCurrency);
+    const revenue = byCurrency.reduce((sum, row) => sum + row.revenue, 0);
+    const expenses = byCurrency.reduce((sum, row) => sum + row.expenses, 0);
 
-    const revenue = Number(rev._sum.netAmount ?? 0);
-    const expenses = Number(exp._sum.amount ?? 0);
-    const netProfit = revenue - expenses;
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { baseCurrency: true },
+    });
 
     return {
       period: {
@@ -74,18 +90,202 @@ export class ReportsService {
         start: start.toISOString(),
         end: end.toISOString(),
       },
+      clinicId,
+      baseCurrency: tenant?.baseCurrency ?? "AED",
+      byCurrency,
       revenue,
       expenses,
-      netProfit,
+      netProfit: revenue - expenses,
+    };
+  }
+
+  async performanceSummary(
+    tenantId: string,
+    fromStr?: string,
+    toStr?: string,
+    clinicIdStr?: string,
+    viewer?: JwtUser,
+  ) {
+    const { start, end } = resolveReportingRange(fromStr, toStr);
+    const clinicId = clinicIdStr?.trim() || null;
+    const scopeClinicIds = await this.resolveScopeClinicIds(tenantId, viewer);
+    if (clinicId) this.assertClinicInScope(clinicId, scopeClinicIds);
+
+    const revenueWhere = buildReportsRevenueWhere(tenantId, start, end, viewer, clinicId, scopeClinicIds);
+    const expenseWhere = buildReportsExpenseWhere(tenantId, start, end, clinicId, scopeClinicIds);
+    const encounterWhere = buildReportsEncounterWhere(tenantId, start, end, viewer, clinicId, scopeClinicIds);
+
+    const patientWhere: Prisma.PatientWhereInput = {
+      tenantId,
+      deletedAt: null,
+      createdAt: { gte: start, lte: end },
+      ...(clinicId ? { homeBranchId: clinicId } : scopeClinicIds?.length ? { homeBranchId: { in: scopeClinicIds } } : {}),
+    };
+
+    const appointmentWhere: Prisma.AppointmentWhereInput = {
+      tenantId,
+      status: AppointmentStatus.COMPLETED,
+      startsAt: { gte: start, lte: end },
+      ...(clinicId ? { clinicId } : scopeClinicIds?.length ? { clinicId: { in: scopeClinicIds } } : {}),
+      ...(viewer?.role === UserRole.PHYSICIAN ? { clinicianId: viewer.userId } : {}),
+    };
+
+    const [revenueByCurrency, expensesByCurrency, visits, newPatients, appointmentsCompleted, tenant] =
+      await Promise.all([
+        sumRevenueByCurrency(this.prisma, revenueWhere),
+        sumExpensesByCurrency(this.prisma, expenseWhere),
+        this.prisma.encounter.count({ where: encounterWhere }),
+        this.prisma.patient.count({ where: patientWhere }),
+        this.prisma.appointment.count({ where: appointmentWhere }),
+        this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { baseCurrency: true } }),
+      ]);
+
+    const byCurrency = mergeCurrencyTotals(revenueByCurrency, expensesByCurrency);
+
+    return {
+      period: {
+        from: formatLocalYmd(start),
+        to: formatLocalYmd(end),
+        start: start.toISOString(),
+        end: end.toISOString(),
+      },
+      clinicId,
+      baseCurrency: tenant?.baseCurrency ?? "AED",
+      byCurrency,
+      visits,
+      newPatients,
+      appointmentsCompleted,
+    };
+  }
+
+  async clinicBreakdown(tenantId: string, fromStr?: string, toStr?: string, viewer?: JwtUser) {
+    if (viewer?.role === UserRole.PHYSICIAN) {
+      throw new ForbiddenException("Physicians cannot view organization clinic breakdown");
+    }
+
+    const { start, end } = resolveReportingRange(fromStr, toStr);
+    const scopeClinicIds = await this.resolveScopeClinicIds(tenantId, viewer);
+
+    const clinics = await this.prisma.clinic.findMany({
+      where: {
+        tenantId,
+        ...(scopeClinicIds?.length ? { id: { in: scopeClinicIds } } : {}),
+      },
+      select: { id: true, nameEn: true, nameAr: true, defaultCurrency: true },
+      orderBy: { nameEn: "asc" },
+    });
+
+    const revenueWhere: Prisma.RevenueEntryWhereInput = {
+      tenantId,
+      status: RevenueStatus.POSTED,
+      postedAt: { gte: start, lte: end },
+      ...(scopeClinicIds?.length ? { clinicId: { in: scopeClinicIds } } : {}),
+    };
+    const expenseWhere: Prisma.ExpenseWhereInput = {
+      tenantId,
+      status: { in: [ExpenseStatus.APPROVED, ExpenseStatus.PENDING] },
+      incurredAt: { gte: start, lte: end },
+      ...(scopeClinicIds?.length ? { clinicId: { in: scopeClinicIds } } : {}),
+    };
+
+    const [revGrouped, expGrouped, visitGrouped, patientGrouped] = await Promise.all([
+      this.prisma.revenueEntry.groupBy({
+        by: ["clinicId", "currency"],
+        where: revenueWhere,
+        _sum: { netAmount: true },
+      }),
+      this.prisma.expense.groupBy({
+        by: ["clinicId", "currency"],
+        where: expenseWhere,
+        _sum: { amount: true },
+      }),
+      this.prisma.encounter.groupBy({
+        by: ["clinicId"],
+        where: {
+          tenantId,
+          status: { in: [EncounterStatus.FINALIZED, EncounterStatus.AMENDED] },
+          finalizedAt: { gte: start, lte: end },
+          ...(scopeClinicIds?.length ? { clinicId: { in: scopeClinicIds } } : {}),
+        },
+        _count: { _all: true },
+      }),
+      this.prisma.patient.groupBy({
+        by: ["homeBranchId"],
+        where: {
+          tenantId,
+          deletedAt: null,
+          createdAt: { gte: start, lte: end },
+          homeBranchId: { not: null },
+          ...(scopeClinicIds?.length ? { homeBranchId: { in: scopeClinicIds } } : {}),
+        },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const revMap = new Map<string, Map<string, number>>();
+    for (const row of revGrouped) {
+      if (!revMap.has(row.clinicId)) revMap.set(row.clinicId, new Map());
+      revMap.get(row.clinicId)!.set(row.currency, Number(row._sum.netAmount ?? 0));
+    }
+
+    const expMap = new Map<string, Map<string, number>>();
+    for (const row of expGrouped) {
+      if (!row.clinicId) continue;
+      if (!expMap.has(row.clinicId)) expMap.set(row.clinicId, new Map());
+      expMap.get(row.clinicId)!.set(row.currency, Number(row._sum.amount ?? 0));
+    }
+
+    const visitsByClinic = new Map(visitGrouped.map((row) => [row.clinicId, row._count._all]));
+    const patientsByClinic = new Map(
+      patientGrouped.filter((row) => row.homeBranchId).map((row) => [row.homeBranchId!, row._count._all]),
+    );
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { baseCurrency: true },
+    });
+
+    const items = clinics.map((clinic) => {
+      const revenueByCurrency = revMap.get(clinic.id) ?? new Map<string, number>();
+      const expensesByCurrency = expMap.get(clinic.id) ?? new Map<string, number>();
+      const byCurrency = mergeCurrencyTotals(revenueByCurrency, expensesByCurrency);
+      return {
+        clinicId: clinic.id,
+        clinicNameEn: clinic.nameEn,
+        clinicNameAr: clinic.nameAr,
+        defaultCurrency: clinic.defaultCurrency,
+        visits: visitsByClinic.get(clinic.id) ?? 0,
+        newPatients: patientsByClinic.get(clinic.id) ?? 0,
+        byCurrency,
+      };
+    });
+
+    return {
+      period: {
+        from: formatLocalYmd(start),
+        to: formatLocalYmd(end),
+        start: start.toISOString(),
+        end: end.toISOString(),
+      },
+      baseCurrency: tenant?.baseCurrency ?? "AED",
+      items,
     };
   }
 
   /**
    * Calendar-month buckets from live data: finalized visits, posted revenue, expenses, new patients.
    */
-  async monthlySeries(tenantId: string, monthsRaw: string | undefined, viewer?: JwtUser) {
+  async monthlySeries(
+    tenantId: string,
+    monthsRaw: string | undefined,
+    clinicIdStr?: string,
+    viewer?: JwtUser,
+  ) {
     const parsed = Number.parseInt(monthsRaw ?? "12", 10);
     const monthCount = Number.isFinite(parsed) ? Math.min(36, Math.max(3, parsed)) : 12;
+    const clinicId = clinicIdStr?.trim() || null;
+    const scopeClinicIds = await this.resolveScopeClinicIds(tenantId, viewer);
+    if (clinicId) this.assertClinicInScope(clinicId, scopeClinicIds);
 
     const now = new Date();
     const startAnchor = new Date(now.getFullYear(), now.getMonth() - (monthCount - 1), 1, 0, 0, 0, 0);
@@ -97,6 +297,8 @@ export class ReportsService {
       revenue: number;
       expenses: number;
       newPatients: number;
+      revenueByCurrency: { currency: string; amount: number }[];
+      expensesByCurrency: { currency: string; amount: number }[];
     }[] = [];
 
     for (let i = 0; i < monthCount; i++) {
@@ -104,59 +306,82 @@ export class ReportsService {
       const monthStart = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
       const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
 
-      const encounterWhere: Prisma.EncounterWhereInput = {
+      const encounterWhere = buildReportsEncounterWhere(
         tenantId,
-        status: { in: [EncounterStatus.FINALIZED, EncounterStatus.AMENDED] },
-        finalizedAt: { gte: monthStart, lte: monthEnd },
-        ...(viewer?.role === UserRole.PHYSICIAN ? { clinicianId: viewer.userId } : {}),
+        monthStart,
+        monthEnd,
+        viewer,
+        clinicId,
+        scopeClinicIds,
+      );
+      const revenueWhere = buildReportsRevenueWhere(
+        tenantId,
+        monthStart,
+        monthEnd,
+        viewer,
+        clinicId,
+        scopeClinicIds,
+      );
+      const expenseWhere = buildReportsExpenseWhere(tenantId, monthStart, monthEnd, clinicId, scopeClinicIds);
+
+      const patientWhere: Prisma.PatientWhereInput = {
+        tenantId,
+        deletedAt: null,
+        createdAt: { gte: monthStart, lte: monthEnd },
+        ...(clinicId
+          ? { homeBranchId: clinicId }
+          : scopeClinicIds?.length
+            ? { homeBranchId: { in: scopeClinicIds } }
+            : {}),
       };
 
-      const revenueWhere: Prisma.RevenueEntryWhereInput = {
-        tenantId,
-        status: RevenueStatus.POSTED,
-        postedAt: { gte: monthStart, lte: monthEnd },
-        ...(viewer?.role === UserRole.PHYSICIAN
-          ? {
-              encounterId: { not: null },
-              encounter: { is: { clinicianId: viewer.userId } },
-            }
-          : {}),
-      };
-
-      const [visits, revAgg, expAgg, newPatients] = await Promise.all([
+      const [visits, revenueByCurrency, expensesByCurrency, newPatients] = await Promise.all([
         this.prisma.encounter.count({ where: encounterWhere }),
-        this.prisma.revenueEntry.aggregate({
-          where: revenueWhere,
-          _sum: { netAmount: true },
-        }),
-        this.prisma.expense.aggregate({
-          where: {
-            tenantId,
-            status: { in: [ExpenseStatus.APPROVED, ExpenseStatus.PENDING] },
-            incurredAt: { gte: monthStart, lte: monthEnd },
-          },
-          _sum: { amount: true },
-        }),
-        this.prisma.patient.count({
-          where: {
-            tenantId,
-            deletedAt: null,
-            createdAt: { gte: monthStart, lte: monthEnd },
-          },
-        }),
+        sumRevenueByCurrency(this.prisma, revenueWhere),
+        sumExpensesByCurrency(this.prisma, expenseWhere),
+        this.prisma.patient.count({ where: patientWhere }),
       ]);
+
+      const revenueRows = [...revenueByCurrency.entries()]
+        .map(([currency, amount]) => ({ currency, amount }))
+        .sort((a, b) => a.currency.localeCompare(b.currency));
+      const expenseRows = [...expensesByCurrency.entries()]
+        .map(([currency, amount]) => ({ currency, amount }))
+        .sort((a, b) => a.currency.localeCompare(b.currency));
 
       buckets.push({
         month: d.toLocaleString("en", { month: "short", year: "2-digit" }),
         monthStart: formatLocalYmd(monthStart).slice(0, 7),
         visits,
-        revenue: Number(revAgg._sum.netAmount ?? 0),
-        expenses: Number(expAgg._sum.amount ?? 0),
+        revenue: revenueRows.reduce((sum, row) => sum + row.amount, 0),
+        expenses: expenseRows.reduce((sum, row) => sum + row.amount, 0),
         newPatients,
+        revenueByCurrency: revenueRows,
+        expensesByCurrency: expenseRows,
       });
     }
 
-    return { months: monthCount, items: buckets };
+    const currencies = [
+      ...new Set(
+        buckets.flatMap((b) => [
+          ...b.revenueByCurrency.map((r) => r.currency),
+          ...b.expensesByCurrency.map((e) => e.currency),
+        ]),
+      ),
+    ].sort((a, b) => a.localeCompare(b));
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { baseCurrency: true },
+    });
+
+    return {
+      months: monthCount,
+      clinicId,
+      baseCurrency: tenant?.baseCurrency ?? "AED",
+      currencies,
+      items: buckets,
+    };
   }
 
   /**

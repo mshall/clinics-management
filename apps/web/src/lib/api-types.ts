@@ -377,6 +377,13 @@ export interface ClinicRevenueBreakdownDto {
   grandNet: number;
 }
 
+export interface ReportsCurrencyTotalsDto {
+  currency: string;
+  revenue: number;
+  expenses: number;
+  netProfit: number;
+}
+
 export interface ReportsMonthlySeriesItemDto {
   month: string;
   monthStart: string;
@@ -384,11 +391,52 @@ export interface ReportsMonthlySeriesItemDto {
   revenue: number;
   expenses: number;
   newPatients: number;
+  revenueByCurrency: { currency: string; amount: number }[];
+  expensesByCurrency: { currency: string; amount: number }[];
 }
 
 export interface ReportsMonthlySeriesDto {
   months: number;
+  clinicId: string | null;
+  baseCurrency: string;
+  currencies: string[];
   items: ReportsMonthlySeriesItemDto[];
+}
+
+export interface ReportsPerformanceDto {
+  period: {
+    from: string;
+    to: string;
+    start: string;
+    end: string;
+  };
+  clinicId: string | null;
+  baseCurrency: string;
+  byCurrency: ReportsCurrencyTotalsDto[];
+  visits: number;
+  newPatients: number;
+  appointmentsCompleted: number;
+}
+
+export interface ReportsClinicBreakdownItemDto {
+  clinicId: string;
+  clinicNameEn: string;
+  clinicNameAr: string;
+  defaultCurrency: string;
+  visits: number;
+  newPatients: number;
+  byCurrency: ReportsCurrencyTotalsDto[];
+}
+
+export interface ReportsClinicBreakdownDto {
+  period: {
+    from: string;
+    to: string;
+    start: string;
+    end: string;
+  };
+  baseCurrency: string;
+  items: ReportsClinicBreakdownItemDto[];
 }
 
 export interface ReportsPatientAcquisitionItemDto {
