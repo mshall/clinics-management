@@ -32,6 +32,7 @@ import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { CreateExpenseDto } from "./dto/create-expense.dto";
 import { ExpenseDto } from "./dto/expense.dto";
+import { UpdateExpenseDto } from "./dto/update-expense.dto";
 import { ExpensesService } from "./expenses.service";
 
 const PROOF_UPLOAD_LIMIT = 15 * 1024 * 1024;
@@ -138,5 +139,39 @@ export class ExpensesController {
   patchStatus(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchExpenseStatusDto) {
     this.assertExpenseAccess(user);
     return this.expenses.updateStatus(requireTenantId(user), id, body.status, user);
+  }
+
+  @Patch(":id")
+  @ApiOperation({ summary: "Edit a pending expense (multipart: text fields + optional proof file)" })
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        clinicId: { type: "string" },
+        category: { type: "string" },
+        vendorName: { type: "string" },
+        amount: { type: "number" },
+        currency: { type: "string" },
+        incurredAt: { type: "string", format: "date-time" },
+        proof: { type: "string", format: "binary", description: "Replace receipt / invoice (PDF or image, max 15MB)" },
+      },
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor("proof", {
+      storage: memoryStorage(),
+      limits: { fileSize: PROOF_UPLOAD_LIMIT },
+    })
+  )
+  @ApiOkResponse({ type: ExpenseDto })
+  update(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Body() body: UpdateExpenseDto,
+    @UploadedFile() proof?: Express.Multer.File
+  ) {
+    this.assertExpenseAccess(user);
+    return this.expenses.update(requireTenantId(user), id, body, user, proof);
   }
 }

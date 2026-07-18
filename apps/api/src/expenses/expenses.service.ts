@@ -18,6 +18,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { CreateExpenseDto } from "./dto/create-expense.dto";
 import type { ExpenseDto } from "./dto/expense.dto";
+import type { UpdateExpenseDto } from "./dto/update-expense.dto";
 
 const MAX_PROOF_BYTES = 15 * 1024 * 1024;
 const ALLOWED_PROOF_MIME = new Set([
@@ -142,25 +143,87 @@ export class ExpensesService {
     });
 
     if (proof?.buffer?.length) {
-      if (proof.size > MAX_PROOF_BYTES) throw new BadRequestException("Proof file too large (max 15MB)");
-      const mime = proof.mimetype || "application/octet-stream";
-      if (!ALLOWED_PROOF_MIME.has(mime)) throw new BadRequestException(`Unsupported proof file type: ${mime}`);
-
-      const docId = randomUUID();
-      const base = path.basename(proof.originalname || "receipt").replace(/[^\w.\-]+/g, "_").slice(0, 120) || "receipt";
-      const relativePath = `${tenantId}/${row.id}/${docId}-${base}`;
-      await this.uploads.put("expenses", relativePath, proof.buffer, mime);
-
       row = await this.prisma.expense.update({
         where: { id: row.id },
-        data: {
-          proofRelativePath: relativePath,
-          proofOriginalName: proof.originalname || base,
-          proofMimeType: mime,
-        },
+        data: await this.attachProof(row.id, tenantId, proof, null),
       });
     }
 
+    return this.map(row);
+  }
+
+  private async attachProof(rowId: string, tenantId: string, proof: ProofFile, previousPath: string | null) {
+    if (proof.size > MAX_PROOF_BYTES) throw new BadRequestException("Proof file too large (max 15MB)");
+    const mime = proof.mimetype || "application/octet-stream";
+    if (!ALLOWED_PROOF_MIME.has(mime)) throw new BadRequestException(`Unsupported proof file type: ${mime}`);
+
+    const docId = randomUUID();
+    const base = path.basename(proof.originalname || "receipt").replace(/[^\w.\-]+/g, "_").slice(0, 120) || "receipt";
+    const relativePath = `${tenantId}/${rowId}/${docId}-${base}`;
+    await this.uploads.put("expenses", relativePath, proof.buffer, mime);
+
+    if (previousPath) {
+      try {
+        await this.uploads.deleteObject("expenses", previousPath);
+      } catch {
+        /* best-effort cleanup */
+      }
+    }
+
+    return {
+      proofRelativePath: relativePath,
+      proofOriginalName: proof.originalname || base,
+      proofMimeType: mime,
+    };
+  }
+
+  async update(
+    tenantId: string,
+    id: string,
+    dto: UpdateExpenseDto,
+    user: JwtUser,
+    proof?: ProofFile
+  ): Promise<ExpenseDto> {
+    const existing = await this.prisma.expense.findFirst({ where: { id, tenantId } });
+    if (!existing) throw new NotFoundException("Expense not found");
+    if (existing.status !== ExpenseStatus.PENDING) {
+      throw new BadRequestException("Only pending expenses can be edited");
+    }
+
+    const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
+    if (scopeIds !== null && !scopeIds.includes(existing.clinicId)) {
+      throw new NotFoundException("Expense not found");
+    }
+
+    const nextClinicId = dto.clinicId?.trim() || existing.clinicId;
+    if (scopeIds !== null && !scopeIds.includes(nextClinicId)) {
+      throw new ForbiddenException("Clinic is outside your assigned scope");
+    }
+
+    const clinic = await this.prisma.clinic.findFirst({ where: { id: nextClinicId, tenantId } });
+    if (!clinic) throw new BadRequestException("Invalid clinicId");
+
+    let currency = existing.currency;
+    if (dto.currency?.trim() && isBaseCurrency(dto.currency.trim())) {
+      currency = dto.currency.trim();
+    } else if (dto.clinicId && nextClinicId !== existing.clinicId) {
+      currency = clinic.defaultCurrency;
+    }
+
+    const data: Prisma.ExpenseUpdateInput = {
+      ...(dto.clinicId ? { clinicId: nextClinicId } : {}),
+      ...(dto.category !== undefined ? { category: dto.category } : {}),
+      ...(dto.vendorName !== undefined ? { vendorName: dto.vendorName || null } : {}),
+      ...(dto.amount !== undefined ? { amount: dto.amount } : {}),
+      currency,
+      ...(dto.incurredAt ? { incurredAt: new Date(dto.incurredAt) } : {}),
+    };
+
+    if (proof?.buffer?.length) {
+      Object.assign(data, await this.attachProof(existing.id, tenantId, proof, existing.proofRelativePath));
+    }
+
+    const row = await this.prisma.expense.update({ where: { id }, data });
     return this.map(row);
   }
 

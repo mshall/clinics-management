@@ -145,6 +145,33 @@ export async function apiPostFormData<T>(
   return (await res.json()) as T;
 }
 
+export async function apiPatchFormData<T>(
+  path: string,
+  formData: FormData,
+  options?: { enhance?: boolean },
+): Promise<T> {
+  const token = useAuthStore.getState().accessToken;
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const body =
+    options?.enhance === false ? formData : await enhanceFormDataImages(formData, "document");
+  const res = await fetch(apiUrl(path), {
+    method: "PATCH",
+    headers,
+    body,
+  });
+  if (res.status === 401) {
+    useAuthStore.getState().signOut();
+  }
+  if (!res.ok) {
+    const parsed = await parseJson(res);
+    throw new ApiError(messageFromErrorBody(res.status, parsed, res.statusText || "Request failed"), res.status, parsed);
+  }
+  const text = await res.text();
+  if (!text) return {} as T;
+  return JSON.parse(text) as T;
+}
+
 /** Authenticated GET returning raw bytes (e.g. PDF / image preview). */
 export async function apiFetchBlob(path: string): Promise<{ blob: Blob; contentType: string }> {
   const res = await fetch(apiUrl(path), { headers: authHeadersAny() });

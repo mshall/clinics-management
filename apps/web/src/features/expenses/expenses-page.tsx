@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Eye, Receipt } from "lucide-react";
+import { Eye, Pencil, Receipt } from "lucide-react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { ResponsiveTable } from "@/components/responsive-table";
@@ -20,7 +20,8 @@ import { Label } from "@/components/ui/label";
 import { useClinicsQuery, useExpensesQuery } from "@/lib/api-hooks";
 import { EXPENSE_CATEGORIES } from "@/lib/expense-categories";
 import type { ExpenseDto } from "@/lib/api-types";
-import { ApiError, apiFetchBlob, apiPatch, apiPostFormData } from "@/lib/http";
+import { ApiError, apiFetchBlob, apiPatch, apiPatchFormData, apiPostFormData } from "@/lib/http";
+import { canEditPendingExpense } from "@/lib/expense-edit-policy";
 import { columnFilterIncludes } from "@/lib/utils";
 import {
   formatClinicName,
@@ -32,10 +33,21 @@ import { defaultMonthRange } from "@/stores/date-range-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectExpenseSubmitIssues } from "@/lib/create-form-validation";
 import { formatMoneyAmount, resolveClinicCurrencyCode } from "@/lib/money-display";
+import { useAuthStore } from "@/stores/auth-store";
+
+function expenseDateInputValue(iso: string): string {
+  const d = new Date(iso);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+
+function dateInputToIso(dateStr: string): string {
+  return new Date(`${dateStr}T12:00:00`).toISOString();
+}
 
 export function ExpensesPage() {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
+  const role = useAuthStore((s) => s.user?.role);
   const initialRange = useMemo(() => defaultMonthRange(), []);
   const [from, setFrom] = useState(initialRange.from);
   const [to, setTo] = useState(initialRange.to);
@@ -105,10 +117,21 @@ export function ExpensesPage() {
   const [efDate, setEfDate] = useState("");
   const [efProof, setEfProof] = useState("");
   const [detail, setDetail] = useState<ExpenseDto | null>(null);
+  const [editExpense, setEditExpense] = useState<ExpenseDto | null>(null);
+  const [editClinicId, setEditClinicId] = useState("");
+  const [editCategory, setEditCategory] = useState("UTILITIES");
+  const [editVendor, setEditVendor] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editCurrency, setEditCurrency] = useState("AED");
+  const [editIncurredDate, setEditIncurredDate] = useState("");
+  const [editProofFile, setEditProofFile] = useState<File | null>(null);
+  const editProofInputRef = useRef<HTMLInputElement>(null);
+  const editValidation = useValidationIssuesDialog({ intent: "submit" });
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
 
   const clinicById = useMemo(() => new Map(clinics.map((c) => [c.id, c])), [clinics]);
   const createClinicCurrency = resolveClinicCurrencyCode(clinics, clinicId || singleManagedClinic?.id);
+  const editClinicCurrency = resolveClinicCurrencyCode(clinics, editClinicId || editExpense?.clinicId);
   const displayCurrency = resolveClinicCurrencyCode(clinics, filterClinicId || clinicId || singleManagedClinic?.id);
 
   useEffect(() => {
@@ -208,6 +231,75 @@ export function ExpensesPage() {
     },
   });
 
+  const closeEditExpense = () => {
+    setEditExpense(null);
+    setEditProofFile(null);
+    if (editProofInputRef.current) editProofInputRef.current.value = "";
+    editValidation.clear();
+  };
+
+  const openEditExpense = (e: ExpenseDto) => {
+    setDetail(null);
+    setEditExpense(e);
+    setEditClinicId(e.clinicId);
+    setEditCategory(e.category);
+    setEditVendor(e.vendorName ?? "");
+    setEditAmount(String(e.amount));
+    setEditCurrency(e.currency);
+    setEditIncurredDate(expenseDateInputValue(e.incurredAt));
+    setEditProofFile(null);
+    if (editProofInputRef.current) editProofInputRef.current.value = "";
+    editValidation.clear();
+  };
+
+  const handleExpenseRowActivate = (e: ExpenseDto) => {
+    if (canEditPendingExpense(e, role)) {
+      openEditExpense(e);
+      return;
+    }
+    setDetail(e);
+  };
+
+  const editMut = useMutation({
+    mutationFn: () => {
+      if (!editExpense) throw new Error("No expense selected");
+      const fd = new FormData();
+      fd.append("clinicId", editClinicId);
+      fd.append("category", editCategory);
+      fd.append("vendorName", editVendor.trim());
+      fd.append("amount", String(Number.parseFloat(editAmount)));
+      fd.append("currency", editCurrency);
+      fd.append("incurredAt", dateInputToIso(editIncurredDate));
+      if (editProofFile) fd.append("proof", editProofFile);
+      return apiPatchFormData<ExpenseDto>(`/api/v1/expenses/${editExpense.id}`, fd);
+    },
+    onSuccess: () => {
+      editValidation.clear();
+      toast.success(t("expenses.editSuccess", "Expense updated."));
+      void qc.invalidateQueries({ queryKey: ["expenses"] });
+      void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
+      closeEditExpense();
+    },
+    onError: (e: unknown) => {
+      editValidation.showError(e);
+    },
+  });
+
+  const handleSaveEditExpense = () => {
+    const issues = collectExpenseSubmitIssues(
+      { clinicId: editClinicId, amount: editAmount, proofFile: editProofFile },
+      t,
+    );
+    if (!editIncurredDate.trim()) {
+      issues.push(t("expenses.errorDateRequired", "Enter a date."));
+    }
+    if (issues.length > 0) {
+      editValidation.showIssues(issues);
+      return;
+    }
+    editMut.mutate();
+  };
+
   const filteredExpenses = useMemo(() => {
     const formatMoney = (x: number, currency: string) => formatMoneyAmount(x, currency, loc);
     return expenses.filter((e) => {
@@ -263,6 +355,7 @@ export function ExpensesPage() {
   return (
     <div className="space-y-6">
       <ValidationIssuesDialog {...validation.dialogProps} />
+      <ValidationIssuesDialog {...editValidation.dialogProps} />
       <ConfirmDialog
         open={submitConfirmOpen}
         onOpenChange={(open) => !createMut.isPending && setSubmitConfirmOpen(open)}
@@ -556,17 +649,19 @@ export function ExpensesPage() {
                   </tr>
                 ) : null}
                 {!isPending &&
-                  filteredExpenses.map((e) => (
+                  filteredExpenses.map((e) => {
+                    const rowEditable = canEditPendingExpense(e, role);
+                    return (
                     <tr
                       key={e.id}
-                      className="cursor-pointer border-t border-border hover:bg-muted/50"
+                      className={`border-t border-border ${rowEditable ? "cursor-pointer hover:bg-muted/50" : "cursor-pointer hover:bg-muted/50"}`}
                       role="button"
                       tabIndex={0}
-                      onClick={() => setDetail(e)}
+                      onClick={() => handleExpenseRowActivate(e)}
                       onKeyDown={(ev) => {
                         if (ev.key === "Enter" || ev.key === " ") {
                           ev.preventDefault();
-                          setDetail(e);
+                          handleExpenseRowActivate(e);
                         }
                       }}
                     >
@@ -613,7 +708,19 @@ export function ExpensesPage() {
                       </td>
                       <td className="px-3 py-2 text-end" onClick={(ev) => ev.stopPropagation()}>
                         {e.status === "PENDING" ? (
-                          <div className="flex justify-end gap-1">
+                          <div className="flex flex-wrap justify-end gap-1">
+                            {rowEditable ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-8 gap-1 text-xs"
+                                onClick={() => openEditExpense(e)}
+                              >
+                                <Pencil className="h-3.5 w-3.5" aria-hidden />
+                                {t("operations.edit", "Edit")}
+                              </Button>
+                            ) : null}
                             <Button size="sm" variant="secondary" onClick={() => statusMut.mutate({ id: e.id, status: "APPROVED" })}>
                               {t("expenses.approve")}
                             </Button>
@@ -621,10 +728,15 @@ export function ExpensesPage() {
                               {t("expenses.reject")}
                             </Button>
                           </div>
-                        ) : null}
+                        ) : (
+                          <Button type="button" size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setDetail(e)}>
+                            {t("common.view", "View")}
+                          </Button>
+                        )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 {!isPending && expenses.length > 0 && filteredExpenses.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground">
@@ -649,6 +761,135 @@ export function ExpensesPage() {
           />
         </CardContent>
       </Card>
+
+      <Dialog open={Boolean(editExpense)} onOpenChange={(o) => !o && !editMut.isPending && closeEditExpense()}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>{t("expenses.editTitle", "Edit expense")}</DialogTitle>
+          </DialogHeader>
+          {editExpense ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <p className="text-sm text-muted-foreground sm:col-span-2">
+                {t("expenses.editPendingHint", "Pending expenses can be corrected before approval.")}
+              </p>
+              <div className="space-y-2 sm:col-span-2">
+                <Label required>{t("expenses.clinic")}</Label>
+                {singleManagedClinic ? (
+                  <p className="flex min-h-10 items-center rounded-md border border-input bg-muted/40 px-3 py-2 text-sm">
+                    {formatClinicName(singleManagedClinic, i18n.language)}
+                  </p>
+                ) : (
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={editClinicId}
+                    onChange={(ev) => {
+                      setEditClinicId(ev.target.value);
+                      setEditCurrency(resolveClinicCurrencyCode(clinics, ev.target.value || undefined));
+                    }}
+                  >
+                    <option value="">{t("expenses.pickClinic")}</option>
+                    {clinics.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {formatClinicName(c, i18n.language)}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>{t("expenses.category")}</Label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={editCategory}
+                  onChange={(ev) => setEditCategory(ev.target.value)}
+                >
+                  {EXPENSE_CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {formatExpenseCategory(c, t)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>{t("expenses.date")}</Label>
+                <Input
+                  className="h-10 ltr-nums"
+                  type="date"
+                  value={editIncurredDate}
+                  onChange={(ev) => setEditIncurredDate(ev.target.value)}
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label>{t("expenses.vendor")}</Label>
+                <Input value={editVendor} onChange={(ev) => setEditVendor(ev.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label required>{t("expenses.amount", "Amount ({{currency}})", { currency: editCurrency })}</Label>
+                <Input
+                  className="ltr-nums"
+                  value={editAmount}
+                  onChange={(ev) => setEditAmount(ev.target.value)}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("expenses.currency", "Currency")}</Label>
+                <BaseCurrencySelect value={editCurrency} onChange={setEditCurrency} />
+                <p className="text-xs text-muted-foreground">
+                  {t("expenses.currencyHint", "Defaults to the clinic currency ({{currency}}).", {
+                    currency: editClinicCurrency,
+                  })}
+                </p>
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label>{t("expenses.paymentProof")}</Label>
+                {editExpense.hasProof ? (
+                  <p className="text-xs text-muted-foreground">
+                    {t("expenses.currentProof", "Current file")}:{" "}
+                    <span className="font-medium text-foreground">{editExpense.proofOriginalName ?? t("expenses.proof")}</span>
+                  </p>
+                ) : null}
+                <Input
+                  ref={editProofInputRef}
+                  type="file"
+                  accept=".pdf,application/pdf,image/jpeg,image/png,image/gif,image/webp"
+                  className="cursor-pointer text-sm file:me-3 file:rounded file:border file:border-input file:bg-muted file:px-2 file:py-1 file:text-xs"
+                  onChange={(ev) => {
+                    const f = ev.target.files?.[0] ?? null;
+                    const max = 15 * 1024 * 1024;
+                    if (f && f.size > max) {
+                      editValidation.showIssues([t("expenses.proofTooLarge", "File is too large (max 15 MB).")]);
+                      setEditProofFile(null);
+                      ev.target.value = "";
+                      return;
+                    }
+                    editValidation.clear();
+                    setEditProofFile(f);
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {editExpense.hasProof
+                    ? t("expenses.replaceProofHint", "Upload a new file to replace the existing proof.")
+                    : t("expenses.paymentProofHint")}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2 sm:col-span-2">
+                <Button type="button" disabled={editMut.isPending} onClick={handleSaveEditExpense}>
+                  {t("expenses.saveChanges", "Save changes")}
+                </Button>
+                <Button type="button" variant="outline" disabled={editMut.isPending} onClick={closeEditExpense}>
+                  {t("common.cancel", "Cancel")}
+                </Button>
+              </div>
+              {editValidation.formErr ? (
+                <p className="text-sm text-destructive sm:col-span-2">{editValidation.formErr}</p>
+              ) : null}
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={Boolean(detail)} onOpenChange={(o) => !o && setDetail(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md" aria-describedby={undefined}>
