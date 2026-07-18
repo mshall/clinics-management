@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { INVOICE_SECTION_KEYS } from "../../common/invoice-config";
 
 export class ClinicDetailDto {
   @ApiProperty()
@@ -54,4 +55,16 @@ export class ClinicDetailDto {
 
   @ApiProperty({ description: "Default currency for appointments, encounters, and operations at this clinic" })
   defaultCurrency!: string;
+
+  @ApiProperty({ description: "Preset id for invoice background color" })
+  invoiceBackgroundColor!: string;
+
+  @ApiProperty({ description: "Hex color for invoice background preview" })
+  invoiceBackgroundHex!: string;
+
+  @ApiProperty({ type: [String], enum: INVOICE_SECTION_KEYS })
+  invoiceSections!: string[];
+
+  @ApiProperty({ description: "Whether an invoice logo has been uploaded" })
+  hasInvoiceLogo!: boolean;
 }

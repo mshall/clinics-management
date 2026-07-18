@@ -298,6 +298,53 @@ export interface ClinicDetailDto {
   licenseNumber: string;
   defaultLanguage: string;
   defaultCurrency: string;
+  invoiceBackgroundColor: string;
+  invoiceBackgroundHex: string;
+  invoiceSections: string[];
+  hasInvoiceLogo: boolean;
+}
+
+export interface InvoiceLineDto {
+  id: string;
+  purpose: string;
+  amountPaid: number;
+  sortOrder: number;
+}
+
+export interface InvoiceDto {
+  id: string;
+  clinicId: string;
+  patientId: string;
+  encounterId: string | null;
+  operationId: string | null;
+  invoiceNumber: string;
+  issueDate: string;
+  currency: string;
+  backgroundColor: string;
+  sections: string[];
+  patientName: string;
+  patientMrn: string | null;
+  clinicNameEn: string;
+  clinicNameAr: string;
+  clinicAddressEn: string;
+  clinicAddressAr: string;
+  clinicPhone: string;
+  clinicEmail: string;
+  clinicLicenseNumber: string;
+  totalAmount: number;
+  lines: InvoiceLineDto[];
+  createdAt: string;
+}
+
+export interface InvoiceListItemDto {
+  id: string;
+  invoiceNumber: string;
+  issueDate: string;
+  currency: string;
+  totalAmount: number;
+  encounterId: string | null;
+  operationId: string | null;
+  createdAt: string;
 }
 
 export interface AdminAuditLogItemDto {
@@ -331,6 +378,7 @@ export interface ReportsMonthlySeriesItemDto {
   monthStart: string;
   visits: number;
   revenue: number;
+  expenses: number;
   newPatients: number;
 }
 

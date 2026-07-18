@@ -34,6 +34,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { EncounterDeleteConfirmDialog } from "@/features/encounters/encounter-delete-confirm-dialog";
+import { GenerateInvoiceDialog } from "@/features/invoices/generate-invoice-dialog";
 import { resolvePatientListLabel } from "@/lib/patient-display";
 import { ENCOUNTER_VISIT_TYPES, formatVisitType } from "@/lib/visit-types";
 import { useAuthStore } from "@/stores/auth-store";
@@ -116,6 +117,7 @@ export function EncounterDetailPage() {
   const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false);
   const [noMedsConfirmOpen, setNoMedsConfirmOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [viewer, setViewer] = useState<{ doc: EncounterDocumentDto; url: string; contentType: string } | null>(null);
   const viewerUrlRef = useRef<string | null>(null);
   const replaceFileRef = useRef<HTMLInputElement>(null);
@@ -628,6 +630,10 @@ export function EncounterDetailPage() {
               {t("encounters.delete", "Delete")}
             </Button>
           ) : null}
+          <Button type="button" variant="outline" size="sm" onClick={() => setInvoiceDialogOpen(true)}>
+            <FileText className="me-2 h-4 w-4" />
+            {t("invoices.generateShort", "Invoice")}
+          </Button>
           <Button asChild variant="outline">
             <Link to="/encounters">{t("encounters.backList")}</Link>
           </Button>
@@ -1159,6 +1165,24 @@ export function EncounterDetailPage() {
           url={viewer.url}
           contentType={viewer.contentType}
           onClose={closeViewer}
+        />
+      ) : null}
+
+      {enc ? (
+        <GenerateInvoiceDialog
+          open={invoiceDialogOpen}
+          onOpenChange={setInvoiceDialogOpen}
+          clinicId={enc.clinicId}
+          encounterId={enc.id}
+          patientName={
+            resolvePatientListLabel({
+              patientId: enc.patientId,
+              patientMrn: enc.patientMrn,
+              patientName: enc.patientName,
+            }).text
+          }
+          defaultPurpose={formatVisitType(visitType, t)}
+          defaultAmount={enc.visitFeeAmount ?? undefined}
         />
       ) : null}
     </div>

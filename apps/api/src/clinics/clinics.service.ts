@@ -10,6 +10,7 @@ import { isBaseCurrency } from "../common/base-currencies";
 import type { ClinicPhysicianDto } from "./dto/clinic-physician.dto";
 import type { ClinicKind } from "./clinic-kind";
 import { resolveClinicKind } from "./clinic-kind";
+import { clinicInvoiceSettingsFromRow } from "../common/invoice-config";
 
 export interface ClinicDto {
   id: string;
@@ -461,6 +462,7 @@ export class ClinicsService {
       licenseNumber: row.licenseNumber,
       defaultLanguage: row.defaultLanguage,
       defaultCurrency: row.defaultCurrency,
+      ...clinicInvoiceSettingsFromRow(row),
     };
   }
 
@@ -643,6 +645,7 @@ export class ClinicsService {
       licenseNumber: row.licenseNumber,
       defaultLanguage: row.defaultLanguage,
       defaultCurrency: row.defaultCurrency,
+      ...clinicInvoiceSettingsFromRow(row),
     };
   }
 }

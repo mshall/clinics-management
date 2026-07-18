@@ -145,6 +145,7 @@ model Tenant {
   operationDocuments     OperationDocument[]
   operationMedications   OperationMedication[]
   patientDocuments       PatientDocument[]
+  invoices               Invoice[]
   userNavTabGrants       UserNavTabGrant[]
   tenantRoleNavTabGrants TenantRoleNavTabGrant[]
   createdAt              DateTime                @default(now())
@@ -166,6 +167,7 @@ model User {
   appointments Appointment[] @relation("AppointmentClinician")
   operationsPerformed Operation[] @relation("OperationClinician")
   operationsCreated   Operation[] @relation("OperationCreatedBy")
+  invoicesCreated     Invoice[]   @relation("InvoiceCreatedBy")
   auditLogsAsActor AuditLog[] @relation("AuditLogActor")
   clinicAdminScopes ClinicAdminScope[]
   navTabGrant       UserNavTabGrant? @relation("UserNavTabGrantUser")
@@ -229,6 +231,11 @@ model Clinic {
   licenseNumber    String
   defaultLanguage  Locale          @default(en)
   defaultCurrency  String          @default("AED")
+  invoiceLogoRelativePath String?
+  invoiceLogoOriginalName String?
+  invoiceLogoMimeType     String?
+  invoiceBackgroundColor  String      @default("white")
+  invoiceSections         Json        @default("[\"clinicHeader\",\"patientDetails\",\"invoiceMeta\",\"lineItems\",\"totals\",\"footer\"]")
   patientsHome     Patient[]       @relation("PatientHomeBranch")
   encounters       Encounter[]
   revenueEntries   RevenueEntry[]
@@ -236,6 +243,7 @@ model Clinic {
   employees        Employee[]
   appointments     Appointment[]
   operations       Operation[]
+  invoices         Invoice[]
   auditLogs        AuditLog[]
   clinicAdminScopes ClinicAdminScope[]
   createdAt        DateTime        @default(now())
@@ -286,6 +294,7 @@ model Patient {
   appointments Appointment[]
   operations   Operation[]
   documents    PatientDocument[]
+  invoices     Invoice[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -346,6 +355,7 @@ model Encounter {
   revenueEntries RevenueEntry[]
   medications    EncounterMedication[]
   documents      EncounterDocument[]
+  invoices       Invoice[]
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
@@ -584,6 +594,7 @@ model Operation {
   documents       OperationDocument[]
   medications     OperationMedication[]
   revenueEntries  RevenueEntry[]
+  invoices        Invoice[]
   createdAt       DateTime        @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -627,6 +638,57 @@ model OperationMedication {
 
   @@index([tenantId])
   @@index([operationId])
+}
+
+model Invoice {
+  id                 String        @id @default(cuid())
+  tenantId           String
+  tenant             Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId           String
+  clinic             Clinic        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patientId          String
+  patient            Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  encounterId        String?
+  encounter          Encounter?    @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+  operationId        String?
+  operation          Operation?    @relation(fields: [operationId], references: [id], onDelete: SetNull)
+  invoiceNumber      String
+  issueDate          DateTime      @default(now())
+  currency           String
+  backgroundColor    String
+  sectionsSnapshot   Json
+  patientName        String
+  patientMrn         String?
+  clinicNameEn       String
+  clinicNameAr       String
+  clinicAddressEn    String
+  clinicAddressAr    String
+  clinicPhone        String
+  clinicEmail        String
+  clinicLicenseNumber String
+  createdByUserId    String?
+  createdBy          User?         @relation("InvoiceCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  lines              InvoiceLine[]
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@unique([clinicId, invoiceNumber])
+  @@index([tenantId])
+  @@index([clinicId])
+  @@index([patientId])
+  @@index([encounterId])
+  @@index([operationId])
+}
+
+model InvoiceLine {
+  id         String   @id @default(cuid())
+  invoiceId  String
+  invoice    Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  purpose    String
+  amountPaid Decimal  @db.Decimal(14, 2)
+  sortOrder  Int      @default(0)
+
+  @@index([invoiceId])
 }
 
 model FeatureFlag {

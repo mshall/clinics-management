@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Lock } from "lucide-react";
+import { Lock, FileText } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CreateActionButton } from "@/components/create-action-button";
@@ -50,6 +50,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { defaultMonthRange } from "@/stores/date-range-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectOperationCreateValidationIssues } from "@/features/operations/operation-form-validation";
+import { GenerateInvoiceDialog } from "@/features/invoices/generate-invoice-dialog";
 import { DatetimeLocalField } from "@/components/datetime-local-field";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 
@@ -287,6 +288,7 @@ export function OperationsPage() {
   const [completePromptOp, setCompletePromptOp] = useState<OperationDto | null>(null);
   const [cancelConfirmOp, setCancelConfirmOp] = useState<OperationDto | null>(null);
   const [editCompleteConfirmOpen, setEditCompleteConfirmOpen] = useState(false);
+  const [editInvoiceOpen, setEditInvoiceOpen] = useState(false);
   const [pendingCompleteAfterSave, setPendingCompleteAfterSave] = useState(false);
   const [editOp, setEditOp] = useState<OperationDto | null>(null);
   const [editPatientId, setEditPatientId] = useState("");
@@ -1232,6 +1234,10 @@ export function OperationsPage() {
               </div>
               <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6">
                 <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="outline" onClick={() => setEditInvoiceOpen(true)}>
+                    <FileText className="me-2 h-4 w-4" />
+                    {t("invoices.generateShort", "Invoice")}
+                  </Button>
                   {editIsScheduled ? (
                     <Button
                       type="button"
@@ -1716,6 +1722,22 @@ export function OperationsPage() {
           )}
         </CardContent>
       </Card>
+
+      {editOp ? (
+        <GenerateInvoiceDialog
+          open={editInvoiceOpen}
+          onOpenChange={setEditInvoiceOpen}
+          clinicId={editClinicId || editOp.clinicId}
+          operationId={editOp.id}
+          patientName={editOp.patientName ?? resolvePatientListLabel({
+            patientId: editOp.patientId,
+            patientMrn: editOp.patientMrn,
+            patientName: editOp.patientName,
+          }).text}
+          defaultPurpose={t("operations.procedureFee", "Procedure fee")}
+          defaultAmount={editOp.paidAmount > 0 ? editOp.paidAmount : editOp.totalCost}
+        />
+      ) : null}
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { PatientEditDialog } from "@/components/patient-edit-dialog";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { PatientClinicalDocuments } from "@/components/patient-clinical-documents";
+import { PatientInvoicesSection } from "@/features/invoices/patient-invoices-section";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -359,6 +360,8 @@ export function PatientDetailPage() {
       </div>
 
       <PatientClinicalDocuments patientId={patient.id} />
+
+      <PatientInvoicesSection patientId={patient.id} clinicId={patient.homeBranchId} />
 
       {canViewEncounters ? (
       <div className="grid gap-4">
