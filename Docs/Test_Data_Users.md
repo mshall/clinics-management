@@ -248,6 +248,14 @@ Branches are children of HQ (`parentClinicId` → HQ).
 | HR deactivate employee | `hr@drahmedshall.com` → **HR** → employee → Deactivate |
 | HR re-hire employee | `hr@drahmedshall.com` → separated employee → Re-hire (set date) |
 | Admin-only employee delete | `hr@drahmedshall.com` cannot delete; `admin@drahmedshall.com` or `clinicadmin.*` can |
+| Archive org user (soft) | `admin@drahmedshall.com` → **Admin → Organization users** → **Archive**; view **Archived users** tab |
+| Restore archived user + employee | Archived tab → **Restore** (starts new employment/operating period as applicable) |
+| Disable clinic / branch | `admin@drahmedshall.com` → **Clinics & branches** → clinic detail → **Disable** |
+| Reactivate disabled clinic | **Clinics & branches** → **Disabled clinics** tab → detail → **Reactivate**; check **Operating history** tab |
+| Reports date-range charts | Set **Reporting period** in header → **Reports** (all sections follow From → To) |
+| Multi-currency clinic breakdown | **Reports** → scope **All clinics** → **Breakdown by clinic** |
+| Clinic invoice settings | **Admin → Clinics & tenants** → edit clinic → invoice logo & sections |
+| Prescription header branding | **Admin → Clinics & tenants** → prescription logo & EN/AR description |
 
 ---
 

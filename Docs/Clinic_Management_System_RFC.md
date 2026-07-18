@@ -4,16 +4,16 @@
 | Field | Value |
 |---|---|
 | **Document Title** | Clinic Management System – Technical RFC |
-| **Version** | 1.4 |
+| **Version** | 1.5 |
 | **Status** | Living document (aligned with `main` as of July 2026) |
-| **Related** | [`Clinic_Management_System_PRD.md`](./Clinic_Management_System_PRD.md) v1.5 |
+| **Related** | [`Clinic_Management_System_PRD.md`](./Clinic_Management_System_PRD.md) v1.6 |
 | **Last Updated** | July 2026 |
 
 ---
 
 ## 1. Overview
 
-This RFC describes the technical architecture and implementation of the Clinic Management System (CMS) defined in the PRD v1.5. The platform is a **multi-tenant SaaS** for clinic groups: one deployed stack serves many organizations (`tenantId`), each with multi-branch clinics, EHR workflows, expenses, HR, and bilingual UI.
+This RFC describes the technical architecture and implementation of the Clinic Management System (CMS) defined in the PRD v1.6. The platform is a **multi-tenant SaaS** for clinic groups: one deployed stack serves many organizations (`tenantId`), each with multi-branch clinics, EHR workflows, expenses, HR, and bilingual UI.
 
 The defining engineering constraints for v1:
 
@@ -154,15 +154,16 @@ NestJS modules in `apps/api/src/app.module.ts` map to product concerns. Cross-mo
 |---|---|---|
 | `AuthModule` | `auth/` | Login, JWT, `/auth/me`, password change |
 | `PatientsModule` | `patients/` | Registry, documents, phone conflict, clinical-documents aggregation |
-| `ClinicsModule` | `clinics/` | Clinic CRUD, physicians, scheduling helpers |
+| `ClinicsModule` | `clinics/` | Clinic CRUD, physicians, scheduling helpers, **disable/reactivate**, operating periods |
 | `EncountersModule` | `encounters/` | Encounters, vitals, diagnoses, medications, documents, finalize |
 | `AppointmentsModule` | `appointments/` | Appointment lifecycle, physician/clinic scope |
 | `OperationsModule` | `operations/` | Surgical/procedure scheduling, balance, revenue hooks |
 | `ExpensesModule` | `expenses/` | Expense entries, proof uploads, approval status |
 | `RevenueModule` | `revenue/` | Revenue ledger, visit fees, manual entries, totals |
-| `HrModule` | `hr/` | Employees, attendance, leave, ID documents |
-| `AdminModule` | `admin/` | Org overview, audit, platform admin, data explorer, org patients/users |
-| `ReportsModule` | `reports/` | Monthly visit/revenue/patient charts |
+| `InvoicesModule` | `invoices/` | Patient invoices, clinic invoice/prescription branding uploads |
+| `HrModule` | `hr/` | Employees, attendance, leave, ID documents, **user-linked lifecycle** |
+| `AdminModule` | `admin/` | Org overview, audit, platform admin, data explorer, org patients/**users lifecycle** |
+| `ReportsModule` | `reports/` | **Date-range** performance, clinic breakdown, monthly series, acquisition |
 | `DashboardModule` | `dashboard/` | Group KPI overview |
 | `UsersModule` | `users/` | Tenant user directory |
 | `UserNavTabsModule` | `user-nav-tabs/` | Per-user navigation grants |
@@ -727,20 +728,58 @@ GET    /admin/data-explorer/export/documents?tables=... # ZIP of blobs from Uplo
 
 Document ZIP export (`tenant-documents-export.ts`) collects file paths from: patients (national ID scan), `patient_documents`, `encounter_documents`, employees (ID doc), expenses (proof), `operation_documents`. Works with **local** `uploads/` and **S3** (`readUploadBuffer`); uses `archiver` v8 `ZipArchive` API.
 
-**Reports (live charts):** `GET /reports/monthly-series?months=N` returns per-calendar-month aggregates: finalized encounter counts (`finalizedAt` in month), sum of **posted** revenue (`postedAt` in month), and new patients (`createdAt` in month). Physicians receive the same shape scoped to their encounters/revenue rows only.
+**Reports (live charts):** All report endpoints accept `from` and `to` (same semantics as `resolveReportingRange`). The web app binds charts to the global reporting period in the header.
 
-**Patient acquisition:** `GET /reports/patient-acquisition?from=&to=` (channel counts); `GET /reports/patient-acquisition/patients?channel=&from=&to=` (paginated drill-down list for the Reports UI dialog).
+```
+GET    /reports/performance?from=&to=&clinicId=
+GET    /reports/clinic-breakdown?from=&to=
+GET    /reports/monthly-series?from=&to=&clinicId=   # calendar-month buckets within range
+GET    /reports/patient-acquisition?from=&to=
+GET    /reports/patient-acquisition/patients?channel=&from=&to=
+GET    /reports/profit-loss?from=&to=&clinicId=      # multi-currency totals
+```
+
+- **Performance** — visits, new patients, appointments completed, `byCurrency[]` revenue/expenses/net.
+- **Clinic breakdown** — per-clinic visits, patients, `byCurrency[]` (group admin, org-wide only).
+- **Monthly series** — per-month visits, posted revenue/expenses by currency, new patients (partial first/last months clamped to range).
+- Physicians receive scoped data on the same shapes.
+
+**Patient acquisition:** channel counts + paginated drill-down list for the Reports UI dialog.
+
+**Clinics lifecycle (implemented):**
+```
+GET    /clinics?includeInactive=true          # admin roles only; default list = ACTIVE only
+POST   /clinics/:id/deactivate               # { effectiveDate? }; cascades active branches
+POST   /clinics/:id/reactivate               # { startDate? }; parent must be ACTIVE for branches
+GET    /clinics/:id                          # includes operatingPeriods[], recordStatus, disabledAt
+```
+- `Clinic.recordStatus` (`ACTIVE` | `INACTIVE`), `ClinicOperatingPeriod` (start/end dates).
+- Active clinics only in physician network and operational pickers (`clinic-scope.ts`).
+
+**Organization users lifecycle (implemented):**
+```
+GET    /admin/users?archived=true
+POST   /admin/users/:id/deactivate
+POST   /admin/users/:id/reactivate
+DELETE /admin/users/:id                      # soft archive (+ linked employee)
+POST   /admin/users/:id/restore
+```
+- `User.deactivatedAt`, `User.deletedAt`; login and JWT validation reject inactive users.
+- Cascades via `common/user-employee-cascade.ts` (mirror employee archive/deactivate).
 
 **HR employee creation:** `POST /hr/employees` and ID-document upload require an allowed role (`GROUP_ADMIN`, `CLINIC_ADMIN`, `HR_OFFICER`, `BRANCH_MANAGER`). `CLINIC_ADMIN` may only assign employees to clinics in `ClinicAdminScope`.
 
 **HR lifecycle (implemented):**
 ```
+GET    /hr/employees?archived=true
 POST   /hr/employees/:id/deactivate
 POST   /hr/employees/:id/reactivate
-DELETE /hr/employees/:id          # GROUP_ADMIN, BRANCH_MANAGER, CLINIC_ADMIN only
+DELETE /hr/employees/:id          # soft archive (+ linked user); GROUP_ADMIN, BRANCH_MANAGER, CLINIC_ADMIN
+POST   /hr/employees/:id/restore
 ```
-- `Employee.recordStatus` (`ACTIVE` | `SEPARATED`) with `EmployeeEmploymentPeriod` rows (start/end, separation reason).
-- `EMPLOYEE_MANAGE_ROLES` vs `EMPLOYEE_DELETE_ROLES` in `hr.service.ts`; web policy in `employee-manage-policy.ts`.
+- `Employee.recordStatus` (`ACTIVE` | `INACTIVE`), `EmployeeEmploymentPeriod`, `Employee.deletedAt`.
+- Deactivate/archive cascades to linked `User`; restore/reactivate clears both sides.
+- `EMPLOYEE_MANAGE_ROLES` vs archive roles in `hr.service.ts`; web policy in `employee-manage-policy.ts`.
 
 #### 6.2.18 HealthModule
 
@@ -754,7 +793,7 @@ Backed by `@nestjs/terminus`. ECS uses `/health/ready` for target group health c
 
 ## 7. Data Model (Key Tables)
 
-Schema highlights — the full Prisma schema lives in `apps/api/prisma/schema.prisma`. Every business table includes `tenantId`, `createdAt`, `updatedAt`, `createdBy`, `updatedBy`, and a soft-delete `deletedAt`.
+Schema highlights — the full Prisma schema lives in `apps/api/prisma/schema.prisma`. Tenant-owned tables include `tenantId`, `createdAt`, and `updatedAt`. Soft-delete and lifecycle fields vary by entity (`Patient.deletedAt`, `User.deactivatedAt` / `deletedAt`, `Employee.deletedAt`, `Clinic.recordStatus`, etc.).
 
 ```prisma
 model Tenant {
@@ -784,14 +823,26 @@ model Clinic {
   licenseNumber   String
   defaultLanguage Locale   @default(en)
   defaultCurrency String   @default("AED")  // EGP | USD | OMR | SAR | AED
-  specialities    ClinicSpeciality[]
-  workingHours    ClinicWorkingHours[]
+  recordStatus    ClinicRecordStatus @default(ACTIVE)
+  disabledAt      DateTime?
+  operatingPeriods ClinicOperatingPeriod[]
+  specialities    ClinicSpeciality[]       // roadmap
+  workingHours    ClinicWorkingHours[]     // roadmap
   parent          Clinic?  @relation("ClinicHierarchy", fields: [parentClinicId], references: [id])
   branches        Clinic[] @relation("ClinicHierarchy")
   tenant          Tenant   @relation(fields: [tenantId], references: [id])
 
   @@index([tenantId])
   @@index([parentClinicId])
+  @@index([tenantId, recordStatus])
+}
+
+model ClinicOperatingPeriod {
+  id        String   @id @default(cuid())
+  clinicId  String
+  startDate DateTime @db.Date
+  endDate   DateTime? @db.Date
+  clinic    Clinic   @relation(...)
 }
 
 model Patient {

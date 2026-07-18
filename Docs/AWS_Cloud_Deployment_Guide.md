@@ -243,7 +243,7 @@ These remain valid if you outgrow App Runner or need different compliance postur
 
 - [`README.md`](../README.md) — local setup, npm scripts, env tables.
 - [`Clinic_Management_System_RFC.md`](./Clinic_Management_System_RFC.md) — platform architecture and module map.
-- [`Clinic_Management_System_PRD.md`](./Clinic_Management_System_PRD.md) — product scope, shipped features, and **§12.3 production feature backlog**.
+- [`Clinic_Management_System_PRD.md`](./Clinic_Management_System_PRD.md) — product scope (v1.6), shipped features, **§12.3** production backlog, and **§12.3.13** enhancements to shipped modules.
 - [`Test_Data_Users.md`](./Test_Data_Users.md) — demo logins and QA matrix.
 
 **Infrastructure code:** `infra/src/kiorly-clinics-management-stack.ts`, `apps/api/Dockerfile`, `apps/api/Dockerfile.seed`.

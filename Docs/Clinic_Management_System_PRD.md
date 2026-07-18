@@ -4,7 +4,7 @@
 | Field | Value |
 |---|---|
 | **Document Title** | Clinic Management System – Product Requirements Document |
-| **Version** | 1.5 |
+| **Version** | 1.6 |
 | **Status** | Living document (aligned with `main` as of July 2026) |
 | **Author** | Product / Engineering |
 | **Last Updated** | July 2026 |
@@ -112,13 +112,17 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 - Surgical **operations** module (schedule, balance, documents, medications, revenue linkage, **full scheduled edit** parity with create form).
 
 **Financial & HR**
-- Expense tracking with proof uploads; revenue ledger (visit fees, manual entries, operations); reports/monthly series.
+- Expense tracking with proof uploads; revenue ledger (visit fees, manual entries, operations); **reports bound to global reporting period** (performance summary, per-clinic breakdown, multi-currency P&L charts).
 - **Multi-currency fees** — clinic `defaultCurrency` (EGP, USD, OMR, SAR, AED); per-operation `feeCurrency`; expense currency defaults to clinic with optional override; UI amount labels reflect active currency.
-- HR: employees, attendance, leave; employee ID document upload; **deactivate / re-hire** with employment period history; **permanent delete** restricted to admin roles (not HR officer alone).
+- **Patient invoicing** — clinic invoice templates (logo, sections, background); invoice PDF generation from encounters/operations.
+- **Prescription branding** — per-clinic header logo and bilingual description on generated Rx images.
+- HR: employees, attendance, leave; employee ID document upload; **linked user ↔ employee (1:1)** with **deactivate / archive (soft) / restore / re-hire** and employment + operating period history.
 
 **Administration**
 - Organization settings, clinics (parent/branch), users, feature flags, audit log.
-- Org patients CRUD, bulk patient delete, bulk user delete, data explorer, **SQL export** and **documents ZIP export** (group admin / break-glass).
+- **Organization user lifecycle** — deactivate, archive (soft delete), restore; archived user list with created/deactivated/archived dates; login blocked when inactive.
+- **Clinic lifecycle** — disable/reactivate clinics and branches; operating period timeline; disabled clinics hidden from operational pickers.
+- Org patients CRUD, bulk patient delete, bulk user archive, data explorer, **SQL export** and **documents ZIP export** (group admin / break-glass).
 - Expanded **audit trail** for patient/encounter views, clinical document list/view/upload/delete/crop (visible in Governance).
 
 **Experience**
@@ -451,8 +455,21 @@ Authorization model:
 | Expense currency defaults to clinic; optional override on create | Shipped |
 | Dynamic currency labels and `Intl` formatting on encounters, operations, expenses | Shipped |
 | Scheduled operation **edit parity** with create (meds, docs, comments, responsive dialog) | Shipped |
-| HR **deactivate / re-hire** with employment periods; admin-only permanent delete | Shipped |
+| HR **deactivate / re-hire** with employment periods; admin-only **archive (soft)** + restore | Shipped |
 | `GET /operations/:id`, `POST /operations/:id/reset-clinical` | Shipped |
+
+#### July 2026 (late) increments
+
+| Area | Status |
+|---|---|
+| **User ↔ employee lifecycle** — deactivate, soft archive, restore; cascades both sides; archived Active/Archived tabs (admin + HR) | Shipped |
+| **Clinic disable / reactivate** — `ClinicOperatingPeriod` history; cascade disable branches; active/disabled directory tabs | Shipped |
+| **Reports overhaul** — all charts tied to header **From → To**; clinic breakdown table; multi-currency performance P&L; mobile-responsive layout; revenue (color) vs expense (grey) styling | Shipped |
+| **Multi-currency group reports** — per-clinic breakdown by currency; org/clinic scope selector | Shipped |
+| **Clinic invoice settings** — logo upload, section toggles, background color; invoice module | Shipped |
+| **Prescription clinic branding** — logo + EN/AR header description on Rx PDF/image | Shipped |
+| Encounter visit fee ↔ linked appointment fee sync; auto-complete appointment on encounter finalize | Shipped |
+| Expense submit confirmation dialog before creating pending expense | Shipped |
 
 ### 12.2 Near-term roadmap (engineering backlog)
 
@@ -577,6 +594,43 @@ This section defines the **target product** for a production-grade, feature-rich
 | I.4 | **Expiry tracking** (vaccines, consumables) | P2 | Safety and waste reduction |
 | I.5 | **Barcode / QR scanning** on mobile web | P3 | Warehouse and clinic stock counts |
 
+*Shipped foundation:* employee directory, attendance, leave, deactivate/re-hire with employment periods, **soft archive + restore** (linked login user), admin-only archive.
+
+#### 12.3.12 Admin, governance & org lifecycle
+
+| # | Feature | Priority | Rationale |
+|---|---|---|---|
+| G.1 | **Bulk user import** (CSV) with role and clinic assignment validation | P1 | Faster onboarding for large groups |
+| G.2 | **Org chart export** (PDF/PNG) from hierarchy view | P2 | Board and accreditation packs |
+| G.3 | **Scheduled access reviews** — quarterly cert that admins still need access | P1 | SOC2 / ISO 27001 readiness |
+| G.4 | **Clinic merge / rename workflow** with audit trail | P2 | M&A and rebranding without data loss |
+| G.5 | **Configurable retention** — auto-archive inactive users after N days | P2 | GDPR / HR policy automation |
+| G.6 | **Break-glass session recording** — video or step log for elevated support | P1 | Trust for platform operator access |
+| G.7 | **Tenant data export package** (GDPR portability) on request | P0 | Legal requirement in EU expansion |
+
+*Shipped foundation:* org users/patients CRUD, soft archive users & employees, clinic disable with operating periods, governance audit tail, data explorer SQL + documents ZIP.
+
+#### 12.3.13 Near-term enhancements to shipped modules
+
+Improvements that extend **already shipped** areas without waiting for a major new module:
+
+| # | Module | Enhancement | Priority |
+|---|---|---|---|
+| N.1 | **Reports** | Scheduled email of P&L PDF/Excel on month close | P1 |
+| N.2 | **Reports** | FX normalization using daily ECB/Central Bank rates (extends multi-currency display) | P1 |
+| N.3 | **Reports** | Physician-level revenue & visit drill-down from clinic breakdown | P1 |
+| N.4 | **Dashboard** | Real-time “today” tiles (appointments, waiting, collections) alongside period KPIs | P1 |
+| N.5 | **Encounters** | Appointment wait-time and cycle-time metrics on finalize | P2 |
+| N.6 | **Invoices** | Bulk invoice generation for operation balances; payment allocation | P1 |
+| N.7 | **Prescriptions** | QR code on Rx for pharmacy verification; controlled-substance flag | P1 |
+| N.8 | **Clinics** | Working hours & holiday calendar per branch (feeds scheduling warnings) | P1 |
+| N.9 | **HR** | Auto-provision login on employee create; offboarding checklist on archive | P1 |
+| N.10 | **Admin users** | SSO group → role mapping; forced MFA for `GROUP_ADMIN` | P0 |
+| N.11 | **Operations** | Pre-op / post-op status checklist templates | P2 |
+| N.12 | **Expenses** | Approval workflow (submit → approve → post) with delegation | P1 |
+| N.13 | **Patients** | Duplicate patient merge wizard (MRN consolidation) | P1 |
+| N.14 | **Mobile web** | PWA install prompt + offline read cache for today’s schedule | P2 |
+
 #### 12.3.8 Analytics, reporting & intelligence
 
 | # | Feature | Priority | Rationale |
@@ -588,7 +642,7 @@ This section defines the **target product** for a production-grade, feature-rich
 | A.5 | **Operational KPI alerts** (revenue drop, expense spike) | P2 | Proactive management |
 | A.6 | **Embedded BI** (Metabase / QuickSight) for enterprise | P3 | Self-serve analytics |
 
-*Shipped foundation:* monthly visit/revenue/patient charts, acquisition channel drill-down, dashboard KPIs.
+*Shipped foundation:* global date-range performance summary, per-clinic multi-currency breakdown, monthly visit/revenue/expense charts (within selected period), acquisition channel drill-down, dashboard KPIs, revenue vs expense visual contrast.
 
 #### 12.3.9 Integrations & interoperability
 
