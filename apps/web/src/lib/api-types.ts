@@ -402,7 +402,12 @@ export interface ReportsMonthlySeriesItemDto {
 }
 
 export interface ReportsMonthlySeriesDto {
-  months: number;
+  period: {
+    from: string;
+    to: string;
+    start: string;
+    end: string;
+  };
   clinicId: string | null;
   baseCurrency: string;
   currencies: string[];

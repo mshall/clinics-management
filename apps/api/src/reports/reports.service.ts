@@ -273,22 +273,22 @@ export class ReportsService {
   }
 
   /**
-   * Calendar-month buckets from live data: finalized visits, posted revenue, expenses, new patients.
+   * Calendar-month buckets from live data within the reporting range.
    */
   async monthlySeries(
     tenantId: string,
-    monthsRaw: string | undefined,
+    fromStr?: string,
+    toStr?: string,
     clinicIdStr?: string,
     viewer?: JwtUser,
   ) {
-    const parsed = Number.parseInt(monthsRaw ?? "12", 10);
-    const monthCount = Number.isFinite(parsed) ? Math.min(36, Math.max(3, parsed)) : 12;
+    const { start, end } = resolveReportingRange(fromStr, toStr);
     const clinicId = clinicIdStr?.trim() || null;
     const scopeClinicIds = await this.resolveScopeClinicIds(tenantId, viewer);
     if (clinicId) this.assertClinicInScope(clinicId, scopeClinicIds);
 
-    const now = new Date();
-    const startAnchor = new Date(now.getFullYear(), now.getMonth() - (monthCount - 1), 1, 0, 0, 0, 0);
+    const startAnchor = new Date(start.getFullYear(), start.getMonth(), 1, 0, 0, 0, 0);
+    const endAnchor = new Date(end.getFullYear(), end.getMonth(), 1, 0, 0, 0, 0);
 
     const buckets: {
       month: string;
@@ -301,33 +301,38 @@ export class ReportsService {
       expensesByCurrency: { currency: string; amount: number }[];
     }[] = [];
 
-    for (let i = 0; i < monthCount; i++) {
-      const d = new Date(startAnchor.getFullYear(), startAnchor.getMonth() + i, 1);
-      const monthStart = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
-      const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+    for (
+      let cursor = new Date(startAnchor);
+      cursor <= endAnchor;
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1)
+    ) {
+      const monthStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1, 0, 0, 0, 0);
+      const monthEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0, 23, 59, 59, 999);
+      const bucketStart = monthStart < start ? start : monthStart;
+      const bucketEnd = monthEnd > end ? end : monthEnd;
 
       const encounterWhere = buildReportsEncounterWhere(
         tenantId,
-        monthStart,
-        monthEnd,
+        bucketStart,
+        bucketEnd,
         viewer,
         clinicId,
         scopeClinicIds,
       );
       const revenueWhere = buildReportsRevenueWhere(
         tenantId,
-        monthStart,
-        monthEnd,
+        bucketStart,
+        bucketEnd,
         viewer,
         clinicId,
         scopeClinicIds,
       );
-      const expenseWhere = buildReportsExpenseWhere(tenantId, monthStart, monthEnd, clinicId, scopeClinicIds);
+      const expenseWhere = buildReportsExpenseWhere(tenantId, bucketStart, bucketEnd, clinicId, scopeClinicIds);
 
       const patientWhere: Prisma.PatientWhereInput = {
         tenantId,
         deletedAt: null,
-        createdAt: { gte: monthStart, lte: monthEnd },
+        createdAt: { gte: bucketStart, lte: bucketEnd },
         ...(clinicId
           ? { homeBranchId: clinicId }
           : scopeClinicIds?.length
@@ -350,7 +355,7 @@ export class ReportsService {
         .sort((a, b) => a.currency.localeCompare(b.currency));
 
       buckets.push({
-        month: d.toLocaleString("en", { month: "short", year: "2-digit" }),
+        month: cursor.toLocaleString("en", { month: "short", year: "2-digit" }),
         monthStart: formatLocalYmd(monthStart).slice(0, 7),
         visits,
         revenue: revenueRows.reduce((sum, row) => sum + row.amount, 0),
@@ -376,7 +381,12 @@ export class ReportsService {
     });
 
     return {
-      months: monthCount,
+      period: {
+        from: formatLocalYmd(start),
+        to: formatLocalYmd(end),
+        start: start.toISOString(),
+        end: end.toISOString(),
+      },
       clinicId,
       baseCurrency: tenant?.baseCurrency ?? "AED",
       currencies,

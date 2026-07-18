@@ -49,10 +49,11 @@ export class ReportsController {
   @ApiOkResponse()
   monthlySeries(
     @CurrentUser() user: JwtUser,
-    @Query("months") months?: string,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
     @Query("clinicId") clinicId?: string,
   ) {
-    return this.reports.monthlySeries(requireTenantId(user), months, clinicId, user);
+    return this.reports.monthlySeries(requireTenantId(user), from, to, clinicId, user);
   }
 
   @Get("patient-acquisition/patients")

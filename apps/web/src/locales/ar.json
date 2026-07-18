@@ -914,6 +914,8 @@
     "defaultCurrency": "افتراضي",
     "multiCurrency": " · متعدد العملات",
     "revenueVsExpensesHint": "إيرادات ومصروفات شهرية مُرحّلة. المبالغ مجمّعة حسب العملة — بدون تحويل سعر صرف.",
+    "revenueVsExpensesHintRange": "إيرادات ومصروفات شهرية مُرحّلة للفترة {{from}} → {{to}}. المبالغ مجمّعة حسب العملة — بدون تحويل سعر صرف.",
+    "currencyColumn": "العملة",
     "chartRevenueByCurrency": "الإيرادات مقابل المصروفات ({{currency}})",
     "chartRevenueCurrency": "إيرادات مُرحّلة ({{currency}})",
     "chartRevenueMulti": "إيرادات مُرحّلة حسب العملة"

@@ -913,6 +913,8 @@
     "defaultCurrency": "Default",
     "multiCurrency": " · multi-currency",
     "revenueVsExpensesHint": "Monthly posted revenue and approved/pending expenses. Amounts are grouped by currency — no FX conversion.",
+    "revenueVsExpensesHintRange": "Monthly posted revenue and approved/pending expenses for {{from}} → {{to}}. Amounts are grouped by currency — no FX conversion.",
+    "currencyColumn": "Currency",
     "chartRevenueByCurrency": "Revenue vs expenses ({{currency}})",
     "chartRevenueCurrency": "Posted revenue ({{currency}})",
     "chartRevenueMulti": "Posted revenue by currency"

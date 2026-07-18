@@ -689,14 +689,14 @@ export function useAdminOverviewQuery() {
   });
 }
 
-export function useReportsMonthlySeriesQuery(months: number, clinicId?: string) {
-  const m = Math.min(36, Math.max(3, Number.isFinite(months) ? months : 12));
+export function useReportsMonthlySeriesQuery(from: string, to: string, clinicId?: string) {
   const viewerId = useAuthStore((s) => s.user?.id ?? "");
   const viewerRole = useAuthStore((s) => s.user?.role ?? "");
-  const q = new URLSearchParams({ months: String(m) });
+  const range = sanitizeReportingRange(from, to);
+  const q = new URLSearchParams({ from: range.from, to: range.to });
   if (clinicId?.trim()) q.set("clinicId", clinicId.trim());
   return useQuery({
-    queryKey: ["reports", "monthly-series", m, clinicId ?? "", viewerId, viewerRole],
+    queryKey: ["reports", "monthly-series", range.from, range.to, clinicId ?? "", viewerId, viewerRole],
     queryFn: () => apiGet<ReportsMonthlySeriesDto>(`/api/v1/reports/monthly-series?${q.toString()}`),
   });
 }
