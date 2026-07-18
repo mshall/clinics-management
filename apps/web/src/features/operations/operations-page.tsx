@@ -52,6 +52,7 @@ import { defaultMonthRange } from "@/stores/date-range-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectOperationCreateValidationIssues } from "@/features/operations/operation-form-validation";
 import { GenerateInvoiceDialog } from "@/features/invoices/generate-invoice-dialog";
+import { LinkedInvoicesSection } from "@/features/invoices/linked-invoices-section";
 import { DatetimeLocalField } from "@/components/datetime-local-field";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 
@@ -1190,6 +1191,12 @@ export function OperationsPage() {
                     placeholder={t("operations.commentsPlaceholder", "Notes about the procedure…")}
                   />
                 </fieldset>
+
+                <LinkedInvoicesSection
+                  className="lg:col-span-2"
+                  operationId={editOp.id}
+                  clinicId={editClinicId || editOp.clinicId}
+                />
 
                 {editIsScheduled && !editOpDetailPending ? (
                   <>

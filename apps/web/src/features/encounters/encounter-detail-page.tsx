@@ -35,6 +35,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { EncounterDeleteConfirmDialog } from "@/features/encounters/encounter-delete-confirm-dialog";
 import { GenerateInvoiceDialog } from "@/features/invoices/generate-invoice-dialog";
+import { LinkedInvoicesSection } from "@/features/invoices/linked-invoices-section";
 import { resolvePatientListLabel } from "@/lib/patient-display";
 import { ENCOUNTER_VISIT_TYPES, formatVisitType } from "@/lib/visit-types";
 import { useAuthStore } from "@/stores/auth-store";
@@ -687,6 +688,10 @@ export function EncounterDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {enc ? (
+        <LinkedInvoicesSection encounterId={enc.id} clinicId={enc.clinicId} />
+      ) : null}
 
       <Card>
         <CardHeader className="pb-2">
