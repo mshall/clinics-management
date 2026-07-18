@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Eye, Receipt } from "lucide-react";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
@@ -104,6 +105,7 @@ export function ExpensesPage() {
   const [efDate, setEfDate] = useState("");
   const [efProof, setEfProof] = useState("");
   const [detail, setDetail] = useState<ExpenseDto | null>(null);
+  const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
 
   const clinicById = useMemo(() => new Map(clinics.map((c) => [c.id, c])), [clinics]);
   const createClinicCurrency = resolveClinicCurrencyCode(clinics, clinicId || singleManagedClinic?.id);
@@ -132,6 +134,8 @@ export function ExpensesPage() {
     },
     onSuccess: () => {
       validation.clear();
+      setSubmitConfirmOpen(false);
+      toast.success(t("expenses.submittedPending", "Expense submitted and pending approval."));
       void qc.invalidateQueries({ queryKey: ["expenses"] });
       void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
       setAmount("");
@@ -150,8 +154,50 @@ export function ExpensesPage() {
       validation.showIssues(issues);
       return;
     }
-    createMut.mutate();
+    setSubmitConfirmOpen(true);
   };
+
+  const submitClinicLabel = useMemo(() => {
+    const c = clinicById.get(clinicId);
+    return c ? formatClinicName(c, i18n.language) : clinicId;
+  }, [clinicById, clinicId, i18n.language]);
+
+  const loc = localeForLanguage(i18n.language);
+  const money = (n: number, currency?: string) => formatMoneyAmount(n, currency ?? displayCurrency, loc);
+
+  const parsedSubmitAmount = Number.parseFloat(amount);
+  const submitConfirmDetails = (
+    <dl className="space-y-3">
+      <div>
+        <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("expenses.clinic")}</dt>
+        <dd className="font-medium">{submitClinicLabel}</dd>
+      </div>
+      <div>
+        <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("expenses.category")}</dt>
+        <dd className="font-medium">{formatExpenseCategory(category, t)}</dd>
+      </div>
+      <div>
+        <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("expenses.vendor")}</dt>
+        <dd className="font-medium">{vendor.trim() || "—"}</dd>
+      </div>
+      <div className="rounded-md border border-border bg-background px-3 py-2">
+        <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("expenses.amount")}</dt>
+        <dd className="text-xl font-semibold ltr-nums">
+          {Number.isFinite(parsedSubmitAmount) ? money(parsedSubmitAmount, expenseCurrency) : amount}
+        </dd>
+      </div>
+      <div>
+        <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("expenses.proof")}</dt>
+        <dd className="font-medium">{proofFile?.name ?? t("expenses.noProof", "No file attached")}</dd>
+      </div>
+      <div>
+        <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("expenses.status")}</dt>
+        <dd>
+          <Badge variant="secondary">{formatExpenseStatus("PENDING", t)}</Badge>
+        </dd>
+      </div>
+    </dl>
+  );
 
   const statusMut = useMutation({
     mutationFn: ({ id, status }: { id: string; status: "APPROVED" | "REJECTED" }) =>
@@ -161,9 +207,6 @@ export function ExpensesPage() {
       void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
     },
   });
-
-  const loc = localeForLanguage(i18n.language);
-  const money = (n: number, currency?: string) => formatMoneyAmount(n, currency ?? displayCurrency, loc);
 
   const filteredExpenses = useMemo(() => {
     const formatMoney = (x: number, currency: string) => formatMoneyAmount(x, currency, loc);
@@ -220,6 +263,22 @@ export function ExpensesPage() {
   return (
     <div className="space-y-6">
       <ValidationIssuesDialog {...validation.dialogProps} />
+      <ConfirmDialog
+        open={submitConfirmOpen}
+        onOpenChange={(open) => !createMut.isPending && setSubmitConfirmOpen(open)}
+        title={t("expenses.confirmSubmitTitle", "Submit this expense?")}
+        description={t(
+          "expenses.confirmSubmitBody",
+          "Review the details below. After you confirm, the expense will be created and remain pending until it is approved.",
+        )}
+        confirmLabel={t("expenses.confirmSubmitAction", "Submit expense")}
+        cancelLabel={t("common.cancel", "Cancel")}
+        pending={createMut.isPending}
+        variant="default"
+        icon={<Receipt className="h-5 w-5" aria-hidden />}
+        onConfirm={() => createMut.mutate()}
+        details={submitConfirmDetails}
+      />
       {proofViewer ? (
         <DocumentViewerOverlay
           fileName={proofViewer.filename}
