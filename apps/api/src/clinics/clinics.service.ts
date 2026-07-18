@@ -1,11 +1,14 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { EmploymentType, Prisma, UserRole } from "@prisma/client";
+import { ClinicRecordStatus, EmploymentType, Prisma, UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { CLINIC_SCOPE_ROLES, fetchClinicScopeIds, fetchPhysicianNetworkClinicIds } from "../common/clinic-scope";
 import { PrismaService } from "../prisma/prisma.service";
 import type { CreateClinicDto } from "./dto/create-clinic.dto";
 import type { PatchClinicDto } from "./dto/patch-clinic.dto";
+import type { DeactivateClinicDto } from "./dto/deactivate-clinic.dto";
+import type { ReactivateClinicDto } from "./dto/reactivate-clinic.dto";
 import type { ClinicDetailDto } from "./dto/clinic-detail.dto";
+import type { ClinicOperatingPeriodDto } from "./dto/clinic-operating-period.dto";
 import { isBaseCurrency } from "../common/base-currencies";
 import type { ClinicPhysicianDto } from "./dto/clinic-physician.dto";
 import type { ClinicKind } from "./clinic-kind";
@@ -24,11 +27,20 @@ export interface ClinicDto {
   kind: ClinicKind;
   logoUrl: string | null;
   defaultCurrency: string;
+  recordStatus: ClinicRecordStatus;
+  disabledAt: string | null;
+  createdAt: string;
 }
 
 @Injectable()
 export class ClinicsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private static readonly CLINIC_MANAGE_ROLES: ReadonlySet<UserRole> = new Set([
+    UserRole.GROUP_ADMIN,
+    UserRole.CLINIC_ADMIN,
+    UserRole.BRANCH_MANAGER,
+  ]);
 
   private static readonly CLINIC_PHYSICIAN_MANAGE_ROLES: ReadonlySet<UserRole> = new Set([
     UserRole.GROUP_ADMIN,
@@ -45,6 +57,67 @@ export class ClinicsService {
     UserRole.RECEPTIONIST,
     UserRole.CALL_CENTER,
   ]);
+
+  private assertCanManageClinicLifecycle(viewer: JwtUser): void {
+    if (!ClinicsService.CLINIC_MANAGE_ROLES.has(viewer.role)) {
+      throw new ForbiddenException("You do not have permission to change clinic status");
+    }
+  }
+
+  private parseYmdDate(value: string | undefined, label: string): Date {
+    const raw = value?.trim();
+    const d = raw ? new Date(raw) : new Date();
+    if (Number.isNaN(d.getTime())) throw new BadRequestException(`Invalid ${label}`);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  private formatYmd(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
+  private mapOperatingPeriod(p: { id: string; startDate: Date; endDate: Date | null }): ClinicOperatingPeriodDto {
+    return {
+      id: p.id,
+      startDate: this.formatYmd(p.startDate),
+      endDate: p.endDate ? this.formatYmd(p.endDate) : null,
+    };
+  }
+
+  private mapClinicRow(c: {
+    id: string;
+    parentClinicId: string | null;
+    nameEn: string;
+    nameAr: string;
+    city: string;
+    country: string;
+    logoUrl: string | null;
+    defaultCurrency: string;
+    recordStatus: ClinicRecordStatus;
+    disabledAt: Date | null;
+    createdAt: Date;
+    parent?: { nameEn: string } | null;
+    _count?: { branches: number };
+  }): ClinicDto {
+    return {
+      id: c.id,
+      parentClinicId: c.parentClinicId,
+      parentNameEn: c.parent?.nameEn ?? null,
+      nameEn: c.nameEn,
+      nameAr: c.nameAr,
+      city: c.city,
+      country: c.country,
+      kind: resolveClinicKind(c.parentClinicId, c._count?.branches ?? 0),
+      logoUrl: c.logoUrl ?? null,
+      defaultCurrency: c.defaultCurrency,
+      recordStatus: c.recordStatus,
+      disabledAt: c.disabledAt?.toISOString() ?? null,
+      createdAt: c.createdAt.toISOString(),
+    };
+  }
 
   private async assertClinicVisible(tenantId: string, clinicId: string, user: JwtUser): Promise<void> {
     const row = await this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId }, select: { id: true } });
@@ -431,6 +504,7 @@ export class ClinicsService {
       include: {
         parent: { select: { id: true, nameEn: true, nameAr: true } },
         _count: { select: { branches: true } },
+        operatingPeriods: { orderBy: { startDate: "asc" } },
       },
     });
     if (!row) throw new NotFoundException("Clinic not found");
@@ -463,17 +537,24 @@ export class ClinicsService {
       licenseNumber: row.licenseNumber,
       defaultLanguage: row.defaultLanguage,
       defaultCurrency: row.defaultCurrency,
+      recordStatus: row.recordStatus,
+      disabledAt: row.disabledAt?.toISOString() ?? null,
+      createdAt: row.createdAt.toISOString(),
+      operatingPeriods: row.operatingPeriods.map((p) => this.mapOperatingPeriod(p)),
       ...clinicInvoiceSettingsFromRow(row),
       ...clinicPrescriptionSettingsFromRow(row),
     };
   }
 
-  async list(tenantId: string, user: JwtUser): Promise<ClinicDto[]> {
+  async list(tenantId: string, user: JwtUser, includeInactive = false): Promise<ClinicDto[]> {
     let where: Prisma.ClinicWhereInput = { tenantId };
+    if (!includeInactive) {
+      where.recordStatus = ClinicRecordStatus.ACTIVE;
+    }
     if (user.role === UserRole.PHYSICIAN) {
       const ids = await fetchPhysicianNetworkClinicIds(this.prisma, tenantId, user.userId);
       if (!ids.length) return [];
-      where = { tenantId, id: { in: ids } };
+      where = { ...where, id: { in: ids } };
     } else if (user.role === UserRole.CLINIC_ADMIN || user.role === UserRole.BRANCH_MANAGER) {
       const scopes = await this.prisma.clinicAdminScope.findMany({
         where: { tenantId, userId: user.userId },
@@ -481,25 +562,14 @@ export class ClinicsService {
       });
       const ids = scopes.map((s) => s.clinicId);
       if (!ids.length) return [];
-      where = { tenantId, id: { in: ids } };
+      where = { ...where, id: { in: ids } };
     }
     const rows = await this.prisma.clinic.findMany({
       where,
       orderBy: [{ parentClinicId: "asc" }, { nameEn: "asc" }],
       include: { parent: { select: { nameEn: true } }, _count: { select: { branches: true } } },
     });
-    return rows.map((c) => ({
-      id: c.id,
-      parentClinicId: c.parentClinicId,
-      parentNameEn: c.parent?.nameEn ?? null,
-      nameEn: c.nameEn,
-      nameAr: c.nameAr,
-      city: c.city,
-      country: c.country,
-      kind: resolveClinicKind(c.parentClinicId, c._count.branches),
-      logoUrl: c.logoUrl ?? null,
-      defaultCurrency: c.defaultCurrency,
-    }));
+    return rows.map((c) => this.mapClinicRow(c));
   }
 
   async create(tenantId: string, dto: CreateClinicDto): Promise<ClinicDto> {
@@ -523,6 +593,9 @@ export class ClinicsService {
         where: { id: parentClinicId, tenantId },
       });
       if (!parent) throw new BadRequestException("Invalid parentClinicId");
+      if (parent.recordStatus === ClinicRecordStatus.INACTIVE) {
+        throw new BadRequestException("Cannot create a branch under a disabled clinic");
+      }
       if (parent.parentClinicId) {
         throw new BadRequestException("Branches can only be created under a root-level clinic");
       }
@@ -538,6 +611,9 @@ export class ClinicsService {
       dto.defaultCurrency?.trim() && isBaseCurrency(dto.defaultCurrency.trim())
         ? dto.defaultCurrency.trim()
         : tenant?.baseCurrency ?? "AED";
+
+    const openedAt = new Date();
+    openedAt.setHours(0, 0, 0, 0);
 
     const row = await this.prisma.clinic.create({
       data: {
@@ -555,22 +631,14 @@ export class ClinicsService {
         licenseNumber,
         logoUrl,
         defaultCurrency,
+        operatingPeriods: {
+          create: { startDate: openedAt },
+        },
       },
-      include: { parent: { select: { nameEn: true } } },
+      include: { parent: { select: { nameEn: true } }, _count: { select: { branches: true } } },
     });
 
-    return {
-      id: row.id,
-      parentClinicId: row.parentClinicId,
-      parentNameEn: row.parent?.nameEn ?? null,
-      nameEn: row.nameEn,
-      nameAr: row.nameAr,
-      city: row.city,
-      country: row.country,
-      kind: resolveClinicKind(row.parentClinicId, 0),
-      logoUrl: row.logoUrl ?? null,
-      defaultCurrency: row.defaultCurrency,
-    };
+    return this.mapClinicRow(row);
   }
 
   async update(tenantId: string, id: string, dto: PatchClinicDto, user?: JwtUser) {
@@ -594,6 +662,9 @@ export class ClinicsService {
           where: { id: dto.parentClinicId, tenantId },
         });
         if (!parent) throw new BadRequestException("Invalid parentClinicId");
+        if (parent.recordStatus === ClinicRecordStatus.INACTIVE) {
+          throw new BadRequestException("Cannot attach a branch to a disabled clinic");
+        }
         if (parent.parentClinicId) {
           throw new BadRequestException("Branches can only be attached under a root-level clinic");
         }
@@ -625,6 +696,7 @@ export class ClinicsService {
       include: {
         parent: { select: { nameEn: true, nameAr: true } },
         _count: { select: { branches: true } },
+        operatingPeriods: { orderBy: { startDate: "asc" } },
       },
     });
 
@@ -647,8 +719,131 @@ export class ClinicsService {
       licenseNumber: row.licenseNumber,
       defaultLanguage: row.defaultLanguage,
       defaultCurrency: row.defaultCurrency,
+      recordStatus: row.recordStatus,
+      disabledAt: row.disabledAt?.toISOString() ?? null,
+      createdAt: row.createdAt.toISOString(),
+      operatingPeriods: row.operatingPeriods.map((p) => this.mapOperatingPeriod(p)),
       ...clinicInvoiceSettingsFromRow(row),
       ...clinicPrescriptionSettingsFromRow(row),
     };
+  }
+
+  private async closeOperatingPeriod(tx: Prisma.TransactionClient, clinicId: string, endDate: Date): Promise<void> {
+    const openPeriod = await tx.clinicOperatingPeriod.findFirst({
+      where: { clinicId, endDate: null },
+      orderBy: { startDate: "desc" },
+    });
+    if (openPeriod) {
+      if (endDate < openPeriod.startDate) {
+        throw new BadRequestException("Effective date cannot be before the clinic started operating");
+      }
+      await tx.clinicOperatingPeriod.update({
+        where: { id: openPeriod.id },
+        data: { endDate },
+      });
+      return;
+    }
+    const clinic = await tx.clinic.findFirst({ where: { id: clinicId }, select: { createdAt: true } });
+    if (!clinic) throw new NotFoundException("Clinic not found");
+    const startDate = new Date(clinic.createdAt);
+    startDate.setHours(0, 0, 0, 0);
+    await tx.clinicOperatingPeriod.create({
+      data: { clinicId, startDate, endDate },
+    });
+  }
+
+  private async deactivateClinicRecord(
+    tx: Prisma.TransactionClient,
+    clinicId: string,
+    effectiveDate: Date,
+  ): Promise<void> {
+    const clinic = await tx.clinic.findFirst({ where: { id: clinicId } });
+    if (!clinic) throw new NotFoundException("Clinic not found");
+    if (clinic.recordStatus === ClinicRecordStatus.INACTIVE) return;
+
+    await this.closeOperatingPeriod(tx, clinicId, effectiveDate);
+    await tx.clinic.update({
+      where: { id: clinicId },
+      data: {
+        recordStatus: ClinicRecordStatus.INACTIVE,
+        disabledAt: new Date(),
+      },
+    });
+  }
+
+  async deactivateClinic(
+    tenantId: string,
+    id: string,
+    dto: DeactivateClinicDto,
+    viewer: JwtUser,
+  ): Promise<ClinicDetailDto> {
+    this.assertCanManageClinicLifecycle(viewer);
+    await this.assertClinicVisible(tenantId, id, viewer);
+
+    const clinic = await this.prisma.clinic.findFirst({
+      where: { id, tenantId },
+      include: { branches: { where: { recordStatus: ClinicRecordStatus.ACTIVE }, select: { id: true } } },
+    });
+    if (!clinic) throw new NotFoundException("Clinic not found");
+    if (clinic.recordStatus === ClinicRecordStatus.INACTIVE) {
+      throw new BadRequestException("Clinic is already disabled");
+    }
+
+    const effectiveDate = this.parseYmdDate(dto.effectiveDate, "effective date");
+    const idsToDisable = [clinic.id, ...clinic.branches.map((b) => b.id)];
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const clinicId of idsToDisable) {
+        await this.deactivateClinicRecord(tx, clinicId, effectiveDate);
+      }
+    });
+
+    return this.getOne(tenantId, id, viewer);
+  }
+
+  async reactivateClinic(
+    tenantId: string,
+    id: string,
+    dto: ReactivateClinicDto,
+    viewer: JwtUser,
+  ): Promise<ClinicDetailDto> {
+    this.assertCanManageClinicLifecycle(viewer);
+    await this.assertClinicVisible(tenantId, id, viewer);
+
+    const clinic = await this.prisma.clinic.findFirst({
+      where: { id, tenantId },
+      include: { parent: { select: { recordStatus: true } } },
+    });
+    if (!clinic) throw new NotFoundException("Clinic not found");
+    if (clinic.recordStatus === ClinicRecordStatus.ACTIVE) {
+      throw new BadRequestException("Clinic is already active");
+    }
+    if (clinic.parentClinicId && clinic.parent?.recordStatus === ClinicRecordStatus.INACTIVE) {
+      throw new BadRequestException("Reactivate the parent clinic before reactivating this branch");
+    }
+
+    const startDate = this.parseYmdDate(dto.startDate, "start date");
+    const lastPeriod = await this.prisma.clinicOperatingPeriod.findFirst({
+      where: { clinicId: id },
+      orderBy: { startDate: "desc" },
+    });
+    if (lastPeriod?.endDate && startDate <= lastPeriod.endDate) {
+      throw new BadRequestException("Reactivation date must be after the last operating period ended");
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.clinicOperatingPeriod.create({
+        data: { clinicId: id, startDate },
+      });
+      await tx.clinic.update({
+        where: { id },
+        data: {
+          recordStatus: ClinicRecordStatus.ACTIVE,
+          disabledAt: null,
+        },
+      });
+    });
+
+    return this.getOne(tenantId, id, viewer);
   }
 }

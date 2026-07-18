@@ -1,4 +1,4 @@
-import { Prisma, UserRole } from "@prisma/client";
+import { ClinicRecordStatus, Prisma, UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import type { PrismaService } from "../prisma/prisma.service";
 
@@ -27,7 +27,10 @@ export async function fetchPhysicianNetworkClinicIds(prisma: PrismaService, tena
     select: { clinicId: true },
   });
   if (links.length === 0) {
-    const all = await prisma.clinic.findMany({ where: { tenantId }, select: { id: true } });
+    const all = await prisma.clinic.findMany({
+      where: { tenantId, recordStatus: ClinicRecordStatus.ACTIVE },
+      select: { id: true },
+    });
     return all.map((c) => c.id);
   }
   const roots = new Set<string>();
@@ -54,7 +57,7 @@ export async function fetchPhysicianNetworkClinicIds(prisma: PrismaService, tena
     ors.push({ parentClinicId: hq });
   }
   const clinics = await prisma.clinic.findMany({
-    where: { tenantId, OR: ors },
+    where: { tenantId, recordStatus: ClinicRecordStatus.ACTIVE, OR: ors },
     select: { id: true },
   });
   return [...new Set(clinics.map((c) => c.id))];

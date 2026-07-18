@@ -180,11 +180,13 @@ export function useDashboardKpisQuery() {
   });
 }
 
-export function useClinicsQuery() {
+export function useClinicsQuery(options?: { includeInactive?: boolean }) {
   const hasToken = useHasAuthToken();
+  const includeInactive = options?.includeInactive ?? false;
+  const q = includeInactive ? "?includeInactive=true" : "";
   return useQuery({
-    queryKey: ["clinics"],
-    queryFn: () => apiGet<ClinicDto[]>("/api/v1/clinics"),
+    queryKey: ["clinics", includeInactive ? "all" : "active"],
+    queryFn: () => apiGet<ClinicDto[]>(`/api/v1/clinics${q}`),
     enabled: hasToken,
   });
 }

@@ -10,6 +10,8 @@ import { AssignClinicPhysicianDto, ClinicPhysicianDto } from "./dto/clinic-physi
 import { ClinicDetailDto } from "./dto/clinic-detail.dto";
 import { CreateClinicDto } from "./dto/create-clinic.dto";
 import { PatchClinicDto } from "./dto/patch-clinic.dto";
+import { DeactivateClinicDto } from "./dto/deactivate-clinic.dto";
+import { ReactivateClinicDto } from "./dto/reactivate-clinic.dto";
 import { ClinicsService } from "./clinics.service";
 
 const SCHEDULING_ROLES: Set<UserRole> = new Set([
@@ -28,6 +30,8 @@ const CLINIC_UPDATE_ROLES: Set<UserRole> = new Set([
   UserRole.BRANCH_MANAGER,
 ]);
 
+const CLINIC_MANAGE_ROLES = CLINIC_UPDATE_ROLES;
+
 @ApiTags("clinics")
 @ApiBearerAuth("bearer")
 @Controller("clinics")
@@ -38,8 +42,10 @@ export class ClinicsController {
   @Get()
   @ApiOperation({ summary: "List clinics and branches for the tenant" })
   @ApiOkResponse({ type: ClinicDto, isArray: true })
-  list(@CurrentUser() user: JwtUser) {
-    return this.clinics.list(requireTenantId(user), user);
+  list(@CurrentUser() user: JwtUser, @Query("includeInactive") includeInactive?: string) {
+    const showInactive =
+      includeInactive === "true" && CLINIC_MANAGE_ROLES.has(user.role);
+    return this.clinics.list(requireTenantId(user), user, showInactive);
   }
 
   @Get("physicians/scheduling")
@@ -114,5 +120,19 @@ export class ClinicsController {
       throw new ForbiddenException("You do not have permission to update this clinic");
     }
     return this.clinics.update(requireTenantId(user), id, body, user);
+  }
+
+  @Post(":id/deactivate")
+  @ApiOperation({ summary: "Disable a clinic or branch (hidden from active directory)" })
+  @ApiOkResponse({ type: ClinicDetailDto })
+  deactivate(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: DeactivateClinicDto) {
+    return this.clinics.deactivateClinic(requireTenantId(user), id, body, user);
+  }
+
+  @Post(":id/reactivate")
+  @ApiOperation({ summary: "Reactivate a disabled clinic or branch" })
+  @ApiOkResponse({ type: ClinicDetailDto })
+  reactivate(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: ReactivateClinicDto) {
+    return this.clinics.reactivateClinic(requireTenantId(user), id, body, user);
   }
 }

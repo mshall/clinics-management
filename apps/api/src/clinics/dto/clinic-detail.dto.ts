@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { INVOICE_SECTION_KEYS } from "../../common/invoice-config";
+import { ClinicOperatingPeriodDto } from "./clinic-operating-period.dto";
 
 export class ClinicDetailDto {
   @ApiProperty()
@@ -76,4 +77,16 @@ export class ClinicDetailDto {
 
   @ApiProperty({ description: "Optional header description on generated prescriptions (Arabic)" })
   prescriptionHeaderDescriptionAr!: string;
+
+  @ApiProperty({ enum: ["ACTIVE", "INACTIVE"] })
+  recordStatus!: "ACTIVE" | "INACTIVE";
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  disabledAt!: string | null;
+
+  @ApiProperty({ description: "When the clinic record was created (ISO timestamp)" })
+  createdAt!: string;
+
+  @ApiProperty({ type: [ClinicOperatingPeriodDto] })
+  operatingPeriods!: ClinicOperatingPeriodDto[];
 }

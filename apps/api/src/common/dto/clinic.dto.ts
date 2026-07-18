@@ -30,4 +30,13 @@ export class ClinicDto {
 
   @ApiProperty({ description: "Default currency for fees at this clinic" })
   defaultCurrency!: string;
+
+  @ApiProperty({ enum: ["ACTIVE", "INACTIVE"] })
+  recordStatus!: "ACTIVE" | "INACTIVE";
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  disabledAt!: string | null;
+
+  @ApiProperty({ description: "When the clinic record was created (ISO timestamp)" })
+  createdAt!: string;
 }

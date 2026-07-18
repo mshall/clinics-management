@@ -312,6 +312,16 @@ export interface ClinicDetailDto {
   hasPrescriptionLogo: boolean;
   prescriptionHeaderDescriptionEn: string;
   prescriptionHeaderDescriptionAr: string;
+  recordStatus: "ACTIVE" | "INACTIVE";
+  disabledAt: string | null;
+  createdAt: string;
+  operatingPeriods: ClinicOperatingPeriodDto[];
+}
+
+export interface ClinicOperatingPeriodDto {
+  id: string;
+  startDate: string;
+  endDate: string | null;
 }
 
 export interface InvoiceLineDto {

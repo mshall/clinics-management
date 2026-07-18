@@ -63,6 +63,11 @@ enum EmployeeRecordStatus {
   INACTIVE
 }
 
+enum ClinicRecordStatus {
+  ACTIVE
+  INACTIVE
+}
+
 enum EmployeeSeparationReason {
   RESIGNATION
 }
@@ -254,11 +259,28 @@ model Clinic {
   invoices         Invoice[]
   auditLogs        AuditLog[]
   clinicAdminScopes ClinicAdminScope[]
+  recordStatus      ClinicRecordStatus      @default(ACTIVE)
+  disabledAt        DateTime?
+  operatingPeriods  ClinicOperatingPeriod[]
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
   @@index([tenantId])
   @@index([parentClinicId])
+  @@index([tenantId, recordStatus])
+}
+
+model ClinicOperatingPeriod {
+  id        String   @id @default(cuid())
+  clinicId  String
+  clinic    Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  startDate DateTime @db.Date
+  endDate   DateTime? @db.Date
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clinicId])
+  @@index([clinicId, startDate])
 }
 
 model ClinicAdminScope {
