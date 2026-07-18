@@ -109,6 +109,7 @@ export function EncounterDetailPage() {
   const [temperature, setTemperature] = useState("");
   const [weightKg, setWeightKg] = useState("");
   const [heightCm, setHeightCm] = useState("");
+  const [visitFeeAmount, setVisitFeeAmount] = useState("");
   const [drugName, setDrugName] = useState("");
   const [dosage, setDosage] = useState("");
   const [frequency, setFrequency] = useState("");
@@ -141,6 +142,7 @@ export function EncounterDetailPage() {
     setTemperature(enc.temperature != null ? String(enc.temperature) : "");
     setWeightKg(enc.weightKg != null ? String(enc.weightKg) : "");
     setHeightCm(enc.heightCm != null ? String(enc.heightCm) : "");
+    setVisitFeeAmount(enc.visitFeeAmount != null ? String(enc.visitFeeAmount) : "");
     setNoMedications(enc.noMedications ?? false);
     if (enc.noMedications) setMedTab("none");
   }, [enc?.id, enc?.noMedications]);
@@ -204,10 +206,13 @@ export function EncounterDetailPage() {
         temperature: numOrUndef(temperature),
         weightKg: numOrUndef(weightKg),
         heightCm: numOrUndef(heightCm),
+        visitFeeAmount: numOrUndef(visitFeeAmount),
       });
     },
     onSuccess: (data) => {
       invalidate();
+      void qc.invalidateQueries({ queryKey: ["revenue"] });
+      void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
       toast.success(
         t("encounters.savedWithStatus", "Encounter saved. Status: {{status}}.", {
           status: encounterStatusLabel(t, data.status),
@@ -645,12 +650,37 @@ export function EncounterDetailPage() {
           <CardTitle className="text-base">
             {t("encounters.visitFee", "Visit fee ({{currency}})", { currency: visitFeeCurrency })}
           </CardTitle>
-          <CardDescription>{t("encounters.visitFeeLockedHint", "Set when this encounter was created.")}</CardDescription>
+          <CardDescription>
+            {draft
+              ? t("encounters.visitFeeEditableHint", "Adjust the visit fee while this encounter is open.")
+              : t("encounters.visitFeeLockedHint", "Set when this encounter was created.")}
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <p className="text-lg font-semibold ltr-nums">
-            {formatMoneyAmount(enc.visitFeeAmount ?? 0, visitFeeCurrency, localeForLanguage(i18n.language))}
-          </p>
+        <CardContent className="space-y-3">
+          {draft ? (
+            <>
+              <Input
+                className="max-w-xs ltr-nums text-lg font-semibold"
+                inputMode="decimal"
+                value={visitFeeAmount}
+                onChange={(e) => setVisitFeeAmount(e.target.value)}
+                placeholder="0.00"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => saveMutation.mutate()}
+                disabled={saveMutation.isPending}
+              >
+                {t("encounters.saveVisitFee", "Save visit fee")}
+              </Button>
+            </>
+          ) : (
+            <p className="text-lg font-semibold ltr-nums">
+              {formatMoneyAmount(enc.visitFeeAmount ?? 0, visitFeeCurrency, localeForLanguage(i18n.language))}
+            </p>
+          )}
         </CardContent>
       </Card>
 

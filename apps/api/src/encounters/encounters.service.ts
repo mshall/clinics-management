@@ -434,6 +434,67 @@ export class EncountersService {
       }
     }
 
+    const visitFeeProvided = dto.visitFeeAmount !== undefined && dto.visitFeeAmount !== null;
+    if (visitFeeProvided) {
+      const newFee = Number(dto.visitFeeAmount);
+      if (!Number.isFinite(newFee) || newFee < 0) {
+        throw new BadRequestException("visitFeeAmount must be a non-negative number");
+      }
+      data.visitFeeAmount = new Prisma.Decimal(String(newFee));
+    }
+
+    if (visitFeeProvided) {
+      const newFee = Number(dto.visitFeeAmount);
+      const row = await this.prisma.$transaction(async (tx) => {
+        const updated = await tx.encounter.update({
+          where: { id },
+          data,
+          include: encounterIncludeDef,
+        });
+
+        const existingRevenue = await tx.revenueEntry.findFirst({
+          where: { tenantId, encounterId: id, category: "VISIT_FEE" },
+        });
+
+        if (newFee > 0) {
+          const currency = await resolveClinicCurrency(tx, tenantId, existing.clinicId);
+          if (existingRevenue) {
+            await tx.revenueEntry.update({
+              where: { id: existingRevenue.id },
+              data: {
+                grossAmount: newFee,
+                netAmount: newFee,
+                taxAmount: 0,
+                currency,
+                description: `Visit fee · encounter ${id.slice(0, 8)}…`,
+              },
+            });
+          } else {
+            await tx.revenueEntry.create({
+              data: {
+                tenantId,
+                clinicId: existing.clinicId,
+                encounterId: id,
+                category: "VISIT_FEE",
+                description: `Visit fee · encounter ${id.slice(0, 8)}…`,
+                grossAmount: newFee,
+                taxAmount: 0,
+                netAmount: newFee,
+                currency,
+                postedAt: new Date(),
+                status: RevenueStatus.POSTED,
+              },
+            });
+          }
+        } else if (existingRevenue) {
+          await tx.revenueEntry.delete({ where: { id: existingRevenue.id } });
+        }
+
+        return updated;
+      });
+      return this.mapEncounter(row);
+    }
+
     const row = await this.prisma.encounter.update({
       where: { id },
       data,

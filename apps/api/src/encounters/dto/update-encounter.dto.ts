@@ -110,4 +110,11 @@ export class UpdateEncounterDto {
   @IsOptional()
   @IsBoolean()
   noMedications?: boolean;
+
+  @ApiPropertyOptional({ description: "Visit fee amount (editable while encounter is draft)" })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  visitFeeAmount?: number;
 }

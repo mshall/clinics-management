@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Lock, FileText } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -332,6 +333,9 @@ export function OperationsPage() {
     resetEditClinicalForm();
     setEditFormErr(null);
   };
+
+  const canEditOperation = (o: OperationDto) =>
+    o.status === "SCHEDULED" || (o.status === "COMPLETED" && canAdminEditCompleted);
 
   const openEdit = (o: OperationDto) => {
     resetEditClinicalForm();
@@ -753,7 +757,9 @@ export function OperationsPage() {
     },
     onSuccess: () => {
       setFormErr(null);
-      setCreateOk(t("operations.created", "Operation scheduled."));
+      setCreateOk(null);
+      setShowCreatePanel(false);
+      toast.success(t("operations.created", "Operation scheduled."));
       void qc.invalidateQueries({ queryKey: ["operations"] });
       resetCreateForm();
     },
@@ -1627,8 +1633,24 @@ export function OperationsPage() {
                         patientName: o.patientName,
                         registryLabel: patientLabel.get(o.patientId),
                       });
+                      const rowEditable = canEditOperation(o);
                       return (
-                        <tr key={o.id} className="border-b last:border-0">
+                        <tr
+                          key={o.id}
+                          className={`border-b last:border-0 ${rowEditable ? "cursor-pointer hover:bg-muted/50" : ""}`}
+                          role={rowEditable ? "button" : undefined}
+                          tabIndex={rowEditable ? 0 : undefined}
+                          onClick={() => {
+                            if (rowEditable) openEdit(o);
+                          }}
+                          onKeyDown={(e) => {
+                            if (!rowEditable) return;
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              openEdit(o);
+                            }
+                          }}
+                        >
                           <td className="px-3 py-2 align-top">
                             <div>{new Date(o.operationDate).toLocaleString(loc)}</div>
                             {clinicLabel ? (
@@ -1657,7 +1679,7 @@ export function OperationsPage() {
                           <td className="max-w-[200px] px-3 py-2 align-top text-muted-foreground">
                             {o.comments?.trim() || "—"}
                           </td>
-                          <td className="px-3 py-2 align-top text-end">
+                          <td className="px-3 py-2 align-top text-end" onClick={(e) => e.stopPropagation()}>
                             {o.status === "SCHEDULED" ? (
                               <div className="flex flex-wrap justify-end gap-1">
                                 <Button
