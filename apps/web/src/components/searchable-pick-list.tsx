@@ -15,7 +15,7 @@ export interface PickListItem {
 interface SearchablePickListProps {
   items: PickListItem[];
   value: string;
-  onValueChange: (value: string) => void;
+  onValueChange: (value: string, item?: PickListItem) => void;
   placeholder?: string;
   searchPlaceholder?: string;
   emptyMessage?: string;
@@ -50,6 +50,12 @@ type PanelRect = {
 const PANEL_MAX_HEIGHT = 224;
 const DEFAULT_PREVIEW_COUNT = 4;
 const OUTSIDE_LISTEN_DELAY_MS = 80;
+const OUTSIDE_LISTEN_DELAY_COARSE_MS = 240;
+
+function outsideListenDelayMs(): number {
+  if (typeof window === "undefined") return OUTSIDE_LISTEN_DELAY_MS;
+  return window.matchMedia("(pointer: coarse)").matches ? OUTSIDE_LISTEN_DELAY_COARSE_MS : OUTSIDE_LISTEN_DELAY_MS;
+}
 
 function measurePanelRect(anchor: HTMLElement): PanelRect {
   const rect = anchor.getBoundingClientRect();
@@ -148,7 +154,7 @@ export function SearchablePickList({
         ? [selectedItem, ...items]
         : items
       : items;
-    return filterPickListItems(base, q);
+    return localFilter ? filterPickListItems(base, q) : base;
   }, [items, q, localFilter, selectedItem, value]);
 
   const displayText = resolveItemLabel(value, items, selectedItem, pinnedItem);
@@ -171,7 +177,7 @@ export function SearchablePickList({
         items.find((i) => i.value === next) ??
         (selectedItem?.value === next ? selectedItem : null);
       if (resolved) setPinnedItem(resolved);
-      onValueChange(next);
+      onValueChange(next, resolved ?? undefined);
       setQ("");
       onSearchQueryChange?.("");
       setOpen(false);
@@ -223,7 +229,7 @@ export function SearchablePickList({
     updatePanelRect();
     const enableOutsideTimer = window.setTimeout(() => {
       listenOutsideRef.current = true;
-    }, OUTSIDE_LISTEN_DELAY_MS);
+    }, outsideListenDelayMs());
     const vv = window.visualViewport;
     vv?.addEventListener("resize", updatePanelRect);
     vv?.addEventListener("scroll", updatePanelRect);
@@ -301,16 +307,11 @@ export function SearchablePickList({
                   onPointerDown={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                  }}
-                  onPointerUp={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
                     handlePick(i.value, i);
                   }}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    handlePick(i.value, i);
                   }}
                 >
                   <span className="font-medium">{i.label}</span>

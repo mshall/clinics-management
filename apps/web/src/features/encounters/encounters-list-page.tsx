@@ -169,16 +169,14 @@ export function EncountersListPage() {
     emptyPatientAcquisitionFormValues(),
   );
   const { data: selectedPatient } = usePatientQuery(createOpen && createPatientId ? createPatientId : undefined);
-  const createPatientSelectedItem = useMemo(
-    (): PickListItem | null =>
-      resolvePickListSelectedItem(
-        createPatientId,
-        dialogPatientItems,
-        pinnedPatientItem,
-        selectedPatient ? patientToPickListItem(selectedPatient) : null,
-      ),
-    [createPatientId, dialogPatientItems, pinnedPatientItem, selectedPatient],
-  );
+  const createPatientSelectedItem = useMemo((): PickListItem | null => {
+    if (!createPatientId.trim()) return null;
+    if (pinnedPatientItem?.value === createPatientId) return pinnedPatientItem;
+    const fromList = dialogPatientItems.find((p) => p.value === createPatientId);
+    if (fromList) return fromList;
+    if (selectedPatient) return patientToPickListItem(selectedPatient);
+    return resolvePickListSelectedItem(createPatientId, dialogPatientItems, pinnedPatientItem);
+  }, [createPatientId, dialogPatientItems, pinnedPatientItem, selectedPatient]);
   useEffect(() => {
     if (!createOpen) return;
     if (!createPatientId) {
@@ -419,15 +417,22 @@ export function EncountersListPage() {
                     value={createPatientId}
                     selectedItem={createPatientSelectedItem}
                     invalid={createFieldInvalid("patient")}
-                    onValueChange={(v) => {
+                    onValueChange={(v, item) => {
                       setCreatePatientId(v);
                       setSelectedAppointmentId("");
                       clearCreateFieldError("patient");
-                      const item = dialogPatientItems.find((p) => p.value === v);
-                      if (item) setPinnedPatientItem(item);
+                      if (item) {
+                        setPinnedPatientItem(item);
+                        return;
+                      }
+                      const fromList = dialogPatientItems.find((p) => p.value === v);
+                      if (fromList) setPinnedPatientItem(fromList);
                     }}
                     onSearchQueryChange={patientPickSearch.setSearch}
-                    onOpen={patientPickSearch.resetSearch}
+                    onOpen={() => {
+                      patientPickSearch.resetSearch();
+                      patientPickSearch.flushDebounced();
+                    }}
                     searchPlaceholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
                     placeholder={t("encounters.pickPatient", "Pick patient")}
                     emptyMessage={dialogPatientsPending ? t("common.loading") : t("encounters.noPatientsMatch", "No patients match.")}
