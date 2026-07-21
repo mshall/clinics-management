@@ -107,7 +107,7 @@ export function ClinicDoctorsPanel({ clinicId }: { clinicId: string }) {
                   if (item) setPinnedPhysicianItem(item);
                 }}
                 onSearchQueryChange={addPickSearch.setSearch}
-                onOpen={addPickSearch.resetSearch}
+                onOpen={addPickSearch.handleOpen}
                 searchPlaceholder={t("appointments.filterPhysician", "Type physician name, Arabic name, or email…")}
                 placeholder={t("clinics.pickDoctor", "Select physician")}
                 emptyMessage={

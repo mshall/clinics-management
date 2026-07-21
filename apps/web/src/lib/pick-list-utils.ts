@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { PickListItem } from "@/components/searchable-pick-list";
 
 /** Resolve a pick-list label when the value may not be in the current search results. */
@@ -49,5 +49,57 @@ export function useDebouncedPickListSearch(initial = "", debounceMs = PICK_LIST_
     setDebounced(search);
   }, [search]);
 
-  return { search, setSearch, debounced, resetSearch, flushDebounced };
+  /** Call from SearchablePickList `onOpen` so server lists load immediately. */
+  const handleOpen = useCallback(() => {
+    resetSearch();
+  }, [resetSearch]);
+
+  return { search, setSearch, debounced, resetSearch, flushDebounced, handleOpen };
+}
+
+/** Stable handler that keeps a pinned row for server-driven pick lists. */
+export function bindPickListValueChange(
+  setValue: (value: string) => void,
+  setPinned: (item: PickListItem | null) => void,
+  items: PickListItem[],
+): (value: string, item?: PickListItem) => void {
+  return (next, item) => {
+    setValue(next);
+    if (item) {
+      setPinned(item);
+      return;
+    }
+    const fromList = items.find((row) => row.value === next);
+    if (fromList) setPinned(fromList);
+  };
+}
+
+/** Hook for server-driven SearchablePickList value + selectedItem wiring. */
+export function usePickListValueBinding(
+  value: string,
+  setValue: (next: string) => void,
+  items: PickListItem[],
+  pinned: PickListItem | null,
+  setPinned: (item: PickListItem | null) => void,
+  ...extraSelected: Array<PickListItem | null | undefined>
+) {
+  const onValueChange = useCallback(
+    (next: string, item?: PickListItem) => {
+      setValue(next);
+      if (item) {
+        setPinned(item);
+        return;
+      }
+      const fromList = items.find((row) => row.value === next);
+      if (fromList) setPinned(fromList);
+    },
+    [items, setPinned, setValue],
+  );
+
+  const selectedItem = useMemo(
+    () => resolvePickListSelectedItem(value, items, pinned, ...extraSelected),
+    [value, items, pinned, ...extraSelected],
+  );
+
+  return { onValueChange, selectedItem };
 }

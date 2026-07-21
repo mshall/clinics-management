@@ -41,7 +41,7 @@ import { canDeleteEncounter } from "@/lib/encounter-delete-policy";
 import { EncounterDeleteConfirmDialog, type EncounterDeleteTarget } from "@/features/encounters/encounter-delete-confirm-dialog";
 import { formatEncounterStatus, formatClinicName, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
-import { resolvePickListSelectedItem, useDebouncedPickListSearch } from "@/lib/pick-list-utils";
+import { useDebouncedPickListSearch, usePickListValueBinding } from "@/lib/pick-list-utils";
 import { physicianToPickListItem } from "@/lib/physician-display";
 import { nativeSelectClassName, searchLedgerActionsClassName, searchLedgerLayoutClassName } from "@/lib/form-control-styles";
 import { columnFilterIncludes } from "@/lib/utils";
@@ -169,14 +169,6 @@ export function EncountersListPage() {
     emptyPatientAcquisitionFormValues(),
   );
   const { data: selectedPatient } = usePatientQuery(createOpen && createPatientId ? createPatientId : undefined);
-  const createPatientSelectedItem = useMemo((): PickListItem | null => {
-    if (!createPatientId.trim()) return null;
-    if (pinnedPatientItem?.value === createPatientId) return pinnedPatientItem;
-    const fromList = dialogPatientItems.find((p) => p.value === createPatientId);
-    if (fromList) return fromList;
-    if (selectedPatient) return patientToPickListItem(selectedPatient);
-    return resolvePickListSelectedItem(createPatientId, dialogPatientItems, pinnedPatientItem);
-  }, [createPatientId, dialogPatientItems, pinnedPatientItem, selectedPatient]);
   useEffect(() => {
     if (!createOpen) return;
     if (!createPatientId) {
@@ -211,11 +203,6 @@ export function EncountersListPage() {
   const doctorPickItems: PickListItem[] = useMemo(
     () => (usersForDoctors ?? []).map((d) => physicianToPickListItem(d, i18n.language)),
     [usersForDoctors, i18n.language],
-  );
-  const createClinicianSelectedItem = useMemo(
-    (): PickListItem | null =>
-      resolvePickListSelectedItem(createClinicianId, doctorPickItems, pinnedClinicianItem),
-    [createClinicianId, doctorPickItems, pinnedClinicianItem],
   );
 
   const aptPickerRows = aptPickerData?.items ?? [];
@@ -371,6 +358,29 @@ export function EncountersListPage() {
     });
   };
 
+  const patientPickBinding = usePickListValueBinding(
+    createPatientId,
+    (next) => {
+      setCreatePatientId(next);
+      setSelectedAppointmentId("");
+      clearCreateFieldError("patient");
+    },
+    dialogPatientItems,
+    pinnedPatientItem,
+    setPinnedPatientItem,
+    selectedPatient ? patientToPickListItem(selectedPatient) : null,
+  );
+  const clinicianPickBinding = usePickListValueBinding(
+    createClinicianId,
+    (next) => {
+      setCreateClinicianId(next);
+      clearCreateFieldError("clinician");
+    },
+    doctorPickItems,
+    pinnedClinicianItem,
+    setPinnedClinicianItem,
+  );
+
   return (
     <div className="space-y-6">
       <ValidationIssuesDialog {...validation.dialogProps} />
@@ -415,24 +425,11 @@ export function EncountersListPage() {
                   <SearchablePickList
                     items={dialogPatientItems}
                     value={createPatientId}
-                    selectedItem={createPatientSelectedItem}
+                    selectedItem={patientPickBinding.selectedItem}
                     invalid={createFieldInvalid("patient")}
-                    onValueChange={(v, item) => {
-                      setCreatePatientId(v);
-                      setSelectedAppointmentId("");
-                      clearCreateFieldError("patient");
-                      if (item) {
-                        setPinnedPatientItem(item);
-                        return;
-                      }
-                      const fromList = dialogPatientItems.find((p) => p.value === v);
-                      if (fromList) setPinnedPatientItem(fromList);
-                    }}
+                    onValueChange={patientPickBinding.onValueChange}
                     onSearchQueryChange={patientPickSearch.setSearch}
-                    onOpen={() => {
-                      patientPickSearch.resetSearch();
-                      patientPickSearch.flushDebounced();
-                    }}
+                    onOpen={patientPickSearch.handleOpen}
                     searchPlaceholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
                     placeholder={t("encounters.pickPatient", "Pick patient")}
                     emptyMessage={dialogPatientsPending ? t("common.loading") : t("encounters.noPatientsMatch", "No patients match.")}
@@ -453,13 +450,15 @@ export function EncountersListPage() {
                     items={aptPickerItems}
                     value={selectedAppointmentId}
                     selectedItem={pinnedAppointmentItem}
-                    onValueChange={(v) => {
+                    onValueChange={(v, item) => {
                       setSelectedAppointmentId(v);
                       const row = aptPickerRows.find((a) => a.id === v);
-                      const item = aptPickerItems.find((i) => i.value === v) ?? null;
-                      setPinnedAppointmentItem(item);
+                      const picked = item ?? aptPickerItems.find((i) => i.value === v) ?? null;
+                      setPinnedAppointmentItem(picked);
                       if (row) {
                         setCreatePatientId(row.patientId);
+                        const patientItem = dialogPatientItems.find((p) => p.value === row.patientId);
+                        if (patientItem) setPinnedPatientItem(patientItem);
                         setCreateClinicId(row.clinicId);
                         setCreateClinicianId(row.clinicianId);
                         if (row.feeAmount != null && Number.isFinite(row.feeAmount)) {
@@ -468,7 +467,7 @@ export function EncountersListPage() {
                       }
                     }}
                     onSearchQueryChange={aptPickSearch.setSearch}
-                    onOpen={aptPickSearch.resetSearch}
+                    onOpen={aptPickSearch.handleOpen}
                     searchPlaceholder={t("encounters.appointmentSearchPlaceholder", "Type at least 2 characters or pick a patient first…")}
                     placeholder={t("encounters.linkedAppointment", "Booked appointment (optional)")}
                     emptyMessage={aptPickerPending ? t("common.loading") : t("encounters.noBookableAppointments", "No matching open appointments.")}
@@ -500,16 +499,11 @@ export function EncountersListPage() {
                     <SearchablePickList
                       items={doctorPickItems}
                       value={createClinicianId}
-                      selectedItem={createClinicianSelectedItem}
+                      selectedItem={clinicianPickBinding.selectedItem}
                       invalid={createFieldInvalid("clinician")}
-                      onValueChange={(v) => {
-                        setCreateClinicianId(v);
-                        clearCreateFieldError("clinician");
-                        const item = doctorPickItems.find((d) => d.value === v);
-                        if (item) setPinnedClinicianItem(item);
-                      }}
+                      onValueChange={clinicianPickBinding.onValueChange}
                       onSearchQueryChange={doctorPickSearch.setSearch}
-                      onOpen={doctorPickSearch.resetSearch}
+                      onOpen={doctorPickSearch.handleOpen}
                       searchPlaceholder={t("appointments.filterPhysician", "Type physician name, Arabic name, or email…")}
                       placeholder={t("encounters.attendingPhysician")}
                       emptyMessage={

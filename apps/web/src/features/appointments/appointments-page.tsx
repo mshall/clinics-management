@@ -453,13 +453,16 @@ export function AppointmentsPage() {
                 items={bookPatientItems}
                 value={patientId}
                 selectedItem={bookPatientSelectedItem}
-                onValueChange={(id) => {
+                onValueChange={(id, item) => {
                   setPatientId(id);
-                  const item = bookPatientItems.find((p) => p.value === id);
                   if (item) setSelectedBookPatientItem(item);
+                  else {
+                    const fromList = bookPatientItems.find((p) => p.value === id);
+                    if (fromList) setSelectedBookPatientItem(fromList);
+                  }
                 }}
                 onSearchQueryChange={bookPatientPickSearch.setSearch}
-                onOpen={bookPatientPickSearch.resetSearch}
+                onOpen={bookPatientPickSearch.handleOpen}
                 searchPlaceholder={t("encounters.patientSearchPlaceholder")}
                 placeholder={t("appointments.pick")}
                 emptyMessage={
@@ -476,13 +479,16 @@ export function AppointmentsPage() {
                 items={physicianItems}
                 value={clinicianId}
                 selectedItem={bookPhysicianSelectedItem}
-                onValueChange={(id) => {
+                onValueChange={(id, item) => {
                   setClinicianId(id);
-                  const item = physicianItems.find((d) => d.value === id);
                   if (item) setPinnedPhysicianItem(item);
+                  else {
+                    const fromList = physicianItems.find((d) => d.value === id);
+                    if (fromList) setPinnedPhysicianItem(fromList);
+                  }
                 }}
                 onSearchQueryChange={bookDoctorPickSearch.setSearch}
-                onOpen={bookDoctorPickSearch.resetSearch}
+                onOpen={bookDoctorPickSearch.handleOpen}
                 searchPlaceholder={t("appointments.filterPhysician", "Type physician name, Arabic name, or email…")}
                 placeholder={t("appointments.pickPhysician")}
                 emptyMessage={

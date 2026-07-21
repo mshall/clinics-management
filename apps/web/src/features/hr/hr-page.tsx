@@ -677,7 +677,7 @@ export function HrPage() {
                           }
                         }}
                         onSearchQueryChange={linkedUserSearch.setSearch}
-                        onOpen={linkedUserSearch.resetSearch}
+                        onOpen={linkedUserSearch.handleOpen}
                         searchPlaceholder={t("hr.linkedLoginAccountSearch", "Type name, email, or role…")}
                         placeholder={t("hr.pickLinkedLoginAccount", "Select login account…")}
                         emptyMessage={t("hr.noUnlinkedUsers", "No unlinked organization users.")}

@@ -1083,7 +1083,7 @@ export function OperationsPage() {
                         selectedItem={editPatientSelectedItem}
                         onValueChange={setEditPatientId}
                         onSearchQueryChange={editPatientPickSearch.setSearch}
-                        onOpen={editPatientPickSearch.resetSearch}
+                        onOpen={editPatientPickSearch.handleOpen}
                         searchPlaceholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
                         placeholder={t("operations.selectPatient", "Select patient")}
                         emptyMessage={
@@ -1105,7 +1105,7 @@ export function OperationsPage() {
                         selectedItem={editPhysicianSelectedItem}
                         onValueChange={setEditClinicianId}
                         onSearchQueryChange={editDoctorPickSearch.setSearch}
-                        onOpen={editDoctorPickSearch.resetSearch}
+                        onOpen={editDoctorPickSearch.handleOpen}
                         searchPlaceholder={t("appointments.filterPhysician", "Type physician name…")}
                         placeholder={t("operations.selectDoctor", "Select doctor")}
                         emptyMessage={
@@ -1410,7 +1410,7 @@ export function OperationsPage() {
                       selectedItem={bookPatientSelectedItem}
                       onValueChange={setPatientId}
                       onSearchQueryChange={bookPatientPickSearch.setSearch}
-                      onOpen={bookPatientPickSearch.resetSearch}
+                      onOpen={bookPatientPickSearch.handleOpen}
                       searchPlaceholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
                       placeholder={t("operations.selectPatient", "Select patient")}
                       emptyMessage={
@@ -1430,13 +1430,16 @@ export function OperationsPage() {
                       items={physicianItems}
                       value={clinicianId}
                       selectedItem={bookPhysicianSelectedItem}
-                      onValueChange={(id) => {
+                      onValueChange={(id, item) => {
                         setClinicianId(id);
-                        const item = physicianItems.find((d) => d.value === id);
                         if (item) setPinnedPhysicianItem(item);
+                        else {
+                          const fromList = physicianItems.find((d) => d.value === id);
+                          if (fromList) setPinnedPhysicianItem(fromList);
+                        }
                       }}
                       onSearchQueryChange={bookDoctorPickSearch.setSearch}
-                      onOpen={bookDoctorPickSearch.resetSearch}
+                      onOpen={bookDoctorPickSearch.handleOpen}
                       searchPlaceholder={t("appointments.filterPhysician", "Type physician name, Arabic name, or email…")}
                       placeholder={t("operations.selectDoctor", "Select doctor")}
                       emptyMessage={

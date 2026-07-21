@@ -411,7 +411,7 @@ export function AppointmentDetailPage() {
               selectedItem={patientSelectedItem}
               onValueChange={setPatientId}
               onSearchQueryChange={patientPickSearch.setSearch}
-              onOpen={patientPickSearch.resetSearch}
+              onOpen={patientPickSearch.handleOpen}
               disabled={readOnly}
               searchPlaceholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
               placeholder={t("appointments.pick")}
@@ -436,7 +436,7 @@ export function AppointmentDetailPage() {
                   if (item) setPinnedClinicianItem(item);
                 }}
                 onSearchQueryChange={doctorPickSearch.setSearch}
-                onOpen={doctorPickSearch.resetSearch}
+                onOpen={doctorPickSearch.handleOpen}
                 disabled={readOnly}
                 searchPlaceholder={t("appointments.filterPhysician", "Type physician name, Arabic name, or email…")}
                 placeholder={t("appointments.pickPhysician")}

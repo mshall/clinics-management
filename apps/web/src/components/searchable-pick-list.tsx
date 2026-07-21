@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { focusTextInput } from "@/lib/focus-input";
@@ -39,48 +38,8 @@ interface SearchablePickListProps {
   invalid?: boolean;
 }
 
-type PanelRect = {
-  top: number;
-  left: number;
-  width: number;
-  maxHeight: number;
-  placement: "below" | "above";
-};
-
-const PANEL_MAX_HEIGHT = 224;
 const DEFAULT_PREVIEW_COUNT = 4;
-const OUTSIDE_LISTEN_DELAY_MS = 80;
-const OUTSIDE_LISTEN_DELAY_COARSE_MS = 240;
-
-function outsideListenDelayMs(): number {
-  if (typeof window === "undefined") return OUTSIDE_LISTEN_DELAY_MS;
-  return window.matchMedia("(pointer: coarse)").matches ? OUTSIDE_LISTEN_DELAY_COARSE_MS : OUTSIDE_LISTEN_DELAY_MS;
-}
-
-function measurePanelRect(anchor: HTMLElement): PanelRect {
-  const rect = anchor.getBoundingClientRect();
-  const vv = window.visualViewport;
-  const viewportHeight = vv?.height ?? window.innerHeight;
-  const offsetTop = vv?.offsetTop ?? 0;
-  const offsetLeft = vv?.offsetLeft ?? 0;
-  const spaceBelow = viewportHeight - rect.bottom - 8;
-  const spaceAbove = rect.top - 8;
-  const keyboardLikely = viewportHeight < window.innerHeight * 0.75;
-  const placement =
-    keyboardLikely || (spaceBelow < PANEL_MAX_HEIGHT && spaceAbove > spaceBelow) ? "above" : "below";
-  const maxHeight = Math.min(
-    PANEL_MAX_HEIGHT,
-    Math.max(120, placement === "below" ? spaceBelow : spaceAbove),
-  );
-  const rawTop = placement === "below" ? rect.bottom + 4 : rect.top - maxHeight - 4;
-  return {
-    top: rawTop + offsetTop,
-    left: rect.left + offsetLeft,
-    width: rect.width,
-    maxHeight,
-    placement,
-  };
-}
+const PICK_GUARD_MS = 400;
 
 function scheduleMobileFocus(el: HTMLInputElement | null | undefined): void {
   window.requestAnimationFrame(() => {
@@ -94,12 +53,14 @@ function resolveItemLabel(
   items: PickListItem[],
   selectedItem: PickListItem | null | undefined,
   pinnedItem: PickListItem | null,
+  committedLabel: string | null,
 ): string | null {
   if (!pickValue.trim()) return null;
   const fromList = items.find((i) => i.value === pickValue);
   if (fromList) return fromList.label;
   if (selectedItem?.value === pickValue) return selectedItem.label;
   if (pinnedItem?.value === pickValue) return pinnedItem.label;
+  if (committedLabel) return committedLabel;
   return null;
 }
 
@@ -125,18 +86,18 @@ export function SearchablePickList({
   const listboxId = `${uid}-listbox`;
   const inputId = `${uid}-input`;
   const rootRef = useRef<HTMLDivElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const listenOutsideRef = useRef(false);
   const pickingRef = useRef(false);
+  const pickingUntilRef = useRef(0);
+  const committedLabelRef = useRef<string | null>(null);
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
-  const [panelRect, setPanelRect] = useState<PanelRect | null>(null);
   const [pinnedItem, setPinnedItem] = useState<PickListItem | null>(null);
 
   useEffect(() => {
     if (!value.trim()) {
       setPinnedItem(null);
+      committedLabelRef.current = null;
       return;
     }
     setPinnedItem((prev) => {
@@ -144,6 +105,7 @@ export function SearchablePickList({
         items.find((i) => i.value === value) ??
         (selectedItem?.value === value ? selectedItem : null) ??
         (prev?.value === value ? prev : null);
+      if (resolved) committedLabelRef.current = resolved.label;
       return resolved ?? prev;
     });
   }, [value, items, selectedItem]);
@@ -157,7 +119,7 @@ export function SearchablePickList({
     return localFilter ? filterPickListItems(base, q) : base;
   }, [items, q, localFilter, selectedItem, value]);
 
-  const displayText = resolveItemLabel(value, items, selectedItem, pinnedItem);
+  const displayText = resolveItemLabel(value, items, selectedItem, pinnedItem, committedLabelRef.current);
   const trimmedQ = q.trim();
   const isSearching = trimmedQ.length > 0;
   const meetsMinSearch = trimmedQ.length >= minSearchLength;
@@ -176,7 +138,10 @@ export function SearchablePickList({
         item ??
         items.find((i) => i.value === next) ??
         (selectedItem?.value === next ? selectedItem : null);
-      if (resolved) setPinnedItem(resolved);
+      if (resolved) {
+        committedLabelRef.current = resolved.label;
+        setPinnedItem(resolved);
+      }
       onValueChange(next, resolved ?? undefined);
       setQ("");
       onSearchQueryChange?.("");
@@ -189,6 +154,7 @@ export function SearchablePickList({
     (next: string, item: PickListItem) => {
       if (disabled || pickingRef.current) return;
       pickingRef.current = true;
+      pickingUntilRef.current = Date.now() + PICK_GUARD_MS;
       pick(next, item);
       window.setTimeout(() => {
         pickingRef.current = false;
@@ -198,62 +164,27 @@ export function SearchablePickList({
   );
 
   const closeWithoutPick = useCallback(() => {
+    if (pickingRef.current || Date.now() < pickingUntilRef.current) return;
     setOpen(false);
     setQ("");
     onSearchQueryChange?.("");
   }, [onSearchQueryChange]);
 
-  const updatePanelRect = useCallback(() => {
-    const anchor = inputRef.current ?? rootRef.current;
-    if (!anchor) return;
-    setPanelRect(measurePanelRect(anchor));
-  }, []);
-
-  const openForSearch = useCallback(() => {
+  const openPicker = useCallback(() => {
     if (disabled) return;
     setOpen(true);
     setQ("");
     onSearchQueryChange?.("");
     onOpen?.();
     scheduleMobileFocus(inputRef.current);
-    updatePanelRect();
-  }, [disabled, onOpen, onSearchQueryChange, updatePanelRect]);
-
-  useEffect(() => {
-    if (!open) {
-      setPanelRect(null);
-      listenOutsideRef.current = false;
-      return;
-    }
-    listenOutsideRef.current = false;
-    updatePanelRect();
-    const enableOutsideTimer = window.setTimeout(() => {
-      listenOutsideRef.current = true;
-    }, outsideListenDelayMs());
-    const vv = window.visualViewport;
-    vv?.addEventListener("resize", updatePanelRect);
-    vv?.addEventListener("scroll", updatePanelRect);
-    window.addEventListener("resize", updatePanelRect);
-    window.addEventListener("scroll", updatePanelRect, true);
-    const focusTimer = window.setTimeout(() => scheduleMobileFocus(inputRef.current), 0);
-    return () => {
-      listenOutsideRef.current = false;
-      window.clearTimeout(enableOutsideTimer);
-      window.clearTimeout(focusTimer);
-      vv?.removeEventListener("resize", updatePanelRect);
-      vv?.removeEventListener("scroll", updatePanelRect);
-      window.removeEventListener("resize", updatePanelRect);
-      window.removeEventListener("scroll", updatePanelRect, true);
-    };
-  }, [open, updatePanelRect]);
+  }, [disabled, onOpen, onSearchQueryChange]);
 
   useEffect(() => {
     if (!open) return;
     const onDocPointerDown = (e: PointerEvent) => {
-      if (!listenOutsideRef.current) return;
+      if (pickingRef.current || Date.now() < pickingUntilRef.current) return;
       const target = e.target as Node;
       if (rootRef.current?.contains(target)) return;
-      if (panelRef.current?.contains(target)) return;
       closeWithoutPick();
     };
     const onKey = (e: KeyboardEvent) => {
@@ -267,25 +198,99 @@ export function SearchablePickList({
     };
   }, [open, closeWithoutPick]);
 
-  const hasSelection = Boolean(displayText);
+  const optionHandlers = (item: PickListItem) => ({
+    onMouseDown: (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      handlePick(item.value, item);
+    },
+    onTouchStart: (e: React.TouchEvent) => {
+      e.stopPropagation();
+    },
+    onTouchEnd: (e: React.TouchEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      handlePick(item.value, item);
+    },
+    onPointerDown: (e: React.PointerEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.pointerType === "touch") return;
+      handlePick(item.value, item);
+    },
+    onClick: (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    },
+  });
 
-  const listbox =
-    open && panelRect
-      ? createPortal(
+  return (
+    <div ref={rootRef} data-pick-list-root className={cn("relative", className)}>
+      {!open ? (
+        <button
+          type="button"
+          disabled={disabled}
+          aria-haspopup="listbox"
+          aria-expanded={false}
+          aria-controls={listboxId}
+          className={cn(
+            "flex h-11 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-start text-sm shadow-sm transition-colors touch-manipulation [-webkit-tap-highlight-color:transparent]",
+            "hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            !displayText && "text-muted-foreground",
+            disabled && "cursor-not-allowed opacity-50",
+            invalid && "border-destructive ring-1 ring-destructive",
+          )}
+          onClick={() => openPicker()}
+        >
+          <span className="min-w-0 flex-1 truncate">{displayText ?? placeholder}</span>
+          <ChevronDown className="size-4 shrink-0 opacity-50" aria-hidden />
+        </button>
+      ) : (
+        <div className="relative">
+          <Input
+            ref={inputRef}
+            id={inputId}
+            type="text"
+            dir="auto"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            enterKeyHint="search"
+            inputMode="search"
+            className={cn(
+              "h-11 touch-manipulation pe-9",
+              invalid && "border-destructive ring-1 ring-destructive",
+            )}
+            placeholder={searchPlaceholder}
+            value={q}
+            disabled={disabled}
+            autoFocus
+            onChange={(e) => {
+              const v = e.target.value;
+              setQ(v);
+              onSearchQueryChange?.(v);
+            }}
+            aria-autocomplete="list"
+            aria-controls={listboxId}
+            role="combobox"
+            aria-expanded
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                e.stopPropagation();
+                closeWithoutPick();
+              }
+            }}
+          />
+          <ChevronDown
+            className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 shrink-0 opacity-50"
+            aria-hidden
+          />
           <div
-            ref={panelRef}
             id={listboxId}
             role="listbox"
             data-pick-list-panel
-            style={{
-              position: "fixed",
-              top: panelRect.top,
-              left: panelRect.left,
-              width: panelRect.width,
-              maxHeight: panelRect.maxHeight,
-              zIndex: 10001,
-            }}
-            className="overflow-auto overscroll-contain rounded-md border border-border bg-background shadow-lg [-webkit-overflow-scrolling:touch] [touch-action:manipulation]"
+            className="absolute left-0 right-0 top-full z-[200] mt-1 max-h-56 overflow-auto overscroll-contain rounded-md border border-border bg-background shadow-lg [-webkit-overflow-scrolling:touch] [touch-action:manipulation]"
           >
             {showingPreview && (minSearchLength > 0 || !isSearching) ? (
               <p className="border-b border-border px-3 py-1.5 text-xs text-muted-foreground">{idleMessage}</p>
@@ -301,91 +306,19 @@ export function SearchablePickList({
                   aria-selected={value === i.value}
                   disabled={disabled}
                   className={cn(
-                    "flex w-full min-h-11 cursor-pointer flex-col gap-0.5 border-b border-border px-3 py-2.5 text-start text-sm last:border-b-0 hover:bg-muted/60 active:bg-muted/80 disabled:opacity-50 touch-manipulation [-webkit-tap-highlight-color:transparent]",
+                    "flex w-full min-h-11 cursor-pointer flex-col gap-0.5 border-b border-border px-3 py-2.5 text-start text-sm last:border-b-0 hover:bg-muted/60 active:bg-muted/80 disabled:opacity-50 touch-manipulation select-none [-webkit-tap-highlight-color:transparent]",
                     value === i.value && "bg-muted/80",
                   )}
-                  onPointerDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handlePick(i.value, i);
-                  }}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
+                  {...optionHandlers(i)}
                 >
                   <span className="font-medium">{i.label}</span>
                   {i.hint ? <span className="text-xs text-muted-foreground">{i.hint}</span> : null}
                 </button>
               ))
             )}
-          </div>,
-          document.body,
-        )
-      : null;
-
-  return (
-    <div ref={rootRef} data-pick-list-root className={cn("relative", className)}>
-      <div className="relative">
-        <Input
-          ref={inputRef}
-          id={inputId}
-          type="text"
-          dir="auto"
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="off"
-          spellCheck={false}
-          enterKeyHint="search"
-          inputMode="text"
-          className={cn(
-            "h-11 touch-manipulation pe-9",
-            invalid && "border-destructive ring-1 ring-destructive",
-          )}
-          placeholder={open ? searchPlaceholder : placeholder}
-          value={open ? q : (displayText ?? "")}
-          disabled={disabled}
-          onFocus={() => {
-            if (!open) openForSearch();
-            else updatePanelRect();
-          }}
-          onClick={() => {
-            if (!open) openForSearch();
-            else scheduleMobileFocus(inputRef.current);
-          }}
-          onChange={(e) => {
-            if (!open) {
-              setOpen(true);
-              onOpen?.();
-            }
-            const v = e.target.value;
-            setQ(v);
-            onSearchQueryChange?.(v);
-          }}
-          aria-autocomplete="list"
-          aria-controls={open ? listboxId : undefined}
-          role="combobox"
-          aria-expanded={open}
-          onKeyDown={(e) => {
-            if (!open && hasSelection && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-              openForSearch();
-              setQ(e.key);
-              onSearchQueryChange?.(e.key);
-              e.preventDefault();
-              return;
-            }
-            if (e.key === "Escape") {
-              e.stopPropagation();
-              closeWithoutPick();
-            }
-          }}
-        />
-        <ChevronDown
-          className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 shrink-0 opacity-50"
-          aria-hidden
-        />
-      </div>
-      {listbox}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
