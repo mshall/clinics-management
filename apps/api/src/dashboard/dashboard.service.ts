@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common";
-import { EncounterStatus, ExpenseStatus, Prisma, RevenueStatus } from "@prisma/client";
+import { ClinicRecordStatus, EncounterStatus, ExpenseStatus, Prisma, RevenueStatus, UserRole } from "@prisma/client";
 import { formatLocalYmd, resolveReportingRange } from "../common/reporting-range";
 import { PrismaService } from "../prisma/prisma.service";
+import { canViewDashboardFinancialKpis, canViewDashboardHrKpis } from "./dashboard-kpi-policy";
 
 export interface GroupOverviewKpis {
   patients: number;
@@ -37,7 +38,12 @@ function mapCurrencyTotals(
 export class DashboardService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async groupOverview(tenantId: string, fromStr?: string, toStr?: string): Promise<GroupOverviewKpis> {
+  async groupOverview(
+    tenantId: string,
+    fromStr?: string,
+    toStr?: string,
+    viewerRole?: UserRole,
+  ): Promise<GroupOverviewKpis> {
     const { start, end } = resolveReportingRange(fromStr, toStr);
 
     const revenueWhere: Prisma.RevenueEntryWhereInput = {
@@ -86,7 +92,9 @@ export class DashboardService {
         where: expenseWhere,
         _sum: { amount: true },
       }),
-      this.prisma.clinic.count({ where: { tenantId, parentClinicId: { not: null } } }),
+      this.prisma.clinic.count({
+        where: { tenantId, recordStatus: ClinicRecordStatus.ACTIVE },
+      }),
       this.prisma.user.count({ where: { tenantId } }),
       this.safeEmployeeCount(tenantId),
     ]);
@@ -96,19 +104,22 @@ export class DashboardService {
     const revenueMonth = revenueByCurrency.reduce((sum, row) => sum + row.amount, 0);
     const expensesMonth = expensesByCurrency.reduce((sum, row) => sum + row.amount, 0);
 
+    const showFinancial = viewerRole == null || canViewDashboardFinancialKpis(viewerRole);
+    const showHr = viewerRole == null || canViewDashboardHrKpis(viewerRole);
+
     return {
       patients,
       encounters30d: encountersInPeriod,
       encountersPeriodTotal: encountersAllInRange,
       appointmentsPeriodTotal: appointmentsInRange,
-      revenueMonth,
-      expensesMonth,
-      netProfitMonth: revenueMonth - expensesMonth,
-      revenueByCurrency,
-      expensesByCurrency,
+      revenueMonth: showFinancial ? revenueMonth : 0,
+      expensesMonth: showFinancial ? expensesMonth : 0,
+      netProfitMonth: showFinancial ? revenueMonth - expensesMonth : 0,
+      revenueByCurrency: showFinancial ? revenueByCurrency : [],
+      expensesByCurrency: showFinancial ? expensesByCurrency : [],
       branches: branchCount,
-      headcount,
-      employeeCount,
+      headcount: showHr ? headcount : 0,
+      employeeCount: showHr ? employeeCount : 0,
       periodFrom: formatLocalYmd(start),
       periodTo: formatLocalYmd(end),
     };

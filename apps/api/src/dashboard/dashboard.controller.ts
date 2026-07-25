@@ -22,6 +22,6 @@ export class DashboardController {
     @Query("from") from?: string,
     @Query("to") to?: string
   ) {
-    return this.dashboard.groupOverview(requireTenantId(user), from, to);
+    return this.dashboard.groupOverview(requireTenantId(user), from, to, user.role);
   }
 }

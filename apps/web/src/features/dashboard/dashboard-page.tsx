@@ -4,6 +4,7 @@ import { defaultHomeForRole } from "@/lib/nav-policy";
 import { useAuthStore } from "@/stores/auth-store";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDashboardKpisQuery } from "@/lib/api-hooks";
+import { canViewDashboardFinancialKpis, canViewDashboardHrKpis } from "@/lib/dashboard-kpi-policy";
 import { formatMultiCurrencyAmounts } from "@/lib/money-display";
 import { localeForLanguage } from "@/lib/locale-display";
 
@@ -15,6 +16,8 @@ export function DashboardPage() {
   const home = defaultHomeForRole(role, navTabKeys, roleNavTabKeys);
   const { data, isPending, isError, error } = useDashboardKpisQuery();
   const locale = localeForLanguage(i18n.language);
+  const showFinancial = canViewDashboardFinancialKpis(role);
+  const showHr = canViewDashboardHrKpis(role);
 
   const revenueDisplay = formatMultiCurrencyAmounts(data?.revenueByCurrency ?? [], locale);
   const expensesDisplay = formatMultiCurrencyAmounts(data?.expensesByCurrency ?? [], locale);
@@ -69,10 +72,15 @@ export function DashboardPage() {
           lng={i18n.language}
         />
         <KpiCard label={t("dashboard.kpi.branches")} value={data?.branches} loading={isPending} lng={i18n.language} />
-        <KpiCard label={t("dashboard.kpi.headcount")} value={data?.headcount} loading={isPending} lng={i18n.language} />
-        <KpiCard label={t("dashboard.kpi.employees")} value={data?.employeeCount} loading={isPending} lng={i18n.language} />
+        {showHr ? (
+          <>
+            <KpiCard label={t("dashboard.kpi.headcount")} value={data?.headcount} loading={isPending} lng={i18n.language} />
+            <KpiCard label={t("dashboard.kpi.employees")} value={data?.employeeCount} loading={isPending} lng={i18n.language} />
+          </>
+        ) : null}
       </div>
 
+      {showFinancial ? (
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <MoneyKpiCard
           label={t("dashboard.kpi.revenuePeriod", "Revenue (period)")}
@@ -90,6 +98,7 @@ export function DashboardPage() {
           loading={isPending}
         />
       </div>
+      ) : null}
     </div>
   );
 }
