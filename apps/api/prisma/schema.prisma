@@ -153,6 +153,7 @@ model Tenant {
   invoices               Invoice[]
   userNavTabGrants       UserNavTabGrant[]
   tenantRoleNavTabGrants TenantRoleNavTabGrant[]
+  userClinicEmployeePrivilegeGrants UserClinicEmployeePrivilegeGrant[]
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
 }
@@ -178,6 +179,8 @@ model User {
   navTabGrant       UserNavTabGrant? @relation("UserNavTabGrantUser")
   navTabGrantsUpdated UserNavTabGrant[] @relation("UserNavTabGrantUpdatedBy")
   tenantRoleNavTabGrantsUpdated TenantRoleNavTabGrant[] @relation("TenantRoleNavTabGrantUpdatedBy")
+  employeePrivilegeGrants UserClinicEmployeePrivilegeGrant[] @relation("EmployeePrivilegeGrantUser")
+  employeePrivilegeGrantsUpdated UserClinicEmployeePrivilegeGrant[] @relation("EmployeePrivilegeGrantUpdatedBy")
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   deactivatedAt DateTime?
@@ -217,6 +220,26 @@ model TenantRoleNavTabGrant {
 
   @@unique([tenantId, role])
   @@index([tenantId])
+}
+
+model UserClinicEmployeePrivilegeGrant {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  tenant             Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId             String
+  user               User     @relation("EmployeePrivilegeGrantUser", fields: [userId], references: [id], onDelete: Cascade)
+  clinicId           String
+  clinic             Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  templateEmployeeId String
+  templateEmployee   Employee @relation("PrivilegeGrantTemplateEmployee", fields: [templateEmployeeId], references: [id], onDelete: Cascade)
+  updatedByUserId    String?
+  updatedBy          User?    @relation("EmployeePrivilegeGrantUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([userId, clinicId])
+  @@index([tenantId, userId])
+  @@index([tenantId, clinicId])
 }
 
 model Clinic {
@@ -259,6 +282,7 @@ model Clinic {
   invoices         Invoice[]
   auditLogs        AuditLog[]
   clinicAdminScopes ClinicAdminScope[]
+  employeePrivilegeGrants UserClinicEmployeePrivilegeGrant[]
   recordStatus      ClinicRecordStatus      @default(ACTIVE)
   disabledAt        DateTime?
   operatingPeriods  ClinicOperatingPeriod[]
@@ -533,6 +557,7 @@ model Employee {
   leaveRequests     LeaveRequest[]
   employmentPeriods EmployeeEmploymentPeriod[]
   payrollExpenses   Expense[]
+  privilegeGrantTemplates UserClinicEmployeePrivilegeGrant[] @relation("PrivilegeGrantTemplateEmployee")
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
   deletedAt         DateTime?

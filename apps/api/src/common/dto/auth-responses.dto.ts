@@ -1,6 +1,20 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
 
+export class EmployeePrivilegeGrantSummaryDto {
+  @ApiProperty()
+  clinicId!: string;
+
+  @ApiProperty()
+  canManageEmployees!: boolean;
+
+  @ApiProperty()
+  canArchiveEmployees!: boolean;
+
+  @ApiProperty()
+  hrProvisionLogin!: boolean;
+}
+
 export class AuthUserDto {
   @ApiProperty()
   id!: string;
@@ -38,6 +52,12 @@ export class AuthUserDto {
 
   @ApiPropertyOptional({ description: "Whether the user uploaded a profile picture" })
   hasAvatar?: boolean;
+
+  @ApiPropertyOptional({
+    type: [EmployeePrivilegeGrantSummaryDto],
+    description: "Clinic-scoped privileges delegated from template employees (mirrors their login role capabilities)",
+  })
+  employeePrivilegeGrants?: EmployeePrivilegeGrantSummaryDto[];
 }
 
 export class LoginResponseDto {

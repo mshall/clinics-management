@@ -34,37 +34,40 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const role = useAuthStore((s) => s.user?.role);
   const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
   const roleNavTabKeys = useAuthStore((s) => s.user?.roleNavTabKeys);
+  const employeePrivilegeGrants = useAuthStore((s) => s.user?.employeePrivilegeGrants);
+  const showTab = (key: Parameters<typeof showNavItem>[1]) =>
+    showNavItem(role, key, navTabKeys, roleNavTabKeys, employeePrivilegeGrants);
   const isPhysician = role === "physician";
-  const showRevenue = canViewRevenue(role) && showNavItem(role, "revenue", navTabKeys, roleNavTabKeys);
+  const showRevenue = canViewRevenue(role) && showTab("revenue");
   const showPlatformNav =
-    showNavItem(role, "platform", navTabKeys, roleNavTabKeys) ||
-    showNavItem(role, "platform_organizations", navTabKeys, roleNavTabKeys) ||
-    showNavItem(role, "platform_users", navTabKeys, roleNavTabKeys) ||
-    showNavItem(role, "platform_clinics", navTabKeys, roleNavTabKeys);
+    showTab("platform") ||
+    showTab("platform_organizations") ||
+    showTab("platform_users") ||
+    showTab("platform_clinics");
 
   return (
     <nav className="flex flex-col gap-0.5 p-3">
       {showPlatformNav ? (
         <>
-          {showNavItem(role, "platform", navTabKeys, roleNavTabKeys) ? (
+          {showTab("platform") ? (
             <NavLink to="/platform" end className={navClass} onClick={() => onNavigate?.()}>
               <Globe2 className="size-4 shrink-0" />
               {t("nav.platformOverview")}
             </NavLink>
           ) : null}
-          {showNavItem(role, "platform_organizations", navTabKeys, roleNavTabKeys) ? (
+          {showTab("platform_organizations") ? (
             <NavLink to="/platform/organizations" className={navClass} onClick={() => onNavigate?.()}>
               <Building2 className="size-4 shrink-0" />
               {t("nav.platformOrganizations")}
             </NavLink>
           ) : null}
-          {showNavItem(role, "platform_users", navTabKeys, roleNavTabKeys) ? (
+          {showTab("platform_users") ? (
             <NavLink to="/platform/users" className={navClass} onClick={() => onNavigate?.()}>
               <Users className="size-4 shrink-0" />
               {t("nav.platformUsers")}
             </NavLink>
           ) : null}
-          {showNavItem(role, "platform_clinics", navTabKeys, roleNavTabKeys) ? (
+          {showTab("platform_clinics") ? (
             <NavLink to="/platform/clinics" className={navClass} onClick={() => onNavigate?.()}>
               <Hospital className="size-4 shrink-0" />
               {t("nav.platformClinics")}
@@ -72,43 +75,43 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
           ) : null}
         </>
       ) : null}
-      {showNavItem(role, "dashboard", navTabKeys, roleNavTabKeys) ? (
+      {showTab("dashboard") ? (
         <NavLink to="/" end className={navClass} onClick={() => onNavigate?.()}>
           <LayoutDashboard className="size-4 shrink-0" />
           {t("nav.dashboard")}
         </NavLink>
       ) : null}
-      {showNavItem(role, "patients", navTabKeys, roleNavTabKeys) ? (
+      {showTab("patients") ? (
         <NavLink to="/patients" className={navClass} onClick={() => onNavigate?.()}>
           <Users className="size-4 shrink-0" />
           {t("nav.patients")}
         </NavLink>
       ) : null}
-      {showNavItem(role, "encounters", navTabKeys, roleNavTabKeys) ? (
+      {showTab("encounters") ? (
         <NavLink to="/encounters" className={navClass} onClick={() => onNavigate?.()}>
           <Stethoscope className="size-4 shrink-0" />
           {t("nav.encounters")}
         </NavLink>
       ) : null}
-      {showNavItem(role, "appointments", navTabKeys, roleNavTabKeys) ? (
+      {showTab("appointments") ? (
         <NavLink to="/appointments" className={navClass} onClick={() => onNavigate?.()}>
           <CalendarDays className="size-4 shrink-0" />
           {isPhysician ? t("appointments.myNav", "My appointments") : t("nav.appointments")}
         </NavLink>
       ) : null}
-      {showNavItem(role, "operations", navTabKeys, roleNavTabKeys) ? (
+      {showTab("operations") ? (
         <NavLink to="/operations" className={navClass} onClick={() => onNavigate?.()}>
           <Scissors className="size-4 shrink-0" />
           {t("nav.operations")}
         </NavLink>
       ) : null}
-      {showNavItem(role, "clinics", navTabKeys, roleNavTabKeys) ? (
+      {showTab("clinics") ? (
         <NavLink to="/clinics" className={navClass} onClick={() => onNavigate?.()}>
           <Building2 className="size-4 shrink-0" />
           {t("nav.clinics")}
         </NavLink>
       ) : null}
-      {showNavItem(role, "expenses", navTabKeys, roleNavTabKeys) ? (
+      {showTab("expenses") ? (
         <NavLink to="/expenses" className={navClass} onClick={() => onNavigate?.()}>
           <Wallet className="size-4 shrink-0" />
           {t("nav.expenses")}
@@ -120,7 +123,7 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
           {t("nav.revenue")}
         </NavLink>
       ) : null}
-      {showNavItem(role, "hr", navTabKeys, roleNavTabKeys) ? (
+      {showTab("hr") ? (
         <NavLink
           to="/hr"
           className={({ isActive }) => navClass({ isActive: isActive || pathname === "/hr" || pathname.startsWith("/hr/") })}
@@ -130,25 +133,25 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
           {t("nav.hr")}
         </NavLink>
       ) : null}
-      {showNavItem(role, "doctor_revenue", navTabKeys, roleNavTabKeys) ? (
+      {showTab("doctor_revenue") ? (
         <NavLink to="/doctor-revenue" className={navClass} onClick={() => onNavigate?.()}>
           <CircleDollarSign className="size-4 shrink-0" />
           {t("nav.doctorRevenue")}
         </NavLink>
       ) : null}
-      {showNavItem(role, "reports", navTabKeys, roleNavTabKeys) ? (
+      {showTab("reports") ? (
         <NavLink to="/reports" className={navClass} onClick={() => onNavigate?.()}>
           <Activity className="size-4 shrink-0" />
           {t("nav.reports")}
         </NavLink>
       ) : null}
-      {showNavItem(role, "profile", navTabKeys, roleNavTabKeys) ? (
+      {showTab("profile") ? (
         <NavLink to="/profile" className={navClass} onClick={() => onNavigate?.()}>
           <User className="size-4 shrink-0" />
           {t("nav.profile")}
         </NavLink>
       ) : null}
-      {showNavItem(role, "admin", navTabKeys, roleNavTabKeys) ? (
+      {showTab("admin") ? (
         <NavLink to="/admin" className={navClass} onClick={() => onNavigate?.()}>
           <Settings className="size-4 shrink-0" />
           {t("nav.admin")}

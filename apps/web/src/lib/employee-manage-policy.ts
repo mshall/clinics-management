@@ -1,5 +1,12 @@
 import { mapApiRole, type DemoRole } from "@/lib/roles";
 
+export type EmployeePrivilegeGrantSummary = {
+  clinicId: string;
+  canManageEmployees: boolean;
+  canArchiveEmployees: boolean;
+  hrProvisionLogin: boolean;
+};
+
 /** Roles that may create, update, and deactivate/reactivate employees in their organization. */
 const EMPLOYEE_MANAGE_ROLES: ReadonlySet<DemoRole> = new Set([
   "group_admin",
@@ -16,14 +23,34 @@ const EMPLOYEE_ARCHIVE_ROLES: ReadonlySet<DemoRole> = new Set([
   "hr_officer",
 ]);
 
-export function canManageEmployees(role: string | DemoRole | undefined | null): boolean {
+function hasDelegatedManage(grants?: EmployeePrivilegeGrantSummary[] | null): boolean {
+  return grants?.some((g) => g.canManageEmployees) ?? false;
+}
+
+function hasDelegatedArchive(grants?: EmployeePrivilegeGrantSummary[] | null): boolean {
+  return grants?.some((g) => g.canArchiveEmployees) ?? false;
+}
+
+function hasDelegatedHrProvisioner(grants?: EmployeePrivilegeGrantSummary[] | null): boolean {
+  return grants?.some((g) => g.hrProvisionLogin) ?? false;
+}
+
+export function canManageEmployees(
+  role: string | DemoRole | undefined | null,
+  grants?: EmployeePrivilegeGrantSummary[] | null,
+): boolean {
+  if (hasDelegatedManage(grants)) return true;
   if (!role) return false;
   const raw = String(role).trim();
   if (EMPLOYEE_MANAGE_ROLES.has(raw as DemoRole)) return true;
   return EMPLOYEE_MANAGE_ROLES.has(mapApiRole(raw));
 }
 
-export function canArchiveEmployees(role: string | DemoRole | undefined | null): boolean {
+export function canArchiveEmployees(
+  role: string | DemoRole | undefined | null,
+  grants?: EmployeePrivilegeGrantSummary[] | null,
+): boolean {
+  if (hasDelegatedArchive(grants)) return true;
   if (!role) return false;
   const raw = String(role).trim();
   if (EMPLOYEE_ARCHIVE_ROLES.has(raw as DemoRole)) return true;
@@ -31,13 +58,24 @@ export function canArchiveEmployees(role: string | DemoRole | undefined | null):
 }
 
 /** @deprecated Use canArchiveEmployees */
-export function canDeleteEmployees(role: string | DemoRole | undefined | null): boolean {
-  return canArchiveEmployees(role);
+export function canDeleteEmployees(
+  role: string | DemoRole | undefined | null,
+  grants?: EmployeePrivilegeGrantSummary[] | null,
+): boolean {
+  return canArchiveEmployees(role, grants);
 }
 
-export function isHrOfficerRole(role: string | DemoRole | undefined | null): boolean {
+export function isHrOfficerRole(
+  role: string | DemoRole | undefined | null,
+  grants?: EmployeePrivilegeGrantSummary[] | null,
+): boolean {
+  if (hasDelegatedHrProvisioner(grants)) return true;
   if (!role) return false;
   const raw = String(role).trim();
   if (raw === "hr_officer" || raw === "HR_OFFICER") return true;
   return mapApiRole(raw) === "hr_officer";
+}
+
+export function hasHrNavAccessFromGrants(grants?: EmployeePrivilegeGrantSummary[] | null): boolean {
+  return hasDelegatedManage(grants) || hasDelegatedHrProvisioner(grants);
 }

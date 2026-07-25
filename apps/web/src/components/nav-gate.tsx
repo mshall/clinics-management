@@ -7,8 +7,9 @@ export function NavGate({ tab, children }: { tab: NavItemKey; children: ReactNod
   const role = useAuthStore((s) => s.user?.role);
   const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
   const roleNavTabKeys = useAuthStore((s) => s.user?.roleNavTabKeys);
-  if (!showNavItem(role, tab, navTabKeys, roleNavTabKeys)) {
-    return <Navigate to={defaultHomeForRole(role, navTabKeys, roleNavTabKeys)} replace />;
+  const employeePrivilegeGrants = useAuthStore((s) => s.user?.employeePrivilegeGrants);
+  if (!showNavItem(role, tab, navTabKeys, roleNavTabKeys, employeePrivilegeGrants)) {
+    return <Navigate to={defaultHomeForRole(role, navTabKeys, roleNavTabKeys, employeePrivilegeGrants)} replace />;
   }
   return <>{children}</>;
 }

@@ -1,4 +1,5 @@
 import type { DemoRole } from "@/lib/roles";
+import { hasHrNavAccessFromGrants, type EmployeePrivilegeGrantSummary } from "@/lib/employee-manage-policy";
 
 export type NavItemKey =
   | "platform"
@@ -197,16 +198,23 @@ export function effectiveNavKeys(
   role: DemoRole | undefined,
   navTabKeys: string[] | null | undefined,
   roleNavTabKeys?: string[] | null,
+  employeePrivilegeGrants?: EmployeePrivilegeGrantSummary[] | null,
 ): Set<NavItemKey> {
   const base = roleNavKeysForRole(role, roleNavTabKeys);
-  if (!navTabKeys?.length) return base;
-  const org = organizationNavKeySet();
-  const out = new Set<NavItemKey>();
-  for (const k of navTabKeys) {
-    const key = k as NavItemKey;
-    if (org.has(key)) out.add(key);
+  const out = (() => {
+    if (!navTabKeys?.length) return new Set(base);
+    const org = organizationNavKeySet();
+    const keys = new Set<NavItemKey>();
+    for (const k of navTabKeys) {
+      const key = k as NavItemKey;
+      if (org.has(key)) keys.add(key);
+    }
+    keys.add("profile");
+    return keys;
+  })();
+  if (hasHrNavAccessFromGrants(employeePrivilegeGrants)) {
+    out.add("hr");
   }
-  out.add("profile");
   return out;
 }
 
@@ -215,8 +223,9 @@ export function showNavItem(
   key: NavItemKey,
   navTabKeys?: string[] | null,
   roleNavTabKeys?: string[] | null,
+  employeePrivilegeGrants?: EmployeePrivilegeGrantSummary[] | null,
 ): boolean {
-  return effectiveNavKeys(role, navTabKeys, roleNavTabKeys).has(key);
+  return effectiveNavKeys(role, navTabKeys, roleNavTabKeys, employeePrivilegeGrants).has(key);
 }
 
 /** Landing path after sign-in when the dashboard is not in the role menu. */
@@ -224,9 +233,10 @@ export function defaultHomeForRole(
   role: DemoRole | undefined,
   navTabKeys?: string[] | null,
   roleNavTabKeys?: string[] | null,
+  employeePrivilegeGrants?: EmployeePrivilegeGrantSummary[] | null,
 ): string {
   if (!role) return "/";
-  const keys = effectiveNavKeys(role, navTabKeys, roleNavTabKeys);
+  const keys = effectiveNavKeys(role, navTabKeys, roleNavTabKeys, employeePrivilegeGrants);
   for (const k of HOME_PRIORITY) {
     if (keys.has(k)) return NAV_ITEM_PATH[k];
   }

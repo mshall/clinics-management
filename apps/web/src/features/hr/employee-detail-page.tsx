@@ -36,8 +36,9 @@ export function EmployeeDetailPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
-  const canManage = canManageEmployees(authUser?.role);
-  const canArchive = canArchiveEmployees(authUser?.role);
+  const privilegeGrants = authUser?.employeePrivilegeGrants;
+  const canManage = canManageEmployees(authUser?.role, privilegeGrants);
+  const canArchive = canArchiveEmployees(authUser?.role, privilegeGrants);
   const { id } = useParams();
   const { data: emp, isPending, isError, error } = useEmployeeQuery(id);
   const { data: clinics = [] } = useClinicsQuery();

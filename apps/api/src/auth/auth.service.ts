@@ -6,6 +6,7 @@ import { randomUUID } from "crypto";
 import * as path from "path";
 import type { Readable } from "stream";
 import { isPlatformSuperAdmin } from "../common/platform-super-admin";
+import { loadEmployeePrivilegeGrantSummaries } from "../common/employee-privilege-grants";
 import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { TenantRoleNavTabsService } from "../user-nav-tabs/tenant-role-nav-tabs.service";
@@ -60,7 +61,7 @@ export class AuthService {
     return arr.length ? arr : null;
   }
 
-  private mapAuthUser(user: {
+  private async mapAuthUser(user: {
     id: string;
     tenantId: string | null;
     email: string;
@@ -68,6 +69,10 @@ export class AuthService {
     role: UserRole;
     avatarRelativePath?: string | null;
   }, navTabKeys: string[] | null, roleNavTabKeys: string[] | null) {
+    const employeePrivilegeGrants =
+      user.tenantId != null
+        ? await loadEmployeePrivilegeGrantSummaries(this.prisma, user.tenantId, user.id)
+        : [];
     return {
       id: user.id,
       tenantId: user.tenantId,
@@ -81,6 +86,7 @@ export class AuthService {
         role: user.role,
       }),
       hasAvatar: Boolean(user.avatarRelativePath),
+      employeePrivilegeGrants: employeePrivilegeGrants.length ? employeePrivilegeGrants : undefined,
     };
   }
 
@@ -127,7 +133,7 @@ export class AuthService {
 
     return {
       accessToken,
-      user: this.mapAuthUser(user, navTabKeys, roleNavTabKeys),
+      user: await this.mapAuthUser(user, navTabKeys, roleNavTabKeys),
     };
   }
 
@@ -164,7 +170,7 @@ export class AuthService {
       user.tenantId != null ? await this.navTabKeysForUser(user.tenantId, userId) : null;
     const roleNavTabKeys =
       user.tenantId != null ? await this.tenantRoleNav.roleNavTabKeysForTenantUser(user.tenantId, user.role) : null;
-    return this.mapAuthUser(user, navTabKeys, roleNavTabKeys);
+    return await this.mapAuthUser(user, navTabKeys, roleNavTabKeys);
   }
 
   async attachMyAvatar(

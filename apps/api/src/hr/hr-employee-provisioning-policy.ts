@@ -26,11 +26,11 @@ export function assertProvisionLoginPayload(
   loginEmail: string | undefined,
   loginPassword: string | undefined,
   loginRole: UserRole | undefined,
-  viewerRole: UserRole,
+  isHrProvisioner: boolean,
 ): void {
   const hasLink = Boolean(userId?.trim());
   const hasLogin = Boolean(loginEmail?.trim() && loginPassword?.trim() && loginRole);
-  if (viewerRole === UserRole.HR_OFFICER) {
+  if (isHrProvisioner) {
     if (!hasLogin) {
       throw new BadRequestException("loginEmail, loginPassword, and loginRole are required for HR employee creation");
     }

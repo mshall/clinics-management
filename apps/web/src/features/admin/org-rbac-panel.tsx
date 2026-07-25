@@ -6,21 +6,45 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useUsersQuery, useClinicsQuery } from "@/lib/api-hooks";
-import { ApiError, apiGet, apiPut } from "@/lib/http";
+import { ApiError, apiDelete, apiGet, apiPut } from "@/lib/http";
 import type { NavItemKey } from "@/lib/nav-policy";
 import {
   canCustomizeOrgRoleNavTabs,
   canExtendUserNavTabs,
+  canManageOrgUserNavTabs,
   navKeysForRole,
   organizationNavKeySet,
   organizationNavOrderedKeys,
   roleNavKeysForRole,
 } from "@/lib/nav-policy";
 import { mapApiRole } from "@/lib/roles";
-import { formatUserRole } from "@/lib/locale-display";
+import { formatClinicName, formatUserRole } from "@/lib/locale-display";
 import type { DemoRole } from "@/lib/roles";
 import { useAuthStore } from "@/stores/auth-store";
 import { canClinicAdminManageUserRbac } from "@/lib/clinic-admin-rbac-policy";
+
+type UserClinicPrivilegeGrantDto = {
+  id: string;
+  userId: string;
+  clinicId: string;
+  clinicNameEn: string;
+  templateEmployeeId: string;
+  templateEmployeeName: string;
+  templateUserRole: string;
+  canManageEmployees: boolean;
+  canArchiveEmployees: boolean;
+  hrProvisionLogin: boolean;
+};
+
+type PrivilegeTemplateEmployeeDto = {
+  id: string;
+  displayName: string;
+  jobTitle: string;
+  userRole: string;
+  canManageEmployees: boolean;
+  canArchiveEmployees: boolean;
+  hrProvisionLogin: boolean;
+};
 
 const NAV_I18N: Record<NavItemKey, string> = {
   platform: "nav.platformOverview",
@@ -104,14 +128,19 @@ function NavTabChecklist({
 }
 
 export function OrgRbacPanel() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const viewer = useAuthStore((s) => s.user);
+  const canManagePrivilegeGrants = canManageOrgUserNavTabs(viewer?.role);
   const canCustomizeRoles = canCustomizeOrgRoleNavTabs(viewer?.role);
   const canExtendUsers = canExtendUserNavTabs(viewer?.role);
   const isClinicAdminViewer = viewer?.role === "clinic_admin";
   const { data: viewerClinics = [] } = useClinicsQuery();
   const viewerClinicIds = useMemo(() => viewerClinics.map((c) => c.id), [viewerClinics]);
+  const assignableClinics = useMemo(() => {
+    if (!isClinicAdminViewer) return viewerClinics;
+    return viewerClinics.filter((c) => viewerClinicIds.includes(c.id));
+  }, [viewerClinics, isClinicAdminViewer, viewerClinicIds]);
 
   const [roleTarget, setRoleTarget] = useState<DemoRole | "">("");
   const [roleDraft, setRoleDraft] = useState<Set<NavItemKey>>(() => new Set());
@@ -295,6 +324,76 @@ export function OrgRbacPanel() {
     userDraft.size === userRoleBase.size &&
     [...userRoleBase].every((k) => userDraft.has(k));
 
+  const [privilegeClinicId, setPrivilegeClinicId] = useState("");
+  const [privilegeTemplateEmployeeId, setPrivilegeTemplateEmployeeId] = useState("");
+  const [privilegeErr, setPrivilegeErr] = useState<string | null>(null);
+
+  const privilegeGrantsQ = useQuery({
+    queryKey: ["user-clinic-privilege-grants", userTargetId],
+    queryFn: () =>
+      apiGet<UserClinicPrivilegeGrantDto[]>(
+        `/api/v1/admin/user-clinic-privilege-grants?userId=${encodeURIComponent(userTargetId)}`,
+      ),
+    enabled: canManagePrivilegeGrants && Boolean(userTargetId),
+  });
+
+  const templateEmployeesQ = useQuery({
+    queryKey: ["privilege-template-employees", privilegeClinicId],
+    queryFn: () =>
+      apiGet<PrivilegeTemplateEmployeeDto[]>(
+        `/api/v1/admin/user-clinic-privilege-grants/template-employees?clinicId=${encodeURIComponent(privilegeClinicId)}`,
+      ),
+    enabled: canManagePrivilegeGrants && Boolean(privilegeClinicId),
+  });
+
+  const savePrivilegeMut = useMutation({
+    mutationFn: () =>
+      apiPut<UserClinicPrivilegeGrantDto>(`/api/v1/admin/user-clinic-privilege-grants`, {
+        userId: userTargetId,
+        clinicId: privilegeClinicId,
+        templateEmployeeId: privilegeTemplateEmployeeId,
+      }),
+    onSuccess: async () => {
+      setPrivilegeErr(null);
+      await qc.invalidateQueries({ queryKey: ["user-clinic-privilege-grants", userTargetId] });
+      if (userTargetId === viewer?.id) await useAuthStore.getState().refreshSessionFromServer();
+    },
+    onError: (e: unknown) => {
+      setPrivilegeErr(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e));
+    },
+  });
+
+  const deletePrivilegeMut = useMutation({
+    mutationFn: (grantId: string) => apiDelete<{ ok: true }>(`/api/v1/admin/user-clinic-privilege-grants/${grantId}`),
+    onSuccess: async () => {
+      setPrivilegeErr(null);
+      await qc.invalidateQueries({ queryKey: ["user-clinic-privilege-grants", userTargetId] });
+      if (userTargetId === viewer?.id) await useAuthStore.getState().refreshSessionFromServer();
+    },
+    onError: (e: unknown) => {
+      setPrivilegeErr(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e));
+    },
+  });
+
+  const clinicPickItems: PickListItem[] = useMemo(
+    () =>
+      assignableClinics.map((c) => ({
+        value: c.id,
+        label: formatClinicName(c, i18n.language),
+      })),
+    [assignableClinics, i18n.language],
+  );
+
+  const templateEmployeeItems: PickListItem[] = useMemo(
+    () =>
+      (templateEmployeesQ.data ?? []).map((e) => ({
+        value: e.id,
+        label: e.displayName,
+        hint: `${e.jobTitle} · ${formatUserRole(mapApiRole(e.userRole), t)}`,
+      })),
+    [templateEmployeesQ.data, t],
+  );
+
   return (
     <Card>
       <CardHeader>
@@ -465,6 +564,117 @@ export function OrgRbacPanel() {
             </div>
           ) : null}
         </div>
+
+        {canManagePrivilegeGrants ? (
+          <div className="space-y-4 rounded-lg border border-border p-4">
+            <div>
+              <h3 className="text-sm font-medium">
+                {t("admin.rbacPrivilegeSection", "Functional privileges by clinic")}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {t(
+                  "admin.rbacPrivilegeHint",
+                  "Grant a user the same HR and employee-management capabilities as a selected employee at a specific clinic. Sidebar HR access is enabled automatically when those capabilities apply.",
+                )}
+              </p>
+            </div>
+            {!userTargetId ? (
+              <p className="text-sm text-muted-foreground">
+                {t("admin.rbacPrivilegePickUserFirst", "Select a user above to manage clinic privilege grants.")}
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {privilegeErr ? <p className="text-sm text-destructive">{privilegeErr}</p> : null}
+                {privilegeGrantsQ.isSuccess && (privilegeGrantsQ.data?.length ?? 0) > 0 ? (
+                  <ul className="space-y-2">
+                    {(privilegeGrantsQ.data ?? []).map((g) => (
+                      <li
+                        key={g.id}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm"
+                      >
+                        <div>
+                          <p className="font-medium">{g.clinicNameEn}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {t("admin.rbacPrivilegeLike", "Same as")} {g.templateEmployeeName} (
+                            {formatUserRole(mapApiRole(g.templateUserRole), t)})
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={deletePrivilegeMut.isPending}
+                          onClick={() => deletePrivilegeMut.mutate(g.id)}
+                        >
+                          {t("common.remove", "Remove")}
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : privilegeGrantsQ.isSuccess ? (
+                  <p className="text-sm text-muted-foreground">
+                    {t("admin.rbacPrivilegeNone", "No clinic privilege grants for this user.")}
+                  </p>
+                ) : null}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>{t("hr.clinic", "Clinic")}</Label>
+                    <SearchablePickList
+                      items={clinicPickItems}
+                      value={privilegeClinicId}
+                      selectedItem={clinicPickItems.find((c) => c.value === privilegeClinicId) ?? null}
+                      onValueChange={(id) => {
+                        setPrivilegeClinicId(id);
+                        setPrivilegeTemplateEmployeeId("");
+                        setPrivilegeErr(null);
+                      }}
+                      searchPlaceholder={t("appointments.filterClinic", "Type clinic name…")}
+                      placeholder={t("hr.pickClinic", "Select clinic…")}
+                      localFilter
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t("admin.rbacPrivilegeTemplate", "Mirror employee")}</Label>
+                    <SearchablePickList
+                      items={templateEmployeeItems}
+                      value={privilegeTemplateEmployeeId}
+                      selectedItem={
+                        templateEmployeeItems.find((e) => e.value === privilegeTemplateEmployeeId) ?? null
+                      }
+                      onValueChange={(id) => {
+                        setPrivilegeTemplateEmployeeId(id);
+                        setPrivilegeErr(null);
+                      }}
+                      searchPlaceholder={t("admin.rbacPrivilegeTemplateSearch", "Type employee name…")}
+                      placeholder={t("admin.rbacPrivilegeTemplatePick", "Select employee…")}
+                      emptyMessage={
+                        !privilegeClinicId
+                          ? t("admin.rbacPrivilegePickClinicFirst", "Choose a clinic first.")
+                          : templateEmployeesQ.isPending
+                            ? t("common.loading")
+                            : t("admin.rbacPrivilegeNoTemplates", "No linked employees in this clinic.")
+                      }
+                      disabled={!privilegeClinicId || templateEmployeesQ.isPending}
+                      localFilter
+                    />
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  disabled={
+                    !userTargetId ||
+                    !privilegeClinicId ||
+                    !privilegeTemplateEmployeeId ||
+                    savePrivilegeMut.isPending
+                  }
+                  onClick={() => savePrivilegeMut.mutate()}
+                >
+                  {t("admin.rbacPrivilegeSave", "Save clinic privileges")}
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

@@ -1,5 +1,6 @@
 import { ClinicRecordStatus, Prisma, UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
+import { loadResolvedEmployeePrivilegeGrants } from "./employee-privilege-grants";
 import type { PrismaService } from "../prisma/prisma.service";
 
 /**
@@ -40,7 +41,10 @@ export async function fetchEmployeeManageScopeIds(
 ): Promise<string[] | null> {
   if (CLINIC_SCOPE_ROLES.has(user.role)) return fetchClinicScopeIds(prisma, tenantId, user);
   if (user.role === UserRole.HR_OFFICER) return fetchHrOfficerClinicScopeIds(prisma, tenantId, user.userId);
-  return null;
+  if (user.role === UserRole.GROUP_ADMIN) return null;
+  const delegated = await loadResolvedEmployeePrivilegeGrants(prisma, tenantId, user.userId);
+  const clinicIds = delegated.filter((g) => g.canManageEmployees).map((g) => g.clinicId);
+  return clinicIds.length ? [...new Set(clinicIds)] : null;
 }
 
 /** HQ clinic plus its branches — used for group physician assignment from a clinic HR desk. */

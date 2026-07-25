@@ -87,9 +87,10 @@ export function HrPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
-  const canManage = canManageEmployees(authUser?.role);
-  const canArchive = canArchiveEmployees(authUser?.role);
-  const isHrOfficer = isHrOfficerRole(authUser?.role);
+  const privilegeGrants = authUser?.employeePrivilegeGrants;
+  const canManage = canManageEmployees(authUser?.role, privilegeGrants);
+  const canArchive = canArchiveEmployees(authUser?.role, privilegeGrants);
+  const isHrOfficer = isHrOfficerRole(authUser?.role, privilegeGrants);
   const hrManageContext = useHrManageContextQuery(isHrOfficer && canManage);
   const { data: clinics = [] } = useClinicsQuery();
   const [tab, setTab] = useState<Tab>(() => parseHrTab(searchParams.get("tab")));

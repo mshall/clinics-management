@@ -22,7 +22,13 @@ import {
   softDeleteLinkedEmployee,
   syncUserClinicAdminScopes,
 } from "../common/user-employee-cascade";
-import { CLINIC_SCOPE_ROLES, fetchClinicGroupNetworkIds, fetchEmployeeManageScopeIds } from "../common/clinic-scope";
+import { fetchClinicGroupNetworkIds, fetchEmployeeManageScopeIds } from "../common/clinic-scope";
+import {
+  viewerCanArchiveEmployees,
+  viewerCanManageEmployees,
+  viewerHasEmployeeManageAccessAtClinic,
+  viewerUsesHrProvisionerFlow,
+} from "../common/employee-privilege-grants";
 import { assertCanCreateGroupAdminRole } from "../common/group-admin-role-policy";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
@@ -52,20 +58,6 @@ const ALLOWED_ID_DOC_MIME = new Set(["application/pdf", "image/jpeg", "image/png
 
 type IdDocFile = { buffer: Buffer; originalname: string; mimetype: string; size: number };
 
-const EMPLOYEE_MANAGE_ROLES = new Set<UserRole>([
-  UserRole.GROUP_ADMIN,
-  UserRole.CLINIC_ADMIN,
-  UserRole.HR_OFFICER,
-  UserRole.BRANCH_MANAGER,
-]);
-
-const EMPLOYEE_DELETE_ROLES = new Set<UserRole>([
-  UserRole.GROUP_ADMIN,
-  UserRole.CLINIC_ADMIN,
-  UserRole.BRANCH_MANAGER,
-  UserRole.HR_OFFICER,
-]);
-
 @Injectable()
 export class HrService {
   constructor(
@@ -73,31 +65,21 @@ export class HrService {
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
   ) {}
 
-  private assertCanManageEmployees(viewer: JwtUser): void {
-    if (!EMPLOYEE_MANAGE_ROLES.has(viewer.role)) {
+  private async assertCanManageEmployees(tenantId: string, viewer: JwtUser): Promise<void> {
+    if (!(await viewerCanManageEmployees(this.prisma, tenantId, viewer))) {
       throw new ForbiddenException("You do not have permission to manage employees");
     }
   }
 
-  private assertCanDeleteEmployee(viewer: JwtUser): void {
-    if (!EMPLOYEE_DELETE_ROLES.has(viewer.role)) {
+  private async assertCanDeleteEmployee(tenantId: string, viewer: JwtUser): Promise<void> {
+    if (!(await viewerCanArchiveEmployees(this.prisma, tenantId, viewer))) {
       throw new ForbiddenException("Only administrators can delete employees");
     }
   }
 
   private async assertEmployeeClinicAccess(tenantId: string, viewer: JwtUser, clinicId: string): Promise<void> {
-    if (CLINIC_SCOPE_ROLES.has(viewer.role)) {
-      const scope = await this.prisma.clinicAdminScope.findFirst({
-        where: { tenantId, userId: viewer.userId, clinicId },
-      });
-      if (!scope) throw new ForbiddenException("Clinic is outside your assignment");
-      return;
-    }
-    if (viewer.role === UserRole.HR_OFFICER) {
-      const scope = await fetchEmployeeManageScopeIds(this.prisma, tenantId, viewer);
-      if (!scope?.includes(clinicId)) {
-        throw new ForbiddenException("Employee is outside your clinic");
-      }
+    if (!(await viewerHasEmployeeManageAccessAtClinic(this.prisma, tenantId, viewer, clinicId))) {
+      throw new ForbiddenException("Employee is outside your clinic");
     }
   }
 
@@ -403,7 +385,7 @@ export class HrService {
   }
 
   async listUnlinkedUsers(tenantId: string, viewer: JwtUser, search?: string): Promise<UnlinkedUserDto[]> {
-    this.assertCanManageEmployees(viewer);
+    await this.assertCanManageEmployees(tenantId, viewer);
     const q = search?.trim();
     const rows = await this.prisma.user.findMany({
       where: {
@@ -429,8 +411,9 @@ export class HrService {
   }
 
   async getManageContext(tenantId: string, viewer: JwtUser): Promise<HrManageContextDto> {
-    this.assertCanManageEmployees(viewer);
-    if (viewer.role !== UserRole.HR_OFFICER) {
+    await this.assertCanManageEmployees(tenantId, viewer);
+    const isHrProvisioner = await viewerUsesHrProvisionerFlow(this.prisma, tenantId, viewer);
+    if (!isHrProvisioner) {
       return {
         clinicId: null,
         clinicNameEn: null,
@@ -470,7 +453,8 @@ export class HrService {
     dto: CreateEmployeeDto,
     loginRole: UserRole | undefined,
   ): Promise<string[]> {
-    if (viewer.role === UserRole.HR_OFFICER) {
+    const isHrProvisioner = await viewerUsesHrProvisionerFlow(this.prisma, tenantId, viewer);
+    if (isHrProvisioner) {
       const scope = await fetchEmployeeManageScopeIds(this.prisma, tenantId, viewer);
       const hrClinicId = scope?.[0];
       if (!hrClinicId) throw new ForbiddenException("Your HR account is not linked to a clinic");
@@ -492,13 +476,14 @@ export class HrService {
     dto: CreateEmployeeDto,
     viewer: JwtUser,
   ): Promise<CreateEmployeeResultDto> {
-    this.assertCanManageEmployees(viewer);
+    await this.assertCanManageEmployees(tenantId, viewer);
+    const isHrProvisioner = await viewerUsesHrProvisionerFlow(this.prisma, tenantId, viewer);
     assertProvisionLoginPayload(
       dto.userId,
       dto.loginEmail,
       dto.loginPassword,
       dto.loginRole,
-      viewer.role,
+      isHrProvisioner,
     );
 
     const userId = dto.userId?.trim();
@@ -527,7 +512,7 @@ export class HrService {
       const loginEmail = dto.loginEmail!.toLowerCase().trim();
       const loginPassword = dto.loginPassword!.trim();
       const loginRole = dto.loginRole!;
-      if (viewer.role === UserRole.HR_OFFICER) assertHrCanAssignLoginRole(loginRole);
+      if (isHrProvisioner) assertHrCanAssignLoginRole(loginRole);
       else assertCanCreateGroupAdminRole(loginRole);
 
       const clash = await this.prisma.user.findFirst({ where: { tenantId, email: loginEmail } });
@@ -634,7 +619,7 @@ export class HrService {
   }
 
   async attachEmployeeIdDocument(tenantId: string, employeeId: string, viewer: JwtUser, file?: IdDocFile): Promise<EmployeeDto> {
-    this.assertCanManageEmployees(viewer);
+    await this.assertCanManageEmployees(tenantId, viewer);
     const emp = await this.prisma.employee.findFirst({ where: { id: employeeId, tenantId } });
     if (!emp) throw new NotFoundException("Employee not found");
     await this.assertEmployeeClinicAccess(tenantId, viewer, emp.clinicId);
@@ -659,7 +644,7 @@ export class HrService {
   }
 
   async updateEmployee(tenantId: string, id: string, dto: UpdateEmployeeDto, viewer: JwtUser): Promise<EmployeeDto> {
-    this.assertCanManageEmployees(viewer);
+    await this.assertCanManageEmployees(tenantId, viewer);
     const existing = await this.prisma.employee.findFirst({
       where: { id, tenantId },
       include: { user: { select: { id: true, role: true } } },
@@ -751,7 +736,7 @@ export class HrService {
     dto: DeactivateEmployeeDto,
     viewer: JwtUser,
   ): Promise<EmployeeDto> {
-    this.assertCanManageEmployees(viewer);
+    await this.assertCanManageEmployees(tenantId, viewer);
     const emp = await this.prisma.employee.findFirst({
       where: { id, tenantId },
       include: { employmentPeriods: { orderBy: { startDate: "desc" } } },
@@ -814,7 +799,7 @@ export class HrService {
     dto: ReactivateEmployeeDto,
     viewer: JwtUser,
   ): Promise<EmployeeDto> {
-    this.assertCanManageEmployees(viewer);
+    await this.assertCanManageEmployees(tenantId, viewer);
     const emp = await this.prisma.employee.findFirst({ where: { id, tenantId } });
     if (!emp) throw new NotFoundException("Employee not found");
     await this.assertEmployeeClinicAccess(tenantId, viewer, emp.clinicId);
@@ -853,7 +838,7 @@ export class HrService {
   }
 
   async deleteEmployee(tenantId: string, id: string, viewer: JwtUser): Promise<{ ok: true; id: string; archived: true }> {
-    this.assertCanDeleteEmployee(viewer);
+    await this.assertCanDeleteEmployee(tenantId, viewer);
     const emp = await this.prisma.employee.findFirst({ where: { id, tenantId } });
     if (!emp) throw new NotFoundException("Employee not found");
     await this.assertEmployeeClinicAccess(tenantId, viewer, emp.clinicId);
@@ -870,7 +855,7 @@ export class HrService {
     dto: ReactivateEmployeeDto,
     viewer: JwtUser,
   ): Promise<EmployeeDto> {
-    this.assertCanManageEmployees(viewer);
+    await this.assertCanManageEmployees(tenantId, viewer);
     const emp = await this.prisma.employee.findFirst({ where: { id, tenantId } });
     if (!emp) throw new NotFoundException("Employee not found");
     await this.assertEmployeeClinicAccess(tenantId, viewer, emp.clinicId);
