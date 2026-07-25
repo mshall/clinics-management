@@ -254,6 +254,20 @@ export interface HrSummaryDto {
   pendingLeaveRequests: number;
 }
 
+export interface HrManageContextDto {
+  clinicId: string | null;
+  clinicNameEn: string | null;
+  groupClinicIds: string[];
+  provisionLogin: boolean;
+  assignableRoles: string[] | null;
+}
+
+export interface CreateEmployeeResultDto extends EmployeeDto {
+  createdLoginEmail?: string;
+  createdLoginPassword?: string;
+  createdLoginRole?: string;
+}
+
 export interface ProfitLossDto {
   period: { from: string; to: string; start: string; end: string };
   revenue: number;

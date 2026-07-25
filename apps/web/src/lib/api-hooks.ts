@@ -17,6 +17,7 @@ import type {
   OperationDto,
   OperationDetailDto,
   HrSummaryDto,
+  HrManageContextDto,
   LeaveRequestDto,
   RevenueEntryDto,
   ReportsMonthlySeriesDto,
@@ -521,6 +522,15 @@ export function useHrSummaryQuery() {
   return useQuery({
     queryKey: ["hr", "summary"],
     queryFn: () => apiGet<HrSummaryDto>("/api/v1/hr/summary"),
+  });
+}
+
+export function useHrManageContextQuery(enabled = true) {
+  const hasAuth = useHasAuthToken();
+  return useQuery({
+    queryKey: ["hr", "manage-context"],
+    queryFn: () => apiGet<HrManageContextDto>("/api/v1/hr/manage-context"),
+    enabled: hasAuth && enabled,
   });
 }
 

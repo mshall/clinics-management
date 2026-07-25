@@ -17,6 +17,64 @@ export async function fetchClinicScopeIds(prisma: PrismaService, tenantId: strin
   return scopes.map((s) => s.clinicId);
 }
 
+/** Clinics an HR manager may act on: their linked employee primary clinic only. */
+export async function fetchHrOfficerClinicScopeIds(
+  prisma: PrismaService,
+  tenantId: string,
+  userId: string,
+): Promise<string[]> {
+  const link = await prisma.employee.findFirst({
+    where: { tenantId, userId, deletedAt: null },
+    select: { clinicId: true },
+  });
+  return link ? [link.clinicId] : [];
+}
+
+/**
+ * Employee HR actions scope: clinic admins/managers via scope table; HR via linked clinic; null = whole tenant.
+ */
+export async function fetchEmployeeManageScopeIds(
+  prisma: PrismaService,
+  tenantId: string,
+  user: JwtUser,
+): Promise<string[] | null> {
+  if (CLINIC_SCOPE_ROLES.has(user.role)) return fetchClinicScopeIds(prisma, tenantId, user);
+  if (user.role === UserRole.HR_OFFICER) return fetchHrOfficerClinicScopeIds(prisma, tenantId, user.userId);
+  return null;
+}
+
+/** HQ clinic plus its branches — used for group physician assignment from a clinic HR desk. */
+export async function fetchClinicGroupNetworkIds(
+  prisma: PrismaService,
+  tenantId: string,
+  clinicId: string,
+): Promise<string[]> {
+  let walkId: string | null = clinicId;
+  let hqId: string | null = null;
+  for (let guard = 0; guard < 32 && walkId; guard += 1) {
+    const cur: { id: string; parentClinicId: string | null } | null = await prisma.clinic.findFirst({
+      where: { id: walkId, tenantId },
+      select: { id: true, parentClinicId: true },
+    });
+    if (!cur) break;
+    if (!cur.parentClinicId) {
+      hqId = cur.id;
+      break;
+    }
+    walkId = cur.parentClinicId;
+  }
+  if (!hqId) return [clinicId];
+  const clinics = await prisma.clinic.findMany({
+    where: {
+      tenantId,
+      recordStatus: ClinicRecordStatus.ACTIVE,
+      OR: [{ id: hqId }, { parentClinicId: hqId }],
+    },
+    select: { id: true },
+  });
+  return [...new Set(clinics.map((c) => c.id))];
+}
+
 /**
  * All clinics under the same parent HQ as any clinic where this user has an {@link Employee} record.
  * If the user has no HR link, they may see every clinic in the tenant (same organization).

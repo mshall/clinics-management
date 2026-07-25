@@ -7,6 +7,7 @@ import {
 } from "@nestjs/common";
 import { AttendanceStatus, EmployeeRecordStatus, EmployeeSeparationReason, LeaveStatus, Prisma, UserRole } from "@prisma/client";
 import { randomUUID } from "crypto";
+import * as bcrypt from "bcryptjs";
 import * as path from "path";
 import type { JwtUser } from "../auth/jwt-user";
 import { ensureClinicStaffEmployeeRecords, jobTitleForRole } from "../common/clinic-staff-employee";
@@ -21,7 +22,8 @@ import {
   softDeleteLinkedEmployee,
   syncUserClinicAdminScopes,
 } from "../common/user-employee-cascade";
-import { CLINIC_SCOPE_ROLES, fetchClinicScopeIds } from "../common/clinic-scope";
+import { CLINIC_SCOPE_ROLES, fetchClinicGroupNetworkIds, fetchEmployeeManageScopeIds } from "../common/clinic-scope";
+import { assertCanCreateGroupAdminRole } from "../common/group-admin-role-policy";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
@@ -37,6 +39,13 @@ import type { EmployeeEmploymentPeriodDto } from "./dto/employee-employment-peri
 import type { ReactivateEmployeeDto } from "./dto/reactivate-employee.dto";
 import type { EmployeeDto } from "./dto/employee.dto";
 import type { LeaveRequestDto } from "./dto/leave-request.dto";
+import type { CreateEmployeeResultDto } from "./dto/create-employee-result.dto";
+import type { HrManageContextDto } from "./dto/hr-manage-context.dto";
+import {
+  assertHrCanAssignLoginRole,
+  assertProvisionLoginPayload,
+  HR_ASSIGNABLE_USER_ROLES,
+} from "./hr-employee-provisioning-policy";
 
 const MAX_ID_DOC_BYTES = 15 * 1024 * 1024;
 const ALLOWED_ID_DOC_MIME = new Set(["application/pdf", "image/jpeg", "image/png", "image/gif", "image/webp"]);
@@ -54,6 +63,7 @@ const EMPLOYEE_DELETE_ROLES = new Set<UserRole>([
   UserRole.GROUP_ADMIN,
   UserRole.CLINIC_ADMIN,
   UserRole.BRANCH_MANAGER,
+  UserRole.HR_OFFICER,
 ]);
 
 @Injectable()
@@ -75,12 +85,20 @@ export class HrService {
     }
   }
 
-  private async assertClinicAdminCanUseClinic(tenantId: string, viewer: JwtUser, clinicId: string): Promise<void> {
-    if (!CLINIC_SCOPE_ROLES.has(viewer.role)) return;
-    const scope = await this.prisma.clinicAdminScope.findFirst({
-      where: { tenantId, userId: viewer.userId, clinicId },
-    });
-    if (!scope) throw new ForbiddenException("Clinic is outside your assignment");
+  private async assertEmployeeClinicAccess(tenantId: string, viewer: JwtUser, clinicId: string): Promise<void> {
+    if (CLINIC_SCOPE_ROLES.has(viewer.role)) {
+      const scope = await this.prisma.clinicAdminScope.findFirst({
+        where: { tenantId, userId: viewer.userId, clinicId },
+      });
+      if (!scope) throw new ForbiddenException("Clinic is outside your assignment");
+      return;
+    }
+    if (viewer.role === UserRole.HR_OFFICER) {
+      const scope = await fetchEmployeeManageScopeIds(this.prisma, tenantId, viewer);
+      if (!scope?.includes(clinicId)) {
+        throw new ForbiddenException("Employee is outside your clinic");
+      }
+    }
   }
 
   private async nextEmployeeNumber(tenantId: string): Promise<string> {
@@ -308,7 +326,7 @@ export class HrService {
   ) {
     await ensureClinicStaffEmployeeRecords(this.prisma, tenantId);
     await this.ensureEmployeeEmploymentPeriods(tenantId);
-    const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, viewer);
+    const scopeIds = await fetchEmployeeManageScopeIds(this.prisma, tenantId, viewer);
     if (scopeIds !== null && !scopeIds.length) {
       const { page, pageSize } = parsePageParams(pageStr, pageSizeStr);
       return paginate([], 0, page, pageSize);
@@ -380,7 +398,7 @@ export class HrService {
       include: this.employeeInclude,
     });
     if (!row) throw new NotFoundException("Employee not found");
-    await this.assertClinicAdminCanUseClinic(tenantId, viewer, row.clinicId);
+    await this.assertEmployeeClinicAccess(tenantId, viewer, row.clinicId);
     return this.mapEmployee(row);
   }
 
@@ -410,36 +428,127 @@ export class HrService {
     return rows;
   }
 
-  async createEmployee(tenantId: string, dto: CreateEmployeeDto, viewer: JwtUser): Promise<EmployeeDto> {
+  async getManageContext(tenantId: string, viewer: JwtUser): Promise<HrManageContextDto> {
     this.assertCanManageEmployees(viewer);
-
-    const userId = dto.userId?.trim();
-    if (!userId) throw new BadRequestException("userId is required — link an organization login account");
-
-    const linkedUser = await this.prisma.user.findFirst({
-      where: { id: userId, tenantId },
-      select: { id: true, email: true, displayName: true, role: true },
-    });
-    if (!linkedUser) {
-      throw new BadRequestException("Invalid userId — user not found in this organization");
+    if (viewer.role !== UserRole.HR_OFFICER) {
+      return {
+        clinicId: null,
+        clinicNameEn: null,
+        groupClinicIds: [],
+        provisionLogin: false,
+        assignableRoles: null,
+      };
     }
-    const alreadyLinked = await this.prisma.employee.findFirst({
-      where: { userId: linkedUser.id },
-      select: { id: true },
-    });
-    if (alreadyLinked) {
-      throw new BadRequestException("This login account is already linked to an employee");
+    const scope = await fetchEmployeeManageScopeIds(this.prisma, tenantId, viewer);
+    const clinicId = scope?.[0] ?? null;
+    if (!clinicId) {
+      return {
+        clinicId: null,
+        clinicNameEn: null,
+        groupClinicIds: [],
+        provisionLogin: true,
+        assignableRoles: [...HR_ASSIGNABLE_USER_ROLES],
+      };
     }
+    const clinic = await this.prisma.clinic.findFirst({
+      where: { id: clinicId, tenantId },
+      select: { nameEn: true },
+    });
+    const groupClinicIds = await fetchClinicGroupNetworkIds(this.prisma, tenantId, clinicId);
+    return {
+      clinicId,
+      clinicNameEn: clinic?.nameEn ?? null,
+      groupClinicIds,
+      provisionLogin: true,
+      assignableRoles: [...HR_ASSIGNABLE_USER_ROLES],
+    };
+  }
 
-    const clinicIds = [
+  private async resolveCreateEmployeeClinicIds(
+    tenantId: string,
+    viewer: JwtUser,
+    dto: CreateEmployeeDto,
+    loginRole: UserRole | undefined,
+  ): Promise<string[]> {
+    if (viewer.role === UserRole.HR_OFFICER) {
+      const scope = await fetchEmployeeManageScopeIds(this.prisma, tenantId, viewer);
+      const hrClinicId = scope?.[0];
+      if (!hrClinicId) throw new ForbiddenException("Your HR account is not linked to a clinic");
+      const role = loginRole ?? UserRole.NURSE;
+      if (role === UserRole.PHYSICIAN && dto.physicianAssignment === "GROUP") {
+        return fetchClinicGroupNetworkIds(this.prisma, tenantId, hrClinicId);
+      }
+      return [hrClinicId];
+    }
+    return [
       ...new Set(
         [dto.clinicId?.trim(), ...(dto.clinicIds ?? []).map((id) => id.trim())].filter(Boolean) as string[],
       ),
     ];
+  }
+
+  async createEmployee(
+    tenantId: string,
+    dto: CreateEmployeeDto,
+    viewer: JwtUser,
+  ): Promise<CreateEmployeeResultDto> {
+    this.assertCanManageEmployees(viewer);
+    assertProvisionLoginPayload(
+      dto.userId,
+      dto.loginEmail,
+      dto.loginPassword,
+      dto.loginRole,
+      viewer.role,
+    );
+
+    const userId = dto.userId?.trim();
+    let linkedUser: { id: string; email: string; displayName: string; role: UserRole };
+    let createdLoginEmail: string | undefined;
+    let createdLoginPassword: string | undefined;
+    let createdLoginRole: string | undefined;
+
+    if (userId) {
+      const existingUser = await this.prisma.user.findFirst({
+        where: { id: userId, tenantId },
+        select: { id: true, email: true, displayName: true, role: true },
+      });
+      if (!existingUser) {
+        throw new BadRequestException("Invalid userId — user not found in this organization");
+      }
+      const alreadyLinked = await this.prisma.employee.findFirst({
+        where: { userId: existingUser.id },
+        select: { id: true },
+      });
+      if (alreadyLinked) {
+        throw new BadRequestException("This login account is already linked to an employee");
+      }
+      linkedUser = existingUser;
+    } else {
+      const loginEmail = dto.loginEmail!.toLowerCase().trim();
+      const loginPassword = dto.loginPassword!.trim();
+      const loginRole = dto.loginRole!;
+      if (viewer.role === UserRole.HR_OFFICER) assertHrCanAssignLoginRole(loginRole);
+      else assertCanCreateGroupAdminRole(loginRole);
+
+      const clash = await this.prisma.user.findFirst({ where: { tenantId, email: loginEmail } });
+      if (clash) throw new BadRequestException("Email already in use for this organization");
+
+      createdLoginEmail = loginEmail;
+      createdLoginPassword = loginPassword;
+      createdLoginRole = loginRole;
+      linkedUser = {
+        id: "",
+        email: loginEmail,
+        displayName: `${dto.firstNameEn.trim()} ${dto.lastNameEn.trim()}`.trim(),
+        role: loginRole,
+      };
+    }
+
+    const clinicIds = await this.resolveCreateEmployeeClinicIds(tenantId, viewer, dto, linkedUser.role);
     if (!clinicIds.length) throw new BadRequestException("Clinic is required");
     const primaryClinicId = clinicIds[0]!;
     for (const clinicId of clinicIds) {
-      await this.assertClinicAdminCanUseClinic(tenantId, viewer, clinicId);
+      await this.assertEmployeeClinicAccess(tenantId, viewer, clinicId);
       const clinic = await this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId } });
       if (!clinic) throw new BadRequestException(`Invalid clinicId: ${clinicId}`);
     }
@@ -460,11 +569,25 @@ export class HrService {
     const jobTitle = dto.jobTitle?.trim() || jobTitleForRole(linkedUser.role);
     try {
       const row = await this.prisma.$transaction(async (tx) => {
+        let userRecord = linkedUser;
+        if (!userId) {
+          userRecord = await tx.user.create({
+            data: {
+              tenantId,
+              email: linkedUser.email,
+              displayName: linkedUser.displayName,
+              passwordHash: bcrypt.hashSync(createdLoginPassword!, 10),
+              role: linkedUser.role,
+            },
+            select: { id: true, email: true, displayName: true, role: true },
+          });
+        }
+
         const created = await tx.employee.create({
           data: {
             tenantId,
             clinicId: primaryClinicId,
-            userId: linkedUser.id,
+            userId: userRecord.id,
             employeeNumber,
             firstNameEn: dto.firstNameEn,
             lastNameEn: dto.lastNameEn,
@@ -480,7 +603,7 @@ export class HrService {
           },
         });
         if (clinicIds.length > 0) {
-          await syncUserClinicAdminScopes(tx, tenantId, linkedUser.id, clinicIds);
+          await syncUserClinicAdminScopes(tx, tenantId, userRecord.id, clinicIds);
         }
         await tx.employeeEmploymentPeriod.create({
           data: {
@@ -494,8 +617,18 @@ export class HrService {
         where: { id: row.id },
         include: this.employeeInclude,
       });
-      return this.mapEmployee(withClinic!);
-    } catch {
+      return {
+        ...this.mapEmployee(withClinic!),
+        ...(createdLoginEmail
+          ? {
+              createdLoginEmail,
+              createdLoginPassword,
+              createdLoginRole,
+            }
+          : {}),
+      };
+    } catch (err) {
+      if (err instanceof BadRequestException || err instanceof ForbiddenException) throw err;
       throw new BadRequestException("Duplicate employee number or invalid data");
     }
   }
@@ -504,7 +637,7 @@ export class HrService {
     this.assertCanManageEmployees(viewer);
     const emp = await this.prisma.employee.findFirst({ where: { id: employeeId, tenantId } });
     if (!emp) throw new NotFoundException("Employee not found");
-    await this.assertClinicAdminCanUseClinic(tenantId, viewer, emp.clinicId);
+    await this.assertEmployeeClinicAccess(tenantId, viewer, emp.clinicId);
     if (!file?.buffer?.length) throw new BadRequestException("File is required");
     if (file.size > MAX_ID_DOC_BYTES) throw new BadRequestException("File too large (max 15MB)");
     const mime = file.mimetype || "application/octet-stream";
@@ -532,7 +665,7 @@ export class HrService {
       include: { user: { select: { id: true, role: true } } },
     });
     if (!existing) throw new NotFoundException("Employee not found");
-    await this.assertClinicAdminCanUseClinic(tenantId, viewer, existing.clinicId);
+    await this.assertEmployeeClinicAccess(tenantId, viewer, existing.clinicId);
 
     const clinicIdsFromDto = dto.clinicIds?.map((cid) => cid.trim()).filter(Boolean);
     const clinicId = dto.clinicId?.trim();
@@ -545,12 +678,12 @@ export class HrService {
 
     if (resolvedClinicIds?.length) {
       for (const cid of resolvedClinicIds) {
-        await this.assertClinicAdminCanUseClinic(tenantId, viewer, cid);
+        await this.assertEmployeeClinicAccess(tenantId, viewer, cid);
         const clinic = await this.prisma.clinic.findFirst({ where: { id: cid, tenantId } });
         if (!clinic) throw new BadRequestException(`Invalid clinicId: ${cid}`);
       }
     } else if (clinicId && clinicId !== existing.clinicId) {
-      await this.assertClinicAdminCanUseClinic(tenantId, viewer, clinicId);
+      await this.assertEmployeeClinicAccess(tenantId, viewer, clinicId);
       const clinic = await this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId } });
       if (!clinic) throw new BadRequestException("Invalid clinicId");
     }
@@ -624,7 +757,7 @@ export class HrService {
       include: { employmentPeriods: { orderBy: { startDate: "desc" } } },
     });
     if (!emp) throw new NotFoundException("Employee not found");
-    await this.assertClinicAdminCanUseClinic(tenantId, viewer, emp.clinicId);
+    await this.assertEmployeeClinicAccess(tenantId, viewer, emp.clinicId);
     if (emp.recordStatus === EmployeeRecordStatus.INACTIVE) {
       throw new BadRequestException("Employee is already inactive");
     }
@@ -684,7 +817,7 @@ export class HrService {
     this.assertCanManageEmployees(viewer);
     const emp = await this.prisma.employee.findFirst({ where: { id, tenantId } });
     if (!emp) throw new NotFoundException("Employee not found");
-    await this.assertClinicAdminCanUseClinic(tenantId, viewer, emp.clinicId);
+    await this.assertEmployeeClinicAccess(tenantId, viewer, emp.clinicId);
     if (emp.recordStatus !== EmployeeRecordStatus.INACTIVE) {
       throw new BadRequestException("Employee is already active");
     }
@@ -723,7 +856,7 @@ export class HrService {
     this.assertCanDeleteEmployee(viewer);
     const emp = await this.prisma.employee.findFirst({ where: { id, tenantId } });
     if (!emp) throw new NotFoundException("Employee not found");
-    await this.assertClinicAdminCanUseClinic(tenantId, viewer, emp.clinicId);
+    await this.assertEmployeeClinicAccess(tenantId, viewer, emp.clinicId);
 
     await this.prisma.$transaction(async (tx) => {
       await softDeleteLinkedEmployee(tx, tenantId, id, viewer.userId);
@@ -740,7 +873,7 @@ export class HrService {
     this.assertCanManageEmployees(viewer);
     const emp = await this.prisma.employee.findFirst({ where: { id, tenantId } });
     if (!emp) throw new NotFoundException("Employee not found");
-    await this.assertClinicAdminCanUseClinic(tenantId, viewer, emp.clinicId);
+    await this.assertEmployeeClinicAccess(tenantId, viewer, emp.clinicId);
     const startDate = dto.startDate ? new Date(dto.startDate) : new Date();
     startDate.setHours(0, 0, 0, 0);
     await this.prisma.$transaction(async (tx) => {
@@ -762,7 +895,7 @@ export class HrService {
     if (!emp?.idDocRelativePath || !emp.idDocOriginalName || !emp.idDocMimeType) {
       throw new NotFoundException("No ID document attached");
     }
-    await this.assertClinicAdminCanUseClinic(tenantId, viewer, emp.clinicId);
+    await this.assertEmployeeClinicAccess(tenantId, viewer, emp.clinicId);
     await this.uploads.assertExists("employees", emp.idDocRelativePath);
     return { storageKey: emp.idDocRelativePath, mimeType: emp.idDocMimeType, originalFileName: emp.idDocOriginalName };
   }
@@ -781,7 +914,7 @@ export class HrService {
       include: { user: { select: { avatarRelativePath: true, avatarMimeType: true } } },
     });
     if (!emp) throw new NotFoundException("Employee not found");
-    await this.assertClinicAdminCanUseClinic(tenantId, viewer, emp.clinicId);
+    await this.assertEmployeeClinicAccess(tenantId, viewer, emp.clinicId);
     const avatarPath = emp.user?.avatarRelativePath;
     if (!avatarPath) throw new NotFoundException("No profile picture for this employee");
     await this.uploads.assertExists("users", avatarPath);

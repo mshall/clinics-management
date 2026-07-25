@@ -82,6 +82,16 @@ export function isOrgWideUserRole(role: string): boolean {
   return (ORG_WIDE_USER_ROLES as readonly string[]).includes(role);
 }
 
+/** Clinic-scoped roles HR may assign when provisioning a new employee login. */
+export const CLINIC_STAFF_ASSIGNABLE_ROLES = [
+  "CLINIC_ADMIN",
+  "BRANCH_MANAGER",
+  "PHYSICIAN",
+  "NURSE",
+  "RECEPTIONIST",
+  "CLINIC_ASSISTANT",
+] as const;
+
 export const ORG_USER_PASSWORD_MIN_LENGTH = 8;
 
 export type OrgUserCreateField =

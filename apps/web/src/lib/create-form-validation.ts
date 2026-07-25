@@ -91,11 +91,25 @@ export function collectEmployeeCreateIssues(
     phone: string;
     salary: string;
     requireLinkedUser?: boolean;
+    provisionLogin?: boolean;
+    loginEmail?: string;
+    loginPassword?: string;
+    loginRole?: string;
   },
   t: TFunction,
 ): string[] {
   const issues: string[] = [];
-  if (input.requireLinkedUser !== false && !input.userId.trim()) {
+  if (input.provisionLogin) {
+    if (!input.loginEmail?.trim()) {
+      issues.push(t("hr.errorLoginEmailRequired", "Login email is required."));
+    }
+    if (!input.loginPassword?.trim() || (input.loginPassword?.trim().length ?? 0) < 8) {
+      issues.push(t("hr.errorLoginPasswordRequired", "Temporary login password must be at least 8 characters."));
+    }
+    if (!input.loginRole?.trim()) {
+      issues.push(t("hr.errorLoginRoleRequired", "Select a role for the new login account."));
+    }
+  } else if (input.requireLinkedUser !== false && !input.userId.trim()) {
     issues.push(t("hr.errorLinkedUserRequired", "Link an organization login account before creating the employee."));
   }
   const showClinicAssignment = input.linkedUserRole && !isOrgWideUserRole(input.linkedUserRole);

@@ -6,6 +6,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
+import { PasswordInput } from "@/components/password-input";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
@@ -17,19 +18,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAttendanceQuery, useClinicsQuery, useEmployeesQuery, useHrSummaryQuery, useLeaveRequestsQuery, useUnlinkedUsersQuery } from "@/lib/api-hooks";
+import { useAttendanceQuery, useClinicsQuery, useEmployeesQuery, useHrManageContextQuery, useHrSummaryQuery, useLeaveRequestsQuery, useUnlinkedUsersQuery } from "@/lib/api-hooks";
+import type { CreateEmployeeResultDto } from "@/lib/api-types";
 import type { EmployeeDto } from "@/lib/api-types";
 import { EmployeeDeleteConfirmDialog, type EmployeeDeleteTarget } from "@/features/hr/employee-delete-confirm-dialog";
 import { EmployeeDeactivateConfirmDialog } from "@/features/hr/employee-deactivate-confirm-dialog";
 import { EmployeeReactivateDialog } from "@/features/hr/employee-reactivate-dialog";
-import { isClinicRequiredUserRole, isOrgWideUserRole } from "@/features/platform/platform-shared";
+import { isClinicRequiredUserRole, isOrgWideUserRole, CLINIC_STAFF_ASSIGNABLE_ROLES } from "@/features/platform/platform-shared";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { canDeleteEmployees, canManageEmployees } from "@/lib/employee-manage-policy";
+import { canArchiveEmployees, canManageEmployees, isHrOfficerRole } from "@/lib/employee-manage-policy";
 import { ApiError, apiDelete, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { columnFilterIncludes } from "@/lib/utils";
 import {
@@ -83,7 +85,9 @@ export function HrPage() {
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
   const canManage = canManageEmployees(authUser?.role);
-  const canDelete = canDeleteEmployees(authUser?.role);
+  const canArchive = canArchiveEmployees(authUser?.role);
+  const isHrOfficer = isHrOfficerRole(authUser?.role);
+  const hrManageContext = useHrManageContextQuery(isHrOfficer && canManage);
   const { data: clinics = [] } = useClinicsQuery();
   const [tab, setTab] = useState<Tab>(() => parseHrTab(searchParams.get("tab")));
 
@@ -195,6 +199,16 @@ export function HrPage() {
   const [employeeToReactivate, setEmployeeToReactivate] = useState<EmployeeDto | null>(null);
   const [empClinic, setEmpClinic] = useState("");
   const [empAssignedClinicIds, setEmpAssignedClinicIds] = useState<string[]>([]);
+  const [empLoginEmail, setEmpLoginEmail] = useState("");
+  const [empLoginPassword, setEmpLoginPassword] = useState("");
+  const [empLoginRole, setEmpLoginRole] = useState<(typeof CLINIC_STAFF_ASSIGNABLE_ROLES)[number]>("NURSE");
+  const [physicianAssignment, setPhysicianAssignment] = useState<"CLINIC" | "GROUP">("CLINIC");
+  const [createdLoginCredentials, setCreatedLoginCredentials] = useState<{
+    email: string;
+    password: string;
+    role: string;
+  } | null>(null);
+  const provisionLogin = Boolean(isHrOfficer && hrManageContext.data?.provisionLogin);
   const [empLinkedUserId, setEmpLinkedUserId] = useState("");
   const [empLinkedUserRole, setEmpLinkedUserRole] = useState("");
   const [pinnedEmpClinicItem, setPinnedEmpClinicItem] = useState<PickListItem | null>(null);
@@ -241,9 +255,14 @@ export function HrPage() {
       resolvePickListSelectedItem(empLinkedUserId, linkedUserItems, pinnedLinkedUserItem),
     [empLinkedUserId, linkedUserItems, pinnedLinkedUserItem],
   );
-  const showClinicAssignment = Boolean(empLinkedUserRole) && !isOrgWideUserRole(empLinkedUserRole) && clinics.length > 0;
+  const showClinicAssignment =
+    !provisionLogin && Boolean(empLinkedUserRole) && !isOrgWideUserRole(empLinkedUserRole) && clinics.length > 0;
   const requiresClinicAssignment = isClinicRequiredUserRole(empLinkedUserRole);
-  const primaryClinicForCreate = showClinicAssignment ? (empAssignedClinicIds[0] ?? "") : empClinic;
+  const primaryClinicForCreate = provisionLogin
+    ? (hrManageContext.data?.clinicId ?? "")
+    : showClinicAssignment
+      ? (empAssignedClinicIds[0] ?? "")
+      : empClinic;
   const empSalaryClinicDefault = resolveClinicCurrencyCode(clinics, primaryClinicForCreate || undefined);
   useEffect(() => {
     if (primaryClinicForCreate) setEmpSalaryCurrency(empSalaryClinicDefault);
@@ -307,20 +326,27 @@ export function HrPage() {
 
   const createEmpMut = useMutation({
     mutationFn: async () => {
-      const primaryClinicId = showClinicAssignment
-        ? (empAssignedClinicIds[0] ?? "")
-        : empClinic;
-      const emp = await apiPost<EmployeeDto>("/api/v1/hr/employees", {
+      const primaryClinicId = primaryClinicForCreate;
+      const emp = await apiPost<CreateEmployeeResultDto>("/api/v1/hr/employees", {
         clinicId: primaryClinicId,
-        ...(showClinicAssignment && empAssignedClinicIds.length
-          ? { clinicIds: empAssignedClinicIds }
-          : {}),
-        userId: empLinkedUserId.trim(),
+        ...(provisionLogin
+          ? {
+              loginEmail: empLoginEmail.trim(),
+              loginPassword: empLoginPassword,
+              loginRole: empLoginRole,
+              ...(empLoginRole === "PHYSICIAN" ? { physicianAssignment } : {}),
+            }
+          : {
+              userId: empLinkedUserId.trim(),
+              ...(showClinicAssignment && empAssignedClinicIds.length
+                ? { clinicIds: empAssignedClinicIds }
+                : {}),
+            }),
         firstNameEn: empFn.trim(),
         lastNameEn: empLn.trim(),
         firstNameAr: empFnAr.trim() || undefined,
         lastNameAr: empLnAr.trim() || undefined,
-        email: empEmail.trim() || undefined,
+        email: (provisionLogin ? empLoginEmail : empEmail).trim() || undefined,
         phone: empPhone.replace(/\D/g, ""),
         employmentType: empType,
         hireDate: new Date().toISOString().slice(0, 10),
@@ -337,6 +363,13 @@ export function HrPage() {
     onSuccess: (emp) => {
       empValidation.clear();
       setCreateEmpOpen(false);
+      if (emp.createdLoginEmail && emp.createdLoginPassword) {
+        setCreatedLoginCredentials({
+          email: emp.createdLoginEmail,
+          password: emp.createdLoginPassword,
+          role: emp.createdLoginRole ?? empLoginRole,
+        });
+      }
       setEmpFn("");
       setEmpLn("");
       setEmpFnAr("");
@@ -347,6 +380,10 @@ export function HrPage() {
       setEmpAssignedClinicIds([]);
       setEmpLinkedUserId("");
       setEmpLinkedUserRole("");
+      setEmpLoginEmail("");
+      setEmpLoginPassword("");
+      setEmpLoginRole("NURSE");
+      setPhysicianAssignment("CLINIC");
       setPinnedEmpClinicItem(null);
       setPinnedEmpTypeItem(null);
       setPinnedLinkedUserItem(null);
@@ -355,7 +392,9 @@ export function HrPage() {
       void qc.invalidateQueries({ queryKey: ["hr"] });
       void qc.invalidateQueries({ queryKey: ["admin", "org-users"] });
       toast.success(t("hr.employeeCreated", "Employee created."));
-      navigate(`/hr/employees/${emp.id}`);
+      if (!emp.createdLoginEmail) {
+        navigate(`/hr/employees/${emp.id}`);
+      }
     },
     onError: (e: unknown) => {
       empValidation.showError(e);
@@ -447,19 +486,21 @@ export function HrPage() {
     iso ? new Date(iso).toLocaleString() : t("hr.notApplicable", "—");
 
   const handleCreateEmployee = () => {
-    const primaryClinicId = showClinicAssignment
-      ? (empAssignedClinicIds[0] ?? "")
-      : empClinic;
     const issues = collectEmployeeCreateIssues(
       {
         userId: empLinkedUserId,
-        linkedUserRole: empLinkedUserRole,
-        clinicId: primaryClinicId,
+        linkedUserRole: provisionLogin ? empLoginRole : empLinkedUserRole,
+        clinicId: primaryClinicForCreate,
         assignedClinicIds: empAssignedClinicIds,
         firstName: empFn,
         lastName: empLn,
         phone: empPhone,
         salary: empSalary,
+        provisionLogin,
+        loginEmail: empLoginEmail,
+        loginPassword: empLoginPassword,
+        loginRole: empLoginRole,
+        requireLinkedUser: !provisionLogin,
       },
       t,
     );
@@ -656,6 +697,78 @@ export function HrPage() {
                   </DialogHeader>
                   <div className="grid gap-3 pt-2 sm:grid-cols-2">
                     {empValidation.formErr ? <p className="text-sm text-destructive sm:col-span-full">{empValidation.formErr}</p> : null}
+                    {provisionLogin ? (
+                      <>
+                        <div className="space-y-2 sm:col-span-2">
+                          <Label>{t("hr.clinic")}</Label>
+                          <Input readOnly value={hrManageContext.data?.clinicNameEn ?? "—"} />
+                        </div>
+                        <div className="space-y-2 sm:col-span-2">
+                          <Label required>{t("auth.email", "Login email")}</Label>
+                          <Input
+                            type="email"
+                            value={empLoginEmail}
+                            onChange={(e) => setEmpLoginEmail(e.target.value)}
+                            autoComplete="off"
+                          />
+                        </div>
+                        <div className="space-y-2 sm:col-span-2">
+                          <Label required>{t("admin.tempPassword", "Temporary password")}</Label>
+                          <PasswordInput value={empLoginPassword} onChange={setEmpLoginPassword} />
+                          <p className="text-xs text-muted-foreground">
+                            {t(
+                              "hr.loginPasswordShownOnceHint",
+                              "This password is shown once after create — share it securely with the employee.",
+                            )}
+                          </p>
+                        </div>
+                        <div className="space-y-2 sm:col-span-2">
+                          <Label required>{t("admin.role", "Role")}</Label>
+                          <select
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            value={empLoginRole}
+                            onChange={(e) =>
+                              setEmpLoginRole(e.target.value as (typeof CLINIC_STAFF_ASSIGNABLE_ROLES)[number])
+                            }
+                          >
+                            {CLINIC_STAFF_ASSIGNABLE_ROLES.map((r) => (
+                              <option key={r} value={r}>
+                                {formatUserRole(r, t)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        {empLoginRole === "PHYSICIAN" ? (
+                          <div className="space-y-2 sm:col-span-2">
+                            <Label>{t("hr.physicianAssignment", "Physician assignment")}</Label>
+                            <div className="flex flex-col gap-2">
+                              <label className="flex items-center gap-2 text-sm">
+                                <input
+                                  type="radio"
+                                  name="physicianAssignment"
+                                  checked={physicianAssignment === "CLINIC"}
+                                  onChange={() => setPhysicianAssignment("CLINIC")}
+                                />
+                                {t("hr.physicianThisClinicOnly", "This clinic only")}
+                              </label>
+                              <label className="flex items-center gap-2 text-sm">
+                                <input
+                                  type="radio"
+                                  name="physicianAssignment"
+                                  checked={physicianAssignment === "GROUP"}
+                                  onChange={() => setPhysicianAssignment("GROUP")}
+                                />
+                                {t(
+                                  "hr.physicianGroupNetwork",
+                                  "Group physician (all clinics in this clinic group)",
+                                )}
+                              </label>
+                            </div>
+                          </div>
+                        ) : null}
+                      </>
+                    ) : (
+                      <>
                     <div className="space-y-2 sm:col-span-2">
                       <Label required>{t("hr.linkedLoginAccount", "Linked login account")}</Label>
                       <p className="text-xs text-muted-foreground">
@@ -784,6 +897,8 @@ export function HrPage() {
                         </p>
                       )}
                     </div>
+                      </>
+                    )}
                     <div className="space-y-2">
                       <Label required>{t("patients.firstNameEn")}</Label>
                       <Input value={empFn} onChange={(e) => setEmpFn(e.target.value)} />
@@ -800,10 +915,12 @@ export function HrPage() {
                       <Label>{t("patients.lastNameAr")}</Label>
                       <Input value={empLnAr} onChange={(e) => setEmpLnAr(e.target.value)} dir="auto" />
                     </div>
+                    {!provisionLogin ? (
                     <div className="space-y-2">
                       <Label>{t("hr.email")}</Label>
                       <Input type="email" value={empEmail} onChange={(e) => setEmpEmail(e.target.value)} />
                     </div>
+                    ) : null}
                     <div className="space-y-2">
                       <Label required>{t("hr.phone")}</Label>
                       <Input
@@ -1022,7 +1139,7 @@ export function HrPage() {
                                       {t("hr.rehire", "Re-hire")}
                                     </DropdownMenuItem>
                                   )}
-                                  {canDelete ? (
+                                  {canArchive ? (
                                     <DropdownMenuItem
                                       className="text-destructive focus:text-destructive"
                                       onSelect={() => setEmployeeToDelete(employeeRowToTarget(e, i18n.language))}
@@ -1469,6 +1586,48 @@ export function HrPage() {
           </CardContent>
         </Card>
       ) : null}
+
+      <Dialog open={Boolean(createdLoginCredentials)} onOpenChange={(open) => !open && setCreatedLoginCredentials(null)}>
+        <DialogContent className="max-w-md" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>{t("hr.loginCredentialsTitle", "Employee login credentials")}</DialogTitle>
+          </DialogHeader>
+          {createdLoginCredentials ? (
+            <div className="space-y-3 text-sm">
+              <p className="text-muted-foreground">
+                {t(
+                  "hr.loginCredentialsIntro",
+                  "Share these credentials with the employee. The password will not be shown again.",
+                )}
+              </p>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("auth.email")}</p>
+                <p className="font-mono ltr-nums">{createdLoginCredentials.email}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {t("admin.tempPassword", "Temporary password")}
+                </p>
+                <p className="font-mono ltr-nums">{createdLoginCredentials.password}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("admin.role", "Role")}</p>
+                <p>{formatUserRole(createdLoginCredentials.role, t)}</p>
+              </div>
+              <Button
+                type="button"
+                className="w-full"
+                onClick={() => {
+                  setCreatedLoginCredentials(null);
+                  void qc.invalidateQueries({ queryKey: ["hr"] });
+                }}
+              >
+                {t("common.done", "Done")}
+              </Button>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -8,11 +8,12 @@ const EMPLOYEE_MANAGE_ROLES: ReadonlySet<DemoRole> = new Set([
   "branch_manager",
 ]);
 
-/** Roles that may permanently delete employees (administrators only; not HR). */
-const EMPLOYEE_DELETE_ROLES: ReadonlySet<DemoRole> = new Set([
+/** Roles that may archive (soft-delete) employees within their scope. */
+const EMPLOYEE_ARCHIVE_ROLES: ReadonlySet<DemoRole> = new Set([
   "group_admin",
   "clinic_admin",
   "branch_manager",
+  "hr_officer",
 ]);
 
 export function canManageEmployees(role: string | DemoRole | undefined | null): boolean {
@@ -22,9 +23,21 @@ export function canManageEmployees(role: string | DemoRole | undefined | null): 
   return EMPLOYEE_MANAGE_ROLES.has(mapApiRole(raw));
 }
 
-export function canDeleteEmployees(role: string | DemoRole | undefined | null): boolean {
+export function canArchiveEmployees(role: string | DemoRole | undefined | null): boolean {
   if (!role) return false;
   const raw = String(role).trim();
-  if (EMPLOYEE_DELETE_ROLES.has(raw as DemoRole)) return true;
-  return EMPLOYEE_DELETE_ROLES.has(mapApiRole(raw));
+  if (EMPLOYEE_ARCHIVE_ROLES.has(raw as DemoRole)) return true;
+  return EMPLOYEE_ARCHIVE_ROLES.has(mapApiRole(raw));
+}
+
+/** @deprecated Use canArchiveEmployees */
+export function canDeleteEmployees(role: string | DemoRole | undefined | null): boolean {
+  return canArchiveEmployees(role);
+}
+
+export function isHrOfficerRole(role: string | DemoRole | undefined | null): boolean {
+  if (!role) return false;
+  const raw = String(role).trim();
+  if (raw === "hr_officer" || raw === "HR_OFFICER") return true;
+  return mapApiRole(raw) === "hr_officer";
 }

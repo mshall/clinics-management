@@ -22,7 +22,7 @@ import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog"
 import { collectEmployeeCreateIssues } from "@/lib/create-form-validation";
 import { useClinicsQuery, useEmployeeQuery } from "@/lib/api-hooks";
 import type { EmployeeDto } from "@/lib/api-types";
-import { canDeleteEmployees, canManageEmployees } from "@/lib/employee-manage-policy";
+import { canArchiveEmployees, canManageEmployees } from "@/lib/employee-manage-policy";
 import { ApiError, apiDelete, apiFetchBlob, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { formatClinicName, formatClinicNameFields, formatEmploymentType, formatUserRole, localeForLanguage } from "@/lib/locale-display";
 import { formatEmployeeName } from "@/lib/employee-display";
@@ -37,7 +37,7 @@ export function EmployeeDetailPage() {
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
   const canManage = canManageEmployees(authUser?.role);
-  const canDelete = canDeleteEmployees(authUser?.role);
+  const canArchive = canArchiveEmployees(authUser?.role);
   const { id } = useParams();
   const { data: emp, isPending, isError, error } = useEmployeeQuery(id);
   const { data: clinics = [] } = useClinicsQuery();
@@ -410,7 +410,7 @@ export function EmployeeDetailPage() {
                       {editing ? t("common.cancel", "Cancel") : t("common.edit", "Edit")}
                     </Button>
                   ) : null}
-                  {canDelete ? (
+                  {canArchive ? (
                     <Button
                       type="button"
                       variant="outline"

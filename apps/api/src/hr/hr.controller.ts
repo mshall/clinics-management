@@ -24,6 +24,8 @@ import { AttendanceDto } from "./dto/attendance.dto";
 import { EmployeeDto } from "./dto/employee.dto";
 import { LeaveRequestDto } from "./dto/leave-request.dto";
 import { UnlinkedUserDto } from "./dto/unlinked-user.dto";
+import { CreateEmployeeResultDto } from "./dto/create-employee-result.dto";
+import { HrManageContextDto } from "./dto/hr-manage-context.dto";
 import { DeactivateEmployeeDto } from "./dto/deactivate-employee.dto";
 import { ReactivateEmployeeDto } from "./dto/reactivate-employee.dto";
 import { UpdateEmployeeDto } from "./dto/update-employee.dto";
@@ -70,6 +72,13 @@ export class HrController {
     return this.hr.listEmployees(requireTenantId(user), user, page, pageSize, search, clinicId, nameFilter, clinicFilter, sortBy, sortOrder, recordStatus, archived);
   }
 
+  @Get("manage-context")
+  @ApiOperation({ summary: "HR desk context: clinic scope and assignable roles" })
+  @ApiOkResponse({ type: HrManageContextDto })
+  manageContext(@CurrentUser() user: JwtUser) {
+    return this.hr.getManageContext(requireTenantId(user), user);
+  }
+
   @Get("unlinked-users")
   @ApiOperation({ summary: "List organization login accounts not yet linked to an employee" })
   @ApiOkResponse({ type: [UnlinkedUserDto] })
@@ -107,7 +116,7 @@ export class HrController {
 
   @Post("employees")
   @ApiOperation({ summary: "Hire / register employee" })
-  @ApiCreatedResponse({ type: EmployeeDto })
+  @ApiCreatedResponse({ type: CreateEmployeeResultDto })
   createEmployee(@CurrentUser() user: JwtUser, @Body() body: CreateEmployeeDto) {
     return this.hr.createEmployee(requireTenantId(user), body, user);
   }
