@@ -38,7 +38,7 @@ import {
   viewerUsesHrProvisionerFlow,
 } from "../common/employee-privilege-grants";
 import { assertCanCreateGroupAdminRole } from "../common/group-admin-role-policy";
-import { assertHrCanDeactivateOrArchiveLinkedUser } from "./hr-employee-provisioning-policy";
+import { assertHrCanDeactivateOrArchiveLinkedUser, assertCanEditGroupAdminEmployeeProfile } from "./hr-employee-provisioning-policy";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
@@ -233,6 +233,19 @@ export class HrService {
       select: { id: true, role: true },
     });
     assertHrCanDeactivateOrArchiveLinkedUser(viewer, linkedUser);
+  }
+
+  private async assertCanEditEmployeeProfileLinkedUser(
+    tenantId: string,
+    viewer: JwtUser,
+    userId: string | null | undefined,
+  ): Promise<void> {
+    if (!userId) return;
+    const linkedUser = await this.prisma.user.findFirst({
+      where: { id: userId, tenantId },
+      select: { id: true, role: true },
+    });
+    assertCanEditGroupAdminEmployeeProfile(viewer, linkedUser);
   }
 
   private async ensureEmployeeEmploymentPeriods(tenantId: string): Promise<void> {
@@ -660,6 +673,7 @@ export class HrService {
     const emp = await this.prisma.employee.findFirst({ where: { id: employeeId, tenantId } });
     if (!emp) throw new NotFoundException("Employee not found");
     await this.assertEmployeeClinicAccess(tenantId, viewer, emp.clinicId);
+    await this.assertCanEditEmployeeProfileLinkedUser(tenantId, viewer, emp.userId);
     if (!file?.buffer?.length) throw new BadRequestException("File is required");
     if (file.size > MAX_ID_DOC_BYTES) throw new BadRequestException("File too large (max 15MB)");
     const mime = file.mimetype || "application/octet-stream";
@@ -688,6 +702,7 @@ export class HrService {
     });
     if (!existing) throw new NotFoundException("Employee not found");
     await this.assertEmployeeClinicAccess(tenantId, viewer, existing.clinicId);
+    await this.assertCanEditEmployeeProfileLinkedUser(tenantId, viewer, existing.userId);
 
     const clinicIdsFromDto = dto.clinicIds?.map((cid) => cid.trim()).filter(Boolean);
     const clinicId = dto.clinicId?.trim();

@@ -57,3 +57,16 @@ export function assertHrCanDeactivateOrArchiveLinkedUser(
     "Organization group administrators can only be deactivated or archived by another group administrator or platform super administrator",
   );
 }
+
+/** Group administrator employee HR records are read-only except for group administrators (and platform super admin). */
+export function assertCanEditGroupAdminEmployeeProfile(
+  viewer: Pick<JwtUser, "userId" | "email" | "role">,
+  linkedUser: Pick<{ id: string; role: UserRole }, "id" | "role"> | null | undefined,
+): void {
+  if (!linkedUser || linkedUser.role !== UserRole.GROUP_ADMIN) return;
+  if (isPlatformSuperAdmin(viewer)) return;
+  if (viewer.role === UserRole.GROUP_ADMIN) return;
+  throw new ForbiddenException(
+    "Organization group administrator profiles can only be edited by a group administrator",
+  );
+}

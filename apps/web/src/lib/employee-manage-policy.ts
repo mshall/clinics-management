@@ -106,3 +106,15 @@ export function canHrDeactivateOrArchiveLinkedUser(
   const role = viewerRole ? mapApiRole(String(viewerRole)) : null;
   return role === "group_admin" && viewerUserId !== linkedUserId;
 }
+
+/** Group administrator employee HR records are editable only by group administrators (and platform super admin). */
+export function canEditGroupAdminEmployeeProfile(
+  viewerRole: string | DemoRole | undefined | null,
+  platformSuperAdmin: boolean | undefined,
+  linkedUserRole: string | null | undefined,
+): boolean {
+  const linkedRole = linkedUserRole?.trim().toUpperCase();
+  if (linkedRole !== "GROUP_ADMIN") return true;
+  if (platformSuperAdmin) return true;
+  return mapApiRole(String(viewerRole ?? "")) === "group_admin";
+}

@@ -22,7 +22,7 @@ import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog"
 import { collectEmployeeCreateIssues } from "@/lib/create-form-validation";
 import { useClinicsQuery, useEmployeeQuery } from "@/lib/api-hooks";
 import type { EmployeeDto } from "@/lib/api-types";
-import { canArchiveEmployees, canManageEmployees, canHrDeactivateOrArchiveLinkedUser } from "@/lib/employee-manage-policy";
+import { canArchiveEmployees, canManageEmployees, canEditGroupAdminEmployeeProfile, canHrDeactivateOrArchiveLinkedUser } from "@/lib/employee-manage-policy";
 import { ApiError, apiDelete, apiFetchBlob, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { formatClinicName, formatClinicNameFields, formatEmploymentType, formatUserRole, localeForLanguage } from "@/lib/locale-display";
 import { formatEmployeeName } from "@/lib/employee-display";
@@ -47,6 +47,11 @@ export function EmployeeDetailPage() {
     authUser?.id,
     emp?.linkedUserRole,
     emp?.userId,
+  );
+  const canEditEmployee = canEditGroupAdminEmployeeProfile(
+    authUser?.role,
+    authUser?.platformSuperAdmin,
+    emp?.linkedUserRole,
   );
   const { data: clinics = [] } = useClinicsQuery();
 
@@ -413,7 +418,7 @@ export function EmployeeDetailPage() {
                       {t("hr.deactivate", "Deactivate")}
                     </Button>
                   ) : null}
-                  {emp.recordStatus === "ACTIVE" ? (
+                  {emp.recordStatus === "ACTIVE" && canEditEmployee ? (
                     <Button type="button" variant="outline" onClick={() => setEditing((v) => !v)}>
                       {editing ? t("common.cancel", "Cancel") : t("common.edit", "Edit")}
                     </Button>
@@ -490,6 +495,14 @@ export function EmployeeDetailPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
+          {!canEditEmployee && emp.linkedUserRole?.toUpperCase() === "GROUP_ADMIN" ? (
+            <p className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+              {t(
+                "hr.groupAdminProfileReadOnly",
+                "This group administrator profile is read-only. Only a group administrator can edit these details.",
+              )}
+            </p>
+          ) : null}
           {editing ? (
             <div className="grid gap-3 sm:grid-cols-2">
               {formErr ? <p className="text-sm text-destructive sm:col-span-full">{formErr}</p> : null}
