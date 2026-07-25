@@ -825,6 +825,9 @@ export function HrPage() {
                                 if (item) {
                                   setPinnedEmpClinicItem(item);
                                   setEmpClinicQuery(item.label);
+                                } else if (!id) {
+                                  setPinnedEmpClinicItem(null);
+                                  setEmpClinicQuery("");
                                 }
                               }}
                               onSearchQueryChange={setEmpClinicQuery}

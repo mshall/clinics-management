@@ -43,7 +43,7 @@ interface SearchablePickListProps {
 }
 
 const DEFAULT_PREVIEW_COUNT = 4;
-const PICK_GUARD_MS = 400;
+const PICK_GUARD_MS = 500;
 const PORTAL_LIST_CAP = 50;
 
 function usePortalPanelStyle(open: boolean, anchorRef: React.RefObject<HTMLElement | null>) {
@@ -134,15 +134,26 @@ export function SearchablePickList({
   const inputRef = useRef<HTMLInputElement>(null);
   const pickingRef = useRef(false);
   const pickingUntilRef = useRef(0);
+  const lastPickRef = useRef<{ value: string; at: number } | null>(null);
   const committedLabelRef = useRef<string | null>(null);
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
+  const [closedText, setClosedText] = useState("");
   const [pinnedItem, setPinnedItem] = useState<PickListItem | null>(null);
+
+  const markPicking = useCallback(() => {
+    pickingRef.current = true;
+    pickingUntilRef.current = Date.now() + PICK_GUARD_MS;
+    window.setTimeout(() => {
+      pickingRef.current = false;
+    }, 0);
+  }, []);
 
   useEffect(() => {
     if (!value.trim()) {
       setPinnedItem(null);
       committedLabelRef.current = null;
+      if (!open) setClosedText("");
       return;
     }
     setPinnedItem((prev) => {
@@ -150,10 +161,13 @@ export function SearchablePickList({
         items.find((i) => i.value === value) ??
         (selectedItem?.value === value ? selectedItem : null) ??
         (prev?.value === value ? prev : null);
-      if (resolved) committedLabelRef.current = resolved.label;
+      if (resolved) {
+        committedLabelRef.current = resolved.label;
+        if (!open) setClosedText(resolved.label);
+      }
       return resolved ?? prev;
     });
-  }, [value, items, selectedItem]);
+  }, [value, items, selectedItem, open]);
 
   const filtered = useMemo(() => {
     const base = !localFilter
@@ -182,37 +196,43 @@ export function SearchablePickList({
     return [];
   }, [open, localFilter, trimmedQ, isSearching, meetsMinSearch, filtered, previewCount]);
 
+  const syncClosedText = useCallback(
+    (next: string) => {
+      setClosedText(next);
+      onSearchQueryChange?.(next);
+    },
+    [onSearchQueryChange],
+  );
+
   const pick = useCallback(
     (next: string, item?: PickListItem) => {
       const resolved =
         item ??
         items.find((i) => i.value === next) ??
         (selectedItem?.value === next ? selectedItem : null);
+      const label = resolved?.label ?? "";
       if (resolved) {
-        committedLabelRef.current = resolved.label;
+        committedLabelRef.current = label;
         setPinnedItem(resolved);
       }
+      markPicking();
       onValueChange(next, resolved ?? undefined);
-      setQ("");
-      if (alwaysEditable && resolved) {
-        onSearchQueryChange?.(resolved.label);
-      } else {
-        onSearchQueryChange?.("");
-      }
+      setQ(label);
+      syncClosedText(label);
       setOpen(false);
+      window.requestAnimationFrame(() => focusTextInput(inputRef.current));
     },
-    [alwaysEditable, items, onValueChange, onSearchQueryChange, selectedItem],
+    [items, markPicking, onValueChange, selectedItem, syncClosedText],
   );
 
   const handlePick = useCallback(
     (next: string, item: PickListItem) => {
-      if (disabled || pickingRef.current) return;
-      pickingRef.current = true;
-      pickingUntilRef.current = Date.now() + PICK_GUARD_MS;
+      if (disabled) return;
+      const now = Date.now();
+      if (lastPickRef.current?.value === next && now - lastPickRef.current.at < 600) return;
+      if (pickingRef.current || now < pickingUntilRef.current) return;
+      lastPickRef.current = { value: next, at: now };
       pick(next, item);
-      window.setTimeout(() => {
-        pickingRef.current = false;
-      }, 0);
     },
     [disabled, pick],
   );
@@ -221,27 +241,28 @@ export function SearchablePickList({
     if (pickingRef.current || Date.now() < pickingUntilRef.current) return;
     setOpen(false);
     if (alwaysEditable) {
-      if (displayText) {
-        setQ("");
-        onSearchQueryChange?.(displayText);
+      const label = displayText ?? closedText;
+      if (label) {
+        setQ(label);
+        syncClosedText(label);
       } else if (q.trim()) {
-        onSearchQueryChange?.(q);
+        syncClosedText(q);
       }
     } else {
       setQ("");
       onSearchQueryChange?.("");
     }
-  }, [alwaysEditable, displayText, onSearchQueryChange, q]);
+  }, [alwaysEditable, closedText, displayText, onSearchQueryChange, q, syncClosedText]);
 
   const openPicker = useCallback(() => {
     if (disabled) return;
     setOpen(true);
-    const seed = displayText ?? q;
+    const seed = displayText ?? closedText ?? q;
     setQ(seed);
     onSearchQueryChange?.(seed);
     onOpen?.();
     scheduleMobileFocus(inputRef.current);
-  }, [disabled, displayText, onOpen, onSearchQueryChange, q]);
+  }, [closedText, disabled, displayText, onOpen, onSearchQueryChange, q]);
 
   const handleInputChange = useCallback(
     (next: string) => {
@@ -252,19 +273,13 @@ export function SearchablePickList({
         onValueChange("", undefined);
         committedLabelRef.current = null;
         setPinnedItem(null);
+        setClosedText("");
       }
     },
     [displayText, onSearchQueryChange, onValueChange, value],
   );
 
-  const handleInputBlur = useCallback(() => {
-    window.setTimeout(() => {
-      if (pickingRef.current || Date.now() < pickingUntilRef.current) return;
-      closeWithoutPick();
-    }, 180);
-  }, [closeWithoutPick]);
-
-  const inputValue = open ? q : q || displayText || "";
+  const inputValue = open ? q : closedText || displayText || q;
 
   useEffect(() => {
     if (!open) return;
@@ -286,31 +301,14 @@ export function SearchablePickList({
     };
   }, [open, closeWithoutPick]);
 
-  const optionHandlers = (item: PickListItem) => ({
-    onMouseDown: (e: React.MouseEvent) => {
+  const selectOption = useCallback(
+    (item: PickListItem) => (e: React.SyntheticEvent) => {
       e.preventDefault();
       e.stopPropagation();
       handlePick(item.value, item);
     },
-    onTouchStart: (e: React.TouchEvent) => {
-      e.stopPropagation();
-    },
-    onTouchEnd: (e: React.TouchEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      handlePick(item.value, item);
-    },
-    onPointerDown: (e: React.PointerEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (e.pointerType === "touch") return;
-      handlePick(item.value, item);
-    },
-    onClick: (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-    },
-  });
+    [handlePick],
+  );
 
   const listPanel = (
     <div
@@ -328,6 +326,9 @@ export function SearchablePickList({
             }
           : undefined
       }
+      onPointerDownCapture={() => {
+        pickingUntilRef.current = Date.now() + PICK_GUARD_MS;
+      }}
     >
       {showingPreview && minSearchLength > 0 && !meetsMinSearch ? (
         <p className="border-b border-border px-3 py-1.5 text-xs text-muted-foreground">{idleMessage}</p>
@@ -346,7 +347,8 @@ export function SearchablePickList({
               "flex w-full min-h-11 cursor-pointer flex-col gap-0.5 border-b border-border px-3 py-2.5 text-start text-sm last:border-b-0 hover:bg-muted/60 active:bg-muted/80 disabled:opacity-50 touch-manipulation select-none [-webkit-tap-highlight-color:transparent]",
               value === i.value && "bg-muted/80",
             )}
-            {...optionHandlers(i)}
+            onPointerDown={selectOption(i)}
+            onClick={selectOption(i)}
           >
             <span className="font-medium">{i.label}</span>
             {i.hint ? <span className="text-xs text-muted-foreground">{i.hint}</span> : null}
@@ -381,7 +383,6 @@ export function SearchablePickList({
           if (!open) openPicker();
         }}
         onChange={(e) => handleInputChange(e.target.value)}
-        onBlur={handleInputBlur}
         aria-autocomplete="list"
         aria-controls={listboxId}
         role="combobox"
