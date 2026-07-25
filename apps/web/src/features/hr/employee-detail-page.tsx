@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
+import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ import { canDeleteEmployees, canManageEmployees } from "@/lib/employee-manage-po
 import { ApiError, apiDelete, apiFetchBlob, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { formatClinicName, formatClinicNameFields, formatEmploymentType, formatUserRole, localeForLanguage } from "@/lib/locale-display";
 import { formatEmployeeName } from "@/lib/employee-display";
+import { formatEmployeeSalaryAmount, resolveClinicCurrencyCode } from "@/lib/money-display";
 import { useAuthStore } from "@/stores/auth-store";
 
 const EMP_TYPE_VALUES = ["FULL_TIME", "PART_TIME", "CONTRACTOR", "LOCUM"] as const;
@@ -56,6 +58,7 @@ export function EmployeeDetailPage() {
   const [employmentType, setEmploymentType] = useState("FULL_TIME");
   const [hireDate, setHireDate] = useState("");
   const [salaryBase, setSalaryBase] = useState("");
+  const [salaryCurrency, setSalaryCurrency] = useState("AED");
   const [idDocFile, setIdDocFile] = useState<File | null>(null);
   const [formErr, setFormErr] = useState<string | null>(null);
   const validation = useValidationIssuesDialog({ intent: "save" });
@@ -74,7 +77,12 @@ export function EmployeeDetailPage() {
     setEmploymentType(emp.employmentType);
     setHireDate(emp.hireDate);
     setSalaryBase(String(emp.salaryBase));
-  }, [emp]);
+    setSalaryCurrency(
+      emp.salaryCurrency ??
+        emp.salaryCurrencyEffective ??
+        resolveClinicCurrencyCode(clinics, emp.clinicId),
+    );
+  }, [emp, clinics]);
 
   const clinicItems: PickListItem[] = useMemo(
     () => clinics.map((c) => ({ value: c.id, label: formatClinicName(c, i18n.language) })),
@@ -88,6 +96,8 @@ export function EmployeeDetailPage() {
   const linkedUserRole = emp?.linkedUserRole ?? "";
   const showClinicAssignment = Boolean(linkedUserRole) && !isOrgWideUserRole(linkedUserRole);
   const requiresClinicAssignment = isClinicRequiredUserRole(linkedUserRole);
+  const primaryClinicId = showClinicAssignment ? (assignedClinicIds[0] ?? clinicId) : clinicId;
+  const salaryClinicDefault = resolveClinicCurrencyCode(clinics, primaryClinicId || emp?.clinicId);
   const assignedClinicLabels = useMemo(() => {
     const ids = emp?.linkedUserClinicIds ?? (emp?.clinicId ? [emp.clinicId] : []);
     return ids
@@ -96,8 +106,12 @@ export function EmployeeDetailPage() {
       .map((c) => formatClinicName(c!, i18n.language));
   }, [emp?.linkedUserClinicIds, emp?.clinicId, clinics, i18n.language]);
 
-  const money = (n: number) =>
-    new Intl.NumberFormat(localeForLanguage(i18n.language), { style: "currency", currency: "AED" }).format(n);
+  useEffect(() => {
+    if (!editing || emp?.salaryCurrency) return;
+    setSalaryCurrency(salaryClinicDefault);
+  }, [editing, emp?.salaryCurrency, salaryClinicDefault]);
+
+  const locale = localeForLanguage(i18n.language);
 
   const saveMut = useMutation({
     mutationFn: async () => {
@@ -116,6 +130,7 @@ export function EmployeeDetailPage() {
         employmentType,
         hireDate,
         salaryBase: Number.parseFloat(salaryBase),
+        salaryCurrency: salaryCurrency === salaryClinicDefault ? null : salaryCurrency,
       });
       if (idDocFile) {
         const fd = new FormData();
@@ -285,6 +300,8 @@ export function EmployeeDetailPage() {
           employmentType: emp.employmentType,
           hireDate: emp.hireDate,
           salaryBase: emp.salaryBase,
+          salaryCurrency: emp.salaryCurrency,
+          salaryCurrencyEffective: emp.salaryCurrencyEffective,
         }}
         pending={deleteMut.isPending}
         onConfirm={() => deleteMut.mutate()}
@@ -306,6 +323,8 @@ export function EmployeeDetailPage() {
           employmentType: emp.employmentType,
           hireDate: emp.hireDate,
           salaryBase: emp.salaryBase,
+          salaryCurrency: emp.salaryCurrency,
+          salaryCurrencyEffective: emp.salaryCurrencyEffective,
         }}
         pending={deactivateMut.isPending}
         onConfirm={(resignationDate) => deactivateMut.mutate(resignationDate)}
@@ -572,6 +591,17 @@ export function EmployeeDetailPage() {
                 <Label>{t("hr.salaryBase")}</Label>
                 <Input className="ltr-nums" type="number" value={salaryBase} onChange={(e) => setSalaryBase(e.target.value)} />
               </div>
+              <div className="space-y-2">
+                <Label>{t("hr.salaryCurrency", "Salary currency")}</Label>
+                <BaseCurrencySelect value={salaryCurrency} onChange={setSalaryCurrency} />
+                <p className="text-xs text-muted-foreground">
+                  {t(
+                    "hr.salaryCurrencyClinicDefaultHint",
+                    "Defaults to the clinic currency ({{currency}}). Choose another only when salary is paid in a different currency.",
+                    { currency: salaryClinicDefault },
+                  )}
+                </p>
+              </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label>{t("hr.replaceIdDocument", "Replace ID / passport")}</Label>
                 <Input
@@ -625,7 +655,10 @@ export function EmployeeDetailPage() {
               <Separator />
               <Row label={t("hr.hireDate")} value={<span className="ltr-nums">{emp.hireDate}</span>} />
               <Separator />
-              <Row label={t("hr.salaryBase")} value={<span className="ltr-nums">{money(emp.salaryBase)}</span>} />
+              <Row
+                label={t("hr.salaryBase")}
+                value={<span className="ltr-nums">{emp ? formatEmployeeSalaryAmount(emp, clinics, locale) : "—"}</span>}
+              />
               {emp.hasIdDoc ? (
                 <>
                   <Separator />

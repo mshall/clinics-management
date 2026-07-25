@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatClinicNameFields, formatEmploymentType, localeForLanguage } from "@/lib/locale-display";
 import { formatEmployeeName } from "@/lib/employee-display";
+import { formatMoneyAmount } from "@/lib/money-display";
 import type { EmployeeDeleteTarget } from "@/features/hr/employee-delete-confirm-dialog";
 
 type EmployeeDeactivateConfirmDialogProps = {
@@ -101,9 +102,13 @@ export function EmployeeDeactivateConfirmDialog({
             </div>
             {employee.salaryBase != null ? (
               <p className="text-xs text-muted-foreground">
-                {t("hr.salaryBase", "Salary base (AED)")}:{" "}
+                {t("hr.salaryBase", "Salary base")}:{" "}
                 <span className="ltr-nums">
-                  {new Intl.NumberFormat(locale, { style: "currency", currency: "AED" }).format(employee.salaryBase)}
+                  {formatMoneyAmount(
+                    employee.salaryBase,
+                    employee.salaryCurrencyEffective ?? employee.salaryCurrency ?? "AED",
+                    locale,
+                  )}
                 </span>
               </p>
             ) : null}

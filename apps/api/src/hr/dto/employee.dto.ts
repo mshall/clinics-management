@@ -48,6 +48,15 @@ export class EmployeeDto {
   @ApiProperty()
   salaryBase!: number;
 
+  @ApiPropertyOptional({
+    nullable: true,
+    description: "Salary currency override; null means the employee clinic default currency",
+  })
+  salaryCurrency!: string | null;
+
+  @ApiProperty({ description: "Effective salary currency (override or clinic default)" })
+  salaryCurrencyEffective!: string;
+
   @ApiPropertyOptional({ nullable: true })
   userId!: string | null;
 

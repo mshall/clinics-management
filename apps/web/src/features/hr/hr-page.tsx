@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
+import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
@@ -31,6 +32,11 @@ import {
 import { canDeleteEmployees, canManageEmployees } from "@/lib/employee-manage-policy";
 import { ApiError, apiDelete, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { columnFilterIncludes } from "@/lib/utils";
+import {
+  formatEmployeeSalaryAmount,
+  formatMultiCurrencyAmounts,
+  resolveClinicCurrencyCode,
+} from "@/lib/money-display";
 import {
   formatAttendanceStatus,
   formatClinicNameFields,
@@ -207,6 +213,7 @@ export function HrPage() {
   const [empPhone, setEmpPhone] = useState("");
   const [empType, setEmpType] = useState("FULL_TIME");
   const [empSalary, setEmpSalary] = useState("9000");
+  const [empSalaryCurrency, setEmpSalaryCurrency] = useState("AED");
   const [empIdDocFile, setEmpIdDocFile] = useState<File | null>(null);
   const empValidation = useValidationIssuesDialog({ intent: "create" });
   const attValidation = useValidationIssuesDialog({ intent: "create" });
@@ -236,6 +243,11 @@ export function HrPage() {
   );
   const showClinicAssignment = Boolean(empLinkedUserRole) && !isOrgWideUserRole(empLinkedUserRole) && clinics.length > 0;
   const requiresClinicAssignment = isClinicRequiredUserRole(empLinkedUserRole);
+  const primaryClinicForCreate = showClinicAssignment ? (empAssignedClinicIds[0] ?? "") : empClinic;
+  const empSalaryClinicDefault = resolveClinicCurrencyCode(clinics, primaryClinicForCreate || undefined);
+  useEffect(() => {
+    if (primaryClinicForCreate) setEmpSalaryCurrency(empSalaryClinicDefault);
+  }, [primaryClinicForCreate, empSalaryClinicDefault]);
   const empClinicSelectedItem = useMemo(
     (): PickListItem | null => resolvePickListSelectedItem(empClinic, clinicItems, pinnedEmpClinicItem),
     [empClinic, clinicItems, pinnedEmpClinicItem],
@@ -313,6 +325,7 @@ export function HrPage() {
         employmentType: empType,
         hireDate: new Date().toISOString().slice(0, 10),
         salaryBase: Number.parseFloat(empSalary),
+        salaryCurrency: empSalaryCurrency === empSalaryClinicDefault ? null : empSalaryCurrency,
       });
       if (empIdDocFile) {
         const fd = new FormData();
@@ -475,22 +488,19 @@ export function HrPage() {
     createLeave.mutate();
   };
 
-  const money = (n: number) =>
-    new Intl.NumberFormat(localeForLanguage(i18n.language), { style: "currency", currency: "AED" }).format(n);
+  const locale = localeForLanguage(i18n.language);
 
   const filteredEmpRows = useMemo(() => {
-    const loc = localeForLanguage(i18n.language);
-    const fmt = (x: number) => new Intl.NumberFormat(loc, { style: "currency", currency: "AED" }).format(x);
     return empRows.filter((e) => {
       if (ecfNum.trim() && !columnFilterIncludes(e.employeeNumber, ecfNum)) return false;
       if (ecfTitle.trim() && !columnFilterIncludes(e.jobTitle, ecfTitle)) return false;
       if (ecfSalary.trim()) {
-        const hay = `${e.salaryBase} ${fmt(e.salaryBase)}`;
+        const hay = `${e.salaryBase} ${formatEmployeeSalaryAmount(e, clinics, locale)}`;
         if (!columnFilterIncludes(hay, ecfSalary)) return false;
       }
       return true;
     });
-  }, [empRows, ecfNum, ecfTitle, ecfSalary, i18n.language]);
+  }, [empRows, ecfNum, ecfTitle, ecfSalary, clinics, locale]);
 
   const filteredAttRows = useMemo(() => {
     return attRows.filter((a) => {
@@ -604,7 +614,9 @@ export function HrPage() {
               <CardTitle className="text-sm font-medium text-muted-foreground">{t("hr.kpiPayroll")}</CardTitle>
             </CardHeader>
             <CardContent className="text-2xl font-semibold ltr-nums">
-              {summary.isPending ? "—" : money(summary.data?.monthlyPayrollEstimate ?? 0)}
+              {summary.isPending
+                ? "—"
+                : formatMultiCurrencyAmounts(summary.data?.monthlyPayrollByCurrency ?? [], locale)}
             </CardContent>
           </Card>
           <Card>
@@ -820,6 +832,17 @@ export function HrPage() {
                       <Label>{t("hr.salaryBase")}</Label>
                       <Input className="ltr-nums" type="number" value={empSalary} onChange={(e) => setEmpSalary(e.target.value)} />
                     </div>
+                    <div className="space-y-2">
+                      <Label>{t("hr.salaryCurrency", "Salary currency")}</Label>
+                      <BaseCurrencySelect value={empSalaryCurrency} onChange={setEmpSalaryCurrency} />
+                      <p className="text-xs text-muted-foreground">
+                        {t(
+                          "hr.salaryCurrencyClinicDefaultHint",
+                          "Defaults to the clinic currency ({{currency}}). Choose another only when salary is paid in a different currency.",
+                          { currency: empSalaryClinicDefault },
+                        )}
+                      </p>
+                    </div>
                     <div className="space-y-2 sm:col-span-2">
                       <Label>{t("hr.idDocument")}</Label>
                       <Input
@@ -961,7 +984,7 @@ export function HrPage() {
                           <td className="px-2 py-2 text-xs text-muted-foreground ltr-nums">{formatEmpWhen(e.deletedAt)}</td>
                         </>
                       ) : null}
-                      <td className="px-2 py-2 ltr-nums">{money(e.salaryBase)}</td>
+                      <td className="px-2 py-2 ltr-nums">{formatEmployeeSalaryAmount(e, clinics, locale)}</td>
                       {canManage ? (
                         <td className="px-2 py-2 text-end">
                           <DropdownMenu>
@@ -1465,5 +1488,7 @@ function employeeRowToTarget(e: EmployeeDto, language: string): EmployeeDeleteTa
     employmentType: e.employmentType,
     hireDate: e.hireDate,
     salaryBase: e.salaryBase,
+    salaryCurrency: e.salaryCurrency,
+    salaryCurrencyEffective: e.salaryCurrencyEffective,
   };
 }

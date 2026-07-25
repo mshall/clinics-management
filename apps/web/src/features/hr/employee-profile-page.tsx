@@ -6,7 +6,8 @@ import { Link, useParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useEmployeeQuery } from "@/lib/api-hooks";
+import { useClinicsQuery, useEmployeeQuery } from "@/lib/api-hooks";
+import { formatEmployeeSalaryAmount } from "@/lib/money-display";
 import { formatEmployeeName } from "@/lib/employee-display";
 import {
   formatClinicNameFields,
@@ -21,6 +22,7 @@ export function EmployeeProfilePage() {
   const { t, i18n } = useTranslation();
   const { id } = useParams();
   const { data: emp, isPending, isError, error } = useEmployeeQuery(id);
+  const { data: clinics = [] } = useClinicsQuery();
 
   const fullName = emp ? formatEmployeeName(emp, i18n.language) : "";
   const avatarPath = emp?.hasUserAvatar && id ? `/api/v1/hr/employees/${id}/avatar` : null;
@@ -35,8 +37,7 @@ export function EmployeeProfilePage() {
     [fullName, emp?.id],
   );
 
-  const money = (n: number) =>
-    new Intl.NumberFormat(localeForLanguage(i18n.language), { style: "currency", currency: "AED" }).format(n);
+  const locale = localeForLanguage(i18n.language);
 
   if (isPending) {
     return <p className="text-muted-foreground">{t("common.loading")}</p>;
@@ -107,7 +108,7 @@ export function EmployeeProfilePage() {
             <ProfileFact icon={Mail} label={t("hr.email")} value={emp.email ?? "—"} />
             <ProfileFact icon={Phone} label={t("hr.phone")} value={<span className="ltr-nums">{emp.phone}</span>} />
             <ProfileFact icon={Calendar} label={t("hr.hireDate")} value={<span className="ltr-nums">{emp.hireDate}</span>} />
-            <ProfileFact icon={UserCircle} label={t("hr.salaryBase")} value={<span className="ltr-nums">{money(emp.salaryBase)}</span>} />
+            <ProfileFact icon={UserCircle} label={t("hr.salaryBase")} value={<span className="ltr-nums">{formatEmployeeSalaryAmount(emp, clinics, locale)}</span>} />
           </dl>
 
           {emp.linkedUserDisplayName ? (

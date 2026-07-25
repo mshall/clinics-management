@@ -11,6 +11,10 @@ import * as path from "path";
 import type { JwtUser } from "../auth/jwt-user";
 import { ensureClinicStaffEmployeeRecords, jobTitleForRole } from "../common/clinic-staff-employee";
 import {
+  effectiveEmployeeSalaryCurrency,
+  normalizeEmployeeSalaryCurrencyOverride,
+} from "../common/employee-salary-currency";
+import {
   deactivateUserForEmployee,
   reactivateUserForEmployee,
   restoreEmployee,
@@ -120,6 +124,7 @@ export class HrService {
     employmentType: EmployeeDto["employmentType"];
     hireDate: Date;
     salaryBase: { toString(): string };
+    salaryCurrency?: string | null;
     userId: string | null;
     recordStatus: EmployeeRecordStatus;
     resignationDate: Date | null;
@@ -127,7 +132,7 @@ export class HrService {
     createdAt: Date;
     deletedAt: Date | null;
     idDocRelativePath?: string | null;
-    clinic?: { nameEn: string; nameAr: string } | null;
+    clinic?: { nameEn: string; nameAr: string; defaultCurrency: string } | null;
     user?: {
       displayName: string;
       role: string;
@@ -161,6 +166,8 @@ export class HrService {
       employmentType: e.employmentType,
       hireDate: e.hireDate.toISOString().slice(0, 10),
       salaryBase: Number(e.salaryBase),
+      salaryCurrency: e.salaryCurrency ?? null,
+      salaryCurrencyEffective: effectiveEmployeeSalaryCurrency(e.salaryCurrency, e.clinic?.defaultCurrency ?? "AED"),
       userId: e.userId,
       hasIdDoc: Boolean(e.idDocRelativePath),
       linkedUserDisplayName: e.user?.displayName ?? null,
@@ -181,7 +188,7 @@ export class HrService {
   }
 
   private employeeInclude = {
-    clinic: { select: { nameEn: true, nameAr: true } },
+    clinic: { select: { nameEn: true, nameAr: true, defaultCurrency: true } },
     user: {
       select: {
         displayName: true,
@@ -436,6 +443,15 @@ export class HrService {
       const clinic = await this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId } });
       if (!clinic) throw new BadRequestException(`Invalid clinicId: ${clinicId}`);
     }
+    const primaryClinic = await this.prisma.clinic.findFirst({
+      where: { id: primaryClinicId, tenantId },
+      select: { defaultCurrency: true },
+    });
+    if (!primaryClinic) throw new BadRequestException("Invalid clinicId");
+    const salaryCurrency = normalizeEmployeeSalaryCurrencyOverride(
+      primaryClinic.defaultCurrency,
+      dto.salaryCurrency,
+    );
 
     const phone = dto.phone.replace(/\D/g, "");
     if (phone.length < 8) throw new BadRequestException("Phone must contain at least 8 digits");
@@ -460,6 +476,7 @@ export class HrService {
             employmentType: dto.employmentType,
             hireDate: new Date(dto.hireDate),
             salaryBase: dto.salaryBase,
+            salaryCurrency,
           },
         });
         if (clinicIds.length > 0) {
@@ -546,6 +563,25 @@ export class HrService {
 
     const primaryClinicId = resolvedClinicIds?.[0];
 
+    let salaryCurrency: string | null | undefined;
+    if (dto.salaryCurrency !== undefined || resolvedClinicIds !== undefined || clinicId) {
+      const targetClinicId = primaryClinicId ?? clinicId ?? existing.clinicId;
+      const clinic = await this.prisma.clinic.findFirst({
+        where: { id: targetClinicId, tenantId },
+        select: { defaultCurrency: true },
+      });
+      if (!clinic) throw new BadRequestException("Invalid clinicId");
+      if (dto.salaryCurrency !== undefined) {
+        salaryCurrency = normalizeEmployeeSalaryCurrencyOverride(clinic.defaultCurrency, dto.salaryCurrency);
+      } else if (targetClinicId !== existing.clinicId) {
+        const current = await this.prisma.employee.findFirst({
+          where: { id },
+          select: { salaryCurrency: true },
+        });
+        if (!current?.salaryCurrency) salaryCurrency = null;
+      }
+    }
+
     await this.prisma.$transaction(async (tx) => {
       await tx.employee.update({
         where: { id },
@@ -561,6 +597,7 @@ export class HrService {
           ...(dto.employmentType !== undefined ? { employmentType: dto.employmentType } : {}),
           ...(dto.hireDate !== undefined ? { hireDate: new Date(dto.hireDate) } : {}),
           ...(dto.salaryBase !== undefined ? { salaryBase: dto.salaryBase } : {}),
+          ...(salaryCurrency !== undefined ? { salaryCurrency } : {}),
         },
       });
       if (existing.userId && resolvedClinicIds !== undefined) {
@@ -929,19 +966,37 @@ export class HrService {
 
   async hrSummary(tenantId: string) {
     await ensureClinicStaffEmployeeRecords(this.prisma, tenantId);
-    const [employeeCount, monthlyPayroll, pendingLeave] = await Promise.all([
+    const [employeeCount, activeEmployees, pendingLeave] = await Promise.all([
       this.prisma.employee.count({ where: { tenantId, recordStatus: EmployeeRecordStatus.ACTIVE } }),
-      this.prisma.employee.aggregate({
+      this.prisma.employee.findMany({
         where: { tenantId, recordStatus: EmployeeRecordStatus.ACTIVE },
-        _sum: { salaryBase: true },
+        select: {
+          salaryBase: true,
+          salaryCurrency: true,
+          clinic: { select: { defaultCurrency: true } },
+        },
       }),
       this.prisma.leaveRequest.count({
         where: { employee: { tenantId }, status: LeaveStatus.PENDING },
       }),
     ]);
+    const payrollByCurrency = new Map<string, number>();
+    for (const employee of activeEmployees) {
+      const currency = effectiveEmployeeSalaryCurrency(
+        employee.salaryCurrency,
+        employee.clinic.defaultCurrency,
+      );
+      payrollByCurrency.set(
+        currency,
+        (payrollByCurrency.get(currency) ?? 0) + Number(employee.salaryBase),
+      );
+    }
+    const monthlyPayrollByCurrency = [...payrollByCurrency.entries()]
+      .map(([currency, amount]) => ({ currency, amount }))
+      .sort((a, b) => a.currency.localeCompare(b.currency));
     return {
       employeeCount,
-      monthlyPayrollEstimate: Number(monthlyPayroll._sum.salaryBase ?? 0),
+      monthlyPayrollByCurrency,
       pendingLeaveRequests: pendingLeave,
     };
   }

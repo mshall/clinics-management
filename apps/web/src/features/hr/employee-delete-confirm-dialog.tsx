@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { formatClinicNameFields, formatEmploymentType, localeForLanguage } from "@/lib/locale-display";
 import { formatEmployeeName } from "@/lib/employee-display";
+import { formatMoneyAmount } from "@/lib/money-display";
 
 export type EmployeeDeleteTarget = {
   id: string;
@@ -18,6 +19,8 @@ export type EmployeeDeleteTarget = {
   employmentType: string;
   hireDate: string;
   salaryBase?: number | null;
+  salaryCurrency?: string | null;
+  salaryCurrencyEffective?: string | null;
 };
 
 type EmployeeDeleteConfirmDialogProps = {
@@ -97,10 +100,14 @@ export function EmployeeDeleteConfirmDialog({
             {employee.salaryBase != null ? (
               <div>
                 <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {t("hr.salaryBase", "Salary base (AED)")}
+                  {t("hr.salaryBase", "Salary base")}
                 </dt>
                 <dd className="ltr-nums">
-                  {new Intl.NumberFormat(locale, { style: "currency", currency: "AED" }).format(employee.salaryBase)}
+                  {formatMoneyAmount(
+                    employee.salaryBase,
+                    employee.salaryCurrencyEffective ?? employee.salaryCurrency ?? "AED",
+                    locale,
+                  )}
                 </dd>
               </div>
             ) : null}

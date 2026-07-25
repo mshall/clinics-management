@@ -14,11 +14,13 @@ import { Input } from "@/components/ui/input";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { Label } from "@/components/ui/label";
 import { useClinicsQuery } from "@/lib/api-hooks";
+import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from "@/lib/http";
 import { formatEmployeeName } from "@/lib/employee-display";
 import { formatClinicName, formatEmploymentType, formatUserRole } from "@/lib/locale-display";
 import type { Paginated } from "@/lib/paginated";
-import { apiErrorMessage, isClinicRequiredUserRole, isOrgWideUserRole, ORG_USER_ROLES } from "@/features/platform/platform-shared";
+import { apiErrorMessage, isClinicRequiredUserRole, isOrgWideUserRole, ORG_USER_ROLES, orgUserRolesForEdit, ORG_USER_ROLES_CREATABLE } from "@/features/platform/platform-shared";
+import { resolveClinicCurrencyCode } from "@/lib/money-display";
 import {
   ORG_USER_PASSWORD_MIN_LENGTH,
 } from "@/features/platform/org-user-form-validation";
@@ -46,6 +48,8 @@ type OrgUserRow = {
   employeeLastNameEn: string | null;
   employeeEmploymentType?: string | null;
   employeeSalaryBase?: number | null;
+  employeeSalaryCurrency?: string | null;
+  employeeSalaryCurrencyEffective?: string | null;
 };
 
 const EMP_TYPE_VALUES = ["FULL_TIME", "PART_TIME", "CONTRACTOR", "LOCUM"] as const;
@@ -73,6 +77,7 @@ export function AdminOrgUsersPanel() {
   const [uClinicIds, setUClinicIds] = useState<string[]>([]);
   const [uEmploymentType, setUEmploymentType] = useState<(typeof EMP_TYPE_VALUES)[number]>("FULL_TIME");
   const [uSalaryBase, setUSalaryBase] = useState("");
+  const [uSalaryCurrency, setUSalaryCurrency] = useState("AED");
   const [userErr, setUserErr] = useState<string | null>(null);
   const [legacyUsersApi, setLegacyUsersApi] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
@@ -156,6 +161,12 @@ export function AdminOrgUsersPanel() {
     enabled: isEdit && Boolean(editUserId),
   });
 
+  const assignableRoles = isCreate
+    ? ORG_USER_ROLES_CREATABLE
+    : orgUserRolesForEdit(userDetailQuery.data?.role ?? uRole);
+  const uPrimaryClinicId = uClinicIds[0] ?? userDetailQuery.data?.clinicIds?.[0] ?? "";
+  const uSalaryClinicDefault = resolveClinicCurrencyCode(clinics, uPrimaryClinicId || undefined);
+
   useEffect(() => {
     if (!isEdit || !userDetailQuery.data) return;
     const u = userDetailQuery.data;
@@ -165,8 +176,18 @@ export function AdminOrgUsersPanel() {
     setUClinicIds(u.clinicIds);
     setUEmploymentType((u.employeeEmploymentType ?? "FULL_TIME") as (typeof EMP_TYPE_VALUES)[number]);
     setUSalaryBase(u.employeeSalaryBase != null ? String(u.employeeSalaryBase) : "0");
+    setUSalaryCurrency(
+      u.employeeSalaryCurrency ??
+        u.employeeSalaryCurrencyEffective ??
+        resolveClinicCurrencyCode(clinics, u.clinicIds[0]),
+    );
     setUPassword("");
-  }, [isEdit, userDetailQuery.data]);
+  }, [isEdit, userDetailQuery.data, clinics]);
+
+  useEffect(() => {
+    if (!isEdit || userDetailQuery.data?.employeeSalaryCurrency) return;
+    if (uPrimaryClinicId) setUSalaryCurrency(uSalaryClinicDefault);
+  }, [isEdit, userDetailQuery.data?.employeeSalaryCurrency, uPrimaryClinicId, uSalaryClinicDefault]);
 
   useEffect(() => {
     if (isOrgWideUserRole(uRole)) {
@@ -222,6 +243,7 @@ export function AdminOrgUsersPanel() {
       body.clinicIds = uClinicIds;
       body.employmentType = uEmploymentType;
       body.salaryBase = Number.parseFloat(uSalaryBase);
+      body.salaryCurrency = uSalaryCurrency === uSalaryClinicDefault ? null : uSalaryCurrency;
       return apiPatch(`/api/v1/admin/users/${editUserId}`, body);
     },
     onSuccess: () => {
@@ -759,7 +781,7 @@ export function AdminOrgUsersPanel() {
                   value={uRole}
                   onChange={(e) => setURole(e.target.value as (typeof ORG_USER_ROLES)[number])}
                 >
-                  {ORG_USER_ROLES.map((r) => (
+                  {assignableRoles.map((r) => (
                     <option key={r} value={r}>
                       {formatUserRole(r, t)}
                     </option>
@@ -839,6 +861,17 @@ export function AdminOrgUsersPanel() {
                       value={uSalaryBase}
                       onChange={(e) => setUSalaryBase(e.target.value)}
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t("hr.salaryCurrency", "Salary currency")}</Label>
+                    <BaseCurrencySelect value={uSalaryCurrency} onChange={setUSalaryCurrency} />
+                    <p className="text-xs text-muted-foreground">
+                      {t(
+                        "hr.salaryCurrencyClinicDefaultHint",
+                        "Defaults to the clinic currency ({{currency}}). Choose another only when salary is paid in a different currency.",
+                        { currency: uSalaryClinicDefault },
+                      )}
+                    </p>
                   </div>
                 </>
               ) : null}

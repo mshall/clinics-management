@@ -7,11 +7,13 @@ import { SearchablePickList, type PickListItem } from "@/components/searchable-p
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { useClinicsQuery } from "@/lib/api-hooks";
 import { useAuthStore } from "@/stores/auth-store";
 import type { EmployeeDto } from "@/lib/api-types";
 import { apiPost, apiPostFormData } from "@/lib/http";
 import { formatClinicName, formatEmploymentType } from "@/lib/locale-display";
+import { resolveClinicCurrencyCode } from "@/lib/money-display";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectEmployeeCreateIssues } from "@/lib/create-form-validation";
 
@@ -45,6 +47,11 @@ export function AdminCreateEmployeePanel() {
   const [empTitle, setEmpTitle] = useState("Staff");
   const [empType, setEmpType] = useState("FULL_TIME");
   const [empSalary, setEmpSalary] = useState("9000");
+  const [empSalaryCurrency, setEmpSalaryCurrency] = useState("AED");
+  const empSalaryClinicDefault = resolveClinicCurrencyCode(clinics, empClinic || undefined);
+  useEffect(() => {
+    if (empClinic) setEmpSalaryCurrency(empSalaryClinicDefault);
+  }, [empClinic, empSalaryClinicDefault]);
   const validation = useValidationIssuesDialog({ intent: "create" });
   const [empIdDocFile, setEmpIdDocFile] = useState<File | null>(null);
 
@@ -62,6 +69,7 @@ export function AdminCreateEmployeePanel() {
         employmentType: empType,
         hireDate: new Date().toISOString().slice(0, 10),
         salaryBase: Number.parseFloat(empSalary),
+        salaryCurrency: empSalaryCurrency === empSalaryClinicDefault ? null : empSalaryCurrency,
       });
       if (empIdDocFile) {
         const fd = new FormData();
@@ -190,6 +198,10 @@ export function AdminCreateEmployeePanel() {
           <div className="space-y-2">
             <Label>{t("hr.salaryBase")}</Label>
             <Input className="ltr-nums" value={empSalary} onChange={(e) => setEmpSalary(e.target.value)} type="number" />
+          </div>
+          <div className="space-y-2">
+            <Label>{t("hr.salaryCurrency", "Salary currency")}</Label>
+            <BaseCurrencySelect value={empSalaryCurrency} onChange={setEmpSalaryCurrency} />
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label>{t("hr.idDocument", "ID / passport (PDF or image)")}</Label>

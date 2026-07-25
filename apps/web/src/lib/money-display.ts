@@ -28,3 +28,28 @@ export function formatMultiCurrencyAmounts(
   if (!rows.length) return "—";
   return rows.map((row) => formatMoneyAmount(row.amount, row.currency, locale)).join(" · ");
 }
+
+export function resolveEmployeeSalaryCurrency(
+  employee: {
+    salaryCurrency?: string | null;
+    salaryCurrencyEffective?: string;
+    clinicId: string;
+  },
+  clinics: Array<{ id: string; defaultCurrency?: string }>,
+): BaseCurrency {
+  if (employee.salaryCurrencyEffective) return asBaseCurrency(employee.salaryCurrencyEffective);
+  if (employee.salaryCurrency) return asBaseCurrency(employee.salaryCurrency);
+  return resolveClinicCurrencyCode(clinics, employee.clinicId);
+}
+
+export function formatEmployeeSalaryAmount(
+  employee: { salaryBase: number; salaryCurrency?: string | null; salaryCurrencyEffective?: string; clinicId: string },
+  clinics: Array<{ id: string; defaultCurrency?: string }>,
+  locale: string,
+): string {
+  return formatMoneyAmount(
+    employee.salaryBase,
+    resolveEmployeeSalaryCurrency(employee, clinics),
+    locale,
+  );
+}

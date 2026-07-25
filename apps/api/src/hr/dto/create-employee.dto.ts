@@ -69,4 +69,11 @@ export class CreateEmployeeDto {
   @IsNumber()
   @Min(0)
   salaryBase!: number;
+
+  @ApiPropertyOptional({
+    description: "Salary currency override; omit or match clinic default to follow clinic defaultCurrency",
+  })
+  @IsOptional()
+  @IsString()
+  salaryCurrency?: string | null;
 }

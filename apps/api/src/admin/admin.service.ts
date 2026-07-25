@@ -2,6 +2,8 @@ import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundEx
 import { EmploymentType, Prisma, UserRole } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { ensureUserEmployeeRecord } from "../common/clinic-staff-employee";
+import { assertCanAssignGroupAdminRole, assertCanCreateGroupAdminRole } from "../common/group-admin-role-policy";
+import { normalizeEmployeeSalaryCurrencyOverride } from "../common/employee-salary-currency";
 import {
   deactivateUserAccount,
   reactivateUserAccount,
@@ -38,6 +40,8 @@ type LinkedEmployeeSummary = {
   employeeLastNameEn: string | null;
   employeeEmploymentType: EmploymentType | null;
   employeeSalaryBase: number | null;
+  employeeSalaryCurrency: string | null;
+  employeeSalaryCurrencyEffective: string | null;
 };
 
 function mapLinkedEmployee(
@@ -48,6 +52,8 @@ function mapLinkedEmployee(
     lastNameEn: string;
     employmentType: EmploymentType;
     salaryBase: { toString(): string };
+    salaryCurrency: string | null;
+    clinic: { defaultCurrency: string };
   } | null,
 ): LinkedEmployeeSummary {
   if (!employee) {
@@ -58,8 +64,12 @@ function mapLinkedEmployee(
       employeeLastNameEn: null,
       employeeEmploymentType: null,
       employeeSalaryBase: null,
+      employeeSalaryCurrency: null,
+      employeeSalaryCurrencyEffective: null,
     };
   }
+  const effectiveCurrency =
+    employee.salaryCurrency?.trim() || employee.clinic.defaultCurrency;
   return {
     employeeId: employee.id,
     employeeNumber: employee.employeeNumber,
@@ -67,6 +77,8 @@ function mapLinkedEmployee(
     employeeLastNameEn: employee.lastNameEn,
     employeeEmploymentType: employee.employmentType,
     employeeSalaryBase: Number(employee.salaryBase),
+    employeeSalaryCurrency: employee.salaryCurrency,
+    employeeSalaryCurrencyEffective: effectiveCurrency,
   };
 }
 
@@ -193,7 +205,8 @@ export class AdminService {
               lastNameEn: true,
               employmentType: true,
               salaryBase: true,
-              clinic: { select: { id: true, nameEn: true } },
+              salaryCurrency: true,
+              clinic: { select: { id: true, nameEn: true, defaultCurrency: true } },
             },
           },
         },
@@ -293,6 +306,7 @@ export class AdminService {
     if (dto.role === UserRole.PLATFORM_SUPER_ADMIN) {
       throw new BadRequestException("Cannot create platform super administrators through this endpoint");
     }
+    assertCanCreateGroupAdminRole(dto.role);
     const existing = await this.prisma.user.findFirst({ where: { tenantId, email } });
     if (existing) throw new BadRequestException("Email already in use for this organization");
     if (CLINIC_SCOPE_ROLES.has(dto.role) && !(dto.clinicIds?.length ?? 0)) {
@@ -334,7 +348,8 @@ export class AdminService {
             lastNameEn: true,
             employmentType: true,
             salaryBase: true,
-            clinic: { select: { id: true, nameEn: true } },
+            salaryCurrency: true,
+            clinic: { select: { id: true, nameEn: true, defaultCurrency: true } },
           },
         },
       },
@@ -366,6 +381,9 @@ export class AdminService {
     }
 
     const nextRole = dto.role ?? existing.role;
+    if (dto.role !== undefined) {
+      assertCanAssignGroupAdminRole(existing.role, nextRole);
+    }
     if (nextRole === UserRole.CLINIC_ADMIN || nextRole === UserRole.BRANCH_MANAGER) {
       if (dto.clinicIds !== undefined && !dto.clinicIds.length) {
         throw new BadRequestException("clinicIds is required for clinic administrator or branch manager");
@@ -403,14 +421,25 @@ export class AdminService {
         await ensureUserEmployeeRecord(tx, tenantId, u, primaryClinic);
       }
 
-      if (dto.employmentType !== undefined || dto.salaryBase !== undefined) {
-        const emp = await tx.employee.findFirst({ where: { tenantId, userId } });
+      if (dto.employmentType !== undefined || dto.salaryBase !== undefined || dto.salaryCurrency !== undefined) {
+        const emp = await tx.employee.findFirst({
+          where: { tenantId, userId },
+          include: { clinic: { select: { defaultCurrency: true } } },
+        });
         if (emp) {
+          let salaryCurrency: string | null | undefined;
+          if (dto.salaryCurrency !== undefined) {
+            salaryCurrency = normalizeEmployeeSalaryCurrencyOverride(
+              emp.clinic.defaultCurrency,
+              dto.salaryCurrency,
+            );
+          }
           await tx.employee.update({
             where: { id: emp.id },
             data: {
               ...(dto.employmentType !== undefined ? { employmentType: dto.employmentType } : {}),
               ...(dto.salaryBase !== undefined ? { salaryBase: dto.salaryBase } : {}),
+              ...(salaryCurrency !== undefined ? { salaryCurrency } : {}),
             },
           });
         }

@@ -14,6 +14,8 @@ import {
 } from "@prisma/client";
 import type { JwtUser } from "../../auth/jwt-user";
 import { paginate, parsePageParams } from "../../common/pagination";
+import { assertCanAssignGroupAdminRole } from "../../common/group-admin-role-policy";
+import { normalizeEmployeeSalaryCurrencyOverride } from "../../common/employee-salary-currency";
 import { PrismaService } from "../../prisma/prisma.service";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../../storage/upload-blob.storage";
 import {
@@ -687,6 +689,8 @@ export class AdminDataExplorerService {
       }
       case "users": {
         const data: Prisma.UserUpdateInput = {};
+        const existing = await this.prisma.user.findFirst({ where: { id, tenantId }, select: { role: true } });
+        if (!existing) throw new NotFoundException("User not found");
         if (body.email !== undefined) {
           const email = String(body.email).toLowerCase().trim();
           const clash = await this.prisma.user.findFirst({ where: { tenantId, email, NOT: { id } } });
@@ -697,6 +701,7 @@ export class AdminDataExplorerService {
         if (body.role !== undefined) {
           const role = String(body.role) as UserRole;
           if (!Object.values(UserRole).includes(role)) throw new BadRequestException("Invalid role");
+          assertCanAssignGroupAdminRole(existing.role, role);
           data.role = role;
         }
         if (Object.keys(data).length === 0) throw new BadRequestException("No patchable fields");
@@ -777,6 +782,11 @@ export class AdminDataExplorerService {
       }
       case "employees": {
         const data: Prisma.EmployeeUpdateInput = {};
+        const existing = await this.prisma.employee.findFirst({
+          where: { id, tenantId },
+          include: { clinic: { select: { defaultCurrency: true } } },
+        });
+        if (!existing) throw new NotFoundException("Employee not found");
         if (body.firstNameEn !== undefined) data.firstNameEn = String(body.firstNameEn).trim();
         if (body.lastNameEn !== undefined) data.lastNameEn = String(body.lastNameEn).trim();
         if (body.email !== undefined) data.email = body.email === null ? null : String(body.email);
@@ -789,11 +799,20 @@ export class AdminDataExplorerService {
         }
         if (body.hireDate !== undefined) data.hireDate = new Date(String(body.hireDate));
         if (body.salaryBase !== undefined) data.salaryBase = Number(body.salaryBase);
+        if (body.salaryCurrency !== undefined) {
+          data.salaryCurrency = normalizeEmployeeSalaryCurrencyOverride(
+            existing.clinic.defaultCurrency,
+            body.salaryCurrency === null ? null : String(body.salaryCurrency),
+          );
+        }
         if (body.clinicId !== undefined) {
           const cid = String(body.clinicId);
           const cl = await this.prisma.clinic.findFirst({ where: { id: cid, tenantId } });
           if (!cl) throw new BadRequestException("Invalid clinicId");
           data.clinic = { connect: { id: cid } };
+          if (body.salaryCurrency === undefined && !existing.salaryCurrency) {
+            data.salaryCurrency = null;
+          }
         }
         if (Object.keys(data).length === 0) throw new BadRequestException("No patchable fields");
         const row = await this.prisma.employee.update({ where: { id }, data });

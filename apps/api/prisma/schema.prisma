@@ -520,6 +520,7 @@ model Employee {
   employmentType    EmploymentType
   hireDate          DateTime
   salaryBase        Decimal         @db.Decimal(14, 2)
+  salaryCurrency    String?
   recordStatus      EmployeeRecordStatus      @default(ACTIVE)
   resignationDate   DateTime?                 @db.Date
   separationReason  EmployeeSeparationReason?

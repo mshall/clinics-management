@@ -13,7 +13,7 @@ import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { apiGet, apiPatch, apiPost } from "@/lib/http";
 import { formatUserRole } from "@/lib/locale-display";
 import type { Paginated } from "@/lib/paginated";
-import { apiErrorMessage, isClinicRequiredUserRole, isOrgWideUserRole, ORG_USER_ROLES, type PlatformUserRow, type TenantRow } from "@/features/platform/platform-shared";
+import { apiErrorMessage, isClinicRequiredUserRole, isOrgWideUserRole, ORG_USER_ROLES, orgUserRolesForEdit, ORG_USER_ROLES_CREATABLE, type PlatformUserRow, type TenantRow } from "@/features/platform/platform-shared";
 import {
   ORG_USER_PASSWORD_MIN_LENGTH,
 } from "@/features/platform/org-user-form-validation";
@@ -74,6 +74,10 @@ export function PlatformUsersTab() {
     queryFn: () => apiGet<UserDetail>(`/api/v1/admin/platform/tenants/${editSelection!.tenantId}/users/${editSelection!.userId}`),
     enabled: isEdit && Boolean(editSelection?.tenantId && editSelection?.userId),
   });
+
+  const assignableRoles = isCreate
+    ? ORG_USER_ROLES_CREATABLE
+    : orgUserRolesForEdit(userDetailQuery.data?.role ?? uRole);
 
   const clinicRows = clinicsQuery.data ?? [];
 
@@ -338,7 +342,7 @@ export function PlatformUsersTab() {
                   value={uRole}
                   onChange={(e) => setURole(e.target.value as (typeof ORG_USER_ROLES)[number])}
                 >
-                  {ORG_USER_ROLES.map((r) => (
+                  {assignableRoles.map((r) => (
                     <option key={r} value={r}>
                       {formatUserRole(r, t)}
                     </option>

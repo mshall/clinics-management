@@ -117,6 +117,8 @@ export interface EmployeeDto {
   employmentType: string;
   hireDate: string;
   salaryBase: number;
+  salaryCurrency?: string | null;
+  salaryCurrencyEffective?: string;
   userId: string | null;
   linkedUserDisplayName?: string | null;
   linkedUserRole?: string | null;
@@ -248,7 +250,7 @@ export interface ClinicPhysicianDto {
 
 export interface HrSummaryDto {
   employeeCount: number;
-  monthlyPayrollEstimate: number;
+  monthlyPayrollByCurrency: Array<{ currency: string; amount: number }>;
   pendingLeaveRequests: number;
 }
 

@@ -43,4 +43,9 @@ export class PlatformPatchTenantUserDto {
   @IsNumber()
   @Min(0)
   salaryBase?: number;
+
+  @ApiPropertyOptional({ description: "Linked HR employee salary currency override" })
+  @IsOptional()
+  @IsString()
+  salaryCurrency?: string | null;
 }

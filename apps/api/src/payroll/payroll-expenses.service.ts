@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { EmployeeRecordStatus, ExpenseStatus, Prisma } from "@prisma/client";
+import { effectiveEmployeeSalaryCurrency } from "../common/employee-salary-currency";
 import { PrismaService } from "../prisma/prisma.service";
 
 export const PAYROLL_EXPENSE_CATEGORY = "PAYROLL";
@@ -65,6 +66,7 @@ export class PayrollExpensesService {
 
     for (const emp of employees) {
       const vendorName = `Salary — ${emp.firstNameEn} ${emp.lastNameEn}`.trim();
+      const currency = effectiveEmployeeSalaryCurrency(emp.salaryCurrency, emp.clinic.defaultCurrency);
       await this.prisma.expense.upsert({
         where: {
           tenantId_employeeId_payrollMonth: {
@@ -79,7 +81,7 @@ export class PayrollExpensesService {
           category: PAYROLL_EXPENSE_CATEGORY,
           vendorName,
           amount: emp.salaryBase,
-          currency: emp.clinic.defaultCurrency,
+          currency,
           incurredAt,
           status: ExpenseStatus.APPROVED,
           employeeId: emp.id,
@@ -89,7 +91,7 @@ export class PayrollExpensesService {
           clinicId: emp.clinicId,
           vendorName,
           amount: emp.salaryBase,
-          currency: emp.clinic.defaultCurrency,
+          currency,
           status: ExpenseStatus.APPROVED,
         },
       });
