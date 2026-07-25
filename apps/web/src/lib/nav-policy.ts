@@ -113,9 +113,9 @@ export function canCustomizeOrgRoleNavTabs(role: DemoRole | undefined): boolean 
   return role === "group_admin";
 }
 
-/** May assign organization tabs to a user beyond their role defaults. */
+/** May assign organization tabs to a user beyond their role defaults (group admin only). */
 export function canExtendUserNavTabs(role: DemoRole | undefined): boolean {
-  return role === "group_admin" || role === "clinic_admin";
+  return role === "group_admin";
 }
 
 export function navKeysForRole(role: DemoRole | undefined): Set<NavItemKey> {

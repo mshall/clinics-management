@@ -286,6 +286,9 @@ export interface UserListItemDto {
   email: string;
   displayName: string;
   role: string;
+  createdAt?: string;
+  clinicIds?: string[];
+  clinics?: { id: string; nameEn: string }[];
 }
 
 export interface ClinicDetailDto {

@@ -1,8 +1,12 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { ForbiddenException, Injectable } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
 import { isFullRoleNav, sanitizeUserNavTabGrant } from "./nav-tab-keys";
+import {
+  assertClinicAdminCanManageUserNavTabs,
+  loadNavTabTargetUser,
+} from "./clinic-admin-rbac-policy";
 import { TenantRoleNavTabsService } from "./tenant-role-nav-tabs.service";
 
 @Injectable()
@@ -24,10 +28,14 @@ export class UserNavTabsService {
     throw new ForbiddenException("Only group or clinic administrators may manage tab visibility");
   }
 
-  async getForUser(tenantId: string, targetUserId: string, actor: JwtUser): Promise<{ tabKeys: string[] | null }> {
-    const target = await this.prisma.user.findFirst({ where: { id: targetUserId, tenantId } });
-    if (!target) throw new NotFoundException("User not found");
+  private async assertCanManageAsync(actor: JwtUser, tenantId: string, targetUserId: string): Promise<void> {
+    const target = await loadNavTabTargetUser(this.prisma, tenantId, targetUserId);
     this.assertCanManage(actor, target);
+    await assertClinicAdminCanManageUserNavTabs(this.prisma, tenantId, actor, target);
+  }
+
+  async getForUser(tenantId: string, targetUserId: string, actor: JwtUser): Promise<{ tabKeys: string[] | null }> {
+    await this.assertCanManageAsync(actor, tenantId, targetUserId);
     const row = await this.prisma.userNavTabGrant.findUnique({
       where: { tenantId_userId: { tenantId, userId: targetUserId } },
     });
@@ -37,13 +45,11 @@ export class UserNavTabsService {
   }
 
   async setForUser(tenantId: string, targetUserId: string, tabKeys: string[], actor: JwtUser): Promise<{ tabKeys: string[] | null }> {
-    const target = await this.prisma.user.findFirst({ where: { id: targetUserId, tenantId } });
-    if (!target) throw new NotFoundException("User not found");
-    this.assertCanManage(actor, target);
+    const target = await loadNavTabTargetUser(this.prisma, tenantId, targetUserId);
+    await this.assertCanManageAsync(actor, tenantId, targetUserId);
 
     const roleBase = await this.tenantRoleNav.effectiveRoleBaseForUser(tenantId, target.role);
-    const allowOrganizationTabs =
-      actor.role === UserRole.GROUP_ADMIN || actor.role === UserRole.CLINIC_ADMIN;
+    const allowOrganizationTabs = actor.role === UserRole.GROUP_ADMIN;
     const sanitized = sanitizeUserNavTabGrant(target.role, tabKeys, {
       allowOrganizationTabs,
       roleBase,

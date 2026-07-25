@@ -5,7 +5,7 @@ import { SearchablePickList, type PickListItem } from "@/components/searchable-p
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { useUsersQuery } from "@/lib/api-hooks";
+import { useUsersQuery, useClinicsQuery } from "@/lib/api-hooks";
 import { ApiError, apiGet, apiPut } from "@/lib/http";
 import type { NavItemKey } from "@/lib/nav-policy";
 import {
@@ -20,6 +20,7 @@ import { mapApiRole } from "@/lib/roles";
 import { formatUserRole } from "@/lib/locale-display";
 import type { DemoRole } from "@/lib/roles";
 import { useAuthStore } from "@/stores/auth-store";
+import { canClinicAdminManageUserRbac } from "@/lib/clinic-admin-rbac-policy";
 
 const NAV_I18N: Record<NavItemKey, string> = {
   platform: "nav.platformOverview",
@@ -108,6 +109,9 @@ export function OrgRbacPanel() {
   const viewer = useAuthStore((s) => s.user);
   const canCustomizeRoles = canCustomizeOrgRoleNavTabs(viewer?.role);
   const canExtendUsers = canExtendUserNavTabs(viewer?.role);
+  const isClinicAdminViewer = viewer?.role === "clinic_admin";
+  const { data: viewerClinics = [] } = useClinicsQuery();
+  const viewerClinicIds = useMemo(() => viewerClinics.map((c) => c.id), [viewerClinics]);
 
   const [roleTarget, setRoleTarget] = useState<DemoRole | "">("");
   const [roleDraft, setRoleDraft] = useState<Set<NavItemKey>>(() => new Set());
@@ -167,9 +171,11 @@ export function OrgRbacPanel() {
 
   const pickableUsers = useMemo(() => {
     const items = usersQ.data?.items ?? [];
-    if (viewer?.role !== "clinic_admin") return items;
-    return items.filter((u) => u.role !== "CLINIC_ADMIN" && u.role !== "GROUP_ADMIN");
-  }, [usersQ.data?.items, viewer?.role]);
+    if (!isClinicAdminViewer) return items;
+    return items.filter((u) =>
+      canClinicAdminManageUserRbac({ role: u.role, clinicIds: u.clinicIds }, viewerClinicIds),
+    );
+  }, [usersQ.data?.items, isClinicAdminViewer, viewerClinicIds]);
 
   const userTarget = pickableUsers.find((u) => u.id === userTargetId);
   const userTargetRole = userTarget ? mapApiRole(userTarget.role) : undefined;
@@ -381,7 +387,12 @@ export function OrgRbacPanel() {
                 "admin.rbacUserHint",
                 canExtendUsers
                   ? "Grant or restrict tabs for a specific user. You can add organization tabs (e.g. HR) even when they are not part of the user's role."
-                  : "Grant or restrict tabs for a specific user within their role permissions.",
+                  : isClinicAdminViewer
+                    ? t(
+                        "admin.rbacUserHintClinicAdmin",
+                        "Adjust sidebar tabs for staff in your assigned clinics only, within their role permissions. Organization-wide tabs (e.g. HR, Admin) cannot be added.",
+                      )
+                    : "Grant or restrict tabs for a specific user within their role permissions.",
               )}
             </p>
           </div>
