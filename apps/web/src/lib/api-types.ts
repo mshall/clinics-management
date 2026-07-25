@@ -55,6 +55,7 @@ export interface EncounterDetailDto {
   heightCm: number | null;
   noMedications: boolean;
   visitFeeAmount: number;
+  visitFeeCurrency: string;
   appointmentId?: string | null;
   finalizedAt: string | null;
   diagnoses: DiagnosisDto[];
@@ -261,6 +262,7 @@ export interface ProfitLossDto {
 export interface RevenueTotalsDto {
   grossTotal: number;
   netTotal: number;
+  byCurrency: Array<{ currency: string; grossTotal: number; netTotal: number }>;
 }
 
 export interface AdminOverviewDto {

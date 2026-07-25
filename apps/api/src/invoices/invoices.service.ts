@@ -11,6 +11,7 @@ import * as path from "path";
 import type { JwtUser } from "../auth/jwt-user";
 import { CLINIC_SCOPE_ROLES, fetchClinicScopeIds, fetchPhysicianNetworkClinicIds } from "../common/clinic-scope";
 import { assertCanGenerateInvoice } from "../common/invoice-generate-roles";
+import { isBaseCurrency } from "../common/base-currencies";
 import { resolveClinicCurrency } from "../common/clinic-currency";
 import {
   invoiceBackgroundHex,
@@ -168,6 +169,8 @@ export class InvoicesService {
     let encounterId: string | null = null;
     let operationId: string | null = null;
 
+    let linkedCurrency: string | undefined;
+
     if (dto.encounterId) {
       const enc = await this.prisma.encounter.findFirst({
         where: { id: dto.encounterId, tenantId },
@@ -180,6 +183,7 @@ export class InvoicesService {
       patientName = `${enc.patient.firstNameEn} ${enc.patient.lastNameEn}`.trim();
       patientMrn = enc.patient.mrn;
       encounterId = enc.id;
+      linkedCurrency = enc.visitFeeCurrency;
     } else {
       const op = await this.prisma.operation.findFirst({
         where: { id: dto.operationId!, tenantId },
@@ -192,14 +196,27 @@ export class InvoicesService {
       patientName = `${op.patient.firstNameEn} ${op.patient.lastNameEn}`.trim();
       patientMrn = op.patient.mrn;
       operationId = op.id;
+      linkedCurrency = op.feeCurrency;
     }
 
     const clinic = await this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId } });
     if (!clinic) throw new NotFoundException("Clinic not found");
 
+    const defaultCurrency = linkedCurrency ?? clinic.defaultCurrency;
+
+    const currencyCode = dto.currency?.trim();
+    const currency =
+      currencyCode && isBaseCurrency(currencyCode)
+        ? currencyCode
+        : isBaseCurrency(defaultCurrency)
+          ? defaultCurrency
+          : await resolveClinicCurrency(this.prisma, tenantId, clinicId);
+    if (currencyCode && !isBaseCurrency(currencyCode)) {
+      throw new BadRequestException("Invalid invoice currency");
+    }
+
     const issueDate = new Date();
     const invoiceNumber = await this.nextInvoiceNumber(clinicId, issueDate);
-    const currency = await resolveClinicCurrency(this.prisma, tenantId, clinicId);
     const backgroundColor = clinic.invoiceBackgroundColor || "white";
     const sections = normalizeInvoiceSections(clinic.invoiceSections);
 

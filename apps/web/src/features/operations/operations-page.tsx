@@ -1985,6 +1985,7 @@ export function OperationsPage() {
           }
           defaultPurpose={t("operations.procedureFee", "Procedure fee")}
           defaultAmount={invoiceOperation.paidAmount > 0 ? invoiceOperation.paidAmount : invoiceOperation.totalCost}
+          defaultCurrency={invoiceOperation.feeCurrency ?? resolveClinicCurrencyCode(clinics, invoiceOperation.clinicId)}
         />
       ) : null}
     </div>

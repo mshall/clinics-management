@@ -378,6 +378,7 @@ model Encounter {
   heightCm       Decimal?          @db.Decimal(6, 2)
   noMedications  Boolean           @default(false)
   visitFeeAmount Decimal           @default(0) @db.Decimal(14, 2)
+  visitFeeCurrency String          @default("AED")
   appointmentId  String?
   appointment    Appointment?     @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   finalizedAt    DateTime?

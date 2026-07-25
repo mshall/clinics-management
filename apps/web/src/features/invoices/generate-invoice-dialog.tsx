@@ -3,6 +3,7 @@ import { Plus, Printer, Trash2 } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,7 @@ type GenerateInvoiceDialogProps = {
   operationId?: string;
   defaultPurpose?: string;
   defaultAmount?: number;
+  defaultCurrency?: string;
 };
 
 export function GenerateInvoiceDialog({
@@ -34,6 +36,7 @@ export function GenerateInvoiceDialog({
   operationId,
   defaultPurpose = "",
   defaultAmount,
+  defaultCurrency = "AED",
 }: GenerateInvoiceDialogProps) {
   const { t, i18n } = useTranslation();
   const previewId = useId().replace(/:/g, "");
@@ -41,12 +44,14 @@ export function GenerateInvoiceDialog({
   const logo = useAuthenticatedImage(clinicInvoiceLogoUrl(clinicId), open);
   const [lines, setLines] = useState<InvoiceLineDraft[]>([{ purpose: defaultPurpose, amountPaid: defaultAmount != null ? String(defaultAmount) : "" }]);
   const [generated, setGenerated] = useState<InvoiceDto | null>(null);
+  const [invoiceCurrency, setInvoiceCurrency] = useState(defaultCurrency);
 
   useEffect(() => {
     if (!open) return;
     setGenerated(null);
+    setInvoiceCurrency(defaultCurrency);
     setLines([{ purpose: defaultPurpose, amountPaid: defaultAmount != null ? String(defaultAmount) : "" }]);
-  }, [open, defaultPurpose, defaultAmount]);
+  }, [open, defaultPurpose, defaultAmount, defaultCurrency]);
 
   const addLine = () => setLines((prev) => [...prev, { purpose: "", amountPaid: "" }]);
   const removeLine = (idx: number) => setLines((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== idx)));
@@ -64,6 +69,7 @@ export function GenerateInvoiceDialog({
       return createMut.mutateAsync({
         encounterId,
         operationId,
+        currency: invoiceCurrency,
         lines: payload,
       });
     },
@@ -112,6 +118,16 @@ export function GenerateInvoiceDialog({
               <p className="font-medium">{patientName}</p>
             </div>
 
+            <div className="space-y-2">
+              <Label>{t("invoices.currency", "Currency")}</Label>
+              <BaseCurrencySelect value={invoiceCurrency} onChange={setInvoiceCurrency} />
+              <p className="text-xs text-muted-foreground">
+                {t("invoices.currencyHint", "Defaults to the clinic or linked record currency ({{currency}}).", {
+                  currency: defaultCurrency,
+                })}
+              </p>
+            </div>
+
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <Label>{t("invoices.lineItems", "Line items")}</Label>
@@ -133,7 +149,9 @@ export function GenerateInvoiceDialog({
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor={`inv-amount-${idx}`}>{t("invoices.amountPaid", "Amount paid")}</Label>
+                    <Label htmlFor={`inv-amount-${idx}`}>
+                      {t("invoices.amountPaid", "Amount paid ({{currency}})", { currency: invoiceCurrency })}
+                    </Label>
                     <Input
                       id={`inv-amount-${idx}`}
                       className="ltr-nums"

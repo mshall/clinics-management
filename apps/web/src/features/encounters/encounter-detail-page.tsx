@@ -25,6 +25,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { DocumentViewerOverlay } from "@/components/document-viewer-overlay";
+import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -98,7 +99,8 @@ export function EncounterDetailPage() {
   const canInvoice = canGenerateInvoice(user?.role);
   const { data: enc, isPending, isError, error } = useEncounterQuery(id);
   const { data: clinics = [] } = useClinicsQuery();
-  const visitFeeCurrency = resolveClinicCurrencyCode(clinics, enc?.clinicId);
+  const clinicDefaultCurrency = resolveClinicCurrencyCode(clinics, enc?.clinicId);
+  const visitFeeCurrency = enc?.visitFeeCurrency ?? clinicDefaultCurrency;
 
   const [visitType, setVisitType] = useState("");
   const [chief, setChief] = useState("");
@@ -114,6 +116,7 @@ export function EncounterDetailPage() {
   const [weightKg, setWeightKg] = useState("");
   const [heightCm, setHeightCm] = useState("");
   const [visitFeeAmount, setVisitFeeAmount] = useState("");
+  const [visitFeeCurrencyDraft, setVisitFeeCurrencyDraft] = useState("AED");
   const [drugName, setDrugName] = useState("");
   const [dosage, setDosage] = useState("");
   const [frequency, setFrequency] = useState("");
@@ -147,9 +150,10 @@ export function EncounterDetailPage() {
     setWeightKg(enc.weightKg != null ? String(enc.weightKg) : "");
     setHeightCm(enc.heightCm != null ? String(enc.heightCm) : "");
     setVisitFeeAmount(enc.visitFeeAmount != null ? String(enc.visitFeeAmount) : "");
+    setVisitFeeCurrencyDraft(enc.visitFeeCurrency ?? clinicDefaultCurrency);
     setNoMedications(enc.noMedications ?? false);
     if (enc.noMedications) setMedTab("none");
-  }, [enc?.id, enc?.noMedications]);
+  }, [enc?.id, enc?.noMedications, enc?.visitFeeAmount, enc?.visitFeeCurrency, clinicDefaultCurrency]);
 
   useEffect(() => {
     if (generatedRxUrlRef.current) {
@@ -211,6 +215,7 @@ export function EncounterDetailPage() {
         weightKg: numOrUndef(weightKg),
         heightCm: numOrUndef(heightCm),
         visitFeeAmount: numOrUndef(visitFeeAmount),
+        visitFeeCurrency: visitFeeCurrencyDraft,
       });
     },
     onSuccess: (data) => {
@@ -668,6 +673,10 @@ export function EncounterDetailPage() {
         <CardContent className="space-y-3">
           {draft ? (
             <>
+              <div className="space-y-2">
+                <Label>{t("encounters.visitFeeCurrency", "Currency")}</Label>
+                <BaseCurrencySelect value={visitFeeCurrencyDraft} onChange={setVisitFeeCurrencyDraft} />
+              </div>
               <Input
                 className="max-w-xs ltr-nums text-lg font-semibold"
                 inputMode="decimal"
@@ -1230,6 +1239,7 @@ export function EncounterDetailPage() {
           }
           defaultPurpose={formatVisitType(visitType, t)}
           defaultAmount={enc.visitFeeAmount ?? undefined}
+          defaultCurrency={visitFeeCurrency}
         />
       ) : null}
     </div>

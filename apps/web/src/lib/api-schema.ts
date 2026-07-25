@@ -36,6 +36,8 @@ export type GroupOverviewKpisDto = components["schemas"]["GroupOverviewKpisDto"]
   periodTo?: string;
   encountersPeriodTotal?: number;
   appointmentsPeriodTotal?: number;
+  revenueByCurrency?: Array<{ currency: string; amount: number }>;
+  expensesByCurrency?: Array<{ currency: string; amount: number }>;
 };
 export type LoginResponseDto = components["schemas"]["LoginResponseDto"];
 export type AuthUserDto = components["schemas"]["AuthUserDto"] & {

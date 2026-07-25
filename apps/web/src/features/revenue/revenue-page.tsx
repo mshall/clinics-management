@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CreateActionButton } from "@/components/create-action-button";
+import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { ResponsiveTable } from "@/components/responsive-table";
@@ -12,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useClinicsQuery, useClinicRevenueBreakdownQuery, usePayableOperationsQuery, useRevenueQuery, useRevenueTotalsQuery } from "@/lib/api-hooks";
-import type { RevenueEntryDto } from "@/lib/api-types";
+import type { RevenueEntryDto, RevenueTotalsDto } from "@/lib/api-types";
 import { apiPost } from "@/lib/http";
 import { columnFilterIncludes } from "@/lib/utils";
 import {
@@ -29,9 +30,26 @@ import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog"
 import { collectRevenueSubmitIssues } from "@/lib/create-form-validation";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { resolvePatientListLabel } from "@/lib/patient-display";
+import { formatMoneyAmount, formatMultiCurrencyAmounts, resolveClinicCurrencyCode } from "@/lib/money-display";
 
 function clinicDisplayName(r: RevenueEntryDto, lng: string): string {
   return formatClinicNameFields(r.clinicNameEn, r.clinicNameAr, lng, r.clinicId);
+}
+
+function formatLedgerTotals(
+  totals: RevenueTotalsDto | undefined,
+  field: "grossTotal" | "netTotal",
+  fallbackCurrency: string,
+  locale: string,
+): string {
+  if (!totals) return "—";
+  if (totals.byCurrency?.length) {
+    return formatMultiCurrencyAmounts(
+      totals.byCurrency.map((row) => ({ currency: row.currency, amount: row[field] })),
+      locale,
+    );
+  }
+  return formatMoneyAmount(totals[field], fallbackCurrency, locale);
 }
 
 export function RevenuePage() {
@@ -83,6 +101,7 @@ export function RevenuePage() {
   const [operationId, setOperationId] = useState("");
   const [gross, setGross] = useState("");
   const [vatPercent, setVatPercent] = useState("");
+  const [revenueCurrency, setRevenueCurrency] = useState("AED");
   const validation = useValidationIssuesDialog({ intent: "submit" });
   const [rfCategory, setRfCategory] = useState("");
   const [rfNet, setRfNet] = useState("");
@@ -104,11 +123,34 @@ export function RevenuePage() {
     [payableOps, operationId]
   );
   const operationBalance = selectedOperation?.balanceDue ?? 0;
+  const postClinicId = operationId && selectedOperation ? selectedOperation.clinicId : clinicId;
+  const postClinicDefaultCurrency = resolveClinicCurrencyCode(clinics, postClinicId || filterClinicId || singleManagedClinic?.id);
+  const displayCurrency = resolveClinicCurrencyCode(clinics, filterClinicId || clinicId || singleManagedClinic?.id);
+  const locale = localeForLanguage(i18n.language);
+
+  useEffect(() => {
+    if (operationId && selectedOperation?.feeCurrency) {
+      setRevenueCurrency(selectedOperation.feeCurrency);
+      return;
+    }
+    setRevenueCurrency(postClinicDefaultCurrency);
+  }, [operationId, selectedOperation?.feeCurrency, postClinicDefaultCurrency]);
+
+  const money = (n: number, currency?: string) => formatMoneyAmount(n, currency ?? displayCurrency, locale);
+
+  const grossN = Number.parseFloat(gross || "0");
+  const vatN = Number.parseFloat(vatPercent || "0");
+  const vatClamped = Number.isFinite(vatN) ? Math.min(100, Math.max(0, vatN)) : 0;
+  const taxComputed = Math.round(grossN * (vatClamped / 100) * 100) / 100;
+  const netComputed = Math.round((grossN - taxComputed) * 100) / 100;
+
+  const paymentExceedsBalance =
+    operationId.length > 0 && netComputed > 0 && netComputed > operationBalance + 0.001;
 
   const createMut = useMutation({
     mutationFn: () => {
       const payload: Record<string, unknown> = {
-        clinicId: operationId && selectedOperation ? selectedOperation.clinicId : clinicId,
+        clinicId: postClinicId,
         category: operationId ? "OPERATION_PAYMENT" : category,
         description: operationId
           ? `Operation payment · ${selectedOperation?.patientName ?? selectedOperation?.patientMrn ?? operationId}`
@@ -116,7 +158,7 @@ export function RevenuePage() {
         grossAmount: grossN,
         taxAmount: taxComputed,
         netAmount: netComputed,
-        currency: "AED",
+        currency: revenueCurrency,
         postedAt: new Date().toISOString(),
       };
       if (operationId) payload.operationId = operationId;
@@ -154,26 +196,13 @@ export function RevenuePage() {
     createMut.mutate();
   };
 
-  const money = (n: number) =>
-    new Intl.NumberFormat(localeForLanguage(i18n.language), { style: "currency", currency: "AED" }).format(n);
-
-  const grossN = Number.parseFloat(gross || "0");
-  const vatN = Number.parseFloat(vatPercent || "0");
-  const vatClamped = Number.isFinite(vatN) ? Math.min(100, Math.max(0, vatN)) : 0;
-  const taxComputed = Math.round(grossN * (vatClamped / 100) * 100) / 100;
-  const netComputed = Math.round((grossN - taxComputed) * 100) / 100;
-
-  const paymentExceedsBalance =
-    operationId.length > 0 && netComputed > 0 && netComputed > operationBalance + 0.001;
-
   const filteredRevenueRows = useMemo(() => {
     const loc = localeForLanguage(i18n.language);
-    const fmt = (x: number) => new Intl.NumberFormat(loc, { style: "currency", currency: "AED" }).format(x);
     return rows.filter((r) => {
       if (rfClinic.trim() && !columnFilterIncludes(clinicDisplayName(r, i18n.language), rfClinic)) return false;
       if (rfCategory.trim() && !columnFilterIncludes(formatRevenueCategory(r.category, t), rfCategory)) return false;
       if (rfNet.trim()) {
-        const hay = `${r.netAmount} ${fmt(r.netAmount)}`;
+        const hay = `${r.netAmount} ${formatMoneyAmount(r.netAmount, r.currency, loc)}`;
         if (!columnFilterIncludes(hay, rfNet)) return false;
       }
       if (rfPosted.trim()) {
@@ -277,7 +306,9 @@ export function RevenuePage() {
             <CardTitle className="text-xs font-medium text-muted-foreground">{t("revenue.totalGross", "Total gross")}</CardTitle>
           </CardHeader>
           <CardContent className="pb-4 pt-0">
-            <p className="text-sm font-semibold ltr-nums sm:text-base">{totalsQ.isPending ? "—" : money(totalsQ.data?.grossTotal ?? 0)}</p>
+            <p className="text-sm font-semibold ltr-nums sm:text-base">
+              {totalsQ.isPending ? "—" : formatLedgerTotals(totalsQ.data, "grossTotal", displayCurrency, locale)}
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -285,7 +316,9 @@ export function RevenuePage() {
             <CardTitle className="text-xs font-medium text-muted-foreground">{t("revenue.totalNet", "Total net")}</CardTitle>
           </CardHeader>
           <CardContent className="pb-4 pt-0">
-            <p className="text-sm font-semibold ltr-nums sm:text-base">{totalsQ.isPending ? "—" : money(totalsQ.data?.netTotal ?? 0)}</p>
+            <p className="text-sm font-semibold ltr-nums sm:text-base">
+              {totalsQ.isPending ? "—" : formatLedgerTotals(totalsQ.data, "netTotal", displayCurrency, locale)}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -395,7 +428,10 @@ export function RevenuePage() {
               <select
                 className={nativeSelectClassName}
                 value={clinicId}
-                onChange={(e) => setClinicId(e.target.value)}
+                onChange={(e) => {
+                  setClinicId(e.target.value);
+                  setRevenueCurrency(resolveClinicCurrencyCode(clinics, e.target.value || undefined));
+                }}
               >
                 <option value="">{t("revenue.pickClinic")}</option>
                 {clinics.map((c) => (
@@ -422,7 +458,16 @@ export function RevenuePage() {
             </select>
           </div>
           <div className="space-y-2">
-            <Label required>{t("revenue.gross")}</Label>
+            <Label>{t("revenue.currency", "Currency")}</Label>
+            <BaseCurrencySelect value={revenueCurrency} onChange={setRevenueCurrency} />
+            <p className="text-xs text-muted-foreground">
+              {t("revenue.currencyHint", "Defaults to the clinic currency ({{currency}}).", {
+                currency: postClinicDefaultCurrency,
+              })}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label required>{t("revenue.gross", "Gross ({{currency}})", { currency: revenueCurrency })}</Label>
             <Input className="ltr-nums" value={gross} onChange={(e) => setGross(e.target.value)} type="number" min="0" step="0.01" />
           </div>
           <div className="space-y-2">
@@ -439,8 +484,8 @@ export function RevenuePage() {
             />
           </div>
           <div className="space-y-2">
-            <Label>{t("revenue.net")}</Label>
-            <Input className="ltr-nums bg-muted/50" readOnly value={gross.trim() ? money(netComputed) : ""} type="text" />
+            <Label>{t("revenue.net", "Net ({{currency}})", { currency: revenueCurrency })}</Label>
+            <Input className="ltr-nums bg-muted/50" readOnly value={gross.trim() ? money(netComputed, revenueCurrency) : ""} type="text" />
           </div>
           <div className="flex items-end">
             <CreateActionButton
@@ -546,7 +591,7 @@ export function RevenuePage() {
                         {clinicDisplayName(r, i18n.language)}
                       </td>
                       <td className="px-3 py-2">{formatRevenueCategory(r.category, t)}</td>
-                      <td className="px-3 py-2 ltr-nums">{money(r.netAmount)}</td>
+                      <td className="px-3 py-2 ltr-nums">{money(r.netAmount, r.currency)}</td>
                       <td className="px-3 py-2 ltr-nums text-xs text-muted-foreground">
                         {new Date(r.postedAt).toLocaleString(localeForLanguage(i18n.language))}
                       </td>
@@ -599,15 +644,15 @@ export function RevenuePage() {
               </div>
               <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
                 <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("revenue.gross")}</dt>
-                <dd className="font-medium ltr-nums">{money(detail.grossAmount)}</dd>
+                <dd className="font-medium ltr-nums">{money(detail.grossAmount, detail.currency)}</dd>
               </div>
               <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
                 <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("revenue.tax")}</dt>
-                <dd className="font-medium ltr-nums">{money(detail.taxAmount)}</dd>
+                <dd className="font-medium ltr-nums">{money(detail.taxAmount, detail.currency)}</dd>
               </div>
               <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
                 <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("revenue.net")}</dt>
-                <dd className="font-medium ltr-nums">{money(detail.netAmount)}</dd>
+                <dd className="font-medium ltr-nums">{money(detail.netAmount, detail.currency)}</dd>
               </div>
               <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
                 <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("revenue.posted")}</dt>

@@ -133,8 +133,11 @@ export class EncounterDetailDto {
   @ApiProperty()
   noMedications!: boolean;
 
-  @ApiProperty({ description: "Visit fee captured when the encounter was created (tenant base currency)" })
+  @ApiProperty({ description: "Visit fee captured when the encounter was created" })
   visitFeeAmount!: number;
+
+  @ApiProperty({ description: "Currency for the visit fee and linked revenue" })
+  visitFeeCurrency!: string;
 
   @ApiPropertyOptional({ nullable: true, description: "Linked booked appointment, if any" })
   appointmentId?: string | null;

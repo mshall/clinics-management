@@ -117,4 +117,10 @@ export class UpdateEncounterDto {
   @IsNumber()
   @Min(0)
   visitFeeAmount?: number;
+
+  @ApiPropertyOptional({ description: "Visit fee currency; defaults to clinic default currency" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  visitFeeCurrency?: string;
 }

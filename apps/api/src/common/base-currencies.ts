@@ -1,4 +1,19 @@
-export const BASE_CURRENCIES = ["EGP", "USD", "OMR", "SAR", "AED"] as const;
+export const BASE_CURRENCIES = [
+  "AED",
+  "SAR",
+  "QAR",
+  "KWD",
+  "BHD",
+  "OMR",
+  "USD",
+  "EUR",
+  "GBP",
+  "EGP",
+  "JOD",
+  "LBP",
+  "TRY",
+  "INR",
+] as const;
 
 export type BaseCurrency = (typeof BASE_CURRENCIES)[number];
 

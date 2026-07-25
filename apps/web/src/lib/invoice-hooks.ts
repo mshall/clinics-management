@@ -71,6 +71,7 @@ export function useCreateInvoiceMutation() {
     mutationFn: (body: {
       encounterId?: string;
       operationId?: string;
+      currency?: string;
       lines: Array<{ purpose: string; amountPaid: number }>;
     }) => apiPost<InvoiceDto>("/api/v1/invoices", body),
     onSuccess: (inv) => {

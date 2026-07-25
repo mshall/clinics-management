@@ -4,6 +4,8 @@ import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { fetchClinicScopeIds, fetchPhysicianNetworkClinicIds } from "../common/clinic-scope";
 import { resolveLedgerListingRange } from "../common/reporting-range";
+import { isBaseCurrency } from "../common/base-currencies";
+import { resolveClinicCurrency } from "../common/clinic-currency";
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
 import type { CreateRevenueDto } from "./dto/create-revenue.dto";
@@ -161,7 +163,7 @@ export class RevenueService {
     if (user.role === UserRole.PHYSICIAN) {
       const net = await fetchPhysicianNetworkClinicIds(this.prisma, tenantId, user.userId);
       if (!net.length) {
-        return { grossTotal: 0, netTotal: 0 };
+        return { grossTotal: 0, netTotal: 0, byCurrency: [] };
       }
       if (clinicId) {
         if (!net.includes(clinicId)) throw new ForbiddenException("Clinic is outside your assigned scope");
@@ -173,7 +175,7 @@ export class RevenueService {
       const scopeIdsTot = await fetchClinicScopeIds(this.prisma, tenantId, user);
       if (scopeIdsTot !== null) {
         if (!scopeIdsTot.length) {
-          return { grossTotal: 0, netTotal: 0 };
+          return { grossTotal: 0, netTotal: 0, byCurrency: [] };
         }
         if (clinicId) {
           if (!scopeIdsTot.includes(clinicId)) throw new ForbiddenException("Clinic is outside your assigned scope");
@@ -197,14 +199,43 @@ export class RevenueService {
           }
         : {}),
     };
-    const agg = await this.prisma.revenueEntry.aggregate({
-      where,
-      _sum: { grossAmount: true, netAmount: true },
-    });
+    const [agg, grouped] = await Promise.all([
+      this.prisma.revenueEntry.aggregate({
+        where,
+        _sum: { grossAmount: true, netAmount: true },
+      }),
+      this.prisma.revenueEntry.groupBy({
+        by: ["currency"],
+        where,
+        _sum: { grossAmount: true, netAmount: true },
+      }),
+    ]);
+    const byCurrency = grouped
+      .map((row) => ({
+        currency: row.currency,
+        grossTotal: Number(row._sum.grossAmount ?? 0),
+        netTotal: Number(row._sum.netAmount ?? 0),
+      }))
+      .filter((row) => row.grossTotal !== 0 || row.netTotal !== 0)
+      .sort((a, b) => a.currency.localeCompare(b.currency));
     return {
       grossTotal: Number(agg._sum.grossAmount ?? 0),
       netTotal: Number(agg._sum.netAmount ?? 0),
+      byCurrency,
     };
+  }
+
+  private async resolveRevenueCurrency(
+    tenantId: string,
+    clinicId: string,
+    currency?: string,
+  ): Promise<string> {
+    const code = currency?.trim();
+    if (code) {
+      if (!isBaseCurrency(code)) throw new BadRequestException("Invalid currency");
+      return code;
+    }
+    return resolveClinicCurrency(this.prisma, tenantId, clinicId);
   }
 
   async create(tenantId: string, dto: CreateRevenueDto, user: JwtUser): Promise<RevenueEntryDto> {
@@ -218,6 +249,7 @@ export class RevenueService {
     }
     const clinic = await this.prisma.clinic.findFirst({ where: { id: dto.clinicId, tenantId } });
     if (!clinic) throw new BadRequestException("Invalid clinicId");
+    const currency = await this.resolveRevenueCurrency(tenantId, dto.clinicId, dto.currency);
     const row = await this.prisma.revenueEntry.create({
       data: {
         tenantId,
@@ -227,7 +259,7 @@ export class RevenueService {
         grossAmount: dto.grossAmount,
         taxAmount: dto.taxAmount,
         netAmount: dto.netAmount,
-        currency: dto.currency,
+        currency,
         postedAt: new Date(dto.postedAt),
         status: dto.status ?? RevenueStatus.POSTED,
       },
@@ -274,7 +306,9 @@ export class RevenueService {
       throw new BadRequestException("Payment amount must be greater than zero");
     }
     if (netAmount > balance + 0.001) {
-      throw new BadRequestException(`Payment exceeds remaining balance (${balance.toFixed(2)} AED)`);
+      throw new BadRequestException(
+        `Payment exceeds remaining balance (${balance.toFixed(2)} ${operation.feeCurrency})`,
+      );
     }
     if (dto.clinicId !== operation.clinicId) {
       throw new BadRequestException("Clinic must match the operation clinic");
@@ -290,9 +324,14 @@ export class RevenueService {
     }
     if (!clinicianName) clinicianName = operation.clinicianId;
 
+    const paymentCurrency = await this.resolveRevenueCurrency(tenantId, operation.clinicId, dto.currency);
+    if (paymentCurrency !== operation.feeCurrency) {
+      throw new BadRequestException(`Payment currency must match the operation currency (${operation.feeCurrency})`);
+    }
+
     const description =
       dto.description?.trim() ||
-      `Operation payment · ${patientName} · ${clinicianName} · ${netAmount.toFixed(2)} AED`;
+      `Operation payment · ${patientName} · ${clinicianName} · ${netAmount.toFixed(2)} ${operation.feeCurrency}`;
 
     await this.prisma.operation.update({
       where: { id: operationId },
@@ -309,7 +348,7 @@ export class RevenueService {
       grossAmount: dto.grossAmount,
       taxAmount: dto.taxAmount,
       netAmount,
-      currency: dto.currency,
+      currency: paymentCurrency,
       postedAt: new Date(dto.postedAt).toISOString(),
       status: RevenueStatus.POSTED,
     };

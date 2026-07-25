@@ -20,6 +20,8 @@ import { resolveLedgerListingRange } from "../common/reporting-range";
 import { paginate, parsePageParams } from "../common/pagination";
 import type { JwtUser } from "../auth/jwt-user";
 import { CLINIC_SCOPE_ROLES, fetchPhysicianNetworkClinicIds } from "../common/clinic-scope";
+import { isBaseCurrency } from "../common/base-currencies";
+import { resolveClinicCurrency } from "../common/clinic-currency";
 import { upsertEncounterVisitFeeRevenue } from "../common/visit-fee-ledger";
 import { PrismaService } from "../prisma/prisma.service";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
@@ -167,6 +169,7 @@ export class EncountersService {
       heightCm: e.heightCm != null ? Number(e.heightCm) : null,
       noMedications: e.noMedications,
       visitFeeAmount: Number(e.visitFeeAmount),
+      visitFeeCurrency: e.visitFeeCurrency,
       appointmentId: e.appointmentId ?? null,
       finalizedAt: e.finalizedAt ? e.finalizedAt.toISOString() : null,
       diagnoses: e.diagnoses.map((d) => this.mapDiag(d)),
@@ -336,6 +339,12 @@ export class EncountersService {
             ? linkedAppointmentFee
             : defaultFee;
 
+      const visitFeeCurrency = await this.resolveVisitFeeCurrency(
+        tenantId,
+        dto.clinicId,
+        dto.visitFeeCurrency,
+      );
+
       const enc = await tx.encounter.create({
         data: {
           tenantId,
@@ -346,6 +355,7 @@ export class EncountersService {
           chiefComplaint: dto.chiefComplaint ?? null,
           status: EncounterStatus.DRAFT,
           visitFeeAmount,
+          visitFeeCurrency,
           appointmentId: linkAppointmentId,
         },
         include: encounterIncludeDef,
@@ -367,6 +377,7 @@ export class EncountersService {
         encounterId: enc.id,
         appointmentId: linkAppointmentId,
         amount: visitFeeAmount,
+        currency: visitFeeCurrency,
       });
 
       if (hasPatientAcquisitionInput(dto)) {
@@ -434,6 +445,14 @@ export class EncountersService {
     }
 
     const visitFeeProvided = dto.visitFeeAmount !== undefined && dto.visitFeeAmount !== null;
+    const visitFeeCurrencyProvided = dto.visitFeeCurrency !== undefined;
+    if (visitFeeCurrencyProvided) {
+      data.visitFeeCurrency = await this.resolveVisitFeeCurrency(
+        tenantId,
+        existing.clinicId,
+        dto.visitFeeCurrency,
+      );
+    }
     if (visitFeeProvided) {
       const newFee = Number(dto.visitFeeAmount);
       if (!Number.isFinite(newFee) || newFee < 0) {
@@ -442,8 +461,8 @@ export class EncountersService {
       data.visitFeeAmount = new Prisma.Decimal(String(newFee));
     }
 
-    if (visitFeeProvided) {
-      const newFee = Number(dto.visitFeeAmount);
+    if (visitFeeProvided || visitFeeCurrencyProvided) {
+      const newFee = visitFeeProvided ? Number(dto.visitFeeAmount) : Number(existing.visitFeeAmount);
       const row = await this.prisma.$transaction(async (tx) => {
         const updated = await tx.encounter.update({
           where: { id },
@@ -457,9 +476,10 @@ export class EncountersService {
           encounterId: id,
           appointmentId: existing.appointmentId,
           amount: newFee,
+          currency: updated.visitFeeCurrency,
         });
 
-        if (existing.appointmentId) {
+        if (existing.appointmentId && visitFeeProvided) {
           await tx.appointment.update({
             where: { id: existing.appointmentId },
             data: { feeAmount: new Prisma.Decimal(String(newFee)) },
@@ -744,5 +764,18 @@ export class EncountersService {
     );
 
     return { ok: true, id };
+  }
+
+  private async resolveVisitFeeCurrency(
+    tenantId: string,
+    clinicId: string,
+    currency?: string,
+  ): Promise<string> {
+    const code = currency?.trim();
+    if (code) {
+      if (!isBaseCurrency(code)) throw new BadRequestException("Invalid visit fee currency");
+      return code;
+    }
+    return resolveClinicCurrency(this.prisma, tenantId, clinicId);
   }
 }

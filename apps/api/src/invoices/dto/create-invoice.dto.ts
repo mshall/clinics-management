@@ -45,4 +45,10 @@ export class CreateInvoiceDto {
   @ValidateNested({ each: true })
   @Type(() => CreateInvoiceLineDto)
   lines!: CreateInvoiceLineDto[];
+
+  @ApiPropertyOptional({ description: "Invoice currency; defaults to linked encounter/operation or clinic default" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  currency?: string;
 }

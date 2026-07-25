@@ -11,12 +11,26 @@ export interface GroupOverviewKpis {
   revenueMonth: number;
   expensesMonth: number;
   netProfitMonth: number;
+  revenueByCurrency: { currency: string; amount: number }[];
+  expensesByCurrency: { currency: string; amount: number }[];
   branches: number;
   headcount: number;
   employeeCount: number;
-  /** Echo of applied reporting window (ISO date, local boundaries) */
   periodFrom: string;
   periodTo: string;
+}
+
+function mapCurrencyTotals(
+  rows: { currency: string; _sum: { netAmount?: Prisma.Decimal | null; amount?: Prisma.Decimal | null } }[],
+  field: "netAmount" | "amount",
+): { currency: string; amount: number }[] {
+  return rows
+    .map((row) => ({
+      currency: row.currency,
+      amount: Number(row._sum[field] ?? 0),
+    }))
+    .filter((row) => row.amount !== 0)
+    .sort((a, b) => a.currency.localeCompare(b.currency));
 }
 
 @Injectable()
@@ -26,45 +40,61 @@ export class DashboardService {
   async groupOverview(tenantId: string, fromStr?: string, toStr?: string): Promise<GroupOverviewKpis> {
     const { start, end } = resolveReportingRange(fromStr, toStr);
 
-    const [patients, encountersInPeriod, encountersAllInRange, appointmentsInRange, revenueAgg, expenseAgg, branchCount, headcount, employeeCount] =
-      await Promise.all([
-        this.prisma.patient.count({ where: { tenantId, deletedAt: null } }),
-        this.prisma.encounter.count({
-          where: {
-            tenantId,
-            status: EncounterStatus.FINALIZED,
-            finalizedAt: { gte: start, lte: end },
-          },
-        }),
-        this.prisma.encounter.count({
-          where: { tenantId, createdAt: { gte: start, lte: end } },
-        }),
-        this.prisma.appointment.count({
-          where: { tenantId, startsAt: { gte: start, lte: end } },
-        }),
-        this.prisma.revenueEntry.aggregate({
-          where: {
-            tenantId,
-            status: RevenueStatus.POSTED,
-            postedAt: { gte: start, lte: end },
-          },
-          _sum: { netAmount: true },
-        }),
-        this.prisma.expense.aggregate({
-          where: {
-            tenantId,
-            status: { in: [ExpenseStatus.APPROVED, ExpenseStatus.PENDING] },
-            incurredAt: { gte: start, lte: end },
-          },
-          _sum: { amount: true },
-        }),
-        this.prisma.clinic.count({ where: { tenantId, parentClinicId: { not: null } } }),
-        this.prisma.user.count({ where: { tenantId } }),
-        this.safeEmployeeCount(tenantId),
-      ]);
+    const revenueWhere: Prisma.RevenueEntryWhereInput = {
+      tenantId,
+      status: RevenueStatus.POSTED,
+      postedAt: { gte: start, lte: end },
+    };
+    const expenseWhere: Prisma.ExpenseWhereInput = {
+      tenantId,
+      status: { in: [ExpenseStatus.APPROVED, ExpenseStatus.PENDING] },
+      incurredAt: { gte: start, lte: end },
+    };
 
-    const revenueMonth = Number(revenueAgg._sum.netAmount ?? 0);
-    const expensesMonth = Number(expenseAgg._sum.amount ?? 0);
+    const [
+      patients,
+      encountersInPeriod,
+      encountersAllInRange,
+      appointmentsInRange,
+      revenueByCurrencyRows,
+      expensesByCurrencyRows,
+      branchCount,
+      headcount,
+      employeeCount,
+    ] = await Promise.all([
+      this.prisma.patient.count({ where: { tenantId, deletedAt: null } }),
+      this.prisma.encounter.count({
+        where: {
+          tenantId,
+          status: EncounterStatus.FINALIZED,
+          finalizedAt: { gte: start, lte: end },
+        },
+      }),
+      this.prisma.encounter.count({
+        where: { tenantId, createdAt: { gte: start, lte: end } },
+      }),
+      this.prisma.appointment.count({
+        where: { tenantId, startsAt: { gte: start, lte: end } },
+      }),
+      this.prisma.revenueEntry.groupBy({
+        by: ["currency"],
+        where: revenueWhere,
+        _sum: { netAmount: true },
+      }),
+      this.prisma.expense.groupBy({
+        by: ["currency"],
+        where: expenseWhere,
+        _sum: { amount: true },
+      }),
+      this.prisma.clinic.count({ where: { tenantId, parentClinicId: { not: null } } }),
+      this.prisma.user.count({ where: { tenantId } }),
+      this.safeEmployeeCount(tenantId),
+    ]);
+
+    const revenueByCurrency = mapCurrencyTotals(revenueByCurrencyRows, "netAmount");
+    const expensesByCurrency = mapCurrencyTotals(expensesByCurrencyRows, "amount");
+    const revenueMonth = revenueByCurrency.reduce((sum, row) => sum + row.amount, 0);
+    const expensesMonth = expensesByCurrency.reduce((sum, row) => sum + row.amount, 0);
 
     return {
       patients,
@@ -74,6 +104,8 @@ export class DashboardService {
       revenueMonth,
       expensesMonth,
       netProfitMonth: revenueMonth - expensesMonth,
+      revenueByCurrency,
+      expensesByCurrency,
       branches: branchCount,
       headcount,
       employeeCount,

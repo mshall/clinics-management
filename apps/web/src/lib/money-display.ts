@@ -20,3 +20,11 @@ export function formatMoneyAmount(amount: number, currency: string, locale: stri
   const code = asBaseCurrency(currency);
   return new Intl.NumberFormat(locale, { style: "currency", currency: code }).format(amount);
 }
+
+export function formatMultiCurrencyAmounts(
+  rows: Array<{ currency: string; amount: number }>,
+  locale: string,
+): string {
+  if (!rows.length) return "—";
+  return rows.map((row) => formatMoneyAmount(row.amount, row.currency, locale)).join(" · ");
+}

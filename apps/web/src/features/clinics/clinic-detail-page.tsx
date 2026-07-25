@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClinicDeactivateConfirmDialog } from "@/features/clinics/clinic-deactivate-confirm-dialog";
 import { ClinicDoctorsPanel } from "@/features/clinics/clinic-doctors-panel";
+import { ClinicCurrencySettingsPanel } from "@/features/clinics/clinic-currency-settings-panel";
 import { ClinicReactivateDialog } from "@/features/clinics/clinic-reactivate-dialog";
 import { useClinicQuery } from "@/lib/api-hooks";
 import { ApiError, apiPost } from "@/lib/http";
@@ -153,6 +154,7 @@ export function ClinicDetailPage() {
       <Tabs defaultValue="overview">
         <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 sm:w-auto">
           <TabsTrigger value="overview">{t("clinics.tabOverview", "Overview")}</TabsTrigger>
+          <TabsTrigger value="settings">{t("clinics.tabSettings", "Settings")}</TabsTrigger>
           <TabsTrigger value="history">{t("clinics.tabOperatingHistory", "Operating history")}</TabsTrigger>
           <TabsTrigger value="doctors">{t("clinics.tabDoctors", "Doctors assigned")}</TabsTrigger>
         </TabsList>
@@ -165,6 +167,10 @@ export function ClinicDetailPage() {
                 <CardDescription>{t("clinics.detailRegistrationHint", "Values entered when the clinic was added.")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
+                <p>
+                  <span className="text-muted-foreground">{t("admin.defaultCurrency", "Default currency")}: </span>
+                  {c.defaultCurrency}
+                </p>
                 <p>
                   <span className="text-muted-foreground">{t("clinics.licenseNumber", "License")}: </span>
                   <span className="font-medium">{c.licenseNumber}</span>
@@ -226,6 +232,14 @@ export function ClinicDetailPage() {
               </CardContent>
             </Card>
           ) : null}
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-4">
+          <ClinicCurrencySettingsPanel
+            clinicId={c.id}
+            defaultCurrency={c.defaultCurrency}
+            canEdit={canManageClinic}
+          />
         </TabsContent>
 
         <TabsContent value="history" className="space-y-4">

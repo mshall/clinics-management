@@ -40,6 +40,12 @@ export class CreateEncounterDto extends PatientAcquisitionFieldsDto {
   @Min(0)
   visitFeeAmount?: number;
 
+  @ApiPropertyOptional({ description: "Visit fee currency; defaults to clinic default currency" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  visitFeeCurrency?: string;
+
   @ApiPropertyOptional({
     description: "Optional booked appointment for this patient; visit moves to in progress until encounter is finalized",
   })

@@ -4,6 +4,8 @@ import { defaultHomeForRole } from "@/lib/nav-policy";
 import { useAuthStore } from "@/stores/auth-store";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDashboardKpisQuery } from "@/lib/api-hooks";
+import { formatMultiCurrencyAmounts } from "@/lib/money-display";
+import { localeForLanguage } from "@/lib/locale-display";
 
 export function DashboardPage() {
   const { t, i18n } = useTranslation();
@@ -12,6 +14,23 @@ export function DashboardPage() {
   const roleNavTabKeys = useAuthStore((s) => s.user?.roleNavTabKeys);
   const home = defaultHomeForRole(role, navTabKeys, roleNavTabKeys);
   const { data, isPending, isError, error } = useDashboardKpisQuery();
+  const locale = localeForLanguage(i18n.language);
+
+  const revenueDisplay = formatMultiCurrencyAmounts(data?.revenueByCurrency ?? [], locale);
+  const expensesDisplay = formatMultiCurrencyAmounts(data?.expensesByCurrency ?? [], locale);
+  const netByCurrency = (() => {
+    const revenue = new Map((data?.revenueByCurrency ?? []).map((row) => [row.currency, row.amount]));
+    const expenses = new Map((data?.expensesByCurrency ?? []).map((row) => [row.currency, row.amount]));
+    const currencies = new Set([...revenue.keys(), ...expenses.keys()]);
+    return [...currencies]
+      .map((currency) => ({
+        currency,
+        amount: (revenue.get(currency) ?? 0) - (expenses.get(currency) ?? 0),
+      }))
+      .filter((row) => row.amount !== 0)
+      .sort((a, b) => a.currency.localeCompare(b.currency));
+  })();
+  const netDisplay = formatMultiCurrencyAmounts(netByCurrency, locale);
 
   if (home !== "/") {
     return <Navigate to={home} replace />;
@@ -36,47 +55,39 @@ export function DashboardPage() {
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <KpiCard
-          label={t("dashboard.kpi.patients")}
-          value={data?.patients}
-          loading={isPending}
-          lng={i18n.language}
-          format="int"
-        />
+        <KpiCard label={t("dashboard.kpi.patients")} value={data?.patients} loading={isPending} lng={i18n.language} />
         <KpiCard
           label={t("dashboard.kpi.encountersPeriod", "Encounters (period)")}
           value={data?.encountersPeriodTotal ?? data?.encounters30d}
           loading={isPending}
           lng={i18n.language}
-          format="int"
         />
         <KpiCard
           label={t("dashboard.kpi.appointmentsPeriod", "Appointments (period)")}
           value={data?.appointmentsPeriodTotal}
           loading={isPending}
           lng={i18n.language}
-          format="int"
         />
-        <KpiCard
-          label={t("dashboard.kpi.branches")}
-          value={data?.branches}
+        <KpiCard label={t("dashboard.kpi.branches")} value={data?.branches} loading={isPending} lng={i18n.language} />
+        <KpiCard label={t("dashboard.kpi.headcount")} value={data?.headcount} loading={isPending} lng={i18n.language} />
+        <KpiCard label={t("dashboard.kpi.employees")} value={data?.employeeCount} loading={isPending} lng={i18n.language} />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <MoneyKpiCard
+          label={t("dashboard.kpi.revenuePeriod", "Revenue (period)")}
+          display={revenueDisplay}
           loading={isPending}
-          lng={i18n.language}
-          format="int"
         />
-        <KpiCard
-          label={t("dashboard.kpi.headcount")}
-          value={data?.headcount}
+        <MoneyKpiCard
+          label={t("dashboard.kpi.expensesPeriod", "Expenses (period)")}
+          display={expensesDisplay}
           loading={isPending}
-          lng={i18n.language}
-          format="int"
         />
-        <KpiCard
-          label={t("dashboard.kpi.employees")}
-          value={data?.employeeCount}
+        <MoneyKpiCard
+          label={t("dashboard.kpi.netPeriod", "Net (period)")}
+          display={netDisplay}
           loading={isPending}
-          lng={i18n.language}
-          format="int"
         />
       </div>
     </div>
@@ -88,31 +99,41 @@ function KpiCard({
   value,
   loading,
   lng,
-  format,
 }: {
   label: string;
   value: number | undefined;
   loading: boolean;
   lng: string;
-  format: "int" | "money";
 }) {
   const display =
     value === undefined || loading
       ? "—"
-      : format === "money"
-        ? new Intl.NumberFormat(lng === "ar" ? "ar-AE" : "en-AE", {
-            style: "currency",
-            currency: "AED",
-            notation: value >= 1_000_000 ? "compact" : "standard",
-            maximumFractionDigits: 1,
-          }).format(value)
-        : new Intl.NumberFormat(lng === "ar" ? "ar-AE" : "en-AE").format(value);
+      : new Intl.NumberFormat(lng === "ar" ? "ar-AE" : "en-AE").format(value);
 
   return (
     <Card>
       <CardHeader className="pb-2">
         <CardDescription>{label}</CardDescription>
         <CardTitle className="text-2xl ltr-nums">{display}</CardTitle>
+      </CardHeader>
+    </Card>
+  );
+}
+
+function MoneyKpiCard({
+  label,
+  display,
+  loading,
+}: {
+  label: string;
+  display: string;
+  loading: boolean;
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardDescription>{label}</CardDescription>
+        <CardTitle className="text-lg ltr-nums sm:text-2xl">{loading ? "—" : display}</CardTitle>
       </CardHeader>
     </Card>
   );

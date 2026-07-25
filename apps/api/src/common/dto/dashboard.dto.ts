@@ -1,4 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
+import { CurrencyTotalDto } from "./currency-totals.dto";
 
 export class GroupOverviewKpisDto {
   @ApiProperty()
@@ -13,14 +14,20 @@ export class GroupOverviewKpisDto {
   @ApiProperty({ description: "Appointments with startsAt in the reporting period" })
   appointmentsPeriodTotal!: number;
 
-  @ApiProperty()
+  @ApiProperty({ description: "Legacy mixed-currency revenue sum for the period" })
   revenueMonth!: number;
 
-  @ApiProperty()
+  @ApiProperty({ description: "Legacy mixed-currency expense sum for the period" })
   expensesMonth!: number;
 
-  @ApiProperty({ description: "Revenue minus expenses for the selected period" })
+  @ApiProperty({ description: "Legacy mixed-currency net for the period" })
   netProfitMonth!: number;
+
+  @ApiProperty({ type: [CurrencyTotalDto] })
+  revenueByCurrency!: CurrencyTotalDto[];
+
+  @ApiProperty({ type: [CurrencyTotalDto] })
+  expensesByCurrency!: CurrencyTotalDto[];
 
   @ApiProperty({ description: "Applied range start (YYYY-MM-DD, local)", example: "2025-05-01" })
   periodFrom!: string;
