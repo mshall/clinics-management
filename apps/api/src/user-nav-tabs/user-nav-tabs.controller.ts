@@ -28,6 +28,6 @@ export class UserNavTabsController {
   })
   @ApiOkResponse({ type: UserNavTabGrantResponseDto })
   putOne(@CurrentUser() user: JwtUser, @Param("userId") userId: string, @Body() body: SetUserNavTabsDto) {
-    return this.svc.setForUser(requireTenantId(user), userId, body.tabKeys ?? [], user);
+    return this.svc.setForUser(requireTenantId(user), userId, body.tabKeys ?? [], user, body.hrClinicId);
   }
 }

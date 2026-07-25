@@ -271,10 +271,15 @@ export function OrgRbacPanel() {
   ]);
 
   const saveUserMut = useMutation({
-    mutationFn: (tabKeys: string[]) => apiPut<{ tabKeys: string[] | null }>(`/api/v1/user-nav-tabs/${userTargetId}`, { tabKeys }),
+    mutationFn: (payload: { tabKeys: string[]; hrClinicId?: string }) =>
+      apiPut<{ tabKeys: string[] | null }>(`/api/v1/user-nav-tabs/${userTargetId}`, payload),
     onSuccess: async () => {
       setUserErr(null);
+      setPendingNavTabKeys(null);
+      setHrAssignDialogMode("assign");
+      setHrAssignDialogOpen(false);
       await qc.invalidateQueries({ queryKey: ["user-nav-tabs", userTargetId] });
+      await qc.invalidateQueries({ queryKey: ["user-clinic-hr-assignments", userTargetId] });
       if (userTargetId === viewer?.id) await useAuthStore.getState().refreshSessionFromServer();
     },
     onError: (e: unknown) => {
@@ -317,6 +322,8 @@ export function OrgRbacPanel() {
   const [hrAssignErr, setHrAssignErr] = useState<string | null>(null);
   const [hrAssignDialogOpen, setHrAssignDialogOpen] = useState(false);
   const [hrAssignClinicId, setHrAssignClinicId] = useState("");
+  const [hrAssignDialogMode, setHrAssignDialogMode] = useState<"assign" | "nav-save">("assign");
+  const [pendingNavTabKeys, setPendingNavTabKeys] = useState<string[] | null>(null);
 
   const hrAssignmentsQ = useQuery({
     queryKey: ["user-clinic-hr-assignments", userTargetId],
@@ -370,20 +377,50 @@ export function OrgRbacPanel() {
 
   const hrDialogClinicItems: PickListItem[] = useMemo(
     () =>
-      unassignedClinics.map((c) => ({
+      (hrAssignDialogMode === "nav-save" ? assignableClinics : unassignedClinics).map((c) => ({
         value: c.id,
         label: formatClinicName(c, i18n.language),
       })),
-    [unassignedClinics, i18n.language],
+    [hrAssignDialogMode, assignableClinics, unassignedClinics, i18n.language],
   );
+
+  const saveUserNavTabs = (tabKeys: string[]) => {
+    if (!userTargetId || !userTargetRole) return;
+    const sorted = [...tabKeys].sort((a, b) => a.localeCompare(b));
+    const hrEnabled = sorted.includes("hr");
+    const needsClinicHr =
+      hrEnabled &&
+      canExtendUsers &&
+      userTargetRole !== "hr_officer" &&
+      (hrAssignmentsQ.data?.length ?? 0) === 0;
+    if (needsClinicHr) {
+      setPendingNavTabKeys(sorted);
+      setHrAssignClinicId(assignableClinics[0]?.id ?? "");
+      setHrAssignDialogMode("nav-save");
+      setHrAssignErr(null);
+      setHrAssignDialogOpen(true);
+      return;
+    }
+    saveUserMut.mutate({ tabKeys: sorted });
+  };
 
   const assignHrForClinic = (clinicId: string) => {
     if (!userTargetId || !clinicId) return;
     saveHrAssignmentMut.mutate(clinicId);
   };
 
+  const confirmHrDialog = () => {
+    if (!hrAssignClinicId) return;
+    if (hrAssignDialogMode === "nav-save" && pendingNavTabKeys) {
+      saveUserMut.mutate({ tabKeys: pendingNavTabKeys, hrClinicId: hrAssignClinicId });
+      return;
+    }
+    assignHrForClinic(hrAssignClinicId);
+  };
+
   const openGroupAdminHrDialog = () => {
     setHrAssignClinicId(unassignedClinics[0]?.id ?? "");
+    setHrAssignDialogMode("assign");
     setHrAssignErr(null);
     setHrAssignDialogOpen(true);
   };
@@ -479,7 +516,7 @@ export function OrgRbacPanel() {
               {t(
                 "admin.rbacUserHint",
                 canExtendUsers
-                  ? "Grant or restrict tabs for a specific user. You can add organization tabs (e.g. HR) even when they are not part of the user's role."
+                  ? "Grant or restrict tabs for a specific user. You can add organization tabs (e.g. HR) even when they are not part of the user's role. Enabling HR will prompt for the clinic where they act as HR."
                   : isClinicAdminViewer
                     ? t(
                         "admin.rbacUserHintClinicAdmin",
@@ -538,7 +575,7 @@ export function OrgRbacPanel() {
                   disabled={!userTargetId || saveUserMut.isPending || userGrantQ.isPending}
                   onClick={() => {
                     if (!userTargetRole) return;
-                    saveUserMut.mutate([...userDraft].sort((a, b) => a.localeCompare(b)));
+                    saveUserNavTabs([...userDraft]);
                   }}
                 >
                   {t("admin.navTabsSave", "Save user permissions")}
@@ -549,7 +586,7 @@ export function OrgRbacPanel() {
                   disabled={!userTargetId || !userTargetRole || saveUserMut.isPending || userGrantQ.isPending}
                   onClick={() => {
                     if (!userTargetRole) return;
-                    saveUserMut.mutate(fullRoleTabKeysSorted(userTargetRole, userRoleGrantQ.data?.tabKeys));
+                    saveUserNavTabs(fullRoleTabKeysSorted(userTargetRole, userRoleGrantQ.data?.tabKeys));
                   }}
                 >
                   {t("admin.navTabsReset", "Use role defaults")}
@@ -666,13 +703,22 @@ export function OrgRbacPanel() {
             <Dialog open={hrAssignDialogOpen} onOpenChange={setHrAssignDialogOpen}>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>{t("admin.rbacHrAssignmentDialogTitle", "Assign as HR")}</DialogTitle>
+                  <DialogTitle>
+                    {hrAssignDialogMode === "nav-save"
+                      ? t("admin.rbacHrNavDialogTitle", "HR access — select clinic")
+                      : t("admin.rbacHrAssignmentDialogTitle", "Assign as HR")}
+                  </DialogTitle>
                 </DialogHeader>
                 <p className="text-sm text-muted-foreground">
-                  {t(
-                    "admin.rbacHrAssignmentDialogHint",
-                    "Choose the clinic where this user will have full HR permissions.",
-                  )}
+                  {hrAssignDialogMode === "nav-save"
+                    ? t(
+                        "admin.rbacHrNavDialogHint",
+                        "This user needs a clinic HR assignment to add or edit employees. Choose the clinic where they will have full HR permissions.",
+                      )
+                    : t(
+                        "admin.rbacHrAssignmentDialogHint",
+                        "Choose the clinic where this user will have full HR permissions.",
+                      )}
                 </p>
                 <div className="space-y-2">
                   <Label>{t("hr.clinic", "Clinic")}</Label>
@@ -693,10 +739,12 @@ export function OrgRbacPanel() {
                   </Button>
                   <Button
                     type="button"
-                    disabled={!hrAssignClinicId || saveHrAssignmentMut.isPending}
-                    onClick={() => assignHrForClinic(hrAssignClinicId)}
+                    disabled={!hrAssignClinicId || saveHrAssignmentMut.isPending || saveUserMut.isPending}
+                    onClick={confirmHrDialog}
                   >
-                    {t("admin.rbacHrAssignmentConfirm", "Assign HR")}
+                    {hrAssignDialogMode === "nav-save"
+                      ? t("admin.rbacHrNavDialogConfirm", "Save HR access")
+                      : t("admin.rbacHrAssignmentConfirm", "Assign HR")}
                   </Button>
                 </div>
               </DialogContent>

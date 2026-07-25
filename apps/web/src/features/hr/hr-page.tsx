@@ -646,6 +646,14 @@ export function HrPage() {
 
   return (
     <div className="space-y-6">
+      {!canManage && authUser ? (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100">
+          {t(
+            "hr.readOnlyAccessHint",
+            "You can view HR data but cannot add or edit employees. Ask a group or clinic administrator to assign you as HR for your clinic (Admin → RBAC → Clinic HR assignment). Then sign out and back in.",
+          )}
+        </div>
+      ) : null}
       <ValidationIssuesDialog {...empValidation.dialogProps} />
       <ValidationIssuesDialog {...attValidation.dialogProps} />
       <ValidationIssuesDialog {...leaveValidation.dialogProps} />

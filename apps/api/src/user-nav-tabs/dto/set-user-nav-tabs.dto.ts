@@ -1,5 +1,5 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsString } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsArray, IsOptional, IsString } from "class-validator";
 
 export class SetUserNavTabsDto {
   @ApiProperty({
@@ -10,4 +10,11 @@ export class SetUserNavTabsDto {
   @IsArray()
   @IsString({ each: true })
   tabKeys!: string[];
+
+  @ApiPropertyOptional({
+    description: "When granting the HR tab, the clinic where this user will act as HR (required if they have no clinic HR assignment yet)",
+  })
+  @IsOptional()
+  @IsString()
+  hrClinicId?: string;
 }
