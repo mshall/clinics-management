@@ -23,6 +23,11 @@ test.describe("UX flows & data wiring smoke", () => {
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByText(/login email/i)).toBeVisible();
     await expect(dialog.getByText(/linked login account/i)).toHaveCount(0);
+    const clinicField = dialog.getByRole("combobox").first();
+    await clinicField.click();
+    await clinicField.fill("Dubai");
+    await dialog.locator('[data-pick-list-panel][role="listbox"]').getByRole("option").first().click();
+    await expect(clinicField).not.toHaveValue("");
   });
 
   test("reports page loads monthly series from API (chart canvas present)", async ({ page }) => {

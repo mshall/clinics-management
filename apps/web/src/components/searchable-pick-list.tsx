@@ -184,7 +184,7 @@ export function SearchablePickList({
   const meetsMinSearch = trimmedQ.length >= minSearchLength;
   const showingPreview = open && (!isSearching || !meetsMinSearch) && previewCount > 0 && filtered.length > 0;
 
-  const panelStyle = usePortalPanelStyle(open, anchorRef);
+  const panelStyle = usePortalPanelStyle(open && !alwaysEditable, anchorRef);
 
   const listItems = useMemo(() => {
     if (!open) return [];
@@ -292,10 +292,11 @@ export function SearchablePickList({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") closeWithoutPick();
     };
-    document.addEventListener("pointerdown", onDocPointerDown, true);
+    // Bubble phase so option pointerdown runs before we treat the tap as an outside close.
+    document.addEventListener("pointerdown", onDocPointerDown);
     document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener("pointerdown", onDocPointerDown, true);
+      document.removeEventListener("pointerdown", onDocPointerDown);
       document.removeEventListener("keydown", onKey);
     };
   }, [open, closeWithoutPick]);
@@ -309,14 +310,20 @@ export function SearchablePickList({
     [handlePick],
   );
 
+  /** Inline lists stay in the dialog DOM tree so clicks are not swallowed by modal layers. */
+  const useFixedPortal = !alwaysEditable;
+
   const listPanel = (
     <div
       id={listboxId}
       role="listbox"
       data-pick-list-panel
-      className="fixed z-[9999] overflow-auto overscroll-contain rounded-md border border-border bg-background shadow-lg [-webkit-overflow-scrolling:touch] [touch-action:manipulation]"
+      className={cn(
+        "overflow-auto overscroll-contain rounded-md border border-border bg-background shadow-lg [-webkit-overflow-scrolling:touch] [touch-action:manipulation]",
+        useFixedPortal ? "fixed z-[9999]" : "absolute inset-x-0 top-full z-[100] mt-1 max-h-56",
+      )}
       style={
-        panelStyle
+        useFixedPortal && panelStyle
           ? {
               top: panelStyle.top,
               left: panelStyle.left,
@@ -394,7 +401,13 @@ export function SearchablePickList({
         className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 shrink-0 opacity-50"
         aria-hidden
       />
-      {open && panelStyle ? createPortal(listPanel, document.body) : null}
+      {open
+        ? useFixedPortal
+          ? panelStyle
+            ? createPortal(listPanel, document.body)
+            : null
+          : listPanel
+        : null}
     </div>
   );
 
