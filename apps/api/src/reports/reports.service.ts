@@ -3,6 +3,7 @@ import {
   AppointmentStatus,
   EncounterStatus,
   ExpenseStatus,
+  OperationStatus,
   PatientAcquisitionChannel,
   Prisma,
   RevenueStatus,
@@ -188,10 +189,57 @@ export class ReportsService {
       ...(scopeClinicIds?.length ? { clinicId: { in: scopeClinicIds } } : {}),
     };
 
-    const [revGrouped, expGrouped, visitGrouped, patientGrouped] = await Promise.all([
+    const operationRevenueWhere: Prisma.RevenueEntryWhereInput = {
+      ...revenueWhere,
+      OR: [{ operationId: { not: null } }, { category: { in: ["OPERATION", "OPERATION_PAYMENT"] } }],
+    };
+    const encounterRevenueWhere: Prisma.RevenueEntryWhereInput = {
+      ...revenueWhere,
+      encounterId: { not: null },
+      operationId: null,
+      NOT: { category: { in: ["OPERATION", "OPERATION_PAYMENT"] } },
+    };
+    const otherRevenueWhere: Prisma.RevenueEntryWhereInput = {
+      ...revenueWhere,
+      encounterId: null,
+      operationId: null,
+      NOT: { category: { in: ["OPERATION", "OPERATION_PAYMENT"] } },
+    };
+
+    const [
+      revGrouped,
+      encounterRevGrouped,
+      operationRevGrouped,
+      otherRevGrouped,
+      otherRevByCategoryGrouped,
+      expGrouped,
+      visitGrouped,
+      patientGrouped,
+      operationGrouped,
+    ] = await Promise.all([
       this.prisma.revenueEntry.groupBy({
         by: ["clinicId", "currency"],
         where: revenueWhere,
+        _sum: { netAmount: true },
+      }),
+      this.prisma.revenueEntry.groupBy({
+        by: ["clinicId", "currency"],
+        where: encounterRevenueWhere,
+        _sum: { netAmount: true },
+      }),
+      this.prisma.revenueEntry.groupBy({
+        by: ["clinicId", "currency"],
+        where: operationRevenueWhere,
+        _sum: { netAmount: true },
+      }),
+      this.prisma.revenueEntry.groupBy({
+        by: ["clinicId", "currency"],
+        where: otherRevenueWhere,
+        _sum: { netAmount: true },
+      }),
+      this.prisma.revenueEntry.groupBy({
+        by: ["clinicId", "currency", "category"],
+        where: otherRevenueWhere,
         _sum: { netAmount: true },
       }),
       this.prisma.expense.groupBy({
@@ -220,12 +268,56 @@ export class ReportsService {
         },
         _count: { _all: true },
       }),
+      this.prisma.operation.groupBy({
+        by: ["clinicId"],
+        where: {
+          tenantId,
+          status: OperationStatus.COMPLETED,
+          operationDate: { gte: start, lte: end },
+          ...(scopeClinicIds?.length ? { clinicId: { in: scopeClinicIds } } : {}),
+        },
+        _count: { _all: true },
+      }),
     ]);
 
     const revMap = new Map<string, Map<string, number>>();
     for (const row of revGrouped) {
       if (!revMap.has(row.clinicId)) revMap.set(row.clinicId, new Map());
       revMap.get(row.clinicId)!.set(row.currency, Number(row._sum.netAmount ?? 0));
+    }
+
+    const toCurrencyMap = (
+      rows: { clinicId: string; currency: string; _sum: { netAmount: Prisma.Decimal | null } }[],
+    ) => {
+      const byClinic = new Map<string, Map<string, number>>();
+      for (const row of rows) {
+        if (!byClinic.has(row.clinicId)) byClinic.set(row.clinicId, new Map());
+        byClinic.get(row.clinicId)!.set(row.currency, Number(row._sum.netAmount ?? 0));
+      }
+      return byClinic;
+    };
+
+    const encounterRevMap = toCurrencyMap(encounterRevGrouped);
+    const operationRevMap = toCurrencyMap(operationRevGrouped);
+    const otherRevMap = toCurrencyMap(otherRevGrouped);
+
+    const otherBreakdownMap = new Map<string, Map<string, { category: string; amount: number }[]>>();
+    for (const row of otherRevByCategoryGrouped) {
+      const amount = Number(row._sum.netAmount ?? 0);
+      if (amount === 0) continue;
+      if (!otherBreakdownMap.has(row.clinicId)) otherBreakdownMap.set(row.clinicId, new Map());
+      const byCurrency = otherBreakdownMap.get(row.clinicId)!;
+      if (!byCurrency.has(row.currency)) byCurrency.set(row.currency, []);
+      byCurrency.get(row.currency)!.push({
+        category: row.category?.trim() || "OTHER",
+        amount,
+      });
+    }
+    for (const byCurrency of otherBreakdownMap.values()) {
+      for (const [currency, rows] of byCurrency) {
+        rows.sort((a, b) => b.amount - a.amount || a.category.localeCompare(b.category));
+        byCurrency.set(currency, rows);
+      }
     }
 
     const expMap = new Map<string, Map<string, number>>();
@@ -236,6 +328,7 @@ export class ReportsService {
     }
 
     const visitsByClinic = new Map(visitGrouped.map((row) => [row.clinicId, row._count._all]));
+    const operationsByClinic = new Map(operationGrouped.map((row) => [row.clinicId, row._count._all]));
     const patientsByClinic = new Map(
       patientGrouped.filter((row) => row.homeBranchId).map((row) => [row.homeBranchId!, row._count._all]),
     );
@@ -248,13 +341,21 @@ export class ReportsService {
     const items = clinics.map((clinic) => {
       const revenueByCurrency = revMap.get(clinic.id) ?? new Map<string, number>();
       const expensesByCurrency = expMap.get(clinic.id) ?? new Map<string, number>();
-      const byCurrency = mergeCurrencyTotals(revenueByCurrency, expensesByCurrency);
+      const byCurrency = mergeCurrencyTotals(
+        revenueByCurrency,
+        expensesByCurrency,
+        encounterRevMap.get(clinic.id) ?? new Map(),
+        operationRevMap.get(clinic.id) ?? new Map(),
+        otherRevMap.get(clinic.id) ?? new Map(),
+        otherBreakdownMap.get(clinic.id) ?? new Map(),
+      );
       return {
         clinicId: clinic.id,
         clinicNameEn: clinic.nameEn,
         clinicNameAr: clinic.nameAr,
         defaultCurrency: clinic.defaultCurrency,
         visits: visitsByClinic.get(clinic.id) ?? 0,
+        operationCount: operationsByClinic.get(clinic.id) ?? 0,
         newPatients: patientsByClinic.get(clinic.id) ?? 0,
         byCurrency,
       };

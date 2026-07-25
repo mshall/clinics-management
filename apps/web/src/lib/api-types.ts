@@ -398,6 +398,10 @@ export interface ReportsCurrencyTotalsDto {
   revenue: number;
   expenses: number;
   netProfit: number;
+  encounterRevenue: number;
+  operationRevenue: number;
+  otherRevenue: number;
+  otherBreakdown: { category: string; amount: number }[];
 }
 
 export interface ReportsMonthlySeriesItemDto {
@@ -445,6 +449,7 @@ export interface ReportsClinicBreakdownItemDto {
   clinicNameAr: string;
   defaultCurrency: string;
   visits: number;
+  operationCount: number;
   newPatients: number;
   byCurrency: ReportsCurrencyTotalsDto[];
 }

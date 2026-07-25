@@ -30,7 +30,7 @@ import {
   useReportsPerformanceQuery,
 } from "@/lib/api-hooks";
 import type { ReportsClinicBreakdownItemDto, ReportsCurrencyTotalsDto, ReportsMonthlySeriesItemDto } from "@/lib/api-types";
-import { formatClinicName, localeForLanguage } from "@/lib/locale-display";
+import { formatClinicName, formatRevenueCategory, localeForLanguage } from "@/lib/locale-display";
 import { formatMoneyAmount } from "@/lib/money-display";
 import {
   patientAcquisitionLabel,
@@ -319,10 +319,14 @@ export function ReportsPage() {
                       <p className="text-xs text-muted-foreground">
                         {t("reports.defaultCurrency", "Default")}: {row.defaultCurrency}
                       </p>
-                      <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                      <div className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
                         <div>
-                          <p className="text-xs text-muted-foreground">{t("reports.visits", "Visits")}</p>
+                          <p className="text-xs text-muted-foreground">{t("reports.encounters", "Encounters")}</p>
                           <p className="font-medium ltr-nums tabular-nums">{row.visits}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">{t("reports.operations", "Operations")}</p>
+                          <p className="font-medium ltr-nums tabular-nums">{row.operationCount}</p>
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">{t("reports.newPatients", "New patients")}</p>
@@ -338,8 +342,27 @@ export function ReportsPage() {
                               <div className="mb-1 font-medium">{c.currency}</div>
                               <div className="space-y-1 ltr-nums tabular-nums">
                                 <p className={REVENUE_TEXT_CLASS}>
-                                  {t("reports.revenue", "Revenue")}: {money(c.revenue, c.currency)}
+                                  {t("reports.revenueTotal", "Total revenue")}: {money(c.revenue, c.currency)}
                                 </p>
+                                <p className="text-foreground/90">
+                                  {t("reports.encounterRevenue", "Encounter / visit fees")}:{" "}
+                                  {money(c.encounterRevenue ?? 0, c.currency)}
+                                </p>
+                                <p className="text-foreground/90">
+                                  {t("reports.operationRevenue", "Operations")}: {money(c.operationRevenue ?? 0, c.currency)}
+                                </p>
+                                <p className="text-foreground/90">
+                                  {t("reports.otherRevenue", "Other")}: {money(c.otherRevenue ?? 0, c.currency)}
+                                </p>
+                                {(c.otherBreakdown ?? []).length > 0 ? (
+                                  <ul className="ms-2 space-y-0.5 border-s border-border/60 ps-2 text-muted-foreground">
+                                    {(c.otherBreakdown ?? []).map((item) => (
+                                      <li key={`${c.currency}-${item.category}`}>
+                                        {formatRevenueCategory(item.category, t)}: {money(item.amount, c.currency)}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                ) : null}
                                 <p className={EXPENSE_TEXT_CLASS}>
                                   {t("reports.expenses", "Expenses")}: {money(c.expenses, c.currency)}
                                 </p>
@@ -359,10 +382,17 @@ export function ReportsPage() {
                     <thead className="bg-muted/60">
                       <tr className="text-start">
                         <th className="px-3 py-2 text-start font-medium">{t("reports.clinicColumn", "Clinic")}</th>
-                        <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.visits", "Visits")}</th>
+                        <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.encounters", "Encounters")}</th>
+                        <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.operations", "Operations")}</th>
                         <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.newPatients", "New patients")}</th>
                         <th className="px-3 py-2 text-start font-medium">{t("reports.currencyColumn", "Currency")}</th>
-                        <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.revenue", "Revenue")}</th>
+                        <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.revenueTotal", "Total revenue")}</th>
+                        <th className="px-3 py-2 text-end font-medium ltr-nums">
+                          {t("reports.encounterRevenue", "Encounter / visit fees")}
+                        </th>
+                        <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.operationRevenue", "Operations revenue")}</th>
+                        <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.otherRevenue", "Other revenue")}</th>
+                        <th className="px-3 py-2 text-start font-medium">{t("reports.otherRevenueBreakdown", "Other breakdown")}</th>
                         <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.expenses", "Expenses")}</th>
                         <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.netProfit", "Net profit")}</th>
                       </tr>
@@ -387,6 +417,9 @@ export function ReportsPage() {
                                 {row.clinic.visits}
                               </td>
                               <td rowSpan={row.clinicRowSpan} className="px-3 py-3 text-end ltr-nums tabular-nums">
+                                {row.clinic.operationCount}
+                              </td>
+                              <td rowSpan={row.clinicRowSpan} className="px-3 py-3 text-end ltr-nums tabular-nums">
                                 {row.clinic.newPatients}
                               </td>
                             </>
@@ -394,6 +427,35 @@ export function ReportsPage() {
                           <td className="px-3 py-3">{row.currencyRow?.currency ?? "—"}</td>
                           <td className={`px-3 py-3 text-end ltr-nums tabular-nums ${REVENUE_TEXT_CLASS}`}>
                             {row.currencyRow ? money(row.currencyRow.revenue, row.currencyRow.currency) : "—"}
+                          </td>
+                          <td className="px-3 py-3 text-end ltr-nums tabular-nums">
+                            {row.currencyRow
+                              ? money(row.currencyRow.encounterRevenue ?? 0, row.currencyRow.currency)
+                              : "—"}
+                          </td>
+                          <td className="px-3 py-3 text-end ltr-nums tabular-nums">
+                            {row.currencyRow
+                              ? money(row.currencyRow.operationRevenue ?? 0, row.currencyRow.currency)
+                              : "—"}
+                          </td>
+                          <td className="px-3 py-3 text-end ltr-nums tabular-nums">
+                            {row.currencyRow ? money(row.currencyRow.otherRevenue ?? 0, row.currencyRow.currency) : "—"}
+                          </td>
+                          <td className="px-3 py-3 text-xs">
+                            {row.currencyRow && (row.currencyRow.otherBreakdown ?? []).length > 0 ? (
+                              <ul className="space-y-1 ltr-nums tabular-nums">
+                                {(row.currencyRow.otherBreakdown ?? []).map((item) => (
+                                  <li key={`${row.key}-${item.category}`}>
+                                    <span className="text-muted-foreground">
+                                      {formatRevenueCategory(item.category, t)}:
+                                    </span>{" "}
+                                    {money(item.amount, row.currencyRow!.currency)}
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              "—"
+                            )}
                           </td>
                           <td className={`px-3 py-3 text-end ltr-nums tabular-nums ${EXPENSE_TEXT_CLASS}`}>
                             {row.currencyRow ? money(row.currencyRow.expenses, row.currencyRow.currency) : "—"}

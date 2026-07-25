@@ -13,19 +13,43 @@ export type ReportsCurrencyTotals = {
   revenue: number;
   expenses: number;
   netProfit: number;
+  encounterRevenue: number;
+  operationRevenue: number;
+  otherRevenue: number;
+  otherBreakdown: { category: string; amount: number }[];
 };
 
 export function mergeCurrencyTotals(
   revenueByCurrency: Map<string, number>,
   expensesByCurrency: Map<string, number>,
+  encounterRevenueByCurrency: Map<string, number> = new Map(),
+  operationRevenueByCurrency: Map<string, number> = new Map(),
+  otherRevenueByCurrency: Map<string, number> = new Map(),
+  otherBreakdownByCurrency: Map<string, { category: string; amount: number }[]> = new Map(),
 ): ReportsCurrencyTotals[] {
-  const currencies = new Set([...revenueByCurrency.keys(), ...expensesByCurrency.keys()]);
+  const currencies = new Set([
+    ...revenueByCurrency.keys(),
+    ...expensesByCurrency.keys(),
+    ...encounterRevenueByCurrency.keys(),
+    ...operationRevenueByCurrency.keys(),
+    ...otherRevenueByCurrency.keys(),
+    ...otherBreakdownByCurrency.keys(),
+  ]);
   return [...currencies]
     .sort((a, b) => a.localeCompare(b))
     .map((currency) => {
       const revenue = revenueByCurrency.get(currency) ?? 0;
       const expenses = expensesByCurrency.get(currency) ?? 0;
-      return { currency, revenue, expenses, netProfit: revenue - expenses };
+      return {
+        currency,
+        revenue,
+        expenses,
+        netProfit: revenue - expenses,
+        encounterRevenue: encounterRevenueByCurrency.get(currency) ?? 0,
+        operationRevenue: operationRevenueByCurrency.get(currency) ?? 0,
+        otherRevenue: otherRevenueByCurrency.get(currency) ?? 0,
+        otherBreakdown: otherBreakdownByCurrency.get(currency) ?? [],
+      };
     });
 }
 
