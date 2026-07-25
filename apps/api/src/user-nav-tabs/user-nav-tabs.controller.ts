@@ -24,7 +24,7 @@ export class UserNavTabsController {
 
   @Put(":userId")
   @ApiOperation({
-    summary: "Set which sidebar tabs a user may see (subset of their role; profile always included)",
+    summary: "Set which sidebar tabs a user may see (profile always included; org admins may extend beyond role defaults)",
   })
   @ApiOkResponse({ type: UserNavTabGrantResponseDto })
   putOne(@CurrentUser() user: JwtUser, @Param("userId") userId: string, @Body() body: SetUserNavTabsDto) {

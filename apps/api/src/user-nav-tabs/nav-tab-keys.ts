@@ -122,6 +122,23 @@ export function sanitizeNavTabKeysForRole(role: UserRole, requested: string[], r
   return uniq.sort((a, b) => a.localeCompare(b));
 }
 
+/**
+ * User-specific grants: org admins may assign any organization tab (extend or restrict).
+ * Clinic admins may only assign a subset of the user's effective role tabs.
+ */
+export function sanitizeUserNavTabGrant(
+  role: UserRole,
+  requested: string[],
+  options: { allowOrganizationTabs: boolean; roleBase: string[] },
+): string[] {
+  const max = options.allowOrganizationTabs
+    ? maxNavTabsForOrganization()
+    : new Set(options.roleBase.length ? options.roleBase : [...maxNavTabsForRole(role)]);
+  const uniq = [...new Set(requested.map((k) => k.trim()).filter((k) => VALID_NAV_TAB_KEYS.has(k) && max.has(k)))];
+  if (!uniq.includes("profile")) uniq.push("profile");
+  return uniq.sort((a, b) => a.localeCompare(b));
+}
+
 export function isFullRoleNav(role: UserRole, keys: string[], roleBase?: string[] | null): boolean {
   const max = roleBase?.length ? new Set(roleBase) : maxNavTabsForRole(role);
   if (keys.length !== max.size) return false;

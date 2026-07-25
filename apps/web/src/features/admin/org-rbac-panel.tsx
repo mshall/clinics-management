@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useUsersQuery } from "@/lib/api-hooks";
 import { ApiError, apiGet, apiPut } from "@/lib/http";
 import type { NavItemKey } from "@/lib/nav-policy";
-import { navKeysForRole, organizationNavOrderedKeys, roleNavKeysForRole } from "@/lib/nav-policy";
+import { navKeysForRole, organizationNavKeySet, organizationNavOrderedKeys, roleNavKeysForRole } from "@/lib/nav-policy";
 import { mapApiRole } from "@/lib/roles";
 import { formatUserRole } from "@/lib/locale-display";
 import type { DemoRole } from "@/lib/roles";
@@ -67,7 +67,7 @@ function NavTabChecklist({
   draft: Set<NavItemKey>;
   onToggle: (key: NavItemKey) => void;
   disabled?: boolean;
-  /** When set, tabs outside this set cannot be toggled (e.g. user grants within role limits). */
+  /** When set, tabs outside this set cannot be toggled (clinic admins: role subset only). */
   allowedKeys?: Set<NavItemKey>;
 }) {
   const { t } = useTranslation();
@@ -112,6 +112,7 @@ export function OrgRbacPanel() {
   });
 
   const organizationOrderedKeys = useMemo(() => organizationNavOrderedKeys(), []);
+  const organizationTabSet = useMemo(() => organizationNavKeySet(), []);
 
   const roleGrantFingerprint = roleGrantQ.data ? JSON.stringify(roleGrantQ.data.tabKeys ?? null) : "";
   const rolePlatformDefaults = useMemo(
@@ -212,11 +213,11 @@ export function OrgRbacPanel() {
     }
     const next = new Set<NavItemKey>();
     for (const k of raw) {
-      if (roleEffective.has(k as NavItemKey)) next.add(k as NavItemKey);
+      if (organizationTabSet.has(k as NavItemKey)) next.add(k as NavItemKey);
     }
     next.add("profile");
     setUserDraft(next);
-  }, [userTargetId, userTargetRole, userGrantFingerprint, userGrantQ.isSuccess, userGrantQ.data?.tabKeys, userRoleGrantQ.data?.tabKeys]);
+  }, [userTargetId, userTargetRole, userGrantFingerprint, userGrantQ.isSuccess, userGrantQ.data?.tabKeys, userRoleGrantQ.data?.tabKeys, organizationTabSet]);
 
   const saveUserMut = useMutation({
     mutationFn: (tabKeys: string[]) => apiPut<{ tabKeys: string[] | null }>(`/api/v1/user-nav-tabs/${userTargetId}`, { tabKeys }),
@@ -269,7 +270,7 @@ export function OrgRbacPanel() {
         <CardDescription>
           {t(
             "admin.rbacSubtitle",
-            "Customize which sidebar sections each role and user can access in this organization. User grants cannot exceed their role permissions.",
+            "Customize which sidebar sections each role and user can access. Organization admins can grant extra tabs to individual users beyond their role.",
           )}
         </CardDescription>
       </CardHeader>
@@ -352,7 +353,9 @@ export function OrgRbacPanel() {
             <p className="text-xs text-muted-foreground">
               {t(
                 "admin.rbacUserHint",
-                "Grant or restrict tabs for a specific user. Grayed-out items are not allowed for their role — expand the role permissions first.",
+                isGroupAdmin
+                  ? "Grant or restrict tabs for a specific user. You can add organization tabs (e.g. HR) even when they are not part of the user's role."
+                  : "Grant or restrict tabs for a specific user within their role permissions.",
               )}
             </p>
           </div>
@@ -391,7 +394,7 @@ export function OrgRbacPanel() {
                   orderedKeys={organizationOrderedKeys}
                   draft={userDraft}
                   onToggle={toggleUser}
-                  allowedKeys={userRoleBase}
+                  allowedKeys={isGroupAdmin ? undefined : userRoleBase}
                 />
               ) : null}
               <p className="text-xs text-muted-foreground">

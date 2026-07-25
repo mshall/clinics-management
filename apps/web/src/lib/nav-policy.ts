@@ -175,8 +175,8 @@ export function orderedNavKeysForRole(role: DemoRole | undefined, roleNavTabKeys
 }
 
 /**
- * When a clinic/group admin assigns a subset of tabs, the effective menu is the
- * intersection of role defaults and the stored grant (always includes `profile`).
+ * When an admin assigns tabs for a user, the stored grant is the explicit allow-list.
+ * With no grant, the user's effective role tabs apply.
  */
 export function effectiveNavKeys(
   role: DemoRole | undefined,
@@ -185,12 +185,11 @@ export function effectiveNavKeys(
 ): Set<NavItemKey> {
   const base = roleNavKeysForRole(role, roleNavTabKeys);
   if (!navTabKeys?.length) return base;
-  const grant = new Set(
-    navTabKeys.filter((k): k is NavItemKey => (NAV_ITEM_PATH as Record<string, string>)[k] !== undefined && base.has(k as NavItemKey))
-  );
+  const org = organizationNavKeySet();
   const out = new Set<NavItemKey>();
-  for (const k of base) {
-    if (grant.has(k)) out.add(k);
+  for (const k of navTabKeys) {
+    const key = k as NavItemKey;
+    if (org.has(key)) out.add(key);
   }
   out.add("profile");
   return out;

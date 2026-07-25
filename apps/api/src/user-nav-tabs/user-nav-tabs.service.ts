@@ -2,7 +2,7 @@ import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/commo
 import { UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
-import { isFullRoleNav, sanitizeNavTabKeysForRole } from "./nav-tab-keys";
+import { isFullRoleNav, sanitizeUserNavTabGrant } from "./nav-tab-keys";
 import { TenantRoleNavTabsService } from "./tenant-role-nav-tabs.service";
 
 @Injectable()
@@ -42,7 +42,11 @@ export class UserNavTabsService {
     this.assertCanManage(actor, target);
 
     const roleBase = await this.tenantRoleNav.effectiveRoleBaseForUser(tenantId, target.role);
-    const sanitized = sanitizeNavTabKeysForRole(target.role, tabKeys, roleBase);
+    const allowOrganizationTabs = actor.role === UserRole.GROUP_ADMIN;
+    const sanitized = sanitizeUserNavTabGrant(target.role, tabKeys, {
+      allowOrganizationTabs,
+      roleBase,
+    });
     if (isFullRoleNav(target.role, sanitized, roleBase)) {
       await this.prisma.userNavTabGrant.deleteMany({ where: { tenantId, userId: targetUserId } });
       return { tabKeys: null };
