@@ -6,7 +6,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
-import { PasswordInput } from "@/components/password-input";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
@@ -51,6 +50,10 @@ import {
 } from "@/lib/locale-display";
 import { employeeToPickListItem, formatEmployeeName, splitDisplayName } from "@/lib/employee-display";
 import { resolvePickListSelectedItem, useDebouncedPickListSearch } from "@/lib/pick-list-utils";
+import {
+  defaultEmployeeLoginPassword,
+  suggestEmployeeLoginEmail,
+} from "@/lib/employee-login-suggest";
 import { useAuthStore } from "@/stores/auth-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import {
@@ -200,7 +203,8 @@ export function HrPage() {
   const [empClinic, setEmpClinic] = useState("");
   const [empAssignedClinicIds, setEmpAssignedClinicIds] = useState<string[]>([]);
   const [empLoginEmail, setEmpLoginEmail] = useState("");
-  const [empLoginPassword, setEmpLoginPassword] = useState("");
+  const [empLoginPassword, setEmpLoginPassword] = useState(() => defaultEmployeeLoginPassword());
+  const [loginEmailTouched, setLoginEmailTouched] = useState(false);
   const [empLoginRole, setEmpLoginRole] = useState<(typeof CLINIC_STAFF_ASSIGNABLE_ROLES)[number]>("NURSE");
   const [physicianAssignment, setPhysicianAssignment] = useState<"CLINIC" | "GROUP">("CLINIC");
   const [createdLoginCredentials, setCreatedLoginCredentials] = useState<{
@@ -267,6 +271,30 @@ export function HrPage() {
   useEffect(() => {
     if (primaryClinicForCreate) setEmpSalaryCurrency(empSalaryClinicDefault);
   }, [primaryClinicForCreate, empSalaryClinicDefault]);
+
+  useEffect(() => {
+    if (!createEmpOpen || !provisionLogin) return;
+    setLoginEmailTouched(false);
+    setEmpLoginPassword(defaultEmployeeLoginPassword());
+    setEmpLoginEmail(
+      suggestEmployeeLoginEmail("", "", hrManageContext.data?.clinicNameEn ?? ""),
+    );
+  }, [createEmpOpen, provisionLogin, hrManageContext.data?.clinicNameEn]);
+
+  useEffect(() => {
+    if (!createEmpOpen || !provisionLogin || loginEmailTouched) return;
+    setEmpLoginEmail(
+      suggestEmployeeLoginEmail(empFn, empLn, hrManageContext.data?.clinicNameEn ?? ""),
+    );
+  }, [
+    createEmpOpen,
+    provisionLogin,
+    loginEmailTouched,
+    empFn,
+    empLn,
+    hrManageContext.data?.clinicNameEn,
+  ]);
+
   const empClinicSelectedItem = useMemo(
     (): PickListItem | null => resolvePickListSelectedItem(empClinic, clinicItems, pinnedEmpClinicItem),
     [empClinic, clinicItems, pinnedEmpClinicItem],
@@ -381,7 +409,8 @@ export function HrPage() {
       setEmpLinkedUserId("");
       setEmpLinkedUserRole("");
       setEmpLoginEmail("");
-      setEmpLoginPassword("");
+      setEmpLoginPassword(defaultEmployeeLoginPassword());
+      setLoginEmailTouched(false);
       setEmpLoginRole("NURSE");
       setPhysicianAssignment("CLINIC");
       setPinnedEmpClinicItem(null);
@@ -703,22 +732,45 @@ export function HrPage() {
                           <Label>{t("hr.clinic")}</Label>
                           <Input readOnly value={hrManageContext.data?.clinicNameEn ?? "—"} />
                         </div>
-                        <div className="space-y-2 sm:col-span-2">
-                          <Label required>{t("auth.email", "Login email")}</Label>
-                          <Input
-                            type="email"
-                            value={empLoginEmail}
-                            onChange={(e) => setEmpLoginEmail(e.target.value)}
-                            autoComplete="off"
-                          />
+                        <div className="space-y-2">
+                          <Label required>{t("patients.firstNameEn")}</Label>
+                          <Input value={empFn} onChange={(e) => setEmpFn(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label required>{t("patients.lastNameEn")}</Label>
+                          <Input value={empLn} onChange={(e) => setEmpLn(e.target.value)} />
                         </div>
                         <div className="space-y-2 sm:col-span-2">
-                          <Label required>{t("admin.tempPassword", "Temporary password")}</Label>
-                          <PasswordInput value={empLoginPassword} onChange={setEmpLoginPassword} />
+                          <Label required>{t("hr.loginEmail", "Login email")}</Label>
+                          <Input
+                            type="email"
+                            className="ltr-nums"
+                            value={empLoginEmail}
+                            onChange={(e) => {
+                              setLoginEmailTouched(true);
+                              setEmpLoginEmail(e.target.value);
+                            }}
+                            autoComplete="off"
+                          />
                           <p className="text-xs text-muted-foreground">
                             {t(
-                              "hr.loginPasswordShownOnceHint",
-                              "This password is shown once after create — share it securely with the employee.",
+                              "hr.loginEmailSuggestHint",
+                              "Suggested: firstname.lastname@clinicname.com — edit before saving.",
+                            )}
+                          </p>
+                        </div>
+                        <div className="space-y-2 sm:col-span-2">
+                          <Label required>{t("hr.loginPassword", "Login password")}</Label>
+                          <Input
+                            className="ltr-nums"
+                            value={empLoginPassword}
+                            onChange={(e) => setEmpLoginPassword(e.target.value)}
+                            autoComplete="new-password"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            {t(
+                              "hr.loginPasswordDefaultHint",
+                              "Default is “demo” — change if needed. A linked user account is created with this password.",
                             )}
                           </p>
                         </div>
@@ -899,6 +951,8 @@ export function HrPage() {
                     </div>
                       </>
                     )}
+                    {!provisionLogin ? (
+                      <>
                     <div className="space-y-2">
                       <Label required>{t("patients.firstNameEn")}</Label>
                       <Input value={empFn} onChange={(e) => setEmpFn(e.target.value)} />
@@ -907,6 +961,8 @@ export function HrPage() {
                       <Label required>{t("patients.lastNameEn")}</Label>
                       <Input value={empLn} onChange={(e) => setEmpLn(e.target.value)} />
                     </div>
+                      </>
+                    ) : null}
                     <div className="space-y-2">
                       <Label>{t("patients.firstNameAr")}</Label>
                       <Input value={empFnAr} onChange={(e) => setEmpFnAr(e.target.value)} dir="auto" />

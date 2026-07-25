@@ -1,5 +1,6 @@
 import type { TFunction } from "i18next";
 import { isOrgWideUserRole } from "@/features/platform/platform-shared";
+import { HR_LOGIN_PASSWORD_MIN_LENGTH } from "@/lib/employee-login-suggest";
 import {
   collectPendingDocumentFieldErrors,
   pendingDocumentValidationMessage,
@@ -103,8 +104,14 @@ export function collectEmployeeCreateIssues(
     if (!input.loginEmail?.trim()) {
       issues.push(t("hr.errorLoginEmailRequired", "Login email is required."));
     }
-    if (!input.loginPassword?.trim() || (input.loginPassword?.trim().length ?? 0) < 8) {
-      issues.push(t("hr.errorLoginPasswordRequired", "Temporary login password must be at least 8 characters."));
+    if (!input.loginPassword?.trim() || (input.loginPassword?.trim().length ?? 0) < HR_LOGIN_PASSWORD_MIN_LENGTH) {
+      issues.push(
+        t(
+          "hr.errorLoginPasswordRequired",
+          "Temporary login password must be at least {{min}} characters.",
+          { min: HR_LOGIN_PASSWORD_MIN_LENGTH },
+        ),
+      );
     }
     if (!input.loginRole?.trim()) {
       issues.push(t("hr.errorLoginRoleRequired", "Select a role for the new login account."));

@@ -24,10 +24,10 @@ export class CreateEmployeeDto {
   @IsEmail()
   loginEmail?: string;
 
-  @ApiPropertyOptional({ minLength: 8, description: "Create a new login — temporary password" })
+  @ApiPropertyOptional({ minLength: 4, description: "Create a new login — temporary password" })
   @IsOptional()
   @IsString()
-  @MinLength(8)
+  @MinLength(4)
   @MaxLength(128)
   loginPassword?: string;
 
