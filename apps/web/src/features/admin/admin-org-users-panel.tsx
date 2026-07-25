@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { useClinicsQuery } from "@/lib/api-hooks";
 import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from "@/lib/http";
 import { formatEmployeeName } from "@/lib/employee-display";
-import { formatClinicName, formatUserRole } from "@/lib/locale-display";
+import { formatClinicName, formatEmploymentType, formatUserRole } from "@/lib/locale-display";
 import type { Paginated } from "@/lib/paginated";
 import { apiErrorMessage, isClinicRequiredUserRole, isOrgWideUserRole, ORG_USER_ROLES } from "@/features/platform/platform-shared";
 import {
@@ -44,7 +44,11 @@ type OrgUserRow = {
   employeeNumber: string | null;
   employeeFirstNameEn: string | null;
   employeeLastNameEn: string | null;
+  employeeEmploymentType?: string | null;
+  employeeSalaryBase?: number | null;
 };
+
+const EMP_TYPE_VALUES = ["FULL_TIME", "PART_TIME", "CONTRACTOR", "LOCUM"] as const;
 
 type UserDetail = OrgUserRow & { tenantId: string | null; tenantName: string | null };
 
@@ -67,6 +71,8 @@ export function AdminOrgUsersPanel() {
   const [uName, setUName] = useState("");
   const [uRole, setURole] = useState<(typeof ORG_USER_ROLES)[number]>("NURSE");
   const [uClinicIds, setUClinicIds] = useState<string[]>([]);
+  const [uEmploymentType, setUEmploymentType] = useState<(typeof EMP_TYPE_VALUES)[number]>("FULL_TIME");
+  const [uSalaryBase, setUSalaryBase] = useState("");
   const [userErr, setUserErr] = useState<string | null>(null);
   const [legacyUsersApi, setLegacyUsersApi] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
@@ -157,6 +163,8 @@ export function AdminOrgUsersPanel() {
     setUName(u.displayName);
     setURole(u.role as (typeof ORG_USER_ROLES)[number]);
     setUClinicIds(u.clinicIds);
+    setUEmploymentType((u.employeeEmploymentType ?? "FULL_TIME") as (typeof EMP_TYPE_VALUES)[number]);
+    setUSalaryBase(u.employeeSalaryBase != null ? String(u.employeeSalaryBase) : "0");
     setUPassword("");
   }, [isEdit, userDetailQuery.data]);
 
@@ -212,6 +220,8 @@ export function AdminOrgUsersPanel() {
       };
       if (uPassword.length >= 8) body.password = uPassword;
       body.clinicIds = uClinicIds;
+      body.employmentType = uEmploymentType;
+      body.salaryBase = Number.parseFloat(uSalaryBase);
       return apiPatch(`/api/v1/admin/users/${editUserId}`, body);
     },
     onSuccess: () => {
@@ -220,6 +230,8 @@ export function AdminOrgUsersPanel() {
       void qc.invalidateQueries({ queryKey: ["admin"] });
       void qc.invalidateQueries({ queryKey: ["users"] });
       void qc.invalidateQueries({ queryKey: ["org-hierarchy"] });
+      void qc.invalidateQueries({ queryKey: ["hr"] });
+      void qc.invalidateQueries({ queryKey: ["expenses"] });
     },
     onError: (e: unknown) => setUserErr(apiErrorMessage(e)),
   });
@@ -791,6 +803,44 @@ export function AdminOrgUsersPanel() {
                     "This role works across the whole organization — no clinic assignment is required.",
                   )}
                 </p>
+              ) : null}
+              {isEdit ? (
+                <>
+                  <div className="space-y-2 md:col-span-2">
+                    <p className="text-sm font-medium">{t("admin.orgUserHrSection", "HR & payroll")}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t(
+                        "admin.orgUserHrSectionHint",
+                        "Contract type and monthly salary for the linked employee record. Salaries appear automatically in monthly PAYROLL expenses.",
+                      )}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t("hr.contractType", "Contract type")}</Label>
+                    <select
+                      className={nativeSelectClassName}
+                      value={uEmploymentType}
+                      onChange={(e) => setUEmploymentType(e.target.value as (typeof EMP_TYPE_VALUES)[number])}
+                    >
+                      {EMP_TYPE_VALUES.map((value) => (
+                        <option key={value} value={value}>
+                          {formatEmploymentType(value, t)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t("hr.salaryBase")}</Label>
+                    <Input
+                      className="ltr-nums"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={uSalaryBase}
+                      onChange={(e) => setUSalaryBase(e.target.value)}
+                    />
+                  </div>
+                </>
               ) : null}
               <div className="flex flex-wrap gap-2 pt-2 md:col-span-2">
                 <Button

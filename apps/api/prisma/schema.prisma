@@ -492,10 +492,15 @@ model Expense {
   proofRelativePath String?
   proofOriginalName String?
   proofMimeType     String?
+  employeeId        String?
+  employee          Employee?     @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  payrollMonth      String?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
+  @@unique([tenantId, employeeId, payrollMonth])
   @@index([tenantId, clinicId, incurredAt])
+  @@index([tenantId, payrollMonth])
 }
 
 model Employee {
@@ -526,6 +531,7 @@ model Employee {
   attendances       Attendance[]
   leaveRequests     LeaveRequest[]
   employmentPeriods EmployeeEmploymentPeriod[]
+  payrollExpenses   Expense[]
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
   deletedAt         DateTime?

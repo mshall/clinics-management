@@ -555,13 +555,13 @@ export function EmployeeDetailPage() {
                 </div>
               )}
               <div className="space-y-2">
-                <Label>{t("hr.employmentType")}</Label>
+                <Label>{t("hr.contractType", "Contract type")}</Label>
                 <SearchablePickList
                   items={empTypeItems}
                   value={employmentType}
                   onValueChange={setEmploymentType}
                   searchPlaceholder={t("hr.filterEmpType")}
-                  placeholder={t("hr.employmentType")}
+                  placeholder={t("hr.contractType", "Contract type")}
                 />
               </div>
               <div className="space-y-2">
@@ -619,7 +619,7 @@ export function EmployeeDetailPage() {
                 </>
               ) : null}
               <Row
-                label={t("hr.employmentType")}
+                label={t("hr.contractType", "Contract type")}
                 value={<Badge variant="secondary">{formatEmploymentType(emp.employmentType, t)}</Badge>}
               />
               <Separator />

@@ -19,6 +19,7 @@ import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-b
 import type { CreateExpenseDto } from "./dto/create-expense.dto";
 import type { ExpenseDto } from "./dto/expense.dto";
 import type { UpdateExpenseDto } from "./dto/update-expense.dto";
+import { PayrollExpensesService } from "../payroll/payroll-expenses.service";
 
 const MAX_PROOF_BYTES = 15 * 1024 * 1024;
 const ALLOWED_PROOF_MIME = new Set([
@@ -38,6 +39,7 @@ export class ExpensesService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
+    private readonly payrollExpenses: PayrollExpensesService,
   ) {}
 
   private map(e: {
@@ -78,12 +80,13 @@ export class ExpensesService {
     sortOrderStr?: string,
     clinicIdStr?: string
   ) {
+    const { start, end } = resolveReportingRange(fromStr, toStr);
     const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
     if (scopeIds !== null && !scopeIds.length) {
       const { page, pageSize } = parsePageParams(pageStr, pageSizeStr);
       return paginate([], 0, page, pageSize);
     }
-    const { start, end } = resolveReportingRange(fromStr, toStr);
+    await this.payrollExpenses.ensureForRange(tenantId, start, end, scopeIds);
     const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
     const sortField = pickSortField(sortByStr, ["incurredAt", "amount", "category", "status", "vendorName"] as const, "incurredAt");
     const sortDir = parseSortOrder(sortOrderStr);

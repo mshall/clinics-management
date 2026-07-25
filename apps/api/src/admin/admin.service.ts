@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
-import { Prisma, UserRole } from "@prisma/client";
+import { EmploymentType, Prisma, UserRole } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { ensureUserEmployeeRecord } from "../common/clinic-staff-employee";
 import {
@@ -36,6 +36,8 @@ type LinkedEmployeeSummary = {
   employeeNumber: string | null;
   employeeFirstNameEn: string | null;
   employeeLastNameEn: string | null;
+  employeeEmploymentType: EmploymentType | null;
+  employeeSalaryBase: number | null;
 };
 
 function mapLinkedEmployee(
@@ -44,6 +46,8 @@ function mapLinkedEmployee(
     employeeNumber: string;
     firstNameEn: string;
     lastNameEn: string;
+    employmentType: EmploymentType;
+    salaryBase: { toString(): string };
   } | null,
 ): LinkedEmployeeSummary {
   if (!employee) {
@@ -52,6 +56,8 @@ function mapLinkedEmployee(
       employeeNumber: null,
       employeeFirstNameEn: null,
       employeeLastNameEn: null,
+      employeeEmploymentType: null,
+      employeeSalaryBase: null,
     };
   }
   return {
@@ -59,6 +65,8 @@ function mapLinkedEmployee(
     employeeNumber: employee.employeeNumber,
     employeeFirstNameEn: employee.firstNameEn,
     employeeLastNameEn: employee.lastNameEn,
+    employeeEmploymentType: employee.employmentType,
+    employeeSalaryBase: Number(employee.salaryBase),
   };
 }
 
@@ -183,6 +191,8 @@ export class AdminService {
               employeeNumber: true,
               firstNameEn: true,
               lastNameEn: true,
+              employmentType: true,
+              salaryBase: true,
               clinic: { select: { id: true, nameEn: true } },
             },
           },
@@ -322,6 +332,8 @@ export class AdminService {
             employeeNumber: true,
             firstNameEn: true,
             lastNameEn: true,
+            employmentType: true,
+            salaryBase: true,
             clinic: { select: { id: true, nameEn: true } },
           },
         },
@@ -389,6 +401,19 @@ export class AdminService {
       if (shouldSyncEmployee) {
         const primaryClinic = dto.clinicIds !== undefined ? (dto.clinicIds[0] ?? null) : undefined;
         await ensureUserEmployeeRecord(tx, tenantId, u, primaryClinic);
+      }
+
+      if (dto.employmentType !== undefined || dto.salaryBase !== undefined) {
+        const emp = await tx.employee.findFirst({ where: { tenantId, userId } });
+        if (emp) {
+          await tx.employee.update({
+            where: { id: emp.id },
+            data: {
+              ...(dto.employmentType !== undefined ? { employmentType: dto.employmentType } : {}),
+              ...(dto.salaryBase !== undefined ? { salaryBase: dto.salaryBase } : {}),
+            },
+          });
+        }
       }
 
       return u;

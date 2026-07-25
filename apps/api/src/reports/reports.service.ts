@@ -15,6 +15,7 @@ import { fetchClinicScopeIds } from "../common/clinic-scope";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
+import { PayrollExpensesService } from "../payroll/payroll-expenses.service";
 import {
   buildReportsEncounterWhere,
   buildReportsExpenseWhere,
@@ -42,7 +43,10 @@ export interface PatientAcquisitionPatientsQuery {
 
 @Injectable()
 export class ReportsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly payrollExpenses: PayrollExpensesService,
+  ) {}
 
   private async resolveScopeClinicIds(tenantId: string, viewer?: JwtUser): Promise<string[] | null> {
     if (!viewer) return null;
@@ -56,6 +60,16 @@ export class ReportsService {
     }
   }
 
+  private async ensurePayrollForRange(
+    tenantId: string,
+    start: Date,
+    end: Date,
+    viewer?: JwtUser,
+  ): Promise<void> {
+    const scopeClinicIds = await this.resolveScopeClinicIds(tenantId, viewer);
+    await this.payrollExpenses.ensureForRange(tenantId, start, end, scopeClinicIds);
+  }
+
   async profitLoss(
     tenantId: string,
     fromStr?: string,
@@ -67,6 +81,7 @@ export class ReportsService {
     const clinicId = clinicIdStr?.trim() || null;
     const scopeClinicIds = await this.resolveScopeClinicIds(tenantId, viewer);
     if (clinicId) this.assertClinicInScope(clinicId, scopeClinicIds);
+    await this.ensurePayrollForRange(tenantId, start, end, viewer);
 
     const revenueWhere = buildReportsRevenueWhere(tenantId, start, end, viewer, clinicId, scopeClinicIds);
     const expenseWhere = buildReportsExpenseWhere(tenantId, start, end, clinicId, scopeClinicIds);
@@ -111,6 +126,7 @@ export class ReportsService {
     const clinicId = clinicIdStr?.trim() || null;
     const scopeClinicIds = await this.resolveScopeClinicIds(tenantId, viewer);
     if (clinicId) this.assertClinicInScope(clinicId, scopeClinicIds);
+    await this.ensurePayrollForRange(tenantId, start, end, viewer);
 
     const revenueWhere = buildReportsRevenueWhere(tenantId, start, end, viewer, clinicId, scopeClinicIds);
     const expenseWhere = buildReportsExpenseWhere(tenantId, start, end, clinicId, scopeClinicIds);
@@ -166,6 +182,7 @@ export class ReportsService {
 
     const { start, end } = resolveReportingRange(fromStr, toStr);
     const scopeClinicIds = await this.resolveScopeClinicIds(tenantId, viewer);
+    await this.ensurePayrollForRange(tenantId, start, end, viewer);
 
     const clinics = await this.prisma.clinic.findMany({
       where: {
@@ -387,6 +404,7 @@ export class ReportsService {
     const clinicId = clinicIdStr?.trim() || null;
     const scopeClinicIds = await this.resolveScopeClinicIds(tenantId, viewer);
     if (clinicId) this.assertClinicInScope(clinicId, scopeClinicIds);
+    await this.ensurePayrollForRange(tenantId, start, end, viewer);
 
     const startAnchor = new Date(start.getFullYear(), start.getMonth(), 1, 0, 0, 0, 0);
     const endAnchor = new Date(end.getFullYear(), end.getMonth(), 1, 0, 0, 0, 0);

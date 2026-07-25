@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { UserRole } from "@prisma/client";
-import { IsArray, IsEmail, IsEnum, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import { EmploymentType, UserRole } from "@prisma/client";
+import { IsArray, IsEmail, IsEnum, IsNumber, IsOptional, IsString, MaxLength, Min, MinLength } from "class-validator";
 
 export class PlatformPatchTenantUserDto {
   @ApiPropertyOptional()
@@ -32,4 +32,15 @@ export class PlatformPatchTenantUserDto {
   @IsArray()
   @IsString({ each: true })
   clinicIds?: string[];
+
+  @ApiPropertyOptional({ enum: EmploymentType, description: "Linked HR employee contract type" })
+  @IsOptional()
+  @IsEnum(EmploymentType)
+  employmentType?: EmploymentType;
+
+  @ApiPropertyOptional({ description: "Linked HR employee monthly base salary" })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  salaryBase?: number;
 }

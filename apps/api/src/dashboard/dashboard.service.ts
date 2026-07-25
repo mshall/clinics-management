@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { ClinicRecordStatus, EncounterStatus, ExpenseStatus, Prisma, RevenueStatus, UserRole } from "@prisma/client";
 import { formatLocalYmd, resolveReportingRange } from "../common/reporting-range";
+import { PayrollExpensesService } from "../payroll/payroll-expenses.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { canViewDashboardFinancialKpis, canViewDashboardHrKpis } from "./dashboard-kpi-policy";
 
@@ -36,7 +37,10 @@ function mapCurrencyTotals(
 
 @Injectable()
 export class DashboardService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly payrollExpenses: PayrollExpensesService,
+  ) {}
 
   async groupOverview(
     tenantId: string,
@@ -45,6 +49,7 @@ export class DashboardService {
     viewerRole?: UserRole,
   ): Promise<GroupOverviewKpis> {
     const { start, end } = resolveReportingRange(fromStr, toStr);
+    await this.payrollExpenses.ensureForRange(tenantId, start, end, null);
 
     const revenueWhere: Prisma.RevenueEntryWhereInput = {
       tenantId,
