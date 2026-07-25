@@ -22,4 +22,10 @@ export class HrManageContextDto {
 
   @ApiPropertyOptional({ enum: UserRole, isArray: true, nullable: true })
   assignableRoles!: UserRole[] | null;
+
+  @ApiProperty({
+    description:
+      "When true, assignableClinicIds is limited to the viewer's HR assignment; when false, all org clinics are assignable",
+  })
+  clinicScopeRestricted!: boolean;
 }

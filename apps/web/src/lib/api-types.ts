@@ -261,6 +261,7 @@ export interface HrManageContextDto {
   assignableClinicIds: string[];
   provisionLogin: boolean;
   assignableRoles: string[] | null;
+  clinicScopeRestricted: boolean;
 }
 
 export interface CreateEmployeeResultDto extends EmployeeDto {

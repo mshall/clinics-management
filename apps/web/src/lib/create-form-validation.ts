@@ -121,11 +121,12 @@ export function collectEmployeeCreateIssues(
   } else if (input.requireLinkedUser !== false && !input.userId.trim()) {
     issues.push(t("hr.errorLinkedUserRequired", "Link an organization login account before creating the employee."));
   }
-  const showClinicAssignment = input.linkedUserRole && !isOrgWideUserRole(input.linkedUserRole);
+  const showClinicAssignment =
+    !input.provisionLogin && input.linkedUserRole && !isOrgWideUserRole(input.linkedUserRole);
   const primaryClinicId = showClinicAssignment
     ? (input.assignedClinicIds[0] ?? "")
     : input.clinicId;
-  if (!primaryClinicId.trim()) {
+  if (!input.provisionLogin && !primaryClinicId.trim()) {
     issues.push(t("hr.errorClinicRequired", "Select a clinic."));
   }
   if (!input.firstName.trim()) issues.push(t("hr.errorFirstNameRequired", "First name is required."));
@@ -146,6 +147,7 @@ export function collectHrProvisionClinicScopeIssues(
     clinicId: string;
     clinicQuery: string;
     assignableItems: PickListItem[];
+    scopeRestricted?: boolean;
   },
   t: TFunction,
 ): string[] {
@@ -162,6 +164,19 @@ export function collectHrProvisionClinicScopeIssues(
       ? input.clinicId.trim()
       : "") || resolveClinicIdFromQuery(input.clinicQuery, input.assignableItems);
   if (resolved) return [];
+
+  if (!input.clinicQuery.trim() && !input.clinicId.trim()) {
+    return [t("hr.errorClinicRequired", "Select a clinic.")];
+  }
+
+  if (input.scopeRestricted === false) {
+    return [
+      t(
+        "hr.errorClinicNotFound",
+        "No matching clinic. Type the clinic name and select from the list.",
+      ),
+    ];
+  }
 
   const names = input.assignableItems.map((i) => i.label).join(", ");
   if (input.assignableItems.length === 1) {

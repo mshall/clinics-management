@@ -30,7 +30,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { canArchiveEmployees, canManageEmployees, canHrDeactivateOrArchiveLinkedUser, isHrOfficerRole } from "@/lib/employee-manage-policy";
+import { canArchiveEmployees, canManageEmployees, canHrDeactivateOrArchiveLinkedUser, usesHrProvisionerCreateFlow } from "@/lib/employee-manage-policy";
 import { ApiError, apiDelete, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { columnFilterIncludes } from "@/lib/utils";
 import {
@@ -91,7 +91,7 @@ export function HrPage() {
   const privilegeGrants = authUser?.employeePrivilegeGrants;
   const canManage = canManageEmployees(authUser?.role, privilegeGrants);
   const canArchive = canArchiveEmployees(authUser?.role, privilegeGrants);
-  const isHrOfficer = isHrOfficerRole(authUser?.role, privilegeGrants);
+  const usesProvisionerUi = usesHrProvisionerCreateFlow(authUser?.role, privilegeGrants);
 
   const canHrLifecycleChange = (employee: EmployeeDto) =>
     canHrDeactivateOrArchiveLinkedUser(
@@ -101,7 +101,7 @@ export function HrPage() {
       employee.linkedUserRole,
       employee.userId,
     );
-  const hrManageContext = useHrManageContextQuery(isHrOfficer && canManage);
+  const hrManageContext = useHrManageContextQuery(usesProvisionerUi && canManage);
   const { data: clinics = [] } = useClinicsQuery();
   const [tab, setTab] = useState<Tab>(() => parseHrTab(searchParams.get("tab")));
 
@@ -224,7 +224,8 @@ export function HrPage() {
     password: string;
     role: string;
   } | null>(null);
-  const provisionLogin = Boolean(isHrOfficer && hrManageContext.data?.provisionLogin);
+  const provisionLogin = Boolean(usesProvisionerUi && hrManageContext.data?.provisionLogin);
+  const clinicScopeRestricted = hrManageContext.data?.clinicScopeRestricted ?? true;
   const [empLinkedUserId, setEmpLinkedUserId] = useState("");
   const [empLinkedUserRole, setEmpLinkedUserRole] = useState("");
   const [pinnedEmpClinicItem, setPinnedEmpClinicItem] = useState<PickListItem | null>(null);
@@ -269,7 +270,12 @@ export function HrPage() {
     if (!query && !empClinic) return null;
     if (resolvedProvisionClinicId) return null;
     const issues = collectHrProvisionClinicScopeIssues(
-      { clinicId: empClinic, clinicQuery: empClinicQuery, assignableItems: provisionClinicItems },
+      {
+        clinicId: empClinic,
+        clinicQuery: empClinicQuery,
+        assignableItems: provisionClinicItems,
+        scopeRestricted: clinicScopeRestricted,
+      },
       t,
     );
     return issues[0] ?? null;
@@ -279,6 +285,7 @@ export function HrPage() {
     empClinicQuery,
     empClinic,
     resolvedProvisionClinicId,
+    clinicScopeRestricted,
     t,
   ]);
   const empTypeItems: PickListItem[] = useMemo(
@@ -303,7 +310,7 @@ export function HrPage() {
     !provisionLogin && Boolean(empLinkedUserRole) && !isOrgWideUserRole(empLinkedUserRole) && clinics.length > 0;
   const requiresClinicAssignment = isClinicRequiredUserRole(empLinkedUserRole);
   const primaryClinicForCreate = provisionLogin
-    ? resolvedProvisionClinicId || hrManageContext.data?.clinicId || ""
+    ? resolvedProvisionClinicId
     : showClinicAssignment
       ? (empAssignedClinicIds[0] ?? "")
       : empClinic;
@@ -316,16 +323,13 @@ export function HrPage() {
 
   useEffect(() => {
     if (!createEmpOpen || !provisionLogin) return;
-    const defaultClinicId =
-      hrManageContext.data?.clinicId ?? hrManageContext.data?.assignableClinicIds?.[0] ?? "";
-    setEmpClinic(defaultClinicId);
-    const defaultItem = provisionClinicItems.find((c) => c.value === defaultClinicId) ?? null;
-    setPinnedEmpClinicItem(defaultItem);
-    setEmpClinicQuery(defaultItem?.label ?? "");
+    setEmpClinic("");
+    setEmpClinicQuery("");
+    setPinnedEmpClinicItem(null);
     setLoginEmailTouched(false);
     setEmpLoginPassword(defaultEmployeeLoginPassword());
-    setEmpLoginEmail(suggestEmployeeLoginEmail("", "", provisionClinicNameEn || defaultItem?.label || ""));
-  }, [createEmpOpen, provisionLogin, hrManageContext.data?.clinicId, hrManageContext.data?.assignableClinicIds, provisionClinicItems]);
+    setEmpLoginEmail(suggestEmployeeLoginEmail("", "", ""));
+  }, [createEmpOpen, provisionLogin]);
 
   useEffect(() => {
     if (!createEmpOpen || !provisionLogin || loginEmailTouched) return;
@@ -569,7 +573,12 @@ export function HrPage() {
   const handleCreateEmployee = () => {
     const scopeIssues = provisionLogin
       ? collectHrProvisionClinicScopeIssues(
-          { clinicId: empClinic, clinicQuery: empClinicQuery, assignableItems: provisionClinicItems },
+          {
+            clinicId: empClinic,
+            clinicQuery: empClinicQuery,
+            assignableItems: provisionClinicItems,
+            scopeRestricted: clinicScopeRestricted,
+          },
           t,
         )
       : [];

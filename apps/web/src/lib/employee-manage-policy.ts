@@ -76,6 +76,17 @@ export function isHrOfficerRole(
   return mapApiRole(raw) === "hr_officer";
 }
 
+/** HR-style create-employee flow (login + clinic picker): HR officers, group admins, and delegated HR grants. */
+export function usesHrProvisionerCreateFlow(
+  role: string | DemoRole | undefined | null,
+  grants?: EmployeePrivilegeGrantSummary[] | null,
+): boolean {
+  if (hasDelegatedHrProvisioner(grants)) return true;
+  if (!role) return false;
+  const mapped = mapApiRole(String(role));
+  return mapped === "hr_officer" || mapped === "group_admin";
+}
+
 export function hasHrNavAccessFromGrants(grants?: EmployeePrivilegeGrantSummary[] | null): boolean {
   return hasDelegatedManage(grants) || hasDelegatedHrProvisioner(grants);
 }

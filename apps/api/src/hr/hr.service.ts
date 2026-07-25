@@ -5,7 +5,15 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { AttendanceStatus, EmployeeRecordStatus, EmployeeSeparationReason, LeaveStatus, Prisma, UserRole } from "@prisma/client";
+import {
+  AttendanceStatus,
+  ClinicRecordStatus,
+  EmployeeRecordStatus,
+  EmployeeSeparationReason,
+  LeaveStatus,
+  Prisma,
+  UserRole,
+} from "@prisma/client";
 import { randomUUID } from "crypto";
 import * as bcrypt from "bcryptjs";
 import * as path from "path";
@@ -435,33 +443,41 @@ export class HrService {
         assignableClinicIds: [],
         provisionLogin: false,
         assignableRoles: null,
+        clinicScopeRestricted: true,
       };
     }
     const scope = await fetchEmployeeManageScopeIds(this.prisma, tenantId, viewer);
-    const assignableClinicIds = scope?.length ? [...scope] : [];
-    const clinicId = assignableClinicIds[0] ?? null;
-    if (!clinicId) {
-      return {
-        clinicId: null,
-        clinicNameEn: null,
-        groupClinicIds: [],
-        assignableClinicIds: [],
-        provisionLogin: true,
-        assignableRoles: [...HR_ASSIGNABLE_USER_ROLES],
-      };
+    const clinicScopeRestricted = scope !== null;
+    let assignableClinicIds: string[];
+    if (scope === null) {
+      const rows = await this.prisma.clinic.findMany({
+        where: { tenantId, recordStatus: ClinicRecordStatus.ACTIVE },
+        select: { id: true },
+        orderBy: { nameEn: "asc" },
+      });
+      assignableClinicIds = rows.map((c) => c.id);
+    } else {
+      assignableClinicIds = scope.length ? [...scope] : [];
     }
-    const clinic = await this.prisma.clinic.findFirst({
-      where: { id: clinicId, tenantId },
-      select: { nameEn: true },
-    });
-    const groupClinicIds = await fetchClinicGroupNetworkIds(this.prisma, tenantId, clinicId);
+    const clinicId = scope?.length === 1 ? scope[0]! : null;
+    let clinicNameEn: string | null = null;
+    let groupClinicIds: string[] = [];
+    if (clinicId) {
+      const clinic = await this.prisma.clinic.findFirst({
+        where: { id: clinicId, tenantId },
+        select: { nameEn: true },
+      });
+      clinicNameEn = clinic?.nameEn ?? null;
+      groupClinicIds = await fetchClinicGroupNetworkIds(this.prisma, tenantId, clinicId);
+    }
     return {
       clinicId,
-      clinicNameEn: clinic?.nameEn ?? null,
+      clinicNameEn,
       groupClinicIds,
       assignableClinicIds,
       provisionLogin: true,
       assignableRoles: [...HR_ASSIGNABLE_USER_ROLES],
+      clinicScopeRestricted,
     };
   }
 
@@ -474,8 +490,8 @@ export class HrService {
     const isHrProvisioner = await viewerUsesHrProvisionerFlow(this.prisma, tenantId, viewer);
     if (isHrProvisioner) {
       const scope = await fetchEmployeeManageScopeIds(this.prisma, tenantId, viewer);
-      const picked = dto.clinicId?.trim() || scope?.[0];
-      if (!picked) throw new ForbiddenException("Your HR account is not linked to a clinic");
+      const picked = dto.clinicId?.trim();
+      if (!picked) throw new BadRequestException("Clinic is required");
       if (scope?.length && !scope.includes(picked)) {
         throw new BadRequestException("Clinic is outside your HR assignment scope");
       }

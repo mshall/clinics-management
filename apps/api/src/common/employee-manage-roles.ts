@@ -25,5 +25,5 @@ export function roleCanArchiveEmployees(role: UserRole): boolean {
 }
 
 export function roleUsesHrProvisionerFlow(role: UserRole): boolean {
-  return role === UserRole.HR_OFFICER;
+  return role === UserRole.HR_OFFICER || role === UserRole.GROUP_ADMIN;
 }
