@@ -227,10 +227,9 @@ export function SearchablePickList({
 
   const handlePick = useCallback(
     (next: string, item: PickListItem) => {
-      if (disabled) return;
+      if (disabled || pickingRef.current) return;
       const now = Date.now();
       if (lastPickRef.current?.value === next && now - lastPickRef.current.at < 600) return;
-      if (pickingRef.current || now < pickingUntilRef.current) return;
       lastPickRef.current = { value: next, at: now };
       pick(next, item);
     },
@@ -315,7 +314,7 @@ export function SearchablePickList({
       id={listboxId}
       role="listbox"
       data-pick-list-panel
-      className="fixed z-[300] overflow-auto overscroll-contain rounded-md border border-border bg-background shadow-lg [-webkit-overflow-scrolling:touch] [touch-action:manipulation]"
+      className="fixed z-[9999] overflow-auto overscroll-contain rounded-md border border-border bg-background shadow-lg [-webkit-overflow-scrolling:touch] [touch-action:manipulation]"
       style={
         panelStyle
           ? {
@@ -326,9 +325,6 @@ export function SearchablePickList({
             }
           : undefined
       }
-      onPointerDownCapture={() => {
-        pickingUntilRef.current = Date.now() + PICK_GUARD_MS;
-      }}
     >
       {showingPreview && minSearchLength > 0 && !meetsMinSearch ? (
         <p className="border-b border-border px-3 py-1.5 text-xs text-muted-foreground">{idleMessage}</p>

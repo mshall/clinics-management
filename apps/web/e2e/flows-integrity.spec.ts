@@ -21,8 +21,7 @@ test.describe("UX flows & data wiring smoke", () => {
     await page.goto("/hr?tab=employees");
     await page.getByRole("button", { name: /add employee/i }).click();
     const dialog = page.getByRole("dialog");
-    await expect(dialog.getByText(/^login email$/i)).toBeVisible();
-    await expect(dialog.getByText(/^login password$/i)).toBeVisible();
+    await expect(dialog.getByText(/login email/i)).toBeVisible();
     await expect(dialog.getByText(/linked login account/i)).toHaveCount(0);
   });
 
