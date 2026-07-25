@@ -39,6 +39,7 @@ import {
 } from "../common/employee-privilege-grants";
 import { assertCanCreateGroupAdminRole } from "../common/group-admin-role-policy";
 import { assertHrCanDeactivateOrArchiveLinkedUser, assertCanEditGroupAdminEmployeeProfile } from "./hr-employee-provisioning-policy";
+import { assertPhysicianHasNoActiveSchedulingCommitments } from "../common/physician-scheduling-commitments";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
@@ -791,7 +792,10 @@ export class HrService {
     await this.assertCanManageEmployees(tenantId, viewer);
     const emp = await this.prisma.employee.findFirst({
       where: { id, tenantId },
-      include: { employmentPeriods: { orderBy: { startDate: "desc" } } },
+      include: {
+        employmentPeriods: { orderBy: { startDate: "desc" } },
+        user: { select: { id: true, role: true } },
+      },
     });
     if (!emp) throw new NotFoundException("Employee not found");
     await this.assertEmployeeClinicAccess(tenantId, viewer, emp.clinicId);
@@ -799,6 +803,12 @@ export class HrService {
       throw new BadRequestException("Employee is already inactive");
     }
     await this.assertHrCanLifecycleChangeLinkedUser(tenantId, viewer, emp.userId);
+    await assertPhysicianHasNoActiveSchedulingCommitments(
+      this.prisma,
+      tenantId,
+      emp.userId,
+      emp.user?.role,
+    );
 
     const resignationDate = new Date(dto.resignationDate);
     const hireDate = emp.hireDate;
@@ -892,10 +902,19 @@ export class HrService {
 
   async deleteEmployee(tenantId: string, id: string, viewer: JwtUser): Promise<{ ok: true; id: string; archived: true }> {
     await this.assertCanDeleteEmployee(tenantId, viewer);
-    const emp = await this.prisma.employee.findFirst({ where: { id, tenantId } });
+    const emp = await this.prisma.employee.findFirst({
+      where: { id, tenantId },
+      include: { user: { select: { id: true, role: true } } },
+    });
     if (!emp) throw new NotFoundException("Employee not found");
     await this.assertEmployeeClinicAccess(tenantId, viewer, emp.clinicId);
     await this.assertHrCanLifecycleChangeLinkedUser(tenantId, viewer, emp.userId);
+    await assertPhysicianHasNoActiveSchedulingCommitments(
+      this.prisma,
+      tenantId,
+      emp.userId,
+      emp.user?.role,
+    );
 
     await this.prisma.$transaction(async (tx) => {
       await softDeleteLinkedEmployee(tx, tenantId, id, viewer.userId);

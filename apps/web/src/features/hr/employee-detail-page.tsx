@@ -75,6 +75,13 @@ export function EmployeeDetailPage() {
   const [idDocFile, setIdDocFile] = useState<File | null>(null);
   const [formErr, setFormErr] = useState<string | null>(null);
   const validation = useValidationIssuesDialog({ intent: "save" });
+  const lifecycleValidation = useValidationIssuesDialog({
+    title: t("hr.cannotRemovePhysicianTitle", "Cannot deactivate or archive physician"),
+    description: t(
+      "hr.cannotRemovePhysicianDescription",
+      "This physician still has active appointment or operation bookings. Resolve the items below before changing their status.",
+    ),
+  });
 
   useEffect(() => {
     if (!emp) return;
@@ -183,13 +190,8 @@ export function EmployeeDetailPage() {
       navigate("/hr?tab=employees");
     },
     onError: (e: unknown) => {
-      const msg =
-        e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body
-          ? String((e.body as { message?: unknown }).message)
-          : e instanceof Error
-            ? e.message
-            : String(e);
-      toast.error(msg);
+      setDeleteOpen(false);
+      lifecycleValidation.showError(e);
     },
   });
 
@@ -203,13 +205,8 @@ export function EmployeeDetailPage() {
       toast.success(t("hr.deactivateSuccess", "Employee deactivated."));
     },
     onError: (e: unknown) => {
-      const msg =
-        e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body
-          ? String((e.body as { message?: unknown }).message)
-          : e instanceof Error
-            ? e.message
-            : String(e);
-      toast.error(msg);
+      setDeactivateOpen(false);
+      lifecycleValidation.showError(e);
     },
   });
 
@@ -707,6 +704,7 @@ export function EmployeeDetailPage() {
         </CardContent>
       </Card>
       <ValidationIssuesDialog {...validation.dialogProps} />
+      <ValidationIssuesDialog {...lifecycleValidation.dialogProps} />
     </div>
   );
 }

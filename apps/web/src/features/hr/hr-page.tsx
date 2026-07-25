@@ -249,6 +249,13 @@ export function HrPage() {
   const empValidation = useValidationIssuesDialog({ intent: "create" });
   const attValidation = useValidationIssuesDialog({ intent: "create" });
   const leaveValidation = useValidationIssuesDialog({ intent: "create" });
+  const lifecycleValidation = useValidationIssuesDialog({
+    title: t("hr.cannotRemovePhysicianTitle", "Cannot deactivate or archive physician"),
+    description: t(
+      "hr.cannotRemovePhysicianDescription",
+      "This physician still has active appointment or operation bookings. Resolve the items below before changing their status.",
+    ),
+  });
 
   const clinicItems: PickListItem[] = useMemo(
     () => clinics.map((c) => ({ value: c.id, label: formatClinicName(c, i18n.language) })),
@@ -495,13 +502,8 @@ export function HrPage() {
       toast.success(t("hr.archiveSuccess", "Employee archived."));
     },
     onError: (e: unknown) => {
-      const msg =
-        e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body
-          ? String((e.body as { message?: unknown }).message)
-          : e instanceof Error
-            ? e.message
-            : String(e);
-      toast.error(msg);
+      setEmployeeToDelete(null);
+      lifecycleValidation.showError(e);
     },
   });
 
@@ -515,13 +517,8 @@ export function HrPage() {
       toast.success(t("hr.deactivateSuccess", "Employee deactivated."));
     },
     onError: (e: unknown) => {
-      const msg =
-        e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body
-          ? String((e.body as { message?: unknown }).message)
-          : e instanceof Error
-            ? e.message
-            : String(e);
-      toast.error(msg);
+      setEmployeeToDeactivate(null);
+      lifecycleValidation.showError(e);
     },
   });
 
@@ -726,6 +723,7 @@ export function HrPage() {
       <ValidationIssuesDialog {...empValidation.dialogProps} />
       <ValidationIssuesDialog {...attValidation.dialogProps} />
       <ValidationIssuesDialog {...leaveValidation.dialogProps} />
+      <ValidationIssuesDialog {...lifecycleValidation.dialogProps} />
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("hr.title")}</h1>
         <p className="text-muted-foreground">{t("hr.subtitle")}</p>
