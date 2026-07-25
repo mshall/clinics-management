@@ -30,6 +30,7 @@ import {
   viewerUsesHrProvisionerFlow,
 } from "../common/employee-privilege-grants";
 import { assertCanCreateGroupAdminRole } from "../common/group-admin-role-policy";
+import { assertHrCanDeactivateOrArchiveLinkedUser } from "./hr-employee-provisioning-policy";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
@@ -211,6 +212,19 @@ export class HrService {
     for (const s of user?.clinicAdminScopes ?? []) ids.add(s.clinicId);
     if (employeeClinicId) ids.add(employeeClinicId);
     return [...ids];
+  }
+
+  private async assertHrCanLifecycleChangeLinkedUser(
+    tenantId: string,
+    viewer: JwtUser,
+    userId: string | null | undefined,
+  ): Promise<void> {
+    if (!userId) return;
+    const linkedUser = await this.prisma.user.findFirst({
+      where: { id: userId, tenantId },
+      select: { id: true, role: true },
+    });
+    assertHrCanDeactivateOrArchiveLinkedUser(viewer, linkedUser);
   }
 
   private async ensureEmployeeEmploymentPeriods(tenantId: string): Promise<void> {
@@ -418,17 +432,20 @@ export class HrService {
         clinicId: null,
         clinicNameEn: null,
         groupClinicIds: [],
+        assignableClinicIds: [],
         provisionLogin: false,
         assignableRoles: null,
       };
     }
     const scope = await fetchEmployeeManageScopeIds(this.prisma, tenantId, viewer);
-    const clinicId = scope?.[0] ?? null;
+    const assignableClinicIds = scope?.length ? [...scope] : [];
+    const clinicId = assignableClinicIds[0] ?? null;
     if (!clinicId) {
       return {
         clinicId: null,
         clinicNameEn: null,
         groupClinicIds: [],
+        assignableClinicIds: [],
         provisionLogin: true,
         assignableRoles: [...HR_ASSIGNABLE_USER_ROLES],
       };
@@ -442,6 +459,7 @@ export class HrService {
       clinicId,
       clinicNameEn: clinic?.nameEn ?? null,
       groupClinicIds,
+      assignableClinicIds,
       provisionLogin: true,
       assignableRoles: [...HR_ASSIGNABLE_USER_ROLES],
     };
@@ -456,13 +474,16 @@ export class HrService {
     const isHrProvisioner = await viewerUsesHrProvisionerFlow(this.prisma, tenantId, viewer);
     if (isHrProvisioner) {
       const scope = await fetchEmployeeManageScopeIds(this.prisma, tenantId, viewer);
-      const hrClinicId = scope?.[0];
-      if (!hrClinicId) throw new ForbiddenException("Your HR account is not linked to a clinic");
+      const picked = dto.clinicId?.trim() || scope?.[0];
+      if (!picked) throw new ForbiddenException("Your HR account is not linked to a clinic");
+      if (scope?.length && !scope.includes(picked)) {
+        throw new BadRequestException("Clinic is outside your HR assignment scope");
+      }
       const role = loginRole ?? UserRole.NURSE;
       if (role === UserRole.PHYSICIAN && dto.physicianAssignment === "GROUP") {
-        return fetchClinicGroupNetworkIds(this.prisma, tenantId, hrClinicId);
+        return fetchClinicGroupNetworkIds(this.prisma, tenantId, picked);
       }
-      return [hrClinicId];
+      return [picked];
     }
     return [
       ...new Set(
@@ -746,6 +767,7 @@ export class HrService {
     if (emp.recordStatus === EmployeeRecordStatus.INACTIVE) {
       throw new BadRequestException("Employee is already inactive");
     }
+    await this.assertHrCanLifecycleChangeLinkedUser(tenantId, viewer, emp.userId);
 
     const resignationDate = new Date(dto.resignationDate);
     const hireDate = emp.hireDate;
@@ -842,6 +864,7 @@ export class HrService {
     const emp = await this.prisma.employee.findFirst({ where: { id, tenantId } });
     if (!emp) throw new NotFoundException("Employee not found");
     await this.assertEmployeeClinicAccess(tenantId, viewer, emp.clinicId);
+    await this.assertHrCanLifecycleChangeLinkedUser(tenantId, viewer, emp.userId);
 
     await this.prisma.$transaction(async (tx) => {
       await softDeleteLinkedEmployee(tx, tenantId, id, viewer.userId);

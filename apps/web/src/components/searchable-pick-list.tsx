@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { focusTextInput } from "@/lib/focus-input";
 import { filterPickListItems } from "@/lib/pick-list-utils";
+import { PICK_LIST_PANEL_SELECTOR } from "@/lib/pick-list-portal";
 import { cn } from "@/lib/utils";
 
 export interface PickListItem {
@@ -40,6 +42,45 @@ interface SearchablePickListProps {
 
 const DEFAULT_PREVIEW_COUNT = 4;
 const PICK_GUARD_MS = 400;
+const PORTAL_LIST_CAP = 50;
+
+function usePortalPanelStyle(open: boolean, anchorRef: React.RefObject<HTMLElement | null>) {
+  const [style, setStyle] = useState<{ top: number; left: number; width: number; maxHeight: number } | null>(
+    null,
+  );
+
+  const update = useCallback(() => {
+    const el = anchorRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom - 12;
+    const spaceAbove = rect.top - 12;
+    const openUp = spaceBelow < 160 && spaceAbove > spaceBelow;
+    const maxHeight = Math.min(224, Math.max(120, openUp ? spaceAbove : spaceBelow));
+    setStyle({
+      top: openUp ? rect.top - maxHeight - 4 : rect.bottom + 4,
+      left: rect.left,
+      width: rect.width,
+      maxHeight,
+    });
+  }, [anchorRef]);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setStyle(null);
+      return;
+    }
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [open, update]);
+
+  return style;
+}
 
 function scheduleMobileFocus(el: HTMLInputElement | null | undefined): void {
   window.requestAnimationFrame(() => {
@@ -86,6 +127,7 @@ export function SearchablePickList({
   const listboxId = `${uid}-listbox`;
   const inputId = `${uid}-input`;
   const rootRef = useRef<HTMLDivElement>(null);
+  const anchorRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const pickingRef = useRef(false);
   const pickingUntilRef = useRef(0);
@@ -125,12 +167,17 @@ export function SearchablePickList({
   const meetsMinSearch = trimmedQ.length >= minSearchLength;
   const showingPreview = open && (!isSearching || !meetsMinSearch) && previewCount > 0 && filtered.length > 0;
 
+  const panelStyle = usePortalPanelStyle(open, anchorRef);
+
   const listItems = useMemo(() => {
     if (!open) return [];
-    if (isSearching && meetsMinSearch) return filtered;
+    if (localFilter && trimmedQ.length === 0) {
+      return filtered.slice(0, PORTAL_LIST_CAP);
+    }
+    if (isSearching && meetsMinSearch) return filtered.slice(0, PORTAL_LIST_CAP);
     if (previewCount > 0 && filtered.length > 0) return filtered.slice(0, previewCount);
     return [];
-  }, [open, isSearching, meetsMinSearch, filtered, previewCount]);
+  }, [open, localFilter, trimmedQ, isSearching, meetsMinSearch, filtered, previewCount]);
 
   const pick = useCallback(
     (next: string, item?: PickListItem) => {
@@ -185,6 +232,7 @@ export function SearchablePickList({
       if (pickingRef.current || Date.now() < pickingUntilRef.current) return;
       const target = e.target as Node;
       if (rootRef.current?.contains(target)) return;
+      if (target instanceof Element && target.closest(PICK_LIST_PANEL_SELECTOR)) return;
       closeWithoutPick();
     };
     const onKey = (e: KeyboardEvent) => {
@@ -224,6 +272,50 @@ export function SearchablePickList({
     },
   });
 
+  const listPanel = (
+    <div
+      id={listboxId}
+      role="listbox"
+      data-pick-list-panel
+      className="fixed z-[300] overflow-auto overscroll-contain rounded-md border border-border bg-background shadow-lg [-webkit-overflow-scrolling:touch] [touch-action:manipulation]"
+      style={
+        panelStyle
+          ? {
+              top: panelStyle.top,
+              left: panelStyle.left,
+              width: panelStyle.width,
+              maxHeight: panelStyle.maxHeight,
+            }
+          : undefined
+      }
+    >
+      {showingPreview && minSearchLength > 0 && !meetsMinSearch ? (
+        <p className="border-b border-border px-3 py-1.5 text-xs text-muted-foreground">{idleMessage}</p>
+      ) : null}
+      {listItems.length === 0 ? (
+        <p className="px-3 py-2 text-xs text-muted-foreground">{isSearching ? emptyMessage : idleMessage}</p>
+      ) : (
+        listItems.map((i, idx) => (
+          <button
+            key={`${i.value}::${idx}`}
+            type="button"
+            role="option"
+            aria-selected={value === i.value}
+            disabled={disabled}
+            className={cn(
+              "flex w-full min-h-11 cursor-pointer flex-col gap-0.5 border-b border-border px-3 py-2.5 text-start text-sm last:border-b-0 hover:bg-muted/60 active:bg-muted/80 disabled:opacity-50 touch-manipulation select-none [-webkit-tap-highlight-color:transparent]",
+              value === i.value && "bg-muted/80",
+            )}
+            {...optionHandlers(i)}
+          >
+            <span className="font-medium">{i.label}</span>
+            {i.hint ? <span className="text-xs text-muted-foreground">{i.hint}</span> : null}
+          </button>
+        ))
+      )}
+    </div>
+  );
+
   return (
     <div ref={rootRef} data-pick-list-root className={cn("relative", className)}>
       {!open ? (
@@ -246,7 +338,7 @@ export function SearchablePickList({
           <ChevronDown className="size-4 shrink-0 opacity-50" aria-hidden />
         </button>
       ) : (
-        <div className="relative">
+        <div ref={anchorRef} className="relative">
           <Input
             ref={inputRef}
             id={inputId}
@@ -286,37 +378,7 @@ export function SearchablePickList({
             className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 shrink-0 opacity-50"
             aria-hidden
           />
-          <div
-            id={listboxId}
-            role="listbox"
-            data-pick-list-panel
-            className="absolute left-0 right-0 top-full z-[200] mt-1 max-h-56 overflow-auto overscroll-contain rounded-md border border-border bg-background shadow-lg [-webkit-overflow-scrolling:touch] [touch-action:manipulation]"
-          >
-            {showingPreview && (minSearchLength > 0 || !isSearching) ? (
-              <p className="border-b border-border px-3 py-1.5 text-xs text-muted-foreground">{idleMessage}</p>
-            ) : null}
-            {listItems.length === 0 ? (
-              <p className="px-3 py-2 text-xs text-muted-foreground">{showingPreview ? emptyMessage : idleMessage}</p>
-            ) : (
-              listItems.map((i, idx) => (
-                <button
-                  key={`${i.value}::${idx}`}
-                  type="button"
-                  role="option"
-                  aria-selected={value === i.value}
-                  disabled={disabled}
-                  className={cn(
-                    "flex w-full min-h-11 cursor-pointer flex-col gap-0.5 border-b border-border px-3 py-2.5 text-start text-sm last:border-b-0 hover:bg-muted/60 active:bg-muted/80 disabled:opacity-50 touch-manipulation select-none [-webkit-tap-highlight-color:transparent]",
-                    value === i.value && "bg-muted/80",
-                  )}
-                  {...optionHandlers(i)}
-                >
-                  <span className="font-medium">{i.label}</span>
-                  {i.hint ? <span className="text-xs text-muted-foreground">{i.hint}</span> : null}
-                </button>
-              ))
-            )}
-          </div>
+          {panelStyle ? createPortal(listPanel, document.body) : null}
         </div>
       )}
     </div>

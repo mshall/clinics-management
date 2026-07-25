@@ -30,7 +30,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { canArchiveEmployees, canManageEmployees, isHrOfficerRole } from "@/lib/employee-manage-policy";
+import { canArchiveEmployees, canManageEmployees, canHrDeactivateOrArchiveLinkedUser, isHrOfficerRole } from "@/lib/employee-manage-policy";
 import { ApiError, apiDelete, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { columnFilterIncludes } from "@/lib/utils";
 import {
@@ -91,6 +91,15 @@ export function HrPage() {
   const canManage = canManageEmployees(authUser?.role, privilegeGrants);
   const canArchive = canArchiveEmployees(authUser?.role, privilegeGrants);
   const isHrOfficer = isHrOfficerRole(authUser?.role, privilegeGrants);
+
+  const canHrLifecycleChange = (employee: EmployeeDto) =>
+    canHrDeactivateOrArchiveLinkedUser(
+      authUser?.role,
+      authUser?.platformSuperAdmin,
+      authUser?.id,
+      employee.linkedUserRole,
+      employee.userId,
+    );
   const hrManageContext = useHrManageContextQuery(isHrOfficer && canManage);
   const { data: clinics = [] } = useClinicsQuery();
   const [tab, setTab] = useState<Tab>(() => parseHrTab(searchParams.get("tab")));
@@ -242,6 +251,11 @@ export function HrPage() {
     () => clinics.map((c) => ({ value: c.id, label: formatClinicName(c, i18n.language) })),
     [clinics, i18n.language],
   );
+  const assignableClinicIds = hrManageContext.data?.assignableClinicIds ?? [];
+  const provisionClinicItems = useMemo(
+    () => clinicItems.filter((c) => assignableClinicIds.includes(c.value)),
+    [clinicItems, assignableClinicIds],
+  );
   const empTypeItems: PickListItem[] = useMemo(
     () => EMP_TYPE_VALUES.map((value) => ({ value, label: formatEmploymentType(value, t) })),
     [t],
@@ -264,10 +278,12 @@ export function HrPage() {
     !provisionLogin && Boolean(empLinkedUserRole) && !isOrgWideUserRole(empLinkedUserRole) && clinics.length > 0;
   const requiresClinicAssignment = isClinicRequiredUserRole(empLinkedUserRole);
   const primaryClinicForCreate = provisionLogin
-    ? (hrManageContext.data?.clinicId ?? "")
+    ? empClinic || hrManageContext.data?.clinicId || ""
     : showClinicAssignment
       ? (empAssignedClinicIds[0] ?? "")
       : empClinic;
+  const provisionClinicNameEn =
+    clinics.find((c) => c.id === primaryClinicForCreate)?.nameEn ?? hrManageContext.data?.clinicNameEn ?? "";
   const empSalaryClinicDefault = resolveClinicCurrencyCode(clinics, primaryClinicForCreate || undefined);
   useEffect(() => {
     if (primaryClinicForCreate) setEmpSalaryCurrency(empSalaryClinicDefault);
@@ -275,17 +291,20 @@ export function HrPage() {
 
   useEffect(() => {
     if (!createEmpOpen || !provisionLogin) return;
+    const defaultClinicId =
+      hrManageContext.data?.clinicId ?? hrManageContext.data?.assignableClinicIds?.[0] ?? "";
+    setEmpClinic(defaultClinicId);
+    const defaultItem = provisionClinicItems.find((c) => c.value === defaultClinicId) ?? null;
+    setPinnedEmpClinicItem(defaultItem);
     setLoginEmailTouched(false);
     setEmpLoginPassword(defaultEmployeeLoginPassword());
-    setEmpLoginEmail(
-      suggestEmployeeLoginEmail("", "", hrManageContext.data?.clinicNameEn ?? ""),
-    );
-  }, [createEmpOpen, provisionLogin, hrManageContext.data?.clinicNameEn]);
+    setEmpLoginEmail(suggestEmployeeLoginEmail("", "", provisionClinicNameEn || defaultItem?.label || ""));
+  }, [createEmpOpen, provisionLogin, hrManageContext.data?.clinicId, hrManageContext.data?.assignableClinicIds]);
 
   useEffect(() => {
     if (!createEmpOpen || !provisionLogin || loginEmailTouched) return;
     setEmpLoginEmail(
-      suggestEmployeeLoginEmail(empFn, empLn, hrManageContext.data?.clinicNameEn ?? ""),
+      suggestEmployeeLoginEmail(empFn, empLn, provisionClinicNameEn),
     );
   }, [
     createEmpOpen,
@@ -293,12 +312,17 @@ export function HrPage() {
     loginEmailTouched,
     empFn,
     empLn,
-    hrManageContext.data?.clinicNameEn,
+    provisionClinicNameEn,
   ]);
 
   const empClinicSelectedItem = useMemo(
-    (): PickListItem | null => resolvePickListSelectedItem(empClinic, clinicItems, pinnedEmpClinicItem),
-    [empClinic, clinicItems, pinnedEmpClinicItem],
+    (): PickListItem | null =>
+      resolvePickListSelectedItem(
+        empClinic,
+        provisionLogin ? provisionClinicItems : clinicItems,
+        pinnedEmpClinicItem,
+      ),
+    [empClinic, clinicItems, provisionClinicItems, pinnedEmpClinicItem, provisionLogin],
   );
   const empTypeSelectedItem = useMemo(
     (): PickListItem | null => resolvePickListSelectedItem(empType, empTypeItems, pinnedEmpTypeItem),
@@ -729,7 +753,7 @@ export function HrPage() {
                 <DialogTrigger asChild>
                   <CreateActionButton type="button">{t("hr.addEmployee")}</CreateActionButton>
                 </DialogTrigger>
-                <DialogContent className="max-h-[min(90dvh,40rem)] max-w-2xl overflow-y-auto overflow-x-visible overscroll-contain" aria-describedby={undefined}>
+                <DialogContent className="max-h-[min(90dvh,40rem)] max-w-2xl overflow-x-visible overflow-y-auto overscroll-contain pb-[max(1.5rem,env(safe-area-inset-bottom))]" aria-describedby={undefined}>
                   <DialogHeader>
                     <DialogTitle>{t("hr.addEmployee")}</DialogTitle>
                   </DialogHeader>
@@ -738,8 +762,30 @@ export function HrPage() {
                     {provisionLogin ? (
                       <>
                         <div className="space-y-2 sm:col-span-2">
-                          <Label>{t("hr.clinic")}</Label>
-                          <Input readOnly value={hrManageContext.data?.clinicNameEn ?? "—"} />
+                          <Label required>{t("hr.clinic")}</Label>
+                          {provisionClinicItems.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                              {t(
+                                "hr.noAssignableClinics",
+                                "No clinics are assigned to your HR account yet. Ask a group administrator to grant clinic HR access.",
+                              )}
+                            </p>
+                          ) : (
+                            <SearchablePickList
+                              items={provisionClinicItems}
+                              value={empClinic}
+                              selectedItem={empClinicSelectedItem}
+                              onValueChange={(id) => {
+                                setEmpClinic(id);
+                                const item = provisionClinicItems.find((c) => c.value === id);
+                                if (item) setPinnedEmpClinicItem(item);
+                              }}
+                              searchPlaceholder={t("appointments.filterClinic", "Type clinic name…")}
+                              placeholder={t("hr.pickClinic", "Select clinic…")}
+                              emptyMessage={t("admin.rbacNoUsersMatch", "No matches.")}
+                              localFilter
+                            />
+                          )}
                         </div>
                         <div className="space-y-2">
                           <Label required>{t("patients.firstNameEn")}</Label>
@@ -1189,7 +1235,7 @@ export function HrPage() {
                             <DropdownMenuContent align="end" onClick={(ev) => ev.stopPropagation()}>
                               {empView === "active" ? (
                                 <>
-                                  {e.recordStatus === "ACTIVE" ? (
+                                  {e.recordStatus === "ACTIVE" && canHrLifecycleChange(e) ? (
                                     <DropdownMenuItem
                                       onSelect={() =>
                                         setEmployeeToDeactivate(employeeRowToTarget(e, i18n.language))
@@ -1198,13 +1244,13 @@ export function HrPage() {
                                       <UserX className="me-2 h-4 w-4" />
                                       {t("hr.deactivate", "Deactivate")}
                                     </DropdownMenuItem>
-                                  ) : (
+                                  ) : e.recordStatus === "ACTIVE" ? null : (
                                     <DropdownMenuItem onSelect={() => setEmployeeToReactivate(e)}>
                                       <UserCheck className="me-2 h-4 w-4" />
                                       {t("hr.rehire", "Re-hire")}
                                     </DropdownMenuItem>
                                   )}
-                                  {canArchive ? (
+                                  {canArchive && canHrLifecycleChange(e) ? (
                                     <DropdownMenuItem
                                       className="text-destructive focus:text-destructive"
                                       onSelect={() => setEmployeeToDelete(employeeRowToTarget(e, i18n.language))}

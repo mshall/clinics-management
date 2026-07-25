@@ -15,6 +15,8 @@ import type { CreateTenantDto } from "./dto/create-tenant.dto";
 import type { CreateTenantUserDto } from "./dto/create-tenant-user.dto";
 import type { PlatformPatchTenantDto } from "./dto/platform-patch-tenant.dto";
 import type { PlatformPatchTenantUserDto } from "./dto/platform-patch-tenant-user.dto";
+import type { DeactivateTenantUserDto } from "./dto/deactivate-tenant-user.dto";
+import type { ReactivateTenantUserDto } from "./dto/reactivate-tenant-user.dto";
 
 @Injectable()
 export class PlatformAdminService {
@@ -238,17 +240,54 @@ export class PlatformAdminService {
     };
   }
 
-  listUsers(user: JwtUser, tenantId: string, pageStr?: string, pageSizeStr?: string) {
+  listUsers(
+    user: JwtUser,
+    tenantId: string,
+    pageStr?: string,
+    pageSizeStr?: string,
+    archivedRaw?: string,
+  ) {
     this.assertPlatform(user);
-    return this.admin.listTenantUsers(tenantId, pageStr, pageSizeStr);
+    return this.admin.listTenantUsers(tenantId, pageStr, pageSizeStr, undefined, undefined, archivedRaw);
   }
 
-  async listAllUsers(user: JwtUser, pageStr?: string, pageSizeStr?: string, tenantIdFilter?: string) {
+  async listAllUsers(
+    user: JwtUser,
+    pageStr?: string,
+    pageSizeStr?: string,
+    tenantIdFilter?: string,
+    archivedRaw?: string,
+  ) {
     this.assertPlatform(user);
+    const archived = archivedRaw === "true" || archivedRaw === "1";
+    const tenantId = tenantIdFilter?.trim();
+    if (tenantId) {
+      const page = await this.admin.listTenantUsers(
+        tenantId,
+        pageStr,
+        pageSizeStr,
+        undefined,
+        undefined,
+        archivedRaw,
+      );
+      const tenant = await this.assertTenant(tenantId);
+      return {
+        ...page,
+        items: page.items.map((item) => ({
+          ...item,
+          tenantId,
+          tenantName: tenant.name,
+        })),
+      };
+    }
+
     const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
-    const where = tenantIdFilter?.trim()
-      ? { tenantId: tenantIdFilter.trim() }
-      : { NOT: { tenantId: null } };
+    const where = {
+      NOT: { tenantId: null },
+      ...(archived
+        ? { OR: [{ deletedAt: { not: null } }, { deactivatedAt: { not: null } }] }
+        : { deletedAt: null, deactivatedAt: null }),
+    };
     const [total, rows] = await Promise.all([
       this.prisma.user.count({ where }),
       this.prisma.user.findMany({
@@ -278,6 +317,9 @@ export class PlatformAdminService {
         displayName: r.displayName,
         role: r.role,
         createdAt: r.createdAt.toISOString(),
+        deactivatedAt: r.deactivatedAt?.toISOString() ?? null,
+        deletedAt: r.deletedAt?.toISOString() ?? null,
+        archived: Boolean(r.deletedAt || r.deactivatedAt),
         clinicIds: clinics.map((c) => c.id),
         clinics,
       };
@@ -293,6 +335,26 @@ export class PlatformAdminService {
   patchUser(user: JwtUser, tenantId: string, userId: string, dto: PlatformPatchTenantUserDto) {
     this.assertPlatform(user);
     return this.admin.updateTenantUser(tenantId, userId, dto);
+  }
+
+  deleteUser(user: JwtUser, tenantId: string, userId: string) {
+    this.assertPlatform(user);
+    return this.admin.deleteTenantUser(tenantId, userId, user);
+  }
+
+  deactivateUser(user: JwtUser, tenantId: string, userId: string, dto: DeactivateTenantUserDto) {
+    this.assertPlatform(user);
+    return this.admin.deactivateTenantUser(tenantId, userId, dto, user);
+  }
+
+  reactivateUser(user: JwtUser, tenantId: string, userId: string, dto: ReactivateTenantUserDto) {
+    this.assertPlatform(user);
+    return this.admin.reactivateTenantUser(tenantId, userId, dto);
+  }
+
+  restoreUser(user: JwtUser, tenantId: string, userId: string, dto: ReactivateTenantUserDto) {
+    this.assertPlatform(user);
+    return this.admin.restoreTenantUserAccount(tenantId, userId, dto);
   }
 
   async listAllClinics(user: JwtUser, tenantIdFilter?: string) {

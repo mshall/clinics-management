@@ -258,6 +258,7 @@ export interface HrManageContextDto {
   clinicId: string | null;
   clinicNameEn: string | null;
   groupClinicIds: string[];
+  assignableClinicIds: string[];
   provisionLogin: boolean;
   assignableRoles: string[] | null;
 }

@@ -20,6 +20,9 @@ export type PlatformUserRow = {
   displayName: string;
   role: string;
   createdAt: string;
+  deactivatedAt?: string | null;
+  deletedAt?: string | null;
+  archived?: boolean;
   clinicIds: string[];
   clinics: { id: string; nameEn: string }[];
 };

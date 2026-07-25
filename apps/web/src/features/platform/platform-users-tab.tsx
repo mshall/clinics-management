@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { PasswordInput } from "@/components/password-input";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { Button } from "@/components/ui/button";
@@ -9,8 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ResponsiveTable } from "@/components/responsive-table";
+import { AdminOrgUserDeleteConfirmDialog } from "@/features/admin/admin-org-user-delete-confirm-dialog";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
-import { apiGet, apiPatch, apiPost } from "@/lib/http";
+import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/http";
 import { formatUserRole } from "@/lib/locale-display";
 import type { Paginated } from "@/lib/paginated";
 import { apiErrorMessage, isClinicRequiredUserRole, isOrgWideUserRole, ORG_USER_ROLES, orgUserRolesForEdit, ORG_USER_ROLES_CREATABLE, type PlatformUserRow, type TenantRow } from "@/features/platform/platform-shared";
@@ -29,7 +31,9 @@ export function PlatformUsersTab() {
   const qc = useQueryClient();
 
   const [filterTenantId, setFilterTenantId] = useState("");
+  const [usersView, setUsersView] = useState<"active" | "archived">("active");
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
+  const [userToArchive, setUserToArchive] = useState<PlatformUserRow | null>(null);
 
   const [uTenantId, setUTenantId] = useState("");
   const [uEmail, setUEmail] = useState("");
@@ -51,10 +55,13 @@ export function PlatformUsersTab() {
   });
 
   const usersQuery = useQuery({
-    queryKey: ["platform", "all-users", filterTenantId],
+    queryKey: ["platform", "all-users", filterTenantId, usersView],
     queryFn: () => {
-      const q = filterTenantId ? `&tenantId=${encodeURIComponent(filterTenantId)}` : "";
-      return apiGet<Paginated<PlatformUserRow>>(`/api/v1/admin/platform/users?page=1&pageSize=200${q}`);
+      const tenantQ = filterTenantId ? `&tenantId=${encodeURIComponent(filterTenantId)}` : "";
+      const archivedQ = usersView === "archived" ? "&archived=true" : "";
+      return apiGet<Paginated<PlatformUserRow>>(
+        `/api/v1/admin/platform/users?page=1&pageSize=200${tenantQ}${archivedQ}`,
+      );
     },
   });
 
@@ -163,8 +170,71 @@ export function PlatformUsersTab() {
     onError: (e: unknown) => setUserErr(apiErrorMessage(e)),
   });
 
+  const platformUserPath = (tenantId: string, userId: string) =>
+    `/api/v1/admin/platform/tenants/${tenantId}/users/${userId}`;
+
+  const archiveMut = useMutation({
+    mutationFn: ({ tenantId, userId }: { tenantId: string; userId: string }) =>
+      apiDelete(platformUserPath(tenantId, userId)),
+    onSuccess: () => {
+      setUserToArchive(null);
+      closeDialog();
+      void qc.invalidateQueries({ queryKey: ["platform"] });
+      void qc.invalidateQueries({ queryKey: ["org-hierarchy"] });
+      toast.success(t("admin.orgUsersArchiveSuccess", "User archived."));
+    },
+    onError: (e: unknown) => toast.error(apiErrorMessage(e)),
+  });
+
+  const deactivateMut = useMutation({
+    mutationFn: ({ tenantId, userId }: { tenantId: string; userId: string }) =>
+      apiPost(`${platformUserPath(tenantId, userId)}/deactivate`, {
+        resignationDate: new Date().toISOString().slice(0, 10),
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["platform"] });
+      void qc.invalidateQueries({ queryKey: ["org-hierarchy"] });
+      toast.success(t("admin.orgUsersDeactivateSuccess", "User deactivated."));
+    },
+    onError: (e: unknown) => toast.error(apiErrorMessage(e)),
+  });
+
+  const reactivateMut = useMutation({
+    mutationFn: ({ tenantId, userId }: { tenantId: string; userId: string }) =>
+      apiPost(`${platformUserPath(tenantId, userId)}/reactivate`, {
+        startDate: new Date().toISOString().slice(0, 10),
+      }),
+    onSuccess: () => {
+      closeDialog();
+      void qc.invalidateQueries({ queryKey: ["platform"] });
+      void qc.invalidateQueries({ queryKey: ["org-hierarchy"] });
+      toast.success(t("admin.orgUsersReactivateSuccess", "User reactivated."));
+    },
+    onError: (e: unknown) => toast.error(apiErrorMessage(e)),
+  });
+
+  const restoreMut = useMutation({
+    mutationFn: ({ tenantId, userId }: { tenantId: string; userId: string }) =>
+      apiPost(`${platformUserPath(tenantId, userId)}/restore`, {
+        startDate: new Date().toISOString().slice(0, 10),
+      }),
+    onSuccess: () => {
+      closeDialog();
+      void qc.invalidateQueries({ queryKey: ["platform"] });
+      void qc.invalidateQueries({ queryKey: ["org-hierarchy"] });
+      toast.success(t("admin.orgUsersRestoreSuccess", "User restored."));
+    },
+    onError: (e: unknown) => toast.error(apiErrorMessage(e)),
+  });
+
+  const lifecyclePending =
+    archiveMut.isPending || deactivateMut.isPending || reactivateMut.isPending || restoreMut.isPending;
+
   const requiresClinicAssignment = isClinicRequiredUserRole(uRole);
   const showClinicAssignment = !isOrgWideUserRole(uRole) && Boolean(activeTenantId);
+  const editUserArchived = Boolean(userDetailQuery.data?.archived);
+  const editUserDeactivatedOnly =
+    Boolean(userDetailQuery.data?.deactivatedAt) && !userDetailQuery.data?.deletedAt;
   const createFormValues = {
     email: uEmail,
     password: uPassword,
@@ -243,6 +313,23 @@ export function PlatformUsersTab() {
             </select>
           </div>
 
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant={usersView === "active" ? "default" : "outline"}
+              onClick={() => setUsersView("active")}
+            >
+              {t("admin.orgUsersActiveTab", "Active users")}
+            </Button>
+            <Button
+              type="button"
+              variant={usersView === "archived" ? "default" : "outline"}
+              onClick={() => setUsersView("archived")}
+            >
+              {t("admin.orgUsersArchivedTab", "Archived users")}
+            </Button>
+          </div>
+
           {usersQuery.isPending ? (
             <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : (
@@ -255,6 +342,9 @@ export function PlatformUsersTab() {
                     <th className="px-3 py-2 text-start">{t("platform.username")}</th>
                     <th className="px-3 py-2 text-start">{t("admin.role")}</th>
                     <th className="px-3 py-2 text-start">{t("platform.assignClinics")}</th>
+                    {usersView === "archived" ? (
+                      <th className="px-3 py-2 text-start">{t("admin.orgUsersArchivedAt", "Archived")}</th>
+                    ) : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -269,6 +359,15 @@ export function PlatformUsersTab() {
                       <td className="px-3 py-2">{row.email}</td>
                       <td className="px-3 py-2">{formatUserRole(row.role, t)}</td>
                       <td className="px-3 py-2 text-muted-foreground">{clinicLabel(row)}</td>
+                      {usersView === "archived" ? (
+                        <td className="px-3 py-2 text-xs text-muted-foreground ltr-nums">
+                          {row.deletedAt
+                            ? new Date(row.deletedAt).toLocaleDateString()
+                            : row.deactivatedAt
+                              ? new Date(row.deactivatedAt).toLocaleDateString()
+                              : "—"}
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>
@@ -391,14 +490,87 @@ export function PlatformUsersTab() {
               ) : isCreate && !uTenantId ? (
                 <p className="text-sm text-muted-foreground md:col-span-2">{t("platform.tabs.pickOrgFirst")}</p>
               ) : null}
+              {isEdit && editSelection && userDetailQuery.data ? (
+                <div className="md:col-span-2 flex flex-wrap gap-2 border-t border-border pt-3">
+                  {usersView === "archived" || editUserArchived ? (
+                    <>
+                      {editUserDeactivatedOnly ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={lifecyclePending}
+                          onClick={() =>
+                            reactivateMut.mutate({
+                              tenantId: editSelection.tenantId,
+                              userId: editSelection.userId,
+                            })
+                          }
+                        >
+                          {t("admin.reactivateUser", "Reactivate")}
+                        </Button>
+                      ) : null}
+                      <Button
+                        type="button"
+                        disabled={lifecyclePending}
+                        onClick={() =>
+                          restoreMut.mutate({
+                            tenantId: editSelection.tenantId,
+                            userId: editSelection.userId,
+                          })
+                        }
+                      >
+                        {t("admin.restoreUser", "Restore")}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={lifecyclePending}
+                        onClick={() =>
+                          deactivateMut.mutate({
+                            tenantId: editSelection.tenantId,
+                            userId: editSelection.userId,
+                          })
+                        }
+                      >
+                        {t("admin.deactivateUser", "Deactivate")}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        disabled={lifecyclePending}
+                        onClick={() =>
+                          setUserToArchive({
+                            id: userDetailQuery.data.id,
+                            tenantId: editSelection.tenantId,
+                            tenantName: userDetailQuery.data.tenantName ?? "",
+                            email: userDetailQuery.data.email,
+                            displayName: userDetailQuery.data.displayName,
+                            role: userDetailQuery.data.role,
+                            createdAt: userDetailQuery.data.createdAt,
+                            clinicIds: userDetailQuery.data.clinicIds,
+                            clinics: userDetailQuery.data.clinics,
+                          })
+                        }
+                      >
+                        {t("admin.archiveUser", "Archive")}
+                      </Button>
+                    </>
+                  )}
+                </div>
+              ) : null}
               <div className="md:col-span-2 flex flex-wrap gap-2 pt-2">
-                <Button
-                  type="button"
-                  disabled={isCreate ? createMut.isPending : !canSaveEdit || patchMut.isPending}
-                  onClick={() => (isCreate ? handleCreateUser() : handleSaveUser())}
-                >
-                  {isEdit ? t("platform.saveUser") : t("platform.createUserBtn")}
-                </Button>
+                {!editUserArchived ? (
+                  <Button
+                    type="button"
+                    disabled={isCreate ? createMut.isPending : !canSaveEdit || patchMut.isPending}
+                    onClick={() => (isCreate ? handleCreateUser() : handleSaveUser())}
+                  >
+                    {isEdit ? t("platform.saveUser") : t("platform.createUserBtn")}
+                  </Button>
+                ) : null}
                 <Button type="button" variant="outline" onClick={closeDialog}>
                   {t("common.cancel")}
                 </Button>
@@ -408,6 +580,16 @@ export function PlatformUsersTab() {
           )}
         </DialogContent>
       </Dialog>
+      <AdminOrgUserDeleteConfirmDialog
+        open={Boolean(userToArchive)}
+        onOpenChange={(open) => !open && setUserToArchive(null)}
+        user={userToArchive}
+        pending={archiveMut.isPending}
+        onConfirm={() => {
+          if (!userToArchive?.tenantId) return;
+          archiveMut.mutate({ tenantId: userToArchive.tenantId, userId: userToArchive.id });
+        }}
+      />
       <ValidationIssuesDialog {...createValidation.dialogProps} />
     </div>
   );

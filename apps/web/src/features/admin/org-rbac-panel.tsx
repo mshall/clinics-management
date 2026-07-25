@@ -275,9 +275,8 @@ export function OrgRbacPanel() {
       apiPut<{ tabKeys: string[] | null }>(`/api/v1/user-nav-tabs/${userTargetId}`, payload),
     onSuccess: async () => {
       setUserErr(null);
-      setPendingNavTabKeys(null);
-      setHrAssignDialogMode("assign");
       setHrAssignDialogOpen(false);
+      setHrAssignClinicIds(new Set());
       await qc.invalidateQueries({ queryKey: ["user-nav-tabs", userTargetId] });
       await qc.invalidateQueries({ queryKey: ["user-clinic-hr-assignments", userTargetId] });
       if (userTargetId === viewer?.id) await useAuthStore.getState().refreshSessionFromServer();
@@ -287,43 +286,10 @@ export function OrgRbacPanel() {
     },
   });
 
-  const toggleRole = (key: NavItemKey) => {
-    if (key === "profile") return;
-    setRoleDraft((prev) => {
-      const n = new Set(prev);
-      if (n.has(key)) n.delete(key);
-      else n.add(key);
-      n.add("profile");
-      return n;
-    });
-  };
-
-  const toggleUser = (key: NavItemKey) => {
-    if (key === "profile") return;
-    setUserDraft((prev) => {
-      const n = new Set(prev);
-      if (n.has(key)) n.delete(key);
-      else n.add(key);
-      n.add("profile");
-      return n;
-    });
-  };
-
-  const roleIsFullDefault =
-    roleTarget &&
-    roleDraft.size === rolePlatformDefaults.size &&
-    [...rolePlatformDefaults].every((k) => roleDraft.has(k));
-
-  const userIsFullRole =
-    userTargetRole &&
-    userDraft.size === userRoleBase.size &&
-    [...userRoleBase].every((k) => userDraft.has(k));
-
   const [hrAssignErr, setHrAssignErr] = useState<string | null>(null);
   const [hrAssignDialogOpen, setHrAssignDialogOpen] = useState(false);
-  const [hrAssignClinicId, setHrAssignClinicId] = useState("");
-  const [hrAssignDialogMode, setHrAssignDialogMode] = useState<"assign" | "nav-save">("assign");
-  const [pendingNavTabKeys, setPendingNavTabKeys] = useState<string[] | null>(null);
+  const [hrAssignClinicIds, setHrAssignClinicIds] = useState<Set<string>>(() => new Set());
+  const [hrDialogSubmitting, setHrDialogSubmitting] = useState(false);
 
   const hrAssignmentsQ = useQuery({
     queryKey: ["user-clinic-hr-assignments", userTargetId],
@@ -351,14 +317,8 @@ export function OrgRbacPanel() {
         clinicId,
       }),
     onSuccess: async () => {
-      setHrAssignErr(null);
-      setHrAssignDialogOpen(false);
-      setHrAssignClinicId("");
       await qc.invalidateQueries({ queryKey: ["user-clinic-hr-assignments", userTargetId] });
       if (userTargetId === viewer?.id) await useAuthStore.getState().refreshSessionFromServer();
-    },
-    onError: (e: unknown) => {
-      setHrAssignErr(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e));
     },
   });
 
@@ -366,64 +326,161 @@ export function OrgRbacPanel() {
     mutationFn: (assignmentId: string) =>
       apiDelete<{ ok: true }>(`/api/v1/admin/user-clinic-hr-assignments/${assignmentId}`),
     onSuccess: async () => {
-      setHrAssignErr(null);
       await qc.invalidateQueries({ queryKey: ["user-clinic-hr-assignments", userTargetId] });
       if (userTargetId === viewer?.id) await useAuthStore.getState().refreshSessionFromServer();
     },
-    onError: (e: unknown) => {
-      setHrAssignErr(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e));
-    },
   });
 
-  const hrDialogClinicItems: PickListItem[] = useMemo(
-    () =>
-      (hrAssignDialogMode === "nav-save" ? assignableClinics : unassignedClinics).map((c) => ({
-        value: c.id,
-        label: formatClinicName(c, i18n.language),
-      })),
-    [hrAssignDialogMode, assignableClinics, unassignedClinics, i18n.language],
-  );
-
-  const saveUserNavTabs = (tabKeys: string[]) => {
-    if (!userTargetId || !userTargetRole) return;
-    const sorted = [...tabKeys].sort((a, b) => a.localeCompare(b));
-    const hrEnabled = sorted.includes("hr");
-    const needsClinicHr =
-      hrEnabled &&
-      canExtendUsers &&
-      userTargetRole !== "hr_officer" &&
-      (hrAssignmentsQ.data?.length ?? 0) === 0;
-    if (needsClinicHr) {
-      setPendingNavTabKeys(sorted);
-      setHrAssignClinicId(assignableClinics[0]?.id ?? "");
-      setHrAssignDialogMode("nav-save");
-      setHrAssignErr(null);
-      setHrAssignDialogOpen(true);
-      return;
+  const openHrClinicDialog = () => {
+    const preselect = new Set<string>();
+    if (unassignedClinics.length === 1) {
+      preselect.add(unassignedClinics[0]!.id);
     }
-    saveUserMut.mutate({ tabKeys: sorted });
+    setHrAssignClinicIds(preselect);
+    setHrAssignErr(null);
+    setHrAssignDialogOpen(true);
+  };
+
+  const toggleHrClinicPick = (clinicId: string) => {
+    setHrAssignClinicIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(clinicId)) next.delete(clinicId);
+      else next.add(clinicId);
+      return next;
+    });
+  };
+
+  const confirmHrClinicDialog = async () => {
+    if (!userTargetId || hrAssignClinicIds.size === 0) return;
+    setHrDialogSubmitting(true);
+    setHrAssignErr(null);
+    try {
+      for (const clinicId of hrAssignClinicIds) {
+        await saveHrAssignmentMut.mutateAsync(clinicId);
+      }
+      const nextDraft = new Set(userDraft);
+      nextDraft.add("hr");
+      nextDraft.add("profile");
+      const tabKeys = [...nextDraft].sort((a, b) => a.localeCompare(b));
+      setUserDraft(nextDraft);
+      await saveUserMut.mutateAsync({ tabKeys, hrClinicId: [...hrAssignClinicIds][0] });
+    } catch (e: unknown) {
+      setHrAssignErr(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e));
+    } finally {
+      setHrDialogSubmitting(false);
+    }
   };
 
   const assignHrForClinic = (clinicId: string) => {
     if (!userTargetId || !clinicId) return;
-    saveHrAssignmentMut.mutate(clinicId);
+    saveHrAssignmentMut.mutate(clinicId, {
+      onError: (e: unknown) => {
+        setHrAssignErr(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e));
+      },
+    });
   };
 
-  const confirmHrDialog = () => {
-    if (!hrAssignClinicId) return;
-    if (hrAssignDialogMode === "nav-save" && pendingNavTabKeys) {
-      saveUserMut.mutate({ tabKeys: pendingNavTabKeys, hrClinicId: hrAssignClinicId });
+  const saveUserNavTabs = (tabKeys: string[]) => {
+    if (!userTargetId || !userTargetRole) return;
+    const sorted = [...tabKeys].sort((a, b) => a.localeCompare(b));
+    if (
+      sorted.includes("hr") &&
+      canExtendUsers &&
+      userTargetRole !== "hr_officer" &&
+      (hrAssignmentsQ.data?.length ?? 0) === 0
+    ) {
+      setUserErr(
+        t(
+          "admin.rbacHrSaveNeedsAssignment",
+          "Use the HR checkbox to choose clinics before saving HR access.",
+        ),
+      );
       return;
     }
-    assignHrForClinic(hrAssignClinicId);
+    setUserErr(null);
+    saveUserMut.mutate({ tabKeys: sorted });
   };
 
-  const openGroupAdminHrDialog = () => {
-    setHrAssignClinicId(unassignedClinics[0]?.id ?? "");
-    setHrAssignDialogMode("assign");
-    setHrAssignErr(null);
-    setHrAssignDialogOpen(true);
+  const hrDialogClinics = useMemo(
+    () =>
+      assignableClinics.map((c) => ({
+        id: c.id,
+        label: formatClinicName(c, i18n.language),
+      })),
+    [assignableClinics, i18n.language],
+  );
+
+  const toggleRole = (key: NavItemKey) => {
+    if (key === "profile") return;
+    setRoleDraft((prev) => {
+      const n = new Set(prev);
+      if (n.has(key)) n.delete(key);
+      else n.add(key);
+      n.add("profile");
+      return n;
+    });
   };
+
+  const toggleUser = (key: NavItemKey) => {
+    if (key === "profile") return;
+
+    if (
+      key === "hr" &&
+      canExtendUsers &&
+      userTargetRole &&
+      userTargetRole !== "hr_officer" &&
+      userDraft.has("hr")
+    ) {
+      setUserDraft((prev) => {
+        const n = new Set(prev);
+        n.delete("hr");
+        n.add("profile");
+        return n;
+      });
+      for (const a of hrAssignmentsQ.data ?? []) {
+        deleteHrAssignmentMut.mutate(a.id);
+      }
+      return;
+    }
+
+    if (
+      key === "hr" &&
+      canExtendUsers &&
+      userTargetRole &&
+      userTargetRole !== "hr_officer" &&
+      !userDraft.has("hr")
+    ) {
+      if ((hrAssignmentsQ.data?.length ?? 0) > 0) {
+        setUserDraft((prev) => {
+          const n = new Set(prev);
+          n.add("hr");
+          n.add("profile");
+          return n;
+        });
+        return;
+      }
+      openHrClinicDialog();
+      return;
+    }
+
+    setUserDraft((prev) => {
+      const n = new Set(prev);
+      if (n.has(key)) n.delete(key);
+      else n.add(key);
+      n.add("profile");
+      return n;
+    });
+  };
+
+  const roleIsFullDefault =
+    roleTarget &&
+    roleDraft.size === rolePlatformDefaults.size &&
+    [...rolePlatformDefaults].every((k) => roleDraft.has(k));
+
+  const userIsFullRole =
+    userTargetRole &&
+    userDraft.size === userRoleBase.size &&
+    [...userRoleBase].every((k) => userDraft.has(k));
 
   return (
     <Card>
@@ -596,7 +653,7 @@ export function OrgRbacPanel() {
           ) : null}
         </div>
 
-        {canManagePrivilegeGrants ? (
+        {canManagePrivilegeGrants && isClinicAdminViewer ? (
           <div className="space-y-4 rounded-lg border border-border p-4">
             <div>
               <h3 className="text-sm font-medium">
@@ -604,8 +661,8 @@ export function OrgRbacPanel() {
               </h3>
               <p className="text-xs text-muted-foreground">
                 {t(
-                  "admin.rbacHrAssignmentHint",
-                  "Assign this user as HR for a clinic. They receive full HR permissions (employees, archive, hire with login) scoped to that clinic only.",
+                  "admin.rbacHrAssignmentHintClinicAdmin",
+                  "Assign this user as HR for your clinic. They receive full HR permissions scoped to that clinic only.",
                 )}
               </p>
             </div>
@@ -655,43 +712,33 @@ export function OrgRbacPanel() {
                 ) : null}
 
                 {unassignedClinics.length > 0 ? (
-                  isClinicAdminViewer ? (
-                    <div className="flex flex-wrap gap-2">
-                      {unassignedClinics.length === 1 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {unassignedClinics.length === 1 ? (
+                      <Button
+                        type="button"
+                        disabled={saveHrAssignmentMut.isPending}
+                        onClick={() => assignHrForClinic(unassignedClinics[0]!.id)}
+                      >
+                        {t("admin.rbacHrAssignmentAssignClinic", "Assign as HR for {{clinic}}", {
+                          clinic: formatClinicName(unassignedClinics[0]!, i18n.language),
+                        })}
+                      </Button>
+                    ) : (
+                      unassignedClinics.map((c) => (
                         <Button
+                          key={c.id}
                           type="button"
+                          variant="outline"
                           disabled={saveHrAssignmentMut.isPending}
-                          onClick={() => assignHrForClinic(unassignedClinics[0]!.id)}
+                          onClick={() => assignHrForClinic(c.id)}
                         >
-                          {t("admin.rbacHrAssignmentAssignClinic", "Assign as HR for {{clinic}}", {
-                            clinic: formatClinicName(unassignedClinics[0]!, i18n.language),
+                          {t("admin.rbacHrAssignmentAssignClinicShort", "HR — {{clinic}}", {
+                            clinic: formatClinicName(c, i18n.language),
                           })}
                         </Button>
-                      ) : (
-                        unassignedClinics.map((c) => (
-                          <Button
-                            key={c.id}
-                            type="button"
-                            variant="outline"
-                            disabled={saveHrAssignmentMut.isPending}
-                            onClick={() => assignHrForClinic(c.id)}
-                          >
-                            {t("admin.rbacHrAssignmentAssignClinicShort", "HR — {{clinic}}", {
-                              clinic: formatClinicName(c, i18n.language),
-                            })}
-                          </Button>
-                        ))
-                      )}
-                    </div>
-                  ) : (
-                    <Button
-                      type="button"
-                      disabled={saveHrAssignmentMut.isPending}
-                      onClick={openGroupAdminHrDialog}
-                    >
-                      {t("admin.rbacHrAssignmentAssign", "Assign as HR…")}
-                    </Button>
-                  )
+                      ))
+                    )}
+                  </div>
                 ) : hrAssignmentsQ.isSuccess ? (
                   <p className="text-xs text-muted-foreground">
                     {t("admin.rbacHrAssignmentAllClinics", "This user is already HR for all assignable clinics.")}
@@ -699,57 +746,74 @@ export function OrgRbacPanel() {
                 ) : null}
               </div>
             )}
-
-            <Dialog open={hrAssignDialogOpen} onOpenChange={setHrAssignDialogOpen}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>
-                    {hrAssignDialogMode === "nav-save"
-                      ? t("admin.rbacHrNavDialogTitle", "HR access — select clinic")
-                      : t("admin.rbacHrAssignmentDialogTitle", "Assign as HR")}
-                  </DialogTitle>
-                </DialogHeader>
-                <p className="text-sm text-muted-foreground">
-                  {hrAssignDialogMode === "nav-save"
-                    ? t(
-                        "admin.rbacHrNavDialogHint",
-                        "This user needs a clinic HR assignment to add or edit employees. Choose the clinic where they will have full HR permissions.",
-                      )
-                    : t(
-                        "admin.rbacHrAssignmentDialogHint",
-                        "Choose the clinic where this user will have full HR permissions.",
-                      )}
-                </p>
-                <div className="space-y-2">
-                  <Label>{t("hr.clinic", "Clinic")}</Label>
-                  <SearchablePickList
-                    items={hrDialogClinicItems}
-                    value={hrAssignClinicId}
-                    selectedItem={hrDialogClinicItems.find((c) => c.value === hrAssignClinicId) ?? null}
-                    onValueChange={setHrAssignClinicId}
-                    searchPlaceholder={t("appointments.filterClinic", "Type clinic name…")}
-                    placeholder={t("hr.pickClinic", "Select clinic…")}
-                    localFilter
-                  />
-                </div>
-                {hrAssignErr ? <p className="text-sm text-destructive">{hrAssignErr}</p> : null}
-                <div className="flex flex-wrap justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setHrAssignDialogOpen(false)}>
-                    {t("common.cancel", "Cancel")}
-                  </Button>
-                  <Button
-                    type="button"
-                    disabled={!hrAssignClinicId || saveHrAssignmentMut.isPending || saveUserMut.isPending}
-                    onClick={confirmHrDialog}
-                  >
-                    {hrAssignDialogMode === "nav-save"
-                      ? t("admin.rbacHrNavDialogConfirm", "Save HR access")
-                      : t("admin.rbacHrAssignmentConfirm", "Assign HR")}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
           </div>
+        ) : null}
+
+        {canExtendUsers ? (
+          <Dialog
+            open={hrAssignDialogOpen}
+            onOpenChange={(open) => {
+              setHrAssignDialogOpen(open);
+              if (!open) {
+                setHrAssignClinicIds(new Set());
+                setHrAssignErr(null);
+              }
+            }}
+          >
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>{t("admin.rbacHrNavDialogTitle", "HR access — select clinics")}</DialogTitle>
+              </DialogHeader>
+              <p className="text-sm text-muted-foreground">
+                {t(
+                  "admin.rbacHrNavDialogHint",
+                  "Choose one or more clinics where this user will have full HR permissions (employees, archive, hire with login).",
+                )}
+              </p>
+              <div className="max-h-[min(50vh,20rem)] space-y-2 overflow-y-auto rounded-md border border-border p-3">
+                {hrDialogClinics.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    {t("admin.rbacHrDialogNoClinics", "No clinics available to assign.")}
+                  </p>
+                ) : (
+                  hrDialogClinics.map((c) => (
+                    <label
+                      key={c.id}
+                      className="flex cursor-pointer items-start gap-3 rounded-md px-2 py-2 hover:bg-muted/50"
+                    >
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 size-4 shrink-0 rounded border-input"
+                        checked={hrAssignClinicIds.has(c.id)}
+                        onChange={() => toggleHrClinicPick(c.id)}
+                      />
+                      <span className="text-sm leading-snug">{c.label}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+              {hrAssignErr ? <p className="text-sm text-destructive">{hrAssignErr}</p> : null}
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={hrDialogSubmitting}
+                  onClick={() => setHrAssignDialogOpen(false)}
+                >
+                  {t("common.cancel", "Cancel")}
+                </Button>
+                <Button
+                  type="button"
+                  disabled={hrAssignClinicIds.size === 0 || hrDialogSubmitting}
+                  onClick={() => void confirmHrClinicDialog()}
+                >
+                  {hrDialogSubmitting
+                    ? t("common.saving", "Saving…")
+                    : t("admin.rbacHrNavDialogConfirm", "Enable HR access")}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         ) : null}
       </CardContent>
     </Card>

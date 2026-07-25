@@ -22,7 +22,7 @@ import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog"
 import { collectEmployeeCreateIssues } from "@/lib/create-form-validation";
 import { useClinicsQuery, useEmployeeQuery } from "@/lib/api-hooks";
 import type { EmployeeDto } from "@/lib/api-types";
-import { canArchiveEmployees, canManageEmployees } from "@/lib/employee-manage-policy";
+import { canArchiveEmployees, canManageEmployees, canHrDeactivateOrArchiveLinkedUser } from "@/lib/employee-manage-policy";
 import { ApiError, apiDelete, apiFetchBlob, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { formatClinicName, formatClinicNameFields, formatEmploymentType, formatUserRole, localeForLanguage } from "@/lib/locale-display";
 import { formatEmployeeName } from "@/lib/employee-display";
@@ -41,6 +41,13 @@ export function EmployeeDetailPage() {
   const canArchive = canArchiveEmployees(authUser?.role, privilegeGrants);
   const { id } = useParams();
   const { data: emp, isPending, isError, error } = useEmployeeQuery(id);
+  const canHrLifecycleChange = canHrDeactivateOrArchiveLinkedUser(
+    authUser?.role,
+    authUser?.platformSuperAdmin,
+    authUser?.id,
+    emp?.linkedUserRole,
+    emp?.userId,
+  );
   const { data: clinics = [] } = useClinicsQuery();
 
   const [editing, setEditing] = useState(false);
@@ -395,7 +402,7 @@ export function EmployeeDetailPage() {
                       <UserCheck className="me-2 h-4 w-4" />
                       {t("hr.rehire", "Re-hire")}
                     </Button>
-                  ) : (
+                  ) : canHrLifecycleChange ? (
                     <Button
                       type="button"
                       variant="outline"
@@ -405,13 +412,13 @@ export function EmployeeDetailPage() {
                       <UserX className="me-2 h-4 w-4" />
                       {t("hr.deactivate", "Deactivate")}
                     </Button>
-                  )}
+                  ) : null}
                   {emp.recordStatus === "ACTIVE" ? (
                     <Button type="button" variant="outline" onClick={() => setEditing((v) => !v)}>
                       {editing ? t("common.cancel", "Cancel") : t("common.edit", "Edit")}
                     </Button>
                   ) : null}
-                  {canArchive ? (
+                  {canArchive && canHrLifecycleChange ? (
                     <Button
                       type="button"
                       variant="outline"

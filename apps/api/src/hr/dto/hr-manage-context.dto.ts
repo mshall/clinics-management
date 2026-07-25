@@ -11,6 +11,12 @@ export class HrManageContextDto {
   @ApiProperty({ type: [String], description: "Clinic group network ids (HQ + branches) for group physician assignment" })
   groupClinicIds!: string[];
 
+  @ApiProperty({
+    type: [String],
+    description: "Clinics where this HR user may assign new employees",
+  })
+  assignableClinicIds!: string[];
+
   @ApiProperty({ description: "When true, new employees are created with a fresh login (email + password)" })
   provisionLogin!: boolean;
 

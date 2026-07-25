@@ -1,6 +1,8 @@
 import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
 import { assertCanCreateGroupAdminRole } from "../common/group-admin-role-policy";
+import { isPlatformSuperAdmin } from "../common/platform-super-admin";
+import type { JwtUser } from "../auth/jwt-user";
 
 /** Roles a clinic HR officer may assign when provisioning a login for a new employee. */
 export const HR_ASSIGNABLE_USER_ROLES: ReadonlySet<UserRole> = new Set([
@@ -41,4 +43,17 @@ export function assertProvisionLoginPayload(
     throw new BadRequestException("Provide either userId to link an existing login or loginEmail, loginPassword, and loginRole to create one");
   }
   if (hasLogin && loginRole) assertCanCreateGroupAdminRole(loginRole);
+}
+
+/** Linked organization group admins cannot be deactivated/archived via HR by HR officers, clinic admins, etc. */
+export function assertHrCanDeactivateOrArchiveLinkedUser(
+  viewer: Pick<JwtUser, "userId" | "email" | "role">,
+  linkedUser: Pick<{ id: string; role: UserRole }, "id" | "role"> | null | undefined,
+): void {
+  if (!linkedUser || linkedUser.role !== UserRole.GROUP_ADMIN) return;
+  if (isPlatformSuperAdmin(viewer)) return;
+  if (viewer.role === UserRole.GROUP_ADMIN && viewer.userId !== linkedUser.id) return;
+  throw new ForbiddenException(
+    "Organization group administrators can only be deactivated or archived by another group administrator or platform super administrator",
+  );
 }

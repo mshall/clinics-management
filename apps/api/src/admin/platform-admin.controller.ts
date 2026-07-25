@@ -1,4 +1,6 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { DeactivateTenantUserDto } from "./dto/deactivate-tenant-user.dto";
+import { ReactivateTenantUserDto } from "./dto/reactivate-tenant-user.dto";
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -56,8 +58,9 @@ export class PlatformAdminController {
     @Query("page") page?: string,
     @Query("pageSize") pageSize?: string,
     @Query("tenantId") tenantId?: string,
+    @Query("archived") archived?: string,
   ) {
-    return this.platform.listAllUsers(user, page, pageSize, tenantId);
+    return this.platform.listAllUsers(user, page, pageSize, tenantId, archived);
   }
 
   @Get("clinics")
@@ -109,8 +112,9 @@ export class PlatformAdminController {
     @Param("tenantId") tenantId: string,
     @Query("page") page?: string,
     @Query("pageSize") pageSize?: string,
+    @Query("archived") archived?: string,
   ) {
-    return this.platform.listUsers(user, tenantId, page, pageSize);
+    return this.platform.listUsers(user, tenantId, page, pageSize, archived);
   }
 
   @Get("tenants/:tenantId/clinics")
@@ -178,5 +182,52 @@ export class PlatformAdminController {
     @Body() body: PlatformPatchTenantUserDto,
   ) {
     return this.platform.patchUser(user, tenantId, userId, body);
+  }
+
+  @Delete("tenants/:tenantId/users/:userId")
+  @ApiOperation({ summary: "Archive an organization user and linked employee (platform super admin)" })
+  @ApiOkResponse()
+  deleteUser(
+    @CurrentUser() user: JwtUser,
+    @Param("tenantId") tenantId: string,
+    @Param("userId") userId: string,
+  ) {
+    return this.platform.deleteUser(user, tenantId, userId);
+  }
+
+  @Post("tenants/:tenantId/users/:userId/deactivate")
+  @ApiOperation({ summary: "Deactivate organization user and linked employee (platform super admin)" })
+  @ApiOkResponse()
+  deactivateUser(
+    @CurrentUser() user: JwtUser,
+    @Param("tenantId") tenantId: string,
+    @Param("userId") userId: string,
+    @Body() body: DeactivateTenantUserDto,
+  ) {
+    return this.platform.deactivateUser(user, tenantId, userId, body);
+  }
+
+  @Post("tenants/:tenantId/users/:userId/reactivate")
+  @ApiOperation({ summary: "Reactivate a deactivated organization user (platform super admin)" })
+  @ApiOkResponse()
+  reactivateUser(
+    @CurrentUser() user: JwtUser,
+    @Param("tenantId") tenantId: string,
+    @Param("userId") userId: string,
+    @Body() body: ReactivateTenantUserDto,
+  ) {
+    return this.platform.reactivateUser(user, tenantId, userId, body);
+  }
+
+  @Post("tenants/:tenantId/users/:userId/restore")
+  @ApiOperation({ summary: "Restore an archived organization user (platform super admin)" })
+  @ApiOkResponse()
+  restoreUser(
+    @CurrentUser() user: JwtUser,
+    @Param("tenantId") tenantId: string,
+    @Param("userId") userId: string,
+    @Body() body: ReactivateTenantUserDto,
+  ) {
+    return this.platform.restoreUser(user, tenantId, userId, body);
   }
 }

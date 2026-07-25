@@ -79,3 +79,19 @@ export function isHrOfficerRole(
 export function hasHrNavAccessFromGrants(grants?: EmployeePrivilegeGrantSummary[] | null): boolean {
   return hasDelegatedManage(grants) || hasDelegatedHrProvisioner(grants);
 }
+
+/** Group-admin login accounts linked to HR employees require group admin or platform super admin to deactivate/archive. */
+export function canHrDeactivateOrArchiveLinkedUser(
+  viewerRole: string | DemoRole | undefined | null,
+  platformSuperAdmin: boolean | undefined,
+  viewerUserId: string | undefined,
+  linkedUserRole: string | null | undefined,
+  linkedUserId: string | null | undefined,
+): boolean {
+  const linkedRole = linkedUserRole?.trim().toUpperCase();
+  if (linkedRole !== "GROUP_ADMIN") return true;
+  if (platformSuperAdmin) return true;
+  if (!viewerUserId || !linkedUserId) return false;
+  const role = viewerRole ? mapApiRole(String(viewerRole)) : null;
+  return role === "group_admin" && viewerUserId !== linkedUserId;
+}
