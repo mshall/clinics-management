@@ -3,6 +3,25 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 /** Tailwind classes for appointment workflow statuses (used across the app). */
+/** Compact colored chip for in-month calendar cells (Apple-style event pills). */
+export function appointmentCalendarEventChipClassName(status: string): string {
+  const u = status.toUpperCase();
+  switch (u) {
+    case "COMPLETED":
+      return "bg-emerald-600 text-white dark:bg-emerald-600";
+    case "CANCELLED":
+      return "bg-red-600/85 text-white line-through dark:bg-red-600/85";
+    case "CONFIRMED":
+      return "bg-sky-600 text-white dark:bg-sky-600";
+    case "CHECKED_IN":
+      return "bg-violet-600 text-white dark:bg-violet-600";
+    case "SCHEDULED":
+      return "bg-orange-500 text-white dark:bg-orange-500";
+    default:
+      return "bg-muted text-muted-foreground";
+  }
+}
+
 export function appointmentStatusClassName(status: string): string {
   const u = status.toUpperCase();
   switch (u) {

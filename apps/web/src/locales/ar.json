@@ -444,6 +444,8 @@
     "calendarPhysicianHint": "المواعيد المسندة إليك عبر شبكة عياداتك.",
     "calendarDayEmpty": "لا مواعيد في هذا اليوم.",
     "calendarPickClinic": "اختر عيادة لتحميل التقويم.",
+    "calendarMoreEvents": "+{{count}} المزيد",
+    "calendarDayAgenda": "جدول اليوم",
     "noClinics": "لا عيادات",
     "weekday": {
       "mon": "إث",

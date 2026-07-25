@@ -443,6 +443,8 @@
     "calendarPhysicianHint": "Appointments assigned to you across your clinic network.",
     "calendarDayEmpty": "No appointments this day.",
     "calendarPickClinic": "Select a clinic to load the calendar.",
+    "calendarMoreEvents": "+{{count}} more",
+    "calendarDayAgenda": "Day agenda",
     "noClinics": "No clinics",
     "weekday": {
       "mon": "Mon",
