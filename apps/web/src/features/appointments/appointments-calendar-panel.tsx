@@ -13,6 +13,7 @@ import { useAppointmentsQuery, useClinicsQuery } from "@/lib/api-hooks";
 import type { AppointmentDto } from "@/lib/api-types";
 import {
   appointmentCalendarMode,
+  appointmentCalendarRequiresClinicSelection,
   appointmentCalendarShowsClinicFilter,
 } from "@/lib/appointment-calendar-policy";
 import {
@@ -55,15 +56,28 @@ function groupAppointmentsByDay(items: AppointmentDto[]): Map<string, Appointmen
   return map;
 }
 
-function calendarEventTitle(a: AppointmentDto, loc: string, mode: "physician" | "clinic"): string {
+function calendarEventTitle(
+  a: AppointmentDto,
+  loc: string,
+  mode: "physician" | "clinic" | "organization",
+  language: string,
+): string {
   const patient = resolvePatientListLabel({
     patientId: a.patientId,
     patientMrn: a.patientMrn,
     patientName: a.patientName,
   });
   const time = new Date(a.startsAt).toLocaleTimeString(loc, { hour: "numeric", minute: "2-digit" });
+  const clinic = formatClinicNameFields(a.clinicNameEn, a.clinicNameAr, language);
   if (mode === "clinic" && a.clinicianName) {
     return `${time} · ${patient.text} · ${a.clinicianName}`;
+  }
+  if (mode === "organization") {
+    const who = a.clinicianName ? ` · ${a.clinicianName}` : "";
+    return `${time} · ${patient.text} · ${clinic}${who}`;
+  }
+  if (mode === "physician") {
+    return `${time} · ${patient.text}`;
   }
   return `${time} · ${patient.text}`;
 }
@@ -75,6 +89,7 @@ export function AppointmentsCalendarPanel() {
   const role = authUser?.role;
   const mode = appointmentCalendarMode(role);
   const showClinicFilter = appointmentCalendarShowsClinicFilter(role);
+  const requiresClinicSelection = appointmentCalendarRequiresClinicSelection(role);
   const loc = localeForLanguage(i18n.language);
 
   const today = useMemo(() => new Date(), []);
@@ -84,12 +99,12 @@ export function AppointmentsCalendarPanel() {
   const [clinicId, setClinicId] = useState("");
 
   useEffect(() => {
-    if (!showClinicFilter || clinicId || clinics.length === 0) return;
+    if (!requiresClinicSelection || clinicId || clinics.length === 0) return;
     setClinicId(clinics[0]!.id);
-  }, [showClinicFilter, clinicId, clinics]);
+  }, [requiresClinicSelection, clinicId, clinics]);
 
   const range = useMemo(() => visibleGridBounds(cursor.year, cursor.month), [cursor.year, cursor.month]);
-  const calendarEnabled = mode === "physician" || Boolean(clinicId);
+  const calendarEnabled = mode === "physician" || mode === "organization" || Boolean(clinicId);
 
   const { data, isPending, isError, error } = useAppointmentsQuery({
     page: 1,
@@ -142,7 +157,9 @@ export function AppointmentsCalendarPanel() {
             <CardTitle className="text-base font-medium text-muted-foreground">
               {mode === "physician"
                 ? t("appointments.calendarMyTitle", "My calendar")
-                : t("appointments.calendarClinicTitle", "Clinic calendar")}
+                : mode === "organization"
+                  ? t("appointments.calendarOrgTitle", "Organization calendar")
+                  : t("appointments.calendarClinicTitle", "Clinic calendar")}
             </CardTitle>
             <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-primary" onClick={goToToday}>
               {t("appointments.today", "Today")}
@@ -185,6 +202,9 @@ export function AppointmentsCalendarPanel() {
                 value={clinicId}
                 onChange={(e) => setClinicId(e.target.value)}
               >
+                {mode === "organization" ? (
+                  <option value="">{t("appointments.allClinics", "All clinics")}</option>
+                ) : null}
                 {clinics.length === 0 ? (
                   <option value="">{t("appointments.noClinics", "No clinics")}</option>
                 ) : (
@@ -196,7 +216,12 @@ export function AppointmentsCalendarPanel() {
                 )}
               </select>
               <p className="text-xs text-muted-foreground">
-                {t("appointments.calendarClinicHint", "All appointments at the selected clinic for this month.")}
+                {mode === "organization"
+                  ? t(
+                      "appointments.calendarOrgHint",
+                      "All organization appointments for this month. Filter by clinic if needed.",
+                    )
+                  : t("appointments.calendarClinicHint", "All appointments at the selected clinic for this month.")}
               </p>
             </div>
           ) : (
@@ -278,7 +303,7 @@ export function AppointmentsCalendarPanel() {
                             <button
                               key={a.id}
                               type="button"
-                              title={calendarEventTitle(a, loc, mode)}
+                              title={calendarEventTitle(a, loc, mode, i18n.language)}
                               className={cn(
                                 "w-full truncate rounded-[4px] px-1 py-0.5 text-start text-[10px] font-medium leading-tight sm:text-[11px]",
                                 appointmentCalendarEventChipClassName(a.status),
@@ -288,7 +313,7 @@ export function AppointmentsCalendarPanel() {
                                 openAppointment(a.id);
                               }}
                             >
-                              {calendarEventTitle(a, loc, mode)}
+                              {calendarEventTitle(a, loc, mode, i18n.language)}
                             </button>
                           ))}
                           {overflowMobile > 0 ? (
@@ -303,7 +328,7 @@ export function AppointmentsCalendarPanel() {
                             <button
                               key={a.id}
                               type="button"
-                              title={calendarEventTitle(a, loc, mode)}
+                              title={calendarEventTitle(a, loc, mode, i18n.language)}
                               className={cn(
                                 "w-full truncate rounded-[4px] px-1.5 py-0.5 text-start text-[11px] font-medium leading-tight",
                                 appointmentCalendarEventChipClassName(a.status),
@@ -313,7 +338,7 @@ export function AppointmentsCalendarPanel() {
                                 openAppointment(a.id);
                               }}
                             >
-                              {calendarEventTitle(a, loc, mode)}
+                              {calendarEventTitle(a, loc, mode, i18n.language)}
                             </button>
                           ))}
                           {overflowLg > 0 ? (
@@ -377,6 +402,16 @@ export function AppointmentsCalendarPanel() {
                               <p className="truncate text-sm font-medium">{patient.text}</p>
                               {mode === "clinic" && a.clinicianName ? (
                                 <p className="truncate text-xs text-muted-foreground">{a.clinicianName}</p>
+                              ) : null}
+                              {mode === "organization" ? (
+                                <>
+                                  <p className="truncate text-xs text-muted-foreground">
+                                    {formatClinicNameFields(a.clinicNameEn, a.clinicNameAr, i18n.language)}
+                                  </p>
+                                  {a.clinicianName ? (
+                                    <p className="truncate text-xs text-muted-foreground">{a.clinicianName}</p>
+                                  ) : null}
+                                </>
                               ) : null}
                               {mode === "physician" ? (
                                 <p className="truncate text-xs text-muted-foreground">
