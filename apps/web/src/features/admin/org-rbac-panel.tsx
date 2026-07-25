@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,14 @@ import { Label } from "@/components/ui/label";
 import { useUsersQuery } from "@/lib/api-hooks";
 import { ApiError, apiGet, apiPut } from "@/lib/http";
 import type { NavItemKey } from "@/lib/nav-policy";
-import { navKeysForRole, organizationNavKeySet, organizationNavOrderedKeys, roleNavKeysForRole } from "@/lib/nav-policy";
+import {
+  canCustomizeOrgRoleNavTabs,
+  canExtendUserNavTabs,
+  navKeysForRole,
+  organizationNavKeySet,
+  organizationNavOrderedKeys,
+  roleNavKeysForRole,
+} from "@/lib/nav-policy";
 import { mapApiRole } from "@/lib/roles";
 import { formatUserRole } from "@/lib/locale-display";
 import type { DemoRole } from "@/lib/roles";
@@ -99,7 +106,8 @@ export function OrgRbacPanel() {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const viewer = useAuthStore((s) => s.user);
-  const isGroupAdmin = viewer?.role === "group_admin";
+  const canCustomizeRoles = canCustomizeOrgRoleNavTabs(viewer?.role);
+  const canExtendUsers = canExtendUserNavTabs(viewer?.role);
 
   const [roleTarget, setRoleTarget] = useState<DemoRole | "">("");
   const [roleDraft, setRoleDraft] = useState<Set<NavItemKey>>(() => new Set());
@@ -108,7 +116,7 @@ export function OrgRbacPanel() {
   const roleGrantQ = useQuery({
     queryKey: ["tenant-role-nav-tabs", roleTarget],
     queryFn: () => apiGet<{ tabKeys: string[] | null }>(`/api/v1/admin/role-nav-tabs/${apiRoleParam(roleTarget as DemoRole)}`),
-    enabled: isGroupAdmin && Boolean(roleTarget),
+    enabled: canCustomizeRoles && Boolean(roleTarget),
   });
 
   const organizationOrderedKeys = useMemo(() => organizationNavOrderedKeys(), []);
@@ -169,7 +177,7 @@ export function OrgRbacPanel() {
   const userRoleGrantQ = useQuery({
     queryKey: ["tenant-role-nav-tabs", userTargetRole],
     queryFn: () => apiGet<{ tabKeys: string[] | null }>(`/api/v1/admin/role-nav-tabs/${apiRoleParam(userTargetRole!)}`),
-    enabled: isGroupAdmin && Boolean(userTargetRole),
+    enabled: canCustomizeRoles && Boolean(userTargetRole),
   });
 
   const userGrantQ = useQuery({
@@ -198,15 +206,23 @@ export function OrgRbacPanel() {
   }, [userTargetId, userPickItems]);
 
   const userGrantFingerprint = userGrantQ.data ? JSON.stringify(userGrantQ.data.tabKeys ?? null) : "";
+  const userDraftSeedRef = useRef("");
 
   useEffect(() => {
     if (!userTargetId) {
       setUserDraft(new Set());
+      userDraftSeedRef.current = "";
       return;
     }
     if (!userTargetRole || !userGrantQ.isSuccess) return;
+    if (canCustomizeRoles && !userRoleGrantQ.isSuccess) return;
+
+    const seedKey = `${userTargetId}:${userGrantFingerprint}:${canCustomizeRoles ? JSON.stringify(userRoleGrantQ.data?.tabKeys ?? null) : "clinic"}`;
+    if (userDraftSeedRef.current === seedKey) return;
+    userDraftSeedRef.current = seedKey;
+
     const roleEffective = roleNavKeysForRole(userTargetRole, userRoleGrantQ.data?.tabKeys);
-    const raw = userGrantQ.data.tabKeys;
+    const raw = userGrantQ.data?.tabKeys;
     if (raw == null || raw.length === 0) {
       setUserDraft(new Set(roleEffective));
       return;
@@ -217,7 +233,17 @@ export function OrgRbacPanel() {
     }
     next.add("profile");
     setUserDraft(next);
-  }, [userTargetId, userTargetRole, userGrantFingerprint, userGrantQ.isSuccess, userGrantQ.data?.tabKeys, userRoleGrantQ.data?.tabKeys, organizationTabSet]);
+  }, [
+    userTargetId,
+    userTargetRole,
+    userGrantFingerprint,
+    userGrantQ.isSuccess,
+    userGrantQ.data?.tabKeys,
+    canCustomizeRoles,
+    userRoleGrantQ.isSuccess,
+    userRoleGrantQ.data?.tabKeys,
+    organizationTabSet,
+  ]);
 
   const saveUserMut = useMutation({
     mutationFn: (tabKeys: string[]) => apiPut<{ tabKeys: string[] | null }>(`/api/v1/user-nav-tabs/${userTargetId}`, { tabKeys }),
@@ -275,7 +301,7 @@ export function OrgRbacPanel() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-8">
-        {isGroupAdmin ? (
+        {canCustomizeRoles ? (
           <div className="space-y-4 rounded-lg border border-border p-4">
             <div>
               <h3 className="text-sm font-medium">{t("admin.rbacRoleSection", "Permissions by role")}</h3>
@@ -353,7 +379,7 @@ export function OrgRbacPanel() {
             <p className="text-xs text-muted-foreground">
               {t(
                 "admin.rbacUserHint",
-                isGroupAdmin
+                canExtendUsers
                   ? "Grant or restrict tabs for a specific user. You can add organization tabs (e.g. HR) even when they are not part of the user's role."
                   : "Grant or restrict tabs for a specific user within their role permissions.",
               )}
@@ -389,12 +415,12 @@ export function OrgRbacPanel() {
             <div className="space-y-3">
               {userGrantQ.isPending ? (
                 <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-              ) : userGrantQ.isSuccess ? (
+              ) : userGrantQ.isSuccess && (!canCustomizeRoles || userRoleGrantQ.isSuccess) ? (
                 <NavTabChecklist
                   orderedKeys={organizationOrderedKeys}
                   draft={userDraft}
                   onToggle={toggleUser}
-                  allowedKeys={isGroupAdmin ? undefined : userRoleBase}
+                  allowedKeys={canExtendUsers ? undefined : userRoleBase}
                 />
               ) : null}
               <p className="text-xs text-muted-foreground">

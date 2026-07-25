@@ -47,6 +47,7 @@ export function AdminPage() {
   const isGroupAdmin = authUser?.role === "group_admin";
   const isClinicAdmin = authUser?.role === "clinic_admin";
   const isBranchManager = authUser?.role === "branch_manager";
+  const canManageOrgUserNavTabs = isGroupAdmin || isClinicAdmin;
   const isPlatformSuperAdmin = Boolean(authUser?.platformSuperAdmin);
   const isPlatformRole = authUser?.role === "platform_super_admin";
   const overview = useAdminOverviewQuery();
@@ -212,6 +213,7 @@ export function AdminPage() {
   });
 
   const [adminSection, setAdminSection] = useState<"clinics" | "users" | "patients" | "organization" | "data" | "governance">("clinics");
+  const [clinicAdminSection, setClinicAdminSection] = useState<"staff" | "organization" | "governance">("staff");
   const [feeDraft, setFeeDraft] = useState("");
   useEffect(() => {
     if (!isPlatformSuperAdmin && !isGroupAdmin && adminSection === "data") setAdminSection("clinics");
@@ -248,8 +250,37 @@ export function AdminPage() {
           </div>
           <OrgHierarchyPanel scope="tenant" />
         </div>
-        <AdminCreateEmployeePanel />
-        <AdminGovernancePanel />
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={clinicAdminSection === "staff" ? "default" : "outline"}
+            onClick={() => setClinicAdminSection("staff")}
+          >
+            {t("admin.tabStaffOnboarding", "Staff onboarding")}
+          </Button>
+          {isClinicAdmin ? (
+            <Button
+              type="button"
+              size="sm"
+              variant={clinicAdminSection === "organization" ? "default" : "outline"}
+              onClick={() => setClinicAdminSection("organization")}
+            >
+              {t("admin.tabOrganization", "Organization & settings")}
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            size="sm"
+            variant={clinicAdminSection === "governance" ? "default" : "outline"}
+            onClick={() => setClinicAdminSection("governance")}
+          >
+            {t("admin.tabGovernance")}
+          </Button>
+        </div>
+        {clinicAdminSection === "staff" ? <AdminCreateEmployeePanel /> : null}
+        {clinicAdminSection === "organization" && isClinicAdmin ? <OrgRbacPanel /> : null}
+        {clinicAdminSection === "governance" ? <AdminGovernancePanel /> : null}
       </div>
     );
   }
@@ -330,7 +361,7 @@ export function AdminPage() {
             </Card>
           ) : null}
 
-          {isGroupAdmin ? <OrgRbacPanel /> : null}
+          {canManageOrgUserNavTabs ? <OrgRbacPanel /> : null}
 
           <Card>
             <CardHeader>

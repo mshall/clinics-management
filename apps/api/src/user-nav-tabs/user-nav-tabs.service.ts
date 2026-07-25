@@ -42,7 +42,8 @@ export class UserNavTabsService {
     this.assertCanManage(actor, target);
 
     const roleBase = await this.tenantRoleNav.effectiveRoleBaseForUser(tenantId, target.role);
-    const allowOrganizationTabs = actor.role === UserRole.GROUP_ADMIN;
+    const allowOrganizationTabs =
+      actor.role === UserRole.GROUP_ADMIN || actor.role === UserRole.CLINIC_ADMIN;
     const sanitized = sanitizeUserNavTabGrant(target.role, tabKeys, {
       allowOrganizationTabs,
       roleBase,

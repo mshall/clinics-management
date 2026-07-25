@@ -103,6 +103,21 @@ export function organizationNavOrderedKeys(): NavItemKey[] {
   return HOME_PRIORITY.filter((k) => org.has(k));
 }
 
+/** May open Admin → Organization RBAC (user grants; role grants only for group admin). */
+export function canManageOrgUserNavTabs(role: DemoRole | undefined): boolean {
+  return role === "group_admin" || role === "clinic_admin";
+}
+
+/** May customize tenant-wide defaults for a role (group admin only). */
+export function canCustomizeOrgRoleNavTabs(role: DemoRole | undefined): boolean {
+  return role === "group_admin";
+}
+
+/** May assign organization tabs to a user beyond their role defaults. */
+export function canExtendUserNavTabs(role: DemoRole | undefined): boolean {
+  return role === "group_admin" || role === "clinic_admin";
+}
+
 export function navKeysForRole(role: DemoRole | undefined): Set<NavItemKey> {
   if (!role) return new Set();
   return new Set(ROLE_KEYS[role] ?? FULL);
