@@ -10,6 +10,7 @@ import { randomUUID } from "crypto";
 import * as path from "path";
 import type { JwtUser } from "../auth/jwt-user";
 import { CLINIC_SCOPE_ROLES, fetchClinicScopeIds, fetchPhysicianNetworkClinicIds } from "../common/clinic-scope";
+import { assertCanGenerateInvoice } from "../common/invoice-generate-roles";
 import { resolveClinicCurrency } from "../common/clinic-currency";
 import {
   invoiceBackgroundHex,
@@ -144,6 +145,7 @@ export class InvoicesService {
   }
 
   async create(tenantId: string, dto: CreateInvoiceDto, viewer: JwtUser): Promise<InvoiceDto> {
+    assertCanGenerateInvoice(viewer.role);
     const hasEncounter = Boolean(dto.encounterId?.trim());
     const hasOperation = Boolean(dto.operationId?.trim());
     if (hasEncounter === hasOperation) {
@@ -236,6 +238,7 @@ export class InvoicesService {
     viewer: JwtUser,
     filters: { patientId?: string; encounterId?: string; operationId?: string },
   ): Promise<InvoiceListItemDto[]> {
+    assertCanGenerateInvoice(viewer.role);
     const where: Prisma.InvoiceWhereInput = { tenantId };
 
     if (filters.patientId) {
@@ -269,6 +272,7 @@ export class InvoicesService {
   }
 
   async getOne(tenantId: string, id: string, viewer: JwtUser): Promise<InvoiceDto> {
+    assertCanGenerateInvoice(viewer.role);
     const row = await this.prisma.invoice.findFirst({
       where: { id, tenantId },
       include: invoiceInclude,
@@ -306,6 +310,7 @@ export class InvoicesService {
     clinicId: string,
     viewer: JwtUser,
   ): Promise<{ storageKey: string; mimeType: string; originalFileName: string }> {
+    assertCanGenerateInvoice(viewer.role);
     await this.assertClinicInvoiceSettingsAccess(tenantId, clinicId, viewer, false);
     const row = await this.prisma.clinic.findFirst({
       where: { id: clinicId, tenantId },

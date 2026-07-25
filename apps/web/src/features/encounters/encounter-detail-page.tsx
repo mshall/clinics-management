@@ -43,6 +43,7 @@ import { useEncounterQuery, useClinicsQuery } from "@/lib/api-hooks";
 import type { EncounterDetailDto, EncounterDocumentDto } from "@/lib/api-types";
 import { ApiError, apiDelete, apiFetchBlob, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { canDeleteEncounter } from "@/lib/encounter-delete-policy";
+import { canGenerateInvoice } from "@/lib/invoice-generate-policy";
 import { formatEncounterStatus, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
 import { formatMoneyAmount, resolveClinicCurrencyCode } from "@/lib/money-display";
 import { generatePrescriptionPng } from "@/lib/prescription-image";
@@ -94,6 +95,7 @@ export function EncounterDetailPage() {
   const qc = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const canDelete = canDeleteEncounter(user?.role);
+  const canInvoice = canGenerateInvoice(user?.role);
   const { data: enc, isPending, isError, error } = useEncounterQuery(id);
   const { data: clinics = [] } = useClinicsQuery();
   const visitFeeCurrency = resolveClinicCurrencyCode(clinics, enc?.clinicId);
@@ -640,10 +642,12 @@ export function EncounterDetailPage() {
               {t("encounters.delete", "Delete")}
             </Button>
           ) : null}
-          <Button type="button" variant="outline" size="sm" onClick={() => setInvoiceDialogOpen(true)}>
-            <FileText className="me-2 h-4 w-4" />
-            {t("invoices.generateShort", "Invoice")}
-          </Button>
+          {canInvoice ? (
+            <Button type="button" variant="outline" size="sm" onClick={() => setInvoiceDialogOpen(true)}>
+              <FileText className="me-2 h-4 w-4" />
+              {t("invoices.generateShort", "Invoice")}
+            </Button>
+          ) : null}
           <Button asChild variant="outline">
             <Link to="/encounters">{t("encounters.backList")}</Link>
           </Button>
@@ -690,7 +694,11 @@ export function EncounterDetailPage() {
       </Card>
 
       {enc ? (
-        <LinkedInvoicesSection encounterId={enc.id} clinicId={enc.clinicId} />
+        <LinkedInvoicesSection
+          encounterId={enc.id}
+          clinicId={enc.clinicId}
+          onGenerate={canInvoice ? () => setInvoiceDialogOpen(true) : undefined}
+        />
       ) : null}
 
       <Card>
@@ -1207,7 +1215,7 @@ export function EncounterDetailPage() {
         />
       ) : null}
 
-      {enc ? (
+      {enc && canInvoice ? (
         <GenerateInvoiceDialog
           open={invoiceDialogOpen}
           onOpenChange={setInvoiceDialogOpen}

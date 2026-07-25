@@ -40,6 +40,7 @@ import {
 import type { OperationDetailDto, OperationDocumentDto, OperationDto } from "@/lib/api-types";
 import { ApiError, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { canAdminEditCompletedOperation } from "@/lib/operation-admin-policy";
+import { canGenerateInvoice } from "@/lib/invoice-generate-policy";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
 import { formatClinicianDisplayName } from "@/lib/employee-display";
 import { physicianToPickListItem } from "@/lib/physician-display";
@@ -103,6 +104,7 @@ export function OperationsPage() {
   const authUser = useAuthStore((s) => s.user);
   const canCreate = authUser?.role ? CREATE_ROLES.has(authUser.role) : false;
   const canAdminEditCompleted = canAdminEditCompletedOperation(authUser?.role);
+  const canInvoice = canGenerateInvoice(authUser?.role);
   const isPhysician = authUser?.role === "physician";
 
   const initialRange = useMemo(() => defaultMonthRange(), []);
@@ -292,6 +294,7 @@ export function OperationsPage() {
   const [cancelConfirmOp, setCancelConfirmOp] = useState<OperationDto | null>(null);
   const [editCompleteConfirmOpen, setEditCompleteConfirmOpen] = useState(false);
   const [editInvoiceOpen, setEditInvoiceOpen] = useState(false);
+  const [invoiceOperation, setInvoiceOperation] = useState<OperationDto | null>(null);
   const [pendingCompleteAfterSave, setPendingCompleteAfterSave] = useState(false);
   const [editOp, setEditOp] = useState<OperationDto | null>(null);
   const [editPatientId, setEditPatientId] = useState("");
@@ -332,9 +335,19 @@ export function OperationsPage() {
 
   const closeEditDialog = () => {
     setEditOp(null);
-    setEditInvoiceOpen(false);
     resetEditClinicalForm();
     setEditFormErr(null);
+  };
+
+  const closeInvoiceDialog = () => {
+    setEditInvoiceOpen(false);
+    setInvoiceOperation(null);
+  };
+
+  const openOperationInvoice = (o: OperationDto) => {
+    if (!canInvoice) return;
+    setInvoiceOperation(o);
+    setEditInvoiceOpen(true);
   };
 
   const canEditOperationForm = (o: OperationDto) =>
@@ -358,11 +371,6 @@ export function OperationsPage() {
     setEditFormErr(null);
     editPatientPickSearch.resetSearch();
     editDoctorPickSearch.resetSearch();
-  };
-
-  const openOperationInvoice = (o: OperationDto) => {
-    openEdit(o);
-    setEditInvoiceOpen(true);
   };
 
   const editIsScheduled = editOp?.status === "SCHEDULED";
@@ -1045,12 +1053,12 @@ export function OperationsPage() {
                   </p>
                 ) : null}
               </div>
-              {editOp ? (
+              {editOp && canInvoice ? (
                 <Button
                   type="button"
                   variant="outline"
                   className="w-full shrink-0 touch-manipulation sm:w-auto"
-                  onClick={() => setEditInvoiceOpen(true)}
+                  onClick={() => openOperationInvoice(editOp)}
                 >
                   <FileText className="me-2 h-4 w-4" />
                   {t("invoices.generateShort", "Invoice")}
@@ -1123,7 +1131,7 @@ export function OperationsPage() {
                     <LinkedInvoicesSection
                       operationId={editOp.id}
                       clinicId={editClinicId || editOp.clinicId}
-                      onGenerate={() => setEditInvoiceOpen(true)}
+                      onGenerate={canInvoice ? () => openOperationInvoice(editOp) : undefined}
                     />
                   </div>
                 ) : (
@@ -1292,7 +1300,7 @@ export function OperationsPage() {
                   className="lg:col-span-2"
                   operationId={editOp.id}
                   clinicId={editClinicId || editOp.clinicId}
-                  onGenerate={() => setEditInvoiceOpen(true)}
+                  onGenerate={canInvoice ? () => openOperationInvoice(editOp) : undefined}
                 />
 
                 {editIsScheduled && !editOpDetailPending ? (
@@ -1722,7 +1730,7 @@ export function OperationsPage() {
                         <p className="mt-2 text-sm font-medium ltr-nums">
                           {money(o.totalCost, o.feeCurrency ?? listCurrency)}
                         </p>
-                        {rowOpenable ? (
+                        {rowOpenable && canInvoice ? (
                           <div className="mt-3 flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
                             <Button type="button" size="sm" variant="secondary" className="flex-1" onClick={() => openEdit(o)}>
                               {canEditOperationForm(o) ? t("operations.edit", "Edit") : t("operations.view", "View")}
@@ -1880,6 +1888,17 @@ export function OperationsPage() {
                                 >
                                   {t("operations.edit", "Edit")}
                                 </Button>
+                                {canInvoice ? (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openOperationInvoice(o)}
+                                  >
+                                    <FileText className="me-1 h-3.5 w-3.5" />
+                                    {t("invoices.generateShort", "Invoice")}
+                                  </Button>
+                                ) : null}
                                 <Button
                                   type="button"
                                   size="sm"
@@ -1911,15 +1930,17 @@ export function OperationsPage() {
                                 >
                                   {rowEditable ? t("operations.edit", "Edit") : t("operations.view", "View")}
                                 </Button>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => openOperationInvoice(o)}
-                                >
-                                  <FileText className="me-1 h-3.5 w-3.5" />
-                                  {t("invoices.generateShort", "Invoice")}
-                                </Button>
+                                {canInvoice ? (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openOperationInvoice(o)}
+                                  >
+                                    <FileText className="me-1 h-3.5 w-3.5" />
+                                    {t("invoices.generateShort", "Invoice")}
+                                  </Button>
+                                ) : null}
                               </div>
                             ) : (
                               <span className="text-xs text-muted-foreground">—</span>
@@ -1945,19 +1966,25 @@ export function OperationsPage() {
         </CardContent>
       </Card>
 
-      {editOp ? (
+      {invoiceOperation && canInvoice ? (
         <GenerateInvoiceDialog
           open={editInvoiceOpen}
-          onOpenChange={setEditInvoiceOpen}
-          clinicId={editClinicId || editOp.clinicId}
-          operationId={editOp.id}
-          patientName={editOp.patientName ?? resolvePatientListLabel({
-            patientId: editOp.patientId,
-            patientMrn: editOp.patientMrn,
-            patientName: editOp.patientName,
-          }).text}
+          onOpenChange={(open) => {
+            if (!open) closeInvoiceDialog();
+            else setEditInvoiceOpen(true);
+          }}
+          clinicId={invoiceOperation.clinicId}
+          operationId={invoiceOperation.id}
+          patientName={
+            invoiceOperation.patientName ??
+            resolvePatientListLabel({
+              patientId: invoiceOperation.patientId,
+              patientMrn: invoiceOperation.patientMrn,
+              patientName: invoiceOperation.patientName,
+            }).text
+          }
           defaultPurpose={t("operations.procedureFee", "Procedure fee")}
-          defaultAmount={editOp.paidAmount > 0 ? editOp.paidAmount : editOp.totalCost}
+          defaultAmount={invoiceOperation.paidAmount > 0 ? invoiceOperation.paidAmount : invoiceOperation.totalCost}
         />
       ) : null}
     </div>
