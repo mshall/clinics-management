@@ -19,6 +19,7 @@ import { assertOrgClinicalDeleteRole } from "../common/org-clinical-delete-roles
 import { resolveLedgerListingRange } from "../common/reporting-range";
 import { paginate, parsePageParams } from "../common/pagination";
 import type { JwtUser } from "../auth/jwt-user";
+import { assertActiveSchedulingPhysician } from "../common/active-scheduling-physician";
 import { CLINIC_SCOPE_ROLES, fetchPhysicianNetworkClinicIds } from "../common/clinic-scope";
 import { isBaseCurrency } from "../common/base-currencies";
 import { resolveClinicCurrency } from "../common/clinic-currency";
@@ -280,10 +281,7 @@ export class EncountersService {
         raw = apt?.clinicianId ?? null;
       }
       if (!raw) throw new BadRequestException("clinicianId is required (or link a booked appointment to infer the physician)");
-      const doc = await this.prisma.user.findFirst({
-        where: { id: raw, tenantId, role: UserRole.PHYSICIAN },
-      });
-      if (!doc) throw new BadRequestException("clinicianId must be a physician in this organization");
+      await assertActiveSchedulingPhysician(this.prisma, tenantId, raw);
       clinicianId = raw;
     }
 

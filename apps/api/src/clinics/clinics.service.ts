@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { ClinicRecordStatus, EmploymentType, Prisma, UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
+import { activeSchedulingPhysicianAndClauses } from "../common/active-scheduling-physician";
 import { CLINIC_SCOPE_ROLES, fetchClinicScopeIds, fetchPhysicianNetworkClinicIds } from "../common/clinic-scope";
 import { PrismaService } from "../prisma/prisma.service";
 import type { CreateClinicDto } from "./dto/create-clinic.dto";
@@ -428,12 +429,10 @@ export class ClinicsService {
     const userWhere: Prisma.UserWhereInput = {
       tenantId,
       role: UserRole.PHYSICIAN,
+      deletedAt: null,
+      deactivatedAt: null,
       ...(searchOr ? { OR: searchOr } : {}),
-      ...(scopeIds !== null
-        ? {
-            OR: [{ employee: { is: null } }, { employee: { is: { clinicId: { in: scopeIds } } } }],
-          }
-        : {}),
+      AND: activeSchedulingPhysicianAndClauses(scopeIds),
     };
 
     const users = await this.prisma.user.findMany({

@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { AppointmentStatus, EncounterStatus, Prisma, UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
+import { findActiveSchedulingPhysician } from "../common/active-scheduling-physician";
 import { CLINIC_SCOPE_ROLES, fetchPhysicianNetworkClinicIds } from "../common/clinic-scope";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { assertOrgClinicalDeleteRole } from "../common/org-clinical-delete-roles";
@@ -274,7 +275,7 @@ export class AppointmentsService {
     const [clinic, patient, clinician] = await Promise.all([
       this.prisma.clinic.findFirst({ where: { id: dto.clinicId, tenantId } }),
       this.prisma.patient.findFirst({ where: { id: dto.patientId, tenantId, deletedAt: null } }),
-      this.prisma.user.findFirst({ where: { id: dto.clinicianId, tenantId } }),
+      findActiveSchedulingPhysician(this.prisma, tenantId, dto.clinicianId),
     ]);
     if (!clinic || !patient || !clinician) throw new BadRequestException("Invalid clinic, patient, or clinician");
     const start = new Date(dto.startsAt);
@@ -361,7 +362,7 @@ export class AppointmentsService {
       const [clinic, patient, clinician] = await Promise.all([
         this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId } }),
         this.prisma.patient.findFirst({ where: { id: patientId, tenantId, deletedAt: null } }),
-        this.prisma.user.findFirst({ where: { id: clinicianId, tenantId } }),
+        findActiveSchedulingPhysician(this.prisma, tenantId, clinicianId),
       ]);
       if (!clinic || !patient || !clinician) throw new BadRequestException("Invalid clinic, patient, or clinician");
     }
