@@ -38,6 +38,8 @@ interface SearchablePickListProps {
   className?: string;
   /** Show invalid styling (red border) for required-field feedback */
   invalid?: boolean;
+  /** Keep a text input visible (editable combobox) instead of a read-only closed button. */
+  alwaysEditable?: boolean;
 }
 
 const DEFAULT_PREVIEW_COUNT = 4;
@@ -122,6 +124,7 @@ export function SearchablePickList({
   selectedItem,
   className,
   invalid,
+  alwaysEditable = false,
 }: SearchablePickListProps) {
   const uid = useId();
   const listboxId = `${uid}-listbox`;
@@ -191,10 +194,14 @@ export function SearchablePickList({
       }
       onValueChange(next, resolved ?? undefined);
       setQ("");
-      onSearchQueryChange?.("");
+      if (alwaysEditable && resolved) {
+        onSearchQueryChange?.(resolved.label);
+      } else {
+        onSearchQueryChange?.("");
+      }
       setOpen(false);
     },
-    [items, onValueChange, onSearchQueryChange, selectedItem],
+    [alwaysEditable, items, onValueChange, onSearchQueryChange, selectedItem],
   );
 
   const handlePick = useCallback(
@@ -213,18 +220,51 @@ export function SearchablePickList({
   const closeWithoutPick = useCallback(() => {
     if (pickingRef.current || Date.now() < pickingUntilRef.current) return;
     setOpen(false);
-    setQ("");
-    onSearchQueryChange?.("");
-  }, [onSearchQueryChange]);
+    if (alwaysEditable) {
+      if (displayText) {
+        setQ("");
+        onSearchQueryChange?.(displayText);
+      } else if (q.trim()) {
+        onSearchQueryChange?.(q);
+      }
+    } else {
+      setQ("");
+      onSearchQueryChange?.("");
+    }
+  }, [alwaysEditable, displayText, onSearchQueryChange, q]);
 
   const openPicker = useCallback(() => {
     if (disabled) return;
     setOpen(true);
-    setQ("");
-    onSearchQueryChange?.("");
+    const seed = displayText ?? q;
+    setQ(seed);
+    onSearchQueryChange?.(seed);
     onOpen?.();
     scheduleMobileFocus(inputRef.current);
-  }, [disabled, onOpen, onSearchQueryChange]);
+  }, [disabled, displayText, onOpen, onSearchQueryChange, q]);
+
+  const handleInputChange = useCallback(
+    (next: string) => {
+      setQ(next);
+      setOpen(true);
+      onSearchQueryChange?.(next);
+      if (value && displayText && next.trim() !== displayText.trim()) {
+        onValueChange("", undefined);
+        committedLabelRef.current = null;
+        setPinnedItem(null);
+      }
+    },
+    [displayText, onSearchQueryChange, onValueChange, value],
+  );
+
+  const handleInputBlur = useCallback(() => {
+    window.setTimeout(() => {
+      if (pickingRef.current || Date.now() < pickingUntilRef.current) return;
+      closeWithoutPick();
+    }, 180);
+  }, [closeWithoutPick]);
+
+  const inputValue = open ? q : q || displayText || "";
 
   useEffect(() => {
     if (!open) return;
@@ -316,9 +356,56 @@ export function SearchablePickList({
     </div>
   );
 
+  const editableField = (
+    <div ref={anchorRef} className="relative">
+      <Input
+        ref={inputRef}
+        id={inputId}
+        type="text"
+        dir="auto"
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck={false}
+        enterKeyHint="search"
+        inputMode="search"
+        className={cn(
+          "h-11 touch-manipulation pe-9",
+          invalid && "border-destructive ring-1 ring-destructive",
+        )}
+        placeholder={open ? searchPlaceholder : placeholder}
+        value={inputValue}
+        disabled={disabled}
+        onFocus={() => openPicker()}
+        onClick={() => {
+          if (!open) openPicker();
+        }}
+        onChange={(e) => handleInputChange(e.target.value)}
+        onBlur={handleInputBlur}
+        aria-autocomplete="list"
+        aria-controls={listboxId}
+        role="combobox"
+        aria-expanded={open}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            e.stopPropagation();
+            closeWithoutPick();
+          }
+        }}
+      />
+      <ChevronDown
+        className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 shrink-0 opacity-50"
+        aria-hidden
+      />
+      {open && panelStyle ? createPortal(listPanel, document.body) : null}
+    </div>
+  );
+
   return (
     <div ref={rootRef} data-pick-list-root className={cn("relative", className)}>
-      {!open ? (
+      {alwaysEditable ? (
+        editableField
+      ) : !open ? (
         <button
           type="button"
           disabled={disabled}
@@ -338,48 +425,7 @@ export function SearchablePickList({
           <ChevronDown className="size-4 shrink-0 opacity-50" aria-hidden />
         </button>
       ) : (
-        <div ref={anchorRef} className="relative">
-          <Input
-            ref={inputRef}
-            id={inputId}
-            type="text"
-            dir="auto"
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-            spellCheck={false}
-            enterKeyHint="search"
-            inputMode="search"
-            className={cn(
-              "h-11 touch-manipulation pe-9",
-              invalid && "border-destructive ring-1 ring-destructive",
-            )}
-            placeholder={searchPlaceholder}
-            value={q}
-            disabled={disabled}
-            autoFocus
-            onChange={(e) => {
-              const v = e.target.value;
-              setQ(v);
-              onSearchQueryChange?.(v);
-            }}
-            aria-autocomplete="list"
-            aria-controls={listboxId}
-            role="combobox"
-            aria-expanded
-            onKeyDown={(e) => {
-              if (e.key === "Escape") {
-                e.stopPropagation();
-                closeWithoutPick();
-              }
-            }}
-          />
-          <ChevronDown
-            className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 shrink-0 opacity-50"
-            aria-hidden
-          />
-          {panelStyle ? createPortal(listPanel, document.body) : null}
-        </div>
+        editableField
       )}
     </div>
   );

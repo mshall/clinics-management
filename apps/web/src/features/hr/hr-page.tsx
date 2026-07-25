@@ -49,7 +49,7 @@ import {
   localeForLanguage,
 } from "@/lib/locale-display";
 import { employeeToPickListItem, formatEmployeeName, splitDisplayName } from "@/lib/employee-display";
-import { resolvePickListSelectedItem, useDebouncedPickListSearch } from "@/lib/pick-list-utils";
+import { resolveClinicIdFromQuery, resolvePickListSelectedItem, useDebouncedPickListSearch } from "@/lib/pick-list-utils";
 import {
   defaultEmployeeLoginPassword,
   suggestEmployeeLoginEmail,
@@ -59,6 +59,7 @@ import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog"
 import {
   collectAttendanceCreateIssues,
   collectEmployeeCreateIssues,
+  collectHrProvisionClinicScopeIssues,
   collectLeaveCreateIssues,
 } from "@/lib/create-form-validation";
 
@@ -211,6 +212,7 @@ export function HrPage() {
   const [employeeToDeactivate, setEmployeeToDeactivate] = useState<EmployeeDeleteTarget | null>(null);
   const [employeeToReactivate, setEmployeeToReactivate] = useState<EmployeeDto | null>(null);
   const [empClinic, setEmpClinic] = useState("");
+  const [empClinicQuery, setEmpClinicQuery] = useState("");
   const [empAssignedClinicIds, setEmpAssignedClinicIds] = useState<string[]>([]);
   const [empLoginEmail, setEmpLoginEmail] = useState("");
   const [empLoginPassword, setEmpLoginPassword] = useState(() => defaultEmployeeLoginPassword());
@@ -256,6 +258,29 @@ export function HrPage() {
     () => clinicItems.filter((c) => assignableClinicIds.includes(c.value)),
     [clinicItems, assignableClinicIds],
   );
+  const resolvedProvisionClinicId = useMemo(() => {
+    if (!provisionLogin) return "";
+    if (empClinic && provisionClinicItems.some((c) => c.value === empClinic)) return empClinic;
+    return resolveClinicIdFromQuery(empClinicQuery, provisionClinicItems);
+  }, [provisionLogin, empClinic, empClinicQuery, provisionClinicItems]);
+  const provisionClinicScopeError = useMemo(() => {
+    if (!provisionLogin || provisionClinicItems.length === 0) return null;
+    const query = empClinicQuery.trim();
+    if (!query && !empClinic) return null;
+    if (resolvedProvisionClinicId) return null;
+    const issues = collectHrProvisionClinicScopeIssues(
+      { clinicId: empClinic, clinicQuery: empClinicQuery, assignableItems: provisionClinicItems },
+      t,
+    );
+    return issues[0] ?? null;
+  }, [
+    provisionLogin,
+    provisionClinicItems,
+    empClinicQuery,
+    empClinic,
+    resolvedProvisionClinicId,
+    t,
+  ]);
   const empTypeItems: PickListItem[] = useMemo(
     () => EMP_TYPE_VALUES.map((value) => ({ value, label: formatEmploymentType(value, t) })),
     [t],
@@ -278,7 +303,7 @@ export function HrPage() {
     !provisionLogin && Boolean(empLinkedUserRole) && !isOrgWideUserRole(empLinkedUserRole) && clinics.length > 0;
   const requiresClinicAssignment = isClinicRequiredUserRole(empLinkedUserRole);
   const primaryClinicForCreate = provisionLogin
-    ? empClinic || hrManageContext.data?.clinicId || ""
+    ? resolvedProvisionClinicId || hrManageContext.data?.clinicId || ""
     : showClinicAssignment
       ? (empAssignedClinicIds[0] ?? "")
       : empClinic;
@@ -296,10 +321,11 @@ export function HrPage() {
     setEmpClinic(defaultClinicId);
     const defaultItem = provisionClinicItems.find((c) => c.value === defaultClinicId) ?? null;
     setPinnedEmpClinicItem(defaultItem);
+    setEmpClinicQuery(defaultItem?.label ?? "");
     setLoginEmailTouched(false);
     setEmpLoginPassword(defaultEmployeeLoginPassword());
     setEmpLoginEmail(suggestEmployeeLoginEmail("", "", provisionClinicNameEn || defaultItem?.label || ""));
-  }, [createEmpOpen, provisionLogin, hrManageContext.data?.clinicId, hrManageContext.data?.assignableClinicIds]);
+  }, [createEmpOpen, provisionLogin, hrManageContext.data?.clinicId, hrManageContext.data?.assignableClinicIds, provisionClinicItems]);
 
   useEffect(() => {
     if (!createEmpOpen || !provisionLogin || loginEmailTouched) return;
@@ -430,6 +456,7 @@ export function HrPage() {
       setEmpEmail("");
       setEmpPhone("");
       setEmpClinic("");
+      setEmpClinicQuery("");
       setEmpAssignedClinicIds([]);
       setEmpLinkedUserId("");
       setEmpLinkedUserRole("");
@@ -540,24 +567,33 @@ export function HrPage() {
     iso ? new Date(iso).toLocaleString() : t("hr.notApplicable", "—");
 
   const handleCreateEmployee = () => {
-    const issues = collectEmployeeCreateIssues(
-      {
-        userId: empLinkedUserId,
-        linkedUserRole: provisionLogin ? empLoginRole : empLinkedUserRole,
-        clinicId: primaryClinicForCreate,
-        assignedClinicIds: empAssignedClinicIds,
-        firstName: empFn,
-        lastName: empLn,
-        phone: empPhone,
-        salary: empSalary,
-        provisionLogin,
-        loginEmail: empLoginEmail,
-        loginPassword: empLoginPassword,
-        loginRole: empLoginRole,
-        requireLinkedUser: !provisionLogin,
-      },
-      t,
-    );
+    const scopeIssues = provisionLogin
+      ? collectHrProvisionClinicScopeIssues(
+          { clinicId: empClinic, clinicQuery: empClinicQuery, assignableItems: provisionClinicItems },
+          t,
+        )
+      : [];
+    const issues = [
+      ...scopeIssues,
+      ...collectEmployeeCreateIssues(
+        {
+          userId: empLinkedUserId,
+          linkedUserRole: provisionLogin ? empLoginRole : empLinkedUserRole,
+          clinicId: primaryClinicForCreate,
+          assignedClinicIds: empAssignedClinicIds,
+          firstName: empFn,
+          lastName: empLn,
+          phone: empPhone,
+          salary: empSalary,
+          provisionLogin,
+          loginEmail: empLoginEmail,
+          loginPassword: empLoginPassword,
+          loginRole: empLoginRole,
+          requireLinkedUser: !provisionLogin,
+        },
+        t,
+      ),
+    ];
     if (issues.length > 0) {
       empValidation.showIssues(issues);
       return;
@@ -775,17 +811,25 @@ export function HrPage() {
                               items={provisionClinicItems}
                               value={empClinic}
                               selectedItem={empClinicSelectedItem}
-                              onValueChange={(id) => {
+                              alwaysEditable
+                              invalid={Boolean(provisionClinicScopeError)}
+                              onValueChange={(id, item) => {
                                 setEmpClinic(id);
-                                const item = provisionClinicItems.find((c) => c.value === id);
-                                if (item) setPinnedEmpClinicItem(item);
+                                if (item) {
+                                  setPinnedEmpClinicItem(item);
+                                  setEmpClinicQuery(item.label);
+                                }
                               }}
+                              onSearchQueryChange={setEmpClinicQuery}
                               searchPlaceholder={t("appointments.filterClinic", "Type clinic name…")}
                               placeholder={t("hr.pickClinic", "Select clinic…")}
                               emptyMessage={t("admin.rbacNoUsersMatch", "No matches.")}
                               localFilter
                             />
                           )}
+                          {provisionClinicScopeError ? (
+                            <p className="text-sm text-destructive">{provisionClinicScopeError}</p>
+                          ) : null}
                         </div>
                         <div className="space-y-2">
                           <Label required>{t("patients.firstNameEn")}</Label>

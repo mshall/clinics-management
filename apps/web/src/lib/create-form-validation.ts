@@ -1,4 +1,6 @@
 import type { TFunction } from "i18next";
+import type { PickListItem } from "@/components/searchable-pick-list";
+import { resolveClinicIdFromQuery } from "@/lib/pick-list-utils";
 import { isOrgWideUserRole } from "@/features/platform/platform-shared";
 import { HR_LOGIN_PASSWORD_MIN_LENGTH } from "@/lib/employee-login-suggest";
 import {
@@ -136,6 +138,48 @@ export function collectEmployeeCreateIssues(
     issues.push(t("hr.errorSalaryInvalid", "Enter a valid salary amount."));
   }
   return issues;
+}
+
+/** HR officer provisioning: clinic must match assignable scope (typed name or pick-list selection). */
+export function collectHrProvisionClinicScopeIssues(
+  input: {
+    clinicId: string;
+    clinicQuery: string;
+    assignableItems: PickListItem[];
+  },
+  t: TFunction,
+): string[] {
+  if (input.assignableItems.length === 0) {
+    return [
+      t(
+        "hr.noAssignableClinics",
+        "No clinics are assigned to your HR account yet. Ask a group administrator to grant clinic HR access.",
+      ),
+    ];
+  }
+  const resolved =
+    (input.clinicId.trim() && input.assignableItems.some((i) => i.value === input.clinicId.trim())
+      ? input.clinicId.trim()
+      : "") || resolveClinicIdFromQuery(input.clinicQuery, input.assignableItems);
+  if (resolved) return [];
+
+  const names = input.assignableItems.map((i) => i.label).join(", ");
+  if (input.assignableItems.length === 1) {
+    return [
+      t(
+        "hr.errorClinicNotInScopeSingle",
+        "You are assigned to {{clinic}} only and do not have permission to assign employees to other clinics.",
+        { clinic: names },
+      ),
+    ];
+  }
+  return [
+    t(
+      "hr.errorClinicNotInScopeMulti",
+      "You can only assign employees to your assigned clinics: {{clinics}}.",
+      { clinics: names },
+    ),
+  ];
 }
 
 export function collectAttendanceCreateIssues(input: { employeeId: string }, t: TFunction): string[] {

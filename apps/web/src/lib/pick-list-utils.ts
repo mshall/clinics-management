@@ -28,6 +28,19 @@ export function filterPickListItems(items: PickListItem[], query: string): PickL
   );
 }
 
+/** Match a typed clinic name to an assignable pick-list row (exact label, then single partial). */
+export function resolveClinicIdFromQuery(query: string, items: PickListItem[]): string {
+  const q = query.trim().toLowerCase();
+  if (!q) return "";
+  const exact = items.find((i) => i.label.toLowerCase() === q);
+  if (exact) return exact.value;
+  const partial = items.filter(
+    (i) => i.label.toLowerCase().includes(q) || q.includes(i.label.toLowerCase()),
+  );
+  if (partial.length === 1) return partial[0]!.value;
+  return "";
+}
+
 const PICK_LIST_SEARCH_DEBOUNCE_MS = 120;
 
 /** Debounced search state for server-driven SearchablePickList parents. */
