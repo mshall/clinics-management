@@ -45,7 +45,7 @@ import { formatClinicianDisplayName } from "@/lib/employee-display";
 import { physicianToPickListItem } from "@/lib/physician-display";
 import { formatClinicName, localeForLanguage } from "@/lib/locale-display";
 import { formatMoneyAmount, resolveClinicCurrencyCode } from "@/lib/money-display";
-import { columnFilterIncludes } from "@/lib/utils";
+import { columnFilterIncludes, cn } from "@/lib/utils";
 import { useDebouncedPickListSearch } from "@/lib/pick-list-utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { defaultMonthRange } from "@/stores/date-range-store";
@@ -332,12 +332,15 @@ export function OperationsPage() {
 
   const closeEditDialog = () => {
     setEditOp(null);
+    setEditInvoiceOpen(false);
     resetEditClinicalForm();
     setEditFormErr(null);
   };
 
-  const canEditOperation = (o: OperationDto) =>
+  const canEditOperationForm = (o: OperationDto) =>
     o.status === "SCHEDULED" || (o.status === "COMPLETED" && canAdminEditCompleted);
+
+  const canOpenOperation = (o: OperationDto) => o.status === "SCHEDULED" || o.status === "COMPLETED";
 
   const openEdit = (o: OperationDto) => {
     resetEditClinicalForm();
@@ -357,7 +360,13 @@ export function OperationsPage() {
     editDoctorPickSearch.resetSearch();
   };
 
+  const openOperationInvoice = (o: OperationDto) => {
+    openEdit(o);
+    setEditInvoiceOpen(true);
+  };
+
   const editIsScheduled = editOp?.status === "SCHEDULED";
+  const editFormLocked = editOp != null && !canEditOperationForm(editOp);
   const { data: editOpDetail, isPending: editOpDetailPending } = useOperationQuery(
     editIsScheduled ? editOp?.id : undefined,
   );
@@ -1010,27 +1019,114 @@ export function OperationsPage() {
 
       <Dialog open={editOp != null} onOpenChange={(open) => !open && closeEditDialog()}>
         <DialogContent
-          className="flex w-[min(100%-2rem,70vw)] max-h-[min(88dvh,44rem)] flex-col gap-0 overflow-hidden p-0 sm:rounded-lg"
+          className="fixed inset-x-3 bottom-3 top-auto flex max-h-[min(92dvh,44rem)] w-auto max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden p-0 sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-[min(100%-2rem,70vw)] sm:max-w-none sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg"
           aria-describedby={undefined}
         >
-          <DialogHeader className="shrink-0 space-y-1 border-b border-border px-4 py-4 pe-14 sm:px-6">
-            <DialogTitle>
-              {editOp?.status === "COMPLETED"
-                ? t("operations.editCompletedTitle", "Edit completed operation")
-                : t("operations.editTitle", "Edit operation")}
-            </DialogTitle>
-            {editOp?.status === "COMPLETED" ? (
-              <p className="text-sm font-normal text-muted-foreground">
-                {t(
-                  "operations.editCompletedHint",
-                  "Administrator correction — you can update details and re-assign the performing doctor. Linked revenue is updated automatically.",
-                )}
-              </p>
-            ) : null}
+          <DialogHeader className="shrink-0 space-y-3 border-b border-border px-4 py-4 pe-14 sm:px-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0 space-y-1 text-start">
+                <DialogTitle>
+                  {editFormLocked
+                    ? t("operations.viewTitle", "Operation details")
+                    : editOp?.status === "COMPLETED"
+                      ? t("operations.editCompletedTitle", "Edit completed operation")
+                      : t("operations.editTitle", "Edit operation")}
+                </DialogTitle>
+                {editFormLocked ? (
+                  <p className="text-sm font-normal text-muted-foreground">
+                    {t("operations.viewHint", "Review details and generate invoices for this operation.")}
+                  </p>
+                ) : editOp?.status === "COMPLETED" ? (
+                  <p className="text-sm font-normal text-muted-foreground">
+                    {t(
+                      "operations.editCompletedHint",
+                      "Administrator correction — you can update details and re-assign the performing doctor. Linked revenue is updated automatically.",
+                    )}
+                  </p>
+                ) : null}
+              </div>
+              {editOp ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full shrink-0 touch-manipulation sm:w-auto"
+                  onClick={() => setEditInvoiceOpen(true)}
+                >
+                  <FileText className="me-2 h-4 w-4" />
+                  {t("invoices.generateShort", "Invoice")}
+                </Button>
+              ) : null}
+            </div>
           </DialogHeader>
           {editOp ? (
             <>
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
+                {editFormLocked ? (
+                  <div className="space-y-4">
+                    <div className="rounded-lg border border-border bg-muted/20 p-4 text-sm">
+                      <dl className="grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <dt className="text-xs text-muted-foreground">{t("operations.operationDate", "Operation date")}</dt>
+                          <dd className="font-medium ltr-nums">
+                            {new Date(editOp.operationDate).toLocaleString(localeForLanguage(i18n.language))}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs text-muted-foreground">{t("operations.status", "Status")}</dt>
+                          <dd>
+                            <OperationStatusBadge status={editOp.status ?? "SCHEDULED"} />
+                          </dd>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <dt className="text-xs text-muted-foreground">{t("operations.patient", "Patient")}</dt>
+                          <dd className="font-medium">
+                            {resolvePatientListLabel({
+                              patientId: editOp.patientId,
+                              patientMrn: editOp.patientMrn,
+                              patientName: editOp.patientName,
+                              registryLabel: patientLabel.get(editOp.patientId),
+                            }).text}
+                          </dd>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <dt className="text-xs text-muted-foreground">{t("operations.doctor", "Performing doctor")}</dt>
+                          <dd className="font-medium">{formatClinicianDisplayName(editOp, i18n.language)}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs text-muted-foreground">
+                            {t("operations.totalCost", "Total cost ({{currency}})", {
+                              currency: editOp.feeCurrency ?? editFeeCurrency,
+                            })}
+                          </dt>
+                          <dd className="font-medium ltr-nums">
+                            {money(editOp.totalCost, editOp.feeCurrency ?? editFeeCurrency)}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs text-muted-foreground">
+                            {t("operations.balanceDue", "Balance ({{currency}})", {
+                              currency: editOp.feeCurrency ?? editFeeCurrency,
+                            })}
+                          </dt>
+                          <dd className="font-medium ltr-nums">
+                            {money(editOp.balanceDue ?? editOp.totalCost - (editOp.paidAmount ?? 0), editOp.feeCurrency ?? editFeeCurrency)}
+                          </dd>
+                        </div>
+                        {editOp.comments?.trim() ? (
+                          <div className="sm:col-span-2">
+                            <dt className="text-xs text-muted-foreground">{t("operations.comments", "Comments")}</dt>
+                            <dd className="whitespace-pre-wrap">{editOp.comments}</dd>
+                          </div>
+                        ) : null}
+                      </dl>
+                    </div>
+                    <LinkedInvoicesSection
+                      operationId={editOp.id}
+                      clinicId={editClinicId || editOp.clinicId}
+                      onGenerate={() => setEditInvoiceOpen(true)}
+                    />
+                  </div>
+                ) : (
                 <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
                 {editIsScheduled && editOpDetailPending ? (
                   <p className="text-sm text-muted-foreground lg:col-span-2">{t("common.loading", "Loading…")}</p>
@@ -1196,6 +1292,7 @@ export function OperationsPage() {
                   className="lg:col-span-2"
                   operationId={editOp.id}
                   clinicId={editClinicId || editOp.clinicId}
+                  onGenerate={() => setEditInvoiceOpen(true)}
                 />
 
                 {editIsScheduled && !editOpDetailPending ? (
@@ -1248,33 +1345,35 @@ export function OperationsPage() {
 
                 {editFormErr ? <p className="text-sm text-destructive lg:col-span-2">{editFormErr}</p> : null}
                 </div>
+                )}
               </div>
-              <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6">
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="outline" onClick={() => setEditInvoiceOpen(true)}>
-                    <FileText className="me-2 h-4 w-4" />
-                    {t("invoices.generateShort", "Invoice")}
-                  </Button>
-                  {editIsScheduled ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="text-destructive hover:text-destructive"
-                      disabled={editMut.isPending || statusMut.isPending}
-                      onClick={() => editOp && setCancelConfirmOp(editOp)}
-                    >
-                      {t("operations.markCancelled", "Cancel operation")}
-                    </Button>
-                  ) : null}
-                </div>
-                <div className="flex flex-wrap justify-end gap-2">
-                <Button type="button" variant="outline" onClick={closeEditDialog} disabled={editMut.isPending}>
-                  {t("common.cancel", "Cancel")}
+              <div className="flex shrink-0 flex-col gap-3 border-t border-border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                {!editFormLocked ? (
+                  <div className="flex flex-wrap gap-2">
+                    {editIsScheduled ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive"
+                        disabled={editMut.isPending || statusMut.isPending}
+                        onClick={() => editOp && setCancelConfirmOp(editOp)}
+                      >
+                        {t("operations.markCancelled", "Cancel operation")}
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div />
+                )}
+                <div className="flex flex-wrap gap-2 sm:justify-end">
+                <Button type="button" variant="outline" className="flex-1 touch-manipulation sm:flex-none" onClick={closeEditDialog} disabled={editMut.isPending}>
+                  {editFormLocked ? t("common.close", "Close") : t("common.cancel", "Cancel")}
                 </Button>
-                {editIsScheduled ? (
+                {!editFormLocked && editIsScheduled ? (
                   <Button
                     type="button"
                     variant="secondary"
+                    className="flex-1 touch-manipulation sm:flex-none"
                     disabled={
                       editMut.isPending ||
                       editOpDetailPending ||
@@ -1289,8 +1388,10 @@ export function OperationsPage() {
                     {t("operations.markCompleted", "Mark completed")}
                   </Button>
                 ) : null}
+                {!editFormLocked ? (
                 <Button
                   type="button"
+                  className="flex-1 touch-manipulation sm:flex-none"
                   disabled={
                     editMut.isPending ||
                     (editIsScheduled && editOpDetailPending) ||
@@ -1304,6 +1405,7 @@ export function OperationsPage() {
                 >
                   {t("operations.saveChanges", "Save changes")}
                 </Button>
+                ) : null}
                 </div>
               </div>
             </>
@@ -1570,7 +1672,79 @@ export function OperationsPage() {
             <p className="text-sm text-destructive">{error instanceof Error ? error.message : String(error)}</p>
           ) : (
             <>
-              <ResponsiveTable>
+              <div className="space-y-3 sm:hidden">
+                {filteredRows.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    {t("operations.empty", "No operations in this period.")}
+                  </p>
+                ) : (
+                  filteredRows.map((o) => {
+                    const clinic = clinicById.get(o.clinicId);
+                    const clinicLabel = clinic
+                      ? formatClinicName({ nameEn: clinic.en, nameAr: clinic.ar }, i18n.language)
+                      : null;
+                    const patientResolved = resolvePatientListLabel({
+                      patientId: o.patientId,
+                      patientMrn: o.patientMrn,
+                      patientName: o.patientName,
+                      registryLabel: patientLabel.get(o.patientId),
+                    });
+                    const rowOpenable = canOpenOperation(o);
+                    return (
+                      <div
+                        key={o.id}
+                        className={cn(
+                          "rounded-lg border bg-card p-3",
+                          rowOpenable && "cursor-pointer touch-manipulation active:bg-muted/40",
+                        )}
+                        role={rowOpenable ? "button" : undefined}
+                        tabIndex={rowOpenable ? 0 : undefined}
+                        onClick={() => {
+                          if (rowOpenable) openEdit(o);
+                        }}
+                        onKeyDown={(e) => {
+                          if (!rowOpenable) return;
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            openEdit(o);
+                          }
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-medium ltr-nums">{new Date(o.operationDate).toLocaleString(loc)}</p>
+                            {clinicLabel ? <p className="text-xs text-muted-foreground">{clinicLabel}</p> : null}
+                          </div>
+                          <OperationStatusBadge status={o.status ?? "SCHEDULED"} />
+                        </div>
+                        <p className="mt-2 truncate text-sm">{patientResolved.text}</p>
+                        <p className="truncate text-xs text-muted-foreground">{formatClinicianDisplayName(o, i18n.language)}</p>
+                        <p className="mt-2 text-sm font-medium ltr-nums">
+                          {money(o.totalCost, o.feeCurrency ?? listCurrency)}
+                        </p>
+                        {rowOpenable ? (
+                          <div className="mt-3 flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
+                            <Button type="button" size="sm" variant="secondary" className="flex-1" onClick={() => openEdit(o)}>
+                              {canEditOperationForm(o) ? t("operations.edit", "Edit") : t("operations.view", "View")}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="flex-1"
+                              onClick={() => openOperationInvoice(o)}
+                            >
+                              <FileText className="me-1 h-3.5 w-3.5" />
+                              {t("invoices.generateShort", "Invoice")}
+                            </Button>
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+              <ResponsiveTable className="hidden sm:block">
               <table className="w-full min-w-[720px] text-sm">
                 <thead>
                   <tr className="border-b text-muted-foreground">
@@ -1647,18 +1821,19 @@ export function OperationsPage() {
                         patientName: o.patientName,
                         registryLabel: patientLabel.get(o.patientId),
                       });
-                      const rowEditable = canEditOperation(o);
+                      const rowOpenable = canOpenOperation(o);
+                      const rowEditable = canEditOperationForm(o);
                       return (
                         <tr
                           key={o.id}
-                          className={`border-b last:border-0 ${rowEditable ? "cursor-pointer hover:bg-muted/50" : ""}`}
-                          role={rowEditable ? "button" : undefined}
-                          tabIndex={rowEditable ? 0 : undefined}
+                          className={`border-b last:border-0 ${rowOpenable ? "cursor-pointer hover:bg-muted/50" : ""}`}
+                          role={rowOpenable ? "button" : undefined}
+                          tabIndex={rowOpenable ? 0 : undefined}
                           onClick={() => {
-                            if (rowEditable) openEdit(o);
+                            if (rowOpenable) openEdit(o);
                           }}
                           onKeyDown={(e) => {
-                            if (!rowEditable) return;
+                            if (!rowOpenable) return;
                             if (e.key === "Enter" || e.key === " ") {
                               e.preventDefault();
                               openEdit(o);
@@ -1725,16 +1900,27 @@ export function OperationsPage() {
                                   {t("operations.markCancelled", "Cancel")}
                                 </Button>
                               </div>
-                            ) : o.status === "COMPLETED" && canAdminEditCompleted ? (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="secondary"
-                                disabled={statusMut.isPending || editMut.isPending}
-                                onClick={() => openEdit(o)}
-                              >
-                                {t("operations.edit", "Edit")}
-                              </Button>
+                            ) : o.status === "COMPLETED" && rowOpenable ? (
+                              <div className="flex flex-wrap justify-end gap-1">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="secondary"
+                                  disabled={statusMut.isPending || editMut.isPending}
+                                  onClick={() => openEdit(o)}
+                                >
+                                  {rowEditable ? t("operations.edit", "Edit") : t("operations.view", "View")}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openOperationInvoice(o)}
+                                >
+                                  <FileText className="me-1 h-3.5 w-3.5" />
+                                  {t("invoices.generateShort", "Invoice")}
+                                </Button>
+                              </div>
                             ) : (
                               <span className="text-xs text-muted-foreground">—</span>
                             )}

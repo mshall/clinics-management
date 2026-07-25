@@ -17,6 +17,7 @@ type LinkedInvoicesSectionProps = {
   operationId?: string;
   clinicId?: string | null;
   className?: string;
+  onGenerate?: () => void;
 };
 
 export function LinkedInvoicesSection({
@@ -24,6 +25,7 @@ export function LinkedInvoicesSection({
   operationId,
   clinicId,
   className,
+  onGenerate,
 }: LinkedInvoicesSectionProps) {
   const { t, i18n } = useTranslation();
   const enabled = Boolean(encounterId || operationId);
@@ -51,10 +53,18 @@ export function LinkedInvoicesSection({
     <>
       <Card className={cn(className)}>
         <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <FileText className="h-4 w-4" />
-            {t("invoices.title", "Invoices")}
-          </CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <FileText className="h-4 w-4" />
+              {t("invoices.title", "Invoices")}
+            </CardTitle>
+            {onGenerate ? (
+              <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={onGenerate}>
+                <FileText className="me-2 h-4 w-4" />
+                {t("invoices.generateShort", "Invoice")}
+              </Button>
+            ) : null}
+          </div>
         </CardHeader>
         <CardContent className="text-sm">
           {isPending ? (
