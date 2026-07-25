@@ -2,11 +2,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { AppointmentDeleteConfirmDialog, type AppointmentDeleteTarget } from "@/features/appointments/appointment-delete-confirm-dialog";
+import { AppointmentsCalendarPanel } from "@/features/appointments/appointments-calendar-panel";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { ResponsiveTable } from "@/components/responsive-table";
@@ -31,6 +32,7 @@ import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog"
 import { collectAppointmentCreateIssues } from "@/lib/create-form-validation";
 import { DatetimeLocalField } from "@/components/datetime-local-field";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 function toAppointmentIso(localDatetime: string): string {
   const d = new Date(localDatetime);
@@ -41,6 +43,12 @@ function toAppointmentIso(localDatetime: string): string {
 export function AppointmentsPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeView = searchParams.get("view") === "calendar" ? "calendar" : "list";
+  const setActiveView = (view: "list" | "calendar") => {
+    if (view === "calendar") setSearchParams({ view: "calendar" }, { replace: true });
+    else setSearchParams({}, { replace: true });
+  };
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
   const isPhysician = authUser?.role === "physician";
@@ -310,6 +318,17 @@ export function AppointmentsPage() {
 
       {isError ? <p className="text-sm text-destructive">{error instanceof Error ? error.message : t("common.error")}</p> : null}
 
+      <Tabs value={activeView} onValueChange={(v) => setActiveView(v as "list" | "calendar")} className="space-y-4">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="list">{t("appointments.listTab", "List")}</TabsTrigger>
+          <TabsTrigger value="calendar">{t("appointments.calendarTab", "Calendar")}</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="calendar" className="mt-0">
+          <AppointmentsCalendarPanel />
+        </TabsContent>
+
+        <TabsContent value="list" className="mt-0 space-y-6">
       {isPhysician ? (
         <Card>
           <CardHeader className="pb-3">
@@ -712,6 +731,8 @@ export function AppointmentsPage() {
           />
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
 
       <AppointmentDeleteConfirmDialog
         open={appointmentToDelete != null}

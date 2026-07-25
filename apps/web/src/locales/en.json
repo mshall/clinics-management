@@ -432,7 +432,27 @@
     "deleteConfirmIntro": "This booking will be permanently removed. This action cannot be undone.",
     "deleteConfirmBody": "Permanently delete this booking for {{patient}}? This cannot be undone.",
     "deleteConfirmAction": "Delete appointment",
-    "deleteSuccess": "Appointment deleted."
+    "deleteSuccess": "Appointment deleted.",
+    "listTab": "List",
+    "calendarTab": "Calendar",
+    "calendarMyTitle": "My calendar",
+    "calendarClinicTitle": "Clinic calendar",
+    "calendarPrev": "Previous month",
+    "calendarNext": "Next month",
+    "calendarClinicHint": "All appointments at the selected clinic for this month.",
+    "calendarPhysicianHint": "Appointments assigned to you across your clinic network.",
+    "calendarDayEmpty": "No appointments this day.",
+    "calendarPickClinic": "Select a clinic to load the calendar.",
+    "noClinics": "No clinics",
+    "weekday": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
+    }
   },
   "clinics": {
     "title": "Clinics & branches",

@@ -433,7 +433,27 @@
     "deleteConfirmIntro": "سيُزال هذا الحجز نهائياً. لا يمكن التراجع عن هذا الإجراء.",
     "deleteConfirmBody": "حذف هذا الحجز لـ {{patient}} نهائياً؟ لا يمكن التراجع.",
     "deleteConfirmAction": "حذف الموعد",
-    "deleteSuccess": "تم حذف الموعد."
+    "deleteSuccess": "تم حذف الموعد.",
+    "listTab": "القائمة",
+    "calendarTab": "التقويم",
+    "calendarMyTitle": "تقويمي",
+    "calendarClinicTitle": "تقويم العيادة",
+    "calendarPrev": "الشهر السابق",
+    "calendarNext": "الشهر التالي",
+    "calendarClinicHint": "جميع مواعيد العيادة المختارة لهذا الشهر.",
+    "calendarPhysicianHint": "المواعيد المسندة إليك عبر شبكة عياداتك.",
+    "calendarDayEmpty": "لا مواعيد في هذا اليوم.",
+    "calendarPickClinic": "اختر عيادة لتحميل التقويم.",
+    "noClinics": "لا عيادات",
+    "weekday": {
+      "mon": "إث",
+      "tue": "ثل",
+      "wed": "أر",
+      "thu": "خم",
+      "fri": "جم",
+      "sat": "سب",
+      "sun": "أح"
+    }
   },
   "clinics": {
     "title": "العيادات والفروع",
