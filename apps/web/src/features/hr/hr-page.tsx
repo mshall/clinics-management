@@ -30,7 +30,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { canArchiveEmployees, canManageEmployees, canHrDeactivateOrArchiveLinkedUser, usesHrProvisionerCreateFlow } from "@/lib/employee-manage-policy";
+import {
+  canArchiveEmployees,
+  canManageEmployees,
+  canHrDeactivateOrArchiveLinkedUser,
+  defaultHrClinicScopeRestricted,
+  resolveHrProvisionCreateUi,
+  usesHrProvisionerCreateFlow,
+} from "@/lib/employee-manage-policy";
 import { ApiError, apiDelete, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { columnFilterIncludes } from "@/lib/utils";
 import {
@@ -224,8 +231,15 @@ export function HrPage() {
     password: string;
     role: string;
   } | null>(null);
-  const provisionLogin = Boolean(usesProvisionerUi && hrManageContext.data?.provisionLogin);
-  const clinicScopeRestricted = hrManageContext.data?.clinicScopeRestricted ?? true;
+  const provisionLogin = resolveHrProvisionCreateUi(
+    authUser?.role,
+    privilegeGrants,
+    hrManageContext.data?.provisionLogin,
+  );
+  const clinicScopeRestricted = defaultHrClinicScopeRestricted(
+    authUser?.role,
+    hrManageContext.data?.clinicScopeRestricted,
+  );
   const [empLinkedUserId, setEmpLinkedUserId] = useState("");
   const [empLinkedUserRole, setEmpLinkedUserRole] = useState("");
   const [pinnedEmpClinicItem, setPinnedEmpClinicItem] = useState<PickListItem | null>(null);
@@ -262,10 +276,14 @@ export function HrPage() {
     [clinics, i18n.language],
   );
   const assignableClinicIds = hrManageContext.data?.assignableClinicIds ?? [];
-  const provisionClinicItems = useMemo(
-    () => clinicItems.filter((c) => assignableClinicIds.includes(c.value)),
-    [clinicItems, assignableClinicIds],
-  );
+  const provisionClinicItems = useMemo(() => {
+    if (!provisionLogin) return [];
+    if (assignableClinicIds.length > 0) {
+      return clinicItems.filter((c) => assignableClinicIds.includes(c.value));
+    }
+    if (!clinicScopeRestricted) return clinicItems;
+    return [];
+  }, [provisionLogin, clinicItems, assignableClinicIds, clinicScopeRestricted]);
   const resolvedProvisionClinicId = useMemo(() => {
     if (!provisionLogin) return "";
     if (empClinic && provisionClinicItems.some((c) => c.value === empClinic)) return empClinic;

@@ -87,6 +87,25 @@ export function usesHrProvisionerCreateFlow(
   return mapped === "hr_officer" || mapped === "group_admin";
 }
 
+/** Whether the HR create dialog should show login-provisioning fields (defaults true for provisioners while context loads). */
+export function resolveHrProvisionCreateUi(
+  role: string | DemoRole | undefined | null,
+  grants: EmployeePrivilegeGrantSummary[] | null | undefined,
+  manageContextProvisionLogin: boolean | undefined,
+): boolean {
+  if (!usesHrProvisionerCreateFlow(role, grants)) return false;
+  return manageContextProvisionLogin ?? true;
+}
+
+/** Group admins manage all org clinics; HR officers stay scope-restricted until manage-context resolves. */
+export function defaultHrClinicScopeRestricted(
+  role: string | DemoRole | undefined | null,
+  manageContextRestricted: boolean | undefined,
+): boolean {
+  if (manageContextRestricted !== undefined) return manageContextRestricted;
+  return mapApiRole(String(role ?? "")) !== "group_admin";
+}
+
 export function hasHrNavAccessFromGrants(grants?: EmployeePrivilegeGrantSummary[] | null): boolean {
   return hasDelegatedManage(grants) || hasDelegatedHrProvisioner(grants);
 }

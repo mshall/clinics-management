@@ -527,10 +527,11 @@ export function useHrSummaryQuery() {
 
 export function useHrManageContextQuery(enabled = true) {
   const hasAuth = useHasAuthToken();
+  const viewerId = useAuthStore((s) => s.user?.id ?? "");
   return useQuery({
-    queryKey: ["hr", "manage-context"],
+    queryKey: ["hr", "manage-context", viewerId],
     queryFn: () => apiGet<HrManageContextDto>("/api/v1/hr/manage-context"),
-    enabled: hasAuth && enabled,
+    enabled: hasAuth && enabled && Boolean(viewerId),
   });
 }
 

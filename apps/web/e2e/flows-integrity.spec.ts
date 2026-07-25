@@ -16,11 +16,14 @@ test.describe("UX flows & data wiring smoke", () => {
     await expect(page.getByRole("heading", { name: /create employee/i })).toBeVisible();
   });
 
-  test("HR employees tab points to administration for new hires", async ({ page }) => {
+  test("group admin HR tab uses login provisioning create employee dialog", async ({ page }) => {
     await login(page, "admin@kiorly.com");
-    await page.goto("/hr");
-    await page.getByRole("button", { name: /employees/i }).click();
-    await expect(page.getByRole("main").getByRole("link", { name: /^admin$/i })).toBeVisible();
+    await page.goto("/hr?tab=employees");
+    await page.getByRole("button", { name: /add employee/i }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByText(/^login email$/i)).toBeVisible();
+    await expect(dialog.getByText(/^login password$/i)).toBeVisible();
+    await expect(dialog.getByText(/linked login account/i)).toHaveCount(0);
   });
 
   test("reports page loads monthly series from API (chart canvas present)", async ({ page }) => {
