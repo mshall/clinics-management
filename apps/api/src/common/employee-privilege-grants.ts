@@ -9,13 +9,17 @@ import {
 
 const CLINIC_SCOPE_ROLES: ReadonlySet<UserRole> = new Set([UserRole.CLINIC_ADMIN, UserRole.BRANCH_MANAGER]);
 
-export type ResolvedEmployeePrivilegeGrant = {
+/** Full clinic HR officer capabilities for a delegated assignment. */
+const CLINIC_HR_CAPABILITIES = {
+  canManageEmployees: true,
+  canArchiveEmployees: true,
+  hrProvisionLogin: true,
+} as const;
+
+export type ResolvedClinicHrAssignment = {
   id: string;
   clinicId: string;
   clinicNameEn: string;
-  templateEmployeeId: string;
-  templateEmployeeName: string;
-  templateUserRole: UserRole;
   canManageEmployees: boolean;
   canArchiveEmployees: boolean;
   hrProvisionLogin: boolean;
@@ -28,23 +32,12 @@ export type EmployeePrivilegeGrantSummary = {
   hrProvisionLogin: boolean;
 };
 
-export function capabilitiesFromTemplateRole(role: UserRole): Omit<
-  EmployeePrivilegeGrantSummary,
-  "clinicId"
-> {
+export function toGrantSummary(assignment: ResolvedClinicHrAssignment): EmployeePrivilegeGrantSummary {
   return {
-    canManageEmployees: roleCanManageEmployees(role),
-    canArchiveEmployees: roleCanArchiveEmployees(role),
-    hrProvisionLogin: roleUsesHrProvisionerFlow(role),
-  };
-}
-
-export function toGrantSummary(grant: ResolvedEmployeePrivilegeGrant): EmployeePrivilegeGrantSummary {
-  return {
-    clinicId: grant.clinicId,
-    canManageEmployees: grant.canManageEmployees,
-    canArchiveEmployees: grant.canArchiveEmployees,
-    hrProvisionLogin: grant.hrProvisionLogin,
+    clinicId: assignment.clinicId,
+    canManageEmployees: assignment.canManageEmployees,
+    canArchiveEmployees: assignment.canArchiveEmployees,
+    hrProvisionLogin: assignment.hrProvisionLogin,
   };
 }
 
@@ -52,39 +45,21 @@ export async function loadResolvedEmployeePrivilegeGrants(
   prisma: PrismaService,
   tenantId: string,
   userId: string,
-): Promise<ResolvedEmployeePrivilegeGrant[]> {
+): Promise<ResolvedClinicHrAssignment[]> {
   const rows = await prisma.userClinicEmployeePrivilegeGrant.findMany({
     where: { tenantId, userId },
     include: {
       clinic: { select: { nameEn: true } },
-      templateEmployee: {
-        select: {
-          id: true,
-          firstNameEn: true,
-          lastNameEn: true,
-          user: { select: { role: true } },
-        },
-      },
     },
     orderBy: { clinic: { nameEn: "asc" } },
   });
 
-  const out: ResolvedEmployeePrivilegeGrant[] = [];
-  for (const row of rows) {
-    const templateRole = row.templateEmployee.user?.role;
-    if (!templateRole) continue;
-    const caps = capabilitiesFromTemplateRole(templateRole);
-    out.push({
-      id: row.id,
-      clinicId: row.clinicId,
-      clinicNameEn: row.clinic.nameEn,
-      templateEmployeeId: row.templateEmployeeId,
-      templateEmployeeName: `${row.templateEmployee.firstNameEn} ${row.templateEmployee.lastNameEn}`.trim(),
-      templateUserRole: templateRole,
-      ...caps,
-    });
-  }
-  return out;
+  return rows.map((row) => ({
+    id: row.id,
+    clinicId: row.clinicId,
+    clinicNameEn: row.clinic.nameEn,
+    ...CLINIC_HR_CAPABILITIES,
+  }));
 }
 
 export async function loadEmployeePrivilegeGrantSummaries(

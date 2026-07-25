@@ -55,7 +55,7 @@ export class AuthUserDto {
 
   @ApiPropertyOptional({
     type: [EmployeePrivilegeGrantSummaryDto],
-    description: "Clinic-scoped privileges delegated from template employees (mirrors their login role capabilities)",
+    description: "Clinics where the user is assigned as HR (full clinic-scoped HR permissions)",
   })
   employeePrivilegeGrants?: EmployeePrivilegeGrantSummaryDto[];
 }

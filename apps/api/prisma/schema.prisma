@@ -223,19 +223,17 @@ model TenantRoleNavTabGrant {
 }
 
 model UserClinicEmployeePrivilegeGrant {
-  id                 String   @id @default(cuid())
-  tenantId           String
-  tenant             Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  userId             String
-  user               User     @relation("EmployeePrivilegeGrantUser", fields: [userId], references: [id], onDelete: Cascade)
-  clinicId           String
-  clinic             Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  templateEmployeeId String
-  templateEmployee   Employee @relation("PrivilegeGrantTemplateEmployee", fields: [templateEmployeeId], references: [id], onDelete: Cascade)
-  updatedByUserId    String?
-  updatedBy          User?    @relation("EmployeePrivilegeGrantUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User     @relation("EmployeePrivilegeGrantUser", fields: [userId], references: [id], onDelete: Cascade)
+  clinicId        String
+  clinic          Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  updatedByUserId String?
+  updatedBy       User?    @relation("EmployeePrivilegeGrantUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@unique([userId, clinicId])
   @@index([tenantId, userId])
@@ -557,7 +555,6 @@ model Employee {
   leaveRequests     LeaveRequest[]
   employmentPeriods EmployeeEmploymentPeriod[]
   payrollExpenses   Expense[]
-  privilegeGrantTemplates UserClinicEmployeePrivilegeGrant[] @relation("PrivilegeGrantTemplateEmployee")
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
   deletedAt         DateTime?

@@ -4,6 +4,12 @@ import { useTranslation } from "react-i18next";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useUsersQuery, useClinicsQuery } from "@/lib/api-hooks";
 import { ApiError, apiDelete, apiGet, apiPut } from "@/lib/http";
@@ -23,27 +29,11 @@ import type { DemoRole } from "@/lib/roles";
 import { useAuthStore } from "@/stores/auth-store";
 import { canClinicAdminManageUserRbac } from "@/lib/clinic-admin-rbac-policy";
 
-type UserClinicPrivilegeGrantDto = {
+type UserClinicHrAssignmentDto = {
   id: string;
   userId: string;
   clinicId: string;
   clinicNameEn: string;
-  templateEmployeeId: string;
-  templateEmployeeName: string;
-  templateUserRole: string;
-  canManageEmployees: boolean;
-  canArchiveEmployees: boolean;
-  hrProvisionLogin: boolean;
-};
-
-type PrivilegeTemplateEmployeeDto = {
-  id: string;
-  displayName: string;
-  jobTitle: string;
-  userRole: string;
-  canManageEmployees: boolean;
-  canArchiveEmployees: boolean;
-  hrProvisionLogin: boolean;
 };
 
 const NAV_I18N: Record<NavItemKey, string> = {
@@ -324,75 +314,79 @@ export function OrgRbacPanel() {
     userDraft.size === userRoleBase.size &&
     [...userRoleBase].every((k) => userDraft.has(k));
 
-  const [privilegeClinicId, setPrivilegeClinicId] = useState("");
-  const [privilegeTemplateEmployeeId, setPrivilegeTemplateEmployeeId] = useState("");
-  const [privilegeErr, setPrivilegeErr] = useState<string | null>(null);
+  const [hrAssignErr, setHrAssignErr] = useState<string | null>(null);
+  const [hrAssignDialogOpen, setHrAssignDialogOpen] = useState(false);
+  const [hrAssignClinicId, setHrAssignClinicId] = useState("");
 
-  const privilegeGrantsQ = useQuery({
-    queryKey: ["user-clinic-privilege-grants", userTargetId],
+  const hrAssignmentsQ = useQuery({
+    queryKey: ["user-clinic-hr-assignments", userTargetId],
     queryFn: () =>
-      apiGet<UserClinicPrivilegeGrantDto[]>(
-        `/api/v1/admin/user-clinic-privilege-grants?userId=${encodeURIComponent(userTargetId)}`,
+      apiGet<UserClinicHrAssignmentDto[]>(
+        `/api/v1/admin/user-clinic-hr-assignments?userId=${encodeURIComponent(userTargetId)}`,
       ),
     enabled: canManagePrivilegeGrants && Boolean(userTargetId),
   });
 
-  const templateEmployeesQ = useQuery({
-    queryKey: ["privilege-template-employees", privilegeClinicId],
-    queryFn: () =>
-      apiGet<PrivilegeTemplateEmployeeDto[]>(
-        `/api/v1/admin/user-clinic-privilege-grants/template-employees?clinicId=${encodeURIComponent(privilegeClinicId)}`,
-      ),
-    enabled: canManagePrivilegeGrants && Boolean(privilegeClinicId),
-  });
+  const assignedClinicIds = useMemo(
+    () => new Set((hrAssignmentsQ.data ?? []).map((a) => a.clinicId)),
+    [hrAssignmentsQ.data],
+  );
 
-  const savePrivilegeMut = useMutation({
-    mutationFn: () =>
-      apiPut<UserClinicPrivilegeGrantDto>(`/api/v1/admin/user-clinic-privilege-grants`, {
+  const unassignedClinics = useMemo(
+    () => assignableClinics.filter((c) => !assignedClinicIds.has(c.id)),
+    [assignableClinics, assignedClinicIds],
+  );
+
+  const saveHrAssignmentMut = useMutation({
+    mutationFn: (clinicId: string) =>
+      apiPut<UserClinicHrAssignmentDto>(`/api/v1/admin/user-clinic-hr-assignments`, {
         userId: userTargetId,
-        clinicId: privilegeClinicId,
-        templateEmployeeId: privilegeTemplateEmployeeId,
+        clinicId,
       }),
     onSuccess: async () => {
-      setPrivilegeErr(null);
-      await qc.invalidateQueries({ queryKey: ["user-clinic-privilege-grants", userTargetId] });
+      setHrAssignErr(null);
+      setHrAssignDialogOpen(false);
+      setHrAssignClinicId("");
+      await qc.invalidateQueries({ queryKey: ["user-clinic-hr-assignments", userTargetId] });
       if (userTargetId === viewer?.id) await useAuthStore.getState().refreshSessionFromServer();
     },
     onError: (e: unknown) => {
-      setPrivilegeErr(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e));
+      setHrAssignErr(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e));
     },
   });
 
-  const deletePrivilegeMut = useMutation({
-    mutationFn: (grantId: string) => apiDelete<{ ok: true }>(`/api/v1/admin/user-clinic-privilege-grants/${grantId}`),
+  const deleteHrAssignmentMut = useMutation({
+    mutationFn: (assignmentId: string) =>
+      apiDelete<{ ok: true }>(`/api/v1/admin/user-clinic-hr-assignments/${assignmentId}`),
     onSuccess: async () => {
-      setPrivilegeErr(null);
-      await qc.invalidateQueries({ queryKey: ["user-clinic-privilege-grants", userTargetId] });
+      setHrAssignErr(null);
+      await qc.invalidateQueries({ queryKey: ["user-clinic-hr-assignments", userTargetId] });
       if (userTargetId === viewer?.id) await useAuthStore.getState().refreshSessionFromServer();
     },
     onError: (e: unknown) => {
-      setPrivilegeErr(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e));
+      setHrAssignErr(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e));
     },
   });
 
-  const clinicPickItems: PickListItem[] = useMemo(
+  const hrDialogClinicItems: PickListItem[] = useMemo(
     () =>
-      assignableClinics.map((c) => ({
+      unassignedClinics.map((c) => ({
         value: c.id,
         label: formatClinicName(c, i18n.language),
       })),
-    [assignableClinics, i18n.language],
+    [unassignedClinics, i18n.language],
   );
 
-  const templateEmployeeItems: PickListItem[] = useMemo(
-    () =>
-      (templateEmployeesQ.data ?? []).map((e) => ({
-        value: e.id,
-        label: e.displayName,
-        hint: `${e.jobTitle} · ${formatUserRole(mapApiRole(e.userRole), t)}`,
-      })),
-    [templateEmployeesQ.data, t],
-  );
+  const assignHrForClinic = (clinicId: string) => {
+    if (!userTargetId || !clinicId) return;
+    saveHrAssignmentMut.mutate(clinicId);
+  };
+
+  const openGroupAdminHrDialog = () => {
+    setHrAssignClinicId(unassignedClinics[0]?.id ?? "");
+    setHrAssignErr(null);
+    setHrAssignDialogOpen(true);
+  };
 
   return (
     <Card>
@@ -569,110 +563,144 @@ export function OrgRbacPanel() {
           <div className="space-y-4 rounded-lg border border-border p-4">
             <div>
               <h3 className="text-sm font-medium">
-                {t("admin.rbacPrivilegeSection", "Functional privileges by clinic")}
+                {t("admin.rbacHrAssignmentSection", "Clinic HR assignment")}
               </h3>
               <p className="text-xs text-muted-foreground">
                 {t(
-                  "admin.rbacPrivilegeHint",
-                  "Grant a user the same HR and employee-management capabilities as a selected employee at a specific clinic. Sidebar HR access is enabled automatically when those capabilities apply.",
+                  "admin.rbacHrAssignmentHint",
+                  "Assign this user as HR for a clinic. They receive full HR permissions (employees, archive, hire with login) scoped to that clinic only.",
                 )}
               </p>
             </div>
             {!userTargetId ? (
               <p className="text-sm text-muted-foreground">
-                {t("admin.rbacPrivilegePickUserFirst", "Select a user above to manage clinic privilege grants.")}
+                {t("admin.rbacHrAssignmentPickUserFirst", "Select a user above to assign clinic HR roles.")}
+              </p>
+            ) : userTargetRole === "hr_officer" ? (
+              <p className="text-sm text-muted-foreground">
+                {t(
+                  "admin.rbacHrAssignmentAlreadyOfficer",
+                  "This user is already an organization HR officer and does not need a clinic assignment.",
+                )}
               </p>
             ) : (
               <div className="space-y-4">
-                {privilegeErr ? <p className="text-sm text-destructive">{privilegeErr}</p> : null}
-                {privilegeGrantsQ.isSuccess && (privilegeGrantsQ.data?.length ?? 0) > 0 ? (
+                {hrAssignErr ? <p className="text-sm text-destructive">{hrAssignErr}</p> : null}
+                {hrAssignmentsQ.isSuccess && (hrAssignmentsQ.data?.length ?? 0) > 0 ? (
                   <ul className="space-y-2">
-                    {(privilegeGrantsQ.data ?? []).map((g) => (
+                    {(hrAssignmentsQ.data ?? []).map((a) => (
                       <li
-                        key={g.id}
+                        key={a.id}
                         className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm"
                       >
                         <div>
-                          <p className="font-medium">{g.clinicNameEn}</p>
+                          <p className="font-medium">{a.clinicNameEn}</p>
                           <p className="text-xs text-muted-foreground">
-                            {t("admin.rbacPrivilegeLike", "Same as")} {g.templateEmployeeName} (
-                            {formatUserRole(mapApiRole(g.templateUserRole), t)})
+                            {t("admin.rbacHrAssignmentActive", "HR for this clinic")}
                           </p>
                         </div>
                         <Button
                           type="button"
                           size="sm"
                           variant="outline"
-                          disabled={deletePrivilegeMut.isPending}
-                          onClick={() => deletePrivilegeMut.mutate(g.id)}
+                          disabled={deleteHrAssignmentMut.isPending}
+                          onClick={() => deleteHrAssignmentMut.mutate(a.id)}
                         >
-                          {t("common.remove", "Remove")}
+                          {t("admin.rbacHrAssignmentRemove", "Remove HR role")}
                         </Button>
                       </li>
                     ))}
                   </ul>
-                ) : privilegeGrantsQ.isSuccess ? (
+                ) : hrAssignmentsQ.isSuccess ? (
                   <p className="text-sm text-muted-foreground">
-                    {t("admin.rbacPrivilegeNone", "No clinic privilege grants for this user.")}
+                    {t("admin.rbacHrAssignmentNone", "Not assigned as HR for any clinic yet.")}
                   </p>
                 ) : null}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>{t("hr.clinic", "Clinic")}</Label>
-                    <SearchablePickList
-                      items={clinicPickItems}
-                      value={privilegeClinicId}
-                      selectedItem={clinicPickItems.find((c) => c.value === privilegeClinicId) ?? null}
-                      onValueChange={(id) => {
-                        setPrivilegeClinicId(id);
-                        setPrivilegeTemplateEmployeeId("");
-                        setPrivilegeErr(null);
-                      }}
-                      searchPlaceholder={t("appointments.filterClinic", "Type clinic name…")}
-                      placeholder={t("hr.pickClinic", "Select clinic…")}
-                      localFilter
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t("admin.rbacPrivilegeTemplate", "Mirror employee")}</Label>
-                    <SearchablePickList
-                      items={templateEmployeeItems}
-                      value={privilegeTemplateEmployeeId}
-                      selectedItem={
-                        templateEmployeeItems.find((e) => e.value === privilegeTemplateEmployeeId) ?? null
-                      }
-                      onValueChange={(id) => {
-                        setPrivilegeTemplateEmployeeId(id);
-                        setPrivilegeErr(null);
-                      }}
-                      searchPlaceholder={t("admin.rbacPrivilegeTemplateSearch", "Type employee name…")}
-                      placeholder={t("admin.rbacPrivilegeTemplatePick", "Select employee…")}
-                      emptyMessage={
-                        !privilegeClinicId
-                          ? t("admin.rbacPrivilegePickClinicFirst", "Choose a clinic first.")
-                          : templateEmployeesQ.isPending
-                            ? t("common.loading")
-                            : t("admin.rbacPrivilegeNoTemplates", "No linked employees in this clinic.")
-                      }
-                      disabled={!privilegeClinicId || templateEmployeesQ.isPending}
-                      localFilter
-                    />
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  disabled={
-                    !userTargetId ||
-                    !privilegeClinicId ||
-                    !privilegeTemplateEmployeeId ||
-                    savePrivilegeMut.isPending
-                  }
-                  onClick={() => savePrivilegeMut.mutate()}
-                >
-                  {t("admin.rbacPrivilegeSave", "Save clinic privileges")}
-                </Button>
+
+                {unassignedClinics.length > 0 ? (
+                  isClinicAdminViewer ? (
+                    <div className="flex flex-wrap gap-2">
+                      {unassignedClinics.length === 1 ? (
+                        <Button
+                          type="button"
+                          disabled={saveHrAssignmentMut.isPending}
+                          onClick={() => assignHrForClinic(unassignedClinics[0]!.id)}
+                        >
+                          {t("admin.rbacHrAssignmentAssignClinic", "Assign as HR for {{clinic}}", {
+                            clinic: formatClinicName(unassignedClinics[0]!, i18n.language),
+                          })}
+                        </Button>
+                      ) : (
+                        unassignedClinics.map((c) => (
+                          <Button
+                            key={c.id}
+                            type="button"
+                            variant="outline"
+                            disabled={saveHrAssignmentMut.isPending}
+                            onClick={() => assignHrForClinic(c.id)}
+                          >
+                            {t("admin.rbacHrAssignmentAssignClinicShort", "HR — {{clinic}}", {
+                              clinic: formatClinicName(c, i18n.language),
+                            })}
+                          </Button>
+                        ))
+                      )}
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      disabled={saveHrAssignmentMut.isPending}
+                      onClick={openGroupAdminHrDialog}
+                    >
+                      {t("admin.rbacHrAssignmentAssign", "Assign as HR…")}
+                    </Button>
+                  )
+                ) : hrAssignmentsQ.isSuccess ? (
+                  <p className="text-xs text-muted-foreground">
+                    {t("admin.rbacHrAssignmentAllClinics", "This user is already HR for all assignable clinics.")}
+                  </p>
+                ) : null}
               </div>
             )}
+
+            <Dialog open={hrAssignDialogOpen} onOpenChange={setHrAssignDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{t("admin.rbacHrAssignmentDialogTitle", "Assign as HR")}</DialogTitle>
+                </DialogHeader>
+                <p className="text-sm text-muted-foreground">
+                  {t(
+                    "admin.rbacHrAssignmentDialogHint",
+                    "Choose the clinic where this user will have full HR permissions.",
+                  )}
+                </p>
+                <div className="space-y-2">
+                  <Label>{t("hr.clinic", "Clinic")}</Label>
+                  <SearchablePickList
+                    items={hrDialogClinicItems}
+                    value={hrAssignClinicId}
+                    selectedItem={hrDialogClinicItems.find((c) => c.value === hrAssignClinicId) ?? null}
+                    onValueChange={setHrAssignClinicId}
+                    searchPlaceholder={t("appointments.filterClinic", "Type clinic name…")}
+                    placeholder={t("hr.pickClinic", "Select clinic…")}
+                    localFilter
+                  />
+                </div>
+                {hrAssignErr ? <p className="text-sm text-destructive">{hrAssignErr}</p> : null}
+                <div className="flex flex-wrap justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setHrAssignDialogOpen(false)}>
+                    {t("common.cancel", "Cancel")}
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={!hrAssignClinicId || saveHrAssignmentMut.isPending}
+                    onClick={() => assignHrForClinic(hrAssignClinicId)}
+                  >
+                    {t("admin.rbacHrAssignmentConfirm", "Assign HR")}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         ) : null}
       </CardContent>

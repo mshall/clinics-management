@@ -1,19 +1,14 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsString, MaxLength } from "class-validator";
 
-export class SetUserClinicPrivilegeGrantDto {
+export class SetUserClinicHrAssignmentDto {
   @ApiProperty()
   @IsString()
   @MaxLength(64)
   userId!: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: "Clinic where the user will act as HR (full clinic HR permissions)" })
   @IsString()
   @MaxLength(64)
   clinicId!: string;
-
-  @ApiProperty({ description: "Employee at this clinic whose login privileges are mirrored for the target user" })
-  @IsString()
-  @MaxLength(64)
-  templateEmployeeId!: string;
 }

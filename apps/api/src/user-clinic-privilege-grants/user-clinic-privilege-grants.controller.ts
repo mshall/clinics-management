@@ -4,43 +4,33 @@ import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
-import { SetUserClinicPrivilegeGrantDto } from "./dto/set-user-clinic-privilege-grant.dto";
-import {
-  PrivilegeTemplateEmployeeDto,
-  UserClinicPrivilegeGrantDto,
-} from "./dto/user-clinic-privilege-grant.dto";
+import { SetUserClinicHrAssignmentDto } from "./dto/set-user-clinic-privilege-grant.dto";
+import { UserClinicHrAssignmentDto } from "./dto/user-clinic-privilege-grant.dto";
 import { UserClinicPrivilegeGrantsService } from "./user-clinic-privilege-grants.service";
 
 @ApiTags("admin")
 @ApiBearerAuth("bearer")
-@Controller("admin/user-clinic-privilege-grants")
+@Controller("admin/user-clinic-hr-assignments")
 @UseGuards(JwtAuthGuard)
 export class UserClinicPrivilegeGrantsController {
   constructor(private readonly grants: UserClinicPrivilegeGrantsService) {}
 
   @Get()
-  @ApiOperation({ summary: "List clinic-scoped privilege grants for a user" })
-  @ApiOkResponse({ type: UserClinicPrivilegeGrantDto, isArray: true })
+  @ApiOperation({ summary: "List clinics where a user is assigned as HR" })
+  @ApiOkResponse({ type: UserClinicHrAssignmentDto, isArray: true })
   list(@CurrentUser() user: JwtUser, @Query("userId") userId: string) {
     return this.grants.listForUser(requireTenantId(user), user, userId);
   }
 
-  @Get("template-employees")
-  @ApiOperation({ summary: "Employees with linked logins that can be used as privilege templates" })
-  @ApiOkResponse({ type: PrivilegeTemplateEmployeeDto, isArray: true })
-  templateEmployees(@CurrentUser() user: JwtUser, @Query("clinicId") clinicId: string) {
-    return this.grants.listTemplateEmployees(requireTenantId(user), user, clinicId);
-  }
-
   @Put()
-  @ApiOperation({ summary: "Grant a user the same functional privileges as a template employee at a clinic" })
-  @ApiOkResponse({ type: UserClinicPrivilegeGrantDto })
-  upsert(@CurrentUser() user: JwtUser, @Body() body: SetUserClinicPrivilegeGrantDto) {
-    return this.grants.upsert(requireTenantId(user), user, body);
+  @ApiOperation({ summary: "Assign a user as HR for a specific clinic" })
+  @ApiOkResponse({ type: UserClinicHrAssignmentDto })
+  assign(@CurrentUser() user: JwtUser, @Body() body: SetUserClinicHrAssignmentDto) {
+    return this.grants.assign(requireTenantId(user), user, body);
   }
 
   @Delete(":id")
-  @ApiOperation({ summary: "Remove a clinic privilege grant" })
+  @ApiOperation({ summary: "Remove a clinic HR assignment" })
   remove(@CurrentUser() user: JwtUser, @Param("id") id: string) {
     return this.grants.remove(requireTenantId(user), user, id);
   }
