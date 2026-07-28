@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { AppointmentDeleteConfirmDialog, type AppointmentDeleteTarget } from "@/features/appointments/appointment-delete-confirm-dialog";
+import { AppointmentOverlapConfirmDialog } from "@/features/appointments/appointment-overlap-confirm-dialog";
 import { AppointmentsCalendarPanel } from "@/features/appointments/appointments-calendar-panel";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
@@ -21,7 +22,7 @@ import { Label } from "@/components/ui/label";
 import { useAdminOverviewQuery, useAppointmentsQuery, useClinicsQuery, usePatientQuery, usePatientsQuery, useSchedulingPhysiciansQuery } from "@/lib/api-hooks";
 import { resolveClinicCurrencyCode } from "@/lib/money-display";
 import { canDeleteAppointment } from "@/lib/appointment-delete-policy";
-import { ApiError, apiDelete, apiPost } from "@/lib/http";
+import { ApiError, apiDelete, apiGet, apiPost } from "@/lib/http";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
 import { physicianToPickListItem } from "@/lib/physician-display";
 import { formatClinicName, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
@@ -30,6 +31,13 @@ import { useDebouncedPickListSearch } from "@/lib/pick-list-utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectAppointmentCreateIssues } from "@/lib/create-form-validation";
+import {
+  APPOINTMENT_MIN_START_HOUR,
+  APPOINTMENT_SLOT_MINUTES,
+  formatDatetimeLocal,
+  suggestNextAppointmentStart,
+} from "@/lib/appointment-scheduling";
+import type { AppointmentDto } from "@/lib/api-types";
 import { DatetimeLocalField } from "@/components/datetime-local-field";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -153,6 +161,8 @@ export function AppointmentsPage() {
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [bookFee, setBookFee] = useState("");
+  const [overlapConflicts, setOverlapConflicts] = useState<AppointmentDto[]>([]);
+  const [showOverlapConfirm, setShowOverlapConfirm] = useState(false);
   const validation = useValidationIssuesDialog({ intent: "create" });
   const [bookOk, setBookOk] = useState<string | null>(null);
   const [appointmentToDelete, setAppointmentToDelete] = useState<AppointmentDeleteTarget | null>(null);
@@ -223,7 +233,54 @@ export function AppointmentsPage() {
     if (d != null && Number.isFinite(Number(d))) setBookFee(String(d));
   }, [showBookPanel, adminOv.data?.currentTenant?.defaultVisitFee]);
 
-  const handleCreateAppointment = () => {
+  const bookDateIso = start.trim() ? start.split("T")[0]! : new Date().toISOString().slice(0, 10);
+  const { data: bookDayData } = useAppointmentsQuery({
+    page: 1,
+    pageSize: 200,
+    sortBy: "startsAt",
+    sortOrder: "asc",
+    from: bookDateIso,
+    to: bookDateIso,
+    enabled: showBookPanel && Boolean(clinicianId.trim()),
+  });
+
+  useEffect(() => {
+    if (!showBookPanel || !clinicianId.trim()) return;
+    const suggested = suggestNextAppointmentStart(bookDayData?.items ?? [], bookDateIso, clinicianId);
+    setStart((prev) => {
+      if (!prev.trim()) return suggested;
+      const prevDate = prev.split("T")[0];
+      if (prevDate !== bookDateIso) return suggested;
+      return prev;
+    });
+  }, [showBookPanel, clinicianId, bookDateIso, bookDayData?.items]);
+
+  useEffect(() => {
+    if (showBookPanel && !start.trim()) {
+      const today = new Date().toISOString().slice(0, 10);
+      setStart(formatDatetimeLocal(new Date(`${today}T${String(APPOINTMENT_MIN_START_HOUR).padStart(2, "0")}:00`)));
+    }
+  }, [showBookPanel, start]);
+
+  const buildCreateBody = (confirmOverlap = false): Record<string, unknown> => {
+    const startsAt = toAppointmentIso(start);
+    const body: Record<string, unknown> = {
+      clinicId,
+      patientId,
+      clinicianId,
+      startsAt,
+    };
+    if (end.trim()) body.endsAt = toAppointmentIso(end);
+    if (confirmOverlap) body.confirmOverlap = true;
+    const trimmedFee = bookFee.trim();
+    if (trimmedFee !== "") {
+      const fee = Number.parseFloat(trimmedFee);
+      if (Number.isFinite(fee) && fee >= 0) body.feeAmount = fee;
+    }
+    return body;
+  };
+
+  const handleCreateAppointment = async () => {
     const issues = collectAppointmentCreateIssues({ clinicId, patientId, clinicianId, start, end }, t);
     if (issues.length > 0) {
       validation.showIssues(issues);
@@ -231,30 +288,37 @@ export function AppointmentsPage() {
     }
     validation.clear();
     setBookOk(null);
-    createMut.mutate();
+
+    try {
+      const params = new URLSearchParams({
+        clinicianId,
+        startsAt: toAppointmentIso(start),
+      });
+      if (end.trim()) params.set("endsAt", toAppointmentIso(end));
+      const conflicts = await apiGet<AppointmentDto[]>(
+        `/api/v1/appointments/scheduling-conflicts?${params.toString()}`,
+      );
+      if (conflicts.length > 0) {
+        setOverlapConflicts(conflicts);
+        setShowOverlapConfirm(true);
+        return;
+      }
+      createMut.mutate(false);
+    } catch (e) {
+      validation.showError(e);
+    }
   };
 
   const createMut = useMutation({
-    mutationFn: () => {
+    mutationFn: (confirmOverlap: boolean) => {
       const issues = collectAppointmentCreateIssues({ clinicId, patientId, clinicianId, start, end }, t);
       if (issues.length > 0) throw new Error(issues.join(" "));
-      const startsAt = toAppointmentIso(start);
-      const body: Record<string, unknown> = {
-        clinicId,
-        patientId,
-        clinicianId,
-        startsAt,
-      };
-      if (end.trim()) body.endsAt = toAppointmentIso(end);
-      const trimmedFee = bookFee.trim();
-      if (trimmedFee !== "") {
-        const fee = Number.parseFloat(trimmedFee);
-        if (Number.isFinite(fee) && fee >= 0) body.feeAmount = fee;
-      }
-      return apiPost("/api/v1/appointments", body);
+      return apiPost("/api/v1/appointments", buildCreateBody(confirmOverlap));
     },
     onSuccess: () => {
       validation.clear();
+      setShowOverlapConfirm(false);
+      setOverlapConflicts([]);
       const message = t("appointments.bookedOk", "Appointment created.");
       setBookOk(message);
       toast.success(message);
@@ -521,11 +585,30 @@ export function AppointmentsPage() {
             </div>
             <div className="space-y-2">
               <Label required>{t("appointments.starts")}</Label>
-              <DatetimeLocalField value={start} onChange={setStart} />
+              <DatetimeLocalField
+                value={start}
+                onChange={setStart}
+                minTime={`${String(APPOINTMENT_MIN_START_HOUR).padStart(2, "0")}:00`}
+                stepSeconds={APPOINTMENT_SLOT_MINUTES * 60}
+                defaultTime={`${String(APPOINTMENT_MIN_START_HOUR).padStart(2, "0")}:00`}
+              />
+              <p className="text-xs text-muted-foreground">
+                {t(
+                  "appointments.startMinHint",
+                  "Booking starts at {{hour}}:00 AM. Each slot is {{minutes}} minutes unless you set a custom end time.",
+                  { hour: APPOINTMENT_MIN_START_HOUR, minutes: APPOINTMENT_SLOT_MINUTES },
+                )}
+              </p>
             </div>
             <div className="space-y-2">
               <Label>{t("appointments.ends")}</Label>
-              <DatetimeLocalField value={end} onChange={setEnd} />
+              <DatetimeLocalField
+                value={end}
+                onChange={setEnd}
+                minTime={`${String(APPOINTMENT_MIN_START_HOUR).padStart(2, "0")}:00`}
+                stepSeconds={APPOINTMENT_SLOT_MINUTES * 60}
+                defaultTime={`${String(APPOINTMENT_MIN_START_HOUR).padStart(2, "0")}:00`}
+              />
               <p className="text-xs text-muted-foreground">
                 {t(
                   "appointments.endOptionalHint",
@@ -749,6 +832,19 @@ export function AppointmentsPage() {
         onConfirm={() => {
           if (appointmentToDelete) deleteMut.mutate(appointmentToDelete.id);
         }}
+      />
+
+      <AppointmentOverlapConfirmDialog
+        open={showOverlapConfirm}
+        onOpenChange={(open) => {
+          if (!open && !createMut.isPending) {
+            setShowOverlapConfirm(false);
+            setOverlapConflicts([]);
+          }
+        }}
+        conflicts={overlapConflicts}
+        pending={createMut.isPending}
+        onConfirm={() => createMut.mutate(true)}
       />
     </div>
   );

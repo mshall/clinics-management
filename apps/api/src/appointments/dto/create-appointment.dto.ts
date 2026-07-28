@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { AppointmentStatus } from "@prisma/client";
-import { IsDateString, IsEnum, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
+import { IsBoolean, IsDateString, IsEnum, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
 
 export class CreateAppointmentDto {
   @ApiProperty()
@@ -20,11 +20,18 @@ export class CreateAppointmentDto {
   startsAt!: string;
 
   @ApiPropertyOptional({
-    description: "Optional scheduled end; set automatically when a linked encounter is finalized",
+    description: "Optional custom end; defaults to a 15-minute slot from startsAt when omitted",
   })
   @IsOptional()
   @IsDateString()
   endsAt?: string;
+
+  @ApiPropertyOptional({
+    description: "Set true to book alongside an existing appointment at the same time",
+  })
+  @IsOptional()
+  @IsBoolean()
+  confirmOverlap?: boolean;
 
   @ApiPropertyOptional({
     description: "Scheduled visit fee; defaults to the organization default visit fee",

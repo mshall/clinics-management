@@ -1,7 +1,13 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { AppointmentStatus, EncounterStatus, Prisma, UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { findActiveSchedulingPhysician } from "../common/active-scheduling-physician";
+import {
+  ACTIVE_APPOINTMENT_STATUSES,
+  appointmentIntervalsOverlap,
+  effectiveAppointmentEnd,
+  resolveCreateAppointmentEnd,
+} from "../common/appointment-scheduling";
 import { CLINIC_SCOPE_ROLES, fetchPhysicianNetworkClinicIds } from "../common/clinic-scope";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { assertOrgClinicalDeleteRole } from "../common/org-clinical-delete-roles";
@@ -268,6 +274,57 @@ export class AppointmentsService {
     );
   }
 
+  private async findSchedulingConflicts(
+    tenantId: string,
+    clinicianId: string,
+    start: Date,
+    end: Date,
+    excludeId?: string,
+  ): Promise<AppointmentRow[]> {
+    const dayStart = new Date(start);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(start);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    const candidates = await this.prisma.appointment.findMany({
+      where: {
+        tenantId,
+        clinicianId,
+        status: { in: [...ACTIVE_APPOINTMENT_STATUSES] },
+        startsAt: { gte: dayStart, lte: dayEnd },
+        ...(excludeId ? { id: { not: excludeId } } : {}),
+      },
+      include: appointmentDtoInclude,
+    });
+
+    return candidates.filter((c) => {
+      const cEnd = effectiveAppointmentEnd(c.startsAt, c.endsAt);
+      return appointmentIntervalsOverlap(start, end, c.startsAt, cEnd);
+    });
+  }
+
+  async listSchedulingConflicts(
+    tenantId: string,
+    viewer: JwtUser,
+    clinicianId: string,
+    startsAt: string,
+    endsAt?: string,
+  ): Promise<AppointmentDto[]> {
+    const start = new Date(startsAt);
+    if (Number.isNaN(start.getTime())) throw new BadRequestException("Invalid startsAt");
+    let end: Date;
+    try {
+      end = resolveCreateAppointmentEnd(start, endsAt);
+    } catch {
+      throw new BadRequestException("endsAt must be after startsAt");
+    }
+    const conflicts = await this.findSchedulingConflicts(tenantId, clinicianId.trim(), start, end);
+    for (const row of conflicts) {
+      await this.assertAppointmentAccess(viewer, row);
+    }
+    return conflicts.map((c) => this.mapRow(c));
+  }
+
   async create(tenantId: string, actor: JwtUser, dto: CreateAppointmentDto): Promise<AppointmentDto> {
     if (isPhysicianRole(actor.role) && dto.clinicianId.trim() !== actor.userId) {
       throw new BadRequestException("Physicians may only book appointments as themselves");
@@ -279,9 +336,21 @@ export class AppointmentsService {
     ]);
     if (!clinic || !patient || !clinician) throw new BadRequestException("Invalid clinic, patient, or clinician");
     const start = new Date(dto.startsAt);
-    const endRaw = dto.endsAt?.trim();
-    const end = endRaw ? new Date(endRaw) : null;
-    if (end != null && end <= start) throw new BadRequestException("endsAt must be after startsAt");
+    if (Number.isNaN(start.getTime())) throw new BadRequestException("Invalid startsAt");
+    let end: Date;
+    try {
+      end = resolveCreateAppointmentEnd(start, dto.endsAt);
+    } catch {
+      throw new BadRequestException("endsAt must be after startsAt");
+    }
+
+    const conflicts = await this.findSchedulingConflicts(tenantId, dto.clinicianId.trim(), start, end);
+    if (conflicts.length > 0 && !dto.confirmOverlap) {
+      throw new ConflictException({
+        message: "This clinician already has an appointment during this time.",
+        conflicts: conflicts.map((c) => this.mapRow(c)),
+      });
+    }
 
     const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
     if (!tenant) throw new BadRequestException("Tenant not found");

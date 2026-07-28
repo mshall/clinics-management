@@ -1,10 +1,11 @@
 import { Camera } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { captureStillPhoto, openCameraStream } from "@/lib/camera-capture";
 import { enhanceCameraCaptureFile } from "@/lib/enhance-image";
+import { shouldUseNativeCameraPicker } from "@/lib/platform";
 
 type DocumentCameraCaptureDialogProps = {
   open: boolean;
@@ -14,7 +15,9 @@ type DocumentCameraCaptureDialogProps = {
 
 export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: DocumentCameraCaptureDialogProps) {
   const { t } = useTranslation();
+  const useNativeCamera = shouldUseNativeCameraPicker();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -29,12 +32,36 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
     setReady(false);
   }, []);
 
+  const finishCapture = useCallback(
+    async (file: File) => {
+      setProcessing(true);
+      try {
+        const enhanced = await enhanceCameraCaptureFile(file);
+        onCapture(enhanced);
+        onOpenChange(false);
+      } catch {
+        setCameraError(t("patients.cameraCaptureFailed", "Could not capture the photo. Try again."));
+      } finally {
+        setProcessing(false);
+      }
+    },
+    [onCapture, onOpenChange, t],
+  );
+
   useEffect(() => {
     if (!open) {
       stopStream();
       setCameraError(null);
       setProcessing(false);
       return;
+    }
+
+    if (useNativeCamera) {
+      stopStream();
+      setCameraError(null);
+      setReady(true);
+      const timer = window.setTimeout(() => fileInputRef.current?.click(), 150);
+      return () => window.clearTimeout(timer);
     }
 
     let cancelled = false;
@@ -70,24 +97,31 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
       cancelled = true;
       stopStream();
     };
-  }, [open, stopStream, t]);
+  }, [open, stopStream, t, useNativeCamera]);
 
   const capture = async () => {
     const video = videoRef.current;
     const stream = streamRef.current;
     if (!video || !stream || !ready || processing) return;
-
     setProcessing(true);
     try {
       const raw = await captureStillPhoto(stream, video);
-      const enhanced = await enhanceCameraCaptureFile(raw);
-      onCapture(enhanced);
-      onOpenChange(false);
+      await finishCapture(raw);
     } catch {
       setCameraError(t("patients.cameraCaptureFailed", "Could not capture the photo. Try again."));
-    } finally {
       setProcessing(false);
     }
+  };
+
+  const onNativeFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || processing) return;
+    void finishCapture(file);
+  };
+
+  const openNativeCamera = () => {
+    if (!processing) fileInputRef.current?.click();
   };
 
   return (
@@ -102,19 +136,39 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
           <DialogTitle>{t("patients.captureDocument", "Capture document")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
-          {cameraError ? (
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="sr-only"
+            aria-hidden
+            onChange={onNativeFileChange}
+          />
+          {useNativeCamera ? (
+            <>
+              {cameraError ? <p className="text-sm text-destructive">{cameraError}</p> : null}
+              {processing ? (
+                <p className="text-center text-sm text-muted-foreground">
+                  {t("patients.enhancingCapture", "Enhancing photo quality…")}
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {t(
+                    "patients.nativeCameraHint",
+                    "Your device camera will open to take a photo. Tap below if it did not open automatically.",
+                  )}
+                </p>
+              )}
+            </>
+          ) : cameraError ? (
             <p className="text-sm text-destructive">{cameraError}</p>
           ) : (
             <div className="overflow-hidden rounded-md border border-border bg-black">
-              <video
-                ref={videoRef}
-                className="aspect-[4/3] w-full object-contain"
-                playsInline
-                muted
-              />
+              <video ref={videoRef} className="aspect-[4/3] w-full object-contain" playsInline muted />
             </div>
           )}
-          {processing ? (
+          {!useNativeCamera && processing ? (
             <p className="text-center text-sm text-muted-foreground">
               {t("patients.enhancingCapture", "Enhancing photo quality…")}
             </p>
@@ -123,15 +177,22 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
             <Button type="button" variant="outline" disabled={processing} onClick={() => onOpenChange(false)}>
               {t("common.cancel", "Cancel")}
             </Button>
-            <Button
-              type="button"
-              disabled={!ready || Boolean(cameraError) || processing}
-              className="gap-1"
-              onClick={() => void capture()}
-            >
-              <Camera className="h-4 w-4" />
-              {processing ? t("common.loading", "Loading…") : t("patients.takePhoto", "Take photo")}
-            </Button>
+            {useNativeCamera ? (
+              <Button type="button" disabled={processing} className="gap-1" onClick={openNativeCamera}>
+                <Camera className="h-4 w-4" />
+                {processing ? t("common.loading", "Loading…") : t("patients.takePhoto", "Take photo")}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                disabled={!ready || Boolean(cameraError) || processing}
+                className="gap-1"
+                onClick={() => void capture()}
+              >
+                <Camera className="h-4 w-4" />
+                {processing ? t("common.loading", "Loading…") : t("patients.takePhoto", "Take photo")}
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>

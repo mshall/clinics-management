@@ -17,6 +17,11 @@ import {
   appointmentCalendarShowsClinicFilter,
 } from "@/lib/appointment-calendar-policy";
 import {
+  appointmentIntervalsOverlap,
+  effectiveAppointmentEnd,
+  formatAppointmentTimeRange,
+} from "@/lib/appointment-scheduling";
+import {
   buildMonthGrid,
   isSameLocalDateIso,
   parseLocalDateIso,
@@ -56,30 +61,45 @@ function groupAppointmentsByDay(items: AppointmentDto[]): Map<string, Appointmen
   return map;
 }
 
+function appointmentsOverlap(a: AppointmentDto, b: AppointmentDto): boolean {
+  if (a.clinicianId !== b.clinicianId) return false;
+  const aStart = new Date(a.startsAt);
+  const aEnd = effectiveAppointmentEnd(a);
+  const bStart = new Date(b.startsAt);
+  const bEnd = effectiveAppointmentEnd(b);
+  return appointmentIntervalsOverlap(aStart, aEnd, bStart, bEnd);
+}
+
+function countOverlappingOthers(apt: AppointmentDto, all: AppointmentDto[]): number {
+  return all.filter((o) => o.id !== apt.id && appointmentsOverlap(apt, o)).length;
+}
+
 function calendarEventTitle(
   a: AppointmentDto,
   loc: string,
   mode: "physician" | "clinic" | "organization",
   language: string,
+  overlapCount = 0,
 ): string {
   const patient = resolvePatientListLabel({
     patientId: a.patientId,
     patientMrn: a.patientMrn,
     patientName: a.patientName,
   });
-  const time = new Date(a.startsAt).toLocaleTimeString(loc, { hour: "numeric", minute: "2-digit" });
+  const time = formatAppointmentTimeRange(a.startsAt, a.endsAt, loc);
   const clinic = formatClinicNameFields(a.clinicNameEn, a.clinicNameAr, language);
+  const overlapSuffix = overlapCount > 0 ? ` · +${overlapCount}` : "";
   if (mode === "clinic" && a.clinicianName) {
-    return `${time} · ${patient.text} · ${a.clinicianName}`;
+    return `${time} · ${patient.text} · ${a.clinicianName}${overlapSuffix}`;
   }
   if (mode === "organization") {
     const who = a.clinicianName ? ` · ${a.clinicianName}` : "";
-    return `${time} · ${patient.text} · ${clinic}${who}`;
+    return `${time} · ${patient.text} · ${clinic}${who}${overlapSuffix}`;
   }
   if (mode === "physician") {
-    return `${time} · ${patient.text}`;
+    return `${time} · ${patient.text}${overlapSuffix}`;
   }
-  return `${time} · ${patient.text}`;
+  return `${time} · ${patient.text}${overlapSuffix}`;
 }
 
 export function AppointmentsCalendarPanel() {
@@ -299,23 +319,26 @@ export function AppointmentsCalendarPanel() {
 
                       <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-hidden">
                         <div className="flex flex-col gap-0.5 lg:hidden">
-                          {visibleMobile.map((a) => (
+                          {visibleMobile.map((a) => {
+                            const overlaps = countOverlappingOthers(a, dayAppointmentsCell);
+                            return (
                             <button
                               key={a.id}
                               type="button"
-                              title={calendarEventTitle(a, loc, mode, i18n.language)}
+                              title={calendarEventTitle(a, loc, mode, i18n.language, overlaps)}
                               className={cn(
                                 "w-full truncate rounded-[4px] px-1 py-0.5 text-start text-[10px] font-medium leading-tight sm:text-[11px]",
                                 appointmentCalendarEventChipClassName(a.status),
+                                overlaps > 0 && "ring-1 ring-inset ring-amber-500/50",
                               )}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 openAppointment(a.id);
                               }}
                             >
-                              {calendarEventTitle(a, loc, mode, i18n.language)}
+                              {calendarEventTitle(a, loc, mode, i18n.language, overlaps)}
                             </button>
-                          ))}
+                          );})}
                           {overflowMobile > 0 ? (
                             <span className="px-0.5 text-[10px] font-medium text-muted-foreground ltr-nums">
                               {t("appointments.calendarMoreEvents", "+{{count}} more", { count: overflowMobile })}
@@ -324,23 +347,26 @@ export function AppointmentsCalendarPanel() {
                         </div>
 
                         <div className="hidden min-h-0 flex-1 flex-col gap-0.5 overflow-hidden lg:flex">
-                          {visibleLg.map((a) => (
+                          {visibleLg.map((a) => {
+                            const overlaps = countOverlappingOthers(a, dayAppointmentsCell);
+                            return (
                             <button
                               key={a.id}
                               type="button"
-                              title={calendarEventTitle(a, loc, mode, i18n.language)}
+                              title={calendarEventTitle(a, loc, mode, i18n.language, overlaps)}
                               className={cn(
                                 "w-full truncate rounded-[4px] px-1.5 py-0.5 text-start text-[11px] font-medium leading-tight",
                                 appointmentCalendarEventChipClassName(a.status),
+                                overlaps > 0 && "ring-1 ring-inset ring-amber-500/50",
                               )}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 openAppointment(a.id);
                               }}
                             >
-                              {calendarEventTitle(a, loc, mode, i18n.language)}
+                              {calendarEventTitle(a, loc, mode, i18n.language, overlaps)}
                             </button>
-                          ))}
+                          );})}
                           {overflowLg > 0 ? (
                             <span className="px-1 text-[11px] font-medium text-muted-foreground ltr-nums">
                               {t("appointments.calendarMoreEvents", "+{{count}} more", { count: overflowLg })}
@@ -377,13 +403,15 @@ export function AppointmentsCalendarPanel() {
                         patientMrn: a.patientMrn,
                         patientName: a.patientName,
                       });
-                      const start = new Date(a.startsAt);
-                      const end = a.endsAt ? new Date(a.endsAt) : null;
+                      const overlapCount = countOverlappingOthers(a, dayAppointments);
                       return (
                         <li key={a.id}>
                           <button
                             type="button"
-                            className="flex w-full gap-3 rounded-xl border border-border/80 bg-card p-3 text-start touch-manipulation transition-colors hover:bg-muted/40 active:bg-muted/60 sm:items-center sm:p-4"
+                            className={cn(
+                              "flex w-full gap-3 rounded-xl border border-border/80 bg-card p-3 text-start touch-manipulation transition-colors hover:bg-muted/40 active:bg-muted/60 sm:items-center sm:p-4",
+                              overlapCount > 0 && "border-amber-500/40 bg-amber-500/5",
+                            )}
                             onClick={() => openAppointment(a.id)}
                           >
                             <span
@@ -395,11 +423,17 @@ export function AppointmentsCalendarPanel() {
                             />
                             <div className="min-w-0 flex-1 space-y-1">
                               <p className="text-sm font-semibold ltr-nums sm:text-base">
-                                {start.toLocaleTimeString(loc, { hour: "2-digit", minute: "2-digit" })}
-                                {end
-                                  ? ` – ${end.toLocaleTimeString(loc, { hour: "2-digit", minute: "2-digit" })}`
-                                  : ` · ${t("appointments.endOpen", "open end")}`}
+                                {formatAppointmentTimeRange(a.startsAt, a.endsAt, loc)}
                               </p>
+                              {overlapCount > 0 ? (
+                                <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                                  {t(
+                                    "appointments.calendarSharedSlot",
+                                    "Shared time slot with {{count}} other patient(s)",
+                                    { count: overlapCount },
+                                  )}
+                                </p>
+                              ) : null}
                               <p className="truncate text-sm font-medium">{patient.text}</p>
                               {mode === "clinic" && a.clinicianName ? (
                                 <p className="truncate text-xs text-muted-foreground">{a.clinicianName}</p>

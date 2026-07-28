@@ -7,6 +7,12 @@ type DatetimeLocalFieldProps = {
   onChange: (value: string) => void;
   disabled?: boolean;
   className?: string;
+  /** Earliest selectable time (HH:mm), e.g. "09:00" */
+  minTime?: string;
+  /** Time input step in seconds (900 = 15 minutes) */
+  stepSeconds?: number;
+  /** Default time when date is set but time is empty */
+  defaultTime?: string;
 };
 
 function splitDatetimeLocal(value: string): { date: string; time: string } {
@@ -16,7 +22,16 @@ function splitDatetimeLocal(value: string): { date: string; time: string } {
 }
 
 /** Split date + time fields — more reliable than `datetime-local` on iOS/Android. */
-export function DatetimeLocalField({ id, value, onChange, disabled, className }: DatetimeLocalFieldProps) {
+export function DatetimeLocalField({
+  id,
+  value,
+  onChange,
+  disabled,
+  className,
+  minTime,
+  stepSeconds,
+  defaultTime = "00:00",
+}: DatetimeLocalFieldProps) {
   const { date, time } = splitDatetimeLocal(value);
 
   const update = (nextDate: string, nextTime: string) => {
@@ -24,7 +39,7 @@ export function DatetimeLocalField({ id, value, onChange, disabled, className }:
       onChange("");
       return;
     }
-    onChange(`${nextDate}T${nextTime || "00:00"}`);
+    onChange(`${nextDate}T${nextTime || defaultTime}`);
   };
 
   return (
@@ -42,6 +57,8 @@ export function DatetimeLocalField({ id, value, onChange, disabled, className }:
         className="ltr-nums"
         value={time}
         disabled={disabled}
+        min={minTime}
+        step={stepSeconds}
         onChange={(e) => update(date, e.target.value)}
       />
     </div>

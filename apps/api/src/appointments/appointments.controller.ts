@@ -60,6 +60,24 @@ export class AppointmentsController {
     );
   }
 
+  @Get("scheduling-conflicts")
+  @ApiOperation({ summary: "List overlapping appointments for a clinician and time window" })
+  @ApiOkResponse({ type: [AppointmentDto] })
+  schedulingConflicts(
+    @CurrentUser() user: JwtUser,
+    @Query("clinicianId") clinicianId: string,
+    @Query("startsAt") startsAt: string,
+    @Query("endsAt") endsAt?: string,
+  ) {
+    return this.appointments.listSchedulingConflicts(
+      requireTenantId(user),
+      user,
+      clinicianId,
+      startsAt,
+      endsAt,
+    );
+  }
+
   @Post()
   @ApiOperation({ summary: "Book appointment" })
   @ApiCreatedResponse({ type: AppointmentDto })
