@@ -239,14 +239,13 @@ export function AppointmentsPage() {
       const issues = collectAppointmentCreateIssues({ clinicId, patientId, clinicianId, start, end }, t);
       if (issues.length > 0) throw new Error(issues.join(" "));
       const startsAt = toAppointmentIso(start);
-      const endsAt = toAppointmentIso(end);
       const body: Record<string, unknown> = {
         clinicId,
         patientId,
         clinicianId,
         startsAt,
-        endsAt,
       };
+      if (end.trim()) body.endsAt = toAppointmentIso(end);
       const trimmedFee = bookFee.trim();
       if (trimmedFee !== "") {
         const fee = Number.parseFloat(trimmedFee);
@@ -525,8 +524,14 @@ export function AppointmentsPage() {
               <DatetimeLocalField value={start} onChange={setStart} />
             </div>
             <div className="space-y-2">
-              <Label required>{t("appointments.ends")}</Label>
+              <Label>{t("appointments.ends")}</Label>
               <DatetimeLocalField value={end} onChange={setEnd} />
+              <p className="text-xs text-muted-foreground">
+                {t(
+                  "appointments.endOptionalHint",
+                  "Optional — leave blank if the visit end time is unknown. It is set automatically when the linked encounter is completed.",
+                )}
+              </p>
             </div>
             <div className="space-y-2">
               <Label>{t("appointments.scheduledFee", "Scheduled fee ({{currency}})", { currency: bookFeeCurrency })}</Label>

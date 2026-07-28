@@ -23,10 +23,10 @@ export class UpdateAppointmentDto {
   @IsDateString()
   startsAt?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ nullable: true })
   @IsOptional()
   @IsDateString()
-  endsAt?: string;
+  endsAt?: string | null;
 
   @ApiPropertyOptional({ description: "Scheduled visit fee; syncs to a linked open encounter when changed" })
   @IsOptional()

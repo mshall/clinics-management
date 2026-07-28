@@ -115,7 +115,7 @@ export class AppointmentsService {
       clinicianFirstNameAr: clinicianParts.firstNameAr,
       clinicianLastNameAr: clinicianParts.lastNameAr,
       startsAt: row.startsAt.toISOString(),
-      endsAt: row.endsAt.toISOString(),
+      endsAt: row.endsAt?.toISOString() ?? null,
       feeAmount: Number(row.feeAmount),
       status: row.status,
       notes: row.notes,
@@ -279,8 +279,9 @@ export class AppointmentsService {
     ]);
     if (!clinic || !patient || !clinician) throw new BadRequestException("Invalid clinic, patient, or clinician");
     const start = new Date(dto.startsAt);
-    const end = new Date(dto.endsAt);
-    if (end <= start) throw new BadRequestException("endsAt must be after startsAt");
+    const endRaw = dto.endsAt?.trim();
+    const end = endRaw ? new Date(endRaw) : null;
+    if (end != null && end <= start) throw new BadRequestException("endsAt must be after startsAt");
 
     const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
     if (!tenant) throw new BadRequestException("Tenant not found");
@@ -351,8 +352,13 @@ export class AppointmentsService {
     }
 
     const nextStarts = dto.startsAt !== undefined ? new Date(dto.startsAt) : existing.startsAt;
-    const nextEnds = dto.endsAt !== undefined ? new Date(dto.endsAt) : existing.endsAt;
-    if (nextEnds <= nextStarts) throw new BadRequestException("endsAt must be after startsAt");
+    const nextEnds =
+      dto.endsAt !== undefined
+        ? dto.endsAt === null || String(dto.endsAt).trim() === ""
+          ? null
+          : new Date(dto.endsAt)
+        : existing.endsAt;
+    if (nextEnds != null && nextEnds <= nextStarts) throw new BadRequestException("endsAt must be after startsAt");
 
     const clinicId = dto.clinicId ?? existing.clinicId;
     const patientId = dto.patientId ?? existing.patientId;
@@ -383,7 +389,12 @@ export class AppointmentsService {
           patientId,
           clinicianId,
           startsAt: dto.startsAt !== undefined ? new Date(dto.startsAt) : undefined,
-          endsAt: dto.endsAt !== undefined ? new Date(dto.endsAt) : undefined,
+          endsAt:
+            dto.endsAt !== undefined
+              ? dto.endsAt === null || String(dto.endsAt).trim() === ""
+                ? null
+                : new Date(dto.endsAt)
+              : undefined,
           status: dto.status !== undefined ? dto.status : undefined,
           notes: dto.notes !== undefined ? (dto.notes === "" ? null : dto.notes) : undefined,
           ...(feeProvided ? { feeAmount: new Prisma.Decimal(String(Number(dto.feeAmount))) } : {}),

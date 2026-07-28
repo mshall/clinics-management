@@ -19,9 +19,12 @@ export class CreateAppointmentDto {
   @IsDateString()
   startsAt!: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional({
+    description: "Optional scheduled end; set automatically when a linked encounter is finalized",
+  })
+  @IsOptional()
   @IsDateString()
-  endsAt!: string;
+  endsAt?: string;
 
   @ApiPropertyOptional({
     description: "Scheduled visit fee; defaults to the organization default visit fee",

@@ -32,10 +32,12 @@ export function collectAppointmentCreateIssues(
   if (!input.clinicId.trim()) issues.push(t("appointments.errorClinicRequired", "Select a clinic."));
   if (!input.patientId.trim()) issues.push(t("appointments.errorPatientRequired", "Select a patient."));
   if (!input.clinicianId.trim()) issues.push(t("appointments.errorClinicianRequired", "Select a clinician."));
-  if (!input.start.trim() || !input.end.trim()) {
-    issues.push(t("appointments.errorTimesRequired", "Start and end date/time are required."));
-  } else if (new Date(input.end).getTime() <= new Date(input.start).getTime()) {
-    issues.push(t("appointments.errorEndAfterStart", "End time must be after start time."));
+  if (!input.start.trim()) {
+    issues.push(t("appointments.errorStartRequired", "Start date/time is required."));
+  } else if (input.end.trim()) {
+    if (new Date(input.end).getTime() <= new Date(input.start).getTime()) {
+      issues.push(t("appointments.errorEndAfterStart", "End time must be after start time."));
+    }
   }
   return issues;
 }

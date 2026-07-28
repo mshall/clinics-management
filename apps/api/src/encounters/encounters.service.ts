@@ -698,20 +698,21 @@ export class EncountersService {
     }
 
     const aptId = enc.appointmentId;
+    const finalizedAt = new Date();
 
     const row = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.encounter.update({
         where: { id: encounterId },
         data: {
           status: EncounterStatus.FINALIZED,
-          finalizedAt: new Date(),
+          finalizedAt,
         },
         include: encounterIncludeDef,
       });
       if (aptId) {
         await tx.appointment.update({
           where: { id: aptId },
-          data: { status: AppointmentStatus.COMPLETED },
+          data: { status: AppointmentStatus.COMPLETED, endsAt: finalizedAt },
         });
       }
       return updated;

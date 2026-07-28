@@ -177,7 +177,7 @@ export interface AppointmentDto {
   clinicianFirstNameAr?: string | null;
   clinicianLastNameAr?: string | null;
   startsAt: string;
-  endsAt: string;
+  endsAt: string | null;
   feeAmount: number;
   status: string;
   notes: string | null;

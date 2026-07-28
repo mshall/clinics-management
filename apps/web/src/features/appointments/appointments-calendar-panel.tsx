@@ -378,7 +378,7 @@ export function AppointmentsCalendarPanel() {
                         patientName: a.patientName,
                       });
                       const start = new Date(a.startsAt);
-                      const end = new Date(a.endsAt);
+                      const end = a.endsAt ? new Date(a.endsAt) : null;
                       return (
                         <li key={a.id}>
                           <button
@@ -396,8 +396,9 @@ export function AppointmentsCalendarPanel() {
                             <div className="min-w-0 flex-1 space-y-1">
                               <p className="text-sm font-semibold ltr-nums sm:text-base">
                                 {start.toLocaleTimeString(loc, { hour: "2-digit", minute: "2-digit" })}
-                                {" – "}
-                                {end.toLocaleTimeString(loc, { hour: "2-digit", minute: "2-digit" })}
+                                {end
+                                  ? ` – ${end.toLocaleTimeString(loc, { hour: "2-digit", minute: "2-digit" })}`
+                                  : ` · ${t("appointments.endOpen", "open end")}`}
                               </p>
                               <p className="truncate text-sm font-medium">{patient.text}</p>
                               {mode === "clinic" && a.clinicianName ? (

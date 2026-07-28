@@ -92,7 +92,7 @@ export function AppointmentDetailPage() {
     setPatientId(apt.patientId);
     setClinicianId(apt.clinicianId);
     setStartsLocal(toDatetimeLocalValue(apt.startsAt));
-    setEndsLocal(toDatetimeLocalValue(apt.endsAt));
+    setEndsLocal(apt.endsAt ? toDatetimeLocalValue(apt.endsAt) : "");
     setNotes(apt.notes ?? "");
     setFeeAmount(apt.feeAmount != null ? String(apt.feeAmount) : "");
     setStatus(apt.status);
@@ -228,14 +228,21 @@ export function AppointmentDetailPage() {
   const onSave = () => {
     if (!id || readOnly) return;
     const start = new Date(startsLocal);
-    const end = new Date(endsLocal);
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-      const msg = t("appointments.invalidDateRange", "Enter valid start and end times.");
+    if (Number.isNaN(start.getTime())) {
+      const msg = t("appointments.errorStartRequired", "Start date/time is required.");
       setFormErr(msg);
       toast.error(msg);
       return;
     }
-    if (end <= start) {
+    const endProvided = endsLocal.trim().length > 0;
+    const end = endProvided ? new Date(endsLocal) : null;
+    if (endProvided && Number.isNaN(end!.getTime())) {
+      const msg = t("appointments.invalidEndTime", "Enter a valid end time.");
+      setFormErr(msg);
+      toast.error(msg);
+      return;
+    }
+    if (end != null && end <= start) {
       const msg = t("appointments.endAfterStart", "End time must be after start time.");
       setFormErr(msg);
       toast.error(msg);
@@ -254,7 +261,7 @@ export function AppointmentDetailPage() {
       patientId,
       clinicianId,
       startsAt: start.toISOString(),
-      endsAt: end.toISOString(),
+      endsAt: end ? end.toISOString() : null,
       notes: notes.trim() === "" ? "" : notes,
       status,
       ...(parsedFee !== undefined ? { feeAmount: parsedFee } : {}),
@@ -456,8 +463,16 @@ export function AppointmentDetailPage() {
             <DatetimeLocalField value={startsLocal} disabled={readOnly} onChange={setStartsLocal} />
           </div>
           <div className="space-y-2">
-            <Label required>{t("appointments.ends")}</Label>
+            <Label>{t("appointments.ends")}</Label>
             <DatetimeLocalField value={endsLocal} disabled={readOnly} onChange={setEndsLocal} />
+            {!readOnly ? (
+              <p className="text-xs text-muted-foreground">
+                {t(
+                  "appointments.endOptionalHint",
+                  "Optional — leave blank if the visit end time is unknown. It is set automatically when the linked encounter is completed.",
+                )}
+              </p>
+            ) : null}
           </div>
           <div className="space-y-2">
             <Label>{t("appointments.scheduledFee", "Scheduled fee ({{currency}})", { currency: feeCurrency })}</Label>

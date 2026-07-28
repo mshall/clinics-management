@@ -821,7 +821,9 @@ export class AdminDataExplorerService {
       case "appointments": {
         const data: Prisma.AppointmentUpdateInput = {};
         if (body.startsAt !== undefined) data.startsAt = new Date(String(body.startsAt));
-        if (body.endsAt !== undefined) data.endsAt = new Date(String(body.endsAt));
+        if (body.endsAt !== undefined) {
+          data.endsAt = body.endsAt === null ? null : new Date(String(body.endsAt));
+        }
         if (body.status !== undefined) {
           const st = String(body.status) as AppointmentStatus;
           if (!Object.values(AppointmentStatus).includes(st)) throw new BadRequestException("Invalid status");

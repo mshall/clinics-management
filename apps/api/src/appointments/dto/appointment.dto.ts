@@ -41,8 +41,8 @@ export class AppointmentDto {
   @ApiProperty()
   startsAt!: string;
 
-  @ApiProperty()
-  endsAt!: string;
+  @ApiPropertyOptional({ nullable: true })
+  endsAt!: string | null;
 
   @ApiProperty({ description: "Scheduled visit fee for this appointment" })
   feeAmount!: number;
