@@ -43,6 +43,14 @@ export function formatDatetimeLocal(date: Date): string {
   return `${y}-${m}-${d}T${hh}:${mm}`;
 }
 
+/** Default end for booking UI: start + slot length (15 minutes). */
+export function defaultEndFromStart(localStart: string, slotMinutes = APPOINTMENT_SLOT_MINUTES): string {
+  if (!localStart.trim()) return "";
+  const d = new Date(localStart);
+  if (Number.isNaN(d.getTime())) return "";
+  return formatDatetimeLocal(addMinutes(d, slotMinutes));
+}
+
 export function isStartBeforeMinHour(localDatetime: string, minHour = APPOINTMENT_MIN_START_HOUR): boolean {
   const { time } = splitDatetimeLocal(localDatetime);
   if (!time) return false;

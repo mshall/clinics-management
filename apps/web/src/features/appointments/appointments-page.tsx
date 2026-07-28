@@ -33,6 +33,7 @@ import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog"
 import { collectAppointmentCreateIssues } from "@/lib/create-form-validation";
 import {
   APPOINTMENT_SLOT_MINUTES,
+  defaultEndFromStart,
   formatDatetimeLocal,
   suggestNextAppointmentStart,
 } from "@/lib/appointment-scheduling";
@@ -280,6 +281,15 @@ export function AppointmentsPage() {
       setStart(formatDatetimeLocal(new Date(`${today}T${clinicOpeningTime}`)));
     }
   }, [showBookPanel, start, clinicOpeningTime]);
+
+  useEffect(() => {
+    if (!showBookPanel) return;
+    if (!start.trim()) {
+      setEnd("");
+      return;
+    }
+    setEnd(defaultEndFromStart(start));
+  }, [showBookPanel, start]);
 
   const appointmentCreateInput = {
     clinicId,
@@ -657,8 +667,9 @@ export function AppointmentsPage() {
               />
               <p className="text-xs text-muted-foreground">
                 {t(
-                  "appointments.endOptionalHint",
-                  "Optional — leave blank if the visit end time is unknown. It is set automatically when the linked encounter is completed.",
+                  "appointments.endAutoHint",
+                  "Prefilled to {{minutes}} minutes after start — clear or change if the visit duration differs.",
+                  { minutes: APPOINTMENT_SLOT_MINUTES },
                 )}
               </p>
             </div>
