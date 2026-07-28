@@ -31,6 +31,12 @@ export class ClinicDto {
   @ApiProperty({ description: "Default currency for fees at this clinic" })
   defaultCurrency!: string;
 
+  @ApiProperty({ default: "09:00", description: "Daily opening time (HH:mm)" })
+  openingTime!: string;
+
+  @ApiProperty({ default: "00:00", description: "Daily closing time (HH:mm)" })
+  closingTime!: string;
+
   @ApiProperty({ enum: ["ACTIVE", "INACTIVE"] })
   recordStatus!: "ACTIVE" | "INACTIVE";
 

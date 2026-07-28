@@ -221,6 +221,34 @@ export function ClinicFormFields({
         </p>
       </div>
       <div className="space-y-2">
+        <Label htmlFor={`${idPrefix}-opening-time`}>{t("admin.clinicOpeningTime", "Opening time")}</Label>
+        <Input
+          id={`${idPrefix}-opening-time`}
+          type="time"
+          className="ltr-nums"
+          value={values.openingTime}
+          step={900}
+          onChange={(e) => onChange({ openingTime: e.target.value })}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor={`${idPrefix}-closing-time`}>{t("admin.clinicClosingTime", "Closing time")}</Label>
+        <Input
+          id={`${idPrefix}-closing-time`}
+          type="time"
+          className="ltr-nums"
+          value={values.closingTime}
+          step={900}
+          onChange={(e) => onChange({ closingTime: e.target.value })}
+        />
+        <p className="text-xs text-muted-foreground">
+          {t(
+            "admin.clinicClosingTimeHint",
+            "Use 12:00 AM (midnight) to stay open until the end of the day. Appointments may still be booked after closing with a warning for call center staff.",
+          )}
+        </p>
+      </div>
+      <div className="space-y-2">
         <Label htmlFor={`${idPrefix}-phone`}>{t("admin.phone", "Phone")}</Label>
         <Input
           id={`${idPrefix}-phone`}

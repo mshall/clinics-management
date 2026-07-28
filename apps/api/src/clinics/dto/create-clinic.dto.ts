@@ -1,7 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
-import { Allow, IsEmail, IsIn, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import { Allow, IsEmail, IsIn, IsOptional, IsString, Matches, MaxLength, MinLength } from "class-validator";
 import { BASE_CURRENCIES } from "../../common/base-currencies";
+import { DEFAULT_CLINIC_CLOSING_TIME, DEFAULT_CLINIC_OPENING_TIME } from "../../common/clinic-hours";
+
+const CLINIC_TIME_HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export class CreateClinicDto {
   /**
@@ -89,4 +92,19 @@ export class CreateClinicDto {
   @IsString()
   @IsIn(BASE_CURRENCIES)
   defaultCurrency?: string;
+
+  @ApiPropertyOptional({ default: DEFAULT_CLINIC_OPENING_TIME, description: "Daily opening time (HH:mm)" })
+  @IsOptional()
+  @IsString()
+  @Matches(CLINIC_TIME_HHMM)
+  openingTime?: string;
+
+  @ApiPropertyOptional({
+    default: DEFAULT_CLINIC_CLOSING_TIME,
+    description: "Daily closing time (HH:mm). Use 00:00 for midnight (end of day).",
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(CLINIC_TIME_HHMM)
+  closingTime?: string;
 }

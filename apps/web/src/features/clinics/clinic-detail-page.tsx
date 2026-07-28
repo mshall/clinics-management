@@ -11,10 +11,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClinicDeactivateConfirmDialog } from "@/features/clinics/clinic-deactivate-confirm-dialog";
 import { ClinicDoctorsPanel } from "@/features/clinics/clinic-doctors-panel";
 import { ClinicCurrencySettingsPanel } from "@/features/clinics/clinic-currency-settings-panel";
+import { ClinicHoursSettingsPanel } from "@/features/clinics/clinic-hours-settings-panel";
 import { ClinicReactivateDialog } from "@/features/clinics/clinic-reactivate-dialog";
 import { useClinicQuery } from "@/lib/api-hooks";
 import { ApiError, apiPost } from "@/lib/http";
-import { formatClinicName, formatClinicNameFields } from "@/lib/locale-display";
+import { formatClinicName, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
+import { formatClinicHoursRange, resolveClinicClosingTime, resolveClinicOpeningTime } from "@/lib/clinic-hours";
 import { clinicKindLabel } from "@/lib/clinic-kind";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -184,6 +186,16 @@ export function ClinicDetailPage() {
                   <span className="font-medium">{c.email}</span>
                 </p>
                 <p>
+                  <span className="text-muted-foreground">{t("clinics.workingHours", "Working hours")}: </span>
+                  <span className="font-medium ltr-nums">
+                    {formatClinicHoursRange(
+                      resolveClinicOpeningTime(c.openingTime),
+                      resolveClinicClosingTime(c.closingTime),
+                      localeForLanguage(i18n.language),
+                    )}
+                  </span>
+                </p>
+                <p>
                   <span className="text-muted-foreground">{t("clinics.defaultLanguage", "Default language")}: </span>
                   <span className="font-medium">{c.defaultLanguage}</span>
                 </p>
@@ -235,6 +247,12 @@ export function ClinicDetailPage() {
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">
+          <ClinicHoursSettingsPanel
+            clinicId={c.id}
+            openingTime={c.openingTime ?? "09:00"}
+            closingTime={c.closingTime ?? "00:00"}
+            canEdit={canManageClinic}
+          />
           <ClinicCurrencySettingsPanel
             clinicId={c.id}
             defaultCurrency={c.defaultCurrency}

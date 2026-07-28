@@ -16,6 +16,12 @@ import type { ClinicKind } from "./clinic-kind";
 import { resolveClinicKind } from "./clinic-kind";
 import { clinicInvoiceSettingsFromRow } from "../common/invoice-config";
 import { clinicPrescriptionSettingsFromRow } from "../common/prescription-config";
+import {
+  DEFAULT_CLINIC_CLOSING_TIME,
+  DEFAULT_CLINIC_OPENING_TIME,
+  assertValidClinicHours,
+  normalizeClinicTime,
+} from "../common/clinic-hours";
 
 export interface ClinicDto {
   id: string;
@@ -28,6 +34,8 @@ export interface ClinicDto {
   kind: ClinicKind;
   logoUrl: string | null;
   defaultCurrency: string;
+  openingTime: string;
+  closingTime: string;
   recordStatus: ClinicRecordStatus;
   disabledAt: string | null;
   createdAt: string;
@@ -97,6 +105,8 @@ export class ClinicsService {
     country: string;
     logoUrl: string | null;
     defaultCurrency: string;
+    openingTime: string;
+    closingTime: string;
     recordStatus: ClinicRecordStatus;
     disabledAt: Date | null;
     createdAt: Date;
@@ -114,6 +124,8 @@ export class ClinicsService {
       kind: resolveClinicKind(c.parentClinicId, c._count?.branches ?? 0),
       logoUrl: c.logoUrl ?? null,
       defaultCurrency: c.defaultCurrency,
+      openingTime: c.openingTime,
+      closingTime: c.closingTime,
       recordStatus: c.recordStatus,
       disabledAt: c.disabledAt?.toISOString() ?? null,
       createdAt: c.createdAt.toISOString(),
@@ -536,6 +548,8 @@ export class ClinicsService {
       licenseNumber: row.licenseNumber,
       defaultLanguage: row.defaultLanguage,
       defaultCurrency: row.defaultCurrency,
+      openingTime: row.openingTime,
+      closingTime: row.closingTime,
       recordStatus: row.recordStatus,
       disabledAt: row.disabledAt?.toISOString() ?? null,
       createdAt: row.createdAt.toISOString(),
@@ -611,6 +625,14 @@ export class ClinicsService {
         ? dto.defaultCurrency.trim()
         : tenant?.baseCurrency ?? "AED";
 
+    const openingTime = normalizeClinicTime(dto.openingTime, DEFAULT_CLINIC_OPENING_TIME);
+    const closingTime = normalizeClinicTime(dto.closingTime, DEFAULT_CLINIC_CLOSING_TIME);
+    try {
+      assertValidClinicHours(openingTime, closingTime);
+    } catch {
+      throw new BadRequestException("Invalid clinic opening or closing time");
+    }
+
     const openedAt = new Date();
     openedAt.setHours(0, 0, 0, 0);
 
@@ -630,6 +652,8 @@ export class ClinicsService {
         licenseNumber,
         logoUrl,
         defaultCurrency,
+        openingTime,
+        closingTime,
         operatingPeriods: {
           create: { startDate: openedAt },
         },
@@ -687,6 +711,23 @@ export class ClinicsService {
       }
       data.defaultCurrency = dto.defaultCurrency.trim();
     }
+    const nextOpening =
+      dto.openingTime !== undefined
+        ? normalizeClinicTime(dto.openingTime, DEFAULT_CLINIC_OPENING_TIME)
+        : existing.openingTime;
+    const nextClosing =
+      dto.closingTime !== undefined
+        ? normalizeClinicTime(dto.closingTime, DEFAULT_CLINIC_CLOSING_TIME)
+        : existing.closingTime;
+    if (dto.openingTime !== undefined || dto.closingTime !== undefined) {
+      try {
+        assertValidClinicHours(nextOpening, nextClosing);
+      } catch {
+        throw new BadRequestException("Invalid clinic opening or closing time");
+      }
+    }
+    if (dto.openingTime !== undefined) data.openingTime = nextOpening;
+    if (dto.closingTime !== undefined) data.closingTime = nextClosing;
     if (!Object.keys(data).length) throw new BadRequestException("No supported fields to update");
 
     const row = await this.prisma.clinic.update({
@@ -718,6 +759,8 @@ export class ClinicsService {
       licenseNumber: row.licenseNumber,
       defaultLanguage: row.defaultLanguage,
       defaultCurrency: row.defaultCurrency,
+      openingTime: row.openingTime,
+      closingTime: row.closingTime,
       recordStatus: row.recordStatus,
       disabledAt: row.disabledAt?.toISOString() ?? null,
       createdAt: row.createdAt.toISOString(),

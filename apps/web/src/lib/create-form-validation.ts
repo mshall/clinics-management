@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import { APPOINTMENT_MIN_START_HOUR, isStartBeforeMinHour } from "@/lib/appointment-scheduling";
+import { isStartBeforeOpening } from "@/lib/clinic-hours";
 import type { PickListItem } from "@/components/searchable-pick-list";
 import { resolveClinicIdFromQuery } from "@/lib/pick-list-utils";
 import { isOrgWideUserRole } from "@/features/platform/platform-shared";
@@ -26,6 +26,7 @@ export function collectAppointmentCreateIssues(
     clinicianId: string;
     start: string;
     end: string;
+    openingTime?: string;
   },
   t: TFunction,
 ): string[] {
@@ -36,12 +37,12 @@ export function collectAppointmentCreateIssues(
   if (!input.start.trim()) {
     issues.push(t("appointments.errorStartRequired", "Start date/time is required."));
   } else {
-    if (isStartBeforeMinHour(input.start, APPOINTMENT_MIN_START_HOUR)) {
+    if (isStartBeforeOpening(input.start, input.openingTime ?? "09:00")) {
       issues.push(
         t(
-          "appointments.errorStartMinHour",
-          "Appointments can only be booked from {{hour}}:00 AM.",
-          { hour: APPOINTMENT_MIN_START_HOUR },
+          "appointments.errorStartBeforeOpening",
+          "Appointments cannot be booked before the clinic opens ({{time}}).",
+          { time: input.openingTime ?? "09:00" },
         ),
       );
     }

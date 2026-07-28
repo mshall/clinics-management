@@ -1,3 +1,9 @@
+import {
+  collectClinicHoursErrors,
+  DEFAULT_CLINIC_CLOSING_TIME,
+  DEFAULT_CLINIC_OPENING_TIME,
+} from "@/lib/clinic-hours";
+
 export type ClinicFormValues = {
   clinicPlacement: "standalone" | "branch";
   parentClinicId: string;
@@ -13,6 +19,8 @@ export type ClinicFormValues = {
   email: string;
   licenseNumber: string;
   defaultCurrency: string;
+  openingTime: string;
+  closingTime: string;
 };
 
 export function emptyClinicForm(): ClinicFormValues {
@@ -31,6 +39,8 @@ export function emptyClinicForm(): ClinicFormValues {
     email: "",
     licenseNumber: "",
     defaultCurrency: "AED",
+    openingTime: DEFAULT_CLINIC_OPENING_TIME,
+    closingTime: DEFAULT_CLINIC_CLOSING_TIME,
   };
 }
 
@@ -62,6 +72,7 @@ export function collectClinicFormErrors(
   if (v.clinicPlacement === "branch" && !v.parentClinicId.trim()) {
     errors.push(t("admin.errorClinicParent", "Select the parent clinic for this branch."));
   }
+  errors.push(...collectClinicHoursErrors(v.openingTime, v.closingTime, t));
   return errors;
 }
 
@@ -98,6 +109,8 @@ export function clinicFormToPatchPayload(v: ClinicFormValues) {
     email: v.email.trim() || undefined,
     licenseNumber: v.licenseNumber.trim() || undefined,
     defaultCurrency: v.defaultCurrency.trim() || "AED",
+    openingTime: v.openingTime.trim() || DEFAULT_CLINIC_OPENING_TIME,
+    closingTime: v.closingTime.trim() || DEFAULT_CLINIC_CLOSING_TIME,
   };
   if (v.clinicPlacement === "standalone") {
     body.parentClinicId = null;
@@ -121,6 +134,8 @@ export function clinicFormToCreatePayload(v: ClinicFormValues, opts?: { includeP
     email: v.email.trim() || undefined,
     licenseNumber: v.licenseNumber.trim() || undefined,
     defaultCurrency: v.defaultCurrency.trim() || "AED",
+    openingTime: v.openingTime.trim() || DEFAULT_CLINIC_OPENING_TIME,
+    closingTime: v.closingTime.trim() || DEFAULT_CLINIC_CLOSING_TIME,
   };
   if (v.clinicPlacement === "branch" && opts?.includeParent !== false && v.parentClinicId.trim()) {
     body.parentClinicId = v.parentClinicId.trim();
@@ -142,6 +157,8 @@ export function clinicDetailToForm(d: {
   email?: string;
   licenseNumber: string;
   defaultCurrency?: string;
+  openingTime?: string;
+  closingTime?: string;
 }): ClinicFormValues {
   return {
     clinicPlacement: d.parentClinicId ? "branch" : "standalone",
@@ -158,5 +175,7 @@ export function clinicDetailToForm(d: {
     email: d.email ?? "",
     licenseNumber: d.licenseNumber,
     defaultCurrency: d.defaultCurrency ?? "AED",
+    openingTime: d.openingTime ?? DEFAULT_CLINIC_OPENING_TIME,
+    closingTime: d.closingTime ?? DEFAULT_CLINIC_CLOSING_TIME,
   };
 }

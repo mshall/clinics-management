@@ -57,6 +57,12 @@ export class ClinicDetailDto {
   @ApiProperty({ description: "Default currency for appointments, encounters, and operations at this clinic" })
   defaultCurrency!: string;
 
+  @ApiProperty({ default: "09:00", description: "Daily opening time (HH:mm)" })
+  openingTime!: string;
+
+  @ApiProperty({ default: "00:00", description: "Daily closing time (HH:mm). 00:00 means midnight (end of day)." })
+  closingTime!: string;
+
   @ApiProperty({ description: "Preset id for invoice background color" })
   invoiceBackgroundColor!: string;
 

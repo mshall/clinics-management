@@ -55,8 +55,9 @@ export function suggestNextAppointmentStart(
   appointments: AppointmentDto[],
   dateIso: string,
   clinicianId: string,
+  openingTime = "09:00",
 ): string {
-  const base = new Date(`${dateIso}T${String(APPOINTMENT_MIN_START_HOUR).padStart(2, "0")}:00`);
+  const base = new Date(`${dateIso}T${openingTime}`);
   let next = base;
   for (const apt of appointments) {
     if (apt.clinicianId !== clinicianId || !ACTIVE_STATUSES.has(apt.status)) continue;

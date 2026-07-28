@@ -32,11 +32,17 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectAppointmentCreateIssues } from "@/lib/create-form-validation";
 import {
-  APPOINTMENT_MIN_START_HOUR,
   APPOINTMENT_SLOT_MINUTES,
   formatDatetimeLocal,
   suggestNextAppointmentStart,
 } from "@/lib/appointment-scheduling";
+import {
+  formatClinicHoursRange,
+  formatClinicTimeLabel,
+  isStartAfterClosing,
+  resolveClinicClosingTime,
+  resolveClinicOpeningTime,
+} from "@/lib/clinic-hours";
 import type { AppointmentDto } from "@/lib/api-types";
 import { DatetimeLocalField } from "@/components/datetime-local-field";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
@@ -152,6 +158,11 @@ export function AppointmentsPage() {
 
   const [clinicId, setClinicId] = useState("");
   const bookFeeCurrency = resolveClinicCurrencyCode(clinics, clinicId);
+  const selectedBookClinic = useMemo(() => clinics.find((c) => c.id === clinicId), [clinics, clinicId]);
+  const clinicOpeningTime = resolveClinicOpeningTime(selectedBookClinic?.openingTime);
+  const clinicClosingTime = resolveClinicClosingTime(selectedBookClinic?.closingTime);
+  const isCallCenter = authUser?.role === "call_center";
+  const bookHoursLocale = localeForLanguage(i18n.language);
   const [patientId, setPatientId] = useState("");
   const [clinicianId, setClinicianId] = useState("");
   const [pinnedPhysicianItem, setPinnedPhysicianItem] = useState<PickListItem | null>(null);
@@ -160,6 +171,9 @@ export function AppointmentsPage() {
   }, [authUser?.role, authUser?.id]);
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
+  const bookingAfterClosing = Boolean(
+    isCallCenter && clinicId.trim() && start.trim() && isStartAfterClosing(start, clinicClosingTime),
+  );
   const [bookFee, setBookFee] = useState("");
   const [overlapConflicts, setOverlapConflicts] = useState<AppointmentDto[]>([]);
   const [showOverlapConfirm, setShowOverlapConfirm] = useState(false);
@@ -246,21 +260,35 @@ export function AppointmentsPage() {
 
   useEffect(() => {
     if (!showBookPanel || !clinicianId.trim()) return;
-    const suggested = suggestNextAppointmentStart(bookDayData?.items ?? [], bookDateIso, clinicianId);
+    const suggested = suggestNextAppointmentStart(
+      bookDayData?.items ?? [],
+      bookDateIso,
+      clinicianId,
+      clinicOpeningTime,
+    );
     setStart((prev) => {
       if (!prev.trim()) return suggested;
       const prevDate = prev.split("T")[0];
       if (prevDate !== bookDateIso) return suggested;
       return prev;
     });
-  }, [showBookPanel, clinicianId, bookDateIso, bookDayData?.items]);
+  }, [showBookPanel, clinicianId, bookDateIso, bookDayData?.items, clinicOpeningTime]);
 
   useEffect(() => {
     if (showBookPanel && !start.trim()) {
       const today = new Date().toISOString().slice(0, 10);
-      setStart(formatDatetimeLocal(new Date(`${today}T${String(APPOINTMENT_MIN_START_HOUR).padStart(2, "0")}:00`)));
+      setStart(formatDatetimeLocal(new Date(`${today}T${clinicOpeningTime}`)));
     }
-  }, [showBookPanel, start]);
+  }, [showBookPanel, start, clinicOpeningTime]);
+
+  const appointmentCreateInput = {
+    clinicId,
+    patientId,
+    clinicianId,
+    start,
+    end,
+    openingTime: clinicOpeningTime,
+  };
 
   const buildCreateBody = (confirmOverlap = false): Record<string, unknown> => {
     const startsAt = toAppointmentIso(start);
@@ -281,7 +309,7 @@ export function AppointmentsPage() {
   };
 
   const handleCreateAppointment = async () => {
-    const issues = collectAppointmentCreateIssues({ clinicId, patientId, clinicianId, start, end }, t);
+    const issues = collectAppointmentCreateIssues(appointmentCreateInput, t);
     if (issues.length > 0) {
       validation.showIssues(issues);
       return;
@@ -311,7 +339,7 @@ export function AppointmentsPage() {
 
   const createMut = useMutation({
     mutationFn: (confirmOverlap: boolean) => {
-      const issues = collectAppointmentCreateIssues({ clinicId, patientId, clinicianId, start, end }, t);
+      const issues = collectAppointmentCreateIssues(appointmentCreateInput, t);
       if (issues.length > 0) throw new Error(issues.join(" "));
       return apiPost("/api/v1/appointments", buildCreateBody(confirmOverlap));
     },
@@ -588,26 +616,44 @@ export function AppointmentsPage() {
               <DatetimeLocalField
                 value={start}
                 onChange={setStart}
-                minTime={`${String(APPOINTMENT_MIN_START_HOUR).padStart(2, "0")}:00`}
+                minTime={clinicOpeningTime}
                 stepSeconds={APPOINTMENT_SLOT_MINUTES * 60}
-                defaultTime={`${String(APPOINTMENT_MIN_START_HOUR).padStart(2, "0")}:00`}
+                defaultTime={clinicOpeningTime}
               />
               <p className="text-xs text-muted-foreground">
-                {t(
-                  "appointments.startMinHint",
-                  "Booking starts at {{hour}}:00 AM. Each slot is {{minutes}} minutes unless you set a custom end time.",
-                  { hour: APPOINTMENT_MIN_START_HOUR, minutes: APPOINTMENT_SLOT_MINUTES },
-                )}
+                {clinicId.trim()
+                  ? t(
+                      "appointments.startClinicHoursHint",
+                      "Clinic hours: {{hours}}. Each slot is {{minutes}} minutes unless you set a custom end time.",
+                      {
+                        hours: formatClinicHoursRange(clinicOpeningTime, clinicClosingTime, bookHoursLocale),
+                        minutes: APPOINTMENT_SLOT_MINUTES,
+                      },
+                    )
+                  : t(
+                      "appointments.startMinHint",
+                      "Select a clinic to apply its opening hours. Each slot is {{minutes}} minutes unless you set a custom end time.",
+                      { minutes: APPOINTMENT_SLOT_MINUTES },
+                    )}
               </p>
+              {bookingAfterClosing ? (
+                <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-900 dark:text-amber-200">
+                  {t(
+                    "appointments.afterClosingWarning",
+                    "This appointment is after the clinic closing time ({{time}}). You can still book it, but please confirm this is intentional.",
+                    { time: formatClinicTimeLabel(clinicClosingTime, bookHoursLocale) },
+                  )}
+                </div>
+              ) : null}
             </div>
             <div className="space-y-2">
               <Label>{t("appointments.ends")}</Label>
               <DatetimeLocalField
                 value={end}
                 onChange={setEnd}
-                minTime={`${String(APPOINTMENT_MIN_START_HOUR).padStart(2, "0")}:00`}
+                minTime={clinicOpeningTime}
                 stepSeconds={APPOINTMENT_SLOT_MINUTES * 60}
-                defaultTime={`${String(APPOINTMENT_MIN_START_HOUR).padStart(2, "0")}:00`}
+                defaultTime={clinicOpeningTime}
               />
               <p className="text-xs text-muted-foreground">
                 {t(

@@ -24,6 +24,8 @@ export type PatientDocumentDto = {
 export type ClinicDto = components["schemas"]["ClinicDto"] & {
   parentNameEn?: string | null;
   defaultCurrency?: string;
+  openingTime?: string;
+  closingTime?: string;
   recordStatus?: "ACTIVE" | "INACTIVE";
   disabledAt?: string | null;
   createdAt?: string;

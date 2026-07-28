@@ -328,6 +328,8 @@ export interface ClinicDetailDto {
   licenseNumber: string;
   defaultLanguage: string;
   defaultCurrency: string;
+  openingTime: string;
+  closingTime: string;
   invoiceBackgroundColor: string;
   invoiceBackgroundHex: string;
   invoiceSections: string[];
