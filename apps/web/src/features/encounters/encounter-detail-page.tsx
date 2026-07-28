@@ -40,13 +40,15 @@ import { LinkedInvoicesSection } from "@/features/invoices/linked-invoices-secti
 import { resolvePatientListLabel } from "@/lib/patient-display";
 import { ENCOUNTER_VISIT_TYPES, formatVisitType } from "@/lib/visit-types";
 import { useAuthStore } from "@/stores/auth-store";
-import { useEncounterQuery, useClinicsQuery } from "@/lib/api-hooks";
+import { useEncounterQuery } from "@/lib/api-hooks";
 import type { EncounterDetailDto, EncounterDocumentDto } from "@/lib/api-types";
 import { ApiError, apiDelete, apiFetchBlob, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { canDeleteEncounter } from "@/lib/encounter-delete-policy";
 import { canGenerateInvoice } from "@/lib/invoice-generate-policy";
 import { formatEncounterStatus, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
-import { formatMoneyAmount, resolveClinicCurrencyCode } from "@/lib/money-display";
+import { formatMoneyAmount } from "@/lib/money-display";
+import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
+import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import { generatePrescriptionPng } from "@/lib/prescription-image";
 import { loadPrescriptionBranding } from "@/lib/prescription-branding";
 import { cn } from "@/lib/utils";
@@ -98,8 +100,9 @@ export function EncounterDetailPage() {
   const canDelete = canDeleteEncounter(user?.role);
   const canInvoice = canGenerateInvoice(user?.role);
   const { data: enc, isPending, isError, error } = useEncounterQuery(id);
-  const { data: clinics = [] } = useClinicsQuery();
-  const clinicDefaultCurrency = resolveClinicCurrencyCode(clinics, enc?.clinicId);
+  const orgBaseCurrency = useOrgBaseCurrency();
+  const resolveClinicCurrency = useClinicCurrencyResolver();
+  const clinicDefaultCurrency = resolveClinicCurrency(enc?.clinicId);
   const visitFeeCurrency = enc?.visitFeeCurrency ?? clinicDefaultCurrency;
 
   const [visitType, setVisitType] = useState("");
@@ -116,7 +119,7 @@ export function EncounterDetailPage() {
   const [weightKg, setWeightKg] = useState("");
   const [heightCm, setHeightCm] = useState("");
   const [visitFeeAmount, setVisitFeeAmount] = useState("");
-  const [visitFeeCurrencyDraft, setVisitFeeCurrencyDraft] = useState("AED");
+  const [visitFeeCurrencyDraft, setVisitFeeCurrencyDraft] = useState<string>(orgBaseCurrency);
   const [drugName, setDrugName] = useState("");
   const [dosage, setDosage] = useState("");
   const [frequency, setFrequency] = useState("");

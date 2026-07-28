@@ -24,7 +24,8 @@ import { physicianToPickListItem } from "@/lib/physician-display";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { DatetimeLocalField } from "@/components/datetime-local-field";
 import { formatClinicName, localeForLanguage } from "@/lib/locale-display";
-import { formatMoneyAmount, resolveClinicCurrencyCode } from "@/lib/money-display";
+import { formatMoneyAmount } from "@/lib/money-display";
+import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -54,6 +55,7 @@ export function AppointmentDetailPage() {
   const qc = useQueryClient();
   const { data: apt, isPending, isError, error } = useAppointmentQuery(id);
   const { data: clinics = [] } = useClinicsQuery();
+  const resolveClinicCurrency = useClinicCurrencyResolver();
   const readOnly = apt ? isReadOnlyStatus(apt.status) : false;
 
   const [clinicId, setClinicId] = useState("");
@@ -98,7 +100,7 @@ export function AppointmentDetailPage() {
     setStatus(apt.status);
   }, [apt]);
 
-  const feeCurrency = resolveClinicCurrencyCode(clinics, apt?.clinicId);
+  const feeCurrency = resolveClinicCurrency(apt?.clinicId);
 
   const statusLabel = (code: string) => {
     if (!isAppointmentStatusCode(code)) return code;

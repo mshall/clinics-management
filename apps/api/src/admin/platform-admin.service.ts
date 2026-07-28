@@ -3,6 +3,8 @@ import { UserRole } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import type { JwtUser } from "../auth/jwt-user";
 import { isPlatformSuperAdmin } from "../common/platform-super-admin";
+import { isBaseCurrency } from "../common/base-currencies";
+import { syncInheritedClinicCurrencies } from "../common/sync-inherited-clinic-currencies";
 import { ClinicsService } from "../clinics/clinics.service";
 import type { ClinicKind } from "../clinics/clinic-kind";
 import { resolveClinicKind } from "../clinics/clinic-kind";
@@ -208,7 +210,7 @@ export class PlatformAdminService {
   async patchTenant(user: JwtUser, tenantId: string, dto: PlatformPatchTenantDto) {
     this.assertPlatform(user);
     const id = this.normalizeTenantId(tenantId);
-    await this.assertTenant(id);
+    const existing = await this.assertTenant(id);
     const data: {
       name?: string;
       nameAr?: string;
@@ -224,12 +226,23 @@ export class PlatformAdminService {
     if (dto.nameAr !== undefined) {
       data.nameAr = dto.nameAr.trim();
     }
-    if (dto.baseCurrency !== undefined) data.baseCurrency = dto.baseCurrency.trim();
+    if (dto.baseCurrency !== undefined) {
+      const next = dto.baseCurrency.trim();
+      if (!isBaseCurrency(next)) throw new BadRequestException("Invalid base currency");
+      data.baseCurrency = next;
+    }
     if (dto.defaultLocale !== undefined) data.defaultLocale = dto.defaultLocale.trim();
     if (dto.defaultVisitFee !== undefined) data.defaultVisitFee = dto.defaultVisitFee;
     if (!Object.keys(data).length) throw new BadRequestException("No supported fields to update");
 
-    const row = await this.prisma.tenant.update({ where: { id }, data });
+    const row = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.tenant.update({ where: { id }, data });
+      if (data.baseCurrency && data.baseCurrency !== existing.baseCurrency) {
+        await syncInheritedClinicCurrencies(tx, id, existing.baseCurrency, data.baseCurrency);
+      }
+      return updated;
+    });
+
     return {
       id: row.id,
       name: row.name,

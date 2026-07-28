@@ -22,6 +22,8 @@ export interface AuthUser {
   /** Legacy email gate: data explorer on Admin, not platform routes */
   platformSuperAdmin?: boolean;
   hasAvatar?: boolean;
+  /** Organization base currency (default for clinics that inherit org settings) */
+  tenantBaseCurrency?: string | null;
 }
 
 interface AuthState {
@@ -36,6 +38,7 @@ interface AuthState {
       employeePrivilegeGrants?: AuthUser["employeePrivilegeGrants"];
       platformSuperAdmin?: boolean;
       hasAvatar?: boolean;
+      tenantBaseCurrency?: string | null;
     },
   ) => void;
   signOut: () => void;
@@ -62,6 +65,7 @@ export const useAuthStore = create<AuthState>()(
             employeePrivilegeGrants: raw.employeePrivilegeGrants,
             platformSuperAdmin: Boolean(raw.platformSuperAdmin),
             hasAvatar: Boolean(raw.hasAvatar),
+            tenantBaseCurrency: raw.tenantBaseCurrency ?? null,
           },
         }),
       signOut: () => set({ accessToken: null, user: null }),
@@ -91,6 +95,7 @@ export const useAuthStore = create<AuthState>()(
             employeePrivilegeGrants: (me as AuthUserDto).employeePrivilegeGrants,
             platformSuperAdmin: Boolean(me.platformSuperAdmin),
             hasAvatar: Boolean((me as { hasAvatar?: boolean }).hasAvatar),
+            tenantBaseCurrency: (me as AuthUserDto).tenantBaseCurrency ?? null,
           },
         });
       },

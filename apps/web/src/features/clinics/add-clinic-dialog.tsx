@@ -10,6 +10,7 @@ import { useClinicsQuery } from "@/lib/api-hooks";
 import { collectClinicFormIssues } from "@/lib/create-form-validation";
 import { apiPost } from "@/lib/http";
 import { formatClinicName } from "@/lib/locale-display";
+import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import { ClinicFormFields } from "./clinic-form-fields";
 import { clinicFormToCreatePayload, emptyClinicForm } from "./clinic-form-utils";
 import { isRootClinic } from "@/lib/clinic-kind";
@@ -22,9 +23,10 @@ type AddClinicDialogProps = {
 export function AddClinicDialog({ open, onOpenChange }: AddClinicDialogProps) {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
+  const orgBaseCurrency = useOrgBaseCurrency();
   const { data: clinics = [] } = useClinicsQuery();
 
-  const [form, setForm] = useState(emptyClinicForm());
+  const [form, setForm] = useState(() => emptyClinicForm(orgBaseCurrency));
   const validation = useValidationIssuesDialog({ intent: "create" });
 
   const parentClinicPickItems: PickListItem[] = useMemo(
@@ -34,11 +36,11 @@ export function AddClinicDialog({ open, onOpenChange }: AddClinicDialogProps) {
   );
 
   const createClinicMut = useMutation({
-    mutationFn: () => apiPost("/api/v1/clinics", clinicFormToCreatePayload(form)),
+    mutationFn: () => apiPost("/api/v1/clinics", clinicFormToCreatePayload(form, { orgBaseCurrency })),
     onSuccess: () => {
       validation.clear();
       void qc.invalidateQueries({ queryKey: ["clinics"] });
-      setForm(emptyClinicForm());
+      setForm(emptyClinicForm(orgBaseCurrency));
       onOpenChange(false);
     },
     onError: (e: unknown) => validation.showError(e),
@@ -62,7 +64,7 @@ export function AddClinicDialog({ open, onOpenChange }: AddClinicDialogProps) {
         onOpenChange(o);
         if (!o) {
           validation.clear();
-          setForm(emptyClinicForm());
+          setForm(emptyClinicForm(orgBaseCurrency));
         }
       }}
     >

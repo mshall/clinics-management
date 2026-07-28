@@ -26,7 +26,9 @@ import { canArchiveEmployees, canManageEmployees, canEditGroupAdminEmployeeProfi
 import { ApiError, apiDelete, apiFetchBlob, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { formatClinicName, formatClinicNameFields, formatEmploymentType, formatUserRole, localeForLanguage } from "@/lib/locale-display";
 import { formatEmployeeName } from "@/lib/employee-display";
-import { formatEmployeeSalaryAmount, resolveClinicCurrencyCode } from "@/lib/money-display";
+import { formatEmployeeSalaryAmount } from "@/lib/money-display";
+import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
+import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import { useAuthStore } from "@/stores/auth-store";
 
 const EMP_TYPE_VALUES = ["FULL_TIME", "PART_TIME", "CONTRACTOR", "LOCUM"] as const;
@@ -54,6 +56,8 @@ export function EmployeeDetailPage() {
     emp?.linkedUserRole,
   );
   const { data: clinics = [] } = useClinicsQuery();
+  const orgBaseCurrency = useOrgBaseCurrency();
+  const resolveClinicCurrency = useClinicCurrencyResolver();
 
   const [editing, setEditing] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -71,7 +75,7 @@ export function EmployeeDetailPage() {
   const [employmentType, setEmploymentType] = useState("FULL_TIME");
   const [hireDate, setHireDate] = useState("");
   const [salaryBase, setSalaryBase] = useState("");
-  const [salaryCurrency, setSalaryCurrency] = useState("AED");
+  const [salaryCurrency, setSalaryCurrency] = useState<string>(orgBaseCurrency);
   const [idDocFile, setIdDocFile] = useState<File | null>(null);
   const [formErr, setFormErr] = useState<string | null>(null);
   const validation = useValidationIssuesDialog({ intent: "save" });
@@ -100,7 +104,7 @@ export function EmployeeDetailPage() {
     setSalaryCurrency(
       emp.salaryCurrency ??
         emp.salaryCurrencyEffective ??
-        resolveClinicCurrencyCode(clinics, emp.clinicId),
+        resolveClinicCurrency(emp.clinicId),
     );
   }, [emp, clinics]);
 
@@ -117,7 +121,7 @@ export function EmployeeDetailPage() {
   const showClinicAssignment = Boolean(linkedUserRole) && !isOrgWideUserRole(linkedUserRole);
   const requiresClinicAssignment = isClinicRequiredUserRole(linkedUserRole);
   const primaryClinicId = showClinicAssignment ? (assignedClinicIds[0] ?? clinicId) : clinicId;
-  const salaryClinicDefault = resolveClinicCurrencyCode(clinics, primaryClinicId || emp?.clinicId);
+  const salaryClinicDefault = resolveClinicCurrency(primaryClinicId || emp?.clinicId);
   const assignedClinicLabels = useMemo(() => {
     const ids = emp?.linkedUserClinicIds ?? (emp?.clinicId ? [emp.clinicId] : []);
     return ids
@@ -675,7 +679,7 @@ export function EmployeeDetailPage() {
               <Separator />
               <Row
                 label={t("hr.salaryBase")}
-                value={<span className="ltr-nums">{emp ? formatEmployeeSalaryAmount(emp, clinics, locale) : "—"}</span>}
+                value={<span className="ltr-nums">{emp ? formatEmployeeSalaryAmount(emp, clinics, locale, orgBaseCurrency) : "—"}</span>}
               />
               {emp.hasIdDoc ? (
                 <>

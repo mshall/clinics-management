@@ -45,7 +45,9 @@ import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-di
 import { formatClinicianDisplayName } from "@/lib/employee-display";
 import { physicianToPickListItem } from "@/lib/physician-display";
 import { formatClinicName, localeForLanguage } from "@/lib/locale-display";
-import { formatMoneyAmount, resolveClinicCurrencyCode } from "@/lib/money-display";
+import { formatMoneyAmount } from "@/lib/money-display";
+import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
+import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import { columnFilterIncludes, cn } from "@/lib/utils";
 import { useDebouncedPickListSearch } from "@/lib/pick-list-utils";
 import { useAuthStore } from "@/stores/auth-store";
@@ -138,6 +140,8 @@ export function OperationsPage() {
   const opTotalPages = opData?.totalPages ?? 1;
 
   const { data: clinics = [] } = useClinicsQuery();
+  const orgBaseCurrency = useOrgBaseCurrency();
+  const resolveClinicCurrency = useClinicCurrencyResolver();
   const singleManagedClinic = clinics.length === 1 ? clinics[0]! : null;
   const clinicById = useMemo(() => {
     const m = new Map<string, { en: string; ar: string }>();
@@ -160,7 +164,7 @@ export function OperationsPage() {
   const [operationDate, setOperationDate] = useState("");
   const [totalCost, setTotalCost] = useState("");
   const [downPayment, setDownPayment] = useState("");
-  const [feeCurrency, setFeeCurrency] = useState("AED");
+  const [feeCurrency, setFeeCurrency] = useState<string>(orgBaseCurrency);
   const [comments, setComments] = useState("");
   const [formErr, setFormErr] = useState<string | null>(null);
   const [createOk, setCreateOk] = useState<string | null>(null);
@@ -239,7 +243,7 @@ export function OperationsPage() {
     const id = schedulingClinicId || selectedPatient?.homeBranchId || clinics[0]?.id;
     return clinics.find((c) => c.id === id) ?? clinics[0];
   }, [schedulingClinicId, selectedPatient?.homeBranchId, clinics]);
-  const createCurrency = resolveClinicCurrencyCode(clinics, selectedClinic?.id);
+  const createCurrency = resolveClinicCurrency(selectedClinic?.id);
 
   useEffect(() => {
     if (showCreatePanel) setFeeCurrency(createCurrency);
@@ -302,7 +306,7 @@ export function OperationsPage() {
   const [editOperationDate, setEditOperationDate] = useState("");
   const [editTotalCost, setEditTotalCost] = useState("");
   const [editDownPayment, setEditDownPayment] = useState("");
-  const [editFeeCurrency, setEditFeeCurrency] = useState("AED");
+  const [editFeeCurrency, setEditFeeCurrency] = useState<string>(orgBaseCurrency);
   const [editComments, setEditComments] = useState("");
   const [editClinicId, setEditClinicId] = useState("");
   const [editFormErr, setEditFormErr] = useState<string | null>(null);
@@ -366,7 +370,7 @@ export function OperationsPage() {
     setEditOperationDate(local);
     setEditTotalCost(String(o.totalCost));
     setEditDownPayment(String(o.downPayment));
-    setEditFeeCurrency(o.feeCurrency ?? resolveClinicCurrencyCode(clinics, o.clinicId));
+    setEditFeeCurrency(o.feeCurrency ?? resolveClinicCurrency(o.clinicId));
     setEditComments(o.comments ?? "");
     setEditFormErr(null);
     editPatientPickSearch.resetSearch();
@@ -378,7 +382,7 @@ export function OperationsPage() {
   const { data: editOpDetail, isPending: editOpDetailPending } = useOperationQuery(
     editIsScheduled ? editOp?.id : undefined,
   );
-  const editClinicDefaultCurrency = resolveClinicCurrencyCode(clinics, editClinicId || editOp?.clinicId);
+  const editClinicDefaultCurrency = resolveClinicCurrency(editClinicId || editOp?.clinicId);
 
   useEffect(() => {
     if (!editIsScheduled || !editOpDetail || editDetailLoadedId === editOpDetail.id) return;
@@ -588,7 +592,7 @@ export function OperationsPage() {
     return op;
   };
 
-  const completeCurrency = completeConfirmOp?.feeCurrency ?? resolveClinicCurrencyCode(clinics, completeConfirmOp?.clinicId);
+  const completeCurrency = completeConfirmOp?.feeCurrency ?? resolveClinicCurrency(completeConfirmOp?.clinicId);
   const completeBalance = completeConfirmOp
     ? Math.max(0, completeConfirmOp.balanceDue ?? completeConfirmOp.totalCost - (completeConfirmOp.paidAmount ?? completeConfirmOp.downPayment))
     : 0;
@@ -816,8 +820,7 @@ export function OperationsPage() {
   };
 
   const loc = localeForLanguage(i18n.language);
-  const listCurrency = resolveClinicCurrencyCode(
-    clinics,
+  const listCurrency = resolveClinicCurrency(
     filterClinicId || singleManagedClinic?.id || rows[0]?.clinicId,
   );
   const money = (n: number, currency?: string) => formatMoneyAmount(n, currency ?? listCurrency, loc);
@@ -993,7 +996,7 @@ export function OperationsPage() {
           completePromptOp
             ? operationSummaryDetails(
                 completePromptOp,
-                completePromptOp.feeCurrency ?? resolveClinicCurrencyCode(clinics, completePromptOp.clinicId),
+                completePromptOp.feeCurrency ?? resolveClinicCurrency(completePromptOp.clinicId),
               )
             : null
         }
@@ -1019,7 +1022,7 @@ export function OperationsPage() {
           cancelConfirmOp
             ? operationSummaryDetails(
                 cancelConfirmOp,
-                cancelConfirmOp.feeCurrency ?? resolveClinicCurrencyCode(clinics, cancelConfirmOp.clinicId),
+                cancelConfirmOp.feeCurrency ?? resolveClinicCurrency(cancelConfirmOp.clinicId),
               )
             : null
         }
@@ -1159,7 +1162,7 @@ export function OperationsPage() {
                           onChange={(e) => {
                             setEditClinicId(e.target.value);
                             setEditClinicianId("");
-                            setEditFeeCurrency(resolveClinicCurrencyCode(clinics, e.target.value));
+                            setEditFeeCurrency(resolveClinicCurrency(e.target.value));
                           }}
                         >
                           {clinics.map((c) => (
@@ -1491,7 +1494,7 @@ export function OperationsPage() {
                         onChange={(e) => {
                           setClinicId(e.target.value);
                           setClinicianId("");
-                          setFeeCurrency(resolveClinicCurrencyCode(clinics, e.target.value || undefined));
+                          setFeeCurrency(resolveClinicCurrency(e.target.value || undefined));
                         }}
                       >
                         <option value="">{t("operations.autoClinic", "Patient home branch")}</option>
@@ -1985,7 +1988,7 @@ export function OperationsPage() {
           }
           defaultPurpose={t("operations.procedureFee", "Procedure fee")}
           defaultAmount={invoiceOperation.paidAmount > 0 ? invoiceOperation.paidAmount : invoiceOperation.totalCost}
-          defaultCurrency={invoiceOperation.feeCurrency ?? resolveClinicCurrencyCode(clinics, invoiceOperation.clinicId)}
+          defaultCurrency={invoiceOperation.feeCurrency ?? resolveClinicCurrency(invoiceOperation.clinicId)}
         />
       ) : null}
     </div>

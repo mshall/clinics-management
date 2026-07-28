@@ -43,8 +43,9 @@ import { columnFilterIncludes } from "@/lib/utils";
 import {
   formatEmployeeSalaryAmount,
   formatMultiCurrencyAmounts,
-  resolveClinicCurrencyCode,
 } from "@/lib/money-display";
+import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
+import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import {
   formatAttendanceStatus,
   formatClinicNameFields,
@@ -110,6 +111,8 @@ export function HrPage() {
     );
   const hrManageContext = useHrManageContextQuery(usesProvisionerUi && canManage);
   const { data: clinics = [] } = useClinicsQuery();
+  const orgBaseCurrency = useOrgBaseCurrency();
+  const resolveClinicCurrency = useClinicCurrencyResolver();
   const [tab, setTab] = useState<Tab>(() => parseHrTab(searchParams.get("tab")));
 
   useEffect(() => {
@@ -258,7 +261,7 @@ export function HrPage() {
   const [empPhone, setEmpPhone] = useState("");
   const [empType, setEmpType] = useState("FULL_TIME");
   const [empSalary, setEmpSalary] = useState("9000");
-  const [empSalaryCurrency, setEmpSalaryCurrency] = useState("AED");
+  const [empSalaryCurrency, setEmpSalaryCurrency] = useState<string>(orgBaseCurrency);
   const [empIdDocFile, setEmpIdDocFile] = useState<File | null>(null);
   const empValidation = useValidationIssuesDialog({ intent: "create" });
   const attValidation = useValidationIssuesDialog({ intent: "create" });
@@ -341,7 +344,7 @@ export function HrPage() {
       : empClinic;
   const provisionClinicNameEn =
     clinics.find((c) => c.id === primaryClinicForCreate)?.nameEn ?? hrManageContext.data?.clinicNameEn ?? "";
-  const empSalaryClinicDefault = resolveClinicCurrencyCode(clinics, primaryClinicForCreate || undefined);
+  const empSalaryClinicDefault = resolveClinicCurrency(primaryClinicForCreate || undefined);
   useEffect(() => {
     if (primaryClinicForCreate) setEmpSalaryCurrency(empSalaryClinicDefault);
   }, [primaryClinicForCreate, empSalaryClinicDefault]);
@@ -650,7 +653,7 @@ export function HrPage() {
       if (ecfNum.trim() && !columnFilterIncludes(e.employeeNumber, ecfNum)) return false;
       if (ecfTitle.trim() && !columnFilterIncludes(e.jobTitle, ecfTitle)) return false;
       if (ecfSalary.trim()) {
-        const hay = `${e.salaryBase} ${formatEmployeeSalaryAmount(e, clinics, locale)}`;
+        const hay = `${e.salaryBase} ${formatEmployeeSalaryAmount(e, clinics, locale, orgBaseCurrency)}`;
         if (!columnFilterIncludes(hay, ecfSalary)) return false;
       }
       return true;
@@ -1284,7 +1287,7 @@ export function HrPage() {
                           <td className="px-2 py-2 text-xs text-muted-foreground ltr-nums">{formatEmpWhen(e.deletedAt)}</td>
                         </>
                       ) : null}
-                      <td className="px-2 py-2 ltr-nums">{formatEmployeeSalaryAmount(e, clinics, locale)}</td>
+                      <td className="px-2 py-2 ltr-nums">{formatEmployeeSalaryAmount(e, clinics, locale, orgBaseCurrency)}</td>
                       {canManage ? (
                         <td className="px-2 py-2 text-end">
                           <DropdownMenu>

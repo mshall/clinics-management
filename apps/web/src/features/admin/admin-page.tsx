@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Navigate } from "react-router-dom";
+import { BaseCurrencySelect } from "@/components/base-currency-select";
 import type { PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
@@ -22,6 +23,7 @@ import { cn, columnFilterIncludes } from "@/lib/utils";
 import { formatClinicName } from "@/lib/locale-display";
 import { clinicKindLabel, isRootClinic } from "@/lib/clinic-kind";
 import { useAuthStore } from "@/stores/auth-store";
+import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import { ClinicFormFields } from "@/features/clinics/clinic-form-fields";
 import {
   clinicDetailToForm,
@@ -44,6 +46,8 @@ export function AdminPage() {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
+  const refreshSession = useAuthStore((s) => s.refreshSessionFromServer);
+  const orgBaseCurrency = useOrgBaseCurrency();
   const isGroupAdmin = authUser?.role === "group_admin";
   const isClinicAdmin = authUser?.role === "clinic_admin";
   const isBranchManager = authUser?.role === "branch_manager";
@@ -65,10 +69,10 @@ export function AdminPage() {
   });
 
   const [selectedClinicId, setSelectedClinicId] = useState<string | null>(null);
-  const [editClinicForm, setEditClinicForm] = useState<ClinicFormValues>(emptyClinicForm());
+  const [editClinicForm, setEditClinicForm] = useState<ClinicFormValues>(() => emptyClinicForm(orgBaseCurrency));
   const selectedClinicDetail = useClinicQuery(selectedClinicId ?? undefined);
 
-  const [addClinicForm, setAddClinicForm] = useState<ClinicFormValues>(emptyClinicForm());
+  const [addClinicForm, setAddClinicForm] = useState<ClinicFormValues>(() => emptyClinicForm(orgBaseCurrency));
   const createClinicValidation = useValidationIssuesDialog({ intent: "create" });
   const patchClinicValidation = useValidationIssuesDialog({ intent: "save" });
 
@@ -125,18 +129,18 @@ export function AdminPage() {
   }, [clinics, cfNameEn, cfNameAr, cfParent, cfCity, cfCountry, cfKind]);
 
   const resetClinicForm = () => {
-    setAddClinicForm(emptyClinicForm());
+    setAddClinicForm(emptyClinicForm(orgBaseCurrency));
   };
 
   useEffect(() => {
     if (!selectedClinicId || !selectedClinicDetail.data) return;
-    setEditClinicForm(clinicDetailToForm(selectedClinicDetail.data));
+    setEditClinicForm(clinicDetailToForm(selectedClinicDetail.data, orgBaseCurrency));
     patchClinicValidation.clear();
   }, [selectedClinicId, selectedClinicDetail.data]);
 
   const patchClinicMut = useMutation({
     mutationFn: () =>
-      apiPatch(`/api/v1/clinics/${selectedClinicId}`, clinicFormToPatchPayload(editClinicForm)),
+      apiPatch(`/api/v1/clinics/${selectedClinicId}`, clinicFormToPatchPayload(editClinicForm, orgBaseCurrency)),
     onSuccess: () => {
       patchClinicValidation.clear();
       setSelectedClinicId(null);
@@ -147,7 +151,7 @@ export function AdminPage() {
   });
 
   const createClinicMut = useMutation({
-    mutationFn: () => apiPost("/api/v1/clinics", clinicFormToCreatePayload(addClinicForm)),
+    mutationFn: () => apiPost("/api/v1/clinics", clinicFormToCreatePayload(addClinicForm, { orgBaseCurrency })),
     onSuccess: () => {
       createClinicValidation.clear();
       resetClinicForm();
@@ -215,6 +219,7 @@ export function AdminPage() {
   const [adminSection, setAdminSection] = useState<"clinics" | "users" | "patients" | "organization" | "data" | "governance">("clinics");
   const [clinicAdminSection, setClinicAdminSection] = useState<"staff" | "organization" | "governance">("staff");
   const [feeDraft, setFeeDraft] = useState("");
+  const [currencyDraft, setCurrencyDraft] = useState<string>(orgBaseCurrency);
   useEffect(() => {
     if (!isPlatformSuperAdmin && !isGroupAdmin && adminSection === "data") setAdminSection("clinics");
   }, [isPlatformSuperAdmin, isGroupAdmin, adminSection]);
@@ -222,10 +227,23 @@ export function AdminPage() {
     const v = overview.data?.currentTenant?.defaultVisitFee;
     if (v != null && Number.isFinite(Number(v))) setFeeDraft(String(v));
   }, [overview.data?.currentTenant?.defaultVisitFee]);
+  useEffect(() => {
+    const bc = overview.data?.currentTenant?.baseCurrency;
+    if (bc) setCurrencyDraft(bc);
+  }, [overview.data?.currentTenant?.baseCurrency]);
 
-  const patchFeeMut = useMutation({
-    mutationFn: () => apiPatch("/api/v1/admin/tenant-settings", { defaultVisitFee: Number.parseFloat(feeDraft) }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["admin", "overview"] }),
+  const patchOrgSettingsMut = useMutation({
+    mutationFn: () =>
+      apiPatch("/api/v1/admin/tenant-settings", {
+        defaultVisitFee: Number.parseFloat(feeDraft),
+        baseCurrency: currencyDraft,
+      }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["admin", "overview"] });
+      await qc.invalidateQueries({ queryKey: ["clinics"] });
+      await refreshSession();
+      toast.success(t("admin.orgSettingsSaved", "Organization settings saved."));
+    },
     onError: (e: unknown) => {
       if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
         toast.error(String((e.body as { message?: unknown }).message));
@@ -347,15 +365,29 @@ export function AdminPage() {
           {isGroupAdmin ? (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">{t("admin.defaultVisitFee", "Default visit fee (encounters)")}</CardTitle>
+                <CardTitle className="text-base">{t("admin.orgSettings", "Organization settings")}</CardTitle>
               </CardHeader>
-              <CardContent className="flex flex-wrap items-end gap-3">
+              <CardContent className="flex flex-wrap items-end gap-4">
+                <div className="space-y-2 max-w-xs">
+                  <Label htmlFor="org-base-currency">{t("platform.baseCurrency", "Base currency")}</Label>
+                  <BaseCurrencySelect id="org-base-currency" value={currencyDraft} onChange={setCurrencyDraft} />
+                  <p className="text-xs text-muted-foreground">
+                    {t(
+                      "admin.orgBaseCurrencyHint",
+                      "Default currency for all clinics unless a clinic sets its own override.",
+                    )}
+                  </p>
+                </div>
                 <div className="space-y-2">
-                  <Label required>{t("admin.feeAmount", "Amount (base currency)")}</Label>
+                  <Label required>{t("admin.feeAmount", "Default visit fee ({{currency}})", { currency: currencyDraft })}</Label>
                   <Input className="ltr-nums w-40" type="number" min="0" step="0.01" value={feeDraft} onChange={(e) => setFeeDraft(e.target.value)} />
                 </div>
-                <Button type="button" disabled={patchFeeMut.isPending || feeDraft === ""} onClick={() => patchFeeMut.mutate()}>
-                  {t("admin.saveFee", "Save")}
+                <Button
+                  type="button"
+                  disabled={patchOrgSettingsMut.isPending || feeDraft === "" || !currencyDraft}
+                  onClick={() => patchOrgSettingsMut.mutate()}
+                >
+                  {t("common.save", "Save")}
                 </Button>
               </CardContent>
             </Card>

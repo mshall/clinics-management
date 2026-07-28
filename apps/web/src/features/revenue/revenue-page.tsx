@@ -30,7 +30,9 @@ import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog"
 import { collectRevenueSubmitIssues } from "@/lib/create-form-validation";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { resolvePatientListLabel } from "@/lib/patient-display";
-import { formatMoneyAmount, formatMultiCurrencyAmounts, resolveClinicCurrencyCode } from "@/lib/money-display";
+import { formatMoneyAmount, formatMultiCurrencyAmounts } from "@/lib/money-display";
+import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
+import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 
 function clinicDisplayName(r: RevenueEntryDto, lng: string): string {
   return formatClinicNameFields(r.clinicNameEn, r.clinicNameAr, lng, r.clinicId);
@@ -89,6 +91,8 @@ export function RevenuePage() {
   const revTotalPages = revData?.totalPages ?? 1;
   const totalsQ = useRevenueTotalsQuery({ from, to, clinicId: filterClinicId || undefined });
   const { data: clinics = [] } = useClinicsQuery();
+  const orgBaseCurrency = useOrgBaseCurrency();
+  const resolveClinicCurrency = useClinicCurrencyResolver();
   const singleManagedClinic = clinics.length === 1 ? clinics[0]! : null;
   const [clinicId, setClinicId] = useState("");
   useEffect(() => {
@@ -101,7 +105,7 @@ export function RevenuePage() {
   const [operationId, setOperationId] = useState("");
   const [gross, setGross] = useState("");
   const [vatPercent, setVatPercent] = useState("");
-  const [revenueCurrency, setRevenueCurrency] = useState("AED");
+  const [revenueCurrency, setRevenueCurrency] = useState<string>(orgBaseCurrency);
   const validation = useValidationIssuesDialog({ intent: "submit" });
   const [rfCategory, setRfCategory] = useState("");
   const [rfNet, setRfNet] = useState("");
@@ -124,8 +128,8 @@ export function RevenuePage() {
   );
   const operationBalance = selectedOperation?.balanceDue ?? 0;
   const postClinicId = operationId && selectedOperation ? selectedOperation.clinicId : clinicId;
-  const postClinicDefaultCurrency = resolveClinicCurrencyCode(clinics, postClinicId || filterClinicId || singleManagedClinic?.id);
-  const displayCurrency = resolveClinicCurrencyCode(clinics, filterClinicId || clinicId || singleManagedClinic?.id);
+  const postClinicDefaultCurrency = resolveClinicCurrency(postClinicId || filterClinicId || singleManagedClinic?.id);
+  const displayCurrency = resolveClinicCurrency(filterClinicId || clinicId || singleManagedClinic?.id);
   const locale = localeForLanguage(i18n.language);
 
   useEffect(() => {
@@ -430,7 +434,7 @@ export function RevenuePage() {
                 value={clinicId}
                 onChange={(e) => {
                   setClinicId(e.target.value);
-                  setRevenueCurrency(resolveClinicCurrencyCode(clinics, e.target.value || undefined));
+                  setRevenueCurrency(resolveClinicCurrency(e.target.value || undefined));
                 }}
               >
                 <option value="">{t("revenue.pickClinic")}</option>

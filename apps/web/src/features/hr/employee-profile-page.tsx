@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useClinicsQuery, useEmployeeQuery } from "@/lib/api-hooks";
 import { formatEmployeeSalaryAmount } from "@/lib/money-display";
+import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import { formatEmployeeName } from "@/lib/employee-display";
 import {
   formatClinicNameFields,
@@ -23,6 +24,8 @@ export function EmployeeProfilePage() {
   const { id } = useParams();
   const { data: emp, isPending, isError, error } = useEmployeeQuery(id);
   const { data: clinics = [] } = useClinicsQuery();
+  const orgBaseCurrency = useOrgBaseCurrency();
+  const locale = localeForLanguage(i18n.language);
 
   const fullName = emp ? formatEmployeeName(emp, i18n.language) : "";
   const avatarPath = emp?.hasUserAvatar && id ? `/api/v1/hr/employees/${id}/avatar` : null;
@@ -36,8 +39,6 @@ export function EmployeeProfilePage() {
     () => ({ background: avatarGradient(fullName || emp?.id || "avatar") }),
     [fullName, emp?.id],
   );
-
-  const locale = localeForLanguage(i18n.language);
 
   if (isPending) {
     return <p className="text-muted-foreground">{t("common.loading")}</p>;
@@ -108,7 +109,7 @@ export function EmployeeProfilePage() {
             <ProfileFact icon={Mail} label={t("hr.email")} value={emp.email ?? "—"} />
             <ProfileFact icon={Phone} label={t("hr.phone")} value={<span className="ltr-nums">{emp.phone}</span>} />
             <ProfileFact icon={Calendar} label={t("hr.hireDate")} value={<span className="ltr-nums">{emp.hireDate}</span>} />
-            <ProfileFact icon={UserCircle} label={t("hr.salaryBase")} value={<span className="ltr-nums">{formatEmployeeSalaryAmount(emp, clinics, locale)}</span>} />
+            <ProfileFact icon={UserCircle} label={t("hr.salaryBase")} value={<span className="ltr-nums">{formatEmployeeSalaryAmount(emp, clinics, locale, orgBaseCurrency)}</span>} />
           </dl>
 
           {emp.linkedUserDisplayName ? (

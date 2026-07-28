@@ -51,7 +51,7 @@ import { defaultEncounterListRange, defaultMonthRange } from "@/stores/date-rang
 import { useAuthStore } from "@/stores/auth-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectEncounterCreateIssues } from "@/lib/create-form-validation";
-import { resolveClinicCurrencyCode } from "@/lib/money-display";
+import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
 
 export function EncountersListPage() {
   const { t, i18n } = useTranslation();
@@ -106,6 +106,7 @@ export function EncountersListPage() {
     [dialogPatientList],
   );
   const { data: clinics = [] } = useClinicsQuery();
+  const resolveClinicCurrency = useClinicCurrencyResolver();
   const data = encData?.items ?? [];
   const total = encData?.total ?? 0;
   const totalPages = encData?.totalPages ?? 1;
@@ -155,7 +156,7 @@ export function EncountersListPage() {
   const [createClinicId, setCreateClinicId] = useState("");
   const [createVisitType, setCreateVisitType] = useState<string>(ENCOUNTER_VISIT_TYPES[0] ?? "Office visit");
   const [createVisitFee, setCreateVisitFee] = useState("");
-  const createVisitFeeCurrency = resolveClinicCurrencyCode(clinics, createClinicId || clinics[0]?.id);
+  const createVisitFeeCurrency = resolveClinicCurrency(createClinicId || clinics[0]?.id);
   const [createClinicianId, setCreateClinicianId] = useState("");
   const [pinnedPatientItem, setPinnedPatientItem] = useState<PickListItem | null>(null);
   const [pinnedClinicianItem, setPinnedClinicianItem] = useState<PickListItem | null>(null);
@@ -822,7 +823,7 @@ export function EncountersListPage() {
                                 createdAt: e.createdAt,
                                 updatedAt: e.updatedAt,
                                 visitFeeAmount: e.visitFeeAmount,
-                                visitFeeCurrency: resolveClinicCurrencyCode(clinics, e.clinicId),
+                                visitFeeCurrency: resolveClinicCurrency(e.clinicId),
                               });
                             }}
                           >

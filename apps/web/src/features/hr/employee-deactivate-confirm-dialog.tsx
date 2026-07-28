@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatClinicNameFields, formatEmploymentType, localeForLanguage } from "@/lib/locale-display";
 import { formatEmployeeName } from "@/lib/employee-display";
-import { formatMoneyAmount } from "@/lib/money-display";
+import { formatMoneyAmount, resolveEmployeeSalaryCurrency } from "@/lib/money-display";
+import { useClinicsQuery } from "@/lib/api-hooks";
+import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import type { EmployeeDeleteTarget } from "@/features/hr/employee-delete-confirm-dialog";
 
 type EmployeeDeactivateConfirmDialogProps = {
@@ -26,6 +28,8 @@ export function EmployeeDeactivateConfirmDialog({
 }: EmployeeDeactivateConfirmDialogProps) {
   const { t, i18n } = useTranslation();
   const locale = localeForLanguage(i18n.language);
+  const { data: clinics = [] } = useClinicsQuery();
+  const orgBaseCurrency = useOrgBaseCurrency();
   const [resignationDate, setResignationDate] = useState("");
 
   useEffect(() => {
@@ -106,7 +110,7 @@ export function EmployeeDeactivateConfirmDialog({
                 <span className="ltr-nums">
                   {formatMoneyAmount(
                     employee.salaryBase,
-                    employee.salaryCurrencyEffective ?? employee.salaryCurrency ?? "AED",
+                    resolveEmployeeSalaryCurrency(employee, clinics, orgBaseCurrency),
                     locale,
                   )}
                 </span>

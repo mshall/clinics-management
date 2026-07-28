@@ -23,7 +23,7 @@ export type ClinicFormValues = {
   closingTime: string;
 };
 
-export function emptyClinicForm(): ClinicFormValues {
+export function emptyClinicForm(orgBaseCurrency = "AED"): ClinicFormValues {
   return {
     clinicPlacement: "standalone",
     parentClinicId: "",
@@ -38,7 +38,7 @@ export function emptyClinicForm(): ClinicFormValues {
     phone: "",
     email: "",
     licenseNumber: "",
-    defaultCurrency: "AED",
+    defaultCurrency: orgBaseCurrency,
     openingTime: DEFAULT_CLINIC_OPENING_TIME,
     closingTime: DEFAULT_CLINIC_CLOSING_TIME,
   };
@@ -95,7 +95,7 @@ export function hasPartialClinicForm(v: ClinicFormValues): boolean {
   );
 }
 
-export function clinicFormToPatchPayload(v: ClinicFormValues) {
+export function clinicFormToPatchPayload(v: ClinicFormValues, orgBaseCurrency = "AED") {
   const body: Record<string, string | null | undefined> = {
     nameEn: v.nameEn.trim(),
     nameAr: v.nameAr.trim(),
@@ -108,7 +108,7 @@ export function clinicFormToPatchPayload(v: ClinicFormValues) {
     phone: v.phone.trim() || undefined,
     email: v.email.trim() || undefined,
     licenseNumber: v.licenseNumber.trim() || undefined,
-    defaultCurrency: v.defaultCurrency.trim() || "AED",
+    defaultCurrency: v.defaultCurrency.trim() || orgBaseCurrency,
     openingTime: v.openingTime.trim() || DEFAULT_CLINIC_OPENING_TIME,
     closingTime: v.closingTime.trim() || DEFAULT_CLINIC_CLOSING_TIME,
   };
@@ -120,7 +120,8 @@ export function clinicFormToPatchPayload(v: ClinicFormValues) {
   return body;
 }
 
-export function clinicFormToCreatePayload(v: ClinicFormValues, opts?: { includeParent?: boolean }) {
+export function clinicFormToCreatePayload(v: ClinicFormValues, opts?: { includeParent?: boolean; orgBaseCurrency?: string }) {
+  const orgBaseCurrency = opts?.orgBaseCurrency ?? "AED";
   const body: Record<string, string | undefined> = {
     nameEn: v.nameEn.trim(),
     nameAr: v.nameAr.trim(),
@@ -133,7 +134,7 @@ export function clinicFormToCreatePayload(v: ClinicFormValues, opts?: { includeP
     phone: v.phone.trim() || undefined,
     email: v.email.trim() || undefined,
     licenseNumber: v.licenseNumber.trim() || undefined,
-    defaultCurrency: v.defaultCurrency.trim() || "AED",
+    defaultCurrency: v.defaultCurrency.trim() || orgBaseCurrency,
     openingTime: v.openingTime.trim() || DEFAULT_CLINIC_OPENING_TIME,
     closingTime: v.closingTime.trim() || DEFAULT_CLINIC_CLOSING_TIME,
   };
@@ -159,7 +160,7 @@ export function clinicDetailToForm(d: {
   defaultCurrency?: string;
   openingTime?: string;
   closingTime?: string;
-}): ClinicFormValues {
+}, orgBaseCurrency = "AED"): ClinicFormValues {
   return {
     clinicPlacement: d.parentClinicId ? "branch" : "standalone",
     parentClinicId: d.parentClinicId ?? "",
@@ -174,7 +175,7 @@ export function clinicDetailToForm(d: {
     phone: d.phone ?? "",
     email: d.email ?? "",
     licenseNumber: d.licenseNumber,
-    defaultCurrency: d.defaultCurrency ?? "AED",
+    defaultCurrency: d.defaultCurrency ?? orgBaseCurrency,
     openingTime: d.openingTime ?? DEFAULT_CLINIC_OPENING_TIME,
     closingTime: d.closingTime ?? DEFAULT_CLINIC_CLOSING_TIME,
   };

@@ -20,7 +20,8 @@ import { formatEmployeeName } from "@/lib/employee-display";
 import { formatClinicName, formatEmploymentType, formatUserRole } from "@/lib/locale-display";
 import type { Paginated } from "@/lib/paginated";
 import { apiErrorMessage, isClinicRequiredUserRole, isOrgWideUserRole, ORG_USER_ROLES, orgUserRolesForEdit, ORG_USER_ROLES_CREATABLE } from "@/features/platform/platform-shared";
-import { resolveClinicCurrencyCode } from "@/lib/money-display";
+import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
+import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import {
   ORG_USER_PASSWORD_MIN_LENGTH,
 } from "@/features/platform/org-user-form-validation";
@@ -62,6 +63,8 @@ export function AdminOrgUsersPanel() {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
+  const orgBaseCurrency = useOrgBaseCurrency();
+  const resolveClinicCurrency = useClinicCurrencyResolver();
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -77,7 +80,7 @@ export function AdminOrgUsersPanel() {
   const [uClinicIds, setUClinicIds] = useState<string[]>([]);
   const [uEmploymentType, setUEmploymentType] = useState<(typeof EMP_TYPE_VALUES)[number]>("FULL_TIME");
   const [uSalaryBase, setUSalaryBase] = useState("");
-  const [uSalaryCurrency, setUSalaryCurrency] = useState("AED");
+  const [uSalaryCurrency, setUSalaryCurrency] = useState<string>(orgBaseCurrency);
   const [userErr, setUserErr] = useState<string | null>(null);
   const [legacyUsersApi, setLegacyUsersApi] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
@@ -165,7 +168,7 @@ export function AdminOrgUsersPanel() {
     ? ORG_USER_ROLES_CREATABLE
     : orgUserRolesForEdit(userDetailQuery.data?.role ?? uRole);
   const uPrimaryClinicId = uClinicIds[0] ?? userDetailQuery.data?.clinicIds?.[0] ?? "";
-  const uSalaryClinicDefault = resolveClinicCurrencyCode(clinics, uPrimaryClinicId || undefined);
+  const uSalaryClinicDefault = resolveClinicCurrency(uPrimaryClinicId || undefined);
 
   useEffect(() => {
     if (!isEdit || !userDetailQuery.data) return;
@@ -179,7 +182,7 @@ export function AdminOrgUsersPanel() {
     setUSalaryCurrency(
       u.employeeSalaryCurrency ??
         u.employeeSalaryCurrencyEffective ??
-        resolveClinicCurrencyCode(clinics, u.clinicIds[0]),
+        resolveClinicCurrency(u.clinicIds[0]),
     );
     setUPassword("");
   }, [isEdit, userDetailQuery.data, clinics]);

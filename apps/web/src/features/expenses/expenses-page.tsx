@@ -32,7 +32,9 @@ import {
 import { defaultMonthRange } from "@/stores/date-range-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectExpenseSubmitIssues } from "@/lib/create-form-validation";
-import { formatMoneyAmount, resolveClinicCurrencyCode } from "@/lib/money-display";
+import { formatMoneyAmount } from "@/lib/money-display";
+import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
+import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import { useAuthStore } from "@/stores/auth-store";
 
 function expenseDateInputValue(iso: string): string {
@@ -76,6 +78,8 @@ export function ExpensesPage() {
   const expTotal = expData?.total ?? 0;
   const expTotalPages = expData?.totalPages ?? 1;
   const { data: clinics = [] } = useClinicsQuery();
+  const orgBaseCurrency = useOrgBaseCurrency();
+  const resolveClinicCurrency = useClinicCurrencyResolver();
   const singleManagedClinic = clinics.length === 1 ? clinics[0]! : null;
   const [clinicId, setClinicId] = useState("");
   useEffect(() => {
@@ -104,7 +108,7 @@ export function ExpensesPage() {
   const [category, setCategory] = useState("UTILITIES");
   const [vendor, setVendor] = useState("");
   const [amount, setAmount] = useState("");
-  const [expenseCurrency, setExpenseCurrency] = useState("AED");
+  const [expenseCurrency, setExpenseCurrency] = useState<string>(orgBaseCurrency);
   const [proofFile, setProofFile] = useState<File | null>(null);
   const proofInputRef = useRef<HTMLInputElement>(null);
   const viewerUrlRef = useRef<string | null>(null);
@@ -122,7 +126,7 @@ export function ExpensesPage() {
   const [editCategory, setEditCategory] = useState("UTILITIES");
   const [editVendor, setEditVendor] = useState("");
   const [editAmount, setEditAmount] = useState("");
-  const [editCurrency, setEditCurrency] = useState("AED");
+  const [editCurrency, setEditCurrency] = useState<string>(orgBaseCurrency);
   const [editIncurredDate, setEditIncurredDate] = useState("");
   const [editProofFile, setEditProofFile] = useState<File | null>(null);
   const editProofInputRef = useRef<HTMLInputElement>(null);
@@ -130,9 +134,9 @@ export function ExpensesPage() {
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
 
   const clinicById = useMemo(() => new Map(clinics.map((c) => [c.id, c])), [clinics]);
-  const createClinicCurrency = resolveClinicCurrencyCode(clinics, clinicId || singleManagedClinic?.id);
-  const editClinicCurrency = resolveClinicCurrencyCode(clinics, editClinicId || editExpense?.clinicId);
-  const displayCurrency = resolveClinicCurrencyCode(clinics, filterClinicId || clinicId || singleManagedClinic?.id);
+  const createClinicCurrency = resolveClinicCurrency(clinicId || singleManagedClinic?.id);
+  const editClinicCurrency = resolveClinicCurrency(editClinicId || editExpense?.clinicId);
+  const displayCurrency = resolveClinicCurrency(filterClinicId || clinicId || singleManagedClinic?.id);
 
   useEffect(() => {
     setExpenseCurrency(createClinicCurrency);
@@ -482,7 +486,7 @@ export function ExpensesPage() {
                 value={clinicId}
                 onChange={(e) => {
                   setClinicId(e.target.value);
-                  setExpenseCurrency(resolveClinicCurrencyCode(clinics, e.target.value || undefined));
+                  setExpenseCurrency(resolveClinicCurrency(e.target.value || undefined));
                 }}
               >
                 <option value="">{t("expenses.pickClinic")}</option>
@@ -784,7 +788,7 @@ export function ExpensesPage() {
                     value={editClinicId}
                     onChange={(ev) => {
                       setEditClinicId(ev.target.value);
-                      setEditCurrency(resolveClinicCurrencyCode(clinics, ev.target.value || undefined));
+                      setEditCurrency(resolveClinicCurrency(ev.target.value || undefined));
                     }}
                   >
                     <option value="">{t("expenses.pickClinic")}</option>

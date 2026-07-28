@@ -68,7 +68,7 @@ export class AuthService {
     displayName: string;
     role: UserRole;
     avatarRelativePath?: string | null;
-  }, navTabKeys: string[] | null, roleNavTabKeys: string[] | null) {
+  }, navTabKeys: string[] | null, roleNavTabKeys: string[] | null, tenantBaseCurrency: string | null = null) {
     const employeePrivilegeGrants =
       user.tenantId != null
         ? await loadEmployeePrivilegeGrantSummaries(this.prisma, user.tenantId, user.id)
@@ -81,6 +81,7 @@ export class AuthService {
       role: user.role,
       navTabKeys,
       roleNavTabKeys,
+      tenantBaseCurrency,
       platformSuperAdmin: isPlatformSuperAdmin({
         email: user.email,
         role: user.role,
@@ -128,12 +129,16 @@ export class AuthService {
       user.tenantId != null ? await this.navTabKeysForUser(user.tenantId, user.id) : null;
     const roleNavTabKeys =
       user.tenantId != null ? await this.tenantRoleNav.roleNavTabKeysForTenantUser(user.tenantId, user.role) : null;
+    const tenantBaseCurrency = user.tenantId
+      ? (await this.prisma.tenant.findUnique({ where: { id: user.tenantId }, select: { baseCurrency: true } }))
+          ?.baseCurrency ?? null
+      : null;
 
     void this.audit.recordLogin(user, user.email);
 
     return {
       accessToken,
-      user: await this.mapAuthUser(user, navTabKeys, roleNavTabKeys),
+      user: await this.mapAuthUser(user, navTabKeys, roleNavTabKeys, tenantBaseCurrency),
     };
   }
 
@@ -170,7 +175,11 @@ export class AuthService {
       user.tenantId != null ? await this.navTabKeysForUser(user.tenantId, userId) : null;
     const roleNavTabKeys =
       user.tenantId != null ? await this.tenantRoleNav.roleNavTabKeysForTenantUser(user.tenantId, user.role) : null;
-    return await this.mapAuthUser(user, navTabKeys, roleNavTabKeys);
+    const tenantBaseCurrency = user.tenantId
+      ? (await this.prisma.tenant.findUnique({ where: { id: user.tenantId }, select: { baseCurrency: true } }))
+          ?.baseCurrency ?? null
+      : null;
+    return await this.mapAuthUser(user, navTabKeys, roleNavTabKeys, tenantBaseCurrency);
   }
 
   async attachMyAvatar(

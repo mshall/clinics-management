@@ -3,7 +3,9 @@ import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { formatClinicNameFields, formatEmploymentType, localeForLanguage } from "@/lib/locale-display";
 import { formatEmployeeName } from "@/lib/employee-display";
-import { formatMoneyAmount } from "@/lib/money-display";
+import { formatMoneyAmount, resolveEmployeeSalaryCurrency } from "@/lib/money-display";
+import { useClinicsQuery } from "@/lib/api-hooks";
+import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 
 export type EmployeeDeleteTarget = {
   id: string;
@@ -40,6 +42,8 @@ export function EmployeeDeleteConfirmDialog({
 }: EmployeeDeleteConfirmDialogProps) {
   const { t, i18n } = useTranslation();
   const locale = localeForLanguage(i18n.language);
+  const { data: clinics = [] } = useClinicsQuery();
+  const orgBaseCurrency = useOrgBaseCurrency();
 
   const clinicLabel =
     employee?.clinicLabel ??
@@ -105,7 +109,7 @@ export function EmployeeDeleteConfirmDialog({
                 <dd className="ltr-nums">
                   {formatMoneyAmount(
                     employee.salaryBase,
-                    employee.salaryCurrencyEffective ?? employee.salaryCurrency ?? "AED",
+                    resolveEmployeeSalaryCurrency(employee, clinics, orgBaseCurrency),
                     locale,
                   )}
                 </dd>

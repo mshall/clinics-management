@@ -37,6 +37,7 @@ import {
   type PatientAcquisitionChannel,
 } from "@/lib/patient-acquisition";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
+import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import { useAuthStore } from "@/stores/auth-store";
 import { useDateRangeStore } from "@/stores/date-range-store";
 
@@ -117,6 +118,7 @@ export function ReportsPage() {
   const { t, i18n } = useTranslation();
   const loc = localeForLanguage(i18n.language);
   const authUser = useAuthStore((s) => s.user);
+  const orgBaseCurrency = useOrgBaseCurrency();
   const isPhysician = authUser?.role === "physician";
   const { from, to } = useDateRangeStore();
   const [scopeClinicId, setScopeClinicId] = useState("");
@@ -510,7 +512,7 @@ export function ReportsPage() {
                   <YAxis tick={{ fontSize: 11 }} width={56} tickFormatter={(v) => String(v)} />
                   <Tooltip
                     formatter={(value: number, name: string) => {
-                      const currency = name.split("_").pop() ?? series.data?.baseCurrency ?? "AED";
+                      const currency = name.split("_").pop() ?? series.data?.baseCurrency ?? orgBaseCurrency;
                       const kind = name.startsWith("revenue_") ? t("nav.revenue") : t("nav.expenses");
                       return [money(Number(value), currency), `${kind} (${currency})`];
                     }}

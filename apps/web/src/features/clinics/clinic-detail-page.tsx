@@ -18,6 +18,7 @@ import { ApiError, apiPost } from "@/lib/http";
 import { formatClinicName, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
 import { formatClinicHoursRange, resolveClinicClosingTime, resolveClinicOpeningTime } from "@/lib/clinic-hours";
 import { clinicKindLabel } from "@/lib/clinic-kind";
+import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import { useAuthStore } from "@/stores/auth-store";
 
 const MANAGE_CLINIC_ROLES = new Set(["group_admin", "clinic_admin", "branch_manager"]);
@@ -26,6 +27,7 @@ export function ClinicDetailPage() {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
+  const orgBaseCurrency = useOrgBaseCurrency();
   const canManageClinic = authUser?.role ? MANAGE_CLINIC_ROLES.has(authUser.role) : false;
   const { id } = useParams();
   const { data: c, isPending, isError, error } = useClinicQuery(id);
@@ -255,7 +257,8 @@ export function ClinicDetailPage() {
           />
           <ClinicCurrencySettingsPanel
             clinicId={c.id}
-            defaultCurrency={c.defaultCurrency}
+            defaultCurrency={c.defaultCurrency ?? orgBaseCurrency}
+            orgBaseCurrency={orgBaseCurrency}
             canEdit={canManageClinic}
           />
         </TabsContent>

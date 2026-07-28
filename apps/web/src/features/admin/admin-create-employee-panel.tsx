@@ -13,7 +13,8 @@ import { useAuthStore } from "@/stores/auth-store";
 import type { EmployeeDto } from "@/lib/api-types";
 import { apiPost, apiPostFormData } from "@/lib/http";
 import { formatClinicName, formatEmploymentType } from "@/lib/locale-display";
-import { resolveClinicCurrencyCode } from "@/lib/money-display";
+import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
+import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectEmployeeCreateIssues } from "@/lib/create-form-validation";
 
@@ -24,6 +25,8 @@ export function AdminCreateEmployeePanel() {
   const qc = useQueryClient();
   const role = useAuthStore((s) => s.user?.role);
   const { data: clinics = [] } = useClinicsQuery();
+  const orgBaseCurrency = useOrgBaseCurrency();
+  const resolveClinicCurrency = useClinicCurrencyResolver();
   const clinicItems: PickListItem[] = useMemo(
     () => clinics.map((c) => ({ value: c.id, label: formatClinicName(c, i18n.language) })),
     [clinics, i18n.language],
@@ -47,8 +50,8 @@ export function AdminCreateEmployeePanel() {
   const [empTitle, setEmpTitle] = useState("Staff");
   const [empType, setEmpType] = useState("FULL_TIME");
   const [empSalary, setEmpSalary] = useState("9000");
-  const [empSalaryCurrency, setEmpSalaryCurrency] = useState("AED");
-  const empSalaryClinicDefault = resolveClinicCurrencyCode(clinics, empClinic || undefined);
+  const [empSalaryCurrency, setEmpSalaryCurrency] = useState<string>(orgBaseCurrency);
+  const empSalaryClinicDefault = resolveClinicCurrency(empClinic || undefined);
   useEffect(() => {
     if (empClinic) setEmpSalaryCurrency(empSalaryClinicDefault);
   }, [empClinic, empSalaryClinicDefault]);

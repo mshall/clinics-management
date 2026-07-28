@@ -46,6 +46,12 @@ export class AuthUserDto {
   roleNavTabKeys?: string[] | null;
 
   @ApiPropertyOptional({
+    description: "Organization base currency (tenant default for clinics that inherit org settings)",
+    nullable: true,
+  })
+  tenantBaseCurrency?: string | null;
+
+  @ApiPropertyOptional({
     description: "True for PLATFORM_SUPER_ADMIN role or when email is listed in PLATFORM_SUPER_ADMIN_EMAILS",
   })
   platformSuperAdmin?: boolean;

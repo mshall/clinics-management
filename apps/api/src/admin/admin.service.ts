@@ -19,6 +19,8 @@ import type { JwtUser } from "../auth/jwt-user";
 import type { CreateTenantUserDto } from "./dto/create-tenant-user.dto";
 import type { PlatformPatchTenantUserDto } from "./dto/platform-patch-tenant-user.dto";
 import type { PatchTenantSettingsDto } from "./dto/patch-tenant-settings.dto";
+import { isBaseCurrency } from "../common/base-currencies";
+import { syncInheritedClinicCurrencies } from "../common/sync-inherited-clinic-currencies";
 import type { BulkDeleteUsersDto } from "./dto/bulk-delete-users.dto";
 import type { DeactivateTenantUserDto } from "./dto/deactivate-tenant-user.dto";
 import type { ReactivateTenantUserDto } from "./dto/reactivate-tenant-user.dto";
@@ -599,13 +601,26 @@ export class AdminService {
   }
 
   async patchTenantSettings(tenantId: string, dto: PatchTenantSettingsDto) {
-    if (dto.defaultVisitFee === undefined) {
-      throw new BadRequestException("No supported fields to update");
+    const existing = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
+    if (!existing) throw new NotFoundException("Tenant not found");
+
+    const data: { defaultVisitFee?: number; baseCurrency?: string } = {};
+    if (dto.defaultVisitFee !== undefined) data.defaultVisitFee = dto.defaultVisitFee;
+    if (dto.baseCurrency !== undefined) {
+      const next = dto.baseCurrency.trim();
+      if (!isBaseCurrency(next)) throw new BadRequestException("Invalid base currency");
+      data.baseCurrency = next;
     }
-    const row = await this.prisma.tenant.update({
-      where: { id: tenantId },
-      data: { defaultVisitFee: dto.defaultVisitFee },
+    if (!Object.keys(data).length) throw new BadRequestException("No supported fields to update");
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.tenant.update({ where: { id: tenantId }, data });
+      if (data.baseCurrency && data.baseCurrency !== existing.baseCurrency) {
+        await syncInheritedClinicCurrencies(tx, tenantId, existing.baseCurrency, data.baseCurrency);
+      }
+      return updated;
     });
+
     return {
       id: row.id,
       name: row.name,

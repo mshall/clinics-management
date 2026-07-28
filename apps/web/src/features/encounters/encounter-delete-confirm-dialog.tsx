@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { formatClinicNameFields, formatEncounterStatus, localeForLanguage } from "@/lib/locale-display";
 import { formatMoneyAmount } from "@/lib/money-display";
+import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
 import { formatVisitType } from "@/lib/visit-types";
 
 export type EncounterDeleteTarget = {
@@ -38,6 +39,7 @@ export function EncounterDeleteConfirmDialog({
 }: EncounterDeleteConfirmDialogProps) {
   const { t, i18n } = useTranslation();
   const locale = localeForLanguage(i18n.language);
+  const resolveClinicCurrency = useClinicCurrencyResolver();
 
   const patientLabel =
     encounter?.patientName?.trim() ||
@@ -120,7 +122,7 @@ export function EncounterDeleteConfirmDialog({
                 <dd className="ltr-nums">
                   {formatMoneyAmount(
                     encounter.visitFeeAmount,
-                    encounter.visitFeeCurrency ?? "AED",
+                    encounter.visitFeeCurrency ?? resolveClinicCurrency(encounter.clinicId),
                     locale,
                   )}
                 </dd>

@@ -11,17 +11,20 @@ import { ApiError, apiPatch } from "@/lib/http";
 type ClinicCurrencySettingsPanelProps = {
   clinicId: string;
   defaultCurrency: string;
+  orgBaseCurrency: string;
   canEdit: boolean;
 };
 
 export function ClinicCurrencySettingsPanel({
   clinicId,
   defaultCurrency,
+  orgBaseCurrency,
   canEdit,
 }: ClinicCurrencySettingsPanelProps) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [currency, setCurrency] = useState(defaultCurrency);
+  const inheritsOrgDefault = defaultCurrency === orgBaseCurrency;
 
   useEffect(() => {
     setCurrency(defaultCurrency);
@@ -50,10 +53,17 @@ export function ClinicCurrencySettingsPanel({
       <CardHeader>
         <CardTitle className="text-base">{t("clinics.currencySettings", "Currency")}</CardTitle>
         <CardDescription>
-          {t(
-            "clinics.currencySettingsHint",
-            "Default currency for fees, revenue display, and new records at this clinic. Staff can still choose another supported currency when posting amounts.",
-          )}
+          {inheritsOrgDefault
+            ? t(
+                "clinics.currencyInheritsOrg",
+                "This clinic uses the organization default currency ({{currency}}). Choose a different currency below to override for this clinic only.",
+                { currency: orgBaseCurrency },
+              )
+            : t(
+                "clinics.currencyCustomOverride",
+                "This clinic uses a custom currency ({{currency}}), different from the organization default ({{orgCurrency}}).",
+                { currency: defaultCurrency, orgCurrency: orgBaseCurrency },
+              )}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

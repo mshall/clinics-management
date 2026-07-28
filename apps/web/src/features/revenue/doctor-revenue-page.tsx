@@ -5,6 +5,8 @@ import { TablePagination } from "@/components/table-pagination";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRevenueQuery, useRevenueTotalsQuery } from "@/lib/api-hooks";
 import type { RevenueEntryDto } from "@/lib/api-types";
+import { formatMoneyAmount, formatMultiCurrencyAmounts } from "@/lib/money-display";
+import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
 import { useDateRangeStore } from "@/stores/date-range-store";
 import {
   formatClinicNameFields,
@@ -24,13 +26,23 @@ export function DoctorRevenuePage() {
 
   const totals = useRevenueTotalsQuery({ from, to });
   const list = useRevenueQuery({ from, to, page, pageSize, sortBy: "postedAt", sortOrder: "desc" });
+  const resolveClinicCurrency = useClinicCurrencyResolver();
+  const locale = localeForLanguage(i18n.language);
 
-  const money = (n: number) =>
-    new Intl.NumberFormat(localeForLanguage(i18n.language), {
-      style: "currency",
-      currency: "AED",
-      maximumFractionDigits: 2,
-    }).format(n);
+  const formatTotals = (field: "grossTotal" | "netTotal") => {
+    if (totals.isPending) return "…";
+    const data = totals.data;
+    if (!data) return "—";
+    if (data.byCurrency?.length) {
+      return formatMultiCurrencyAmounts(
+        data.byCurrency.map((row) => ({ currency: row.currency, amount: row[field] })),
+        locale,
+      );
+    }
+    return formatMoneyAmount(data[field], resolveClinicCurrency(undefined), locale);
+  };
+
+  const rowMoney = (r: RevenueEntryDto) => formatMoneyAmount(r.netAmount, r.currency, locale);
 
   const rows: RevenueEntryDto[] = useMemo(() => list.data?.items ?? [], [list.data?.items]);
 
@@ -48,7 +60,7 @@ export function DoctorRevenuePage() {
           <CardHeader>
             <CardTitle className="text-base">{t("doctorRevenue.gross", "Gross (period)")}</CardTitle>
             <CardDescription className="ltr-nums text-2xl font-semibold">
-              {totals.isPending ? "…" : money(totals.data?.grossTotal ?? 0)}
+              {totals.isPending ? "…" : formatTotals("grossTotal")}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -56,7 +68,7 @@ export function DoctorRevenuePage() {
           <CardHeader>
             <CardTitle className="text-base">{t("doctorRevenue.net", "Net (period)")}</CardTitle>
             <CardDescription className="ltr-nums text-2xl font-semibold">
-              {totals.isPending ? "…" : money(totals.data?.netTotal ?? 0)}
+              {totals.isPending ? "…" : formatTotals("netTotal")}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -91,7 +103,7 @@ export function DoctorRevenuePage() {
                     <td className="max-w-[14rem] truncate px-3 py-2 text-muted-foreground" title={clinicCellLabel(r, i18n.language)}>
                       {clinicCellLabel(r, i18n.language)}
                     </td>
-                    <td className="px-3 py-2 ltr-nums">{money(r.netAmount)}</td>
+                    <td className="px-3 py-2 ltr-nums">{rowMoney(r)}</td>
                     <td className="px-3 py-2 text-muted-foreground ltr-nums">{new Date(r.postedAt).toLocaleString()}</td>
                   </tr>
                 ))}

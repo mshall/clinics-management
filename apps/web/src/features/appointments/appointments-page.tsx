@@ -20,7 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAdminOverviewQuery, useAppointmentsQuery, useClinicsQuery, usePatientQuery, usePatientsQuery, useSchedulingPhysiciansQuery } from "@/lib/api-hooks";
-import { resolveClinicCurrencyCode } from "@/lib/money-display";
+import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
 import { canDeleteAppointment } from "@/lib/appointment-delete-policy";
 import { ApiError, apiDelete, apiGet, apiPost } from "@/lib/http";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
@@ -117,6 +117,7 @@ export function AppointmentsPage() {
   const aptTotal = aptData?.total ?? 0;
   const aptTotalPages = aptData?.totalPages ?? 1;
   const { data: clinics = [] } = useClinicsQuery();
+  const resolveClinicCurrency = useClinicCurrencyResolver();
   const adminOv = useAdminOverviewQuery();
   const clinicById = useMemo(() => {
     const m = new Map<string, { en: string; ar: string }>();
@@ -158,7 +159,7 @@ export function AppointmentsPage() {
   }, [rows, afClinic, afStarts, afPatient, afStatus, i18n.language, patientLabel, clinicById]);
 
   const [clinicId, setClinicId] = useState("");
-  const bookFeeCurrency = resolveClinicCurrencyCode(clinics, clinicId);
+  const bookFeeCurrency = resolveClinicCurrency(clinicId);
   const selectedBookClinic = useMemo(() => clinics.find((c) => c.id === clinicId), [clinics, clinicId]);
   const clinicOpeningTime = resolveClinicOpeningTime(selectedBookClinic?.openingTime);
   const clinicClosingTime = resolveClinicClosingTime(selectedBookClinic?.closingTime);
