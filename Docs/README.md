@@ -2,7 +2,7 @@
 
 Reference material for the **Kiorly Clinics Management** platform (monorepo root: [`README.md`](../README.md)).
 
-**Doc set version:** PRD **v1.6** · RFC **v1.5** (aligned with `main`, July 2026).
+**Doc set version:** PRD **v1.7** · RFC **v1.6** (aligned with `main`, July 2026).
 
 ---
 
@@ -41,8 +41,8 @@ When signed in as **Group admin** (e.g. `admin@drahmedshall.com` or `admin@kiorl
 |------|------|-------|
 | Organization users | **Admin → Organization users** | Search, role filter; create/edit; **deactivate**, **archive** (soft), **restore**; **Active / Archived** tabs with lifecycle dates |
 | Organization patients | **Admin → Organization patients** | Search, bulk delete |
-| Clinics & branches | **Clinics & branches** (`/clinics`) | Parent/branch directory; **disable / reactivate** with **operating history**; active vs disabled tabs |
-| Clinics & tenants (settings) | **Admin → Clinics & tenants** | Registration, invoice & prescription branding |
+| Clinics & branches | **Clinics & branches** (`/clinics`) | Parent/branch directory; **disable / reactivate** with **operating history**; active vs disabled tabs; **working hours** on Settings tab |
+| Clinics & tenants (settings) | **Admin → Clinics & tenants** | Registration, invoice & prescription branding, **opening/closing times** on create/edit |
 | Organization & settings | **Admin → Organization & settings** | Default visit fee, feature flags, staff onboarding |
 | Governance & audit | **Admin → Governance** | Audit trail |
 
@@ -78,6 +78,28 @@ Amount labels and formatted values use the clinic or selected currency across en
 
 ---
 
+## Appointments & scheduling
+
+| Topic | Behaviour |
+|-------|-----------|
+| **Earliest slot** | Selected clinic **`openingTime`** (default 9:00 AM) |
+| **Default duration** | 15 minutes when end time omitted |
+| **Next slot** | Booking form suggests next free slot for clinician/day |
+| **Overlap** | Confirm dialog to double-book same clinician/time (`confirmOverlap`) |
+| **After hours** | Bookings after **`closingTime`** allowed; **call center** sees warning |
+| **Calendar** | **Appointments → Calendar** — month grid, day agenda, shared-slot highlights |
+| **API** | `GET /api/v1/appointments/scheduling-conflicts`; optional `endsAt`; finalize sets end from encounter |
+
+Configure hours: **Clinic detail → Settings → Working hours**, or group admin clinic create/edit forms.
+
+---
+
+## Document camera (mobile)
+
+On phones and touch devices, patient/encounter document capture opens the **native OS camera** instead of a live browser preview — see `DocumentCameraCaptureDialog` and `apps/web/src/lib/platform.ts`.
+
+---
+
 ## Roadmap & comprehensive platform vision
 
 Shipped capabilities are listed in the PRD [§12.1 Delivered on `main`](./Clinic_Management_System_PRD.md#121-delivered-on-main). For a **production-grade, feature-rich** target platform, see:
@@ -85,7 +107,7 @@ Shipped capabilities are listed in the PRD [§12.1 Delivered on `main`](./Clinic
 | Section | Contents |
 |---------|----------|
 | PRD **§12.3** | Full backlog by domain (security, clinical, finance, HR, analytics, integrations) with P0–P3 priorities |
-| PRD **§12.3.13** | **Near-term enhancements to shipped modules** (reports scheduling, invoice bulk, clinic hours, HR offboarding, etc.) |
+| PRD **§12.3.13** | **Near-term enhancements to shipped modules** (reports scheduling, invoice bulk, holiday calendar, HR offboarding, etc.) |
 | PRD **§12.3.12** | Admin, governance & org lifecycle (access reviews, tenant export, clinic merge) |
 | PRD **§13** | International expansion phases (country packs, patient portal, payments, FHIR, payroll) |
 | RFC **§6.2** | Implemented API behaviour; **§6.1** module map |
@@ -115,6 +137,9 @@ Scheduled operations open an **edit dialog** that mirrors the **create** form: f
 | Web org users UI | `apps/web/src/features/admin/admin-org-users-panel.tsx` |
 | User ↔ employee cascade | `apps/api/src/common/user-employee-cascade.ts` |
 | Clinic disable / operating periods | `apps/api/src/clinics/clinics.service.ts` |
+| Clinic working hours | `apps/api/src/common/clinic-hours.ts`, `apps/web/src/lib/clinic-hours.ts`, `ClinicHoursSettingsPanel` |
+| Appointment scheduling & overlap | `apps/api/src/common/appointment-scheduling.ts`, `apps/web/src/features/appointments/` |
+| Document camera (mobile native) | `apps/web/src/components/document-camera-capture-dialog.tsx`, `apps/web/src/lib/platform.ts` |
 | Web clinics directory | `apps/web/src/features/clinics/clinics-page.tsx` |
 | Reports (date-range charts) | `apps/api/src/reports/reports.service.ts`, `apps/web/src/features/reports/reports-page.tsx` |
 | Supported currencies | `apps/api/src/common/base-currencies.ts`, `apps/web/src/lib/base-currencies.ts` |

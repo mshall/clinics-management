@@ -4,9 +4,9 @@
 | Field | Value |
 |---|---|
 | **Document Title** | Clinic Management System – Technical RFC |
-| **Version** | 1.5 |
+| **Version** | 1.6 |
 | **Status** | Living document (aligned with `main` as of July 2026) |
-| **Related** | [`Clinic_Management_System_PRD.md`](./Clinic_Management_System_PRD.md) v1.6 |
+| **Related** | [`Clinic_Management_System_PRD.md`](./Clinic_Management_System_PRD.md) v1.7 |
 | **Last Updated** | July 2026 |
 
 ---
@@ -209,7 +209,7 @@ PATCH  /auth/me/password
 
 #### 6.2.2 ClinicsModule + Admin platform *(implemented)*
 
-**Entities:** `Tenant`, `Clinic`, `ClinicPhysician`, `ClinicAdminScope`, working hours and speciality fields on `Clinic`.
+**Entities:** `Tenant`, `Clinic` (`openingTime`, `closingTime`, `defaultCurrency`, …), `ClinicPhysician`, `ClinicAdminScope`, `ClinicOperatingPeriod`.
 
 **Org-scoped endpoints (`/clinics`):**
 ```
@@ -238,6 +238,7 @@ PATCH  /admin/platform/feature-flags/:key
 **Notes:**
 - Multi-tenancy: **shared database, shared schema**, `tenantId` on every business row; enforced in services (RLS optional later).
 - Hierarchy via nullable `parentClinicId` on `Clinic`.
+- **Working hours:** `openingTime` and `closingTime` (HH:mm strings; defaults `09:00` / `00:00`). Validated on create/patch; `00:00` closing means open until end of calendar day. Exposed on list and detail DTOs.
 - Org settings and audit: `/admin/overview`, `/admin/audit-logs`, org patient/user bulk tools under `/admin/...`.
 
 #### 6.2.3 UsersModule *(implemented)*
@@ -288,6 +289,7 @@ GET    /patients/:id/national-id-document
 - Soft-delete via `deletedAt`; bulk delete and single delete for roles in `PATIENT_MANAGE_ROLES` (Group Admin, Group Supervisor, Call Center, Clinic Admin, Clinic Assistant, Branch Manager).
 - Cross-branch encounter documents on the profile respect the same physician/clinic scope as encounter lists.
 - Document blobs stored via `UploadBlobStorage` (`uploads/` locally or S3 in production); crop replaces the blob in place and updates metadata.
+- **Camera capture (web):** `DocumentCameraCaptureDialog` — on mobile/touch (`shouldUseNativeCameraPicker()`), uses native file input `capture="environment"` instead of `getUserMedia` preview; image enhanced via `enhanceCameraCaptureFile` before upload.
 
 #### 6.2.5 EncountersModule *(implemented)*
 
@@ -327,21 +329,29 @@ GET    /prescriptions/:id/pdf
 
 #### 6.2.7 AppointmentsModule *(implemented)*
 
-**Entities:** `Appointment` (status: Scheduled, Confirmed, Cancelled, Completed).
+**Entities:** `Appointment` (status: Scheduled, Confirmed, Checked-in, Cancelled, Completed; optional `endsAt`; `feeAmount`).
 
 **Endpoints:**
 ```
 GET    /appointments
-POST   /appointments
+GET    /appointments/scheduling-conflicts   # ?clinicianId=&startsAt=&endsAt=
+POST   /appointments                        # body may include confirmOverlap: true
 GET    /appointments/:id
 PATCH  /appointments/:id
-POST   /appointments/:id/cancel
+PATCH  /appointments/:id/status
+DELETE /appointments/:id                    # group admin, supervisor, call center
 ```
 
 **Notes:**
-- Physicians see only appointments where they are the attending clinician.
+- Physicians see only appointments where they are the attending clinician; `POST /appointments` rejects booking another clinician when role is physician.
 - Clinic admins filtered by `ClinicAdminScope`.
-- Linking to encounters moves status toward Confirmed/Completed per PRD §6.1a.
+- **Slot defaults:** when `endsAt` omitted on create, API sets `endsAt = startsAt + 15 minutes` (`appointment-scheduling.ts`).
+- **Overlap:** active appointments (Scheduled/Confirmed/Checked-in) for the same clinician on the same day block create unless `confirmOverlap: true`; conflict details returned in `409` body.
+- **Clinic hours:** earliest bookable time follows clinic `openingTime` in the web UI; after `closingTime` bookings allowed; call center sees after-hours warning only (not API-enforced).
+- Linking to encounters moves status toward Confirmed/Completed; finalize sets `endsAt` from encounter finalize time when unset (PRD §6.1a).
+- Web calendar: `AppointmentsCalendarPanel` — month grid, day agenda, overlap indicators.
+
+**Shared constants:** `apps/api/src/common/appointment-scheduling.ts`, `apps/web/src/lib/appointment-scheduling.ts`, `apps/web/src/lib/clinic-hours.ts`.
 
 #### 6.2.7a OperationsModule *(implemented)*
 
@@ -374,11 +384,13 @@ GET    /operations/:id/documents/:docId/file
 - When omitted or invalid, `expenses.service` defaults to the target clinic’s `defaultCurrency`.
 - Proof upload via `multipart/form-data`; approval status via `PATCH .../status`.
 
-#### 6.2.7c ClinicsModule — default currency *(implemented)*
+#### 6.2.7c ClinicsModule — default currency & working hours *(implemented)*
 
 - `Clinic.defaultCurrency` validated against `BASE_CURRENCIES` on create/patch.
+- `Clinic.openingTime` / `Clinic.closingTime` — HH:mm; defaults `09:00` / `00:00`; validated in `clinic-hours.ts`.
 - `resolveClinicCurrency(client, tenantId, clinicId)` falls back: clinic → tenant `baseCurrency` → `AED`.
 - Encounters use clinic currency when posting visit-fee revenue.
+- Web: `ClinicHoursSettingsPanel` on clinic detail **Settings** tab; fields on shared `ClinicFormFields` for group admin create/edit.
 
 **Shared constants:** `apps/api/src/common/base-currencies.ts`, `apps/api/src/common/clinic-currency.ts`.
 

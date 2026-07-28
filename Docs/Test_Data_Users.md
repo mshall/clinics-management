@@ -210,6 +210,12 @@ Branches are children of HQ (`parentClinicId` → HQ).
 | Goal | Login |
 |------|--------|
 | Register patient with documents + camera | `assistant@kiorly.com` or `receptionist@kiorly.com` → **Patients → New patient** |
+| Mobile native camera for documents | Same as above on phone — capture opens OS camera (no live preview stream) |
+| Book appointment (15-min slot, clinic hours) | `assistant@kiorly.com` or `callcenter@kiorly.com` → **Appointments → Book** — pick clinic first |
+| Double-book same clinician/time | Book overlapping slot → confirm dialog lists existing patient |
+| Call center after-hours warning | `callcenter@kiorly.com` → book after clinic **closing time** — amber warning, booking still allowed |
+| Appointments calendar (shared slots) | **Appointments → Calendar** tab — overlapping entries highlighted |
+| Configure clinic working hours | `admin@kiorly.com` or `clinicadmin@kiorly.com` → **Clinics** → clinic → **Settings → Working hours** |
 | Phone duplicate warning (use existing patient phone) | Same as above — enter a phone already on another patient |
 | Patient profile age from DOB | Open any patient with DOB set — header shows date + calculated age |
 | Patient profile clinical docs (labs / radiology / Rx / other) | Open any patient → scroll to document sections; upload at registration, via encounter, or **+ Add** on profile |

@@ -4,7 +4,7 @@
 | Field | Value |
 |---|---|
 | **Document Title** | Clinic Management System – Product Requirements Document |
-| **Version** | 1.6 |
+| **Version** | 1.7 |
 | **Status** | Living document (aligned with `main` as of July 2026) |
 | **Author** | Product / Engineering |
 | **Last Updated** | July 2026 |
@@ -169,11 +169,18 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 
 ### 6.1a Appointments & encounters (current build)
 
-- **Appointment statuses:** Scheduled (default when booking), Confirmed, Cancelled, Completed. The appointment record is read-only after Completed.
-- **Encounter link:** An optional booked appointment (same patient) may be attached when creating an encounter; linking sets the appointment to **Confirmed**; **finalizing** the encounter sets it to **Completed**.
-- **Visit fee** is set on **encounter** creation (tenant default in administration; **display and revenue use the clinic’s `defaultCurrency`**); amounts greater than zero create a `VISIT_FEE` revenue ledger line. Appointments do not store a fee.
+- **Appointment statuses:** Scheduled (default when booking), Confirmed, Checked-in, Cancelled, Completed. The appointment record is read-only after Completed.
+- **Scheduling rules:** Booking uses the selected clinic’s **opening time** as the earliest slot (default **9:00 AM**). When end time is omitted, the system books a **15-minute** slot (`endsAt = startsAt + 15 min`). The booking form suggests the **next available slot** for the clinician on the selected day; users may still pick an earlier overlapping time.
+- **Double booking:** Overlapping appointments for the same clinician show a **confirmation dialog** listing the existing patient and time range; confirming books both patients at the same time (`confirmOverlap: true` on create). Preview overlaps via `GET /appointments/scheduling-conflicts`.
+- **Optional end time:** `endsAt` is optional on create; when a linked encounter is **finalized**, the appointment `endsAt` is set from the encounter finalize timestamp.
+- **Clinic working hours:** Each clinic stores **`openingTime`** and **`closingTime`** (HH:mm; default **09:00 → 00:00** midnight/end-of-day). Group admin and clinic admin configure these on create/edit and under **Clinic detail → Settings → Working hours**. Appointments **after closing** remain bookable; **call center** users see an **after-hours warning** (booking is not blocked).
+- **Calendar:** Appointments list and **Calendar** tab show time ranges (e.g. 9:00–9:15), highlight **shared slots** when multiple patients overlap, and group day-agenda entries accordingly.
+- **Scheduled fee:** Appointments store a **scheduled visit fee** (`feeAmount`; defaults to tenant default visit fee). Syncs to open encounter visit fee when updated.
+- **Encounter link:** An optional booked appointment (same patient) may be attached when creating an encounter; linking sets the appointment to **Confirmed**; **finalizing** the encounter sets it to **Completed** and sets `endsAt` when not already set.
+- **Visit fee** is also set on **encounter** creation (tenant default in administration; **display and revenue use the clinic’s `defaultCurrency`**); amounts greater than zero create a `VISIT_FEE` revenue ledger line.
 - **Physician experience:** The web app exposes **Appointments** in the main navigation for physicians. List and detail APIs return only appointments where the JWT user is the **attending clinician**; physicians may only **book** appointments as themselves. The appointments ledger table highlights **clinic** (localized name) for at-a-glance branch context.
 - **Clinic administrator:** Appointment lists are limited to clinics in the administrator’s **scope**; detail and mutations outside that scope are denied.
+- **Delete:** Group admin, group supervisor, and call center may delete appointments (confirm dialog in UI).
 
 ### 6.1b Patient registry & profile (current build)
 
@@ -181,7 +188,7 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 - Required: English/Arabic names (Arabic first and last required), gender, phone. **Date of birth is optional.**
 - **Phone uniqueness:** Each phone number may belong to only one active patient per organization. While typing, the form checks for conflicts, highlights the phone field, shows the existing patient’s name/MRN, and links to their profile; **Create patient** stays disabled until resolved.
 - Optional: email, national ID, national ID scan (PDF/image), home branch, **how did they find us?** (social, website, doctor referral with name, other with free text).
-- Optional **attached documents** at registration: type **Lab results**, **Radiology**, **Prescription**, or **Other** (custom description); multiple photos/files per row; in-browser **camera capture** on supported devices.
+- Optional **attached documents** at registration: type **Lab results**, **Radiology**, **Prescription**, or **Other** (custom description); multiple photos/files per row; **camera capture** — on mobile/touch devices the app opens the **native OS camera** (`capture="environment"`) for a lighter UX; desktop uses in-browser preview where supported.
 
 **Patient list & administration**
 - Search/filter by MRN, phone, name, national ID, gender; column filters; pagination and sort.
@@ -232,6 +239,7 @@ See [`Test_Data_Users.md`](./Test_Data_Users.md) for demo logins and QA scenario
 - **`PLATFORM_SUPER_ADMIN`** user (`tenantId: null`) uses the **Platform** tab only: create/list/edit organizations, clinics under any tenant, users, feature flags.
 - Each **organization** has independent base currency, locale, default visit fee, clinics, and user directory.
 - Each **clinic** stores **`defaultCurrency`** (one of EGP, USD, OMR, SAR, AED) used for visit fees, expense defaults, and operation defaults unless overridden per operation.
+- Each **clinic** stores **`openingTime`** and **`closingTime`** (daily working hours, HH:mm; defaults **09:00** and **00:00** for open-until-midnight). Configurable by group admin and clinic admin; used for appointment slot guidance and call-center after-hours warnings.
 - Demo seed includes multiple tenants (Kiorly demo, Dr Ahmed Shall Group, shell orgs) on one database — see [`Test_Data_Users.md`](./Test_Data_Users.md).
 - Production deployment: single CloudFront URL, App Runner API, RDS — see [`AWS_Cloud_Deployment_Guide.md`](./AWS_Cloud_Deployment_Guide.md).
 
@@ -471,6 +479,17 @@ Authorization model:
 | Encounter visit fee ↔ linked appointment fee sync; auto-complete appointment on encounter finalize | Shipped |
 | Expense submit confirmation dialog before creating pending expense | Shipped |
 
+#### July 2026 (latest) increments
+
+| Area | Status |
+|---|---|
+| **Appointment scheduling** — clinic opening time as earliest slot; 15-minute default slots; next-slot suggestion; overlap preview + confirm dialog for double booking | Shipped |
+| **Optional appointment `endsAt`** — set automatically when linked encounter is finalized | Shipped |
+| **Appointments calendar** — month grid, day agenda, time ranges, shared-slot indicators | Shipped |
+| **Clinic working hours** — `openingTime` / `closingTime` per clinic (default 9 AM–midnight); admin settings panel; call-center after-hours booking warning | Shipped |
+| **Mobile document camera** — native OS camera on mobile instead of heavy `getUserMedia` preview | Shipped |
+| **HR create employee** — provision login (email/password/clinic) aligned with HR officer flow; clinic picker fix in dialogs | Shipped |
+
 ### 12.2 Near-term roadmap (engineering backlog)
 
 **Phase 2 – Operational depth**
@@ -623,7 +642,7 @@ Improvements that extend **already shipped** areas without waiting for a major n
 | N.5 | **Encounters** | Appointment wait-time and cycle-time metrics on finalize | P2 |
 | N.6 | **Invoices** | Bulk invoice generation for operation balances; payment allocation | P1 |
 | N.7 | **Prescriptions** | QR code on Rx for pharmacy verification; controlled-substance flag | P1 |
-| N.8 | **Clinics** | Working hours & holiday calendar per branch (feeds scheduling warnings) | P1 |
+| N.8 | **Clinics** | ~~Working hours per branch~~ **(shipped:** `openingTime`/`closingTime`; holiday calendar still backlog) | P1 |
 | N.9 | **HR** | Auto-provision login on employee create; offboarding checklist on archive | P1 |
 | N.10 | **Admin users** | SSO group → role mapping; forced MFA for `GROUP_ADMIN` | P0 |
 | N.11 | **Operations** | Pre-op / post-op status checklist templates | P2 |
