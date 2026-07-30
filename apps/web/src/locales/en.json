@@ -38,6 +38,12 @@
     "appearance": "Appearance",
     "light": "Light",
     "dark": "Dark (Kiorly)",
+    "groupDefault": "Kiorly (default)",
+    "groupMaterial": "Material Design 3",
+    "defaultLight": "Default — Light",
+    "defaultDark": "Default — Dark",
+    "materialLight": "Material — Light",
+    "materialDark": "Material — Dark",
     "rememberForNextLogin": "Use as default when I sign in again"
   },
   "dateRange": {

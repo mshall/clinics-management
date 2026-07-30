@@ -38,6 +38,12 @@
     "appearance": "المظهر",
     "light": "فاتح",
     "dark": "داكن (كيورلي)",
+    "groupDefault": "كيورلي (الافتراضي)",
+    "groupMaterial": "Material Design 3",
+    "defaultLight": "الافتراضي — فاتح",
+    "defaultDark": "الافتراضي — داكن",
+    "materialLight": "Material — فاتح",
+    "materialDark": "Material — داكن",
     "rememberForNextLogin": "استخدامه افتراضيًا عند تسجيل الدخول لاحقًا"
   },
   "dateRange": {

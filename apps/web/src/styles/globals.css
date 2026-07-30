@@ -1,9 +1,13 @@
+@import "./material-theme.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  :root {
+  /* Kiorly default — light */
+  :root,
+  html[data-theme="default-light"] {
     --background: 210 20% 98%;
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
@@ -26,8 +30,8 @@
     --radius: 0.5rem;
   }
 
-  /* Kiorly logo: #0f1419 base, #b8964a accent */
-  .dark {
+  /* Kiorly default — dark (#0f1419 base, #b8964a accent) */
+  html[data-theme="default-dark"] {
     --background: 215 28% 8%;
     --foreground: 45 15% 94%;
     --card: 215 26% 11%;
@@ -47,6 +51,7 @@
     --border: 215 18% 20%;
     --input: 215 18% 20%;
     --ring: 43 44% 52%;
+    --radius: 0.5rem;
   }
 
   * {

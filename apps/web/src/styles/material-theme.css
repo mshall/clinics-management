@@ -1,0 +1,114 @@
+/**
+ * Material Design 3 (Material You) theme layer.
+ * Tokens mapped to app semantic CSS variables for shadcn/Radix compatibility.
+ * Ref: https://m3.material.io/styles/color/static/baseline
+ */
+
+html[data-theme="material-light"] {
+  --background: 300 100% 99%;
+  --foreground: 264 7% 12%;
+  --card: 300 100% 99%;
+  --card-foreground: 264 7% 12%;
+  --popover: 300 100% 99%;
+  --popover-foreground: 264 7% 12%;
+  --primary: 255 34% 48%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 264 24% 92%;
+  --secondary-foreground: 255 34% 28%;
+  --muted: 264 20% 94%;
+  --muted-foreground: 264 6% 40%;
+  --accent: 264 30% 93%;
+  --accent-foreground: 255 34% 32%;
+  --destructive: 0 72% 42%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 264 8% 82%;
+  --input: 264 8% 82%;
+  --ring: 255 34% 48%;
+  --radius: 0.75rem;
+  --md-elevation-1: 0 1px 2px 0 rgb(0 0 0 / 0.08), 0 1px 3px 1px rgb(0 0 0 / 0.06);
+  --md-elevation-2: 0 1px 2px 0 rgb(0 0 0 / 0.1), 0 2px 6px 2px rgb(0 0 0 / 0.08);
+  --md-elevation-3: 0 4px 8px 3px rgb(0 0 0 / 0.1), 0 1px 3px 0 rgb(0 0 0 / 0.12);
+}
+
+html[data-theme="material-dark"] {
+  --background: 264 14% 8%;
+  --foreground: 300 5% 90%;
+  --card: 264 12% 12%;
+  --card-foreground: 300 5% 90%;
+  --popover: 264 12% 12%;
+  --popover-foreground: 300 5% 90%;
+  --primary: 255 100% 84%;
+  --primary-foreground: 260 50% 15%;
+  --secondary: 264 10% 18%;
+  --secondary-foreground: 300 5% 90%;
+  --muted: 264 10% 16%;
+  --muted-foreground: 300 4% 68%;
+  --accent: 264 14% 20%;
+  --accent-foreground: 255 100% 84%;
+  --destructive: 0 62% 55%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 264 8% 22%;
+  --input: 264 8% 22%;
+  --ring: 255 100% 84%;
+  --radius: 0.75rem;
+  --md-elevation-1: 0 1px 3px 1px rgb(0 0 0 / 0.25), 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --md-elevation-2: 0 2px 6px 2px rgb(0 0 0 / 0.28), 0 1px 2px 0 rgb(0 0 0 / 0.32);
+  --md-elevation-3: 0 4px 8px 3px rgb(0 0 0 / 0.32), 0 1px 3px 0 rgb(0 0 0 / 0.34);
+}
+
+html.theme-material {
+  font-family: "Roboto", system-ui, -apple-system, "Segoe UI", "Noto Sans Arabic", "Noto Sans", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+html.theme-material body {
+  letter-spacing: 0.01em;
+}
+
+/* M3 surface containers & elevation */
+html.theme-material .border-border.bg-card,
+html.theme-material [class*="bg-card"] {
+  border-color: hsl(var(--border) / 0.65);
+}
+
+html.theme-material .shadow-lg,
+html.theme-material .shadow-md {
+  box-shadow: var(--md-elevation-2);
+}
+
+html.theme-material .shadow-sm {
+  box-shadow: var(--md-elevation-1);
+}
+
+/* M3 filled buttons: pill shape, flat (elevation on hover) */
+html.theme-material button.inline-flex.rounded-md.bg-primary,
+html.theme-material button.inline-flex.rounded-md.bg-destructive,
+html.theme-material button.inline-flex.rounded-md.bg-emerald-600 {
+  border-radius: 9999px;
+  box-shadow: none;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+html.theme-material button.inline-flex.rounded-md.bg-primary:hover:not(:disabled),
+html.theme-material button.inline-flex.rounded-md.bg-destructive:hover:not(:disabled) {
+  box-shadow: var(--md-elevation-1);
+}
+
+html.theme-material button.inline-flex.rounded-md.border.border-input {
+  border-radius: 9999px;
+  font-weight: 500;
+}
+
+/* M3 dialogs: larger corner radius */
+html.theme-material [role="dialog"] {
+  border-radius: 1.75rem;
+}
+
+/* Touch-friendly targets on mobile (Material 48dp minimum) */
+@media (max-width: 640px) {
+  html.theme-material button.inline-flex.min-h-11 {
+    min-height: 3rem;
+  }
+}
