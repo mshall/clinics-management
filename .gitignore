@@ -10,6 +10,7 @@ apps/api/.env
 apps/web/.env
 apps/web/node_modules
 apps/web/dist
+apps/docs/dist
 apps/api/uploads
 apps/web/playwright-report
 apps/web/test-results

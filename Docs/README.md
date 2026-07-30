@@ -2,7 +2,20 @@
 
 Reference material for the **Kiorly Clinics Management** platform (monorepo root: [`README.md`](../README.md)).
 
-**Doc set version:** PRD **v1.7** · RFC **v1.6** (aligned with `main`, July 2026).
+**Doc set version:** PRD **v1.8** · RFC **v1.7** (aligned with `main`, July 2026).
+
+---
+
+## Documentation portal
+
+Browse all markdown (including synced **PiggyMetrics** reference) in a local UI:
+
+```bash
+npm run docs:sync   # refresh PiggyMetrics README from GitHub master
+npm run docs:dev    # http://localhost:5175
+```
+
+See **[Documentation_Portal.md](./Documentation_Portal.md)** for module layout, sync workflow, and ports (API 3000 · Web 5173 · Docs 5175).
 
 ---
 
@@ -10,6 +23,7 @@ Reference material for the **Kiorly Clinics Management** platform (monorepo root
 
 | Document | Purpose |
 |----------|---------|
+| [**Documentation_Portal.md**](./Documentation_Portal.md) | Docs workspace (`apps/docs`), PiggyMetrics sync, how to view locally |
 | [**Test_Data_Users.md**](./Test_Data_Users.md) | Demo logins, passwords, roles, QA scenarios, org user counts |
 | [**Clinic_Management_System_PRD.md**](./Clinic_Management_System_PRD.md) | Product requirements, shipped scope, and **production feature backlog** (§12.3) |
 | [**Clinic_Management_System_RFC.md**](./Clinic_Management_System_RFC.md) | Technical RFC — API behaviour, RBAC, data model notes |
@@ -70,11 +84,13 @@ Supported currencies: **EGP**, **USD**, **OMR**, **SAR**, **AED**.
 
 | Setting | Where | Effect |
 |---------|-------|--------|
+| **Organization base currency** | Admin → Organization & settings | Default for new clinics; changing org base **syncs inherited** clinics (those still on the previous base); custom clinic overrides are kept |
 | **Clinic default currency** | Admin / clinic create & edit (`defaultCurrency`) | Visit fees, expense defaults, operation defaults |
 | **Operation payment currency** | Operations create & edit (`feeCurrency`) | Per-procedure override when patient pays in another currency |
 | **Expense currency** | Expenses create form | Defaults to clinic currency; optional override |
+| **Employee salary currency** | HR → Employee profile | Override vs clinic default for payroll expense lines |
 
-Amount labels and formatted values use the clinic or selected currency across encounters, operations, and expenses (`apps/web/src/lib/money-display.ts`).
+Amount labels and formatted values use org/clinic/operation resolution across encounters, operations, and expenses (`apps/web/src/lib/money-display.ts`, `useOrgBaseCurrency()`).
 
 ---
 
@@ -85,12 +101,25 @@ Amount labels and formatted values use the clinic or selected currency across en
 | **Earliest slot** | Selected clinic **`openingTime`** (default 9:00 AM) |
 | **Default duration** | 15 minutes when end time omitted |
 | **Next slot** | Booking form suggests next free slot for clinician/day |
-| **Overlap** | Confirm dialog to double-book same clinician/time (`confirmOverlap`) |
+| **Overlap** | Confirm dialog to double-book same clinician/time (`confirmOverlap`); **multiple conflicts** shown one-at-a-time with “+N more booking(s)” |
 | **After hours** | Bookings after **`closingTime`** allowed; **call center** sees warning |
 | **Calendar** | **Appointments → Calendar** — month grid, day agenda, shared-slot highlights |
 | **API** | `GET /api/v1/appointments/scheduling-conflicts`; optional `endsAt`; finalize sets end from encounter |
 
 Configure hours: **Clinic detail → Settings → Working hours**, or group admin clinic create/edit forms.
+
+---
+
+## UI themes
+
+| Theme | Description |
+|-------|-------------|
+| **Kiorly Light / Dark** | Default product tokens (`data-theme="default-*"`) |
+| **Material Light / Dark** | Material Design 3 layer — Roboto, pill buttons, M3 surfaces, light-blue primary accent |
+
+**Theme switcher:** app shell (and login). Optional **“Use as default when I sign in again”** persists via `localStorage`; in-tab choice uses `sessionStorage` until sign-out.
+
+Implementation: `apps/web/src/stores/theme-store.ts`, `apps/web/src/components/theme-switcher.tsx`, `apps/web/src/styles/material-theme.css`.
 
 ---
 
@@ -143,7 +172,9 @@ Scheduled operations open an **edit dialog** that mirrors the **create** form: f
 | Web clinics directory | `apps/web/src/features/clinics/clinics-page.tsx` |
 | Reports (date-range charts) | `apps/api/src/reports/reports.service.ts`, `apps/web/src/features/reports/reports-page.tsx` |
 | Supported currencies | `apps/api/src/common/base-currencies.ts`, `apps/web/src/lib/base-currencies.ts` |
-| Clinic / fee currency resolution | `apps/api/src/common/clinic-currency.ts`, `apps/web/src/lib/money-display.ts` |
+| Clinic / fee currency resolution | `apps/api/src/common/clinic-currency.ts`, `apps/api/src/common/sync-inherited-clinic-currencies.ts`, `apps/web/src/lib/money-display.ts`, `useOrgBaseCurrency()` |
+| UI themes (Kiorly + Material M3) | `apps/web/src/stores/theme-store.ts`, `apps/web/src/styles/material-theme.css` |
+| Docs portal + PiggyMetrics sync | `apps/docs/`, `scripts/sync-piggymetrics-docs.sh` |
 | HR deactivate / archive / restore | `apps/api/src/hr/hr.service.ts`, `apps/web/src/lib/employee-manage-policy.ts` |
 | Operations UI | `apps/web/src/features/operations/operations-page.tsx` |
 | Invoices & clinic invoice settings | `apps/api/src/invoices/`, `apps/web/src/features/invoices/` |

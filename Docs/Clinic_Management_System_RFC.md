@@ -4,9 +4,9 @@
 | Field | Value |
 |---|---|
 | **Document Title** | Clinic Management System – Technical RFC |
-| **Version** | 1.6 |
+| **Version** | 1.7 |
 | **Status** | Living document (aligned with `main` as of July 2026) |
-| **Related** | [`Clinic_Management_System_PRD.md`](./Clinic_Management_System_PRD.md) v1.7 |
+| **Related** | [`Clinic_Management_System_PRD.md`](./Clinic_Management_System_PRD.md) v1.8, [`Documentation_Portal.md`](./Documentation_Portal.md) |
 | **Last Updated** | July 2026 |
 
 ---
@@ -411,7 +411,7 @@ GET    /expenses/reports/group-rollup
 ```
 
 **Notes:**
-- Salary expenses are auto-created by HR/payroll runs to keep books in sync.
+- **`PAYROLL` expenses (shipped):** `PayrollExpensesService` upserts salary lines from active employee contracts when reports, dashboard, or expenses are loaded — no separate `POST /payroll/runs` yet.
 - Approval workflow configurable per tenant (single or two-step).
 
 #### 6.2.9 HrModule
@@ -427,14 +427,13 @@ POST   /attendance/clock-in
 POST   /attendance/clock-out
 POST   /leave-requests
 PATCH  /leave-requests/:id/approve
-POST   /payroll/runs
-GET    /payslips/:id/pdf
+POST   /payroll/runs          # roadmap — not implemented; see PayrollExpensesService
+GET    /payslips/:id/pdf      # roadmap
 ```
 
 **Notes:**
 - License/document expiry monitor runs as a daily job; emits notifications T-90, T-30, T-7.
-- Payroll run is idempotent and can be re-run for a period until locked.
-- Salary lines auto-post to `ExpensesModule` upon payroll lock.
+- Payroll run API remains roadmap; salary expense sync is automatic on read paths (see ExpensesModule notes).
 
 #### 6.2.10 RevenueModule
 

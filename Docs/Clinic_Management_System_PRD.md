@@ -4,11 +4,11 @@
 | Field | Value |
 |---|---|
 | **Document Title** | Clinic Management System – Product Requirements Document |
-| **Version** | 1.7 |
+| **Version** | 1.8 |
 | **Status** | Living document (aligned with `main` as of July 2026) |
 | **Author** | Product / Engineering |
 | **Last Updated** | July 2026 |
-| **Related Documents** | [`Clinic_Management_System_RFC.md`](./Clinic_Management_System_RFC.md), [`AWS_Cloud_Deployment_Guide.md`](./AWS_Cloud_Deployment_Guide.md), [`Test_Data_Users.md`](./Test_Data_Users.md) |
+| **Related Documents** | [`Clinic_Management_System_RFC.md`](./Clinic_Management_System_RFC.md), [`Documentation_Portal.md`](./Documentation_Portal.md), [`AWS_Cloud_Deployment_Guide.md`](./AWS_Cloud_Deployment_Guide.md), [`Test_Data_Users.md`](./Test_Data_Users.md) |
 
 ---
 
@@ -489,6 +489,20 @@ Authorization model:
 | **Clinic working hours** — `openingTime` / `closingTime` per clinic (default 9 AM–midnight); admin settings panel; call-center after-hours booking warning | Shipped |
 | **Mobile document camera** — native OS camera on mobile instead of heavy `getUserMedia` preview | Shipped |
 | **HR create employee** — provision login (email/password/clinic) aligned with HR officer flow; clinic picker fix in dialogs | Shipped |
+
+#### July 2026 (end) increments
+
+| Area | Status |
+|---|---|
+| **Organization base currency** — tenant default; new clinics inherit; org change syncs inherited clinic currencies; per-clinic override on Settings → Currency | Shipped |
+| **UI themes** — Kiorly Light/Dark + Material Design 3 Light/Dark; theme switcher on login & shell; optional persist on sign-in | Shipped |
+| **Material theme accent** — light-blue primary (buttons, focus ring, highlights) | Shipped |
+| **Appointment overlap UX** — paginated conflict list in confirm dialog (“+N more booking(s)”) | Shipped |
+| **Org hierarchy mindmap** — Admin / Platform tree dialog (`GET .../admin/org-hierarchy`) | Shipped |
+| **Payroll expense lines** — `PAYROLL` expenses upserted from employee salaries on reports/dashboard/expenses load (no separate payroll run API yet) | Shipped |
+| **Employee salary & currency** — contract edit; salary currency override vs clinic default | Shipped |
+| **Clinic-scoped HR grants** — assign HR module access per clinic for group/clinic admins | Shipped |
+| **Documentation portal** — `apps/docs` module; PiggyMetrics README sync from upstream `master` | Shipped |
 
 ### 12.2 Near-term roadmap (engineering backlog)
 

@@ -334,6 +334,7 @@ Use **Amazon Lightsail** (fixed monthly) **or** one **EC2** instance (e.g. **t4g
 
 ## Documentation
 
+- **Documentation portal (local UI):** [`Docs/Documentation_Portal.md`](Docs/Documentation_Portal.md) — run `npm run docs:dev` → [http://localhost:5175](http://localhost:5175). Includes synced [PiggyMetrics](https://github.com/sqshq/PiggyMetrics) reference (`npm run docs:sync`).
 - **Documentation index:** [`Docs/README.md`](Docs/README.md)
 - **Test users & passwords (QA / demos):** [`Docs/Test_Data_Users.md`](Docs/Test_Data_Users.md)
 - Product / requirements context: [`Docs/Clinic_Management_System_PRD.md`](Docs/Clinic_Management_System_PRD.md)

@@ -212,7 +212,13 @@ Branches are children of HQ (`parentClinicId` → HQ).
 | Register patient with documents + camera | `assistant@kiorly.com` or `receptionist@kiorly.com` → **Patients → New patient** |
 | Mobile native camera for documents | Same as above on phone — capture opens OS camera (no live preview stream) |
 | Book appointment (15-min slot, clinic hours) | `assistant@kiorly.com` or `callcenter@kiorly.com` → **Appointments → Book** — pick clinic first |
-| Double-book same clinician/time | Book overlapping slot → confirm dialog lists existing patient |
+| Double-book same clinician/time | Book overlapping slot → confirm dialog; with **multiple** conflicts use “+N more booking(s)” to reveal each |
+| Switch UI theme (Kiorly / Material) | Login or shell → theme menu → try Material Light; optional “remember on sign-in” |
+| Org base currency inheritance | `admin@kiorly.com` → **Admin → Organization & settings** → change base currency → verify inherited clinics update |
+| Org hierarchy tree | `admin@kiorly.com` → **Admin** → **Organization hierarchy** mindmap dialog |
+| Payroll lines in expenses/reports | `finance@kiorly.com` → **Reports** or **Expenses** — salaried employees generate `PAYROLL` rows |
+| Employee salary currency | `hr@drahmedshall.com` → **HR → Employee profile** → edit salary / currency |
+| Documentation portal | Repo root → `npm run docs:dev` → http://localhost:5175 |
 | Call center after-hours warning | `callcenter@kiorly.com` → book after clinic **closing time** — amber warning, booking still allowed |
 | Appointments calendar (shared slots) | **Appointments → Calendar** tab — overlapping entries highlighted |
 | Configure clinic working hours | `admin@kiorly.com` or `clinicadmin@kiorly.com` → **Clinics** → clinic → **Settings → Working hours** |

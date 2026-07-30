@@ -3,7 +3,8 @@
   "private": true,
   "workspaces": [
     "apps/web",
-    "apps/api"
+    "apps/api",
+    "apps/docs"
   ],
   "scripts": {
     "db:up": "docker compose up -d",
@@ -19,6 +20,10 @@
     "build": "npm run build -w api && npm run build -w web",
     "lint": "npm run lint -w web",
     "preview": "npm run preview -w web",
+    "docs:sync": "bash scripts/sync-piggymetrics-docs.sh",
+    "docs:dev": "npm run dev -w docs",
+    "docs:build": "npm run build -w docs",
+    "docs:preview": "npm run preview -w docs",
     "test:e2e": "npm run test:e2e -w web",
     "test:unit": "npm run test:unit -w api",
     "infra:install": "npm ci --prefix infra --no-audit --no-fund",
