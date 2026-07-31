@@ -89,7 +89,7 @@ Root `package.json` scripts:
 | **Web** (`apps/web`) | 5173 / 5174 | Clinic management SPA |
 | **Docs** (`apps/docs`) | 5175 | Documentation portal (this module) |
 
-Run `npm run dev` for API + web; run `npm run docs:dev` separately when reading or editing documentation.
+Run `npm run dev` for API + web + **docs portal** (5175). To run only the portal: `npm run docs:dev`. Troubleshoot with `npm run docs:doctor`.
 
 ---
 
