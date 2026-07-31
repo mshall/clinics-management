@@ -12,7 +12,7 @@ Browse all markdown (including synced **PiggyMetrics** reference) in a local UI:
 
 ```bash
 npm run docs:sync   # refresh PiggyMetrics README from GitHub master
-npm run docs:dev    # http://localhost:5175
+npm run docs:dev    # http://localhost:5175  (also starts with npm run dev)
 ```
 
 See **[Documentation_Portal.md](./Documentation_Portal.md)** for module layout, sync workflow, and ports (API 3000 · Web 5173 · Docs 5175).

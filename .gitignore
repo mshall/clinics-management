@@ -11,6 +11,7 @@ apps/web/.env
 apps/web/node_modules
 apps/web/dist
 apps/docs/dist
+apps/docs/tsconfig.app.tsbuildinfo
 apps/api/uploads
 apps/web/playwright-report
 apps/web/test-results
