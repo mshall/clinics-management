@@ -209,7 +209,7 @@ export function PendingDocumentAttachments({
                 </div>
               ) : null}
               <div className="space-y-2">
-                <Label required>{t("patients.documentFile", "File")}</Label>
+                <Label required>{t("patients.documentFiles", "Files")}</Label>
                 <div className="flex flex-wrap items-center gap-2">
                   <Input
                     className={cn("cursor-pointer text-sm flex-1 min-w-[12rem]", invalidClass(row.id, "file"))}

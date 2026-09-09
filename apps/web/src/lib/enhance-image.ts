@@ -4,42 +4,51 @@ const picaInstance = pica();
 
 export type ImageEnhanceProfile = "document" | "camera" | "avatar" | "general";
 
-const PROFILES: Record<
-  ImageEnhanceProfile,
-  { minLongEdge: number; maxLongEdge: number; unsharpAmount: number; unsharpRadius: number }
-> = {
-  document: { minLongEdge: 2800, maxLongEdge: 4096, unsharpAmount: 140, unsharpRadius: 0.8 },
-  camera: { minLongEdge: 3200, maxLongEdge: 4096, unsharpAmount: 180, unsharpRadius: 0.85 },
-  avatar: { minLongEdge: 768, maxLongEdge: 1280, unsharpAmount: 100, unsharpRadius: 0.6 },
-  general: { minLongEdge: 2000, maxLongEdge: 3200, unsharpAmount: 120, unsharpRadius: 0.75 },
+type ProfileLimits = {
+  maxLongEdge: number;
+  unsharpAmount: number;
+  unsharpRadius: number;
 };
 
-const JPEG_QUALITY = 0.96;
+const PROFILES: Record<ImageEnhanceProfile, ProfileLimits> = {
+  /** Clinical uploads — downscale only; never upscale (keeps AWS uploads fast). */
+  document: { maxLongEdge: 2400, unsharpAmount: 90, unsharpRadius: 0.6 },
+  camera: { maxLongEdge: 3200, unsharpAmount: 120, unsharpRadius: 0.7 },
+  avatar: { maxLongEdge: 1280, unsharpAmount: 100, unsharpRadius: 0.6 },
+  general: { maxLongEdge: 2400, unsharpAmount: 100, unsharpRadius: 0.65 },
+};
+
+const JPEG_QUALITY = 0.88;
 
 export function isEnhanceableImage(file: File): boolean {
   if (!file.type.startsWith("image/")) return false;
   return file.type !== "image/gif" && file.type !== "image/svg+xml";
 }
 
+function shouldSkipEnhancement(file: File, profile: ImageEnhanceProfile): boolean {
+  if (!isEnhanceableImage(file)) return true;
+  if (profile === "document") {
+    if (file.name.startsWith("document-capture-")) return true;
+    if (file.name.startsWith("prescription-generated-")) return true;
+  }
+  return false;
+}
+
 function computeTargetSize(
   width: number,
   height: number,
-  limits: { minLongEdge: number; maxLongEdge: number },
-): { width: number; height: number } {
-  const { minLongEdge, maxLongEdge } = limits;
+  maxLongEdge: number,
+): { width: number; height: number; resize: boolean } {
   const longEdge = Math.max(width, height);
-  let scale = 1;
-
-  if (longEdge < minLongEdge) {
-    scale = minLongEdge / longEdge;
-  } else if (longEdge > maxLongEdge) {
-    scale = maxLongEdge / longEdge;
+  if (longEdge <= maxLongEdge) {
+    return { width, height, resize: false };
   }
-
-  const targetWidth = Math.max(1, Math.round(width * scale));
-  const targetHeight = Math.max(1, Math.round(height * scale));
-
-  return { width: targetWidth, height: targetHeight };
+  const scale = maxLongEdge / longEdge;
+  return {
+    width: Math.max(1, Math.round(width * scale)),
+    height: Math.max(1, Math.round(height * scale)),
+    resize: true,
+  };
 }
 
 async function loadImageFromFile(file: File): Promise<HTMLImageElement> {
@@ -74,12 +83,27 @@ function outputName(originalName: string, mime: string): string {
   return `${base}${ext}`;
 }
 
+function drawToCanvas(img: HTMLImageElement, width: number, height: number, profile: ImageEnhanceProfile): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas unavailable");
+  if (profile === "camera" || profile === "document") {
+    ctx.filter = "contrast(1.04) brightness(1.02)";
+  }
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, 0, 0, width, height);
+  ctx.filter = "none";
+  return canvas;
+}
+
 export async function enhanceImageFile(
   file: File,
   profile: ImageEnhanceProfile = "document",
 ): Promise<File> {
-  if (!isEnhanceableImage(file)) return file;
-  if (profile === "document" && file.name.startsWith("document-capture-")) return file;
+  if (shouldSkipEnhancement(file, profile)) return file;
 
   try {
     const img = await loadImageFromFile(file);
@@ -87,24 +111,22 @@ export async function enhanceImageFile(
     const naturalHeight = img.naturalHeight || img.height;
     if (!naturalWidth || !naturalHeight) return file;
 
-    const { minLongEdge, maxLongEdge, unsharpAmount, unsharpRadius } = PROFILES[profile];
-    const { width, height } = computeTargetSize(naturalWidth, naturalHeight, {
-      minLongEdge,
-      maxLongEdge,
-    });
+    const { maxLongEdge, unsharpAmount, unsharpRadius } = PROFILES[profile];
+    const { width, height, resize } = computeTargetSize(naturalWidth, naturalHeight, maxLongEdge);
+    if (!resize) return file;
 
-    const from = document.createElement("canvas");
-    from.width = naturalWidth;
-    from.height = naturalHeight;
-    const fromCtx = from.getContext("2d");
-    if (!fromCtx) return file;
+    const scale = Math.min(width / naturalWidth, height / naturalHeight);
+    const preservePng = file.type === "image/png";
+    const mime = preservePng ? "image/png" : file.type === "image/webp" ? "image/webp" : "image/jpeg";
+    const quality = mime === "image/jpeg" ? JPEG_QUALITY : mime === "image/webp" ? 0.88 : 1;
 
-    if (profile === "camera" || profile === "document") {
-      fromCtx.filter = "contrast(1.06) brightness(1.03)";
+    // Moderate downscale: canvas is much faster than pica on mobile / remote hosts.
+    if (scale >= 0.55) {
+      const canvas = drawToCanvas(img, width, height, profile);
+      return await canvasToFile(canvas, outputName(file.name, mime), mime, quality);
     }
-    fromCtx.drawImage(img, 0, 0);
-    fromCtx.filter = "none";
 
+    const from = drawToCanvas(img, naturalWidth, naturalHeight, profile);
     const to = document.createElement("canvas");
     to.width = width;
     to.height = height;
@@ -115,17 +137,13 @@ export async function enhanceImageFile(
       unsharpThreshold: 1,
     });
 
-    const preservePng = file.type === "image/png";
-    const mime = preservePng ? "image/png" : file.type === "image/webp" ? "image/webp" : "image/jpeg";
-    const quality = mime === "image/jpeg" ? JPEG_QUALITY : mime === "image/webp" ? 0.92 : 1;
-
     return await canvasToFile(to, outputName(file.name, mime), mime, quality);
   } catch {
     return file;
   }
 }
 
-/** Sharpen and upscale a camera capture; marks filename so upload won't re-process. */
+/** Sharpen camera capture; marks filename so upload won't re-process. */
 export async function enhanceCameraCaptureFile(file: File): Promise<File> {
   const enhanced = await enhanceImageFile(file, "camera");
   const mime = enhanced.type || "image/jpeg";

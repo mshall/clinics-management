@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiErrorMessage } from "@/features/platform/platform-shared";
 import { apiPostFormData } from "@/lib/http";
+import { uploadFilesSequentially } from "@/lib/upload-files-sequentially";
 
 type PatientClinicalSectionUploadProps = {
   patientId: string;
@@ -40,7 +41,7 @@ export function PatientClinicalSectionUpload({ patientId, category }: PatientCli
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [otherDescription, setOtherDescription] = useState("");
   const [cameraOpen, setCameraOpen] = useState(false);
 
@@ -50,7 +51,7 @@ export function PatientClinicalSectionUpload({ patientId, category }: PatientCli
       : patientDocumentCategoryLabel(category, t);
 
   const resetForm = () => {
-    setFile(null);
+    setFiles([]);
     if (category === "OTHER") setOtherDescription("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -60,8 +61,12 @@ export function PatientClinicalSectionUpload({ patientId, category }: PatientCli
     setOpen(false);
   };
 
+  const removeFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const uploadMutation = useMutation({
-    mutationFn: async (uploadFile: File) => {
+    mutationFn: async (uploadFiles: File[]) => {
       if (!description) {
         throw new Error(
           category === "OTHER"
@@ -69,16 +74,22 @@ export function PatientClinicalSectionUpload({ patientId, category }: PatientCli
             : t("patients.errorDocCategoryRequired", "Each attached document needs a type."),
         );
       }
-      const fd = new FormData();
-      fd.append("file", uploadFile);
-      fd.append("description", description);
-      return apiPostFormData(`/api/v1/patients/${patientId}/documents`, fd);
+      await uploadFilesSequentially(uploadFiles, async (uploadFile) => {
+        const fd = new FormData();
+        fd.append("file", uploadFile);
+        fd.append("description", description);
+        return apiPostFormData(`/api/v1/patients/${patientId}/documents`, fd);
+      });
     },
-    onSuccess: async () => {
+    onSuccess: async (_data, uploaded) => {
       resetForm();
       setOpen(false);
       await queryClient.invalidateQueries({ queryKey: ["patient", patientId, "clinical-documents"] });
-      toast.success(t("patients.clinicalDocUploaded", "Document uploaded."));
+      toast.success(
+        uploaded.length === 1
+          ? t("patients.clinicalDocUploaded", "Document uploaded.")
+          : t("patients.clinicalDocsUploaded", "{{count}} documents uploaded.", { count: uploaded.length }),
+      );
     },
     onError: (error: unknown) => {
       toast.error(apiErrorMessage(error));
@@ -86,12 +97,12 @@ export function PatientClinicalSectionUpload({ patientId, category }: PatientCli
   });
 
   const submit = () => {
-    if (!file) return;
-    uploadMutation.mutate(file);
+    if (files.length === 0) return;
+    uploadMutation.mutate(files);
   };
 
   const canUpload =
-    Boolean(file) && !uploadMutation.isPending && (category !== "OTHER" || Boolean(otherDescription.trim()));
+    files.length > 0 && !uploadMutation.isPending && (category !== "OTHER" || Boolean(otherDescription.trim()));
 
   if (!open) {
     return (
@@ -135,11 +146,12 @@ export function PatientClinicalSectionUpload({ patientId, category }: PatientCli
       <input
         ref={fileInputRef}
         type="file"
+        multiple
         accept="application/pdf,image/jpeg,image/png,image/webp,image/gif,text/plain"
         className="hidden"
         onChange={(e) => {
-          const picked = e.target.files?.[0] ?? null;
-          if (picked) setFile(picked);
+          const picked = [...(e.target.files ?? [])];
+          if (picked.length > 0) setFiles((prev) => [...prev, ...picked]);
           e.target.value = "";
         }}
       />
@@ -154,7 +166,7 @@ export function PatientClinicalSectionUpload({ patientId, category }: PatientCli
           onClick={() => fileInputRef.current?.click()}
         >
           <Upload className="h-4 w-4" />
-          {t("patients.uploadADocument", "Upload a document")}
+          {t("patients.uploadDocuments", "Upload document(s)")}
         </Button>
         <Button
           type="button"
@@ -169,27 +181,50 @@ export function PatientClinicalSectionUpload({ patientId, category }: PatientCli
         </Button>
       </div>
 
-      {file ? (
+      {files.length > 0 ? (
         <div className="space-y-2 rounded-md border border-border bg-background px-3 py-2">
-          <p className="truncate text-xs text-muted-foreground ltr-nums">
-            {t("expenses.selectedFile", "Selected file")}:{" "}
-            <span className="font-medium text-foreground">{file.name}</span>
-          </p>
+          <ul className="space-y-1">
+            {files.map((file, index) => (
+              <li
+                key={`${file.name}-${file.lastModified}-${index}`}
+                className="flex items-center justify-between gap-2 text-xs"
+              >
+                <span className="min-w-0 truncate ltr-nums text-muted-foreground">{file.name}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 shrink-0"
+                  aria-label={t("common.remove", "Remove")}
+                  onClick={() => removeFile(index)}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </li>
+            ))}
+          </ul>
           <Button type="button" size="sm" className="w-full gap-1" disabled={!canUpload} onClick={submit}>
             <Upload className="h-4 w-4" />
-            {uploadMutation.isPending ? t("common.loading") : t("patients.uploadDocument", "Upload")}
+            {uploadMutation.isPending
+              ? t("common.loading")
+              : files.length === 1
+                ? t("patients.uploadDocument", "Upload")
+                : t("patients.uploadDocumentsCount", "Upload {{count}} files", { count: files.length })}
           </Button>
         </div>
       ) : (
         <p className="text-xs text-muted-foreground">
-          {t("patients.clinicalUploadHint", "Choose a file from your device or capture one with the camera.")}
+          {t(
+            "patients.clinicalUploadHintMulti",
+            "Choose one or more files from your device, or capture with the camera.",
+          )}
         </p>
       )}
 
       <DocumentCameraCaptureDialog
         open={cameraOpen}
         onOpenChange={setCameraOpen}
-        onCapture={(captured) => setFile(captured)}
+        onCapture={(captured) => setFiles((prev) => [...prev, captured])}
       />
     </div>
   );

@@ -43,6 +43,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useEncounterQuery } from "@/lib/api-hooks";
 import type { EncounterDetailDto, EncounterDocumentDto } from "@/lib/api-types";
 import { ApiError, apiDelete, apiFetchBlob, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
+import { uploadFilesSequentially } from "@/lib/upload-files-sequentially";
 import { canDeleteEncounter } from "@/lib/encounter-delete-policy";
 import { canGenerateInvoice } from "@/lib/invoice-generate-policy";
 import { formatEncounterStatus, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
@@ -300,20 +301,27 @@ export function EncounterDetailPage() {
   };
 
   const uploadMutation = useMutation({
-    mutationFn: ({ file, kind }: { file: File; kind: DocKind }) => {
-      const fd = new FormData();
-      fd.set("file", file);
-      fd.set("kind", kind);
-      return apiPostFormData<EncounterDocumentDto>(`/api/v1/encounters/${id}/documents`, fd);
+    mutationFn: async ({ files, kind }: { files: File[]; kind: DocKind }) => {
+      await uploadFilesSequentially(files, async (file) => {
+        const fd = new FormData();
+        fd.set("file", file);
+        fd.set("kind", kind);
+        return apiPostFormData<EncounterDocumentDto>(`/api/v1/encounters/${id}/documents`, fd);
+      });
     },
     onSuccess: (_data, variables) => {
       if (variables.kind === "PRESCRIPTION") {
         setNoMedications(false);
-        if (!variables.file.name.startsWith("prescription-generated-")) {
+        const first = variables.files[0];
+        if (first && !first.name.startsWith("prescription-generated-")) {
           setMedTab("prescription");
         }
       }
-      toast.success(t("encounters.docUploaded"));
+      toast.success(
+        variables.files.length === 1
+          ? t("encounters.docUploaded")
+          : t("encounters.docsUploaded", "{{count}} documents uploaded.", { count: variables.files.length }),
+      );
       invalidate();
     },
     onError: (e: unknown) => {
@@ -878,12 +886,14 @@ export function EncounterDetailPage() {
                   <Upload className="h-4 w-4 shrink-0" aria-hidden />
                   <input
                     type="file"
+                    multiple
                     accept="application/pdf,image/*,text/plain"
                     className="text-xs"
+                    disabled={uploadMutation.isPending}
                     onChange={(e) => {
-                      const f = e.target.files?.[0];
+                      const picked = [...(e.target.files ?? [])];
                       e.target.value = "";
-                      if (f) uploadMutation.mutate({ file: f, kind: "LAB" });
+                      if (picked.length) uploadMutation.mutate({ files: picked, kind: "LAB" });
                     }}
                   />
                 </label>
@@ -937,12 +947,14 @@ export function EncounterDetailPage() {
                   <Upload className="h-4 w-4 shrink-0" aria-hidden />
                   <input
                     type="file"
+                    multiple
                     accept="application/pdf,image/*,text/plain"
                     className="text-xs"
+                    disabled={uploadMutation.isPending}
                     onChange={(e) => {
-                      const f = e.target.files?.[0];
+                      const picked = [...(e.target.files ?? [])];
                       e.target.value = "";
-                      if (f) uploadMutation.mutate({ file: f, kind: "RADIOLOGY" });
+                      if (picked.length) uploadMutation.mutate({ files: picked, kind: "RADIOLOGY" });
                     }}
                   />
                 </label>
@@ -1157,7 +1169,7 @@ export function EncounterDetailPage() {
                         onChange={(e) => {
                           const f = e.target.files?.[0];
                           e.target.value = "";
-                          if (f) uploadMutation.mutate({ file: f, kind: "PRESCRIPTION" });
+                          if (f) uploadMutation.mutate({ files: [f], kind: "PRESCRIPTION" });
                         }}
                       />
                       <button
