@@ -198,6 +198,23 @@ async function ensureEmployee(
     where: { tenantId, employeeNumber },
   });
   if (existing) return existing;
+
+  if (data.userId) {
+    const linked = await prisma.employee.findFirst({
+      where: { userId: data.userId },
+    });
+    if (linked) {
+      if (linked.tenantId !== tenantId) return linked;
+      if (linked.clinicId !== clinicId || linked.employeeNumber !== employeeNumber) {
+        return prisma.employee.update({
+          where: { id: linked.id },
+          data: { clinicId, employeeNumber },
+        });
+      }
+      return linked;
+    }
+  }
+
   return prisma.employee.create({
     data: {
       tenantId,
