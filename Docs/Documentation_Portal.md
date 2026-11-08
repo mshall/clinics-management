@@ -91,6 +91,8 @@ Root `package.json` scripts:
 
 Run `npm run dev` for API + web + **docs portal** (5175). To run only the portal: `npm run docs:dev`. Troubleshoot with `npm run docs:doctor`.
 
+**GitHub + AWS sync:** `npm run sync:github` (pull `main`), `npm run sync:aws` (stack URL + health + `apps/web/.env.aws`), `npm run dev:web:aws` (local UI against live API). Full deploy: `npm run sync:aws:deploy` or push to `main` (GitHub Actions **Deploy to AWS**).
+
 ---
 
 ## Editing project docs

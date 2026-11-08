@@ -234,8 +234,14 @@ API output is under `apps/api/dist`; web static assets under `apps/web/dist`.
 
 | Command | Description |
 |--------|-------------|
-| `npm run dev` | API (watch) + Vite dev server |
+| `npm run dev` | API (watch) + Vite + docs portal |
 | `npm run dev:api` / `npm run dev:web` | One app only |
+| `npm run dev:web:aws` | Local Vite UI against live AWS API (`sync:aws` writes `apps/web/.env.aws`) |
+| `npm run sync:github` | Fetch + fast-forward pull `origin/main` |
+| `npm run sync:aws` | Stack `AppUrl`, health check, write `.env.aws` |
+| `npm run sync:aws:smoke` | Post-deploy health + demo login (CI smoke) |
+| `npm run sync:aws:deploy` | Pull GitHub + local CDK deploy (needs AWS CLI + Docker) |
+| `npm run sync:all` | `sync` (GitHub + DB) then `sync:aws` |
 | `npm run db:up` / `npm run db:down` | Start / stop Docker services |
 | `npm run db:setup` | Generate client, migrate, seed |
 | `npm run build` | Build API then web |

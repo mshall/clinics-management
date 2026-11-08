@@ -6,6 +6,7 @@ dist
 .env.*
 !.env.example
 !**/.env.example
+!**/.env.aws.example
 apps/api/.env
 apps/web/.env
 apps/web/node_modules
@@ -17,3 +18,4 @@ apps/web/playwright-report
 apps/web/test-results
 infra/cdk.out
 infra/lib
+.sync/
