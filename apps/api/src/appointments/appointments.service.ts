@@ -325,10 +325,65 @@ export class AppointmentsService {
     return conflicts.map((c) => this.mapRow(c));
   }
 
+  async createForIntegration(
+    tenantId: string,
+    dto: CreateAppointmentDto & { integrationClientId: string; externalReference?: string },
+  ): Promise<AppointmentDto> {
+    if (dto.externalReference) {
+      const existing = await this.prisma.appointment.findFirst({
+        where: {
+          tenantId,
+          integrationClientId: dto.integrationClientId,
+          externalReference: dto.externalReference,
+        },
+        include: appointmentDtoInclude,
+      });
+      if (existing) return this.mapRow(existing);
+    }
+    return this.createInternal(tenantId, dto, {
+      integrationClientId: dto.integrationClientId,
+      externalReference: dto.externalReference ?? null,
+    });
+  }
+
+  async getByIdForIntegration(tenantId: string, id: string, integrationClientId: string): Promise<AppointmentDto> {
+    const row = await this.prisma.appointment.findFirst({
+      where: { id, tenantId, integrationClientId },
+      include: appointmentDtoInclude,
+    });
+    if (!row) throw new NotFoundException("Appointment not found");
+    return this.mapRow(row);
+  }
+
+  async cancelForIntegration(tenantId: string, id: string, integrationClientId: string): Promise<AppointmentDto> {
+    const row = await this.prisma.appointment.findFirst({
+      where: { id, tenantId, integrationClientId },
+      include: appointmentDtoInclude,
+    });
+    if (!row) throw new NotFoundException("Appointment not found");
+    if (row.status === AppointmentStatus.COMPLETED) {
+      throw new BadRequestException("Cannot cancel a completed appointment");
+    }
+    const updated = await this.prisma.appointment.update({
+      where: { id },
+      data: { status: AppointmentStatus.CANCELLED },
+      include: appointmentDtoInclude,
+    });
+    return this.mapRow(updated);
+  }
+
   async create(tenantId: string, actor: JwtUser, dto: CreateAppointmentDto): Promise<AppointmentDto> {
     if (isPhysicianRole(actor.role) && dto.clinicianId.trim() !== actor.userId) {
       throw new BadRequestException("Physicians may only book appointments as themselves");
     }
+    return this.createInternal(tenantId, dto, {});
+  }
+
+  private async createInternal(
+    tenantId: string,
+    dto: CreateAppointmentDto,
+    integration: { integrationClientId?: string; externalReference?: string | null },
+  ): Promise<AppointmentDto> {
     const [clinic, patient, clinician] = await Promise.all([
       this.prisma.clinic.findFirst({ where: { id: dto.clinicId, tenantId } }),
       this.prisma.patient.findFirst({ where: { id: dto.patientId, tenantId, deletedAt: null } }),
@@ -369,6 +424,8 @@ export class AppointmentsService {
         feeAmount,
         status: dto.status ?? AppointmentStatus.SCHEDULED,
         notes: dto.notes ?? null,
+        integrationClientId: integration.integrationClientId ?? null,
+        externalReference: integration.externalReference ?? null,
       },
       include: appointmentDtoInclude,
     });

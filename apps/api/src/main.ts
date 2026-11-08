@@ -30,6 +30,15 @@ async function bootstrap() {
       .setDescription("REST API for the clinic platform (v1).")
       .setVersion("1.0.0")
       .addBearerAuth({ type: "http", scheme: "bearer", bearerFormat: "JWT" }, "bearer")
+      .addBearerAuth(
+        {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "kio_live.ic_….secret",
+          description: "Integration client token from Admin → Integration API clients",
+        },
+        "integration",
+      )
       .build();
     const document = SwaggerModule.createDocument(app, swaggerConfig, {
       extraModels: [LoginDto, LoginResponseDto, AuthUserDto, PatientDto, ClinicDto, GroupOverviewKpisDto],

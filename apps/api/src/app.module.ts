@@ -20,6 +20,7 @@ import { StorageModule } from "./storage/storage.module";
 import { UserNavTabsModule } from "./user-nav-tabs/user-nav-tabs.module";
 import { UserClinicPrivilegeGrantsModule } from "./user-clinic-privilege-grants/user-clinic-privilege-grants.module";
 import { SupportModule } from "./support/support.module";
+import { IntegrationsModule } from "./integrations/integrations.module";
 import { UsersModule } from "./users/users.module";
 
 @Module({
@@ -46,6 +47,7 @@ import { UsersModule } from "./users/users.module";
     UserNavTabsModule,
     UserClinicPrivilegeGrantsModule,
     SupportModule,
+    IntegrationsModule,
   ],
 })
 export class AppModule {}

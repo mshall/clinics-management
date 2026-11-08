@@ -833,6 +833,32 @@ POST   /support/tracking/logs/:auditLogId/ticket
 
 **Web:** `apps/web/src/features/support/customer-support-page.tsx`; nav key `customer_support`.
 
+#### 6.2.21 IntegrationsModule *(implemented — appointment booking)*
+
+External **patient platforms** authenticate with an **integration bearer token** (not staff JWT):
+
+```
+Authorization: Bearer kio_live.<clientKey>.<secret>
+```
+
+**Admin (staff JWT):** `GET/POST /admin/integration-clients`, `POST .../:id/rotate-secret`, `POST .../:id/deactivate` — group admin & clinic admin.
+
+**Integration API (bearer token):**
+
+| Method | Path | Scope |
+|--------|------|--------|
+| GET | `/integrations/auth/verify` | any valid token |
+| GET | `/integrations/clinics` | `APPOINTMENTS_READ` |
+| GET | `/integrations/physicians?clinicId=` | `APPOINTMENTS_READ` |
+| GET | `/integrations/appointments/availability?clinicId&clinicianId&from&to` | `APPOINTMENTS_READ` |
+| POST | `/integrations/appointments` | `APPOINTMENTS_WRITE` |
+| GET | `/integrations/appointments/:id` | `APPOINTMENTS_READ` (same client only) |
+| POST | `/integrations/appointments/:id/cancel` | `APPOINTMENTS_WRITE` |
+
+Booking body accepts `patientId` **or** `patientMrn`, optional `externalReference` for **idempotency**, and the same scheduling rules as staff (`confirmOverlap`, default 15‑minute slot). Rows store `integrationClientId` + `externalReference`; staff `POST /appointments` is unchanged.
+
+**Roadmap:** operations/surgery booking scopes, webhooks, patient self-registration, OAuth2 client credentials.
+
 #### 6.2.20 Performance & load testing
 
 | Concern | Implementation |

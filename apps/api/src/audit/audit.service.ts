@@ -206,9 +206,33 @@ export class AuditService {
     });
   }
 
+  async recordIntegration(entry: {
+    tenantId: string;
+    clinicId: string | null;
+    integrationClientId: string;
+    integrationClientName: string;
+    action: string;
+    resourceId: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<void> {
+    await this.record({
+      tenantId: entry.tenantId,
+      actorId: null,
+      clinicId: entry.clinicId,
+      action: entry.action,
+      resource: "IntegrationAppointment",
+      resourceId: entry.resourceId,
+      metadata: {
+        integrationClientId: entry.integrationClientId,
+        integrationClientName: entry.integrationClientName,
+        ...entry.metadata,
+      },
+    });
+  }
+
   private async record(entry: {
     tenantId: string;
-    actorId: string;
+    actorId: string | null;
     clinicId: string | null;
     action: string;
     resource: string;

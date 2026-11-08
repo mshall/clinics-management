@@ -133,6 +133,11 @@ enum SupportTicketPriority {
   URGENT
 }
 
+enum IntegrationScope {
+  APPOINTMENTS_READ
+  APPOINTMENTS_WRITE
+}
+
 enum SupportProductModule {
   PATIENTS
   ENCOUNTERS
@@ -187,6 +192,7 @@ model Tenant {
   tenantRoleNavTabGrants TenantRoleNavTabGrant[]
   userClinicEmployeePrivilegeGrants UserClinicEmployeePrivilegeGrant[]
   supportTickets                 SupportTicket[]
+  integrationClients             IntegrationClient[]
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
 }
@@ -217,6 +223,7 @@ model User {
   supportTicketsReported         SupportTicket[] @relation("SupportTicketReporter")
   supportTicketsAssigned         SupportTicket[] @relation("SupportTicketAssignee")
   supportTicketEvents            SupportTicketEvent[] @relation("SupportTicketEventActor")
+  integrationClientsCreated      IntegrationClient[] @relation("IntegrationClientCreatedBy")
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   deactivatedAt DateTime?
@@ -665,13 +672,18 @@ model Appointment {
   feeAmount      Decimal           @default(0) @db.Decimal(14, 2)
   status         AppointmentStatus @default(SCHEDULED)
   notes          String?
+  integrationClientId String?
+  integrationClient   IntegrationClient? @relation(fields: [integrationClientId], references: [id], onDelete: SetNull)
+  externalReference   String?
   revenueEntries RevenueEntry[]
   encounters     Encounter[]
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
+  @@unique([integrationClientId, externalReference])
   @@index([tenantId, clinicId, startsAt])
   @@index([patientId])
+  @@index([tenantId, externalReference])
 }
 
 model Operation {
@@ -869,4 +881,25 @@ model SupportTicketEvent {
   createdAt   DateTime      @default(now())
 
   @@index([ticketId, createdAt])
+}
+
+model IntegrationClient {
+  id                String             @id @default(cuid())
+  tenantId          String
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name              String
+  clientKey         String
+  secretHash        String
+  scopes            IntegrationScope[]
+  allowedClinicIds  String[]           @default([])
+  createdByUserId   String?
+  createdBy         User?              @relation("IntegrationClientCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  lastUsedAt        DateTime?
+  deactivatedAt     DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  appointments      Appointment[]
+
+  @@unique([tenantId, clientKey])
+  @@index([tenantId])
 }

@@ -72,6 +72,8 @@ When signed in as **Group admin** (e.g. `admin@drahmedshall.com` or `admin@kiorl
 
 **Insights API:** `GET /api/v1/admin/insights/overview-360`, `GET /api/v1/admin/insights/staff-performance`.
 
+**Integration API (external patient platforms):** Group or clinic admins create clients under **Admin → Organization & settings → Integration API clients**. External systems use `Authorization: Bearer kio_live.<clientKey>.<secret>` on `/api/v1/integrations/*` (not staff JWT). Example: `curl -H "Authorization: Bearer kio_live...." http://localhost:3000/api/v1/integrations/auth/verify`. See RFC §6.2.21 and PRD admin section. **Local smoke:** with API + Postgres up, `npm run test:integration-smoke`.
+
 **Profile picture:** any logged-in user → **Profile** → camera icon on avatar → crop and upload (`POST /api/v1/auth/me/avatar`).
 
 **HR employee profile:** **HR → Employees** → row → **Employee profile** for a person-centric view (linked login avatar when available).

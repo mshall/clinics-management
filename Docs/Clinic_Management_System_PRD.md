@@ -346,6 +346,8 @@ For **group admin**, **group supervisor**, **branch/clinic admin**, and **call c
 
 **Insights API:** `GET /admin/insights/overview-360`, `GET /admin/insights/staff-performance` (roles: group admin, group supervisor, branch manager, clinic admin).
 
+**External patient platform integration (shipped):** Organization admins create **integration API clients** (Admin → Organization → Integration API clients). External systems call `/api/v1/integrations/*` with `Authorization: Bearer kio_live.<clientKey>.<secret>` — scoped `APPOINTMENTS_READ` / `APPOINTMENTS_WRITE`. In-clinic staff APIs and JWT login are **unchanged**.
+
 ### 6.7 Clinic Onboarding Form
 
 When adding a clinic (parent or branch), the following fields are captured:

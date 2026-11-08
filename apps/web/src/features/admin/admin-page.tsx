@@ -36,6 +36,7 @@ import { AdminCreateEmployeePanel } from "./admin-create-employee-panel";
 import { AdminDataExplorerPanel } from "./admin-data-explorer-panel";
 import { AdminGovernancePanel } from "./admin-governance-panel";
 import { AdminInsightsPanel } from "./admin-insights-panel";
+import { AdminIntegrationClientsPanel } from "./admin-integration-clients-panel";
 import { AdminOrgPatientsPanel } from "./admin-org-patients-panel";
 import { AdminOrgUsersPanel } from "./admin-org-users-panel";
 import { OrgRbacPanel } from "./org-rbac-panel";
@@ -314,7 +315,12 @@ export function AdminPage() {
           ) : null}
         </div>
         {clinicAdminSection === "staff" ? <AdminCreateEmployeePanel /> : null}
-        {clinicAdminSection === "organization" && isClinicAdmin ? <OrgRbacPanel /> : null}
+        {clinicAdminSection === "organization" && isClinicAdmin ? (
+          <div className="space-y-6">
+            <OrgRbacPanel />
+            <AdminIntegrationClientsPanel />
+          </div>
+        ) : null}
         {clinicAdminSection === "governance" ? <AdminGovernancePanel /> : null}
         {clinicAdminSection === "insights" && canViewInsights ? <AdminInsightsPanel /> : null}
       </div>
@@ -424,6 +430,8 @@ export function AdminPage() {
           ) : null}
 
           {canManageOrgUserNavTabs ? <OrgRbacPanel /> : null}
+
+          {isGroupAdmin || isClinicAdmin ? <AdminIntegrationClientsPanel /> : null}
 
           <Card>
             <CardHeader>
