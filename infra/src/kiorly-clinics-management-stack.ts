@@ -219,11 +219,19 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       observabilityConfigurationName: "kiorly-api-observability",
     });
 
+    const apiAutoScaling = new apprunner.CfnAutoScalingConfiguration(this, "ApiAutoScaling", {
+      autoScalingConfigurationName: "kiorly-api-autoscale",
+      maxConcurrency: 100,
+      maxSize: 25,
+      minSize: 1,
+    });
+
     const appRunnerService = new apprunner.CfnService(this, "ApiService", {
       serviceName: `kiorly-api-${cdk.Names.uniqueId(this).slice(-8).toLowerCase()}`,
       observabilityConfiguration: {
         observabilityEnabled: false,
       },
+      autoScalingConfigurationArn: apiAutoScaling.attrAutoScalingConfigurationArn,
       sourceConfiguration: {
         autoDeploymentsEnabled: false,
         authenticationConfiguration: {
@@ -280,6 +288,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     });
 
     appRunnerService.node.addDependency(apiObservability);
+    appRunnerService.node.addDependency(apiAutoScaling);
     appRunnerService.node.addDependency(vpcConnector);
     appRunnerService.node.addDependency(imageAsset);
     appRunnerService.node.addDependency(db);

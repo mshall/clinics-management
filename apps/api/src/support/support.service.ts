@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma, SupportProductModule, SupportTicketStatus } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
+import { resolveAuditLogCreatedAtFilter } from "../common/audit-log-query-bounds";
 import { paginate, parsePageParams } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
 import { mapResourceToSupportModule, resolveHints } from "./support-resolution-hints";
@@ -228,10 +229,8 @@ export class SupportService {
     },
   ) {
     const { page, pageSize, skip } = parsePageParams(query.page, query.pageSize);
-    const q = query.q?.trim() ?? "";
-    const createdAt: Prisma.DateTimeFilter = {};
-    if (query.from) createdAt.gte = new Date(query.from);
-    if (query.to) createdAt.lte = new Date(query.to);
+    const q = (query.q?.trim() ?? "").slice(0, 200);
+    const createdAt = resolveAuditLogCreatedAtFilter(query.from, query.to);
 
     const where: Prisma.AuditLogWhereInput = {
       tenantId,
@@ -239,7 +238,7 @@ export class SupportService {
       ...(query.resource ? { resource: { contains: query.resource, mode: "insensitive" } } : {}),
       ...(query.actorId ? { actorId: query.actorId } : {}),
       ...(query.clinicId ? { clinicId: query.clinicId } : {}),
-      ...(Object.keys(createdAt).length ? { createdAt } : {}),
+      createdAt,
       ...(q
         ? {
             OR: [

@@ -817,6 +817,7 @@ model AuditLog {
   createdAt  DateTime @default(now())
 
   @@index([tenantId, createdAt])
+  @@index([tenantId, createdAt, clinicId])
   @@index([tenantId, clinicId])
   @@index([tenantId, actorId])
   @@index([tenantId, resource])

@@ -1,21 +1,49 @@
 import { Injectable } from "@nestjs/common";
-import { UserRole } from "@prisma/client";
+import { Prisma, UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { fetchClinicScopeIds } from "../common/clinic-scope";
+import { parseInsightsRange } from "../common/insights-range";
 import { PrismaService } from "../prisma/prisma.service";
 
-function parseRange(from?: string, to?: string): { from: Date; to: Date } {
-  const toDate = to ? new Date(to) : new Date();
-  const fromDate = from ? new Date(from) : new Date(toDate.getTime() - 30 * 24 * 60 * 60 * 1000);
-  return { from: fromDate, to: toDate };
-}
+const MAX_STAFF_ROWS = 500;
 
 @Injectable()
 export class AdminInsightsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async auditActivitySeries(
+    tenantId: string,
+    from: Date,
+    to: Date,
+    scopeClinicIds?: string[],
+  ): Promise<{ date: string; count: number }[]> {
+    const rows =
+      scopeClinicIds?.length ?
+        await this.prisma.$queryRaw<Array<{ day: Date; count: bigint }>>`
+          SELECT date_trunc('day', "createdAt") AS day, COUNT(*)::bigint AS count
+          FROM "AuditLog"
+          WHERE "tenantId" = ${tenantId}
+            AND "createdAt" >= ${from}
+            AND "createdAt" <= ${to}
+            AND "clinicId" IN (${Prisma.join(scopeClinicIds)})
+          GROUP BY 1
+          ORDER BY 1 ASC`
+      : await this.prisma.$queryRaw<Array<{ day: Date; count: bigint }>>`
+          SELECT date_trunc('day', "createdAt") AS day, COUNT(*)::bigint AS count
+          FROM "AuditLog"
+          WHERE "tenantId" = ${tenantId}
+            AND "createdAt" >= ${from}
+            AND "createdAt" <= ${to}
+          GROUP BY 1
+          ORDER BY 1 ASC`;
+    return rows.map((r) => ({
+      date: (r.day instanceof Date ? r.day : new Date(r.day)).toISOString().slice(0, 10),
+      count: Number(r.count),
+    }));
+  }
+
   async overview360(tenantId: string, user: JwtUser, fromStr?: string, toStr?: string) {
-    const { from, to } = parseRange(fromStr, toStr);
+    const { from, to } = parseInsightsRange(fromStr, toStr);
     const scopeClinicIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
     const clinicFilter = scopeClinicIds?.length ? { clinicId: { in: scopeClinicIds } } : {};
 
@@ -28,7 +56,7 @@ export class AdminInsightsService {
       expensesCreated,
       topActions,
       topResources,
-      auditByDay,
+      activitySeries,
     ] = await Promise.all([
       this.prisma.auditLog.count({
         where: { tenantId, createdAt: { gte: from, lte: to }, ...clinicFilter },
@@ -50,19 +78,8 @@ export class AdminInsightsService {
         where: { tenantId, createdAt: { gte: from, lte: to }, ...clinicFilter },
         _count: { _all: true },
       }),
-      this.prisma.auditLog.findMany({
-        where: { tenantId, createdAt: { gte: from, lte: to }, ...clinicFilter },
-        select: { createdAt: true },
-        orderBy: { createdAt: "asc" },
-      }),
+      this.auditActivitySeries(tenantId, from, to, scopeClinicIds?.length ? scopeClinicIds : undefined),
     ]);
-
-    const dayMap = new Map<string, number>();
-    for (const row of auditByDay) {
-      const key = row.createdAt.toISOString().slice(0, 10);
-      dayMap.set(key, (dayMap.get(key) ?? 0) + 1);
-    }
-    const activitySeries = [...dayMap.entries()].map(([date, count]) => ({ date, count }));
 
     return {
       period: { from: from.toISOString(), to: to.toISOString() },
@@ -87,7 +104,7 @@ export class AdminInsightsService {
   }
 
   async staffPerformance(tenantId: string, user: JwtUser, fromStr?: string, toStr?: string) {
-    const { from, to } = parseRange(fromStr, toStr);
+    const { from, to } = parseInsightsRange(fromStr, toStr);
     const scopeClinicIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
 
     const users = await this.prisma.user.findMany({
@@ -111,7 +128,8 @@ export class AdminInsightsService {
         role: true,
         deactivatedAt: true,
       },
-      take: 200,
+      orderBy: { createdAt: "desc" },
+      take: MAX_STAFF_ROWS,
     });
 
     const userIds = users.map((u) => u.id);

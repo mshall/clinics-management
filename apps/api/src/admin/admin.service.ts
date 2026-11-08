@@ -11,6 +11,7 @@ import {
   softDeleteTenantUser,
 } from "../common/user-employee-cascade";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
+import { resolveAuditLogCreatedAtFilter } from "../common/audit-log-query-bounds";
 import { paginate, parsePageParams } from "../common/pagination";
 import { fetchClinicScopeIds } from "../common/clinic-scope";
 import { PrismaService } from "../prisma/prisma.service";
@@ -568,29 +569,28 @@ export class AdminService {
         return paginate([], 0, page, pageSize);
       }
     }
-    const createdAt: Prisma.DateTimeFilter = {};
-    if (filters?.from) createdAt.gte = new Date(filters.from);
-    if (filters?.to) createdAt.lte = new Date(filters.to);
+    const qBounded = q.slice(0, 200);
+    const createdAt = resolveAuditLogCreatedAtFilter(filters?.from, filters?.to);
 
-  const where: Prisma.AuditLogWhereInput = {
+    const where: Prisma.AuditLogWhereInput = {
       tenantId,
       ...(scopeClinicIds
         ? {
             OR: [{ clinicId: { in: scopeClinicIds } }, { clinicId: null }],
           }
         : {}),
-      ...(Object.keys(createdAt).length ? { createdAt } : {}),
+      createdAt,
       ...(filters?.action ? { action: { contains: filters.action, mode: "insensitive" } } : {}),
       ...(filters?.resource ? { resource: { contains: filters.resource, mode: "insensitive" } } : {}),
       ...(filters?.actorId ? { actorId: filters.actorId } : {}),
-      ...(q
+      ...(qBounded
         ? {
             OR: [
-              { action: { contains: q, mode: "insensitive" } },
-              { resource: { contains: q, mode: "insensitive" } },
-              { resourceId: { contains: q, mode: "insensitive" } },
-              { actor: { is: { displayName: { contains: q, mode: "insensitive" } } } },
-              { actor: { is: { email: { contains: q, mode: "insensitive" } } } },
+              { action: { contains: qBounded, mode: "insensitive" } },
+              { resource: { contains: qBounded, mode: "insensitive" } },
+              { resourceId: { contains: qBounded, mode: "insensitive" } },
+              { actor: { is: { displayName: { contains: qBounded, mode: "insensitive" } } } },
+              { actor: { is: { email: { contains: qBounded, mode: "insensitive" } } } },
             ],
           }
         : {}),
