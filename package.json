@@ -7,7 +7,7 @@
     "apps/docs"
   ],
   "scripts": {
-    "db:up": "docker compose up -d",
+    "db:up": "bash scripts/start-local-postgres.sh",
     "db:down": "docker compose down",
     "db:setup": "npm run db:setup -w api",
     "db:doctor": "npm run db:doctor -w api",

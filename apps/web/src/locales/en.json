@@ -1171,7 +1171,15 @@
       "deactivate": "Deactivate",
       "deactivated": "Client deactivated",
       "deactivateConfirm": "Deactivate this client? External systems using its token will stop working.",
-      "dismissToken": "Dismiss"
+      "dismissToken": "Dismiss",
+      "webhooks": "Webhooks",
+      "webhooksTitle": "Outbound webhooks",
+      "webhookUrl": "Endpoint URL",
+      "addWebhook": "Add webhook",
+      "webhookCreated": "Webhook registered",
+      "webhookDeactivated": "Webhook deactivated",
+      "webhookInvalid": "Webhook URL and at least one event are required",
+      "webhookSecretOnce": "Copy this signing secret now:"
     },
     "insights": {
       "period": "Reporting period",

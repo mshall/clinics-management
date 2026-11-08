@@ -857,7 +857,19 @@ Authorization: Bearer kio_live.<clientKey>.<secret>
 
 Booking body accepts `patientId` **or** `patientMrn`, optional `externalReference` for **idempotency**, and the same scheduling rules as staff (`confirmOverlap`, default 15‑minute slot). Rows store `integrationClientId` + `externalReference`; staff `POST /appointments` is unchanged.
 
-**Roadmap:** operations/surgery booking scopes, webhooks, patient self-registration, OAuth2 client credentials.
+**Operations (bearer token):**
+
+| Method | Path | Scope |
+|--------|------|--------|
+| GET | `/integrations/operations/physicians?clinicId=` | `OPERATIONS_READ` |
+| GET | `/integrations/operations/availability?clinicId&clinicianId&from&to` | `OPERATIONS_READ` |
+| POST | `/integrations/operations` | `OPERATIONS_WRITE` |
+| GET | `/integrations/operations/:id` | `OPERATIONS_READ` (same client only) |
+| POST | `/integrations/operations/:id/cancel` | `OPERATIONS_WRITE` |
+
+**Webhooks (staff JWT):** `GET/POST /admin/integration-clients/:clientId/webhooks`, `POST .../:webhookId/deactivate`. Delivery uses `POST` with headers `X-Kiorly-Event`, `X-Kiorly-Timestamp`, `X-Kiorly-Signature` (HMAC-SHA256). Events: `APPOINTMENT_BOOKED`, `APPOINTMENT_CANCELLED`, `OPERATION_BOOKED`, `OPERATION_CANCELLED`.
+
+**Roadmap:** patient self-registration, OAuth2 client credentials, webhook delivery retries UI.
 
 #### 6.2.20 Performance & load testing
 

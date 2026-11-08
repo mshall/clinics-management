@@ -1172,7 +1172,15 @@
       "deactivate": "إلغاء التفعيل",
       "deactivated": "تم إلغاء تفعيل العميل",
       "deactivateConfirm": "إلغاء تفعيل هذا العميل؟ ستتوقف الأنظمة الخارجية عن العمل برمزه.",
-      "dismissToken": "إخفاء"
+      "dismissToken": "إخفاء",
+      "webhooks": "خطافات ويب",
+      "webhooksTitle": "خطافات ويب صادرة",
+      "webhookUrl": "رابط النقطة النهائية",
+      "addWebhook": "إضافة خطاف",
+      "webhookCreated": "تم تسجيل الخطاف",
+      "webhookDeactivated": "تم إلغاء تفعيل الخطاف",
+      "webhookInvalid": "مطلوب رابط الحدث ونوع حدث واحد على الأقل",
+      "webhookSecretOnce": "انسخ سر التوقيع الآن:"
     },
     "insights": {
       "period": "فترة التقرير",

@@ -136,6 +136,15 @@ enum SupportTicketPriority {
 enum IntegrationScope {
   APPOINTMENTS_READ
   APPOINTMENTS_WRITE
+  OPERATIONS_READ
+  OPERATIONS_WRITE
+}
+
+enum IntegrationWebhookEvent {
+  APPOINTMENT_BOOKED
+  APPOINTMENT_CANCELLED
+  OPERATION_BOOKED
+  OPERATION_CANCELLED
 }
 
 enum SupportProductModule {
@@ -193,6 +202,7 @@ model Tenant {
   userClinicEmployeePrivilegeGrants UserClinicEmployeePrivilegeGrant[]
   supportTickets                 SupportTicket[]
   integrationClients             IntegrationClient[]
+  integrationWebhooks            IntegrationWebhook[]
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
 }
@@ -706,6 +716,9 @@ model Operation {
   comments        String?
   status          OperationStatus @default(SCHEDULED)
   noMedications   Boolean         @default(false)
+  integrationClientId String?
+  integrationClient   IntegrationClient? @relation(fields: [integrationClientId], references: [id], onDelete: SetNull)
+  externalReference   String?
   documents       OperationDocument[]
   medications     OperationMedication[]
   revenueEntries  RevenueEntry[]
@@ -713,9 +726,11 @@ model Operation {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime @updatedAt
 
+  @@unique([integrationClientId, externalReference])
   @@index([tenantId, clinicId, operationDate])
   @@index([tenantId, clinicianId, operationDate])
   @@index([patientId])
+  @@index([tenantId, externalReference])
 }
 
 model OperationDocument {
@@ -899,7 +914,29 @@ model IntegrationClient {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   appointments      Appointment[]
+  operations        Operation[]
+  webhooks          IntegrationWebhook[]
 
   @@unique([tenantId, clientKey])
+  @@index([tenantId])
+}
+
+model IntegrationWebhook {
+  id                  String                    @id @default(cuid())
+  tenantId            String
+  tenant              Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  integrationClientId String
+  integrationClient   IntegrationClient         @relation(fields: [integrationClientId], references: [id], onDelete: Cascade)
+  url                 String
+  signingSecret       String
+  eventTypes          IntegrationWebhookEvent[]
+  deactivatedAt       DateTime?
+  lastDeliveredAt     DateTime?
+  lastFailureAt       DateTime?
+  lastFailureMessage  String?
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+
+  @@index([integrationClientId])
   @@index([tenantId])
 }

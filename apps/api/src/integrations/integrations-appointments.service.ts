@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { AppointmentStatus, ClinicRecordStatus, IntegrationScope, Prisma } from "@prisma/client";
+import { AppointmentStatus, ClinicRecordStatus, IntegrationScope, IntegrationWebhookEvent, Prisma } from "@prisma/client";
 import { activeSchedulingPhysicianWhere } from "../common/active-scheduling-physician";
 import { AuditService } from "../audit/audit.service";
 import { AppointmentsService } from "../appointments/appointments.service";
@@ -7,6 +7,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import type { IntegrationBookAppointmentDto } from "./dto/integration-book-appointment.dto";
 import type { IntegrationPrincipal } from "./integration.types";
 import { IntegrationClientService } from "./integration-client.service";
+import { IntegrationWebhookService } from "./integration-webhook.service";
 
 @Injectable()
 export class IntegrationsAppointmentsService {
@@ -15,6 +16,7 @@ export class IntegrationsAppointmentsService {
     private readonly appointments: AppointmentsService,
     private readonly clientService: IntegrationClientService,
     private readonly audit: AuditService,
+    private readonly webhooks: IntegrationWebhookService,
   ) {}
 
   async listClinics(principal: IntegrationPrincipal) {
@@ -173,6 +175,17 @@ export class IntegrationsAppointmentsService {
       },
     });
 
+    this.webhooks.emit(principal.id, IntegrationWebhookEvent.APPOINTMENT_BOOKED, {
+      appointmentId: created.id,
+      clinicId: created.clinicId,
+      patientId: created.patientId,
+      clinicianId: created.clinicianId,
+      startsAt: created.startsAt,
+      endsAt: created.endsAt ?? null,
+      status: created.status,
+      externalReference: dto.externalReference ?? null,
+    });
+
     return created;
   }
 
@@ -195,6 +208,13 @@ export class IntegrationsAppointmentsService {
       resourceId: updated.id,
       metadata: {},
     });
+
+    this.webhooks.emit(principal.id, IntegrationWebhookEvent.APPOINTMENT_CANCELLED, {
+      appointmentId: updated.id,
+      clinicId: updated.clinicId,
+      status: updated.status,
+    });
+
     return updated;
   }
 }

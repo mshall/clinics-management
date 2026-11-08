@@ -3,6 +3,7 @@ import { OperationDocumentKind, OperationStatus, Prisma, RevenueStatus, UserRole
 import { randomUUID } from "crypto";
 import * as path from "path";
 import type { JwtUser } from "../auth/jwt-user";
+import { findActiveSchedulingPhysician } from "../common/active-scheduling-physician";
 import { fetchClinicScopeIds } from "../common/clinic-scope";
 import { resolveClinicCurrency } from "../common/clinic-currency";
 import { isBaseCurrency } from "../common/base-currencies";
@@ -874,5 +875,108 @@ export class OperationsService {
 
   openDocumentReadStream(storageKey: string) {
     return this.uploads.getReadStream("operations", storageKey);
+  }
+
+  async createForIntegration(
+    tenantId: string,
+    dto: CreateOperationDto & {
+      clinicId: string;
+      integrationClientId: string;
+      externalReference?: string;
+    },
+  ): Promise<OperationDto> {
+    if (dto.externalReference) {
+      const existing = await this.prisma.operation.findFirst({
+        where: {
+          tenantId,
+          integrationClientId: dto.integrationClientId,
+          externalReference: dto.externalReference,
+        },
+        include: operationInclude,
+      });
+      if (existing) return this.mapRow(existing);
+    }
+
+    const downPayment = dto.downPayment ?? 0;
+    if (downPayment > dto.totalCost) {
+      throw new BadRequestException("Down payment cannot exceed total cost");
+    }
+
+    const [clinic, patient, clinician] = await Promise.all([
+      this.prisma.clinic.findFirst({ where: { id: dto.clinicId, tenantId } }),
+      this.prisma.patient.findFirst({
+        where: { id: dto.patientId, tenantId, deletedAt: null },
+        select: { id: true },
+      }),
+      findActiveSchedulingPhysician(this.prisma, tenantId, dto.clinicianId),
+    ]);
+    if (!clinic || !patient || !clinician) {
+      throw new BadRequestException("Invalid clinic, patient, or clinician");
+    }
+
+    const operationDate = new Date(dto.operationDate);
+    if (Number.isNaN(operationDate.getTime())) {
+      throw new BadRequestException("Invalid operation date");
+    }
+
+    const feeCurrency = await this.resolveOperationFeeCurrency(tenantId, dto.clinicId, dto.feeCurrency);
+
+    const row = await this.prisma.operation.create({
+      data: {
+        tenantId,
+        clinicId: dto.clinicId,
+        patientId: dto.patientId,
+        clinicianId: dto.clinicianId,
+        createdByUserId: null,
+        operationDate,
+        totalCost: dto.totalCost,
+        downPayment,
+        paidAmount: downPayment,
+        feeCurrency,
+        comments: dto.comments?.trim() || null,
+        status: OperationStatus.SCHEDULED,
+        noMedications: dto.noMedications ?? false,
+        integrationClientId: dto.integrationClientId,
+        externalReference: dto.externalReference ?? null,
+      },
+      include: operationInclude,
+    });
+    return this.mapRow(row);
+  }
+
+  async getByIdForIntegration(tenantId: string, id: string, integrationClientId: string): Promise<OperationDto> {
+    const row = await this.prisma.operation.findFirst({
+      where: { id, tenantId, integrationClientId },
+      include: operationInclude,
+    });
+    if (!row) throw new NotFoundException("Operation not found");
+    return this.mapRow(row);
+  }
+
+  async cancelForIntegration(tenantId: string, id: string, integrationClientId: string): Promise<OperationDto> {
+    const existing = await this.prisma.operation.findFirst({
+      where: { id, tenantId, integrationClientId },
+      include: operationInclude,
+    });
+    if (!existing) throw new NotFoundException("Operation not found");
+    if (existing.status === OperationStatus.COMPLETED) {
+      throw new BadRequestException("Cannot cancel a completed operation");
+    }
+    if (existing.status === OperationStatus.CANCELLED) {
+      return this.mapRow(existing);
+    }
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      await tx.revenueEntry.updateMany({
+        where: { tenantId, operationId: id, status: RevenueStatus.POSTED },
+        data: { status: RevenueStatus.VOID },
+      });
+      return tx.operation.update({
+        where: { id },
+        data: { status: OperationStatus.CANCELLED, paidAmount: 0 },
+        include: operationInclude,
+      });
+    });
+    return this.mapRow(row);
   }
 }

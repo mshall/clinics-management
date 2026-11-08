@@ -17,6 +17,10 @@ export function generateClientSecret(): string {
   return randomBytes(32).toString("base64url");
 }
 
+export function generateWebhookSigningSecret(): string {
+  return `whsec_${randomBytes(24).toString("base64url")}`;
+}
+
 export function formatIntegrationBearerToken(clientKey: string, secret: string): string {
   return `${INTEGRATION_BEARER_PREFIX}${clientKey}.${secret}`;
 }

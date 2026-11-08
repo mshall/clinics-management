@@ -40,12 +40,23 @@ client_name="smoke-$(date +%s)"
 create_raw="$(curl -sS -w "\n%{http_code}" -X POST "$API_BASE/admin/integration-clients" \
   -H "Authorization: Bearer $staff_token" \
   -H "Content-Type: application/json" \
-  -d "{\"name\":\"$client_name\"}")"
+  -d "{\"name\":\"$client_name\",\"scopes\":[\"APPOINTMENTS_READ\",\"APPOINTMENTS_WRITE\",\"OPERATIONS_READ\",\"OPERATIONS_WRITE\"]}")"
 create_http="$(echo "$create_raw" | tail -1)"
 create_body="$(echo "$create_raw" | sed '$d')"
 [[ "$create_http" == "201" || "$create_http" == "200" ]] || fail "create integration client HTTP $create_http — $create_body"
 integration_token="$(echo "$create_body" | python3 -c "import sys,json; print(json.load(sys.stdin)['bearerToken'])")"
+client_id="$(echo "$create_body" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))")"
 echo "OK  create integration client"
+
+if [[ -n "$client_id" ]]; then
+  hook_raw="$(curl -sS -w "\n%{http_code}" -X POST "$API_BASE/admin/integration-clients/$client_id/webhooks" \
+    -H "Authorization: Bearer $staff_token" \
+    -H "Content-Type: application/json" \
+    -d '{"url":"https://httpbin.org/post","eventTypes":["APPOINTMENT_BOOKED","OPERATION_BOOKED"]}')"
+  hook_http="$(echo "$hook_raw" | tail -1)"
+  [[ "$hook_http" == "201" || "$hook_http" == "200" ]] || fail "register webhook HTTP $hook_http"
+  echo "OK  register integration webhook"
+fi
 
 verify_http="$(curl -sS -o /tmp/kio-verify.json -w "%{http_code}" -X GET "$API_BASE/integrations/auth/verify" \
   -H "Authorization: Bearer $integration_token")"
@@ -107,5 +118,30 @@ staff_book_raw="$(curl -sS -w "\n%{http_code}" -X POST "$API_BASE/appointments" 
 staff_book_http="$(echo "$staff_book_raw" | tail -1)"
 [[ "$staff_book_http" == "201" || "$staff_book_http" == "200" ]] || fail "staff POST /appointments HTTP $staff_book_http"
 echo "OK  staff internal appointment book"
+
+op_date="$(python3 -c "from datetime import datetime, timedelta, timezone; print((datetime.now(timezone.utc)+timedelta(days=20)).replace(hour=9,minute=0,second=0,microsecond=0).isoformat().replace('+00:00','Z'))")"
+op_ext="op-smoke-$(date +%s)"
+op_book_raw="$(curl -sS -w "\n%{http_code}" -X POST "$API_BASE/integrations/operations" \
+  -H "Authorization: Bearer $integration_token" \
+  -H "Content-Type: application/json" \
+  -d "{\"clinicId\":\"$clinic_id\",\"patientId\":\"$patient_id\",\"clinicianId\":\"$clinician_id\",\"operationDate\":\"$op_date\",\"totalCost\":1500,\"downPayment\":200,\"externalReference\":\"$op_ext\",\"noMedications\":true}")"
+op_book_http="$(echo "$op_book_raw" | tail -1)"
+op_book_body="$(echo "$op_book_raw" | sed '$d')"
+[[ "$op_book_http" == "201" || "$op_book_http" == "200" ]] || fail "integration operation book HTTP $op_book_http — $op_book_body"
+op_id="$(echo "$op_book_body" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")"
+echo "OK  integration book operation $op_id"
+
+op_cancel_http="$(curl -sS -o /dev/null -w "%{http_code}" -X POST "$API_BASE/integrations/operations/$op_id/cancel" \
+  -H "Authorization: Bearer $integration_token")"
+[[ "$op_cancel_http" == "200" || "$op_cancel_http" == "201" ]] || fail "integration operation cancel HTTP $op_cancel_http"
+echo "OK  integration cancel operation"
+
+staff_op_raw="$(curl -sS -w "\n%{http_code}" -X POST "$API_BASE/operations" \
+  -H "Authorization: Bearer $staff_token" \
+  -H "Content-Type: application/json" \
+  -d "{\"clinicId\":\"$clinic_id\",\"patientId\":\"$patient_id\",\"clinicianId\":\"$clinician_id\",\"operationDate\":\"$op_date\",\"totalCost\":500,\"noMedications\":true}")"
+staff_op_http="$(echo "$staff_op_raw" | tail -1)"
+[[ "$staff_op_http" == "201" || "$staff_op_http" == "200" ]] || fail "staff POST /operations HTTP $staff_op_http"
+echo "OK  staff internal operation book"
 
 echo "integration-api-smoke: all checks passed"
