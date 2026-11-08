@@ -2,7 +2,7 @@
 
 Reference material for the **Kiorly Clinics Management** platform (monorepo root: [`README.md`](../README.md)).
 
-**Doc set version:** PRD **v1.8** · RFC **v1.7** (aligned with `main`, July 2026).
+**Doc set version:** PRD **v1.9** · RFC **v1.8** (aligned with `main`, November 2026).
 
 ---
 
@@ -58,13 +58,19 @@ When signed in as **Group admin** (e.g. `admin@drahmedshall.com` or `admin@kiorl
 | Clinics & branches | **Clinics & branches** (`/clinics`) | Parent/branch directory; **disable / reactivate** with **operating history**; active vs disabled tabs; **working hours** on Settings tab |
 | Clinics & tenants (settings) | **Admin → Clinics & tenants** | Registration, invoice & prescription branding, **opening/closing times** on create/edit |
 | Organization & settings | **Admin → Organization & settings** | Default visit fee, feature flags, staff onboarding |
-| Governance & audit | **Admin → Governance** | Audit trail |
+| Governance & audit | **Admin → Governance** | Audit trail (`from`/`to`/`action`/`resource`/`actorId`; default 90-day window) |
+| Insights & performance | **Admin → Insights & performance** | 360° overview + staff activity scores (configurable date range) |
+| Customer support | **Customer support** (`/customer-support`) | Tickets + log tracking with resolution hints |
 
 **Organization users API:** `GET /api/v1/admin/users?page=&pageSize=&q=&role=&archived=` — `q` matches email or display name; `role` is a `UserRole` enum value; `archived=true` returns deactivated or archived users. Lifecycle: `POST .../deactivate`, `POST .../reactivate`, `DELETE ...` (soft archive), `POST .../restore`.
 
 **Clinics API:** `GET /api/v1/clinics?includeInactive=true` (admin roles) lists disabled clinics; `POST /api/v1/clinics/:id/deactivate`, `POST .../reactivate`; detail includes `operatingPeriods[]`.
 
-**Reports:** All charts and KPIs use the global **reporting period** (From → To) in the app header — not a separate “months of history” control. See PRD §6.7 and RFC §6.2.17.
+**Reports:** All charts and KPIs use the global **reporting period** (From → To) in the app header — not a separate “months of history” control. See PRD §6.6.1 and RFC §6.2.17.
+
+**Customer support API:** `GET /api/v1/support/tickets`, `GET /api/v1/support/tracking/logs`, `POST /api/v1/support/tracking/logs/:auditLogId/ticket` — see PRD §6.6.2 and RFC §6.2.19.
+
+**Insights API:** `GET /api/v1/admin/insights/overview-360`, `GET /api/v1/admin/insights/staff-performance`.
 
 **Profile picture:** any logged-in user → **Profile** → camera icon on avatar → crop and upload (`POST /api/v1/auth/me/avatar`).
 
@@ -176,6 +182,9 @@ Scheduled operations open an **edit dialog** that mirrors the **create** form: f
 | UI themes (Kiorly + Material M3) | `apps/web/src/stores/theme-store.ts`, `apps/web/src/styles/material-theme.css` |
 | Docs portal + PiggyMetrics sync | `apps/docs/`, `scripts/sync-piggymetrics-docs.sh` |
 | HR deactivate / archive / restore | `apps/api/src/hr/hr.service.ts`, `apps/web/src/lib/employee-manage-policy.ts` |
+| Customer support API + hints | `apps/api/src/support/`, `apps/web/src/features/support/` |
+| Admin insights (360° + staff) | `apps/api/src/admin/admin-insights.service.ts`, `apps/web/src/features/admin/admin-insights-panel.tsx` |
+| Audit query bounds / perf tests | `apps/api/src/common/audit-log-query-bounds.ts`, `scripts/load-test-slo.mjs` |
 | Operations UI | `apps/web/src/features/operations/operations-page.tsx` |
 | Invoices & clinic invoice settings | `apps/api/src/invoices/`, `apps/web/src/features/invoices/` |
 | Prescription clinic branding | `apps/api/src/clinics/` (prescription settings), Admin clinic panels |

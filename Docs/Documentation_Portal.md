@@ -2,7 +2,7 @@
 
 The **docs** workspace is a separate module in this monorepo. It renders Kiorly project markdown and synced **PiggyMetrics** reference documentation in a local browser UI.
 
-**Doc set version:** PRD **v1.8** · RFC **v1.7** (aligned with `main`, July 2026).
+**Doc set version:** PRD **v1.9** · RFC **v1.8** (aligned with `main`, November 2026).
 
 ---
 

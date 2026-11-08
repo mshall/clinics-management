@@ -4,10 +4,10 @@
 | Field | Value |
 |---|---|
 | **Document Title** | Clinic Management System – Technical RFC |
-| **Version** | 1.7 |
-| **Status** | Living document (aligned with `main` as of July 2026) |
-| **Related** | [`Clinic_Management_System_PRD.md`](./Clinic_Management_System_PRD.md) v1.8, [`Documentation_Portal.md`](./Documentation_Portal.md) |
-| **Last Updated** | July 2026 |
+| **Version** | 1.8 |
+| **Status** | Living document (aligned with `main` as of November 2026) |
+| **Related** | [`Clinic_Management_System_PRD.md`](./Clinic_Management_System_PRD.md) v1.9, [`Documentation_Portal.md`](./Documentation_Portal.md) |
+| **Last Updated** | November 2026 |
 
 ---
 
@@ -162,7 +162,8 @@ NestJS modules in `apps/api/src/app.module.ts` map to product concerns. Cross-mo
 | `RevenueModule` | `revenue/` | Revenue ledger, visit fees, manual entries, totals |
 | `InvoicesModule` | `invoices/` | Patient invoices, clinic invoice/prescription branding uploads |
 | `HrModule` | `hr/` | Employees, attendance, leave, ID documents, **user-linked lifecycle** |
-| `AdminModule` | `admin/` | Org overview, audit, platform admin, data explorer, org patients/**users lifecycle** |
+| `AdminModule` | `admin/` | Org overview, audit, **insights**, platform admin, data explorer, org patients/**users lifecycle** |
+| `SupportModule` | `support/` | Customer support tickets, audit **log tracking** with resolution hints |
 | `ReportsModule` | `reports/` | **Date-range** performance, clinic breakdown, monthly series, acquisition |
 | `DashboardModule` | `dashboard/` | Group KPI overview |
 | `UsersModule` | `users/` | Tenant user directory |
@@ -692,8 +693,10 @@ GET    /files/:id                      # presigned GET URL with short TTL
 - **Action names** are derived from method + path, e.g. `VIEW_PATIENT`, `VIEW_PATIENT_CLINICAL_DOCUMENTS`, `VIEW_PATIENT_DOCUMENT`, `UPLOAD_PATIENT_DOCUMENT`, `DELETE_ENCOUNTER_DOCUMENT`, `CROP_PATIENT_DOCUMENT`, `LOGIN`.
 - Each row stores: `tenantId`, `actorId`, optional `clinicId`, `action`, `resource`, `resourceId`, `metadata` (method, path, sanitized body), `createdAt`.
 
+**Indexes (shipped):** `@@index([tenantId, createdAt])`, `@@index([tenantId, createdAt, clinicId])`, plus `tenantId` + `actorId` / `action` / `resource` / `clinicId` for filtered listings.
+
 **Notes:**
-- Org admins tail logs via `GET /admin/audit-logs` (Governance UI).
+- Org admins tail logs via `GET /admin/audit-logs` (Governance UI). Query params: `page`, `pageSize`, `q`, `from`, `to`, `action`, `resource`, `actorId`. When `from`/`to` omitted, API defaults to a **90-day** window (max **366 days**) so million-row tenants stay bounded.
 - Hash-chaining partitions and immutable storage — roadmap; current table is application-append-only.
 
 #### 6.2.17 AdminModule
@@ -703,12 +706,19 @@ Group-admin-facing operations not specific to any one domain.
 **Implemented endpoints (v1):**
 ```
 GET    /admin/overview
-GET    /admin/audit-logs
+GET    /admin/audit-logs                 # filters: from, to, action, resource, actorId, q
+GET    /admin/insights/overview-360      # GROUP_ADMIN, GROUP_SUPERVISOR, BRANCH_MANAGER, CLINIC_ADMIN
+GET    /admin/insights/staff-performance
 GET    /admin/tenants                    # paginated list of all tenants — **platform super-admin only** (see below)
 PATCH  /admin/tenant-settings
 POST   /admin/users
 PATCH  /admin/feature-flags/:key
 ```
+
+**Insights implementation (`AdminInsightsService`):**
+- Overview counts use parallel `count` / `groupBy` queries; **daily audit activity** uses SQL `date_trunc` aggregation (not row-by-row fetch).
+- Reporting range parsed via `parseInsightsRange` (default 30 days, max 366 days).
+- Staff performance: up to **500** users per request; metrics from grouped audit, encounters, appointments, operations, and open support tickets; `activityScore` for ranking.
 
 **Platform super-admin gate:** Dedicated users with role `PLATFORM_SUPER_ADMIN` and `tenantId: null`, and/or callers whose email appears in `PLATFORM_SUPER_ADMIN_EMAILS`. Login and `GET /auth/me` return `platformSuperAdmin: true` when applicable.
 
@@ -795,12 +805,45 @@ POST   /hr/employees/:id/restore
 #### 6.2.18 HealthModule
 
 ```
-GET    /health/live
-GET    /health/ready
-GET    /health/info        # version, build SHA, environment
+GET    /health/live        # process up (App Runner health check path: /api/v1/health/live)
+GET    /health/ready       # SELECT 1 against PostgreSQL via Prisma
 ```
 
-Backed by `@nestjs/terminus`. ECS uses `/health/ready` for target group health checks.
+- **Liveness** — always `{ status: "ok" }` when the Nest process is listening (used during migrate-on-boot interim listener).
+- **Readiness** — returns `503` when the database is unreachable; use for post-deploy smoke and monitoring (not wired to App Runner health check today).
+
+#### 6.2.19 SupportModule *(implemented)*
+
+**Entities:** `SupportTicket`, `SupportTicketEvent`; enums `SupportTicketStatus`, `SupportTicketPriority`, `SupportProductModule`.
+
+**Access roles:** `GROUP_ADMIN`, `GROUP_SUPERVISOR`, `BRANCH_MANAGER`, `CLINIC_ADMIN`, `CALL_CENTER` (`support-access.ts`).
+
+**Endpoints:**
+```
+GET    /support/tickets
+POST   /support/tickets
+GET    /support/tickets/:id
+PATCH  /support/tickets/:id
+POST   /support/tickets/:id/events
+GET    /support/tracking/logs
+POST   /support/tracking/logs/:auditLogId/ticket
+```
+
+**Resolution hints:** `support-resolution-hints.ts` maps audit `action` + `resource` to `summary`, `actions[]`, and `severity` for first-line support.
+
+**Web:** `apps/web/src/features/support/customer-support-page.tsx`; nav key `customer_support`.
+
+#### 6.2.20 Performance & load testing
+
+| Concern | Implementation |
+|---|---|
+| Pagination cap | `MAX_PAGE_SIZE = 100` (`parsePageParams`) |
+| Audit / support log date bounds | `resolveAuditLogCreatedAtFilter` — default 90d, max 366d |
+| Insights date bounds | `parseInsightsRange` / `clampInsightsRange` |
+| DB indexes | `AuditLog` composite `(tenantId, createdAt, clinicId)` migration `20261108180000_audit_log_perf_indexes` |
+| Graceful shutdown | `app.enableShutdownHooks()` in `main.ts` |
+| AWS scale-out | App Runner `CfnAutoScalingConfiguration`: `maxConcurrency` 100, `maxSize` 25 |
+| Load SLO smoke | `npm run test:perf` → `scripts/load-test-slo.mjs` (default 2000 requests, ≥99.9% HTTP 200 on `/health/live`) |
 
 ## 7. Data Model (Key Tables)
 
@@ -1170,7 +1213,7 @@ Post-deploy: Lambda DbSeedFn (idempotent demo seed on RDS)
 |----------|------|
 | VPC | Public + isolated DB subnets; **no NAT** (cost control) |
 | RDS PostgreSQL 16 | Private; `db.t4g.micro`; 7-day backups |
-| App Runner | API container from `apps/api/Dockerfile`; health `/api/v1/health/live` |
+| App Runner | API container from `apps/api/Dockerfile`; health `/api/v1/health/live`; autoscaling max 25 × 100 concurrent requests |
 | S3 | Web static assets + **API uploads** (`UPLOAD_STORAGE=s3`) |
 | CloudFront | One HTTPS URL for SPA and `/api/*` (avoids CORS split-brain) |
 | Secrets Manager | JWT + RDS credentials |

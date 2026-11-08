@@ -93,10 +93,17 @@ Typical flows:
 
 ### Admin
 
-- **Tabs:** clinics & tenants, **organization users**, organization patients, organization & settings, governance (group admin).
+- **Tabs:** clinics & tenants, **organization users**, organization patients, organization & settings, **insights & performance**, governance (group admin).
 - **Organization users:** search by email or display name, **filter by role**, create/edit/delete users, clinic assignment, bulk delete.
 - Current tenant overview, **default visit fee**, audit tail, **feature flags**, clinic creation (parent/branch), clinic directory.
+- **Insights & performance:** audit volumes, clinical/financial counters, top actions/resources, staff leaderboard (configurable date range).
 - **All tenants** list and **data explorer** for platform super admin / break-glass group admin (see [Test_Data_Users.md](Docs/Test_Data_Users.md)).
+
+### Customer support
+
+- **Tickets** across product modules with status workflow and timeline.
+- **Log tracking:** searchable audit trail with **resolution hints**; open a ticket from any log row.
+- Roles: group admin, group supervisor, branch/clinic admin, call center (sidebar **Customer support**).
 
 ### Profile & HR
 
@@ -245,6 +252,8 @@ API output is under `apps/api/dist`; web static assets under `apps/web/dist`.
 | `npm run db:up` / `npm run db:down` | Start / stop Docker services |
 | `npm run db:setup` | Generate client, migrate, seed |
 | `npm run build` | Build API then web |
+| `npm run test:unit` | API unit/policy tests (Node test runner) |
+| `npm run test:perf` | Concurrent health load smoke (default ≥99.9% success on `/api/v1/health/live`) |
 | `npm run lint` | Lint web |
 | `npm run codegen -w web` | Regenerate TS types from OpenAPI (after export) |
 
@@ -343,8 +352,8 @@ Use **Amazon Lightsail** (fixed monthly) **or** one **EC2** instance (e.g. **t4g
 - **Documentation portal (local UI):** [`Docs/Documentation_Portal.md`](Docs/Documentation_Portal.md) — run `npm run docs:dev` → [http://localhost:5175](http://localhost:5175). Includes synced [PiggyMetrics](https://github.com/sqshq/PiggyMetrics) reference (`npm run docs:sync`).
 - **Documentation index:** [`Docs/README.md`](Docs/README.md)
 - **Test users & passwords (QA / demos):** [`Docs/Test_Data_Users.md`](Docs/Test_Data_Users.md)
-- Product / requirements context: [`Docs/Clinic_Management_System_PRD.md`](Docs/Clinic_Management_System_PRD.md)
-- Technical RFC: [`Docs/Clinic_Management_System_RFC.md`](Docs/Clinic_Management_System_RFC.md)
+- Product / requirements context: [`Docs/Clinic_Management_System_PRD.md`](Docs/Clinic_Management_System_PRD.md) (v1.9 — customer support, admin insights, scale/perf notes)
+- Technical RFC: [`Docs/Clinic_Management_System_RFC.md`](Docs/Clinic_Management_System_RFC.md) (v1.8)
 - AWS deployment (RDS, App Runner, S3/CloudFront, checklist): [`Docs/AWS_Cloud_Deployment_Guide.md`](Docs/AWS_Cloud_Deployment_Guide.md)
 
 ---

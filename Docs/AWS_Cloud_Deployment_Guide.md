@@ -119,8 +119,9 @@ npx prisma migrate deploy
 ## 7. API container (App Runner)
 
 - **Image:** Built from repo root, `apps/api/Dockerfile`, **linux/amd64**.
-- **Port:** 3000; health check **`GET /api/v1/health/live`**.
+- **Port:** 3000; health check **`GET /api/v1/health/live`** (liveness). Optional **`GET /api/v1/health/ready`** checks RDS (`SELECT 1`) for monitoring smoke.
 - **CPU / memory:** 1 vCPU, 2 GB (stack default — supports migrate-on-boot).
+- **Auto scaling (shipped):** `CfnAutoScalingConfiguration` — **maxConcurrency** 100 per instance, **maxSize** 25 instances (thousands of concurrent API requests via horizontal scale-out).
 - **Secrets:** `JWT_SECRET` from Secrets Manager JSON key `jwt`.
 - **Environment (non-secret):**
 
@@ -209,11 +210,13 @@ Supported in product: patient registration documents, national ID scan, encounte
 
 ---
 
-## 12. Observability & backups
+## 12. Observability, performance smoke & backups
 
 - **App Runner / Lambda logs** → CloudWatch Logs.
 - **RDS** enhanced monitoring optional; **7-day** automated backups in default stack.
 - **Alarms:** add CloudWatch alarms for 5xx, unhealthy targets, RDS storage (not all wired in minimal stack).
+- **Load SLO smoke (local or CI):** with API running, `npm run test:perf` issues **2000** concurrent `GET /api/v1/health/live` requests and fails if success rate &lt; **99.9%** (tune via `LOAD_TEST_*` env vars in `scripts/load-test-slo.mjs`).
+- **Post-deploy:** `npm run sync:aws:smoke` (health + demo login). Optionally probe `GET /api/v1/health/ready` after RDS is warm.
 
 ---
 
@@ -243,7 +246,7 @@ These remain valid if you outgrow App Runner or need different compliance postur
 
 - [`README.md`](../README.md) — local setup, npm scripts, env tables.
 - [`Clinic_Management_System_RFC.md`](./Clinic_Management_System_RFC.md) — platform architecture and module map.
-- [`Clinic_Management_System_PRD.md`](./Clinic_Management_System_PRD.md) — product scope (v1.6), shipped features, **§12.3** production backlog, and **§12.3.13** enhancements to shipped modules.
+- [`Clinic_Management_System_PRD.md`](./Clinic_Management_System_PRD.md) — product scope (v1.9), shipped features, **§12.3** production backlog, and **§12.3.13** enhancements to shipped modules.
 - [`Test_Data_Users.md`](./Test_Data_Users.md) — demo logins and QA matrix.
 
 **Infrastructure code:** `infra/src/kiorly-clinics-management-stack.ts`, `apps/api/Dockerfile`, `apps/api/Dockerfile.seed`.

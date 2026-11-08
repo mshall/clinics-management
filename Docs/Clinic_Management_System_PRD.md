@@ -4,10 +4,10 @@
 | Field | Value |
 |---|---|
 | **Document Title** | Clinic Management System – Product Requirements Document |
-| **Version** | 1.8 |
-| **Status** | Living document (aligned with `main` as of July 2026) |
+| **Version** | 1.9 |
+| **Status** | Living document (aligned with `main` as of November 2026) |
 | **Author** | Product / Engineering |
-| **Last Updated** | July 2026 |
+| **Last Updated** | November 2026 |
 | **Related Documents** | [`Clinic_Management_System_RFC.md`](./Clinic_Management_System_RFC.md), [`Documentation_Portal.md`](./Documentation_Portal.md), [`AWS_Cloud_Deployment_Guide.md`](./AWS_Cloud_Deployment_Guide.md), [`Test_Data_Users.md`](./Test_Data_Users.md) |
 
 ---
@@ -124,6 +124,8 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 - **Clinic lifecycle** — disable/reactivate clinics and branches; operating period timeline; disabled clinics hidden from operational pickers.
 - Org patients CRUD, bulk patient delete, bulk user archive, data explorer, **SQL export** and **documents ZIP export** (group admin / break-glass).
 - Expanded **audit trail** for patient/encounter views, clinical document list/view/upload/delete/crop (visible in Governance).
+- **Insights & performance** — 360° org overview (volumes, top actions/resources, daily audit activity) and **staff performance** table (activity score, audit/clinical throughput, open support tickets).
+- **Customer support** — ticket queue across product modules, status workflow, timeline events, and **log tracking** with resolution hints; open tickets from audit rows without engineering escalation.
 
 **Experience**
 - Bilingual UI (English / Arabic with RTL).
@@ -299,6 +301,8 @@ Reporting: monthly/quarterly/annual expense by branch, by category, group consol
 - Manage **clinics** (parent/branch) **within the signed-in organization** (tenant).
 - Manage users, roles, clinic assignments, optional **nav tab grants**, and feature flags.
 - View group-level KPIs: patients, encounters, revenue, expenses, headcount (dashboard + reports).
+- **Insights & performance** tab: configurable date range (default 30 days, max 1 year); audit volumes; open support tickets; staff leaderboard with activity score.
+- **Governance & audit** — searchable audit log with optional filters (`from`, `to`, `action`, `resource`, `actorId`); default **90-day** lookback when dates omitted (max 1 year) to keep large tenants responsive.
 - **Group administrators** use organization admin tabs; **platform-only** tools (cross-tenant directory, provisioning) require `PLATFORM_SUPER_ADMIN`; raw **data explorer** also available to group admin and break-glass allowlist emails.
 - Subscription / licensing billing integration — future SaaS commercial layer.
 
@@ -326,6 +330,21 @@ A dedicated **Platform Super Administrator** operates **outside any organization
 
 - The **Reports** area charts **visit volume** (finalized encounters), **posted revenue**, and **new patient registrations** per calendar month from live ledger and patient data—not illustrative placeholders.
 - **Patient acquisition** breakdown (how patients found the clinic) with date range filter; each channel row is **clickable** to open a paginated patient list dialog for that channel and period.
+
+### 6.6.2 Customer support & operational tracking
+
+For **group admin**, **group supervisor**, **branch/clinic admin**, and **call center** (nav tab `customer_support`):
+
+| Capability | Description |
+|---|---|
+| **Ticket queue** | Create and search tickets by module (patients, encounters, appointments, operations, expenses, revenue, HR, reports, admin, auth, clinics, billing, other), priority, and status (`OPEN` → `CLOSED`). |
+| **Ticket detail** | Description, linked clinic/patient/audit row, assignee, resolution notes, **timeline events** (created, status/priority/assignee changes, comments). |
+| **Log tracking** | Paginated audit trail with **resolution hints** (summary, severity, suggested actions) mapped from `action` + `resource` to reduce engineering fixes. |
+| **Ticket from log** | One-click create a ticket prefilled from any audit row (links `linkedAuditLogId`). |
+
+**API (v1):** `GET/POST /support/tickets`, `GET/PATCH /support/tickets/:id`, `POST /support/tickets/:id/events`, `GET /support/tracking/logs`, `POST /support/tracking/logs/:auditLogId/ticket`.
+
+**Insights API:** `GET /admin/insights/overview-360`, `GET /admin/insights/staff-performance` (roles: group admin, group supervisor, branch manager, clinic admin).
 
 ### 6.7 Clinic Onboarding Form
 
@@ -504,6 +523,16 @@ Authorization model:
 | **Clinic-scoped HR grants** — assign HR module access per clinic for group/clinic admins | Shipped |
 | **Documentation portal** — `apps/docs` module; PiggyMetrics README sync from upstream `master` | Shipped |
 
+#### November 2026 increments
+
+| Area | Status |
+|---|---|
+| **Customer support module** — tickets, timeline, status updates; nav tab + `/customer-support` UI (EN/AR) | Shipped |
+| **Support log tracking** — audit list with resolution hints; create ticket from log | Shipped |
+| **Admin insights & performance** — 360° overview + staff activity scores; **Insights & performance** admin tab | Shipped |
+| **Governance audit filters** — `from`, `to`, `action`, `resource`, `actorId`; bounded date windows for scale | Shipped |
+| **Performance & scale** — SQL daily aggregation for insights charts; audit composite index `(tenantId, createdAt, clinicId)`; App Runner autoscaling (up to 25 instances × 100 concurrent requests); `GET /health/ready` (DB probe); `npm run test:perf` load SLO script (≥99.9% success on health smoke) | Shipped |
+
 ### 12.2 Near-term roadmap (engineering backlog)
 
 **Phase 2 – Operational depth**
@@ -641,7 +670,7 @@ This section defines the **target product** for a production-grade, feature-rich
 | G.6 | **Break-glass session recording** — video or step log for elevated support | P1 | Trust for platform operator access |
 | G.7 | **Tenant data export package** (GDPR portability) on request | P0 | Legal requirement in EU expansion |
 
-*Shipped foundation:* org users/patients CRUD, soft archive users & employees, clinic disable with operating periods, governance audit tail, data explorer SQL + documents ZIP.
+*Shipped foundation:* org users/patients CRUD, soft archive users & employees, clinic disable with operating periods, governance audit tail (filtered + date-bounded), **insights & staff performance**, **customer support tickets & log tracking**, data explorer SQL + documents ZIP.
 
 #### 12.3.13 Near-term enhancements to shipped modules
 
