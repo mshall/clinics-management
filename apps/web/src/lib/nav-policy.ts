@@ -17,6 +17,7 @@ export type NavItemKey =
   | "hr"
   | "reports"
   | "admin"
+  | "customer_support"
   | "doctor_revenue"
   | "profile";
 
@@ -31,6 +32,7 @@ const FULL: NavItemKey[] = [
   "revenue",
   "hr",
   "reports",
+  "customer_support",
   "admin",
   "profile",
 ];
@@ -44,6 +46,8 @@ const GROUP_SUPERVISOR_NAV: NavItemKey[] = [
   "expenses",
   "revenue",
   "reports",
+  "customer_support",
+  "admin",
   "profile",
 ];
 
@@ -57,7 +61,7 @@ const ROLE_KEYS: Record<DemoRole, NavItemKey[]> = {
   physician: ["patients", "encounters", "appointments", "operations", "doctor_revenue", "profile", "reports"],
   nurse: ["patients", "appointments", "encounters", "profile"],
   receptionist: ["patients", "appointments", "encounters", "operations", "profile"],
-  call_center: ["patients", "appointments", "profile"],
+  call_center: ["patients", "appointments", "customer_support", "profile"],
   clinic_admin: [
     "dashboard",
     "patients",
@@ -158,6 +162,7 @@ export const NAV_ITEM_PATH: Record<NavItemKey, string> = {
   revenue: "/revenue",
   hr: "/hr",
   reports: "/reports",
+  customer_support: "/customer-support",
   admin: "/admin",
   doctor_revenue: "/doctor-revenue",
   profile: "/profile",
@@ -178,6 +183,7 @@ const HOME_PRIORITY: NavItemKey[] = [
   "revenue",
   "hr",
   "reports",
+  "customer_support",
   "doctor_revenue",
   "admin",
   "profile",

@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ClinicsModule } from "../clinics/clinics.module";
 import { StorageModule } from "../storage/storage.module";
 import { AdminController } from "./admin.controller";
+import { AdminInsightsService } from "./admin-insights.service";
 import { AdminService } from "./admin.service";
 import { AdminDataExplorerController } from "./data-explorer/admin-data-explorer.controller";
 import { AdminDataExplorerService } from "./data-explorer/admin-data-explorer.service";
@@ -11,6 +12,6 @@ import { PlatformAdminService } from "./platform-admin.service";
 @Module({
   imports: [ClinicsModule, StorageModule],
   controllers: [AdminController, AdminDataExplorerController, PlatformAdminController],
-  providers: [AdminService, AdminDataExplorerService, PlatformAdminService],
+  providers: [AdminService, AdminInsightsService, AdminDataExplorerService, PlatformAdminService],
 })
 export class AdminModule {}

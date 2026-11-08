@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native"]
 }
 
 datasource db {
@@ -117,6 +118,37 @@ enum EncounterDocumentKind {
   PRESCRIPTION
 }
 
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_ON_USER
+  RESOLVED
+  CLOSED
+}
+
+enum SupportTicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum SupportProductModule {
+  PATIENTS
+  ENCOUNTERS
+  APPOINTMENTS
+  OPERATIONS
+  EXPENSES
+  REVENUE
+  HR
+  REPORTS
+  ADMIN
+  AUTH
+  CLINICS
+  BILLING
+  OTHER
+}
+
 enum PatientAcquisitionChannel {
   SOCIAL_FACEBOOK
   SOCIAL_INSTAGRAM
@@ -154,6 +186,7 @@ model Tenant {
   userNavTabGrants       UserNavTabGrant[]
   tenantRoleNavTabGrants TenantRoleNavTabGrant[]
   userClinicEmployeePrivilegeGrants UserClinicEmployeePrivilegeGrant[]
+  supportTickets                 SupportTicket[]
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
 }
@@ -181,6 +214,9 @@ model User {
   tenantRoleNavTabGrantsUpdated TenantRoleNavTabGrant[] @relation("TenantRoleNavTabGrantUpdatedBy")
   employeePrivilegeGrants UserClinicEmployeePrivilegeGrant[] @relation("EmployeePrivilegeGrantUser")
   employeePrivilegeGrantsUpdated UserClinicEmployeePrivilegeGrant[] @relation("EmployeePrivilegeGrantUpdatedBy")
+  supportTicketsReported         SupportTicket[] @relation("SupportTicketReporter")
+  supportTicketsAssigned         SupportTicket[] @relation("SupportTicketAssignee")
+  supportTicketEvents            SupportTicketEvent[] @relation("SupportTicketEventActor")
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   deactivatedAt DateTime?
@@ -286,6 +322,7 @@ model Clinic {
   recordStatus      ClinicRecordStatus      @default(ACTIVE)
   disabledAt        DateTime?
   operatingPeriods  ClinicOperatingPeriod[]
+  supportTickets    SupportTicket[]
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
@@ -349,6 +386,7 @@ model Patient {
   operations   Operation[]
   documents    PatientDocument[]
   invoices     Invoice[]
+  supportTickets SupportTicket[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -780,4 +818,54 @@ model AuditLog {
 
   @@index([tenantId, createdAt])
   @@index([tenantId, clinicId])
+  @@index([tenantId, actorId])
+  @@index([tenantId, resource])
+  @@index([tenantId, action])
+}
+
+model SupportTicket {
+  id               String               @id @default(cuid())
+  tenantId         String
+  tenant           Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId         String?
+  clinic           Clinic?              @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+  ticketNo         String
+  title            String
+  description      String
+  module           SupportProductModule
+  priority         SupportTicketPriority @default(MEDIUM)
+  status           SupportTicketStatus   @default(OPEN)
+  reporterUserId   String?
+  reporter         User?                @relation("SupportTicketReporter", fields: [reporterUserId], references: [id], onDelete: SetNull)
+  assigneeUserId   String?
+  assignee         User?                @relation("SupportTicketAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+  patientId        String?
+  patient          Patient?             @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  resourceType     String?
+  resourceId       String?
+  linkedAuditLogId String?
+  resolutionNotes  String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  resolvedAt       DateTime?
+  events           SupportTicketEvent[]
+
+  @@unique([tenantId, ticketNo])
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, module])
+  @@index([tenantId, assigneeUserId])
+}
+
+model SupportTicketEvent {
+  id          String        @id @default(cuid())
+  ticketId    String
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  actorUserId String?
+  actor       User?         @relation("SupportTicketEventActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  eventType   String
+  message     String?
+  metadata    Json?
+  createdAt   DateTime      @default(now())
+
+  @@index([ticketId, createdAt])
 }

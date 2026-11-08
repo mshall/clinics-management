@@ -27,6 +27,7 @@ import { ReportsPage } from "@/features/reports/reports-page";
 import { DoctorRevenueGate } from "@/features/revenue/doctor-revenue-gate";
 import { RevenueGate } from "@/features/revenue/revenue-gate";
 import { NavGate } from "@/components/nav-gate";
+import { CustomerSupportPage } from "@/features/support/customer-support-page";
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
@@ -58,6 +59,14 @@ export const router = createBrowserRouter([
       { path: "hr/employees/:id", element: <NavGate tab="hr"><EmployeeDetailPage /></NavGate> },
       { path: "hr/employees/:id/profile", element: <NavGate tab="hr"><EmployeeProfilePage /></NavGate> },
       { path: "reports", element: <NavGate tab="reports"><ReportsPage /></NavGate> },
+      {
+        path: "customer-support",
+        element: (
+          <NavGate tab="customer_support">
+            <CustomerSupportPage />
+          </NavGate>
+        ),
+      },
       {
         path: "platform",
         element: <PlatformLayout />,

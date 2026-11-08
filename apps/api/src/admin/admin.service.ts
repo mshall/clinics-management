@@ -547,7 +547,14 @@ export class AdminService {
     return { ok: true, deleted, failed };
   }
 
-  async auditLogs(tenantId: string, pageStr: string | undefined, pageSizeStr: string | undefined, qRaw: string | undefined, user: JwtUser) {
+  async auditLogs(
+    tenantId: string,
+    pageStr: string | undefined,
+    pageSizeStr: string | undefined,
+    qRaw: string | undefined,
+    user: JwtUser,
+    filters?: { from?: string; to?: string; action?: string; resource?: string; actorId?: string },
+  ) {
     if (user.role !== UserRole.GROUP_ADMIN && user.role !== UserRole.CLINIC_ADMIN && user.role !== UserRole.BRANCH_MANAGER) {
       throw new ForbiddenException("Only administrators may list audit logs");
     }
@@ -561,14 +568,27 @@ export class AdminService {
         return paginate([], 0, page, pageSize);
       }
     }
-    const where: Prisma.AuditLogWhereInput = {
+    const createdAt: Prisma.DateTimeFilter = {};
+    if (filters?.from) createdAt.gte = new Date(filters.from);
+    if (filters?.to) createdAt.lte = new Date(filters.to);
+
+  const where: Prisma.AuditLogWhereInput = {
       tenantId,
-      ...(scopeClinicIds ? { clinicId: { in: scopeClinicIds } } : {}),
+      ...(scopeClinicIds
+        ? {
+            OR: [{ clinicId: { in: scopeClinicIds } }, { clinicId: null }],
+          }
+        : {}),
+      ...(Object.keys(createdAt).length ? { createdAt } : {}),
+      ...(filters?.action ? { action: { contains: filters.action, mode: "insensitive" } } : {}),
+      ...(filters?.resource ? { resource: { contains: filters.resource, mode: "insensitive" } } : {}),
+      ...(filters?.actorId ? { actorId: filters.actorId } : {}),
       ...(q
         ? {
             OR: [
               { action: { contains: q, mode: "insensitive" } },
               { resource: { contains: q, mode: "insensitive" } },
+              { resourceId: { contains: q, mode: "insensitive" } },
               { actor: { is: { displayName: { contains: q, mode: "insensitive" } } } },
               { actor: { is: { email: { contains: q, mode: "insensitive" } } } },
             ],

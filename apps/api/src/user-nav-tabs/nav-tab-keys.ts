@@ -16,6 +16,7 @@ export const VALID_NAV_TAB_KEYS = new Set([
   "revenue",
   "hr",
   "reports",
+  "customer_support",
   "admin",
   "doctor_revenue",
   "profile",
@@ -32,6 +33,7 @@ const FULL: string[] = [
   "revenue",
   "hr",
   "reports",
+  "customer_support",
   "admin",
   "profile",
 ];
@@ -46,6 +48,8 @@ const GROUP_SUPERVISOR_TABS: string[] = [
   "expenses",
   "revenue",
   "reports",
+  "customer_support",
+  "admin",
   "profile",
 ];
 
@@ -58,7 +62,7 @@ const ROLE_MAX: Record<UserRole, readonly string[]> = {
   [UserRole.PHYSICIAN]: ["patients", "encounters", "appointments", "operations", "doctor_revenue", "profile", "reports"],
   [UserRole.NURSE]: ["patients", "appointments", "encounters", "profile"],
   [UserRole.RECEPTIONIST]: ["patients", "appointments", "encounters", "operations", "profile"],
-  [UserRole.CALL_CENTER]: ["patients", "appointments", "profile"],
+  [UserRole.CALL_CENTER]: ["patients", "appointments", "customer_support", "profile"],
   [UserRole.CLINIC_ADMIN]: [
     "dashboard",
     "patients",

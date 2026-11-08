@@ -6,6 +6,8 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { isPlatformSuperAdmin } from "../common/platform-super-admin";
+import { assertInsightsAccess } from "../support/support-access";
+import { AdminInsightsService } from "./admin-insights.service";
 import { AdminService } from "./admin.service";
 import { CreateTenantUserDto } from "./dto/create-tenant-user.dto";
 import { BulkDeleteUsersDto } from "./dto/bulk-delete-users.dto";
@@ -20,7 +22,10 @@ import { PatchTenantSettingsDto } from "./dto/patch-tenant-settings.dto";
 @Controller("admin")
 @UseGuards(JwtAuthGuard)
 export class AdminController {
-  constructor(private readonly admin: AdminService) {}
+  constructor(
+    private readonly admin: AdminService,
+    private readonly insights: AdminInsightsService,
+  ) {}
 
   @Get("overview")
   @ApiOperation({ summary: "Admin dashboard: tenant, flags, audit tail" })
@@ -42,9 +47,30 @@ export class AdminController {
     @CurrentUser() user: JwtUser,
     @Query("page") page?: string,
     @Query("pageSize") pageSize?: string,
-    @Query("q") q?: string
+    @Query("q") q?: string,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("action") action?: string,
+    @Query("resource") resource?: string,
+    @Query("actorId") actorId?: string,
   ) {
-    return this.admin.auditLogs(requireTenantId(user), page, pageSize, q, user);
+    return this.admin.auditLogs(requireTenantId(user), page, pageSize, q, user, { from, to, action, resource, actorId });
+  }
+
+  @Get("insights/overview-360")
+  @ApiOperation({ summary: "Organization 360° performance and audit overview" })
+  @ApiOkResponse()
+  insightsOverview360(@CurrentUser() user: JwtUser, @Query("from") from?: string, @Query("to") to?: string) {
+    assertInsightsAccess(user);
+    return this.insights.overview360(requireTenantId(user), user, from, to);
+  }
+
+  @Get("insights/staff-performance")
+  @ApiOperation({ summary: "Staff activity and performance metrics" })
+  @ApiOkResponse()
+  insightsStaffPerformance(@CurrentUser() user: JwtUser, @Query("from") from?: string, @Query("to") to?: string) {
+    assertInsightsAccess(user);
+    return this.insights.staffPerformance(requireTenantId(user), user, from, to);
   }
 
   @Get("tenants")

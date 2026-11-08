@@ -35,6 +35,7 @@ import {
 import { AdminCreateEmployeePanel } from "./admin-create-employee-panel";
 import { AdminDataExplorerPanel } from "./admin-data-explorer-panel";
 import { AdminGovernancePanel } from "./admin-governance-panel";
+import { AdminInsightsPanel } from "./admin-insights-panel";
 import { AdminOrgPatientsPanel } from "./admin-org-patients-panel";
 import { AdminOrgUsersPanel } from "./admin-org-users-panel";
 import { OrgRbacPanel } from "./org-rbac-panel";
@@ -51,6 +52,8 @@ export function AdminPage() {
   const isGroupAdmin = authUser?.role === "group_admin";
   const isClinicAdmin = authUser?.role === "clinic_admin";
   const isBranchManager = authUser?.role === "branch_manager";
+  const isGroupSupervisor = authUser?.role === "group_supervisor";
+  const canViewInsights = isGroupAdmin || isClinicAdmin || isBranchManager || isGroupSupervisor;
   const canManageOrgUserNavTabs = isGroupAdmin || isClinicAdmin;
   const isPlatformSuperAdmin = Boolean(authUser?.platformSuperAdmin);
   const isPlatformRole = authUser?.role === "platform_super_admin";
@@ -216,8 +219,12 @@ export function AdminPage() {
     onError: (e: unknown) => console.error(e),
   });
 
-  const [adminSection, setAdminSection] = useState<"clinics" | "users" | "patients" | "organization" | "data" | "governance">("clinics");
-  const [clinicAdminSection, setClinicAdminSection] = useState<"staff" | "organization" | "governance">("staff");
+  const [adminSection, setAdminSection] = useState<
+    "clinics" | "users" | "patients" | "organization" | "data" | "governance" | "insights"
+  >("clinics");
+  const [clinicAdminSection, setClinicAdminSection] = useState<"staff" | "organization" | "governance" | "insights">(
+    "staff",
+  );
   const [feeDraft, setFeeDraft] = useState("");
   const [currencyDraft, setCurrencyDraft] = useState<string>(orgBaseCurrency);
   useEffect(() => {
@@ -251,7 +258,7 @@ export function AdminPage() {
     },
   });
 
-  if (authUser && !isGroupAdmin && !isClinicAdmin && !isBranchManager) {
+  if (authUser && !isGroupAdmin && !isClinicAdmin && !isBranchManager && !isGroupSupervisor) {
     return <Navigate to="/" replace />;
   }
   if (isClinicAdmin || isBranchManager) {
@@ -295,10 +302,21 @@ export function AdminPage() {
           >
             {t("admin.tabGovernance")}
           </Button>
+          {canViewInsights ? (
+            <Button
+              type="button"
+              size="sm"
+              variant={clinicAdminSection === "insights" ? "default" : "outline"}
+              onClick={() => setClinicAdminSection("insights")}
+            >
+              {t("admin.tabInsights", "Insights & performance")}
+            </Button>
+          ) : null}
         </div>
         {clinicAdminSection === "staff" ? <AdminCreateEmployeePanel /> : null}
         {clinicAdminSection === "organization" && isClinicAdmin ? <OrgRbacPanel /> : null}
         {clinicAdminSection === "governance" ? <AdminGovernancePanel /> : null}
+        {clinicAdminSection === "insights" && canViewInsights ? <AdminInsightsPanel /> : null}
       </div>
     );
   }
@@ -346,12 +364,24 @@ export function AdminPage() {
         <Button type="button" size="sm" variant={adminSection === "governance" ? "default" : "outline"} onClick={() => setAdminSection("governance")}>
           {t("admin.tabGovernance")}
         </Button>
+        {canViewInsights ? (
+          <Button
+            type="button"
+            size="sm"
+            variant={adminSection === "insights" ? "default" : "outline"}
+            onClick={() => setAdminSection("insights")}
+          >
+            {t("admin.tabInsights", "Insights & performance")}
+          </Button>
+        ) : null}
         </div>
         <OrgHierarchyPanel scope="tenant" />
       </div>
 
       {adminSection === "governance" ? (
         <AdminGovernancePanel />
+      ) : adminSection === "insights" && canViewInsights ? (
+        <AdminInsightsPanel />
       ) : adminSection === "users" && isGroupAdmin ? (
         <AdminOrgUsersPanel />
       ) : adminSection === "patients" && isGroupAdmin ? (

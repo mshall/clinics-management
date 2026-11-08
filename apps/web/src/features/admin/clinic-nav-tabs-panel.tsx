@@ -28,6 +28,7 @@ const NAV_I18N: Record<NavItemKey, string> = {
   revenue: "nav.revenue",
   hr: "nav.hr",
   reports: "nav.reports",
+  customer_support: "nav.customerSupport",
   admin: "nav.admin",
   doctor_revenue: "nav.doctorRevenue",
   profile: "nav.profile",

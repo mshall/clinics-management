@@ -5,6 +5,7 @@ import {
   ClipboardList,
   CircleDollarSign,
   Globe2,
+  Headphones,
   Hospital,
   LayoutDashboard,
   Receipt,
@@ -143,6 +144,12 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
         <NavLink to="/reports" className={navClass} onClick={() => onNavigate?.()}>
           <Activity className="size-4 shrink-0" />
           {t("nav.reports")}
+        </NavLink>
+      ) : null}
+      {showTab("customer_support") ? (
+        <NavLink to="/customer-support" className={navClass} onClick={() => onNavigate?.()}>
+          <Headphones className="size-4 shrink-0" />
+          {t("nav.customerSupport", "Customer support")}
         </NavLink>
       ) : null}
       {showTab("profile") ? (
