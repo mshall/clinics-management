@@ -35,6 +35,10 @@ import { IntegrationFailureGovernanceService } from "./integration-failure-gover
     IntegrationFailureRetentionService,
     IntegrationFailureGovernanceService,
   ],
-  exports: [IntegrationFailureLogService, IntegrationWebhookService],
+  exports: [
+    IntegrationFailureLogService,
+    IntegrationWebhookService,
+    IntegrationFailureRetentionService,
+  ],
 })
 export class IntegrationsModule {}
