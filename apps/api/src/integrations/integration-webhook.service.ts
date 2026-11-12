@@ -172,7 +172,7 @@ export class IntegrationWebhookService {
           lastFailureMessage: failureMessage,
         },
       });
-      await this.recordWebhookFailure(webhookId, event, url, res.status, failureMessage, deliveryId);
+      await this.recordWebhookFailure(webhookId, event, url, res.status, failureMessage, deliveryId, body);
     } catch (err) {
       const failureMessage = err instanceof Error ? err.message : String(err);
       await this.prisma.integrationWebhook.update({
@@ -182,8 +182,28 @@ export class IntegrationWebhookService {
           lastFailureMessage: failureMessage,
         },
       });
-      await this.recordWebhookFailure(webhookId, event, url, 0, failureMessage, deliveryId);
+      await this.recordWebhookFailure(webhookId, event, url, 0, failureMessage, deliveryId, body);
     }
+  }
+
+  async retryDeliveryFromFailureLog(tenantId: string, failureLogId: string): Promise<{ ok: boolean; message: string }> {
+    const row = await this.prisma.integrationFailureLog.findFirst({
+      where: { id: failureLogId, tenantId, category: "WEBHOOK" },
+    });
+    if (!row) throw new NotFoundException("Webhook failure not found");
+    const ctx = row.requestContext as Record<string, unknown> | null;
+    const webhookId = typeof ctx?.webhookId === "string" ? ctx.webhookId : null;
+    const payloadBody = typeof ctx?.payloadBody === "string" ? ctx.payloadBody : null;
+    const event = ctx?.event as IntegrationWebhookEvent | undefined;
+    if (!webhookId || !payloadBody || !event) {
+      throw new BadRequestException("This failure record cannot be retried (missing webhook payload)");
+    }
+    const hook = await this.prisma.integrationWebhook.findFirst({
+      where: { id: webhookId, tenantId, deactivatedAt: null },
+    });
+    if (!hook) throw new NotFoundException("Webhook not found or deactivated");
+    await this.postHook(hook.id, hook.url, hook.signingSecret, event, payloadBody);
+    return { ok: true, message: "Webhook delivery re-attempted" };
   }
 
   private async recordWebhookFailure(
@@ -193,6 +213,7 @@ export class IntegrationWebhookService {
     httpStatus: number,
     failureMessage: string,
     deliveryId: string,
+    payloadBody: string,
   ): Promise<void> {
     const hook = await this.prisma.integrationWebhook.findUnique({
       where: { id: webhookId },
@@ -234,7 +255,7 @@ export class IntegrationWebhookService {
         ],
         exception: "WebhookDeliveryError",
       },
-      requestContext: { event, url, webhookId },
+      requestContext: { event, url, webhookId, payloadBody, integrationClientRouteHint: hook.integrationClientId },
     });
   }
 }

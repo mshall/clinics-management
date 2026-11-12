@@ -14,7 +14,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "openapi:export": "tsx scripts/openapi-export.ts",
-    "test:unit": "node --import tsx --test src/common/reporting-range.node.test.ts src/common/group-admin-role-policy.node.test.ts src/common/employee-salary-currency.node.test.ts src/hr/hr-employee-provisioning-policy.node.test.ts src/common/insights-range.node.test.ts src/common/audit-log-query-bounds.node.test.ts src/common/pagination.node.test.ts src/integrations/integration-token.node.test.ts src/integrations/integration-clinic-allowlist.node.test.ts"
+    "test:unit": "node --import tsx --test src/common/reporting-range.node.test.ts src/common/group-admin-role-policy.node.test.ts src/common/employee-salary-currency.node.test.ts src/hr/hr-employee-provisioning-policy.node.test.ts src/common/insights-range.node.test.ts src/common/audit-log-query-bounds.node.test.ts src/common/pagination.node.test.ts src/integrations/integration-token.node.test.ts src/integrations/integration-clinic-allowlist.node.test.ts src/integrations/integration-failure-fingerprint.node.test.ts src/integrations/integration-failure-labels.node.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1045.0",

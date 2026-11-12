@@ -13,6 +13,8 @@ import { IntegrationsOperationsController } from "./integrations-operations.cont
 import { IntegrationsOperationsService } from "./integrations-operations.service";
 import { IntegrationFailureExceptionFilter } from "./integration-failure.filter";
 import { IntegrationFailureLogService } from "./integration-failure-log.service";
+import { IntegrationFailureRetentionService } from "./integration-failure-retention.service";
+import { IntegrationFailureGovernanceService } from "./integration-failure-governance.service";
 
 @Module({
   imports: [AppointmentsModule, OperationsModule, AuditModule],
@@ -30,7 +32,9 @@ import { IntegrationFailureLogService } from "./integration-failure-log.service"
     IntegrationAuthGuard,
     IntegrationFailureLogService,
     IntegrationFailureExceptionFilter,
+    IntegrationFailureRetentionService,
+    IntegrationFailureGovernanceService,
   ],
-  exports: [IntegrationFailureLogService],
+  exports: [IntegrationFailureLogService, IntegrationWebhookService],
 })
 export class IntegrationsModule {}

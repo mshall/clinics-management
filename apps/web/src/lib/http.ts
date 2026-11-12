@@ -53,6 +53,24 @@ function messageFromErrorBody(status: number, body: unknown, fallback: string): 
   return fallback;
 }
 
+export async function apiDownload(path: string, filename: string): Promise<void> {
+  const res = await fetch(apiUrl(path), { headers: authHeadersAny() });
+  if (res.status === 401) {
+    useAuthStore.getState().signOut();
+  }
+  if (!res.ok) {
+    const body = await parseJson(res);
+    throw new ApiError(messageFromErrorBody(res.status, body, res.statusText || "Download failed"), res.status, body);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export async function apiGet<T>(path: string): Promise<T> {
   const res = await fetch(apiUrl(path), { headers: authHeadersJson() });
   if (res.status === 401) {

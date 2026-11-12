@@ -2,7 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import type { ClinicDto, GroupOverviewKpisDto, PatientDto } from "@/lib/api-schema";
 import type {
   AdminAuditLogItemDto,
+  AdminIntegrationFailureGroupDto,
   AdminIntegrationFailureItemDto,
+  AdminIntegrationFailureSummaryDto,
   AdminOverviewDto,
   AppointmentDto,
   ClinicDetailDto,
@@ -519,21 +521,82 @@ export function useAdminAuditLogsQuery(params: { page: number; pageSize: number;
   });
 }
 
+function integrationFailureFilterParams(params: {
+  q?: string;
+  from?: string;
+  to?: string;
+  category?: string;
+  integrationClientId?: string;
+  clinicId?: string;
+  status?: string;
+  locale?: string;
+}) {
+  const q = new URLSearchParams();
+  if (params.q?.trim()) q.set("q", params.q.trim());
+  if (params.from?.trim()) q.set("from", params.from.trim());
+  if (params.to?.trim()) q.set("to", params.to.trim());
+  if (params.category?.trim()) q.set("category", params.category.trim());
+  if (params.integrationClientId?.trim()) q.set("integrationClientId", params.integrationClientId.trim());
+  if (params.clinicId?.trim()) q.set("clinicId", params.clinicId.trim());
+  if (params.status?.trim()) q.set("status", params.status.trim());
+  if (params.locale?.trim()) q.set("locale", params.locale.trim());
+  return q;
+}
+
 export function useAdminIntegrationFailuresQuery(params: {
   page: number;
   pageSize: number;
   q: string;
+  from?: string;
+  to?: string;
   category?: string;
+  integrationClientId?: string;
+  clinicId?: string;
+  status?: string;
+  locale?: string;
   enabled?: boolean;
 }) {
-  const q = new URLSearchParams();
-  q.set("page", String(params.page));
-  q.set("pageSize", String(params.pageSize));
-  if (params.q.trim()) q.set("q", params.q.trim());
-  if (params.category?.trim()) q.set("category", params.category.trim());
+  const filterQ = integrationFailureFilterParams(params);
+  filterQ.set("page", String(params.page));
+  filterQ.set("pageSize", String(params.pageSize));
   return useQuery({
-    queryKey: ["admin", "integration-failures", params.page, params.pageSize, params.q.trim(), params.category ?? ""],
-    queryFn: () => apiGet<Paginated<AdminIntegrationFailureItemDto>>(`/api/v1/admin/integration-failures?${q.toString()}`),
+    queryKey: [
+      "admin",
+      "integration-failures",
+      params.page,
+      params.pageSize,
+      filterQ.toString(),
+    ],
+    queryFn: () =>
+      apiGet<Paginated<AdminIntegrationFailureItemDto>>(`/api/v1/admin/integration-failures?${filterQ.toString()}`),
+    enabled: params.enabled ?? true,
+  });
+}
+
+export function useAdminIntegrationFailuresSummaryQuery(enabled = true) {
+  return useQuery({
+    queryKey: ["admin", "integration-failures", "summary"],
+    queryFn: () => apiGet<AdminIntegrationFailureSummaryDto>("/api/v1/admin/integration-failures/summary"),
+    enabled,
+  });
+}
+
+export function useAdminIntegrationFailureGroupsQuery(params: {
+  page: number;
+  pageSize: number;
+  from?: string;
+  to?: string;
+  category?: string;
+  locale?: string;
+  enabled?: boolean;
+}) {
+  const filterQ = integrationFailureFilterParams(params);
+  filterQ.set("page", String(params.page));
+  filterQ.set("pageSize", String(params.pageSize));
+  return useQuery({
+    queryKey: ["admin", "integration-failures", "groups", filterQ.toString()],
+    queryFn: () =>
+      apiGet<Paginated<AdminIntegrationFailureGroupDto>>(`/api/v1/admin/integration-failures/groups?${filterQ.toString()}`),
     enabled: params.enabled ?? true,
   });
 }

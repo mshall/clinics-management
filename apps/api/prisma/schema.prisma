@@ -154,6 +154,12 @@ enum IntegrationFailureCategory {
   WEBHOOK
 }
 
+enum IntegrationFailureStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+}
+
 enum SupportProductModule {
   PATIENTS
   ENCOUNTERS
@@ -186,6 +192,8 @@ model Tenant {
   baseCurrency          String          @default("AED")
   defaultLocale         String          @default("en")
   defaultVisitFee Decimal         @default(150) @db.Decimal(14, 2)
+  integrationFailureRetentionDays     Int       @default(30)
+  integrationFailureLastSpikeAlertAt  DateTime?
   users          User[]
   clinics        Clinic[]
   clinicAdminScopes ClinicAdminScope[]
@@ -242,6 +250,7 @@ model User {
   supportTicketsAssigned         SupportTicket[] @relation("SupportTicketAssignee")
   supportTicketEvents            SupportTicketEvent[] @relation("SupportTicketEventActor")
   integrationClientsCreated      IntegrationClient[] @relation("IntegrationClientCreatedBy")
+  integrationFailuresResolved    IntegrationFailureLog[] @relation("IntegrationFailureResolvedBy")
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   deactivatedAt DateTime?
@@ -954,11 +963,19 @@ model IntegrationFailureLog {
   trace                 Json
   requestContext        Json?
   correlationId         String?
+  status                IntegrationFailureStatus   @default(OPEN)
+  resolutionNote        String?
+  resolvedAt            DateTime?
+  resolvedByUserId      String?
+  resolvedBy            User?                      @relation("IntegrationFailureResolvedBy", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
+  fingerprint           String?
   createdAt             DateTime                   @default(now())
 
   @@index([tenantId, createdAt])
   @@index([tenantId, category, createdAt])
   @@index([integrationClientId, createdAt])
+  @@index([tenantId, fingerprint, createdAt])
+  @@index([tenantId, status, createdAt])
 }
 
 model IntegrationWebhook {

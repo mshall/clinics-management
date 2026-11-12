@@ -869,7 +869,7 @@ Booking body accepts `patientId` **or** `patientMrn`, optional `externalReferenc
 
 **Webhooks (staff JWT):** `GET/POST /admin/integration-clients/:clientId/webhooks`, `POST .../:webhookId/deactivate`. Delivery uses `POST` with headers `X-Kiorly-Event`, `X-Kiorly-Timestamp`, `X-Kiorly-Signature` (HMAC-SHA256). Events: `APPOINTMENT_BOOKED`, `APPOINTMENT_CANCELLED`, `OPERATION_BOOKED`, `OPERATION_CANCELLED`.
 
-**Governance — failing operations:** `GET /admin/integration-failures` (same admin roles as audit). Persists integration API and webhook failures with HTTP status, correlation id, request context, step trace, and resolution hints. Admin UI: **Governance → Failing operations**.
+**Governance — failing operations:** Integration API and webhook failures are persisted with structured operation names, reasons, fingerprints, workflow status (open/acknowledged/resolved), and step traces. Failed integration responses include `X-Kiorly-Correlation-Id` and a `correlationId` field in the JSON body for portal support. Admin APIs: `GET /admin/integration-failures` (filters, locale-aware hints), `GET .../summary`, `GET .../groups`, `GET .../export`, `GET .../:id`, `PATCH .../:id`, `POST .../:id/retry-webhook`. Retention: `Tenant.integrationFailureRetentionDays` (default **30**), configurable via `PATCH /admin/tenant-settings`; background purge every 6 hours. Spike detection writes audit action `INTEGRATION_FAILURE_SPIKE`. UI: **Governance → Failing operations**.
 
 **Roadmap:** patient self-registration, OAuth2 client credentials, webhook delivery retries UI.
 

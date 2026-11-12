@@ -9,10 +9,27 @@ import {
 } from "@nestjs/common";
 import type { Request, Response } from "express";
 import { IntegrationFailureCategory } from "@prisma/client";
+import { randomUUID } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import type { IntegrationPrincipal } from "./integration.types";
 import { IntegrationFailureLogService } from "./integration-failure-log.service";
 import { parseIntegrationBearerToken } from "./integration-token";
+
+function enrichIntegrationErrorBody(
+  responseBody: unknown,
+  correlationId: string,
+  failureLogId?: string,
+): Record<string, unknown> {
+  const base =
+    typeof responseBody === "object" && responseBody !== null && !Array.isArray(responseBody)
+      ? { ...(responseBody as Record<string, unknown>) }
+      : { message: typeof responseBody === "string" ? responseBody : "Request failed" };
+  return {
+    ...base,
+    correlationId,
+    ...(failureLogId ? { failureLogId } : {}),
+  };
+}
 
 @Injectable()
 @Catch()
@@ -62,26 +79,25 @@ export class IntegrationFailureExceptionFilter implements ExceptionFilter {
       else if (typeof obj.error === "string") errorMessage = obj.error;
     }
 
+    const authHeader = req.headers.authorization;
+    const bearer = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
+    const parsedBearer = parseIntegrationBearerToken(bearer);
+
     let principal = req.integrationClient;
-    if (!principal && status >= 400) {
-      const auth = req.headers.authorization;
-      const bearer = auth?.startsWith("Bearer ") ? auth.slice(7) : undefined;
-      const parsed = parseIntegrationBearerToken(bearer);
-      if (parsed) {
-        const row = await this.prisma.integrationClient.findFirst({
-          where: { clientKey: parsed.clientKey },
-          select: { id: true, tenantId: true, name: true },
-        });
-        if (row) {
-          principal = {
-            id: row.id,
-            clientKey: parsed.clientKey,
-            tenantId: row.tenantId,
-            name: row.name,
-            scopes: [],
-            allowedClinicIds: [],
-          };
-        }
+    if (!principal && status >= 400 && parsedBearer) {
+      const row = await this.prisma.integrationClient.findFirst({
+        where: { clientKey: parsedBearer.clientKey },
+        select: { id: true, tenantId: true, name: true, clientKey: true },
+      });
+      if (row) {
+        principal = {
+          id: row.id,
+          clientKey: row.clientKey,
+          tenantId: row.tenantId,
+          name: row.name,
+          scopes: [],
+          allowedClinicIds: [],
+        };
       }
     }
 
@@ -98,15 +114,35 @@ export class IntegrationFailureExceptionFilter implements ExceptionFilter {
       clinicId = clinic?.id ?? null;
     }
 
+    const authOk = Boolean(req.integrationClient);
     const trace = {
       steps: [
         { step: "request_received", ok: true, detail: `${req.method} ${path}` },
         {
           step: "auth",
-          ok: Boolean(principal),
-          detail: principal ? `client ${principal.clientKey}` : "no integration principal on request",
+          ok: authOk,
+          detail: authOk
+            ? `client ${req.integrationClient!.clientKey}`
+            : parsedBearer
+              ? `token presented for ${parsedBearer.clientKey} but not accepted`
+              : "no integration bearer token",
         },
-        { step: "handler", ok: false, detail: errorMessage },
+        {
+          step: "authorization",
+          ok: status !== HttpStatus.FORBIDDEN,
+          detail: status === HttpStatus.FORBIDDEN ? errorMessage : "scope and clinic allowlist",
+        },
+        {
+          step: "validation",
+          ok: status !== HttpStatus.BAD_REQUEST,
+          detail: status === HttpStatus.BAD_REQUEST ? errorMessage : "request shape accepted",
+        },
+        {
+          step: "resource",
+          ok: status !== HttpStatus.NOT_FOUND,
+          detail: status === HttpStatus.NOT_FOUND ? errorMessage : "resources resolved",
+        },
+        { step: "handler", ok: status < 400, detail: status >= 400 ? errorMessage : "completed" },
       ],
       exception: exception instanceof Error ? exception.constructor.name : "UnknownError",
       stack:
@@ -115,12 +151,16 @@ export class IntegrationFailureExceptionFilter implements ExceptionFilter {
           : undefined,
     };
 
+    const fallbackCorrelationId: string = randomUUID();
+    let correlationId: string = fallbackCorrelationId;
+    let failureLogId: string | undefined;
+
     if (principal?.tenantId && status >= 400) {
       const category =
         status === HttpStatus.UNAUTHORIZED || status === HttpStatus.FORBIDDEN
           ? IntegrationFailureCategory.AUTH
           : this.failures.inferCategory(path);
-      void this.failures.record({
+      const recorded = await this.failures.record({
         tenantId: principal.tenantId,
         integrationClientId: principal.id,
         integrationClientName: principal.name,
@@ -134,6 +174,7 @@ export class IntegrationFailureExceptionFilter implements ExceptionFilter {
         errorMessage,
         trace,
         rawResponse: responseBody,
+        correlationId: fallbackCorrelationId,
         requestContext: {
           query: req.query,
           body: this.failures.sanitizeRequestBody(req.body),
@@ -147,13 +188,23 @@ export class IntegrationFailureExceptionFilter implements ExceptionFilter {
               : undefined,
         },
       });
+      if (recorded) {
+        correlationId = recorded.correlationId;
+        failureLogId = recorded.id;
+      }
     }
 
+    res.setHeader("X-Kiorly-Correlation-Id", correlationId);
+
     if (exception instanceof HttpException) {
-      res.status(status).json(responseBody);
+      const body =
+        status >= 400 ? enrichIntegrationErrorBody(responseBody, correlationId, failureLogId) : responseBody;
+      res.status(status).json(body);
       return;
     }
     this.logger.error(exception);
-    res.status(500).json({ statusCode: 500, message: "Internal server error" });
+    res.status(500).json(
+      enrichIntegrationErrorBody({ statusCode: 500, message: "Internal server error" }, correlationId, failureLogId),
+    );
   }
 }

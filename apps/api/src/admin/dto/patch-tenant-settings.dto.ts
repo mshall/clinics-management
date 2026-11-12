@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsIn, IsNumber, IsOptional, IsString, Min } from "class-validator";
+import { IsIn, IsInt, IsNumber, IsOptional, IsString, Max, Min } from "class-validator";
 import { BASE_CURRENCIES } from "../../common/base-currencies";
 
 export class PatchTenantSettingsDto {
@@ -21,4 +21,16 @@ export class PatchTenantSettingsDto {
   @IsNumber()
   @Min(0)
   defaultVisitFee?: number;
+
+  @ApiPropertyOptional({
+    description: "Days to retain integration failure logs before automatic deletion (default 30)",
+    minimum: 1,
+    maximum: 3650,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(3650)
+  integrationFailureRetentionDays?: number;
 }

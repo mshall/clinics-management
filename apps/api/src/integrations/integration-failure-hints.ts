@@ -1,4 +1,5 @@
 import type { IntegrationFailureCategory } from "@prisma/client";
+import { localizeIntegrationFailureResolution } from "./integration-failure-hints-i18n";
 
 export type IntegrationFailureResolution = {
   summary: string;
@@ -137,4 +138,30 @@ export function resolveIntegrationFailureHints(
   }
 
   return DEFAULT;
+}
+
+export function resolveIntegrationFailureHintsForLocale(
+  locale: string | undefined,
+  category: IntegrationFailureCategory,
+  operation: string,
+  statusCode: number,
+  errorMessage: string,
+): IntegrationFailureResolution {
+  const base = resolveIntegrationFailureHints(category, operation, statusCode, errorMessage);
+  if (category === "AUTH" || statusCode === 401) {
+    return localizeIntegrationFailureResolution(locale, "auth", base);
+  }
+  if (statusCode === 403) {
+    return localizeIntegrationFailureResolution(locale, "forbidden", base);
+  }
+  if (category === "WEBHOOK") {
+    return localizeIntegrationFailureResolution(locale, "webhook", base);
+  }
+  if (statusCode === 404) {
+    return localizeIntegrationFailureResolution(locale, "notFound", base);
+  }
+  if (statusCode === 400) {
+    return localizeIntegrationFailureResolution(locale, "validation", base);
+  }
+  return localizeIntegrationFailureResolution(locale, "default", base);
 }

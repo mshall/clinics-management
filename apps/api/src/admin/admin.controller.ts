@@ -1,4 +1,19 @@
-import { Body, Controller, Delete, ForbiddenException, Get, HttpCode, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  Header,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Res,
+  UseGuards,
+} from "@nestjs/common";
+import type { Response } from "express";
 import { UserRole } from "@prisma/client";
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
@@ -16,6 +31,8 @@ import { PlatformPatchTenantUserDto } from "./dto/platform-patch-tenant-user.dto
 import { DeactivateTenantUserDto } from "./dto/deactivate-tenant-user.dto";
 import { ReactivateTenantUserDto } from "./dto/reactivate-tenant-user.dto";
 import { PatchTenantSettingsDto } from "./dto/patch-tenant-settings.dto";
+import { PatchIntegrationFailureDto } from "./dto/patch-integration-failure.dto";
+import { IntegrationFailureAdminService } from "./integration-failure-admin.service";
 
 @ApiTags("admin")
 @ApiBearerAuth("bearer")
@@ -25,6 +42,7 @@ export class AdminController {
   constructor(
     private readonly admin: AdminService,
     private readonly insights: AdminInsightsService,
+    private readonly integrationFailureAdmin: IntegrationFailureAdminService,
   ) {}
 
   @Get("overview")
@@ -70,15 +88,111 @@ export class AdminController {
     @Query("from") from?: string,
     @Query("to") to?: string,
     @Query("category") category?: string,
+    @Query("integrationClientId") integrationClientId?: string,
+    @Query("clinicId") clinicId?: string,
+    @Query("status") status?: string,
+    @Query("locale") locale?: string,
   ) {
-    return this.admin.integrationFailures(requireTenantId(user), page, pageSize, q, user, { from, to, category });
+    return this.integrationFailureAdmin.list(requireTenantId(user), page, pageSize, q, user, {
+      from,
+      to,
+      category,
+      integrationClientId,
+      clinicId,
+      status,
+      locale,
+    });
+  }
+
+  @Get("integration-failures/summary")
+  @ApiOperation({ summary: "Integration failure metrics for governance dashboard" })
+  @ApiOkResponse()
+  integrationFailuresSummary(@CurrentUser() user: JwtUser) {
+    return this.integrationFailureAdmin.summary(requireTenantId(user), user);
+  }
+
+  @Get("integration-failures/groups")
+  @ApiOperation({ summary: "Grouped integration failures by fingerprint" })
+  @ApiOkResponse()
+  integrationFailureGroups(
+    @CurrentUser() user: JwtUser,
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("category") category?: string,
+    @Query("locale") locale?: string,
+  ) {
+    return this.integrationFailureAdmin.groups(requireTenantId(user), page, pageSize, user, {
+      from,
+      to,
+      category,
+      locale,
+    });
+  }
+
+  @Get("integration-failures/export")
+  @ApiOperation({ summary: "Export integration failures as CSV" })
+  @Header("Content-Type", "text/csv; charset=utf-8")
+  async integrationFailuresExport(
+    @CurrentUser() user: JwtUser,
+    @Res() res: Response,
+    @Query("q") q?: string,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("category") category?: string,
+    @Query("integrationClientId") integrationClientId?: string,
+    @Query("clinicId") clinicId?: string,
+    @Query("status") status?: string,
+  ) {
+    const csv = await this.integrationFailureAdmin.exportCsv(requireTenantId(user), user, {
+      from,
+      to,
+      category,
+      integrationClientId,
+      clinicId,
+      status,
+    }, q);
+    res.setHeader("Content-Disposition", 'attachment; filename="integration-failures.csv"');
+    res.send(csv);
   }
 
   @Get("integration-failures/:id")
   @ApiOperation({ summary: "Full trace for one integration failure record" })
   @ApiOkResponse()
-  integrationFailureById(@CurrentUser() user: JwtUser, @Param("id") id: string) {
-    return this.admin.integrationFailureById(requireTenantId(user), id, user);
+  integrationFailureById(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Query("locale") locale?: string,
+  ) {
+    return this.integrationFailureAdmin.byId(requireTenantId(user), id, user, locale);
+  }
+
+  @Patch("integration-failures/:id")
+  @ApiOperation({ summary: "Acknowledge or resolve an integration failure" })
+  @ApiOkResponse()
+  patchIntegrationFailure(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Body() body: PatchIntegrationFailureDto,
+  ) {
+    return this.integrationFailureAdmin.patchStatus(requireTenantId(user), id, user, body);
+  }
+
+  @Post("integration-failures/:id/retry-webhook")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Re-attempt webhook delivery for a logged failure" })
+  @ApiOkResponse()
+  retryIntegrationFailureWebhook(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.integrationFailureAdmin.retryWebhook(requireTenantId(user), id, user);
+  }
+
+  @Post("integration-failures/purge-retention")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Apply retention policy now (group admin)" })
+  @ApiOkResponse()
+  purgeIntegrationFailureRetention(@CurrentUser() user: JwtUser) {
+    return this.integrationFailureAdmin.purgeNow(requireTenantId(user), user);
   }
 
   @Get("insights/overview-360")

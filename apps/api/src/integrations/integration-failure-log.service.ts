@@ -1,5 +1,5 @@
-import { Injectable, Logger } from "@nestjs/common";
-import { IntegrationFailureCategory, Prisma } from "@prisma/client";
+import { Injectable, Logger, Optional } from "@nestjs/common";
+import { IntegrationFailureCategory, IntegrationFailureStatus, Prisma } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import {
@@ -8,6 +8,8 @@ import {
   formatIntegrationOperationName,
   summarizeFailureReason,
 } from "./integration-failure-labels";
+import { computeIntegrationFailureFingerprint } from "./integration-failure-fingerprint";
+import { IntegrationFailureGovernanceService } from "./integration-failure-governance.service";
 
 export type IntegrationFailureTrace = {
   steps: Array<{ step: string; ok: boolean; detail?: string }>;
@@ -37,20 +39,53 @@ export type RecordIntegrationFailureInput = {
   correlationId?: string | null;
 };
 
-const REDACT_KEYS = new Set(["password", "secret", "authorization", "token", "bearer", "signingsecret"]);
+export type RecordIntegrationFailureResult = {
+  id: string;
+  correlationId: string;
+};
+
+const REDACT_KEYS = new Set([
+  "password",
+  "secret",
+  "authorization",
+  "token",
+  "bearer",
+  "signingsecret",
+  "nationalid",
+  "national_id",
+  "emiratesid",
+  "mrn",
+  "phone",
+  "mobile",
+  "email",
+  "firstname",
+  "lastname",
+  "patientname",
+  "displayname",
+]);
+
+const PARTIAL_MASK_KEYS = new Set(["phone", "mobile", "email"]);
 
 @Injectable()
 export class IntegrationFailureLogService {
   private readonly log = new Logger(IntegrationFailureLogService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly governance?: IntegrationFailureGovernanceService,
+  ) {}
 
   sanitizeRequestBody(body: unknown): Record<string, unknown> | null {
     if (!body || typeof body !== "object" || Array.isArray(body)) return null;
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(body as Record<string, unknown>)) {
-      if (REDACT_KEYS.has(k.toLowerCase())) {
-        out[k] = "[redacted]";
+      const key = k.toLowerCase();
+      if (REDACT_KEYS.has(key)) {
+        if (PARTIAL_MASK_KEYS.has(key) && typeof v === "string" && v.length > 4) {
+          out[k] = `${v.slice(0, 2)}***${v.slice(-2)}`;
+        } else {
+          out[k] = "[redacted]";
+        }
         continue;
       }
       if (typeof v === "string" && v.length > 256) {
@@ -81,7 +116,7 @@ export class IntegrationFailureLogService {
     return `${m}_${path.split("/").filter(Boolean).slice(-2).join("_").toUpperCase() || "REQUEST"}`;
   }
 
-  async record(input: RecordIntegrationFailureInput): Promise<string | null> {
+  async record(input: RecordIntegrationFailureInput): Promise<RecordIntegrationFailureResult | null> {
     const correlationId = input.correlationId ?? randomUUID();
     const clinicId = input.clinicId?.trim() || null;
     const operationName = input.operationName ?? formatIntegrationOperationName(input.operation, input.category);
@@ -98,6 +133,13 @@ export class IntegrationFailureLogService {
         input.httpPath,
         input.rawResponse,
       );
+    const fingerprint = computeIntegrationFailureFingerprint({
+      tenantId: input.tenantId,
+      integrationClientId: input.integrationClientId,
+      operation: input.operation,
+      statusCode: input.statusCode,
+      reason,
+    });
     try {
       const row = await this.prisma.integrationFailureLog.create({
         data: {
@@ -121,9 +163,14 @@ export class IntegrationFailureLogService {
             ? (input.requestContext as Prisma.InputJsonValue)
             : undefined,
           correlationId,
+          fingerprint,
+          status: IntegrationFailureStatus.OPEN,
         },
       });
-      return row.id;
+      if (this.governance) {
+        void this.governance.maybeAlertSpike(input.tenantId);
+      }
+      return { id: row.id, correlationId };
     } catch (err) {
       this.log.warn(`Failed to persist integration failure: ${err instanceof Error ? err.message : String(err)}`);
       return null;

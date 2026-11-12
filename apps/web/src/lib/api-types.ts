@@ -284,7 +284,13 @@ export interface RevenueTotalsDto {
 }
 
 export interface AdminOverviewDto {
-  currentTenant: { id: string; name: string; baseCurrency: string; defaultVisitFee: number } | null;
+  currentTenant: {
+    id: string;
+    name: string;
+    baseCurrency: string;
+    defaultVisitFee: number;
+    integrationFailureRetentionDays: number;
+  } | null;
   registeredTenants: number;
   featureFlags: Array<{ id: string; key: string; enabled: boolean; description: string | null }>;
   recentAudit: Array<{ id: string; action: string; resource: string; resourceId: string | null; createdAt: string }>;
@@ -422,6 +428,12 @@ export interface AdminIntegrationFailureItemDto {
   operationCode: string;
   reason: string;
   reasonDetail: string;
+  fingerprint: string | null;
+  workflowStatus: "OPEN" | "ACKNOWLEDGED" | "RESOLVED";
+  resolutionNote: string | null;
+  resolvedAt: string | null;
+  resolvedByUserId: string | null;
+  resolvedByDisplayName: string | null;
   httpMethod: string | null;
   httpPath: string | null;
   statusCode: number;
@@ -436,8 +448,30 @@ export interface AdminIntegrationFailureItemDto {
   correlationId: string | null;
   trace: Record<string, unknown>;
   requestContext: Record<string, unknown> | null;
+  externalReference: string | null;
+  canRetryWebhook: boolean;
   createdAt: string;
   resolution: IntegrationFailureResolutionDto;
+}
+
+export interface AdminIntegrationFailureSummaryDto {
+  totalLast24h: number;
+  failuresLastHour: number;
+  openCount: number;
+  byCategory: Array<{ category: string; count: number }>;
+  retentionDays: number;
+  spikeDetected: boolean;
+  recentSpikeAlertAt: string | null;
+  recentSpikeAuditAt: string | null;
+}
+
+export interface AdminIntegrationFailureGroupDto {
+  fingerprint: string;
+  count: number;
+  openCount: number;
+  lastSeenAt: string | null;
+  latestFailureId: string;
+  latest: AdminIntegrationFailureItemDto;
 }
 
 export interface ClinicRevenueBreakdownDto {
