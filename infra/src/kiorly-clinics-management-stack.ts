@@ -231,7 +231,8 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       observabilityConfiguration: {
         observabilityEnabled: false,
       },
-      autoScalingConfigurationArn: apiAutoScaling.attrAutoScalingConfigurationArn,
+      // Ref resolves the ARN from stack state; GetAtt triggers a live App Runner Describe that can fail during updates.
+      autoScalingConfigurationArn: apiAutoScaling.ref,
       sourceConfiguration: {
         autoDeploymentsEnabled: false,
         authenticationConfiguration: {
