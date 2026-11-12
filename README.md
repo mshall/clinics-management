@@ -168,15 +168,7 @@ From the **repository root**:
 npm install
 ```
 
-### 3. Start PostgreSQL (and Redis)
-
-```bash
-npm run db:up
-```
-
-This uses `docker-compose.yml` (Postgres `cms` / `cms` / DB `cms` on port **5432**, Redis on **6379**).
-
-### 4. Configure the API
+### 3. Configure the API (first time)
 
 Create **`apps/api/.env`** (minimal example):
 
@@ -186,22 +178,24 @@ JWT_SECRET="change-me-to-a-long-random-string-in-production"
 PORT=3000
 ```
 
-- **`DATABASE_URL`** must match the Postgres user/password/database from Docker Compose.
-- **`JWT_SECRET`** must be a strong secret in any shared or production environment.
+- **`DATABASE_URL`** — use Docker Compose (`cms:cms@localhost:5432/cms`) or local Postgres (e.g. `postgres:CareemTiger@localhost:5432/postgres` as in `.env.example`).
 
-### 5. Apply migrations and seed demo data
+### 4. Start PostgreSQL
+
+**Automatic (recommended):** `npm run dev` and `npm run test:integration-smoke` run **`npm run db:ensure`** first (starts Postgres via Docker or repo **`.pgdata/`**, applies migrations, seeds if the DB is empty).
+
+**Manual:** `npm run db:up` (start only), `npm run db:down` (stop workspace `.pgdata` and/or Docker), `npm run db:ensure` (start + migrate + seed-if-empty).
+
+Docker Compose (`docker-compose.yml`) exposes Postgres on **5432** and Redis on **6379** when Docker works on your Mac.
+
+### 5. Apply migrations and seed demo data (optional)
+- **`JWT_SECRET`** must be a strong secret in any shared or production environment.
 
 ```bash
 npm run db:setup
 ```
 
-Equivalent to Prisma generate, migrate deploy, and seed (demo tenant and users — see `apps/api/prisma/seed.ts` for credentials).
-
-If you only need schema without re-seeding:
-
-```bash
-npm run db:deploy -w api
-```
+Forces migrate deploy + full demo seed (see `apps/api/prisma/seed.ts`). Skip if `db:ensure` already seeded a fresh database.
 
 ### 6. Run the app (API + web)
 
@@ -249,8 +243,10 @@ API output is under `apps/api/dist`; web static assets under `apps/web/dist`.
 | `npm run sync:aws:smoke` | Post-deploy health + demo login (CI smoke) |
 | `npm run sync:aws:deploy` | Pull GitHub + local CDK deploy (needs AWS CLI + Docker) |
 | `npm run sync:all` | `sync` (GitHub + DB) then `sync:aws` |
-| `npm run db:up` / `npm run db:down` | Start / stop Docker services |
-| `npm run db:setup` | Generate client, migrate, seed |
+| `npm run db:ensure` | Postgres up + migrate + seed-if-empty (also runs before `dev` / integration smoke) |
+| `npm run db:up` / `npm run db:down` | Start / stop Postgres (Docker or `.pgdata/`) |
+| `npm run db:setup` | Generate client, migrate, full seed |
+| `npm run test:integration-smoke` | End-to-end integration API check (auto `db:ensure`) |
 | `npm run build` | Build API then web |
 | `npm run test:unit` | API unit/policy tests (Node test runner) |
 | `npm run test:perf` | Concurrent health load smoke (default ≥99.9% success on `/api/v1/health/live`) |

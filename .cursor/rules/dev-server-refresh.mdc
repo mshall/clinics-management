@@ -3,6 +3,14 @@ description: After repo changes, restart with a fresh npm run dev so API/web wat
 alwaysApply: true
 ---
 
+# Local Postgres (this machine)
+
+Before `npm run dev`, `npm run test:integration-smoke`, or Prisma commands when the DB may be down:
+
+1. Run **`npm run db:ensure`** from the repo root (or rely on `predev` / `pretest:integration-smoke`, which call the same script).
+2. The script starts Postgres in order: existing listener → Docker → **`.pgdata/`** in the repo → system install; runs **`prisma migrate deploy`**; seeds demo data only when the database has no tenants.
+3. Do **not** ask the user to run `sudo` or manual `pg_ctl` unless `db:ensure` fails with a clear error.
+
 # Command execution (do not delegate)
 
 When shell access is available, **run** install, build, Prisma, dev-server, test, and port-cleanup commands yourself. Do not end a turn by only telling the user to run those commands unless the environment truly cannot execute them.

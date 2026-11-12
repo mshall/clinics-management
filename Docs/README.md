@@ -72,7 +72,7 @@ When signed in as **Group admin** (e.g. `admin@drahmedshall.com` or `admin@kiorl
 
 **Insights API:** `GET /api/v1/admin/insights/overview-360`, `GET /api/v1/admin/insights/staff-performance`.
 
-**Integration API (external patient platforms):** Group or clinic admins create clients under **Admin → Organization & settings → Integration API clients**. External systems use `Authorization: Bearer kio_live.<clientKey>.<secret>` on `/api/v1/integrations/*` (not staff JWT). Appointments, **operations/surgery booking**, and **signed webhooks** are documented in RFC §6.2.21. **Local DB:** `npm run db:up` then `npm run db:setup`. **Smoke:** `npm run test:integration-smoke`.
+**Integration API (external patient platforms):** Group or clinic admins create clients under **Admin → Organization & settings → Integration API clients**. External systems use `Authorization: Bearer kio_live.<clientKey>.<secret>` on `/api/v1/integrations/*` (not staff JWT). Appointments, **operations/surgery booking**, and **signed webhooks** are documented in RFC §6.2.21. **Local DB:** `npm run dev` and `npm run test:integration-smoke` automatically run **`npm run db:ensure`** (Postgres `.pgdata/`, migrations, demo seed if empty). Manual: `npm run db:setup`, stop with `npm run db:down`.
 
 **Profile picture:** any logged-in user → **Profile** → camera icon on avatar → crop and upload (`POST /api/v1/auth/me/avatar`).
 
