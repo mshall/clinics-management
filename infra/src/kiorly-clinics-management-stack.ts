@@ -219,19 +219,33 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       observabilityConfigurationName: "kiorly-api-observability",
     });
 
+    const apiAutoScalingName = "kiorly-api-autoscale";
     const apiAutoScaling = new apprunner.CfnAutoScalingConfiguration(this, "ApiAutoScaling", {
-      autoScalingConfigurationName: "kiorly-api-autoscale",
+      autoScalingConfigurationName: apiAutoScalingName,
       maxConcurrency: 100,
       maxSize: 25,
       minSize: 1,
     });
+    // Avoid Fn::GetAtt AutoScalingConfigurationArn on CfnService — CloudFormation can fail resolving it
+    // ("The security token included in the request is invalid") even when the config exists. App Runner
+    // accepts a name-only ARN and uses the latest active revision (same as our CfnAutoScalingConfiguration).
+    // @see https://github.com/aws/aws-cdk/issues/34275
+    const apiAutoScalingArn = cdk.Fn.join("", [
+      "arn:",
+      cdk.Aws.PARTITION,
+      ":apprunner:",
+      cdk.Aws.REGION,
+      ":",
+      cdk.Aws.ACCOUNT_ID,
+      `:autoscalingconfiguration/${apiAutoScalingName}`,
+    ]);
 
     const appRunnerService = new apprunner.CfnService(this, "ApiService", {
       serviceName: `kiorly-api-${cdk.Names.uniqueId(this).slice(-8).toLowerCase()}`,
       observabilityConfiguration: {
         observabilityEnabled: false,
       },
-      autoScalingConfigurationArn: apiAutoScaling.attrAutoScalingConfigurationArn,
+      autoScalingConfigurationArn: apiAutoScalingArn,
       sourceConfiguration: {
         autoDeploymentsEnabled: false,
         authenticationConfiguration: {
