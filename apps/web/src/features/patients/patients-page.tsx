@@ -55,6 +55,8 @@ export function PatientsPage() {
   const [pageSize, setPageSize] = useState(10);
   const [sortBy, setSortBy] = useState("mrn");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  const [pfId, setPfId] = useState("");
+  const debouncedPfId = useDebouncedValue(pfId, 300);
   const [pfMrn, setPfMrn] = useState("");
   const [pfName, setPfName] = useState("");
   const [pfGender, setPfGender] = useState("");
@@ -67,12 +69,13 @@ export function PatientsPage() {
   const query = useMemo(
     () => ({
       search: debouncedQuick,
+      id: debouncedPfId.trim() || undefined,
       page,
       pageSize,
       sortBy,
       sortOrder,
     }),
-    [debouncedQuick, page, pageSize, sortBy, sortOrder]
+    [debouncedQuick, debouncedPfId, page, pageSize, sortBy, sortOrder],
   );
 
   const onSort = (column: string) => {
@@ -109,7 +112,7 @@ export function PatientsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedQuick]);
+  }, [debouncedQuick, debouncedPfId]);
 
   const { data: clinics = [] } = useClinicsQuery();
   const authRole = useAuthStore((s) => s.user?.role);
@@ -540,8 +543,17 @@ export function PatientsPage() {
             variant="ghost"
             size="sm"
             className="h-8 text-xs"
-            disabled={!pfMrn.trim() && !pfName.trim() && !pfGender.trim() && !pfDob.trim() && !pfEmail.trim() && !pfBranch.trim()}
+            disabled={
+              !pfId.trim() &&
+              !pfMrn.trim() &&
+              !pfName.trim() &&
+              !pfGender.trim() &&
+              !pfDob.trim() &&
+              !pfEmail.trim() &&
+              !pfBranch.trim()
+            }
             onClick={() => {
+              setPfId("");
               setPfMrn("");
               setPfName("");
               setPfGender("");
@@ -567,6 +579,11 @@ export function PatientsPage() {
             <table className="w-full min-w-[720px] text-sm">
               <thead className="bg-muted/60">
                 <tr className="text-start">
+                  <FilterTh
+                    label={t("patients.patientId", "Patient ID")}
+                    value={pfId}
+                    onChange={setPfId}
+                  />
                   <SortableTh
                     label={t("patients.mrn")}
                     column="mrn"
@@ -626,6 +643,9 @@ export function PatientsPage() {
                       }
                     }}
                   >
+                    <td className="px-3 py-2 font-mono text-xs ltr-nums text-muted-foreground" title={p.id}>
+                      {p.id.length > 10 ? `${p.id.slice(0, 10)}…` : p.id}
+                    </td>
                     <td className="px-3 py-2 font-mono text-xs ltr-nums">{p.mrn}</td>
                     <td className="px-3 py-2">
                       {i18n.language === "ar" && p.firstNameAr ? (
@@ -677,14 +697,14 @@ export function PatientsPage() {
                 ))}
                 {items.length === 0 && !isFetching ? (
                   <tr>
-                    <td colSpan={canManagePatients ? 7 : 6} className="px-3 py-8 text-center text-muted-foreground">
+                    <td colSpan={canManagePatients ? 8 : 7} className="px-3 py-8 text-center text-muted-foreground">
                       {t("patients.empty")}
                     </td>
                   </tr>
                 ) : null}
                 {items.length > 0 && filteredPatients.length === 0 && !isFetching ? (
                   <tr>
-                    <td colSpan={canManagePatients ? 7 : 6} className="px-3 py-8 text-center text-muted-foreground">
+                    <td colSpan={canManagePatients ? 8 : 7} className="px-3 py-8 text-center text-muted-foreground">
                       {t("patients.noColMatch", "No rows match the column filters.")}
                     </td>
                   </tr>

@@ -51,6 +51,7 @@ export class PatientsController {
   list(
     @CurrentUser() user: JwtUser,
     @Query("search") search?: string,
+    @Query("id") id?: string,
     @Query("mrn") mrn?: string,
     @Query("phone") phone?: string,
     @Query("gender") gender?: string,
@@ -65,6 +66,7 @@ export class PatientsController {
       requireTenantId(user),
       {
         search,
+        id,
         mrn,
         phone,
         gender,

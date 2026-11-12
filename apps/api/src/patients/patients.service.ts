@@ -57,6 +57,7 @@ function isPhysicianRole(role: UserRole | undefined): boolean {
 
 export interface PatientListQuery {
   search?: string;
+  id?: string;
   mrn?: string;
   phone?: string;
   gender?: string;
@@ -173,6 +174,7 @@ export class PatientsService {
         and.push({
           AND: tokens.map((token) => ({
             OR: [
+              { id: { contains: token, mode: "insensitive" } },
               { mrn: { contains: token, mode: "insensitive" } },
               { firstNameEn: { contains: token, mode: "insensitive" } },
               { lastNameEn: { contains: token, mode: "insensitive" } },
@@ -186,6 +188,7 @@ export class PatientsService {
       } else {
         and.push({
           OR: [
+            { id: { contains: broad, mode: "insensitive" } },
             { mrn: { contains: broad, mode: "insensitive" } },
             { firstNameEn: { contains: broad, mode: "insensitive" } },
             { lastNameEn: { contains: broad, mode: "insensitive" } },
@@ -197,6 +200,9 @@ export class PatientsService {
         });
       }
     }
+
+    const patientId = q.id?.trim();
+    if (patientId) and.push({ id: { contains: patientId, mode: "insensitive" } });
 
     const mrn = q.mrn?.trim();
     if (mrn) and.push({ mrn: { contains: mrn, mode: "insensitive" } });

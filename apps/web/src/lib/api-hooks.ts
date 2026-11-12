@@ -91,6 +91,7 @@ function rangeQs(): string {
 
 export interface PatientsListParams {
   search?: string;
+  id?: string;
   mrn?: string;
   phone?: string;
   gender?: string;
@@ -106,6 +107,7 @@ export interface PatientsListParams {
 function patientsQs(p: PatientsListParams): URLSearchParams {
   const q = new URLSearchParams();
   if (p.search?.trim()) q.set("search", p.search.trim());
+  if (p.id?.trim()) q.set("id", p.id.trim());
   if (p.mrn?.trim()) q.set("mrn", p.mrn.trim());
   if (p.phone?.trim()) q.set("phone", p.phone.trim());
   if (p.gender?.trim()) q.set("gender", p.gender.trim());
