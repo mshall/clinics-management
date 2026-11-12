@@ -221,6 +221,16 @@ export class IntegrationWebhookService {
     });
     if (!hook?.integrationClient) return;
 
+    let webhookPatientId: string | undefined;
+    try {
+      const parsed = JSON.parse(payloadBody) as { data?: { patientId?: unknown } };
+      if (typeof parsed.data?.patientId === "string" && parsed.data.patientId.trim()) {
+        webhookPatientId = parsed.data.patientId.trim();
+      }
+    } catch {
+      /* ignore */
+    }
+
     const reason = summarizeFailureReason(httpStatus || 502, "WebhookDeliveryError", failureMessage);
     const reasonDetail = buildFailureReasonDetail(
       httpStatus || 502,
@@ -255,7 +265,14 @@ export class IntegrationWebhookService {
         ],
         exception: "WebhookDeliveryError",
       },
-      requestContext: { event, url, webhookId, payloadBody, integrationClientRouteHint: hook.integrationClientId },
+      requestContext: {
+        event,
+        url,
+        webhookId,
+        payloadBody,
+        integrationClientRouteHint: hook.integrationClientId,
+        ...(webhookPatientId ? { patientId: webhookPatientId } : {}),
+      },
     });
   }
 }

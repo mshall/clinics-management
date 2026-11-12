@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
+import { resolvePatientAuditContext } from "../common/audit-patient-context";
 import { PrismaService } from "../prisma/prisma.service";
 
 const SKIP_PATH_PREFIXES = ["health/"];
@@ -190,6 +191,8 @@ export class AuditService {
       resource,
       resourceId,
       metadata: safeMetadata(m, path, body),
+      body,
+      response,
     });
   }
 
@@ -213,20 +216,22 @@ export class AuditService {
     integrationClientName: string;
     action: string;
     resourceId: string;
+    resource?: string;
     metadata?: Record<string, unknown>;
   }): Promise<void> {
+    const metadata = {
+      integrationClientId: entry.integrationClientId,
+      integrationClientName: entry.integrationClientName,
+      ...entry.metadata,
+    };
     await this.record({
       tenantId: entry.tenantId,
       actorId: null,
       clinicId: entry.clinicId,
       action: entry.action,
-      resource: "IntegrationAppointment",
+      resource: entry.resource ?? "IntegrationAppointment",
       resourceId: entry.resourceId,
-      metadata: {
-        integrationClientId: entry.integrationClientId,
-        integrationClientName: entry.integrationClientName,
-        ...entry.metadata,
-      },
+      metadata,
     });
   }
 
@@ -238,8 +243,17 @@ export class AuditService {
     resource: string;
     resourceId: string | null;
     metadata?: Record<string, unknown>;
+    body?: unknown;
+    response?: unknown;
   }): Promise<void> {
     try {
+      const patientCtx = await resolvePatientAuditContext(this.prisma, entry.tenantId, {
+        resource: entry.resource,
+        resourceId: entry.resourceId,
+        body: entry.body,
+        response: entry.response,
+        metadata: entry.metadata ?? null,
+      });
       await this.prisma.auditLog.create({
         data: {
           tenantId: entry.tenantId,
@@ -248,6 +262,8 @@ export class AuditService {
           action: entry.action,
           resource: entry.resource,
           resourceId: entry.resourceId,
+          patientId: patientCtx.patientId,
+          patientMrn: patientCtx.patientMrn,
           metadata: entry.metadata ? (entry.metadata as Prisma.InputJsonValue) : undefined,
         },
       });

@@ -83,6 +83,7 @@ export class IntegrationFailureAdminService {
               { httpPath: { contains: qBounded, mode: "insensitive" } },
               { integrationClientName: { contains: qBounded, mode: "insensitive" } },
               { correlationId: { contains: qBounded, mode: "insensitive" } },
+              { patientMrn: { contains: qBounded, mode: "insensitive" } },
             ],
           }
         : {}),
@@ -281,6 +282,7 @@ export class IntegrationFailureAdminService {
       "client",
       "clinicId",
       "correlationId",
+      "patientMrn",
     ].join(",");
     const lines = rows.map((r) =>
       [
@@ -294,6 +296,7 @@ export class IntegrationFailureAdminService {
         r.integrationClientName ?? "",
         r.clinicId ?? "",
         r.correlationId ?? "",
+        r.patientMrn ?? "",
       ]
         .map((c) => escape(String(c)))
         .join(","),
@@ -404,6 +407,8 @@ export class IntegrationFailureAdminService {
       trace: r.trace,
       requestContext: ctx,
       externalReference,
+      patientId: r.patientId,
+      patientMrn: r.patientMrn,
       canRetryWebhook,
       createdAt: r.createdAt.toISOString(),
       resolution,

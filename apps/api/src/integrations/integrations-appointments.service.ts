@@ -206,7 +206,7 @@ export class IntegrationsAppointmentsService {
       integrationClientName: principal.name,
       action: "INTEGRATION_CANCEL_APPOINTMENT",
       resourceId: updated.id,
-      metadata: {},
+      metadata: { patientId: updated.patientId },
     });
 
     this.webhooks.emit(principal.id, IntegrationWebhookEvent.APPOINTMENT_CANCELLED, {

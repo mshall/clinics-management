@@ -858,6 +858,8 @@ model AuditLog {
   action     String
   resource   String
   resourceId String?
+  patientId  String?
+  patientMrn String?
   metadata   Json?
   createdAt  DateTime @default(now())
 
@@ -867,6 +869,7 @@ model AuditLog {
   @@index([tenantId, actorId])
   @@index([tenantId, resource])
   @@index([tenantId, action])
+  @@index([tenantId, patientMrn, createdAt])
 }
 
 model SupportTicket {
@@ -969,6 +972,8 @@ model IntegrationFailureLog {
   resolvedByUserId      String?
   resolvedBy            User?                      @relation("IntegrationFailureResolvedBy", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
   fingerprint           String?
+  patientId             String?
+  patientMrn            String?
   createdAt             DateTime                   @default(now())
 
   @@index([tenantId, createdAt])
@@ -976,6 +981,7 @@ model IntegrationFailureLog {
   @@index([integrationClientId, createdAt])
   @@index([tenantId, fingerprint, createdAt])
   @@index([tenantId, status, createdAt])
+  @@index([tenantId, patientMrn, createdAt])
 }
 
 model IntegrationWebhook {

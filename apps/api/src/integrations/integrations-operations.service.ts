@@ -144,6 +144,7 @@ export class IntegrationsOperationsService {
       integrationClientId: principal.id,
       integrationClientName: principal.name,
       action: "INTEGRATION_BOOK_OPERATION",
+      resource: "IntegrationOperation",
       resourceId: created.id,
       metadata: {
         externalReference: dto.externalReference ?? null,
@@ -184,8 +185,9 @@ export class IntegrationsOperationsService {
       integrationClientId: principal.id,
       integrationClientName: principal.name,
       action: "INTEGRATION_CANCEL_OPERATION",
+      resource: "IntegrationOperation",
       resourceId: updated.id,
-      metadata: {},
+      metadata: { patientId: updated.patientId },
     });
 
     this.webhooks.emit(principal.id, IntegrationWebhookEvent.OPERATION_CANCELLED, {

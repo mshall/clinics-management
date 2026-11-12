@@ -403,6 +403,8 @@ export interface AdminAuditLogItemDto {
   action: string;
   resource: string;
   resourceId: string | null;
+  patientId: string | null;
+  patientMrn: string | null;
   clinicId: string | null;
   createdAt: string;
   actorDisplayName: string | null;
@@ -449,6 +451,8 @@ export interface AdminIntegrationFailureItemDto {
   trace: Record<string, unknown>;
   requestContext: Record<string, unknown> | null;
   externalReference: string | null;
+  patientId: string | null;
+  patientMrn: string | null;
   canRetryWebhook: boolean;
   createdAt: string;
   resolution: IntegrationFailureResolutionDto;

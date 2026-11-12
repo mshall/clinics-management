@@ -107,6 +107,7 @@ export function AdminGovernancePanel() {
                   <th className="px-3 py-2 text-start font-medium">{t("admin.auditColActor", "User")}</th>
                   <th className="px-3 py-2 text-start font-medium">{t("admin.auditColAction", "Action")}</th>
                   <th className="px-3 py-2 text-start font-medium">{t("admin.auditColResource", "Resource")}</th>
+                  <th className="px-3 py-2 text-start font-medium">{t("admin.auditColPatientMrn", "Patient MRN")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -141,11 +142,12 @@ export function AdminGovernancePanel() {
                       {r.resource}
                       {r.resourceId ? <span className="block font-mono text-xs ltr-nums">{r.resourceId.slice(0, 12)}…</span> : null}
                     </td>
+                    <td className="px-3 py-2 font-mono text-xs ltr-nums">{r.patientMrn ?? "—"}</td>
                   </tr>
                 ))}
                 {!audit.isPending && !rows.length ? (
                   <tr>
-                    <td colSpan={4} className="px-3 py-6 text-center text-muted-foreground">
+                    <td colSpan={5} className="px-3 py-6 text-center text-muted-foreground">
                       {t("admin.auditEmpty", "No audit rows match your filters.")}
                     </td>
                   </tr>
@@ -193,6 +195,12 @@ export function AdminGovernancePanel() {
                 {detail.actorDisplayName ?? "—"} ({detail.actorEmail ?? "—"})
                 {detail.actorRole ? ` · ${formatUserRole(detail.actorRole, t)}` : ""}
               </p>
+              {detail.patientMrn ? (
+                <p>
+                  <span className="text-muted-foreground">{t("admin.auditColPatientMrn", "Patient MRN")}: </span>
+                  <span className="font-mono">{detail.patientMrn}</span>
+                </p>
+              ) : null}
               {detail.clinicId ? (
                 <p className="font-mono text-xs text-muted-foreground">
                   clinicId: {detail.clinicId}

@@ -10,6 +10,7 @@ import {
 } from "./integration-failure-labels";
 import { computeIntegrationFailureFingerprint } from "./integration-failure-fingerprint";
 import { IntegrationFailureGovernanceService } from "./integration-failure-governance.service";
+import { resolvePatientFromRequestContext } from "../common/audit-patient-context";
 
 export type IntegrationFailureTrace = {
   steps: Array<{ step: string; ok: boolean; detail?: string }>;
@@ -140,6 +141,12 @@ export class IntegrationFailureLogService {
       statusCode: input.statusCode,
       reason,
     });
+    const patientCtx = await resolvePatientFromRequestContext(
+      this.prisma,
+      input.tenantId,
+      input.httpPath,
+      input.requestContext ?? null,
+    );
     try {
       const row = await this.prisma.integrationFailureLog.create({
         data: {
@@ -165,6 +172,8 @@ export class IntegrationFailureLogService {
           correlationId,
           fingerprint,
           status: IntegrationFailureStatus.OPEN,
+          patientId: patientCtx.patientId,
+          patientMrn: patientCtx.patientMrn,
         },
       });
       if (this.governance) {

@@ -70,6 +70,9 @@ function FailureDetailFields({
     { label: t("admin.governanceOperationType", "Operation type"), value: detail.operationTypeLabel },
     { label: t("admin.governanceOperationName", "Operation name"), value: detail.operationName },
     { label: t("admin.governanceOperationCode", "Operation code"), value: detail.operationCode, mono: true },
+    ...(detail.patientMrn
+      ? [{ label: t("admin.governancePatientMrn", "Patient MRN"), value: detail.patientMrn, mono: true, copy: true }]
+      : []),
     { label: t("admin.governanceFailuresReason", "Reason"), value: detail.reason },
     { label: t("admin.governanceFailuresReasonDetail", "Detailed reason"), value: detail.reasonDetail },
     { label: t("admin.governanceFailuresError", "Raw error"), value: detail.errorMessage },
@@ -415,7 +418,7 @@ export function AdminGovernanceIntegrationFailures() {
                   id="failure-q"
                   value={qDraft}
                   onChange={(e) => setQDraft(e.target.value)}
-                  placeholder={t("admin.governanceFailuresSearchPh")}
+                  placeholder={t("admin.governanceFailuresSearchPh", "ID, reason, MRN, operation name, client…")}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") applyFilters();
                   }}
@@ -541,6 +544,7 @@ export function AdminGovernanceIntegrationFailures() {
                     <th className="px-3 py-2 text-start font-medium">{t("admin.governanceWorkflowStatus", "Status")}</th>
                     <th className="px-3 py-2 text-start font-medium">{t("admin.governanceOperationType", "Type")}</th>
                     <th className="px-3 py-2 text-start font-medium">{t("admin.governanceOperationName", "Operation name")}</th>
+                    <th className="px-3 py-2 text-start font-medium">{t("admin.governancePatientMrn", "Patient MRN")}</th>
                     <th className="px-3 py-2 text-start font-medium">{t("admin.governanceFailuresReason", "Reason")}</th>
                     <th className="px-3 py-2 text-start font-medium">HTTP</th>
                   </tr>
@@ -558,16 +562,17 @@ export function AdminGovernanceIntegrationFailures() {
                       <td className="px-3 py-2 font-mono text-xs">{r.id.slice(0, 10)}…</td>
                       <td className="px-3 py-2 text-xs">{r.workflowStatus}</td>
                       <td className="px-3 py-2 text-xs text-muted-foreground">{r.operationTypeLabel || r.category}</td>
-                      <td className="px-3 py-2 font-medium">{r.operationName || r.operation}</td>
-                      <td className="px-3 py-2 max-w-[240px] truncate" title={r.reasonDetail}>
-                        {r.reason}
-                      </td>
+                    <td className="px-3 py-2 font-medium">{r.operationName || r.operation}</td>
+                    <td className="px-3 py-2 font-mono text-xs ltr-nums">{r.patientMrn ?? "—"}</td>
+                    <td className="px-3 py-2 max-w-[240px] truncate" title={r.reasonDetail}>
+                      {r.reason}
+                    </td>
                       <td className="px-3 py-2 ltr-nums">{r.statusCode}</td>
                     </tr>
                   ))}
                   {!failures.isPending && !rows.length ? (
                     <tr>
-                      <td colSpan={7} className="px-3 py-6 text-center text-muted-foreground">
+                      <td colSpan={8} className="px-3 py-6 text-center text-muted-foreground">
                         {t("admin.governanceFailuresEmpty")}
                       </td>
                     </tr>
