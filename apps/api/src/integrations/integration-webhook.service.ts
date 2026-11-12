@@ -6,6 +6,7 @@ import type { CreateIntegrationWebhookDto } from "./dto/create-integration-webho
 import { IntegrationFailureCategory } from "@prisma/client";
 import { generateWebhookSigningSecret } from "./integration-token";
 import { IntegrationFailureLogService } from "./integration-failure-log.service";
+import { buildFailureReasonDetail, summarizeFailureReason } from "./integration-failure-labels";
 
 export type IntegrationWebhookPayload = {
   event: IntegrationWebhookEvent;
@@ -199,6 +200,16 @@ export class IntegrationWebhookService {
     });
     if (!hook?.integrationClient) return;
 
+    const reason = summarizeFailureReason(httpStatus || 502, "WebhookDeliveryError", failureMessage);
+    const reasonDetail = buildFailureReasonDetail(
+      httpStatus || 502,
+      "WebhookDeliveryError",
+      failureMessage,
+      "POST",
+      url,
+      { event, deliveryId, httpStatus: httpStatus || null },
+    );
+
     await this.failureLogs.record({
       tenantId: hook.integrationClient.tenantId,
       integrationClientId: hook.integrationClientId,
@@ -206,6 +217,10 @@ export class IntegrationWebhookService {
       clinicId: null,
       category: IntegrationFailureCategory.WEBHOOK,
       operation: "DELIVER_WEBHOOK",
+      operationName: "Deliver webhook",
+      operationTypeLabel: "Outbound webhook",
+      reason,
+      reasonDetail,
       httpMethod: "POST",
       httpPath: url,
       statusCode: httpStatus || 502,

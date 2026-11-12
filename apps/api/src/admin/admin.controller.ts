@@ -74,6 +74,13 @@ export class AdminController {
     return this.admin.integrationFailures(requireTenantId(user), page, pageSize, q, user, { from, to, category });
   }
 
+  @Get("integration-failures/:id")
+  @ApiOperation({ summary: "Full trace for one integration failure record" })
+  @ApiOkResponse()
+  integrationFailureById(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.admin.integrationFailureById(requireTenantId(user), id, user);
+  }
+
   @Get("insights/overview-360")
   @ApiOperation({ summary: "Organization 360° performance and audit overview" })
   @ApiOkResponse()

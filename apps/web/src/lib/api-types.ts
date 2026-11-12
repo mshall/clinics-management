@@ -415,7 +415,13 @@ export interface IntegrationFailureResolutionDto {
 export interface AdminIntegrationFailureItemDto {
   id: string;
   category: string;
+  operationType: string;
+  operationTypeLabel: string;
   operation: string;
+  operationName: string;
+  operationCode: string;
+  reason: string;
+  reasonDetail: string;
   httpMethod: string | null;
   httpPath: string | null;
   statusCode: number;
@@ -423,6 +429,7 @@ export interface AdminIntegrationFailureItemDto {
   errorMessage: string;
   integrationClientId: string | null;
   integrationClientName: string | null;
+  integrationClientKey: string | null;
   clinicId: string | null;
   clinicNameEn: string | null;
   clinicNameAr: string | null;

@@ -133,11 +133,18 @@ export class IntegrationFailureExceptionFilter implements ExceptionFilter {
         errorCode: exception instanceof Error ? exception.constructor.name : "HttpError",
         errorMessage,
         trace,
+        rawResponse: responseBody,
         requestContext: {
           query: req.query,
           body: this.failures.sanitizeRequestBody(req.body),
           scopes: principal.scopes,
           allowedClinicIds: principal.allowedClinicIds,
+          clientKey: principal.clientKey,
+          ...(rawClinicId && !clinicId ? { invalidClinicIdFromRequest: rawClinicId } : {}),
+          externalReference:
+            typeof (req.body as Record<string, unknown> | undefined)?.externalReference === "string"
+              ? (req.body as Record<string, unknown>).externalReference
+              : undefined,
         },
       });
     }

@@ -942,6 +942,10 @@ model IntegrationFailureLog {
   clinic                Clinic?                    @relation(fields: [clinicId], references: [id], onDelete: SetNull)
   category              IntegrationFailureCategory
   operation             String
+  operationName         String?
+  operationTypeLabel    String?
+  reason                String?
+  reasonDetail          String?
   httpMethod            String?
   httpPath              String?
   statusCode            Int

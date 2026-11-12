@@ -2,6 +2,12 @@ import { Injectable, Logger } from "@nestjs/common";
 import { IntegrationFailureCategory, Prisma } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
+import {
+  buildFailureReasonDetail,
+  formatCategoryLabel,
+  formatIntegrationOperationName,
+  summarizeFailureReason,
+} from "./integration-failure-labels";
 
 export type IntegrationFailureTrace = {
   steps: Array<{ step: string; ok: boolean; detail?: string }>;
@@ -16,6 +22,11 @@ export type RecordIntegrationFailureInput = {
   clinicId?: string | null;
   category: IntegrationFailureCategory;
   operation: string;
+  operationName?: string | null;
+  operationTypeLabel?: string | null;
+  reason?: string | null;
+  reasonDetail?: string | null;
+  rawResponse?: unknown;
   httpMethod?: string | null;
   httpPath?: string | null;
   statusCode: number;
@@ -73,6 +84,20 @@ export class IntegrationFailureLogService {
   async record(input: RecordIntegrationFailureInput): Promise<string | null> {
     const correlationId = input.correlationId ?? randomUUID();
     const clinicId = input.clinicId?.trim() || null;
+    const operationName = input.operationName ?? formatIntegrationOperationName(input.operation, input.category);
+    const operationTypeLabel = input.operationTypeLabel ?? formatCategoryLabel(input.category);
+    const reason =
+      input.reason ?? summarizeFailureReason(input.statusCode, input.errorCode ?? null, input.errorMessage);
+    const reasonDetail =
+      input.reasonDetail ??
+      buildFailureReasonDetail(
+        input.statusCode,
+        input.errorCode ?? null,
+        input.errorMessage,
+        input.httpMethod,
+        input.httpPath,
+        input.rawResponse,
+      );
     try {
       const row = await this.prisma.integrationFailureLog.create({
         data: {
@@ -82,6 +107,10 @@ export class IntegrationFailureLogService {
           clinicId,
           category: input.category,
           operation: input.operation,
+          operationName,
+          operationTypeLabel,
+          reason,
+          reasonDetail,
           httpMethod: input.httpMethod ?? null,
           httpPath: input.httpPath ?? null,
           statusCode: input.statusCode,
