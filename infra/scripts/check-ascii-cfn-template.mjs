@@ -27,9 +27,25 @@ function scanSecurityGroup(templateFile, resourceId, props) {
   }
 }
 
+function assertNoAppRunnerAutoScalingGetAtt(templatePath, template) {
+  const apiService = template.Resources?.ApiService;
+  if (apiService?.Type !== "AWS::AppRunner::Service") return;
+  const arn = apiService.Properties?.AutoScalingConfigurationArn ?? {};
+  const usesGetAttOnAutoScaling =
+    typeof arn === "object" &&
+    arn["Fn::GetAtt"]?.[0] === "ApiAutoScaling" &&
+    arn["Fn::GetAtt"]?.[1] === "AutoScalingConfigurationArn";
+  if (!usesGetAttOnAutoScaling) return;
+  console.error(
+    `${templatePath}: ApiService.AutoScalingConfigurationArn must not Fn::GetAtt ApiAutoScaling (use name-only Sub ARN)`,
+  );
+  failed = true;
+}
+
 for (const file of readdirSync(cdkOut).filter((f) => f.endsWith(".template.json"))) {
   const templatePath = join(cdkOut, file);
   const template = JSON.parse(readFileSync(templatePath, "utf8"));
+  assertNoAppRunnerAutoScalingGetAtt(templatePath, template);
   for (const [resourceId, resource] of Object.entries(template.Resources ?? {})) {
     if (resource.Type === "AWS::EC2::SecurityGroup") {
       scanSecurityGroup(templatePath, resourceId, resource.Properties ?? {});
