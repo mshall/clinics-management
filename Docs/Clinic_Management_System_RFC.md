@@ -869,6 +869,8 @@ Booking body accepts `patientId` **or** `patientMrn`, optional `externalReferenc
 
 **Webhooks (staff JWT):** `GET/POST /admin/integration-clients/:clientId/webhooks`, `POST .../:webhookId/deactivate`. Delivery uses `POST` with headers `X-Kiorly-Event`, `X-Kiorly-Timestamp`, `X-Kiorly-Signature` (HMAC-SHA256). Events: `APPOINTMENT_BOOKED`, `APPOINTMENT_CANCELLED`, `OPERATION_BOOKED`, `OPERATION_CANCELLED`.
 
+**Governance — failing operations:** `GET /admin/integration-failures` (same admin roles as audit). Persists integration API and webhook failures with HTTP status, correlation id, request context, step trace, and resolution hints. Admin UI: **Governance → Failing operations**.
+
 **Roadmap:** patient self-registration, OAuth2 client credentials, webhook delivery retries UI.
 
 #### 6.2.20 Performance & load testing

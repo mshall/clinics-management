@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query, UseFilters, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { IntegrationScope } from "@prisma/client";
 import { OperationDto } from "../operations/dto/operation.dto";
@@ -7,11 +7,13 @@ import { IntegrationClient, RequireIntegrationScopes } from "./integration-auth.
 import { IntegrationAuthGuard } from "./integration-auth.guard";
 import type { IntegrationPrincipal } from "./integration.types";
 import { IntegrationsOperationsService } from "./integrations-operations.service";
+import { IntegrationFailureExceptionFilter } from "./integration-failure.filter";
 
 @ApiTags("integrations")
 @ApiBearerAuth("integration")
 @Controller("integrations/operations")
 @UseGuards(IntegrationAuthGuard)
+@UseFilters(IntegrationFailureExceptionFilter)
 export class IntegrationsOperationsController {
   constructor(private readonly integrationOperations: IntegrationsOperationsService) {}
 

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { AdminGovernanceIntegrationFailures } from "./admin-governance-integration-failures";
 import { useTranslation } from "react-i18next";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
@@ -10,8 +11,11 @@ import { useAdminAuditLogsQuery } from "@/lib/api-hooks";
 import type { AdminAuditLogItemDto } from "@/lib/api-types";
 import { localeForLanguage, formatUserRole } from "@/lib/locale-display";
 
+type GovernanceTab = "audit" | "integration-failures";
+
 export function AdminGovernancePanel() {
   const { t, i18n } = useTranslation();
+  const [tab, setTab] = useState<GovernanceTab>("audit");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [qDraft, setQDraft] = useState("");
@@ -35,7 +39,23 @@ export function AdminGovernancePanel() {
 
   return (
     <div className="space-y-4">
-      <Card>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" size="sm" variant={tab === "audit" ? "default" : "outline"} onClick={() => setTab("audit")}>
+          {t("admin.governanceTabAudit", "Audit trail")}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={tab === "integration-failures" ? "default" : "outline"}
+          onClick={() => setTab("integration-failures")}
+        >
+          {t("admin.governanceTabFailures", "Failing operations")}
+        </Button>
+      </div>
+
+      {tab === "integration-failures" ? <AdminGovernanceIntegrationFailures /> : null}
+
+      {tab === "audit" ? <Card>
         <CardHeader>
           <CardTitle className="text-base">{t("admin.tabGovernance")}</CardTitle>
           <CardDescription>
@@ -149,8 +169,9 @@ export function AdminGovernancePanel() {
             />
           ) : null}
         </CardContent>
-      </Card>
+      </Card> : null}
 
+      {tab === "audit" ? (
       <Dialog open={Boolean(detail)} onOpenChange={(o) => !o && setDetail(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg" aria-describedby={undefined}>
           <DialogHeader>
@@ -184,6 +205,7 @@ export function AdminGovernancePanel() {
           ) : null}
         </DialogContent>
       </Dialog>
+      ) : null}
     </div>
   );
 }

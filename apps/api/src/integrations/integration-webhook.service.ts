@@ -3,7 +3,9 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from "@nes
 import { IntegrationWebhookEvent } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import type { CreateIntegrationWebhookDto } from "./dto/create-integration-webhook.dto";
+import { IntegrationFailureCategory } from "@prisma/client";
 import { generateWebhookSigningSecret } from "./integration-token";
+import { IntegrationFailureLogService } from "./integration-failure-log.service";
 
 export type IntegrationWebhookPayload = {
   event: IntegrationWebhookEvent;
@@ -17,7 +19,10 @@ export type IntegrationWebhookPayload = {
 export class IntegrationWebhookService {
   private readonly log = new Logger(IntegrationWebhookService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly failureLogs: IntegrationFailureLogService,
+  ) {}
 
   listWebhooks(tenantId: string, integrationClientId: string) {
     return this.prisma.integrationWebhook.findMany({
@@ -158,21 +163,63 @@ export class IntegrationWebhookService {
       }
 
       const snippet = (await res.text()).slice(0, 240);
+      const failureMessage = `HTTP ${res.status}: ${snippet}`;
       await this.prisma.integrationWebhook.update({
         where: { id: webhookId },
         data: {
           lastFailureAt: new Date(),
-          lastFailureMessage: `HTTP ${res.status}: ${snippet}`,
+          lastFailureMessage: failureMessage,
         },
       });
+      await this.recordWebhookFailure(webhookId, event, url, res.status, failureMessage, deliveryId);
     } catch (err) {
+      const failureMessage = err instanceof Error ? err.message : String(err);
       await this.prisma.integrationWebhook.update({
         where: { id: webhookId },
         data: {
           lastFailureAt: new Date(),
-          lastFailureMessage: err instanceof Error ? err.message : String(err),
+          lastFailureMessage: failureMessage,
         },
       });
+      await this.recordWebhookFailure(webhookId, event, url, 0, failureMessage, deliveryId);
     }
+  }
+
+  private async recordWebhookFailure(
+    webhookId: string,
+    event: IntegrationWebhookEvent,
+    url: string,
+    httpStatus: number,
+    failureMessage: string,
+    deliveryId: string,
+  ): Promise<void> {
+    const hook = await this.prisma.integrationWebhook.findUnique({
+      where: { id: webhookId },
+      include: { integrationClient: { select: { id: true, name: true, tenantId: true } } },
+    });
+    if (!hook?.integrationClient) return;
+
+    await this.failureLogs.record({
+      tenantId: hook.integrationClient.tenantId,
+      integrationClientId: hook.integrationClientId,
+      integrationClientName: hook.integrationClient.name,
+      clinicId: null,
+      category: IntegrationFailureCategory.WEBHOOK,
+      operation: "DELIVER_WEBHOOK",
+      httpMethod: "POST",
+      httpPath: url,
+      statusCode: httpStatus || 502,
+      errorCode: "WebhookDeliveryError",
+      errorMessage: failureMessage,
+      correlationId: deliveryId,
+      trace: {
+        steps: [
+          { step: "webhook_selected", ok: true, detail: webhookId },
+          { step: "post_target", ok: false, detail: failureMessage },
+        ],
+        exception: "WebhookDeliveryError",
+      },
+      requestContext: { event, url, webhookId },
+    });
   }
 }

@@ -12,6 +12,7 @@ import {
 } from "../common/user-employee-cascade";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { resolveAuditLogCreatedAtFilter } from "../common/audit-log-query-bounds";
+import { resolveIntegrationFailureHints } from "../integrations/integration-failure-hints";
 import { paginate, parsePageParams } from "../common/pagination";
 import { fetchClinicScopeIds } from "../common/clinic-scope";
 import { PrismaService } from "../prisma/prisma.service";
@@ -617,6 +618,97 @@ export class AdminService {
       actorRole: r.actor?.role ?? null,
       metadata: r.metadata === null ? null : (r.metadata as Record<string, unknown>),
     }));
+    return paginate(items, total, page, pageSize);
+  }
+
+  async integrationFailures(
+    tenantId: string,
+    pageStr: string | undefined,
+    pageSizeStr: string | undefined,
+    qRaw: string | undefined,
+    user: JwtUser,
+    filters?: { from?: string; to?: string; category?: string },
+  ) {
+    if (user.role !== UserRole.GROUP_ADMIN && user.role !== UserRole.CLINIC_ADMIN && user.role !== UserRole.BRANCH_MANAGER) {
+      throw new ForbiddenException("Only administrators may list integration failures");
+    }
+    const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
+    const q = qRaw?.trim() ?? "";
+    let scopeClinicIds: string[] | null = null;
+    const auditScope = await fetchClinicScopeIds(this.prisma, tenantId, user);
+    if (auditScope !== null) {
+      scopeClinicIds = auditScope;
+      if (!scopeClinicIds.length) {
+        return paginate([], 0, page, pageSize);
+      }
+    }
+    const qBounded = q.slice(0, 200);
+    const createdAt = resolveAuditLogCreatedAtFilter(filters?.from, filters?.to);
+
+    const categoryFilter = filters?.category?.trim();
+    const categoryEnum = categoryFilter
+      ? (["AUTH", "APPOINTMENT", "OPERATION", "WEBHOOK"] as const).find((c) => c === categoryFilter.toUpperCase())
+      : undefined;
+
+    const where: Prisma.IntegrationFailureLogWhereInput = {
+      tenantId,
+      createdAt,
+      ...(categoryEnum ? { category: categoryEnum } : {}),
+      ...(scopeClinicIds
+        ? {
+            OR: [{ clinicId: { in: scopeClinicIds } }, { clinicId: null }],
+          }
+        : {}),
+      ...(qBounded
+        ? {
+            OR: [
+              { errorMessage: { contains: qBounded, mode: "insensitive" } },
+              { operation: { contains: qBounded, mode: "insensitive" } },
+              { httpPath: { contains: qBounded, mode: "insensitive" } },
+              { integrationClientName: { contains: qBounded, mode: "insensitive" } },
+              { correlationId: { contains: qBounded, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    };
+
+    const [total, rows] = await Promise.all([
+      this.prisma.integrationFailureLog.count({ where }),
+      this.prisma.integrationFailureLog.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: pageSize,
+        include: {
+          clinic: { select: { nameEn: true, nameAr: true } },
+        },
+      }),
+    ]);
+
+    const items = rows.map((r) => {
+      const resolution = resolveIntegrationFailureHints(r.category, r.operation, r.statusCode, r.errorMessage);
+      return {
+        id: r.id,
+        category: r.category,
+        operation: r.operation,
+        httpMethod: r.httpMethod,
+        httpPath: r.httpPath,
+        statusCode: r.statusCode,
+        errorCode: r.errorCode,
+        errorMessage: r.errorMessage,
+        integrationClientId: r.integrationClientId,
+        integrationClientName: r.integrationClientName,
+        clinicId: r.clinicId,
+        clinicNameEn: r.clinic?.nameEn ?? null,
+        clinicNameAr: r.clinic?.nameAr ?? null,
+        correlationId: r.correlationId,
+        trace: r.trace,
+        requestContext: r.requestContext === null ? null : (r.requestContext as Record<string, unknown>),
+        createdAt: r.createdAt.toISOString(),
+        resolution,
+      };
+    });
+
     return paginate(items, total, page, pageSize);
   }
 

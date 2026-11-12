@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ClinicDto, GroupOverviewKpisDto, PatientDto } from "@/lib/api-schema";
 import type {
   AdminAuditLogItemDto,
+  AdminIntegrationFailureItemDto,
   AdminOverviewDto,
   AppointmentDto,
   ClinicDetailDto,
@@ -514,6 +515,25 @@ export function useAdminAuditLogsQuery(params: { page: number; pageSize: number;
   return useQuery({
     queryKey: ["admin", "audit-logs", params.page, params.pageSize, params.q.trim()],
     queryFn: () => apiGet<Paginated<AdminAuditLogItemDto>>(`/api/v1/admin/audit-logs?${q.toString()}`),
+    enabled: params.enabled ?? true,
+  });
+}
+
+export function useAdminIntegrationFailuresQuery(params: {
+  page: number;
+  pageSize: number;
+  q: string;
+  category?: string;
+  enabled?: boolean;
+}) {
+  const q = new URLSearchParams();
+  q.set("page", String(params.page));
+  q.set("pageSize", String(params.pageSize));
+  if (params.q.trim()) q.set("q", params.q.trim());
+  if (params.category?.trim()) q.set("category", params.category.trim());
+  return useQuery({
+    queryKey: ["admin", "integration-failures", params.page, params.pageSize, params.q.trim(), params.category ?? ""],
+    queryFn: () => apiGet<Paginated<AdminIntegrationFailureItemDto>>(`/api/v1/admin/integration-failures?${q.toString()}`),
     enabled: params.enabled ?? true,
   });
 }

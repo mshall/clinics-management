@@ -57,6 +57,23 @@ export class AdminController {
     return this.admin.auditLogs(requireTenantId(user), page, pageSize, q, user, { from, to, action, resource, actorId });
   }
 
+  @Get("integration-failures")
+  @ApiOperation({
+    summary: "Failed integration / webhook operations with request tracing and resolution hints (governance)",
+  })
+  @ApiOkResponse()
+  integrationFailures(
+    @CurrentUser() user: JwtUser,
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string,
+    @Query("q") q?: string,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("category") category?: string,
+  ) {
+    return this.admin.integrationFailures(requireTenantId(user), page, pageSize, q, user, { from, to, category });
+  }
+
   @Get("insights/overview-360")
   @ApiOperation({ summary: "Organization 360° performance and audit overview" })
   @ApiOkResponse()

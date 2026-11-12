@@ -11,6 +11,8 @@ import { IntegrationsAppointmentsController } from "./integrations-appointments.
 import { IntegrationsAppointmentsService } from "./integrations-appointments.service";
 import { IntegrationsOperationsController } from "./integrations-operations.controller";
 import { IntegrationsOperationsService } from "./integrations-operations.service";
+import { IntegrationFailureExceptionFilter } from "./integration-failure.filter";
+import { IntegrationFailureLogService } from "./integration-failure-log.service";
 
 @Module({
   imports: [AppointmentsModule, OperationsModule, AuditModule],
@@ -26,6 +28,9 @@ import { IntegrationsOperationsService } from "./integrations-operations.service
     IntegrationsAppointmentsService,
     IntegrationsOperationsService,
     IntegrationAuthGuard,
+    IntegrationFailureLogService,
+    IntegrationFailureExceptionFilter,
   ],
+  exports: [IntegrationFailureLogService],
 })
 export class IntegrationsModule {}

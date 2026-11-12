@@ -405,6 +405,34 @@ export interface AdminAuditLogItemDto {
   metadata: Record<string, unknown> | null;
 }
 
+export interface IntegrationFailureResolutionDto {
+  summary: string;
+  actions: string[];
+  severity: "info" | "warning" | "critical";
+  likelyCause?: string;
+}
+
+export interface AdminIntegrationFailureItemDto {
+  id: string;
+  category: string;
+  operation: string;
+  httpMethod: string | null;
+  httpPath: string | null;
+  statusCode: number;
+  errorCode: string | null;
+  errorMessage: string;
+  integrationClientId: string | null;
+  integrationClientName: string | null;
+  clinicId: string | null;
+  clinicNameEn: string | null;
+  clinicNameAr: string | null;
+  correlationId: string | null;
+  trace: Record<string, unknown>;
+  requestContext: Record<string, unknown> | null;
+  createdAt: string;
+  resolution: IntegrationFailureResolutionDto;
+}
+
 export interface ClinicRevenueBreakdownDto {
   items: Array<{
     clinicId: string;
