@@ -13,8 +13,18 @@ if (!/createBootHealthServer|createServer\(\(req, res\)/.test(entry)) {
   failed = true;
 }
 
-if (!/await listenHealthServer\(bootHealthServer\)/.test(entry)) {
-  console.error(`${entryPath}: must bind health listener before secret fetch / migrate`);
+if (!/await listenFrontProxy\(frontProxy\)/.test(entry)) {
+  console.error(`${entryPath}: must bind front proxy on PORT before secret fetch / migrate`);
+  failed = true;
+}
+
+if (/closeHealthServer|boot health listener closed/.test(entry)) {
+  console.error(`${entryPath}: must not close the public listener before Nest is ready (use proxy handoff)`);
+  failed = true;
+}
+
+if (!/NEST_INTERNAL_PORT|nestPort/.test(entry)) {
+  console.error(`${entryPath}: must run Nest on an internal port and proxy from App Runner PORT`);
   failed = true;
 }
 

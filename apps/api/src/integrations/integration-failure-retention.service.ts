@@ -11,8 +11,16 @@ export class IntegrationFailureRetentionService implements OnModuleInit, OnModul
   constructor(private readonly prisma: PrismaService) {}
 
   onModuleInit(): void {
-    void this.purgeAllTenants();
-    this.timer = setInterval(() => void this.purgeAllTenants(), PURGE_INTERVAL_MS);
+    void this.purgeAllTenants().catch((err) => {
+      this.log.warn(`Initial failure-log purge skipped: ${err instanceof Error ? err.message : String(err)}`);
+    });
+    this.timer = setInterval(
+      () =>
+        void this.purgeAllTenants().catch((err) => {
+          this.log.warn(`Scheduled failure-log purge failed: ${err instanceof Error ? err.message : String(err)}`);
+        }),
+      PURGE_INTERVAL_MS,
+    );
   }
 
   onModuleDestroy(): void {
