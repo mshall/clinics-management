@@ -1,14 +1,15 @@
 /**
- * App Runner boot: bind PORT immediately (before secret/migrate), then Nest on PORT.
+ * App Runner boot: keep PORT (3000) open for health checks, run Nest on NEST_INTERNAL_PORT, proxy when ready.
  */
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { spawn, spawnSync } from "node:child_process";
-import { createServer } from "node:http";
+import { createServer, request as httpRequest } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const port = Number(process.env.PORT ?? "3000");
+const publicPort = Number(process.env.PORT ?? "3000");
+const nestPort = Number(process.env.NEST_INTERNAL_PORT ?? "3001");
 
 process.stderr.write(`[boot] entrypoint pid=${process.pid}\n`);
 
@@ -49,36 +50,105 @@ function respondLive(res, req) {
   res.end(JSON.stringify({ status: "ok" }));
 }
 
-function createBootHealthServer() {
+function respondStarting(res) {
+  res.statusCode = 503;
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.end(JSON.stringify({ status: "starting" }));
+}
+
+let nestReady = false;
+
+function proxyToNest(req, res) {
+  const proxyReq = httpRequest(
+    {
+      host: "127.0.0.1",
+      port: nestPort,
+      path: req.url,
+      method: req.method,
+      headers: { ...req.headers, host: `127.0.0.1:${nestPort}` },
+    },
+    (proxyRes) => {
+      res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
+      proxyRes.pipe(res);
+    },
+  );
+  proxyReq.on("error", (err) => {
+    console.error("[boot] proxy to Nest failed:", err?.message ?? err);
+    if (!res.headersSent) {
+      res.statusCode = 502;
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.end(JSON.stringify({ status: "bad_gateway" }));
+    }
+  });
+  req.pipe(proxyReq);
+}
+
+function createFrontProxy() {
   return createServer((req, res) => {
+    if (nestReady) {
+      proxyToNest(req, res);
+      return;
+    }
     if (isLiveProbe(req)) {
       respondLive(res, req);
       return;
     }
-    res.statusCode = 503;
-    res.setHeader("Content-Type", "application/json; charset=utf-8");
-    res.end(JSON.stringify({ status: "starting" }));
+    respondStarting(res);
   });
 }
 
-async function listenHealthServer(server) {
+async function listenFrontProxy(server) {
   await new Promise((resolve, reject) => {
-    server.listen(port, "0.0.0.0", () => {
-      process.stderr.write(`[boot] health listener on ${port}\n`);
+    server.listen(publicPort, "0.0.0.0", () => {
+      process.stderr.write(`[boot] front proxy on ${publicPort} (Nest internal ${nestPort})\n`);
       resolve();
     });
     server.on("error", reject);
   });
 }
 
-async function closeHealthServer(server) {
-  await new Promise((resolve) => {
-    server.close(() => resolve());
-  });
+async function waitForNestReady(maxMs) {
+  const deadline = Date.now() + maxMs;
+  const probePath = "/api/v1/health/live";
+  while (Date.now() < deadline) {
+    try {
+      const ok = await new Promise((resolve) => {
+        const probe = httpRequest(
+          {
+            host: "127.0.0.1",
+            port: nestPort,
+            path: probePath,
+            method: "HEAD",
+            timeout: 8_000,
+          },
+          (res) => {
+            res.resume();
+            resolve(res.statusCode === 200);
+          },
+        );
+        probe.on("error", () => resolve(false));
+        probe.on("timeout", () => {
+          probe.destroy();
+          resolve(false);
+        });
+        probe.end();
+      });
+      if (ok) {
+        nestReady = true;
+        console.error(`[boot] Nest ready on ${nestPort} — forwarding ${publicPort}`);
+        return;
+      }
+    } catch (e) {
+      console.error("[boot] Nest readiness probe error:", e?.message ?? e);
+    }
+    await sleep(750);
+  }
+  console.error(`[boot] Nest did not become ready on ${nestPort} within ${maxMs}ms`);
+  process.exit(1);
 }
 
-const bootHealthServer = createBootHealthServer();
-await listenHealthServer(bootHealthServer);
+const frontProxy = createFrontProxy();
+await listenFrontProxy(frontProxy);
 
 const dbSecretArn = process.env.DB_SECRET_ARN;
 if (dbSecretArn) {
@@ -134,7 +204,7 @@ if (process.env.PRISMA_MIGRATE_ON_BOOT === "true") {
       console.error("[boot] prisma migrate deploy completed OK");
     }
   } finally {
-    /* health listener stays up through migrate */
+    /* front proxy stays up through migrate */
   }
   if (migrateExit !== 0) {
     process.exit(migrateExit);
@@ -163,13 +233,14 @@ if (smEpForChild) process.env.AWS_ENDPOINT_URL_SECRETS_MANAGER = smEpForChild;
 if (kmsEp) process.env.AWS_ENDPOINT_URL_KMS = kmsEp;
 if (stsEp) process.env.AWS_ENDPOINT_URL_STS = stsEp;
 
-await closeHealthServer(bootHealthServer);
-console.error("[boot] boot health listener closed — starting Nest");
-
 const mainJs = path.join(__dirname, "dist", "main.js");
-console.error("[boot] spawning Nest", mainJs, "PORT=", port);
-const child = spawn(process.execPath, [mainJs], { stdio: "inherit", env: process.env });
+const childEnv = { ...process.env, PORT: String(nestPort) };
+console.error("[boot] spawning Nest", mainJs, "PORT=", nestPort, "(public", publicPort, "via proxy)");
+const child = spawn(process.execPath, [mainJs], { stdio: "inherit", env: childEnv });
 child.on("exit", (code, signal) => {
   console.error("[boot] Nest exited code=", code, "signal=", signal);
   process.exit(code ?? (signal ? 1 : 0));
 });
+
+const nestReadyTimeoutMs = Number(process.env.NEST_READY_TIMEOUT_MS ?? "240000");
+await waitForNestReady(nestReadyTimeoutMs);
