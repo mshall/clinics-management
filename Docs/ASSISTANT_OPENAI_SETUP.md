@@ -13,7 +13,7 @@ The in-app assistant **always** answers from **live database data** for allowed 
 
 ## 2. Local development
 
-In `apps/api/.env` (not committed):
+In `apps/api/.env` (gitignored — **never commit**):
 
 ```env
 OPENAI_API_KEY=sk-your-key-here
@@ -22,24 +22,31 @@ OPENAI_MODEL=gpt-4o-mini
 
 Restart the API (`npm run dev` from repo root).
 
-## 3. AWS (production App Runner)
+## 3. AWS production — **Secrets Manager only**
 
-After deploy, in **AWS Console → App Runner → your API service → Configuration → Environment variables**, add:
+The CDK stack references Secrets Manager secret **`kiorly-clinics-management/openai-api-key`** (JSON field `apiKey`). App Runner injects `OPENAI_API_KEY` from that secret — **not** from plain environment variables. The first run of the script below creates the secret if the stack output is not deployed yet.
 
-| Name | Value |
-|------|--------|
-| `OPENAI_API_KEY` | your `sk-…` key |
-| `OPENAI_MODEL` | `gpt-4o-mini` (optional) |
+### One-time upload from your machine
 
-Redeploy or apply configuration so the service restarts.
-
-**Or from this repo (reads `apps/api/.env`, does not commit the key):**
+Put the key in `apps/api/.env` locally, then run:
 
 ```bash
 bash scripts/configure-apprunner-openai.sh
 ```
 
-> **Security:** Never commit API keys or paste them in chat. Add keys only to `apps/api/.env` (gitignored) or App Runner env vars. If a key is exposed, **revoke it** in the OpenAI dashboard and create a new one.
+This script:
+
+1. Writes `{"apiKey":"…"}` to **AWS Secrets Manager**
+2. Removes any **plain-text** `OPENAI_API_KEY` on App Runner (if it was set earlier)
+3. Ensures App Runner uses the **Secrets Manager reference** (`…:apiKey::`)
+
+After a fresh CDK deploy, run the same script whenever you rotate the key.
+
+### Do not use the AWS Console for plain env vars
+
+In App Runner → Environment variables, **do not** paste the OpenAI key as a plain variable. Use Secrets Manager + the script above (or `aws secretsmanager put-secret-value` on the stack output `OpenAiSecretArn`).
+
+> **Security:** Never commit API keys or paste them in chat. If a key is exposed, **revoke it** in OpenAI and run `configure-apprunner-openai.sh` with a new key in `apps/api/.env`.
 
 ## 4. Verify
 

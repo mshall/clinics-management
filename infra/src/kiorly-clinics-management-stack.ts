@@ -65,6 +65,16 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
+    /**
+     * JSON field `apiKey`. Created/updated by scripts/configure-apprunner-openai.sh
+     * (import by name so re-deploy does not fail when the secret already exists).
+     */
+    const openAiSecret = secretsmanager.Secret.fromSecretNameV2(
+      this,
+      "OpenAiApiKey",
+      `${id}/openai-api-key`,
+    );
+
     const dbParams = new rds.ParameterGroup(this, "DbParams", {
       engine: rds.DatabaseInstanceEngine.postgres({ version: rds.PostgresEngineVersion.VER_16 }),
       parameters: {
@@ -203,17 +213,19 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
 
     const instanceRole = new iam.Role(this, "AppRunnerInstance", {
       assumedBy: new iam.ServicePrincipal("tasks.apprunner.amazonaws.com"),
-      description: "Runtime access to Secrets Manager for DB + JWT",
+      description: "Runtime access to Secrets Manager for DB + JWT + OpenAI",
     });
     instanceRole.addManagedPolicy(
       iam.ManagedPolicy.fromAwsManagedPolicyName("AWSXRayDaemonWriteAccess"),
     );
     db.secret!.grantRead(instanceRole);
     jwtSecret.grantRead(instanceRole);
+    openAiSecret.grantRead(instanceRole);
     apiUploadsBucket.grantReadWrite(instanceRole);
 
     // App Runner: reference JSON key so JWT_SECRET is a plain string (matches JwtModule + Passport JwtStrategy).
     const jwtSecretFieldArn = `${jwtSecret.secretArn}:jwt::`;
+    const openAiApiKeyFieldArn = `${openAiSecret.secretArn}:apiKey::`;
 
     const apiObservability = new apprunner.CfnObservabilityConfiguration(this, "ApiObservability", {
       observabilityConfigurationName: "kiorly-api-observability",
@@ -273,8 +285,12 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
               { name: "PRISMA_SEED_ON_BOOT", value: "false" },
               { name: "UPLOAD_STORAGE", value: "s3" },
               { name: "S3_UPLOAD_BUCKET", value: apiUploadsBucket.bucketName },
+              { name: "OPENAI_MODEL", value: "gpt-4o-mini" },
             ],
-            runtimeEnvironmentSecrets: [{ name: "JWT_SECRET", value: jwtSecretFieldArn }],
+            runtimeEnvironmentSecrets: [
+              { name: "JWT_SECRET", value: jwtSecretFieldArn },
+              { name: "OPENAI_API_KEY", value: openAiApiKeyFieldArn },
+            ],
           },
         },
       },
@@ -425,6 +441,11 @@ function handler(event) {
 
     new cdk.CfnOutput(this, "DbSecretArn", {
       value: db.secret!.secretArn,
+    });
+
+    new cdk.CfnOutput(this, "OpenAiSecretArn", {
+      value: openAiSecret.secretArn,
+      description: "Secrets Manager ARN for OpenAI apiKey — set with scripts/configure-apprunner-openai.sh",
     });
 
     new cdk.CfnOutput(this, "DbSeedFunctionName", {
