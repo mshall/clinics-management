@@ -30,6 +30,7 @@ See **[Documentation_Portal.md](./Documentation_Portal.md)** for module layout, 
 | [**AWS_Cloud_Deployment_Guide.md**](./AWS_Cloud_Deployment_Guide.md) | RDS, App Runner, CloudFront, CI/CD deploy, post-deploy seed |
 | [**ASSISTANT.md**](./ASSISTANT.md) | AI assistant architecture: permissions, playbook, live data, actions |
 | [**ASSISTANT_OPENAI_SETUP.md**](./ASSISTANT_OPENAI_SETUP.md) | OpenAI API key and AWS Secrets Manager for the assistant |
+| [**CLINICAL_WORKFLOW.md**](./CLINICAL_WORKFLOW.md) | Template builder, shortcuts, safety checks, vitals charts, letters, note lock |
 
 ---
 

@@ -1,3 +1,4 @@
+import QRCode from "qrcode";
 import type { EncounterMedicationDto } from "@/lib/api-types";
 
 /** Served from `apps/web/public/prescription.png` (source: `Docs/Prescription/prescription.png`). */
@@ -26,6 +27,8 @@ export type PrescriptionImageInput = {
     logo?: HTMLImageElement | null;
     headerDescription?: string | null;
   };
+  /** Encoded clinic + patient verification payload for pharmacy QR scan */
+  qrPayload?: string;
 };
 
 export function loadPrescriptionImage(src: string): Promise<HTMLImageElement> {
@@ -166,6 +169,22 @@ export async function generatePrescriptionPng(input: PrescriptionImageInput): Pr
     ctx.fillStyle = "#475569";
     ctx.textAlign = rtl ? "right" : "left";
     ctx.fillText(input.physicianName.trim(), rtl ? width - 95 : 95, height - 120);
+  }
+
+  const qrText =
+    input.qrPayload?.trim() ||
+    JSON.stringify({
+      clinic: input.clinicName,
+      mrn: input.patientMrn ?? "",
+      at: input.date.toISOString(),
+    });
+  try {
+    const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 1, width: 140 });
+    const qrImg = await loadPrescriptionImage(qrDataUrl);
+    const qrSize = 120;
+    ctx.drawImage(qrImg, width / 2 - qrSize / 2, height - qrSize - 28, qrSize, qrSize);
+  } catch {
+    // QR optional if canvas/library fails
   }
 
   return new Promise((resolve, reject) => {

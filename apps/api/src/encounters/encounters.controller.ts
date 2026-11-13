@@ -203,6 +203,13 @@ export class EncountersController {
     return { ok: true };
   }
 
+  @Post(":id/amend")
+  @ApiOperation({ summary: "Reopen a finalized locked encounter for correction (AMENDED status + reason)" })
+  @ApiOkResponse({ type: EncounterDetailDto })
+  amend(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: { reason: string }) {
+    return this.encounters.amend(requireTenantId(user), user, id, body.reason ?? "");
+  }
+
   @Post(":id/finalize")
   @ApiOperation({ summary: "Finalize encounter (clinician only; diagnoses + medications policy)" })
   @ApiOkResponse({ type: EncounterDetailDto })

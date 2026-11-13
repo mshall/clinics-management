@@ -145,6 +145,24 @@ export class EncounterDetailDto {
   @ApiPropertyOptional({ nullable: true })
   finalizedAt!: string | null;
 
+  @ApiPropertyOptional({ nullable: true, type: String })
+  clinicalTemplateId!: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: Object })
+  specialtyFormResponses!: Record<string, unknown> | null;
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  noteLockedAt!: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  signedAt!: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  amendReason!: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  amendedAt!: string | null;
+
   @ApiProperty({ type: [DiagnosisDto] })
   diagnoses!: DiagnosisDto[];
 

@@ -62,6 +62,20 @@ enum EncounterStatus {
   AMENDED
 }
 
+enum ClinicalLetterType {
+  SICK_LEAVE
+  MEDICAL_REPORT
+  REFERRAL
+  FITNESS_CERTIFICATE
+}
+
+enum ClinicalShortcutType {
+  TEXT_EXPAND
+  DIAGNOSIS_FAV
+  RX_SET
+  COPY_LAST_VISIT
+}
+
 enum RevenueStatus {
   POSTED
   VOID
@@ -234,6 +248,7 @@ model Tenant {
   baseCurrency          String          @default("AED")
   defaultLocale         String          @default("en")
   defaultVisitFee Decimal         @default(150) @db.Decimal(14, 2)
+  encounterAutoLockHours         Int             @default(72)
   defaultTaxRegistrationNumber String          @default("N/A")
   defaultInvoiceVatPercent     Decimal         @default(5) @db.Decimal(5, 2)
   integrationFailureRetentionDays     Int       @default(30)
@@ -264,6 +279,12 @@ model Tenant {
   integrationClients             IntegrationClient[]
   integrationWebhooks            IntegrationWebhook[]
   integrationFailureLogs         IntegrationFailureLog[]
+  clinicalFormTemplates          ClinicalFormTemplate[]
+  icd10Entries                   Icd10Entry[]
+  clinicianShortcuts             ClinicianShortcut[]
+  clinicianDiagnosisFavorites    ClinicianDiagnosisFavorite[]
+  drugInteractionRules           DrugInteractionRule[]
+  clinicalLetters                ClinicalLetter[]
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
 }
@@ -296,6 +317,11 @@ model User {
   supportTicketEvents            SupportTicketEvent[] @relation("SupportTicketEventActor")
   integrationClientsCreated      IntegrationClient[] @relation("IntegrationClientCreatedBy")
   integrationFailuresResolved    IntegrationFailureLog[] @relation("IntegrationFailureResolvedBy")
+  clinicalFormTemplatesOwned     ClinicalFormTemplate[] @relation("ClinicalFormTemplateOwner")
+  clinicianShortcuts               ClinicianShortcut[]
+  clinicianDiagnosisFavorites    ClinicianDiagnosisFavorite[]
+  encountersSigned               Encounter[] @relation("EncounterSignedBy")
+  encountersAmended              Encounter[] @relation("EncounterAmendedBy")
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   deactivatedAt DateTime?
@@ -471,6 +497,7 @@ model Patient {
   invoices     Invoice[]
   supportTickets SupportTicket[]
   allergies    PatientAllergy[]
+  clinicalLetters ClinicalLetter[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -478,6 +505,103 @@ model Patient {
   @@unique([tenantId, nationalId])
   @@index([tenantId])
   @@index([tenantId, phone])
+}
+
+model ClinicalFormTemplate {
+  id           String            @id @default(cuid())
+  tenantId     String
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ownerUserId  String?
+  owner        User?             @relation("ClinicalFormTemplateOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  specialty    ClinicalSpecialty
+  name         String
+  description  String            @default("")
+  sectionsJson Json
+  isPublished  Boolean           @default(false)
+  encounters   Encounter[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([tenantId, specialty])
+  @@index([tenantId, ownerUserId])
+}
+
+model ClinicianShortcut {
+  id        String               @id @default(cuid())
+  tenantId  String
+  tenant    Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      ClinicalShortcutType
+  label     String
+  trigger   String?
+  payload   Json
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@index([tenantId, userId, type])
+}
+
+model ClinicianDiagnosisFavorite {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  icd10Code   String
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@unique([tenantId, userId, icd10Code])
+  @@index([tenantId, userId])
+}
+
+model Icd10Entry {
+  id            String   @id @default(cuid())
+  tenantId      String?
+  tenant        Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  icd10Code     String
+  descriptionEn String
+  descriptionAr String   @default("")
+  keywords      String   @default("")
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([icd10Code])
+}
+
+model DrugInteractionRule {
+  id          String   @id @default(cuid())
+  tenantId    String?
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  drugA       String
+  drugB       String
+  severity    String   @default("moderate")
+  messageEn   String
+  messageAr   String   @default("")
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+model ClinicalLetter {
+  id             String             @id @default(cuid())
+  tenantId       String
+  tenant         Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  encounterId    String?
+  encounter      Encounter?         @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+  patientId      String
+  patient        Patient            @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  type           ClinicalLetterType
+  titleEn        String
+  titleAr        String             @default("")
+  bodyEn         String
+  bodyAr         String             @default("")
+  createdByUserId String
+  createdAt      DateTime           @default(now())
+
+  @@index([tenantId, patientId])
+  @@index([encounterId])
 }
 
 model PatientAllergy {
@@ -545,6 +669,18 @@ model Encounter {
   appointmentId  String?
   appointment    Appointment?     @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   finalizedAt    DateTime?
+  clinicalTemplateId String?
+  clinicalTemplate   ClinicalFormTemplate? @relation(fields: [clinicalTemplateId], references: [id], onDelete: SetNull)
+  specialtyFormResponses Json?
+  noteLockedAt   DateTime?
+  signedAt       DateTime?
+  signedByUserId String?
+  signedBy       User?             @relation("EncounterSignedBy", fields: [signedByUserId], references: [id], onDelete: SetNull)
+  amendReason    String?
+  amendedByUserId String?
+  amendedBy      User?             @relation("EncounterAmendedBy", fields: [amendedByUserId], references: [id], onDelete: SetNull)
+  amendedAt      DateTime?
+  clinicalLetters ClinicalLetter[]
   diagnoses      Diagnosis[]
   revenueEntries RevenueEntry[]
   medications    EncounterMedication[]

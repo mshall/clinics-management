@@ -295,6 +295,10 @@ GET    /patients/:id/allergies               # paginated (max 5 rows/page)
 - Document blobs stored via `UploadBlobStorage` (`uploads/` locally or S3 in production); crop replaces the blob in place and updates metadata.
 - **Camera capture (web):** `DocumentCameraCaptureDialog` — on mobile/touch (`shouldUseNativeCameraPicker()`), uses native file input `capture="environment"` instead of `getUserMedia` preview; image enhanced via `enhanceCameraCaptureFile` before upload.
 
+#### 6.2.4b ClinicalModule *(implemented baseline)*
+
+**Scope:** `ClinicalModule` (`/api/v1/clinical/*`) — specialty **form templates**, clinician **shortcuts**, **ICD-10** search with favorites, **vitals time series**, **last-visit copy**, **clinical letters**, medication **safety-check** warnings. Encounter fields: `clinicalTemplateId`, `specialtyFormResponses`, `noteLockedAt`, `signedAt`, amend metadata; tenant `encounterAutoLockHours` (default 72). See [CLINICAL_WORKFLOW.md](./CLINICAL_WORKFLOW.md).
+
 #### 6.2.5 EncountersModule *(implemented)*
 
 **Entities:** `Encounter`, `Vital`, `Diagnosis`, `EncounterMedication`, `EncounterDocument` (`kind`: `LAB` | `RADIOLOGY` | `PRESCRIPTION`).

@@ -58,6 +58,12 @@ export interface EncounterDetailDto {
   visitFeeCurrency: string;
   appointmentId?: string | null;
   finalizedAt: string | null;
+  clinicalTemplateId?: string | null;
+  specialtyFormResponses?: Record<string, unknown> | null;
+  noteLockedAt?: string | null;
+  signedAt?: string | null;
+  amendReason?: string | null;
+  amendedAt?: string | null;
   diagnoses: DiagnosisDto[];
   medications: EncounterMedicationDto[];
   documents: EncounterDocumentDto[];

@@ -11,6 +11,7 @@ import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { PatientClinicalDocuments } from "@/components/patient-clinical-documents";
 import { PatientInvoicesSection } from "@/features/invoices/patient-invoices-section";
 import { PatientAllergiesSection } from "@/components/patient-allergies-section";
+import { PatientVitalsCharts } from "@/components/patient-vitals-charts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -361,6 +362,14 @@ export function PatientDetailPage() {
       </div>
 
       <PatientAllergiesSection patientId={patient.id} />
+
+      {canViewEncounters ? (
+        <Card>
+          <CardContent className="pt-6">
+            <PatientVitalsCharts patientId={patient.id} />
+          </CardContent>
+        </Card>
+      ) : null}
 
       <PatientClinicalDocuments patientId={patient.id} />
 

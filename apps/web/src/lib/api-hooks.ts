@@ -158,6 +158,28 @@ export type PatientAllergyDto = {
   createdAt: string;
 };
 
+export type PatientVitalsPoint = {
+  encounterId: string;
+  at: string;
+  heartRate: number | null;
+  spo2: number | null;
+  bpSystolic: number | null;
+  bpDiastolic: number | null;
+  temperature: number | null;
+  weightKg: number | null;
+  heightCm: number | null;
+  patientDob: string | null;
+};
+
+export function usePatientVitalsSeriesQuery(patientId: string | undefined) {
+  const hasToken = useHasAuthToken();
+  return useQuery({
+    queryKey: ["clinical", "vitals-series", patientId],
+    queryFn: () => apiGet<PatientVitalsPoint[]>(`/api/v1/clinical/patients/${patientId}/vitals-series`),
+    enabled: Boolean(patientId) && hasToken,
+  });
+}
+
 export function usePatientAllergiesQuery(patientId: string | undefined, page: number, pageSize = 5) {
   const hasToken = useHasAuthToken();
   return useQuery({

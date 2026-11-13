@@ -175,6 +175,15 @@ export class EncountersService {
       visitFeeCurrency: e.visitFeeCurrency,
       appointmentId: e.appointmentId ?? null,
       finalizedAt: e.finalizedAt ? e.finalizedAt.toISOString() : null,
+      clinicalTemplateId: e.clinicalTemplateId ?? null,
+      specialtyFormResponses:
+        e.specialtyFormResponses && typeof e.specialtyFormResponses === "object" && !Array.isArray(e.specialtyFormResponses)
+          ? (e.specialtyFormResponses as Record<string, unknown>)
+          : null,
+      noteLockedAt: e.noteLockedAt ? e.noteLockedAt.toISOString() : null,
+      signedAt: e.signedAt ? e.signedAt.toISOString() : null,
+      amendReason: e.amendReason ?? null,
+      amendedAt: e.amendedAt ? e.amendedAt.toISOString() : null,
       diagnoses: e.diagnoses.map((d) => this.mapDiag(d)),
       medications: lite ? [] : e.medications.map((m) => this.mapMed(m)),
       documents: lite ? [] : e.documents.map((d) => this.mapDoc(d)),
@@ -265,7 +274,26 @@ export class EncountersService {
     if (viewer && isPhysicianRole(viewer.role) && row.clinicianId !== viewer.userId) {
       throw new ForbiddenException("You can only open encounters assigned to you");
     }
-    return this.mapEncounter(row);
+    await this.applyAutoNoteLockIfDue(tenantId, row.id);
+    const fresh = await this.prisma.encounter.findFirst({ where: { id, tenantId }, include: encounterIncludeDef });
+    return this.mapEncounter(fresh ?? row);
+  }
+
+  private async applyAutoNoteLockIfDue(tenantId: string, encounterId: string): Promise<void> {
+    const enc = await this.prisma.encounter.findFirst({
+      where: { id: encounterId, tenantId },
+      select: { status: true, finalizedAt: true, noteLockedAt: true },
+    });
+    if (!enc || enc.status !== EncounterStatus.FINALIZED || enc.noteLockedAt || !enc.finalizedAt) return;
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { encounterAutoLockHours: true },
+    });
+    const hours = tenant?.encounterAutoLockHours ?? 72;
+    const lockAt = new Date(enc.finalizedAt.getTime() + hours * 3600_000);
+    if (Date.now() >= lockAt.getTime()) {
+      await this.prisma.encounter.update({ where: { id: encounterId }, data: { noteLockedAt: lockAt } });
+    }
   }
 
   async create(tenantId: string, actor: JwtUser, dto: CreateEncounterDto): Promise<EncounterDetailDto> {
@@ -395,10 +423,41 @@ export class EncountersService {
     return this.mapEncounter(row);
   }
 
+  private async ensureEditableEncounter(enc: { id: string; tenantId: string; status: EncounterStatus; noteLockedAt: Date | null }) {
+    if (enc.status === EncounterStatus.DRAFT || enc.status === EncounterStatus.AMENDED) return;
+    if (enc.status === EncounterStatus.FINALIZED && !enc.noteLockedAt) return;
+    if (enc.status === EncounterStatus.FINALIZED && enc.noteLockedAt) {
+      throw new BadRequestException("Encounter note is locked — use Amend to reopen with a documented reason");
+    }
+  }
+
   private ensureEditable(status: EncounterStatus) {
     if (status === EncounterStatus.FINALIZED) {
       throw new BadRequestException("Encounter is finalized and cannot be edited");
     }
+  }
+
+  async amend(tenantId: string, viewer: JwtUser, encounterId: string, reason: string): Promise<EncounterDetailDto> {
+    const enc = await this.prisma.encounter.findFirst({ where: { id: encounterId, tenantId } });
+    if (!enc) throw new NotFoundException("Encounter not found");
+    assertPhysicianEncounterAccess(viewer, enc);
+    if (enc.status !== EncounterStatus.FINALIZED) {
+      throw new BadRequestException("Only finalized encounters can be amended");
+    }
+    const trimmed = reason.trim();
+    if (trimmed.length < 3) throw new BadRequestException("Amend reason is required");
+    const row = await this.prisma.encounter.update({
+      where: { id: encounterId },
+      data: {
+        status: EncounterStatus.AMENDED,
+        amendReason: trimmed,
+        amendedByUserId: viewer.userId,
+        amendedAt: new Date(),
+        noteLockedAt: null,
+      },
+      include: encounterIncludeDef,
+    });
+    return this.mapEncounter(row);
   }
 
   private async deletePrescriptionDocuments(tenantId: string, encounterId: string): Promise<void> {
@@ -416,7 +475,7 @@ export class EncountersService {
     const existing = await this.prisma.encounter.findFirst({ where: { id, tenantId } });
     if (!existing) throw new NotFoundException("Encounter not found");
     assertPhysicianEncounterAccess(viewer, existing);
-    this.ensureEditable(existing.status);
+    await this.ensureEditableEncounter(existing);
 
     const data: Prisma.EncounterUpdateInput = {};
     if (dto.visitType !== undefined) data.visitType = dto.visitType;
@@ -438,6 +497,14 @@ export class EncountersService {
     }
     if (dto.heightCm !== undefined) {
       data.heightCm = new Prisma.Decimal(String(dto.heightCm));
+    }
+    if (dto.clinicalTemplateId !== undefined) {
+      data.clinicalTemplate = dto.clinicalTemplateId
+        ? { connect: { id: dto.clinicalTemplateId } }
+        : { disconnect: true };
+    }
+    if (dto.specialtyFormResponses !== undefined) {
+      data.specialtyFormResponses = dto.specialtyFormResponses as Prisma.InputJsonValue;
     }
     if (dto.noMedications !== undefined) {
       data.noMedications = dto.noMedications;
@@ -559,8 +626,12 @@ export class EncountersService {
     const enc = await this.prisma.encounter.findFirst({ where: { id: encounterId, tenantId } });
     if (!enc) throw new NotFoundException("Encounter not found");
     assertPhysicianEncounterAccess(viewer, enc);
-    this.ensureEditable(enc.status);
+    await this.ensureEditableEncounter(enc);
 
+    const existing = await this.prisma.encounterMedication.findMany({
+      where: { encounterId, tenantId },
+      select: { drugName: true },
+    });
     const m = await this.prisma.encounterMedication.create({
       data: {
         tenantId,
@@ -711,6 +782,8 @@ export class EncountersService {
         data: {
           status: EncounterStatus.FINALIZED,
           finalizedAt,
+          signedAt: finalizedAt,
+          signedByUserId: viewer.userId,
         },
         include: encounterIncludeDef,
       });

@@ -536,6 +536,7 @@ Authorization model:
 | **Performance & scale** — SQL daily aggregation for insights charts; audit composite index `(tenantId, createdAt, clinicId)`; App Runner autoscaling (up to 25 instances × 100 concurrent requests); `GET /health/ready` (DB probe); `npm run test:perf` load SLO script (≥99.9% success on health smoke) | Shipped |
 | **Patient allergies (baseline)** — multi-select catalog + Other on register/admin create and new encounter; paginated allergies table on patient chart (5 rows/page) | Shipped |
 | **In-product AI assistant** — role-scoped playbook, live metrics, patient lookup actions, per-clinic revenue breakdown, rich markdown chat UI | Shipped |
+| **Clinical workflow extensions** — template builder, physician shortcuts, ICD search (EN/AR), Rx QR, vitals/growth charts, clinical letters, auto-lock + amend, allergy/interaction warnings | Shipped (baseline) |
 
 ### 12.2 Near-term roadmap (engineering backlog)
 

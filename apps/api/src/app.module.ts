@@ -23,6 +23,7 @@ import { SupportModule } from "./support/support.module";
 import { IntegrationsModule } from "./integrations/integrations.module";
 import { UsersModule } from "./users/users.module";
 import { AssistantModule } from "./assistant/assistant.module";
+import { ClinicalModule } from "./clinical/clinical.module";
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { AssistantModule } from "./assistant/assistant.module";
     SupportModule,
     IntegrationsModule,
     AssistantModule,
+    ClinicalModule,
   ],
 })
 export class AppModule {}

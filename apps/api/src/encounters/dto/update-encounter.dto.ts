@@ -123,4 +123,14 @@ export class UpdateEncounterDto {
   @IsString()
   @MaxLength(8)
   visitFeeCurrency?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  clinicalTemplateId?: string;
+
+  @ApiPropertyOptional({ type: Object })
+  @IsOptional()
+  @IsObject()
+  specialtyFormResponses?: Record<string, unknown>;
 }

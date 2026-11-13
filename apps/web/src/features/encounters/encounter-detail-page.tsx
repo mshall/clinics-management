@@ -51,6 +51,7 @@ import { formatMoneyAmount } from "@/lib/money-display";
 import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
 import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import { generatePrescriptionPng } from "@/lib/prescription-image";
+import { EncounterClinicalTools } from "@/features/clinical/encounter-clinical-tools";
 import { loadPrescriptionBranding } from "@/lib/prescription-branding";
 import { cn } from "@/lib/utils";
 
@@ -192,7 +193,10 @@ export function EncounterDetailPage() {
     setViewer(null);
   };
 
-  const draft = enc?.status === "DRAFT" || enc?.status === "AMENDED";
+  const draft =
+    enc?.status === "DRAFT" ||
+    enc?.status === "AMENDED" ||
+    (enc?.status === "FINALIZED" && !enc?.noteLockedAt);
   const canFinalize = Boolean(enc && user && enc.clinicianId === user.id && draft);
 
   const invalidate = () => {
@@ -837,6 +841,18 @@ export function EncounterDetailPage() {
               <Label htmlFor="cc">{t("encounters.chiefComplaint")}</Label>
               <Input id="cc" value={chief} onChange={(e) => setChief(e.target.value)} disabled={!draft} />
             </div>
+            {enc ? (
+              <EncounterClinicalTools
+                encounter={enc}
+                pendingDrugName={drugName}
+                onApplySoap={(partial) => {
+                  if (partial.subjective !== undefined) setSubjective(partial.subjective ?? "");
+                  if (partial.objective !== undefined) setObjective(partial.objective ?? "");
+                  if (partial.assessment !== undefined) setAssessment(partial.assessment ?? "");
+                  if (partial.plan !== undefined) setPlan(partial.plan ?? "");
+                }}
+              />
+            ) : null}
             <div className="space-y-2">
               <Label htmlFor="s" className="flex items-center gap-2">
                 <Stethoscope className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />S — {t("encounters.subjective")}
