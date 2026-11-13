@@ -37,7 +37,9 @@
 # If stack kiorly-clinics-management is ROLLBACK_COMPLETE, delete it in CloudFormation before the next deploy.
 #
 # If the job shows only "exit code 1", open the "Deploy CDK stack" step log — the real error
-# is usually npm/cdk/docker or a CloudFormation event (e.g. App Runner NotStabilized).
+# is usually npm/cdk/docker or a CloudFormation event (e.g. App Runner NotStabilized or
+# OPERATION_IN_PROGRESS when a prior deploy's image rollout has not finished).
+# cicd-deploy.sh calls cicd-wait-apprunner-idle.sh before cdk deploy to reduce overlap races.
 # On PRs, `.github/workflows/pr-synth-build.yml` runs `npm run infra:synth` (no AWS deploy) for early feedback.
 #
 # --- Why CI cannot "pause, let Cursor fix, resume this CloudFormation step" ---
