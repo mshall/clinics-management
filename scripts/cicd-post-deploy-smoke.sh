@@ -62,6 +62,33 @@ echo "OK  POST /api/v1/auth/login ($DEMO_EMAIL)"
 
 access_token="$(echo "$body" | python3 -c "import sys,json; print(json.load(sys.stdin)['accessToken'])")"
 
+assistant_ctx_http="$(curl -sS -o /dev/null -w "%{http_code}" -X GET "$APP_URL/api/v1/assistant/context?locale=en" \
+  -H "Authorization: Bearer $access_token" \
+  -H "Accept: application/json")"
+if [[ "$assistant_ctx_http" != "200" ]]; then
+  echo "::error::Assistant context smoke failed HTTP $assistant_ctx_http — API image may be stale"
+  exit 1
+fi
+echo "OK  GET /api/v1/assistant/context"
+
+assistant_chat_raw="$(curl -sS -w "\n%{http_code}" -X POST "$APP_URL/api/v1/assistant/chat" \
+  -H "Authorization: Bearer $access_token" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{"message":"hello","locale":"en"}')"
+assistant_chat_http="$(echo "$assistant_chat_raw" | tail -1)"
+assistant_chat_body="$(echo "$assistant_chat_raw" | sed '$d')"
+if [[ "$assistant_chat_http" != "200" && "$assistant_chat_http" != "201" ]]; then
+  echo "::error::Assistant chat smoke failed HTTP $assistant_chat_http"
+  echo "$assistant_chat_body" | head -c 1000
+  exit 1
+fi
+echo "$assistant_chat_body" | python3 -c "import sys,json; d=json.load(sys.stdin); assert d.get('reply'), 'missing reply'" || {
+  echo "::error::Assistant chat response missing reply"
+  exit 1
+}
+echo "OK  POST /api/v1/assistant/chat"
+
 admin_raw="$(curl -sS -w "\n%{http_code}" -X GET "$APP_URL/api/v1/admin/users?page=1&pageSize=5" \
   -H "Authorization: Bearer $access_token" \
   -H "Accept: application/json")"
