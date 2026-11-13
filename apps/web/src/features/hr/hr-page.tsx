@@ -23,7 +23,13 @@ import type { EmployeeDto } from "@/lib/api-types";
 import { EmployeeDeleteConfirmDialog, type EmployeeDeleteTarget } from "@/features/hr/employee-delete-confirm-dialog";
 import { EmployeeDeactivateConfirmDialog } from "@/features/hr/employee-deactivate-confirm-dialog";
 import { EmployeeReactivateDialog } from "@/features/hr/employee-reactivate-dialog";
-import { isClinicRequiredUserRole, isOrgWideUserRole, CLINIC_STAFF_ASSIGNABLE_ROLES } from "@/features/platform/platform-shared";
+import {
+  isClinicRequiredUserRole,
+  isOrgWideUserRole,
+  isProvisionLoginClinicRequired,
+  CLINIC_STAFF_ASSIGNABLE_ROLES,
+} from "@/features/platform/platform-shared";
+import { CLINICAL_SPECIALTY_VALUES } from "@/lib/clinical-specialties";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,6 +58,7 @@ import {
   formatLeaveStatus,
   formatLeaveType,
   formatEmploymentType,
+  formatClinicalSpecialty,
   formatClinicName,
   formatUserRole,
   localeForLanguage,
@@ -81,6 +88,7 @@ function parseHrTab(value: string | null): Tab {
 }
 
 const EMP_TYPE_VALUES = ["FULL_TIME", "PART_TIME", "CONTRACTOR", "LOCUM"] as const;
+const HR_CREATE_EMPLOYMENT_TYPES = ["FULL_TIME", "PART_TIME", "CONTRACTOR"] as const;
 
 export function HrPage() {
   const { t, i18n } = useTranslation();
@@ -263,6 +271,8 @@ export function HrPage() {
   const [empSalary, setEmpSalary] = useState("9000");
   const [empSalaryCurrency, setEmpSalaryCurrency] = useState<string>(orgBaseCurrency);
   const [empIdDocFile, setEmpIdDocFile] = useState<File | null>(null);
+  const [empClinicalSpecialty, setEmpClinicalSpecialty] = useState("");
+  const [empCommissionPercent, setEmpCommissionPercent] = useState("");
   const empValidation = useValidationIssuesDialog({ intent: "create" });
   const attValidation = useValidationIssuesDialog({ intent: "create" });
   const leaveValidation = useValidationIssuesDialog({ intent: "create" });
@@ -317,7 +327,19 @@ export function HrPage() {
     t,
   ]);
   const empTypeItems: PickListItem[] = useMemo(
-    () => EMP_TYPE_VALUES.map((value) => ({ value, label: formatEmploymentType(value, t) })),
+    () =>
+      (provisionLogin ? HR_CREATE_EMPLOYMENT_TYPES : EMP_TYPE_VALUES).map((value) => ({
+        value,
+        label: formatEmploymentType(value, t),
+      })),
+    [t, provisionLogin],
+  );
+  const clinicalSpecialtyItems: PickListItem[] = useMemo(
+    () =>
+      CLINICAL_SPECIALTY_VALUES.map((value) => ({
+        value,
+        label: formatClinicalSpecialty(value, t),
+      })),
     [t],
   );
   const linkedUserItems: PickListItem[] = useMemo(
@@ -337,8 +359,15 @@ export function HrPage() {
   const showClinicAssignment =
     !provisionLogin && Boolean(empLinkedUserRole) && !isOrgWideUserRole(empLinkedUserRole) && clinics.length > 0;
   const requiresClinicAssignment = isClinicRequiredUserRole(empLinkedUserRole);
+  const hideProvisionClinic =
+    provisionLogin && empLoginRole === "PHYSICIAN" && physicianAssignment === "GROUP";
+  const showProvisionClinicPicker =
+    provisionLogin && isProvisionLoginClinicRequired(empLoginRole, physicianAssignment);
+  const provisionClinicAnchor = hideProvisionClinic
+    ? (provisionClinicItems[0]?.value ?? "")
+    : resolvedProvisionClinicId;
   const primaryClinicForCreate = provisionLogin
-    ? resolvedProvisionClinicId
+    ? provisionClinicAnchor
     : showClinicAssignment
       ? (empAssignedClinicIds[0] ?? "")
       : empClinic;
@@ -463,6 +492,10 @@ export function HrPage() {
         hireDate: new Date().toISOString().slice(0, 10),
         salaryBase: Number.parseFloat(empSalary),
         salaryCurrency: empSalaryCurrency === empSalaryClinicDefault ? null : empSalaryCurrency,
+        ...(empClinicalSpecialty.trim() ? { clinicalSpecialty: empClinicalSpecialty.trim() } : {}),
+        ...(empCommissionPercent.trim()
+          ? { commissionPercent: Number.parseFloat(empCommissionPercent) }
+          : {}),
       });
       if (empIdDocFile) {
         const fd = new FormData();
@@ -497,6 +530,8 @@ export function HrPage() {
       setLoginEmailTouched(false);
       setEmpLoginRole("NURSE");
       setPhysicianAssignment("CLINIC");
+      setEmpClinicalSpecialty("");
+      setEmpCommissionPercent("");
       setPinnedEmpClinicItem(null);
       setPinnedEmpTypeItem(null);
       setPinnedLinkedUserItem(null);
@@ -589,17 +624,18 @@ export function HrPage() {
     iso ? new Date(iso).toLocaleString() : t("hr.notApplicable", "—");
 
   const handleCreateEmployee = () => {
-    const scopeIssues = provisionLogin
-      ? collectHrProvisionClinicScopeIssues(
-          {
-            clinicId: empClinic,
-            clinicQuery: empClinicQuery,
-            assignableItems: provisionClinicItems,
-            scopeRestricted: clinicScopeRestricted,
-          },
-          t,
-        )
-      : [];
+    const scopeIssues =
+      provisionLogin && showProvisionClinicPicker
+        ? collectHrProvisionClinicScopeIssues(
+            {
+              clinicId: empClinic,
+              clinicQuery: empClinicQuery,
+              assignableItems: provisionClinicItems,
+              scopeRestricted: clinicScopeRestricted,
+            },
+            t,
+          )
+        : [];
     const issues = [
       ...scopeIssues,
       ...collectEmployeeCreateIssues(
@@ -616,6 +652,9 @@ export function HrPage() {
           loginEmail: empLoginEmail,
           loginPassword: empLoginPassword,
           loginRole: empLoginRole,
+          physicianAssignment,
+          clinicalSpecialty: empClinicalSpecialty,
+          commissionPercent: empCommissionPercent,
           requireLinkedUser: !provisionLogin,
         },
         t,
@@ -825,43 +864,6 @@ export function HrPage() {
                     {empValidation.formErr ? <p className="text-sm text-destructive sm:col-span-full">{empValidation.formErr}</p> : null}
                     {provisionLogin ? (
                       <>
-                        <div className="space-y-2 sm:col-span-2">
-                          <Label required>{t("hr.clinic")}</Label>
-                          {provisionClinicItems.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">
-                              {t(
-                                "hr.noAssignableClinics",
-                                "No clinics are assigned to your HR account yet. Ask a group administrator to grant clinic HR access.",
-                              )}
-                            </p>
-                          ) : (
-                            <SearchablePickList
-                              items={provisionClinicItems}
-                              value={empClinic}
-                              selectedItem={empClinicSelectedItem}
-                              alwaysEditable
-                              invalid={Boolean(provisionClinicScopeError)}
-                              onValueChange={(id, item) => {
-                                setEmpClinic(id);
-                                if (item) {
-                                  setPinnedEmpClinicItem(item);
-                                  setEmpClinicQuery(item.label);
-                                } else if (!id) {
-                                  setPinnedEmpClinicItem(null);
-                                  setEmpClinicQuery("");
-                                }
-                              }}
-                              onSearchQueryChange={setEmpClinicQuery}
-                              searchPlaceholder={t("appointments.filterClinic", "Type clinic name…")}
-                              placeholder={t("hr.pickClinic", "Select clinic…")}
-                              emptyMessage={t("admin.rbacNoUsersMatch", "No matches.")}
-                              localFilter
-                            />
-                          )}
-                          {provisionClinicScopeError ? (
-                            <p className="text-sm text-destructive">{provisionClinicScopeError}</p>
-                          ) : null}
-                        </div>
                         <div className="space-y-2">
                           <Label required>{t("patients.firstNameEn")}</Label>
                           <Input value={empFn} onChange={(e) => setEmpFn(e.target.value)} />
@@ -946,6 +948,70 @@ export function HrPage() {
                                 )}
                               </label>
                             </div>
+                          </div>
+                        ) : null}
+                        {empLoginRole === "PHYSICIAN" || empLoginRole === "NURSE" ? (
+                          <div className="space-y-2 sm:col-span-2">
+                            <Label required>{t("hr.clinicalSpecialty", "Clinical specialty")}</Label>
+                            <select
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                              value={empClinicalSpecialty}
+                              onChange={(e) => setEmpClinicalSpecialty(e.target.value)}
+                            >
+                              <option value="">{t("hr.pickClinicalSpecialty", "Select specialty…")}</option>
+                              {clinicalSpecialtyItems.map((item) => (
+                                <option key={item.value} value={item.value}>
+                                  {item.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : null}
+                        {hideProvisionClinic ? (
+                          <p className="text-xs text-muted-foreground sm:col-span-2">
+                            {t(
+                              "hr.groupPhysicianClinicHiddenHint",
+                              "Group physicians are assigned across all clinics in the clinic group — no single clinic selection is required.",
+                            )}
+                          </p>
+                        ) : null}
+                        {showProvisionClinicPicker ? (
+                          <div className="space-y-2 sm:col-span-2">
+                            <Label required>{t("hr.clinic")}</Label>
+                            {provisionClinicItems.length === 0 ? (
+                              <p className="text-sm text-muted-foreground">
+                                {t(
+                                  "hr.noAssignableClinics",
+                                  "No clinics are assigned to your HR account yet. Ask a group administrator to grant clinic HR access.",
+                                )}
+                              </p>
+                            ) : (
+                              <SearchablePickList
+                                items={provisionClinicItems}
+                                value={empClinic}
+                                selectedItem={empClinicSelectedItem}
+                                alwaysEditable
+                                invalid={Boolean(provisionClinicScopeError)}
+                                onValueChange={(id, item) => {
+                                  setEmpClinic(id);
+                                  if (item) {
+                                    setPinnedEmpClinicItem(item);
+                                    setEmpClinicQuery(item.label);
+                                  } else if (!id) {
+                                    setPinnedEmpClinicItem(null);
+                                    setEmpClinicQuery("");
+                                  }
+                                }}
+                                onSearchQueryChange={setEmpClinicQuery}
+                                searchPlaceholder={t("appointments.filterClinic", "Type clinic name…")}
+                                placeholder={t("hr.pickClinic", "Select clinic…")}
+                                emptyMessage={t("admin.rbacNoUsersMatch", "No matches.")}
+                                localFilter
+                              />
+                            )}
+                            {provisionClinicScopeError ? (
+                              <p className="text-sm text-destructive">{provisionClinicScopeError}</p>
+                            ) : null}
                           </div>
                         ) : null}
                       </>
@@ -1143,6 +1209,26 @@ export function HrPage() {
                           "hr.salaryCurrencyClinicDefaultHint",
                           "Defaults to the clinic currency ({{currency}}). Choose another only when salary is paid in a different currency.",
                           { currency: empSalaryClinicDefault },
+                        )}
+                      </p>
+                    </div>
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label>{t("hr.commissionPercent", "Commission (%)")}</Label>
+                      <Input
+                        className="ltr-nums"
+                        type="number"
+                        min={0}
+                        max={100}
+                        step="0.01"
+                        inputMode="decimal"
+                        value={empCommissionPercent}
+                        onChange={(e) => setEmpCommissionPercent(e.target.value)}
+                        placeholder="0"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {t(
+                          "hr.commissionPercentHint",
+                          "Optional — percentage of revenue this employee brings to the clinic or group.",
                         )}
                       </p>
                     </div>

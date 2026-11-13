@@ -3,6 +3,7 @@ import { invoiceBackgroundHex } from "@/lib/invoice-config";
 import { formatMoneyAmount } from "@/lib/money-display";
 import { localeForLanguage } from "@/lib/locale-display";
 import { cn } from "@/lib/utils";
+import { computeVatInclusiveBreakdown } from "@/lib/vat-breakdown";
 
 type InvoiceDocumentPreviewProps = {
   invoice: InvoiceDto;
@@ -17,6 +18,11 @@ export function InvoiceDocumentPreview({ invoice, language, className, logoUrl }
   const bg = invoiceBackgroundHex(invoice.backgroundColor);
   const sections = new Set(invoice.sections);
   const resolvedLogo = logoUrl ?? null;
+  const vatPercent = invoice.vatPercent ?? 5;
+  const taxLines =
+    invoice.subtotalExVat != null && invoice.vatAmount != null
+      ? { subtotalExVat: invoice.subtotalExVat, vatAmount: invoice.vatAmount }
+      : computeVatInclusiveBreakdown(invoice.totalAmount, vatPercent);
 
   return (
     <div
@@ -32,6 +38,14 @@ export function InvoiceDocumentPreview({ invoice, language, className, logoUrl }
               <p className="text-muted-foreground">{rtl ? invoice.clinicAddressAr : invoice.clinicAddressEn}</p>
               <p className="text-muted-foreground ltr-nums">
                 {invoice.clinicPhone} · {invoice.clinicEmail}
+              </p>
+              {invoice.clinicTaxRegistrationNumber ? (
+                <p className="text-muted-foreground ltr-nums">
+                  {rtl ? "الرقم الضريبي (TRN)" : "TRN"}: {invoice.clinicTaxRegistrationNumber}
+                </p>
+              ) : null}
+              <p className="text-muted-foreground ltr-nums">
+                {rtl ? "الرخصة" : "License"}: {invoice.clinicLicenseNumber}
               </p>
             </div>
             {resolvedLogo ? (
@@ -110,9 +124,19 @@ export function InvoiceDocumentPreview({ invoice, language, className, logoUrl }
 
         {sections.has("totals") ? (
           <section className="flex justify-end">
-            <div className="min-w-[220px] rounded-md border border-border/60 bg-background/50 p-4">
-              <div className="flex items-center justify-between gap-4 font-semibold">
-                <span>{rtl ? "الإجمالي" : "Total"}</span>
+            <div className="min-w-[240px] space-y-2 rounded-md border border-border/60 bg-background/50 p-4 text-sm">
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-muted-foreground">{rtl ? "المجموع قبل الضريبة" : "Subtotal (excl. VAT)"}</span>
+                <span className="ltr-nums">{formatMoneyAmount(taxLines.subtotalExVat, invoice.currency, locale)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-muted-foreground">
+                  {rtl ? `ضريبة القيمة المضافة (${vatPercent}%)` : `VAT (${vatPercent}%)`}
+                </span>
+                <span className="ltr-nums">{formatMoneyAmount(taxLines.vatAmount, invoice.currency, locale)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4 border-t border-border/60 pt-2 font-semibold">
+                <span>{rtl ? "الإجمالي شامل الضريبة" : "Total (incl. VAT)"}</span>
                 <span className="ltr-nums">{formatMoneyAmount(invoice.totalAmount, invoice.currency, locale)}</span>
               </div>
             </div>

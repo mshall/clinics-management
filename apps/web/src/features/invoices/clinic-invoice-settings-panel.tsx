@@ -31,6 +31,8 @@ export function ClinicInvoiceSettingsPanel({ clinicId, detail, disabled }: Clini
   const uploadMut = useUploadClinicInvoiceLogoMutation(clinicId);
   const [backgroundColor, setBackgroundColor] = useState(detail.invoiceBackgroundColor || "white");
   const [sections, setSections] = useState<string[]>(detail.invoiceSections ?? DEFAULT_INVOICE_SECTIONS);
+  const [taxRegistrationNumber, setTaxRegistrationNumber] = useState(detail.taxRegistrationNumber ?? "");
+  const [invoiceVatPercent, setInvoiceVatPercent] = useState(String(detail.invoiceVatPercent ?? 5));
   const [logoKey, setLogoKey] = useState(0);
   const logo = useAuthenticatedImage(
     detail.hasInvoiceLogo ? `${clinicInvoiceLogoUrl(clinicId)}?v=${logoKey}` : null,
@@ -40,7 +42,9 @@ export function ClinicInvoiceSettingsPanel({ clinicId, detail, disabled }: Clini
   useEffect(() => {
     setBackgroundColor(detail.invoiceBackgroundColor || "white");
     setSections(detail.invoiceSections ?? DEFAULT_INVOICE_SECTIONS);
-  }, [detail.invoiceBackgroundColor, detail.invoiceSections, clinicId]);
+    setTaxRegistrationNumber(detail.taxRegistrationNumber ?? "");
+    setInvoiceVatPercent(String(detail.invoiceVatPercent ?? 5));
+  }, [detail.invoiceBackgroundColor, detail.invoiceSections, detail.taxRegistrationNumber, detail.invoiceVatPercent, clinicId]);
 
   const toggleSection = (key: string) => {
     setSections((prev) => {
@@ -54,7 +58,13 @@ export function ClinicInvoiceSettingsPanel({ clinicId, detail, disabled }: Clini
 
   const saveSettings = async () => {
     try {
-      await patchMut.mutateAsync({ invoiceBackgroundColor: backgroundColor, invoiceSections: sections });
+      const vatN = Number.parseFloat(invoiceVatPercent);
+      await patchMut.mutateAsync({
+        invoiceBackgroundColor: backgroundColor,
+        invoiceSections: sections,
+        taxRegistrationNumber: taxRegistrationNumber.trim() || null,
+        invoiceVatPercent: Number.isFinite(vatN) ? vatN : 5,
+      });
       toast.success(t("invoices.settingsSaved", "Invoice settings saved"));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
@@ -81,6 +91,32 @@ export function ClinicInvoiceSettingsPanel({ clinicId, detail, disabled }: Clini
         <p className="text-xs text-muted-foreground">
           {t("invoices.settingsHint", "Configure logo, background, and sections for patient invoices.")}
         </p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-2 sm:col-span-2">
+          <Label>{t("invoices.taxRegistrationNumber", "Tax registration (TRN)")}</Label>
+          <Input
+            className="ltr-nums"
+            value={taxRegistrationNumber}
+            disabled={disabled}
+            onChange={(e) => setTaxRegistrationNumber(e.target.value)}
+            placeholder="100000000000003"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>{t("invoices.vatPercentSetting", "VAT % on invoices")}</Label>
+          <Input
+            className="ltr-nums"
+            type="number"
+            min={0}
+            max={100}
+            step="0.01"
+            value={invoiceVatPercent}
+            disabled={disabled}
+            onChange={(e) => setInvoiceVatPercent(e.target.value)}
+          />
+        </div>
       </div>
 
       <div className="space-y-2">

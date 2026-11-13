@@ -132,6 +132,8 @@ export class HrService {
     phone: string;
     jobTitle: string;
     employmentType: EmployeeDto["employmentType"];
+    clinicalSpecialty?: EmployeeDto["clinicalSpecialty"];
+    commissionPercent?: { toString(): string } | null;
     hireDate: Date;
     salaryBase: { toString(): string };
     salaryCurrency?: string | null;
@@ -174,6 +176,8 @@ export class HrService {
       phone: e.phone,
       jobTitle: e.jobTitle,
       employmentType: e.employmentType,
+      clinicalSpecialty: e.clinicalSpecialty ?? null,
+      commissionPercent: e.commissionPercent != null ? Number(e.commissionPercent) : null,
       hireDate: e.hireDate.toISOString().slice(0, 10),
       salaryBase: Number(e.salaryBase),
       salaryCurrency: e.salaryCurrency ?? null,
@@ -504,13 +508,23 @@ export class HrService {
     const isHrProvisioner = await viewerUsesHrProvisionerFlow(this.prisma, tenantId, viewer);
     if (isHrProvisioner) {
       const scope = await fetchEmployeeManageScopeIds(this.prisma, tenantId, viewer);
-      const picked = dto.clinicId?.trim();
+      const role = loginRole ?? UserRole.NURSE;
+      const isGroupPhysician = role === UserRole.PHYSICIAN && dto.physicianAssignment === "GROUP";
+      let picked = dto.clinicId?.trim();
+      if (!picked && isGroupPhysician) {
+        const fallback = scope?.[0];
+        if (!fallback) {
+          throw new BadRequestException(
+            "No assignable clinic to anchor a group physician — grant HR access to at least one clinic",
+          );
+        }
+        picked = fallback;
+      }
       if (!picked) throw new BadRequestException("Clinic is required");
       if (scope?.length && !scope.includes(picked)) {
         throw new BadRequestException("Clinic is outside your HR assignment scope");
       }
-      const role = loginRole ?? UserRole.NURSE;
-      if (role === UserRole.PHYSICIAN && dto.physicianAssignment === "GROUP") {
+      if (isGroupPhysician) {
         return fetchClinicGroupNetworkIds(this.prisma, tenantId, picked);
       }
       return [picked];
@@ -580,6 +594,17 @@ export class HrService {
       };
     }
 
+    const roleForProvision = linkedUser.role;
+    if (
+      (roleForProvision === UserRole.PHYSICIAN || roleForProvision === UserRole.NURSE) &&
+      !dto.clinicalSpecialty
+    ) {
+      throw new BadRequestException("Clinical specialty is required for physicians and nurses");
+    }
+    if (dto.commissionPercent != null && (dto.commissionPercent < 0 || dto.commissionPercent > 100)) {
+      throw new BadRequestException("Commission percent must be between 0 and 100");
+    }
+
     const clinicIds = await this.resolveCreateEmployeeClinicIds(tenantId, viewer, dto, linkedUser.role);
     if (!clinicIds.length) throw new BadRequestException("Clinic is required");
     const primaryClinicId = clinicIds[0]!;
@@ -633,6 +658,8 @@ export class HrService {
             phone,
             jobTitle,
             employmentType: dto.employmentType,
+            clinicalSpecialty: dto.clinicalSpecialty ?? null,
+            commissionPercent: dto.commissionPercent ?? null,
             hireDate: new Date(dto.hireDate),
             salaryBase: dto.salaryBase,
             salaryCurrency,

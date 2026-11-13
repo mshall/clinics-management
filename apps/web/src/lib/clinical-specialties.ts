@@ -1,0 +1,23 @@
+/** Must stay aligned with Prisma `ClinicalSpecialty` enum. */
+export const CLINICAL_SPECIALTY_VALUES = [
+  "POLYCLINIC",
+  "GENERAL_MEDICINE",
+  "PAIN_MANAGEMENT",
+  "ORTHOPEDICS",
+  "PEDIATRICS",
+  "DERMATOLOGY",
+  "DENTISTRY",
+  "PHYSIO_THERAPY",
+  "AESTHETICS",
+  "CARDIOLOGY",
+  "OBSTETRICS_GYNECOLOGY",
+  "ENT",
+  "OPHTHALMOLOGY",
+  "PSYCHIATRY",
+  "RADIOLOGY",
+  "LABORATORY",
+  "INTERNAL_MEDICINE",
+  "FAMILY_MEDICINE",
+] as const;
+
+export type ClinicalSpecialtyId = (typeof CLINICAL_SPECIALTY_VALUES)[number];

@@ -3,6 +3,26 @@
     "name": "Kiorly",
     "tagline": "Clinic Management"
   },
+  "clinicalSpecialties": {
+    "POLYCLINIC": "Polyclinic",
+    "GENERAL_MEDICINE": "General medicine",
+    "PAIN_MANAGEMENT": "Pain management",
+    "ORTHOPEDICS": "Orthopedics",
+    "PEDIATRICS": "Pediatrics",
+    "DERMATOLOGY": "Dermatology",
+    "DENTISTRY": "Dentistry",
+    "PHYSIO_THERAPY": "Physio therapy",
+    "AESTHETICS": "Aesthetics",
+    "CARDIOLOGY": "Cardiology",
+    "OBSTETRICS_GYNECOLOGY": "Obstetrics & gynecology",
+    "ENT": "ENT",
+    "OPHTHALMOLOGY": "Ophthalmology",
+    "PSYCHIATRY": "Psychiatry",
+    "RADIOLOGY": "Radiology",
+    "LABORATORY": "Laboratory",
+    "INTERNAL_MEDICINE": "Internal medicine",
+    "FAMILY_MEDICINE": "Family medicine"
+  },
   "nav": {
     "menu": "Navigation menu",
     "dashboard": "Dashboard",
@@ -857,7 +877,7 @@
     "employmentTypes": {
       "FULL_TIME": "Full time",
       "PART_TIME": "Part time",
-      "CONTRACTOR": "Contractor",
+      "CONTRACTOR": "Contractual",
       "LOCUM": "Locum"
     },
     "leaveTypes": {

@@ -95,6 +95,12 @@ export function formatLeaveStatus(status: string, t: TFunction): string {
   return translated === key ? status : translated;
 }
 
+export function formatClinicalSpecialty(type: string, t: TFunction): string {
+  const key = `clinicalSpecialties.${type}`;
+  const translated = t(key);
+  return translated === key ? type.replace(/_/g, " ") : translated;
+}
+
 export function formatEmploymentType(type: string, t: TFunction): string {
   const key = `hr.employmentTypes.${type}`;
   const translated = t(key);

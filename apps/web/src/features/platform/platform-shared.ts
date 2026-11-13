@@ -66,7 +66,25 @@ export function orgUserRolesForEdit(currentRole: string): readonly (typeof ORG_U
 }
 
 /** Roles scoped to assigned clinic(s) — at least one clinic required on create/edit. */
-export const CLINIC_REQUIRED_USER_ROLES = ["CLINIC_ADMIN", "BRANCH_MANAGER"] as const;
+export const CLINIC_REQUIRED_USER_ROLES = [
+  "CLINIC_ADMIN",
+  "BRANCH_MANAGER",
+  "RECEPTIONIST",
+  "CLINIC_ASSISTANT",
+] as const;
+
+/** HR provision login: clinic picker visibility (group physicians use network anchor instead). */
+export function isProvisionLoginClinicRequired(
+  role: string,
+  physicianAssignment?: "CLINIC" | "GROUP",
+): boolean {
+  if (role === "PHYSICIAN" && physicianAssignment === "GROUP") return false;
+  return (
+    isClinicRequiredUserRole(role) ||
+    role === "PHYSICIAN" ||
+    role === "NURSE"
+  );
+}
 
 /** Organization-wide roles — no clinic assignment required or shown. */
 export const ORG_WIDE_USER_ROLES = [

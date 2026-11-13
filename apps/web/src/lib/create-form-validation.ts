@@ -2,7 +2,7 @@ import type { TFunction } from "i18next";
 import { isStartBeforeOpening } from "@/lib/clinic-hours";
 import type { PickListItem } from "@/components/searchable-pick-list";
 import { resolveClinicIdFromQuery } from "@/lib/pick-list-utils";
-import { isOrgWideUserRole } from "@/features/platform/platform-shared";
+import { isOrgWideUserRole, isProvisionLoginClinicRequired } from "@/features/platform/platform-shared";
 import { HR_LOGIN_PASSWORD_MIN_LENGTH } from "@/lib/employee-login-suggest";
 import {
   collectPendingDocumentFieldErrors,
@@ -111,6 +111,9 @@ export function collectEmployeeCreateIssues(
     loginEmail?: string;
     loginPassword?: string;
     loginRole?: string;
+    physicianAssignment?: "CLINIC" | "GROUP";
+    clinicalSpecialty?: string;
+    commissionPercent?: string;
   },
   t: TFunction,
 ): string[] {
@@ -139,7 +142,21 @@ export function collectEmployeeCreateIssues(
   const primaryClinicId = showClinicAssignment
     ? (input.assignedClinicIds[0] ?? "")
     : input.clinicId;
-  if (!input.provisionLogin && !primaryClinicId.trim()) {
+  if (input.provisionLogin) {
+    const role = input.loginRole?.trim() ?? "";
+    if (isProvisionLoginClinicRequired(role, input.physicianAssignment) && !input.clinicId.trim()) {
+      issues.push(t("hr.errorClinicRequired", "Select a clinic."));
+    }
+    if ((role === "PHYSICIAN" || role === "NURSE") && !input.clinicalSpecialty?.trim()) {
+      issues.push(t("hr.errorClinicalSpecialtyRequired", "Select a clinical specialty."));
+    }
+    if (input.commissionPercent?.trim()) {
+      const n = Number.parseFloat(input.commissionPercent);
+      if (Number.isNaN(n) || n < 0 || n > 100) {
+        issues.push(t("hr.errorCommissionInvalid", "Commission must be between 0 and 100 percent."));
+      }
+    }
+  } else if (!primaryClinicId.trim()) {
     issues.push(t("hr.errorClinicRequired", "Select a clinic."));
   }
   if (!input.firstName.trim()) issues.push(t("hr.errorFirstNameRequired", "First name is required."));

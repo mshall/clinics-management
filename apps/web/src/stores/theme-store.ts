@@ -55,7 +55,7 @@ function migrateLegacyTheme(state: Record<string, unknown> | undefined): ThemeId
   }
   if (state?.persistDefault && state.mode === "dark") return "default-dark";
   if (state?.persistDefault && state.mode === "light") return "default-light";
-  return "default-light";
+  return "material-light";
 }
 
 /** Run before React mounts so the first paint matches persisted preference. */
@@ -68,20 +68,20 @@ export function applyThemeFromPersistedStorage() {
     }
     const raw = localStorage.getItem("cms-theme");
     if (!raw) {
-      applyThemeDom("default-light");
+      applyThemeDom("material-light");
       return;
     }
     const parsed = JSON.parse(raw) as { state?: Record<string, unknown> };
     const st = parsed.state;
     if (!st?.persistDefault) {
-      applyThemeDom("default-light");
+      applyThemeDom("material-light");
       return;
     }
     const themeId = migrateLegacyTheme(st);
     applyThemeDom(themeId);
     writeSessionTheme(themeId);
   } catch {
-    applyThemeDom("default-light");
+    applyThemeDom("material-light");
   }
 }
 
@@ -96,7 +96,7 @@ interface ThemeState {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
-      themeId: "default-light",
+      themeId: "material-light",
       persistDefault: false,
       setThemeId: (themeId) => {
         applyThemeDom(themeId);
@@ -135,18 +135,18 @@ export const useThemeStore = create<ThemeState>()(
           return;
         }
         if (state.persistDefault) {
-          applyThemeDom(state.themeId ?? "default-light");
+          applyThemeDom(state.themeId ?? "material-light");
         }
       },
       migrate: (persisted: unknown) => {
         const p = persisted as { themeId?: string; mode?: string; persistDefault?: boolean } | undefined;
-        if (!p) return { themeId: "default-light" as ThemeId, persistDefault: false };
+        if (!p) return { themeId: "material-light" as ThemeId, persistDefault: false };
         return {
           themeId: migrateLegacyTheme(p as Record<string, unknown>),
           persistDefault: Boolean(p.persistDefault),
         };
       },
-      version: 2,
+      version: 3,
     },
   ),
 );

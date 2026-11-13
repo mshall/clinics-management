@@ -59,6 +59,27 @@ enum EmploymentType {
   LOCUM
 }
 
+enum ClinicalSpecialty {
+  POLYCLINIC
+  GENERAL_MEDICINE
+  PAIN_MANAGEMENT
+  ORTHOPEDICS
+  PEDIATRICS
+  DERMATOLOGY
+  DENTISTRY
+  PHYSIO_THERAPY
+  AESTHETICS
+  CARDIOLOGY
+  OBSTETRICS_GYNECOLOGY
+  ENT
+  OPHTHALMOLOGY
+  PSYCHIATRY
+  RADIOLOGY
+  LABORATORY
+  INTERNAL_MEDICINE
+  FAMILY_MEDICINE
+}
+
 enum EmployeeRecordStatus {
   ACTIVE
   INACTIVE
@@ -328,6 +349,9 @@ model Clinic {
   phone            String
   email            String
   licenseNumber    String
+  clinicalSpecialty ClinicalSpecialty @default(POLYCLINIC)
+  taxRegistrationNumber String?
+  invoiceVatPercent   Decimal       @default(5) @db.Decimal(5, 2)
   defaultLanguage  Locale          @default(en)
   defaultCurrency  String          @default("AED")
   invoiceLogoRelativePath String?
@@ -615,6 +639,8 @@ model Employee {
   phone             String
   jobTitle          String
   employmentType    EmploymentType
+  clinicalSpecialty ClinicalSpecialty?
+  commissionPercent Decimal?        @db.Decimal(5, 2)
   hireDate          DateTime
   salaryBase        Decimal         @db.Decimal(14, 2)
   salaryCurrency    String?
@@ -814,6 +840,8 @@ model Invoice {
   clinicPhone        String
   clinicEmail        String
   clinicLicenseNumber String
+  clinicTaxRegistrationNumber String?
+  vatPercentSnapshot Decimal      @default(5) @db.Decimal(5, 2)
   createdByUserId    String?
   createdBy          User?         @relation("InvoiceCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   lines              InvoiceLine[]

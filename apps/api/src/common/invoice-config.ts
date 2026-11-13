@@ -48,17 +48,26 @@ export type ClinicInvoiceSettingsDto = {
   invoiceBackgroundHex: string;
   invoiceSections: InvoiceSectionKey[];
   hasInvoiceLogo: boolean;
+  taxRegistrationNumber: string | null;
+  invoiceVatPercent: number;
 };
 
 export function clinicInvoiceSettingsFromRow(row: {
   invoiceBackgroundColor: string;
   invoiceSections: unknown;
   invoiceLogoRelativePath: string | null;
+  taxRegistrationNumber?: string | null;
+  invoiceVatPercent?: { toString(): string } | number | null;
 }): ClinicInvoiceSettingsDto {
+  const vatRaw = row.invoiceVatPercent;
+  const invoiceVatPercent =
+    vatRaw == null ? 5 : typeof vatRaw === "number" ? vatRaw : Number(vatRaw);
   return {
     invoiceBackgroundColor: row.invoiceBackgroundColor || "white",
     invoiceBackgroundHex: invoiceBackgroundHex(row.invoiceBackgroundColor || "white"),
     invoiceSections: normalizeInvoiceSections(row.invoiceSections),
     hasInvoiceLogo: Boolean(row.invoiceLogoRelativePath),
+    taxRegistrationNumber: row.taxRegistrationNumber?.trim() || null,
+    invoiceVatPercent: Number.isFinite(invoiceVatPercent) ? invoiceVatPercent : 5,
   };
 }

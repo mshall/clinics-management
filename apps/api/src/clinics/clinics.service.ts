@@ -652,6 +652,7 @@ export class ClinicsService {
         licenseNumber,
         logoUrl,
         defaultCurrency,
+        clinicalSpecialty: dto.clinicalSpecialty ?? undefined,
         openingTime,
         closingTime,
         operatingPeriods: {

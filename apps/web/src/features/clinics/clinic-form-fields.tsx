@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { MIDDLE_EAST_COUNTRY_OPTIONS } from "@/lib/middle-east-countries";
 import { clinicKindLabel, type ClinicKind } from "@/lib/clinic-kind";
+import { CLINICAL_SPECIALTY_VALUES } from "@/lib/clinical-specialties";
+import { formatClinicalSpecialty } from "@/lib/locale-display";
 import type { ClinicFormValues } from "./clinic-form-utils";
 
 type ClinicFormFieldsProps = {
@@ -130,6 +132,23 @@ export function ClinicFormFields({
           {t("admin.city", "City")}
         </Label>
         <Input id={`${idPrefix}-city`} value={values.city} onChange={(e) => onChange({ city: e.target.value })} />
+      </div>
+      <div className="space-y-2 sm:col-span-2">
+        <Label htmlFor={`${idPrefix}-specialty`} required>
+          {t("admin.clinicSpecialty", "Clinic specialty")}
+        </Label>
+        <select
+          id={`${idPrefix}-specialty`}
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          value={values.clinicalSpecialty}
+          onChange={(e) => onChange({ clinicalSpecialty: e.target.value })}
+        >
+          {CLINICAL_SPECIALTY_VALUES.map((value) => (
+            <option key={value} value={value}>
+              {formatClinicalSpecialty(value, t)}
+            </option>
+          ))}
+        </select>
       </div>
       <div className="space-y-2 sm:col-span-2">
         <Label>{t("admin.country", "Country")}</Label>

@@ -1,12 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { EmploymentType, UserRole } from "@prisma/client";
-import { IsArray, IsDateString, IsEmail, IsEnum, IsNumber, IsOptional, IsString, MaxLength, Min, MinLength } from "class-validator";
+import { ClinicalSpecialty, EmploymentType, UserRole } from "@prisma/client";
+import { IsArray, IsDateString, IsEmail, IsEnum, IsNumber, IsOptional, IsString, Max, MaxLength, Min, MinLength } from "class-validator";
 import { Type } from "class-transformer";
 
 export class CreateEmployeeDto {
-  @ApiProperty()
+  @ApiPropertyOptional({
+    description:
+      "Primary clinic for the employee record. Omit only when provisioning a group physician (network is derived server-side).",
+  })
+  @IsOptional()
   @IsString()
-  clinicId!: string;
+  clinicId?: string;
 
   @ApiPropertyOptional({ type: [String], description: "Additional clinics for physicians (primary is clinicId)" })
   @IsOptional()
@@ -102,4 +106,19 @@ export class CreateEmployeeDto {
   @IsOptional()
   @IsString()
   salaryCurrency?: string | null;
+
+  @ApiPropertyOptional({ enum: ClinicalSpecialty, description: "Clinical specialty for physicians and nurses" })
+  @IsOptional()
+  @IsEnum(ClinicalSpecialty)
+  clinicalSpecialty?: ClinicalSpecialty;
+
+  @ApiPropertyOptional({
+    description: "Revenue commission percent (0–100) paid to the employee from clinic or group revenue",
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  commissionPercent?: number | null;
 }

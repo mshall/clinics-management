@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { EmployeeRecordStatus, EmployeeSeparationReason, EmploymentType } from "@prisma/client";
+import { ClinicalSpecialty, EmployeeRecordStatus, EmployeeSeparationReason, EmploymentType } from "@prisma/client";
 import { EmployeeEmploymentPeriodDto } from "./employee-employment-period.dto";
 
 export class EmployeeDto {
@@ -41,6 +41,15 @@ export class EmployeeDto {
 
   @ApiProperty({ enum: EmploymentType })
   employmentType!: EmploymentType;
+
+  @ApiPropertyOptional({ enum: ClinicalSpecialty, nullable: true })
+  clinicalSpecialty!: ClinicalSpecialty | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: "Commission percent of revenue attributed to this employee (0–100)",
+  })
+  commissionPercent!: number | null;
 
   @ApiProperty()
   hireDate!: string;

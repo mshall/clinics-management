@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsArray, IsOptional, IsString, MaxLength } from "class-validator";
+import { Type } from "class-transformer";
+import { IsArray, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
 import { INVOICE_SECTION_KEYS } from "../../common/invoice-config";
 
 export class PatchClinicInvoiceSettingsDto {
@@ -18,4 +19,18 @@ export class PatchClinicInvoiceSettingsDto {
   @IsArray()
   @IsString({ each: true })
   invoiceSections?: string[];
+
+  @ApiPropertyOptional({ description: "UAE TRN or other tax registration number on invoices" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  taxRegistrationNumber?: string | null;
+
+  @ApiPropertyOptional({ description: "VAT percent (e.g. 5 for UAE)", default: 5 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  invoiceVatPercent?: number;
 }

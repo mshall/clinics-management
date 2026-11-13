@@ -19,6 +19,7 @@ export type ClinicFormValues = {
   email: string;
   licenseNumber: string;
   defaultCurrency: string;
+  clinicalSpecialty: string;
   openingTime: string;
   closingTime: string;
 };
@@ -39,6 +40,7 @@ export function emptyClinicForm(orgBaseCurrency = "AED"): ClinicFormValues {
     email: "",
     licenseNumber: "",
     defaultCurrency: orgBaseCurrency,
+    clinicalSpecialty: "POLYCLINIC",
     openingTime: DEFAULT_CLINIC_OPENING_TIME,
     closingTime: DEFAULT_CLINIC_CLOSING_TIME,
   };
@@ -135,6 +137,7 @@ export function clinicFormToCreatePayload(v: ClinicFormValues, opts?: { includeP
     email: v.email.trim() || undefined,
     licenseNumber: v.licenseNumber.trim() || undefined,
     defaultCurrency: v.defaultCurrency.trim() || orgBaseCurrency,
+    clinicalSpecialty: v.clinicalSpecialty.trim() || "POLYCLINIC",
     openingTime: v.openingTime.trim() || DEFAULT_CLINIC_OPENING_TIME,
     closingTime: v.closingTime.trim() || DEFAULT_CLINIC_CLOSING_TIME,
   };
@@ -158,6 +161,7 @@ export function clinicDetailToForm(d: {
   email?: string;
   licenseNumber: string;
   defaultCurrency?: string;
+  clinicalSpecialty?: string;
   openingTime?: string;
   closingTime?: string;
 }, orgBaseCurrency = "AED"): ClinicFormValues {
@@ -176,6 +180,7 @@ export function clinicDetailToForm(d: {
     email: d.email ?? "",
     licenseNumber: d.licenseNumber,
     defaultCurrency: d.defaultCurrency ?? orgBaseCurrency,
+    clinicalSpecialty: d.clinicalSpecialty ?? "POLYCLINIC",
     openingTime: d.openingTime ?? DEFAULT_CLINIC_OPENING_TIME,
     closingTime: d.closingTime ?? DEFAULT_CLINIC_CLOSING_TIME,
   };

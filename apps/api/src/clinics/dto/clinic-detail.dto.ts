@@ -75,6 +75,15 @@ export class ClinicDetailDto {
   @ApiProperty({ description: "Whether an invoice logo has been uploaded" })
   hasInvoiceLogo!: boolean;
 
+  @ApiPropertyOptional({
+    nullable: true,
+    description: "Tax registration number (TRN) shown on tax invoices",
+  })
+  taxRegistrationNumber!: string | null;
+
+  @ApiProperty({ description: "VAT percent applied on generated tax invoices (default 5)" })
+  invoiceVatPercent!: number;
+
   @ApiProperty({ description: "Whether a prescription header logo has been uploaded" })
   hasPrescriptionLogo!: boolean;
 

@@ -18,6 +18,7 @@ import {
   isInvoiceBackgroundColorId,
   normalizeInvoiceSections,
 } from "../common/invoice-config";
+import { computeVatInclusiveBreakdown } from "../common/vat-breakdown";
 import { PrismaService } from "../prisma/prisma.service";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { CreateInvoiceDto } from "./dto/create-invoice.dto";
@@ -68,6 +69,8 @@ export class InvoicesService {
       clinicPhone: row.clinicPhone,
       clinicEmail: row.clinicEmail,
       clinicLicenseNumber: row.clinicLicenseNumber,
+      clinicTaxRegistrationNumber: row.clinicTaxRegistrationNumber ?? null,
+      ...computeVatInclusiveBreakdown(totalAmount, Number(row.vatPercentSnapshot ?? 5)),
       totalAmount,
       lines,
       createdAt: row.createdAt.toISOString(),
@@ -219,6 +222,7 @@ export class InvoicesService {
     const invoiceNumber = await this.nextInvoiceNumber(clinicId, issueDate);
     const backgroundColor = clinic.invoiceBackgroundColor || "white";
     const sections = normalizeInvoiceSections(clinic.invoiceSections);
+    const vatPercentSnapshot = Number(clinic.invoiceVatPercent ?? 5);
 
     const row = await this.prisma.invoice.create({
       data: {
@@ -241,6 +245,8 @@ export class InvoicesService {
         clinicPhone: clinic.phone,
         clinicEmail: clinic.email,
         clinicLicenseNumber: clinic.licenseNumber,
+        clinicTaxRegistrationNumber: clinic.taxRegistrationNumber?.trim() || null,
+        vatPercentSnapshot,
         createdByUserId: viewer.userId,
         lines: { create: lines },
       },
@@ -387,7 +393,12 @@ export class InvoicesService {
     tenantId: string,
     clinicId: string,
     viewer: JwtUser,
-    body: { invoiceBackgroundColor?: string; invoiceSections?: string[] },
+    body: {
+      invoiceBackgroundColor?: string;
+      invoiceSections?: string[];
+      taxRegistrationNumber?: string | null;
+      invoiceVatPercent?: number;
+    },
   ) {
     await this.assertClinicInvoiceSettingsAccess(tenantId, clinicId, viewer, true);
 
@@ -402,6 +413,16 @@ export class InvoicesService {
       const sections = normalizeInvoiceSections(body.invoiceSections);
       data.invoiceSections = sections as unknown as Prisma.InputJsonValue;
     }
+    if (body.taxRegistrationNumber !== undefined) {
+      const trn = body.taxRegistrationNumber?.trim() || null;
+      data.taxRegistrationNumber = trn;
+    }
+    if (body.invoiceVatPercent !== undefined) {
+      if (body.invoiceVatPercent < 0 || body.invoiceVatPercent > 100) {
+        throw new BadRequestException("VAT percent must be between 0 and 100");
+      }
+      data.invoiceVatPercent = body.invoiceVatPercent;
+    }
     if (!Object.keys(data).length) throw new BadRequestException("No supported fields to update");
 
     const row = await this.prisma.clinic.update({
@@ -412,6 +433,8 @@ export class InvoicesService {
         invoiceBackgroundColor: true,
         invoiceSections: true,
         invoiceLogoRelativePath: true,
+        taxRegistrationNumber: true,
+        invoiceVatPercent: true,
       },
     });
 
@@ -421,6 +444,8 @@ export class InvoicesService {
       invoiceBackgroundHex: invoiceBackgroundHex(row.invoiceBackgroundColor),
       invoiceSections: normalizeInvoiceSections(row.invoiceSections),
       hasInvoiceLogo: Boolean(row.invoiceLogoRelativePath),
+      taxRegistrationNumber: row.taxRegistrationNumber?.trim() || null,
+      invoiceVatPercent: Number(row.invoiceVatPercent ?? 5),
     };
   }
 

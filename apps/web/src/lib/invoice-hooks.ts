@@ -41,7 +41,12 @@ export function useInvoiceQuery(id: string | undefined) {
 export function usePatchClinicInvoiceSettingsMutation(clinicId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { invoiceBackgroundColor?: string; invoiceSections?: string[] }) =>
+    mutationFn: (body: {
+      invoiceBackgroundColor?: string;
+      invoiceSections?: string[];
+      taxRegistrationNumber?: string | null;
+      invoiceVatPercent?: number;
+    }) =>
       apiPatch(`/api/v1/clinics/${clinicId}/invoice-settings`, body),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["clinic", clinicId] });

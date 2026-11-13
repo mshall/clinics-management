@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
-import { Allow, IsEmail, IsIn, IsOptional, IsString, Matches, MaxLength, MinLength } from "class-validator";
+import { Allow, IsEmail, IsEnum, IsIn, IsOptional, IsString, Matches, MaxLength, MinLength } from "class-validator";
+import { ClinicalSpecialty } from "@prisma/client";
 import { BASE_CURRENCIES } from "../../common/base-currencies";
 import { DEFAULT_CLINIC_CLOSING_TIME, DEFAULT_CLINIC_OPENING_TIME } from "../../common/clinic-hours";
 
@@ -92,6 +93,11 @@ export class CreateClinicDto {
   @IsString()
   @IsIn(BASE_CURRENCIES)
   defaultCurrency?: string;
+
+  @ApiPropertyOptional({ enum: ClinicalSpecialty, default: ClinicalSpecialty.POLYCLINIC })
+  @IsOptional()
+  @IsEnum(ClinicalSpecialty)
+  clinicalSpecialty?: ClinicalSpecialty;
 
   @ApiPropertyOptional({ default: DEFAULT_CLINIC_OPENING_TIME, description: "Daily opening time (HH:mm)" })
   @IsOptional()

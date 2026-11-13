@@ -115,6 +115,8 @@ export interface EmployeeDto {
   phone: string;
   jobTitle: string;
   employmentType: string;
+  clinicalSpecialty?: string | null;
+  commissionPercent?: number | null;
   hireDate: string;
   salaryBase: number;
   salaryCurrency?: string | null;
@@ -340,6 +342,8 @@ export interface ClinicDetailDto {
   invoiceBackgroundHex: string;
   invoiceSections: string[];
   hasInvoiceLogo: boolean;
+  taxRegistrationNumber: string | null;
+  invoiceVatPercent: number;
   hasPrescriptionLogo: boolean;
   prescriptionHeaderDescriptionEn: string;
   prescriptionHeaderDescriptionAr: string;
@@ -382,6 +386,10 @@ export interface InvoiceDto {
   clinicPhone: string;
   clinicEmail: string;
   clinicLicenseNumber: string;
+  clinicTaxRegistrationNumber: string | null;
+  vatPercent: number;
+  subtotalExVat: number;
+  vatAmount: number;
   totalAmount: number;
   lines: InvoiceLineDto[];
   createdAt: string;

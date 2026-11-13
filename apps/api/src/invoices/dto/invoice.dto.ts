@@ -72,6 +72,18 @@ export class InvoiceDto {
   @ApiProperty()
   clinicLicenseNumber!: string;
 
+  @ApiPropertyOptional({ nullable: true, description: "Tax registration number (TRN) at time of issue" })
+  clinicTaxRegistrationNumber!: string | null;
+
+  @ApiProperty({ description: "VAT percent snapshot at issue time" })
+  vatPercent!: number;
+
+  @ApiProperty({ description: "Taxable amount excluding VAT" })
+  subtotalExVat!: number;
+
+  @ApiProperty({ description: "VAT amount" })
+  vatAmount!: number;
+
   @ApiProperty()
   totalAmount!: number;
 
