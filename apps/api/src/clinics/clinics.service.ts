@@ -618,7 +618,7 @@ export class ClinicsService {
 
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { baseCurrency: true },
+      select: { baseCurrency: true, defaultTaxRegistrationNumber: true, defaultInvoiceVatPercent: true },
     });
     const defaultCurrency =
       dto.defaultCurrency?.trim() && isBaseCurrency(dto.defaultCurrency.trim())
@@ -653,6 +653,8 @@ export class ClinicsService {
         logoUrl,
         defaultCurrency,
         clinicalSpecialty: dto.clinicalSpecialty ?? undefined,
+        taxRegistrationNumber: tenant?.defaultTaxRegistrationNumber ?? "N/A",
+        invoiceVatPercent: tenant?.defaultInvoiceVatPercent ?? 5,
         openingTime,
         closingTime,
         operatingPeriods: {

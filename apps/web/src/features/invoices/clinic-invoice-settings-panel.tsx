@@ -31,7 +31,7 @@ export function ClinicInvoiceSettingsPanel({ clinicId, detail, disabled }: Clini
   const uploadMut = useUploadClinicInvoiceLogoMutation(clinicId);
   const [backgroundColor, setBackgroundColor] = useState(detail.invoiceBackgroundColor || "white");
   const [sections, setSections] = useState<string[]>(detail.invoiceSections ?? DEFAULT_INVOICE_SECTIONS);
-  const [taxRegistrationNumber, setTaxRegistrationNumber] = useState(detail.taxRegistrationNumber ?? "");
+  const [taxRegistrationNumber, setTaxRegistrationNumber] = useState(detail.taxRegistrationNumber ?? "N/A");
   const [invoiceVatPercent, setInvoiceVatPercent] = useState(String(detail.invoiceVatPercent ?? 5));
   const [logoKey, setLogoKey] = useState(0);
   const logo = useAuthenticatedImage(
@@ -42,7 +42,7 @@ export function ClinicInvoiceSettingsPanel({ clinicId, detail, disabled }: Clini
   useEffect(() => {
     setBackgroundColor(detail.invoiceBackgroundColor || "white");
     setSections(detail.invoiceSections ?? DEFAULT_INVOICE_SECTIONS);
-    setTaxRegistrationNumber(detail.taxRegistrationNumber ?? "");
+    setTaxRegistrationNumber(detail.taxRegistrationNumber ?? "N/A");
     setInvoiceVatPercent(String(detail.invoiceVatPercent ?? 5));
   }, [detail.invoiceBackgroundColor, detail.invoiceSections, detail.taxRegistrationNumber, detail.invoiceVatPercent, clinicId]);
 
@@ -62,7 +62,7 @@ export function ClinicInvoiceSettingsPanel({ clinicId, detail, disabled }: Clini
       await patchMut.mutateAsync({
         invoiceBackgroundColor: backgroundColor,
         invoiceSections: sections,
-        taxRegistrationNumber: taxRegistrationNumber.trim() || null,
+        taxRegistrationNumber: taxRegistrationNumber.trim() || "N/A",
         invoiceVatPercent: Number.isFinite(vatN) ? vatN : 5,
       });
       toast.success(t("invoices.settingsSaved", "Invoice settings saved"));
@@ -101,8 +101,14 @@ export function ClinicInvoiceSettingsPanel({ clinicId, detail, disabled }: Clini
             value={taxRegistrationNumber}
             disabled={disabled}
             onChange={(e) => setTaxRegistrationNumber(e.target.value)}
-            placeholder="100000000000003"
+            placeholder="N/A"
           />
+          <p className="text-xs text-muted-foreground">
+            {t(
+              "invoices.clinicTrnOrgHint",
+              "Group admins can set TRN and VAT for all clinics under Administration → Organization & settings.",
+            )}
+          </p>
         </div>
         <div className="space-y-2">
           <Label>{t("invoices.vatPercentSetting", "VAT % on invoices")}</Label>

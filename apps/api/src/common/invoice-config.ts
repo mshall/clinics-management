@@ -67,7 +67,7 @@ export function clinicInvoiceSettingsFromRow(row: {
     invoiceBackgroundHex: invoiceBackgroundHex(row.invoiceBackgroundColor || "white"),
     invoiceSections: normalizeInvoiceSections(row.invoiceSections),
     hasInvoiceLogo: Boolean(row.invoiceLogoRelativePath),
-    taxRegistrationNumber: row.taxRegistrationNumber?.trim() || null,
+    taxRegistrationNumber: row.taxRegistrationNumber?.trim() || "N/A",
     invoiceVatPercent: Number.isFinite(invoiceVatPercent) ? invoiceVatPercent : 5,
   };
 }

@@ -291,6 +291,8 @@ export interface AdminOverviewDto {
     name: string;
     baseCurrency: string;
     defaultVisitFee: number;
+    defaultTaxRegistrationNumber: string;
+    defaultInvoiceVatPercent: number;
     integrationFailureRetentionDays: number;
   } | null;
   registeredTenants: number;

@@ -213,6 +213,8 @@ model Tenant {
   baseCurrency          String          @default("AED")
   defaultLocale         String          @default("en")
   defaultVisitFee Decimal         @default(150) @db.Decimal(14, 2)
+  defaultTaxRegistrationNumber String          @default("N/A")
+  defaultInvoiceVatPercent     Decimal         @default(5) @db.Decimal(5, 2)
   integrationFailureRetentionDays     Int       @default(30)
   integrationFailureLastSpikeAlertAt  DateTime?
   users          User[]

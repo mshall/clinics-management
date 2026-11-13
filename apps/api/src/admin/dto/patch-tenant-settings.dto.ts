@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsIn, IsInt, IsNumber, IsOptional, IsString, Max, Min } from "class-validator";
+import { IsIn, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
 import { BASE_CURRENCIES } from "../../common/base-currencies";
 
 export class PatchTenantSettingsDto {
@@ -33,4 +33,24 @@ export class PatchTenantSettingsDto {
   @Min(1)
   @Max(3650)
   integrationFailureRetentionDays?: number;
+
+  @ApiPropertyOptional({
+    description: "Tax registration (TRN) applied to all clinics in the organization",
+    default: "N/A",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  defaultTaxRegistrationNumber?: string;
+
+  @ApiPropertyOptional({
+    description: "VAT percent on tax invoices for all clinics (default 5)",
+    default: 5,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  defaultInvoiceVatPercent?: number;
 }

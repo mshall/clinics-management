@@ -19,6 +19,7 @@ import {
   normalizeInvoiceSections,
 } from "../common/invoice-config";
 import { computeVatInclusiveBreakdown } from "../common/vat-breakdown";
+import { normalizeOrgTaxRegistrationNumber } from "../common/sync-clinic-invoice-tax";
 import { PrismaService } from "../prisma/prisma.service";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { CreateInvoiceDto } from "./dto/create-invoice.dto";
@@ -245,7 +246,7 @@ export class InvoicesService {
         clinicPhone: clinic.phone,
         clinicEmail: clinic.email,
         clinicLicenseNumber: clinic.licenseNumber,
-        clinicTaxRegistrationNumber: clinic.taxRegistrationNumber?.trim() || null,
+        clinicTaxRegistrationNumber: normalizeOrgTaxRegistrationNumber(clinic.taxRegistrationNumber),
         vatPercentSnapshot,
         createdByUserId: viewer.userId,
         lines: { create: lines },
@@ -414,8 +415,7 @@ export class InvoicesService {
       data.invoiceSections = sections as unknown as Prisma.InputJsonValue;
     }
     if (body.taxRegistrationNumber !== undefined) {
-      const trn = body.taxRegistrationNumber?.trim() || null;
-      data.taxRegistrationNumber = trn;
+      data.taxRegistrationNumber = normalizeOrgTaxRegistrationNumber(body.taxRegistrationNumber);
     }
     if (body.invoiceVatPercent !== undefined) {
       if (body.invoiceVatPercent < 0 || body.invoiceVatPercent > 100) {
@@ -444,7 +444,7 @@ export class InvoicesService {
       invoiceBackgroundHex: invoiceBackgroundHex(row.invoiceBackgroundColor),
       invoiceSections: normalizeInvoiceSections(row.invoiceSections),
       hasInvoiceLogo: Boolean(row.invoiceLogoRelativePath),
-      taxRegistrationNumber: row.taxRegistrationNumber?.trim() || null,
+      taxRegistrationNumber: normalizeOrgTaxRegistrationNumber(row.taxRegistrationNumber),
       invoiceVatPercent: Number(row.invoiceVatPercent ?? 5),
     };
   }

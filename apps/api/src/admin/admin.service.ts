@@ -22,6 +22,10 @@ import type { PlatformPatchTenantUserDto } from "./dto/platform-patch-tenant-use
 import type { PatchTenantSettingsDto } from "./dto/patch-tenant-settings.dto";
 import { isBaseCurrency } from "../common/base-currencies";
 import { syncInheritedClinicCurrencies } from "../common/sync-inherited-clinic-currencies";
+import {
+  normalizeOrgTaxRegistrationNumber,
+  syncClinicInvoiceTaxFromTenant,
+} from "../common/sync-clinic-invoice-tax";
 import type { BulkDeleteUsersDto } from "./dto/bulk-delete-users.dto";
 import type { DeactivateTenantUserDto } from "./dto/deactivate-tenant-user.dto";
 import type { ReactivateTenantUserDto } from "./dto/reactivate-tenant-user.dto";
@@ -123,6 +127,8 @@ export class AdminService {
             name: tenant.name,
             baseCurrency: tenant.baseCurrency,
             defaultVisitFee: Number(tenant.defaultVisitFee),
+            defaultTaxRegistrationNumber: tenant.defaultTaxRegistrationNumber,
+            defaultInvoiceVatPercent: Number(tenant.defaultInvoiceVatPercent),
             integrationFailureRetentionDays: tenant.integrationFailureRetentionDays,
           }
         : null,
@@ -632,6 +638,8 @@ export class AdminService {
       defaultVisitFee?: number;
       baseCurrency?: string;
       integrationFailureRetentionDays?: number;
+      defaultTaxRegistrationNumber?: string;
+      defaultInvoiceVatPercent?: number;
     } = {};
     if (dto.defaultVisitFee !== undefined) data.defaultVisitFee = dto.defaultVisitFee;
     if (dto.baseCurrency !== undefined) {
@@ -642,12 +650,29 @@ export class AdminService {
     if (dto.integrationFailureRetentionDays !== undefined) {
       data.integrationFailureRetentionDays = dto.integrationFailureRetentionDays;
     }
+    if (dto.defaultTaxRegistrationNumber !== undefined) {
+      data.defaultTaxRegistrationNumber = normalizeOrgTaxRegistrationNumber(dto.defaultTaxRegistrationNumber);
+    }
+    if (dto.defaultInvoiceVatPercent !== undefined) {
+      if (dto.defaultInvoiceVatPercent < 0 || dto.defaultInvoiceVatPercent > 100) {
+        throw new BadRequestException("VAT percent must be between 0 and 100");
+      }
+      data.defaultInvoiceVatPercent = dto.defaultInvoiceVatPercent;
+    }
     if (!Object.keys(data).length) throw new BadRequestException("No supported fields to update");
 
     const row = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.tenant.update({ where: { id: tenantId }, data });
       if (data.baseCurrency && data.baseCurrency !== existing.baseCurrency) {
         await syncInheritedClinicCurrencies(tx, tenantId, existing.baseCurrency, data.baseCurrency);
+      }
+      if (data.defaultTaxRegistrationNumber !== undefined || data.defaultInvoiceVatPercent !== undefined) {
+        const trn =
+          data.defaultTaxRegistrationNumber ?? normalizeOrgTaxRegistrationNumber(existing.defaultTaxRegistrationNumber);
+        const vat = Number(
+          data.defaultInvoiceVatPercent ?? existing.defaultInvoiceVatPercent,
+        );
+        await syncClinicInvoiceTaxFromTenant(tx, tenantId, trn, vat);
       }
       return updated;
     });
@@ -657,6 +682,8 @@ export class AdminService {
       name: row.name,
       baseCurrency: row.baseCurrency,
       defaultVisitFee: Number(row.defaultVisitFee),
+      defaultTaxRegistrationNumber: row.defaultTaxRegistrationNumber,
+      defaultInvoiceVatPercent: Number(row.defaultInvoiceVatPercent),
       integrationFailureRetentionDays: row.integrationFailureRetentionDays,
     };
   }
