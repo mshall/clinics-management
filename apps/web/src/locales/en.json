@@ -55,6 +55,31 @@
     "quickLinks": "Quick links",
     "footer": "For technical RFC/PRD detail, see the documentation portal in the repository Docs folder."
   },
+  "frontDesk": {
+    "searchPatients": "Find patient",
+    "globalSearchTitle": "Global patient search",
+    "globalSearchPh": "Phone, national ID, MRN, or name",
+    "noSearchResults": "No matches",
+    "quickCheckIn": "Quick check-in",
+    "collectPayment": "Payment today",
+    "room": "Room",
+    "checkInButton": "Check in & print ticket",
+    "checkInDone": "Checked in · ticket #{{n}}",
+    "checkedInTicket": "Ticket",
+    "liveBoard": "Live clinic board",
+    "waitingScreen": "Waiting-room screen",
+    "waitingQueue": "Waiting",
+    "waitMins": "{{n}} min",
+    "callTicket": "Call",
+    "rooms": "Rooms",
+    "lastCalled": "Last called",
+    "roomFree": "Free",
+    "roomBusy": "In use",
+    "nowServing": "Now serving",
+    "inQueue": "In queue",
+    "vipPatient": "VIP patient",
+    "needsChaperone": "Needs a chaperone"
+  },
   "auth": {
     "signIn": "Sign in",
     "email": "Email",
@@ -97,9 +122,22 @@
       "headcount": "User accounts",
       "employees": "HR employees",
       "appointmentsPeriod": "Appointments (period)",
-      "encountersPeriod": "Encounters (period)"
+      "encountersPeriod": "Encounters (period)",
+      "revenuePeriod": "Revenue (period)",
+      "expensesPeriod": "Expenses (period)",
+      "netPeriod": "Net (period)"
     },
-    "chartPlaceholder": "Income vs expenses and growth charts will use Recharts with live data."
+    "chartPlaceholder": "Income vs expenses and growth charts will use Recharts with live data.",
+    "loadError": "Could not load dashboard.",
+    "todayLive": "Today (live)",
+    "today": {
+      "appointments": "Appointments",
+      "waiting": "Waiting",
+      "seen": "Seen today",
+      "collected": "Collected",
+      "noShows": "No-shows",
+      "checkedIn": "Checked in"
+    }
   },
   "patients": {
     "title": "Patients",
@@ -736,6 +774,11 @@
     "doctorSearchIdle": "Type a name or pick from the list.",
     "status": "Status",
     "statusScheduled": "Scheduled",
+    "statusBooked": "Booked",
+    "statusPreOp": "Pre-op",
+    "statusInProgress": "In progress",
+    "statusRecovery": "Recovery",
+    "statusDischarged": "Discharged",
     "statusCancelled": "Cancelled",
     "statusCompleted": "Completed",
     "markCompleted": "Mark completed",

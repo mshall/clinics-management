@@ -9,6 +9,7 @@ Role-based user onboarding lives in the web app, not only in markdown.
 | **Nav** | Bottom of the sidebar — **Guide book** (EN) / **كتيب التعليمات** (AR) |
 | **Route** | `/guide` (any signed-in user; not gated by custom nav-tab grants) |
 | **Language** | Follows app language (EN/AR); role labels use existing locale formatters |
+| **Locales** | `apps/web/src/locales/en.json` and `ar.json` are kept in parity (same key set); dashboard “Today (live)” and front-desk strings included |
 
 ## Behaviour
 

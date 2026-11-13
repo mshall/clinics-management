@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate } from "react-router-dom";
 import { defaultHomeForRole } from "@/lib/nav-policy";
@@ -17,6 +18,13 @@ export function DashboardPage() {
   const { data, isPending, isError, error } = useDashboardKpisQuery();
   const todayQ = useDashboardTodayQuery();
   const locale = localeForLanguage(i18n.language);
+  const todayDateLabel = useMemo(() => {
+    const raw = todayQ.data?.date;
+    if (!raw) return "";
+    const d = new Date(`${raw}T12:00:00`);
+    if (Number.isNaN(d.getTime())) return raw;
+    return new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(d);
+  }, [todayQ.data?.date, locale]);
   const showFinancial = canViewDashboardFinancialKpis(role);
   const showHr = canViewDashboardHrKpis(role);
 
@@ -54,23 +62,23 @@ export function DashboardPage() {
 
       {isError ? (
         <p className="text-sm text-destructive">
-          {error instanceof Error ? error.message : "Could not load dashboard."}
+          {error instanceof Error ? error.message : t("dashboard.loadError")}
         </p>
       ) : null}
 
       {todayQ.data ? (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">{t("dashboard.todayLive", "Today (live)")}</CardTitle>
-            <CardDescription className="ltr-nums">{todayQ.data.date}</CardDescription>
+            <CardTitle className="text-base">{t("dashboard.todayLive")}</CardTitle>
+            <CardDescription className="ltr-nums">{todayDateLabel}</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6 text-sm">
-            <TodayStat label={t("dashboard.today.appointments", "Appointments")} value={todayQ.data.appointments} />
-            <TodayStat label={t("dashboard.today.waiting", "Waiting")} value={todayQ.data.waiting} />
-            <TodayStat label={t("dashboard.today.seen", "Seen today")} value={todayQ.data.seen} />
-            <TodayStat label={t("dashboard.today.collected", "Collected")} value={todayQ.data.collected} money />
-            <TodayStat label={t("dashboard.today.noShows", "No-shows")} value={todayQ.data.noShows} />
-            <TodayStat label={t("dashboard.today.checkedIn", "Checked in")} value={todayQ.data.checkedIn} />
+            <TodayStat label={t("dashboard.today.appointments")} value={todayQ.data.appointments} locale={locale} />
+            <TodayStat label={t("dashboard.today.waiting")} value={todayQ.data.waiting} locale={locale} />
+            <TodayStat label={t("dashboard.today.seen")} value={todayQ.data.seen} locale={locale} />
+            <TodayStat label={t("dashboard.today.collected")} value={todayQ.data.collected} money locale={locale} />
+            <TodayStat label={t("dashboard.today.noShows")} value={todayQ.data.noShows} locale={locale} />
+            <TodayStat label={t("dashboard.today.checkedIn")} value={todayQ.data.checkedIn} locale={locale} />
           </CardContent>
         </Card>
       ) : null}
@@ -121,8 +129,20 @@ export function DashboardPage() {
   );
 }
 
-function TodayStat({ label, value, money }: { label: string; value: number; money?: boolean }) {
-  const display = money ? value.toFixed(2) : String(value);
+function TodayStat({
+  label,
+  value,
+  money,
+  locale,
+}: {
+  label: string;
+  value: number;
+  money?: boolean;
+  locale: string;
+}) {
+  const display = money
+    ? new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
+    : new Intl.NumberFormat(locale).format(value);
   return (
     <div>
       <p className="text-muted-foreground text-xs">{label}</p>
