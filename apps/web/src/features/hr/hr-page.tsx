@@ -27,7 +27,7 @@ import {
   isClinicRequiredUserRole,
   isOrgWideUserRole,
   isProvisionLoginClinicRequired,
-  CLINIC_STAFF_ASSIGNABLE_ROLES,
+  HR_PROVISION_ASSIGNABLE_ROLES,
 } from "@/features/platform/platform-shared";
 import { CLINICAL_SPECIALTY_VALUES } from "@/lib/clinical-specialties";
 import {
@@ -235,7 +235,12 @@ export function HrPage() {
   const [empLoginEmail, setEmpLoginEmail] = useState("");
   const [empLoginPassword, setEmpLoginPassword] = useState(() => defaultEmployeeLoginPassword());
   const [loginEmailTouched, setLoginEmailTouched] = useState(false);
-  const [empLoginRole, setEmpLoginRole] = useState<(typeof CLINIC_STAFF_ASSIGNABLE_ROLES)[number]>("NURSE");
+  const [empLoginRole, setEmpLoginRole] = useState<(typeof HR_PROVISION_ASSIGNABLE_ROLES)[number]>("NURSE");
+  const provisionAssignableRoles = useMemo(() => {
+    const fromApi = hrManageContext.data?.assignableRoles;
+    if (fromApi?.length) return fromApi;
+    return [...HR_PROVISION_ASSIGNABLE_ROLES];
+  }, [hrManageContext.data?.assignableRoles]);
   const [physicianAssignment, setPhysicianAssignment] = useState<"CLINIC" | "GROUP">("CLINIC");
   const [createdLoginCredentials, setCreatedLoginCredentials] = useState<{
     email: string;
@@ -912,10 +917,10 @@ export function HrPage() {
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                             value={empLoginRole}
                             onChange={(e) =>
-                              setEmpLoginRole(e.target.value as (typeof CLINIC_STAFF_ASSIGNABLE_ROLES)[number])
+                              setEmpLoginRole(e.target.value as (typeof HR_PROVISION_ASSIGNABLE_ROLES)[number])
                             }
                           >
-                            {CLINIC_STAFF_ASSIGNABLE_ROLES.map((r) => (
+                            {provisionAssignableRoles.map((r) => (
                               <option key={r} value={r}>
                                 {formatUserRole(r, t)}
                               </option>
@@ -972,6 +977,14 @@ export function HrPage() {
                             {t(
                               "hr.groupPhysicianClinicHiddenHint",
                               "Group physicians are assigned across all clinics in the clinic group — no single clinic selection is required.",
+                            )}
+                          </p>
+                        ) : null}
+                        {provisionLogin && isOrgWideUserRole(empLoginRole) ? (
+                          <p className="text-xs text-muted-foreground sm:col-span-2">
+                            {t(
+                              "hr.orgWideRoleClinicHiddenHint",
+                              "This organization-wide role does not require clinic assignment — HR uses your scoped clinic only as the employee record home clinic.",
                             )}
                           </p>
                         ) : null}

@@ -78,6 +78,7 @@ export function isProvisionLoginClinicRequired(
   role: string,
   physicianAssignment?: "CLINIC" | "GROUP",
 ): boolean {
+  if (isOrgWideUserRole(role)) return false;
   if (role === "PHYSICIAN" && physicianAssignment === "GROUP") return false;
   return (
     isClinicRequiredUserRole(role) ||
@@ -111,6 +112,14 @@ export const CLINIC_STAFF_ASSIGNABLE_ROLES = [
   "NURSE",
   "RECEPTIONIST",
   "CLINIC_ASSISTANT",
+] as const;
+
+/** Fallback when HR manage-context assignableRoles is unavailable (keep aligned with API HR_ASSIGNABLE_USER_ROLES). */
+export const HR_PROVISION_ASSIGNABLE_ROLES = [
+  "GROUP_SUPERVISOR",
+  "HR_OFFICER",
+  "FINANCE_OFFICER",
+  ...CLINIC_STAFF_ASSIGNABLE_ROLES,
 ] as const;
 
 export const ORG_USER_PASSWORD_MIN_LENGTH = 8;

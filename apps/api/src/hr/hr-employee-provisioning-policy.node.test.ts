@@ -9,8 +9,13 @@ test("HR may assign clinic staff roles", () => {
   assert.doesNotThrow(() => assertHrCanAssignLoginRole(UserRole.PHYSICIAN));
 });
 
-test("HR cannot assign org-wide roles", () => {
-  assert.throws(() => assertHrCanAssignLoginRole(UserRole.HR_OFFICER), ForbiddenException);
+test("HR may assign selected organization-wide roles", () => {
+  assert.doesNotThrow(() => assertHrCanAssignLoginRole(UserRole.HR_OFFICER));
+  assert.doesNotThrow(() => assertHrCanAssignLoginRole(UserRole.FINANCE_OFFICER));
+  assert.doesNotThrow(() => assertHrCanAssignLoginRole(UserRole.GROUP_SUPERVISOR));
+});
+
+test("HR cannot assign group administrator", () => {
   assert.throws(() => assertHrCanAssignLoginRole(UserRole.GROUP_ADMIN), ForbiddenException);
 });
 

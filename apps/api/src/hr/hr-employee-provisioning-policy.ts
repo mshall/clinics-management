@@ -6,6 +6,9 @@ import type { JwtUser } from "../auth/jwt-user";
 
 /** Roles a clinic HR officer may assign when provisioning a login for a new employee. */
 export const HR_ASSIGNABLE_USER_ROLES: ReadonlySet<UserRole> = new Set([
+  UserRole.GROUP_SUPERVISOR,
+  UserRole.HR_OFFICER,
+  UserRole.FINANCE_OFFICER,
   UserRole.CLINIC_ADMIN,
   UserRole.BRANCH_MANAGER,
   UserRole.PHYSICIAN,
@@ -14,11 +17,18 @@ export const HR_ASSIGNABLE_USER_ROLES: ReadonlySet<UserRole> = new Set([
   UserRole.CLINIC_ASSISTANT,
 ]);
 
+/** Organization-wide login roles — employee record uses an HR-scope clinic as anchor only. */
+export const HR_ORG_WIDE_PROVISION_ROLES: ReadonlySet<UserRole> = new Set([
+  UserRole.GROUP_SUPERVISOR,
+  UserRole.HR_OFFICER,
+  UserRole.FINANCE_OFFICER,
+]);
+
 export type PhysicianAssignmentScope = "CLINIC" | "GROUP";
 
 export function assertHrCanAssignLoginRole(role: UserRole): void {
   if (!HR_ASSIGNABLE_USER_ROLES.has(role)) {
-    throw new ForbiddenException("HR officers may only assign clinic staff roles");
+    throw new ForbiddenException("HR officers may only assign approved organization and clinic staff roles");
   }
   assertCanCreateGroupAdminRole(role);
 }

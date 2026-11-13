@@ -30,7 +30,7 @@ import {
   softDeleteLinkedEmployee,
   syncUserClinicAdminScopes,
 } from "../common/user-employee-cascade";
-import { fetchClinicGroupNetworkIds, fetchEmployeeManageScopeIds } from "../common/clinic-scope";
+import { CLINIC_SCOPE_ROLES, fetchClinicGroupNetworkIds, fetchEmployeeManageScopeIds } from "../common/clinic-scope";
 import {
   viewerCanArchiveEmployees,
   viewerCanManageEmployees,
@@ -59,6 +59,7 @@ import type { CreateEmployeeResultDto } from "./dto/create-employee-result.dto";
 import type { HrManageContextDto } from "./dto/hr-manage-context.dto";
 import {
   assertHrCanAssignLoginRole,
+  HR_ORG_WIDE_PROVISION_ROLES,
   assertProvisionLoginPayload,
   HR_ASSIGNABLE_USER_ROLES,
 } from "./hr-employee-provisioning-policy";
@@ -510,12 +511,13 @@ export class HrService {
       const scope = await fetchEmployeeManageScopeIds(this.prisma, tenantId, viewer);
       const role = loginRole ?? UserRole.NURSE;
       const isGroupPhysician = role === UserRole.PHYSICIAN && dto.physicianAssignment === "GROUP";
+      const isOrgWideProvision = HR_ORG_WIDE_PROVISION_ROLES.has(role);
       let picked = dto.clinicId?.trim();
-      if (!picked && isGroupPhysician) {
+      if (!picked && (isGroupPhysician || isOrgWideProvision)) {
         const fallback = scope?.[0];
         if (!fallback) {
           throw new BadRequestException(
-            "No assignable clinic to anchor a group physician — grant HR access to at least one clinic",
+            "No assignable clinic to anchor this employee — grant HR access to at least one clinic",
           );
         }
         picked = fallback;
@@ -665,8 +667,9 @@ export class HrService {
             salaryCurrency,
           },
         });
-        if (clinicIds.length > 0) {
-          await syncUserClinicAdminScopes(tx, tenantId, userRecord.id, clinicIds);
+        const adminScopeClinicIds = CLINIC_SCOPE_ROLES.has(linkedUser.role) ? clinicIds : [];
+        if (adminScopeClinicIds.length > 0) {
+          await syncUserClinicAdminScopes(tx, tenantId, userRecord.id, adminScopeClinicIds);
         }
         await tx.employeeEmploymentPeriod.create({
           data: {
