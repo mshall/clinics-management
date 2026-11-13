@@ -34,7 +34,7 @@ export function AppShell() {
 
   return (
     <div className="flex min-h-screen bg-muted/40">
-      <aside className="hidden w-60 shrink-0 border-e border-border bg-card md:flex md:flex-col">
+      <aside className="sticky top-0 hidden h-screen min-h-0 w-60 shrink-0 border-e border-border bg-card md:flex md:flex-col">
         <div className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-4">
           <img src="/logo.svg" alt="" className="h-9 w-9 object-contain" width={36} height={36} />
           <div className="min-w-0">
@@ -42,7 +42,7 @@ export function AppShell() {
             <p className="truncate text-xs text-muted-foreground">{t("app.tagline")}</p>
           </div>
         </div>
-        <div className="flex flex-1 flex-col">
+        <div className="flex min-h-0 flex-1 flex-col">
           <AppNavLinks />
         </div>
       </aside>

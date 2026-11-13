@@ -49,7 +49,15 @@ Staff with **Appointments** nav access can use check-in and the board (reception
 | Waiting-room TV | **Open waiting-room screen** (new tab) → `/front-desk/waiting-room?clinicId=` — large **Now serving** + queue count |
 | API | `GET /api/v1/front-desk/board?clinicId=` |
 
-Configure room names under **Clinics & branches → clinic detail → Settings → Exam rooms** (group admin, clinic admin, or branch manager). Changes apply immediately to the live board and waiting-room screen for that clinic.
+Configure room names under **Clinics & branches → clinic detail → Settings → Exam rooms** (group admin, clinic admin, or branch manager). There is no separate Save control:
+
+| Action | Behaviour |
+|--------|-----------|
+| **Rename** | Edit → **Done** — saves immediately if the name changed |
+| **Add** | Enter a name → **Add** → confirm in the dialog — saves on confirm |
+| **Remove** | Trash → confirm in the dialog — saves on confirm |
+
+Updates apply to the live board and waiting-room screen for that clinic after each successful action.
 
 ---
 

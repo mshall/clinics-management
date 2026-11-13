@@ -1,8 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { DoorOpen, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,8 @@ type ClinicRoomsSettingsPanelProps = {
   roomLabels: string[];
   canEdit: boolean;
 };
+
+type DeleteTarget = { index: number; name: string };
 
 function normalizeDraft(labels: string[]): string[] {
   const out: string[] = [];
@@ -33,6 +36,17 @@ function normalizeDraft(labels: string[]): string[] {
   return out;
 }
 
+function listsEqual(a: string[], b: string[]): boolean {
+  const na = normalizeDraft(a);
+  const nb = normalizeDraft(b);
+  return na.length === nb.length && na.every((v, i) => v === nb[i]);
+}
+
+function hasDuplicateName(rooms: string[], name: string, skipIndex?: number): boolean {
+  const key = name.trim().toLowerCase();
+  return rooms.some((r, i) => i !== skipIndex && r.trim().toLowerCase() === key);
+}
+
 export function ClinicRoomsSettingsPanel({ clinicId, roomLabels, canEdit }: ClinicRoomsSettingsPanelProps) {
   const { t } = useTranslation();
   const qc = useQueryClient();
@@ -40,12 +54,16 @@ export function ClinicRoomsSettingsPanel({ clinicId, roomLabels, canEdit }: Clin
   const [newRoom, setNewRoom] = useState("");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editDraft, setEditDraft] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
 
   useEffect(() => {
     setRooms([...roomLabels]);
     setEditingIndex(null);
     setEditDraft("");
     setNewRoom("");
+    setDeleteTarget(null);
+    setAddDialogOpen(false);
   }, [roomLabels]);
 
   const saveMut = useMutation({
@@ -67,13 +85,20 @@ export function ClinicRoomsSettingsPanel({ clinicId, roomLabels, canEdit }: Clin
     },
   });
 
-  const normalizedRooms = normalizeDraft(rooms);
-  const normalizedSaved = normalizeDraft(roomLabels);
-  const unchanged =
-    normalizedRooms.length === normalizedSaved.length &&
-    normalizedRooms.every((v, i) => v === normalizedSaved[i]);
-  const tooFew = normalizedRooms.length < 1;
-  const tooMany = rooms.filter((r) => r.trim()).length > ROOM_LABEL_MAX_COUNT;
+  const persistRooms = (nextRooms: string[]) => {
+    const normalized = normalizeDraft(nextRooms);
+    if (normalized.length < 1) {
+      toast.error(t("clinics.roomsMin", "Keep at least one room."));
+      return;
+    }
+    if (nextRooms.filter((r) => r.trim()).length > ROOM_LABEL_MAX_COUNT) {
+      toast.error(t("clinics.roomsMax", "You can configure up to {{max}} rooms.", { max: ROOM_LABEL_MAX_COUNT }));
+      return;
+    }
+    if (listsEqual(normalized, roomLabels)) return;
+    setRooms(normalized);
+    saveMut.mutate(normalized);
+  };
 
   const commitEdit = (index: number) => {
     const next = editDraft.trim();
@@ -81,33 +106,57 @@ export function ClinicRoomsSettingsPanel({ clinicId, roomLabels, canEdit }: Clin
       toast.error(t("clinics.roomsNameRequired", "Room name cannot be empty."));
       return;
     }
-    setRooms((prev) => prev.map((r, i) => (i === index ? next : r)));
+    if (hasDuplicateName(rooms, next, index)) {
+      toast.error(t("clinics.roomsDuplicate", "A room with this name already exists."));
+      return;
+    }
+    const nextRooms = rooms.map((r, i) => (i === index ? next : r));
     setEditingIndex(null);
     setEditDraft("");
+    if (next === rooms[index]?.trim()) return;
+    persistRooms(nextRooms);
   };
 
-  const addRoom = () => {
+  const openAddDialog = () => {
     const next = newRoom.trim();
     if (!next) return;
     if (rooms.length >= ROOM_LABEL_MAX_COUNT) {
       toast.error(t("clinics.roomsMax", "You can configure up to {{max}} rooms.", { max: ROOM_LABEL_MAX_COUNT }));
       return;
     }
-    setRooms((prev) => [...prev, next]);
-    setNewRoom("");
-  };
-
-  const removeRoom = (index: number) => {
-    if (rooms.length <= 1) {
-      toast.error(t("clinics.roomsMin", "Keep at least one room."));
+    if (hasDuplicateName(rooms, next)) {
+      toast.error(t("clinics.roomsDuplicate", "A room with this name already exists."));
       return;
     }
-    setRooms((prev) => prev.filter((_, i) => i !== index));
-    if (editingIndex === index) {
+    setAddDialogOpen(true);
+  };
+
+  const confirmAdd = () => {
+    const next = newRoom.trim();
+    if (!next) return;
+    const nextRooms = [...rooms, next];
+    setNewRoom("");
+    setAddDialogOpen(false);
+    persistRooms(nextRooms);
+  };
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    if (rooms.length <= 1) {
+      toast.error(t("clinics.roomsMin", "Keep at least one room."));
+      setDeleteTarget(null);
+      return;
+    }
+    const nextRooms = rooms.filter((_, i) => i !== deleteTarget.index);
+    if (editingIndex === deleteTarget.index) {
       setEditingIndex(null);
       setEditDraft("");
     }
+    setDeleteTarget(null);
+    persistRooms(nextRooms);
   };
+
+  const busy = saveMut.isPending;
 
   return (
     <Card>
@@ -116,7 +165,7 @@ export function ClinicRoomsSettingsPanel({ clinicId, roomLabels, canEdit }: Clin
         <CardDescription>
           {t(
             "clinics.roomsSettingsHint",
-            "Names shown on the front-desk live board (free vs in use). Add, rename, or remove rooms for this clinic.",
+            "Names shown on the front-desk live board (free vs in use). Rename with Edit → Done, or use Add / Delete — each change saves immediately after you confirm.",
           )}
         </CardDescription>
       </CardHeader>
@@ -132,6 +181,7 @@ export function ClinicRoomsSettingsPanel({ clinicId, roomLabels, canEdit }: Clin
                         className="max-w-xs"
                         value={editDraft}
                         maxLength={ROOM_LABEL_MAX_LEN}
+                        disabled={busy}
                         onChange={(e) => setEditDraft(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") commitEdit(index);
@@ -142,13 +192,14 @@ export function ClinicRoomsSettingsPanel({ clinicId, roomLabels, canEdit }: Clin
                         }}
                         aria-label={t("clinics.roomName", "Room name")}
                       />
-                      <Button type="button" size="sm" onClick={() => commitEdit(index)}>
+                      <Button type="button" size="sm" disabled={busy} onClick={() => commitEdit(index)}>
                         {t("common.done", "Done")}
                       </Button>
                       <Button
                         type="button"
                         size="sm"
                         variant="ghost"
+                        disabled={busy}
                         onClick={() => {
                           setEditingIndex(null);
                           setEditDraft("");
@@ -164,6 +215,7 @@ export function ClinicRoomsSettingsPanel({ clinicId, roomLabels, canEdit }: Clin
                         type="button"
                         size="icon"
                         variant="ghost"
+                        disabled={busy || editingIndex !== null}
                         aria-label={t("clinics.editRoom", "Edit room")}
                         onClick={() => {
                           setEditingIndex(index);
@@ -176,9 +228,9 @@ export function ClinicRoomsSettingsPanel({ clinicId, roomLabels, canEdit }: Clin
                         type="button"
                         size="icon"
                         variant="ghost"
-                        disabled={rooms.length <= 1}
+                        disabled={busy || rooms.length <= 1 || editingIndex !== null}
                         aria-label={t("clinics.deleteRoom", "Delete room")}
-                        onClick={() => removeRoom(index)}
+                        onClick={() => setDeleteTarget({ index, name: label })}
                       >
                         <Trash2 className="size-4" />
                       </Button>
@@ -195,33 +247,24 @@ export function ClinicRoomsSettingsPanel({ clinicId, roomLabels, canEdit }: Clin
                   className="max-w-xs"
                   value={newRoom}
                   maxLength={ROOM_LABEL_MAX_LEN}
+                  disabled={busy || editingIndex !== null}
                   placeholder={t("clinics.roomNamePlaceholder", "e.g. Room 4")}
                   onChange={(e) => setNewRoom(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") addRoom();
+                    if (e.key === "Enter") openAddDialog();
                   }}
                 />
               </div>
-              <Button type="button" variant="secondary" disabled={!newRoom.trim()} onClick={addRoom}>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={!newRoom.trim() || busy || editingIndex !== null}
+                onClick={openAddDialog}
+              >
                 <Plus className="me-1 size-4" />
                 {t("common.add", "Add")}
               </Button>
             </div>
-            {tooFew ? (
-              <p className="text-sm text-destructive">{t("clinics.roomsMin", "Keep at least one room.")}</p>
-            ) : null}
-            {tooMany ? (
-              <p className="text-sm text-destructive">
-                {t("clinics.roomsMax", "You can configure up to {{max}} rooms.", { max: ROOM_LABEL_MAX_COUNT })}
-              </p>
-            ) : null}
-            <Button
-              type="button"
-              disabled={saveMut.isPending || unchanged || tooFew || tooMany}
-              onClick={() => saveMut.mutate(normalizedRooms)}
-            >
-              {t("common.save", "Save")}
-            </Button>
           </>
         ) : (
           <ul className="list-inside list-disc text-sm">
@@ -231,6 +274,56 @@ export function ClinicRoomsSettingsPanel({ clinicId, roomLabels, canEdit }: Clin
           </ul>
         )}
       </CardContent>
+
+      <ConfirmDialog
+        open={addDialogOpen}
+        onOpenChange={(open) => {
+          if (!busy) setAddDialogOpen(open);
+        }}
+        variant="default"
+        icon={<DoorOpen className="h-5 w-5" aria-hidden />}
+        title={t("clinics.roomsAddConfirmTitle", "Add exam room?")}
+        description={t(
+          "clinics.roomsAddConfirmIntro",
+          "This room will appear on the front-desk live board for this clinic. You can rename or remove it later.",
+        )}
+        confirmLabel={t("clinics.roomsAddConfirmAction", "Add room")}
+        cancelLabel={t("common.cancel", "Cancel")}
+        pending={busy}
+        onConfirm={confirmAdd}
+        details={
+          newRoom.trim() ? (
+            <dl className="space-y-1">
+              <dt className="text-xs text-muted-foreground">{t("clinics.roomName", "Room name")}</dt>
+              <dd className="font-medium">{newRoom.trim()}</dd>
+            </dl>
+          ) : null
+        }
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!busy && !open) setDeleteTarget(null);
+        }}
+        title={t("clinics.roomsDeleteConfirmTitle", "Remove exam room?")}
+        description={t(
+          "clinics.roomsDeleteConfirmIntro",
+          "The room is removed from this clinic’s list. The live board will no longer show it. Existing room assignments today are not changed automatically.",
+        )}
+        confirmLabel={t("clinics.roomsDeleteConfirmAction", "Remove room")}
+        cancelLabel={t("common.cancel", "Cancel")}
+        pending={busy}
+        onConfirm={confirmDelete}
+        details={
+          deleteTarget ? (
+            <dl className="space-y-1">
+              <dt className="text-xs text-muted-foreground">{t("clinics.roomName", "Room name")}</dt>
+              <dd className="font-medium">{deleteTarget.name}</dd>
+            </dl>
+          ) : null
+        }
+      />
     </Card>
   );
 }
