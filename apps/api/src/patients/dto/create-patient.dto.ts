@@ -3,6 +3,7 @@ import { Gender } from "@prisma/client";
 import { Transform } from "class-transformer";
 import {
   IsArray,
+  IsBoolean,
   IsDateString,
   IsEmail,
   IsEnum,
@@ -78,6 +79,16 @@ export class CreatePatientDto extends PatientAcquisitionFieldsDto {
   @IsOptional()
   @IsString()
   homeBranchId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isVip?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  needsChaperone?: boolean;
 
   @ApiPropertyOptional({ type: [PatientAllergyInputDto] })
   @IsOptional()

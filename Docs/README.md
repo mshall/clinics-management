@@ -31,6 +31,8 @@ See **[Documentation_Portal.md](./Documentation_Portal.md)** for module layout, 
 | [**ASSISTANT.md**](./ASSISTANT.md) | AI assistant architecture: permissions, playbook, live data, actions |
 | [**ASSISTANT_OPENAI_SETUP.md**](./ASSISTANT_OPENAI_SETUP.md) | OpenAI API key and AWS Secrets Manager for the assistant |
 | [**CLINICAL_WORKFLOW.md**](./CLINICAL_WORKFLOW.md) | Template builder, shortcuts, safety checks, vitals charts, letters, note lock |
+| [**PATIENT_360_AND_SCHEDULING.md**](./PATIENT_360_AND_SCHEDULING.md) | Patient summary, timeline, family merge, appointment types, series, waitlist, follow-up |
+| [**FRONT_DESK.md**](./FRONT_DESK.md) | Global search (⌘K), quick check-in, live board, waiting-room screen, chart header alerts |
 
 ---
 

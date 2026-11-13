@@ -41,6 +41,12 @@ export class PatientDto {
   @ApiPropertyOptional({ nullable: true, type: String })
   homeBranchId!: string | null;
 
+  @ApiPropertyOptional()
+  isVip?: boolean;
+
+  @ApiPropertyOptional()
+  needsChaperone?: boolean;
+
   @ApiPropertyOptional({ description: "Whether a national ID / SSN scan is on file" })
   hasNationalIdDoc?: boolean;
 

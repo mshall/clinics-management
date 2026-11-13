@@ -148,6 +148,40 @@ enum AppointmentStatus {
   CHECKED_IN
   COMPLETED
   CANCELLED
+  NO_SHOW
+}
+
+enum PatientActiveProblemStatus {
+  ACTIVE
+  RESOLVED
+}
+
+enum PatientFamilyRelation {
+  PARENT
+  CHILD
+  SPOUSE
+  GUARDIAN
+  OTHER
+}
+
+enum ClinicalPhotoKind {
+  BEFORE
+  AFTER
+  GENERAL
+}
+
+enum EncounterFollowUpStatus {
+  NONE
+  PENDING_BOOKING
+  REMINDER_SENT
+  BOOKED
+}
+
+enum AppointmentWaitlistStatus {
+  WAITING
+  OFFERED
+  BOOKED
+  CANCELLED
 }
 
 enum OperationDocumentKind {
@@ -285,6 +319,13 @@ model Tenant {
   clinicianDiagnosisFavorites    ClinicianDiagnosisFavorite[]
   drugInteractionRules           DrugInteractionRule[]
   clinicalLetters                ClinicalLetter[]
+  appointmentTypes               AppointmentType[]
+  clinicianAvailabilityTemplates ClinicianAvailabilityTemplate[]
+  appointmentSeries              AppointmentSeries[]
+  appointmentWaitlist            AppointmentWaitlistEntry[]
+  patientActiveProblems          PatientActiveProblem[]
+  patientFamilyLinks             PatientFamilyLink[]
+  patientClinicalPhotos          PatientClinicalPhoto[]
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
 }
@@ -317,6 +358,9 @@ model User {
   supportTicketEvents            SupportTicketEvent[] @relation("SupportTicketEventActor")
   integrationClientsCreated      IntegrationClient[] @relation("IntegrationClientCreatedBy")
   integrationFailuresResolved    IntegrationFailureLog[] @relation("IntegrationFailureResolvedBy")
+  clinicianAvailabilityTemplates ClinicianAvailabilityTemplate[] @relation("ClinicianAvailability")
+  appointmentSeriesAsClinician   AppointmentSeries[] @relation("AppointmentSeriesClinician")
+  waitlistAsClinician            AppointmentWaitlistEntry[] @relation("WaitlistClinician")
   clinicalFormTemplatesOwned     ClinicalFormTemplate[] @relation("ClinicalFormTemplateOwner")
   clinicianShortcuts               ClinicianShortcut[]
   clinicianDiagnosisFavorites    ClinicianDiagnosisFavorite[]
@@ -416,6 +460,8 @@ model Clinic {
   prescriptionHeaderDescriptionAr String @default("")
   openingTime        String          @default("09:00") @db.VarChar(5)
   closingTime        String          @default("00:00") @db.VarChar(5)
+  frontDeskRoomLabels Json           @default("[\"Room 1\",\"Room 2\",\"Room 3\"]")
+  lastCalledTicketNumber Int?
   patientsHome     Patient[]       @relation("PatientHomeBranch")
   encounters       Encounter[]
   revenueEntries   RevenueEntry[]
@@ -432,6 +478,10 @@ model Clinic {
   operatingPeriods  ClinicOperatingPeriod[]
   supportTickets    SupportTicket[]
   integrationFailureLogs IntegrationFailureLog[]
+  appointmentTypes       AppointmentType[]
+  clinicianAvailabilityTemplates ClinicianAvailabilityTemplate[]
+  appointmentSeries      AppointmentSeries[]
+  appointmentWaitlist    AppointmentWaitlistEntry[]
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
@@ -498,6 +548,16 @@ model Patient {
   supportTickets SupportTicket[]
   allergies    PatientAllergy[]
   clinicalLetters ClinicalLetter[]
+  activeProblems PatientActiveProblem[]
+  familyLinksFrom PatientFamilyLink[] @relation("PatientFamilyFrom")
+  familyLinksTo   PatientFamilyLink[] @relation("PatientFamilyTo")
+  clinicalPhotos  PatientClinicalPhoto[]
+  waitlistEntries AppointmentWaitlistEntry[]
+  appointmentSeries AppointmentSeries[]
+  noShowCount          Int      @default(0)
+  requiresAppointmentDeposit Boolean @default(false)
+  isVip                Boolean  @default(false)
+  needsChaperone       Boolean  @default(false)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -686,13 +746,19 @@ model Encounter {
   medications    EncounterMedication[]
   documents      EncounterDocument[]
   patientAllergies PatientAllergy[]
+  activeProblemsEncounter PatientActiveProblem[]
   invoices       Invoice[]
+  followUpDueAt  DateTime?
+  followUpWeeks  Int?
+  followUpNote   String?
+  followUpStatus EncounterFollowUpStatus @default(NONE)
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
   @@index([tenantId, clinicId, finalizedAt])
   @@index([patientId])
   @@index([appointmentId])
+  @@index([tenantId, followUpStatus, followUpDueAt])
 }
 
 model Diagnosis {
@@ -900,10 +966,22 @@ model Appointment {
   patient        Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
   clinicianId    String
   clinician      User              @relation("AppointmentClinician", fields: [clinicianId], references: [id], onDelete: Restrict)
+  appointmentTypeId String?
+  appointmentType   AppointmentType? @relation(fields: [appointmentTypeId], references: [id], onDelete: SetNull)
+  seriesId       String?
+  series         AppointmentSeries? @relation(fields: [seriesId], references: [id], onDelete: SetNull)
   startsAt       DateTime
   endsAt         DateTime?
   feeAmount      Decimal           @default(0) @db.Decimal(14, 2)
   status         AppointmentStatus @default(SCHEDULED)
+  roomLabel      String?
+  allowDoubleBook Boolean          @default(false)
+  checkedInAt    DateTime?
+  queueTicketNumber Int?
+  checkInPaymentAmount Decimal?    @db.Decimal(14, 2)
+  calledAt       DateTime?
+  noShowAt       DateTime?
+  recurrenceIndex Int?
   notes          String?
   integrationClientId String?
   integrationClient   IntegrationClient? @relation(fields: [integrationClientId], references: [id], onDelete: SetNull)
@@ -917,6 +995,8 @@ model Appointment {
   @@index([tenantId, clinicId, startsAt])
   @@index([patientId])
   @@index([tenantId, externalReference])
+  @@index([seriesId])
+  @@index([tenantId, clinicianId, startsAt])
 }
 
 model Operation {
@@ -1189,6 +1269,148 @@ model IntegrationFailureLog {
   @@index([tenantId, fingerprint, createdAt])
   @@index([tenantId, status, createdAt])
   @@index([tenantId, patientMrn, createdAt])
+}
+
+model PatientActiveProblem {
+  id           String                   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patientId    String
+  patient      Patient                  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  icd10Code    String?
+  labelEn      String
+  labelAr      String?
+  status       PatientActiveProblemStatus @default(ACTIVE)
+  onsetDate    DateTime?                @db.Date
+  resolvedAt   DateTime?
+  encounterId  String?
+  encounter    Encounter?               @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+
+  @@index([tenantId, patientId, status])
+}
+
+model PatientFamilyLink {
+  id              String              @id @default(cuid())
+  tenantId        String
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fromPatientId   String
+  fromPatient     Patient             @relation("PatientFamilyFrom", fields: [fromPatientId], references: [id], onDelete: Cascade)
+  toPatientId     String
+  toPatient       Patient             @relation("PatientFamilyTo", fields: [toPatientId], references: [id], onDelete: Cascade)
+  relation        PatientFamilyRelation
+  createdAt       DateTime            @default(now())
+
+  @@unique([tenantId, fromPatientId, toPatientId, relation])
+  @@index([tenantId, fromPatientId])
+  @@index([tenantId, toPatientId])
+}
+
+model PatientClinicalPhoto {
+  id               String            @id @default(cuid())
+  tenantId         String
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patientId        String
+  patient          Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  kind             ClinicalPhotoKind @default(GENERAL)
+  pairGroupId      String?
+  caption          String?
+  originalFileName String
+  mimeType         String
+  sizeBytes        Int
+  relativePath     String
+  takenAt          DateTime?
+  createdAt        DateTime          @default(now())
+
+  @@index([tenantId, patientId])
+  @@index([tenantId, pairGroupId])
+}
+
+model AppointmentType {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId        String?
+  clinic          Clinic?  @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  nameEn          String
+  nameAr          String   @default("")
+  durationMinutes Int      @default(15)
+  feeAmount       Decimal  @default(0) @db.Decimal(14, 2)
+  colorHex        String   @default("#3b82f6")
+  isActive        Boolean  @default(true)
+  appointments    Appointment[]
+  series          AppointmentSeries[]
+  waitlist        AppointmentWaitlistEntry[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId, clinicId])
+}
+
+model ClinicianAvailabilityTemplate {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId     String
+  clinic       Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinicianId  String
+  clinician    User     @relation("ClinicianAvailability", fields: [clinicianId], references: [id], onDelete: Cascade)
+  weekJson     Json
+  blockedJson  Json     @default("[]")
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
+
+  @@unique([tenantId, clinicId, clinicianId])
+}
+
+model AppointmentSeries {
+  id                String   @id @default(cuid())
+  tenantId          String
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId          String
+  clinic            Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patientId         String
+  patient           Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  clinicianId       String
+  clinician         User     @relation("AppointmentSeriesClinician", fields: [clinicianId], references: [id], onDelete: Restrict)
+  appointmentTypeId String?
+  appointmentType   AppointmentType? @relation(fields: [appointmentTypeId], references: [id], onDelete: SetNull)
+  label             String
+  totalSessions     Int
+  completedSessions Int      @default(0)
+  packagePaidAmount Decimal  @default(0) @db.Decimal(14, 2)
+  cadenceDays       Int      @default(7)
+  startsOn          DateTime @db.Date
+  appointments      Appointment[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([tenantId, patientId])
+}
+
+model AppointmentWaitlistEntry {
+  id                String                  @id @default(cuid())
+  tenantId          String
+  tenant            Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId          String
+  clinic            Clinic                  @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patientId         String
+  patient           Patient                 @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  clinicianId       String?
+  clinician         User?                   @relation("WaitlistClinician", fields: [clinicianId], references: [id], onDelete: SetNull)
+  appointmentTypeId String?
+  appointmentType   AppointmentType?        @relation(fields: [appointmentTypeId], references: [id], onDelete: SetNull)
+  preferredFrom     DateTime?
+  preferredTo       DateTime?
+  status            AppointmentWaitlistStatus @default(WAITING)
+  offeredSlotAt     DateTime?
+  notes             String?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  @@index([tenantId, clinicId, status])
+  @@index([patientId])
 }
 
 model IntegrationWebhook {

@@ -133,4 +133,17 @@ export class UpdateEncounterDto {
   @IsOptional()
   @IsObject()
   specialtyFormResponses?: Record<string, unknown>;
+
+  @ApiPropertyOptional({ description: "Schedule follow-up N weeks after finalize (e.g. 2)" })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  followUpWeeks?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  followUpNote?: string;
 }

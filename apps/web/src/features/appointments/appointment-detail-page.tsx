@@ -28,6 +28,8 @@ import { formatMoneyAmount } from "@/lib/money-display";
 import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
+import { PatientChartAlerts } from "@/components/patient-chart-alerts";
+import { QuickCheckInPanel } from "@/features/front-desk/quick-check-in-panel";
 
 function toDatetimeLocalValue(iso: string): string {
   const d = new Date(iso);
@@ -348,7 +350,10 @@ export function AppointmentDetailPage() {
           <Button variant="ghost" className="mb-2 h-auto px-0 text-muted-foreground" asChild>
             <Link to="/appointments">← {t("appointments.backToList", "Back to appointments")}</Link>
           </Button>
-          <h1 className="text-2xl font-bold tracking-tight">{t("appointments.detailTitle", "Appointment")}</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight">{t("appointments.detailTitle", "Appointment")}</h1>
+            {apt.patientId ? <PatientChartAlerts patientId={apt.patientId} /> : null}
+          </div>
           <p className="text-muted-foreground text-sm">
             {apt.patientName ? (
               <span>
@@ -389,6 +394,11 @@ export function AppointmentDetailPage() {
           {t("appointments.readOnlyHint", "This appointment is completed and cannot be edited.")}
         </p>
       ) : null}
+
+      <QuickCheckInPanel
+        appointment={apt}
+        currency={resolveClinicCurrency(apt.clinicId) ?? "AED"}
+      />
 
       <Card>
         <CardHeader>

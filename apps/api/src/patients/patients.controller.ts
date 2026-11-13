@@ -36,6 +36,7 @@ import { UpdatePatientDto } from "./dto/update-patient.dto";
 import { BulkDeletePatientsDto } from "./dto/bulk-delete-patients.dto";
 import { PatientPhoneConflictDto } from "./dto/patient-phone-conflict.dto";
 import { PatientsService } from "./patients.service";
+import { Patient360Service } from "./patient-360.service";
 
 const PATIENT_DOC_UPLOAD_LIMIT = 15 * 1024 * 1024;
 
@@ -44,7 +45,10 @@ const PATIENT_DOC_UPLOAD_LIMIT = 15 * 1024 * 1024;
 @Controller("patients")
 @UseGuards(JwtAuthGuard)
 export class PatientsController {
-  constructor(private readonly patients: PatientsService) {}
+  constructor(
+    private readonly patients: PatientsService,
+    private readonly patient360: Patient360Service,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: "List patients with pagination and optional filters" })
@@ -332,6 +336,58 @@ export class PatientsController {
   @ApiOkResponse({ description: "Grouped clinical documents from registration and encounters" })
   listClinicalDocuments(@CurrentUser() user: JwtUser, @Param("id") id: string) {
     return this.patients.listClinicalDocuments(requireTenantId(user), id, user);
+  }
+
+  @Get(":id/summary")
+  @ApiOperation({ summary: "Patient 360 one-page summary" })
+  summary(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.patient360.getSummary(requireTenantId(user), id);
+  }
+
+  @Get(":id/timeline")
+  @ApiOperation({ summary: "Unified patient timeline" })
+  timeline(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Query("types") types?: string,
+    @Query("limit") limit?: string,
+  ) {
+    return this.patient360.getTimeline(requireTenantId(user), id, types, limit ? Number(limit) : 80);
+  }
+
+  @Get(":id/active-problems")
+  activeProblems(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.patient360.listActiveProblems(requireTenantId(user), id);
+  }
+
+  @Post(":id/active-problems")
+  saveActiveProblem(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: Record<string, unknown>) {
+    return this.patient360.upsertActiveProblem(requireTenantId(user), id, body as never);
+  }
+
+  @Get(":id/family-links")
+  familyLinks(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.patient360.listFamilyLinks(requireTenantId(user), id);
+  }
+
+  @Post(":id/family-links")
+  addFamilyLink(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: Record<string, unknown>) {
+    return this.patient360.addFamilyLink(requireTenantId(user), id, body as never);
+  }
+
+  @Delete(":id/family-links/:linkId")
+  removeFamilyLink(@CurrentUser() user: JwtUser, @Param("linkId") linkId: string) {
+    return this.patient360.removeFamilyLink(requireTenantId(user), linkId);
+  }
+
+  @Post(":id/merge")
+  mergePatients(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: { sourcePatientId: string }) {
+    return this.patient360.mergePatients(requireTenantId(user), user, id, body.sourcePatientId);
+  }
+
+  @Get(":id/clinical-photos")
+  clinicalPhotos(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.patient360.listClinicalPhotos(requireTenantId(user), id);
   }
 
   @Get(":id")

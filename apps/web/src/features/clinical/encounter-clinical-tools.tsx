@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiGet, apiPost } from "@/lib/http";
 import type { EncounterDetailDto } from "@/lib/api-types";
+import { ClinicalLetterDialog } from "@/features/clinical/clinical-letter-dialog";
+import { Link } from "react-router-dom";
 
 type IcdRow = { icd10Code: string; descriptionEn: string; descriptionAr: string };
 type Shortcut = { id: string; label: string; type: string; payload: unknown };
@@ -83,10 +85,14 @@ export function EncounterClinicalTools({ encounter, onApplySoap, pendingDrugName
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {t("encounters.clinicalTools", "Clinical tools")}
       </p>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button type="button" size="sm" variant="outline" disabled={copyLast.isPending} onClick={() => copyLast.mutate()}>
           {t("encounters.copyLastVisit", "Copy last visit")}
         </Button>
+        <ClinicalLetterDialog patientId={encounter.patientId} encounterId={encounter.id} />
+        <Link to="/clinical/templates" className="text-xs text-primary hover:underline">
+          {t("clinical.templateBuilderLink", "Open template builder")}
+        </Link>
         {encounter.noteLockedAt ? (
           <Button
             type="button"

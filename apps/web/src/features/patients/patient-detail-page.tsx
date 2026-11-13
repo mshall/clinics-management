@@ -11,6 +11,13 @@ import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { PatientClinicalDocuments } from "@/components/patient-clinical-documents";
 import { PatientInvoicesSection } from "@/features/invoices/patient-invoices-section";
 import { PatientAllergiesSection } from "@/components/patient-allergies-section";
+import { Patient360Summary } from "@/components/patient-360-summary";
+import { PatientTimeline } from "@/components/patient-timeline";
+import { PatientActiveProblemsSection } from "@/components/patient-active-problems-section";
+import { PatientFamilyPanel } from "@/components/patient-family-panel";
+import { PatientMergeWizard } from "@/components/patient-merge-wizard";
+import { PatientClinicalPhotoGallery } from "@/components/patient-clinical-photo-gallery";
+import { PatientChartAlerts } from "@/components/patient-chart-alerts";
 import { PatientVitalsCharts } from "@/components/patient-vitals-charts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -191,6 +198,7 @@ export function PatientDetailPage() {
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-2xl font-bold tracking-tight">{name}</h1>
+                  <PatientChartAlerts patientId={patient.id} />
                   <Badge variant="secondary" className="font-mono text-xs ltr-nums">
                     {patient.mrn}
                   </Badge>
@@ -221,6 +229,19 @@ export function PatientDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Patient360Summary patientId={patient.id} />
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <PatientTimeline patientId={patient.id} />
+        <div className="space-y-4">
+          <PatientActiveProblemsSection patientId={patient.id} canEdit={canEditPatient} />
+          <PatientAllergiesSection patientId={patient.id} />
+          <PatientFamilyPanel patientId={patient.id} />
+          {canEditPatient ? <PatientMergeWizard targetPatientId={patient.id} /> : null}
+          <PatientClinicalPhotoGallery patientId={patient.id} />
+        </div>
+      </div>
 
       <div className={`grid gap-4 ${canViewEncounters ? "xl:grid-cols-[1.1fr_1fr]" : ""}`}>
         <Card>
@@ -360,8 +381,6 @@ export function PatientDetailPage() {
         </Card>
         ) : null}
       </div>
-
-      <PatientAllergiesSection patientId={patient.id} />
 
       {canViewEncounters ? (
         <Card>

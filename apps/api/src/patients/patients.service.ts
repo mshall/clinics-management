@@ -117,6 +117,8 @@ export class PatientsService {
     acquisitionReferralName?: string | null;
     acquisitionOtherDetail?: string | null;
     homeBranchId: string | null;
+    isVip: boolean;
+    needsChaperone: boolean;
     homeBranch: { nameEn: string } | null;
     documents?: {
       id: string;
@@ -151,6 +153,8 @@ export class PatientsService {
     dto.acquisitionOtherDetail = p.acquisitionOtherDetail ?? null;
     dto.homeBranch = p.homeBranch ? p.homeBranch.nameEn : null;
     dto.homeBranchId = p.homeBranchId;
+    dto.isVip = p.isVip;
+    dto.needsChaperone = p.needsChaperone;
     if (opts?.includeDocuments && p.documents) {
       dto.documents = p.documents.map((d) => this.mapDoc(d));
     }
@@ -445,6 +449,8 @@ export class PatientsService {
         nationalId,
         ...patientAcquisitionUpdateData(dto),
         homeBranchId: dto.homeBranchId ?? null,
+        isVip: dto.isVip ?? false,
+        needsChaperone: dto.needsChaperone ?? false,
         allergies: allergyInputs.length
           ? {
               create: allergyInputs.map((a) => ({
@@ -581,6 +587,8 @@ export class PatientsService {
     if (dto.email !== undefined) data.email = dto.email?.trim() || null;
     if (dto.nationalId !== undefined) data.nationalId = nextNational ?? null;
     if (dto.homeBranchId !== undefined) data.homeBranch = dto.homeBranchId ? { connect: { id: dto.homeBranchId } } : { disconnect: true };
+    if (dto.isVip !== undefined) data.isVip = dto.isVip;
+    if (dto.needsChaperone !== undefined) data.needsChaperone = dto.needsChaperone;
     if (dto.acquisitionChannel !== undefined) {
       Object.assign(data, patientAcquisitionUpdateData({
         acquisitionChannel: dto.acquisitionChannel,

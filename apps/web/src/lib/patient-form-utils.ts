@@ -17,6 +17,8 @@ export type PatientDemographicsFormValues = {
   email: string;
   nationalId: string;
   homeBranchId: string;
+  isVip: boolean;
+  needsChaperone: boolean;
   acquisition: PatientAcquisitionFormValues;
 };
 
@@ -37,6 +39,8 @@ export function patientToDemographicsForm(patient: PatientDto): PatientDemograph
     email: patient.email ?? "",
     nationalId: patient.nationalId ?? "",
     homeBranchId: patient.homeBranchId ?? "",
+    isVip: Boolean(patient.isVip),
+    needsChaperone: Boolean(patient.needsChaperone),
     acquisition: patientAcquisitionFormValuesFromPatient(patient),
   };
 }
@@ -73,7 +77,7 @@ export function collectPatientDemographicsValidationIssues(
 
 export function demographicsFormToPatchBody(
   values: PatientDemographicsFormValues,
-): Record<string, string | undefined> {
+): Record<string, string | boolean | undefined> {
   return {
     firstNameEn: values.firstNameEn.trim(),
     lastNameEn: values.lastNameEn.trim(),
@@ -85,6 +89,8 @@ export function demographicsFormToPatchBody(
     email: values.email.trim() || undefined,
     nationalId: values.nationalId.trim() || undefined,
     homeBranchId: values.homeBranchId || undefined,
+    isVip: values.isVip,
+    needsChaperone: values.needsChaperone,
     ...patientAcquisitionFormToBody(values.acquisition),
   };
 }

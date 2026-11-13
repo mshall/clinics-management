@@ -38,4 +38,7 @@ async function main() {
   console.log(`Wrote ${file}`);
 }
 
-void main();
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

@@ -147,6 +147,8 @@ export function AdminOrgPatientsPanel() {
     email,
     nationalId,
     homeBranchId,
+    isVip: false,
+    needsChaperone: false,
     acquisition,
   });
 

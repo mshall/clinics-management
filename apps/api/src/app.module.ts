@@ -24,6 +24,8 @@ import { IntegrationsModule } from "./integrations/integrations.module";
 import { UsersModule } from "./users/users.module";
 import { AssistantModule } from "./assistant/assistant.module";
 import { ClinicalModule } from "./clinical/clinical.module";
+import { SchedulingModule } from "./scheduling/scheduling.module";
+import { FrontDeskModule } from "./front-desk/front-desk.module";
 
 @Module({
   imports: [
@@ -52,6 +54,8 @@ import { ClinicalModule } from "./clinical/clinical.module";
     IntegrationsModule,
     AssistantModule,
     ClinicalModule,
+    SchedulingModule,
+    FrontDeskModule,
   ],
 })
 export class AppModule {}

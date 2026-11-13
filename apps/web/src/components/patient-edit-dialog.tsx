@@ -62,6 +62,7 @@ export function PatientEditDialog({ patient, open, onOpenChange }: PatientEditDi
       void qc.invalidateQueries({ queryKey: ["patients"] });
       void qc.invalidateQueries({ queryKey: ["admin", "org-patients"] });
       void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
+      void qc.invalidateQueries({ queryKey: ["patient", patient.id, "header-alerts"] });
     },
     onError: (e: unknown) => {
       const conflict = parsePhoneConflictFromError(e);
@@ -193,6 +194,24 @@ export function PatientEditDialog({ patient, open, onOpenChange }: PatientEditDi
                 </option>
               ))}
             </select>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:gap-6">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={values.isVip}
+                onChange={(e) => setValues((prev) => ({ ...prev, isVip: e.target.checked }))}
+              />
+              {t("frontDesk.vipPatient", "VIP patient")}
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={values.needsChaperone}
+                onChange={(e) => setValues((prev) => ({ ...prev, needsChaperone: e.target.checked }))}
+              />
+              {t("frontDesk.needsChaperone", "Needs a chaperone")}
+            </label>
           </div>
           <PatientAcquisitionFields values={values.acquisition} onChange={setAcquisition} />
           <div className="flex flex-wrap gap-2 pt-2">

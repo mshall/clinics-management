@@ -8,6 +8,7 @@ import {
 import {
   AppointmentStatus,
   EncounterDocumentKind,
+  EncounterFollowUpStatus,
   EncounterStatus,
   Prisma,
   UserRole,
@@ -184,6 +185,10 @@ export class EncountersService {
       signedAt: e.signedAt ? e.signedAt.toISOString() : null,
       amendReason: e.amendReason ?? null,
       amendedAt: e.amendedAt ? e.amendedAt.toISOString() : null,
+      followUpDueAt: e.followUpDueAt ? e.followUpDueAt.toISOString() : null,
+      followUpWeeks: e.followUpWeeks ?? null,
+      followUpNote: e.followUpNote ?? null,
+      followUpStatus: e.followUpStatus,
       diagnoses: e.diagnoses.map((d) => this.mapDiag(d)),
       medications: lite ? [] : e.medications.map((m) => this.mapMed(m)),
       documents: lite ? [] : e.documents.map((d) => this.mapDoc(d)),
@@ -506,6 +511,22 @@ export class EncountersService {
     if (dto.specialtyFormResponses !== undefined) {
       data.specialtyFormResponses = dto.specialtyFormResponses as Prisma.InputJsonValue;
     }
+    if (dto.followUpWeeks !== undefined) {
+      if (dto.followUpWeeks <= 0) {
+        data.followUpWeeks = null;
+        data.followUpDueAt = null;
+        data.followUpStatus = EncounterFollowUpStatus.NONE;
+      } else {
+        data.followUpWeeks = dto.followUpWeeks;
+        const due = new Date();
+        due.setDate(due.getDate() + dto.followUpWeeks * 7);
+        data.followUpDueAt = due;
+        data.followUpStatus = EncounterFollowUpStatus.PENDING_BOOKING;
+      }
+    }
+    if (dto.followUpNote !== undefined) {
+      data.followUpNote = dto.followUpNote?.trim() || null;
+    }
     if (dto.noMedications !== undefined) {
       data.noMedications = dto.noMedications;
       if (dto.noMedications) {
@@ -776,6 +797,20 @@ export class EncountersService {
     const aptId = enc.appointmentId;
     const finalizedAt = new Date();
 
+    const followPatch =
+      enc.followUpWeeks && enc.followUpWeeks > 0 && !enc.followUpDueAt
+        ? (() => {
+            const due = new Date(finalizedAt);
+            due.setDate(due.getDate() + enc.followUpWeeks! * 7);
+            return {
+              followUpDueAt: due,
+              followUpStatus: EncounterFollowUpStatus.PENDING_BOOKING,
+            };
+          })()
+        : enc.followUpWeeks && enc.followUpWeeks > 0
+          ? { followUpStatus: EncounterFollowUpStatus.PENDING_BOOKING }
+          : {};
+
     const row = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.encounter.update({
         where: { id: encounterId },
@@ -784,6 +819,7 @@ export class EncountersService {
           finalizedAt,
           signedAt: finalizedAt,
           signedByUserId: viewer.userId,
+          ...followPatch,
         },
         include: encounterIncludeDef,
       });

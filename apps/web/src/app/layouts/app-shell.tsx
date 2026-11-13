@@ -12,6 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { useAuthStore } from "@/stores/auth-store";
 import { formatUserRole } from "@/lib/locale-display";
 import { RoleAssistantWidget } from "@/features/assistant/role-assistant-widget";
+import { GlobalPatientSearch } from "@/components/global-patient-search";
 
 export function AppShell() {
   const { t } = useTranslation();
@@ -70,6 +71,7 @@ export function AppShell() {
             <span className="truncate text-sm font-semibold">{t("app.name")}</span>
           </div>
           <div className="ms-auto flex items-center gap-2">
+            <GlobalPatientSearch />
             {user ? (
               <span className="hidden max-w-[12rem] truncate text-sm text-muted-foreground sm:inline">
                 {user.displayName} · {formatUserRole(user.role, t)}

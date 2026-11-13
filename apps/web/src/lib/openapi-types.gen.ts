@@ -14,7 +14,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Exchange credentials for a JWT */
-        post: operations["authLogin"];
+        post: operations["AuthController_login"];
         delete?: never;
         options?: never;
         head?: never;
@@ -29,10 +29,117 @@ export interface paths {
             cookie?: never;
         };
         /** Current user profile */
-        get: operations["authMe"];
+        get: operations["AuthController_me"];
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/me/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download your profile picture */
+        get: operations["AuthController_getMyAvatar"];
+        put?: never;
+        /** Upload or replace your profile picture (image, max 5MB) */
+        post: operations["AuthController_uploadMyAvatar"];
+        /** Remove your profile picture */
+        delete: operations["AuthController_removeMyAvatar"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/me/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change your own password */
+        patch: operations["AuthController_changePassword"];
+        trace?: never;
+    };
+    "/api/v1/user-nav-tabs/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get saved navigation tab grant for a user (null = role defaults) */
+        get: operations["UserNavTabsController_getOne"];
+        /** Set which sidebar tabs a user may see (profile always included; org admins may extend beyond role defaults) */
+        put: operations["UserNavTabsController_putOne"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/role-nav-tabs/{role}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get organization role sidebar permissions (null = platform defaults) */
+        get: operations["TenantRoleNavTabsController_getOne"];
+        /** Set organization role sidebar permissions (subset of platform role max) */
+        put: operations["TenantRoleNavTabsController_putOne"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/user-clinic-hr-assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List clinics where a user is assigned as HR */
+        get: operations["UserClinicPrivilegeGrantsController_list"];
+        /** Assign a user as HR for a specific clinic */
+        put: operations["UserClinicPrivilegeGrantsController_assign"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/user-clinic-hr-assignments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a clinic HR assignment */
+        delete: operations["UserClinicPrivilegeGrantsController_remove"];
         options?: never;
         head?: never;
         patch?: never;
@@ -45,10 +152,149 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List patients */
-        get: operations["patientsList"];
+        /** List patients with pagination and optional filters */
+        get: operations["PatientsController_list"];
+        put?: never;
+        /** Register a new patient */
+        post: operations["PatientsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/patients/bulk-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Soft-delete multiple patients (group admin, clinic admin, assistant, or branch manager) */
+        post: operations["PatientsController_bulkDelete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/patients/phone-conflict": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Check whether a phone number is already registered to another patient */
+        get: operations["PatientsController_checkPhoneConflict"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/patients/{id}/national-id-document": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download optional national ID / SSN scan (if uploaded) */
+        get: operations["PatientsController_getNationalIdDocument"];
+        put?: never;
+        /** Upload optional national ID / SSN scan (PDF or image, max 15MB) */
+        post: operations["PatientsController_uploadNationalIdDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/patients/{id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Attach a document with description to patient record */
+        post: operations["PatientsController_uploadDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/patients/{id}/documents/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download a patient-attached document */
+        get: operations["PatientsController_getDocument"];
+        put?: never;
+        post?: never;
+        /** Remove a patient-attached document */
+        delete: operations["PatientsController_removeDocument"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/patients/{id}/encounter-documents/{encounterId}/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove an encounter document from the patient profile */
+        delete: operations["PatientsController_removeEncounterDocument"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/patients/{id}/documents/{documentId}/crop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Crop and replace a patient-attached image document */
+        post: operations["PatientsController_cropDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/patients/{id}/encounter-documents/{encounterId}/{documentId}/crop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Crop and replace an encounter image document from the patient profile */
+        post: operations["PatientsController_cropEncounterDocument"];
         delete?: never;
         options?: never;
         head?: never;
@@ -63,7 +309,26 @@ export interface paths {
             cookie?: never;
         };
         /** Get patient by id */
-        get: operations["patientsGet"];
+        get: operations["PatientsController_get"];
+        put?: never;
+        post?: never;
+        /** Soft-delete a patient (group admin, clinic admin, assistant, or branch manager) */
+        delete: operations["PatientsController_delete"];
+        options?: never;
+        head?: never;
+        /** Update patient demographics */
+        patch: operations["PatientsController_update"];
+        trace?: never;
+    };
+    "/api/v1/patients/{id}/clinical-documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List lab, radiology, prescription, and other documents for a patient */
+        get: operations["PatientsController_listClinicalDocuments"];
         put?: never;
         post?: never;
         delete?: never;
@@ -79,10 +344,132 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List clinics */
-        get: operations["clinicsList"];
+        /** List clinics and branches for the tenant */
+        get: operations["ClinicsController_list"];
+        put?: never;
+        /** Create a parent clinic or a branch under a parent */
+        post: operations["ClinicsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clinics/physicians/scheduling": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List physicians for scheduling (optionally scoped to a clinic) */
+        get: operations["ClinicsController_listSchedulingPhysicians"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clinics/{id}/physicians/available": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Physicians in the tenant not yet assigned to this clinic */
+        get: operations["ClinicsController_listAvailablePhysicians"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clinics/{id}/physicians": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Physicians assigned to this clinic */
+        get: operations["ClinicsController_listClinicPhysicians"];
+        put?: never;
+        /** Assign a physician to this clinic */
+        post: operations["ClinicsController_assignPhysician"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clinics/{id}/physicians/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a physician assignment from this clinic */
+        delete: operations["ClinicsController_removePhysician"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clinics/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one clinic including registration fields from admin */
+        get: operations["ClinicsController_getOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update clinic registration fields */
+        patch: operations["ClinicsController_patch"];
+        trace?: never;
+    };
+    "/api/v1/clinics/{id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Disable a clinic or branch (hidden from active directory) */
+        post: operations["ClinicsController_deactivate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clinics/{id}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reactivate a disabled clinic or branch */
+        post: operations["ClinicsController_reactivate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -96,8 +483,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Group KPIs */
-        get: operations["dashboardGroupOverview"];
+        /** Group-level KPI snapshot */
+        get: operations["DashboardController_groupOverview"];
         put?: never;
         post?: never;
         delete?: never;
@@ -113,10 +500,1991 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Liveness */
-        get: operations["healthLive"];
+        /** Liveness probe */
+        get: operations["HealthController_live"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/health/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Readiness probe (database connectivity) */
+        get: operations["HealthController_ready"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/encounters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List encounters (optional patientId, paginated) */
+        get: operations["EncountersController_list"];
+        put?: never;
+        /** Create draft encounter for a patient */
+        post: operations["EncountersController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/encounters/{id}/documents/{docId}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stream encounter document (inline display) */
+        get: operations["EncountersController_getDocumentFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/encounters/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get encounter with diagnoses, medications, documents */
+        get: operations["EncountersController_get"];
+        put?: never;
+        post?: never;
+        /** Delete encounter (group admin, supervisor, call center) */
+        delete: operations["EncountersController_remove"];
+        options?: never;
+        head?: never;
+        /** Update SOAP / vitals / no-medications (draft only) */
+        patch: operations["EncountersController_patch"];
+        trace?: never;
+    };
+    "/api/v1/encounters/{id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload lab, radiology, or prescription document (multipart field: file, kind=LAB|RADIOLOGY|PRESCRIPTION) */
+        post: operations["EncountersController_uploadDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/encounters/{id}/documents/{docId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove document (draft only) */
+        delete: operations["EncountersController_removeDocument"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/encounters/{id}/medications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add prescribed medication */
+        post: operations["EncountersController_addMedication"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/encounters/{id}/medications/{medicationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove medication (draft only) */
+        delete: operations["EncountersController_removeMedication"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/encounters/{id}/diagnoses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add ICD-10 diagnosis to encounter */
+        post: operations["EncountersController_addDiagnosis"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/encounters/{id}/diagnoses/{diagnosisId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove diagnosis (draft only) */
+        delete: operations["EncountersController_removeDiagnosis"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/encounters/{id}/finalize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Finalize encounter (clinician only; diagnoses + medications policy) */
+        post: operations["EncountersController_finalize"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/expenses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List expenses */
+        get: operations["ExpensesController_list"];
+        put?: never;
+        /** Record an expense (multipart: text fields + optional proof file) */
+        post: operations["ExpensesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/expenses/{id}/proof": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download payment proof attachment (if any) */
+        get: operations["ExpensesController_getProof"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/expenses/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Approve or reject expense */
+        patch: operations["ExpensesController_patchStatus"];
+        trace?: never;
+    };
+    "/api/v1/expenses/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit a pending expense (multipart: text fields + optional proof file) */
+        patch: operations["ExpensesController_update"];
+        trace?: never;
+    };
+    "/api/v1/revenue/totals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sum gross and net revenue for the reporting range (same filters as list, all pages) */
+        get: operations["RevenueController_totals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/revenue/clinic-breakdown": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Posted revenue aggregated per clinic (super admin or clinic admin scope) */
+        get: operations["RevenueController_clinicBreakdown"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/revenue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List revenue entries */
+        get: operations["RevenueController_list"];
+        put?: never;
+        /** Post a revenue entry */
+        post: operations["RevenueController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hr/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** HR KPIs: headcount, payroll estimate, pending leave */
+        get: operations["HrController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hr/employees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List employees */
+        get: operations["HrController_listEmployees"];
+        put?: never;
+        /** Hire / register employee */
+        post: operations["HrController_createEmployee"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hr/manage-context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** HR desk context: clinic scope and assignable roles */
+        get: operations["HrController_manageContext"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hr/unlinked-users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List organization login accounts not yet linked to an employee */
+        get: operations["HrController_listUnlinkedUsers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hr/employees/{id}/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download linked login account profile picture (if any) */
+        get: operations["HrController_getEmployeeUserAvatar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hr/employees/{id}/id-document": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download employee ID / passport attachment (if any) */
+        get: operations["HrController_getEmployeeIdDocument"];
+        put?: never;
+        /** Upload ID or passport (PDF or image, max 15MB) */
+        post: operations["HrController_uploadEmployeeIdDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hr/employees/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get employee by id */
+        get: operations["HrController_getEmployee"];
+        put?: never;
+        post?: never;
+        /** Archive employee and linked user (soft delete) */
+        delete: operations["HrController_removeEmployee"];
+        options?: never;
+        head?: never;
+        /** Update employee (HR, group admin, clinic admin, branch manager) */
+        patch: operations["HrController_updateEmployee"];
+        trace?: never;
+    };
+    "/api/v1/hr/employees/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore an archived employee and linked user */
+        post: operations["HrController_restoreEmployee"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hr/employees/{id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deactivate employee (resignation) */
+        post: operations["HrController_deactivateEmployee"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hr/employees/{id}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reactivate a previously deactivated employee */
+        post: operations["HrController_reactivateEmployee"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hr/attendance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List attendance records */
+        get: operations["HrController_listAttendance"];
+        put?: never;
+        /** Clock attendance */
+        post: operations["HrController_createAttendance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hr/leave-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List leave requests */
+        get: operations["HrController_listLeave"];
+        put?: never;
+        /** Submit leave request */
+        post: operations["HrController_createLeave"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hr/leave-requests/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Approve or reject leave */
+        patch: operations["HrController_patchLeaveStatus"];
+        trace?: never;
+    };
+    "/api/v1/appointments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List appointments */
+        get: operations["AppointmentsController_list"];
+        put?: never;
+        /** Book appointment */
+        post: operations["AppointmentsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/appointments/scheduling-conflicts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List overlapping appointments for a clinician and time window */
+        get: operations["AppointmentsController_schedulingConflicts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/appointments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get appointment by id */
+        get: operations["AppointmentsController_getOne"];
+        put?: never;
+        post?: never;
+        /** Delete appointment (group admin, supervisor, call center) */
+        delete: operations["AppointmentsController_remove"];
+        options?: never;
+        head?: never;
+        /** Update appointment (not allowed when completed or cancelled) */
+        patch: operations["AppointmentsController_update"];
+        trace?: never;
+    };
+    "/api/v1/appointments/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update appointment status */
+        patch: operations["AppointmentsController_patchStatus"];
+        trace?: never;
+    };
+    "/api/v1/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List operations (physicians see only their assigned procedures) */
+        get: operations["OperationsController_list"];
+        put?: never;
+        /** Schedule a new operation */
+        post: operations["OperationsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operations/payable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List operations with an outstanding balance (for revenue payments) */
+        get: operations["OperationsController_listPayable"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get operation with medications and documents */
+        get: operations["OperationsController_getOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit a scheduled operation, or correct a completed operation (admin only) */
+        patch: operations["OperationsController_update"];
+        trace?: never;
+    };
+    "/api/v1/operations/{id}/documents/{docId}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stream operation document (inline display) */
+        get: operations["OperationsController_getDocumentFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operations/{id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload attachment or prescription document (multipart: file, kind, optional description) */
+        post: operations["OperationsController_uploadDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operations/{id}/medications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add medication for this operation */
+        post: operations["OperationsController_addMedication"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operations/{id}/reset-clinical": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Clear medications and optionally prescription documents (scheduled operations only) */
+        post: operations["OperationsController_resetClinical"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operations/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update operation status (completed posts revenue; cancelled voids revenue) */
+        patch: operations["OperationsController_patchStatus"];
+        trace?: never;
+    };
+    "/api/v1/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List invoices (filter by patientId, encounterId, or operationId) */
+        get: operations["InvoicesController_list"];
+        put?: never;
+        /** Generate an invoice linked to an encounter or operation */
+        post: operations["InvoicesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoices/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one invoice with line items */
+        get: operations["InvoicesController_getOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clinics/{clinicId}/invoice-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update clinic invoice branding (admin roles) */
+        patch: operations["InvoicesController_patchClinicSettings"];
+        trace?: never;
+    };
+    "/api/v1/clinics/{clinicId}/invoice-logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download clinic invoice logo */
+        get: operations["InvoicesController_getLogo"];
+        put?: never;
+        /** Upload clinic invoice logo (admin roles) */
+        post: operations["InvoicesController_uploadLogo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clinics/{clinicId}/prescription-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update clinic prescription header branding (admin roles) */
+        patch: operations["InvoicesController_patchClinicPrescriptionSettings"];
+        trace?: never;
+    };
+    "/api/v1/clinics/{clinicId}/prescription-logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download clinic prescription header logo */
+        get: operations["InvoicesController_getPrescriptionLogo"];
+        put?: never;
+        /** Upload clinic prescription header logo (admin roles) */
+        post: operations["InvoicesController_uploadPrescriptionLogo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin dashboard: tenant, flags, audit tail */
+        get: operations["AdminController_overview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/audit-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Paginated audit log for the organization (group admin: all actions; clinic admin: assigned clinics) */
+        get: operations["AdminController_auditLogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/insights/overview-360": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Organization 360° performance and audit overview */
+        get: operations["AdminController_insightsOverview360"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/insights/staff-performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Staff activity and performance metrics */
+        get: operations["AdminController_insightsStaffPerformance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/tenants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all organizations (platform) */
+        get: operations["AdminController_tenants"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/tenant-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update tenant-level settings (group admin only) */
+        patch: operations["AdminController_patchTenantSettings"];
+        trace?: never;
+    };
+    "/api/v1/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List users in the current organization (group admin only) */
+        get: operations["AdminController_listUsers"];
+        put?: never;
+        /** Create a user in the current tenant with a fixed platform role (group admin only) */
+        post: operations["AdminController_createUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Organization user detail (group admin only) */
+        get: operations["AdminController_getUser"];
+        put?: never;
+        post?: never;
+        /** Archive an organization user and linked employee (soft delete, group admin only) */
+        delete: operations["AdminController_deleteUser"];
+        options?: never;
+        head?: never;
+        /** Update an organization user (group admin only) */
+        patch: operations["AdminController_patchUser"];
+        trace?: never;
+    };
+    "/api/v1/admin/users/bulk-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Delete multiple organization users (group admin only) */
+        post: operations["AdminController_bulkDeleteUsers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{userId}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deactivate organization user and linked employee */
+        post: operations["AdminController_deactivateUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{userId}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reactivate a deactivated organization user and linked employee */
+        post: operations["AdminController_reactivateUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{userId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore an archived organization user and linked employee */
+        post: operations["AdminController_restoreUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/feature-flags/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Toggle feature flag */
+        patch: operations["AdminController_patchFlag"];
+        trace?: never;
+    };
+    "/api/v1/admin/org-hierarchy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Organization tree: clinics, branches, and users */
+        get: operations["AdminController_orgHierarchy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/data-explorer/tables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List allowlisted tables and supported operations (group admin or platform super admin) */
+        get: operations["AdminDataExplorerController_tables"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/data-explorer/export/sql": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download selected organization entities as a single SQL file */
+        get: operations["AdminDataExplorerController_exportSql"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/data-explorer/export/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download uploaded files linked to selected organization entities as a ZIP archive */
+        get: operations["AdminDataExplorerController_exportDocuments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/data-explorer/{table}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Paginated rows for an allowlisted table */
+        get: operations["AdminDataExplorerController_list"];
+        put?: never;
+        /** Create row (tables that support create only) */
+        post: operations["AdminDataExplorerController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/data-explorer/{table}/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Single row by id */
+        get: operations["AdminDataExplorerController_getOne"];
+        put?: never;
+        post?: never;
+        /** Delete row (tables that support delete only) */
+        delete: operations["AdminDataExplorerController_remove"];
+        options?: never;
+        head?: never;
+        /** Partial update for allowlisted fields */
+        patch: operations["AdminDataExplorerController_patch"];
+        trace?: never;
+    };
+    "/api/v1/admin/platform/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Platform-wide KPIs (platform super admin) */
+        get: operations["PlatformAdminController_overview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/platform/hierarchy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Platform hierarchy tree (all organizations or one filtered) */
+        get: operations["PlatformAdminController_hierarchy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/platform/feature-flags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List global feature flags */
+        get: operations["PlatformAdminController_featureFlags"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/platform/feature-flags/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Toggle a global feature flag */
+        patch: operations["PlatformAdminController_patchFeatureFlag"];
+        trace?: never;
+    };
+    "/api/v1/admin/platform/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all organization users (platform-wide) */
+        get: operations["PlatformAdminController_listAllUsers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/platform/clinics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all clinics (platform-wide) */
+        get: operations["PlatformAdminController_listAllClinics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/platform/tenants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all organizations (platform super admin) */
+        get: operations["PlatformAdminController_listTenants"];
+        put?: never;
+        /** Create organization with optional group admin and HQ clinic */
+        post: operations["PlatformAdminController_createTenant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/platform/tenants/{tenantId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Organization detail */
+        get: operations["PlatformAdminController_getTenant"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update organization settings */
+        patch: operations["PlatformAdminController_patchTenant"];
+        trace?: never;
+    };
+    "/api/v1/admin/platform/tenants/{tenantId}/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List users in an organization */
+        get: operations["PlatformAdminController_listUsers"];
+        put?: never;
+        /** Create a user in an organization (optional clinic scope) */
+        post: operations["PlatformAdminController_createUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/platform/tenants/{tenantId}/clinics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List clinics for an organization */
+        get: operations["PlatformAdminController_listClinics"];
+        put?: never;
+        /** Create a clinic or branch under an organization */
+        post: operations["PlatformAdminController_createClinic"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/platform/tenants/{tenantId}/clinics/{clinicId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get clinic registration details */
+        get: operations["PlatformAdminController_getClinic"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update clinic registration details */
+        patch: operations["PlatformAdminController_patchClinic"];
+        trace?: never;
+    };
+    "/api/v1/admin/platform/tenants/{tenantId}/users/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get organization user details */
+        get: operations["PlatformAdminController_getUser"];
+        put?: never;
+        post?: never;
+        /** Archive an organization user and linked employee (platform super admin) */
+        delete: operations["PlatformAdminController_deleteUser"];
+        options?: never;
+        head?: never;
+        /** Update organization user (email, password, role, clinic scope) */
+        patch: operations["PlatformAdminController_patchUser"];
+        trace?: never;
+    };
+    "/api/v1/admin/platform/tenants/{tenantId}/users/{userId}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deactivate organization user and linked employee (platform super admin) */
+        post: operations["PlatformAdminController_deactivateUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/platform/tenants/{tenantId}/users/{userId}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reactivate a deactivated organization user (platform super admin) */
+        post: operations["PlatformAdminController_reactivateUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/platform/tenants/{tenantId}/users/{userId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore an archived organization user (platform super admin) */
+        post: operations["PlatformAdminController_restoreUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/profit-loss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Revenue, expenses, and net profit for a period (multi-currency) */
+        get: operations["ReportsController_profitLoss"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Organization or clinic performance KPIs for a period */
+        get: operations["ReportsController_performance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/clinic-breakdown": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Per-clinic revenue, expenses, and operational metrics */
+        get: operations["ReportsController_clinicBreakdown"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/monthly-series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Per-month visits, posted revenue, expenses, and new patients (multi-currency) */
+        get: operations["ReportsController_monthlySeries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/patient-acquisition/patients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Paginated patients for one acquisition channel in a date range */
+        get: operations["ReportsController_patientAcquisitionPatients"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/patient-acquisition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** New patient registrations grouped by acquisition channel (how they found us) */
+        get: operations["ReportsController_patientAcquisition"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List users in tenant (for scheduling, assignments) */
+        get: operations["UsersController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/support/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List customer support tickets */
+        get: operations["SupportController_listTickets"];
+        put?: never;
+        /** Create support ticket */
+        post: operations["SupportController_createTicket"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/support/tickets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get support ticket detail */
+        get: operations["SupportController_getTicket"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update ticket status, priority, assignee */
+        patch: operations["SupportController_patchTicket"];
+        trace?: never;
+    };
+    "/api/v1/support/tickets/{id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add comment or timeline event */
+        post: operations["SupportController_addEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/support/tracking/logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detailed audit trail with resolution hints */
+        get: operations["SupportController_trackingLogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/support/tracking/logs/{auditLogId}/ticket": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Open ticket from audit log */
+        post: operations["SupportController_ticketFromAudit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/auth/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Verify integration API token and return granted scopes */
+        get: operations["IntegrationsAppointmentsController_verify"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/clinics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List bookable clinics for this integration client */
+        get: operations["IntegrationsAppointmentsController_listClinics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/physicians": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List physicians available for booking at a clinic */
+        get: operations["IntegrationsAppointmentsController_listPhysicians"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/appointments/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Busy intervals for a clinician (plan external slot picker) */
+        get: operations["IntegrationsAppointmentsController_availability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/appointments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Book an appointment from an external patient platform */
+        post: operations["IntegrationsAppointmentsController_book"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/appointments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get appointment created by this integration client */
+        get: operations["IntegrationsAppointmentsController_getOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/appointments/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel an integration-booked appointment */
+        post: operations["IntegrationsAppointmentsController_cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/integration-clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List API integration clients for the organization */
+        get: operations["IntegrationAdminController_list"];
+        put?: never;
+        /** Create integration client (bearer token shown once) */
+        post: operations["IntegrationAdminController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/integration-clients/{id}/rotate-secret": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rotate integration client secret */
+        post: operations["IntegrationAdminController_rotate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/integration-clients/{id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deactivate integration client */
+        post: operations["IntegrationAdminController_deactivate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/encounters/{id}/amend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reopen a finalized locked encounter for correction (AMENDED status + reason) */
+        post: operations["EncountersController_amend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clinical/form-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ClinicalController_listTemplates"];
+        put?: never;
+        post: operations["ClinicalController_upsertTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clinical/shortcuts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ClinicalController_shortcuts"];
+        put?: never;
+        post: operations["ClinicalController_createShortcut"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clinical/shortcuts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["ClinicalController_deleteShortcut"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clinical/icd10/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ClinicalController_searchIcd"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clinical/icd10/favorites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ClinicalController_favIcd"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clinical/patients/{patientId}/vitals-series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ClinicalController_vitalsSeries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clinical/patients/{patientId}/last-visit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ClinicalController_lastVisit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clinical/letters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ClinicalController_letter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clinical/medications/safety-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ClinicalController_safetyCheck"];
         delete?: never;
         options?: never;
         head?: never;
@@ -128,24 +2496,111 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         LoginDto: {
-            /** Format: email */
+            /** @example physician@kiorly.com */
             email: string;
+            /** @example demo */
             password: string;
+        };
+        EmployeePrivilegeGrantSummaryDto: {
+            clinicId: string;
+            canManageEmployees: boolean;
+            canArchiveEmployees: boolean;
+            hrProvisionLogin: boolean;
         };
         AuthUserDto: {
             id: string;
-            tenantId: string;
+            /** @description Null for platform super administrators */
+            tenantId: string | null;
             email: string;
             displayName: string;
             /** @enum {string} */
-            role: "GROUP_ADMIN" | "BRANCH_MANAGER" | "PHYSICIAN" | "NURSE" | "RECEPTIONIST" | "CALL_CENTER" | "HR_OFFICER" | "FINANCE_OFFICER" | "CLINIC_ADMIN" | "CLINIC_ASSISTANT";
+            role: "PLATFORM_SUPER_ADMIN" | "GROUP_ADMIN" | "GROUP_SUPERVISOR" | "BRANCH_MANAGER" | "PHYSICIAN" | "NURSE" | "RECEPTIONIST" | "CALL_CENTER" | "HR_OFFICER" | "FINANCE_OFFICER" | "CLINIC_ADMIN" | "CLINIC_ASSISTANT";
+            /** @description Subset of sidebar tabs allowed for this user; omit or null = role defaults */
             navTabKeys?: string[] | null;
-            /** @description Set when email is listed in PLATFORM_SUPER_ADMIN_EMAILS */
+            /** @description Organization override for this user's role sidebar tabs; omit or null = platform role defaults */
+            roleNavTabKeys?: string[] | null;
+            /** @description Organization base currency (tenant default for clinics that inherit org settings) */
+            tenantBaseCurrency?: string | null;
+            /** @description True for PLATFORM_SUPER_ADMIN role or when email is listed in PLATFORM_SUPER_ADMIN_EMAILS */
             platformSuperAdmin?: boolean;
+            /** @description Whether the user uploaded a profile picture */
+            hasAvatar?: boolean;
+            /** @description Clinics where the user is assigned as HR (full clinic-scoped HR permissions) */
+            employeePrivilegeGrants?: components["schemas"]["EmployeePrivilegeGrantSummaryDto"][];
         };
         LoginResponseDto: {
             accessToken: string;
             user: components["schemas"]["AuthUserDto"];
+        };
+        ChangePasswordDto: {
+            /** @description Your current password */
+            currentPassword: string;
+            /** @description New password (min 8 characters) */
+            newPassword: string;
+        };
+        UserNavTabGrantResponseDto: {
+            /** @description Saved tab keys, or null when the user follows role defaults */
+            tabKeys?: string[] | null;
+        };
+        SetUserNavTabsDto: {
+            /**
+             * @description Allowed tab keys for this user (intersected with role on save). Empty = clear override.
+             * @example [
+             *       "dashboard",
+             *       "revenue",
+             *       "reports",
+             *       "profile"
+             *     ]
+             */
+            tabKeys: string[];
+            /** @description When granting the HR tab, the clinic where this user will act as HR (required if they have no clinic HR assignment yet) */
+            hrClinicId?: string;
+        };
+        UserClinicHrAssignmentDto: {
+            id: string;
+            userId: string;
+            clinicId: string;
+            clinicNameEn: string;
+        };
+        SetUserClinicHrAssignmentDto: {
+            userId: string;
+            /** @description Clinic where the user will act as HR (full clinic HR permissions) */
+            clinicId: string;
+        };
+        CreatePatientDto: {
+            /**
+             * @description How the patient found the clinic
+             * @enum {string}
+             */
+            acquisitionChannel?: "SOCIAL_FACEBOOK" | "SOCIAL_INSTAGRAM" | "SOCIAL_TIKTOK" | "WEBSITE_GOOGLE" | "DOCTOR_REFERRAL" | "OTHER";
+            /** @description Referring doctor name when acquisitionChannel is DOCTOR_REFERRAL */
+            acquisitionReferralName?: string;
+            /** @description Free-text channel when acquisitionChannel is OTHER */
+            acquisitionOtherDetail?: string;
+            firstNameEn: string;
+            lastNameEn: string;
+            firstNameAr: string;
+            lastNameAr: string;
+            /** @example 1988-03-12 */
+            dob?: string;
+            /** @enum {string} */
+            gender: "M" | "F" | "OTHER" | "UNKNOWN";
+            /** @example +971501112233 */
+            phone: string;
+            /** @example patient@example.com */
+            email?: string;
+            /** @description National ID / SSN (unique per organization when provided) */
+            nationalId?: string;
+            /** @description Home branch clinic id */
+            homeBranchId?: string;
+        };
+        PatientDocumentDto: {
+            id: string;
+            description: string;
+            originalFileName: string;
+            mimeType: string;
+            sizeBytes: number;
+            createdAt: string;
         };
         PatientDto: {
             id: string;
@@ -154,13 +2609,70 @@ export interface components {
             lastNameEn: string;
             firstNameAr?: string | null;
             lastNameAr?: string | null;
-            /** Format: date */
-            dob: string;
+            /** @example 1988-03-12 */
+            dob?: string | null;
             /** @enum {string} */
             gender: "M" | "F" | "OTHER" | "UNKNOWN";
             phone: string;
             email?: string | null;
+            /** @description Government-issued national / social security identifier */
+            nationalId?: string | null;
             homeBranch?: string | null;
+            homeBranchId?: string | null;
+            /** @description Whether a national ID / SSN scan is on file */
+            hasNationalIdDoc?: boolean;
+            /** @enum {string|null} */
+            acquisitionChannel?: "SOCIAL_FACEBOOK" | "SOCIAL_INSTAGRAM" | "SOCIAL_TIKTOK" | "WEBSITE_GOOGLE" | "DOCTOR_REFERRAL" | "OTHER" | null;
+            acquisitionReferralName?: string | null;
+            acquisitionOtherDetail?: string | null;
+            documents?: components["schemas"]["PatientDocumentDto"][];
+        };
+        BulkDeletePatientsDto: {
+            /** @description Patient ids to soft-delete */
+            ids?: string[];
+            /** @description When true, delete all active patients matching search (ignores ids) */
+            all?: boolean;
+            /** @description Same search filter as patient list when all=true */
+            search?: string;
+        };
+        PatientPhoneConflictPatientDto: {
+            id: string;
+            mrn: string;
+            firstNameEn: string;
+            lastNameEn: string;
+            firstNameAr?: Record<string, never>;
+            lastNameAr?: Record<string, never>;
+        };
+        PatientPhoneConflictDto: {
+            conflict: boolean;
+            patient?: components["schemas"]["PatientPhoneConflictPatientDto"];
+        };
+        UpdatePatientDto: {
+            /**
+             * @description How the patient found the clinic
+             * @enum {string}
+             */
+            acquisitionChannel?: "SOCIAL_FACEBOOK" | "SOCIAL_INSTAGRAM" | "SOCIAL_TIKTOK" | "WEBSITE_GOOGLE" | "DOCTOR_REFERRAL" | "OTHER";
+            /** @description Referring doctor name when acquisitionChannel is DOCTOR_REFERRAL */
+            acquisitionReferralName?: string;
+            /** @description Free-text channel when acquisitionChannel is OTHER */
+            acquisitionOtherDetail?: string;
+            firstNameEn?: string;
+            lastNameEn?: string;
+            firstNameAr?: string;
+            lastNameAr?: string;
+            /** @example 1988-03-12 */
+            dob?: string;
+            /** @enum {string} */
+            gender?: "M" | "F" | "OTHER" | "UNKNOWN";
+            /** @example +971501112233 */
+            phone?: string;
+            /** @example patient@example.com */
+            email?: string;
+            /** @description National ID / SSN (unique per organization when provided) */
+            nationalId?: string;
+            /** @description Home branch clinic id */
+            homeBranchId?: string;
         };
         ClinicDto: {
             id: string;
@@ -170,17 +2682,1047 @@ export interface components {
             city: string;
             country: string;
             /** @enum {string} */
-            kind: "parent" | "branch";
+            kind: "parent" | "branch" | "standalone";
+            /** @description Parent clinic display name when loaded with list */
+            parentNameEn?: Record<string, never> | null;
+            logoUrl?: Record<string, never> | null;
+            /** @description Default currency for fees at this clinic */
+            defaultCurrency: string;
+            /**
+             * @description Daily opening time (HH:mm)
+             * @default 09:00
+             */
+            openingTime: string;
+            /**
+             * @description Daily closing time (HH:mm)
+             * @default 00:00
+             */
+            closingTime: string;
+            /** @enum {string} */
+            recordStatus: "ACTIVE" | "INACTIVE";
+            disabledAt?: string | null;
+            /** @description When the clinic record was created (ISO timestamp) */
+            createdAt: string;
+        };
+        ClinicPhysicianDto: {
+            userId: string;
+            displayName: string;
+            email?: Record<string, never>;
+            employeeId: string;
+            jobTitle?: Record<string, never>;
+            firstNameEn?: Record<string, never> | null;
+            lastNameEn?: Record<string, never> | null;
+            firstNameAr?: Record<string, never> | null;
+            lastNameAr?: Record<string, never> | null;
+        };
+        CreateClinicDto: {
+            /** @description Parent clinic id; omit for a top-level (parent) clinic (Prisma cuid) */
+            parentClinicId?: Record<string, never>;
+            nameEn: string;
+            nameAr: string;
+            /** @default AE */
+            country: string;
+            city: string;
+            addressEn?: string;
+            addressAr?: string;
+            locationUrl?: string;
+            phone?: string;
+            email?: string;
+            licenseNumber?: string;
+            /** @description Public URL for clinic logo image */
+            logoUrl?: string;
+            /**
+             * @description Default currency for fees at this clinic
+             * @default AED
+             * @enum {string}
+             */
+            defaultCurrency: "AED" | "SAR" | "QAR" | "KWD" | "BHD" | "OMR" | "USD" | "EUR" | "GBP" | "EGP" | "JOD" | "LBP" | "TRY" | "INR";
+            /**
+             * @description Daily opening time (HH:mm)
+             * @default 09:00
+             */
+            openingTime: string;
+            /**
+             * @description Daily closing time (HH:mm). Use 00:00 for midnight (end of day).
+             * @default 00:00
+             */
+            closingTime: string;
+        };
+        AssignClinicPhysicianDto: {
+            /** @description Physician user id to assign to this clinic */
+            userId: string;
+        };
+        ClinicOperatingPeriodDto: {
+            id: string;
+            /** @description First day of this operating period (YYYY-MM-DD) */
+            startDate: string;
+            /** @description Last day of this operating period (YYYY-MM-DD) */
+            endDate?: Record<string, never> | null;
+        };
+        ClinicDetailDto: {
+            id: string;
+            parentClinicId?: Record<string, never> | null;
+            parentNameEn?: Record<string, never> | null;
+            parentNameAr?: Record<string, never> | null;
+            nameEn: string;
+            nameAr: string;
+            city: string;
+            country: string;
+            /** @enum {string} */
+            kind: "parent" | "branch" | "standalone";
+            logoUrl?: Record<string, never> | null;
+            addressEn: string;
+            addressAr: string;
+            locationUrl: string;
+            phone: string;
+            email: string;
+            licenseNumber: string;
+            defaultLanguage: string;
+            /** @description Default currency for appointments, encounters, and operations at this clinic */
+            defaultCurrency: string;
+            /**
+             * @description Daily opening time (HH:mm)
+             * @default 09:00
+             */
+            openingTime: string;
+            /**
+             * @description Daily closing time (HH:mm). 00:00 means midnight (end of day).
+             * @default 00:00
+             */
+            closingTime: string;
+            /** @description Preset id for invoice background color */
+            invoiceBackgroundColor: string;
+            /** @description Hex color for invoice background preview */
+            invoiceBackgroundHex: string;
+            invoiceSections: ("clinicHeader" | "patientDetails" | "invoiceMeta" | "lineItems" | "totals" | "footer")[];
+            /** @description Whether an invoice logo has been uploaded */
+            hasInvoiceLogo: boolean;
+            /** @description Whether a prescription header logo has been uploaded */
+            hasPrescriptionLogo: boolean;
+            /** @description Optional header description on generated prescriptions (English) */
+            prescriptionHeaderDescriptionEn: string;
+            /** @description Optional header description on generated prescriptions (Arabic) */
+            prescriptionHeaderDescriptionAr: string;
+            /** @enum {string} */
+            recordStatus: "ACTIVE" | "INACTIVE";
+            disabledAt?: string | null;
+            /** @description When the clinic record was created (ISO timestamp) */
+            createdAt: string;
+            operatingPeriods: components["schemas"]["ClinicOperatingPeriodDto"][];
+        };
+        PatchClinicDto: {
+            /** @description Parent clinic id; set null to make a root-level clinic, or a root clinic id to attach as branch */
+            parentClinicId?: Record<string, never> | null;
+            nameEn?: string;
+            nameAr?: string;
+            country?: string;
+            city?: string;
+            addressEn?: string;
+            addressAr?: string;
+            locationUrl?: string;
+            phone?: string;
+            email?: string;
+            licenseNumber?: string;
+            logoUrl?: string;
+            /**
+             * @description Default currency for fees at this clinic
+             * @enum {string}
+             */
+            defaultCurrency?: "AED" | "SAR" | "QAR" | "KWD" | "BHD" | "OMR" | "USD" | "EUR" | "GBP" | "EGP" | "JOD" | "LBP" | "TRY" | "INR";
+            /** @description Daily opening time (HH:mm) */
+            openingTime?: string;
+            /** @description Daily closing time (HH:mm). Use 00:00 for midnight (end of day). */
+            closingTime?: string;
+        };
+        DeactivateClinicDto: {
+            /** @description Last operating day (YYYY-MM-DD). Defaults to today. */
+            effectiveDate?: string;
+        };
+        ReactivateClinicDto: {
+            /** @description First operating day after reactivation (YYYY-MM-DD). Defaults to today. */
+            startDate?: string;
+        };
+        CurrencyTotalDto: {
+            /** @example AED */
+            currency: string;
+            amount: number;
         };
         GroupOverviewKpisDto: {
             patients: number;
+            /** @description Finalized encounters with finalizedAt in the reporting period (legacy) */
             encounters30d: number;
+            /** @description All encounters with createdAt in the reporting period */
             encountersPeriodTotal: number;
+            /** @description Appointments with startsAt in the reporting period */
             appointmentsPeriodTotal: number;
+            /** @description Legacy mixed-currency revenue sum for the period */
             revenueMonth: number;
+            /** @description Legacy mixed-currency expense sum for the period */
             expensesMonth: number;
+            /** @description Legacy mixed-currency net for the period */
+            netProfitMonth: number;
+            revenueByCurrency: components["schemas"]["CurrencyTotalDto"][];
+            expensesByCurrency: components["schemas"]["CurrencyTotalDto"][];
+            /**
+             * @description Applied range start (YYYY-MM-DD, local)
+             * @example 2025-05-01
+             */
+            periodFrom: string;
+            /**
+             * @description Applied range end (YYYY-MM-DD, local)
+             * @example 2025-05-31
+             */
+            periodTo: string;
             branches: number;
+            /** @description User accounts in tenant */
             headcount: number;
+            /** @description HR employee records */
+            employeeCount: number;
+        };
+        CreateEncounterDto: {
+            /**
+             * @description How the patient found the clinic
+             * @enum {string}
+             */
+            acquisitionChannel?: "SOCIAL_FACEBOOK" | "SOCIAL_INSTAGRAM" | "SOCIAL_TIKTOK" | "WEBSITE_GOOGLE" | "DOCTOR_REFERRAL" | "OTHER";
+            /** @description Referring doctor name when acquisitionChannel is DOCTOR_REFERRAL */
+            acquisitionReferralName?: string;
+            /** @description Free-text channel when acquisitionChannel is OTHER */
+            acquisitionOtherDetail?: string;
+            clinicId: string;
+            patientId: string;
+            /** @description Attending physician (user id). Required for non-physician callers; ignored when caller is a physician (self). */
+            clinicianId?: string;
+            /** @example Follow-up */
+            visitType: string;
+            chiefComplaint?: string;
+            /** @description Consultation / visit fee for this encounter; defaults to tenant defaultVisitFee */
+            visitFeeAmount?: number;
+            /** @description Visit fee currency; defaults to clinic default currency */
+            visitFeeCurrency?: string;
+            /** @description Optional booked appointment for this patient; visit moves to in progress until encounter is finalized */
+            appointmentId?: string;
+        };
+        DiagnosisDto: {
+            id: string;
+            icd10Code: string;
+            descriptionEn: string;
+            descriptionAr?: Record<string, never> | null;
+            isPrimary: boolean;
+        };
+        EncounterMedicationDto: {
+            id: string;
+            drugName: string;
+            dosage?: Record<string, never> | null;
+            route?: Record<string, never> | null;
+            frequency?: Record<string, never> | null;
+            duration?: Record<string, never> | null;
+            instructions?: Record<string, never> | null;
+        };
+        EncounterDocumentDto: {
+            id: string;
+            /** @enum {string} */
+            kind: "LAB" | "RADIOLOGY" | "PRESCRIPTION";
+            originalFileName: string;
+            mimeType: string;
+            sizeBytes: number;
+            createdAt: string;
+        };
+        EncounterDetailDto: {
+            id: string;
+            clinicId: string;
+            /** @description Clinic display name (English) */
+            clinicNameEn?: Record<string, never> | null;
+            /** @description Clinic display name (Arabic) */
+            clinicNameAr?: Record<string, never> | null;
+            patientId: string;
+            /** @description Patient MRN when patient row is joined */
+            patientMrn?: Record<string, never> | null;
+            /** @description Patient display name (EN) when patient row is joined */
+            patientName?: Record<string, never> | null;
+            clinicianId: string;
+            status: string;
+            visitType: string;
+            chiefComplaint?: Record<string, never> | null;
+            subjective?: Record<string, never> | null;
+            objective?: Record<string, never> | null;
+            assessment?: Record<string, never> | null;
+            plan?: Record<string, never> | null;
+            vitalsJson?: Record<string, never> | null;
+            heartRate?: Record<string, never> | null;
+            spo2?: Record<string, never> | null;
+            bpSystolic?: Record<string, never> | null;
+            bpDiastolic?: Record<string, never> | null;
+            temperature?: Record<string, never> | null;
+            weightKg?: Record<string, never> | null;
+            heightCm?: Record<string, never> | null;
+            noMedications: boolean;
+            /** @description Visit fee captured when the encounter was created */
+            visitFeeAmount: number;
+            /** @description Currency for the visit fee and linked revenue */
+            visitFeeCurrency: string;
+            /** @description Linked booked appointment, if any */
+            appointmentId?: Record<string, never> | null;
+            finalizedAt?: Record<string, never> | null;
+            diagnoses: components["schemas"]["DiagnosisDto"][];
+            medications: components["schemas"]["EncounterMedicationDto"][];
+            documents: components["schemas"]["EncounterDocumentDto"][];
+            createdAt: string;
+            updatedAt: string;
+            clinicalTemplateId?: string | null;
+            specialtyFormResponses?: Record<string, never> | null;
+            noteLockedAt?: string | null;
+            signedAt?: string | null;
+            amendReason?: string | null;
+            amendedAt?: string | null;
+        };
+        UpdateEncounterDto: {
+            visitType?: string;
+            chiefComplaint?: string;
+            subjective?: string;
+            objective?: string;
+            assessment?: string;
+            plan?: string;
+            /** @description Optional legacy vitals map */
+            vitalsJson?: Record<string, never>;
+            heartRate?: number;
+            spo2?: number;
+            bpSystolic?: number;
+            bpDiastolic?: number;
+            temperature?: number;
+            weightKg?: number;
+            heightCm?: number;
+            /** @description True when clinician confirms no medications prescribed */
+            noMedications?: boolean;
+            /** @description Visit fee amount (editable while encounter is draft) */
+            visitFeeAmount?: number;
+            /** @description Visit fee currency; defaults to clinic default currency */
+            visitFeeCurrency?: string;
+            clinicalTemplateId?: string;
+            specialtyFormResponses?: Record<string, never>;
+        };
+        AddEncounterMedicationDto: {
+            /** @example Metformin 500mg */
+            drugName: string;
+            dosage?: string;
+            route?: string;
+            frequency?: string;
+            duration?: string;
+            instructions?: string;
+        };
+        AddDiagnosisDto: {
+            /** @example I10 */
+            icd10Code: string;
+            descriptionEn: string;
+            descriptionAr?: string;
+            /** @default false */
+            isPrimary: boolean;
+        };
+        ExpenseDto: {
+            id: string;
+            clinicId: string;
+            category: string;
+            vendorName?: Record<string, never> | null;
+            amount: number;
+            currency: string;
+            incurredAt: string;
+            status: string;
+            /** @description Whether a payment proof file was uploaded */
+            hasProof: boolean;
+            /** @description Original filename of the proof, when present */
+            proofOriginalName?: Record<string, never> | null;
+        };
+        PatchExpenseStatusDto: {
+            /** @enum {string} */
+            status: "PENDING" | "APPROVED" | "REJECTED";
+        };
+        CurrencyRevenueTotalsDto: {
+            /** @example AED */
+            currency: string;
+            grossTotal: number;
+            netTotal: number;
+        };
+        RevenueTotalsDto: {
+            /** @description Legacy mixed-currency sum; prefer byCurrency when multiple currencies are present */
+            grossTotal: number;
+            /** @description Legacy mixed-currency sum; prefer byCurrency when multiple currencies are present */
+            netTotal: number;
+            byCurrency: components["schemas"]["CurrencyRevenueTotalsDto"][];
+        };
+        CreateRevenueDto: {
+            clinicId: string;
+            /** @example VISIT */
+            category: string;
+            description?: string;
+            grossAmount: number;
+            taxAmount: number;
+            netAmount: number;
+            /** @example AED */
+            currency: string;
+            postedAt: string;
+            /** @enum {string} */
+            status?: "POSTED" | "VOID";
+            /** @description When set, records a payment against this operation and updates paid amount */
+            operationId?: string;
+        };
+        RevenueEntryDto: {
+            id: string;
+            clinicId: string;
+            /** @description Clinic display name (English) */
+            clinicNameEn?: Record<string, never> | null;
+            /** @description Clinic display name (Arabic) */
+            clinicNameAr?: Record<string, never> | null;
+            category: string;
+            description?: Record<string, never> | null;
+            grossAmount: number;
+            taxAmount: number;
+            netAmount: number;
+            currency: string;
+            postedAt: string;
+            status: string;
+        };
+        HrManageContextDto: {
+            /** @description Primary clinic for clinic-scoped HR officers */
+            clinicId?: Record<string, never> | null;
+            clinicNameEn?: Record<string, never> | null;
+            /** @description Clinic group network ids (HQ + branches) for group physician assignment */
+            groupClinicIds: string[];
+            /** @description Clinics where this HR user may assign new employees */
+            assignableClinicIds: string[];
+            /** @description When true, new employees are created with a fresh login (email + password) */
+            provisionLogin: boolean;
+            assignableRoles?: ("PLATFORM_SUPER_ADMIN" | "GROUP_ADMIN" | "GROUP_SUPERVISOR" | "BRANCH_MANAGER" | "PHYSICIAN" | "NURSE" | "RECEPTIONIST" | "CALL_CENTER" | "HR_OFFICER" | "FINANCE_OFFICER" | "CLINIC_ADMIN" | "CLINIC_ASSISTANT")[] | null;
+            /** @description When true, assignableClinicIds is limited to the viewer's HR assignment; when false, all org clinics are assignable */
+            clinicScopeRestricted: boolean;
+        };
+        UnlinkedUserDto: {
+            id: string;
+            email: string;
+            displayName: string;
+            role: string;
+        };
+        EmployeeEmploymentPeriodDto: {
+            id: string;
+            startDate: string;
+            endDate?: Record<string, never> | null;
+            /** @enum {string|null} */
+            separationReason?: "RESIGNATION" | null;
+        };
+        EmployeeDto: {
+            id: string;
+            clinicId: string;
+            /** @description Clinic display name when joined in list/detail */
+            clinicNameEn?: Record<string, never> | null;
+            clinicNameAr?: Record<string, never> | null;
+            employeeNumber: string;
+            firstNameEn: string;
+            lastNameEn: string;
+            firstNameAr?: Record<string, never> | null;
+            lastNameAr?: Record<string, never> | null;
+            email?: Record<string, never> | null;
+            phone: string;
+            jobTitle: string;
+            /** @enum {string} */
+            employmentType: "FULL_TIME" | "PART_TIME" | "CONTRACTOR" | "LOCUM";
+            hireDate: string;
+            salaryBase: number;
+            /** @description Salary currency override; null means the employee clinic default currency */
+            salaryCurrency?: Record<string, never> | null;
+            /** @description Effective salary currency (override or clinic default) */
+            salaryCurrencyEffective: string;
+            userId?: Record<string, never> | null;
+            /** @description Whether an ID / passport document was uploaded */
+            hasIdDoc: boolean;
+            /** @description Linked login account display name */
+            linkedUserDisplayName?: Record<string, never> | null;
+            /** @description Linked login account role */
+            linkedUserRole?: Record<string, never> | null;
+            /** @description Clinics assigned to the linked login account */
+            linkedUserClinicIds: string[];
+            /** @description Whether the linked login account has a profile picture */
+            hasUserAvatar: boolean;
+            /** @enum {string} */
+            recordStatus: "ACTIVE" | "INACTIVE";
+            resignationDate?: Record<string, never> | null;
+            /** @enum {string|null} */
+            separationReason?: "RESIGNATION" | null;
+            employmentPeriods: components["schemas"]["EmployeeEmploymentPeriodDto"][];
+            createdAt: string;
+            deletedAt?: Record<string, never> | null;
+            /** @description True when inactive or archived */
+            archived: boolean;
+            linkedUserCreatedAt?: Record<string, never> | null;
+            linkedUserDeactivatedAt?: Record<string, never> | null;
+            linkedUserDeletedAt?: Record<string, never> | null;
+        };
+        CreateEmployeeDto: {
+            clinicId: string;
+            /** @description Additional clinics for physicians (primary is clinicId) */
+            clinicIds?: string[];
+            /** @description Link to an existing unmapped organization login account */
+            userId?: string;
+            /** @description Create a new login — email for the employee account */
+            loginEmail?: string;
+            /** @description Create a new login — temporary password */
+            loginPassword?: string;
+            /**
+             * @description Create a new login — organization role
+             * @enum {string}
+             */
+            loginRole?: "PLATFORM_SUPER_ADMIN" | "GROUP_ADMIN" | "GROUP_SUPERVISOR" | "BRANCH_MANAGER" | "PHYSICIAN" | "NURSE" | "RECEPTIONIST" | "CALL_CENTER" | "HR_OFFICER" | "FINANCE_OFFICER" | "CLINIC_ADMIN" | "CLINIC_ASSISTANT";
+            /**
+             * @description For physicians: assign to this clinic only or as a group physician across the clinic network
+             * @enum {string}
+             */
+            physicianAssignment?: "CLINIC" | "GROUP";
+            firstNameEn: string;
+            lastNameEn: string;
+            firstNameAr?: string;
+            lastNameAr?: string;
+            email?: string;
+            phone: string;
+            /** @description Derived from linked user role when omitted */
+            jobTitle?: string;
+            /** @enum {string} */
+            employmentType: "FULL_TIME" | "PART_TIME" | "CONTRACTOR" | "LOCUM";
+            hireDate: string;
+            salaryBase: number;
+            /** @description Salary currency override; omit or match clinic default to follow clinic defaultCurrency */
+            salaryCurrency?: Record<string, never>;
+        };
+        CreateEmployeeResultDto: {
+            id: string;
+            clinicId: string;
+            /** @description Clinic display name when joined in list/detail */
+            clinicNameEn?: Record<string, never> | null;
+            clinicNameAr?: Record<string, never> | null;
+            employeeNumber: string;
+            firstNameEn: string;
+            lastNameEn: string;
+            firstNameAr?: Record<string, never> | null;
+            lastNameAr?: Record<string, never> | null;
+            email?: Record<string, never> | null;
+            phone: string;
+            jobTitle: string;
+            /** @enum {string} */
+            employmentType: "FULL_TIME" | "PART_TIME" | "CONTRACTOR" | "LOCUM";
+            hireDate: string;
+            salaryBase: number;
+            /** @description Salary currency override; null means the employee clinic default currency */
+            salaryCurrency?: Record<string, never> | null;
+            /** @description Effective salary currency (override or clinic default) */
+            salaryCurrencyEffective: string;
+            userId?: Record<string, never> | null;
+            /** @description Whether an ID / passport document was uploaded */
+            hasIdDoc: boolean;
+            /** @description Linked login account display name */
+            linkedUserDisplayName?: Record<string, never> | null;
+            /** @description Linked login account role */
+            linkedUserRole?: Record<string, never> | null;
+            /** @description Clinics assigned to the linked login account */
+            linkedUserClinicIds: string[];
+            /** @description Whether the linked login account has a profile picture */
+            hasUserAvatar: boolean;
+            /** @enum {string} */
+            recordStatus: "ACTIVE" | "INACTIVE";
+            resignationDate?: Record<string, never> | null;
+            /** @enum {string|null} */
+            separationReason?: "RESIGNATION" | null;
+            employmentPeriods: components["schemas"]["EmployeeEmploymentPeriodDto"][];
+            createdAt: string;
+            deletedAt?: Record<string, never> | null;
+            /** @description True when inactive or archived */
+            archived: boolean;
+            linkedUserCreatedAt?: Record<string, never> | null;
+            linkedUserDeactivatedAt?: Record<string, never> | null;
+            linkedUserDeletedAt?: Record<string, never> | null;
+            /** @description Login email when a new account was provisioned */
+            createdLoginEmail?: string;
+            /** @description Temporary login password (shown once after create) */
+            createdLoginPassword?: string;
+            createdLoginRole?: string;
+        };
+        UpdateEmployeeDto: {
+            clinicId?: string;
+            /** @description Assigned clinics for linked clinic-scoped users (e.g. physicians) */
+            clinicIds?: string[];
+            firstNameEn?: string;
+            lastNameEn?: string;
+            firstNameAr?: string;
+            lastNameAr?: string;
+            email?: string;
+            phone?: string;
+            jobTitle?: string;
+            /** @enum {string} */
+            employmentType?: "FULL_TIME" | "PART_TIME" | "CONTRACTOR" | "LOCUM";
+            hireDate?: string;
+            salaryBase?: number;
+            /** @description Salary currency override; omit or match clinic default to follow clinic defaultCurrency */
+            salaryCurrency?: Record<string, never>;
+        };
+        ReactivateEmployeeDto: {
+            /** @description New employment start date (YYYY-MM-DD); defaults to today */
+            startDate?: string;
+        };
+        DeactivateEmployeeDto: {
+            /** @description Resignation date (YYYY-MM-DD) */
+            resignationDate: string;
+        };
+        CreateAttendanceDto: {
+            employeeId: string;
+            /** @example 2025-05-01 */
+            workDate: string;
+            clockIn?: string;
+            clockOut?: string;
+            /** @enum {string} */
+            status?: "PRESENT" | "LATE" | "ABSENT" | "ON_LEAVE";
+            notes?: string;
+        };
+        AttendanceDto: {
+            id: string;
+            employeeId: string;
+            employeeNumber?: Record<string, never> | null;
+            employeeFullName?: Record<string, never> | null;
+            employeeFirstNameEn?: Record<string, never> | null;
+            employeeLastNameEn?: Record<string, never> | null;
+            employeeFirstNameAr?: Record<string, never> | null;
+            employeeLastNameAr?: Record<string, never> | null;
+            /** @description Employee home clinic (English name) */
+            clinicNameEn?: Record<string, never> | null;
+            workDate: string;
+            clockIn?: Record<string, never> | null;
+            clockOut?: Record<string, never> | null;
+            /** @enum {string} */
+            status: "PRESENT" | "LATE" | "ABSENT" | "ON_LEAVE";
+            notes?: Record<string, never> | null;
+        };
+        CreateLeaveRequestDto: {
+            employeeId: string;
+            /** @enum {string} */
+            type: "ANNUAL" | "SICK" | "UNPAID" | "OTHER";
+            startDate: string;
+            endDate: string;
+            reason?: string;
+        };
+        LeaveRequestDto: {
+            id: string;
+            employeeId: string;
+            /** @enum {string} */
+            type: "ANNUAL" | "SICK" | "UNPAID" | "OTHER";
+            startDate: string;
+            endDate: string;
+            /** @enum {string} */
+            status: "PENDING" | "APPROVED" | "REJECTED";
+            reason?: Record<string, never> | null;
+        };
+        PatchLeaveStatusDto: {
+            /** @enum {string} */
+            status: "PENDING" | "APPROVED" | "REJECTED";
+        };
+        AppointmentDto: {
+            id: string;
+            clinicId: string;
+            /** @description Clinic display name (English) */
+            clinicNameEn?: Record<string, never> | null;
+            /** @description Clinic display name (Arabic) */
+            clinicNameAr?: Record<string, never> | null;
+            patientId: string;
+            clinicianId: string;
+            /** @description Clinician name: linked employee first/last (EN) when present, else user displayName */
+            clinicianName?: Record<string, never> | null;
+            clinicianFirstNameEn?: Record<string, never> | null;
+            clinicianLastNameEn?: Record<string, never> | null;
+            clinicianFirstNameAr?: Record<string, never> | null;
+            clinicianLastNameAr?: Record<string, never> | null;
+            startsAt: string;
+            endsAt?: Record<string, never> | null;
+            /** @description Scheduled visit fee for this appointment */
+            feeAmount: number;
+            /** @enum {string} */
+            status: "SCHEDULED" | "CONFIRMED" | "CHECKED_IN" | "COMPLETED" | "CANCELLED";
+            notes?: Record<string, never> | null;
+            /** @description Present on list responses when patient is included */
+            patientMrn?: Record<string, never> | null;
+            patientName?: Record<string, never> | null;
+        };
+        CreateAppointmentDto: {
+            clinicId: string;
+            patientId: string;
+            clinicianId: string;
+            startsAt: string;
+            /** @description Optional custom end; defaults to a 15-minute slot from startsAt when omitted */
+            endsAt?: string;
+            /** @description Set true to book alongside an existing appointment at the same time */
+            confirmOverlap?: boolean;
+            /** @description Scheduled visit fee; defaults to the organization default visit fee */
+            feeAmount?: number;
+            /** @enum {string} */
+            status?: "SCHEDULED" | "CONFIRMED" | "CHECKED_IN" | "COMPLETED" | "CANCELLED";
+            notes?: string;
+        };
+        PatchAppointmentStatusDto: {
+            /** @enum {string} */
+            status: "SCHEDULED" | "CONFIRMED" | "CHECKED_IN" | "COMPLETED" | "CANCELLED";
+        };
+        UpdateAppointmentDto: {
+            clinicId?: string;
+            patientId?: string;
+            clinicianId?: string;
+            startsAt?: string;
+            endsAt?: Record<string, never> | null;
+            /** @description Scheduled visit fee; syncs to a linked open encounter when changed */
+            feeAmount?: number;
+            /** @enum {string} */
+            status?: "SCHEDULED" | "CONFIRMED" | "CHECKED_IN" | "COMPLETED" | "CANCELLED";
+            notes?: Record<string, never> | null;
+        };
+        OperationDto: {
+            id: string;
+            clinicId: string;
+            clinicNameEn?: Record<string, never>;
+            clinicNameAr?: Record<string, never>;
+            patientId: string;
+            patientMrn?: Record<string, never>;
+            patientName?: Record<string, never>;
+            clinicianId: string;
+            clinicianName?: Record<string, never>;
+            clinicianFirstNameEn?: Record<string, never> | null;
+            clinicianLastNameEn?: Record<string, never> | null;
+            clinicianFirstNameAr?: Record<string, never> | null;
+            clinicianLastNameAr?: Record<string, never> | null;
+            operationDate: string;
+            totalCost: number;
+            downPayment: number;
+            paidAmount: number;
+            balanceDue: number;
+            /** @description Currency amounts are recorded in (may differ from clinic default) */
+            feeCurrency: string;
+            comments?: Record<string, never>;
+            /** @enum {string} */
+            status: "SCHEDULED" | "CANCELLED" | "COMPLETED";
+            createdAt: string;
+        };
+        CreateOperationDto: {
+            patientId: string;
+            clinicianId: string;
+            /** @description Scheduled operation date/time (ISO 8601) */
+            operationDate: string;
+            totalCost: number;
+            /** @default 0 */
+            downPayment: number;
+            comments?: string;
+            /** @description Defaults to patient home branch or first tenant clinic */
+            clinicId?: string;
+            /** @description When true, no medications or prescriptions apply to this operation */
+            noMedications?: boolean;
+            /**
+             * @description Currency the patient pays in; defaults to the clinic default currency
+             * @enum {string}
+             */
+            feeCurrency?: "AED" | "SAR" | "QAR" | "KWD" | "BHD" | "OMR" | "USD" | "EUR" | "GBP" | "EGP" | "JOD" | "LBP" | "TRY" | "INR";
+        };
+        OperationMedicationDto: {
+            id: string;
+            drugName: string;
+            dosage?: Record<string, never>;
+            route?: Record<string, never>;
+            frequency?: Record<string, never>;
+            duration?: Record<string, never>;
+            instructions?: Record<string, never>;
+        };
+        OperationDocumentDto: {
+            id: string;
+            /** @enum {string} */
+            kind: "ATTACHMENT" | "PRESCRIPTION";
+            description?: Record<string, never>;
+            originalFileName: string;
+            mimeType: string;
+            sizeBytes: number;
+            createdAt: string;
+        };
+        OperationDetailDto: {
+            id: string;
+            clinicId: string;
+            clinicNameEn?: Record<string, never>;
+            clinicNameAr?: Record<string, never>;
+            patientId: string;
+            patientMrn?: Record<string, never>;
+            patientName?: Record<string, never>;
+            clinicianId: string;
+            clinicianName?: Record<string, never>;
+            clinicianFirstNameEn?: Record<string, never> | null;
+            clinicianLastNameEn?: Record<string, never> | null;
+            clinicianFirstNameAr?: Record<string, never> | null;
+            clinicianLastNameAr?: Record<string, never> | null;
+            operationDate: string;
+            totalCost: number;
+            downPayment: number;
+            paidAmount: number;
+            balanceDue: number;
+            /** @description Currency amounts are recorded in (may differ from clinic default) */
+            feeCurrency: string;
+            comments?: Record<string, never>;
+            /** @enum {string} */
+            status: "SCHEDULED" | "CANCELLED" | "COMPLETED";
+            createdAt: string;
+            noMedications: boolean;
+            medications: components["schemas"]["OperationMedicationDto"][];
+            documents: components["schemas"]["OperationDocumentDto"][];
+        };
+        AddOperationMedicationDto: {
+            /** @example Metformin 500mg */
+            drugName: string;
+            dosage?: string;
+            route?: string;
+            frequency?: string;
+            duration?: string;
+            instructions?: string;
+        };
+        UpdateOperationDto: {
+            patientId?: string;
+            clinicianId?: string;
+            operationDate?: string;
+            totalCost?: number;
+            downPayment?: number;
+            comments?: string;
+            clinicId?: string;
+            noMedications?: boolean;
+            /**
+             * @description Currency the patient pays in
+             * @enum {string}
+             */
+            feeCurrency?: "AED" | "SAR" | "QAR" | "KWD" | "BHD" | "OMR" | "USD" | "EUR" | "GBP" | "EGP" | "JOD" | "LBP" | "TRY" | "INR";
+        };
+        PatchOperationStatusDto: {
+            /** @enum {string} */
+            status: "SCHEDULED" | "CANCELLED" | "COMPLETED";
+            /** @description Amount collected now; required when completing with an outstanding balance */
+            collectionAmount?: number;
+        };
+        CreateInvoiceLineDto: {
+            /** @description Purpose / service description */
+            purpose: string;
+            /** @description Amount paid for this line */
+            amountPaid: number;
+        };
+        CreateInvoiceDto: {
+            /** @description Link invoice to an encounter */
+            encounterId?: string;
+            /** @description Link invoice to an operation */
+            operationId?: string;
+            lines: components["schemas"]["CreateInvoiceLineDto"][];
+            /** @description Invoice currency; defaults to linked encounter/operation or clinic default */
+            currency?: string;
+        };
+        InvoiceLineDto: {
+            id: string;
+            purpose: string;
+            amountPaid: number;
+            sortOrder: number;
+        };
+        InvoiceDto: {
+            id: string;
+            clinicId: string;
+            patientId: string;
+            encounterId?: Record<string, never> | null;
+            operationId?: Record<string, never> | null;
+            invoiceNumber: string;
+            issueDate: string;
+            currency: string;
+            backgroundColor: string;
+            sections: string[];
+            patientName: string;
+            patientMrn?: Record<string, never> | null;
+            clinicNameEn: string;
+            clinicNameAr: string;
+            clinicAddressEn: string;
+            clinicAddressAr: string;
+            clinicPhone: string;
+            clinicEmail: string;
+            clinicLicenseNumber: string;
+            totalAmount: number;
+            lines: components["schemas"]["InvoiceLineDto"][];
+            createdAt: string;
+        };
+        InvoiceListItemDto: {
+            id: string;
+            invoiceNumber: string;
+            issueDate: string;
+            currency: string;
+            totalAmount: number;
+            encounterId?: Record<string, never> | null;
+            operationId?: Record<string, never> | null;
+            createdAt: string;
+        };
+        PatchClinicInvoiceSettingsDto: {
+            /** @description One of the preset invoice background color ids */
+            invoiceBackgroundColor?: string;
+            /** @description Sections to include on generated invoices */
+            invoiceSections?: ("clinicHeader" | "patientDetails" | "invoiceMeta" | "lineItems" | "totals" | "footer")[];
+        };
+        PatchClinicPrescriptionSettingsDto: {
+            /** @description Header description shown on generated prescriptions (English) */
+            prescriptionHeaderDescriptionEn?: string;
+            /** @description Header description shown on generated prescriptions (Arabic) */
+            prescriptionHeaderDescriptionAr?: string;
+        };
+        PatchTenantSettingsDto: {
+            /**
+             * @description Organization base currency; inherited by clinics unless they use a custom default
+             * @enum {string}
+             */
+            baseCurrency?: "AED" | "SAR" | "QAR" | "KWD" | "BHD" | "OMR" | "USD" | "EUR" | "GBP" | "EGP" | "JOD" | "LBP" | "TRY" | "INR";
+            /** @description Default visit/consultation fee for new encounters (same currency as tenant base) */
+            defaultVisitFee?: number;
+        };
+        CreateTenantUserDto: {
+            email: string;
+            password: string;
+            displayName: string;
+            /** @enum {string} */
+            role: "PLATFORM_SUPER_ADMIN" | "GROUP_ADMIN" | "GROUP_SUPERVISOR" | "BRANCH_MANAGER" | "PHYSICIAN" | "NURSE" | "RECEPTIONIST" | "CALL_CENTER" | "HR_OFFICER" | "FINANCE_OFFICER" | "CLINIC_ADMIN" | "CLINIC_ASSISTANT";
+            /** @description Assign one or more clinics. Required for clinic administrator and branch manager; optional for other roles. */
+            clinicIds?: string[];
+        };
+        BulkDeleteUsersDto: {
+            /** @description User ids to delete */
+            ids?: string[];
+            /** @description When true, delete all users matching search (ignores ids) */
+            all?: boolean;
+            /** @description Same search filter as user list when all=true */
+            search?: string;
+            /** @description Same role filter as user list when all=true (UserRole enum) */
+            role?: string;
+        };
+        PlatformPatchTenantUserDto: {
+            email?: string;
+            password?: string;
+            displayName?: string;
+            /** @enum {string} */
+            role?: "PLATFORM_SUPER_ADMIN" | "GROUP_ADMIN" | "GROUP_SUPERVISOR" | "BRANCH_MANAGER" | "PHYSICIAN" | "NURSE" | "RECEPTIONIST" | "CALL_CENTER" | "HR_OFFICER" | "FINANCE_OFFICER" | "CLINIC_ADMIN" | "CLINIC_ASSISTANT";
+            /** @description Clinic scope for CLINIC_ADMIN / BRANCH_MANAGER */
+            clinicIds?: string[];
+            /**
+             * @description Linked HR employee contract type
+             * @enum {string}
+             */
+            employmentType?: "FULL_TIME" | "PART_TIME" | "CONTRACTOR" | "LOCUM";
+            /** @description Linked HR employee monthly base salary */
+            salaryBase?: number;
+            /** @description Linked HR employee salary currency override */
+            salaryCurrency?: Record<string, never>;
+        };
+        DeactivateTenantUserDto: {
+            /** @description Resignation / deactivation date (defaults to today) */
+            resignationDate?: string;
+        };
+        ReactivateTenantUserDto: {
+            /** @description Employment restart date (defaults to today) */
+            startDate?: string;
+        };
+        PatchFeatureFlagDto: {
+            enabled: boolean;
+        };
+        CreateTenantGroupAdminDto: {
+            /** @description Sign-in email (username) for the organization group administrator */
+            email: string;
+            password: string;
+            /** @example Acme Group Administrator */
+            displayName: string;
+        };
+        CreateTenantDto: {
+            /**
+             * @description Organization name (English)
+             * @example Acme Clinic Group
+             */
+            name: string;
+            /**
+             * @description Organization name (Arabic)
+             * @example مجموعة عيادات أكم
+             */
+            nameAr: string;
+            /**
+             * @default AED
+             * @enum {string}
+             */
+            baseCurrency: "AED" | "SAR" | "QAR" | "KWD" | "BHD" | "OMR" | "USD" | "EUR" | "GBP" | "EGP" | "JOD" | "LBP" | "TRY" | "INR";
+            /** @default en */
+            defaultLocale: string;
+            /** @description Initial group administrator for this organization (email, password, display name) */
+            groupAdmin?: components["schemas"]["CreateTenantGroupAdminDto"];
+            /** @description Optional first parent clinic (HQ) — same fields as organization admin clinic onboarding */
+            initialClinic?: components["schemas"]["CreateClinicDto"];
+        };
+        PlatformPatchTenantDto: {
+            /** @description Organization name (English) */
+            name?: string;
+            /** @description Organization name (Arabic) */
+            nameAr?: string;
+            /**
+             * @example AED
+             * @enum {string}
+             */
+            baseCurrency?: "AED" | "SAR" | "QAR" | "KWD" | "BHD" | "OMR" | "USD" | "EUR" | "GBP" | "EGP" | "JOD" | "LBP" | "TRY" | "INR";
+            /** @example en */
+            defaultLocale?: string;
+            /** @description Default visit fee for new encounters in this organization */
+            defaultVisitFee?: number;
+        };
+        CreateSupportTicketDto: {
+            title: string;
+            description: string;
+            /** @enum {string} */
+            module: "PATIENTS" | "ENCOUNTERS" | "APPOINTMENTS" | "OPERATIONS" | "EXPENSES" | "REVENUE" | "HR" | "REPORTS" | "ADMIN" | "AUTH" | "CLINICS" | "BILLING" | "OTHER";
+            /** @enum {string} */
+            priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+            clinicId?: string;
+            patientId?: string;
+            assigneeUserId?: string;
+            resourceType?: string;
+            resourceId?: string;
+            linkedAuditLogId?: string;
+        };
+        PatchSupportTicketDto: {
+            /** @enum {string} */
+            status?: "OPEN" | "IN_PROGRESS" | "WAITING_ON_USER" | "RESOLVED" | "CLOSED";
+            /** @enum {string} */
+            priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+            assigneeUserId?: Record<string, never>;
+            resolutionNotes?: string;
+        };
+        CreateSupportTicketEventDto: {
+            eventType: string;
+            message?: string;
+        };
+        IntegrationBookAppointmentDto: {
+            /** @description Clinic branch where the visit is booked */
+            clinicId: string;
+            /** @description Internal patient id when already synced */
+            patientId?: string;
+            /** @description Patient MRN in the clinic system (alternative to patientId) */
+            patientMrn?: string;
+            /** @description Attending physician user id */
+            clinicianId: string;
+            startsAt: string;
+            endsAt?: string;
+            /** @description Idempotency key from the external patient platform (unique per integration client) */
+            externalReference?: string;
+            /** @description Set true to allow double-booking the same clinician */
+            confirmOverlap?: boolean;
+            notes?: string;
+        };
+        CreateIntegrationClientDto: {
+            /** @example Patient portal — production */
+            name: string;
+            /**
+             * @default [
+             *       "APPOINTMENTS_READ",
+             *       "APPOINTMENTS_WRITE"
+             *     ]
+             */
+            scopes: ("APPOINTMENTS_READ" | "APPOINTMENTS_WRITE")[];
+            /** @description Restrict bookings to these clinic ids; empty = all active clinics in the organization */
+            allowedClinicIds?: string[];
         };
     };
     responses: never;
@@ -191,7 +3733,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    authLogin: {
+    AuthController_login: {
         parameters: {
             query?: never;
             header?: never;
@@ -204,7 +3746,6 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -215,7 +3756,7 @@ export interface operations {
             };
         };
     };
-    authMe: {
+    AuthController_me: {
         parameters: {
             query?: never;
             header?: never;
@@ -224,7 +3765,6 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -235,10 +3775,200 @@ export interface operations {
             };
         };
     };
-    patientsList: {
+    AuthController_getMyAvatar: {
         parameters: {
-            query?: {
-                search?: string;
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Binary image stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_uploadMyAvatar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description Profile picture
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ok?: boolean;
+                        hasAvatar?: boolean;
+                    };
+                };
+            };
+        };
+    };
+    AuthController_removeMyAvatar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ok?: boolean;
+                        hasAvatar?: boolean;
+                    };
+                };
+            };
+        };
+    };
+    AuthController_changePassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example true */
+                        ok?: boolean;
+                    };
+                };
+            };
+        };
+    };
+    UserNavTabsController_getOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserNavTabGrantResponseDto"];
+                };
+            };
+        };
+    };
+    UserNavTabsController_putOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetUserNavTabsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserNavTabGrantResponseDto"];
+                };
+            };
+        };
+    };
+    TenantRoleNavTabsController_getOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                role: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserNavTabGrantResponseDto"];
+                };
+            };
+        };
+    };
+    TenantRoleNavTabsController_putOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                role: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetUserNavTabsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserNavTabGrantResponseDto"];
+                };
+            };
+        };
+    };
+    UserClinicPrivilegeGrantsController_list: {
+        parameters: {
+            query: {
+                userId: string;
             };
             header?: never;
             path?: never;
@@ -246,18 +3976,40 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PatientDto"][];
+                    "application/json": components["schemas"]["UserClinicHrAssignmentDto"][];
                 };
             };
         };
     };
-    patientsGet: {
+    UserClinicPrivilegeGrantsController_assign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetUserClinicHrAssignmentDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserClinicHrAssignmentDto"];
+                };
+            };
+        };
+    };
+    UserClinicPrivilegeGrantsController_remove: {
         parameters: {
             query?: never;
             header?: never;
@@ -268,7 +4020,151 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientsController_list: {
+        parameters: {
+            query: {
+                search: string;
+                mrn: string;
+                phone: string;
+                gender: string;
+                name: string;
+                nationalId: string;
+                page: string;
+                pageSize: string;
+                sortBy: string;
+                sortOrder: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { items: PatientDto[], total, page, pageSize, totalPages } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePatientDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PatientDto"];
+                };
+            };
+        };
+    };
+    PatientsController_bulkDelete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkDeletePatientsDto"];
+            };
+        };
+        responses: {
+            /** @description { ok: true, deleted: number } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientsController_checkPhoneConflict: {
+        parameters: {
+            query: {
+                phone: string;
+                excludePatientId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PatientPhoneConflictDto"];
+                };
+            };
+        };
+    };
+    PatientsController_getNationalIdDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Binary file stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientsController_uploadNationalIdDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description National ID / SSN scan
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -279,16 +4175,262 @@ export interface operations {
             };
         };
     };
-    clinicsList: {
+    PatientsController_uploadDocument: {
         parameters: {
             query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    /** @description Required description for this document */
+                    description: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PatientDocumentDto"];
+                };
+            };
+        };
+    };
+    PatientsController_getDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Binary file stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientsController_removeDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { ok: true } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientsController_removeEncounterDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                encounterId: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { ok: true } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientsController_cropDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    cropX?: number;
+                    cropY?: number;
+                    cropWidth?: number;
+                    cropHeight?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description { ok: true, id, originalFileName, mimeType, sizeBytes } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientsController_cropEncounterDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                encounterId: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    cropX?: number;
+                    cropY?: number;
+                    cropWidth?: number;
+                    cropHeight?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description { ok: true, id, originalFileName, mimeType, sizeBytes } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientsController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PatientDto"];
+                };
+            };
+        };
+    };
+    PatientsController_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { ok: true } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientsController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePatientDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PatientDto"];
+                };
+            };
+        };
+    };
+    PatientsController_listClinicalDocuments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Grouped clinical documents from registration and encounters */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicsController_list: {
+        parameters: {
+            query: {
+                includeInactive: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -299,16 +4441,250 @@ export interface operations {
             };
         };
     };
-    dashboardGroupOverview: {
+    ClinicsController_create: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateClinicDto"];
+            };
+        };
+        responses: {
+            /** @description ClinicDto */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicsController_listSchedulingPhysicians: {
+        parameters: {
+            query: {
+                clinicId: string;
+                search: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClinicPhysicianDto"][];
+                };
+            };
+        };
+    };
+    ClinicsController_listAvailablePhysicians: {
+        parameters: {
+            query: {
+                search: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClinicPhysicianDto"][];
+                };
+            };
+        };
+    };
+    ClinicsController_listClinicPhysicians: {
+        parameters: {
+            query: {
+                search: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClinicPhysicianDto"][];
+                };
+            };
+        };
+    };
+    ClinicsController_assignPhysician: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignClinicPhysicianDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClinicPhysicianDto"];
+                };
+            };
+        };
+    };
+    ClinicsController_removePhysician: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicsController_getOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClinicDetailDto"];
+                };
+            };
+        };
+    };
+    ClinicsController_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchClinicDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClinicDetailDto"];
+                };
+            };
+        };
+    };
+    ClinicsController_deactivate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeactivateClinicDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClinicDetailDto"];
+                };
+            };
+        };
+    };
+    ClinicsController_reactivate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReactivateClinicDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClinicDetailDto"];
+                };
+            };
+        };
+    };
+    DashboardController_groupOverview: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -319,7 +4695,7 @@ export interface operations {
             };
         };
     };
-    healthLive: {
+    HealthController_live: {
         parameters: {
             query?: never;
             header?: never;
@@ -328,7 +4704,6 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -336,9 +4711,3368 @@ export interface operations {
                 content: {
                     "application/json": {
                         /** @example ok */
-                        status: string;
+                        status?: string;
                     };
                 };
+            };
+        };
+    };
+    HealthController_ready: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example ok */
+                        status?: string;
+                        /** @example ok */
+                        database?: string;
+                    };
+                };
+            };
+        };
+    };
+    EncountersController_list: {
+        parameters: {
+            query: {
+                patientId: string;
+                patientSearch: string;
+                from: string;
+                to: string;
+                page: string;
+                pageSize: string;
+                sortBy: string;
+                sortOrder: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { items, total, page, pageSize, totalPages } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    EncountersController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateEncounterDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EncounterDetailDto"];
+                };
+            };
+        };
+    };
+    EncountersController_getDocumentFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                docId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Binary file stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    EncountersController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EncounterDetailDto"];
+                };
+            };
+        };
+    };
+    EncountersController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { ok: true, id } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    EncountersController_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateEncounterDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EncounterDetailDto"];
+                };
+            };
+        };
+    };
+    EncountersController_uploadDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    /** @enum {string} */
+                    kind: "LAB" | "RADIOLOGY" | "PRESCRIPTION";
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EncounterDocumentDto"];
+                };
+            };
+        };
+    };
+    EncountersController_removeDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                docId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { ok: true } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    EncountersController_addMedication: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddEncounterMedicationDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EncounterMedicationDto"];
+                };
+            };
+        };
+    };
+    EncountersController_removeMedication: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                medicationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { ok: true } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    EncountersController_addDiagnosis: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddDiagnosisDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiagnosisDto"];
+                };
+            };
+        };
+    };
+    EncountersController_removeDiagnosis: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                diagnosisId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    EncountersController_finalize: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EncounterDetailDto"];
+                };
+            };
+        };
+    };
+    ExpensesController_list: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                page: string;
+                pageSize: string;
+                sortBy: string;
+                sortOrder: string;
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { items, total, page, pageSize, totalPages } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ExpensesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    clinicId: string;
+                    category: string;
+                    vendorName?: string;
+                    amount: number;
+                    currency: string;
+                    /** Format: date-time */
+                    incurredAt: string;
+                    /** @enum {string} */
+                    status?: "PENDING" | "APPROVED" | "REJECTED";
+                    /**
+                     * Format: binary
+                     * @description Receipt / invoice (PDF or image, max 15MB)
+                     */
+                    proof?: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseDto"];
+                };
+            };
+        };
+    };
+    ExpensesController_getProof: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Binary file stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ExpensesController_patchStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchExpenseStatusDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseDto"];
+                };
+            };
+        };
+    };
+    ExpensesController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    clinicId?: string;
+                    category?: string;
+                    vendorName?: string;
+                    amount?: number;
+                    currency?: string;
+                    /** Format: date-time */
+                    incurredAt?: string;
+                    /**
+                     * Format: binary
+                     * @description Replace receipt / invoice (PDF or image, max 15MB)
+                     */
+                    proof?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseDto"];
+                };
+            };
+        };
+    };
+    RevenueController_totals: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                clinicId: string;
+                clinicianId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevenueTotalsDto"];
+                };
+            };
+        };
+    };
+    RevenueController_clinicBreakdown: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RevenueController_list: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                page: string;
+                pageSize: string;
+                clinicId: string;
+                sortBy: string;
+                sortOrder: string;
+                clinicianId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { items, total, page, pageSize, totalPages } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RevenueController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRevenueDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevenueEntryDto"];
+                };
+            };
+        };
+    };
+    HrController_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HrController_listEmployees: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+                search: string;
+                clinicId: string;
+                nameFilter: string;
+                clinicFilter: string;
+                sortBy: string;
+                sortOrder: string;
+                recordStatus: string;
+                archived: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { items, total, page, pageSize, totalPages } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HrController_createEmployee: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateEmployeeDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateEmployeeResultDto"];
+                };
+            };
+        };
+    };
+    HrController_manageContext: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HrManageContextDto"];
+                };
+            };
+        };
+    };
+    HrController_listUnlinkedUsers: {
+        parameters: {
+            query: {
+                search: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnlinkedUserDto"][];
+                };
+            };
+        };
+    };
+    HrController_getEmployeeUserAvatar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Binary image stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HrController_getEmployeeIdDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Binary file stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HrController_uploadEmployeeIdDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description ID or passport scan
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeDto"];
+                };
+            };
+        };
+    };
+    HrController_getEmployee: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeDto"];
+                };
+            };
+        };
+    };
+    HrController_removeEmployee: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { ok: true, id, archived: true } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HrController_updateEmployee: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateEmployeeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeDto"];
+                };
+            };
+        };
+    };
+    HrController_restoreEmployee: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReactivateEmployeeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeDto"];
+                };
+            };
+        };
+    };
+    HrController_deactivateEmployee: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeactivateEmployeeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeDto"];
+                };
+            };
+        };
+    };
+    HrController_reactivateEmployee: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReactivateEmployeeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeDto"];
+                };
+            };
+        };
+    };
+    HrController_listAttendance: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+                employeeId: string;
+                workDateFrom: string;
+                workDateTo: string;
+                status: string;
+                sortBy: string;
+                sortOrder: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { items, total, page, pageSize, totalPages } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HrController_createAttendance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAttendanceDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceDto"];
+                };
+            };
+        };
+    };
+    HrController_listLeave: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+                employeeId: string;
+                status: string;
+                startFrom: string;
+                startTo: string;
+                sortBy: string;
+                sortOrder: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { items, total, page, pageSize, totalPages } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HrController_createLeave: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateLeaveRequestDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveRequestDto"];
+                };
+            };
+        };
+    };
+    HrController_patchLeaveStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchLeaveStatusDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveRequestDto"];
+                };
+            };
+        };
+    };
+    AppointmentsController_list: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+                from: string;
+                to: string;
+                patientMrn: string;
+                patientSearch: string;
+                patientId: string;
+                status: string;
+                clinicId: string;
+                sortBy: string;
+                sortOrder: string;
+                bookableOnly: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { items, total, page, pageSize, totalPages } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AppointmentsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAppointmentDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppointmentDto"];
+                };
+            };
+        };
+    };
+    AppointmentsController_schedulingConflicts: {
+        parameters: {
+            query: {
+                clinicianId: string;
+                startsAt: string;
+                endsAt: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppointmentDto"][];
+                };
+            };
+        };
+    };
+    AppointmentsController_getOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppointmentDto"];
+                };
+            };
+        };
+    };
+    AppointmentsController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { ok: true, id } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AppointmentsController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAppointmentDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppointmentDto"];
+                };
+            };
+        };
+    };
+    AppointmentsController_patchStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchAppointmentStatusDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppointmentDto"];
+                };
+            };
+        };
+    };
+    OperationsController_list: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                page: string;
+                pageSize: string;
+                sortBy: string;
+                sortOrder: string;
+                clinicId: string;
+                status: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { items, total, page, pageSize, totalPages } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OperationsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOperationDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationDto"];
+                };
+            };
+        };
+    };
+    OperationsController_listPayable: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationDto"][];
+                };
+            };
+        };
+    };
+    OperationsController_getOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationDetailDto"];
+                };
+            };
+        };
+    };
+    OperationsController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateOperationDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationDto"];
+                };
+            };
+        };
+    };
+    OperationsController_getDocumentFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                docId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Binary file stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OperationsController_uploadDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    /** @enum {string} */
+                    kind: "ATTACHMENT" | "PRESCRIPTION";
+                    description?: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationDocumentDto"];
+                };
+            };
+        };
+    };
+    OperationsController_addMedication: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddOperationMedicationDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationMedicationDto"];
+                };
+            };
+        };
+    };
+    OperationsController_resetClinical: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Clinical data cleared */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OperationsController_patchStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchOperationStatusDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationDto"];
+                };
+            };
+        };
+    };
+    InvoicesController_list: {
+        parameters: {
+            query: {
+                patientId: string;
+                encounterId: string;
+                operationId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceListItemDto"][];
+                };
+            };
+        };
+    };
+    InvoicesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateInvoiceDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceDto"];
+                };
+            };
+        };
+    };
+    InvoicesController_getOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceDto"];
+                };
+            };
+        };
+    };
+    InvoicesController_patchClinicSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clinicId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchClinicInvoiceSettingsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InvoicesController_getLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clinicId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Binary image stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InvoicesController_uploadLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clinicId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InvoicesController_patchClinicPrescriptionSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clinicId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchClinicPrescriptionSettingsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InvoicesController_getPrescriptionLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clinicId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Binary image stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InvoicesController_uploadPrescriptionLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clinicId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_overview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_auditLogs: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+                q: string;
+                from: string;
+                to: string;
+                action: string;
+                resource: string;
+                actorId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_insightsOverview360: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_insightsStaffPerformance: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_tenants: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+                sortBy: string;
+                sortOrder: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_patchTenantSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchTenantSettingsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_listUsers: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+                q: string;
+                role: string;
+                archived: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_createUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTenantUserDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_getUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_deleteUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_patchUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformPatchTenantUserDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_bulkDeleteUsers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkDeleteUsersDto"];
+            };
+        };
+        responses: {
+            /** @description { ok: true, deleted: number, failed: { id, message }[] } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_deactivateUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeactivateTenantUserDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_reactivateUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReactivateTenantUserDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_restoreUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReactivateTenantUserDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_patchFlag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchFeatureFlagDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_orgHierarchy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminDataExplorerController_tables: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminDataExplorerController_exportSql: {
+        parameters: {
+            query: {
+                tables: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description SQL script with INSERT statements for selected entities */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminDataExplorerController_exportDocuments: {
+        parameters: {
+            query: {
+                tables: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description ZIP archive of documents from object storage with manifest.json */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminDataExplorerController_list: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+            };
+            header?: never;
+            path: {
+                table: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminDataExplorerController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                table: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminDataExplorerController_getOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                table: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminDataExplorerController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                table: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminDataExplorerController_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                table: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_overview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_hierarchy: {
+        parameters: {
+            query: {
+                tenantId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_featureFlags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_patchFeatureFlag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchFeatureFlagDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_listAllUsers: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+                tenantId: string;
+                archived: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_listAllClinics: {
+        parameters: {
+            query: {
+                tenantId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_listTenants: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+                sortBy: string;
+                sortOrder: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_createTenant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTenantDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_getTenant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_patchTenant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformPatchTenantDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_listUsers: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+                archived: string;
+            };
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_createUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTenantUserDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_listClinics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClinicDto"][];
+                };
+            };
+        };
+    };
+    PlatformAdminController_createClinic: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateClinicDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClinicDto"];
+                };
+            };
+        };
+    };
+    PlatformAdminController_getClinic: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                clinicId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_patchClinic: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                clinicId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchClinicDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_getUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_deleteUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_patchUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformPatchTenantUserDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_deactivateUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeactivateTenantUserDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_reactivateUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReactivateTenantUserDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_restoreUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReactivateTenantUserDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ReportsController_profitLoss: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ReportsController_performance: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ReportsController_clinicBreakdown: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ReportsController_monthlySeries: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ReportsController_patientAcquisitionPatients: {
+        parameters: {
+            query: {
+                channel: string;
+                from: string;
+                to: string;
+                search: string;
+                mrn: string;
+                name: string;
+                phone: string;
+                branch: string;
+                detail: string;
+                page: string;
+                pageSize: string;
+                sortBy: string;
+                sortOrder: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ReportsController_patientAcquisition: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsersController_list: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupportController_listTickets: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+                status: string;
+                module: string;
+                q: string;
+                assigneeUserId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupportController_createTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSupportTicketDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupportController_getTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupportController_patchTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchSupportTicketDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupportController_addEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSupportTicketEventDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupportController_trackingLogs: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+                q: string;
+                action: string;
+                resource: string;
+                actorId: string;
+                from: string;
+                to: string;
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupportController_ticketFromAudit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                auditLogId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationsAppointmentsController_verify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationsAppointmentsController_listClinics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationsAppointmentsController_listPhysicians: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationsAppointmentsController_availability: {
+        parameters: {
+            query: {
+                clinicId: string;
+                clinicianId: string;
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationsAppointmentsController_book: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IntegrationBookAppointmentDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationsAppointmentsController_getOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationsAppointmentsController_cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationAdminController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationAdminController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateIntegrationClientDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationAdminController_rotate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationAdminController_deactivate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    EncountersController_amend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EncounterDetailDto"];
+                };
+            };
+        };
+    };
+    ClinicalController_listTemplates: {
+        parameters: {
+            query: {
+                specialty: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_upsertTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_shortcuts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_createShortcut: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_deleteShortcut: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_searchIcd: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_favIcd: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_vitalsSeries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                patientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_lastVisit: {
+        parameters: {
+            query: {
+                excludeEncounterId: string;
+            };
+            header?: never;
+            path: {
+                patientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_letter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_safetyCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

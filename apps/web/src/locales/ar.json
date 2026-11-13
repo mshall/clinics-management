@@ -8,6 +8,7 @@
     "dashboard": "لوحة التحكم",
     "patients": "المرضى",
     "encounters": "الزيارات",
+    "clinicalTemplates": "قوالب سريرية",
     "appointments": "المواعيد",
     "operations": "العمليات",
     "clinics": "العيادات والفروع",
@@ -1154,7 +1155,19 @@
     "safetyWarnings": "سلامة الدواء",
     "safetyNoIssues": "لا تحذيرات حساسية أو تفاعلات لهذا الدواء.",
     "noteLocked": "الملاحظة مقفلة — استخدم التعديل للتحرير.",
-    "signedAt": "موقَّع"
+    "signedAt": "موقَّع",
+    "specialtyFormTemplate": "قالب نموذج التخصص",
+    "noSpecialtyTemplate": "بدون (SOAP فقط)",
+    "templateNoSections": "لا توجد أقسام في هذا القالب بعد.",
+    "letterType": "نوع الخطاب",
+    "letterSickDays": "أيام الإجازة",
+    "letterReferTo": "التحويل إلى",
+    "letterActivity": "النشاط / العمل",
+    "letterDiagnosis": "التشخيص / السبب",
+    "letterNotes": "ملاحظات التقرير (إنجليزي)",
+    "letterGenerated": "تم إنشاء الخطاب.",
+    "letterPrint": "طباعة (ثنائي اللغة)",
+    "letterCreate": "إنشاء الخطاب"
   },
   "orgHierarchy": {
     "title": "خريطة المنظمة",

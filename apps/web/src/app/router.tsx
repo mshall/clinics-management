@@ -29,6 +29,8 @@ import { RevenueGate } from "@/features/revenue/revenue-gate";
 import { NavGate } from "@/components/nav-gate";
 import { CustomerSupportPage } from "@/features/support/customer-support-page";
 import { ClinicalTemplatesPage } from "@/features/clinical/clinical-templates-page";
+import { FrontDeskBoardPage } from "@/features/front-desk/front-desk-board-page";
+import { WaitingRoomPage } from "@/features/front-desk/waiting-room-page";
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
@@ -49,6 +51,8 @@ export const router = createBrowserRouter([
       { path: "encounters/demo", element: <Navigate to="/encounters" replace /> },
       { path: "appointments", element: <NavGate tab="appointments"><AppointmentsPage /></NavGate> },
       { path: "appointments/:id", element: <NavGate tab="appointments"><AppointmentDetailPage /></NavGate> },
+      { path: "front-desk/board", element: <NavGate tab="appointments"><FrontDeskBoardPage /></NavGate> },
+      { path: "front-desk/waiting-room", element: <NavGate tab="appointments"><WaitingRoomPage /></NavGate> },
       { path: "operations", element: <NavGate tab="operations"><OperationsPage /></NavGate> },
       { path: "clinics", element: <NavGate tab="clinics"><ClinicsPage /></NavGate> },
       { path: "clinics/:id", element: <NavGate tab="clinics"><ClinicDetailPage /></NavGate> },

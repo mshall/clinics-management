@@ -51,4 +51,25 @@ export class CreateAppointmentDto {
   @IsString()
   @MaxLength(2000)
   notes?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  appointmentTypeId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  seriesId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  roomLabel?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  allowDoubleBook?: boolean;
 }

@@ -105,7 +105,7 @@ export function PatientsPage() {
       ) {
         return false;
       }
-      if (pfDob.trim() && !columnFilterIncludes(p.dob, pfDob)) return false;
+      if (pfDob.trim() && !columnFilterIncludes(p.dob ?? "", pfDob)) return false;
       if (pfEmail.trim() && !columnFilterIncludes(p.email ?? "", pfEmail)) return false;
       if (pfBranch.trim() && !columnFilterIncludes(p.homeBranch ?? "", pfBranch)) return false;
       return true;
@@ -191,6 +191,8 @@ export function PatientsPage() {
         email,
         nationalId,
         homeBranchId,
+        isVip: false,
+        needsChaperone: false,
         acquisition: {
           channel: acquisitionChannel,
           referralName: acquisitionReferralName,
@@ -227,6 +229,8 @@ export function PatientsPage() {
           email,
           nationalId,
           homeBranchId,
+          isVip: false,
+          needsChaperone: false,
           acquisition: {
             channel: acquisitionChannel,
             referralName: acquisitionReferralName,

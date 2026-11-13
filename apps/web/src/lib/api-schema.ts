@@ -7,6 +7,8 @@ export type PatientDto = components["schemas"]["PatientDto"] & {
   homeBranchId?: string | null;
   nationalId?: string | null;
   hasNationalIdDoc?: boolean;
+  isVip?: boolean;
+  needsChaperone?: boolean;
   acquisitionChannel?: string | null;
   acquisitionReferralName?: string | null;
   acquisitionOtherDetail?: string | null;

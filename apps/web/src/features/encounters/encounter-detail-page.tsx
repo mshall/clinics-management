@@ -52,6 +52,8 @@ import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
 import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import { generatePrescriptionPng } from "@/lib/prescription-image";
 import { EncounterClinicalTools } from "@/features/clinical/encounter-clinical-tools";
+import { PatientChartAlerts } from "@/components/patient-chart-alerts";
+import { EncounterSpecialtyForm } from "@/features/clinical/encounter-specialty-form";
 import { loadPrescriptionBranding } from "@/lib/prescription-branding";
 import { cn } from "@/lib/utils";
 
@@ -138,6 +140,10 @@ export function EncounterDetailPage() {
   const pendingReplaceRef = useRef<{ docId: string; kind: DocKind } | null>(null);
   const generatedRxUrlRef = useRef<string | null>(null);
   const [generatedRxPreview, setGeneratedRxPreview] = useState<string | null>(null);
+  const [clinicalTemplateId, setClinicalTemplateId] = useState<string | null>(null);
+  const [specialtyFormResponses, setSpecialtyFormResponses] = useState<Record<string, unknown>>({});
+  const [followUpWeeks, setFollowUpWeeks] = useState("");
+  const [followUpNote, setFollowUpNote] = useState("");
 
   useEffect(() => {
     if (!enc) return;
@@ -158,6 +164,10 @@ export function EncounterDetailPage() {
     setVisitFeeCurrencyDraft(enc.visitFeeCurrency ?? clinicDefaultCurrency);
     setNoMedications(enc.noMedications ?? false);
     if (enc.noMedications) setMedTab("none");
+    setClinicalTemplateId(enc.clinicalTemplateId ?? null);
+    setSpecialtyFormResponses(enc.specialtyFormResponses ?? {});
+    setFollowUpWeeks(enc.followUpWeeks != null ? String(enc.followUpWeeks) : "");
+    setFollowUpNote(enc.followUpNote ?? "");
   }, [enc?.id, enc?.noMedications, enc?.visitFeeAmount, enc?.visitFeeCurrency, clinicDefaultCurrency]);
 
   useEffect(() => {
@@ -224,6 +234,10 @@ export function EncounterDetailPage() {
         heightCm: numOrUndef(heightCm),
         visitFeeAmount: numOrUndef(visitFeeAmount),
         visitFeeCurrency: visitFeeCurrencyDraft,
+        clinicalTemplateId: clinicalTemplateId ?? "",
+        specialtyFormResponses: specialtyFormResponses,
+        followUpWeeks: followUpWeeks.trim() === "" ? undefined : Number(followUpWeeks),
+        followUpNote: followUpNote.trim() || undefined,
       });
     },
     onSuccess: (data) => {
@@ -625,6 +639,7 @@ export function EncounterDetailPage() {
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{t("encounters.title")}</h1>
             <Badge variant={enc.status === "FINALIZED" ? "default" : "secondary"}>{formatEncounterStatus(enc.status, t)}</Badge>
+            <PatientChartAlerts patientId={enc.patientId} />
           </div>
           <p className="text-muted-foreground">
             {formatVisitType(visitType, t)}
@@ -841,6 +856,13 @@ export function EncounterDetailPage() {
               <Label htmlFor="cc">{t("encounters.chiefComplaint")}</Label>
               <Input id="cc" value={chief} onChange={(e) => setChief(e.target.value)} disabled={!draft} />
             </div>
+            <EncounterSpecialtyForm
+              disabled={!draft}
+              templateId={clinicalTemplateId}
+              responses={specialtyFormResponses}
+              onTemplateIdChange={setClinicalTemplateId}
+              onResponsesChange={setSpecialtyFormResponses}
+            />
             {enc ? (
               <EncounterClinicalTools
                 encounter={enc}
@@ -871,6 +893,30 @@ export function EncounterDetailPage() {
               <Label htmlFor="p">P — {t("encounters.planField")}</Label>
               <Textarea id="p" rows={3} value={plan} onChange={(e) => setPlan(e.target.value)} disabled={!draft} />
             </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label optional htmlFor="fu-weeks">{t("encounters.followUpWeeks", "Return in (weeks)")}</Label>
+                <Input
+                  id="fu-weeks"
+                  type="number"
+                  min={0}
+                  max={52}
+                  value={followUpWeeks}
+                  disabled={!draft}
+                  onChange={(e) => setFollowUpWeeks(e.target.value)}
+                  placeholder={t("encounters.followUpWeeksPh", "e.g. 2")}
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label optional>{t("encounters.followUpNote", "Follow-up note")}</Label>
+                <Input value={followUpNote} disabled={!draft} onChange={(e) => setFollowUpNote(e.target.value)} />
+              </div>
+            </div>
+            {enc?.followUpDueAt ? (
+              <p className="text-xs text-muted-foreground">
+                {t("encounters.followUpDue", "Follow-up due")}: {new Date(enc.followUpDueAt).toLocaleDateString()} ({enc.followUpStatus})
+              </p>
+            ) : null}
             {draft ? (
               <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="secondary" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>

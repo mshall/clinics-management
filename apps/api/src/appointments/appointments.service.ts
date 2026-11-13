@@ -14,6 +14,7 @@ import { assertOrgClinicalDeleteRole } from "../common/org-clinical-delete-roles
 import { paginate, parsePageParams } from "../common/pagination";
 import { syncOpenEncounterVisitFeeFromAppointment } from "../common/visit-fee-ledger";
 import { PrismaService } from "../prisma/prisma.service";
+import { SchedulingService } from "../scheduling/scheduling.service";
 import type { CreateAppointmentDto } from "./dto/create-appointment.dto";
 import type { AppointmentDto } from "./dto/appointment.dto";
 import type { UpdateAppointmentDto } from "./dto/update-appointment.dto";
@@ -37,7 +38,10 @@ function isPhysicianRole(role: UserRole | undefined): boolean {
 
 @Injectable()
 export class AppointmentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly scheduling: SchedulingService,
+  ) {}
 
   private async assertAppointmentAccess(
     viewer: JwtUser | undefined,
@@ -125,6 +129,9 @@ export class AppointmentsService {
       feeAmount: Number(row.feeAmount),
       status: row.status,
       notes: row.notes,
+      roomLabel: row.roomLabel ?? null,
+      checkedInAt: row.checkedInAt?.toISOString() ?? null,
+      queueTicketNumber: row.queueTicketNumber ?? null,
       ...(patient
         ? {
             patientMrn: patient.mrn,
@@ -392,14 +399,20 @@ export class AppointmentsService {
     if (!clinic || !patient || !clinician) throw new BadRequestException("Invalid clinic, patient, or clinician");
     const start = new Date(dto.startsAt);
     if (Number.isNaN(start.getTime())) throw new BadRequestException("Invalid startsAt");
-    let end: Date;
+    const apptType = dto.appointmentTypeId
+      ? await this.prisma.appointmentType.findFirst({ where: { id: dto.appointmentTypeId, tenantId } })
+      : null;
+  let end: Date;
     try {
-      end = resolveCreateAppointmentEnd(start, dto.endsAt);
+      end = dto.endsAt
+        ? resolveCreateAppointmentEnd(start, dto.endsAt)
+        : this.scheduling.resolveDurationFromType(apptType, null, start);
     } catch {
       throw new BadRequestException("endsAt must be after startsAt");
     }
 
-    const conflicts = await this.findSchedulingConflicts(tenantId, dto.clinicianId.trim(), start, end);
+    let conflicts = await this.findSchedulingConflicts(tenantId, dto.clinicianId.trim(), start, end);
+    if (dto.allowDoubleBook) conflicts = [];
     if (conflicts.length > 0 && !dto.confirmOverlap) {
       throw new ConflictException({
         message: "This clinician already has an appointment during this time.",
@@ -410,7 +423,13 @@ export class AppointmentsService {
     const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
     if (!tenant) throw new BadRequestException("Tenant not found");
     const defaultFee = Number(tenant.defaultVisitFee);
-    const feeRaw = dto.feeAmount !== undefined && dto.feeAmount !== null ? Number(dto.feeAmount) : defaultFee;
+    const typeFee = apptType ? Number(apptType.feeAmount) : null;
+    const feeRaw =
+      dto.feeAmount !== undefined && dto.feeAmount !== null
+        ? Number(dto.feeAmount)
+        : typeFee != null
+          ? typeFee
+          : defaultFee;
     const feeAmount = Number.isFinite(feeRaw) && feeRaw >= 0 ? feeRaw : defaultFee;
 
     const row = await this.prisma.appointment.create({
@@ -419,6 +438,10 @@ export class AppointmentsService {
         clinicId: dto.clinicId,
         patientId: dto.patientId,
         clinicianId: dto.clinicianId,
+        appointmentTypeId: dto.appointmentTypeId ?? null,
+        seriesId: dto.seriesId ?? null,
+        roomLabel: dto.roomLabel ?? null,
+        allowDoubleBook: dto.allowDoubleBook ?? false,
         startsAt: start,
         endsAt: end,
         feeAmount,
@@ -452,6 +475,14 @@ export class AppointmentsService {
       data: { status },
       include: appointmentDtoInclude,
     });
+    if (status === AppointmentStatus.CANCELLED) {
+      await this.scheduling.offerWaitlistForCancelledSlot(
+        tenantId,
+        row.clinicId,
+        row.startsAt,
+        row.clinicianId,
+      );
+    }
     return this.mapRow(row);
   }
 

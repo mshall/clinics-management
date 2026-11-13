@@ -60,6 +60,10 @@ export interface EncounterDetailDto {
   finalizedAt: string | null;
   clinicalTemplateId?: string | null;
   specialtyFormResponses?: Record<string, unknown> | null;
+  followUpDueAt?: string | null;
+  followUpWeeks?: number | null;
+  followUpNote?: string | null;
+  followUpStatus?: string;
   noteLockedAt?: string | null;
   signedAt?: string | null;
   amendReason?: string | null;
@@ -191,6 +195,9 @@ export interface AppointmentDto {
   notes: string | null;
   patientMrn?: string | null;
   patientName?: string | null;
+  roomLabel?: string | null;
+  checkedInAt?: string | null;
+  queueTicketNumber?: number | null;
 }
 
 export interface OperationDto {

@@ -19,7 +19,7 @@ export class AuthUserDto {
   @ApiProperty()
   id!: string;
 
-  @ApiProperty({ nullable: true, description: "Null for platform super administrators" })
+  @ApiProperty({ type: String, nullable: true, description: "Null for platform super administrators" })
   tenantId!: string | null;
 
   @ApiProperty()
@@ -46,6 +46,7 @@ export class AuthUserDto {
   roleNavTabKeys?: string[] | null;
 
   @ApiPropertyOptional({
+    type: String,
     description: "Organization base currency (tenant default for clinics that inherit org settings)",
     nullable: true,
   })

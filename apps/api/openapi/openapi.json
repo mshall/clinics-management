@@ -5018,7 +5018,7 @@
     "/api/v1/admin/insights/overview-360": {
       "get": {
         "operationId": "AdminController_insightsOverview360",
-        "summary": "Organization 360\u00b0 performance and audit overview",
+        "summary": "Organization 360° performance and audit overview",
         "parameters": [
           {
             "name": "from",
@@ -7685,6 +7685,300 @@
           }
         ]
       }
+    },
+    "/api/v1/encounters/{id}/amend": {
+      "post": {
+        "operationId": "EncountersController_amend",
+        "summary": "Reopen a finalized locked encounter for correction (AMENDED status + reason)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EncounterDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "encounters"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/clinical/form-templates": {
+      "get": {
+        "operationId": "ClinicalController_listTemplates",
+        "parameters": [
+          {
+            "name": "specialty",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "clinical"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "ClinicalController_upsertTemplate",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "clinical"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/clinical/shortcuts": {
+      "get": {
+        "operationId": "ClinicalController_shortcuts",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "clinical"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "ClinicalController_createShortcut",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "clinical"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/clinical/shortcuts/{id}": {
+      "delete": {
+        "operationId": "ClinicalController_deleteShortcut",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "clinical"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/clinical/icd10/search": {
+      "get": {
+        "operationId": "ClinicalController_searchIcd",
+        "parameters": [
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "clinical"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/clinical/icd10/favorites": {
+      "post": {
+        "operationId": "ClinicalController_favIcd",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "clinical"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/clinical/patients/{patientId}/vitals-series": {
+      "get": {
+        "operationId": "ClinicalController_vitalsSeries",
+        "parameters": [
+          {
+            "name": "patientId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "clinical"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/clinical/patients/{patientId}/last-visit": {
+      "get": {
+        "operationId": "ClinicalController_lastVisit",
+        "parameters": [
+          {
+            "name": "patientId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "excludeEncounterId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "clinical"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/clinical/letters": {
+      "post": {
+        "operationId": "ClinicalController_letter",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "clinical"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/clinical/medications/safety-check": {
+      "post": {
+        "operationId": "ClinicalController_safetyCheck",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "clinical"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
     }
   },
   "info": {
@@ -7704,9 +7998,9 @@
       },
       "integration": {
         "scheme": "bearer",
-        "bearerFormat": "kio_live.ic_\u2026.secret",
+        "bearerFormat": "kio_live.ic_….secret",
         "type": "http",
-        "description": "Integration client token from Admin \u2192 Integration API clients"
+        "description": "Integration client token from Admin → Integration API clients"
       }
     },
     "schemas": {
@@ -7757,7 +8051,7 @@
             "type": "string"
           },
           "tenantId": {
-            "type": "object",
+            "type": "string",
             "nullable": true,
             "description": "Null for platform super administrators"
           },
@@ -7801,7 +8095,7 @@
             }
           },
           "tenantBaseCurrency": {
-            "type": "object",
+            "type": "string",
             "description": "Organization base currency (tenant default for clinics that inherit org settings)",
             "nullable": true
           },
@@ -9164,6 +9458,30 @@
           },
           "updatedAt": {
             "type": "string"
+          },
+          "clinicalTemplateId": {
+            "type": "string",
+            "nullable": true
+          },
+          "specialtyFormResponses": {
+            "type": "object",
+            "nullable": true
+          },
+          "noteLockedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "signedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "amendReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "amendedAt": {
+            "type": "string",
+            "nullable": true
           }
         },
         "required": [
@@ -9240,6 +9558,12 @@
           "visitFeeCurrency": {
             "type": "string",
             "description": "Visit fee currency; defaults to clinic default currency"
+          },
+          "clinicalTemplateId": {
+            "type": "string"
+          },
+          "specialtyFormResponses": {
+            "type": "object"
           }
         }
       },
@@ -9808,12 +10132,12 @@
           },
           "loginEmail": {
             "type": "string",
-            "description": "Create a new login \u2014 email for the employee account"
+            "description": "Create a new login — email for the employee account"
           },
           "loginPassword": {
             "type": "string",
             "minLength": 4,
-            "description": "Create a new login \u2014 temporary password"
+            "description": "Create a new login — temporary password"
           },
           "loginRole": {
             "type": "string",
@@ -9831,7 +10155,7 @@
               "CLINIC_ADMIN",
               "CLINIC_ASSISTANT"
             ],
-            "description": "Create a new login \u2014 organization role"
+            "description": "Create a new login — organization role"
           },
           "physicianAssignment": {
             "type": "string",
@@ -11431,7 +11755,7 @@
           },
           "nameAr": {
             "type": "string",
-            "example": "\u0645\u062c\u0645\u0648\u0639\u0629 \u0639\u064a\u0627\u062f\u0627\u062a \u0623\u0643\u0645",
+            "example": "مجموعة عيادات أكم",
             "description": "Organization name (Arabic)"
           },
           "baseCurrency": {
@@ -11467,7 +11791,7 @@
             ]
           },
           "initialClinic": {
-            "description": "Optional first parent clinic (HQ) \u2014 same fields as organization admin clinic onboarding",
+            "description": "Optional first parent clinic (HQ) — same fields as organization admin clinic onboarding",
             "allOf": [
               {
                 "$ref": "#/components/schemas/CreateClinicDto"
@@ -11674,7 +11998,7 @@
         "properties": {
           "name": {
             "type": "string",
-            "example": "Patient portal \u2014 production"
+            "example": "Patient portal — production"
           },
           "scopes": {
             "type": "array",

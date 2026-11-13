@@ -12,6 +12,8 @@ import {
   Scissors,
   Settings,
   Stethoscope,
+  FileStack,
+  Monitor,
   User,
   Users,
   Wallet,
@@ -89,16 +91,52 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
         </NavLink>
       ) : null}
       {showTab("encounters") ? (
-        <NavLink to="/encounters" className={navClass} onClick={() => onNavigate?.()}>
-          <Stethoscope className="size-4 shrink-0" />
-          {t("nav.encounters")}
-        </NavLink>
+        <>
+          <NavLink to="/encounters" className={navClass} onClick={() => onNavigate?.()}>
+            <Stethoscope className="size-4 shrink-0" />
+            {t("nav.encounters")}
+          </NavLink>
+          <NavLink
+            to="/clinical/templates"
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-3 rounded-md py-2 pe-3 ps-9 text-sm font-medium transition-colors",
+                isActive || pathname.startsWith("/clinical/")
+                  ? "bg-primary/15 text-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )
+            }
+            onClick={() => onNavigate?.()}
+          >
+            <FileStack className="size-4 shrink-0" />
+            {t("nav.clinicalTemplates", "Clinical templates")}
+          </NavLink>
+        </>
       ) : null}
       {showTab("appointments") ? (
-        <NavLink to="/appointments" className={navClass} onClick={() => onNavigate?.()}>
-          <CalendarDays className="size-4 shrink-0" />
-          {isPhysician ? t("appointments.myNav", "My appointments") : t("nav.appointments")}
-        </NavLink>
+        <>
+          <NavLink to="/appointments" className={navClass} onClick={() => onNavigate?.()}>
+            <CalendarDays className="size-4 shrink-0" />
+            {isPhysician ? t("appointments.myNav", "My appointments") : t("nav.appointments")}
+          </NavLink>
+          {!isPhysician ? (
+            <NavLink
+              to="/front-desk/board"
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center gap-3 rounded-md py-2 pe-3 ps-9 text-sm font-medium transition-colors",
+                  isActive || pathname.startsWith("/front-desk/")
+                    ? "bg-primary/15 text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )
+              }
+              onClick={() => onNavigate?.()}
+            >
+              <Monitor className="size-4 shrink-0" />
+              {t("nav.frontDeskBoard", "Front desk board")}
+            </NavLink>
+          ) : null}
+        </>
       ) : null}
       {showTab("operations") ? (
         <NavLink to="/operations" className={navClass} onClick={() => onNavigate?.()}>

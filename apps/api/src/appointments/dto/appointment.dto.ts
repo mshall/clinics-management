@@ -58,4 +58,13 @@ export class AppointmentDto {
 
   @ApiPropertyOptional({ nullable: true })
   patientName?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  roomLabel?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  checkedInAt?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  queueTicketNumber?: number | null;
 }

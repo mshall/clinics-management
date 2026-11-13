@@ -163,6 +163,18 @@ export class EncounterDetailDto {
   @ApiPropertyOptional({ nullable: true, type: String })
   amendedAt!: string | null;
 
+  @ApiPropertyOptional({ nullable: true })
+  followUpDueAt!: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  followUpWeeks!: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  followUpNote!: string | null;
+
+  @ApiPropertyOptional()
+  followUpStatus!: string;
+
   @ApiProperty({ type: [DiagnosisDto] })
   diagnoses!: DiagnosisDto[];
 

@@ -9,6 +9,7 @@ Configurable specialty forms, physician shortcuts, safety checks, vitals trends,
 - Templates can be **published** (org-wide) or owned by a physician.
 - **Encounter:** `clinicalTemplateId` + `specialtyFormResponses` (JSON) on `PATCH /api/v1/encounters/:id` — rendered in the encounter UI atop Subjective / Objective / Assessment / Plan.
 - **Web:** `/clinical/templates` — template builder (no code deploy for new specialty layouts).
+- **Encounter UI:** template picker and dynamic fields above SOAP; saved with the encounter. Sidebar **Clinical templates** when Encounters is enabled.
 
 ## Doctor shortcuts
 
@@ -36,7 +37,7 @@ Configurable specialty forms, physician shortcuts, safety checks, vitals trends,
 ## Clinical document generator
 
 - **API:** `POST /api/v1/clinical/letters` — types: `SICK_LEAVE`, `MEDICAL_REPORT`, `REFERRAL`, `FITNESS_CERTIFICATE`.
-- Bilingual **title/body** stored in `ClinicalLetter`; print from encounter or patient chart using clinic letterhead branding (same assets as invoices/Rx).
+- Bilingual **title/body** stored in `ClinicalLetter`; **Generate letter** on the encounter clinical tools panel opens a dialog with bilingual print.
 
 ## Signing, locking, and amendments
 
@@ -50,6 +51,17 @@ Configurable specialty forms, physician shortcuts, safety checks, vitals trends,
 - Patient **allergies** (chart) are checked when adding medications: `POST /api/v1/clinical/medications/safety-check` returns warnings (does not block save).
 - **Drug–drug** rules in `DrugInteractionRule` (seeded defaults + per-tenant rules).
 - Warnings shown in the encounter medication panel before confirm.
+
+## OpenAPI / codegen
+
+From repo root (API running or `apps/api/.env` from `.env.example`):
+
+```bash
+npm run openapi:export -w api   # preferred
+npm run codegen -w web
+```
+
+If export fails locally, refresh clinical paths from a live dev API: `curl -s http://127.0.0.1:3000/docs-json` and merge `/api/v1/clinical/*` into `apps/api/openapi/openapi.json`, then run `codegen`.
 
 ## Related docs
 
