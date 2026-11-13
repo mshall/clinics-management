@@ -5,6 +5,7 @@ import type { JwtUser } from "../auth/jwt-user";
 import { formatLocalYmd } from "../common/reporting-range";
 import type { ClinicDto } from "../clinics/clinics.service";
 import { ClinicsService } from "../clinics/clinics.service";
+import { PatientsService } from "../patients/patients.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { RevenueService } from "../revenue/revenue.service";
 import {
@@ -18,12 +19,17 @@ import {
   messageAsksForExpenses,
   messageAsksForOrgUsers,
   messageAsksForPatientCount,
-  messageAsksForPersonalRevenue,
   messageAsksForRevenue,
   messageNeedsClinicContext,
 } from "./assistant-intent";
+import { resolveAssistantRevenueIsPersonal } from "./assistant-revenue-scope";
 import { canAssistantQueryEmployeeCount } from "./assistant-hr-policy";
+import { canAssistantSearchPatients } from "./assistant-patient-policy";
+import { extractPatientSearchTerm, messageAsksForPatientLookup } from "./assistant-patient-search";
 import { resolveAssistantPeriod, type AssistantPeriod } from "./assistant-period";
+import type { AssistantChatActionDto } from "./dto/assistant-chat.dto";
+
+const ASSISTANT_PATIENT_SEARCH_LIMIT = 8;
 
 export type AssistantLiveClinic = {
   id: string;
@@ -41,6 +47,7 @@ export type AssistantFinancialSummary = {
   scope: "organization" | "personal";
   revenueByCurrency: { currency: string; grossTotal: number; netTotal: number }[];
   revenueNetTotal: number;
+  revenueGrossTotal: number;
   expenseByCurrency?: { currency: string; amount: number }[];
   expenseTotal?: number;
 };
@@ -66,6 +73,7 @@ export class AssistantLiveDataService {
     private readonly prisma: PrismaService,
     private readonly clinics: ClinicsService,
     private readonly revenue: RevenueService,
+    private readonly patients: PatientsService,
   ) {}
 
   private canSeePatients(navKeys: string[]): boolean {
@@ -148,7 +156,7 @@ export class AssistantLiveDataService {
     tenantId: string,
     snapshot: AssistantLiveSnapshot,
   ): Promise<void> {
-    const personal = messageAsksForPersonalRevenue(message);
+    const personal = resolveAssistantRevenueIsPersonal(message, user.role, navKeys);
     const canRevenue = personal
       ? canAssistantQueryPersonalRevenue(navKeys, user.role)
       : canAssistantQueryOrgRevenue(navKeys, user.role);
@@ -172,6 +180,7 @@ export class AssistantLiveDataService {
       scope: personal ? "personal" : "organization",
       revenueByCurrency: [],
       revenueNetTotal: 0,
+      revenueGrossTotal: 0,
     };
 
     if (canRevenue && messageAsksForRevenue(message)) {
@@ -183,6 +192,7 @@ export class AssistantLiveDataService {
         netTotal: row.netTotal,
       }));
       summary.revenueNetTotal = totals.netTotal;
+      summary.revenueGrossTotal = totals.grossTotal;
     }
 
     if (canExpenses && messageAsksForExpenses(message)) {
@@ -259,13 +269,16 @@ export class AssistantLiveDataService {
           : "Revenue scope: organization totals within your clinic access.";
 
     const lines: string[] = [];
-    if (locale === "ar") {
-      lines.push(`${org} — الإيرادات للفترة (${periodLabel}: ${from} → ${to}):`);
-      lines.push(scopeLine);
-    } else {
-      lines.push(`${org} — revenue for ${periodLabel} (${from} → ${to}):`);
-      lines.push(scopeLine);
-    }
+    const title =
+      fin.scope === "personal"
+        ? locale === "ar"
+          ? `إيراداتك السريرية (${periodLabel}: ${from} → ${to}):`
+          : `Your clinical income (${periodLabel}: ${from} → ${to}):`
+        : locale === "ar"
+          ? `${org} — الإيرادات للفترة (${periodLabel}: ${from} → ${to}):`
+          : `${org} — revenue for ${periodLabel} (${from} → ${to}):`;
+    lines.push(title);
+    lines.push(scopeLine);
 
     if (fin.revenueByCurrency.length) {
       for (const row of fin.revenueByCurrency) {
@@ -277,6 +290,14 @@ export class AssistantLiveDataService {
       }
     } else {
       lines.push(locale === "ar" ? "• لا توجد إيرادات مسجلة في هذه الفترة." : "• No posted revenue in this period.");
+    }
+
+    if (fin.revenueByCurrency.length && fin.scope === "personal") {
+      lines.push(
+        locale === "ar"
+          ? `الإجمالي: إجمالي ${fin.revenueGrossTotal.toFixed(2)} · صافي ${fin.revenueNetTotal.toFixed(2)} (كل العملات المعروضة أعلاه).`
+          : `Totals (currencies above): gross ${fin.revenueGrossTotal.toFixed(2)} · net ${fin.revenueNetTotal.toFixed(2)}.`,
+      );
     }
 
     if (fin.expenseByCurrency?.length) {
@@ -292,8 +313,8 @@ export class AssistantLiveDataService {
   tryDirectDataReply(snapshot: AssistantLiveSnapshot, message: string, locale: "en" | "ar"): string | null {
     if (snapshot.financialAccessDenied) {
       return locale === "ar"
-        ? "لا يمكنني عرض الإيرادات أو المصروفات لأنها خارج تبويباتك الحالية (مثل الإيرادات أو التقارير)."
-        : "I can't show revenue or expenses because your role menu does not include Revenue, Reports, or Dashboard.";
+        ? "لا يمكنني عرض الإيرادات أو المصروفات لأنها خارج تبويباتك الحالية (إيراداتي للطبيب، أو الإيرادات/التقارير للباقي)."
+        : "I can't show revenue or expenses because your menu does not include My revenue (physicians), or Revenue / Reports / Dashboard.";
     }
 
     if (messageAsksForRevenue(message) && snapshot.financialSummary) {
@@ -335,6 +356,80 @@ export class AssistantLiveDataService {
     return null;
   }
 
+  async tryPatientLookupReply(
+    user: JwtUser,
+    navKeys: string[],
+    message: string,
+    locale: "en" | "ar",
+  ): Promise<{ reply: string; actions: AssistantChatActionDto[] } | null> {
+    if (!canAssistantSearchPatients(navKeys) || !messageAsksForPatientLookup(message)) return null;
+    const tenantId = user.tenantId;
+    if (!tenantId) return null;
+
+    const term = extractPatientSearchTerm(message);
+    if (term.length < 2) {
+      return {
+        reply:
+          locale === "ar"
+            ? "أخبرني باسم المريض أو رقم MRN أو الهاتف أو رقم الهوية للبحث."
+            : "Tell me the patient's name, MRN, phone, national ID, or record id to search.",
+        actions: [],
+      };
+    }
+
+    const page = await this.patients.listPaginated(
+      tenantId,
+      { search: term, page: "1", pageSize: String(ASSISTANT_PATIENT_SEARCH_LIMIT) },
+      user,
+    );
+    const rows = page.items;
+    const total = page.total ?? rows.length;
+
+    if (!rows.length) {
+      return {
+        reply:
+          locale === "ar"
+            ? `لا يوجد مريض مطابق لـ «${term}» ضمن صلاحياتك.`
+            : `No patients matched “${term}” within your access.`,
+        actions: [],
+      };
+    }
+
+    const actions: AssistantChatActionDto[] = rows.map((p) => {
+      const name =
+        locale === "ar" && (p.firstNameAr?.trim() || p.lastNameAr?.trim())
+          ? `${p.firstNameAr ?? p.firstNameEn} ${p.lastNameAr ?? p.lastNameEn}`.trim()
+          : `${p.firstNameEn} ${p.lastNameEn}`.trim();
+      const branch = p.homeBranch ? ` · ${p.homeBranch}` : "";
+      return {
+        type: "open_patient",
+        patientId: p.id,
+        mrn: p.mrn,
+        label: `${name} (${p.mrn})${branch}`,
+      };
+    });
+
+    let reply: string;
+    if (total === 1) {
+      reply =
+        locale === "ar"
+          ? "وجدت مريضًا واحدًا — افتح السجل من الزر أدناه."
+          : "Found one patient — open their chart using the button below.";
+    } else if (total <= ASSISTANT_PATIENT_SEARCH_LIMIT) {
+      reply =
+        locale === "ar"
+          ? `وجدت ${total} مريضًا مطابقًا — اختر السجل الصحيح:`
+          : `Found ${total} matching patients — select the correct chart:`;
+    } else {
+      reply =
+        locale === "ar"
+          ? `أول ${ASSISTANT_PATIENT_SEARCH_LIMIT} من ${total} نتيجة — اختر السجل أو ضيّق البحث في تبويب المرضى.`
+          : `Showing the first ${ASSISTANT_PATIENT_SEARCH_LIMIT} of ${total} matches — pick a chart or refine search in Patients.`;
+    }
+
+    return { reply, actions };
+  }
+
   snapshotForPrompt(snapshot: AssistantLiveSnapshot): string {
     const slim = {
       organization: snapshot.organization,
@@ -358,6 +453,7 @@ export class AssistantLiveDataService {
             scope: snapshot.financialSummary.scope,
             revenueByCurrency: snapshot.financialSummary.revenueByCurrency,
             revenueNetTotal: snapshot.financialSummary.revenueNetTotal,
+            revenueGrossTotal: snapshot.financialSummary.revenueGrossTotal,
             expenseByCurrency: snapshot.financialSummary.expenseByCurrency,
           }
         : undefined,

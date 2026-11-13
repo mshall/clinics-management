@@ -1,5 +1,7 @@
 # AI assistant — OpenAI setup
 
+The in-app assistant is **role-aware**: it uses your navigation tabs as the permission boundary, answers from **live data** where possible, follows a **playbook** of how-to steps, and can return **action buttons** (open a patient chart, jump to a module). OpenAI improves natural language when `OPENAI_API_KEY` is set; without it, rule-based answers and live data still work.
+
 The in-app assistant **always** answers from **live database data** for allowed topics (clinics, revenue, patient counts, etc.) using the same rules as the REST API.
 
 **OpenAI is optional but recommended** for natural phrasing, follow-up questions, and topics not covered by direct data handlers. Without a key, you still get factual answers for structured questions (e.g. clinic lists, monthly revenue).

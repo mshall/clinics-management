@@ -1,4 +1,5 @@
 import { NAV_GUIDANCE, TOPIC_GUIDANCE } from "./assistant-knowledge";
+import { QA_EXTENDED } from "./assistant-qa-extended";
 import { messageAllowedForNav, requiredNavKeysForMessage } from "./assistant-scope";
 
 export type QaEntry = {
@@ -9,8 +10,7 @@ export type QaEntry = {
   ar: string;
 };
 
-/** Conceptual and FAQ answers — permission-checked per entry. */
-export const QA_ENTRIES: QaEntry[] = [
+const QA_CORE: QaEntry[] = [
   {
     pattern: /what (is|are) (an? )?encounter|explain encounter|visit workflow|ما هي الزيارة|اشرح الزيارات/i,
     nav: ["encounters"],
@@ -65,7 +65,28 @@ export const QA_ENTRIES: QaEntry[] = [
     en: "Doctor revenue shows income attributed to your clinical work in allowed clinics. It is read-oriented for physicians and does not replace org-wide revenue reporting.",
     ar: "إيرادات الطبيب تعرض الدخل المنسوب لعملك السريري في العيادات المسموحة. للقراءة للطبيب ولا تغني عن تقارير الإيرادات على مستوى المؤسسة.",
   },
+  {
+    pattern: /what (is|are) (an? )?expense|how.*expense.*approv|ما هو المصروف/i,
+    nav: ["expenses"],
+    en: "Expenses track clinic costs with approval status. Finance and clinic roles record lines per clinic and period; payroll-linked expenses may appear when payroll is configured.",
+    ar: "المصروفات تتابع التكاليف بحالات اعتماد. تُسجَّل لكل عيادة وفترة؛ قد تظهر مصروفات مرتبطة بالرواتب عند التفعيل.",
+  },
+  {
+    pattern: /dashboard|kpi|overview|مؤشرات|لوحة/i,
+    nav: ["dashboard"],
+    en: "The organization dashboard summarizes KPIs: patients, encounters, revenue/expenses for the period, branches, and headcount — scoped to your role.",
+    ar: "لوحة المؤسسة تلخص المؤشرات: المرضى والزيارات والإيرادات/المصروفات والفروع والموظفين — حسب دورك.",
+  },
+  {
+    pattern: /operation(s)? booking|procedure scheduling|حجز عملية/i,
+    nav: ["operations"],
+    en: "Operations handles surgical/procedure bookings like appointments, with scheduling and clinical documentation hooks.",
+    ar: "العمليات تدير حجوزات الإجراءات والجراحات مثل المواعيد.",
+  },
 ];
+
+/** Conceptual and FAQ answers — permission-checked per entry. */
+export const QA_ENTRIES: QaEntry[] = [...QA_CORE, ...QA_EXTENDED];
 
 export function isSmallTalkOrMeta(message: string): boolean {
   const m = message.trim().toLowerCase();
@@ -87,8 +108,8 @@ export function composeCapabilityOverview(navKeys: string[], locale: "en" | "ar"
       : "I can answer questions about your profile and account settings.";
   }
   return locale === "ar"
-    ? `يمكنني الإجابة على أسئلة وإجراءات ضمن صلاحياتك، بما في ذلك: ${areas.join(" ")} اسألني “ما هو…” أو “كيف…” عن أي من هذه المجالات.`
-    : `I can answer questions and how-to steps within your permissions, including: ${areas.join(" ")} Ask me “what is…?” or “how do I…?” about any of these areas.`;
+    ? `أجيب عن أسئلة «ما هو…» و«كيف…» وأرقام حية (عيادات، موظفون، إيرادات، مرضى) وخطوات بالأزرار للانتقال للصفحة الصحيحة — ضمن: ${areas.join(" ")}`
+    : `I answer what/how questions, live data (clinics, headcount, revenue, patient search), and offer buttons to open the right screen — within: ${areas.join(" ")}`;
 }
 
 export function findQaAnswer(message: string, navKeys: string[], locale: "en" | "ar"): string | null {

@@ -1,5 +1,6 @@
 import { UserRole } from "@prisma/client";
 import type { AssistantRoleSlug } from "./assistant-access";
+import { quickPromptsForNav } from "./assistant-playbook";
 
 type LocaleCopy = { title: string; greeting: string; prompts: string[] };
 
@@ -173,11 +174,13 @@ const FALLBACK = BY_ROLE[UserRole.RECEPTIONIST];
 export function roleAssistantContent(
   role: UserRole,
   locale: "en" | "ar",
-  _allowedNavKeys: string[],
+  allowedNavKeys: string[],
 ): { title: string; greeting: string; suggestedPrompts: string[] } {
   const pack = BY_ROLE[role] ?? FALLBACK;
   const copy = pack[locale];
-  return { title: copy.title, greeting: copy.greeting, suggestedPrompts: copy.prompts.slice(0, 4) };
+  const navPrompts = quickPromptsForNav(allowedNavKeys, locale);
+  const suggestedPrompts = navPrompts.length >= 2 ? navPrompts : copy.prompts.slice(0, 4);
+  return { title: copy.title, greeting: copy.greeting, suggestedPrompts };
 }
 
 export function assistantSystemPersonaLabel(roleSlug: AssistantRoleSlug, locale: "en" | "ar"): string {

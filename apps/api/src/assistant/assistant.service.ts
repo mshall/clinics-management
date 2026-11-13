@@ -8,8 +8,12 @@ import { resolveAssistantNavKeys } from "./assistant-effective-nav";
 import { NAV_GUIDANCE, TOPIC_GUIDANCE } from "./assistant-knowledge";
 import { AssistantLiveDataService } from "./assistant-live-data.service";
 import { messageAsksForLiveMetric } from "./assistant-intent";
+import { messageAsksForPatientLookup } from "./assistant-patient-search";
+import { tryPlaybookReply } from "./assistant-playbook";
 import { composeCapabilityOverview, findQaAnswer, isSmallTalkOrMeta } from "./assistant-qa";
-import { roleAssistantContent, assistantSystemPersonaLabel } from "./assistant-role-content";
+import { buildMatureSystemPrompt } from "./assistant-system-prompt";
+import { roleAssistantContent } from "./assistant-role-content";
+import type { AssistantChatActionDto } from "./dto/assistant-chat.dto";
 import { messageAllowedForNav, outOfScopeReply, requiredNavKeysForMessage } from "./assistant-scope";
 import type { AssistantChatResponseDto, AssistantContextDto } from "./dto/assistant-chat.dto";
 
@@ -103,7 +107,7 @@ export class AssistantService {
 
     for (const hit of keywordHits) {
       if (hit.pattern.test(m)) {
-        if (messageAsksForLiveMetric(message)) break;
+        if (messageAsksForLiveMetric(message) || messageAsksForPatientLookup(message)) break;
         if (this.navKeyAllowed(navKeys, hit.nav)) {
           const g = NAV_GUIDANCE[hit.nav];
           if (g) return g[locale];
@@ -115,30 +119,6 @@ export class AssistantService {
     return composeCapabilityOverview(navKeys, locale);
   }
 
-  private buildSystemPrompt(
-    persona: AssistantRoleSlug,
-    navKeys: string[],
-    locale: "en" | "ar",
-    liveJson: string,
-  ): string {
-    const label = assistantSystemPersonaLabel(persona, locale);
-    const navSummary = navKeys
-      .map((k) => NAV_GUIDANCE[k]?.[locale])
-      .filter(Boolean)
-      .join("\n");
-    return [
-      `You are ${label} for Kiorly clinic software.`,
-      "Answer conceptual questions and how-to steps using ONLY the live organization snapshot and nav guidance below.",
-      "For lists (clinics, counts), quote the snapshot exactly; never invent clinics, patients, or users.",
-      "You must NOT discuss modules or actions outside allowedNavKeys.",
-      "If the user asks to change data, describe the steps in the UI — you cannot mutate the database yourself.",
-      `Allowed nav keys: ${navKeys.join(", ")}`,
-      "Live organization snapshot (JSON):",
-      liveJson,
-      "Nav guidance:",
-      navSummary,
-    ].join("\n");
-  }
 
   private async llmReply(system: string, message: string, locale: "en" | "ar"): Promise<string | null> {
     const apiKey = this.config.get<string>("OPENAI_API_KEY")?.trim();
@@ -153,8 +133,8 @@ export class AssistantService {
         },
         body: JSON.stringify({
           model,
-          temperature: 0.35,
-          max_tokens: 800,
+          temperature: 0.25,
+          max_tokens: 1000,
           messages: [
             { role: "system", content: system },
             {
@@ -199,17 +179,36 @@ export class AssistantService {
     const snapshot = await this.liveData.buildSnapshot(user, navKeys, message);
     const direct = this.liveData.tryDirectDataReply(snapshot, message, locale);
     if (direct?.trim()) {
-      return {
-        reply: direct,
+      return this.replyResponse(user, persona, locale, navKeys, direct);
+    }
+
+    const patientLookup = await this.liveData.tryPatientLookupReply(user, navKeys, message, locale);
+    if (patientLookup) {
+      return this.replyResponse(
+        user,
         persona,
-        suggestedPrompts: roleAssistantContent(user.role, locale, navKeys).suggestedPrompts,
-      };
+        locale,
+        navKeys,
+        patientLookup.reply,
+        patientLookup.actions.length ? patientLookup.actions : undefined,
+      );
+    }
+
+    const playbook = tryPlaybookReply(message, navKeys, locale);
+    if (playbook) {
+      return this.replyResponse(user, persona, locale, navKeys, playbook.reply, playbook.actions);
+    }
+
+    const qaEarly = findQaAnswer(message, navKeys, locale);
+    if (qaEarly && !this.config.get<string>("OPENAI_API_KEY")?.trim()) {
+      return this.replyResponse(user, persona, locale, navKeys, qaEarly);
     }
 
     const liveJson = this.liveData.snapshotForPrompt(snapshot);
-    const system = this.buildSystemPrompt(persona, navKeys, locale, liveJson);
+    const system = buildMatureSystemPrompt(persona, navKeys, locale, liveJson);
     const llm = await this.llmReply(system, message, locale);
     let reply = llm ?? this.ruleBasedReply(message, locale, navKeys);
+    let actions: AssistantChatActionDto[] | undefined;
     if (!llm?.trim() && snapshot.financialSummary && /revenue|expense|إيراد|مصروف/i.test(message)) {
       reply = this.liveData.formatFinancialReply(snapshot, locale);
     }
@@ -217,12 +216,32 @@ export class AssistantService {
     const required = requiredNavKeysForMessage(message);
     if (required.length && !required.some((k) => navKeys.includes(k))) {
       reply = outOfScopeReply(locale, navKeys);
+      actions = undefined;
     }
 
+    if (!actions?.length) {
+      const playbookFallback = tryPlaybookReply(message, navKeys, locale);
+      if (playbookFallback?.actions?.length && /how|steps|open|go to|كيف|افتح/i.test(message)) {
+        actions = playbookFallback.actions;
+      }
+    }
+
+    return this.replyResponse(user, persona, locale, navKeys, reply, actions);
+  }
+
+  private replyResponse(
+    user: JwtUser,
+    persona: AssistantRoleSlug,
+    locale: "en" | "ar",
+    navKeys: string[],
+    reply: string,
+    actions?: AssistantChatActionDto[],
+  ): AssistantChatResponseDto {
     return {
       reply,
       persona,
       suggestedPrompts: roleAssistantContent(user.role, locale, navKeys).suggestedPrompts,
+      actions: actions?.length ? actions : undefined,
     };
   }
 }

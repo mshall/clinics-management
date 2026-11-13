@@ -51,6 +51,3 @@ export function messageAsksForExpenses(message: string): boolean {
   return /expense|expenses|spend|costs|مصروف|مصروفات|تكلفة/i.test(message);
 }
 
-export function messageAsksForPersonalRevenue(message: string): boolean {
-  return /my revenue|doctor revenue|إيراداتي|دخلي/i.test(message);
-}

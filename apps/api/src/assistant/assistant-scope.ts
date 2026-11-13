@@ -16,8 +16,15 @@ export function requiredNavKeysForMessage(message: string): string[] {
     if (/how many|number of|count of|headcount|كم|عدد|ما عدد/.test(m)) keys.add("admin");
   }
   if (/expense|مصروف|مصروفات/.test(m)) keys.add("expenses");
-  if (/revenue|إيراد|إيرادات/.test(m) && !/doctor|طبيب|my revenue|إيراداتي/.test(m)) keys.add("revenue");
-  if (/doctor revenue|إيراداتي|my revenue/.test(m)) keys.add("doctor_revenue");
+  if (/revenue|إيراد|إيرادات|income|earnings|\bgross\b|\bnet\b|دخل|أرباح/.test(m)) {
+    const orgIncome =
+      /organi[sz]ation|org-wide|all clinics|for the org|for this org|إيرادات المؤسسة/i.test(m);
+    if (orgIncome) keys.add("revenue");
+    else {
+      keys.add("doctor_revenue");
+      keys.add("revenue");
+    }
+  }
   if (/report|analytics|p&l|profit|تقرير|تقارير/.test(m)) keys.add("reports");
   if (/support ticket|customer support|تذكرة|دعم العملاء/.test(m)) keys.add("customer_support");
   if (/platform organiz|platform user|platform clinic|منصة/.test(m)) {

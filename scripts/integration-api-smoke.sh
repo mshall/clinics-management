@@ -80,6 +80,40 @@ emp_q_body="$(echo "$emp_q_raw" | sed '$d')"
 echo "$emp_q_body" | python3 -c "import sys,json,re; r=json.load(sys.stdin).get('reply',''); assert re.search(r'Active employees|employee', r, re.I) and re.search(r'\d+', r), r[:280]" || fail "assistant employee count reply missing number"
 echo "OK  assistant employee count"
 
+pat_q_raw="$(curl -sS -w "\n%{http_code}" -X POST "$API_BASE/assistant/chat" \
+  -H "Authorization: Bearer $staff_token" -H "Content-Type: application/json" \
+  -d '{"message":"find patient named Ahmed","locale":"en"}')"
+pat_q_http="$(echo "$pat_q_raw" | tail -1)"
+pat_q_body="$(echo "$pat_q_raw" | sed '$d')"
+[[ "$pat_q_http" == "200" || "$pat_q_http" == "201" ]] || fail "assistant patient lookup HTTP $pat_q_http"
+echo "$pat_q_body" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('reply'), 'missing reply'; acts=d.get('actions') or []; assert all(a.get('type')=='open_patient' and a.get('patientId') for a in acts) if acts else True" || fail "assistant patient lookup invalid actions"
+echo "OK  assistant patient lookup"
+
+phy_login_raw="$(curl -sS -w "\n%{http_code}" -X POST "$API_BASE/auth/login" \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"${PHYSICIAN_SMOKE_EMAIL:-dr.ahmed@drahmedshall.com}\",\"password\":\"$ADMIN_PASSWORD\"}")"
+phy_login_http="$(echo "$phy_login_raw" | tail -1)"
+phy_login_body="$(echo "$phy_login_raw" | sed '$d')"
+[[ "$phy_login_http" == "200" || "$phy_login_http" == "201" ]] || fail "physician login HTTP $phy_login_http"
+phy_token="$(echo "$phy_login_body" | python3 -c "import sys,json; print(json.load(sys.stdin)['accessToken'])")"
+phy_rev_raw="$(curl -sS -w "\n%{http_code}" -X POST "$API_BASE/assistant/chat" \
+  -H "Authorization: Bearer $phy_token" -H "Content-Type: application/json" \
+  -d '{"message":"What is my gross and net income this month?","locale":"en"}')"
+phy_rev_http="$(echo "$phy_rev_raw" | tail -1)"
+phy_rev_body="$(echo "$phy_rev_raw" | sed '$d')"
+[[ "$phy_rev_http" == "200" || "$phy_rev_http" == "201" ]] || fail "physician assistant revenue HTTP $phy_rev_http"
+echo "$phy_rev_body" | python3 -c "import json,sys; r=json.load(sys.stdin).get('reply',''); assert 'gross' in r.lower() or 'net' in r.lower() or 'clinical income' in r.lower() or 'no posted' in r.lower(), r[:280]" || fail "physician income reply unexpected"
+echo "OK  assistant physician income"
+
+howto_raw="$(curl -sS -w "\n%{http_code}" -X POST "$API_BASE/assistant/chat" \
+  -H "Authorization: Bearer $staff_token" -H "Content-Type: application/json" \
+  -d '{"message":"How do I register a patient?","locale":"en"}')"
+howto_http="$(echo "$howto_raw" | tail -1)"
+howto_body="$(echo "$howto_raw" | sed '$d')"
+[[ "$howto_http" == "200" || "$howto_http" == "201" ]] || fail "assistant how-to HTTP $howto_http"
+echo "$howto_body" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('reply'); acts=d.get('actions') or []; assert any(a.get('type')=='navigate' and a.get('href')=='/patients' for a in acts), acts" || fail "how-to missing navigate action"
+echo "OK  assistant how-to navigate"
+
 client_name="smoke-$(date +%s)"
 create_raw="$(curl -sS -w "\n%{http_code}" -X POST "$API_BASE/admin/integration-clients" \
   -H "Authorization: Bearer $staff_token" \

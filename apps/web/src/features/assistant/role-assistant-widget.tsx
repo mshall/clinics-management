@@ -1,6 +1,8 @@
 import { Bot, Loader2, Send, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
+import type { AssistantChatAction } from "@/lib/assistant-hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ApiError } from "@/lib/http";
@@ -9,7 +11,7 @@ import { useAssistantChatMutation, useAssistantContextQuery } from "@/lib/assist
 import { useAuthStore } from "@/stores/auth-store";
 import { isAssistantEnabledForRole } from "@/lib/assistant-policy";
 
-type ChatLine = { role: "user" | "assistant"; text: string };
+type ChatLine = { role: "user" | "assistant"; text: string; actions?: AssistantChatAction[] };
 
 export function RoleAssistantWidget() {
   const { i18n, t } = useTranslation();
@@ -48,7 +50,10 @@ export function RoleAssistantWidget() {
       { message, locale },
       {
         onSuccess: (res) => {
-          setLines((prev) => [...prev, { role: "assistant", text: res.reply }]);
+          setLines((prev) => [
+            ...prev,
+            { role: "assistant", text: res.reply, actions: res.actions?.length ? res.actions : undefined },
+          ]);
         },
         onError: (err) => {
           let text = t("assistant.errorReply", "Sorry, I could not respond right now. Try again in a moment.");
@@ -105,6 +110,34 @@ export function RoleAssistantWidget() {
                 )}
               >
                 {line.text}
+                {line.role === "assistant" && line.actions?.length ? (
+                  <div className="mt-2 flex flex-col gap-1">
+                    {line.actions.map((action) => {
+                      const key = action.patientId ?? action.href ?? action.label;
+                      const to =
+                        action.type === "open_patient" && action.patientId
+                          ? `/patients/${action.patientId}`
+                          : action.type === "navigate" && action.href
+                            ? action.href
+                            : null;
+                      if (!to) return null;
+                      return (
+                        <Button
+                          key={key}
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          className="h-auto min-h-8 w-full justify-start whitespace-normal px-2 py-1.5 text-start text-xs"
+                          asChild
+                        >
+                          <Link to={to} onClick={() => setOpen(false)}>
+                            {action.label}
+                          </Link>
+                        </Button>
+                      );
+                    })}
+                  </div>
+                ) : null}
               </div>
             ))}
             {chatMut.isPending ? (

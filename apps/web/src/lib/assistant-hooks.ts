@@ -9,10 +9,20 @@ export type AssistantContext = {
   allowedNavKeys: string[];
 };
 
+export type AssistantChatAction = {
+  type: "open_patient" | "navigate";
+  label: string;
+  patientId?: string;
+  mrn?: string;
+  href?: string;
+  navKey?: string;
+};
+
 export type AssistantChatResponse = {
   reply: string;
   persona: string;
   suggestedPrompts: string[];
+  actions?: AssistantChatAction[];
 };
 
 export function useAssistantContextQuery(enabled: boolean, locale: string) {

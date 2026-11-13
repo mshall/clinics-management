@@ -15,6 +15,26 @@ export class AssistantChatDto {
   locale?: "en" | "ar";
 }
 
+export class AssistantChatActionDto {
+  @ApiProperty({ enum: ["open_patient", "navigate"] })
+  type!: "open_patient" | "navigate";
+
+  @ApiProperty({ description: "Button label (localized)" })
+  label!: string;
+
+  @ApiPropertyOptional({ description: "Patient id when type is open_patient" })
+  patientId?: string;
+
+  @ApiPropertyOptional()
+  mrn?: string;
+
+  @ApiPropertyOptional({ description: "In-app route when type is navigate (e.g. /patients)" })
+  href?: string;
+
+  @ApiPropertyOptional({ description: "Nav tab key for navigate actions" })
+  navKey?: string;
+}
+
 export class AssistantChatResponseDto {
   @ApiProperty()
   reply!: string;
@@ -24,6 +44,9 @@ export class AssistantChatResponseDto {
 
   @ApiProperty({ type: [String] })
   suggestedPrompts!: string[];
+
+  @ApiPropertyOptional({ type: [AssistantChatActionDto] })
+  actions?: AssistantChatActionDto[];
 }
 
 export class AssistantContextDto {
