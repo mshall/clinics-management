@@ -260,7 +260,7 @@ Org admin user CRUD and bulk delete live under **`/admin/users`** (see `AdminMod
 
 #### 6.2.4 PatientsModule
 
-**Entities:** `Patient`, `PatientDocument`, national ID scan fields, acquisition channel fields; encounter documents are owned by `EncountersModule` but surfaced on the patient profile via aggregation.
+**Entities:** `Patient`, `PatientDocument`, `PatientAllergy` (`PatientAllergyCode` enum + optional `otherComment`), national ID scan fields, acquisition channel fields; encounter documents are owned by `EncountersModule` but surfaced on the patient profile via aggregation.
 
 **Implemented endpoints (`/api/v1/patients`):**
 ```
@@ -280,7 +280,10 @@ DELETE /patients/:id/encounter-documents/:encounterId/:documentId
 POST   /patients/:id/encounter-documents/:encounterId/:documentId/crop
 POST   /patients/:id/national-id-document
 GET    /patients/:id/national-id-document
+GET    /patients/:id/allergies               # paginated (max 5 rows/page)
 ```
+
+**Allergies:** Optional `allergies[]` on `POST /patients` and `PATCH /patients/:id` (`code` + `otherComment` when `OTHER`). `POST /encounters` accepts optional `patientAllergies[]` to **merge** new rows onto the chart (deduped by code / other text). Captured in registration, admin org patient create/edit, and new-encounter dialog.
 
 **Notes:**
 - Patients are **tenant-scoped**. `mrn` and `nationalId` are unique per tenant when set; **phone** is unique per tenant via normalized digit comparison (enforced on create/update and exposed through `phone-conflict`).

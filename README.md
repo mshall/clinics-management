@@ -51,7 +51,7 @@ Typical flows:
 
 - Register and list patients; advanced filters (MRN, phone, name, national ID, gender).
 - Column filters on the main table; **home branch** and demographics.
-- Patient detail view.
+- Patient detail view; **allergies** section (paginated table) with catalog multi-select + **Other** on registration and new encounter.
 
 ### Encounters (clinical visits)
 
@@ -74,6 +74,12 @@ Typical flows:
 
 - Record expenses by clinic, category, vendor, amount, date; optional **receipt / proof** upload (PDF or images).
 - Status workflow (e.g. pending / approved) as implemented in the API.
+
+### In-product AI assistant
+
+- Role-scoped floating chat: live data, how-to playbook with **Navigate** / **Open patient** actions, optional OpenAI for phrasing.
+- Rich markdown rendering in the widget (headings, lists, metric-style revenue lines).
+- See `Docs/ASSISTANT.md` and `Docs/ASSISTANT_OPENAI_SETUP.md`.
 
 ### Revenue
 
@@ -205,6 +211,9 @@ npm run dev
 
 - **Web:** [http://localhost:5173](http://localhost:5173)
 - **API:** [http://localhost:3000](http://localhost:3000)
+- **Docs portal** (with `npm run dev`): [http://localhost:5175](http://localhost:5175)
+
+When using **Cursor** in this repo, workspace rule `.cursor/rules/dev-server-refresh.mdc` instructs the agent to restart `npm run dev` and verify API health after meaningful code changes (no need to ask manually).
 - **Swagger:** [http://localhost:3000/docs](http://localhost:3000/docs)
 
 After `db:setup`, use the **demo seed users** below (password **`demo`** for every account). Full list, AWS demo URL, and role matrix: **[`Docs/Test_Data_Users.md`](Docs/Test_Data_Users.md)**. Additional mixed-role staff accounts `staff3@kiorly.com` … `staff15@kiorly.com` are also created; see `apps/api/prisma/seed.ts` for exact role assignment.

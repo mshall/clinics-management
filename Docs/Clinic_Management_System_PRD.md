@@ -534,6 +534,8 @@ Authorization model:
 | **Admin insights & performance** — 360° overview + staff activity scores; **Insights & performance** admin tab | Shipped |
 | **Governance audit filters** — `from`, `to`, `action`, `resource`, `actorId`; bounded date windows for scale | Shipped |
 | **Performance & scale** — SQL daily aggregation for insights charts; audit composite index `(tenantId, createdAt, clinicId)`; App Runner autoscaling (up to 25 instances × 100 concurrent requests); `GET /health/ready` (DB probe); `npm run test:perf` load SLO script (≥99.9% success on health smoke) | Shipped |
+| **Patient allergies (baseline)** — multi-select catalog + Other on register/admin create and new encounter; paginated allergies table on patient chart (5 rows/page) | Shipped |
+| **In-product AI assistant** — role-scoped playbook, live metrics, patient lookup actions, per-clinic revenue breakdown, rich markdown chat UI | Shipped |
 
 ### 12.2 Near-term roadmap (engineering backlog)
 
@@ -582,7 +584,7 @@ This section defines the **target product** for a production-grade, feature-rich
 
 | # | Feature | Priority | Rationale |
 |---|---|---|---|
-| C.1 | **Structured allergies & adverse reactions** on patient chart | P0 | Safety baseline for prescribing |
+| C.1 | **Structured allergies & adverse reactions** on patient chart | P0 | Safety baseline for prescribing (**baseline shipped** — catalog + Other; interaction alerts still C.2) |
 | C.2 | **Drug–drug & drug–allergy interaction alerts** at Rx time | P1 | Clinician trust and liability reduction |
 | C.3 | **Configurable drug catalog** per tenant/country | P1 | Replace free-text meds with searchable formulary |
 | C.4 | **Clinical templates** beyond SOAP (specialty forms) | P1 | Dermatology, dental, physio, pain clinic |

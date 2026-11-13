@@ -41,7 +41,7 @@ See **[Test_Data_Users.md](./Test_Data_Users.md)** for:
 - **Dr Ahmed Shall Group** — 30 organization users (6 org-wide + 24 clinic staff)
 - **Kiorly Clinic Group (Demo)** — group admin, finance, HR, clinical, and clinic-scoped roles
 - **Platform super admin** — `superadmin@kiorly.com` (no tenant)
-- Quick test matrix (patients, encounters, reports, admin, HR, profile picture, etc.)
+- Quick test matrix (patients, **allergies**, encounters, reports, admin, HR, **AI assistant**, profile picture, etc.)
 
 **Load seed (local):** from repo root — `npm run db:setup -w api`
 
@@ -75,6 +75,10 @@ When signed in as **Group admin** (e.g. `admin@drahmedshall.com` or `admin@kiorl
 **Insights API:** `GET /api/v1/admin/insights/overview-360`, `GET /api/v1/admin/insights/staff-performance`.
 
 **Integration API (external patient platforms):** Group or clinic admins create clients under **Admin → Organization & settings → Integration API clients**. External systems use `Authorization: Bearer kio_live.<clientKey>.<secret>` on `/api/v1/integrations/*` (not staff JWT). Appointments, **operations/surgery booking**, and **signed webhooks** are documented in RFC §6.2.21. **Local DB:** `npm run dev` and `npm run test:integration-smoke` automatically run **`npm run db:ensure`** (Postgres `.pgdata/`, migrations, demo seed if empty). Manual: `npm run db:setup`, stop with `npm run db:down`.
+
+**Patient allergies:** patient chart → **Allergies** (paginated table). Set at **Patients → Register**, **Admin → Organization patients**, or **Encounters → New** (multi-select + Other). API: `GET /api/v1/patients/:id/allergies`.
+
+**AI assistant:** floating widget (roles with assistant enabled) — live clinics/headcount/revenue, **per-clinic revenue** when permitted, patient name search with chart buttons, how-to steps with navigate actions. See [ASSISTANT.md](./ASSISTANT.md).
 
 **Profile picture:** any logged-in user → **Profile** → camera icon on avatar → crop and upload (`POST /api/v1/auth/me/avatar`).
 

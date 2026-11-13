@@ -63,8 +63,10 @@ In App Runner → Environment variables, **do not** paste the OpenAI key as a pl
 2. Open the floating assistant.
 3. Ask: `What are the list of clinics in this org?`
 4. Ask: `What's the revenue for this org for this month?`
+5. Ask: `What are the revenues per clinic across the org for this month?` (needs Revenue or Reports in nav)
+6. Ask: `Look for a patient named Fatma Mostafa` (needs Patients tab; returns chart buttons when matches exist)
 
-Answers should cite **real** clinic names and **posted revenue** for the current calendar month (within your role and clinic scope).
+Answers should cite **real** clinic names and **posted revenue** for the current calendar month (within your role and clinic scope). Per-clinic breakdowns list each allowed clinic with net/gross totals for the resolved period.
 
 ## Permission model
 

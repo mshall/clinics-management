@@ -28,3 +28,13 @@ Whenever you complete meaningful edits in this monorepo (Nest API, Vite web, Pri
 3. Do **not** assume an old background `npm run dev` is still authoritative after your edits—restart it yourself when you have shell access.
 
 Skip only for edits that cannot affect runtime (e.g. comments-only in docs with no build impact)—when in doubt, restart.
+
+# Automatic refresh (do not wait for the user)
+
+Treat local dev refresh as **part of finishing the task**, not a follow-up for the user.
+
+1. **Never** end a turn that changed runtime code with only “refresh your browser” or “run `npm run dev`” — run restart and verification yourself in that same turn when shell access is available.
+2. After restart, **confirm** the API is up (`curl` `http://127.0.0.1:3000/api/v1/health/live` → `200`) before you report done; if it fails, read the dev log and fix or retry once.
+3. In the summary, state briefly that the stack was restarted and is healthy — do **not** ask the user to restart unless the agent cannot access the machine or a command failed after retry.
+4. **Browser:** Vite usually hot-reloads the web app; a hard refresh is only needed if the user still sees stale UI. You do not need to ask them to refresh when the dev stack was restarted successfully.
+5. Applies after **push** as well as local edits when you still have shell access on this machine (restart so their local tab matches what they will test).
