@@ -1503,7 +1503,8 @@
     "send": "Send",
     "thinking": "Thinking…",
     "inputPlaceholder": "Ask in English or Arabic…",
-    "errorReply": "Sorry, I could not respond right now. Try again in a moment."
+    "errorReply": "Sorry, I could not respond right now. Try again in a moment.",
+    "errorNotAvailable": "The assistant API is not available on this server. Restart or redeploy the API (npm run dev), then try again."
   },
   "validation": {
     "cannotSubmitTitle": "Cannot submit yet",

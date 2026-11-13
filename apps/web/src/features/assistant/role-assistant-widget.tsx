@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ApiError } from "@/lib/http";
 import { cn } from "@/lib/utils";
 import { useAssistantChatMutation, useAssistantContextQuery } from "@/lib/assistant-hooks";
 import { useAuthStore } from "@/stores/auth-store";
@@ -49,14 +50,19 @@ export function RoleAssistantWidget() {
         onSuccess: (res) => {
           setLines((prev) => [...prev, { role: "assistant", text: res.reply }]);
         },
-        onError: () => {
-          setLines((prev) => [
-            ...prev,
-            {
-              role: "assistant",
-              text: t("assistant.errorReply", "Sorry, I could not respond right now. Try again in a moment."),
-            },
-          ]);
+        onError: (err) => {
+          let text = t("assistant.errorReply", "Sorry, I could not respond right now. Try again in a moment.");
+          if (err instanceof ApiError) {
+            if (err.status === 404) {
+              text = t(
+                "assistant.errorNotAvailable",
+                "The assistant API is not available on this server. Restart or redeploy the API (npm run dev), then try again.",
+              );
+            } else if (err.message.trim()) {
+              text = err.message;
+            }
+          }
+          setLines((prev) => [...prev, { role: "assistant", text }]);
         },
       },
     );

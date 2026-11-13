@@ -36,6 +36,21 @@ login_body="$(echo "$login_raw" | sed '$d')"
 staff_token="$(echo "$login_body" | python3 -c "import sys,json; print(json.load(sys.stdin)['accessToken'])")"
 echo "OK  staff login"
 
+assistant_ctx_http="$(curl -sS -o /tmp/kio-assistant-ctx.json -w "%{http_code}" -X GET "$API_BASE/assistant/context?locale=en" \
+  -H "Authorization: Bearer $staff_token")"
+[[ "$assistant_ctx_http" == "200" ]] || fail "assistant context HTTP $assistant_ctx_http (restart API after pulling assistant changes)"
+echo "OK  assistant context"
+
+assistant_chat_raw="$(curl -sS -w "\n%{http_code}" -X POST "$API_BASE/assistant/chat" \
+  -H "Authorization: Bearer $staff_token" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"hello","locale":"en"}')"
+assistant_chat_http="$(echo "$assistant_chat_raw" | tail -1)"
+assistant_chat_body="$(echo "$assistant_chat_raw" | sed '$d')"
+[[ "$assistant_chat_http" == "200" || "$assistant_chat_http" == "201" ]] || fail "assistant chat HTTP $assistant_chat_http — $assistant_chat_body"
+echo "$assistant_chat_body" | python3 -c "import sys,json; d=json.load(sys.stdin); assert d.get('reply'), 'missing reply'" || fail "assistant chat missing reply"
+echo "OK  assistant chat"
+
 client_name="smoke-$(date +%s)"
 create_raw="$(curl -sS -w "\n%{http_code}" -X POST "$API_BASE/admin/integration-clients" \
   -H "Authorization: Bearer $staff_token" \
