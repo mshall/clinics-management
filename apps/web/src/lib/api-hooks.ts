@@ -150,6 +150,26 @@ export function usePatientQuery(id: string | undefined) {
   });
 }
 
+export type PatientAllergyDto = {
+  id: string;
+  code: string;
+  otherComment: string | null;
+  encounterId: string | null;
+  createdAt: string;
+};
+
+export function usePatientAllergiesQuery(patientId: string | undefined, page: number, pageSize = 5) {
+  const hasToken = useHasAuthToken();
+  return useQuery({
+    queryKey: ["patient", patientId, "allergies", page, pageSize],
+    queryFn: () =>
+      apiGet<Paginated<PatientAllergyDto>>(
+        `/api/v1/patients/${patientId}/allergies?page=${page}&pageSize=${pageSize}`,
+      ),
+    enabled: Boolean(patientId) && hasToken,
+  });
+}
+
 export function usePatientClinicalDocumentsQuery(patientId: string | undefined) {
   const hasToken = useHasAuthToken();
   return useQuery({

@@ -6,7 +6,7 @@ import {
   Logger,
   NotFoundException,
 } from "@nestjs/common";
-import { Gender, EncounterDocumentKind, PatientAcquisitionChannel, Prisma, UserRole } from "@prisma/client";
+import { Gender, EncounterDocumentKind, PatientAcquisitionChannel, PatientAllergyCode, Prisma, UserRole } from "@prisma/client";
 import { randomUUID } from "crypto";
 import * as path from "node:path";
 import type { JwtUser } from "../auth/jwt-user";
@@ -26,7 +26,10 @@ import {
   validatePatientAcquisition,
 } from "../common/patient-acquisition";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
+import { PatientAllergyDto } from "../common/dto/patient-allergy.dto";
+import { normalizePatientAllergyInputs } from "../common/patient-allergies";
 import type { CreatePatientDto } from "./dto/create-patient.dto";
+import type { PatientAllergyInputDto } from "./dto/patient-allergy-input.dto";
 import type { UpdatePatientDto } from "./dto/update-patient.dto";
 import type { BulkDeletePatientsDto } from "./dto/bulk-delete-patients.dto";
 import {
@@ -170,20 +173,44 @@ export class PatientsService {
     const broad = q.search?.trim() ?? "";
     if (broad.length > 0) {
       const tokens = broad.split(/\s+/).filter(Boolean);
+      const insensitive = Prisma.QueryMode.insensitive;
+      const tokenOr = (token: string): Prisma.PatientWhereInput => ({
+        OR: [
+          { id: { contains: token, mode: insensitive } },
+          { mrn: { contains: token, mode: insensitive } },
+          { firstNameEn: { contains: token, mode: insensitive } },
+          { lastNameEn: { contains: token, mode: insensitive } },
+          { firstNameAr: { contains: token, mode: insensitive } },
+          { lastNameAr: { contains: token, mode: insensitive } },
+          { phone: { contains: token, mode: insensitive } },
+          { nationalId: { contains: token, mode: insensitive } },
+        ],
+      });
       if (tokens.length > 1) {
+        const first = tokens[0]!;
+        const last = tokens[tokens.length - 1]!;
         and.push({
-          AND: tokens.map((token) => ({
-            OR: [
-              { id: { contains: token, mode: "insensitive" } },
-              { mrn: { contains: token, mode: "insensitive" } },
-              { firstNameEn: { contains: token, mode: "insensitive" } },
-              { lastNameEn: { contains: token, mode: "insensitive" } },
-              { firstNameAr: { contains: token, mode: "insensitive" } },
-              { lastNameAr: { contains: token, mode: "insensitive" } },
-              { phone: { contains: token, mode: "insensitive" } },
-              { nationalId: { contains: token, mode: "insensitive" } },
-            ],
-          })),
+          OR: [
+            { AND: tokens.map((token) => tokenOr(token)) },
+            {
+              AND: [
+                { firstNameEn: { contains: first, mode: "insensitive" } },
+                { lastNameEn: { contains: last, mode: "insensitive" } },
+              ],
+            },
+            {
+              AND: [
+                { firstNameAr: { contains: first, mode: "insensitive" } },
+                { lastNameAr: { contains: last, mode: "insensitive" } },
+              ],
+            },
+            {
+              AND: [
+                { firstNameEn: { contains: last, mode: "insensitive" } },
+                { lastNameEn: { contains: first, mode: "insensitive" } },
+              ],
+            },
+          ],
         });
       } else {
         and.push({
@@ -402,6 +429,7 @@ export class PatientsService {
     const phoneClash = await this.findPatientByPhone(tenantId, phone);
     if (phoneClash) this.throwPhoneInUse(phoneClash);
     const mrn = await this.nextMrn(tenantId);
+    const allergyInputs = normalizePatientAllergyInputs(dto.allergies);
     const row = await this.prisma.patient.create({
       data: {
         tenantId,
@@ -417,10 +445,94 @@ export class PatientsService {
         nationalId,
         ...patientAcquisitionUpdateData(dto),
         homeBranchId: dto.homeBranchId ?? null,
+        allergies: allergyInputs.length
+          ? {
+              create: allergyInputs.map((a) => ({
+                tenantId,
+                code: a.code,
+                otherComment: a.code === PatientAllergyCode.OTHER ? a.otherComment ?? null : null,
+              })),
+            }
+          : undefined,
       },
       include: { homeBranch: { select: { nameEn: true } } },
     });
     return this.map(row);
+  }
+
+  private mapAllergy(row: {
+    id: string;
+    code: PatientAllergyCode;
+    otherComment: string | null;
+    encounterId: string | null;
+    createdAt: Date;
+  }): PatientAllergyDto {
+    const dto = new PatientAllergyDto();
+    dto.id = row.id;
+    dto.code = row.code;
+    dto.otherComment = row.otherComment;
+    dto.encounterId = row.encounterId;
+    dto.createdAt = row.createdAt.toISOString();
+    return dto;
+  }
+
+  async listAllergiesPaginated(
+    tenantId: string,
+    patientId: string,
+    user: JwtUser,
+    page?: string,
+    pageSize?: string,
+  ) {
+    await this.getById(tenantId, patientId, user);
+    const rawSize = pageSize?.trim() ? Math.min(5, Math.max(1, Number.parseInt(pageSize, 10) || 5)) : 5;
+    const { page: p, pageSize: ps, skip } = parsePageParams(page, String(rawSize));
+    const where = { tenantId, patientId };
+    const [total, rows] = await Promise.all([
+      this.prisma.patientAllergy.count({ where }),
+      this.prisma.patientAllergy.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: ps,
+      }),
+    ]);
+    return paginate(rows.map((r) => this.mapAllergy(r)), total, p, ps);
+  }
+
+  async mergePatientAllergies(
+    tenantId: string,
+    patientId: string,
+    user: JwtUser,
+    items: PatientAllergyInputDto[] | undefined,
+    encounterId?: string,
+  ): Promise<void> {
+    if (!items?.length) return;
+    await this.getById(tenantId, patientId, user);
+    const normalized = normalizePatientAllergyInputs(items);
+    if (!normalized.length) return;
+    const existing = await this.prisma.patientAllergy.findMany({
+      where: { tenantId, patientId },
+      select: { code: true, otherComment: true },
+    });
+    const have = new Set(
+      existing.map((e) =>
+        e.code === PatientAllergyCode.OTHER ? `OTHER:${(e.otherComment ?? "").toLowerCase()}` : e.code,
+      ),
+    );
+    const toCreate = normalized.filter((a) => {
+      const key = a.code === PatientAllergyCode.OTHER ? `OTHER:${(a.otherComment ?? "").toLowerCase()}` : a.code;
+      return !have.has(key);
+    });
+    if (!toCreate.length) return;
+    await this.prisma.patientAllergy.createMany({
+      data: toCreate.map((a) => ({
+        tenantId,
+        patientId,
+        code: a.code,
+        otherComment: a.code === PatientAllergyCode.OTHER ? a.otherComment ?? null : null,
+        encounterId: encounterId ?? null,
+      })),
+    });
   }
 
   private async assertCanManagePatient(user: JwtUser): Promise<void> {
@@ -489,6 +601,9 @@ export class PatientsService {
       data,
       include: { homeBranch: { select: { nameEn: true } } },
     });
+    if (dto.allergies !== undefined) {
+      await this.mergePatientAllergies(tenantId, id, user, dto.allergies);
+    }
     return this.map(row);
   }
 

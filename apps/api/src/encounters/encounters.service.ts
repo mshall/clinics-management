@@ -25,6 +25,7 @@ import { isBaseCurrency } from "../common/base-currencies";
 import { resolveClinicCurrency } from "../common/clinic-currency";
 import { upsertEncounterVisitFeeRevenue } from "../common/visit-fee-ledger";
 import { PrismaService } from "../prisma/prisma.service";
+import { PatientsService } from "../patients/patients.service";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { AddDiagnosisDto } from "./dto/add-diagnosis.dto";
 import type { AddEncounterMedicationDto } from "./dto/add-encounter-medication.dto";
@@ -77,6 +78,7 @@ function assertPhysicianEncounterAccess(viewer: JwtUser | undefined, encounter: 
 export class EncountersService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly patients: PatientsService,
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
   ) {}
 
@@ -387,6 +389,9 @@ export class EncountersService {
 
       return enc;
     });
+    if (dto.patientAllergies?.length) {
+      await this.patients.mergePatientAllergies(tenantId, dto.patientId, actor, dto.patientAllergies, row.id);
+    }
     return this.mapEncounter(row);
   }
 

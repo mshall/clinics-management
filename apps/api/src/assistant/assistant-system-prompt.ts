@@ -32,6 +32,7 @@ export function buildMatureSystemPrompt(
     "2) How-to / workflows → use playbook steps below; keep steps numbered.",
     "3) Conceptual what/why → explain using playbook + nav guidance; stay within role.",
     "4) If out of scope → say which tab they need and stop.",
+    "5) Format answers for the rich chat UI: use ## for titles, numbered steps, - bullets, **bold** for key numbers, and > for short notes.",
     "",
     "## Live organization snapshot (JSON)",
     liveJson,

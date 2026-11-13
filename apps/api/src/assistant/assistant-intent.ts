@@ -51,3 +51,13 @@ export function messageAsksForExpenses(message: string): boolean {
   return /expense|expenses|spend|costs|مصروف|مصروفات|تكلفة/i.test(message);
 }
 
+export function messageAsksForClinicRevenueBreakdown(message: string): boolean {
+  if (!messageAsksForRevenue(message)) return false;
+  const m = message.toLowerCase();
+  return (
+    /per clinic|by clinic|each clinic|clinic.*breakdown|breakdown.*clinic|revenue per clinic|across.*clinic|per branch|by branch/i.test(
+      m,
+    ) || /إيراد.*عياد|عياد.*إيراد|لكل عياد/i.test(message)
+  );
+}
+

@@ -13,3 +13,10 @@ test("extracts patient search terms", () => {
   assert.equal(extractPatientSearchTerm('patient details for "Sara Ali"'), "Sara Ali");
   assert.match(extractPatientSearchTerm("Show patient details for Ahmed Hassan"), /Ahmed Hassan/);
 });
+
+test("extracts name from look for patient named", () => {
+  const term = extractPatientSearchTerm("look for a patient named Fatma Mostafa");
+  assert.match(term, /fatma/i);
+  assert.match(term, /mostafa/i);
+  assert.ok(!/look for|named/i.test(term.toLowerCase()));
+});

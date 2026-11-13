@@ -107,9 +107,10 @@ export function composeCapabilityOverview(navKeys: string[], locale: "en" | "ar"
       ? "يمكنني الإجابة على أسئلة حول الملف الشخصي وإعدادات حسابك."
       : "I can answer questions about your profile and account settings.";
   }
+  const list = areas.map((a) => `- ${a}`).join("\n");
   return locale === "ar"
-    ? `أجيب عن أسئلة «ما هو…» و«كيف…» وأرقام حية (عيادات، موظفون، إيرادات، مرضى) وخطوات بالأزرار للانتقال للصفحة الصحيحة — ضمن: ${areas.join(" ")}`
-    : `I answer what/how questions, live data (clinics, headcount, revenue, patient search), and offer buttons to open the right screen — within: ${areas.join(" ")}`;
+    ? `## ما يمكنني فعله\n\nأجيب عن «ما هو…» و«كيف…» مع **بيانات حية** وأزرار انتقال ضمن:\n\n${list}`
+    : `## What I can help with\n\n**Live data**, how-to steps, and navigation buttons within:\n\n${list}`;
 }
 
 export function findQaAnswer(message: string, navKeys: string[], locale: "en" | "ar"): string | null {

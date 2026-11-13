@@ -1,7 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsNumber, IsOptional, IsString, MaxLength, Min, MinLength } from "class-validator";
+import { IsArray, IsNumber, IsOptional, IsString, MaxLength, Min, MinLength, ValidateNested } from "class-validator";
 import { PatientAcquisitionFieldsDto } from "../../common/dto/patient-acquisition-fields.dto";
+import { PatientAllergyInputDto } from "../../patients/dto/patient-allergy-input.dto";
 
 export class CreateEncounterDto extends PatientAcquisitionFieldsDto {
   @ApiProperty()
@@ -52,4 +53,11 @@ export class CreateEncounterDto extends PatientAcquisitionFieldsDto {
   @IsOptional()
   @IsString()
   appointmentId?: string;
+
+  @ApiPropertyOptional({ type: [PatientAllergyInputDto], description: "New allergies to merge onto the patient chart" })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PatientAllergyInputDto)
+  patientAllergies?: PatientAllergyInputDto[];
 }

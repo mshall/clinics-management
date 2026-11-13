@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Gender } from "@prisma/client";
 import { Transform } from "class-transformer";
 import {
+  IsArray,
   IsDateString,
   IsEmail,
   IsEnum,
@@ -10,8 +11,11 @@ import {
   MaxLength,
   MinLength,
   ValidateIf,
+  ValidateNested,
 } from "class-validator";
+import { Type } from "class-transformer";
 import { PatientAcquisitionFieldsDto } from "../../common/dto/patient-acquisition-fields.dto";
+import { PatientAllergyInputDto } from "./patient-allergy-input.dto";
 
 export class CreatePatientDto extends PatientAcquisitionFieldsDto {
   @ApiProperty({ minLength: 1, maxLength: 120 })
@@ -74,4 +78,11 @@ export class CreatePatientDto extends PatientAcquisitionFieldsDto {
   @IsOptional()
   @IsString()
   homeBranchId?: string;
+
+  @ApiPropertyOptional({ type: [PatientAllergyInputDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PatientAllergyInputDto)
+  allergies?: PatientAllergyInputDto[];
 }

@@ -12,9 +12,9 @@ function messageMentionsRevenue(message: string): boolean {
 export function messageAsksForOrgRevenue(message: string): boolean {
   const m = message.toLowerCase();
   return (
-    /organi[sz]ation|org-wide|organisation-wide|all clinics|whole org|for the org|for this org|entire (clinic|branch)|branch revenue|clinic revenue|group revenue/i.test(
+    /organi[sz]ation|org-wide|organisation-wide|all clinics|whole org|for the org|for this org|entire (clinic|branch)|branch revenue|clinic revenue|group revenue|across the org|per clinic|by clinic|each clinic|revenue per|breakdown.*clinic/i.test(
       m,
-    ) || /إيرادات المؤسسة|إيراد المؤسسة|المؤسسة.*إيراد/i.test(message)
+    ) || /إيرادات المؤسسة|إيراد المؤسسة|المؤسسة.*إيراد|إيراد.*(كل|لكل) عياد/i.test(message)
   );
 }
 

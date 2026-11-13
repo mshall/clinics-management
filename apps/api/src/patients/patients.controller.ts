@@ -28,6 +28,7 @@ import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
+import { PatientAllergyDto } from "../common/dto/patient-allergy.dto";
 import { PatientDto } from "../common/dto/patient.dto";
 import { PatientDocumentDto } from "../common/dto/patient-document.dto";
 import { CreatePatientDto } from "./dto/create-patient.dto";
@@ -110,6 +111,18 @@ export class PatientsController {
       user,
       excludePatientId?.trim() || undefined,
     );
+  }
+
+  @Get(":id/allergies")
+  @ApiOperation({ summary: "List patient allergies (paginated, max 5 per page)" })
+  @ApiOkResponse({ description: "Paginated PatientAllergyDto" })
+  listAllergies(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string,
+  ) {
+    return this.patients.listAllergiesPaginated(requireTenantId(user), id, user, page, pageSize);
   }
 
   @Get(":id/national-id-document")

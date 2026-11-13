@@ -43,7 +43,9 @@ import {
   type PatientPhoneConflictPatient,
 } from "@/lib/patient-phone-conflict";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
+import { PatientAllergiesField } from "@/components/patient-allergies-field";
 import { collectPatientRegisterValidationIssues } from "@/lib/create-form-validation";
+import { allergiesFormToApi, type PatientAllergyFormItem } from "@/lib/patient-allergies";
 
 export function PatientsPage() {
   const { t, i18n } = useTranslation();
@@ -136,6 +138,7 @@ export function PatientsPage() {
   const [acquisitionChannel, setAcquisitionChannel] = useState<PatientAcquisitionChannel | "">("");
   const [acquisitionReferralName, setAcquisitionReferralName] = useState("");
   const [acquisitionOtherDetail, setAcquisitionOtherDetail] = useState("");
+  const [allergyItems, setAllergyItems] = useState<PatientAllergyFormItem[]>([]);
   const [docInvalidRowIds, setDocInvalidRowIds] = useState<Set<string>>(() => new Set());
   const formErrRef = useRef<HTMLParagraphElement>(null);
   const validation = useValidationIssuesDialog({ intent: "create" });
@@ -157,6 +160,7 @@ export function PatientsPage() {
     setAcquisitionChannel("");
     setAcquisitionReferralName("");
     setAcquisitionOtherDetail("");
+    setAllergyItems([]);
     setDocInvalidRowIds(new Set());
   };
 
@@ -234,7 +238,8 @@ export function PatientsPage() {
       );
       if (result.issues.length > 0) throw new Error(result.issues.join(" "));
 
-      const body: Record<string, string | undefined> = {
+      const allergies = allergiesFormToApi(allergyItems);
+      const body: Record<string, unknown> = {
         firstNameEn,
         lastNameEn,
         firstNameAr: firstNameAr.trim(),
@@ -245,6 +250,7 @@ export function PatientsPage() {
         email: email.trim() || undefined,
         nationalId: nationalId.trim() || undefined,
         homeBranchId: homeBranchId || undefined,
+        ...(allergies.length ? { allergies } : {}),
       };
       if (acquisitionChannel) {
         body.acquisitionChannel = acquisitionChannel;
@@ -464,6 +470,12 @@ export function PatientsPage() {
                   </select>
                 )}
               </div>
+
+              <PatientAllergiesField
+                className="border-t border-border pt-3"
+                value={allergyItems}
+                onChange={setAllergyItems}
+              />
 
               <PendingDocumentAttachments
                 className="space-y-3 border-t border-border pt-3"

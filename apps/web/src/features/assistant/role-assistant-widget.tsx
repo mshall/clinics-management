@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { useAssistantChatMutation, useAssistantContextQuery } from "@/lib/assistant-hooks";
 import { useAuthStore } from "@/stores/auth-store";
 import { isAssistantEnabledForRole } from "@/lib/assistant-policy";
+import { AssistantMessageBody } from "@/features/assistant/assistant-message-body";
 
 type ChatLine = { role: "user" | "assistant"; text: string; actions?: AssistantChatAction[] };
 
@@ -84,7 +85,7 @@ export function RoleAssistantWidget() {
       {open ? (
         <div
           className={cn(
-            "flex w-[min(100vw-2rem,22rem)] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-lg",
+            "flex w-[min(100vw-2rem,26rem)] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-lg",
             "animate-in fade-in slide-in-from-bottom-2 duration-200",
           )}
         >
@@ -100,18 +101,24 @@ export function RoleAssistantWidget() {
               <span className="sr-only">{t("common.close", "Close")}</span>
             </Button>
           </div>
-          <div ref={scrollRef} className="max-h-72 space-y-2 overflow-y-auto p-3 text-sm">
+          <div ref={scrollRef} className="max-h-[min(24rem,50vh)] space-y-3 overflow-y-auto p-3">
             {lines.map((line, idx) => (
               <div
                 key={`${idx}-${line.role}`}
                 className={cn(
-                  "rounded-lg px-3 py-2",
-                  line.role === "user" ? "bg-primary/10 text-foreground ms-6" : "bg-muted text-foreground me-6",
+                  "rounded-xl px-3 py-2.5",
+                  line.role === "user"
+                    ? "ms-4 border border-primary/20 bg-primary/10 text-sm text-foreground"
+                    : "me-2 border border-border/60 bg-muted/80 text-foreground shadow-sm",
                 )}
               >
-                {line.text}
+                {line.role === "assistant" ? (
+                  <AssistantMessageBody text={line.text} />
+                ) : (
+                  <p className="text-sm leading-relaxed">{line.text}</p>
+                )}
                 {line.role === "assistant" && line.actions?.length ? (
-                  <div className="mt-2 flex flex-col gap-1">
+                  <div className="mt-3 flex flex-col gap-1.5 border-t border-border/50 pt-2">
                     {line.actions.map((action) => {
                       const key = action.patientId ?? action.href ?? action.label;
                       const to =

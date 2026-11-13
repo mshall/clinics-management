@@ -177,6 +177,10 @@ export class AssistantService {
     }
 
     const snapshot = await this.liveData.buildSnapshot(user, navKeys, message);
+    const clinicBreakdown = await this.liveData.tryClinicRevenueBreakdownReply(user, navKeys, message, locale);
+    if (clinicBreakdown) {
+      return this.replyResponse(user, persona, locale, navKeys, clinicBreakdown);
+    }
     const direct = this.liveData.tryDirectDataReply(snapshot, message, locale);
     if (direct?.trim()) {
       return this.replyResponse(user, persona, locale, navKeys, direct);

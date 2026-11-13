@@ -355,7 +355,14 @@ export class RevenueService {
   }
 
   async clinicBreakdown(tenantId: string, fromStr: string | undefined, toStr: string | undefined, user: JwtUser) {
-    if (user.role !== UserRole.GROUP_ADMIN && user.role !== UserRole.CLINIC_ADMIN && user.role !== UserRole.BRANCH_MANAGER) {
+    const allowed: ReadonlySet<UserRole> = new Set([
+      UserRole.GROUP_ADMIN,
+      UserRole.GROUP_SUPERVISOR,
+      UserRole.CLINIC_ADMIN,
+      UserRole.BRANCH_MANAGER,
+      UserRole.FINANCE_OFFICER,
+    ]);
+    if (!allowed.has(user.role)) {
       throw new ForbiddenException("Only administrators may view clinic revenue breakdown");
     }
     const { start, end } = resolveLedgerListingRange(fromStr, toStr);

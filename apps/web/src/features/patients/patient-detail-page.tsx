@@ -10,6 +10,7 @@ import { PatientEditDialog } from "@/components/patient-edit-dialog";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { PatientClinicalDocuments } from "@/components/patient-clinical-documents";
 import { PatientInvoicesSection } from "@/features/invoices/patient-invoices-section";
+import { PatientAllergiesSection } from "@/components/patient-allergies-section";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -358,6 +359,8 @@ export function PatientDetailPage() {
         </Card>
         ) : null}
       </div>
+
+      <PatientAllergiesSection patientId={patient.id} />
 
       <PatientClinicalDocuments patientId={patient.id} />
 

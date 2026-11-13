@@ -30,6 +30,27 @@ enum Gender {
   UNKNOWN
 }
 
+enum PatientAllergyCode {
+  PENICILLIN
+  AMOXICILLIN
+  SULFA
+  ASPIRIN
+  NSAIDS
+  LATEX
+  PEANUTS
+  TREE_NUTS
+  SHELLFISH
+  EGGS
+  MILK
+  SOY
+  WHEAT
+  BEE_STING
+  CONTRAST_IODINE
+  CODEINE
+  MORPHINE
+  OTHER
+}
+
 enum Locale {
   en
   ar
@@ -234,6 +255,7 @@ model Tenant {
   operationDocuments     OperationDocument[]
   operationMedications   OperationMedication[]
   patientDocuments       PatientDocument[]
+  patientAllergies       PatientAllergy[]
   invoices               Invoice[]
   userNavTabGrants       UserNavTabGrant[]
   tenantRoleNavTabGrants TenantRoleNavTabGrant[]
@@ -448,6 +470,7 @@ model Patient {
   documents    PatientDocument[]
   invoices     Invoice[]
   supportTickets SupportTicket[]
+  allergies    PatientAllergy[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -455,6 +478,23 @@ model Patient {
   @@unique([tenantId, nationalId])
   @@index([tenantId])
   @@index([tenantId, phone])
+}
+
+model PatientAllergy {
+  id           String             @id @default(cuid())
+  tenantId     String
+  tenant       Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patientId    String
+  patient      Patient            @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  code         PatientAllergyCode
+  otherComment String?
+  encounterId  String?
+  encounter    Encounter?         @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@index([tenantId])
+  @@index([patientId])
 }
 
 model PatientDocument {
@@ -509,6 +549,7 @@ model Encounter {
   revenueEntries RevenueEntry[]
   medications    EncounterMedication[]
   documents      EncounterDocument[]
+  patientAllergies PatientAllergy[]
   invoices       Invoice[]
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt

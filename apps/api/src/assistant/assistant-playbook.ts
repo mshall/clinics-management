@@ -277,8 +277,7 @@ export function messageRequestsOpenScreen(message: string): boolean {
 
 export function formatPlaybookReply(entry: PlaybookEntry, locale: PlaybookLocale): string {
   const pack = entry[locale];
-  const lines = [`${pack.title}:`, ...pack.steps.map((s, i) => `${i + 1}. ${s}`)];
-  return lines.join("\n");
+  return `## ${pack.title}\n\n${pack.steps.map((s, i) => `${i + 1}. ${s}`).join("\n")}`;
 }
 
 export function navigateActionForNavKey(navKey: string, locale: PlaybookLocale): AssistantChatActionDto | null {
@@ -322,8 +321,8 @@ export function tryPlaybookReply(
     if (!act) continue;
     const reply =
       locale === "ar"
-        ? `يمكنك فتح هذا القسم من الزر أدناه.`
-        : `You can open that area in the app using the button below.`;
+        ? `## انتقال سريع\n\nيمكنك فتح هذا القسم من الزر أدناه.`
+        : `## Quick navigation\n\nOpen this section in the app using the button below.`;
     return { reply, actions: [act] };
   }
   return null;

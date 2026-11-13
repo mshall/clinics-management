@@ -6,6 +6,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
+import { PatientAllergiesField } from "@/components/patient-allergies-field";
 import {
   emptyPatientAcquisitionFormValues,
   PatientAcquisitionFields,
@@ -46,6 +47,7 @@ import { physicianToPickListItem } from "@/lib/physician-display";
 import { nativeSelectClassName, searchLedgerActionsClassName, searchLedgerLayoutClassName } from "@/lib/form-control-styles";
 import { columnFilterIncludes } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { allergiesFormToApi, type PatientAllergyFormItem } from "@/lib/patient-allergies";
 import { ENCOUNTER_VISIT_TYPES, formatVisitType } from "@/lib/visit-types";
 import { defaultEncounterListRange, defaultMonthRange } from "@/stores/date-range-store";
 import { useAuthStore } from "@/stores/auth-store";
@@ -166,6 +168,7 @@ export function EncountersListPage() {
   const aptPickSearch = useDebouncedPickListSearch();
   const [selectedAppointmentId, setSelectedAppointmentId] = useState("");
   const [pinnedAppointmentItem, setPinnedAppointmentItem] = useState<PickListItem | null>(null);
+  const [allergyItems, setAllergyItems] = useState<PatientAllergyFormItem[]>([]);
   const [acquisitionValues, setAcquisitionValues] = useState<PatientAcquisitionFormValues>(
     emptyPatientAcquisitionFormValues(),
   );
@@ -253,6 +256,7 @@ export function EncountersListPage() {
     doctorPickSearch.resetSearch();
     setCreateFieldErrors(new Set());
     setAcquisitionValues(emptyPatientAcquisitionFormValues());
+    setAllergyItems([]);
     setCreateOpen(true);
   };
 
@@ -270,12 +274,14 @@ export function EncountersListPage() {
 
   const createMut = useMutation({
     mutationFn: () => {
+      const patientAllergies = allergiesFormToApi(allergyItems);
       const body: Record<string, unknown> = {
         clinicId: createClinicId,
         patientId: createPatientId,
         visitType: createVisitType,
         chiefComplaint: "",
         ...patientAcquisitionFormToBody(acquisitionValues),
+        ...(patientAllergies.length ? { patientAllergies } : {}),
       };
       const trimmed = createVisitFee.trim();
       if (trimmed !== "") {
@@ -576,6 +582,11 @@ export function EncountersListPage() {
                     )}
                   </p>
                 </div>
+                <PatientAllergiesField
+                  className="border-t border-border pt-3"
+                  value={allergyItems}
+                  onChange={setAllergyItems}
+                />
                 <PatientAcquisitionFields
                   className="space-y-0 border-t border-border pt-3"
                   values={acquisitionValues}

@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { ForbiddenException, Injectable } from "@nestjs/common";
 import { EmployeeRecordStatus, ExpenseStatus, Prisma, UserRole } from "@prisma/client";
 import { fetchEmployeeManageScopeIds } from "../common/clinic-scope";
 import type { JwtUser } from "../auth/jwt-user";
@@ -15,6 +15,7 @@ import {
 } from "./assistant-finance-policy";
 import {
   messageAsksForClinicList,
+  messageAsksForClinicRevenueBreakdown,
   messageAsksForEmployeeCount,
   messageAsksForExpenses,
   messageAsksForOrgUsers,
@@ -26,6 +27,7 @@ import { resolveAssistantRevenueIsPersonal } from "./assistant-revenue-scope";
 import { canAssistantQueryEmployeeCount } from "./assistant-hr-policy";
 import { canAssistantSearchPatients } from "./assistant-patient-policy";
 import { extractPatientSearchTerm, messageAsksForPatientLookup } from "./assistant-patient-search";
+import { mdCallout, mdHeading, mdMetric } from "./assistant-markdown";
 import { resolveAssistantPeriod, type AssistantPeriod } from "./assistant-period";
 import type { AssistantChatActionDto } from "./dto/assistant-chat.dto";
 
@@ -230,13 +232,13 @@ export class AssistantLiveDataService {
   formatClinicListReply(clinics: AssistantLiveClinic[], locale: "en" | "ar", orgName?: string): string {
     if (!clinics.length) {
       return locale === "ar"
-        ? "لا توجد عيادات نشطة ضمن صلاحياتك الحالية."
-        : "There are no active clinics in your current permissions.";
+        ? "## العيادات\n\n> لا توجد عيادات نشطة ضمن صلاحياتك الحالية."
+        : "## Clinics\n\n> There are no active clinics in your current permissions.";
     }
     const header =
       locale === "ar"
-        ? `${orgName ? `مؤسسة ${orgName}: ` : ""}${clinics.length} عيادة/فرع نشط يمكنك الوصول إليه:`
-        : `${orgName ? `${orgName} — ` : ""}${clinics.length} active clinic(s) / branch(es) you can access:`;
+        ? `${orgName ? `مؤسسة ${orgName} — ` : ""}${clinics.length} عيادة/فرع نشط`
+        : `${orgName ? `${orgName} — ` : ""}${clinics.length} active clinic(s) / branch(es)`;
     const lines = clinics.map((c, i) => {
       const name = locale === "ar" && c.nameAr.trim() ? c.nameAr : c.nameEn;
       const branch =
@@ -249,7 +251,7 @@ export class AssistantLiveDataService {
         ? `${i + 1}. ${name} — ${c.city}, ${c.country}${branch}`
         : `${i + 1}. ${name} — ${c.city}, ${c.country}${branch} [${c.kind}]`;
     });
-    return [header, ...lines].join("\n");
+    return `${mdHeading(header)}${lines.join("\n")}`;
   }
 
   formatFinancialReply(snapshot: AssistantLiveSnapshot, locale: "en" | "ar"): string {
@@ -277,44 +279,47 @@ export class AssistantLiveDataService {
         : locale === "ar"
           ? `${org} — الإيرادات للفترة (${periodLabel}: ${from} → ${to}):`
           : `${org} — revenue for ${periodLabel} (${from} → ${to}):`;
-    lines.push(title);
-    lines.push(scopeLine);
+    const parts: string[] = [mdHeading(title.replace(/:$/, "")), mdCallout(scopeLine)];
 
     if (fin.revenueByCurrency.length) {
       for (const row of fin.revenueByCurrency) {
-        lines.push(
-          locale === "ar"
-            ? `• ${row.currency}: صافي ${row.netTotal.toFixed(2)} (إجمالي ${row.grossTotal.toFixed(2)})`
-            : `• ${row.currency}: net ${row.netTotal.toFixed(2)} (gross ${row.grossTotal.toFixed(2)})`,
+        parts.push(
+          mdMetric(
+            row.currency,
+            row.netTotal.toFixed(2),
+            row.grossTotal.toFixed(2),
+            locale,
+          ),
         );
       }
     } else {
-      lines.push(locale === "ar" ? "• لا توجد إيرادات مسجلة في هذه الفترة." : "• No posted revenue in this period.");
+      parts.push(locale === "ar" ? "- لا توجد إيرادات مسجلة في هذه الفترة." : "- No posted revenue in this period.");
     }
 
     if (fin.revenueByCurrency.length && fin.scope === "personal") {
-      lines.push(
+      const totalLine =
         locale === "ar"
-          ? `الإجمالي: إجمالي ${fin.revenueGrossTotal.toFixed(2)} · صافي ${fin.revenueNetTotal.toFixed(2)} (كل العملات المعروضة أعلاه).`
-          : `Totals (currencies above): gross ${fin.revenueGrossTotal.toFixed(2)} · net ${fin.revenueNetTotal.toFixed(2)}.`,
-      );
+          ? `**الإجمالي:** إجمالي **${fin.revenueGrossTotal.toFixed(2)}** · صافي **${fin.revenueNetTotal.toFixed(2)}**`
+          : `**Totals:** Gross **${fin.revenueGrossTotal.toFixed(2)}** · Net **${fin.revenueNetTotal.toFixed(2)}**`;
+      parts.push(`\n${totalLine}`);
     }
 
     if (fin.expenseByCurrency?.length) {
-      lines.push(locale === "ar" ? "المصروفات:" : "Expenses:");
+      parts.push(`\n## ${locale === "ar" ? "المصروفات" : "Expenses"}`);
       for (const row of fin.expenseByCurrency) {
-        lines.push(`• ${row.currency}: ${row.amount.toFixed(2)}`);
+        parts.push(`- **${row.currency}** — ${row.amount.toFixed(2)}`);
       }
     }
 
-    return lines.join("\n");
+    return parts.join("\n");
   }
 
   tryDirectDataReply(snapshot: AssistantLiveSnapshot, message: string, locale: "en" | "ar"): string | null {
+    if (messageAsksForClinicRevenueBreakdown(message)) return null;
     if (snapshot.financialAccessDenied) {
       return locale === "ar"
-        ? "لا يمكنني عرض الإيرادات أو المصروفات لأنها خارج تبويباتك الحالية (إيراداتي للطبيب، أو الإيرادات/التقارير للباقي)."
-        : "I can't show revenue or expenses because your menu does not include My revenue (physicians), or Revenue / Reports / Dashboard.";
+        ? "## خارج النطاق\n\n> لا يمكنني عرض الإيرادات أو المصروفات لأنها خارج تبويباتك الحالية."
+        : "## Out of scope\n\n> I can't show revenue or expenses — open **My revenue**, **Revenue**, **Reports**, or **Dashboard** first.";
     }
 
     if (messageAsksForRevenue(message) && snapshot.financialSummary) {
@@ -326,31 +331,29 @@ export class AssistantLiveDataService {
     }
 
     if (messageAsksForPatientCount(message) && snapshot.patientCount !== undefined) {
-      return locale === "ar"
-        ? `عدد المرضى النشطين في المؤسسة (ضمن صلاحياتك): ${snapshot.patientCount}.`
-        : `Active patients in the organization (within your access): ${snapshot.patientCount}.`;
+      const title = locale === "ar" ? "المرضى النشطون" : "Active patients";
+      const scope = locale === "ar" ? "ضمن صلاحياتك" : "Within your access";
+      return `${mdHeading(title)}${mdCallout(scope)}- **${snapshot.patientCount}** ${locale === "ar" ? "مريض" : "patients"}`;
     }
 
     if (messageAsksForOrgUsers(message) && snapshot.organizationUserCount !== undefined) {
-      return locale === "ar"
-        ? `عدد مستخدمي المؤسسة: ${snapshot.organizationUserCount}.`
-        : `Organization user accounts: ${snapshot.organizationUserCount}.`;
+      const title = locale === "ar" ? "مستخدمو المؤسسة" : "Organization users";
+      return `${mdHeading(title)}- **${snapshot.organizationUserCount}** ${locale === "ar" ? "حساب" : "accounts"}`;
     }
 
     if (messageAsksForEmployeeCount(message) && snapshot.activeEmployeeCount !== undefined) {
       const org = snapshot.organization?.name;
-      if (locale === "ar") {
-        const scope =
-          snapshot.employeeCountScope === "clinic_scope"
-            ? "ضمن العيادات المسموح لك بإدارتها"
-            : "في المؤسسة بأكملها";
-        return `${org ? `${org}: ` : ""}عدد الموظفين النشطين ${scope}: ${snapshot.activeEmployeeCount}.`;
-      }
+      const title = locale === "ar" ? "الموظفون النشطون" : "Active employees";
       const scope =
         snapshot.employeeCountScope === "clinic_scope"
-          ? "within your assigned clinics"
-          : "across the organization";
-      return `${org ? `${org} — ` : ""}Active employees ${scope}: ${snapshot.activeEmployeeCount}.`;
+          ? locale === "ar"
+            ? "ضمن العيادات المسموح لك بإدارتها"
+            : "within your assigned clinics"
+          : locale === "ar"
+            ? "في المؤسسة بأكملها"
+            : "across the organization";
+      const orgLine = org ? `${mdCallout(org)}` : "";
+      return `${mdHeading(title)}${orgLine}> ${scope}\n\n- **${snapshot.activeEmployeeCount}** ${locale === "ar" ? "موظف" : "employees"}`;
     }
 
     return null;
@@ -371,8 +374,8 @@ export class AssistantLiveDataService {
       return {
         reply:
           locale === "ar"
-            ? "أخبرني باسم المريض أو رقم MRN أو الهاتف أو رقم الهوية للبحث."
-            : "Tell me the patient's name, MRN, phone, national ID, or record id to search.",
+            ? "## بحث عن مريض\n\nأخبرني بالاسم أو **MRN** أو الهاتف أو رقم الهوية."
+            : "## Patient search\n\nTell me a **name**, **MRN**, phone, national ID, or record id.",
         actions: [],
       };
     }
@@ -389,8 +392,8 @@ export class AssistantLiveDataService {
       return {
         reply:
           locale === "ar"
-            ? `لا يوجد مريض مطابق لـ «${term}» ضمن صلاحياتك.`
-            : `No patients matched “${term}” within your access.`,
+            ? `## لا توجد نتائج\n\nلا يوجد مريض مطابق لـ **${term}** ضمن صلاحياتك.`
+            : `## No matches\n\nNo patients matched **${term}** within your access.`,
         actions: [],
       };
     }
@@ -413,21 +416,70 @@ export class AssistantLiveDataService {
     if (total === 1) {
       reply =
         locale === "ar"
-          ? "وجدت مريضًا واحدًا — افتح السجل من الزر أدناه."
-          : "Found one patient — open their chart using the button below.";
+          ? "## مريض واحد\n\nافتح السجل من الزر أدناه."
+          : "## One patient\n\nOpen their chart using the button below.";
     } else if (total <= ASSISTANT_PATIENT_SEARCH_LIMIT) {
       reply =
         locale === "ar"
-          ? `وجدت ${total} مريضًا مطابقًا — اختر السجل الصحيح:`
-          : `Found ${total} matching patients — select the correct chart:`;
+          ? `## ${total} نتائج\n\nاختر السجل الصحيح:`
+          : `## ${total} matches\n\nSelect the correct chart:`;
     } else {
       reply =
         locale === "ar"
-          ? `أول ${ASSISTANT_PATIENT_SEARCH_LIMIT} من ${total} نتيجة — اختر السجل أو ضيّق البحث في تبويب المرضى.`
-          : `Showing the first ${ASSISTANT_PATIENT_SEARCH_LIMIT} of ${total} matches — pick a chart or refine search in Patients.`;
+          ? `## ${ASSISTANT_PATIENT_SEARCH_LIMIT} من ${total}\n\nاختر السجل أو ضيّق البحث في تبويب المرضى.`
+          : `## First ${ASSISTANT_PATIENT_SEARCH_LIMIT} of ${total}\n\nPick a chart or refine search in Patients.`;
     }
 
     return { reply, actions };
+  }
+
+  async tryClinicRevenueBreakdownReply(
+    user: JwtUser,
+    navKeys: string[],
+    message: string,
+    locale: "en" | "ar",
+  ): Promise<string | null> {
+    if (!messageAsksForClinicRevenueBreakdown(message)) return null;
+    if (!canAssistantQueryOrgRevenue(navKeys, user.role)) {
+      return locale === "ar"
+        ? "## خارج النطاق\n\n> لا يمكنني عرض إيرادات العيادات — تحتاج تبويب **الإيرادات** أو **التقارير**."
+        : "## Out of scope\n\n> I can't show per-clinic revenue — open **Revenue** or **Reports** in your menu.";
+    }
+    const tenantId = user.tenantId;
+    if (!tenantId) return null;
+    const period = resolveAssistantPeriod(message);
+    const from = formatLocalYmd(period.start);
+    const to = formatLocalYmd(period.end);
+    const periodLabel = locale === "ar" ? period.labelAr : period.labelEn;
+    try {
+      const breakdown = await this.revenue.clinicBreakdown(tenantId, from, to, user);
+      const items = [...breakdown.items].sort((a, b) => b.netTotal - a.netTotal);
+      if (!items.length) {
+        return locale === "ar"
+          ? `## إيراد العيادات — ${periodLabel}\n\n> لا توجد إيرادات مسجلة في هذه الفترة.`
+          : `## Revenue by clinic — ${periodLabel}\n\n> No posted revenue in this period.`;
+      }
+      const lines = items.map((row) => {
+        const name = locale === "ar" && row.nameAr.trim() ? row.nameAr : row.nameEn;
+        return `- **${name}** — Net **${row.netTotal.toFixed(2)}** · Gross ${row.grossTotal.toFixed(2)}`;
+      });
+      const total =
+        locale === "ar"
+          ? `\n**الإجمالي:** صافي **${breakdown.grandNet.toFixed(2)}** · إجمالي ${breakdown.grandGross.toFixed(2)}`
+          : `\n**Total:** Net **${breakdown.grandNet.toFixed(2)}** · Gross ${breakdown.grandGross.toFixed(2)}`;
+      const title =
+        locale === "ar"
+          ? `إيراد كل عيادة — ${periodLabel}`
+          : `Revenue per clinic — ${periodLabel}`;
+      return `${mdHeading(title)}${mdCallout(`${from} → ${to}`)}${lines.join("\n")}${total}`;
+    } catch (e) {
+      if (e instanceof ForbiddenException) {
+        return locale === "ar"
+          ? "## خارج النطاق\n\n> دورك الحالي لا يسمح بعرض تفصيل الإيراد لكل عيادة."
+          : "## Out of scope\n\n> Your role cannot view per-clinic revenue breakdown.";
+      }
+      throw e;
+    }
   }
 
   snapshotForPrompt(snapshot: AssistantLiveSnapshot): string {

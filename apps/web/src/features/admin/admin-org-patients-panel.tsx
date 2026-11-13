@@ -11,7 +11,9 @@ import {
   patientAcquisitionFormValuesFromPatient,
   type PatientAcquisitionFormValues,
 } from "@/components/patient-acquisition-fields";
+import { PatientAllergiesField } from "@/components/patient-allergies-field";
 import { PatientPhoneField } from "@/components/patient-phone-field";
+import { allergiesFormToApi, type PatientAllergyFormItem } from "@/lib/patient-allergies";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { Button } from "@/components/ui/button";
@@ -64,6 +66,7 @@ export function AdminOrgPatientsPanel() {
   const [nationalId, setNationalId] = useState("");
   const [homeBranchId, setHomeBranchId] = useState("");
   const [acquisition, setAcquisition] = useState<PatientAcquisitionFormValues>(emptyPatientAcquisitionFormValues());
+  const [allergyItems, setAllergyItems] = useState<PatientAllergyFormItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [selectAllMatching, setSelectAllMatching] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -106,6 +109,7 @@ export function AdminOrgPatientsPanel() {
     setNationalId("");
     setHomeBranchId("");
     setAcquisition(emptyPatientAcquisitionFormValues());
+    setAllergyItems([]);
     setFormErr(null);
   };
 
@@ -154,19 +158,23 @@ export function AdminOrgPatientsPanel() {
     return issues;
   };
 
-  const buildBody = (): Record<string, string | undefined> => ({
-    firstNameEn: firstNameEn.trim(),
-    lastNameEn: lastNameEn.trim(),
-    firstNameAr: firstNameAr.trim(),
-    lastNameAr: lastNameAr.trim(),
-    ...(dob.trim() ? { dob } : {}),
-    gender,
-    phone: phone.trim(),
-    email: email.trim() || undefined,
-    nationalId: nationalId.trim() || undefined,
-    homeBranchId: homeBranchId || undefined,
-    ...patientAcquisitionFormToBody(acquisition),
-  });
+  const buildBody = (): Record<string, unknown> => {
+    const allergies = allergiesFormToApi(allergyItems);
+    return {
+      firstNameEn: firstNameEn.trim(),
+      lastNameEn: lastNameEn.trim(),
+      firstNameAr: firstNameAr.trim(),
+      lastNameAr: lastNameAr.trim(),
+      ...(dob.trim() ? { dob } : {}),
+      gender,
+      phone: phone.trim(),
+      email: email.trim() || undefined,
+      nationalId: nationalId.trim() || undefined,
+      homeBranchId: homeBranchId || undefined,
+      ...patientAcquisitionFormToBody(acquisition),
+      ...(allergies.length ? { allergies } : {}),
+    };
+  };
 
   const createMut = useMutation({
     mutationFn: () => apiPost<PatientDto>("/api/v1/patients", buildBody()),
@@ -551,6 +559,7 @@ export function AdminOrgPatientsPanel() {
                   ))}
                 </select>
               </div>
+              <PatientAllergiesField value={allergyItems} onChange={setAllergyItems} />
               <PatientAcquisitionFields values={acquisition} onChange={setAcquisition} />
               <div className="flex flex-wrap gap-2 pt-2">
                 <Button

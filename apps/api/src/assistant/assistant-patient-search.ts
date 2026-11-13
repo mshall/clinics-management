@@ -16,7 +16,7 @@ export function messageAsksForPatientLookup(message: string): boolean {
   if (!hasPatient && !MRN_RE.test(message)) return false;
 
   const wantsLookup =
-    /detail|info|information|find|search|show|lookup|open|who is|record|chart|named|called|about|phone|national id|identifier/i.test(
+    /detail|info|information|find|search|show|lookup|open|who is|record|chart|named|called|about|phone|national id|identifier|look for/i.test(
       m,
     ) ||
     /(ما|معلومات|ابحث|اعرض|تفاصيل).*(مريض|mrn)/iu.test(message) ||
@@ -45,9 +45,11 @@ export function extractPatientSearchTerm(message: string): string {
 
   let t = message.trim();
   const stripPrefixes = [
-    /^(please\s+)?(can you\s+)?(help me\s+)?(find|search|show|get|lookup|open)\s+(me\s+)?(the\s+)?/i,
+    /^look\s+for\s+(a\s+)?/i,
+    /^(please\s+)?(can you\s+)?(help me\s+)?(find|search|show|get|lookup|open)\s+(me\s+)?(the\s+)?(a\s+)?/i,
     /^(patient\s+)?(details?|info(?:rmation)?|record|chart)\s+(for|of|about)\s+/i,
     /^patient\s+(named|called)\s+/i,
+    /^(named|called)\s+(patient\s+)?/i,
     /^(who is|details on)\s+(the\s+)?patient\s+/i,
     /^مريض\s+(اسمه|يدعى|اسم)\s+/u,
     /^(ابحث|اعرض|اعطني)\s+(عن\s+)?(المريض|مريض)\s*/u,
@@ -55,7 +57,12 @@ export function extractPatientSearchTerm(message: string): string {
   for (const re of stripPrefixes) {
     t = t.replace(re, "");
   }
-  t = t.replace(/\bpatient(s)?\b/gi, "").replace(/\b(mrn|medical record number)\b/gi, "").trim();
+  t = t
+    .replace(/\bpatient(s)?\b/gi, "")
+    .replace(/\b(mrn|medical record number)\b/gi, "")
+    .replace(/^(a|an|the)\s+/i, "")
+    .replace(/^(named|called)\s+/i, "")
+    .trim();
   t = t.replace(/[?.!]+$/, "").trim();
 
   if (t.length >= 2) return t;
