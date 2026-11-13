@@ -33,7 +33,13 @@ After deploy, in **AWS Console → App Runner → your API service → Configura
 
 Redeploy or apply configuration so the service restarts.
 
-> **Security:** Treat the key like a password. Prefer a Secrets Manager secret + CDK reference later; plain env vars are acceptable for demos.
+**Or from this repo (reads `apps/api/.env`, does not commit the key):**
+
+```bash
+bash scripts/configure-apprunner-openai.sh
+```
+
+> **Security:** Never commit API keys or paste them in chat. Add keys only to `apps/api/.env` (gitignored) or App Runner env vars. If a key is exposed, **revoke it** in the OpenAI dashboard and create a new one.
 
 ## 4. Verify
 
