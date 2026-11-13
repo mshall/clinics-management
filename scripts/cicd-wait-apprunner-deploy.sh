@@ -26,6 +26,14 @@ echo "Waiting for latest App Runner UPDATE_SERVICE on ${SERVICE_ARN} (max ${MAX_
 deadline=$(( $(date +%s) + MAX_WAIT_SEC ))
 
 while [[ $(date +%s) -lt $deadline ]]; do
+  runner_status="$(
+    aws apprunner describe-service \
+      --service-arn "$SERVICE_ARN" \
+      --region "$REGION" \
+      --query 'Service.Status' \
+      --output text 2>/dev/null || echo "UNKNOWN"
+  )"
+
   status="$(
     aws apprunner list-operations \
       --service-arn "$SERVICE_ARN" \
@@ -41,6 +49,10 @@ for op in ops:
         break
 "
   )"
+
+  if [[ "$runner_status" == "OPERATION_IN_PROGRESS" && "$status" != "IN_PROGRESS" ]]; then
+    status="IN_PROGRESS"
+  fi
 
   case "$status" in
     SUCCEEDED)
