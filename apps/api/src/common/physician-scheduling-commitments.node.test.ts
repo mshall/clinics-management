@@ -49,8 +49,11 @@ test("blocks lifecycle changes when physician has scheduled operations", async (
   const db = {
     appointment: { count: async () => 0 },
     operation: {
-      count: async (args: { where: { status: OperationStatus } }) => {
-        assert.equal(args.where.status, OperationStatus.SCHEDULED);
+      count: async (args: {
+        where: { status: OperationStatus | { in: OperationStatus[] } };
+      }) => {
+        const st = args.where.status;
+        assert.ok(typeof st === "object" && "in" in st && st.in.includes(OperationStatus.BOOKED));
         return 1;
       },
     },

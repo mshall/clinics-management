@@ -12,6 +12,7 @@ import {
   Scissors,
   Settings,
   Stethoscope,
+  BookOpen,
   FileStack,
   Monitor,
   User,
@@ -48,8 +49,11 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
     showTab("platform_users") ||
     showTab("platform_clinics");
 
+  const signedIn = Boolean(role);
+
   return (
-    <nav className="flex flex-col gap-0.5 p-3">
+    <nav className="flex min-h-0 flex-1 flex-col gap-0.5 p-3">
+      <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
       {showPlatformNav ? (
         <>
           {showTab("platform") ? (
@@ -201,6 +205,24 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
           <Settings className="size-4 shrink-0" />
           {t("nav.admin")}
         </NavLink>
+      ) : null}
+      </div>
+      {signedIn ? (
+        <div className="mt-auto shrink-0 border-t border-border pt-3">
+          <NavLink
+            to="/guide"
+            className={({ isActive }) =>
+              cn(
+                navClass({ isActive }),
+                "border border-primary/20 bg-primary/5 hover:bg-primary/10",
+              )
+            }
+            onClick={() => onNavigate?.()}
+          >
+            <BookOpen className="size-4 shrink-0" />
+            {t("nav.guideBook")}
+          </NavLink>
+        </div>
       ) : null}
     </nav>
   );

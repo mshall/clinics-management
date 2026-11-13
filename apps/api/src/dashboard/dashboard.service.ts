@@ -1,5 +1,13 @@
 import { Injectable } from "@nestjs/common";
-import { ClinicRecordStatus, EncounterStatus, ExpenseStatus, Prisma, RevenueStatus, UserRole } from "@prisma/client";
+import {
+  AppointmentStatus,
+  ClinicRecordStatus,
+  EncounterStatus,
+  ExpenseStatus,
+  Prisma,
+  RevenueStatus,
+  UserRole,
+} from "@prisma/client";
 import { formatLocalYmd, resolveReportingRange } from "../common/reporting-range";
 import { PayrollExpensesService } from "../payroll/payroll-expenses.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -127,6 +135,70 @@ export class DashboardService {
       employeeCount: showHr ? employeeCount : 0,
       periodFrom: formatLocalYmd(start),
       periodTo: formatLocalYmd(end),
+    };
+  }
+
+  async clinicToday(tenantId: string, clinicId?: string) {
+    const dayStart = new Date();
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayEnd.getDate() + 1);
+
+    const apptWhere: Prisma.AppointmentWhereInput = {
+      tenantId,
+      startsAt: { gte: dayStart, lt: dayEnd },
+      ...(clinicId ? { clinicId } : {}),
+    };
+
+    const [appointmentsTotal, checkedIn, completed, noShows, revenueToday, waitingNow] = await Promise.all([
+      this.prisma.appointment.count({ where: apptWhere }),
+      this.prisma.appointment.count({
+        where: { ...apptWhere, status: { in: [AppointmentStatus.CHECKED_IN] } },
+      }),
+      this.prisma.appointment.count({
+        where: { ...apptWhere, status: AppointmentStatus.COMPLETED },
+      }),
+      this.prisma.appointment.count({
+        where: { ...apptWhere, noShowAt: { not: null } },
+      }),
+      this.prisma.revenueEntry.aggregate({
+        where: {
+          tenantId,
+          status: RevenueStatus.POSTED,
+          postedAt: { gte: dayStart, lt: dayEnd },
+          ...(clinicId ? { clinicId } : {}),
+        },
+        _sum: { netAmount: true },
+      }),
+      this.prisma.appointment.count({
+        where: {
+          tenantId,
+          ...(clinicId ? { clinicId } : {}),
+          status: AppointmentStatus.CHECKED_IN,
+          checkedInAt: { gte: dayStart },
+        },
+      }),
+    ]);
+
+    const encountersSeen = await this.prisma.encounter.count({
+      where: {
+        tenantId,
+        status: EncounterStatus.FINALIZED,
+        updatedAt: { gte: dayStart, lt: dayEnd },
+        ...(clinicId ? { clinicId } : {}),
+      },
+    });
+
+    return {
+      clinicId: clinicId ?? null,
+      date: dayStart.toISOString().slice(0, 10),
+      appointments: appointmentsTotal,
+      waiting: waitingNow,
+      seen: encountersSeen,
+      appointmentsCompleted: completed,
+      checkedIn,
+      noShows,
+      collected: Number(revenueToday._sum.netAmount ?? 0),
     };
   }
 

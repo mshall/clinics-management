@@ -2,8 +2,8 @@ import { useTranslation } from "react-i18next";
 import { Navigate } from "react-router-dom";
 import { defaultHomeForRole } from "@/lib/nav-policy";
 import { useAuthStore } from "@/stores/auth-store";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useDashboardKpisQuery } from "@/lib/api-hooks";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useDashboardKpisQuery, useDashboardTodayQuery } from "@/lib/api-hooks";
 import { canViewDashboardFinancialKpis, canViewDashboardHrKpis } from "@/lib/dashboard-kpi-policy";
 import { formatMultiCurrencyAmounts } from "@/lib/money-display";
 import { localeForLanguage } from "@/lib/locale-display";
@@ -15,6 +15,7 @@ export function DashboardPage() {
   const roleNavTabKeys = useAuthStore((s) => s.user?.roleNavTabKeys);
   const home = defaultHomeForRole(role, navTabKeys, roleNavTabKeys);
   const { data, isPending, isError, error } = useDashboardKpisQuery();
+  const todayQ = useDashboardTodayQuery();
   const locale = localeForLanguage(i18n.language);
   const showFinancial = canViewDashboardFinancialKpis(role);
   const showHr = canViewDashboardHrKpis(role);
@@ -55,6 +56,23 @@ export function DashboardPage() {
         <p className="text-sm text-destructive">
           {error instanceof Error ? error.message : "Could not load dashboard."}
         </p>
+      ) : null}
+
+      {todayQ.data ? (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">{t("dashboard.todayLive", "Today (live)")}</CardTitle>
+            <CardDescription className="ltr-nums">{todayQ.data.date}</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6 text-sm">
+            <TodayStat label={t("dashboard.today.appointments", "Appointments")} value={todayQ.data.appointments} />
+            <TodayStat label={t("dashboard.today.waiting", "Waiting")} value={todayQ.data.waiting} />
+            <TodayStat label={t("dashboard.today.seen", "Seen today")} value={todayQ.data.seen} />
+            <TodayStat label={t("dashboard.today.collected", "Collected")} value={todayQ.data.collected} money />
+            <TodayStat label={t("dashboard.today.noShows", "No-shows")} value={todayQ.data.noShows} />
+            <TodayStat label={t("dashboard.today.checkedIn", "Checked in")} value={todayQ.data.checkedIn} />
+          </CardContent>
+        </Card>
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -99,6 +117,16 @@ export function DashboardPage() {
         />
       </div>
       ) : null}
+    </div>
+  );
+}
+
+function TodayStat({ label, value, money }: { label: string; value: number; money?: boolean }) {
+  const display = money ? value.toFixed(2) : String(value);
+  return (
+    <div>
+      <p className="text-muted-foreground text-xs">{label}</p>
+      <p className="font-semibold ltr-nums">{display}</p>
     </div>
   );
 }

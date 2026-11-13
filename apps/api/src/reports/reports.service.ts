@@ -289,7 +289,7 @@ export class ReportsService {
         by: ["clinicId"],
         where: {
           tenantId,
-          status: OperationStatus.COMPLETED,
+          status: { in: [OperationStatus.COMPLETED, OperationStatus.DISCHARGED] },
           operationDate: { gte: start, lte: end },
           ...(scopeClinicIds?.length ? { clinicId: { in: scopeClinicIds } } : {}),
         },

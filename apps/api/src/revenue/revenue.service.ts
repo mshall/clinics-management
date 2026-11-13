@@ -291,7 +291,10 @@ export class RevenueService {
     if (operation.status === OperationStatus.CANCELLED) {
       throw new BadRequestException("Cannot record payment for a cancelled operation");
     }
-    if (operation.status === OperationStatus.COMPLETED) {
+    if (
+      operation.status === OperationStatus.COMPLETED ||
+      operation.status === OperationStatus.DISCHARGED
+    ) {
       throw new BadRequestException("This operation is already fully paid and completed");
     }
 

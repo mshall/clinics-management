@@ -31,6 +31,7 @@ import { CustomerSupportPage } from "@/features/support/customer-support-page";
 import { ClinicalTemplatesPage } from "@/features/clinical/clinical-templates-page";
 import { FrontDeskBoardPage } from "@/features/front-desk/front-desk-board-page";
 import { WaitingRoomPage } from "@/features/front-desk/waiting-room-page";
+import { GuideBookPage } from "@/features/guide/guide-book-page";
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
@@ -84,6 +85,7 @@ export const router = createBrowserRouter([
         ],
       },
       { path: "admin", element: <NavGate tab="admin"><AdminPage /></NavGate> },
+      { path: "guide", element: <GuideBookPage /> },
     ],
   },
   { path: "*", element: <Navigate to="/" replace /> },

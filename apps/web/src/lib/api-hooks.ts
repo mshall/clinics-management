@@ -228,6 +228,31 @@ export function useDashboardKpisQuery() {
   });
 }
 
+export type DashboardTodayDto = {
+  date: string;
+  appointments: number;
+  waiting: number;
+  seen: number;
+  appointmentsCompleted: number;
+  checkedIn: number;
+  noShows: number;
+  collected: number;
+  clinicId: string | null;
+};
+
+export function useDashboardTodayQuery(clinicId?: string) {
+  const hasToken = useHasAuthToken();
+  return useQuery({
+    queryKey: ["dashboard", "today", clinicId ?? "all"],
+    queryFn: () =>
+      apiGet<DashboardTodayDto>(
+        `/api/v1/dashboards/today${clinicId ? `?clinicId=${encodeURIComponent(clinicId)}` : ""}`,
+      ),
+    enabled: hasToken,
+    refetchInterval: 30_000,
+  });
+}
+
 export function useClinicsQuery(options?: { includeInactive?: boolean }) {
   const hasToken = useHasAuthToken();
   const includeInactive = options?.includeInactive ?? false;

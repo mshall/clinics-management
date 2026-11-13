@@ -46,7 +46,14 @@
     "platformUsers": "Users",
     "platformClinics": "Clinics",
     "clinicRevenue": "Clinic revenue",
-    "governance": "Governance & audit"
+    "governance": "Governance & audit",
+    "frontDeskBoard": "Front desk board",
+    "guideBook": "Guide book"
+  },
+  "guide": {
+    "roleOnly": "Tailored to your sign-in role",
+    "quickLinks": "Quick links",
+    "footer": "For technical RFC/PRD detail, see the documentation portal in the repository Docs folder."
   },
   "auth": {
     "signIn": "Sign in",

@@ -248,4 +248,40 @@ export class OperationsController {
     this.assertStatusAccess(user);
     return this.operations.updateStatus(requireTenantId(user), id, body.status, user, body.collectionAmount);
   }
+
+  @Get(":id/pre-op-checklist")
+  preOpList(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.operations.ensurePreOpChecklist(requireTenantId(user), id);
+  }
+
+  @Post(":id/pre-op-checklist/:itemId/complete")
+  preOpComplete(@CurrentUser() user: JwtUser, @Param("id") id: string, @Param("itemId") itemId: string) {
+    return this.operations.completePreOpItem(requireTenantId(user), id, itemId, user.userId);
+  }
+
+  @Post(":id/supplies")
+  addSupply(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Body() body: { itemName: string; quantity?: number; unit?: string; catalogCode?: string },
+  ) {
+    this.assertCreateAccess(user);
+    return this.operations.addSupply(requireTenantId(user), id, body);
+  }
+
+  @Post(":id/installments")
+  setInstallments(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Body() body: { rows: { dueOn: string; amount: number }[] },
+  ) {
+    this.assertStatusAccess(user);
+    return this.operations.setInstallments(requireTenantId(user), id, body.rows ?? []);
+  }
+
+  @Patch(":id/operation-note")
+  saveNote(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: Record<string, unknown>) {
+    this.assertCreateAccess(user);
+    return this.operations.saveOperationNote(requireTenantId(user), id, body);
+  }
 }

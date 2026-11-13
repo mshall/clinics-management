@@ -187,12 +187,47 @@ enum AppointmentWaitlistStatus {
 enum OperationDocumentKind {
   ATTACHMENT
   PRESCRIPTION
+  CONSENT
+  OPERATION_NOTE
 }
 
 enum OperationStatus {
   SCHEDULED
-  CANCELLED
+  BOOKED
+  PRE_OP
+  IN_PROGRESS
+  RECOVERY
+  DISCHARGED
   COMPLETED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+  WALLET
+  OTHER
+}
+
+enum MessageChannel {
+  SMS
+  WHATSAPP
+  EMAIL
+}
+
+enum EtaReceiptStatus {
+  PENDING
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+}
+
+enum RecallCampaignKind {
+  CHECKUP_DUE
+  LAPSED
+  BIRTHDAY
+  CUSTOM
 }
 
 enum AttendanceStatus {
@@ -326,6 +361,15 @@ model Tenant {
   patientActiveProblems          PatientActiveProblem[]
   patientFamilyLinks             PatientFamilyLink[]
   patientClinicalPhotos          PatientClinicalPhoto[]
+  serviceCatalogItems            ServiceCatalogItem[]
+  payerCompanies                 PayerCompany[]
+  messageTemplates               MessageTemplate[]
+  recallCampaigns                RecallCampaign[]
+  commissionRules                CommissionRule[]
+  cashierShiftCloses             CashierShiftClose[]
+  patientServicePackages         PatientServicePackage[]
+  billingPayments                BillingPayment[]
+  etaReceipts                    EtaReceiptSubmission[]
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
 }
@@ -470,6 +514,9 @@ model Clinic {
   appointments     Appointment[]
   operations       Operation[]
   invoices         Invoice[]
+  billingPayments  BillingPayment[]
+  cashierShiftCloses CashierShiftClose[]
+  etaReceipts      EtaReceiptSubmission[]
   auditLogs        AuditLog[]
   clinicAdminScopes ClinicAdminScope[]
   employeePrivilegeGrants UserClinicEmployeePrivilegeGrant[]
@@ -558,6 +605,11 @@ model Patient {
   requiresAppointmentDeposit Boolean @default(false)
   isVip                Boolean  @default(false)
   needsChaperone       Boolean  @default(false)
+  dataProtectionConsents PatientDataProtectionConsent[]
+  servicePackages      PatientServicePackage[]
+  billingPayments      BillingPayment[]
+  etaReceipts          EtaReceiptSubmission[]
+  satisfactionSurveys  SatisfactionSurveyResponse[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -981,8 +1033,10 @@ model Appointment {
   checkInPaymentAmount Decimal?    @db.Decimal(14, 2)
   calledAt       DateTime?
   noShowAt       DateTime?
+  noShowRiskScore Decimal?  @db.Decimal(5, 2)
   recurrenceIndex Int?
   notes          String?
+  satisfactionSurveys SatisfactionSurveyResponse[]
   integrationClientId String?
   integrationClient   IntegrationClient? @relation(fields: [integrationClientId], references: [id], onDelete: SetNull)
   externalReference   String?
@@ -1024,6 +1078,10 @@ model Operation {
   externalReference   String?
   documents       OperationDocument[]
   medications     OperationMedication[]
+  preOpChecklist  OperationPreOpCheckItem[]
+  supplyUsages    OperationSupplyUsed[]
+  installments    OperationInstallment[]
+  operationNote   Json?
   revenueEntries  RevenueEntry[]
   invoices        Invoice[]
   createdAt       DateTime        @default(now())
@@ -1104,6 +1162,7 @@ model Invoice {
   createdByUserId    String?
   createdBy          User?         @relation("InvoiceCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   lines              InvoiceLine[]
+  billingPayments    BillingPayment[]
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
@@ -1121,9 +1180,17 @@ model InvoiceLine {
   invoice    Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   purpose    String
   amountPaid Decimal  @db.Decimal(14, 2)
+  quantity           Decimal  @default(1) @db.Decimal(10, 2)
+  unitPrice          Decimal? @db.Decimal(14, 2)
+  discountPercent    Decimal  @default(0) @db.Decimal(5, 2)
+  taxPercent         Decimal  @default(0) @db.Decimal(5, 2)
+  serviceCatalogItemId String?
+  serviceCatalogItem   ServiceCatalogItem? @relation(fields: [serviceCatalogItemId], references: [id], onDelete: SetNull)
+  discountNeedsApproval Boolean @default(false)
   sortOrder  Int      @default(0)
 
   @@index([invoiceId])
+  @@index([serviceCatalogItemId])
 }
 
 model FeatureFlag {
@@ -1431,4 +1498,362 @@ model IntegrationWebhook {
 
   @@index([integrationClientId])
   @@index([tenantId])
+}
+
+model OperationPreOpCheckItem {
+  id          String    @id @default(cuid())
+  tenantId    String
+  operationId String
+  operation   Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  labelEn     String
+  labelAr     String    @default("")
+  completedAt DateTime?
+  completedByUserId String?
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+
+  @@index([operationId])
+  @@index([tenantId])
+}
+
+model OperationSupplyUsed {
+  id          String    @id @default(cuid())
+  tenantId    String
+  operationId String
+  operation   Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  itemName    String
+  quantity    Decimal   @default(1) @db.Decimal(10, 2)
+  unit        String    @default("unit")
+  catalogCode String?
+  createdAt   DateTime  @default(now())
+
+  @@index([operationId])
+  @@index([tenantId])
+}
+
+model OperationInstallment {
+  id          String    @id @default(cuid())
+  tenantId    String
+  operationId String
+  operation   Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  dueOn       DateTime  @db.Date
+  amount      Decimal   @db.Decimal(14, 2)
+  paidAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([operationId])
+  @@index([tenantId, dueOn])
+}
+
+model ServiceCatalogItem {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code      String
+  nameEn    String
+  nameAr    String   @default("")
+  category  String   @default("GENERAL")
+  active    Boolean  @default(true)
+  prices    ServicePrice[]
+  contractPrices ContractServicePrice[]
+  invoiceLines InvoiceLine[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, code])
+  @@index([tenantId, active])
+}
+
+model ServicePrice {
+  id              String             @id @default(cuid())
+  tenantId        String
+  catalogItemId   String
+  catalogItem     ServiceCatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+  effectiveFrom   DateTime           @db.Date
+  effectiveTo     DateTime?          @db.Date
+  amount          Decimal            @db.Decimal(14, 2)
+  currency        String             @default("EGP")
+  createdAt       DateTime           @default(now())
+
+  @@index([catalogItemId, effectiveFrom])
+  @@index([tenantId])
+}
+
+model PayerCompany {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  nameEn      String
+  nameAr      String   @default("")
+  contractRef String?
+  active      Boolean  @default(true)
+  contractPrices ContractServicePrice[]
+  preAuths    PayerPreAuthorization[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, active])
+}
+
+model ContractServicePrice {
+  id            String             @id @default(cuid())
+  tenantId      String
+  payerCompanyId String
+  payerCompany  PayerCompany       @relation(fields: [payerCompanyId], references: [id], onDelete: Cascade)
+  catalogItemId String
+  catalogItem   ServiceCatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+  amount        Decimal            @db.Decimal(14, 2)
+  currency      String             @default("EGP")
+  effectiveFrom DateTime           @db.Date
+  effectiveTo   DateTime?          @db.Date
+  patientCopayPercent Decimal      @default(0) @db.Decimal(5, 2)
+  createdAt     DateTime           @default(now())
+
+  @@index([payerCompanyId, catalogItemId])
+  @@index([tenantId])
+}
+
+model BillingPayment {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId        String
+  clinic          Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patientId       String
+  patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  invoiceId       String?
+  invoice         Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  totalAmount     Decimal  @db.Decimal(14, 2)
+  currency        String   @default("EGP")
+  cashierUserId   String?
+  allocations     BillingPaymentAllocation[]
+  etaReceipt      EtaReceiptSubmission?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId, clinicId, createdAt])
+  @@index([patientId])
+}
+
+model BillingPaymentAllocation {
+  id        String        @id @default(cuid())
+  paymentId String
+  payment   BillingPayment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  method    PaymentMethod
+  amount    Decimal       @db.Decimal(14, 2)
+
+  @@index([paymentId])
+}
+
+model CreditNote {
+  id          String   @id @default(cuid())
+  tenantId    String
+  clinicId    String
+  patientId   String
+  invoiceId   String?
+  amount      Decimal  @db.Decimal(14, 2)
+  currency    String   @default("EGP")
+  reason      String
+  approvedByUserId String?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, clinicId])
+  @@index([patientId])
+}
+
+model PatientServicePackage {
+  id                String   @id @default(cuid())
+  tenantId          String
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patientId         String
+  patient           Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  nameEn            String
+  nameAr            String   @default("")
+  totalSessions     Int
+  sessionsRemaining Int
+  paidAmount        Decimal  @default(0) @db.Decimal(14, 2)
+  currency          String   @default("EGP")
+  expiresOn         DateTime? @db.Date
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([tenantId, patientId])
+}
+
+model CashierShiftClose {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId        String
+  clinic          Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  cashierUserId   String
+  shiftDate       DateTime @db.Date
+  expectedCash    Decimal  @db.Decimal(14, 2)
+  countedCash     Decimal  @db.Decimal(14, 2)
+  expectedCard    Decimal  @db.Decimal(14, 2)
+  countedCard     Decimal  @db.Decimal(14, 2)
+  notes           String?
+  closedAt        DateTime @default(now())
+
+  @@index([tenantId, clinicId, shiftDate])
+}
+
+model CommissionRule {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicianId     String?
+  serviceCatalogItemId String?
+  ruleType        String   @default("PERCENT")
+  percent         Decimal? @db.Decimal(5, 2)
+  fixedAmount     Decimal? @db.Decimal(14, 2)
+  roomRental      Boolean  @default(false)
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId, active])
+}
+
+model PayerPreAuthorization {
+  id              String       @id @default(cuid())
+  tenantId        String
+  payerCompanyId  String
+  payerCompany    PayerCompany @relation(fields: [payerCompanyId], references: [id], onDelete: Cascade)
+  patientId       String
+  referenceCode   String
+  approvedAmount  Decimal?     @db.Decimal(14, 2)
+  status          String       @default("PENDING")
+  validUntil      DateTime?    @db.Date
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([tenantId, patientId])
+  @@index([payerCompanyId])
+}
+
+model EtaReceiptSubmission {
+  id              String           @id @default(cuid())
+  tenantId        String
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId        String
+  clinic          Clinic           @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patientId       String
+  patient         Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  paymentId       String?          @unique
+  payment         BillingPayment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  status          EtaReceiptStatus @default(PENDING)
+  etaUuid         String?
+  payloadJson     Json?
+  submittedAt     DateTime?
+  errorMessage    String?
+  createdAt       DateTime         @default(now())
+
+  @@index([tenantId, clinicId, status])
+}
+
+model PatientDataProtectionConsent {
+  id              String   @id @default(cuid())
+  tenantId        String
+  patientId       String
+  patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  signedAt        DateTime @default(now())
+  signedOnTablet  Boolean  @default(true)
+  signerName      String?
+  locale          String   @default("ar")
+  ipAddress       String?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId, patientId])
+}
+
+model MessageTemplate {
+  id          String         @id @default(cuid())
+  tenantId    String
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  key         String
+  channel     MessageChannel
+  subjectEn   String?
+  subjectAr   String?
+  bodyEn      String
+  bodyAr      String
+  active      Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@unique([tenantId, key, channel])
+}
+
+model OutboundMessage {
+  id          String         @id @default(cuid())
+  tenantId    String
+  patientId   String?
+  channel     MessageChannel
+  templateKey String?
+  toPhone     String
+  body        String
+  status      String         @default("QUEUED")
+  sentAt      DateTime?
+  error       String?
+  createdAt   DateTime       @default(now())
+
+  @@index([tenantId, status])
+}
+
+model RecallCampaign {
+  id          String             @id @default(cuid())
+  tenantId    String
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  kind        RecallCampaignKind
+  nameEn      String
+  nameAr      String             @default("")
+  acquisitionChannel PatientAcquisitionChannel?
+  active      Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+
+  @@index([tenantId, kind])
+}
+
+model SatisfactionSurveyResponse {
+  id            String   @id @default(cuid())
+  tenantId      String
+  patientId     String
+  patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  appointmentId String?
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  encounterId   String?
+  clinicianId   String?
+  score         Int
+  comment       String?
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId, clinicianId])
+}
+
+model ClinicalIncident {
+  id          String   @id @default(cuid())
+  tenantId    String
+  clinicId    String
+  reportedByUserId String?
+  severity    String   @default("LOW")
+  summaryEn   String
+  summaryAr   String   @default("")
+  status      String   @default("OPEN")
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, clinicId])
+}
+
+model AiScribeSession {
+  id            String   @id @default(cuid())
+  tenantId      String
+  encounterId   String
+  status        String   @default("DRAFT")
+  transcript    String?
+  draftNote     Json?
+  draftRx       Json?
+  approvedAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId, encounterId])
 }

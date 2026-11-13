@@ -26,7 +26,14 @@
     "platformUsers": "المستخدمون",
     "platformClinics": "العيادات",
     "clinicRevenue": "إيرادات العيادة",
-    "governance": "الحوكمة والتدقيق"
+    "governance": "الحوكمة والتدقيق",
+    "frontDeskBoard": "لوحة الاستقبال",
+    "guideBook": "كتيب التعليمات"
+  },
+  "guide": {
+    "roleOnly": "مخصص لدور تسجيل الدخول",
+    "quickLinks": "روابط سريعة",
+    "footer": "للتفاصيل التقنية (RFC/PRD)، راجع مجلد Docs في المستودع."
   },
   "auth": {
     "signIn": "تسجيل الدخول",

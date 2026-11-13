@@ -26,6 +26,10 @@ import { AssistantModule } from "./assistant/assistant.module";
 import { ClinicalModule } from "./clinical/clinical.module";
 import { SchedulingModule } from "./scheduling/scheduling.module";
 import { FrontDeskModule } from "./front-desk/front-desk.module";
+import { BillingModule } from "./billing/billing.module";
+import { ComplianceModule } from "./compliance/compliance.module";
+import { MessagingModule } from "./messaging/messaging.module";
+import { ClinicAiModule } from "./clinic-ai/clinic-ai.module";
 
 @Module({
   imports: [
@@ -56,6 +60,10 @@ import { FrontDeskModule } from "./front-desk/front-desk.module";
     ClinicalModule,
     SchedulingModule,
     FrontDeskModule,
+    BillingModule,
+    ComplianceModule,
+    MessagingModule,
+    ClinicAiModule,
   ],
 })
 export class AppModule {}

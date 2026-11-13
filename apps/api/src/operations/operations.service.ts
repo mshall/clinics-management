@@ -1,5 +1,11 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { OperationDocumentKind, OperationStatus, Prisma, RevenueStatus, UserRole } from "@prisma/client";
+import {
+  assertOperationStatusTransition,
+  isTerminalOperationStatus,
+  normalizeOperationStatus,
+  operationStatusIsEditable,
+} from "./operation-status-flow";
 import { randomUUID } from "crypto";
 import * as path from "path";
 import type { JwtUser } from "../auth/jwt-user";
@@ -54,8 +60,8 @@ export class OperationsService {
   ) {}
 
   private ensureEditableStatus(status: OperationStatus): void {
-    if (status !== OperationStatus.SCHEDULED) {
-      throw new BadRequestException("Only scheduled operations can be edited");
+    if (!operationStatusIsEditable(status)) {
+      throw new BadRequestException("Only booked or pre-op operations can be edited");
     }
   }
 
@@ -407,7 +413,7 @@ export class OperationsService {
         paidAmount: downPayment,
         feeCurrency,
         comments: dto.comments?.trim() || null,
-        status: OperationStatus.SCHEDULED,
+        status: OperationStatus.BOOKED,
         noMedications: dto.noMedications ?? false,
       },
       include: operationInclude,
@@ -678,15 +684,14 @@ export class OperationsService {
       return this.mapRow(existing);
     }
 
-    if (existing.status === OperationStatus.COMPLETED || existing.status === OperationStatus.CANCELLED) {
-      throw new BadRequestException("Cannot change status of a completed or cancelled operation");
-    }
+    assertOperationStatusTransition(existing.status, status);
 
-    if (status === OperationStatus.SCHEDULED) {
-      throw new BadRequestException("Invalid status transition");
-    }
+    const completesRevenue =
+      status === OperationStatus.COMPLETED ||
+      status === OperationStatus.DISCHARGED ||
+      normalizeOperationStatus(status) === OperationStatus.DISCHARGED;
 
-    if (status === OperationStatus.COMPLETED) {
+    if (completesRevenue) {
       const total = Number(existing.totalCost);
       const paid = Number(existing.paidAmount);
       const remaining = Math.max(0, total - paid);
@@ -734,7 +739,7 @@ export class OperationsService {
         });
         return tx.operation.update({
           where: { id },
-          data: { status: OperationStatus.COMPLETED, paidAmount: total },
+          data: { status: OperationStatus.DISCHARGED, paidAmount: total },
           include: operationInclude,
         });
       });
@@ -756,7 +761,12 @@ export class OperationsService {
       return this.mapRow(row);
     }
 
-    throw new BadRequestException("Invalid status");
+  const row = await this.prisma.operation.update({
+      where: { id },
+      data: { status },
+      include: operationInclude,
+    });
+    return this.mapRow(row);
   }
 
   async addMedication(
@@ -934,7 +944,7 @@ export class OperationsService {
         paidAmount: downPayment,
         feeCurrency,
         comments: dto.comments?.trim() || null,
-        status: OperationStatus.SCHEDULED,
+        status: OperationStatus.BOOKED,
         noMedications: dto.noMedications ?? false,
         integrationClientId: dto.integrationClientId,
         externalReference: dto.externalReference ?? null,
@@ -978,5 +988,85 @@ export class OperationsService {
       });
     });
     return this.mapRow(row);
+  }
+
+  private static DEFAULT_PREOP = [
+    { labelEn: "Identity confirmed", labelAr: "تأكيد الهوية" },
+    { labelEn: "Consent signed on tablet", labelAr: "توقيع الموافقة على الجهاز اللوحي" },
+    { labelEn: "NPO / fasting verified", labelAr: "تحقق الصيام" },
+    { labelEn: "Surgical site marked", labelAr: "تحديد موقع العملية" },
+  ];
+
+  async ensurePreOpChecklist(tenantId: string, operationId: string) {
+    const op = await this.prisma.operation.findFirst({ where: { id: operationId, tenantId } });
+    if (!op) throw new NotFoundException("Operation not found");
+    const count = await this.prisma.operationPreOpCheckItem.count({ where: { operationId } });
+    if (count > 0) {
+      return this.prisma.operationPreOpCheckItem.findMany({ where: { operationId }, orderBy: { sortOrder: "asc" } });
+    }
+    return this.prisma.$transaction(async (tx) => {
+      const rows = [];
+      for (let idx = 0; idx < OperationsService.DEFAULT_PREOP.length; idx++) {
+        const item = OperationsService.DEFAULT_PREOP[idx];
+        rows.push(
+          await tx.operationPreOpCheckItem.create({
+            data: { tenantId, operationId, labelEn: item.labelEn, labelAr: item.labelAr, sortOrder: idx },
+          }),
+        );
+      }
+      return rows;
+    });
+  }
+
+  async completePreOpItem(tenantId: string, operationId: string, itemId: string, userId: string) {
+    const item = await this.prisma.operationPreOpCheckItem.findFirst({ where: { id: itemId, tenantId, operationId } });
+    if (!item) throw new NotFoundException("Checklist item not found");
+    return this.prisma.operationPreOpCheckItem.update({
+      where: { id: itemId },
+      data: { completedAt: new Date(), completedByUserId: userId },
+    });
+  }
+
+  async addSupply(tenantId: string, operationId: string, body: { itemName: string; quantity?: number; unit?: string; catalogCode?: string }) {
+    return this.prisma.operationSupplyUsed.create({
+      data: {
+        tenantId,
+        operationId,
+        itemName: body.itemName.trim(),
+        quantity: body.quantity ?? 1,
+        unit: body.unit?.trim() || "unit",
+        catalogCode: body.catalogCode?.trim() || null,
+      },
+    });
+  }
+
+  async setInstallments(tenantId: string, operationId: string, rows: { dueOn: string; amount: number }[]) {
+    const op = await this.prisma.operation.findFirst({ where: { id: operationId, tenantId } });
+    if (!op) throw new NotFoundException("Operation not found");
+    return this.prisma.$transaction(async (tx) => {
+      await tx.operationInstallment.deleteMany({ where: { operationId, tenantId } });
+      if (!rows.length) return [];
+      return Promise.all(
+        rows.map((r) =>
+          tx.operationInstallment.create({
+            data: {
+              tenantId,
+              operationId,
+              dueOn: new Date(r.dueOn),
+              amount: new Prisma.Decimal(String(r.amount)),
+            },
+          }),
+        ),
+      );
+    });
+  }
+
+  async saveOperationNote(tenantId: string, operationId: string, note: Record<string, unknown>) {
+    const op = await this.prisma.operation.findFirst({ where: { id: operationId, tenantId } });
+    if (!op) throw new NotFoundException("Operation not found");
+    return this.prisma.operation.update({
+      where: { id: operationId },
+      data: { operationNote: note as Prisma.InputJsonValue },
+    });
   }
 }

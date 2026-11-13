@@ -33,6 +33,8 @@ See **[Documentation_Portal.md](./Documentation_Portal.md)** for module layout, 
 | [**CLINICAL_WORKFLOW.md**](./CLINICAL_WORKFLOW.md) | Template builder, shortcuts, safety checks, vitals charts, letters, note lock |
 | [**PATIENT_360_AND_SCHEDULING.md**](./PATIENT_360_AND_SCHEDULING.md) | Patient summary, timeline, family merge, appointment types, series, waitlist, follow-up |
 | [**FRONT_DESK.md**](./FRONT_DESK.md) | Global search (⌘K), quick check-in, live board, waiting-room screen, chart header alerts |
+| [**CLINIC_PLATFORM_CAPABILITIES.md**](./CLINIC_PLATFORM_CAPABILITIES.md) | Operations pipeline, billing/compliance, messaging, reports, clinic AI — status matrix |
+| [**GUIDE_BOOK.md**](./GUIDE_BOOK.md) | In-app Guide book (`/guide`) — role-based EN/AR instructions |
 
 ---
 

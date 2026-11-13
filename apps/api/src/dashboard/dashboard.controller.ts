@@ -24,4 +24,10 @@ export class DashboardController {
   ) {
     return this.dashboard.groupOverview(requireTenantId(user), from, to, user.role);
   }
+
+  @Get("today")
+  @ApiOperation({ summary: "Live clinic day snapshot (appointments, waiting, collections)" })
+  today(@CurrentUser() user: JwtUser, @Query("clinicId") clinicId?: string) {
+    return this.dashboard.clinicToday(requireTenantId(user), clinicId);
+  }
 }

@@ -1,6 +1,10 @@
 # Product epic roadmap (beyond current sprint)
 
-This document tracks large epics from the clinic platform backlog. **Shipped in the latest sprint** (see git history): HR add-employee UX (clinic placement, group physician, specialty, commission), clinic specialty on create, Material Light default theme, tax invoices (TRN + VAT breakdown), and foundation enums for clinical specialties.
+This document tracks large epics from the clinic platform backlog.
+
+**Capability matrix (status per requirement):** [CLINIC_PLATFORM_CAPABILITIES.md](./CLINIC_PLATFORM_CAPABILITIES.md) — operations pipeline, Egypt compliance hooks, billing catalog, messaging, clinic AI, and owner reports.
+
+**Recently shipped foundations** (see git history): front desk flow, patient 360/scheduling, clinical workflow UI, and wave `20261114160000_clinic_platform_wave` (billing/compliance/messaging/clinic-ai schema + APIs).
 
 ## Insurance & revenue cycle
 

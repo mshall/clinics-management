@@ -14,7 +14,9 @@ type SchedulingCommitmentDb = {
     count: (args: { where: { tenantId: string; clinicianId: string; status: { in: AppointmentStatus[] } } }) => Promise<number>;
   };
   operation: {
-    count: (args: { where: { tenantId: string; clinicianId: string; status: OperationStatus } }) => Promise<number>;
+    count: (args: {
+      where: { tenantId: string; clinicianId: string; status: OperationStatus | { in: OperationStatus[] } };
+    }) => Promise<number>;
   };
 };
 
@@ -35,7 +37,7 @@ export async function countPhysicianSchedulingCommitments(
       where: {
         tenantId,
         clinicianId: userId,
-        status: OperationStatus.SCHEDULED,
+        status: { in: [OperationStatus.SCHEDULED, OperationStatus.BOOKED, OperationStatus.PRE_OP, OperationStatus.IN_PROGRESS] },
       },
     }),
   ]);
