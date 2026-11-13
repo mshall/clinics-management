@@ -5,5 +5,6 @@ import { RevenueService } from "./revenue.service";
 @Module({
   controllers: [RevenueController],
   providers: [RevenueService],
+  exports: [RevenueService],
 })
 export class RevenueModule {}

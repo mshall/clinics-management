@@ -196,7 +196,7 @@ export class AssistantService {
 
     const snapshot = await this.liveData.buildSnapshot(user, navKeys, message);
     const direct = this.liveData.tryDirectDataReply(snapshot, message, locale);
-    if (direct) {
+    if (direct?.trim()) {
       return {
         reply: direct,
         persona,
@@ -207,11 +207,10 @@ export class AssistantService {
     const liveJson = this.liveData.snapshotForPrompt(snapshot);
     const system = this.buildSystemPrompt(persona, navKeys, locale, liveJson);
     const llm = await this.llmReply(system, message, locale);
-    let reply =
-      llm ??
-      (snapshot.clinics?.length && /clinic|عياد/i.test(message)
-        ? this.liveData.formatClinicListReply(snapshot.clinics, locale, snapshot.organization?.name)
-        : this.ruleBasedReply(message, locale, navKeys));
+    let reply = llm ?? this.ruleBasedReply(message, locale, navKeys);
+    if (!llm?.trim() && snapshot.financialSummary && /revenue|expense|إيراد|مصروف/i.test(message)) {
+      reply = this.liveData.formatFinancialReply(snapshot, locale);
+    }
 
     const required = requiredNavKeysForMessage(message);
     if (required.length && !required.some((k) => navKeys.includes(k))) {

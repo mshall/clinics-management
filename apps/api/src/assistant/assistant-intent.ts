@@ -18,3 +18,18 @@ export function messageAsksForPatientCount(message: string): boolean {
 export function messageAsksForOrgUsers(message: string): boolean {
   return /how many user|user count|staff count|organi[sz]ation user|كم مستخدم|عدد المستخدمين/i.test(message);
 }
+
+export function messageAsksForRevenue(message: string): boolean {
+  return (
+    /revenue|income|earnings|takings|sales|turnover|إيراد|إيرادات|دخل|دخول/i.test(message) &&
+    !/expense|مصروف/i.test(message)
+  );
+}
+
+export function messageAsksForExpenses(message: string): boolean {
+  return /expense|expenses|spend|costs|مصروف|مصروفات|تكلفة/i.test(message);
+}
+
+export function messageAsksForPersonalRevenue(message: string): boolean {
+  return /my revenue|doctor revenue|إيراداتي|دخلي/i.test(message);
+}

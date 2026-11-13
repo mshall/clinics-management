@@ -61,6 +61,16 @@ clinic_list_body="$(echo "$clinic_list_raw" | sed '$d')"
 echo "$clinic_list_body" | python3 -c "import sys,json; r=json.load(sys.stdin).get('reply',''); assert len(r)>20 and ('clinic' in r.lower() or '1.' in r), r[:240]" || fail "assistant clinic list reply empty"
 echo "OK  assistant clinic list"
 
+revenue_q_raw="$(curl -sS -w "\n%{http_code}" -X POST "$API_BASE/assistant/chat" \
+  -H "Authorization: Bearer $staff_token" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"What is the revenue for this org this month?","locale":"en"}')"
+revenue_q_http="$(echo "$revenue_q_raw" | tail -1)"
+revenue_q_body="$(echo "$revenue_q_raw" | sed '$d')"
+[[ "$revenue_q_http" == "200" || "$revenue_q_http" == "201" ]] || fail "assistant revenue HTTP $revenue_q_http"
+echo "$revenue_q_body" | python3 -c "import sys,json; r=json.load(sys.stdin).get('reply',''); assert 'revenue' in r.lower() or 'net' in r.lower() or 'AED' in r or 'EGP' in r, r[:280]" || fail "assistant revenue reply missing totals"
+echo "OK  assistant revenue query"
+
 client_name="smoke-$(date +%s)"
 create_raw="$(curl -sS -w "\n%{http_code}" -X POST "$API_BASE/admin/integration-clients" \
   -H "Authorization: Bearer $staff_token" \

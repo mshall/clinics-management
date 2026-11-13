@@ -1,15 +1,26 @@
 import { Injectable } from "@nestjs/common";
-import { UserRole } from "@prisma/client";
+import { ExpenseStatus, UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
+import { formatLocalYmd } from "../common/reporting-range";
 import type { ClinicDto } from "../clinics/clinics.service";
 import { ClinicsService } from "../clinics/clinics.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { RevenueService } from "../revenue/revenue.service";
+import {
+  canAssistantQueryExpenses,
+  canAssistantQueryOrgRevenue,
+  canAssistantQueryPersonalRevenue,
+} from "./assistant-finance-policy";
 import {
   messageAsksForClinicList,
+  messageAsksForExpenses,
   messageAsksForOrgUsers,
   messageAsksForPatientCount,
+  messageAsksForPersonalRevenue,
+  messageAsksForRevenue,
   messageNeedsClinicContext,
 } from "./assistant-intent";
+import { resolveAssistantPeriod, type AssistantPeriod } from "./assistant-period";
 
 export type AssistantLiveClinic = {
   id: string;
@@ -22,6 +33,15 @@ export type AssistantLiveClinic = {
   parentNameEn: string | null;
 };
 
+export type AssistantFinancialSummary = {
+  period: AssistantPeriod;
+  scope: "organization" | "personal";
+  revenueByCurrency: { currency: string; grossTotal: number; netTotal: number }[];
+  revenueNetTotal: number;
+  expenseByCurrency?: { currency: string; amount: number }[];
+  expenseTotal?: number;
+};
+
 export type AssistantLiveSnapshot = {
   organization: { name: string; baseCurrency: string } | null;
   role: UserRole;
@@ -30,6 +50,8 @@ export type AssistantLiveSnapshot = {
   clinics?: AssistantLiveClinic[];
   patientCount?: number;
   organizationUserCount?: number;
+  financialSummary?: AssistantFinancialSummary;
+  financialAccessDenied?: boolean;
   generatedAt: string;
 };
 
@@ -38,6 +60,7 @@ export class AssistantLiveDataService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly clinics: ClinicsService,
+    private readonly revenue: RevenueService,
   ) {}
 
   private canSeePatients(navKeys: string[]): boolean {
@@ -90,7 +113,74 @@ export class AssistantLiveDataService {
       snapshot.organizationUserCount = await this.prisma.user.count({ where: { tenantId } });
     }
 
+    if (messageAsksForRevenue(message) || messageAsksForExpenses(message)) {
+      await this.attachFinancialSummary(user, navKeys, message, tenantId, snapshot);
+    }
+
     return snapshot;
+  }
+
+  private async attachFinancialSummary(
+    user: JwtUser,
+    navKeys: string[],
+    message: string,
+    tenantId: string,
+    snapshot: AssistantLiveSnapshot,
+  ): Promise<void> {
+    const personal = messageAsksForPersonalRevenue(message);
+    const canRevenue = personal
+      ? canAssistantQueryPersonalRevenue(navKeys, user.role)
+      : canAssistantQueryOrgRevenue(navKeys, user.role);
+    const canExpenses = messageAsksForExpenses(message) && canAssistantQueryExpenses(navKeys, user.role);
+
+    if (messageAsksForRevenue(message) && !canRevenue) {
+      snapshot.financialAccessDenied = true;
+      return;
+    }
+    if (messageAsksForExpenses(message) && !canExpenses && !messageAsksForRevenue(message)) {
+      snapshot.financialAccessDenied = true;
+      return;
+    }
+
+    const period = resolveAssistantPeriod(message);
+    const from = formatLocalYmd(period.start);
+    const to = formatLocalYmd(period.end);
+
+    const summary: AssistantFinancialSummary = {
+      period,
+      scope: personal ? "personal" : "organization",
+      revenueByCurrency: [],
+      revenueNetTotal: 0,
+    };
+
+    if (canRevenue && messageAsksForRevenue(message)) {
+      const clinicianId = personal ? user.userId : undefined;
+      const totals = await this.revenue.totals(tenantId, from, to, undefined, clinicianId, user);
+      summary.revenueByCurrency = totals.byCurrency.map((row) => ({
+        currency: row.currency,
+        grossTotal: row.grossTotal,
+        netTotal: row.netTotal,
+      }));
+      summary.revenueNetTotal = totals.netTotal;
+    }
+
+    if (canExpenses && messageAsksForExpenses(message)) {
+      const expenseRows = await this.prisma.expense.groupBy({
+        by: ["currency"],
+        where: {
+          tenantId,
+          status: { in: [ExpenseStatus.APPROVED, ExpenseStatus.PENDING] },
+          incurredAt: { gte: period.start, lte: period.end },
+        },
+        _sum: { amount: true },
+      });
+      summary.expenseByCurrency = expenseRows
+        .map((r) => ({ currency: r.currency, amount: Number(r._sum.amount ?? 0) }))
+        .filter((r) => r.amount !== 0);
+      summary.expenseTotal = summary.expenseByCurrency.reduce((s, r) => s + r.amount, 0);
+    }
+
+    snapshot.financialSummary = summary;
   }
 
   private mapClinic(c: ClinicDto): AssistantLiveClinic {
@@ -131,7 +221,64 @@ export class AssistantLiveDataService {
     return [header, ...lines].join("\n");
   }
 
+  formatFinancialReply(snapshot: AssistantLiveSnapshot, locale: "en" | "ar"): string {
+    const fin = snapshot.financialSummary;
+    if (!fin) return "";
+    const org = snapshot.organization?.name ?? "Organization";
+    const periodLabel = locale === "ar" ? fin.period.labelAr : fin.period.labelEn;
+    const from = formatLocalYmd(fin.period.start);
+    const to = formatLocalYmd(fin.period.end);
+    const scopeLine =
+      fin.scope === "personal"
+        ? locale === "ar"
+          ? "نطاق الإيراد: إيراداتك السريرية المسندة."
+          : "Revenue scope: your attributed clinical revenue."
+        : locale === "ar"
+          ? "نطاق الإيراد: المؤسسة ضمن صلاحياتك وعياداتك."
+          : "Revenue scope: organization totals within your clinic access.";
+
+    const lines: string[] = [];
+    if (locale === "ar") {
+      lines.push(`${org} — الإيرادات للفترة (${periodLabel}: ${from} → ${to}):`);
+      lines.push(scopeLine);
+    } else {
+      lines.push(`${org} — revenue for ${periodLabel} (${from} → ${to}):`);
+      lines.push(scopeLine);
+    }
+
+    if (fin.revenueByCurrency.length) {
+      for (const row of fin.revenueByCurrency) {
+        lines.push(
+          locale === "ar"
+            ? `• ${row.currency}: صافي ${row.netTotal.toFixed(2)} (إجمالي ${row.grossTotal.toFixed(2)})`
+            : `• ${row.currency}: net ${row.netTotal.toFixed(2)} (gross ${row.grossTotal.toFixed(2)})`,
+        );
+      }
+    } else {
+      lines.push(locale === "ar" ? "• لا توجد إيرادات مسجلة في هذه الفترة." : "• No posted revenue in this period.");
+    }
+
+    if (fin.expenseByCurrency?.length) {
+      lines.push(locale === "ar" ? "المصروفات:" : "Expenses:");
+      for (const row of fin.expenseByCurrency) {
+        lines.push(`• ${row.currency}: ${row.amount.toFixed(2)}`);
+      }
+    }
+
+    return lines.join("\n");
+  }
+
   tryDirectDataReply(snapshot: AssistantLiveSnapshot, message: string, locale: "en" | "ar"): string | null {
+    if (snapshot.financialAccessDenied) {
+      return locale === "ar"
+        ? "لا يمكنني عرض الإيرادات أو المصروفات لأنها خارج تبويباتك الحالية (مثل الإيرادات أو التقارير)."
+        : "I can't show revenue or expenses because your role menu does not include Revenue, Reports, or Dashboard.";
+    }
+
+    if (messageAsksForRevenue(message) && snapshot.financialSummary) {
+      return this.formatFinancialReply(snapshot, locale);
+    }
+
     if (messageAsksForClinicList(message) && snapshot.clinics) {
       return this.formatClinicListReply(snapshot.clinics, locale, snapshot.organization?.name);
     }
@@ -165,6 +312,16 @@ export class AssistantLiveDataService {
       })),
       patientCount: snapshot.patientCount,
       organizationUserCount: snapshot.organizationUserCount,
+      financialSummary: snapshot.financialSummary
+        ? {
+            periodFrom: formatLocalYmd(snapshot.financialSummary.period.start),
+            periodTo: formatLocalYmd(snapshot.financialSummary.period.end),
+            scope: snapshot.financialSummary.scope,
+            revenueByCurrency: snapshot.financialSummary.revenueByCurrency,
+            revenueNetTotal: snapshot.financialSummary.revenueNetTotal,
+            expenseByCurrency: snapshot.financialSummary.expenseByCurrency,
+          }
+        : undefined,
     };
     return JSON.stringify(slim);
   }
