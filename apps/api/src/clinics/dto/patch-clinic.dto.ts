@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
-import { Allow, IsEmail, IsIn, IsOptional, IsString, Matches, MaxLength, MinLength } from "class-validator";
+import { Allow, IsArray, IsEmail, IsIn, IsOptional, IsString, Matches, MaxLength, MinLength } from "class-validator";
 import { BASE_CURRENCIES } from "../../common/base-currencies";
 import { DEFAULT_CLINIC_CLOSING_TIME, DEFAULT_CLINIC_OPENING_TIME } from "../../common/clinic-hours";
 
@@ -106,4 +106,14 @@ export class PatchClinicDto {
   @IsString()
   @Matches(CLINIC_TIME_HHMM)
   closingTime?: string;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description: "Exam/consultation room labels for the front-desk live board",
+    example: ["Room 1", "Room 2", "Room 3"],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  frontDeskRoomLabels?: string[];
 }

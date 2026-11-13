@@ -49,7 +49,7 @@ Staff with **Appointments** nav access can use check-in and the board (reception
 | Waiting-room TV | **Open waiting-room screen** (new tab) → `/front-desk/waiting-room?clinicId=` — large **Now serving** + queue count |
 | API | `GET /api/v1/front-desk/board?clinicId=` |
 
-Configure room labels on the clinic record (`frontDeskRoomLabels` in Prisma).
+Configure room names under **Clinics & branches → clinic detail → Settings → Exam rooms** (group admin, clinic admin, or branch manager). Changes apply immediately to the live board and waiting-room screen for that clinic.
 
 ---
 

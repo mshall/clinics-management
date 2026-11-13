@@ -675,7 +675,18 @@
     "operatingPeriodLabel": "Period {{n}}",
     "operatingCurrent": "Current",
     "operatingEnded": "Ended",
-    "operatingPresent": "Present"
+    "operatingPresent": "Present",
+    "roomsSettings": "Exam rooms",
+    "roomsSettingsHint": "Names shown on the front-desk live board (free vs in use). Add, rename, or remove rooms for this clinic.",
+    "roomsSaved": "Room list updated.",
+    "roomsMin": "Keep at least one room.",
+    "roomsMax": "You can configure up to {{max}} rooms.",
+    "roomsNameRequired": "Room name cannot be empty.",
+    "roomName": "Room name",
+    "roomNamePlaceholder": "e.g. Room 4",
+    "addRoom": "Add room",
+    "editRoom": "Edit room",
+    "deleteRoom": "Delete room"
   },
   "clinicRevenue": {
     "subtitle": "Posted encounter revenue by clinic for the reporting period.",

@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { AppointmentStatus, Prisma, RevenueStatus } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
+import { parseFrontDeskRoomLabels } from "../common/front-desk-room-labels";
 import { PrismaService } from "../prisma/prisma.service";
 import { PatientsService } from "../patients/patients.service";
 
@@ -100,9 +101,7 @@ export class FrontDeskService {
   async clinicBoard(tenantId: string, clinicId: string) {
     const clinic = await this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId } });
     if (!clinic) throw new NotFoundException("Clinic not found");
-    const roomLabels = Array.isArray(clinic.frontDeskRoomLabels)
-      ? (clinic.frontDeskRoomLabels as string[])
-      : ["Room 1", "Room 2", "Room 3"];
+    const roomLabels = parseFrontDeskRoomLabels(clinic.frontDeskRoomLabels);
 
     const dayStart = new Date();
     dayStart.setHours(0, 0, 0, 0);

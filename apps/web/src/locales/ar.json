@@ -676,7 +676,18 @@
     "operatingPeriodLabel": "الفترة {{n}}",
     "operatingCurrent": "الحالية",
     "operatingEnded": "منتهية",
-    "operatingPresent": "حتى الآن"
+    "operatingPresent": "حتى الآن",
+    "roomsSettings": "غرف الفحص",
+    "roomsSettingsHint": "الأسماء المعروضة على لوحة الاستقبال (شاغرة أو قيد الاستخدام). أضف أو أعد تسمية أو احذف الغرف لهذه العيادة.",
+    "roomsSaved": "تم تحديث قائمة الغرف.",
+    "roomsMin": "يجب الإبقاء على غرفة واحدة على الأقل.",
+    "roomsMax": "يمكنك ضبط ما يصل إلى {{max}} غرفة.",
+    "roomsNameRequired": "لا يمكن أن يكون اسم الغرفة فارغاً.",
+    "roomName": "اسم الغرفة",
+    "roomNamePlaceholder": "مثال: الغرفة 4",
+    "addRoom": "إضافة غرفة",
+    "editRoom": "تعديل الغرفة",
+    "deleteRoom": "حذف الغرفة"
   },
   "clinicRevenue": {
     "subtitle": "إيرادات الزيارات المُثبتة حسب العيادة لفترة التقارير.",

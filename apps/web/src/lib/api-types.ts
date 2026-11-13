@@ -366,6 +366,7 @@ export interface ClinicDetailDto {
   disabledAt: string | null;
   createdAt: string;
   operatingPeriods: ClinicOperatingPeriodDto[];
+  frontDeskRoomLabels: string[];
 }
 
 export interface ClinicOperatingPeriodDto {

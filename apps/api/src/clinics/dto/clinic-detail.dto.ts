@@ -104,4 +104,11 @@ export class ClinicDetailDto {
 
   @ApiProperty({ type: [ClinicOperatingPeriodDto] })
   operatingPeriods!: ClinicOperatingPeriodDto[];
+
+  @ApiProperty({
+    type: [String],
+    description: "Front-desk room labels (live board free/busy)",
+    example: ["Room 1", "Room 2", "Room 3"],
+  })
+  frontDeskRoomLabels!: string[];
 }

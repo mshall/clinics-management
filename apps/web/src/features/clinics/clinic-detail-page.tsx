@@ -12,6 +12,7 @@ import { ClinicDeactivateConfirmDialog } from "@/features/clinics/clinic-deactiv
 import { ClinicDoctorsPanel } from "@/features/clinics/clinic-doctors-panel";
 import { ClinicCurrencySettingsPanel } from "@/features/clinics/clinic-currency-settings-panel";
 import { ClinicHoursSettingsPanel } from "@/features/clinics/clinic-hours-settings-panel";
+import { ClinicRoomsSettingsPanel } from "@/features/clinics/clinic-rooms-settings-panel";
 import { ClinicReactivateDialog } from "@/features/clinics/clinic-reactivate-dialog";
 import { useClinicQuery } from "@/lib/api-hooks";
 import { ApiError, apiPost } from "@/lib/http";
@@ -259,6 +260,11 @@ export function ClinicDetailPage() {
             clinicId={c.id}
             defaultCurrency={c.defaultCurrency ?? orgBaseCurrency}
             orgBaseCurrency={orgBaseCurrency}
+            canEdit={canManageClinic}
+          />
+          <ClinicRoomsSettingsPanel
+            clinicId={c.id}
+            roomLabels={c.frontDeskRoomLabels?.length ? c.frontDeskRoomLabels : ["Room 1", "Room 2", "Room 3"]}
             canEdit={canManageClinic}
           />
         </TabsContent>

@@ -22,6 +22,7 @@ import {
   assertValidClinicHours,
   normalizeClinicTime,
 } from "../common/clinic-hours";
+import { normalizeFrontDeskRoomLabels, parseFrontDeskRoomLabels } from "../common/front-desk-room-labels";
 
 export interface ClinicDto {
   id: string;
@@ -554,6 +555,7 @@ export class ClinicsService {
       disabledAt: row.disabledAt?.toISOString() ?? null,
       createdAt: row.createdAt.toISOString(),
       operatingPeriods: row.operatingPeriods.map((p) => this.mapOperatingPeriod(p)),
+      frontDeskRoomLabels: parseFrontDeskRoomLabels(row.frontDeskRoomLabels),
       ...clinicInvoiceSettingsFromRow(row),
       ...clinicPrescriptionSettingsFromRow(row),
     };
@@ -675,7 +677,7 @@ export class ClinicsService {
     });
     if (!existing) throw new NotFoundException("Clinic not found");
 
-    const data: Record<string, string | null> = {};
+    const data: Record<string, string | null | Prisma.InputJsonValue> = {};
     if (dto.parentClinicId !== undefined) {
       if (dto.parentClinicId === null) {
         if (existing._count.branches > 0) {
@@ -731,6 +733,13 @@ export class ClinicsService {
     }
     if (dto.openingTime !== undefined) data.openingTime = nextOpening;
     if (dto.closingTime !== undefined) data.closingTime = nextClosing;
+    if (dto.frontDeskRoomLabels !== undefined) {
+      try {
+        data.frontDeskRoomLabels = normalizeFrontDeskRoomLabels(dto.frontDeskRoomLabels);
+      } catch {
+        throw new BadRequestException("Invalid front-desk room labels");
+      }
+    }
     if (!Object.keys(data).length) throw new BadRequestException("No supported fields to update");
 
     const row = await this.prisma.clinic.update({
@@ -768,6 +777,7 @@ export class ClinicsService {
       disabledAt: row.disabledAt?.toISOString() ?? null,
       createdAt: row.createdAt.toISOString(),
       operatingPeriods: row.operatingPeriods.map((p) => this.mapOperatingPeriod(p)),
+      frontDeskRoomLabels: parseFrontDeskRoomLabels(row.frontDeskRoomLabels),
       ...clinicInvoiceSettingsFromRow(row),
       ...clinicPrescriptionSettingsFromRow(row),
     };
