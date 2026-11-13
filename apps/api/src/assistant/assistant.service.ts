@@ -1,18 +1,13 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
 import { TenantRoleNavTabsService } from "../user-nav-tabs/tenant-role-nav-tabs.service";
-import {
-  defaultNavTabsForRole,
-  effectiveRoleNavTabs,
-  parseStoredNavTabKeys,
-  sanitizeNavTabKeysForRole,
-  sanitizeUserNavTabGrant,
-} from "../user-nav-tabs/nav-tab-keys";
-import { assertAssistantAccess, type AssistantPersona } from "./assistant-access";
+import { assertAssistantAccess, type AssistantRoleSlug } from "./assistant-access";
+import { resolveAssistantNavKeys } from "./assistant-effective-nav";
 import { NAV_GUIDANCE, TOPIC_GUIDANCE } from "./assistant-knowledge";
+import { roleAssistantContent, assistantSystemPersonaLabel } from "./assistant-role-content";
+import { messageAllowedForNav, outOfScopeReply, requiredNavKeysForMessage } from "./assistant-scope";
 import type { AssistantChatResponseDto, AssistantContextDto } from "./dto/assistant-chat.dto";
 
 function pickLocale(locale: string | undefined, message: string): "en" | "ar" {
@@ -29,111 +24,49 @@ export class AssistantService {
   ) {}
 
   private async allowedNavKeys(user: JwtUser): Promise<string[]> {
-    const tenantId = user.tenantId!;
-    const [userGrant, roleGrantRaw] = await Promise.all([
-      this.prisma.userNavTabGrant.findUnique({
-        where: { tenantId_userId: { tenantId, userId: user.userId } },
-      }),
-      this.tenantRoleNav.roleNavTabKeysForTenantUser(tenantId, user.role),
-    ]);
-    const roleBase = effectiveRoleNavTabs(user.role, roleGrantRaw);
-    const parsedUserGrant = userGrant ? parseStoredNavTabKeys(userGrant.tabKeys) : null;
-    const userKeys = parsedUserGrant?.length
-      ? sanitizeUserNavTabGrant(user.role, parsedUserGrant, {
-          allowOrganizationTabs: user.role === UserRole.GROUP_ADMIN,
-          roleBase,
-        })
-      : null;
-    if (userKeys?.length) return userKeys;
-    if (user.role === UserRole.GROUP_ADMIN || user.role === UserRole.GROUP_SUPERVISOR) {
-      return roleBase.length ? roleBase : defaultNavTabsForRole(user.role);
-    }
-    return sanitizeNavTabKeysForRole(user.role, roleBase, roleBase);
-  }
-
-  private suggestedPrompts(persona: AssistantPersona, locale: "en" | "ar"): string[] {
-    if (persona === "physician") {
-      return locale === "ar"
-        ? [
-            "كيف أبدأ زيارة جديدة؟",
-            "أين أجد مواعيدي؟",
-            "شرح الفواتير الضريبية للمريض",
-            "مساعد سريري بالعربية والإنجليزية",
-          ]
-        : [
-            "How do I start a new encounter?",
-            "Where are my appointments?",
-            "Explain tax invoices for patients",
-            "Clinical scribe in Arabic and English",
-          ];
-    }
-    return locale === "ar"
-      ? [
-          "ضبط TRN وضريبة القيمة المضافة للمؤسسة",
-          "إضافة عيادة جديدة",
-          "صلاحيات المستخدمين والتبويبات",
-          "مراجعة أخطاء التكامل",
-        ]
-      : [
-          "Set organization TRN and VAT",
-          "Add a new clinic",
-          "User roles and nav permissions",
-          "Review integration failures",
-        ];
-  }
-
-  private contextCopy(persona: AssistantPersona, locale: "en" | "ar"): { title: string; greeting: string } {
-    if (persona === "physician") {
-      return locale === "ar"
-        ? {
-            title: "مساعد الطبيب",
-            greeting:
-              "مرحباً — أنا مساعدك في كيورلي. أساعدك في المرضى والمواعيد والزيارات والإيرادات ضمن صلاحياتك. اسأل بالعربية أو الإنجليزية.",
-          }
-        : {
-            title: "Physician assistant",
-            greeting:
-              "Hi — I'm your Kiorly copilot. I help with patients, appointments, encounters, and revenue within your permissions. Ask in English or Arabic.",
-          };
-    }
-    return locale === "ar"
-      ? {
-          title: "مساعد مدير المؤسسة",
-          greeting:
-            "مرحباً — أنا مساعد الإدارة. أرشدك عبر العيادات والمستخدمين والإعدادات والحوكمة حسب صلاحياتك. اسأل بالعربية أو الإنجليزية.",
-        }
-      : {
-          title: "Organization admin assistant",
-          greeting:
-            "Hi — I'm your organization admin assistant. I guide you through clinics, users, settings, and governance within your permissions. Ask in English or Arabic.",
-        };
+    return resolveAssistantNavKeys(this.prisma, this.tenantRoleNav, user);
   }
 
   async getContext(user: JwtUser, locale?: string): Promise<AssistantContextDto> {
     const persona = assertAssistantAccess(user);
     const lang = locale === "ar" ? "ar" : "en";
-    const { title, greeting } = this.contextCopy(persona, lang);
+    const allowedNavKeys = await this.allowedNavKeys(user);
+    const { title, greeting, suggestedPrompts } = roleAssistantContent(user.role, lang, allowedNavKeys);
     return {
       persona,
       title,
       greeting,
-      suggestedPrompts: this.suggestedPrompts(persona, lang),
-      allowedNavKeys: await this.allowedNavKeys(user),
+      suggestedPrompts,
+      allowedNavKeys,
     };
   }
 
-  private ruleBasedReply(
-    message: string,
-    locale: "en" | "ar",
-    persona: AssistantPersona,
-    navKeys: string[],
-  ): string {
+  private navKeyAllowed(navKeys: string[], key: string): boolean {
+    return navKeys.includes(key);
+  }
+
+  private ruleBasedReply(message: string, locale: "en" | "ar", navKeys: string[]): string {
+    if (!messageAllowedForNav(message, navKeys)) {
+      return outOfScopeReply(locale, navKeys);
+    }
+
     const m = message.toLowerCase();
     const pick = (key: keyof typeof TOPIC_GUIDANCE) => TOPIC_GUIDANCE[key][locale];
 
-    if (/trn|vat|tax|ضريبة|رقم ضريبي/.test(m)) return pick("trn_vat");
-    if (/invoice|فاتورة|فواتير/.test(m)) return pick("invoice");
-    if (/scribe|transcri|ambient|ملاحظات|تدوين|مساعد سريري|عربي/.test(m)) return pick("ai_scribe");
+    if (/trn|vat|tax|ضريبة|رقم ضريبي/.test(m)) {
+      if (!this.navKeyAllowed(navKeys, "admin")) return outOfScopeReply(locale, navKeys);
+      return pick("trn_vat");
+    }
+    if (/invoice|فاتورة|فواتير/.test(m)) {
+      if (!this.navKeyAllowed(navKeys, "encounters") && !this.navKeyAllowed(navKeys, "operations")) {
+        return outOfScopeReply(locale, navKeys);
+      }
+      return pick("invoice");
+    }
+    if (/scribe|transcri|ambient|ملاحظات|تدوين|مساعد سريري/.test(m)) {
+      if (!this.navKeyAllowed(navKeys, "encounters")) return outOfScopeReply(locale, navKeys);
+      return pick("ai_scribe");
+    }
     if (/language|لغة|english|arabic|عربية/.test(m)) return pick("language");
 
     for (const key of navKeys) {
@@ -144,43 +77,56 @@ export class AssistantService {
       }
     }
 
-    if (/clinic|عياد|branch|فرع/.test(m) && navKeys.includes("admin")) {
-      return NAV_GUIDANCE.admin[locale];
-    }
-    if (/employee|hr|موظف|موارد بشرية/.test(m) && navKeys.includes("hr")) {
-      return NAV_GUIDANCE.hr[locale];
-    }
-    if (/appointment|موعد|حجز/.test(m) && navKeys.includes("appointments")) {
-      return NAV_GUIDANCE.appointments[locale];
-    }
-    if (/encounter|visit|زيارة/.test(m) && navKeys.includes("encounters")) {
-      return NAV_GUIDANCE.encounters[locale];
-    }
-    if (/integrat|webhook|تكامل/.test(m) && navKeys.includes("admin")) {
-      return locale === "ar"
-        ? "راجع الإدارة → الحوكمة → العمليات الفاشلة وتكاملات API."
-        : "Open Admin → Governance → Failing operations and Integration clients.";
+    const keywordHits: { pattern: RegExp; nav: string }[] = [
+      { pattern: /clinic|عياد|branch|فرع/, nav: "clinics" },
+      { pattern: /employee|hr|موظف|موارد بشرية/, nav: "hr" },
+      { pattern: /appointment|موعد|حجز/, nav: "appointments" },
+      { pattern: /encounter|visit|زيارة/, nav: "encounters" },
+      { pattern: /integrat|webhook|تكامل/, nav: "admin" },
+      { pattern: /expense|مصروف/, nav: "expenses" },
+      { pattern: /revenue|إيراد/, nav: "revenue" },
+      { pattern: /report|تقرير/, nav: "reports" },
+      { pattern: /support|تذكرة|دعم/, nav: "customer_support" },
+      { pattern: /platform/, nav: "platform_organizations" },
+    ];
+
+    for (const hit of keywordHits) {
+      if (hit.pattern.test(m)) {
+        if (this.navKeyAllowed(navKeys, hit.nav)) {
+          const g = NAV_GUIDANCE[hit.nav];
+          if (g) return g[locale];
+        }
+        return outOfScopeReply(locale, navKeys);
+      }
     }
 
     const hints = navKeys
       .map((k) => NAV_GUIDANCE[k]?.[locale])
       .filter(Boolean)
       .slice(0, 4);
-    if (persona === "physician") {
-      return locale === "ar"
-        ? `يمكنني المساعدة في: ${hints.join(" ")} أو اسأل عن الزيارات والمواعيد والفواتير.`
-        : `I can help with: ${hints.join(" ")} Or ask about encounters, appointments, and invoices.`;
-    }
     return locale === "ar"
-      ? `يمكنني المساعدة ضمن صلاحياتك في: ${hints.join(" ")} جرّب السؤال عن TRN أو العيادات أو المستخدمين.`
-      : `I can help within your permissions on: ${hints.join(" ")} Try asking about TRN, clinics, or users.`;
+      ? `يمكنني المساعدة فقط ضمن صلاحياتك في: ${hints.join(" ")} اسأل عن أحد هذه المجالات.`
+      : `I can only help within your permissions on: ${hints.join(" ")} Ask about one of these areas.`;
   }
 
-  private async llmReply(
-    system: string,
-    message: string,
-    locale: "en" | "ar",
-  ): Promise<string | null> {
+  private buildSystemPrompt(user: JwtUser, persona: AssistantRoleSlug, navKeys: string[], locale: "en" | "ar"): string {
+    const label = assistantSystemPersonaLabel(persona, locale);
+    const navSummary = navKeys
+      .map((k) => NAV_GUIDANCE[k]?.[locale])
+      .filter(Boolean)
+      .join("\n");
+    return [
+      `You are ${label} for Kiorly clinic software.`,
+      "You must NOT instruct the user to perform actions or open screens outside their allowed navigation areas.",
+      "If the user asks about something outside scope, refuse briefly and list what you can help with.",
+      "Never invent patient data, financial figures, or admin settings.",
+      `Allowed nav keys: ${navKeys.join(", ")}`,
+      "Nav guidance:",
+      navSummary,
+    ].join("\n");
+  }
+
+  private async llmReply(system: string, message: string, locale: "en" | "ar"): Promise<string | null> {
     const apiKey = this.config.get<string>("OPENAI_API_KEY")?.trim();
     if (!apiKey) return null;
     const model = this.config.get<string>("OPENAI_MODEL")?.trim() || "gpt-4o-mini";
@@ -219,21 +165,28 @@ export class AssistantService {
     const persona = assertAssistantAccess(user);
     const locale = pickLocale(localeHint, message);
     const navKeys = await this.allowedNavKeys(user);
-    const navSummary = navKeys
-      .map((k) => NAV_GUIDANCE[k]?.[locale])
-      .filter(Boolean)
-      .join("\n");
-    const system =
-      persona === "physician"
-        ? `You are a bilingual clinical ops assistant for a physician using Kiorly clinic software. Only advise on features the user can access. Never invent data. Nav scope:\n${navSummary}`
-        : `You are a bilingual organization admin assistant for Kiorly clinic management. Only advise on features the user can access. Nav scope:\n${navSummary}`;
 
+    if (!messageAllowedForNav(message, navKeys)) {
+      return {
+        reply: outOfScopeReply(locale, navKeys),
+        persona,
+        suggestedPrompts: roleAssistantContent(user.role, locale, navKeys).suggestedPrompts,
+      };
+    }
+
+    const system = this.buildSystemPrompt(user, persona, navKeys, locale);
     const llm = await this.llmReply(system, message, locale);
-    const reply = llm ?? this.ruleBasedReply(message, locale, persona, navKeys);
+    let reply = llm ?? this.ruleBasedReply(message, locale, navKeys);
+
+    const required = requiredNavKeysForMessage(message);
+    if (required.length && !required.some((k) => navKeys.includes(k))) {
+      reply = outOfScopeReply(locale, navKeys);
+    }
+
     return {
       reply,
       persona,
-      suggestedPrompts: this.suggestedPrompts(persona, locale),
+      suggestedPrompts: roleAssistantContent(user.role, locale, navKeys).suggestedPrompts,
     };
   }
 }

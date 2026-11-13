@@ -52,6 +52,26 @@ export const NAV_GUIDANCE: Record<string, { en: string; ar: string }> = {
     en: "Dashboard: organization overview KPIs.",
     ar: "لوحة المؤسسة: مؤشرات الأداء للمؤسسة.",
   },
+  platform: {
+    en: "Platform home: cross-tenant platform administration entry.",
+    ar: "المنصة: بوابة إدارة المنصة عبر المؤسسات.",
+  },
+  platform_organizations: {
+    en: "Platform organizations: create and manage tenant organizations.",
+    ar: "منظمات المنصة: إنشاء وإدارة مؤسسات المستأجرين.",
+  },
+  platform_users: {
+    en: "Platform users: manage platform-level administrator accounts.",
+    ar: "مستخدمو المنصة: إدارة حسابات مسؤولي المنصة.",
+  },
+  platform_clinics: {
+    en: "Platform clinics: cross-organization clinic visibility for platform ops.",
+    ar: "عيادات المنصة: عرض العيادات عبر المؤسسات لعمليات المنصة.",
+  },
+  profile: {
+    en: "Profile: your account, language, and avatar settings.",
+    ar: "الملف الشخصي: حسابك واللغة والصورة.",
+  },
 };
 
 export const TOPIC_GUIDANCE: Record<string, { en: string; ar: string }> = {

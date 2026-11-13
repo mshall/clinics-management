@@ -1,15 +1,13 @@
 import type { DemoRole } from "@/lib/roles";
 
-/** Roles that see the floating AI assistant (organization admin tier + physicians). */
+/** Every authenticated tenant/platform role gets a permission-scoped assistant. */
 export function isAssistantEnabledForRole(role: string | undefined | null): boolean {
-  if (!role) return false;
-  return role === "group_admin" || role === "group_supervisor" || role === "physician";
+  return Boolean(role?.trim());
 }
 
-export type AssistantPersona = "organization_admin" | "physician";
+export type AssistantRoleSlug = DemoRole;
 
-export function assistantPersonaForRole(role: DemoRole | string): AssistantPersona | null {
-  if (role === "group_admin" || role === "group_supervisor") return "organization_admin";
-  if (role === "physician") return "physician";
-  return null;
+export function assistantPersonaForRole(role: DemoRole | string): DemoRole | null {
+  if (!role?.trim()) return null;
+  return role as DemoRole;
 }

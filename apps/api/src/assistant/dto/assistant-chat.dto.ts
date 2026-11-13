@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { IsIn, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import { ASSISTANT_ROLE_SLUGS } from "../assistant-access";
 
 export class AssistantChatDto {
   @ApiProperty({ description: "User message to the assistant" })
@@ -18,16 +19,16 @@ export class AssistantChatResponseDto {
   @ApiProperty()
   reply!: string;
 
-  @ApiProperty({ enum: ["organization_admin", "physician"] })
-  persona!: "organization_admin" | "physician";
+  @ApiProperty({ enum: ASSISTANT_ROLE_SLUGS })
+  persona!: (typeof ASSISTANT_ROLE_SLUGS)[number];
 
   @ApiProperty({ type: [String] })
   suggestedPrompts!: string[];
 }
 
 export class AssistantContextDto {
-  @ApiProperty({ enum: ["organization_admin", "physician"] })
-  persona!: "organization_admin" | "physician";
+  @ApiProperty({ enum: ASSISTANT_ROLE_SLUGS })
+  persona!: (typeof ASSISTANT_ROLE_SLUGS)[number];
 
   @ApiProperty()
   title!: string;

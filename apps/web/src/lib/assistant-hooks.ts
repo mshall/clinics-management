@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiGet, apiPost } from "@/lib/http";
 
 export type AssistantContext = {
-  persona: "organization_admin" | "physician";
+  persona: string;
   title: string;
   greeting: string;
   suggestedPrompts: string[];
@@ -11,7 +11,7 @@ export type AssistantContext = {
 
 export type AssistantChatResponse = {
   reply: string;
-  persona: "organization_admin" | "physician";
+  persona: string;
   suggestedPrompts: string[];
 };
 
