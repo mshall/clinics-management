@@ -78,6 +78,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Block tracked OpenAI API keys in repo
+        run: bash scripts/check-no-openai-secrets-in-git.sh
+
       - uses: actions/setup-node@v6
         with:
           node-version: "22"

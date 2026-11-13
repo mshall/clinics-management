@@ -46,7 +46,14 @@ After a fresh CDK deploy, run the same script whenever you rotate the key.
 
 In App Runner → Environment variables, **do not** paste the OpenAI key as a plain variable. Use Secrets Manager + the script above (or `aws secretsmanager put-secret-value` on the stack output `OpenAiSecretArn`).
 
-> **Security:** Never commit API keys or paste them in chat. If a key is exposed, **revoke it** in OpenAI and run `configure-apprunner-openai.sh` with a new key in `apps/api/.env`.
+> **Security:** Never commit API keys or paste them in chat. Production keys exist **only** in AWS Secrets Manager (not GitHub, not CDK, not App Runner plain env). CI runs `npm run check:no-openai-secrets-in-git` to block accidental commits.
+
+### Rotate a compromised key
+
+1. In [OpenAI API keys](https://platform.openai.com/api-keys), **revoke** the old key and **create** a new one.
+2. Put the new value **only** in gitignored `apps/api/.env` (`OPENAI_API_KEY=…`).
+3. Run `bash scripts/configure-apprunner-openai.sh` once (uploads to Secrets Manager; App Runner keeps using the secret reference).
+4. Restart local API if you use the assistant in dev.
 
 ## 4. Verify
 

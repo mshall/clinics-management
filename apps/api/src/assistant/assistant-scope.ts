@@ -11,7 +11,10 @@ export function requiredNavKeysForMessage(message: string): string[] {
     keys.add("admin");
     keys.add("clinics");
   }
-  if (/\bhr\b|employee|payroll|leave|attendance|موظف|موارد بشرية|إجازة|حضور/.test(m)) keys.add("hr");
+  if (/\bhr\b|employee|payroll|leave|attendance|موظف|موارد بشرية|إجازة|حضور/.test(m)) {
+    keys.add("hr");
+    if (/how many|number of|count of|headcount|كم|عدد|ما عدد/.test(m)) keys.add("admin");
+  }
   if (/expense|مصروف|مصروفات/.test(m)) keys.add("expenses");
   if (/revenue|إيراد|إيرادات/.test(m) && !/doctor|طبيب|my revenue|إيراداتي/.test(m)) keys.add("revenue");
   if (/doctor revenue|إيراداتي|my revenue/.test(m)) keys.add("doctor_revenue");

@@ -16,7 +16,28 @@ export function messageAsksForPatientCount(message: string): boolean {
 }
 
 export function messageAsksForOrgUsers(message: string): boolean {
-  return /how many user|user count|staff count|organi[sz]ation user|كم مستخدم|عدد المستخدمين/i.test(message);
+  if (messageAsksForEmployeeCount(message)) return false;
+  return /how many user|user count|organi[sz]ation user|login account|كم مستخدم|عدد المستخدمين/i.test(message);
+}
+
+export function messageAsksForEmployeeCount(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    /(how many|number of|count of|total)\s+(active\s+)?(employees?|staff|headcount|workforce)/i.test(m) ||
+    /(employees?|staff)\s+(count|total)|headcount|workforce size/i.test(m) ||
+    /(كم|ما عدد|عدد)\s*(الموظفين|موظف)/u.test(message)
+  );
+}
+
+export function messageAsksForLiveMetric(message: string): boolean {
+  return (
+    messageAsksForClinicList(message) ||
+    messageAsksForPatientCount(message) ||
+    messageAsksForOrgUsers(message) ||
+    messageAsksForEmployeeCount(message) ||
+    messageAsksForRevenue(message) ||
+    messageAsksForExpenses(message)
+  );
 }
 
 export function messageAsksForRevenue(message: string): boolean {

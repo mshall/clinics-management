@@ -71,6 +71,15 @@ revenue_q_body="$(echo "$revenue_q_raw" | sed '$d')"
 echo "$revenue_q_body" | python3 -c "import sys,json; r=json.load(sys.stdin).get('reply',''); assert 'revenue' in r.lower() or 'net' in r.lower() or 'AED' in r or 'EGP' in r, r[:280]" || fail "assistant revenue reply missing totals"
 echo "OK  assistant revenue query"
 
+emp_q_raw="$(curl -sS -w "\n%{http_code}" -X POST "$API_BASE/assistant/chat" \
+  -H "Authorization: Bearer $staff_token" -H "Content-Type: application/json" \
+  -d '{"message":"how many employees do we have in the organization?","locale":"en"}')"
+emp_q_http="$(echo "$emp_q_raw" | tail -1)"
+emp_q_body="$(echo "$emp_q_raw" | sed '$d')"
+[[ "$emp_q_http" == "200" || "$emp_q_http" == "201" ]] || fail "assistant employee count HTTP $emp_q_http"
+echo "$emp_q_body" | python3 -c "import sys,json,re; r=json.load(sys.stdin).get('reply',''); assert re.search(r'Active employees|employee', r, re.I) and re.search(r'\d+', r), r[:280]" || fail "assistant employee count reply missing number"
+echo "OK  assistant employee count"
+
 client_name="smoke-$(date +%s)"
 create_raw="$(curl -sS -w "\n%{http_code}" -X POST "$API_BASE/admin/integration-clients" \
   -H "Authorization: Bearer $staff_token" \

@@ -38,6 +38,7 @@
     "test:unit": "npm run test:unit -w api",
     "pretest:integration-smoke": "bash scripts/ensure-local-dev-db.sh",
     "test:integration-smoke": "bash scripts/integration-api-smoke.sh",
+    "check:no-openai-secrets-in-git": "bash scripts/check-no-openai-secrets-in-git.sh",
     "test:perf": "node scripts/load-test-slo.mjs",
     "infra:install": "npm ci --prefix infra --no-audit --no-fund",
     "infra:synth": "npm run build -w web && npm run infra:install && npm run synth --prefix infra",

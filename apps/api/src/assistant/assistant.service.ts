@@ -7,6 +7,7 @@ import { assertAssistantAccess, type AssistantRoleSlug } from "./assistant-acces
 import { resolveAssistantNavKeys } from "./assistant-effective-nav";
 import { NAV_GUIDANCE, TOPIC_GUIDANCE } from "./assistant-knowledge";
 import { AssistantLiveDataService } from "./assistant-live-data.service";
+import { messageAsksForLiveMetric } from "./assistant-intent";
 import { composeCapabilityOverview, findQaAnswer, isSmallTalkOrMeta } from "./assistant-qa";
 import { roleAssistantContent, assistantSystemPersonaLabel } from "./assistant-role-content";
 import { messageAllowedForNav, outOfScopeReply, requiredNavKeysForMessage } from "./assistant-scope";
@@ -102,6 +103,7 @@ export class AssistantService {
 
     for (const hit of keywordHits) {
       if (hit.pattern.test(m)) {
+        if (messageAsksForLiveMetric(message)) break;
         if (this.navKeyAllowed(navKeys, hit.nav)) {
           const g = NAV_GUIDANCE[hit.nav];
           if (g) return g[locale];

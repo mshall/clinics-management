@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
-import { ExpenseStatus, UserRole } from "@prisma/client";
+import { EmployeeRecordStatus, ExpenseStatus, Prisma, UserRole } from "@prisma/client";
+import { fetchEmployeeManageScopeIds } from "../common/clinic-scope";
 import type { JwtUser } from "../auth/jwt-user";
 import { formatLocalYmd } from "../common/reporting-range";
 import type { ClinicDto } from "../clinics/clinics.service";
@@ -13,6 +14,7 @@ import {
 } from "./assistant-finance-policy";
 import {
   messageAsksForClinicList,
+  messageAsksForEmployeeCount,
   messageAsksForExpenses,
   messageAsksForOrgUsers,
   messageAsksForPatientCount,
@@ -20,6 +22,7 @@ import {
   messageAsksForRevenue,
   messageNeedsClinicContext,
 } from "./assistant-intent";
+import { canAssistantQueryEmployeeCount } from "./assistant-hr-policy";
 import { resolveAssistantPeriod, type AssistantPeriod } from "./assistant-period";
 
 export type AssistantLiveClinic = {
@@ -50,6 +53,8 @@ export type AssistantLiveSnapshot = {
   clinics?: AssistantLiveClinic[];
   patientCount?: number;
   organizationUserCount?: number;
+  activeEmployeeCount?: number;
+  employeeCountScope?: "organization" | "clinic_scope";
   financialSummary?: AssistantFinancialSummary;
   financialAccessDenied?: boolean;
   generatedAt: string;
@@ -111,6 +116,22 @@ export class AssistantLiveDataService {
 
     if (this.canSeeOrgUsers(navKeys) && messageAsksForOrgUsers(message)) {
       snapshot.organizationUserCount = await this.prisma.user.count({ where: { tenantId } });
+    }
+
+    if (canAssistantQueryEmployeeCount(navKeys, user.role) && messageAsksForEmployeeCount(message)) {
+      const scopeIds = await fetchEmployeeManageScopeIds(this.prisma, tenantId, user);
+      const where: Prisma.EmployeeWhereInput = {
+        tenantId,
+        deletedAt: null,
+        recordStatus: EmployeeRecordStatus.ACTIVE,
+      };
+      if (scopeIds !== null) {
+        where.clinicId = scopeIds.length ? { in: scopeIds } : { in: [] };
+        snapshot.employeeCountScope = "clinic_scope";
+      } else {
+        snapshot.employeeCountScope = "organization";
+      }
+      snapshot.activeEmployeeCount = await this.prisma.employee.count({ where });
     }
 
     if (messageAsksForRevenue(message) || messageAsksForExpenses(message)) {
@@ -295,6 +316,22 @@ export class AssistantLiveDataService {
         : `Organization user accounts: ${snapshot.organizationUserCount}.`;
     }
 
+    if (messageAsksForEmployeeCount(message) && snapshot.activeEmployeeCount !== undefined) {
+      const org = snapshot.organization?.name;
+      if (locale === "ar") {
+        const scope =
+          snapshot.employeeCountScope === "clinic_scope"
+            ? "ضمن العيادات المسموح لك بإدارتها"
+            : "في المؤسسة بأكملها";
+        return `${org ? `${org}: ` : ""}عدد الموظفين النشطين ${scope}: ${snapshot.activeEmployeeCount}.`;
+      }
+      const scope =
+        snapshot.employeeCountScope === "clinic_scope"
+          ? "within your assigned clinics"
+          : "across the organization";
+      return `${org ? `${org} — ` : ""}Active employees ${scope}: ${snapshot.activeEmployeeCount}.`;
+    }
+
     return null;
   }
 
@@ -312,6 +349,8 @@ export class AssistantLiveDataService {
       })),
       patientCount: snapshot.patientCount,
       organizationUserCount: snapshot.organizationUserCount,
+      activeEmployeeCount: snapshot.activeEmployeeCount,
+      employeeCountScope: snapshot.employeeCountScope,
       financialSummary: snapshot.financialSummary
         ? {
             periodFrom: formatLocalYmd(snapshot.financialSummary.period.start),
