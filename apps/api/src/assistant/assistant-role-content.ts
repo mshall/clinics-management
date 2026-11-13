@@ -7,8 +7,14 @@ const BY_ROLE: Record<UserRole, { en: LocaleCopy; ar: LocaleCopy }> = {
   [UserRole.PLATFORM_SUPER_ADMIN]: {
     en: {
       title: "Platform assistant",
-      greeting: "Hi — I help with platform organizations, users, and clinics within your platform permissions.",
-      prompts: ["List platform organizations", "Manage platform users", "Review platform clinics"],
+      greeting:
+        "Hi — ask me questions or how-to steps about platform organizations, users, and clinics within your permissions.",
+      prompts: [
+        "What is a platform tenant?",
+        "How do I add an organization?",
+        "Explain platform user vs org user",
+        "Review platform clinics",
+      ],
     },
     ar: {
       title: "مساعد المنصة",
@@ -19,8 +25,14 @@ const BY_ROLE: Record<UserRole, { en: LocaleCopy; ar: LocaleCopy }> = {
   [UserRole.GROUP_ADMIN]: {
     en: {
       title: "Organization admin assistant",
-      greeting: "Hi — I guide you through clinics, users, settings, and governance within your permissions.",
-      prompts: ["Set organization TRN and VAT", "Add a clinic", "User roles and nav permissions", "Review integrations"],
+      greeting:
+        "Hi — ask me anything about clinics, users, settings, or governance in your menu; I answer questions and how-to steps within your permissions.",
+      prompts: [
+        "What is TRN and VAT used for?",
+        "How do I add a clinic?",
+        "Explain role nav permissions",
+        "What are integration webhooks?",
+      ],
     },
     ar: {
       title: "مساعد مدير المؤسسة",
@@ -103,8 +115,14 @@ const BY_ROLE: Record<UserRole, { en: LocaleCopy; ar: LocaleCopy }> = {
   [UserRole.PHYSICIAN]: {
     en: {
       title: "Physician assistant",
-      greeting: "Hi — I help with patients, appointments, encounters, and your revenue within your permissions.",
-      prompts: ["Start a new encounter", "My appointments", "Tax invoices for patients", "Clinical documentation tips"],
+      greeting:
+        "Hi — ask clinical or billing questions (what/why/how) for patients, appointments, encounters, and revenue within your permissions.",
+      prompts: [
+        "What is the encounter workflow?",
+        "Difference between appointment and encounter",
+        "How are tax invoices generated?",
+        "How do I document a visit?",
+      ],
     },
     ar: {
       title: "مساعد الطبيب",

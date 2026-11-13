@@ -51,6 +51,16 @@ assistant_chat_body="$(echo "$assistant_chat_raw" | sed '$d')"
 echo "$assistant_chat_body" | python3 -c "import sys,json; d=json.load(sys.stdin); assert d.get('reply'), 'missing reply'" || fail "assistant chat missing reply"
 echo "OK  assistant chat"
 
+clinic_list_raw="$(curl -sS -w "\n%{http_code}" -X POST "$API_BASE/assistant/chat" \
+  -H "Authorization: Bearer $staff_token" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"What are the list of clinics in this org?","locale":"en"}')"
+clinic_list_http="$(echo "$clinic_list_raw" | tail -1)"
+clinic_list_body="$(echo "$clinic_list_raw" | sed '$d')"
+[[ "$clinic_list_http" == "200" || "$clinic_list_http" == "201" ]] || fail "assistant clinic list HTTP $clinic_list_http"
+echo "$clinic_list_body" | python3 -c "import sys,json; r=json.load(sys.stdin).get('reply',''); assert len(r)>20 and ('clinic' in r.lower() or '1.' in r), r[:240]" || fail "assistant clinic list reply empty"
+echo "OK  assistant clinic list"
+
 client_name="smoke-$(date +%s)"
 create_raw="$(curl -sS -w "\n%{http_code}" -X POST "$API_BASE/admin/integration-clients" \
   -H "Authorization: Bearer $staff_token" \

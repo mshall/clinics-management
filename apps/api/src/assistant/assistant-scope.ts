@@ -44,6 +44,6 @@ export function messageAllowedForNav(message: string, navKeys: string[]): boolea
 export function outOfScopeReply(locale: "en" | "ar", navKeys: string[]): string {
   const areas = navKeys.filter((k) => k !== "profile").join(", ") || "profile";
   return locale === "ar"
-    ? `لا يمكنني المساعدة في هذا الموضوع لأنه خارج صلاحياتك الحالية. يمكنني الإرشاد فقط في: ${areas}.`
-    : `I can't help with that topic because it's outside your current permissions. I can only guide you within: ${areas}.`;
+    ? `لا يمكنني الإجابة عن هذا الموضوع لأنه خارج صلاحياتك الحالية. يمكنني الإجابة عن الأسئلة والإجراءات ضمن: ${areas}.`
+    : `I can't answer that topic because it's outside your current permissions. I can answer questions and how-to steps within: ${areas}.`;
 }

@@ -6,6 +6,8 @@ import { TenantRoleNavTabsService } from "../user-nav-tabs/tenant-role-nav-tabs.
 import { assertAssistantAccess, type AssistantRoleSlug } from "./assistant-access";
 import { resolveAssistantNavKeys } from "./assistant-effective-nav";
 import { NAV_GUIDANCE, TOPIC_GUIDANCE } from "./assistant-knowledge";
+import { AssistantLiveDataService } from "./assistant-live-data.service";
+import { composeCapabilityOverview, findQaAnswer, isSmallTalkOrMeta } from "./assistant-qa";
 import { roleAssistantContent, assistantSystemPersonaLabel } from "./assistant-role-content";
 import { messageAllowedForNav, outOfScopeReply, requiredNavKeysForMessage } from "./assistant-scope";
 import type { AssistantChatResponseDto, AssistantContextDto } from "./dto/assistant-chat.dto";
@@ -20,6 +22,7 @@ export class AssistantService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tenantRoleNav: TenantRoleNavTabsService,
+    private readonly liveData: AssistantLiveDataService,
     private readonly config: ConfigService,
   ) {}
 
@@ -46,9 +49,16 @@ export class AssistantService {
   }
 
   private ruleBasedReply(message: string, locale: "en" | "ar", navKeys: string[]): string {
+    if (isSmallTalkOrMeta(message)) {
+      return composeCapabilityOverview(navKeys, locale);
+    }
+
     if (!messageAllowedForNav(message, navKeys)) {
       return outOfScopeReply(locale, navKeys);
     }
+
+    const qa = findQaAnswer(message, navKeys, locale);
+    if (qa) return qa;
 
     const m = message.toLowerCase();
     const pick = (key: keyof typeof TOPIC_GUIDANCE) => TOPIC_GUIDANCE[key][locale];
@@ -100,16 +110,15 @@ export class AssistantService {
       }
     }
 
-    const hints = navKeys
-      .map((k) => NAV_GUIDANCE[k]?.[locale])
-      .filter(Boolean)
-      .slice(0, 4);
-    return locale === "ar"
-      ? `يمكنني المساعدة فقط ضمن صلاحياتك في: ${hints.join(" ")} اسأل عن أحد هذه المجالات.`
-      : `I can only help within your permissions on: ${hints.join(" ")} Ask about one of these areas.`;
+    return composeCapabilityOverview(navKeys, locale);
   }
 
-  private buildSystemPrompt(user: JwtUser, persona: AssistantRoleSlug, navKeys: string[], locale: "en" | "ar"): string {
+  private buildSystemPrompt(
+    persona: AssistantRoleSlug,
+    navKeys: string[],
+    locale: "en" | "ar",
+    liveJson: string,
+  ): string {
     const label = assistantSystemPersonaLabel(persona, locale);
     const navSummary = navKeys
       .map((k) => NAV_GUIDANCE[k]?.[locale])
@@ -117,10 +126,13 @@ export class AssistantService {
       .join("\n");
     return [
       `You are ${label} for Kiorly clinic software.`,
-      "You must NOT instruct the user to perform actions or open screens outside their allowed navigation areas.",
-      "If the user asks about something outside scope, refuse briefly and list what you can help with.",
-      "Never invent patient data, financial figures, or admin settings.",
+      "Answer conceptual questions and how-to steps using ONLY the live organization snapshot and nav guidance below.",
+      "For lists (clinics, counts), quote the snapshot exactly; never invent clinics, patients, or users.",
+      "You must NOT discuss modules or actions outside allowedNavKeys.",
+      "If the user asks to change data, describe the steps in the UI — you cannot mutate the database yourself.",
       `Allowed nav keys: ${navKeys.join(", ")}`,
+      "Live organization snapshot (JSON):",
+      liveJson,
       "Nav guidance:",
       navSummary,
     ].join("\n");
@@ -139,8 +151,8 @@ export class AssistantService {
         },
         body: JSON.stringify({
           model,
-          temperature: 0.3,
-          max_tokens: 600,
+          temperature: 0.35,
+          max_tokens: 800,
           messages: [
             { role: "system", content: system },
             {
@@ -166,6 +178,14 @@ export class AssistantService {
     const locale = pickLocale(localeHint, message);
     const navKeys = await this.allowedNavKeys(user);
 
+    if (isSmallTalkOrMeta(message)) {
+      return {
+        reply: composeCapabilityOverview(navKeys, locale),
+        persona,
+        suggestedPrompts: roleAssistantContent(user.role, locale, navKeys).suggestedPrompts,
+      };
+    }
+
     if (!messageAllowedForNav(message, navKeys)) {
       return {
         reply: outOfScopeReply(locale, navKeys),
@@ -174,9 +194,24 @@ export class AssistantService {
       };
     }
 
-    const system = this.buildSystemPrompt(user, persona, navKeys, locale);
+    const snapshot = await this.liveData.buildSnapshot(user, navKeys, message);
+    const direct = this.liveData.tryDirectDataReply(snapshot, message, locale);
+    if (direct) {
+      return {
+        reply: direct,
+        persona,
+        suggestedPrompts: roleAssistantContent(user.role, locale, navKeys).suggestedPrompts,
+      };
+    }
+
+    const liveJson = this.liveData.snapshotForPrompt(snapshot);
+    const system = this.buildSystemPrompt(persona, navKeys, locale, liveJson);
     const llm = await this.llmReply(system, message, locale);
-    let reply = llm ?? this.ruleBasedReply(message, locale, navKeys);
+    let reply =
+      llm ??
+      (snapshot.clinics?.length && /clinic|عياد/i.test(message)
+        ? this.liveData.formatClinicListReply(snapshot.clinics, locale, snapshot.organization?.name)
+        : this.ruleBasedReply(message, locale, navKeys));
 
     const required = requiredNavKeysForMessage(message);
     if (required.length && !required.some((k) => navKeys.includes(k))) {

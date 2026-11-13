@@ -1,11 +1,13 @@
 import { Module } from "@nestjs/common";
+import { ClinicsModule } from "../clinics/clinics.module";
 import { UserNavTabsModule } from "../user-nav-tabs/user-nav-tabs.module";
 import { AssistantController } from "./assistant.controller";
+import { AssistantLiveDataService } from "./assistant-live-data.service";
 import { AssistantService } from "./assistant.service";
 
 @Module({
-  imports: [UserNavTabsModule],
+  imports: [UserNavTabsModule, ClinicsModule],
   controllers: [AssistantController],
-  providers: [AssistantService],
+  providers: [AssistantService, AssistantLiveDataService],
 })
 export class AssistantModule {}
