@@ -445,7 +445,7 @@ function handler(event) {
 
     new cdk.CfnOutput(this, "OpenAiSecretArn", {
       value: openAiSecret.secretArn,
-      description: "Secrets Manager ARN for OpenAI apiKey — set with scripts/configure-apprunner-openai.sh",
+      description: "Secrets Manager ARN for OpenAI apiKey - set with scripts/configure-apprunner-openai.sh",
     });
 
     new cdk.CfnOutput(this, "DbSeedFunctionName", {
