@@ -38,6 +38,16 @@ async function parseJson(res: Response): Promise<unknown> {
 }
 
 function messageFromErrorBody(status: number, body: unknown, fallback: string): string {
+  if (import.meta.env.DEV && (status === 500 || status === 502 || status === 503)) {
+    const empty =
+      body == null ||
+      body === "" ||
+      (typeof body === "string" && !body.trim()) ||
+      (typeof body === "object" && !Array.isArray(body) && !("message" in body) && Object.keys(body).length === 0);
+    if (empty) {
+      return "Local API is not reachable. From the repo root run npm run dev and wait for “API listening on http://localhost:3000”.";
+    }
+  }
   if (body && typeof body === "object") {
     const o = body as { message?: unknown; error?: unknown };
     if (Array.isArray(o.message)) {

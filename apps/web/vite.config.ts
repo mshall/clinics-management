@@ -17,6 +17,21 @@ export default defineConfig({
       "/api": {
         target: "http://localhost:3000",
         changeOrigin: true,
+        configure(proxy) {
+          proxy.on("error", (_err, _req, res) => {
+            if (res && !res.headersSent && typeof res.writeHead === "function") {
+              res.writeHead(503, { "Content-Type": "application/json" });
+              res.end(
+                JSON.stringify({
+                  statusCode: 503,
+                  message:
+                    "Local API is not reachable. From the repo root run npm run dev and wait for API listening on port 3000.",
+                  error: "ApiUnavailable",
+                }),
+              );
+            }
+          });
+        },
       },
     },
   },
