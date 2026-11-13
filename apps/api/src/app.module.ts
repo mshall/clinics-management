@@ -22,6 +22,7 @@ import { UserClinicPrivilegeGrantsModule } from "./user-clinic-privilege-grants/
 import { SupportModule } from "./support/support.module";
 import { IntegrationsModule } from "./integrations/integrations.module";
 import { UsersModule } from "./users/users.module";
+import { AssistantModule } from "./assistant/assistant.module";
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { UsersModule } from "./users/users.module";
     UserClinicPrivilegeGrantsModule,
     SupportModule,
     IntegrationsModule,
+    AssistantModule,
   ],
 })
 export class AppModule {}

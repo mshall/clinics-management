@@ -1497,6 +1497,14 @@
     "openTicketFromLog": "Open support ticket",
     "statusUpdated": "Status updated"
   },
+  "assistant": {
+    "title": "Kiorly assistant",
+    "toggle": "Open AI assistant",
+    "send": "Send",
+    "thinking": "Thinking…",
+    "inputPlaceholder": "Ask in English or Arabic…",
+    "errorReply": "Sorry, I could not respond right now. Try again in a moment."
+  },
   "validation": {
     "cannotSubmitTitle": "Cannot submit yet",
     "cannotSubmitDescription": "Fix the items below, then try submitting again.",

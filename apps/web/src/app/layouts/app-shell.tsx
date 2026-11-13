@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useAuthStore } from "@/stores/auth-store";
 import { formatUserRole } from "@/lib/locale-display";
+import { RoleAssistantWidget } from "@/features/assistant/role-assistant-widget";
 
 export function AppShell() {
   const { t } = useTranslation();
@@ -94,6 +95,7 @@ export function AppShell() {
         <main className="mx-auto w-full max-w-[min(96rem,calc(100vw-1rem))] flex-1 p-3 sm:p-4 md:p-6">
           <Outlet />
         </main>
+        <RoleAssistantWidget />
       </div>
     </div>
   );

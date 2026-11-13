@@ -1478,6 +1478,14 @@
     "openTicketFromLog": "فتح تذكرة دعم",
     "statusUpdated": "تم تحديث الحالة"
   },
+  "assistant": {
+    "title": "مساعد كيورلي",
+    "toggle": "فتح المساعد الذكي",
+    "send": "إرسال",
+    "thinking": "جاري التفكير…",
+    "inputPlaceholder": "اسأل بالعربية أو الإنجليزية…",
+    "errorReply": "عذراً، لم أتمكن من الرد الآن. حاول مرة أخرى بعد قليل."
+  },
   "validation": {
     "cannotSubmitTitle": "لا يمكن الإرسال بعد",
     "cannotSubmitDescription": "أصلح العناصر أدناه ثم حاول الإرسال مرة أخرى.",
