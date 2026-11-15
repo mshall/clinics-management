@@ -128,7 +128,7 @@ export class AdminInsightsService {
         role: true,
         deactivatedAt: true,
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ displayName: "asc" }, { email: "asc" }],
       take: MAX_STAFF_ROWS,
     });
 

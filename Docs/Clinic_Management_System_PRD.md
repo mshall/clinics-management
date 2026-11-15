@@ -124,7 +124,7 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 - **Clinic lifecycle** — disable/reactivate clinics and branches; operating period timeline; disabled clinics hidden from operational pickers.
 - Org patients CRUD, bulk patient delete, bulk user archive, data explorer, **SQL export** and **documents ZIP export** (group admin / break-glass).
 - Expanded **audit trail** for patient/encounter views, clinical document list/view/upload/delete/crop (visible in Governance).
-- **Insights & performance** — 360° org overview (volumes, top actions/resources, daily audit activity) and **staff performance** table (activity score, audit/clinical throughput, open support tickets).
+- **Insights & performance** — org volume KPIs (patients, encounters, appointments, expenses, open tickets), **Top {role}** trophy cards with period-relative score coloring, and a **staff performance** table listing all in-scope staff (created/performed clinical metrics; no score/audit/ticket columns in the UI).
 - **Customer support** — ticket queue across product modules, status workflow, timeline events, and **log tracking** with resolution hints; open tickets from audit rows without engineering escalation.
 
 **Experience**

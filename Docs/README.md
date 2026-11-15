@@ -72,7 +72,7 @@ When signed in as **Group admin** (e.g. `admin@drahmedshall.com` or `admin@kiorl
 | Clinics & tenants (settings) | **Admin → Clinics & tenants** | Registration, invoice & prescription branding, **opening/closing times** on create/edit |
 | Organization & settings | **Admin → Organization & settings** | Default visit fee, **organization feature flags** (incl. AI assistant on/off), staff onboarding |
 | Governance & audit | **Admin → Governance** | Audit trail (`from`/`to`/`action`/`resource`/`actorId`; default 90-day window) |
-| Insights & performance | **Admin → Insights & performance** | 360° overview + staff activity scores (configurable date range) |
+| Insights & performance | **Admin → Insights & performance** or **HR → Insights & performance** | Volume KPIs, **Top {role}** trophy cards (period-scored), and a staff table (clinical throughput; name only in Staff column) |
 | Customer support | **Customer support** (`/customer-support`) | Tickets + log tracking with resolution hints |
 
 **Organization users API:** `GET /api/v1/admin/users?page=&pageSize=&q=&role=&archived=` — `q` matches email or display name; `role` is a `UserRole` enum value; `archived=true` returns deactivated or archived users. Lifecycle: `POST .../deactivate`, `POST .../reactivate`, `DELETE ...` (soft archive), `POST .../restore`.

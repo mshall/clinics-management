@@ -742,7 +742,7 @@ PATCH  /admin/feature-flags/:key
 **Insights implementation (`AdminInsightsService`):**
 - Overview counts use parallel `count` / `groupBy` queries; **daily audit activity** uses SQL `date_trunc` aggregation (not row-by-row fetch).
 - Reporting range parsed via `parseInsightsRange` (default 30 days, max 366 days).
-- Staff performance: up to **500** users per request; metrics from grouped audit, encounters, appointments, operations, and open support tickets; `activityScore` for ranking.
+- Staff performance: up to **500** users per request (name order); metrics from grouped audit, encounters, appointments, operations, and open support tickets; `activityScore` powers **Top {role}** cards (not shown as a table column). UI: HR/Admin **Insights & performance** — volume KPIs, role trophy cards, staff table (created/performed columns only).
 
 **Platform super-admin gate:** Dedicated users with role `PLATFORM_SUPER_ADMIN` and `tenantId: null`, and/or callers whose email appears in `PLATFORM_SUPER_ADMIN_EMAILS`. Login and `GET /auth/me` return `platformSuperAdmin: true` when applicable.
 
