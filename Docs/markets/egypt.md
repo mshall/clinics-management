@@ -25,7 +25,7 @@ Every posted payment path queues fiscal: check-in, visit fee, billing payment, t
 | DPO | Named in HR org chart |
 | Consent | `POST /compliance/patients/:id/data-protection-consent` |
 | Breach handling | [COMPLIANCE_CONTROLS.md](../COMPLIANCE_CONTROLS.md) |
-| Data flows | RDS + S3 **Frankfurt**; optional OpenAI assistant |
+| Data flows | RDS + S3 **Frankfurt**; optional OpenAI assistant (`ai_assistant` flags — [FEATURE_FLAGS.md](../FEATURE_FLAGS.md)) |
 
 ## 3. Backup, restore, incident
 

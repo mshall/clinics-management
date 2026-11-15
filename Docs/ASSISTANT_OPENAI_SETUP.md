@@ -6,6 +6,12 @@ Only **chat completions** (and basic tool calls if enabled later) are used — c
 
 The in-app assistant **always** answers from **live database data** for allowed topics (clinics, revenue, patient counts, etc.) using the same rules as the REST API.
 
+## Enable / disable the assistant
+
+The capability is gated by the `ai_assistant` flag at **platform**, **market (country)**, and **organization** layers. All must allow before users see the widget or can call chat. Turn off at any layer to hide the assistant for that scope — see [FEATURE_FLAGS.md](./FEATURE_FLAGS.md).
+
+Configuring `OPENAI_API_KEY` or a market `secretRef` does **not** enable the product UI by itself; flags must be on and the role must be assistant-eligible.
+
 **OpenAI is optional but recommended** for natural phrasing, follow-up questions, and topics not covered by direct data handlers. Without a key, you still get factual answers for structured questions (e.g. clinic lists, monthly revenue).
 
 ## 1. Create an API key

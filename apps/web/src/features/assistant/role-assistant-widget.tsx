@@ -18,7 +18,7 @@ export function RoleAssistantWidget() {
   const { i18n, t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const accessToken = useAuthStore((s) => s.accessToken);
-  const enabled = Boolean(accessToken && user && isAssistantEnabledForRole(user.role));
+  const roleOk = Boolean(accessToken && user && isAssistantEnabledForRole(user.role));
   const locale = i18n.language === "ar" ? "ar" : "en";
   const rtl = locale === "ar";
 
@@ -27,7 +27,7 @@ export function RoleAssistantWidget() {
   const [lines, setLines] = useState<ChatLine[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const contextQ = useAssistantContextQuery(enabled && open, locale);
+  const contextQ = useAssistantContextQuery(roleOk, locale);
   const chatMut = useAssistantChatMutation();
 
   useEffect(() => {
@@ -39,8 +39,6 @@ export function RoleAssistantWidget() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [lines, chatMut.isPending]);
-
-  if (!enabled) return null;
 
   const send = (text: string) => {
     const message = text.trim();
@@ -73,6 +71,9 @@ export function RoleAssistantWidget() {
       },
     );
   };
+
+  if (!roleOk || contextQ.isPending) return null;
+  if (contextQ.data?.assistantEnabled === false) return null;
 
   return (
     <div

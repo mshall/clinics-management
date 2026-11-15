@@ -28,6 +28,7 @@ Every posted payment path queues ETA: **check-in** (cash / InstaPay / Fawry), **
 | Consent | `POST /compliance/patients/:id/data-protection-consent` at intake |
 | Breach handling | See [COMPLIANCE_CONTROLS.md](./COMPLIANCE_CONTROLS.md) incident section |
 | Data flows | Patient PHI in **RDS (Frankfurt eu-central-1)**; assistant optional **OpenAI** (see [ASSISTANT_OPENAI_SETUP.md](./ASSISTANT_OPENAI_SETUP.md)); uploads in **S3** same region |
+| AI assistant | Enable at platform + **EG market Flags** + per-org if needed — [FEATURE_FLAGS.md](./FEATURE_FLAGS.md) |
 
 ## 3. Backup, restore, incident
 

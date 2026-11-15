@@ -1,11 +1,11 @@
 /** Canonical feature flag keys — must match DB seeds and admin UI. */
 export const FEATURE_FLAG_KEYS = [
+  "ai_assistant",
   "eta_receipts",
   "whatsapp_reminders",
   "instapay",
   "fawry",
   "card_payments",
-  "ai_assistant",
 ] as const;
 
 export type FeatureFlagKey = (typeof FEATURE_FLAG_KEYS)[number];

@@ -64,4 +64,9 @@ export class AssistantContextDto {
 
   @ApiProperty({ type: [String], description: "Nav areas the user may access" })
   allowedNavKeys!: string[];
+
+  @ApiProperty({
+    description: "Effective ai_assistant feature flag (platform ∧ market ∧ organization)",
+  })
+  assistantEnabled!: boolean;
 }

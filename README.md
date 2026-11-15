@@ -86,6 +86,7 @@ Typical flows:
 
 - Role-scoped floating chat: live data, how-to playbook with **Navigate** / **Open patient** actions, optional OpenAI for phrasing.
 - Rich markdown rendering in the widget (headings, lists, metric-style revenue lines).
+- Gated by layered flag **`ai_assistant`** (platform · market · organization) — see `Docs/FEATURE_FLAGS.md`.
 - See `Docs/ASSISTANT.md` and `Docs/ASSISTANT_OPENAI_SETUP.md`.
 
 ### Revenue
@@ -108,7 +109,7 @@ Typical flows:
 
 - **Tabs:** clinics & tenants, **organization users**, organization patients, organization & settings, **insights & performance**, governance (group admin).
 - **Organization users:** search by email or display name, **filter by role**, create/edit/delete users, clinic assignment, bulk delete.
-- Current tenant overview, **default visit fee**, audit tail, **feature flags**, clinic creation (parent/branch), clinic directory.
+- Current tenant overview, **default visit fee**, audit tail, **organization feature flags** (overrides on country/platform defaults), clinic creation (parent/branch), clinic directory.
 - **Insights & performance:** audit volumes, clinical/financial counters, top actions/resources, staff leaderboard (configurable date range).
 - **All tenants** list and **data explorer** for platform super admin / break-glass group admin (see [Test_Data_Users.md](Docs/Test_Data_Users.md)).
 

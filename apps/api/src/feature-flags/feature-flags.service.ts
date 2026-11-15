@@ -26,6 +26,13 @@ export class FeatureFlagsService {
     return row?.effective ?? false;
   }
 
+  /** Tenant orgs: platform ∧ market ∧ org. Platform users without tenantId: global master only. */
+  async isEnabledForUser(tenantId: string | null | undefined, key: FeatureFlagKey | string): Promise<boolean> {
+    if (tenantId) return this.isEnabled(tenantId, key);
+    const global = await this.prisma.featureFlag.findUnique({ where: { key } });
+    return global?.enabled ?? true;
+  }
+
   async listForTenant(tenantId: string): Promise<FeatureFlagLayerView[]> {
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },

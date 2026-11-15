@@ -11,6 +11,7 @@ import { apiErrorMessage } from "@/features/platform/platform-shared";
 import { apiGet, apiPatch, apiPost } from "@/lib/http";
 import type { TenantFeatureFlagRow } from "@/features/admin/tenant-feature-flags-panel";
 import { Badge } from "@/components/ui/badge";
+import { featureFlagLabel } from "@/lib/feature-flag-labels";
 
 export type MarketRow = {
   id: string;
@@ -95,7 +96,10 @@ export function PlatformMarketsTab() {
       apiPatch(`/api/v1/admin/platform/markets/${encodeURIComponent(marketId)}/feature-flags/${encodeURIComponent(key)}`, {
         enabled,
       }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["platform", "markets", flagsMarketId, "feature-flags"] }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["platform", "markets", flagsMarketId, "feature-flags"] });
+      void qc.invalidateQueries({ queryKey: ["assistant"] });
+    },
   });
 
   return (
@@ -192,7 +196,13 @@ export function PlatformMarketsTab() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">{t("platform.marketCountryFlags", "Country feature flags")}</CardTitle>
-            <CardDescription>{rows.find((r) => r.id === flagsMarketId)?.nameEn}</CardDescription>
+            <CardDescription>
+              {t(
+                "platform.marketFlagsHint",
+                "Turn features on or off for every organization in {{market}}. AI assistant uses ai_assistant.",
+                { market: rows.find((r) => r.id === flagsMarketId)?.nameEn ?? "" },
+              )}
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2 sm:grid-cols-2">
             {marketFlagsQuery.isPending ? (
@@ -201,12 +211,12 @@ export function PlatformMarketsTab() {
               (marketFlagsQuery.data ?? []).map((f) => (
                 <div key={f.key} className="flex flex-col gap-2 rounded-md border border-border px-3 py-2 text-sm">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs">{f.key}</span>
-                    <Badge variant={f.marketEnabled ? "default" : "secondary"}>
-                      {f.marketEnabled ? "ON" : "OFF"}
+                    <span className="text-sm font-medium">{featureFlagLabel(t, f.key, f.description)}</span>
+                    <Badge variant={(f.marketEnabled ?? f.effective) ? "default" : "secondary"}>
+                      {(f.marketEnabled ?? f.effective) ? t("platform.flagOn", "On") : t("platform.flagOff", "Off")}
                     </Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground">{f.description}</p>
+                  <p className="font-mono text-xs text-muted-foreground">{f.key}</p>
                   <Button
                     type="button"
                     size="sm"

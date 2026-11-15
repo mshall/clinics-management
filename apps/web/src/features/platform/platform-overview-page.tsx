@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiGet, apiPatch } from "@/lib/http";
+import { featureFlagLabel } from "@/lib/feature-flag-labels";
 
 type FeatureFlagRow = {
   id: string;
@@ -23,7 +24,10 @@ export function PlatformOverviewPage() {
   const flagMut = useMutation({
     mutationFn: ({ key, enabled }: { key: string; enabled: boolean }) =>
       apiPatch(`/api/v1/admin/platform/feature-flags/${encodeURIComponent(key)}`, { enabled }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["platform", "feature-flags"] }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["platform", "feature-flags"] });
+      void qc.invalidateQueries({ queryKey: ["assistant"] });
+    },
   });
 
   return (
@@ -40,8 +44,8 @@ export function PlatformOverviewPage() {
             {(flagsQuery.data ?? []).map((f) => (
               <li key={f.key} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2">
                 <div>
-                  <span className="font-medium">{f.key}</span>
-                  {f.description ? <p className="text-xs text-muted-foreground">{f.description}</p> : null}
+                  <span className="font-medium">{featureFlagLabel(t, f.key, f.description ?? f.key)}</span>
+                  <p className="font-mono text-xs text-muted-foreground">{f.key}</p>
                 </div>
                 <Button
                   type="button"

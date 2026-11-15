@@ -88,7 +88,7 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 | **Pre-visit summary** (5 lines) | **Shipped** | `GET /clinic-ai/patients/:id/pre-visit-summary` |
 | **No-show risk** on appointments | **Foundation** | `POST /clinic-ai/appointments/refresh-no-show-risk`; `Appointment.noShowRiskScore` — show in UI next |
 
-Distinct from the **role assistant** (`/assistant/chat`): that remains Q&A; clinic-ai is chart workflow.
+Distinct from the **role assistant** (`/assistant/chat`): that remains Q&A; clinic-ai is chart workflow. The role assistant is gated by layered flag `ai_assistant` — see [FEATURE_FLAGS.md](./FEATURE_FLAGS.md).
 
 ---
 

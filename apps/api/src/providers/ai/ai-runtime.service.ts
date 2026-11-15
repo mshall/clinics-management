@@ -24,7 +24,7 @@ export class AiRuntimeService {
   async runtimeForTenant(tenantId: string | null | undefined): Promise<AiRuntimeConfig | null> {
     if (!tenantId) return null;
 
-    const aiEnabled = await this.featureFlags.isEnabled(tenantId, "ai_assistant");
+    const aiEnabled = await this.featureFlags.isEnabledForUser(tenantId, "ai_assistant");
     if (!aiEnabled) return null;
 
     const marketCtx = await resolveMarketForTenant(this.prisma, tenantId);

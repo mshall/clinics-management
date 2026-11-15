@@ -10,6 +10,8 @@ Use this checklist when platform ops launches a **new country pack** (`Market` r
 | Configure JSON packs | `taxConfig`, `providerConfig`, `paymentMethods`, `featureDefaults` (DB or future admin UI) |
 | Enable fiscal / claims / health connectors | One connector per provider key; credentials via `ProviderCredential.secretRef` only |
 | Go live | `POST /admin/platform/markets/:id/launch` — tenants may only bind to `LIVE` markets |
+| **Country feature flags** | Platform → Market launch → **Flags** — set `ai_assistant`, `eta_receipts`, payments, etc. for every tenant in that market (see [FEATURE_FLAGS.md](./FEATURE_FLAGS.md)) |
+| **AiProvider** (optional) | `providerConfig.ai` — `baseUrl`, `model`, `secretRef`; independent of flag but required for LLM phrasing |
 | Deployment cell | Egypt: **Frankfurt (`frankfurt`, `eu-central-1`)** until in-country consent |
 
 ## B. Legal & compliance (per market)

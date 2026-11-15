@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiPatch } from "@/lib/http";
+import { featureFlagLabel } from "@/lib/feature-flag-labels";
 
 export type TenantFeatureFlagRow = {
   key: string;
@@ -27,7 +28,10 @@ export function TenantFeatureFlagsPanel({
   const toggle = useMutation({
     mutationFn: ({ key, enabled }: { key: string; enabled: boolean }) =>
       apiPatch(`/api/v1/admin/tenant-feature-flags/${encodeURIComponent(key)}`, { enabled }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["admin", "overview"] }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["admin", "overview"] });
+      void qc.invalidateQueries({ queryKey: ["assistant"] });
+    },
   });
 
   return (
@@ -47,11 +51,12 @@ export function TenantFeatureFlagsPanel({
           return (
             <div key={f.key} className="flex flex-col gap-2 rounded-md border border-border px-3 py-2 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-mono text-xs font-medium">{f.key}</span>
+                <span className="text-sm font-medium">{featureFlagLabel(t, f.key, f.description)}</span>
                 <Badge variant={f.effective ? "default" : "secondary"}>
                   {f.effective ? t("platform.flagOn", "On") : t("platform.flagOff", "Off")}
                 </Badge>
               </div>
+              <p className="font-mono text-xs text-muted-foreground">{f.key}</p>
               <p className="text-xs text-muted-foreground">{f.description}</p>
               <p className="text-xs text-muted-foreground">
                 {t("admin.flagLayers", "Platform {{g}} · Market {{m}}", {

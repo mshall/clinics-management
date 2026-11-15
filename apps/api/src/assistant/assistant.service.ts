@@ -1,8 +1,9 @@
-import { Injectable } from "@nestjs/common";
+import { ForbiddenException, Injectable } from "@nestjs/common";
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
 import { TenantRoleNavTabsService } from "../user-nav-tabs/tenant-role-nav-tabs.service";
 import { AiRuntimeService } from "../providers/ai/ai-runtime.service";
+import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
 import { assertAssistantAccess, type AssistantRoleSlug } from "./assistant-access";
 import { resolveAssistantNavKeys } from "./assistant-effective-nav";
 import { NAV_GUIDANCE, TOPIC_GUIDANCE } from "./assistant-knowledge";
@@ -29,7 +30,12 @@ export class AssistantService {
     private readonly tenantRoleNav: TenantRoleNavTabsService,
     private readonly liveData: AssistantLiveDataService,
     private readonly ai: AiRuntimeService,
+    private readonly featureFlags: FeatureFlagsService,
   ) {}
+
+  private async assistantEnabledForUser(user: JwtUser): Promise<boolean> {
+    return this.featureFlags.isEnabledForUser(user.tenantId, "ai_assistant");
+  }
 
   private async allowedNavKeys(user: JwtUser): Promise<string[]> {
     return resolveAssistantNavKeys(this.prisma, this.tenantRoleNav, user);
@@ -37,8 +43,19 @@ export class AssistantService {
 
   async getContext(user: JwtUser, locale?: string): Promise<AssistantContextDto> {
     const persona = assertAssistantAccess(user);
+    const assistantEnabled = await this.assistantEnabledForUser(user);
     const lang = locale === "ar" ? "ar" : "en";
     const allowedNavKeys = await this.allowedNavKeys(user);
+    if (!assistantEnabled) {
+      return {
+        persona,
+        title: "",
+        greeting: "",
+        suggestedPrompts: [],
+        allowedNavKeys,
+        assistantEnabled: false,
+      };
+    }
     const { title, greeting, suggestedPrompts } = roleAssistantContent(user.role, lang, allowedNavKeys);
     return {
       persona,
@@ -46,6 +63,7 @@ export class AssistantService {
       greeting,
       suggestedPrompts,
       allowedNavKeys,
+      assistantEnabled: true,
     };
   }
 
@@ -140,6 +158,9 @@ export class AssistantService {
 
   async chat(user: JwtUser, message: string, localeHint?: string): Promise<AssistantChatResponseDto> {
     const persona = assertAssistantAccess(user);
+    if (!(await this.assistantEnabledForUser(user))) {
+      throw new ForbiddenException("AI assistant is disabled for this organization or country market");
+    }
     const locale = pickLocale(localeHint, message);
     const navKeys = await this.allowedNavKeys(user);
     const tenantId = user.tenantId;

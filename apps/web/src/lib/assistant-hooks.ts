@@ -7,6 +7,7 @@ export type AssistantContext = {
   greeting: string;
   suggestedPrompts: string[];
   allowedNavKeys: string[];
+  assistantEnabled: boolean;
 };
 
 export type AssistantChatAction = {

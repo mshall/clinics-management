@@ -299,7 +299,7 @@ Reporting: monthly/quarterly/annual expense by branch, by category, group consol
 ### 6.6 Admin Dashboard
 
 - Manage **clinics** (parent/branch) **within the signed-in organization** (tenant).
-- Manage users, roles, clinic assignments, optional **nav tab grants**, and feature flags.
+- Manage users, roles, clinic assignments, optional **nav tab grants**, and **organization feature flags** (per-tenant overrides on top of platform and country market defaults — e.g. disable **AI assistant** for one group).
 - View group-level KPIs: patients, encounters, revenue, expenses, headcount (dashboard + reports).
 - **Insights & performance** tab: configurable date range (default 30 days, max 1 year); audit volumes; open support tickets; staff leaderboard with activity score.
 - **Governance & audit** — searchable audit log with optional filters (`from`, `to`, `action`, `resource`, `actorId`); default **90-day** lookback when dates omitted (max 1 year) to keep large tenants responsive.
@@ -320,7 +320,8 @@ A dedicated **Platform Super Administrator** operates **outside any organization
 | **Clinic provisioning** | Add parent clinics or branches under any organization |
 | **User provisioning** | Create any organization role; assign clinics for clinic admin / branch manager |
 | **User directory** | List all users within a selected organization |
-| **Global feature flags** | View and toggle platform-wide feature flags |
+| **Global feature flags** | View and toggle platform-wide feature flags (master switches for all tenants) |
+| **Market launch & country flags** | Create/launch country packs; per-market feature flags (e.g. enable **AI assistant** for Egypt only) |
 
 **Out of scope for the dedicated platform account:** clinical workflows (patients, encounters, prescriptions), org-scoped finance/HR, and the raw data explorer (reserved for legacy break-glass org admins via email allowlist). The platform super admin signs in to the **Platform** tab only (plus Profile).
 
@@ -829,7 +830,7 @@ Establishes the legal and operational base to **sell and host** in a first inter
 | # | Feature | Description |
 |---|---|---|
 | A.3.1 | **Country onboarding wizard** | Platform admin or self-serve flow: pick country → preload locale, tax, ID rules, holidays, consent templates, default diagnosis set. |
-| A.3.2 | **Feature flags per tenant / region** | Enable claims, portal, or integrations per market without code deploys. |
+| A.3.2 | **Feature flags per tenant / region** | *Shipped (phase 1):* layered flags — platform, market, tenant — for assistant, ETA, WhatsApp, InstaPay/Fawry/card. See [FEATURE_FLAGS.md](./FEATURE_FLAGS.md). Claims/portal flags remain roadmap. |
 | A.3.3 | **PostgreSQL RLS (optional hardening)** | Row-level security as defense-in-depth alongside application `tenantId` checks. |
 
 **Exit criteria:** First paying tenant in a new region runs on in-region infrastructure with consent, retention, MFA, and tax-ready invoicing.

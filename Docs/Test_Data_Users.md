@@ -93,7 +93,7 @@ After sign-in you land on `/platform`. Navigation shows **Platform** and **Profi
 3. Optionally check **Also create first HQ clinic**
 4. Select the org → add branches, create clinic-scoped users, adjust settings
 
-**API:** `GET/POST/PATCH /api/v1/admin/platform/*` — overview, tenants, clinics, users, feature flags.
+**API:** `GET/POST/PATCH /api/v1/admin/platform/*` — overview, tenants, clinics, users, **global** feature flags; `GET/PATCH …/markets/:id/feature-flags/:key` for **country** flags. Org admins: `PATCH /api/v1/admin/tenant-feature-flags/:key`. See [FEATURE_FLAGS.md](./FEATURE_FLAGS.md).
 
 ---
 

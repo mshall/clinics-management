@@ -153,7 +153,8 @@ Local development: `docker-compose.yml` provides Postgres 16 and Redis; API + Vi
 | **Persistence** | `FiscalDocument` + `FiscalSubmission` (replaces `EtaReceiptSubmission`). |
 | **Credentials** | `ProviderCredential.secretRef` → AWS Secrets Manager (not env vars in production). |
 | **Platform admin** | `GET/POST /admin/platform/markets`, `POST …/launch`; UI **Market launch** tab. |
-| **AiProvider** | `providers/ai/` — `openai-compatible` chat completions; `baseUrl` + `model` + `secretRef` per market; prompts in `assistant/prompts/v1/`. Feature flag `ai_assistant`. |
+| **Feature flags** | `FeatureFlag` (global), `MarketFeatureFlag`, `TenantFeatureFlag`; effective = global ∧ market ∧ org with explicit org/market overrides. APIs: `GET/PATCH /admin/platform/feature-flags/:key`, `GET/PATCH /admin/platform/markets/:id/feature-flags/:key`, `PATCH /admin/tenant-feature-flags/:key`. See [FEATURE_FLAGS.md](./FEATURE_FLAGS.md). |
+| **AiProvider** | `providers/ai/` — `openai-compatible` chat completions; `baseUrl` + `model` + `secretRef` per market; prompts in `assistant/prompts/v1/`. Gated by layered flag `ai_assistant` (widget, chat API, LLM runtime). |
 | **Roadmap** | `PaymentProvider`, `MessagingProvider`, `ClaimsProvider`, `HealthExchangeProvider`; multi-region cells + login directory. |
 
 See [MARKET_GO_LIVE_TEMPLATE.md](./MARKET_GO_LIVE_TEMPLATE.md) and [markets/egypt.md](./markets/egypt.md).

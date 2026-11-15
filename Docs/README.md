@@ -29,6 +29,7 @@ See **[Documentation_Portal.md](./Documentation_Portal.md)** for module layout, 
 | [**Clinic_Management_System_RFC.md**](./Clinic_Management_System_RFC.md) | Technical RFC — API behaviour, RBAC, data model notes |
 | [**AWS_Cloud_Deployment_Guide.md**](./AWS_Cloud_Deployment_Guide.md) | RDS, App Runner, CloudFront, CI/CD deploy, post-deploy seed |
 | [**ASSISTANT.md**](./ASSISTANT.md) | AI assistant architecture: permissions, playbook, live data, actions |
+| [**FEATURE_FLAGS.md**](./FEATURE_FLAGS.md) | Layered flags (platform · market · org): AI assistant, ETA, payments, WhatsApp |
 | [**ASSISTANT_OPENAI_SETUP.md**](./ASSISTANT_OPENAI_SETUP.md) | OpenAI API key and AWS Secrets Manager for the assistant |
 | [**CLINICAL_WORKFLOW.md**](./CLINICAL_WORKFLOW.md) | Clinic Settings templates (EN/AR defaults + custom), shortcuts, safety, vitals, letters, note lock |
 | [**PATIENT_360_AND_SCHEDULING.md**](./PATIENT_360_AND_SCHEDULING.md) | Patient summary, timeline, family merge, appointment types, series, waitlist, follow-up |
@@ -66,7 +67,7 @@ When signed in as **Group admin** (e.g. `admin@drahmedshall.com` or `admin@kiorl
 | Organization patients | **Admin → Organization patients** | Search, bulk delete |
 | Clinics & branches | **Clinics & branches** (`/clinics`) | Parent/branch directory; **disable / reactivate** with **operating history**; active vs disabled tabs; **working hours** on Settings tab |
 | Clinics & tenants (settings) | **Admin → Clinics & tenants** | Registration, invoice & prescription branding, **opening/closing times** on create/edit |
-| Organization & settings | **Admin → Organization & settings** | Default visit fee, feature flags, staff onboarding |
+| Organization & settings | **Admin → Organization & settings** | Default visit fee, **organization feature flags** (incl. AI assistant on/off), staff onboarding |
 | Governance & audit | **Admin → Governance** | Audit trail (`from`/`to`/`action`/`resource`/`actorId`; default 90-day window) |
 | Insights & performance | **Admin → Insights & performance** | 360° overview + staff activity scores (configurable date range) |
 | Customer support | **Customer support** (`/customer-support`) | Tickets + log tracking with resolution hints |
@@ -85,7 +86,7 @@ When signed in as **Group admin** (e.g. `admin@drahmedshall.com` or `admin@kiorl
 
 **Patient allergies:** patient chart → **Allergies** (paginated table). Set at **Patients → Register**, **Admin → Organization patients**, or **Encounters → New** (multi-select + Other). API: `GET /api/v1/patients/:id/allergies`.
 
-**AI assistant:** floating widget (roles with assistant enabled) — live clinics/headcount/revenue, **per-clinic revenue** when permitted, patient name search with chart buttons, how-to steps with navigate actions. See [ASSISTANT.md](./ASSISTANT.md).
+**AI assistant:** floating widget (roles with assistant enabled) — live clinics/headcount/revenue, **per-clinic revenue** when permitted, patient name search with chart buttons, how-to steps with navigate actions. Requires `ai_assistant` at **platform, market, and org** layers — see [FEATURE_FLAGS.md](./FEATURE_FLAGS.md) and [ASSISTANT.md](./ASSISTANT.md).
 
 **Profile picture:** any logged-in user → **Profile** → camera icon on avatar → crop and upload (`POST /api/v1/auth/me/avatar`).
 

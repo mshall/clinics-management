@@ -29,7 +29,7 @@ npm run docs:preview   # http://localhost:4175
 
 | Section | Source | Description |
 |---------|--------|-------------|
-| **Project docs** | `Docs/*.md` | PRD, RFC, test users, AWS guide, this page |
+| **Project docs** | `Docs/*.md` | PRD, RFC, test users, AWS guide, feature flags, assistant, this page |
 | **Architecture comparison** | `apps/docs/content/architecture-comparison.md` | Kiorly monolith ↔ PiggyMetrics microservices mapping |
 | **PiggyMetrics (synced)** | `apps/docs/content/piggymetrics/README.md` | Upstream README from [`sqshq/PiggyMetrics`](https://github.com/sqshq/PiggyMetrics) `master` |
 

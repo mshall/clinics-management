@@ -55,6 +55,16 @@ All LLM calls go through `AiRuntimeService` → `AiProvider` (`providers/ai/`). 
 
 Supported API surface: **chat completions** and optional **function tools** — not Assistants, built-in file search, or vendor-specific structured-output modes.
 
-Feature flag: `ai_assistant` (platform / market / org layers).
+Feature flag: `ai_assistant` (platform / market / org layers). **All three layers must allow** the flag for the assistant widget and chat API to work.
+
+| Layer | Web UI | API |
+|-------|--------|-----|
+| Platform (global master) | Platform → Overview → Global feature flags | `PATCH /admin/platform/feature-flags/ai_assistant` |
+| Country (market) | Platform → Market launch → Flags on a country | `PATCH /admin/platform/markets/:id/feature-flags/ai_assistant` |
+| Organization | Admin → Organization → Organization feature flags | `PATCH /admin/tenant-feature-flags/ai_assistant` |
+
+When disabled at any layer, `GET /assistant/context` returns `assistantEnabled: false` and `POST /assistant/chat` responds with **403**.
+
+Full flag semantics and keys: [FEATURE_FLAGS.md](./FEATURE_FLAGS.md).
 
 Credentials setup: [ASSISTANT_OPENAI_SETUP.md](./ASSISTANT_OPENAI_SETUP.md) (rename path stays; content describes secret ref wiring).
