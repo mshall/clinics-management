@@ -15,7 +15,11 @@ type Channel = {
   channelKey: string;
   accountNumber: string | null;
   mobileNumber: string | null;
+  referencePattern: string;
+  fiscalPaymentCode: string;
 };
+
+const DEFAULT_REFERENCE_PATTERN = "^[A-Za-z0-9][A-Za-z0-9\\-_.]{5,31}$";
 
 export function TenantPaymentChannelsPanel() {
   const { t } = useTranslation();
@@ -23,6 +27,8 @@ export function TenantPaymentChannelsPanel() {
   const [name, setName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
+  const [referencePattern, setReferencePattern] = useState(DEFAULT_REFERENCE_PATTERN);
+  const [fiscalPaymentCode, setFiscalPaymentCode] = useState<"C" | "V" | "O">("O");
 
   const { data } = useQuery({
     queryKey: ["admin", "payment-channels"],
@@ -35,11 +41,15 @@ export function TenantPaymentChannelsPanel() {
         name: name.trim(),
         accountNumber: accountNumber.trim() || undefined,
         mobileNumber: mobileNumber.trim() || undefined,
+        referencePattern: referencePattern.trim(),
+        fiscalPaymentCode,
       }),
     onSuccess: () => {
       setName("");
       setAccountNumber("");
       setMobileNumber("");
+      setReferencePattern(DEFAULT_REFERENCE_PATTERN);
+      setFiscalPaymentCode("O");
       void qc.invalidateQueries({ queryKey: ["admin", "payment-channels"] });
       void qc.invalidateQueries({ queryKey: ["markets", "current"] });
       toast.success(t("admin.paymentChannelCreated", "Payment channel added"));
@@ -73,6 +83,10 @@ export function TenantPaymentChannelsPanel() {
       );
       return;
     }
+    if (!referencePattern.trim()) {
+      toast.error(t("admin.paymentChannelReferenceRequired", "Enter a reference format (regex)"));
+      return;
+    }
     createMut.mutate();
   };
 
@@ -97,6 +111,7 @@ export function TenantPaymentChannelsPanel() {
                   <th className="py-2 pe-2">{t("admin.paymentChannelKey", "Channel ID")}</th>
                   <th className="py-2 pe-2">{t("admin.paymentChannelAccount", "Account")}</th>
                   <th className="py-2 pe-2">{t("admin.paymentChannelMobile", "Mobile")}</th>
+                  <th className="py-2 pe-2">{t("admin.paymentChannelFiscalCode", "Receipt code")}</th>
                   <th className="py-2 text-end" />
                 </tr>
               </thead>
@@ -107,6 +122,7 @@ export function TenantPaymentChannelsPanel() {
                     <td className="py-2 pe-2 font-mono text-xs">{c.channelKey}</td>
                     <td className="py-2 pe-2 ltr-nums">{c.accountNumber ?? "—"}</td>
                     <td className="py-2 pe-2 ltr-nums">{c.mobileNumber ?? "—"}</td>
+                    <td className="py-2 pe-2 font-mono text-xs">{c.fiscalPaymentCode}</td>
                     <td className="py-2 text-end">
                       <Button
                         type="button"
@@ -142,6 +158,27 @@ export function TenantPaymentChannelsPanel() {
             <div className="space-y-1">
               <Label optional>{t("admin.paymentChannelMobile", "Mobile number")}</Label>
               <Input className="ltr-nums" value={mobileNumber} onChange={(e) => setMobileNumber(e.target.value)} maxLength={24} />
+            </div>
+            <div className="space-y-1 sm:col-span-2">
+              <Label required>{t("admin.paymentChannelReferencePattern", "Transaction reference format (regex)")}</Label>
+              <Input
+                className="font-mono text-xs"
+                value={referencePattern}
+                onChange={(e) => setReferencePattern(e.target.value)}
+                maxLength={200}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label required>{t("admin.paymentChannelFiscalCode", "Receipt code")}</Label>
+              <select
+                className="flex h-9 w-full max-w-xs rounded-md border border-input bg-background px-2 text-sm"
+                value={fiscalPaymentCode}
+                onChange={(e) => setFiscalPaymentCode(e.target.value as "C" | "V" | "O")}
+              >
+                <option value="O">{t("admin.fiscalCodeO", "O — transfer / other")}</option>
+                <option value="C">{t("admin.fiscalCodeC", "C — cash")}</option>
+                <option value="V">{t("admin.fiscalCodeV", "V — card")}</option>
+              </select>
             </div>
           </div>
           <p className="text-xs text-muted-foreground">

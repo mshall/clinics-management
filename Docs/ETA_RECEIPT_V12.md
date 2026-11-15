@@ -6,69 +6,74 @@ Platform support for Egypt **Receipt v1.2**: wire document builder, **content-ha
 
 | Phase | Behavior |
 |--------|----------|
-| **Queue** | `queueFiscalDocument` builds a **draft** in `EtaEgyptFiscalProvider` with `receiptUuid: ""` (no random UUID). Binds `FiscalSubmission.deviceId` from the clinic’s first `ProviderCredential.deviceId` when present. |
-| **Submit** | `FiscalSubmitService.submitOne` runs only for the **head** of the device queue (FIFO). Reads `previousUUID` from `FiscalPosChain` for `(tenant, clinic, provider, deviceId)`, builds Receipt **v1.2**, sets `header.uuid` to **SHA-256** of serialized body (uuid empty), signs, and POSTs with POS headers. On success, updates `FiscalPosChain.lastAcceptedUuid`. |
+| **Queue** | `queueFiscalDocument` builds a **draft** with `receiptUuid: ""`. Resolves **ETA payment method** (`C` / `V` / `O`) from visit collection, billing allocations, market pack, or org **payment channels**. Uses patient name on buyer when available. |
+| **Prepare** (short DB tx) | Lock device, assign `receiptNumber`, compute UUID, write **final** `payloadJson`, set status **`SUBMITTING`**. Does **not** call ETA inside the transaction. |
+| **Submit** (network) | `submitEtaReceipt` uses the stored payload only — **never recomputes** UUID/timestamp on retry. |
+| **Finalize** (short DB tx) | On success: advance device chain (`lastReceiptUuid`, `receiptSequence`), status `SUBMITTED`. On failure: keep `SUBMITTING`, backoff `nextRetryAt`, increment `submitAttempts`. |
+| **Worker** | `FiscalSubmissionWorker` polls each active device FIFO (`PENDING` / `SUBMITTING`). Alerts via `IntegrationFailureLog` after repeated failures. Disable with `FISCAL_SUBMIT_WORKER=false`. |
+
+Manual: `POST /api/v1/compliance/egypt/eta-queue/:id/submit` (same three-step path).
+
+## Payment method codes
+
+| Code | Meaning | Source |
+|------|---------|--------|
+| `C` | Cash | Visit cash, billing cash-only |
+| `V` | Card | Billing with `CARD` allocation |
+| `O` | Transfer / other | InstaPay, Fawry, org payment channels (configurable `fiscalPaymentCode` on `TenantPaymentChannel`) |
+
+## Buyer name & privacy
+
+- Check-in and visit fees pass the patient’s display name when known (not the literal `"Patient"`).
+- Receipts **≥ EGP 150,000** require a real buyer name at submit (operations / high-value care).
+- Sending patient names to ETA is a **data processing** step — document in your privacy notice.
 
 ## Receipt v1.2 body (wire)
 
-Built in `buildEtaWireReceiptDocument` (`apps/api/src/compliance/eta-egypt-wire.ts`):
-
-- `documentTypeVersion` **1.2**, seller (RIN, branch, activity), **buyer** type `P`, **itemData** (EGS, unit `EA`), **taxTotals**, **paymentMethod**, totals, **deviceSerialNumber**
-- `header`: `dateTimeIssued`, `receiptNumber`, `uuid`, `previousUUID`, `referenceUUID` (returns), `currency`, `exchangeRate`
+Built in `buildEtaWireReceiptDocument` (`apps/api/src/compliance/eta-egypt-wire.ts`).
 
 ## UUID (content hash)
 
-1. Set `header.uuid` to `""`.
-2. Serialize with `etaSerializeValue` (uppercase quoted keys; array elements repeat the array name).
-3. `computeEtaReceiptUuid` → 64-character hex SHA-256.
+See `eta-egypt-serialize.ts`. Cross-check in ETA pre-production:
 
-Implemented in `apps/api/src/compliance/eta-egypt-serialize.ts`.
+```bash
+# After ETA toolkit returns UUID for the golden fixture:
+ETA_GOLDEN_UUID_EXPECTED=<64-char-hex> npm run test:unit -w api
+```
+
+Fixture: `eta-sdk-golden-fixture.node.test.ts`.
 
 ## Per-device chain
 
-- **Not** per clinic — keyed by `ProviderCredential.deviceId` (POS serial registered with ETA).
-- State table: `FiscalPosChain` (`lastAcceptedUuid` per device).
-- First receipt on a device: `previousUUID` is `""`.
-- HTTP: `posserial`, `pososversion`, `posmodelframework`, `presharedkey` on token and submit (`eta-egypt.client.ts`); values from Secrets Manager JSON or `ETA_POS_*` env (`eta-secret-resolver.ts`).
+State on **`FiscalDevice`** (`lastReceiptUuid`, `receiptSequence`). `previousUUID` taken at prepare time from the device row; chain advances only on successful finalize.
 
-## API
+## Notifications webhook
 
-| Endpoint | Role |
-|----------|------|
-| `POST /api/v1/compliance/egypt/eta-queue/:id/submit` | Submit one queued receipt (enforces device queue order) |
-| `GET /api/v1/compliance/egypt/eta-queue` | Pending / rejected submissions |
+`POST /api/v1/integrations/fiscal/eta-egypt/notifications/:tenantId` — tenant id from **URL** (portal callback), `Authorization: ApiKey …` compared with `timingSafeEqual`.
 
 ## Configuration
 
-1. Market **EG** with `eta-egypt` fiscal provider and `eta_receipts` flag.
-2. Clinic `providerSettings["eta-egypt"]` (branch, activity, item codes) + TRN.
-3. **`FiscalDevice`** per clinic (virtual **Kiorly POS** or physical serial) with credentials stored only in **Secrets Manager** (`secretRef` on linked `ProviderCredential`). Queue/submit use **`fiscalDeviceId`**, not clinic-wide chain.
+1. Market **EG** + `eta_receipts` flag.
+2. Clinic `providerSettings["eta-egypt"]` + TRN.
+3. **`FiscalDevice`** with Secrets Manager credentials.
 
-See [markets/egypt.md](./markets/egypt.md) — **Receipt devices**.
-
-See [markets/egypt.md](./markets/egypt.md) for onboarding checklist.
+See [markets/egypt.md](./markets/egypt.md).
 
 ## Tests
-
-From repo root:
 
 ```bash
 npm run test:unit -w api
 ```
 
-Coverage includes:
-
-- `eta-receipt-v12.node.test.ts` — v1.2 builder + hash + chain semantics
-- `eta-egypt-wire.node.test.ts` — wire fields
-- `eta-egypt-serialize.node.test.ts` — stable 64-hex UUID
+- `eta-receipt-v12.node.test.ts`, `eta-sdk-golden-fixture.node.test.ts`, `fiscal-payment-method.node.test.ts`
 
 ## Code map
 
 | Component | Path |
 |-----------|------|
-| Queue (no uuid at enqueue) | `apps/api/src/compliance/fiscal-queue.ts` |
-| Submit + chain | `apps/api/src/compliance/fiscal-submit.service.ts` |
-| v1.2 builder | `apps/api/src/compliance/eta-egypt-wire.ts` |
-| Serialization / hash | `apps/api/src/compliance/eta-egypt-serialize.ts` |
-| HTTP submit + POS headers | `apps/api/src/compliance/eta-egypt.client.ts` |
-| Provider payload | `apps/api/src/providers/fiscal/eta-egypt.fiscal-provider.ts` |
+| Queue | `fiscal-queue.ts` |
+| Prepare / submit / finalize | `fiscal-submit.service.ts` |
+| Background worker | `fiscal-submission.worker.ts` |
+| Payment codes | `fiscal-payment-method.ts` |
+| v1.2 builder | `eta-egypt-wire.ts` |
+| Serialization / hash | `eta-egypt-serialize.ts` |

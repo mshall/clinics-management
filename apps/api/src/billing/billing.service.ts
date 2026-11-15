@@ -165,6 +165,7 @@ export class BillingService {
           vatPercent: Number(clinic?.invoiceVatPercent ?? 0),
           description: `Billing payment ${payment.id.slice(0, 8)}…`,
           clinicTaxRin: clinic?.taxRegistrationNumber,
+          billingPaymentMethods: body.allocations.map((a) => a.method),
         });
       }
       return payment;

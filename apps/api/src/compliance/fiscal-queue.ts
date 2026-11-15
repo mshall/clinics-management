@@ -5,7 +5,12 @@ import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
 import type { PrismaService } from "../prisma/prisma.service";
 import { buildFiscalIdempotencyKey, fiscalSourceRefFromQueue } from "./fiscal-idempotency";
 import { resolveEtaClinicSettings } from "../providers/provider-settings";
-import { paymentMethodFromCollection } from "./fiscal-payment-method";
+import { resolveFiscalPaymentMethodCode } from "./fiscal-payment-method";
+import {
+  mapOrganizationPaymentChannel,
+  organizationChannelsToPaymentMethods,
+} from "../markets/tenant-payment-channel-merge";
+import { parseMarketPaymentMethods } from "../markets/market-payment-methods";
 import { resolveFiscalDeviceForQueue } from "../fiscal-devices/fiscal-devices-public";
 
 export type QueueFiscalParams = {
@@ -24,6 +29,7 @@ export type QueueFiscalParams = {
   transferReference?: string | null;
   clinicTaxRin?: string | null;
   buyerName?: string | null;
+  billingPaymentMethods?: import("@prisma/client").PaymentMethod[];
   /** Void / credit receipt for a voided visit-fee revenue row */
   returnForRevenueEntryId?: string;
 };
@@ -77,6 +83,22 @@ export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: 
     referenceReceiptUuid = prior?.providerDocumentUuid?.trim() || undefined;
   }
 
+  const orgRows = await tx.tenantPaymentChannel.findMany({
+    where: { tenantId: params.tenantId },
+  });
+  const orgDtos = orgRows.map(mapOrganizationPaymentChannel);
+  const marketMethods = parseMarketPaymentMethods(marketCtx.paymentMethods);
+  const allMethods = [...marketMethods, ...organizationChannelsToPaymentMethods(orgRows)];
+  const paymentMethod = resolveFiscalPaymentMethodCode(
+    {
+      collectionMode: params.collectionMode,
+      transferChannel: params.transferChannel,
+      billingMethods: params.billingPaymentMethods,
+    },
+    allMethods,
+    orgDtos,
+  );
+
   const built = provider.buildPayload({
     tenantId: params.tenantId,
     clinicId: params.clinicId,
@@ -91,7 +113,7 @@ export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: 
       taxpayerActivityCode: etaClinic?.taxpayerActivityCode,
       defaultItemCode: etaClinic?.defaultItemCode,
       taxRegistrationNumber: params.clinicTaxRin ?? clinic?.taxRegistrationNumber,
-      paymentMethod: paymentMethodFromCollection(params.collectionMode, params.transferChannel),
+      paymentMethod,
       buyerName: params.buyerName,
     },
     idempotencyKey,

@@ -168,6 +168,7 @@ export class FrontDeskService {
           collectionMode: collection.collectionMode,
           transferChannel: collection.transferChannel,
           transferReference: collection.transferReference,
+          buyerName: `${apt.patient.firstNameEn} ${apt.patient.lastNameEn}`.trim() || undefined,
         });
       }
       return {

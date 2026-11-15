@@ -7,6 +7,8 @@ export type OrganizationPaymentChannelDto = {
   channelKey: string;
   accountNumber: string | null;
   mobileNumber: string | null;
+  referencePattern: string;
+  fiscalPaymentCode: string;
 };
 
 export function mapOrganizationPaymentChannel(row: TenantPaymentChannel): OrganizationPaymentChannelDto {
@@ -16,6 +18,8 @@ export function mapOrganizationPaymentChannel(row: TenantPaymentChannel): Organi
     channelKey: row.channelKey,
     accountNumber: row.accountNumber,
     mobileNumber: row.mobileNumber,
+    referencePattern: row.referencePattern,
+    fiscalPaymentCode: row.fiscalPaymentCode,
   };
 }
 
@@ -23,5 +27,7 @@ export function organizationChannelsToPaymentMethods(channels: TenantPaymentChan
   return channels.map((c) => ({
     key: c.channelKey,
     transferChannel: c.channelKey,
+    referencePattern: c.referencePattern,
+    fiscalPaymentCode: c.fiscalPaymentCode,
   }));
 }

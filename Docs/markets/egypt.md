@@ -29,7 +29,11 @@ Every posted payment path queues fiscal: check-in, visit fee, billing payment, t
 | **Physical** | Clinic owns a registered POS | Add device with authority serial; same credentials flow. |
 | **Skip** | Setup later | Device stays `CREDENTIALS_PENDING`; payments queue with `PENDING` submit until device is `ACTIVE`. |
 
-**Callback URL (general notifications):** `POST /api/v1/integrations/fiscal/eta-egypt/notifications` with header `Authorization: ApiKey <pre-shared key>` (`ETA_NOTIFICATION_API_KEY` in AWS). Ping: `POST …/notifications/ping`. Events update device status and audit log.
+**Callback URL (general notifications):** `POST /api/v1/integrations/fiscal/eta-egypt/notifications/{tenantId}` (register the org id in the path on the ETA portal — **not** in the JSON body). Header `Authorization: ApiKey <pre-shared key>` (`ETA_NOTIFICATION_API_KEY` in AWS, compared with `timingSafeEqual`). Ping: `POST …/notifications/ping`.
+
+**Privacy:** Patient names may be sent on e-receipts as buyer details (required above EGP 150,000). Disclose in your patient privacy notice.
+
+**Automatic submit:** `FiscalSubmissionWorker` drains pending receipts per device (set `FISCAL_SUBMIT_WORKER=false` to disable).
 
 **Troubleshooting:** Banner “finish receipt device setup” when no default `ACTIVE` device; submit rejected if queue order broken or production uses `local:`/`env:` secret refs.
 

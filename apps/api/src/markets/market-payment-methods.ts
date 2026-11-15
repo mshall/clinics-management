@@ -7,6 +7,8 @@ export type MarketPaymentMethodDef = {
   referencePattern?: string;
   /** Env var name for optional online verification URL (e.g. INSTAPAY_VERIFY_URL) */
   verifyUrlEnv?: string;
+  /** ETA fiscal payment code: C cash, V card, O other/transfer */
+  fiscalPaymentCode?: string;
 };
 
 export function parseMarketPaymentMethods(raw: unknown): MarketPaymentMethodDef[] {
@@ -23,6 +25,8 @@ export function parseMarketPaymentMethods(raw: unknown): MarketPaymentMethodDef[
       transferChannel: typeof o.transferChannel === "string" ? o.transferChannel.trim().toUpperCase() : undefined,
       referencePattern: typeof o.referencePattern === "string" ? o.referencePattern : undefined,
       verifyUrlEnv: typeof o.verifyUrlEnv === "string" ? o.verifyUrlEnv.trim() : undefined,
+      fiscalPaymentCode:
+        typeof o.fiscalPaymentCode === "string" ? o.fiscalPaymentCode.trim().toUpperCase() : undefined,
     });
   }
   return out;

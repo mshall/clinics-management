@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import type { JwtUser } from "../auth/jwt-user";
 import { assertPaymentChannelContactFields, channelKeyFromPaymentChannelName } from "../common/tenant-payment-channel-key";
 import { PrismaService } from "../prisma/prisma.service";
@@ -17,9 +17,24 @@ export class TenantPaymentChannelsService {
     return { channels: rows.map(mapOrganizationPaymentChannel) };
   }
 
+  private assertReferencePattern(pattern: string): string {
+    const p = pattern.trim();
+    try {
+      RegExp(p);
+    } catch {
+      throw new BadRequestException("referencePattern is not a valid regular expression");
+    }
+    return p;
+  }
+
   async create(user: JwtUser, tenantId: string, dto: CreateTenantPaymentChannelDto) {
     const name = dto.name.trim();
     assertPaymentChannelContactFields(dto.accountNumber, dto.mobileNumber);
+    const referencePattern = this.assertReferencePattern(dto.referencePattern);
+    const fiscalPaymentCode = dto.fiscalPaymentCode.trim().toUpperCase();
+    if (!["C", "V", "O"].includes(fiscalPaymentCode)) {
+      throw new BadRequestException("fiscalPaymentCode must be C, V, or O");
+    }
     const existing = await this.prisma.tenantPaymentChannel.findMany({
       where: { tenantId },
       select: { channelKey: true },
@@ -38,6 +53,8 @@ export class TenantPaymentChannelsService {
         channelKey,
         accountNumber,
         mobileNumber,
+        referencePattern,
+        fiscalPaymentCode,
       },
     });
 

@@ -13,6 +13,8 @@ export type OrganizationPaymentChannel = {
   channelKey: string;
   accountNumber: string | null;
   mobileNumber: string | null;
+  referencePattern: string;
+  fiscalPaymentCode: string;
 };
 
 export type TenantMarketContext = {
