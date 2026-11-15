@@ -1,4 +1,5 @@
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
+import { getLocalFiscalSecret } from "../fiscal-devices/fiscal-device-local-secrets";
 
 const smCache = new Map<string, { value: EtaConnectionConfig; at: number }>();
 const SM_CACHE_MS = 60_000;
@@ -90,15 +91,25 @@ function parseSecretJson(raw: string): EtaConnectionConfig | null {
  */
 export async function resolveEtaConnection(secretRef: string | null | undefined): Promise<EtaConnectionConfig | null> {
   const ref = secretRef?.trim();
+  if (ref?.startsWith("local:")) {
+    const raw = getLocalFiscalSecret(ref);
+    if (raw) return parseSecretJson(raw);
+    return null;
+  }
+
   if (ref?.startsWith("env:")) {
-    const envName = ref.slice(4).trim();
-    if (envName && process.env[envName]?.trim()) {
-      return fromEnv();
+    if (process.env.NODE_ENV === "production" && process.env.KIORLY_DEPLOY_TARGET === "aws") {
+      return null;
     }
     return fromEnv();
   }
 
-  if (!ref) return fromEnv();
+  if (!ref) {
+    if (process.env.NODE_ENV === "production" && process.env.KIORLY_DEPLOY_TARGET === "aws") {
+      return null;
+    }
+    return fromEnv();
+  }
 
   const cached = smCache.get(ref);
   if (cached && Date.now() - cached.at < SM_CACHE_MS) return cached.value;
@@ -107,14 +118,14 @@ export async function resolveEtaConnection(secretRef: string | null | undefined)
     const client = new SecretsManagerClient({});
     const out = await client.send(new GetSecretValueCommand({ SecretId: ref }));
     const raw = out.SecretString?.trim();
-    if (!raw) return fromEnv();
+    if (!raw) return null;
     const parsed = parseSecretJson(raw) ?? null;
     if (parsed) {
       smCache.set(ref, { value: parsed, at: Date.now() });
       return parsed;
     }
-    return fromEnv();
+    return null;
   } catch {
-    return fromEnv();
+    return null;
   }
 }

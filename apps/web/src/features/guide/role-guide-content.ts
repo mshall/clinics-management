@@ -374,8 +374,8 @@ const GROUP_ADMIN: RoleGuide = {
         {
           titleEn: "Clinics & branches",
           titleAr: "العيادات والفروع",
-          bodyEn: "Clinics: hierarchy, hours, tax/TRN, invoice branding, front-desk room labels.",
-          bodyAr: "العيادات: التسلسل الهرمي، الأوقات، الضريبة، العلامة التجارية للفاتورة.",
+          bodyEn: "Clinics: hierarchy, hours, tax/TRN, invoice branding, front-desk room labels. Settings → Receipt devices: virtual Kiorly POS or physical serial, portal registration, credentials (never stored in the app database).",
+          bodyAr: "العيادات: التسلسل الهرمي، الأوقات، الضريبة، العلامة التجارية. الإعدادات ← أجهزة الإيصال: نقطة بيع افتراضية أو جهاز فعلي وتسجيل البوابة.",
           path: "/clinics",
         },
         {

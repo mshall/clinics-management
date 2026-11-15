@@ -27,9 +27,13 @@ Staff UI loads channels from `GET /api/v1/markets/current`.
 
 `Market` rows must define `defaultCurrency`, `defaultTimezone`, `defaultPhoneRegion`, `weekendDays`, `enabledLanguages`, `dataRegion`, and `hostCell` explicitly (no DB-level Egypt defaults). `resolveMarketForTenant` rejects organizations without a complete market pack.
 
+## Fiscal devices (provider-agnostic)
+
+`FiscalDevice` models **virtual** (Kiorly-hosted POS) or **physical** receipt issuers. Markets whose fiscal provider sets `deviceRegistration.required` auto-provision a virtual device on clinic create. Submission chains **`lastReceiptUuid`** per device (future markets e.g. ZATCA EGS can reuse the same model). API: `/api/v1/clinics/:clinicId/fiscal-devices`, `/api/v1/fiscal-devices/:id/credentials` (secrets never returned).
+
 ## ETA wire format
 
-Draft payload is built in `EtaEgyptFiscalProvider` at queue time (**no random uuid**). `FiscalSubmitService` assigns **`previousUUID`** from `FiscalPosChain` per **`ProviderCredential.deviceId`**, computes **`uuid`** with `eta-egypt-serialize.ts`, then submits Receipt **v1.2** via `buildEtaWireReceiptDocument`. Validate against the [ETA SDK](https://sdk.invoicing.eta.gov.eg/) before production ([markets/egypt.md](./markets/egypt.md)).
+Draft payload is built in `EtaEgyptFiscalProvider` at queue time (**no random uuid**). `FiscalSubmitService` locks the target **`FiscalDevice`**, assigns **`previousUUID`** / `receiptNumber`, computes **`uuid`** via `computeDocumentUuid`, then submits Receipt **v1.2**. Validate against the [ETA SDK](https://sdk.invoicing.eta.gov.eg/) before production ([markets/egypt.md](./markets/egypt.md)).
 
 ## Currency
 

@@ -8,6 +8,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { parseMarketPaymentMethods } from "./market-payment-methods";
 import { resolveMarketForTenant } from "./market-resolver";
 import { resolveTenantTransferCollectionContext } from "./market-transfer-context";
+import { getFiscalProvider } from "../providers/fiscal/fiscal-provider.registry";
 
 @ApiTags("markets")
 @ApiBearerAuth("bearer")
@@ -27,6 +28,7 @@ export class TenantMarketController {
     const ctx = await resolveMarketForTenant(this.prisma, user.tenantId);
     const transfer = await resolveTenantTransferCollectionContext(this.prisma, this.featureFlags, user.tenantId);
     const paymentMethods = parseMarketPaymentMethods(ctx.paymentMethods);
+    const fiscalProvider = getFiscalProvider(ctx.fiscalProviderKey);
     return {
       marketId: ctx.market.id,
       marketCode: ctx.market.code,
@@ -34,6 +36,7 @@ export class TenantMarketController {
       timezone: ctx.timezone,
       weekendDays: ctx.weekendDays,
       fiscalProviderKey: ctx.fiscalProviderKey,
+      fiscalDeviceRegistration: fiscalProvider?.deviceRegistration ?? null,
       paymentMethods,
       transferChannels: [...transfer.allowedTransferChannels],
     };

@@ -196,6 +196,26 @@ export class AuditService {
     });
   }
 
+  async recordEvent(entry: {
+    tenantId: string;
+    actorId: string | null;
+    clinicId: string | null;
+    action: string;
+    resource: string;
+    resourceId: string | null;
+    metadata?: Record<string, unknown>;
+  }): Promise<void> {
+    await this.record({
+      tenantId: entry.tenantId,
+      actorId: entry.actorId,
+      clinicId: entry.clinicId,
+      action: entry.action,
+      resource: entry.resource,
+      resourceId: entry.resourceId,
+      metadata: entry.metadata,
+    });
+  }
+
   async recordLogin(user: { id: string; tenantId: string | null }, email: string): Promise<void> {
     if (!user.tenantId) return;
     await this.record({

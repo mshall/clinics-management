@@ -6,6 +6,7 @@ import type { PrismaService } from "../prisma/prisma.service";
 import { buildFiscalIdempotencyKey, fiscalSourceRefFromQueue } from "./fiscal-idempotency";
 import { resolveEtaClinicSettings } from "../providers/provider-settings";
 import { paymentMethodFromCollection } from "./fiscal-payment-method";
+import { resolveFiscalDeviceForQueue } from "../fiscal-devices/fiscal-device-resolve";
 
 export type QueueFiscalParams = {
   tenantId: string;
@@ -29,20 +30,6 @@ export type QueueFiscalParams = {
 
 /** @deprecated use queueFiscalDocument */
 export const queueEtaReceipt = queueFiscalDocument;
-
-async function resolveDefaultPosDeviceId(
-  tx: Prisma.TransactionClient,
-  tenantId: string,
-  clinicId: string,
-  providerKey: string,
-): Promise<string | null> {
-  const cred = await tx.providerCredential.findFirst({
-    where: { tenantId, clinicId, providerKey },
-    orderBy: { createdAt: "asc" },
-    select: { deviceId: true },
-  });
-  return cred?.deviceId?.trim() || null;
-}
 
 export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: QueueFiscalParams): Promise<void> {
   if (params.totalAmount <= 0) return;
@@ -71,7 +58,8 @@ export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: 
   const sourceRef = fiscalSourceRefFromQueue(params);
   const idempotencyKey = buildFiscalIdempotencyKey(providerKey, sourceRef);
   const returnSale = sourceRef.kind === "return";
-  const deviceId = await resolveDefaultPosDeviceId(tx, params.tenantId, params.clinicId, providerKey);
+  const fiscalDevice = await resolveFiscalDeviceForQueue(tx, params.tenantId, params.clinicId, providerKey);
+  if (provider.deviceRegistration?.required && !fiscalDevice) return;
 
   let referenceReceiptUuid: string | undefined;
   if (returnSale && params.returnForRevenueEntryId) {
@@ -150,6 +138,7 @@ export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: 
         transferReference: params.transferReference,
       } as Prisma.InputJsonValue,
       schemaVersion: built.schemaVersion,
+      fiscalDeviceId: fiscalDevice?.id ?? null,
     },
   });
 
@@ -159,8 +148,9 @@ export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: 
       clinicId: params.clinicId,
       patientId: params.patientId,
       fiscalDocumentId: doc.id,
+      fiscalDeviceId: fiscalDevice?.id ?? null,
       providerKey,
-      deviceId,
+      deviceId: fiscalDevice?.serialNumber ?? null,
       status: FiscalSubmissionStatus.PENDING,
       idempotencyKey: built.idempotencyKey,
       signature: built.signature || null,

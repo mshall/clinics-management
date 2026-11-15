@@ -42,7 +42,9 @@ Implemented in `apps/api/src/compliance/eta-egypt-serialize.ts`.
 
 1. Market **EG** with `eta-egypt` fiscal provider and `eta_receipts` flag.
 2. Clinic `providerSettings["eta-egypt"]` (branch, activity, item codes) + TRN.
-3. **`ProviderCredential`** per clinic: `providerKey=eta-egypt`, **`deviceId`** = POS serial, `secretRef` → ETA client + POS headers.
+3. **`FiscalDevice`** per clinic (virtual **Kiorly POS** or physical serial) with credentials stored only in **Secrets Manager** (`secretRef` on linked `ProviderCredential`). Queue/submit use **`fiscalDeviceId`**, not clinic-wide chain.
+
+See [markets/egypt.md](./markets/egypt.md) — **Receipt devices**.
 
 See [markets/egypt.md](./markets/egypt.md) for onboarding checklist.
 

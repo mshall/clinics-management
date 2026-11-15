@@ -17,9 +17,21 @@ Instance of [MARKET_GO_LIVE_TEMPLATE.md](../MARKET_GO_LIVE_TEMPLATE.md) for mark
 
 Fiscal provider key: **`eta-egypt`** (`FiscalDocument` + `FiscalSubmission`). Clinic/org ETA fields live in **`providerSettings["eta-egypt"]`** ([MULTI_MARKET.md](../MULTI_MARKET.md)). Technical reference: [ETA_RECEIPT_V12.md](../ETA_RECEIPT_V12.md).
 
-Idempotency is keyed by **payment / revenue / invoice** source id (not amount or description). **Visit fee amount changes** void the posted revenue row, queue a **return** receipt, then queue a **new sale** on a new revenue row. **UUID / chain:** receipts are **not** random — `header.uuid` is a **SHA-256** over the ETA-serialized Receipt **v1.2** body (empty uuid field) including `previousUUID`. The chain is **per POS device** (`ProviderCredential.deviceId` / `posserial` headers), computed **only at submit** in queue order via `FiscalPosChain`. Wire body includes buyer (type P), tax totals, payment method, item/unit types, `documentTypeVersion` **1.2**, and POS headers on token + submit.
+Idempotency is keyed by **payment / revenue / invoice** source id (not amount or description). **Visit fee amount changes** void the posted revenue row, queue a **return** receipt, then queue a **new sale** on a new revenue row. **UUID / chain:** receipts are **not** random — `header.uuid` is a **SHA-256** over the ETA-serialized Receipt **v1.2** body (empty uuid field) including `previousUUID`. The chain is **per `FiscalDevice`** (serial + `receiptSequence` / `lastReceiptUuid`), computed **only at submit** in device queue order. Wire body includes buyer (type P), tax totals, payment method, item/unit types, `documentTypeVersion` **1.2**, and POS headers on token + submit.
 
 Every posted payment path queues fiscal: check-in, visit fee, billing payment, tax invoice.
+
+### Receipt devices (virtual vs physical POS)
+
+| Mode | When | Steps |
+|------|------|--------|
+| **Virtual (Kiorly POS)** | Clinic has no hardware POS | On clinic create, platform provisions **`FiscalDevice`** kind `VIRTUAL` with serial `KIORLY-EG-…`. Register that serial on the **ETA portal**, link to branch, then **Clinic → Settings → Receipt devices** → enter client ID/secret (stored in Secrets Manager only). |
+| **Physical** | Clinic owns a registered POS | Add device with authority serial; same credentials flow. |
+| **Skip** | Setup later | Device stays `CREDENTIALS_PENDING`; payments queue with `PENDING` submit until device is `ACTIVE`. |
+
+**Callback URL (general notifications):** `POST /api/v1/integrations/fiscal/eta-egypt/notifications` with header `Authorization: ApiKey <pre-shared key>` (`ETA_NOTIFICATION_API_KEY` in AWS). Ping: `POST …/notifications/ping`. Events update device status and audit log.
+
+**Troubleshooting:** Banner “finish receipt device setup” when no default `ACTIVE` device; submit rejected if queue order broken or production uses `local:`/`env:` secret refs.
 
 ## 2. Data protection (Egypt PDPL)
 

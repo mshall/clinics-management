@@ -31,9 +31,19 @@ export type FiscalSubmitResult =
   | { ok: true; providerDocumentUuid: string; mode: "live" | "sandbox" }
   | { ok: false; error: string; mode: "unconfigured" | "live" };
 
+export type FiscalDeviceRegistration = {
+  required: boolean;
+  credentialFields: Array<{ key: string; type: string; labelKey: string }>;
+  registrationGuideKey: string;
+};
+
 export interface FiscalProvider {
   readonly key: FiscalProviderKey;
   readonly settingsSchema: Record<string, unknown>;
+  readonly deviceRegistration?: FiscalDeviceRegistration;
   buildPayload(ctx: FiscalPayloadBuildContext): BuiltFiscalPayload;
+  /** ETA v1.2: SHA-256 content hash of wire document with empty uuid (see eta-egypt-serialize). */
+  computeDocumentUuid?(wireDocument: unknown, previousUuid: string): string;
   submit(payload: unknown, signature: string, secretRef?: string | null): Promise<FiscalSubmitResult>;
+  testAuth?(secretRef: string | null): Promise<{ ok: boolean; error?: string }>;
 }

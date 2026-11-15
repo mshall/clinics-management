@@ -1,6 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/http";
 
+export type FiscalDeviceRegistration = {
+  required: boolean;
+  credentialFields: Array<{ key: string; type: string; labelKey: string }>;
+  registrationGuideKey: string;
+};
+
 export type TenantMarketContext = {
   marketId: string;
   marketCode: string;
@@ -8,6 +14,7 @@ export type TenantMarketContext = {
   timezone: string;
   weekendDays: number[];
   fiscalProviderKey: string;
+  fiscalDeviceRegistration: FiscalDeviceRegistration | null;
   paymentMethods: Array<{ key: string; labelKey?: string; transferChannel?: string }>;
   transferChannels: string[];
 };

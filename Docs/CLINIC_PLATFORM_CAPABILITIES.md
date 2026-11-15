@@ -38,7 +38,8 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 | Daily cash close per cashier/branch | **Foundation** | `POST /billing/cash-close` compares expected vs counted by method |
 | Doctor commission rules & statements | **Foundation** | `CommissionRule` table; statements = reports slice |
 | Insurer billing, co-pay, pre-auth | **Foundation** | `PayerPreAuthorization`, copay % on contract prices |
-| **Egypt: ETA e-receipts** | **Foundation (priority)** | Queued on **every** posted payment path (check-in revenue, encounter visit fee, billing payment, tax invoice); signed payload + `POST /compliance/egypt/eta-queue/:id/submit` calls ETA OAuth when `ETA_*` env is set (sandbox UUID in dev without creds) |
+| **Egypt: ETA e-receipts** | **Shipped (core)** | Per-clinic **`FiscalDevice`** (virtual Kiorly POS or physical serial); payments queue `FiscalDocument`/`FiscalSubmission` on the default ACTIVE device; OAuth from device credentials in Secrets Manager (no raw secrets in DB); Receipt v1.2 SHA-256 UUID chain per device |
+| **Receipt devices (multi-market)** | **Shipped** | `GET/POST /clinics/:id/fiscal-devices`, credentials, test connection; auto-provision virtual device on clinic create when provider `deviceRegistration.required`; clinic settings **Receipt devices** panel + add-clinic tax step |
 | **Egypt: data protection consent** | **Foundation (priority)** | `POST /compliance/patients/:id/data-protection-consent` |
 
 ---

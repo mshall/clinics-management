@@ -237,6 +237,20 @@ enum FiscalSubmissionStatus {
   REJECTED
 }
 
+enum FiscalDeviceKind {
+  VIRTUAL
+  PHYSICAL
+}
+
+enum FiscalDeviceStatus {
+  PENDING_REGISTRATION
+  CREDENTIALS_PENDING
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+  CREDENTIALS_EXPIRED
+}
+
 enum MarketLaunchStatus {
   DRAFT
   LIVE
@@ -414,8 +428,42 @@ model ProviderCredential {
   label       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  fiscalDevice FiscalDevice?
 
   @@index([tenantId, providerKey])
+}
+
+model FiscalDevice {
+  id                String             @id @default(cuid())
+  tenantId          String
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId          String
+  clinic            Clinic             @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  providerKey       String
+  kind              FiscalDeviceKind
+  serialNumber      String
+  label             String?
+  deviceModel       String?
+  osVersion         String?
+  status            FiscalDeviceStatus @default(CREDENTIALS_PENDING)
+  isDefault         Boolean            @default(false)
+  credentialId      String?            @unique
+  credential        ProviderCredential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
+  lastReceiptUuid   String?
+  receiptSequence   Int                @default(0)
+  lastSubmittedAt   DateTime?
+  registeredAt      DateTime?
+  activatedAt       DateTime?
+  deactivatedAt     DateTime?
+  statusReason      String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  fiscalDocuments   FiscalDocument[]
+  fiscalSubmissions FiscalSubmission[]
+
+  @@unique([tenantId, providerKey, serialNumber])
+  @@index([tenantId, clinicId, providerKey])
+  @@index([tenantId, clinicId, providerKey, isDefault])
 }
 
 model FiscalDocument {
@@ -426,6 +474,8 @@ model FiscalDocument {
   clinic          Clinic           @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   patientId       String
   patient         Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  fiscalDeviceId  String?
+  fiscalDevice    FiscalDevice?    @relation(fields: [fiscalDeviceId], references: [id], onDelete: SetNull)
   providerKey     String
   paymentId       String?          @unique
   payment         BillingPayment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
@@ -451,8 +501,11 @@ model FiscalSubmission {
   patient              Patient                @relation(fields: [patientId], references: [id], onDelete: Cascade)
   fiscalDocumentId     String                 @unique
   fiscalDocument       FiscalDocument         @relation(fields: [fiscalDocumentId], references: [id], onDelete: Cascade)
+  fiscalDeviceId       String?
+  fiscalDevice         FiscalDevice?          @relation(fields: [fiscalDeviceId], references: [id], onDelete: SetNull)
   providerKey          String
   deviceId             String?
+  receiptNumber        Int?
   status               FiscalSubmissionStatus @default(PENDING)
   providerDocumentUuid String?
   payloadJson          Json?
@@ -545,6 +598,7 @@ model Tenant {
   billingPayments                BillingPayment[]
   fiscalDocuments                FiscalDocument[]
   fiscalSubmissions              FiscalSubmission[]
+  fiscalDevices                  FiscalDevice[]
   providerCredentials            ProviderCredential[]
   tenantFeatureFlags             TenantFeatureFlag[]
   createdAt              DateTime                @default(now())
@@ -700,6 +754,7 @@ model Clinic {
   cashierShiftCloses CashierShiftClose[]
   fiscalDocuments  FiscalDocument[]
   fiscalSubmissions FiscalSubmission[]
+  fiscalDevices    FiscalDevice[]
   providerCredentials ProviderCredential[]
   timezone         String?
   weekendDays      Json?

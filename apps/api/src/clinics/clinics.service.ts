@@ -35,6 +35,14 @@ function bustClinicListCache(tenantId: string): void {
   clinicListCache.deletePrefix(`clinics:${tenantId}:`);
 }
 
+export interface ClinicCreateFiscalDeviceSummary {
+  id: string;
+  serialNumber: string;
+  kind: string;
+  status: string;
+  isDefault: boolean;
+}
+
 export interface ClinicDto {
   id: string;
   parentClinicId: string | null;
@@ -51,6 +59,7 @@ export interface ClinicDto {
   recordStatus: ClinicRecordStatus;
   disabledAt: string | null;
   createdAt: string;
+  fiscalDevice?: ClinicCreateFiscalDeviceSummary;
 }
 
 @Injectable()
@@ -691,40 +700,57 @@ export class ClinicsService {
     const openedAt = new Date();
     openedAt.setHours(0, 0, 0, 0);
 
-    const row = await this.prisma.clinic.create({
-      data: {
-        tenantId,
-        parentClinicId,
-        nameEn: dto.nameEn.trim(),
-        nameAr: dto.nameAr.trim(),
-        country,
-        city: dto.city.trim(),
-        addressEn,
-        addressAr,
-        locationUrl,
-        phone,
-        email,
-        licenseNumber,
-        logoUrl,
-        defaultCurrency,
-        clinicalSpecialty: dto.clinicalSpecialty ?? undefined,
-        taxRegistrationNumber: tenant?.defaultTaxRegistrationNumber ?? "N/A",
-        invoiceVatPercent: tenant?.defaultInvoiceVatPercent ?? 5,
-        openingTime,
-        closingTime,
-        timezone: tenant?.market?.defaultTimezone ?? undefined,
-        weekendDays: tenant?.market?.weekendDays
-          ? (tenant.market.weekendDays as Prisma.InputJsonValue)
-          : undefined,
-        operatingPeriods: {
-          create: { startDate: openedAt },
+    const { clinic: row, fiscalDevice } = await this.prisma.$transaction(async (tx) => {
+      const clinic = await tx.clinic.create({
+        data: {
+          tenantId,
+          parentClinicId,
+          nameEn: dto.nameEn.trim(),
+          nameAr: dto.nameAr.trim(),
+          country,
+          city: dto.city.trim(),
+          addressEn,
+          addressAr,
+          locationUrl,
+          phone,
+          email,
+          licenseNumber,
+          logoUrl,
+          defaultCurrency,
+          clinicalSpecialty: dto.clinicalSpecialty ?? undefined,
+          taxRegistrationNumber: tenant?.defaultTaxRegistrationNumber ?? "N/A",
+          invoiceVatPercent: tenant?.defaultInvoiceVatPercent ?? 5,
+          openingTime,
+          closingTime,
+          timezone: tenant?.market?.defaultTimezone ?? undefined,
+          weekendDays: tenant?.market?.weekendDays
+            ? (tenant.market.weekendDays as Prisma.InputJsonValue)
+            : undefined,
+          operatingPeriods: {
+            create: { startDate: openedAt },
+          },
         },
-      },
-      include: { parent: { select: { nameEn: true } }, _count: { select: { branches: true } } },
+        include: { parent: { select: { nameEn: true } }, _count: { select: { branches: true } } },
+      });
+      const { provisionDefaultVirtualFiscalDevice } = await import("../fiscal-devices/fiscal-device-provision");
+      const fiscalDevice = await provisionDefaultVirtualFiscalDevice(tx, tenantId, clinic.id);
+      return { clinic, fiscalDevice };
     });
 
     bustClinicListCache(tenantId);
-    return this.mapClinicRow(row);
+    const mapped = this.mapClinicRow(row);
+    return fiscalDevice
+      ? {
+          ...mapped,
+          fiscalDevice: {
+            id: fiscalDevice.id,
+            serialNumber: fiscalDevice.serialNumber,
+            kind: fiscalDevice.kind,
+            status: fiscalDevice.status,
+            isDefault: fiscalDevice.isDefault,
+          },
+        }
+      : mapped;
   }
 
   async update(tenantId: string, id: string, dto: PatchClinicDto, user?: JwtUser) {

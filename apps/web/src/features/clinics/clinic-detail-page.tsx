@@ -12,6 +12,7 @@ import { ClinicDeactivateConfirmDialog } from "@/features/clinics/clinic-deactiv
 import { ClinicDoctorsPanel } from "@/features/clinics/clinic-doctors-panel";
 import { ClinicContactSettingsPanel } from "@/features/clinics/clinic-contact-settings-panel";
 import { ClinicRegulatorySettingsPanel } from "@/features/clinics/clinic-regulatory-settings-panel";
+import { ClinicFiscalDevicesPanel } from "@/features/clinics/clinic-fiscal-devices-panel";
 import { ClinicCurrencySettingsPanel } from "@/features/clinics/clinic-currency-settings-panel";
 import { ClinicHoursSettingsPanel } from "@/features/clinics/clinic-hours-settings-panel";
 import { ClinicRoomsSettingsPanel } from "@/features/clinics/clinic-rooms-settings-panel";
@@ -270,6 +271,7 @@ export function ClinicDetailPage() {
 
         <TabsContent value="settings" className="space-y-4">
           <ClinicRegulatorySettingsPanel clinicId={c.id} detail={c} canEdit={canManageClinic} />
+          {canManageClinic ? <ClinicFiscalDevicesPanel clinicId={c.id} /> : null}
           <ClinicContactSettingsPanel
             clinicId={c.id}
             phone={c.phone}

@@ -9,8 +9,19 @@ import type { BuiltFiscalPayload, FiscalPayloadBuildContext, FiscalProvider, Fis
 
 export const ETA_EGYPT_PROVIDER_KEY = "eta-egypt";
 
+import { computeEtaReceiptUuid } from "../../compliance/eta-egypt-serialize";
+
 export class EtaEgyptFiscalProvider implements FiscalProvider {
   readonly key = ETA_EGYPT_PROVIDER_KEY;
+
+  readonly deviceRegistration = {
+    required: true,
+    credentialFields: [
+      { key: "clientId", type: "string", labelKey: "fiscalDevices.fieldClientId" },
+      { key: "clientSecret", type: "secret", labelKey: "fiscalDevices.fieldClientSecret" },
+    ],
+    registrationGuideKey: "fiscalDevices.registrationGuide",
+  };
 
   readonly settingsSchema = {
     fields: [
@@ -68,6 +79,13 @@ export class EtaEgyptFiscalProvider implements FiscalProvider {
       signature,
       idempotencyKey: ctx.idempotencyKey,
     };
+  }
+
+  computeDocumentUuid(wireDocument: unknown, _previousUuid: string): string {
+    const doc = wireDocument as Record<string, unknown>;
+    const header =
+      doc.header && typeof doc.header === "object" ? { ...(doc.header as Record<string, unknown>), uuid: "" } : { uuid: "" };
+    return computeEtaReceiptUuid({ ...doc, header });
   }
 
   async submit(payload: unknown, signature: string, secretRef?: string | null): Promise<FiscalSubmitResult> {
