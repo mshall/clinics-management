@@ -1,14 +1,16 @@
 /**
- * App Runner boot: bind PORT immediately (before secret/migrate), then Nest on PORT.
+ * App Runner boot: bind PORT immediately (before secret/migrate), then Nest on an internal port
+ * with the public listener proxying once Nest is up — avoids a dead window on :3000 during handoff.
  */
 import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
 import { spawn, spawnSync } from "node:child_process";
-import { createServer } from "node:http";
+import { createServer, request as httpRequest } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT ?? "3000");
+const nestInternalPort = Number(process.env.NEST_INTERNAL_PORT ?? "3001");
 
 process.stderr.write(`[boot] entrypoint pid=${process.pid}\n`);
 
@@ -49,32 +51,77 @@ function respondLive(res, req) {
   res.end(JSON.stringify({ status: "ok" }));
 }
 
+/** @type {boolean} */
+let nestReady = false;
+
+function proxyToNest(req, res) {
+  const proxyReq = httpRequest(
+    {
+      host: "127.0.0.1",
+      port: nestInternalPort,
+      method: req.method,
+      path: req.url,
+      headers: { ...req.headers, host: `127.0.0.1:${nestInternalPort}` },
+    },
+    (proxyRes) => {
+      res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
+      proxyRes.pipe(res);
+    },
+  );
+  proxyReq.on("error", (err) => {
+    console.error("[boot] proxy error:", err?.message ?? err);
+    if (!res.headersSent) {
+      res.statusCode = 502;
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.end(JSON.stringify({ status: "bad_gateway", message: "Nest not reachable" }));
+    }
+  });
+  req.pipe(proxyReq);
+}
+
 function createBootHealthServer() {
   return createServer((req, res) => {
     if (isLiveProbe(req)) {
       respondLive(res, req);
       return;
     }
-    res.statusCode = 503;
-    res.setHeader("Content-Type", "application/json; charset=utf-8");
-    res.end(JSON.stringify({ status: "starting" }));
+    if (!nestReady) {
+      res.statusCode = 503;
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.end(JSON.stringify({ status: "starting" }));
+      return;
+    }
+    proxyToNest(req, res);
   });
 }
 
 async function listenHealthServer(server) {
   await new Promise((resolve, reject) => {
     server.listen(port, "0.0.0.0", () => {
-      process.stderr.write(`[boot] health listener on ${port}\n`);
+      process.stderr.write(`[boot] edge listener on ${port} (Nest internal ${nestInternalPort})\n`);
       resolve();
     });
     server.on("error", reject);
   });
 }
 
-async function closeHealthServer(server) {
-  await new Promise((resolve) => {
-    server.close(() => resolve());
-  });
+async function waitForNestLive(maxWaitMs = 120_000) {
+  const path = "/api/v1/health/live";
+  const deadline = Date.now() + maxWaitMs;
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(`http://127.0.0.1:${nestInternalPort}${path}`, { method: "GET" });
+      if (res.ok) {
+        console.error("[boot] Nest live on internal port", nestInternalPort);
+        return true;
+      }
+    } catch {
+      /* retry */
+    }
+    await sleep(400);
+  }
+  console.error("[boot] timed out waiting for Nest on internal port", nestInternalPort);
+  return false;
 }
 
 const bootHealthServer = createBootHealthServer();
@@ -134,7 +181,7 @@ if (process.env.PRISMA_MIGRATE_ON_BOOT === "true") {
       console.error("[boot] prisma migrate deploy completed OK");
     }
   } finally {
-    /* health listener stays up through migrate */
+    /* edge listener stays up through migrate */
   }
   if (migrateExit !== 0) {
     process.exit(migrateExit);
@@ -163,13 +210,22 @@ if (smEpForChild) process.env.AWS_ENDPOINT_URL_SECRETS_MANAGER = smEpForChild;
 if (kmsEp) process.env.AWS_ENDPOINT_URL_KMS = kmsEp;
 if (stsEp) process.env.AWS_ENDPOINT_URL_STS = stsEp;
 
-await closeHealthServer(bootHealthServer);
-console.error("[boot] boot health listener closed — starting Nest");
-
 const mainJs = path.join(__dirname, "dist", "main.js");
-console.error("[boot] spawning Nest", mainJs, "PORT=", port);
-const child = spawn(process.execPath, [mainJs], { stdio: "inherit", env: process.env });
+const nestEnv = { ...process.env, PORT: String(nestInternalPort), LISTEN_HOST: "127.0.0.1" };
+console.error("[boot] spawning Nest", mainJs, "internal PORT=", nestInternalPort);
+const child = spawn(process.execPath, [mainJs], { stdio: "inherit", env: nestEnv });
+
+const nestUp = await waitForNestLive();
+if (!nestUp) {
+  console.error("[boot] Nest did not become live — exiting");
+  child.kill("SIGTERM");
+  process.exit(1);
+}
+nestReady = true;
+console.error("[boot] proxying public :", port, "to Nest");
+
 child.on("exit", (code, signal) => {
   console.error("[boot] Nest exited code=", code, "signal=", signal);
+  nestReady = false;
   process.exit(code ?? (signal ? 1 : 0));
 });

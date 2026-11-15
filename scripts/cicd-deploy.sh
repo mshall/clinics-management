@@ -45,6 +45,7 @@ if [ "${CI:-}" = "true" ]; then
 fi
 npx cdk synth "${CDK_DEPLOY_ARGS[@]}"
 npm run check:ascii-cfn
+bash "$ROOT/scripts/cicd-wait-apprunner-idle.sh"
 npx cdk deploy --app cdk.out "${CDK_DEPLOY_ARGS[@]}"
 APPRUNNER_OK=0
 bash "$ROOT/scripts/cicd-wait-apprunner-deploy.sh" || APPRUNNER_OK=1
