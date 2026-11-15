@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClinicDeactivateConfirmDialog } from "@/features/clinics/clinic-deactivate-confirm-dialog";
 import { ClinicDoctorsPanel } from "@/features/clinics/clinic-doctors-panel";
+import { ClinicContactSettingsPanel } from "@/features/clinics/clinic-contact-settings-panel";
 import { ClinicCurrencySettingsPanel } from "@/features/clinics/clinic-currency-settings-panel";
 import { ClinicHoursSettingsPanel } from "@/features/clinics/clinic-hours-settings-panel";
 import { ClinicRoomsSettingsPanel } from "@/features/clinics/clinic-rooms-settings-panel";
@@ -258,16 +259,24 @@ export function ClinicDetailPage() {
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">
-          <ClinicHoursSettingsPanel
+          <ClinicContactSettingsPanel
             clinicId={c.id}
-            openingTime={c.openingTime ?? "09:00"}
-            closingTime={c.closingTime ?? "00:00"}
+            licenseNumber={c.licenseNumber}
+            phone={c.phone}
+            email={c.email}
+            defaultLanguage={c.defaultLanguage}
             canEdit={canManageClinic}
           />
           <ClinicCurrencySettingsPanel
             clinicId={c.id}
             defaultCurrency={c.defaultCurrency ?? orgBaseCurrency}
             orgBaseCurrency={orgBaseCurrency}
+            canEdit={canManageClinic}
+          />
+          <ClinicHoursSettingsPanel
+            clinicId={c.id}
+            openingTime={c.openingTime ?? "09:00"}
+            closingTime={c.closingTime ?? "00:00"}
             canEdit={canManageClinic}
           />
           <ClinicRoomsSettingsPanel

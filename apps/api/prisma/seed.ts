@@ -454,6 +454,40 @@ async function seedDrAhmedGroup(passwordHash: string) {
       licenseNumber: "EG-AES-DOK-001",
       defaultLanguage: Locale.ar,
     },
+    {
+      slug: "oct",
+      label: "6th October & Sheikh Zayed",
+      nameEn: "6th October & Sheikh Zayed Clinic",
+      nameAr: "عيادة أكتوبر والشيخ زايد",
+      country: "EG",
+      city: "6th of October City",
+      addressEn:
+        "Plot 1 — El Wahat Road, 2nd District, East Extensions, 6th of October City, Giza Governorate. Saturday: patients from 4:30 PM, Dr. Ahmed from 5:00 PM. First-come, first-served. Consultation fees: standard visit 1,000 EGP; urgent visit 2,000 EGP.",
+      addressAr:
+        "ق1 – طريق الواحات – الحي الثاني بالتوسعات الشرقية – مدينة 6 أكتوبر، محافظة الجيزة. السبت: حضور المرضى من ٤:٣٠ مساءً، الدكتور متواجد من ٥ مساءً. الدخول بأسبقية الحضور. الكشف العادي ١٠٠٠ جنيه؛ الكشف المستعجل ٢٠٠٠ جنيه.",
+      locationUrl: "https://maps.app.goo.gl/ZfmUAd7k3W1RwRVJ8",
+      phone: "+201010027404",
+      email: "october@dr-ahmedelshall.com",
+      licenseNumber: "EG-AES-OCT-001",
+      defaultLanguage: Locale.ar,
+    },
+    {
+      slug: "abc",
+      label: "ABC Hospital",
+      nameEn: "ABC Hospital — Contract Clinic",
+      nameAr: "مستشفى ABC — تعاقدات",
+      country: "EG",
+      city: "Mohandessin",
+      addressEn:
+        "Syria Street, Mohandessin, Giza Governorate. Contract clinic for ABC Hospital. Please bring all prior test results. First-come, first-served when sessions are announced.",
+      addressAr:
+        "شارع سوريا بالمهندسين، محافظة الجيزة. عيادة تعاقدات مستشفى ABC. نرجو إحضار كافة الفحوصات السابقة. الدخول بأسبقية الحضور عند الإعلان عن المواعيد.",
+      locationUrl: "https://maps.app.goo.gl/K7aQ4jGcR3LFyaL86",
+      phone: "+201010027404",
+      email: "abc@dr-ahmedelshall.com",
+      licenseNumber: "EG-AES-ABC-001",
+      defaultLanguage: Locale.ar,
+    },
   ];
 
   const drAhmedClinics = await Promise.all(
@@ -534,7 +568,7 @@ async function ensureIncrementalSeed(passwordHash: string) {
     `(${clinics.length} clinics, per-clinic staff ensured)`,
     kiorlyTenant ? `| Kiorly demo users ensured for tenant ${kiorlyTenant.id}` : "",
     "| org logins (password: demo): admin@drahmedshall.com, supervisor@drahmedshall.com, dr.ahmed@drahmedshall.com, callcenter@drahmedshall.com, finance@drahmedshall.com, hr@drahmedshall.com",
-    "| per clinic (hel/cmc/moh/dok): branchmgr.{slug}, clinicadmin.{slug}, assistant.{slug}, nurse.{slug}, receptionist.{slug}, physician.{slug} @drahmedshall.com"
+    "| per clinic (hel/cmc/moh/dok/oct/abc): branchmgr.{slug}, clinicadmin.{slug}, assistant.{slug}, nurse.{slug}, receptionist.{slug}, physician.{slug} @drahmedshall.com"
   );
 }
 
@@ -1176,7 +1210,7 @@ async function seedFreshDatabase(passwordHash: string) {
     drAhmedTenant.id,
     `(${drAhmedClinics.length} clinics, per-clinic staff)`,
     "| org: admin@drahmedshall.com, dr.ahmed@drahmedshall.com, callcenter@, finance@, hr@ @drahmedshall.com",
-    "| per clinic slug hel/cmc/moh/dok: branchmgr, clinicadmin, assistant, nurse, receptionist, physician @drahmedshall.com (password: demo)"
+    "| per clinic slug hel/cmc/moh/dok/oct/abc: branchmgr, clinicadmin, assistant, nurse, receptionist, physician @drahmedshall.com (password: demo)"
   );
 
   await ensureSuperAdmin(passwordHash);

@@ -745,6 +745,11 @@ export class ClinicsService {
       }
       data.defaultCurrency = dto.defaultCurrency.trim();
     }
+    if (dto.defaultLanguage !== undefined) {
+      const lang = dto.defaultLanguage.trim();
+      if (lang !== "en" && lang !== "ar") throw new BadRequestException("defaultLanguage must be en or ar");
+      data.defaultLanguage = lang;
+    }
     const nextOpening =
       dto.openingTime !== undefined
         ? normalizeClinicTime(dto.openingTime, DEFAULT_CLINIC_OPENING_TIME)

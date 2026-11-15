@@ -95,6 +95,12 @@ export class PatchClinicDto {
   @IsIn(BASE_CURRENCIES)
   defaultCurrency?: string;
 
+  @ApiPropertyOptional({ enum: ["en", "ar"], description: "Default locale for this clinic" })
+  @IsOptional()
+  @IsString()
+  @IsIn(["en", "ar"])
+  defaultLanguage?: string;
+
   @ApiPropertyOptional({ description: "Daily opening time (HH:mm)" })
   @IsOptional()
   @IsString()

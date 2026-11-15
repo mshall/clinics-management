@@ -6,13 +6,13 @@ Reference for QA, demos, and onboarding. All seeded accounts use password **`dem
 
 **Load data (AWS):** each successful [Deploy to AWS](https://github.com/mshall/clinics-management/actions/workflows/deploy-aws.yml) run invokes the **DbSeedFn** Lambda (`scripts/cicd-post-deploy-seed.sh`) after CDK deploy. It runs `prisma migrate deploy`, repairs enum values if needed, then the **idempotent** seed — safe on non-empty RDS.
 
-**Live demo (AWS):** [https://d92iz83i79c05.cloudfront.net](https://d92iz83i79c05.cloudfront.net) — sign in with any account below (password **`demo`**). Uses **CloudFront** for SPA + `/api/*` to **App Runner** (see [`AWS_Cloud_Deployment_Guide.md`](./AWS_Cloud_Deployment_Guide.md)). After seed, **Dr Ahmed Shall Group** exposes **30 organization users** in **Admin → Organization users** (`GET /api/v1/admin/users`); smoke tests expect `total ≥ 30`.
+**Live demo (AWS):** [https://d92iz83i79c05.cloudfront.net](https://d92iz83i79c05.cloudfront.net) — sign in with any account below (password **`demo`**). Uses **CloudFront** for SPA + `/api/*` to **App Runner** (see [`AWS_Cloud_Deployment_Guide.md`](./AWS_Cloud_Deployment_Guide.md)). After seed, **Dr Ahmed Shall Group** exposes **42 organization users** in **Admin → Organization users** (`GET /api/v1/admin/users`); smoke tests expect `total ≥ 30`.
 
 **Idempotent seed:** if **any** database content already exists (tenants, users, clinics, or patients), the seed **does not delete or replace** existing rows and **never resets passwords** on accounts that already exist. It only ensures missing demo records (platform super admin, Kiorly login accounts, Dr Ahmed Shall clinics/staff/patients) are created. A full demo dataset is inserted **only** on a completely empty database.
 
 **Primary organization:** `Kiorly Clinic Group (Demo)` — 1 HQ clinic + 14 branches (see [Clinic hierarchy](#clinic-hierarchy)).
 
-**Additional organizations:** seed creates **Dr Ahmed Shall Group** (4 Cairo clinics, EGP) and 13 empty shell tenants (`Shell Organization 3` … `Shell Organization 15`) with no users; use the platform admin UI to inspect or manage them.
+**Additional organizations:** seed creates **Dr Ahmed Shall Group** (6 clinics, EGP) and 13 empty shell tenants (`Shell Organization 3` … `Shell Organization 15`) with no users; use the platform admin UI to inspect or manage them.
 
 ---
 
@@ -20,7 +20,7 @@ Reference for QA, demos, and onboarding. All seeded accounts use password **`dem
 
 Professor / consultant in chronic pain, joints, spine, and neuritis (non-surgical) — Cairo University Qasr Al-Aini.
 
-**User count (organization):** **30** accounts — 6 org-wide roles below + 6 staff roles × 4 clinics (`hel`, `cmc`, `moh`, `dok`). All belong to tenant **Dr Ahmed Shall Group** and appear in **Admin → Organization users** when signed in as `admin@drahmedshall.com`.
+**User count (organization):** **42** accounts — 6 org-wide roles below + 6 staff roles × 6 clinics (`hel`, `cmc`, `moh`, `dok`, `oct`, `abc`). All belong to tenant **Dr Ahmed Shall Group** and appear in **Admin → Organization users** when signed in as `admin@drahmedshall.com`.
 
 **Organization users UI:** search by **email** or **display name**, and filter by **role** (dropdown). Example: choose **Group supervisor** to list only `supervisor@drahmedshall.com`; choose **Nurse** to see all `nurse.{slug}@…` accounts. API: `GET /api/v1/admin/users?q=&role=GROUP_SUPERVISOR`.
 
@@ -37,7 +37,7 @@ Professor / consultant in chronic pain, joints, spine, and neuritis (non-surgica
 
 ### Per-clinic accounts
 
-Each clinic has its own staff logins. Replace `{slug}` with **`hel`**, **`cmc`**, **`moh`**, or **`dok`**.
+Each clinic has its own staff logins. Replace `{slug}` with **`hel`**, **`cmc`**, **`moh`**, **`dok`**, **`oct`**, or **`abc`**.
 
 | Email pattern | Role | Clinic scope |
 |---------------|------|--------------|
@@ -54,6 +54,8 @@ Each clinic has its own staff logins. Replace `{slug}` with **`hel`**, **`cmc`**
 | `cmc` | Fifth Settlement — CMC | `receptionist.cmc@drahmedshall.com` |
 | `moh` | Mohandessin | `receptionist.moh@drahmedshall.com` |
 | `dok` | Capital Hospital Dokki | `receptionist.dok@drahmedshall.com` |
+| `oct` | 6th October & Sheikh Zayed | `receptionist.oct@drahmedshall.com` |
+| `abc` | ABC Hospital — Contract Clinic | `receptionist.abc@drahmedshall.com` |
 
 Each clinic also gets **5 demo patients** (MRN `AES-{SLUG}-001` … `005`) when missing.
 
@@ -65,8 +67,10 @@ Each clinic also gets **5 demo patients** (MRN `AES-{SLUG}-001` … `005`) when 
 | Fifth Settlement Clinic — CMC | New Cairo | Mon: patients 7 PM, Dr. 8 PM |
 | Mohandessin Clinic | Mohandessin | Thu: from 12 PM |
 | Capital Hospital Dokki — Contract Clinic | Dokki | Tue: patients 4–6 PM |
+| 6th October & Sheikh Zayed Clinic | 6th of October City | Sat: patients 4:30 PM, Dr. 5 PM; standard visit 1,000 EGP / urgent 2,000 EGP |
+| ABC Hospital — Contract Clinic | Mohandessin | Syria Street; contract sessions (first-come when announced) |
 
-All four clinics are **standalone** root locations under the group (flat layout). Maps links are stored in each clinic’s `locationUrl`.
+All six clinics are **standalone** root locations under the group (flat layout). Maps links are stored in each clinic’s `locationUrl`.
 
 ---
 
@@ -279,9 +283,9 @@ Branches are children of HQ (`parentClinicId` → HQ).
 | Encounters | 360 (+ 4 demo drafts with meds / documents) |
 | Appointments | 260 |
 | Employees | 17 (+ physicians linked to users) |
-| Organizations | 15 (1 Kiorly demo populated, 1 Dr Ahmed with 4 clinics, 13 shells) |
-| Clinics | 19 (Kiorly: 1 HQ + 14 branches; Dr Ahmed: 4 standalone) |
-| Dr Ahmed patients | 5 per clinic (20 total when fully seeded) |
+| Organizations | 15 (1 Kiorly demo populated, 1 Dr Ahmed with 6 clinics, 13 shells) |
+| Clinics | 21 (Kiorly: 1 HQ + 14 branches; Dr Ahmed: 6 standalone) |
+| Dr Ahmed patients | 5 per clinic (30 total when fully seeded) |
 | Patient documents | Registration uploads + encounter lab/radiology/Rx files (see profile **clinical document** sections) |
 
 **Patient phone rule:** only one active patient per organization per normalized phone number; API `GET /api/v1/patients/phone-conflict?phone=...`.
