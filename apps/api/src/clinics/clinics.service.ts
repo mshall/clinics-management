@@ -636,7 +636,14 @@ export class ClinicsService {
   }
 
   async create(tenantId: string, dto: CreateClinicDto): Promise<ClinicDto> {
-    const country = dto.country?.trim() || "AE";
+    const tenantForMarket = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { baseCurrency: true, defaultTaxRegistrationNumber: true, defaultInvoiceVatPercent: true, market: { select: { defaultPhoneRegion: true, defaultTimezone: true, weekendDays: true } } },
+    });
+    const country =
+      dto.country?.trim() ||
+      tenantForMarket?.market?.defaultPhoneRegion?.trim() ||
+      "EG";
     const addressEn = dto.addressEn?.trim() || "Address pending";
     const addressAr = dto.addressAr?.trim() || "العنوان قيد التحديث";
     const locationUrl = dto.locationUrl?.trim() || "https://maps.google.com/";
@@ -666,10 +673,7 @@ export class ClinicsService {
 
     const logoUrl = dto.logoUrl?.trim() || null;
 
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: { baseCurrency: true, defaultTaxRegistrationNumber: true, defaultInvoiceVatPercent: true },
-    });
+    const tenant = tenantForMarket;
     const defaultCurrency =
       dto.defaultCurrency?.trim() && isBaseCurrency(dto.defaultCurrency.trim())
         ? dto.defaultCurrency.trim()
@@ -707,6 +711,10 @@ export class ClinicsService {
         invoiceVatPercent: tenant?.defaultInvoiceVatPercent ?? 5,
         openingTime,
         closingTime,
+        timezone: tenant?.market?.defaultTimezone ?? undefined,
+        weekendDays: tenant?.market?.weekendDays
+          ? (tenant.market.weekendDays as Prisma.InputJsonValue)
+          : undefined,
         operatingPeriods: {
           create: { startDate: openedAt },
         },
@@ -750,7 +758,7 @@ export class ClinicsService {
     }
     if (dto.nameEn !== undefined) data.nameEn = dto.nameEn.trim();
     if (dto.nameAr !== undefined) data.nameAr = dto.nameAr.trim();
-    if (dto.country !== undefined) data.country = dto.country.trim() || "AE";
+    if (dto.country !== undefined) data.country = dto.country.trim() || "EG";
     if (dto.city !== undefined) data.city = dto.city.trim();
     if (dto.addressEn !== undefined) data.addressEn = dto.addressEn.trim();
     if (dto.addressAr !== undefined) data.addressAr = dto.addressAr.trim();

@@ -4,6 +4,7 @@ import { UserRole } from "@prisma/client";
 export const VALID_NAV_TAB_KEYS = new Set([
   "platform",
   "platform_organizations",
+  "platform_markets",
   "platform_users",
   "platform_clinics",
   "dashboard",
@@ -80,6 +81,7 @@ const ROLE_MAX: Record<UserRole, readonly string[]> = {
   [UserRole.CLINIC_ASSISTANT]: ["patients", "appointments", "encounters", "operations", "expenses", "revenue", "profile"],
   [UserRole.PLATFORM_SUPER_ADMIN]: [
     "platform",
+    "platform_markets",
     "platform_organizations",
     "platform_users",
     "platform_clinics",

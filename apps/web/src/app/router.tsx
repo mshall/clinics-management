@@ -21,6 +21,7 @@ import { PlatformClinicsTab } from "@/features/platform/platform-clinics-tab";
 import { PlatformLayout } from "@/features/platform/platform-layout";
 import { PlatformOrganizationsTab } from "@/features/platform/platform-organizations-tab";
 import { PlatformOverviewPage } from "@/features/platform/platform-overview-page";
+import { PlatformMarketsTab } from "@/features/platform/platform-markets-tab";
 import { PlatformUsersTab } from "@/features/platform/platform-users-tab";
 import { ProfileGate } from "@/features/profile/profile-gate";
 import { ReportsPage } from "@/features/reports/reports-page";
@@ -86,6 +87,7 @@ export const router = createBrowserRouter([
         element: <PlatformLayout />,
         children: [
           { index: true, element: <PlatformOverviewPage /> },
+          { path: "markets", element: <PlatformMarketsTab /> },
           { path: "organizations", element: <PlatformOrganizationsTab /> },
           { path: "users", element: <PlatformUsersTab /> },
           { path: "clinics", element: <PlatformClinicsTab /> },

@@ -28,6 +28,7 @@ export function requiredNavKeysForMessage(message: string): string[] {
   if (/report|analytics|p&l|profit|تقرير|تقارير/.test(m)) keys.add("reports");
   if (/support ticket|customer support|تذكرة|دعم العملاء/.test(m)) keys.add("customer_support");
   if (/platform organiz|platform user|platform clinic|منصة/.test(m)) {
+    keys.add("platform_markets");
     keys.add("platform_organizations");
     keys.add("platform_users");
     keys.add("platform_clinics");

@@ -30,6 +30,9 @@ import { BillingModule } from "./billing/billing.module";
 import { ComplianceModule } from "./compliance/compliance.module";
 import { MessagingModule } from "./messaging/messaging.module";
 import { ClinicAiModule } from "./clinic-ai/clinic-ai.module";
+import { MarketsModule } from "./markets/markets.module";
+import { FeatureFlagsModule } from "./feature-flags/feature-flags.module";
+import { ProvidersModule } from "./providers/providers.module";
 
 @Module({
   imports: [
@@ -64,6 +67,9 @@ import { ClinicAiModule } from "./clinic-ai/clinic-ai.module";
     ComplianceModule,
     MessagingModule,
     ClinicAiModule,
+    MarketsModule,
+    FeatureFlagsModule,
+    ProvidersModule,
   ],
 })
 export class AppModule {}

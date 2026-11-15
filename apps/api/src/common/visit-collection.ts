@@ -17,6 +17,7 @@ export type VisitCollectionInput = {
 export function parseVisitCollectionForAmount(
   amount: number,
   input: VisitCollectionInput | null | undefined,
+  opts?: { allowedTransferChannels?: Set<MoneyTransferChannel> },
 ): ParsedVisitCollection {
   if (amount <= 0) {
     return { collectionMode: null, transferChannel: null, transferReference: null };
@@ -33,6 +34,10 @@ export function parseVisitCollectionForAmount(
   const channel = input.transferChannel;
   if (channel !== MoneyTransferChannel.INSTAPAY && channel !== MoneyTransferChannel.FAWRY) {
     throw new BadRequestException("Select InstaPay or Fawry for money transfer");
+  }
+  const allowed = opts?.allowedTransferChannels;
+  if (allowed && !allowed.has(channel)) {
+    throw new BadRequestException("This payment channel is not enabled for your market or organization");
   }
   const ref = input.transferReference?.trim() ?? "";
   if (ref.length < 3) {

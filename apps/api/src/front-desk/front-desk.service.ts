@@ -16,6 +16,7 @@ import { EncountersService } from "../encounters/encounters.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { PatientsService } from "../patients/patients.service";
 import { FrontDeskFlowService } from "./front-desk-flow.service";
+import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
 
 @Injectable()
 export class FrontDeskService {
@@ -24,6 +25,7 @@ export class FrontDeskService {
     private readonly patients: PatientsService,
     private readonly flow: FrontDeskFlowService,
     private readonly encounters: EncountersService,
+    private readonly featureFlags: FeatureFlagsService,
   ) {}
 
   quickSearch(tenantId: string, user: JwtUser, q: string) {
@@ -74,11 +76,13 @@ export class FrontDeskService {
     const ticket = (maxTicket._max.queueTicketNumber ?? 0) + 1;
     const now = new Date();
     const pay = body.paymentAmount != null && body.paymentAmount > 0 ? body.paymentAmount : null;
+    const allowedTransfers = await this.featureFlags.allowedTransferChannels(tenantId);
     const collection =
       pay != null
         ? parseVisitCollectionForAmount(
             pay,
             body.visitCollection ?? { mode: VisitCollectionMode.CASH_ON_VISIT },
+            { allowedTransferChannels: allowedTransfers },
           )
         : null;
     const collectionPatch =

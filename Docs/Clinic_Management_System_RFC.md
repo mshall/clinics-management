@@ -142,6 +142,21 @@ Local development: `docker-compose.yml` provides Postgres 16 and Redis; API + Vi
 
 **Enterprise option:** Deploy a **dedicated stack** (same CDK app) with one tenant populated — logical single-tenant, separate RDS. Not a code fork.
 
+### 5.2 Markets, deployment cells, and providers (implemented — phase 1)
+
+| Concept | Implementation |
+|---|---|
+| **Market** | Country pack: currency, timezone, weekend days, `taxConfig`, `paymentMethods`, `providerConfig`, `hostCell`, `dataRegion`. Seeded **EG** live on Frankfurt. |
+| **Tenant** | `marketId` + `deploymentCell`; defaults from market on platform create. |
+| **Clinic** | Inherits market settings; optional `timezone`, `weekendDays`, `settingsOverrides` where market allows. |
+| **FiscalProvider** | Interface in `providers/fiscal/`; **ETA Egypt** (`eta-egypt`) is first implementation. |
+| **Persistence** | `FiscalDocument` + `FiscalSubmission` (replaces `EtaReceiptSubmission`). |
+| **Credentials** | `ProviderCredential.secretRef` → AWS Secrets Manager (not env vars in production). |
+| **Platform admin** | `GET/POST /admin/platform/markets`, `POST …/launch`; UI **Market launch** tab. |
+| **Roadmap** | `PaymentProvider`, `MessagingProvider`, `ClaimsProvider`, `HealthExchangeProvider`, `AiProvider`; multi-region cells + login directory. |
+
+See [MARKET_GO_LIVE_TEMPLATE.md](./MARKET_GO_LIVE_TEMPLATE.md) and [markets/egypt.md](./markets/egypt.md).
+
 ## 6. Backend Module Catalog
 
 NestJS modules in `apps/api/src/app.module.ts` map to product concerns. Cross-module access should go through injected services; `eslint-plugin-boundaries` is the long-term enforcement target.

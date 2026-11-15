@@ -154,13 +154,24 @@ export class PlatformAdminService {
       }
     }
 
+    const market =
+      dto.marketId?.trim()
+        ? await this.prisma.market.findFirst({ where: { id: dto.marketId.trim() } })
+        : await this.prisma.market.findFirst({ where: { code: "EG", status: "LIVE" } });
+    if (dto.marketId?.trim() && !market) throw new BadRequestException("Market not found");
+    const deploymentCell = dto.deploymentCell?.trim() || market?.hostCell || "frankfurt";
+    const baseCurrency = dto.baseCurrency?.trim() || market?.defaultCurrency || "EGP";
+    const defaultLocale = dto.defaultLocale?.trim() || market?.defaultLocale || "en";
+
     const result = await this.prisma.$transaction(async (tx) => {
       const row = await tx.tenant.create({
         data: {
           name,
           nameAr,
-          baseCurrency: dto.baseCurrency?.trim() || "EGP",
-          defaultLocale: dto.defaultLocale?.trim() || "en",
+          marketId: market?.id ?? null,
+          deploymentCell,
+          baseCurrency,
+          defaultLocale,
         },
       });
 

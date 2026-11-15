@@ -43,6 +43,8 @@ import { OrgRbacPanel } from "./org-rbac-panel";
 import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel";
 import { ClinicInvoiceSettingsPanel } from "@/features/invoices/clinic-invoice-settings-panel";
 import { ClinicPrescriptionSettingsPanel } from "@/features/prescriptions/clinic-prescription-settings-panel";
+import { TenantFeatureFlagsPanel } from "./tenant-feature-flags-panel";
+import { ProviderCredentialsPanel } from "./provider-credentials-panel";
 
 export function AdminPage() {
   const { t, i18n } = useTranslation();
@@ -214,12 +216,6 @@ export function AdminPage() {
     });
   }, [tenantRows, tfName, tfUsers, tfClinics, tfRegistered, tfPatients]);
 
-  const toggleFlag = useMutation({
-    mutationFn: ({ key, enabled }: { key: string; enabled: boolean }) =>
-      apiPatch(`/api/v1/admin/feature-flags/${encodeURIComponent(key)}`, { enabled }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["admin", "overview"] }),
-    onError: (e: unknown) => console.error(e),
-  });
 
   const [adminSection, setAdminSection] = useState<
     "clinics" | "users" | "patients" | "organization" | "data" | "governance" | "insights"
@@ -543,38 +539,13 @@ export function AdminPage() {
 
           {isGroupAdmin || isClinicAdmin ? <AdminIntegrationClientsPanel /> : null}
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t("admin.featureFlags")}</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-2 sm:grid-cols-2">
-              {(overview.data?.featureFlags ?? []).map((f) => (
-                <div key={f.id} className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2">
-                  <div className="min-w-0">
-                    <p className="truncate font-mono text-xs font-medium">{f.key}</p>
-                    <p className="truncate text-xs text-muted-foreground">{f.description}</p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <Badge variant={f.enabled ? "default" : "secondary"}>{f.enabled ? "ON" : "OFF"}</Badge>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={toggleFlag.isPending}
-                      onClick={() => {
-                        toggleFlag.mutate({ key: f.key, enabled: !f.enabled }, {
-                          onError: (e) => {
-                            if (e instanceof ApiError) toast.error(e.message);
-                          },
-                        });
-                      }}
-                    >
-                      {t("admin.toggle")}
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+          {isGroupAdmin ? (
+            <TenantFeatureFlagsPanel flags={overview.data?.featureFlags ?? []} canEdit />
+          ) : (
+            <TenantFeatureFlagsPanel flags={overview.data?.featureFlags ?? []} canEdit={false} />
+          )}
+
+          {isGroupAdmin ? <ProviderCredentialsPanel /> : null}
 
         </div>
       ) : null}

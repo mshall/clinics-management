@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/commo
 import { AppointmentStatus, MessageChannel } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { MessagingService } from "./messaging.service";
+import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
 
 const SCAN_MS = 60_000;
 const WINDOW_MINUTES = 30;
@@ -14,6 +15,7 @@ export class AppointmentReminderScheduler implements OnModuleInit, OnModuleDestr
   constructor(
     private readonly prisma: PrismaService,
     private readonly messaging: MessagingService,
+    private readonly featureFlags: FeatureFlagsService,
   ) {}
 
   onModuleInit() {
@@ -48,7 +50,7 @@ export class AppointmentReminderScheduler implements OnModuleInit, OnModuleDestr
       where: { id: tenantId },
       select: { whatsAppRemindersEnabled: true, appointmentReminderHoursBefore: true },
     });
-    if (!tenant?.whatsAppRemindersEnabled) return;
+    if (!tenant || !(await this.featureFlags.isEnabled(tenantId, "whatsapp_reminders"))) return;
 
     const hours = hoursBefore ?? tenant.appointmentReminderHoursBefore ?? 24;
     const targetStart = new Date(Date.now() + hours * 3600_000);

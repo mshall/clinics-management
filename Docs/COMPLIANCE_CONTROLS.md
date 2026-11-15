@@ -1,6 +1,19 @@
 # Compliance control mapping
 
-Kiorly is designed for Egyptian clinics with healthcare and tax obligations. This document maps platform controls to common frameworks — **not** a certification statement. External audit required for formal ISO 27001, SOC 2, HIPAA, FedRAMP, or FISMA attestation.
+Kiorly is a multi-market clinic platform. Controls below apply globally; **market-specific law** is tracked per country pack (`Market`).
+
+## Requirements matrix by market
+
+| Market | Data protection | Fiscal / e-invoice | Health data / exchange | Payments & messaging | Notes |
+|--------|-----------------|--------------------|-------------------------|----------------------|--------|
+| **Egypt (EG)** | PDPL — consent API, breach notify | **ETA** via `eta-egypt` fiscal provider | MoH licensing on clinic | InstaPay / Fawry in market JSON | Data in **Frankfurt** until in-country consent |
+| **KSA** | PDPL | **ZATCA** (connector TBD) | **NPHIES** (TBD) | Mada / local rails (TBD) | Planned GCC cell |
+| **UAE** | ICT health law, DHA/DOH | **FTA** (TBD) | **NABIDH** / **Malaffi** (TBD) | Card + local (TBD) | Planned ME cell |
+| **EU / EMEA** | **GDPR** | Country fiscal providers | National HIE where required | SEPA / local | Frankfurt cell default |
+
+Go-live checklists: [MARKET_GO_LIVE_TEMPLATE.md](./MARKET_GO_LIVE_TEMPLATE.md). Egypt instance: [markets/egypt.md](./markets/egypt.md).
+
+This document maps platform controls to common frameworks — **not** a certification statement. External audit required for formal ISO 27001, SOC 2, HIPAA, FedRAMP, or FISMA attestation.
 
 ## Framework overview
 

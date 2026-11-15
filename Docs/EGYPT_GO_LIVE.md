@@ -1,5 +1,7 @@
 # Egypt clinic go-live
 
+> **Canonical doc:** [markets/egypt.md](./markets/egypt.md) (market pack **EG**). This file is kept for existing links.
+
 Single checklist for launching a clinic on Kiorly in Egypt: tax, data, operations, and pilot success.
 
 ## 1. ETA e-receipt onboarding

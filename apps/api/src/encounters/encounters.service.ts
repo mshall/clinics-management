@@ -31,6 +31,7 @@ import { parseVisitCollectionForAmount } from "../common/visit-collection";
 import { resolveTransferVerification } from "../common/visit-collection-transfer";
 import { PrismaService } from "../prisma/prisma.service";
 import { FrontDeskFlowService } from "../front-desk/front-desk-flow.service";
+import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
 import { PatientsService } from "../patients/patients.service";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { AddDiagnosisDto } from "./dto/add-diagnosis.dto";
@@ -86,6 +87,7 @@ export class EncountersService {
     private readonly prisma: PrismaService,
     private readonly patients: PatientsService,
     private readonly frontDeskFlow: FrontDeskFlowService,
+    private readonly featureFlags: FeatureFlagsService,
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
   ) {}
 
@@ -360,10 +362,13 @@ export class EncountersService {
         : linkedAppointmentFeePreview != null && linkedAppointmentFeePreview >= 0
           ? linkedAppointmentFeePreview
           : Number(tenantRow?.defaultVisitFee ?? 0);
+    const allowedTransfers = await this.featureFlags.allowedTransferChannels(tenantId);
+    const collectionOpts = { allowedTransferChannels: allowedTransfers };
     const visitCollectionPreview = parseVisitCollectionForAmount(
       visitFeePreview,
       dto.visitCollection ??
         (visitFeePreview > 0 ? { mode: VisitCollectionMode.CASH_ON_VISIT } : undefined),
+      collectionOpts,
     );
     let transferVerificationStatus: TransferVerificationStatus | undefined;
     if (
@@ -459,6 +464,7 @@ export class EncountersService {
               visitFeeAmount,
               dto.visitCollection ??
                 (visitFeeAmount > 0 ? { mode: VisitCollectionMode.CASH_ON_VISIT } : undefined),
+              collectionOpts,
             );
 
       await upsertEncounterVisitFeeRevenue(tx, {
@@ -620,9 +626,11 @@ export class EncountersService {
       const priorRevenue = await this.prisma.revenueEntry.findFirst({
         where: { tenantId, encounterId: id, category: "VISIT_FEE" },
       });
+      const allowedTransfers = await this.featureFlags.allowedTransferChannels(tenantId);
+      const collectionOpts = { allowedTransferChannels: allowedTransfers };
       let visitCollection: ReturnType<typeof parseVisitCollectionForAmount>;
       if (dto.visitCollection !== undefined) {
-        visitCollection = parseVisitCollectionForAmount(newFee, dto.visitCollection);
+        visitCollection = parseVisitCollectionForAmount(newFee, dto.visitCollection, collectionOpts);
       } else if (newFee > 0 && priorRevenue?.collectionMode) {
         visitCollection = {
           collectionMode: priorRevenue.collectionMode,
@@ -630,7 +638,7 @@ export class EncountersService {
           transferReference: priorRevenue.transferReference,
         };
       } else {
-        visitCollection = parseVisitCollectionForAmount(newFee, undefined);
+        visitCollection = parseVisitCollectionForAmount(newFee, undefined, collectionOpts);
       }
       const clinicRow = await this.prisma.clinic.findFirst({
         where: { id: existing.clinicId, tenantId },

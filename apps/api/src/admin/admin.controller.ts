@@ -347,14 +347,18 @@ export class AdminController {
     return this.admin.restoreTenantUserAccount(requireTenantId(user), userId, body);
   }
 
-  @Patch("feature-flags/:key")
-  @ApiOperation({ summary: "Toggle feature flag" })
+  @Patch("tenant-feature-flags/:key")
+  @ApiOperation({ summary: "Set organization feature flag override" })
   @ApiOkResponse()
-  patchFlag(@CurrentUser() user: JwtUser, @Param("key") key: string, @Body() body: PatchFeatureFlagDto) {
+  patchTenantFeatureFlag(
+    @CurrentUser() user: JwtUser,
+    @Param("key") key: string,
+    @Body() body: PatchFeatureFlagDto,
+  ) {
     if (user.role !== UserRole.GROUP_ADMIN) {
-      throw new ForbiddenException("Only platform administrators can change feature flags");
+      throw new ForbiddenException("Only group administrators can change organization feature flags");
     }
-    return this.admin.setFeatureFlag(key, body.enabled);
+    return this.admin.setTenantFeatureFlag(requireTenantId(user), key, body.enabled);
   }
 
   @Get("org-hierarchy")

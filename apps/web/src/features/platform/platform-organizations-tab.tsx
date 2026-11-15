@@ -18,6 +18,7 @@ import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel"
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { apiGet, apiPost } from "@/lib/http";
 import type { Paginated } from "@/lib/paginated";
+import type { MarketRow } from "@/features/platform/platform-markets-tab";
 
 type DialogMode = null | "create" | { edit: string };
 
@@ -29,7 +30,8 @@ export function PlatformOrganizationsTab() {
 
   const [tenantName, setTenantName] = useState("");
   const [tenantNameAr, setTenantNameAr] = useState("");
-  const [tenantCurrency, setTenantCurrency] = useState("AED");
+  const [tenantMarketId, setTenantMarketId] = useState("");
+  const [tenantCurrency, setTenantCurrency] = useState("EGP");
   const [tenantLocale, setTenantLocale] = useState("en");
   const [gaEmail, setGaEmail] = useState("");
   const [gaPassword, setGaPassword] = useState("");
@@ -44,6 +46,13 @@ export function PlatformOrganizationsTab() {
     queryFn: () => apiGet<Paginated<TenantRow>>("/api/v1/admin/platform/tenants?page=1&pageSize=200&sortBy=name&sortOrder=asc"),
   });
 
+  const marketsQuery = useQuery({
+    queryKey: ["platform", "markets"],
+    queryFn: () => apiGet<MarketRow[]>("/api/v1/admin/platform/markets"),
+  });
+
+  const liveMarkets = (marketsQuery.data ?? []).filter((m) => m.status === "LIVE");
+
   const tenantRows = tenantsQuery.data?.items ?? [];
   const editTenantId = dialogMode && typeof dialogMode === "object" ? dialogMode.edit : null;
   const editRow = editTenantId ? tenantRows.find((r) => r.id === editTenantId) : null;
@@ -51,7 +60,8 @@ export function PlatformOrganizationsTab() {
   const resetCreateForm = () => {
     setTenantName("");
     setTenantNameAr("");
-    setTenantCurrency("AED");
+    setTenantMarketId(liveMarkets.find((m) => m.code === "EG")?.id ?? liveMarkets[0]?.id ?? "");
+    setTenantCurrency("EGP");
     setTenantLocale("en");
     setGaEmail("");
     setGaPassword("");
@@ -73,6 +83,7 @@ export function PlatformOrganizationsTab() {
       const body: Record<string, unknown> = {
         name: tenantName.trim(),
         nameAr: tenantNameAr.trim(),
+        ...(tenantMarketId ? { marketId: tenantMarketId } : {}),
         baseCurrency: tenantCurrency,
         defaultLocale: tenantLocale.trim() || "en",
         groupAdmin: { email: gaEmail.trim(), password: gaPassword, displayName: gaName.trim() },
@@ -206,6 +217,29 @@ export function PlatformOrganizationsTab() {
             <div className="space-y-2">
               <Label required>{t("admin.nameAr", "Name (AR)")}</Label>
               <Input value={tenantNameAr} onChange={(e) => setTenantNameAr(e.target.value)} dir="rtl" />
+            </div>
+            <div className="space-y-2">
+              <Label>{t("platform.marketPack", "Market (country pack)")}</Label>
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={tenantMarketId}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setTenantMarketId(id);
+                  const m = liveMarkets.find((x) => x.id === id);
+                  if (m?.defaultCurrency) setTenantCurrency(m.defaultCurrency);
+                }}
+              >
+                {liveMarkets.length === 0 ? (
+                  <option value="">{t("platform.noLiveMarkets", "No live markets — launch Egypt first")}</option>
+                ) : (
+                  liveMarkets.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.code} — {m.nameEn} ({m.hostCell})
+                    </option>
+                  ))
+                )}
+              </select>
             </div>
             <div className="space-y-2">
               <Label>{t("platform.baseCurrency")}</Label>

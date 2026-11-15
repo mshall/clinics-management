@@ -45,6 +45,7 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const showPlatformNav =
     showTab("platform") ||
     showTab("platform_organizations") ||
+    showTab("platform_markets") ||
     showTab("platform_users") ||
     showTab("platform_clinics");
 
@@ -59,6 +60,12 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
             <NavLink to="/platform" end className={navClass} onClick={() => onNavigate?.()}>
               <Globe2 className="size-4 shrink-0" />
               {t("nav.platformOverview")}
+            </NavLink>
+          ) : null}
+          {showTab("platform_markets") ? (
+            <NavLink to="/platform/markets" className={navClass} onClick={() => onNavigate?.()}>
+              <Globe2 className="size-4 shrink-0" />
+              {t("nav.platformMarkets", "Market launch")}
             </NavLink>
           ) : null}
           {showTab("platform_organizations") ? (

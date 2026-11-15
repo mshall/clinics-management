@@ -22,6 +22,8 @@ import type { PlatformPatchTenantUserDto } from "./dto/platform-patch-tenant-use
 import type { PatchTenantSettingsDto } from "./dto/patch-tenant-settings.dto";
 import { isBaseCurrency } from "../common/base-currencies";
 import { syncInheritedClinicCurrencies } from "../common/sync-inherited-clinic-currencies";
+import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
+import { FEATURE_FLAG_KEYS, isKnownFeatureFlagKey } from "../feature-flags/feature-flag-keys";
 import {
   normalizeOrgTaxRegistrationNumber,
   syncClinicInvoiceTaxFromTenant,
@@ -107,13 +109,14 @@ export class AdminService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
+    private readonly featureFlags: FeatureFlagsService,
   ) {}
 
   async overview(currentTenantId: string) {
-    const [tenant, tenantCount, flags, recentAudit] = await Promise.all([
+    const [tenant, tenantCount, tenantFeatureFlags, recentAudit] = await Promise.all([
       this.prisma.tenant.findUnique({ where: { id: currentTenantId } }),
       this.prisma.tenant.count(),
-      this.prisma.featureFlag.findMany({ orderBy: { key: "asc" } }),
+      this.featureFlags.listForTenant(currentTenantId),
       this.prisma.auditLog.findMany({
         where: { tenantId: currentTenantId },
         orderBy: { createdAt: "desc" },
@@ -138,12 +141,7 @@ export class AdminService {
           }
         : null,
       registeredTenants: tenantCount,
-      featureFlags: flags.map((f) => ({
-        id: f.id,
-        key: f.key,
-        enabled: f.enabled,
-        description: f.description,
-      })),
+      featureFlags: tenantFeatureFlags,
       recentAudit: recentAudit.map((a) => ({
         id: a.id,
         action: a.action,
@@ -307,7 +305,10 @@ export class AdminService {
   }
 
   async listFeatureFlags() {
-    const flags = await this.prisma.featureFlag.findMany({ orderBy: { key: "asc" } });
+    const flags = await this.prisma.featureFlag.findMany({
+      where: { key: { in: [...FEATURE_FLAG_KEYS] } },
+      orderBy: { key: "asc" },
+    });
     return flags.map((f) => ({
       id: f.id,
       key: f.key,
@@ -684,6 +685,10 @@ export class AdminService {
     }
     if (!Object.keys(data).length) throw new BadRequestException("No supported fields to update");
 
+    if (dto.whatsAppRemindersEnabled !== undefined) {
+      await this.featureFlags.setTenantFlag(tenantId, "whatsapp_reminders", dto.whatsAppRemindersEnabled);
+    }
+
     const row = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.tenant.update({ where: { id: tenantId }, data });
       if (data.baseCurrency && data.baseCurrency !== existing.baseCurrency) {
@@ -723,6 +728,12 @@ export class AdminService {
       where: { key },
       data: { enabled },
     });
+  }
+
+  async setTenantFeatureFlag(tenantId: string, key: string, enabled: boolean) {
+    if (!isKnownFeatureFlagKey(key)) throw new BadRequestException("Unknown feature flag key");
+    await this.featureFlags.setTenantFlag(tenantId, key, enabled);
+    return this.featureFlags.listForTenant(tenantId);
   }
 
   async getOrgHierarchyForUser(user: JwtUser, tenantId: string): Promise<OrgHierarchyNode> {

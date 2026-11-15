@@ -1,9 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { EtaReceiptStatus } from "@prisma/client";
+import { FiscalSubmissionStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
-import { submitEtaReceipt, signEtaPayload, type EtaReceiptPayload } from "./eta-egypt.client";
+import type { EtaReceiptPayload } from "./eta-egypt.client";
 import type { PatchClinicEtaSettingsDto } from "../clinics/dto/patch-clinic-eta-settings.dto";
 import { buildEtaReceiptQrPayload, type EtaReceiptViewDto } from "./eta-receipt-presenter";
+import { getFiscalProvider } from "../providers/fiscal/fiscal-provider.registry";
 
 @Injectable()
 export class ComplianceService {
@@ -36,48 +37,51 @@ export class ComplianceService {
   }
 
   async listEtaQueue(tenantId: string, clinicId?: string) {
-    return this.prisma.etaReceiptSubmission.findMany({
+    return this.prisma.fiscalSubmission.findMany({
       where: {
         tenantId,
         ...(clinicId ? { clinicId } : {}),
-        status: { in: [EtaReceiptStatus.PENDING, EtaReceiptStatus.REJECTED] },
+        status: { in: [FiscalSubmissionStatus.PENDING, FiscalSubmissionStatus.REJECTED] },
       },
       orderBy: { createdAt: "asc" },
       take: 100,
     });
   }
 
-  /** Submits a queued receipt to the Egyptian Tax Authority (signed payload + OAuth). */
   async submitEtaToAuthority(tenantId: string, id: string) {
-    const row = await this.prisma.etaReceiptSubmission.findFirst({ where: { id, tenantId } });
-    if (!row) throw new NotFoundException("ETA submission not found");
-    if (row.status === EtaReceiptStatus.SUBMITTED || row.status === EtaReceiptStatus.ACCEPTED) {
+    const row = await this.prisma.fiscalSubmission.findFirst({
+      where: { id, tenantId },
+      include: { fiscalDocument: true },
+    });
+    if (!row) throw new NotFoundException("Fiscal submission not found");
+    if (row.status === FiscalSubmissionStatus.SUBMITTED || row.status === FiscalSubmissionStatus.ACCEPTED) {
       return row;
     }
-    const payload = row.payloadJson as unknown as EtaReceiptPayload | null;
-    if (!payload?.idempotencyKey) {
-      throw new BadRequestException("ETA submission is missing a signed payload");
-    }
-    const signature = row.signature?.trim() || signEtaPayload(payload);
-    const result = await submitEtaReceipt(payload, signature);
+    const provider = getFiscalProvider(row.providerKey);
+    if (!provider) throw new BadRequestException(`Unknown fiscal provider: ${row.providerKey}`);
+    const payload = row.payloadJson;
+    if (!payload) throw new BadRequestException("Submission is missing payload");
+    const cred = await this.prisma.providerCredential.findFirst({
+      where: { tenantId, clinicId: row.clinicId, providerKey: row.providerKey },
+      select: { secretRef: true },
+    });
+    const result = await provider.submit(payload, row.signature?.trim() ?? "", cred?.secretRef ?? null);
     if (!result.ok) {
-      return this.prisma.etaReceiptSubmission.update({
+      return this.prisma.fiscalSubmission.update({
         where: { id },
         data: {
-          status: EtaReceiptStatus.REJECTED,
+          status: FiscalSubmissionStatus.REJECTED,
           errorMessage: result.error,
-          signature: signature || null,
         },
       });
     }
-    return this.prisma.etaReceiptSubmission.update({
+    return this.prisma.fiscalSubmission.update({
       where: { id },
       data: {
-        status: EtaReceiptStatus.SUBMITTED,
-        etaUuid: result.etaUuid,
+        status: FiscalSubmissionStatus.SUBMITTED,
+        providerDocumentUuid: result.providerDocumentUuid,
         submittedAt: new Date(),
-        signature: signature || null,
-        errorMessage: result.mode === "sandbox" ? "Sandbox UUID (ETA credentials not configured)" : null,
+        errorMessage: result.mode === "sandbox" ? "Sandbox UUID (provider credentials not configured)" : null,
       },
     });
   }
@@ -110,23 +114,24 @@ export class ComplianceService {
   }
 
   async getEtaReceiptView(tenantId: string, id: string): Promise<EtaReceiptViewDto> {
-    const row = await this.prisma.etaReceiptSubmission.findFirst({
+    const row = await this.prisma.fiscalSubmission.findFirst({
       where: { id, tenantId },
       include: {
         clinic: true,
         patient: { select: { firstNameEn: true, lastNameEn: true, mrn: true } },
+        fiscalDocument: true,
       },
     });
-    if (!row) throw new NotFoundException("ETA submission not found");
+    if (!row) throw new NotFoundException("Fiscal submission not found");
     const payload = row.payloadJson as unknown as EtaReceiptPayload | null;
     const line = payload?.lines?.[0];
-    const total = line?.unitPrice ?? payload?.totalAmount ?? Number(0);
+    const total = line?.unitPrice ?? payload?.totalAmount ?? Number(row.fiscalDocument.totalAmount);
     const showLogo = row.clinic.etaIncludeLogoOnReceipt && Boolean(row.clinic.invoiceLogoRelativePath);
     const submittedAt = row.submittedAt?.toISOString() ?? null;
     return {
       id: row.id,
       status: row.status,
-      etaUuid: row.etaUuid,
+      etaUuid: row.providerDocumentUuid,
       submittedAt,
       clinic: {
         nameEn: row.clinic.nameEn,
@@ -142,7 +147,7 @@ export class ComplianceService {
       },
       lineDescription: line?.description ?? "Medical service",
       totalAmount: total,
-      currency: line?.currency ?? payload?.currency ?? "EGP",
+      currency: line?.currency ?? payload?.currency ?? row.fiscalDocument.currency,
       vatPercent: line?.vatPercent ?? 0,
       patientLabel: `${row.patient.firstNameEn} ${row.patient.lastNameEn}`.trim(),
       issuerRin: payload?.issuerRin ?? row.clinic.taxRegistrationNumber ?? "N/A",
@@ -150,10 +155,10 @@ export class ComplianceService {
       taxpayerActivityCode: payload?.taxpayerActivityCode ?? "8690",
       itemCode: line?.itemCode ?? row.clinic.etaDefaultItemCode,
       qrPayload: buildEtaReceiptQrPayload({
-        etaUuid: row.etaUuid,
+        etaUuid: row.providerDocumentUuid,
         issuerRin: payload?.issuerRin ?? "N/A",
         totalAmount: total,
-        currency: line?.currency ?? "EGP",
+        currency: line?.currency ?? row.fiscalDocument.currency,
         submittedAt,
       }),
     };

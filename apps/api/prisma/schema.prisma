@@ -234,11 +234,17 @@ enum MessageChannel {
   EMAIL
 }
 
-enum EtaReceiptStatus {
+enum FiscalSubmissionStatus {
   PENDING
   SUBMITTED
   ACCEPTED
   REJECTED
+}
+
+enum MarketLaunchStatus {
+  DRAFT
+  LIVE
+  SUNSET
 }
 
 enum TransferVerificationStatus {
@@ -335,10 +341,131 @@ enum PatientAcquisitionChannel {
   OTHER
 }
 
+model Market {
+  id                 String              @id @default(cuid())
+  code               String              @unique
+  nameEn             String
+  nameAr             String              @default("")
+  status             MarketLaunchStatus  @default(DRAFT)
+  launchedAt         DateTime?
+  dataRegion         String              @default("eu-central-1")
+  hostCell           String              @default("frankfurt")
+  defaultCurrency    String              @default("EGP")
+  defaultLocale      String              @default("en")
+  defaultTimezone    String              @default("Africa/Cairo")
+  weekendDays        Json                @default("[5, 6]")
+  enabledLanguages   Json                @default("[\"en\", \"ar\"]")
+  defaultPhoneRegion String              @default("EG")
+  idDocumentTypes    Json                @default("[]")
+  taxConfig          Json                @default("{}")
+  providerConfig     Json                @default("{}")
+  clinicalConfig     Json                @default("{}")
+  legalConfig        Json                @default("{}")
+  paymentMethods     Json                @default("[]")
+  featureDefaults    Json                @default("{}")
+  settingsSchema     Json                @default("{}")
+  translations       Json                @default("{}")
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  tenants            Tenant[]
+  featureFlags       MarketFeatureFlag[]
+}
+
+model MarketFeatureFlag {
+  id          String   @id @default(cuid())
+  marketId    String
+  market      Market   @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  key         String
+  enabled     Boolean  @default(false)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([marketId, key])
+}
+
+model TenantFeatureFlag {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  key         String
+  enabled     Boolean  @default(false)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, key])
+}
+
+model ProviderCredential {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId    String?
+  clinic      Clinic?  @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+  providerKey String
+  deviceId    String?
+  secretRef   String
+  label       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, providerKey])
+}
+
+model FiscalDocument {
+  id              String           @id @default(cuid())
+  tenantId        String
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId        String
+  clinic          Clinic           @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patientId       String
+  patient         Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  providerKey     String
+  paymentId       String?          @unique
+  payment         BillingPayment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  revenueEntryId  String?          @unique
+  revenueEntry    RevenueEntry?    @relation(fields: [revenueEntryId], references: [id], onDelete: SetNull)
+  invoiceId       String?          @unique
+  invoice         Invoice?         @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  currency        String           @default("EGP")
+  totalAmount     Decimal          @db.Decimal(14, 2)
+  payloadJson     Json?
+  schemaVersion   String           @default("1")
+  createdAt       DateTime         @default(now())
+  submission      FiscalSubmission?
+}
+
+model FiscalSubmission {
+  id                   String                 @id @default(cuid())
+  tenantId             String
+  tenant               Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId             String
+  clinic               Clinic                 @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patientId            String
+  patient              Patient                @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  fiscalDocumentId     String                 @unique
+  fiscalDocument       FiscalDocument         @relation(fields: [fiscalDocumentId], references: [id], onDelete: Cascade)
+  providerKey          String
+  status               FiscalSubmissionStatus @default(PENDING)
+  providerDocumentUuid String?
+  payloadJson          Json?
+  signature            String?
+  idempotencyKey       String?                @unique
+  submittedAt          DateTime?
+  errorMessage         String?
+  createdAt            DateTime               @default(now())
+
+  @@index([tenantId, clinicId, status])
+}
+
 model Tenant {
   id                    String          @id @default(cuid())
   name                  String
   nameAr                String          @default("")
+  marketId              String?
+  market                Market?         @relation(fields: [marketId], references: [id], onDelete: SetNull)
+  deploymentCell        String          @default("frankfurt")
   baseCurrency          String          @default("EGP")
   defaultLocale         String          @default("en")
   defaultVisitFee Decimal         @default(150) @db.Decimal(14, 2)
@@ -399,7 +526,10 @@ model Tenant {
   cashierShiftCloses             CashierShiftClose[]
   patientServicePackages         PatientServicePackage[]
   billingPayments                BillingPayment[]
-  etaReceipts                    EtaReceiptSubmission[]
+  fiscalDocuments                FiscalDocument[]
+  fiscalSubmissions              FiscalSubmission[]
+  providerCredentials            ProviderCredential[]
+  tenantFeatureFlags             TenantFeatureFlag[]
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
 }
@@ -555,7 +685,12 @@ model Clinic {
   billingPayments  BillingPayment[]
   clinicalFormTemplates ClinicalFormTemplate[]
   cashierShiftCloses CashierShiftClose[]
-  etaReceipts      EtaReceiptSubmission[]
+  fiscalDocuments  FiscalDocument[]
+  fiscalSubmissions FiscalSubmission[]
+  providerCredentials ProviderCredential[]
+  timezone         String?
+  weekendDays      Json?
+  settingsOverrides Json?
   auditLogs        AuditLog[]
   clinicAdminScopes ClinicAdminScope[]
   employeePrivilegeGrants UserClinicEmployeePrivilegeGrant[]
@@ -647,7 +782,8 @@ model Patient {
   dataProtectionConsents PatientDataProtectionConsent[]
   servicePackages      PatientServicePackage[]
   billingPayments      BillingPayment[]
-  etaReceipts          EtaReceiptSubmission[]
+  fiscalDocuments      FiscalDocument[]
+  fiscalSubmissions    FiscalSubmission[]
   satisfactionSurveys  SatisfactionSurveyResponse[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
@@ -937,7 +1073,7 @@ model RevenueEntry {
   transferVerificationStatus TransferVerificationStatus @default(NOT_APPLICABLE)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
-  etaReceipt    EtaReceiptSubmission?
+  fiscalDocument FiscalDocument?
 
   @@index([tenantId, clinicId, postedAt])
   @@index([appointmentId])
@@ -1220,7 +1356,7 @@ model Invoice {
   createdBy          User?         @relation("InvoiceCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   lines              InvoiceLine[]
   billingPayments    BillingPayment[]
-  etaReceipt         EtaReceiptSubmission?
+  fiscalDocument     FiscalDocument?
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
@@ -1685,7 +1821,7 @@ model BillingPayment {
   currency        String   @default("EGP")
   cashierUserId   String?
   allocations     BillingPaymentAllocation[]
-  etaReceipt      EtaReceiptSubmission?
+  fiscalDocument  FiscalDocument?
   createdAt       DateTime @default(now())
 
   @@index([tenantId, clinicId, createdAt])
@@ -1787,32 +1923,6 @@ model PayerPreAuthorization {
 
   @@index([tenantId, patientId])
   @@index([payerCompanyId])
-}
-
-model EtaReceiptSubmission {
-  id              String           @id @default(cuid())
-  tenantId        String
-  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  clinicId        String
-  clinic          Clinic           @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  patientId       String
-  patient         Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  paymentId       String?          @unique
-  payment         BillingPayment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
-  revenueEntryId  String?          @unique
-  revenueEntry    RevenueEntry?    @relation(fields: [revenueEntryId], references: [id], onDelete: SetNull)
-  invoiceId       String?          @unique
-  invoice         Invoice?         @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-  status          EtaReceiptStatus @default(PENDING)
-  etaUuid         String?
-  payloadJson     Json?
-  signature       String?
-  idempotencyKey  String?          @unique
-  submittedAt     DateTime?
-  errorMessage    String?
-  createdAt       DateTime         @default(now())
-
-  @@index([tenantId, clinicId, status])
 }
 
 model PatientDataProtectionConsent {

@@ -18,7 +18,19 @@ export class CreateTenantDto {
   @MaxLength(200)
   nameAr!: string;
 
-  @ApiPropertyOptional({ default: "AED", enum: BASE_CURRENCIES })
+  @ApiPropertyOptional({ description: "Market pack (country) — defaults to Egypt when omitted" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  marketId?: string;
+
+  @ApiPropertyOptional({ description: "Deployment cell / host zone — defaults from market (Frankfurt for Egypt)" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  deploymentCell?: string;
+
+  @ApiPropertyOptional({ enum: BASE_CURRENCIES, description: "Overrides market default currency when set" })
   @IsOptional()
   @IsString()
   @IsIn(BASE_CURRENCIES)

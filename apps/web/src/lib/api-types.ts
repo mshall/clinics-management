@@ -338,7 +338,14 @@ export interface AdminOverviewDto {
     integrationFailureRetentionDays: number;
   } | null;
   registeredTenants: number;
-  featureFlags: Array<{ id: string; key: string; enabled: boolean; description: string | null }>;
+  featureFlags: Array<{
+    key: string;
+    description: string;
+    globalEnabled: boolean;
+    marketEnabled: boolean | null;
+    tenantEnabled: boolean | null;
+    effective: boolean;
+  }>;
   recentAudit: Array<{ id: string; action: string; resource: string; resourceId: string | null; createdAt: string }>;
 }
 

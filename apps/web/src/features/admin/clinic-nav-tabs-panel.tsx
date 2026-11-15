@@ -15,6 +15,7 @@ import { useAuthStore } from "@/stores/auth-store";
 
 const NAV_I18N: Record<NavItemKey, string> = {
   platform: "nav.platformOverview",
+  platform_markets: "nav.platformMarkets",
   platform_organizations: "nav.platformOrganizations",
   platform_users: "nav.platformUsers",
   platform_clinics: "nav.platformClinics",

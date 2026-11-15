@@ -2,6 +2,7 @@
 export const ASSISTANT_NAV_PATH: Record<string, string> = {
   platform: "/platform",
   platform_organizations: "/platform/organizations",
+  platform_markets: "/platform/markets",
   platform_users: "/platform/users",
   platform_clinics: "/platform/clinics",
   dashboard: "/",
