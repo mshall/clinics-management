@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiErrorMessage } from "@/features/platform/platform-shared";
 import { apiPostFormData } from "@/lib/http";
-import { uploadFilesSequentially } from "@/lib/upload-files-sequentially";
+import { uploadFilesWithConcurrency } from "@/lib/upload-files-sequentially";
 
 type PatientClinicalSectionUploadProps = {
   patientId: string;
@@ -74,7 +74,7 @@ export function PatientClinicalSectionUpload({ patientId, category }: PatientCli
             : t("patients.errorDocCategoryRequired", "Each attached document needs a type."),
         );
       }
-      await uploadFilesSequentially(uploadFiles, async (uploadFile) => {
+      await uploadFilesWithConcurrency(uploadFiles, async (uploadFile) => {
         const fd = new FormData();
         fd.append("file", uploadFile);
         fd.append("description", description);

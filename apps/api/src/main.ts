@@ -8,13 +8,28 @@ import { AuthUserDto, LoginResponseDto } from "./common/dto/auth-responses.dto";
 import { ClinicDto } from "./common/dto/clinic.dto";
 import { GroupOverviewKpisDto } from "./common/dto/dashboard.dto";
 import { PatientDto } from "./common/dto/patient.dto";
+import { MulterExceptionFilter } from "./common/multer-exception.filter";
 import { PrismaClientExceptionFilter } from "./common/prisma-exception.filter";
 import { IntegrationFailureExceptionFilter } from "./integrations/integration-failure.filter";
+import compression from "compression";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableShutdownHooks();
-  app.useGlobalFilters(new PrismaClientExceptionFilter(), app.get(IntegrationFailureExceptionFilter));
+  app.use(
+    compression({
+      threshold: 1024,
+      filter: (req, res) => {
+        if (req.headers["x-no-compression"]) return false;
+        return compression.filter(req, res);
+      },
+    }),
+  );
+  app.useGlobalFilters(
+    new MulterExceptionFilter(),
+    new PrismaClientExceptionFilter(),
+    app.get(IntegrationFailureExceptionFilter),
+  );
   app.enableCors({ origin: true, credentials: true });
   app.setGlobalPrefix("api/v1");
   app.useGlobalPipes(

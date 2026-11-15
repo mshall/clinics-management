@@ -20,6 +20,14 @@ const PROFILES: Record<ImageEnhanceProfile, ProfileLimits> = {
 
 const JPEG_QUALITY = 0.88;
 
+/** Skip client-side resize when the file is already small (speeds uploads). */
+const FAST_SKIP_MAX_BYTES: Record<ImageEnhanceProfile, number> = {
+  document: 1_200_000,
+  camera: 1_600_000,
+  avatar: 600_000,
+  general: 1_200_000,
+};
+
 export function isEnhanceableImage(file: File): boolean {
   if (!file.type.startsWith("image/")) return false;
   return file.type !== "image/gif" && file.type !== "image/svg+xml";
@@ -104,6 +112,7 @@ export async function enhanceImageFile(
   profile: ImageEnhanceProfile = "document",
 ): Promise<File> {
   if (shouldSkipEnhancement(file, profile)) return file;
+  if (file.size > 0 && file.size <= FAST_SKIP_MAX_BYTES[profile]) return file;
 
   try {
     const img = await loadImageFromFile(file);
@@ -163,18 +172,23 @@ export async function enhanceFormDataImages(
   profile: ImageEnhanceProfile = "document",
 ): Promise<FormData> {
   const entries = [...formData.entries()];
-  let changed = false;
   const enhanced = new FormData();
-
-  for (const [key, value] of entries) {
+  const fileJobs = entries.map(async ([key, value]) => {
     if (value instanceof File && isEnhanceableImage(value)) {
       const next = await enhanceImageFile(value, profile);
-      if (next !== value) changed = true;
-      enhanced.append(key, next, next.name);
+      return { key, value: next, changed: next !== value, isFile: true as const };
+    }
+    return { key, value, changed: false, isFile: false as const };
+  });
+  const results = await Promise.all(fileJobs);
+  let changed = false;
+  for (const row of results) {
+    if (row.isFile && row.changed) changed = true;
+    if (row.value instanceof File) {
+      enhanced.append(row.key, row.value, row.value.name);
     } else {
-      enhanced.append(key, value);
+      enhanced.append(row.key, row.value);
     }
   }
-
   return changed ? enhanced : formData;
 }

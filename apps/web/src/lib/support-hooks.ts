@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/http";
+import { QUERY_STALE } from "@/lib/query-cache-policy";
 import type { Paginated } from "@/lib/paginated";
 import type {
   AdminInsights360Dto,
@@ -56,6 +57,8 @@ export function useAdminInsights360Query(from: string, to: string) {
   return useQuery({
     queryKey: ["admin", "insights", "360", from, to],
     queryFn: () => apiGet<AdminInsights360Dto>(`/api/v1/admin/insights/overview-360${rangeQuery(from, to)}`),
+    staleTime: QUERY_STALE.summary,
+    gcTime: QUERY_STALE.summary * 3,
   });
 }
 
@@ -63,5 +66,7 @@ export function useAdminStaffPerformanceQuery(from: string, to: string) {
   return useQuery({
     queryKey: ["admin", "insights", "staff", from, to],
     queryFn: () => apiGet<StaffPerformanceDto>(`/api/v1/admin/insights/staff-performance${rangeQuery(from, to)}`),
+    staleTime: QUERY_STALE.summary,
+    gcTime: QUERY_STALE.summary * 3,
   });
 }

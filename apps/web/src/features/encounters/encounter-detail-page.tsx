@@ -44,7 +44,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useEncounterQuery } from "@/lib/api-hooks";
 import type { EncounterDetailDto, EncounterDocumentDto } from "@/lib/api-types";
 import { ApiError, apiDelete, apiFetchBlob, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
-import { uploadFilesSequentially } from "@/lib/upload-files-sequentially";
+import { uploadFilesWithConcurrency } from "@/lib/upload-files-sequentially";
 import { canDeleteEncounter } from "@/lib/encounter-delete-policy";
 import { canGenerateInvoice } from "@/lib/invoice-generate-policy";
 import { formatEncounterStatus, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
@@ -340,7 +340,7 @@ export function EncounterDetailPage() {
 
   const uploadMutation = useMutation({
     mutationFn: async ({ files, kind }: { files: File[]; kind: DocKind }) => {
-      await uploadFilesSequentially(files, async (file) => {
+      await uploadFilesWithConcurrency(files, async (file) => {
         const fd = new FormData();
         fd.set("file", file);
         fd.set("kind", kind);

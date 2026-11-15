@@ -38,6 +38,13 @@ import {
   patientCategoryToClinicalKind,
 } from "./patient-document-category";
 import { MIN_PHONE_DIGITS, normalizePhoneDigits } from "./patient-phone";
+import {
+  assertUploadSizeBytes,
+  throwUploadDescriptionRequired,
+  throwUploadFileRequired,
+  throwUploadImagesOnly,
+  throwUploadUnsupportedType,
+} from "../common/upload-errors";
 import type { PatientPhoneConflictDto, PatientPhoneConflictPatientDto } from "./dto/patient-phone-conflict.dto";
 
 const MAX_PATIENT_DOC_BYTES = 15 * 1024 * 1024;
@@ -675,11 +682,11 @@ export class PatientsService {
   ): Promise<PatientDocumentDto> {
     await this.getById(tenantId, patientId, user);
     const desc = description?.trim();
-    if (!desc) throw new BadRequestException("Document description is required");
-    if (!file?.buffer?.length) throw new BadRequestException("File is required");
-    if (file.size > MAX_PATIENT_DOC_BYTES) throw new BadRequestException("File too large (max 15MB)");
+    if (!desc) throwUploadDescriptionRequired();
+    if (!file?.buffer?.length) throwUploadFileRequired();
+    assertUploadSizeBytes(file.size, MAX_PATIENT_DOC_BYTES);
     const mime = file.mimetype || "application/octet-stream";
-    if (!ALLOWED_PATIENT_DOC_MIME.has(mime)) throw new BadRequestException(`Unsupported file type: ${mime}`);
+    if (!ALLOWED_PATIENT_DOC_MIME.has(mime)) throwUploadUnsupportedType(mime);
 
     const docId = randomUUID();
     const base = path.basename(file.originalname || "document").replace(/[^\w.\-]+/g, "_").slice(0, 120) || "document";

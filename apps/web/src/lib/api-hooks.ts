@@ -33,6 +33,7 @@ import type {
   UserListItemDto,
 } from "@/lib/api-types";
 import { ApiError, apiGet } from "@/lib/http";
+import { QUERY_STALE } from "@/lib/query-cache-policy";
 import type { PatientClinicalDocumentsDto } from "@/lib/patient-document-category";
 import type { PatientPhoneConflictResponse } from "@/lib/patient-phone-conflict";
 import type { Paginated } from "@/lib/paginated";
@@ -262,6 +263,7 @@ export function useClinicsQuery(options?: { includeInactive?: boolean }) {
     queryKey: ["clinics", includeInactive ? "all" : "active"],
     queryFn: () => apiGet<ClinicDto[]>(`/api/v1/clinics${q}`),
     enabled: hasToken,
+    staleTime: QUERY_STALE.reference,
   });
 }
 
@@ -270,6 +272,7 @@ export function useClinicQuery(id: string | undefined) {
   return useQuery({
     queryKey: ["clinic", id],
     queryFn: () => apiGet<ClinicDetailDto>(`/api/v1/clinics/${id}`),
+    staleTime: QUERY_STALE.detail,
     enabled: Boolean(id) && hasToken,
   });
 }
@@ -288,6 +291,7 @@ export function useSchedulingPhysiciansQuery(params: {
     queryKey: ["clinicians", "scheduling", clinicId ?? "", search ?? ""],
     queryFn: () => apiGet<ClinicPhysicianDto[]>(`/api/v1/clinics/physicians/scheduling?${q.toString()}`),
     enabled: enabled && hasToken,
+    staleTime: search?.trim() ? QUERY_STALE.list : QUERY_STALE.reference,
     placeholderData: (previous) => previous,
   });
 }
@@ -506,6 +510,7 @@ export function useOperationsSummaryQuery(params: { from: string; to: string; cl
   return useQuery({
     queryKey: ["operations", "summary", params.from, params.to, params.clinicId ?? ""],
     queryFn: () => apiGet<OperationSummaryDto>(`/api/v1/operations/summary?${q.toString()}`),
+    staleTime: QUERY_STALE.list,
   });
 }
 
@@ -686,6 +691,7 @@ export function useHrSummaryQuery() {
   return useQuery({
     queryKey: ["hr", "summary"],
     queryFn: () => apiGet<HrSummaryDto>("/api/v1/hr/summary"),
+    staleTime: QUERY_STALE.summary,
   });
 }
 
@@ -863,6 +869,7 @@ export function useAdminOverviewQuery() {
     queryKey: ["admin", "overview"],
     queryFn: () => apiGet<AdminOverviewDto>("/api/v1/admin/overview"),
     enabled: hasToken,
+    staleTime: QUERY_STALE.summary,
   });
 }
 

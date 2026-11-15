@@ -1,5 +1,7 @@
 import { apiUrl } from "@/lib/api-url";
+import { localizeApiErrorMessage } from "@/lib/api-error-message";
 import { enhanceFormDataImages } from "@/lib/enhance-image";
+import i18n from "@/lib/i18n";
 import { useAuthStore } from "@/stores/auth-store";
 
 export class ApiError extends Error {
@@ -13,16 +15,27 @@ export class ApiError extends Error {
   }
 }
 
+function clientLanguageHeader(): string {
+  const lang = i18n.language?.split("-")[0] ?? "en";
+  return lang === "ar" ? "ar" : "en";
+}
+
 function authHeadersJson(): HeadersInit {
   const token = useAuthStore.getState().accessToken;
-  const headers: Record<string, string> = { Accept: "application/json" };
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    "Accept-Language": clientLanguageHeader(),
+  };
   if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
 }
 
 function authHeadersAny(): HeadersInit {
   const token = useAuthStore.getState().accessToken;
-  const headers: Record<string, string> = { Accept: "*/*" };
+  const headers: Record<string, string> = {
+    Accept: "*/*",
+    "Accept-Language": clientLanguageHeader(),
+  };
   if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
 }
@@ -45,22 +58,13 @@ function messageFromErrorBody(status: number, body: unknown, fallback: string): 
       (typeof body === "string" && !body.trim()) ||
       (typeof body === "object" && !Array.isArray(body) && !("message" in body) && Object.keys(body).length === 0);
     if (empty) {
-      return "Local API is not reachable. From the repo root run npm run dev and wait for “API listening on http://localhost:3000”.";
+      return i18n.t(
+        "errors.apiUnreachable",
+        "Local API is not reachable. From the repo root run npm run dev and wait for the API to be ready.",
+      );
     }
   }
-  if (body && typeof body === "object") {
-    const o = body as { message?: unknown; error?: unknown };
-    if (Array.isArray(o.message)) {
-      return o.message.map((x) => String(x)).join("; ");
-    }
-    if (typeof o.message === "string" && o.message.trim()) {
-      return o.message;
-    }
-    if (status === 503 && typeof o.error === "string") {
-      return `${o.error}. ${typeof o.message === "string" ? o.message : fallback}`;
-    }
-  }
-  return fallback;
+  return localizeApiErrorMessage(status, body, fallback);
 }
 
 export async function apiDownload(path: string, filename: string): Promise<void> {
@@ -154,7 +158,10 @@ export async function apiPostFormData<T>(
   options?: { enhance?: boolean },
 ): Promise<T> {
   const token = useAuthStore.getState().accessToken;
-  const headers: Record<string, string> = { Accept: "application/json" };
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    "Accept-Language": clientLanguageHeader(),
+  };
   if (token) headers.Authorization = `Bearer ${token}`;
   const body =
     options?.enhance === false ? formData : await enhanceFormDataImages(formData, "document");
@@ -179,7 +186,10 @@ export async function apiPatchFormData<T>(
   options?: { enhance?: boolean },
 ): Promise<T> {
   const token = useAuthStore.getState().accessToken;
-  const headers: Record<string, string> = { Accept: "application/json" };
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    "Accept-Language": clientLanguageHeader(),
+  };
   if (token) headers.Authorization = `Bearer ${token}`;
   const body =
     options?.enhance === false ? formData : await enhanceFormDataImages(formData, "document");

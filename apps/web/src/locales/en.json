@@ -1792,6 +1792,24 @@
     "cannotSaveTitle": "Cannot save yet",
     "cannotSaveDescription": "Fix the items below, then try saving again."
   },
+  "errors": {
+    "apiUnreachable": "Local API is not reachable. From the repo root run npm run dev and wait for the API to be ready.",
+    "network": "Network error. Check your connection and try again.",
+    "requestFailed": "Request failed. Please try again.",
+    "unauthorized": "Your session expired. Please sign in again.",
+    "forbidden": "You do not have permission for this action.",
+    "notFound": "The requested record was not found.",
+    "server": "Something went wrong on the server. Please try again in a moment.",
+    "unknown": "Something went wrong.",
+    "upload": {
+      "fileRequired": "Please choose a file to upload.",
+      "fileTooLarge": "This file is too large. Maximum size is {{maxMb}} MB.",
+      "unsupportedType": "This file type is not allowed ({{mime}}). Use PDF or common image formats.",
+      "descriptionRequired": "Please add a description for this document.",
+      "imagesOnly": "Only image documents can be cropped.",
+      "failed": "Upload failed. Please try again."
+    }
+  },
   "common": {
     "actions": "Actions",
     "loading": "Loading…",

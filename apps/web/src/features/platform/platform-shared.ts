@@ -1,4 +1,3 @@
-import { ApiError } from "@/lib/http";
 
 export type TenantRow = {
   id: string;
@@ -162,7 +161,4 @@ export function canCreateOrgUser(
   return getOrgUserCreateMissingFields(values, opts).length === 0;
 }
 
-export function apiErrorMessage(e: unknown): string {
-  if (e instanceof ApiError) return e.message;
-  return e instanceof Error ? e.message : String(e);
-}
+export { apiErrorMessage } from "@/lib/api-error-message";

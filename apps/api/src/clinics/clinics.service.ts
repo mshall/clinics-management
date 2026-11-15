@@ -23,6 +23,13 @@ import {
   normalizeClinicTime,
 } from "../common/clinic-hours";
 import { normalizeFrontDeskRoomLabels, parseFrontDeskRoomLabels } from "../common/front-desk-room-labels";
+import { TtlCache } from "../common/ttl-cache";
+
+const clinicListCache = new TtlCache<ClinicDto[]>(60_000);
+
+function bustClinicListCache(tenantId: string): void {
+  clinicListCache.deletePrefix(`clinics:${tenantId}:`);
+}
 
 export interface ClinicDto {
   id: string;
@@ -591,6 +598,10 @@ export class ClinicsService {
   }
 
   async list(tenantId: string, user: JwtUser, includeInactive = false): Promise<ClinicDto[]> {
+    const cacheKey = `clinics:${tenantId}:${user.userId}:${includeInactive ? "all" : "active"}`;
+    const cached = clinicListCache.get(cacheKey);
+    if (cached) return cached;
+
     let where: Prisma.ClinicWhereInput = { tenantId };
     if (!includeInactive) {
       where.recordStatus = ClinicRecordStatus.ACTIVE;
@@ -613,7 +624,9 @@ export class ClinicsService {
       orderBy: [{ parentClinicId: "asc" }, { nameEn: "asc" }],
       include: { parent: { select: { nameEn: true } }, _count: { select: { branches: true } } },
     });
-    return rows.map((c) => this.mapClinicRow(c));
+    const mapped = rows.map((c) => this.mapClinicRow(c));
+    clinicListCache.set(cacheKey, mapped);
+    return mapped;
   }
 
   async create(tenantId: string, dto: CreateClinicDto): Promise<ClinicDto> {
@@ -695,6 +708,7 @@ export class ClinicsService {
       include: { parent: { select: { nameEn: true } }, _count: { select: { branches: true } } },
     });
 
+    bustClinicListCache(tenantId);
     return this.mapClinicRow(row);
   }
 
@@ -786,6 +800,7 @@ export class ClinicsService {
       },
     });
 
+    bustClinicListCache(tenantId);
     return {
       id: row.id,
       parentClinicId: row.parentClinicId,
@@ -887,6 +902,7 @@ export class ClinicsService {
       }
     });
 
+    bustClinicListCache(tenantId);
     return this.getOne(tenantId, id, viewer);
   }
 
@@ -933,6 +949,7 @@ export class ClinicsService {
       });
     });
 
+    bustClinicListCache(tenantId);
     return this.getOne(tenantId, id, viewer);
   }
 }
