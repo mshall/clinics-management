@@ -16,6 +16,12 @@ const DEFAULT_TEMPLATES: { key: string; channel: MessageChannel; bodyEn: string;
     bodyAr: "تذكير: موعدكم غداً {{time}}. أرسل تأكيد أو إلغاء.",
   },
   {
+    key: "appointment_reminder_whatsapp",
+    channel: MessageChannel.WHATSAPP,
+    bodyEn: "Hello {{name}}, this is a reminder from {{clinic}}: your appointment is on {{time}}.",
+    bodyAr: "مرحباً {{name}}، تذكير من {{clinic}}: موعدكم {{time}}.",
+  },
+  {
     key: "appointment_reminder_2h",
     channel: MessageChannel.SMS,
     bodyEn: "Your visit is in 2 hours at {{clinic}}.",

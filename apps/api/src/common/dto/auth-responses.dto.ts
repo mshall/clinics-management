@@ -60,6 +60,9 @@ export class AuthUserDto {
   @ApiPropertyOptional({ description: "Whether the user uploaded a profile picture" })
   hasAvatar?: boolean;
 
+  @ApiPropertyOptional({ description: "Whether TOTP MFA is enabled for this account" })
+  mfaEnabled?: boolean;
+
   @ApiPropertyOptional({
     type: [EmployeePrivilegeGrantSummaryDto],
     description: "Clinics where the user is assigned as HR (full clinic-scoped HR permissions)",

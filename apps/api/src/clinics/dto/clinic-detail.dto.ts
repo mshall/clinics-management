@@ -111,4 +111,19 @@ export class ClinicDetailDto {
     example: ["Room 1", "Room 2", "Room 3"],
   })
   frontDeskRoomLabels!: string[];
+
+  @ApiPropertyOptional({ nullable: true })
+  etaBranchCode!: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  etaTaxpayerActivityCode!: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  etaDefaultItemCode!: string | null;
+
+  @ApiProperty({ default: true })
+  etaReceiptsEnabled!: boolean;
+
+  @ApiProperty({ default: true })
+  etaIncludeLogoOnReceipt!: boolean;
 }

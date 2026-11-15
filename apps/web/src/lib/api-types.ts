@@ -396,6 +396,11 @@ export interface ClinicDetailDto {
   createdAt: string;
   operatingPeriods: ClinicOperatingPeriodDto[];
   frontDeskRoomLabels: string[];
+  etaBranchCode?: string | null;
+  etaTaxpayerActivityCode?: string | null;
+  etaDefaultItemCode?: string | null;
+  etaReceiptsEnabled?: boolean;
+  etaIncludeLogoOnReceipt?: boolean;
 }
 
 export interface ClinicOperatingPeriodDto {

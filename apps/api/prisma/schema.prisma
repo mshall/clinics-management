@@ -347,6 +347,11 @@ model Tenant {
   defaultInvoiceVatPercent     Decimal         @default(5) @db.Decimal(5, 2)
   integrationFailureRetentionDays     Int       @default(30)
   integrationFailureLastSpikeAlertAt  DateTime?
+  whatsAppRemindersEnabled            Boolean   @default(false)
+  appointmentReminderHoursBefore      Int       @default(24)
+  etaDefaultTaxpayerActivityCode      String    @default("8690")
+  etaDefaultItemCode                  String?
+  etaEsignatureLabel                  String?
   users          User[]
   clinics        Clinic[]
   clinicAdminScopes ClinicAdminScope[]
@@ -409,6 +414,7 @@ model User {
   role         UserRole
   mfaEnabled   Boolean        @default(false)
   mfaTotpSecret String?
+  mfaRecoveryHashes Json?
   avatarRelativePath String?
   avatarMimeType     String?
   employee     Employee?
@@ -532,6 +538,11 @@ model Clinic {
   openingTime        String          @default("09:00") @db.VarChar(5)
   closingTime        String          @default("00:00") @db.VarChar(5)
   frontDeskRoomLabels Json           @default("[\"Room 1\",\"Room 2\",\"Room 3\"]")
+  etaBranchCode           String?
+  etaTaxpayerActivityCode String?
+  etaDefaultItemCode      String?
+  etaReceiptsEnabled      Boolean     @default(true)
+  etaIncludeLogoOnReceipt Boolean     @default(true)
   lastCalledTicketNumber Int?
   patientsHome     Patient[]       @relation("PatientHomeBranch")
   encounters       Encounter[]
@@ -1840,16 +1851,19 @@ model OutboundMessage {
   id          String         @id @default(cuid())
   tenantId    String
   patientId   String?
+  appointmentId String?
   channel     MessageChannel
   templateKey String?
   toPhone     String
   body        String
   status      String         @default("QUEUED")
+  metadata    Json?
   sentAt      DateTime?
   error       String?
   createdAt   DateTime       @default(now())
 
   @@index([tenantId, status])
+  @@index([appointmentId])
 }
 
 model RecallCampaign {

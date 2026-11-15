@@ -11,7 +11,7 @@ import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { TenantRoleNavTabsService } from "../user-nav-tabs/tenant-role-nav-tabs.service";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
-import { verifyTotpCode } from "./mfa.service";
+import { MfaService, verifyTotpCode } from "./mfa.service";
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 const ALLOWED_AVATAR_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -50,6 +50,7 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly audit: AuditService,
     private readonly tenantRoleNav: TenantRoleNavTabsService,
+    private readonly mfa: MfaService,
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
   ) {}
 
@@ -129,8 +130,11 @@ export class AuthService {
           errorCode: "MFA_REQUIRED",
         });
       }
-      if (!verifyTotpCode(user.mfaTotpSecret, mfaCode)) {
-        throw new UnauthorizedException("Invalid authenticator code");
+      const code = mfaCode.trim();
+      const totpOk = verifyTotpCode(user.mfaTotpSecret, code);
+      if (!totpOk) {
+        const recoveryOk = await this.mfa.consumeRecoveryCode(user.id, code);
+        if (!recoveryOk) throw new UnauthorizedException("Invalid authenticator or recovery code");
       }
     }
 

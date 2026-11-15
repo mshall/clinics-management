@@ -11,6 +11,7 @@ export type EtaReceiptPayload = {
     unitPrice: number;
     vatPercent: number;
     currency: string;
+    itemCode?: string;
   }[];
   totalAmount: number;
   currency: string;

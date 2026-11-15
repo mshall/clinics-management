@@ -231,6 +231,11 @@ export function AdminPage() {
   const [currencyDraft, setCurrencyDraft] = useState<string>(orgBaseCurrency);
   const [trnDraft, setTrnDraft] = useState("N/A");
   const [vatDraft, setVatDraft] = useState("5");
+  const [whatsappEnabled, setWhatsappEnabled] = useState(false);
+  const [reminderHours, setReminderHours] = useState("24");
+  const [etaActivityOrg, setEtaActivityOrg] = useState("8690");
+  const [etaItemOrg, setEtaItemOrg] = useState("");
+  const [etaSealLabel, setEtaSealLabel] = useState("");
   useEffect(() => {
     if (!isPlatformSuperAdmin && !isGroupAdmin && adminSection === "data") setAdminSection("clinics");
   }, [isPlatformSuperAdmin, isGroupAdmin, adminSection]);
@@ -250,15 +255,33 @@ export function AdminPage() {
     const v = overview.data?.currentTenant?.defaultInvoiceVatPercent;
     if (v != null && Number.isFinite(Number(v))) setVatDraft(String(v));
   }, [overview.data?.currentTenant?.defaultInvoiceVatPercent]);
+  useEffect(() => {
+    const t = overview.data?.currentTenant as { whatsAppRemindersEnabled?: boolean } | undefined;
+    if (t?.whatsAppRemindersEnabled != null) setWhatsappEnabled(t.whatsAppRemindersEnabled);
+    const h = overview.data?.currentTenant as { appointmentReminderHoursBefore?: number } | undefined;
+    if (h?.appointmentReminderHoursBefore != null) setReminderHours(String(h.appointmentReminderHoursBefore));
+    const act = overview.data?.currentTenant as { etaDefaultTaxpayerActivityCode?: string } | undefined;
+    if (act?.etaDefaultTaxpayerActivityCode) setEtaActivityOrg(act.etaDefaultTaxpayerActivityCode);
+    const item = overview.data?.currentTenant as { etaDefaultItemCode?: string | null } | undefined;
+    if (item?.etaDefaultItemCode != null) setEtaItemOrg(item.etaDefaultItemCode ?? "");
+    const seal = overview.data?.currentTenant as { etaEsignatureLabel?: string | null } | undefined;
+    if (seal?.etaEsignatureLabel != null) setEtaSealLabel(seal.etaEsignatureLabel ?? "");
+  }, [overview.data?.currentTenant]);
 
   const patchOrgSettingsMut = useMutation({
     mutationFn: () => {
       const vatN = Number.parseFloat(vatDraft);
+      const hours = Number.parseInt(reminderHours, 10);
       return apiPatch("/api/v1/admin/tenant-settings", {
         defaultVisitFee: Number.parseFloat(feeDraft),
         baseCurrency: currencyDraft,
         defaultTaxRegistrationNumber: trnDraft.trim() || "N/A",
         defaultInvoiceVatPercent: Number.isFinite(vatN) ? vatN : 5,
+        whatsAppRemindersEnabled: whatsappEnabled,
+        appointmentReminderHoursBefore: Number.isFinite(hours) ? hours : 24,
+        etaDefaultTaxpayerActivityCode: etaActivityOrg.trim() || "8690",
+        etaDefaultItemCode: etaItemOrg.trim() || null,
+        etaEsignatureLabel: etaSealLabel.trim() || null,
       });
     },
     onSuccess: async () => {
@@ -464,6 +487,40 @@ export function AdminPage() {
                   <p className="text-xs text-muted-foreground">
                     {t("admin.orgVatHint", "Default is 5%. Saving updates all clinics for tax invoices.")}
                   </p>
+                </div>
+                <div className="w-full space-y-2 border-t border-border pt-4">
+                  <p className="text-sm font-medium">{t("compliance.orgEtaTitle", "Egypt ETA (organization)")}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t(
+                      "compliance.orgEtaHint",
+                      "Production API keys live in AWS Secrets Manager (configure-apprunner-eta.sh). Per-clinic branch codes are under each clinic Settings.",
+                    )}
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="org-eta-activity">{t("compliance.etaActivity", "Default activity code")}</Label>
+                      <Input id="org-eta-activity" className="ltr-nums" value={etaActivityOrg} onChange={(e) => setEtaActivityOrg(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="org-eta-item">{t("compliance.etaItemCode", "Default item code")}</Label>
+                      <Input id="org-eta-item" value={etaItemOrg} onChange={(e) => setEtaItemOrg(e.target.value)} />
+                    </div>
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label htmlFor="org-eta-seal">{t("compliance.etaSealLabel", "E-signature / seal reference")}</Label>
+                      <Input id="org-eta-seal" value={etaSealLabel} onChange={(e) => setEtaSealLabel(e.target.value)} placeholder="kiorly-clinics-management/eta-credentials" />
+                    </div>
+                  </div>
+                </div>
+                <div className="w-full space-y-2 border-t border-border pt-4">
+                  <p className="text-sm font-medium">{t("admin.whatsappReminders", "WhatsApp appointment reminders")}</p>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={whatsappEnabled} onChange={(e) => setWhatsappEnabled(e.target.checked)} />
+                    {t("admin.whatsappRemindersEnabled", "Send async WhatsApp reminders for confirmed appointments")}
+                  </label>
+                  <div className="space-y-2 max-w-xs">
+                    <Label htmlFor="reminder-hours">{t("admin.reminderHoursBefore", "Hours before appointment")}</Label>
+                    <Input id="reminder-hours" className="ltr-nums w-28" type="number" min={1} max={168} value={reminderHours} onChange={(e) => setReminderHours(e.target.value)} />
+                  </div>
                 </div>
                 <Button
                   type="button"

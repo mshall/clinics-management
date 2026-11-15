@@ -14,6 +14,7 @@ import { ClinicContactSettingsPanel } from "@/features/clinics/clinic-contact-se
 import { ClinicCurrencySettingsPanel } from "@/features/clinics/clinic-currency-settings-panel";
 import { ClinicHoursSettingsPanel } from "@/features/clinics/clinic-hours-settings-panel";
 import { ClinicRoomsSettingsPanel } from "@/features/clinics/clinic-rooms-settings-panel";
+import { ClinicEtaSettingsPanel } from "@/features/compliance/clinic-eta-settings-panel";
 import { ClinicClinicalTemplatesPanel } from "@/features/clinics/clinic-clinical-templates-panel";
 import { ClinicReactivateDialog } from "@/features/clinics/clinic-reactivate-dialog";
 import { useClinicQuery } from "@/lib/api-hooks";
@@ -285,6 +286,7 @@ export function ClinicDetailPage() {
             canEdit={canManageClinic}
           />
           <ClinicClinicalTemplatesPanel clinicId={c.id} canEdit={canManageClinic} />
+          <ClinicEtaSettingsPanel clinicId={c.id} detail={c} disabled={!canManageClinic} />
         </TabsContent>
 
         <TabsContent value="history" className="space-y-4">

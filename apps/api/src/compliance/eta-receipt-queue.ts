@@ -21,6 +21,19 @@ export type QueueEtaReceiptParams = {
 export async function queueEtaReceipt(tx: Prisma.TransactionClient, params: QueueEtaReceiptParams): Promise<void> {
   if (params.totalAmount <= 0) return;
 
+  const clinic = await tx.clinic.findFirst({
+    where: { id: params.clinicId, tenantId: params.tenantId },
+    select: {
+      etaReceiptsEnabled: true,
+      etaBranchCode: true,
+      etaTaxpayerActivityCode: true,
+      etaDefaultItemCode: true,
+      taxRegistrationNumber: true,
+      tenant: { select: { etaDefaultTaxpayerActivityCode: true, etaDefaultItemCode: true } },
+    },
+  });
+  if (clinic && !clinic.etaReceiptsEnabled) return;
+
   const idempotencyKey = buildIdempotencyKey([
     params.tenantId,
     params.revenueEntryId ?? "",
@@ -44,10 +57,18 @@ export async function queueEtaReceipt(tx: Prisma.TransactionClient, params: Queu
   if (existing) return;
 
   const payload: EtaReceiptPayload = {
-    issuerRin: params.clinicTaxRin?.trim() || process.env.ETA_DEFAULT_ISSUER_RIN?.trim() || "PENDING-RIN",
-    branchCode: params.clinicId.slice(0, 8),
+    issuerRin:
+      params.clinicTaxRin?.trim() ||
+      clinic?.taxRegistrationNumber?.trim() ||
+      process.env.ETA_DEFAULT_ISSUER_RIN?.trim() ||
+      "PENDING-RIN",
+    branchCode: clinic?.etaBranchCode?.trim() || params.clinicId.slice(0, 8),
     documentType: "EI",
-    taxpayerActivityCode: process.env.ETA_TAXPAYER_ACTIVITY_CODE?.trim() || "8690",
+    taxpayerActivityCode:
+      clinic?.etaTaxpayerActivityCode?.trim() ||
+      clinic?.tenant.etaDefaultTaxpayerActivityCode?.trim() ||
+      process.env.ETA_TAXPAYER_ACTIVITY_CODE?.trim() ||
+      "8690",
     lines: [
       {
         description: params.description,
@@ -55,6 +76,7 @@ export async function queueEtaReceipt(tx: Prisma.TransactionClient, params: Queu
         unitPrice: params.totalAmount,
         vatPercent: params.vatPercent ?? 0,
         currency: params.currency,
+        itemCode: clinic?.etaDefaultItemCode ?? clinic?.tenant.etaDefaultItemCode ?? undefined,
       },
     ],
     totalAmount: params.totalAmount,

@@ -82,20 +82,73 @@ export class MfaService {
     return { secret, otpauthUrl, pending: true as const };
   }
 
+  generateRecoveryCodes(count = 8): string[] {
+    return Array.from({ length: count }, () =>
+      randomBytes(4).toString("hex").toUpperCase(),
+    );
+  }
+
   async confirmSetup(
     userId: string,
     tenantId: string | null,
     secret: string,
     code: string,
-  ): Promise<{ ok: true }> {
+  ): Promise<{ ok: true; recoveryCodes: string[] }> {
     if (!verifyTotpCode(secret, code)) {
       throw new BadRequestException("Invalid authenticator code");
     }
+    const recoveryCodes = this.generateRecoveryCodes();
+    const hashes = recoveryCodes.map((c) => bcrypt.hashSync(c, 10));
     await this.prisma.user.update({
       where: { id: userId },
-      data: { mfaTotpSecret: secret, mfaEnabled: true },
+      data: { mfaTotpSecret: secret, mfaEnabled: true, mfaRecoveryHashes: hashes },
     });
-    return { ok: true };
+    return { ok: true, recoveryCodes };
+  }
+
+  async regenerateRecoveryCodes(
+    userId: string,
+    tenantId: string | null,
+    password: string,
+    totpCode: string,
+  ): Promise<{ ok: true; recoveryCodes: string[] }> {
+    const user = await this.prisma.user.findFirst({
+      where: tenantId != null ? { id: userId, tenantId } : { id: userId, tenantId: null },
+      select: { passwordHash: true, mfaEnabled: true, mfaTotpSecret: true },
+    });
+    if (!user?.mfaEnabled) throw new BadRequestException("MFA is not enabled");
+    if (!bcrypt.compareSync(password, user.passwordHash)) throw new BadRequestException("Password is incorrect");
+    if (!verifyTotpCode(user.mfaTotpSecret, totpCode)) throw new BadRequestException("Invalid authenticator code");
+    const recoveryCodes = this.generateRecoveryCodes();
+    const hashes = recoveryCodes.map((c) => bcrypt.hashSync(c, 10));
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { mfaRecoveryHashes: hashes },
+    });
+    return { ok: true, recoveryCodes };
+  }
+
+  async consumeRecoveryCode(userId: string, code: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { mfaRecoveryHashes: true },
+    });
+    const hashes = Array.isArray(user?.mfaRecoveryHashes)
+      ? (user!.mfaRecoveryHashes as unknown[]).map((x) => String(x))
+      : [];
+    const normalized = code.trim().toUpperCase();
+    for (let i = 0; i < hashes.length; i += 1) {
+      const h = hashes[i]!;
+      if (bcrypt.compareSync(normalized, h)) {
+        const next = [...hashes.slice(0, i), ...hashes.slice(i + 1)];
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: { mfaRecoveryHashes: next.length ? next : [] },
+        });
+        return true;
+      }
+    }
+    return false;
   }
 
   async disable(userId: string, tenantId: string | null, password: string, code: string) {
@@ -112,7 +165,7 @@ export class MfaService {
     }
     await this.prisma.user.update({
       where: { id: userId },
-      data: { mfaEnabled: false, mfaTotpSecret: null },
+      data: { mfaEnabled: false, mfaTotpSecret: null, mfaRecoveryHashes: [] },
     });
     return { ok: true as const };
   }

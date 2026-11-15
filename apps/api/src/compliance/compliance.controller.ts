@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { ComplianceService } from "./compliance.service";
+import { PatchClinicEtaSettingsDto } from "../clinics/dto/patch-clinic-eta-settings.dto";
 
 @ApiTags("compliance")
 @ApiBearerAuth("bearer")
@@ -35,5 +36,15 @@ export class ComplianceController {
   @Post("egypt/eta-queue/:id/submit")
   submitEta(@CurrentUser() user: JwtUser, @Param("id") id: string) {
     return this.compliance.submitEtaToAuthority(requireTenantId(user), id);
+  }
+
+  @Get("egypt/eta-queue/:id/receipt")
+  etaReceiptView(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.compliance.getEtaReceiptView(requireTenantId(user), id);
+  }
+
+  @Patch("clinics/:clinicId/eta-settings")
+  patchClinicEta(@CurrentUser() user: JwtUser, @Param("clinicId") clinicId: string, @Body() body: PatchClinicEtaSettingsDto) {
+    return this.compliance.patchClinicEtaSettings(requireTenantId(user), clinicId, body);
   }
 }

@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsIn, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
+import { IsBoolean, IsIn, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
 import { BASE_CURRENCIES } from "../../common/base-currencies";
 
 export class PatchTenantSettingsDto {
@@ -53,4 +53,37 @@ export class PatchTenantSettingsDto {
   @Min(0)
   @Max(100)
   defaultInvoiceVatPercent?: number;
+
+  @ApiPropertyOptional({ description: "Enable WhatsApp appointment reminders (async outbound queue)" })
+  @IsOptional()
+  @IsBoolean()
+  whatsAppRemindersEnabled?: boolean;
+
+  @ApiPropertyOptional({ description: "Hours before appointment to send WhatsApp reminder", default: 24 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(168)
+  appointmentReminderHoursBefore?: number;
+
+  @ApiPropertyOptional({ description: "Default ETA taxpayer activity code for all clinics" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(16)
+  etaDefaultTaxpayerActivityCode?: string;
+
+  @ApiPropertyOptional({ description: "Default ETA GPC item code for visit services" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  etaDefaultItemCode?: string | null;
+
+  @ApiPropertyOptional({
+    description: "Label for e-signature token/seal stored in AWS Secrets Manager (per organization)",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  etaEsignatureLabel?: string | null;
 }

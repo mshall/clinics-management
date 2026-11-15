@@ -72,6 +72,16 @@ export class AuthController {
     return this.mfa.disable(user.userId, user.tenantId, body.password, body.code);
   }
 
+  @Post("mfa/recovery/regenerate")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth("bearer")
+  regenerateMfaRecovery(
+    @CurrentUser() user: JwtUser,
+    @Body() body: { password: string; code: string },
+  ) {
+    return this.mfa.regenerateRecoveryCodes(user.userId, user.tenantId, body.password, body.code);
+  }
+
   @Get("me")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth("bearer")

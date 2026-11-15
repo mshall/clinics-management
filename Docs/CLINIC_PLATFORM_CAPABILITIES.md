@@ -32,6 +32,7 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 | Service & price list (codes, effective dates) | **Foundation** | `ServiceCatalogItem` + `ServicePrice`; `GET/POST /billing/catalog` |
 | Contract prices per payer company | **Foundation** | `PayerCompany`, `ContractServicePrice`; resolver in `BillingService.resolvePrice` |
 | Invoice lines: qty, price, discount, tax | **Foundation** | `InvoiceLine` columns; manager flag when discount &gt; 15% |
+| Check-in collection (cash / InstaPay / Fawry) | **Shipped** | Front desk check-in; validates transfer refs; **queues ETA e-receipt** with revenue |
 | Split payment cash + card | **Foundation** | `POST /billing/payments` with `allocations[]` |
 | Refunds, credit notes, deposits, packages | **Foundation** | `CreditNote`, `PatientServicePackage` tables; APIs next slice |
 | Daily cash close per cashier/branch | **Foundation** | `POST /billing/cash-close` compares expected vs counted by method |
@@ -47,7 +48,7 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 | Requirement | Status | Notes |
 |-------------|--------|--------|
 | WhatsApp/SMS templates (EN/AR) | **Foundation** | `GET /messaging/templates` seeds confirm, 24h/2h reminders, results ready |
-| Automated reminder queue | **Planned** | `OutboundMessage` QUEUED; connect Twilio/Meta BSP |
+| Automated reminder queue | **Foundation** | `OutboundMessage` QUEUED; background worker + optional `WHATSAPP_*` env; org enables in Admin → Organization |
 | Confirm/cancel replies | **Planned** | Webhook handler + appointment status |
 | Recall / campaigns (check-up, lapsed, birthday) | **Foundation** | `GET /messaging/recall-campaigns`; tie to `Patient.acquisitionChannel` in next slice |
 | Post-visit satisfaction → doctor score | **Foundation** | `SatisfactionSurveyResponse` table; trigger on encounter finalize (next) |
@@ -93,6 +94,7 @@ Distinct from the **role assistant** (`/assistant/chat`): that remains Q&A; clin
 
 ## Related docs
 
+- [EGYPT_GO_LIVE.md](./EGYPT_GO_LIVE.md) · [COMPLIANCE_CONTROLS.md](./COMPLIANCE_CONTROLS.md)
 - [FRONT_DESK.md](./FRONT_DESK.md) · [PATIENT_360_AND_SCHEDULING.md](./PATIENT_360_AND_SCHEDULING.md) · [CLINICAL_WORKFLOW.md](./CLINICAL_WORKFLOW.md)
 - [Clinic_Management_System_PRD.md](./Clinic_Management_System_PRD.md) · [PRODUCT_EPIC_ROADMAP.md](./PRODUCT_EPIC_ROADMAP.md)
 

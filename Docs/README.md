@@ -34,6 +34,8 @@ See **[Documentation_Portal.md](./Documentation_Portal.md)** for module layout, 
 | [**PATIENT_360_AND_SCHEDULING.md**](./PATIENT_360_AND_SCHEDULING.md) | Patient summary, timeline, family merge, appointment types, series, waitlist, follow-up |
 | [**FRONT_DESK.md**](./FRONT_DESK.md) | Global search (⌘K), check-in → waiting → call → start visit (auto exam room) → finalize; board, TV screen, InstaPay/Fawry at check-in |
 | [**CLINIC_PLATFORM_CAPABILITIES.md**](./CLINIC_PLATFORM_CAPABILITIES.md) | Operations pipeline, billing/compliance, messaging, reports, clinic AI — status matrix |
+| [**EGYPT_GO_LIVE.md**](./EGYPT_GO_LIVE.md) | Egypt launch: ETA, data protection, backup, legal pack, pilot |
+| [**COMPLIANCE_CONTROLS.md**](./COMPLIANCE_CONTROLS.md) | ISO 27001 / HIPAA / SOC / FISMA control mapping (non-certification) |
 | [**GUIDE_BOOK.md**](./GUIDE_BOOK.md) | In-app Guide book (`/guide`) — role-based EN/AR instructions |
 
 ---

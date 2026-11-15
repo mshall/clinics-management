@@ -24,6 +24,7 @@ export interface AuthUser {
   hasAvatar?: boolean;
   /** Organization base currency (default for clinics that inherit org settings) */
   tenantBaseCurrency?: string | null;
+  mfaEnabled?: boolean;
 }
 
 interface AuthState {
@@ -38,6 +39,7 @@ interface AuthState {
       employeePrivilegeGrants?: AuthUser["employeePrivilegeGrants"];
       platformSuperAdmin?: boolean;
       hasAvatar?: boolean;
+      mfaEnabled?: boolean;
       tenantBaseCurrency?: string | null;
     },
   ) => void;
@@ -66,6 +68,7 @@ export const useAuthStore = create<AuthState>()(
             platformSuperAdmin: Boolean(raw.platformSuperAdmin),
             hasAvatar: Boolean(raw.hasAvatar),
             tenantBaseCurrency: raw.tenantBaseCurrency ?? null,
+            mfaEnabled: Boolean(raw.mfaEnabled),
           },
         }),
       signOut: () => set({ accessToken: null, user: null }),
@@ -96,6 +99,7 @@ export const useAuthStore = create<AuthState>()(
             platformSuperAdmin: Boolean(me.platformSuperAdmin),
             hasAvatar: Boolean((me as { hasAvatar?: boolean }).hasAvatar),
             tenantBaseCurrency: (me as AuthUserDto).tenantBaseCurrency ?? null,
+            mfaEnabled: Boolean((me as AuthUserDto).mfaEnabled),
           },
         });
       },

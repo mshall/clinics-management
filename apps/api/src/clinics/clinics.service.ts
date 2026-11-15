@@ -595,6 +595,11 @@ export class ClinicsService {
       frontDeskRoomLabels: parseFrontDeskRoomLabels(row.frontDeskRoomLabels),
       ...clinicInvoiceSettingsFromRow(row),
       ...clinicPrescriptionSettingsFromRow(row),
+      etaBranchCode: row.etaBranchCode,
+      etaTaxpayerActivityCode: row.etaTaxpayerActivityCode,
+      etaDefaultItemCode: row.etaDefaultItemCode,
+      etaReceiptsEnabled: row.etaReceiptsEnabled,
+      etaIncludeLogoOnReceipt: row.etaIncludeLogoOnReceipt,
     };
   }
 

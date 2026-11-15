@@ -130,6 +130,11 @@ export class AdminService {
             defaultTaxRegistrationNumber: tenant.defaultTaxRegistrationNumber,
             defaultInvoiceVatPercent: Number(tenant.defaultInvoiceVatPercent),
             integrationFailureRetentionDays: tenant.integrationFailureRetentionDays,
+            whatsAppRemindersEnabled: tenant.whatsAppRemindersEnabled,
+            appointmentReminderHoursBefore: tenant.appointmentReminderHoursBefore,
+            etaDefaultTaxpayerActivityCode: tenant.etaDefaultTaxpayerActivityCode,
+            etaDefaultItemCode: tenant.etaDefaultItemCode,
+            etaEsignatureLabel: tenant.etaEsignatureLabel,
           }
         : null,
       registeredTenants: tenantCount,
@@ -640,6 +645,11 @@ export class AdminService {
       integrationFailureRetentionDays?: number;
       defaultTaxRegistrationNumber?: string;
       defaultInvoiceVatPercent?: number;
+      whatsAppRemindersEnabled?: boolean;
+      appointmentReminderHoursBefore?: number;
+      etaDefaultTaxpayerActivityCode?: string;
+      etaDefaultItemCode?: string | null;
+      etaEsignatureLabel?: string | null;
     } = {};
     if (dto.defaultVisitFee !== undefined) data.defaultVisitFee = dto.defaultVisitFee;
     if (dto.baseCurrency !== undefined) {
@@ -658,6 +668,19 @@ export class AdminService {
         throw new BadRequestException("VAT percent must be between 0 and 100");
       }
       data.defaultInvoiceVatPercent = dto.defaultInvoiceVatPercent;
+    }
+    if (dto.whatsAppRemindersEnabled !== undefined) data.whatsAppRemindersEnabled = dto.whatsAppRemindersEnabled;
+    if (dto.appointmentReminderHoursBefore !== undefined) {
+      data.appointmentReminderHoursBefore = dto.appointmentReminderHoursBefore;
+    }
+    if (dto.etaDefaultTaxpayerActivityCode !== undefined) {
+      data.etaDefaultTaxpayerActivityCode = dto.etaDefaultTaxpayerActivityCode.trim() || "8690";
+    }
+    if (dto.etaDefaultItemCode !== undefined) {
+      data.etaDefaultItemCode = dto.etaDefaultItemCode?.trim() || null;
+    }
+    if (dto.etaEsignatureLabel !== undefined) {
+      data.etaEsignatureLabel = dto.etaEsignatureLabel?.trim() || null;
     }
     if (!Object.keys(data).length) throw new BadRequestException("No supported fields to update");
 
@@ -685,6 +708,11 @@ export class AdminService {
       defaultTaxRegistrationNumber: row.defaultTaxRegistrationNumber,
       defaultInvoiceVatPercent: Number(row.defaultInvoiceVatPercent),
       integrationFailureRetentionDays: row.integrationFailureRetentionDays,
+      whatsAppRemindersEnabled: row.whatsAppRemindersEnabled,
+      appointmentReminderHoursBefore: row.appointmentReminderHoursBefore,
+      etaDefaultTaxpayerActivityCode: row.etaDefaultTaxpayerActivityCode,
+      etaDefaultItemCode: row.etaDefaultItemCode,
+      etaEsignatureLabel: row.etaEsignatureLabel,
     };
   }
 
