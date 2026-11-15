@@ -42,7 +42,7 @@ This document maps platform controls to common frameworks — **not** a certific
 
 ## Backup and restore
 
-1. **RDS:** Automated backups and PITR in `eu-central-1` (CDK `DatabaseInstance`, Multi-AZ, deletion protection).
+1. **RDS:** Automated backups ( **35 days**, AWS maximum) and PITR in `eu-central-1` (CDK `DatabaseInstance`, Multi-AZ, deletion protection). **Medical-record retention** beyond 35 days uses quarterly snapshot export to S3 with lifecycle (see Egypt go-live backup section).
 2. **S3 uploads:** Versioning recommended on upload bucket (ops).
 3. **Restore drill (quarterly):** Restore RDS snapshot to staging; run `prisma migrate deploy` + smoke `health/ready`.
 4. **RTO/RPO targets:** Define per contract (pilot default RPO 24h, RTO 8h).

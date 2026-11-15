@@ -452,6 +452,7 @@ model FiscalSubmission {
   fiscalDocumentId     String                 @unique
   fiscalDocument       FiscalDocument         @relation(fields: [fiscalDocumentId], references: [id], onDelete: Cascade)
   providerKey          String
+  deviceId             String?
   status               FiscalSubmissionStatus @default(PENDING)
   providerDocumentUuid String?
   payloadJson          Json?
@@ -462,6 +463,18 @@ model FiscalSubmission {
   createdAt            DateTime               @default(now())
 
   @@index([tenantId, clinicId, status])
+  @@index([tenantId, clinicId, providerKey, deviceId, status, createdAt])
+}
+
+model FiscalPosChain {
+  tenantId         String
+  clinicId         String
+  providerKey      String
+  deviceId         String
+  lastAcceptedUuid String?
+  updatedAt        DateTime @updatedAt
+
+  @@id([tenantId, clinicId, providerKey, deviceId])
 }
 
 model Tenant {

@@ -9,6 +9,7 @@ import { MfaService } from "./mfa.service";
 import { JwtStrategy } from "./jwt.strategy";
 import { resolveJwtSigningSecret } from "./jwt-secret.util";
 import { PrivilegedMfaGuard } from "./privileged-mfa.guard";
+import { PrivilegedMfaPolicyService } from "./privileged-mfa-policy.service";
 import { PrismaModule } from "../prisma/prisma.module";
 
 @Module({
@@ -26,7 +27,7 @@ import { PrismaModule } from "../prisma/prisma.module";
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, MfaService, JwtStrategy, PrivilegedMfaGuard],
+  providers: [AuthService, MfaService, JwtStrategy, PrivilegedMfaGuard, PrivilegedMfaPolicyService],
   exports: [AuthService, MfaService, PrivilegedMfaGuard],
 })
 export class AuthModule {}

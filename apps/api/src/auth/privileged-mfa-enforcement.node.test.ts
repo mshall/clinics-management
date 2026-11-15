@@ -13,6 +13,9 @@ test("privileged MFA not enforced locally without AWS deploy target", () => {
   assert.equal(privilegedMfaEnforced(), false);
   process.env.KIORLY_DEPLOY_TARGET = "aws";
   assert.equal(privilegedMfaEnforced(), true);
+  process.env.PRIVILEGED_MFA_ENFORCE = "false";
+  assert.equal(privilegedMfaEnforced(), true);
+  delete process.env.PRIVILEGED_MFA_ENFORCE;
   if (env === undefined) delete process.env.NODE_ENV;
   else process.env.NODE_ENV = env;
   if (deploy === undefined) delete process.env.KIORLY_DEPLOY_TARGET;

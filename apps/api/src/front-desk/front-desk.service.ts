@@ -102,7 +102,11 @@ export class FrontDeskService {
             checkInTransferReference: null,
           };
 
-    const currency = body.currency?.trim() || apt.clinic.defaultCurrency || "EGP";
+    const { resolveClinicCurrency } = await import("../common/clinic-currency");
+    const currency =
+      body.currency?.trim() ||
+      apt.clinic.defaultCurrency?.trim() ||
+      (await resolveClinicCurrency(this.prisma, tenantId, apt.clinicId));
     let transferVerificationStatus: import("@prisma/client").TransferVerificationStatus | undefined;
     if (pay != null && collection?.transferChannel && collection.transferReference) {
       transferVerificationStatus = await resolveTransferVerification(

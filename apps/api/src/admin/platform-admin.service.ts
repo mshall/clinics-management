@@ -167,7 +167,10 @@ export class PlatformAdminService {
       throw new BadRequestException("Select a live country market before creating an organization");
     }
     const deploymentCell = dto.deploymentCell?.trim() || market.hostCell || "frankfurt";
-    const baseCurrency = dto.baseCurrency?.trim() || market?.defaultCurrency || "EGP";
+    const baseCurrency = dto.baseCurrency?.trim() || market?.defaultCurrency?.trim();
+    if (!baseCurrency) {
+      throw new BadRequestException("baseCurrency is required (or set defaultCurrency on the market pack)");
+    }
     const defaultLocale = dto.defaultLocale?.trim() || market?.defaultLocale || "en";
 
     const result = await this.prisma.$transaction(async (tx) => {

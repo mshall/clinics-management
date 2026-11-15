@@ -13,10 +13,10 @@ export type FiscalPayloadBuildContext = {
   taxConfig: Record<string, unknown>;
   clinicOverrides: Record<string, unknown>;
   idempotencyKey: string;
-  /** UUID for this receipt in the POS chain (ETA headerUUID). */
+  /** ETA receipt UUID — empty while queued; computed at submit from receipt content + POS chain. */
   receiptUuid: string;
-  /** Last accepted provider document UUID for this clinic branch (ETA previousUUID). */
-  previousReceiptUuid?: string | null;
+  /** Return receipts: UUID of the original sale receipt (referenceUUID). */
+  referenceReceiptUuid?: string;
   documentNature?: "sale" | "return";
 };
 

@@ -18,6 +18,8 @@ import type { AssistantChatActionDto } from "./dto/assistant-chat.dto";
 import { messageAllowedForNav, outOfScopeReply, requiredNavKeysForMessage } from "./assistant-scope";
 import type { AssistantChatResponseDto, AssistantContextDto } from "./dto/assistant-chat.dto";
 import { sanitizeAssistantMessageForLlm } from "./assistant-message-sanitize";
+import { resolveMarketForTenant } from "../markets/market-resolver";
+import { redactionForMarket } from "../providers/ai/market-ai-redaction";
 
 function pickLocale(locale: string | undefined, message: string): "en" | "ar" {
   if (locale === "ar" || locale === "en") return locale;
@@ -144,7 +146,16 @@ export class AssistantService {
     message: string,
     locale: "en" | "ar",
   ): Promise<string | null> {
-    const safeMessage = sanitizeAssistantMessageForLlm(message);
+    let redaction = null;
+    if (tenantId) {
+      try {
+        const marketCtx = await resolveMarketForTenant(this.prisma, tenantId);
+        redaction = redactionForMarket(marketCtx.market.code, marketCtx.providerConfig);
+      } catch {
+        redaction = redactionForMarket("EG", null);
+      }
+    }
+    const safeMessage = sanitizeAssistantMessageForLlm(message, redaction);
     const userContent = locale === "ar" ? `رد بالعربية. ${safeMessage}` : safeMessage;
     const result = await this.ai.chatCompletion(tenantId, {
       messages: [

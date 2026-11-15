@@ -29,8 +29,16 @@ Staff UI loads channels from `GET /api/v1/markets/current`.
 
 ## ETA wire format
 
-Internal payload is built in `EtaEgyptFiscalProvider`. Submit uses **`buildEtaWireReceiptDocument`** (`header.uuid`, `header.previousUUID`, `documentType: "r"`) per Egypt e-Receipt chain rules. Validate against the current ETA API documentation before production go-live ([markets/egypt.md](./markets/egypt.md)).
+Draft payload is built in `EtaEgyptFiscalProvider` at queue time (**no random uuid**). `FiscalSubmitService` assigns **`previousUUID`** from `FiscalPosChain` per **`ProviderCredential.deviceId`**, computes **`uuid`** with `eta-egypt-serialize.ts`, then submits Receipt **v1.2** via `buildEtaWireReceiptDocument`. Validate against the [ETA SDK](https://sdk.invoicing.eta.gov.eg/) before production ([markets/egypt.md](./markets/egypt.md)).
+
+## Currency
+
+Billing and clinic flows resolve currency from **clinic → tenant → market pack** (`resolveClinicCurrency`, `resolveMarketForTenant`). There is **no hidden EGP fallback** in billing, front desk, platform org create, or unknown country codes.
+
+## AI redaction
+
+Assistant prompts use **market-specific** redaction patterns (`providerConfig.ai.redaction` or built-in defaults per market code), including **person names**. Egypt uses the EU OpenAI API host in the market pack (`https://eu.api.openai.com/v1`).
 
 ## Privileged MFA (AWS production only)
 
-`PrivilegedMfaGuard` enforces TOTP for admin/finance roles when **`NODE_ENV=production`** and **`KIORLY_DEPLOY_TARGET=aws`** (set on App Runner). Local dev is unaffected unless `PRIVILEGED_MFA_ENFORCE=true`.
+`PrivilegedMfaGuard` enforces TOTP for admin/finance roles when **`NODE_ENV=production`** and **`KIORLY_DEPLOY_TARGET=aws`**. **`PRIVILEGED_MFA_ENFORCE=false` is ignored on AWS production** (enforcement stays on; startup writes `PRIVILEGED_MFA_DISABLE_IGNORED` to the audit log). Local dev is unaffected unless `PRIVILEGED_MFA_ENFORCE=true`.

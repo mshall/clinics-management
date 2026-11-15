@@ -17,7 +17,7 @@ Instance of [MARKET_GO_LIVE_TEMPLATE.md](../MARKET_GO_LIVE_TEMPLATE.md) for mark
 
 Fiscal provider key: **`eta-egypt`** (`FiscalDocument` + `FiscalSubmission`). Clinic/org ETA fields live in **`providerSettings["eta-egypt"]`** ([MULTI_MARKET.md](../MULTI_MARKET.md)).
 
-Idempotency is keyed by **payment / revenue / invoice** source id (not amount or description). Return receipts queue when a visit fee is voided. Submit uses **`header.uuid`** and **`header.previousUUID`** on the wire document — confirm field names against the current ETA e-Receipt API before go-live.
+Idempotency is keyed by **payment / revenue / invoice** source id (not amount or description). **Visit fee amount changes** void the posted revenue row, queue a **return** receipt, then queue a **new sale** on a new revenue row. **UUID / chain:** receipts are **not** random — `header.uuid` is a **SHA-256** over the ETA-serialized Receipt **v1.2** body (empty uuid field) including `previousUUID`. The chain is **per POS device** (`ProviderCredential.deviceId` / `posserial` headers), computed **only at submit** in queue order via `FiscalPosChain`. Wire body includes buyer (type P), tax totals, payment method, item/unit types, `documentTypeVersion` **1.2**, and POS headers on token + submit.
 
 Every posted payment path queues fiscal: check-in, visit fee, billing payment, tax invoice.
 

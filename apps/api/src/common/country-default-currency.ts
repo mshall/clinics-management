@@ -14,7 +14,8 @@ const COUNTRY_CURRENCY: Record<string, string> = {
   EU: "EUR",
 };
 
-export function defaultCurrencyForCountry(countryCode: string | null | undefined): string {
+export function defaultCurrencyForCountry(countryCode: string | null | undefined): string | null {
   const cc = countryCode?.trim().toUpperCase() ?? "";
-  return COUNTRY_CURRENCY[cc] ?? "EGP";
+  if (!cc) return null;
+  return COUNTRY_CURRENCY[cc] ?? null;
 }

@@ -1,13 +1,15 @@
 import { createHmac, randomUUID } from "crypto";
 import type { EtaConnectionConfig } from "./eta-secret-resolver";
-import { buildEtaWireReceiptDocument } from "./eta-egypt-wire";
+import { buildEtaWireReceiptDocument, type EtaWireBuildContext } from "./eta-egypt-wire";
 
 export type EtaReceiptPayload = {
   issuerRin: string;
   branchCode: string;
   documentType: "R";
+  /** Filled at submit time via ETA SHA256 serialization (empty while queued). */
   receiptUuid: string;
   previousReceiptUuid?: string;
+  referenceReceiptUuid?: string;
   taxpayerActivityCode: string;
   lines: {
     description: string;
@@ -19,10 +21,20 @@ export type EtaReceiptPayload = {
   }[];
   totalAmount: number;
   currency: string;
+  exchangeRate?: number;
+  paymentMethod?: string;
+  buyerName?: string;
   patientId: string;
   clinicId: string;
   idempotencyKey: string;
   documentNature: "sale" | "return";
+};
+
+export type EtaPosHeaders = {
+  posSerial: string;
+  posOsVersion?: string;
+  posModelFramework?: string;
+  presharedKey?: string;
 };
 
 export function buildIdempotencyKey(parts: string[]): string {
@@ -40,13 +52,24 @@ export function signEtaPayload(payload: EtaReceiptPayload, signingKeyOverride?: 
 }
 
 export type EtaSubmitResult =
-  | { ok: true; etaUuid: string; mode: "live" | "sandbox" }
+  | { ok: true; receiptUuid: string; mode: "live" | "sandbox" }
   | { ok: false; error: string; mode: "unconfigured" | "live" };
+
+function posHeaderBlock(pos?: EtaPosHeaders): Record<string, string> {
+  if (!pos?.posSerial?.trim()) return {};
+  return {
+    posserial: pos.posSerial.trim(),
+    pososversion: pos.posOsVersion?.trim() || "1.0",
+    posmodelframework: pos.posModelFramework?.trim() || "1.0",
+    ...(pos.presharedKey?.trim() ? { presharedkey: pos.presharedKey.trim() } : {}),
+  };
+}
 
 export async function submitEtaReceipt(
   payload: EtaReceiptPayload,
   signature: string,
   connection?: EtaConnectionConfig | null,
+  pos?: EtaPosHeaders,
 ): Promise<EtaSubmitResult> {
   const baseUrl = connection?.baseUrl?.trim() || process.env.ETA_API_BASE_URL?.trim();
   const clientId = connection?.clientId?.trim() || process.env.ETA_CLIENT_ID?.trim();
@@ -54,7 +77,7 @@ export async function submitEtaReceipt(
     if (process.env.NODE_ENV === "production") {
       return { ok: false, error: "ETA credentials are not configured", mode: "unconfigured" };
     }
-    return { ok: true, etaUuid: payload.receiptUuid || randomUUID(), mode: "sandbox" };
+    return { ok: true, receiptUuid: payload.receiptUuid || randomUUID().replace(/-/g, ""), mode: "sandbox" };
   }
 
   const tokenUrl =
@@ -66,9 +89,11 @@ export async function submitEtaReceipt(
     return { ok: false, error: "ETA client secret is missing", mode: "unconfigured" };
   }
 
+  const posHeaders = posHeaderBlock(pos);
+
   const tokenRes = await fetch(tokenUrl, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: { "Content-Type": "application/x-www-form-urlencoded", ...posHeaders },
     body: new URLSearchParams({
       grant_type: "client_credentials",
       client_id: clientId,
@@ -85,6 +110,15 @@ export async function submitEtaReceipt(
     return { ok: false, error: "ETA token response missing access_token", mode: "live" };
   }
 
+  const wireCtx: EtaWireBuildContext = {
+    payload,
+    previousUUID: payload.previousReceiptUuid?.trim() ?? "",
+    deviceSerial: pos?.posSerial?.trim() || "UNCONFIGURED",
+    internalId: payload.idempotencyKey,
+    referenceUuid: payload.referenceReceiptUuid,
+  };
+  const wireDocument = buildEtaWireReceiptDocument(wireCtx);
+
   const submitPath =
     connection?.receiptSubmitPath?.trim() || process.env.ETA_RECEIPT_SUBMIT_PATH?.trim() || "/api/v1/receiptsubmissions";
   const submitRes = await fetch(`${baseUrl.replace(/\/$/, "")}${submitPath}`, {
@@ -92,8 +126,9 @@ export async function submitEtaReceipt(
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
+      ...posHeaders,
     },
-    body: JSON.stringify({ documents: [buildEtaWireReceiptDocument(payload)] }),
+    body: JSON.stringify({ documents: [wireDocument] }),
   });
 
   if (!submitRes.ok) {
@@ -106,9 +141,13 @@ export async function submitEtaReceipt(
     uuid?: string;
     acceptedDocuments?: { uuid?: string }[];
   };
-  const etaUuid = out.submissionUUID ?? out.uuid ?? out.acceptedDocuments?.[0]?.uuid;
-  if (!etaUuid?.trim()) {
+  const etaUuid =
+    out.acceptedDocuments?.[0]?.uuid?.trim() ||
+    out.submissionUUID?.trim() ||
+    out.uuid?.trim() ||
+    payload.receiptUuid?.trim();
+  if (!etaUuid) {
     return { ok: false, error: "ETA submit response did not include a document UUID", mode: "live" };
   }
-  return { ok: true, etaUuid: etaUuid.trim(), mode: "live" };
+  return { ok: true, receiptUuid: etaUuid, mode: "live" };
 }

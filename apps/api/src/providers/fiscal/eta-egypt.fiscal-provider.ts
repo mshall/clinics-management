@@ -34,8 +34,8 @@ export class EtaEgyptFiscalProvider implements FiscalProvider {
       issuerRin,
       branchCode: (typeof clinic.branchCode === "string" ? clinic.branchCode : ctx.clinicId.slice(0, 8)).trim(),
       documentType: "R",
-      receiptUuid: ctx.receiptUuid,
-      previousReceiptUuid: ctx.previousReceiptUuid?.trim() || undefined,
+      receiptUuid: ctx.receiptUuid?.trim() || "",
+      referenceReceiptUuid: ctx.referenceReceiptUuid?.trim() || undefined,
       taxpayerActivityCode:
         (typeof clinic.taxpayerActivityCode === "string" ? clinic.taxpayerActivityCode : null) ||
         (typeof tax.defaultActivityCode === "string" ? tax.defaultActivityCode : "8690"),
@@ -53,6 +53,9 @@ export class EtaEgyptFiscalProvider implements FiscalProvider {
       ],
       totalAmount: ctx.totalAmount,
       currency: ctx.currency,
+      paymentMethod:
+        typeof clinic.paymentMethod === "string" ? clinic.paymentMethod.trim() : undefined,
+      buyerName: typeof clinic.buyerName === "string" ? clinic.buyerName.trim() : undefined,
       patientId: ctx.patientId,
       clinicId: ctx.clinicId,
       idempotencyKey: ctx.idempotencyKey,
@@ -72,6 +75,6 @@ export class EtaEgyptFiscalProvider implements FiscalProvider {
     const sig = signature?.trim() || signEtaPayload(payload as EtaReceiptPayload, connection?.signingKey);
     const result = await submitEtaReceipt(payload as EtaReceiptPayload, sig, connection);
     if (!result.ok) return result;
-    return { ok: true, providerDocumentUuid: result.etaUuid, mode: result.mode };
+    return { ok: true, providerDocumentUuid: result.receiptUuid, mode: result.mode };
   }
 }

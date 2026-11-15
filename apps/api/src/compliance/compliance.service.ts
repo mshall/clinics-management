@@ -9,11 +9,14 @@ import {
   resolveEtaClinicSettings,
 } from "../providers/provider-settings";
 import { buildEtaReceiptQrPayload, type EtaReceiptViewDto } from "./eta-receipt-presenter";
-import { getFiscalProvider } from "../providers/fiscal/fiscal-provider.registry";
+import { FiscalSubmitService } from "./fiscal-submit.service";
 
 @Injectable()
 export class ComplianceService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly fiscalSubmit: FiscalSubmitService,
+  ) {}
 
   async recordDataProtectionConsent(
     tenantId: string,
@@ -54,41 +57,7 @@ export class ComplianceService {
   }
 
   async submitEtaToAuthority(tenantId: string, id: string) {
-    const row = await this.prisma.fiscalSubmission.findFirst({
-      where: { id, tenantId },
-      include: { fiscalDocument: true },
-    });
-    if (!row) throw new NotFoundException("Fiscal submission not found");
-    if (row.status === FiscalSubmissionStatus.SUBMITTED || row.status === FiscalSubmissionStatus.ACCEPTED) {
-      return row;
-    }
-    const provider = getFiscalProvider(row.providerKey);
-    if (!provider) throw new BadRequestException(`Unknown fiscal provider: ${row.providerKey}`);
-    const payload = row.payloadJson;
-    if (!payload) throw new BadRequestException("Submission is missing payload");
-    const cred = await this.prisma.providerCredential.findFirst({
-      where: { tenantId, clinicId: row.clinicId, providerKey: row.providerKey },
-      select: { secretRef: true },
-    });
-    const result = await provider.submit(payload, row.signature?.trim() ?? "", cred?.secretRef ?? null);
-    if (!result.ok) {
-      return this.prisma.fiscalSubmission.update({
-        where: { id },
-        data: {
-          status: FiscalSubmissionStatus.REJECTED,
-          errorMessage: result.error,
-        },
-      });
-    }
-    return this.prisma.fiscalSubmission.update({
-      where: { id },
-      data: {
-        status: FiscalSubmissionStatus.SUBMITTED,
-        providerDocumentUuid: result.providerDocumentUuid,
-        submittedAt: new Date(),
-        errorMessage: result.mode === "sandbox" ? "Sandbox UUID (provider credentials not configured)" : null,
-      },
-    });
+    return this.fiscalSubmit.submitOne(tenantId, id);
   }
 
   async patchClinicEtaSettings(tenantId: string, clinicId: string, dto: PatchClinicEtaSettingsDto) {

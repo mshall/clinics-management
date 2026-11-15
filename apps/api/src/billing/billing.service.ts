@@ -3,6 +3,7 @@ import { PaymentMethod, Prisma, UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
 import { queueEtaReceipt } from "../compliance/eta-receipt-queue";
+import { resolveMarketForTenant } from "../markets/market-resolver";
 import { flattenBillingPaymentAllocations, sumExpectedCashAndCard } from "./billing-cash-close";
 
 const DISCOUNT_APPROVAL_THRESHOLD = 15;
@@ -45,6 +46,7 @@ export class BillingService {
     if (!code) throw new BadRequestException("Service code is required");
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const currency = await this.resolveTenantCurrency(tenantId, body.currency);
     return this.prisma.$transaction(async (tx) => {
       const item = await tx.serviceCatalogItem.create({
         data: {
@@ -61,7 +63,7 @@ export class BillingService {
           catalogItemId: item.id,
           effectiveFrom: today,
           amount: new Prisma.Decimal(String(body.amount)),
-          currency: body.currency?.trim() || "EGP",
+          currency,
         },
       });
       return item;
@@ -104,6 +106,13 @@ export class BillingService {
     });
   }
 
+  private async resolveTenantCurrency(tenantId: string, override?: string): Promise<string> {
+    const o = override?.trim();
+    if (o) return o;
+    const ctx = await resolveMarketForTenant(this.prisma, tenantId);
+    return ctx.currency;
+  }
+
   async recordPayment(
     tenantId: string,
     user: JwtUser,
@@ -124,6 +133,7 @@ export class BillingService {
       where: { id: body.clinicId, tenantId },
       select: { taxRegistrationNumber: true, invoiceVatPercent: true },
     });
+    const currency = await this.resolveTenantCurrency(tenantId, body.currency);
 
     return this.prisma.$transaction(async (tx) => {
       const payment = await tx.billingPayment.create({
@@ -133,7 +143,7 @@ export class BillingService {
           patientId: body.patientId,
           invoiceId: body.invoiceId,
           totalAmount: new Prisma.Decimal(String(total)),
-          currency: body.currency?.trim() || "EGP",
+          currency,
           cashierUserId: user.userId,
           allocations: {
             create: body.allocations.map((a) => ({

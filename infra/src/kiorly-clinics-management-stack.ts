@@ -97,7 +97,8 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       multiAz: true,
       credentials: rds.Credentials.fromGeneratedSecret("clinicapp"),
       databaseName: "clinic",
-      backupRetention: cdk.Duration.days(7),
+      /** RDS automated backup window (AWS max 35d). Longer medical-record retention uses snapshot/export runbooks. */
+      backupRetention: cdk.Duration.days(35),
       deleteAutomatedBackups: false,
       removalPolicy: cdk.RemovalPolicy.SNAPSHOT,
       deletionProtection: true,
