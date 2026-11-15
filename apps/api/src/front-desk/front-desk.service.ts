@@ -8,6 +8,8 @@ import {
   VisitCollectionMode,
 } from "@prisma/client";
 import { collectionFieldsFromParsed, parseVisitCollectionForAmount, type VisitCollectionInput } from "../common/visit-collection";
+import { resolveTransferVerification } from "../common/visit-collection-transfer";
+import { queueEtaReceipt } from "../compliance/eta-receipt-queue";
 import type { JwtUser } from "../auth/jwt-user";
 import { parseFrontDeskRoomLabels } from "../common/front-desk-room-labels";
 import { EncountersService } from "../encounters/encounters.service";
@@ -45,7 +47,10 @@ export class FrontDeskService {
   ) {
     const apt = await this.prisma.appointment.findFirst({
       where: { id: appointmentId, tenantId },
-      include: { patient: true, clinic: { select: { defaultCurrency: true, nameEn: true } } },
+      include: {
+        patient: true,
+        clinic: { select: { defaultCurrency: true, nameEn: true, taxRegistrationNumber: true, invoiceVatPercent: true } },
+      },
     });
     if (!apt) throw new NotFoundException("Appointment not found");
     if (apt.status === AppointmentStatus.CANCELLED || apt.status === AppointmentStatus.COMPLETED) {
@@ -89,6 +94,17 @@ export class FrontDeskService {
             checkInTransferReference: null,
           };
 
+    const currency = body.currency?.trim() || apt.clinic.defaultCurrency || "EGP";
+    let transferVerificationStatus: import("@prisma/client").TransferVerificationStatus | undefined;
+    if (pay != null && collection?.transferChannel && collection.transferReference) {
+      transferVerificationStatus = await resolveTransferVerification(
+        collection.transferChannel,
+        collection.transferReference,
+        pay,
+        currency,
+      );
+    }
+
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.appointment.update({
         where: { id: appointmentId },
@@ -109,8 +125,7 @@ export class FrontDeskService {
         },
       });
       if (pay != null && collection) {
-        const currency = body.currency?.trim() || apt.clinic.defaultCurrency || "AED";
-        await tx.revenueEntry.create({
+        const revenue = await tx.revenueEntry.create({
           data: {
             tenantId,
             clinicId: apt.clinicId,
@@ -123,8 +138,23 @@ export class FrontDeskService {
             currency,
             postedAt: now,
             status: RevenueStatus.POSTED,
+            transferVerificationStatus,
             ...collectionFieldsFromParsed(collection),
           },
+        });
+        await queueEtaReceipt(tx, {
+          tenantId,
+          clinicId: apt.clinicId,
+          patientId: apt.patientId,
+          revenueEntryId: revenue.id,
+          totalAmount: pay,
+          currency,
+          vatPercent: Number(apt.clinic.invoiceVatPercent ?? 0),
+          description: revenue.description ?? "Check-in payment",
+          clinicTaxRin: apt.clinic.taxRegistrationNumber,
+          collectionMode: collection.collectionMode,
+          transferChannel: collection.transferChannel,
+          transferReference: collection.transferReference,
         });
       }
       return {

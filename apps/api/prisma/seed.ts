@@ -14,6 +14,7 @@ import {
   UserRole,
 } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
+import { assertDemoPasswordAllowedInProduction, isDemoSeedBlockedInProduction } from "../src/common/seed-demo-guard";
 
 const prisma = new PrismaClient();
 
@@ -70,13 +71,16 @@ type UserSeed = {
 };
 
 async function ensureUser(passwordHash: string, data: UserSeed) {
+  if (isDemoSeedBlockedInProduction()) {
+    return null;
+  }
   const existing = await prisma.user.findFirst({
     where: { email: data.email, tenantId: data.tenantId },
   });
   if (existing) {
     const ensureDemoPasswords =
       process.env.PRISMA_SEED_ENSURE_DEMO_PASSWORDS === "true" ||
-      process.env.NODE_ENV !== "production";
+      (process.env.NODE_ENV !== "production" && process.env.ALLOW_DEMO_SEED !== "false");
     if (ensureDemoPasswords) {
       let matchesDemo = false;
       try {
@@ -1217,6 +1221,13 @@ async function seedFreshDatabase(passwordHash: string) {
 }
 
 async function main() {
+  if (isDemoSeedBlockedInProduction()) {
+    console.log(
+      "Seed: skipped in production (demo users/passwords blocked). Set ALLOW_DEMO_SEED=true only on intentional demo stacks.",
+    );
+    return;
+  }
+  assertDemoPasswordAllowedInProduction("demo");
   const passwordHash = bcrypt.hashSync("demo", 10);
 
   if (await hasAnyDatabaseContent()) {

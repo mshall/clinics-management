@@ -162,7 +162,7 @@ Shipped capabilities are listed in the PRD [§12.1 Delivered on `main`](./Clinic
 
 **Suggested next waves (summary):**
 
-1. **Production gate** — MFA, refresh tokens, rate limiting, WAF, audit export, patient invoicing at scale, notifications (SMS/WhatsApp).
+1. **Production gate** — TOTP MFA (shipped foundation), refresh tokens, rate limiting, WAF, audit export, patient invoicing at scale, notifications (SMS/WhatsApp). **Never** seed `password: demo` in production (`ALLOW_DEMO_SEED` opt-in only).
 2. **Operations depth** — Patient portal, online payments, expense approval workflows, executive dashboard alerts, scheduled reports.
 3. **Clinical & insurance** — Formulary, interaction checks, structured labs, first insurance connector.
 4. **Enterprise scale** — SSO, white-label, subscription billing, native mobile apps, embedded BI.

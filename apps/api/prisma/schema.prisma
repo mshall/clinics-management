@@ -241,6 +241,13 @@ enum EtaReceiptStatus {
   REJECTED
 }
 
+enum TransferVerificationStatus {
+  NOT_APPLICABLE
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
 enum RecallCampaignKind {
   CHECKUP_DUE
   LAPSED
@@ -332,7 +339,7 @@ model Tenant {
   id                    String          @id @default(cuid())
   name                  String
   nameAr                String          @default("")
-  baseCurrency          String          @default("AED")
+  baseCurrency          String          @default("EGP")
   defaultLocale         String          @default("en")
   defaultVisitFee Decimal         @default(150) @db.Decimal(14, 2)
   encounterAutoLockHours         Int             @default(72)
@@ -400,6 +407,8 @@ model User {
   passwordHash String
   displayName  String
   role         UserRole
+  mfaEnabled   Boolean        @default(false)
+  mfaTotpSecret String?
   avatarRelativePath String?
   avatarMimeType     String?
   employee     Employee?
@@ -509,7 +518,7 @@ model Clinic {
   taxRegistrationNumber String?
   invoiceVatPercent   Decimal       @default(5) @db.Decimal(5, 2)
   defaultLanguage  Locale          @default(en)
-  defaultCurrency  String          @default("AED")
+  defaultCurrency  String          @default("EGP")
   invoiceLogoRelativePath String?
   invoiceLogoOriginalName String?
   invoiceLogoMimeType     String?
@@ -802,7 +811,7 @@ model Encounter {
   heightCm       Decimal?          @db.Decimal(6, 2)
   noMedications  Boolean           @default(false)
   visitFeeAmount Decimal           @default(0) @db.Decimal(14, 2)
-  visitFeeCurrency String          @default("AED")
+  visitFeeCurrency String          @default("EGP")
   appointmentId  String?
   appointment    Appointment?     @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   finalizedAt    DateTime?
@@ -914,8 +923,10 @@ model RevenueEntry {
   collectionMode VisitCollectionMode?
   transferChannel MoneyTransferChannel?
   transferReference String?
+  transferVerificationStatus TransferVerificationStatus @default(NOT_APPLICABLE)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+  etaReceipt    EtaReceiptSubmission?
 
   @@index([tenantId, clinicId, postedAt])
   @@index([appointmentId])
@@ -1104,7 +1115,7 @@ model Operation {
   totalCost       Decimal  @db.Decimal(14, 2)
   downPayment     Decimal         @default(0) @db.Decimal(14, 2)
   paidAmount      Decimal         @default(0) @db.Decimal(14, 2)
-  feeCurrency     String          @default("AED")
+  feeCurrency     String          @default("EGP")
   comments        String?
   status          OperationStatus @default(SCHEDULED)
   noMedications   Boolean         @default(false)
@@ -1198,6 +1209,7 @@ model Invoice {
   createdBy          User?         @relation("InvoiceCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   lines              InvoiceLine[]
   billingPayments    BillingPayment[]
+  etaReceipt         EtaReceiptSubmission?
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
@@ -1776,9 +1788,15 @@ model EtaReceiptSubmission {
   patient         Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
   paymentId       String?          @unique
   payment         BillingPayment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  revenueEntryId  String?          @unique
+  revenueEntry    RevenueEntry?    @relation(fields: [revenueEntryId], references: [id], onDelete: SetNull)
+  invoiceId       String?          @unique
+  invoice         Invoice?         @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
   status          EtaReceiptStatus @default(PENDING)
   etaUuid         String?
   payloadJson     Json?
+  signature       String?
+  idempotencyKey  String?          @unique
   submittedAt     DateTime?
   errorMessage    String?
   createdAt       DateTime         @default(now())

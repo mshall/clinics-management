@@ -12,7 +12,13 @@ import { Link } from "react-router-dom";
 
 type IcdRow = { icd10Code: string; descriptionEn: string; descriptionAr: string };
 type Shortcut = { id: string; label: string; type: string; payload: unknown };
-type ClinicalWarning = { kind: string; severity: string; messageEn: string; messageAr: string };
+type ClinicalWarning = {
+  kind: string;
+  severity: string;
+  messageEn: string;
+  messageAr: string;
+  limitedCheck?: boolean;
+};
 
 type Props = {
   encounter: EncounterDetailDto;
@@ -154,9 +160,18 @@ export function EncounterClinicalTools({ encounter, onApplySoap, pendingDrugName
       {safetyQuery.data?.length ? (
         <ul className="space-y-1 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-950 dark:text-amber-100">
           {safetyQuery.data.map((w, i) => (
-            <li key={i}>{isAr && w.messageAr ? w.messageAr : w.messageEn}</li>
+            <li key={i}>
+              {isAr && w.messageAr ? w.messageAr : w.messageEn}
+              {w.limitedCheck ? (
+                <span className="mt-0.5 block font-medium text-amber-900/80 dark:text-amber-50/90">
+                  {t("clinical.safetyLimitedCheck", "Limited check — not the full Egyptian drug catalog.")}
+                </span>
+              ) : null}
+            </li>
           ))}
         </ul>
+      ) : pendingDrugName && pendingDrugName.trim().length > 1 && safetyQuery.isSuccess && !safetyQuery.data?.length ? (
+        <p className="text-xs text-muted-foreground">{t("clinical.safetyNoIssues")}</p>
       ) : null}
     </div>
   );

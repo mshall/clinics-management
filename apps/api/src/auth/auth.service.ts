@@ -11,6 +11,7 @@ import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { TenantRoleNavTabsService } from "../user-nav-tabs/tenant-role-nav-tabs.service";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
+import { verifyTotpCode } from "./mfa.service";
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 const ALLOWED_AVATAR_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -68,6 +69,7 @@ export class AuthService {
     displayName: string;
     role: UserRole;
     avatarRelativePath?: string | null;
+    mfaEnabled?: boolean;
   }, navTabKeys: string[] | null, roleNavTabKeys: string[] | null, tenantBaseCurrency: string | null = null) {
     const employeePrivilegeGrants =
       user.tenantId != null
@@ -87,11 +89,12 @@ export class AuthService {
         role: user.role,
       }),
       hasAvatar: Boolean(user.avatarRelativePath),
+      mfaEnabled: Boolean(user.mfaEnabled),
       employeePrivilegeGrants: employeePrivilegeGrants.length ? employeePrivilegeGrants : undefined,
     };
   }
 
-  async login(email: string, password: string) {
+  async login(email: string, password: string, mfaCode?: string) {
     const normalized = normalizeLoginEmail(email);
     const variants = loginEmailLookupVariants(normalized);
     const candidates = await this.prisma.user.findMany({
@@ -108,6 +111,8 @@ export class AuthService {
         role: true,
         passwordHash: true,
         avatarRelativePath: true,
+        mfaEnabled: true,
+        mfaTotpSecret: true,
         deletedAt: true,
         deactivatedAt: true,
       },
@@ -116,6 +121,17 @@ export class AuthService {
     if (!user) throw new UnauthorizedException("Invalid credentials");
     if (user.deletedAt || user.deactivatedAt) {
       throw new UnauthorizedException("This account is deactivated or archived");
+    }
+    if (user.mfaEnabled) {
+      if (!mfaCode?.trim()) {
+        throw new UnauthorizedException({
+          message: "Multi-factor authentication code is required",
+          errorCode: "MFA_REQUIRED",
+        });
+      }
+      if (!verifyTotpCode(user.mfaTotpSecret, mfaCode)) {
+        throw new UnauthorizedException("Invalid authenticator code");
+      }
     }
 
     const accessToken = this.jwt.sign({

@@ -20,6 +20,7 @@ import {
 } from "../common/invoice-config";
 import { computeVatInclusiveBreakdown } from "../common/vat-breakdown";
 import { normalizeOrgTaxRegistrationNumber } from "../common/sync-clinic-invoice-tax";
+import { queueEtaReceipt } from "../compliance/eta-receipt-queue";
 import { PrismaService } from "../prisma/prisma.service";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { CreateInvoiceDto } from "./dto/create-invoice.dto";
@@ -225,33 +226,49 @@ export class InvoicesService {
     const sections = normalizeInvoiceSections(clinic.invoiceSections);
     const vatPercentSnapshot = Number(clinic.invoiceVatPercent ?? 5);
 
-    const row = await this.prisma.invoice.create({
-      data: {
+    const lineTotal = lines.reduce((sum, l) => sum + Number(l.amountPaid), 0);
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.invoice.create({
+        data: {
+          tenantId,
+          clinicId,
+          patientId,
+          encounterId,
+          operationId,
+          invoiceNumber,
+          issueDate,
+          currency,
+          backgroundColor,
+          sectionsSnapshot: sections as unknown as Prisma.InputJsonValue,
+          patientName,
+          patientMrn,
+          clinicNameEn: clinic.nameEn,
+          clinicNameAr: clinic.nameAr,
+          clinicAddressEn: clinic.addressEn,
+          clinicAddressAr: clinic.addressAr,
+          clinicPhone: clinic.phone,
+          clinicEmail: clinic.email,
+          clinicLicenseNumber: clinic.licenseNumber,
+          clinicTaxRegistrationNumber: normalizeOrgTaxRegistrationNumber(clinic.taxRegistrationNumber),
+          vatPercentSnapshot,
+          createdByUserId: viewer.userId,
+          lines: { create: lines },
+        },
+        include: invoiceInclude,
+      });
+      await queueEtaReceipt(tx, {
         tenantId,
         clinicId,
         patientId,
-        encounterId,
-        operationId,
-        invoiceNumber,
-        issueDate,
+        invoiceId: created.id,
+        totalAmount: lineTotal,
         currency,
-        backgroundColor,
-        sectionsSnapshot: sections as unknown as Prisma.InputJsonValue,
-        patientName,
-        patientMrn,
-        clinicNameEn: clinic.nameEn,
-        clinicNameAr: clinic.nameAr,
-        clinicAddressEn: clinic.addressEn,
-        clinicAddressAr: clinic.addressAr,
-        clinicPhone: clinic.phone,
-        clinicEmail: clinic.email,
-        clinicLicenseNumber: clinic.licenseNumber,
-        clinicTaxRegistrationNumber: normalizeOrgTaxRegistrationNumber(clinic.taxRegistrationNumber),
-        vatPercentSnapshot,
-        createdByUserId: viewer.userId,
-        lines: { create: lines },
-      },
-      include: invoiceInclude,
+        vatPercent: vatPercentSnapshot,
+        description: `Tax invoice ${invoiceNumber}`,
+        clinicTaxRin: clinic.taxRegistrationNumber,
+      });
+      return created;
     });
 
     return this.mapInvoice(row);

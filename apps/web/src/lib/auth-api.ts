@@ -47,14 +47,18 @@ function loginHttpErrorMessage(status: number, data: unknown, fallback: string):
   return msg;
 }
 
-export async function loginRequest(email: string, password: string): Promise<LoginResponse> {
+export async function loginRequest(email: string, password: string, mfaCode?: string): Promise<LoginResponse> {
   const normalizedEmail = email.normalize("NFKC").trim().toLowerCase();
   let res: Response;
   try {
     res = await fetch(apiUrl("/api/v1/auth/login"), {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ email: normalizedEmail, password }),
+      body: JSON.stringify({
+        email: normalizedEmail,
+        password,
+        ...(mfaCode?.trim() ? { mfaCode: mfaCode.trim() } : {}),
+      }),
     });
   } catch {
     throw new ApiError(

@@ -46,7 +46,7 @@ When staff collect a fee at **check-in** (appointment) or when **creating an enc
 | Method | UI |
 |--------|-----|
 | **Cash on visit** | Default; posts to revenue with `collectionMode=CASH_ON_VISIT` |
-| **Money transfer** | Choose **InstaPay** or **Fawry**, enter **transaction ID** (stored on the `RevenueEntry` and check-in appointment record) |
+| **Money transfer** | Choose **InstaPay** or **Fawry**, enter **transaction ID** (format-validated; verified when `INSTAPAY_VERIFY_URL` / `FAWRY_VERIFY_URL` is set). Posts `RevenueEntry` and enqueues **ETA e-receipt** automatically. |
 
 API: `visitCollection` on `POST /api/v1/front-desk/appointments/:id/check-in` and `POST/PATCH /api/v1/encounters` when `visitFeeAmount` / `paymentAmount` > 0.
 

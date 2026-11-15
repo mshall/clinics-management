@@ -1,7 +1,8 @@
-import { EncounterStatus, Prisma, RevenueStatus } from "@prisma/client";
+import { EncounterStatus, Prisma, RevenueStatus, type TransferVerificationStatus } from "@prisma/client";
 import { isBaseCurrency } from "./base-currencies";
 import { resolveClinicCurrency } from "./clinic-currency";
 import { collectionFieldsFromParsed, type ParsedVisitCollection } from "./visit-collection";
+import { queueEtaReceipt } from "../compliance/eta-receipt-queue";
 
 export async function upsertEncounterVisitFeeRevenue(
   tx: Prisma.TransactionClient,
@@ -13,6 +14,10 @@ export async function upsertEncounterVisitFeeRevenue(
     amount: number;
     currency?: string;
     collection?: ParsedVisitCollection;
+    patientId: string;
+    transferVerificationStatus?: TransferVerificationStatus;
+    clinicTaxRin?: string | null;
+    vatPercent?: number;
   },
 ): Promise<void> {
   const { tenantId, clinicId, encounterId, appointmentId, amount, currency: currencyOpt } = params;
@@ -35,12 +40,17 @@ export async function upsertEncounterVisitFeeRevenue(
       currency,
       appointmentId,
       description: `Visit fee · encounter ${encounterId.slice(0, 8)}…`,
+      ...(params.transferVerificationStatus !== undefined
+        ? { transferVerificationStatus: params.transferVerificationStatus }
+        : {}),
       ...collectionData,
     };
+    let revenueId: string;
     if (existingRevenue) {
-      await tx.revenueEntry.update({ where: { id: existingRevenue.id }, data: revenueData });
+      const updated = await tx.revenueEntry.update({ where: { id: existingRevenue.id }, data: revenueData });
+      revenueId = updated.id;
     } else {
-      await tx.revenueEntry.create({
+      const created = await tx.revenueEntry.create({
         data: {
           tenantId,
           clinicId,
@@ -51,7 +61,22 @@ export async function upsertEncounterVisitFeeRevenue(
           ...revenueData,
         },
       });
+      revenueId = created.id;
     }
+    await queueEtaReceipt(tx, {
+      tenantId,
+      clinicId,
+      patientId: params.patientId,
+      revenueEntryId: revenueId,
+      totalAmount: amount,
+      currency,
+      vatPercent: params.vatPercent ?? 0,
+      description: revenueData.description,
+      clinicTaxRin: params.clinicTaxRin,
+      collectionMode: params.collection?.collectionMode,
+      transferChannel: params.collection?.transferChannel,
+      transferReference: params.collection?.transferReference,
+    });
     return;
   }
 
@@ -73,6 +98,7 @@ export async function syncOpenEncounterVisitFeeFromAppointment(
       status: { in: [EncounterStatus.DRAFT, EncounterStatus.AMENDED] },
     },
     orderBy: { updatedAt: "desc" },
+    select: { id: true, clinicId: true, visitFeeCurrency: true, patientId: true },
   });
   if (!encounter) return;
 
@@ -87,5 +113,6 @@ export async function syncOpenEncounterVisitFeeFromAppointment(
     appointmentId,
     amount: feeAmount,
     currency: encounter.visitFeeCurrency,
+    patientId: encounter.patientId,
   });
 }

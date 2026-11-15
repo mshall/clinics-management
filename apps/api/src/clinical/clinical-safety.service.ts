@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { PatientAllergyCode } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { drugNamesMatchForInteraction, normalizeDrugNameForSafety } from "../common/egypt-drug-aliases";
 
 const ALLERGY_DRUG_HINTS: Record<PatientAllergyCode, string[]> = {
   PENICILLIN: ["penicillin", "amoxicillin", "ampicillin", "piperacillin"],
@@ -28,6 +29,8 @@ export type ClinicalSafetyWarning = {
   severity: string;
   messageEn: string;
   messageAr: string;
+  /** True when matching used brand-name normalization — not the national drug catalog. */
+  limitedCheck?: boolean;
 };
 
 @Injectable()
@@ -35,12 +38,14 @@ export class ClinicalSafetyService {
   constructor(private readonly prisma: PrismaService) {}
 
   private drugMatchesAllergy(drugName: string, code: PatientAllergyCode, otherComment: string | null): boolean {
-    const d = drugName.toLowerCase();
+    const { canonical, matchedCatalog } = normalizeDrugNameForSafety(drugName);
+    const d = `${drugName.toLowerCase()} ${canonical}`;
     if (code === PatientAllergyCode.OTHER) {
       const o = (otherComment ?? "").toLowerCase().trim();
-      return o.length > 2 && d.includes(o);
+      return o.length > 2 && (d.includes(o) || canonical.includes(o));
     }
-    return ALLERGY_DRUG_HINTS[code].some((hint) => d.includes(hint));
+    const hit = ALLERGY_DRUG_HINTS[code].some((hint) => d.includes(hint) || canonical.includes(hint));
+    return hit || (!matchedCatalog && code === PatientAllergyCode.AMOXICILLIN && drugName.toLowerCase().includes("augment"));
   }
 
   async checkMedicationSafety(
@@ -50,6 +55,8 @@ export class ClinicalSafetyService {
     existingDrugNames: string[],
   ): Promise<ClinicalSafetyWarning[]> {
     const warnings: ClinicalSafetyWarning[] = [];
+    const { matchedCatalog } = normalizeDrugNameForSafety(drugName);
+    const limitedCheck = !matchedCatalog;
     const allergies = await this.prisma.patientAllergy.findMany({
       where: { tenantId, patientId },
       select: { code: true, otherComment: true },
@@ -59,8 +66,13 @@ export class ClinicalSafetyService {
         warnings.push({
           kind: "allergy",
           severity: "high",
-          messageEn: `Patient allergy (${a.code}) may conflict with ${drugName}.`,
-          messageAr: `حساسية المريض (${a.code}) قد تتعارض مع ${drugName}.`,
+          messageEn: limitedCheck
+            ? `Patient allergy (${a.code}) may conflict with ${drugName} (limited brand-name check — verify against Egyptian formulary).`
+            : `Patient allergy (${a.code}) may conflict with ${drugName}.`,
+          messageAr: limitedCheck
+            ? `حساسية المريض (${a.code}) قد تتعارض مع ${drugName} (فحص محدود بأسماء تجارية — راجع الدليل الدوائي المصري).`
+            : `حساسية المريض (${a.code}) قد تتعارض مع ${drugName}.`,
+          limitedCheck: limitedCheck || undefined,
         });
       }
     }
@@ -68,23 +80,38 @@ export class ClinicalSafetyService {
     const rules = await this.prisma.drugInteractionRule.findMany({
       where: { OR: [{ tenantId }, { tenantId: null }] },
     });
-    const dNew = drugName.toLowerCase();
+    const matchesRuleDrug = (typed: string, ruleDrug: string) => {
+      const n = normalizeDrugNameForSafety(typed).canonical;
+      const r = ruleDrug.toLowerCase();
+      return n.includes(r) || typed.toLowerCase().includes(r) || drugNamesMatchForInteraction(typed, ruleDrug);
+    };
     for (const other of existingDrugNames) {
-      const dOther = other.toLowerCase();
       for (const rule of rules) {
-        const a = rule.drugA.toLowerCase();
-        const b = rule.drugB.toLowerCase();
         const hit =
-          (dNew.includes(a) && dOther.includes(b)) || (dNew.includes(b) && dOther.includes(a));
+          (matchesRuleDrug(drugName, rule.drugA) && matchesRuleDrug(other, rule.drugB)) ||
+          (matchesRuleDrug(drugName, rule.drugB) && matchesRuleDrug(other, rule.drugA));
         if (hit) {
           warnings.push({
             kind: "interaction",
             severity: rule.severity,
-            messageEn: rule.messageEn,
+            messageEn: limitedCheck
+              ? `${rule.messageEn} (Limited check: typed drug names only — Egyptian national list not loaded.)`
+              : rule.messageEn,
             messageAr: rule.messageAr || rule.messageEn,
+            limitedCheck: limitedCheck || undefined,
           });
         }
       }
+    }
+    if (!warnings.length && limitedCheck && drugName.trim().length > 1) {
+      warnings.push({
+        kind: "interaction",
+        severity: "info",
+        messageEn:
+          "Drug interaction check is limited to typed names and local alias list — not the full Egyptian drug catalog.",
+        messageAr: "فحص التفاعلات الدوائية محدود بالأسماء المدخلة وقائمة الأسماء التجارية — وليس الدليل الدوائي المصري الكامل.",
+        limitedCheck: true,
+      });
     }
     return warnings;
   }

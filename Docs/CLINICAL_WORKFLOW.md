@@ -48,7 +48,7 @@ Configurable specialty forms, physician shortcuts, safety checks, vitals trends,
 
 ## Safety checks (allergies & interactions)
 
-- Patient **allergies** (chart) are checked when adding medications: `POST /api/v1/clinical/medications/safety-check` returns warnings (does not block save).
+- Patient **allergies** (chart) are checked when adding medications: `POST /api/v1/clinical/medications/safety-check` returns warnings (does not block save). Responses may include `limitedCheck: true` when matching uses typed names and the Egypt brand-alias list only — not the national drug catalog.
 - **Drug–drug** rules in `DrugInteractionRule` (seeded defaults + per-tenant rules).
 - Warnings shown in the encounter medication panel before confirm.
 

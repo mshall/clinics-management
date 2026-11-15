@@ -159,7 +159,7 @@ export class PlatformAdminService {
         data: {
           name,
           nameAr,
-          baseCurrency: dto.baseCurrency?.trim() || "AED",
+          baseCurrency: dto.baseCurrency?.trim() || "EGP",
           defaultLocale: dto.defaultLocale?.trim() || "en",
         },
       });

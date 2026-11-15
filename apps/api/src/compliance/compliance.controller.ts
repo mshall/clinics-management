@@ -33,7 +33,7 @@ export class ComplianceController {
   }
 
   @Post("egypt/eta-queue/:id/submit")
-  submitEta(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: { etaUuid: string }) {
-    return this.compliance.markEtaSubmitted(requireTenantId(user), id, body.etaUuid);
+  submitEta(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.compliance.submitEtaToAuthority(requireTenantId(user), id);
   }
 }

@@ -11,6 +11,7 @@ import type { ReactivateClinicDto } from "./dto/reactivate-clinic.dto";
 import type { ClinicDetailDto } from "./dto/clinic-detail.dto";
 import type { ClinicOperatingPeriodDto } from "./dto/clinic-operating-period.dto";
 import { isBaseCurrency } from "../common/base-currencies";
+import { defaultCurrencyForCountry } from "../common/country-default-currency";
 import type { ClinicPhysicianDto } from "./dto/clinic-physician.dto";
 import type { ClinicKind } from "./clinic-kind";
 import { resolveClinicKind } from "./clinic-kind";
@@ -667,7 +668,7 @@ export class ClinicsService {
     const defaultCurrency =
       dto.defaultCurrency?.trim() && isBaseCurrency(dto.defaultCurrency.trim())
         ? dto.defaultCurrency.trim()
-        : tenant?.baseCurrency ?? "AED";
+        : defaultCurrencyForCountry(country) || tenant?.baseCurrency || "EGP";
 
     const openingTime = normalizeClinicTime(dto.openingTime, DEFAULT_CLINIC_OPENING_TIME);
     const closingTime = normalizeClinicTime(dto.closingTime, DEFAULT_CLINIC_CLOSING_TIME);

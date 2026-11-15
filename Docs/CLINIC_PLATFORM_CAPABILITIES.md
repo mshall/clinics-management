@@ -37,7 +37,7 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 | Daily cash close per cashier/branch | **Foundation** | `POST /billing/cash-close` compares expected vs counted by method |
 | Doctor commission rules & statements | **Foundation** | `CommissionRule` table; statements = reports slice |
 | Insurer billing, co-pay, pre-auth | **Foundation** | `PayerPreAuthorization`, copay % on contract prices |
-| **Egypt: ETA e-receipts** | **Foundation (priority)** | `EtaReceiptSubmission` auto-queued on payment; `GET /compliance/egypt/eta-queue` — **wire ETA credentials before go-live** |
+| **Egypt: ETA e-receipts** | **Foundation (priority)** | Queued on **every** posted payment path (check-in revenue, encounter visit fee, billing payment, tax invoice); signed payload + `POST /compliance/egypt/eta-queue/:id/submit` calls ETA OAuth when `ETA_*` env is set (sandbox UUID in dev without creds) |
 | **Egypt: data protection consent** | **Foundation (priority)** | `POST /compliance/patients/:id/data-protection-consent` |
 
 ---
@@ -71,7 +71,7 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 | Requirement | Status | Notes |
 |-------------|--------|--------|
 | Onboarding wizard & Excel import | **Planned** | |
-| MFA & session expiry | **Planned** | Login MFA field is stub |
+| MFA (TOTP) | **Foundation** | `POST /auth/mfa/setup`, `/mfa/confirm`, `/mfa/disable`; login accepts `mfaCode` when enabled |
 | Permissions screen per role | **Shipped** | Admin → org/clinic nav tabs (`org-rbac-panel`, `clinic-nav-tabs-panel`) |
 | Thermal/A4 bilingual print | **Partial** | Tax invoices + prescriptions; thermal next |
 | Tablet layout / offline schedule | **Planned** | |
@@ -106,7 +106,8 @@ npm run dev
 ```
 
 1. Create operation → advance status through pre-op → discharged (collect balance on discharge).
-2. `POST /api/v1/billing/catalog` then `POST /api/v1/billing/payments` with cash + card allocations → check ETA queue.
+2. Check in with cash or InstaPay/Fawry (valid reference format) → `GET /api/v1/compliance/egypt/eta-queue` shows pending rows; submit with `POST .../submit` (no manual UUID).
+3. `POST /api/v1/billing/catalog` then `POST /api/v1/billing/payments` → another ETA queue row.
 3. Record data-protection consent for a patient.
 4. `GET /api/v1/dashboards/today`
 5. `GET /api/v1/clinic-ai/patients/:id/pre-visit-summary`

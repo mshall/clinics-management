@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { EtaReceiptStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { submitEtaReceipt, signEtaPayload, type EtaReceiptPayload } from "./eta-egypt.client";
 
 @Injectable()
 export class ComplianceService {
@@ -44,16 +45,37 @@ export class ComplianceService {
     });
   }
 
-  /** Marks receipt submitted — replace with real ETA API when credentials are configured. */
-  async markEtaSubmitted(tenantId: string, id: string, etaUuid: string) {
+  /** Submits a queued receipt to the Egyptian Tax Authority (signed payload + OAuth). */
+  async submitEtaToAuthority(tenantId: string, id: string) {
     const row = await this.prisma.etaReceiptSubmission.findFirst({ where: { id, tenantId } });
     if (!row) throw new NotFoundException("ETA submission not found");
+    if (row.status === EtaReceiptStatus.SUBMITTED || row.status === EtaReceiptStatus.ACCEPTED) {
+      return row;
+    }
+    const payload = row.payloadJson as unknown as EtaReceiptPayload | null;
+    if (!payload?.idempotencyKey) {
+      throw new BadRequestException("ETA submission is missing a signed payload");
+    }
+    const signature = row.signature?.trim() || signEtaPayload(payload);
+    const result = await submitEtaReceipt(payload, signature);
+    if (!result.ok) {
+      return this.prisma.etaReceiptSubmission.update({
+        where: { id },
+        data: {
+          status: EtaReceiptStatus.REJECTED,
+          errorMessage: result.error,
+          signature: signature || null,
+        },
+      });
+    }
     return this.prisma.etaReceiptSubmission.update({
       where: { id },
       data: {
         status: EtaReceiptStatus.SUBMITTED,
-        etaUuid: etaUuid.trim(),
+        etaUuid: result.etaUuid,
         submittedAt: new Date(),
+        signature: signature || null,
+        errorMessage: result.mode === "sandbox" ? "Sandbox UUID (ETA credentials not configured)" : null,
       },
     });
   }

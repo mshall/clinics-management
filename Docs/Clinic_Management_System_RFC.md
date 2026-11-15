@@ -50,7 +50,7 @@ We adopt a **modular monolith** for the backend rather than microservices in v1.
 | Database | **PostgreSQL 16 (Amazon RDS in prod; Docker locally)** | Mature RDBMS, strong JSON support, multi-AZ capable |
 | Cache / Queues | Redis (Docker locally) | Available in compose; ElastiCache optional for prod scale |
 | Object Storage | **Amazon S3 (production)** / local `uploads/` (development) | Attachments, prescriptions, patient documents, logos — `UPLOAD_STORAGE=s3` on App Runner |
-| Auth | **JWT (symmetric `JWT_SECRET`)** via `@nestjs/jwt`; **bcryptjs** password hashes | Implemented: `POST /auth/login`, `GET /auth/me`, `PATCH /auth/me/password`. Refresh tokens, MFA, OIDC SSO — roadmap |
+| Auth | **JWT (symmetric `JWT_SECRET`)** via `@nestjs/jwt`; **bcryptjs** password hashes; **TOTP MFA** optional per user | Implemented: `POST /auth/login` (+ `mfaCode`), `GET /auth/me`, MFA setup/confirm/disable. Refresh tokens, OIDC SSO — roadmap |
 | Frontend Web | **React 18 + Vite + TypeScript** | Fast DX, modern tooling |
 | State Mgmt | TanStack Query + Zustand | Server state and lightweight client state |
 | UI Library | shadcn/ui + Tailwind CSS + Radix | Accessible, themeable, RTL-friendly |
@@ -396,7 +396,7 @@ GET    /operations/:id/documents/:docId/file
 
 - `Clinic.defaultCurrency` validated against `BASE_CURRENCIES` on create/patch.
 - `Clinic.openingTime` / `Clinic.closingTime` — HH:mm; defaults `09:00` / `00:00`; validated in `clinic-hours.ts`.
-- `resolveClinicCurrency(client, tenantId, clinicId)` falls back: clinic → tenant `baseCurrency` → `AED`.
+- `resolveClinicCurrency(client, tenantId, clinicId)` falls back: clinic → tenant `baseCurrency` → `EGP`. New clinics use `defaultCurrencyForCountry(country)` when country is set at onboarding.
 - Encounters use clinic currency when posting visit-fee revenue.
 - Web: `ClinicHoursSettingsPanel` on clinic detail **Settings** tab; fields on shared `ClinicFormFields` for group admin create/edit.
 

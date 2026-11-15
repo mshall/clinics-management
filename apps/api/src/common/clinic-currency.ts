@@ -11,5 +11,5 @@ export async function resolveClinicCurrency(
     where: { id: clinicId, tenantId },
     select: { defaultCurrency: true, tenant: { select: { baseCurrency: true } } },
   });
-  return clinic?.defaultCurrency ?? clinic?.tenant.baseCurrency ?? "AED";
+  return clinic?.defaultCurrency ?? clinic?.tenant.baseCurrency ?? "EGP";
 }

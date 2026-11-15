@@ -1,5 +1,6 @@
 import { BadRequestException } from "@nestjs/common";
 import { MoneyTransferChannel, VisitCollectionMode } from "@prisma/client";
+import { assertValidTransferReference } from "./transfer-reference";
 
 export type ParsedVisitCollection = {
   collectionMode: VisitCollectionMode | null;
@@ -37,6 +38,7 @@ export function parseVisitCollectionForAmount(
   if (ref.length < 3) {
     throw new BadRequestException("Transaction ID is required for money transfer");
   }
+  assertValidTransferReference(channel, ref);
   return {
     collectionMode: VisitCollectionMode.MONEY_TRANSFER,
     transferChannel: channel,

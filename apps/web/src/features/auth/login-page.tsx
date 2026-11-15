@@ -61,14 +61,17 @@ export function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      void mfa;
-      const res = await loginRequest(email, password);
+      const res = await loginRequest(email, password, mfa);
       setSession(res.accessToken, res.user);
       const from = (location.state as { from?: string } | null)?.from;
       const { user: signedIn } = useAuthStore.getState();
       navigate(resolvePostLoginPath(signedIn?.role, signedIn?.navTabKeys, from, signedIn?.roleNavTabKeys), { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("auth.signIn"));
+      if (err instanceof Error && err.message.includes("Multi-factor")) {
+        setError(t("auth.mfaRequired", "Enter the 6-digit code from your authenticator app."));
+      } else {
+        setError(err instanceof Error ? err.message : t("auth.signIn"));
+      }
     } finally {
       setSubmitting(false);
     }

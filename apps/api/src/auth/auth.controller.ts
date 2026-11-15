@@ -17,6 +17,7 @@ import { memoryStorage } from "multer";
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { AuthUserDto, LoginResponseDto } from "../common/dto/auth-responses.dto";
 import { AuthService } from "./auth.service";
+import { MfaService } from "./mfa.service";
 import { CurrentUser } from "./current-user.decorator";
 import { ChangePasswordDto } from "./dto/change-password.dto";
 import { LoginDto } from "./dto/login.dto";
@@ -28,14 +29,47 @@ const AVATAR_UPLOAD_LIMIT = 5 * 1024 * 1024;
 @ApiTags("auth")
 @Controller("auth")
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    private readonly mfa: MfaService,
+  ) {}
 
   @Post("login")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Exchange credentials for a JWT" })
   @ApiOkResponse({ type: LoginResponseDto })
   login(@Body() dto: LoginDto) {
-    return this.auth.login(dto.email, dto.password);
+    return this.auth.login(dto.email, dto.password, dto.mfaCode);
+  }
+
+  @Post("mfa/setup")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth("bearer")
+  @ApiOperation({ summary: "Start TOTP MFA setup (returns secret + otpauth URL)" })
+  beginMfa(@CurrentUser() user: JwtUser) {
+    return this.mfa.beginSetup(user.userId, user.tenantId, user.email);
+  }
+
+  @Post("mfa/confirm")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth("bearer")
+  @ApiOperation({ summary: "Confirm MFA with a valid TOTP code" })
+  confirmMfa(
+    @CurrentUser() user: JwtUser,
+    @Body() body: { secret: string; code: string },
+  ) {
+    return this.mfa.confirmSetup(user.userId, user.tenantId, body.secret, body.code);
+  }
+
+  @Post("mfa/disable")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth("bearer")
+  @ApiOperation({ summary: "Disable MFA (password + current TOTP code)" })
+  disableMfa(
+    @CurrentUser() user: JwtUser,
+    @Body() body: { password: string; code: string },
+  ) {
+    return this.mfa.disable(user.userId, user.tenantId, body.password, body.code);
   }
 
   @Get("me")

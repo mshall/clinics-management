@@ -1,7 +1,9 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { EtaReceiptStatus, PaymentMethod, Prisma, UserRole } from "@prisma/client";
+import { PaymentMethod, Prisma, UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
+import { queueEtaReceipt } from "../compliance/eta-receipt-queue";
+import { flattenBillingPaymentAllocations, sumExpectedCashAndCard } from "./billing-cash-close";
 
 const DISCOUNT_APPROVAL_THRESHOLD = 15;
 
@@ -118,6 +120,11 @@ export class BillingService {
     const total = body.allocations.reduce((s, a) => s + a.amount, 0);
     if (total <= 0) throw new BadRequestException("Payment total must be positive");
 
+    const clinic = await this.prisma.clinic.findFirst({
+      where: { id: body.clinicId, tenantId },
+      select: { taxRegistrationNumber: true, invoiceVatPercent: true },
+    });
+
     return this.prisma.$transaction(async (tx) => {
       const payment = await tx.billingPayment.create({
         data: {
@@ -138,19 +145,16 @@ export class BillingService {
         include: { allocations: true },
       });
       if (body.submitEta !== false) {
-        await tx.etaReceiptSubmission.create({
-          data: {
-            tenantId,
-            clinicId: body.clinicId,
-            patientId: body.patientId,
-            paymentId: payment.id,
-            status: EtaReceiptStatus.PENDING,
-            payloadJson: {
-              note: "ETA e-receipt queue stub — wire Egypt ETA SDK/credentials before production",
-              total,
-              currency: payment.currency,
-            },
-          },
+        await queueEtaReceipt(tx, {
+          tenantId,
+          clinicId: body.clinicId,
+          patientId: body.patientId,
+          paymentId: payment.id,
+          totalAmount: total,
+          currency: payment.currency,
+          vatPercent: Number(clinic?.invoiceVatPercent ?? 0),
+          description: `Billing payment ${payment.id.slice(0, 8)}…`,
+          clinicTaxRin: clinic?.taxRegistrationNumber,
         });
       }
       return payment;
@@ -177,15 +181,12 @@ export class BillingService {
       where: { tenantId, clinicId: body.clinicId, createdAt: { gte: day, lt: dayEnd } },
       include: { allocations: true },
     });
-    let expectedCash = 0;
-    let expectedCard = 0;
-    for (const p of payments) {
-      for (const a of p.allocations) {
-        const amt = Number(a.amount);
-        if (a.method === PaymentMethod.CASH) expectedCash += amt;
-        else if (a.method === PaymentMethod.CARD) expectedCard += amt;
-      }
-    }
+    const flat = flattenBillingPaymentAllocations(
+      payments.map((p) => ({
+        allocations: p.allocations.map((a) => ({ method: a.method, amount: Number(a.amount) })),
+      })),
+    );
+    const { expectedCash, expectedCard } = sumExpectedCashAndCard(flat);
 
     return this.prisma.cashierShiftClose.create({
       data: {
