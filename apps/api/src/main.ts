@@ -11,17 +11,22 @@ import { PatientDto } from "./common/dto/patient.dto";
 import { MulterExceptionFilter } from "./common/multer-exception.filter";
 import { PrismaClientExceptionFilter } from "./common/prisma-exception.filter";
 import { IntegrationFailureExceptionFilter } from "./integrations/integration-failure.filter";
-import compression from "compression";
+import * as compressionImport from "compression";
+
+const compressionMiddleware =
+  typeof compressionImport === "function"
+    ? compressionImport
+    : (compressionImport as { default: typeof compressionImport }).default;
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableShutdownHooks();
   app.use(
-    compression({
+    compressionMiddleware({
       threshold: 1024,
       filter: (req, res) => {
         if (req.headers["x-no-compression"]) return false;
-        return compression.filter(req, res);
+        return compressionMiddleware.filter(req, res);
       },
     }),
   );
