@@ -19,6 +19,8 @@ RUN dnf install -y openssl ca-certificates && dnf clean all
 COPY --from=build /repo/node_modules ${LAMBDA_TASK_ROOT}/node_modules
 COPY --from=build /repo/apps/api/prisma ${LAMBDA_TASK_ROOT}/prisma
 COPY --from=build /repo/apps/api/prisma.config.ts ${LAMBDA_TASK_ROOT}/prisma.config.ts
+# prisma/seed.ts imports ../src/common/seed-demo-guard (production demo password policy).
+COPY apps/api/src/common/seed-demo-guard.ts ${LAMBDA_TASK_ROOT}/src/common/
 COPY infra/lambda/db-seed/run.mjs ${LAMBDA_TASK_ROOT}/index.mjs
 ENV PATH="${LAMBDA_TASK_ROOT}/node_modules/.bin:/usr/local/bin:${PATH}"
 CMD ["index.handler"]

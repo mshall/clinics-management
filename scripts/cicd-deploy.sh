@@ -21,6 +21,7 @@ else
 fi
 npm run build -w web
 node scripts/check-boot-proxy-order.mjs
+node scripts/check-seed-lambda-docker-context.mjs
 cd infra
 if [[ "${CI:-}" == "true" ]]; then
   NPM_CONFIG_LOGLEVEL=error npm ci --no-audit --no-fund
