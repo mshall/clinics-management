@@ -17,12 +17,16 @@ import {
   messageAsksForClinicList,
   messageAsksForClinicRevenueBreakdown,
   messageAsksForEmployeeCount,
+  messageAsksForEncounterCount,
   messageAsksForExpenses,
   messageAsksForOrgUsers,
   messageAsksForPatientCount,
   messageAsksForRevenue,
+  messageAsksForTodayLive,
   messageNeedsClinicContext,
 } from "./assistant-intent";
+import type { AssistantEncounterPeriodCount, AssistantTodaySnapshot } from "./assistant-scoped-queries.service";
+import { AssistantScopedQueriesService } from "./assistant-scoped-queries.service";
 import { resolveAssistantRevenueIsPersonal } from "./assistant-revenue-scope";
 import { canAssistantQueryEmployeeCount } from "./assistant-hr-policy";
 import { canAssistantSearchPatients } from "./assistant-patient-policy";
@@ -66,6 +70,8 @@ export type AssistantLiveSnapshot = {
   employeeCountScope?: "organization" | "clinic_scope";
   financialSummary?: AssistantFinancialSummary;
   financialAccessDenied?: boolean;
+  todayLive?: AssistantTodaySnapshot;
+  encounterPeriod?: AssistantEncounterPeriodCount;
   generatedAt: string;
 };
 
@@ -76,6 +82,7 @@ export class AssistantLiveDataService {
     private readonly clinics: ClinicsService,
     private readonly revenue: RevenueService,
     private readonly patients: PatientsService,
+    private readonly scopedQueries: AssistantScopedQueriesService,
   ) {}
 
   private canSeePatients(navKeys: string[]): boolean {
@@ -146,6 +153,21 @@ export class AssistantLiveDataService {
 
     if (messageAsksForRevenue(message) || messageAsksForExpenses(message)) {
       await this.attachFinancialSummary(user, navKeys, message, tenantId, snapshot);
+    }
+
+    const canAppointments = navKeys.includes("appointments") || navKeys.includes("dashboard");
+    const canEncounters = navKeys.includes("encounters");
+    if (canAppointments && messageAsksForTodayLive(message)) {
+      snapshot.todayLive = await this.scopedQueries.todayOperations(tenantId, user);
+    }
+    if (canEncounters && messageAsksForEncounterCount(message)) {
+      const period = resolveAssistantPeriod(message);
+      snapshot.encounterPeriod = await this.scopedQueries.encounterCountsForPeriod(
+        tenantId,
+        user,
+        period.start,
+        period.end,
+      );
     }
 
     return snapshot;
@@ -356,7 +378,65 @@ export class AssistantLiveDataService {
       return `${mdHeading(title)}${orgLine}> ${scope}\n\n- **${snapshot.activeEmployeeCount}** ${locale === "ar" ? "موظف" : "employees"}`;
     }
 
+    if (messageAsksForTodayLive(message) && snapshot.todayLive) {
+      return this.formatTodayLiveReply(snapshot.todayLive, locale);
+    }
+
+    if (messageAsksForEncounterCount(message) && snapshot.encounterPeriod) {
+      return this.formatEncounterPeriodReply(snapshot.encounterPeriod, locale, snapshot.role);
+    }
+
     return null;
+  }
+
+  private formatTodayLiveReply(today: AssistantTodaySnapshot, locale: "en" | "ar"): string {
+    const scope =
+      today.scope === "clinic_scope"
+        ? locale === "ar"
+          ? "ضمن عياداتك المسموحة"
+          : "within your permitted clinics"
+        : locale === "ar"
+          ? "على مستوى المؤسسة"
+          : "organization-wide";
+    const title = locale === "ar" ? `اليوم (${today.date})` : `Today (${today.date})`;
+    const lines =
+      locale === "ar"
+        ? [
+            `- **مواعيد اليوم:** ${today.appointmentsToday}`,
+            `- **بانتظار الدور (تسجيل وصول):** ${today.checkedInWaiting}`,
+            `- **مكتمل:** ${today.appointmentsCompleted}`,
+            `- **لم يحضر:** ${today.noShows}`,
+            `- **زيارات مُنهية اليوم:** ${today.encountersFinalizedToday}`,
+            `- **زيارات مفتوحة:** ${today.openEncounters}`,
+            `- **محصّل اليوم (صافي):** **${today.collectedToday.toFixed(2)}**`,
+          ]
+        : [
+            `- **Appointments today:** ${today.appointmentsToday}`,
+            `- **Waiting (checked in):** ${today.checkedInWaiting}`,
+            `- **Completed appointments:** ${today.appointmentsCompleted}`,
+            `- **No-shows:** ${today.noShows}`,
+            `- **Encounters finalized today:** ${today.encountersFinalizedToday}`,
+            `- **Open encounters:** ${today.openEncounters}`,
+            `- **Collected today (net):** **${today.collectedToday.toFixed(2)}**`,
+          ];
+    return `${mdHeading(title)}${mdCallout(scope)}\n${lines.join("\n")}`;
+  }
+
+  private formatEncounterPeriodReply(
+    period: AssistantEncounterPeriodCount,
+    locale: "en" | "ar",
+    role: UserRole,
+  ): string {
+    const physicianScope =
+      role === UserRole.PHYSICIAN
+        ? locale === "ar"
+          ? "زياراتك السريرية فقط"
+          : "your encounters only"
+        : locale === "ar"
+          ? "ضمن صلاحيات عياداتك"
+          : "within your clinic access";
+    const title = locale === "ar" ? "عدد الزيارات" : "Encounter counts";
+    return `${mdHeading(title)}${mdCallout(`${period.from} → ${period.to} · ${physicianScope}`)}\n- **${locale === "ar" ? "منتهية" : "Finalized"}:** ${period.finalized}\n- **${locale === "ar" ? "مسودة / معدّلة" : "Draft / amended"}:** ${period.draftOrAmended}`;
   }
 
   async tryPatientLookupReply(
@@ -509,6 +589,8 @@ export class AssistantLiveDataService {
             expenseByCurrency: snapshot.financialSummary.expenseByCurrency,
           }
         : undefined,
+      todayLive: snapshot.todayLive,
+      encounterPeriod: snapshot.encounterPeriod,
     };
     return JSON.stringify(slim);
   }

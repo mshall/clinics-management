@@ -130,6 +130,9 @@ export class AppointmentsService {
       status: row.status,
       notes: row.notes,
       roomLabel: row.roomLabel ?? null,
+      queueStage: row.queueStage ?? null,
+      preferredRoomLabel: row.preferredRoomLabel ?? null,
+      roomAssignedAt: row.roomAssignedAt?.toISOString() ?? null,
       checkedInAt: row.checkedInAt?.toISOString() ?? null,
       queueTicketNumber: row.queueTicketNumber ?? null,
       ...(patient

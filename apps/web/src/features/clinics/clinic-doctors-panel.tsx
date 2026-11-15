@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { ResponsiveTable } from "@/components/responsive-table";
@@ -12,12 +13,19 @@ import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog"
 import { collectClinicDoctorAssignIssues } from "@/lib/create-form-validation";
 import { resolvePickListSelectedItem, useDebouncedPickListSearch } from "@/lib/pick-list-utils";
 import { physicianToPickListItem } from "@/lib/physician-display";
-import { apiDelete, apiPost } from "@/lib/http";
+import { apiDelete, apiPatch, apiPost } from "@/lib/http";
+import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { useAuthStore } from "@/stores/auth-store";
 
 const MANAGE_ROLES = new Set(["group_admin", "branch_manager", "clinic_admin"]);
 
-export function ClinicDoctorsPanel({ clinicId }: { clinicId: string }) {
+export function ClinicDoctorsPanel({
+  clinicId,
+  examRoomLabels = [],
+}: {
+  clinicId: string;
+  examRoomLabels?: string[];
+}) {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const role = useAuthStore((s) => s.user?.role);
@@ -64,6 +72,16 @@ export function ClinicDoctorsPanel({ clinicId }: { clinicId: string }) {
       void qc.invalidateQueries({ queryKey: ["clinic", clinicId, "physicians"] });
       void qc.invalidateQueries({ queryKey: ["clinicians", "scheduling"] });
     },
+  });
+
+  const examRoomMut = useMutation({
+    mutationFn: ({ userId, defaultExamRoomLabel }: { userId: string; defaultExamRoomLabel: string | null }) =>
+      apiPatch(`/api/v1/clinics/${clinicId}/physicians/${userId}/exam-room`, { defaultExamRoomLabel }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["clinic", clinicId, "physicians"] });
+      toast.success(t("clinics.examRoomSaved", "Default exam room updated."));
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const validation = useValidationIssuesDialog({ intent: "create" });
@@ -150,6 +168,7 @@ export function ClinicDoctorsPanel({ clinicId }: { clinicId: string }) {
                     <th className="px-3 py-2 text-start font-medium">{t("clinics.doctorName", "Name")}</th>
                     <th className="px-3 py-2 text-start font-medium">{t("clinics.email", "Email")}</th>
                     <th className="px-3 py-2 text-start font-medium">{t("hr.jobTitle", "Job title")}</th>
+                    <th className="px-3 py-2 text-start font-medium">{t("clinics.defaultExamRoom", "Default exam room")}</th>
                     {canManage ? <th className="px-3 py-2 text-end font-medium">{t("common.actions", "Actions")}</th> : null}
                   </tr>
                 </thead>
@@ -161,6 +180,30 @@ export function ClinicDoctorsPanel({ clinicId }: { clinicId: string }) {
                       </td>
                       <td className="px-3 py-2 text-muted-foreground">{d.email ?? "—"}</td>
                       <td className="px-3 py-2 text-muted-foreground">{d.jobTitle ?? "—"}</td>
+                      <td className="px-3 py-2">
+                        {canManage && examRoomLabels.length ? (
+                          <select
+                            className={nativeSelectClassName}
+                            disabled={examRoomMut.isPending}
+                            value={d.defaultExamRoomLabel ?? ""}
+                            onChange={(e) =>
+                              examRoomMut.mutate({
+                                userId: d.userId,
+                                defaultExamRoomLabel: e.target.value.trim() || null,
+                              })
+                            }
+                          >
+                            <option value="">{t("frontDesk.autoAssignRoom", "Auto-assign")}</option>
+                            {examRoomLabels.map((r) => (
+                              <option key={r} value={r}>
+                                {r}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="text-muted-foreground">{d.defaultExamRoomLabel ?? "—"}</span>
+                        )}
+                      </td>
                       {canManage ? (
                         <td className="px-3 py-2 text-end">
                           <Button

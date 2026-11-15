@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { SearchInput } from "@/components/search-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { VisitCollectionFields } from "@/components/visit-collection-fields";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
@@ -48,6 +49,12 @@ import { nativeSelectClassName, searchLedgerActionsClassName, searchLedgerLayout
 import { columnFilterIncludes } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { allergiesFormToApi, type PatientAllergyFormItem } from "@/lib/patient-allergies";
+import {
+  emptyVisitCollection,
+  validateVisitCollection,
+  visitCollectionToApi,
+  type VisitCollectionValue,
+} from "@/lib/visit-collection";
 import { ENCOUNTER_VISIT_TYPES, formatVisitType } from "@/lib/visit-types";
 import { defaultEncounterListRange, defaultMonthRange } from "@/stores/date-range-store";
 import { useAuthStore } from "@/stores/auth-store";
@@ -158,6 +165,7 @@ export function EncountersListPage() {
   const [createClinicId, setCreateClinicId] = useState("");
   const [createVisitType, setCreateVisitType] = useState<string>(ENCOUNTER_VISIT_TYPES[0] ?? "Office visit");
   const [createVisitFee, setCreateVisitFee] = useState("");
+  const [createVisitCollection, setCreateVisitCollection] = useState<VisitCollectionValue>(emptyVisitCollection);
   const createVisitFeeCurrency = resolveClinicCurrency(createClinicId || clinics[0]?.id);
   const [createClinicianId, setCreateClinicianId] = useState("");
   const [pinnedPatientItem, setPinnedPatientItem] = useState<PickListItem | null>(null);
@@ -284,10 +292,16 @@ export function EncountersListPage() {
         ...(patientAllergies.length ? { patientAllergies } : {}),
       };
       const trimmed = createVisitFee.trim();
+      let feeAmount = 0;
       if (trimmed !== "") {
         const fee = Number.parseFloat(trimmed);
-        if (Number.isFinite(fee) && fee >= 0) body.visitFeeAmount = fee;
+        if (Number.isFinite(fee) && fee >= 0) {
+          body.visitFeeAmount = fee;
+          feeAmount = fee;
+        }
       }
+      const visitCollection = visitCollectionToApi(feeAmount, createVisitCollection);
+      if (visitCollection) body.visitCollection = visitCollection;
       if (selectedAppointmentId.trim()) body.appointmentId = selectedAppointmentId.trim();
       if (!isPhysician && createClinicianId.trim()) body.clinicianId = createClinicianId.trim();
       return apiPost<EncounterDetailDto>("/api/v1/encounters", body);
@@ -332,6 +346,15 @@ export function EncountersListPage() {
 
   const handleCreateEncounter = () => {
     if (createMut.isPending) return;
+
+    const feeTrim = createVisitFee.trim();
+    const feeNum = feeTrim === "" ? 0 : Number.parseFloat(feeTrim);
+    const collectErr =
+      Number.isFinite(feeNum) && feeNum > 0 ? validateVisitCollection(feeNum, createVisitCollection, t) : null;
+    if (collectErr) {
+      toast.error(collectErr);
+      return;
+    }
 
     const issues = collectEncounterCreateIssues(
       {
@@ -581,6 +604,15 @@ export function EncountersListPage() {
                       { currency: createVisitFeeCurrency },
                     )}
                   </p>
+                  <VisitCollectionFields
+                    amount={(() => {
+                      const n = Number.parseFloat(createVisitFee.trim());
+                      return Number.isFinite(n) && n > 0 ? n : 0;
+                    })()}
+                    value={createVisitCollection}
+                    onChange={setCreateVisitCollection}
+                    disabled={createMut.isPending}
+                  />
                 </div>
                 <PatientAllergiesField
                   className="border-t border-border pt-3"

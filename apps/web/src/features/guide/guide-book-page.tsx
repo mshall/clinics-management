@@ -170,7 +170,7 @@ function RoleQuickLinks({ role, isAr }: { role: DemoRole | undefined; isAr: bool
       break;
     case "physician":
       add("/encounters", "Encounters", "الزيارات");
-      add("/clinical/templates", "Templates", "القوالب");
+      add("/clinics", "Clinic settings (templates)", "إعدادات العيادة (القوالب)");
       break;
     case "receptionist":
     case "clinic_assistant":

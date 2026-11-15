@@ -252,7 +252,7 @@ export function defaultHomeForRole(
 /** Map a URL path (including detail routes) to the nav tab that owns it. */
 export function navKeyForPath(path: string): NavItemKey | null {
   const pathname = (path.split("?")[0] ?? "/").replace(/\/+$/, "") || "/";
-  if (pathname === "/clinical/templates" || pathname.startsWith("/clinical/")) return "encounters";
+  if (pathname === "/clinical/templates" || pathname.startsWith("/clinical/")) return "clinics";
   const entries = (Object.entries(NAV_ITEM_PATH) as [NavItemKey, string][]).sort(
     (a, b) => b[1].length - a[1].length,
   );

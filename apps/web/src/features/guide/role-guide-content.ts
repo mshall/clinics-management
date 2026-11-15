@@ -178,9 +178,9 @@ const PHYSICIAN: RoleGuide = {
         {
           titleEn: "Clinical templates",
           titleAr: "القوالب السريرية",
-          bodyEn: "Clinical templates: specialty forms, letters, shortcuts, and prescription QR for dispensing.",
-          bodyAr: "القوالب السريرية: نماذج التخصص، الخطابات، الاختصارات، وQR الوصفة.",
-          path: "/clinical/templates",
+          bodyEn: "Built-in EN/AR specialty forms per organization; clinic admins add customs under Clinics → Settings. Pick forms on the encounter; letters, shortcuts, and prescription QR stay on the encounter toolbar.",
+          bodyAr: "نماذج افتراضية لكل التخصصات؛ مدير العيادة يضيف القوالب المخصصة من إعدادات العيادة. اختر النموذج في الزيارة؛ الخطابات والاختصارات وQR الوصفة من شريط أدوات الزيارة.",
+          path: "/clinics",
         },
         {
           titleEn: "AI scribe (approve)",

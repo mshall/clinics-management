@@ -26,6 +26,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { DocumentViewerOverlay } from "@/components/document-viewer-overlay";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
+import { VisitCollectionFields } from "@/components/visit-collection-fields";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,6 +51,12 @@ import { formatEncounterStatus, formatClinicNameFields, localeForLanguage } from
 import { formatMoneyAmount } from "@/lib/money-display";
 import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
 import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
+import {
+  emptyVisitCollection,
+  validateVisitCollection,
+  visitCollectionToApi,
+  type VisitCollectionValue,
+} from "@/lib/visit-collection";
 import { generatePrescriptionPng } from "@/lib/prescription-image";
 import { EncounterClinicalTools } from "@/features/clinical/encounter-clinical-tools";
 import { PatientChartAlerts } from "@/components/patient-chart-alerts";
@@ -124,6 +131,7 @@ export function EncounterDetailPage() {
   const [heightCm, setHeightCm] = useState("");
   const [visitFeeAmount, setVisitFeeAmount] = useState("");
   const [visitFeeCurrencyDraft, setVisitFeeCurrencyDraft] = useState<string>(orgBaseCurrency);
+  const [visitCollection, setVisitCollection] = useState<VisitCollectionValue>(emptyVisitCollection);
   const [drugName, setDrugName] = useState("");
   const [dosage, setDosage] = useState("");
   const [frequency, setFrequency] = useState("");
@@ -215,6 +223,19 @@ export function EncounterDetailPage() {
     void qc.invalidateQueries({ queryKey: ["appointments"] });
   };
 
+  const buildVisitFeePatch = () => {
+    const fee = numOrUndef(visitFeeAmount);
+    const amount = fee ?? 0;
+  const collectErr = amount > 0 ? validateVisitCollection(amount, visitCollection, t) : null;
+    if (collectErr) throw new Error(collectErr);
+    const visitCollectionPayload = visitCollectionToApi(amount, visitCollection);
+    return {
+      visitFeeAmount: fee,
+      visitFeeCurrency: visitFeeCurrencyDraft,
+      ...(visitCollectionPayload ? { visitCollection: visitCollectionPayload } : {}),
+    };
+  };
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       return apiPatch<EncounterDetailDto>(`/api/v1/encounters/${id}`, {
@@ -232,8 +253,7 @@ export function EncounterDetailPage() {
         temperature: numOrUndef(temperature),
         weightKg: numOrUndef(weightKg),
         heightCm: numOrUndef(heightCm),
-        visitFeeAmount: numOrUndef(visitFeeAmount),
-        visitFeeCurrency: visitFeeCurrencyDraft,
+        ...buildVisitFeePatch(),
         clinicalTemplateId: clinicalTemplateId ?? "",
         specialtyFormResponses: specialtyFormResponses,
         followUpWeeks: followUpWeeks.trim() === "" ? undefined : Number(followUpWeeks),
@@ -451,6 +471,7 @@ export function EncounterDetailPage() {
       if (data.appointmentId) {
         void qc.invalidateQueries({ queryKey: ["appointment", data.appointmentId] });
       }
+      void qc.invalidateQueries({ queryKey: ["front-desk"] });
       toast.success(
         t("encounters.finalizedWithStatus", "Encounter finalized. Status: {{status}}.", {
           status: encounterStatusLabel(t, data.status),
@@ -714,6 +735,15 @@ export function EncounterDetailPage() {
                 onChange={(e) => setVisitFeeAmount(e.target.value)}
                 placeholder="0.00"
               />
+              <VisitCollectionFields
+                amount={(() => {
+                  const n = Number.parseFloat(visitFeeAmount.trim());
+                  return Number.isFinite(n) && n > 0 ? n : 0;
+                })()}
+                value={visitCollection}
+                onChange={setVisitCollection}
+                disabled={saveMutation.isPending}
+              />
               <Button
                 type="button"
                 variant="secondary"
@@ -721,7 +751,7 @@ export function EncounterDetailPage() {
                 onClick={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending}
               >
-                {t("encounters.saveVisitFee", "Save visit fee")}
+                {t("encounters.saveVisitFee", "Save visit fee & payment")}
               </Button>
             </>
           ) : (
@@ -857,6 +887,7 @@ export function EncounterDetailPage() {
               <Input id="cc" value={chief} onChange={(e) => setChief(e.target.value)} disabled={!draft} />
             </div>
             <EncounterSpecialtyForm
+              clinicId={enc.clinicId}
               disabled={!draft}
               templateId={clinicalTemplateId}
               responses={specialtyFormResponses}

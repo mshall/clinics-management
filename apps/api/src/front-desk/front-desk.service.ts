@@ -1,15 +1,27 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { AppointmentStatus, Prisma, RevenueStatus } from "@prisma/client";
+import {
+  AppointmentQueueStage,
+  AppointmentStatus,
+  EncounterStatus,
+  Prisma,
+  RevenueStatus,
+  VisitCollectionMode,
+} from "@prisma/client";
+import { collectionFieldsFromParsed, parseVisitCollectionForAmount, type VisitCollectionInput } from "../common/visit-collection";
 import type { JwtUser } from "../auth/jwt-user";
 import { parseFrontDeskRoomLabels } from "../common/front-desk-room-labels";
+import { EncountersService } from "../encounters/encounters.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { PatientsService } from "../patients/patients.service";
+import { FrontDeskFlowService } from "./front-desk-flow.service";
 
 @Injectable()
 export class FrontDeskService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly patients: PatientsService,
+    private readonly flow: FrontDeskFlowService,
+    private readonly encounters: EncountersService,
   ) {}
 
   quickSearch(tenantId: string, user: JwtUser, q: string) {
@@ -24,7 +36,12 @@ export class FrontDeskService {
     tenantId: string,
     user: JwtUser,
     appointmentId: string,
-    body: { paymentAmount?: number; roomLabel?: string; currency?: string },
+    body: {
+      paymentAmount?: number;
+      roomLabel?: string;
+      currency?: string;
+      visitCollection?: VisitCollectionInput;
+    },
   ) {
     const apt = await this.prisma.appointment.findFirst({
       where: { id: appointmentId, tenantId },
@@ -52,6 +69,25 @@ export class FrontDeskService {
     const ticket = (maxTicket._max.queueTicketNumber ?? 0) + 1;
     const now = new Date();
     const pay = body.paymentAmount != null && body.paymentAmount > 0 ? body.paymentAmount : null;
+    const collection =
+      pay != null
+        ? parseVisitCollectionForAmount(
+            pay,
+            body.visitCollection ?? { mode: VisitCollectionMode.CASH_ON_VISIT },
+          )
+        : null;
+    const collectionPatch =
+      collection && pay != null
+        ? {
+            checkInCollectionMode: collection.collectionMode,
+            checkInTransferChannel: collection.transferChannel,
+            checkInTransferReference: collection.transferReference,
+          }
+        : {
+            checkInCollectionMode: null,
+            checkInTransferChannel: null,
+            checkInTransferReference: null,
+          };
 
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.appointment.update({
@@ -61,14 +97,18 @@ export class FrontDeskService {
           checkedInAt: now,
           queueTicketNumber: ticket,
           checkInPaymentAmount: pay != null ? new Prisma.Decimal(String(pay)) : null,
-          roomLabel: body.roomLabel?.trim() || apt.roomLabel,
+          ...this.flow.applyCheckInQueueFields({
+            preferredRoomLabel: body.roomLabel,
+            existingPreferred: apt.preferredRoomLabel ?? apt.roomLabel,
+          }),
+          ...collectionPatch,
         },
         include: {
           patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true, isVip: true, needsChaperone: true } },
           clinician: { select: { displayName: true } },
         },
       });
-      if (pay != null) {
+      if (pay != null && collection) {
         const currency = body.currency?.trim() || apt.clinic.defaultCurrency || "AED";
         await tx.revenueEntry.create({
           data: {
@@ -83,6 +123,7 @@ export class FrontDeskService {
             currency,
             postedAt: now,
             status: RevenueStatus.POSTED,
+            ...collectionFieldsFromParsed(collection),
           },
         });
       }
@@ -106,7 +147,7 @@ export class FrontDeskService {
     const dayStart = new Date();
     dayStart.setHours(0, 0, 0, 0);
 
-    const waiting = await this.prisma.appointment.findMany({
+    const dayAppointments = await this.prisma.appointment.findMany({
       where: {
         tenantId,
         clinicId,
@@ -127,36 +168,83 @@ export class FrontDeskService {
           },
         },
         clinician: { select: { displayName: true } },
+        encounters: {
+          where: { status: { in: [EncounterStatus.DRAFT, EncounterStatus.AMENDED] } },
+          take: 1,
+          select: { id: true },
+        },
       },
     });
 
     const now = Date.now();
-    const waitingRows = waiting.map((w) => ({
+    const mapRow = (w: (typeof dayAppointments)[number]) => ({
       appointmentId: w.id,
       ticketNumber: w.queueTicketNumber,
       patientName: `${w.patient.firstNameEn} ${w.patient.lastNameEn}`,
       patientMrn: w.patient.mrn,
       clinicianName: w.clinician.displayName,
+      queueStage: w.queueStage ?? AppointmentQueueStage.WAITING,
       roomLabel: w.roomLabel,
+      preferredRoomLabel: w.preferredRoomLabel,
       waitMinutes: w.checkedInAt ? Math.floor((now - w.checkedInAt.getTime()) / 60_000) : 0,
       calledAt: w.calledAt?.toISOString() ?? null,
+      openEncounterId: w.encounters[0]?.id ?? null,
       alerts: this.patientAlertFlags(w.patient),
-    }));
+    });
 
-    const occupiedRooms = new Set(waiting.filter((w) => w.roomLabel).map((w) => w.roomLabel!));
+    const waiting = dayAppointments.filter(
+      (w) =>
+        w.queueStage === null ||
+        w.queueStage === AppointmentQueueStage.WAITING ||
+        w.queueStage === AppointmentQueueStage.CALLED,
+    );
+    const inExam = dayAppointments.filter((w) => w.queueStage === AppointmentQueueStage.IN_EXAM);
+
+    const occupiedRooms = new Set(inExam.filter((w) => w.roomLabel).map((w) => w.roomLabel!));
     const rooms = roomLabels.map((label) => ({
       label,
       free: !occupiedRooms.has(label),
+      appointmentId: inExam.find((w) => w.roomLabel === label)?.id ?? null,
     }));
 
     return {
       clinicId,
       clinicName: clinic.nameEn,
       lastCalledTicket: clinic.lastCalledTicketNumber,
-      waiting: waitingRows,
+      waiting: waiting.map(mapRow),
+      inExam: inExam.map(mapRow),
       rooms,
       generatedAt: new Date().toISOString(),
     };
+  }
+
+  /** Opens a draft encounter and auto-assigns an exam room (waiting → in exam). */
+  async startVisitFromAppointment(tenantId: string, user: JwtUser, appointmentId: string) {
+    const apt = await this.prisma.appointment.findFirst({
+      where: { id: appointmentId, tenantId },
+    });
+    if (!apt) throw new NotFoundException("Appointment not found");
+    if (apt.status === AppointmentStatus.CANCELLED || apt.status === AppointmentStatus.COMPLETED) {
+      throw new BadRequestException("Cannot start visit");
+    }
+    const existing = await this.prisma.encounter.findFirst({
+      where: {
+        tenantId,
+        appointmentId,
+        status: { in: [EncounterStatus.DRAFT, EncounterStatus.AMENDED] },
+      },
+      select: { id: true },
+    });
+    if (existing) return { encounterId: existing.id, alreadyOpen: true as const };
+
+    const enc = await this.encounters.create(tenantId, user, {
+      clinicId: apt.clinicId,
+      patientId: apt.patientId,
+      clinicianId: apt.clinicianId,
+      appointmentId: apt.id,
+      visitType: "Outpatient",
+    });
+    return { encounterId: enc.id, alreadyOpen: false as const };
   }
 
   async callTicket(tenantId: string, clinicId: string, ticketNumber: number) {
@@ -171,9 +259,8 @@ export class FrontDeskService {
       },
     });
     if (apt) {
-      await this.prisma.appointment.update({
-        where: { id: apt.id },
-        data: { calledAt: new Date() },
+      await this.prisma.$transaction(async (tx) => {
+        await this.flow.markCalled(tx, apt.id);
       });
     }
     await this.prisma.clinic.update({

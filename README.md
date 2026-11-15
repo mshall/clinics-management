@@ -27,7 +27,7 @@ The platform is designed for **healthcare groups** that operate **one or many cl
 
 Typical flows:
 
-- **Front desk / nurses:** patients, appointments, encounters (within role limits).
+- **Front desk / nurses:** check-in → waiting queue → call ticket → **start visit** (auto exam room) → encounter; live board and waiting-room TV ([`Docs/FRONT_DESK.md`](Docs/FRONT_DESK.md)).
 - **Physicians:** patients, encounters, **own** appointments schedule, doctor revenue, clinical documentation.
 - **Finance:** expenses, revenue (where permitted), reports.
 - **HR:** employees, attendance, leave.
@@ -56,8 +56,15 @@ Typical flows:
 ### Encounters (clinical visits)
 
 - List and open encounters; structured visit data, diagnoses, medications, **document uploads** (e.g. lab / radiology).
+- Optional **specialty form templates** (org-wide EN/AR defaults per specialty + clinic customs under **Clinics → Settings**); see [`Docs/CLINICAL_WORKFLOW.md`](Docs/CLINICAL_WORKFLOW.md).
 - Finalization workflow aligned with the API.
 - Creating an encounter captures a **visit fee** (default from tenant admin **default visit fee**); amounts greater than zero post a revenue ledger line (`VISIT_FEE`).
+
+### Front desk (reception)
+
+- **Quick check-in** on appointments (ticket, `WAITING` queue, optional preferred exam room and visit payment — cash, InstaPay, or Fawry).
+- **Live board** and **waiting-room screen**; **start visit** opens encounter and assigns a room; **finalize encounter** frees the room automatically.
+- See [`Docs/FRONT_DESK.md`](Docs/FRONT_DESK.md).
 
 ### Appointments
 
@@ -214,6 +221,9 @@ npm run dev
 - **Docs portal** (with `npm run dev`): [http://localhost:5175](http://localhost:5175)
 
 When using **Cursor** in this repo, workspace rule `.cursor/rules/dev-server-refresh.mdc` instructs the agent to restart `npm run dev` and verify API health after meaningful code changes (no need to ask manually).
+
+If the UI shows **“Local API is not reachable”**, from the repo root run `npm run db:ensure && npm run dev` and wait until the `[api]` log prints **`API listening on http://localhost:3000/api/v1`** before reloading. Quick check: `npm run api:ensure` (uses `/api/v1/health/ready` with DB connectivity, not liveness alone).
+
 - **Swagger:** [http://localhost:3000/docs](http://localhost:3000/docs)
 
 After `db:setup`, use the **demo seed users** below (password **`demo`** for every account). Full list, AWS demo URL, and role matrix: **[`Docs/Test_Data_Users.md`](Docs/Test_Data_Users.md)**. Additional mixed-role staff accounts `staff3@kiorly.com` … `staff15@kiorly.com` are also created; see `apps/api/prisma/seed.ts` for exact role assignment.
@@ -245,6 +255,7 @@ API output is under `apps/api/dist`; web static assets under `apps/web/dist`.
 | Command | Description |
 |--------|-------------|
 | `npm run dev` | API (watch) + Vite + docs portal |
+| `npm run api:ensure` | Exit 0 only when API is ready (`health/ready` + DB) |
 | `npm run dev:api` / `npm run dev:web` | One app only |
 | `npm run dev:web:aws` | Local Vite UI against live AWS API (`sync:aws` writes `apps/web/.env.aws`) |
 | `npm run sync:github` | Fetch + fast-forward pull `origin/main` |
@@ -336,7 +347,7 @@ Use **Amazon Lightsail** (fixed monthly) **or** one **EC2** instance (e.g. **t4g
 
 1. Register a domain (Route 53 or any registrar); create **A/AAAA** or **CNAME** to your instance or CloudFront.
 2. Provision VM → install Docker (optional) or Node → deploy `dist` + env files.
-3. Run `prisma migrate deploy` against production `DATABASE_URL` (no seed in production unless intended).
+3. Run `prisma migrate deploy` against production `DATABASE_URL` after each deploy (includes front-desk queue flow and clinical template migrations); no seed in production unless intended.
 4. Put **Nginx** (or ALB) in front with HTTPS.
 5. Configure **backups** (EBS snapshots and/or RDS automated backups).
 
@@ -359,6 +370,8 @@ Use **Amazon Lightsail** (fixed monthly) **or** one **EC2** instance (e.g. **t4g
 - **Test users & passwords (QA / demos):** [`Docs/Test_Data_Users.md`](Docs/Test_Data_Users.md)
 - Product / requirements context: [`Docs/Clinic_Management_System_PRD.md`](Docs/Clinic_Management_System_PRD.md) (v1.9 — customer support, admin insights, scale/perf notes)
 - Technical RFC: [`Docs/Clinic_Management_System_RFC.md`](Docs/Clinic_Management_System_RFC.md) (v1.8)
+- Front desk automated flow: [`Docs/FRONT_DESK.md`](Docs/FRONT_DESK.md)
+- Clinical templates & chart tools: [`Docs/CLINICAL_WORKFLOW.md`](Docs/CLINICAL_WORKFLOW.md)
 - AWS deployment (RDS, App Runner, S3/CloudFront, checklist): [`Docs/AWS_Cloud_Deployment_Guide.md`](Docs/AWS_Cloud_Deployment_Guide.md)
 
 ---

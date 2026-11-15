@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { AppointmentStatus } from "@prisma/client";
+import { AppointmentQueueStage, AppointmentStatus } from "@prisma/client";
 
 export class AppointmentDto {
   @ApiProperty()
@@ -61,6 +61,15 @@ export class AppointmentDto {
 
   @ApiPropertyOptional({ nullable: true })
   roomLabel?: string | null;
+
+  @ApiPropertyOptional({ enum: AppointmentQueueStage, nullable: true })
+  queueStage?: AppointmentQueueStage | null;
+
+  @ApiPropertyOptional({ nullable: true, description: "Hint for auto room assignment when the encounter starts" })
+  preferredRoomLabel?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  roomAssignedAt?: string | null;
 
   @ApiPropertyOptional({ nullable: true })
   checkedInAt?: string | null;

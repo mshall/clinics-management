@@ -4,6 +4,7 @@ import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
+import { FrontDeskCheckInDto } from "./dto/check-in.dto";
 import { FrontDeskService } from "./front-desk.service";
 
 @ApiTags("front-desk")
@@ -18,13 +19,19 @@ export class FrontDeskController {
     return this.frontDesk.quickSearch(requireTenantId(user), user, q ?? "");
   }
 
+  @Post("appointments/:id/start-visit")
+  startVisit(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.frontDesk.startVisitFromAppointment(requireTenantId(user), user, id);
+  }
+
   @Post("appointments/:id/check-in")
-  checkIn(
-    @CurrentUser() user: JwtUser,
-    @Param("id") id: string,
-    @Body() body: { paymentAmount?: number; roomLabel?: string; currency?: string },
-  ) {
-    return this.frontDesk.checkIn(requireTenantId(user), user, id, body);
+  checkIn(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: FrontDeskCheckInDto) {
+    return this.frontDesk.checkIn(requireTenantId(user), user, id, {
+      paymentAmount: body.paymentAmount,
+      roomLabel: body.roomLabel,
+      currency: body.currency,
+      visitCollection: body.toVisitCollectionInput(),
+    });
   }
 
   @Get("board")

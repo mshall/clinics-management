@@ -1,6 +1,7 @@
 import { EncounterStatus, Prisma, RevenueStatus } from "@prisma/client";
 import { isBaseCurrency } from "./base-currencies";
 import { resolveClinicCurrency } from "./clinic-currency";
+import { collectionFieldsFromParsed, type ParsedVisitCollection } from "./visit-collection";
 
 export async function upsertEncounterVisitFeeRevenue(
   tx: Prisma.TransactionClient,
@@ -11,6 +12,7 @@ export async function upsertEncounterVisitFeeRevenue(
     appointmentId: string | null;
     amount: number;
     currency?: string;
+    collection?: ParsedVisitCollection;
   },
 ): Promise<void> {
   const { tenantId, clinicId, encounterId, appointmentId, amount, currency: currencyOpt } = params;
@@ -23,6 +25,8 @@ export async function upsertEncounterVisitFeeRevenue(
       ? currencyOpt.trim()
       : await resolveClinicCurrency(tx, tenantId, clinicId);
 
+  const collectionData = params.collection ? collectionFieldsFromParsed(params.collection) : {};
+
   if (amount > 0) {
     const revenueData = {
       grossAmount: new Prisma.Decimal(String(amount)),
@@ -31,6 +35,7 @@ export async function upsertEncounterVisitFeeRevenue(
       currency,
       appointmentId,
       description: `Visit fee · encounter ${encounterId.slice(0, 8)}…`,
+      ...collectionData,
     };
     if (existingRevenue) {
       await tx.revenueEntry.update({ where: { id: existingRevenue.id }, data: revenueData });

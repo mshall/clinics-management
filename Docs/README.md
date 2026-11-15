@@ -30,9 +30,9 @@ See **[Documentation_Portal.md](./Documentation_Portal.md)** for module layout, 
 | [**AWS_Cloud_Deployment_Guide.md**](./AWS_Cloud_Deployment_Guide.md) | RDS, App Runner, CloudFront, CI/CD deploy, post-deploy seed |
 | [**ASSISTANT.md**](./ASSISTANT.md) | AI assistant architecture: permissions, playbook, live data, actions |
 | [**ASSISTANT_OPENAI_SETUP.md**](./ASSISTANT_OPENAI_SETUP.md) | OpenAI API key and AWS Secrets Manager for the assistant |
-| [**CLINICAL_WORKFLOW.md**](./CLINICAL_WORKFLOW.md) | Template builder, shortcuts, safety checks, vitals charts, letters, note lock |
+| [**CLINICAL_WORKFLOW.md**](./CLINICAL_WORKFLOW.md) | Clinic Settings templates (EN/AR defaults + custom), shortcuts, safety, vitals, letters, note lock |
 | [**PATIENT_360_AND_SCHEDULING.md**](./PATIENT_360_AND_SCHEDULING.md) | Patient summary, timeline, family merge, appointment types, series, waitlist, follow-up |
-| [**FRONT_DESK.md**](./FRONT_DESK.md) | Global search (⌘K), quick check-in, live board, waiting-room screen, chart header alerts |
+| [**FRONT_DESK.md**](./FRONT_DESK.md) | Global search (⌘K), check-in → waiting → call → start visit (auto exam room) → finalize; board, TV screen, InstaPay/Fawry at check-in |
 | [**CLINIC_PLATFORM_CAPABILITIES.md**](./CLINIC_PLATFORM_CAPABILITIES.md) | Operations pipeline, billing/compliance, messaging, reports, clinic AI — status matrix |
 | [**GUIDE_BOOK.md**](./GUIDE_BOOK.md) | In-app Guide book (`/guide`) — role-based EN/AR instructions |
 

@@ -34,7 +34,9 @@ Skip only for edits that cannot affect runtime (e.g. comments-only in docs with 
 Treat local dev refresh as **part of finishing the task**, not a follow-up for the user.
 
 1. **Never** end a turn that changed runtime code with only “refresh your browser” or “run `npm run dev`” — run restart and verification yourself in that same turn when shell access is available.
-2. After restart, **confirm** the API is up (`curl` `http://127.0.0.1:3000/api/v1/health/live` → `200`) before you report done; if it fails, read the dev log and fix or retry once.
-3. In the summary, state briefly that the stack was restarted and is healthy — do **not** ask the user to restart unless the agent cannot access the machine or a command failed after retry.
-4. **Browser:** Vite usually hot-reloads the web app; a hard refresh is only needed if the user still sees stale UI. You do not need to ask them to refresh when the dev stack was restarted successfully.
-5. Applies after **push** as well as local edits when you still have shell access on this machine (restart so their local tab matches what they will test).
+2. After restart, **confirm** the API is up with **`npm run api:ensure`** or `curl` `http://127.0.0.1:3000/api/v1/health/ready` → JSON with `"database":"ok"` (not `/health/live` alone — that can pass while a dying Nest process shuts down and Vite will still proxy-fail until watch recompiles).
+3. Do **not** start Vite before the API is ready: root `npm run dev` uses `scripts/wait-api-ready.sh` (3× consecutive ready checks). If the user sees “Local API is not reachable”, restart from repo root: `npm run db:ensure && npm run dev` and wait for **`API listening on http://127.0.0.1:3000/api/v1`** in the `[api]` log.
+4. In the summary, state briefly that the stack was restarted and is healthy — do **not** ask the user to restart unless the agent cannot access the machine or a command failed after retry.
+5. **Browser:** Vite usually hot-reloads the web app; a hard refresh is only needed if the user still sees stale UI. You do not need to ask them to refresh when the dev stack was restarted successfully.
+6. Applies after **push** as well as local edits when you still have shell access on this machine (restart so their local tab matches what they will test).
+7. Avoid orphaned dev stacks: killing port 3000 without restarting `npm run dev` in the same turn is what causes “API not reachable” for the user — always pair port cleanup with a fresh root `npm run dev` when you touched runtime code.

@@ -13,7 +13,6 @@ import {
   Settings,
   Stethoscope,
   BookOpen,
-  FileStack,
   Monitor,
   User,
   Users,
@@ -95,27 +94,10 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
         </NavLink>
       ) : null}
       {showTab("encounters") ? (
-        <>
-          <NavLink to="/encounters" className={navClass} onClick={() => onNavigate?.()}>
-            <Stethoscope className="size-4 shrink-0" />
-            {t("nav.encounters")}
-          </NavLink>
-          <NavLink
-            to="/clinical/templates"
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-3 rounded-md py-2 pe-3 ps-9 text-sm font-medium transition-colors",
-                isActive || pathname.startsWith("/clinical/")
-                  ? "bg-primary/15 text-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
-              )
-            }
-            onClick={() => onNavigate?.()}
-          >
-            <FileStack className="size-4 shrink-0" />
-            {t("nav.clinicalTemplates", "Clinical templates")}
-          </NavLink>
-        </>
+        <NavLink to="/encounters" className={navClass} onClick={() => onNavigate?.()}>
+          <Stethoscope className="size-4 shrink-0" />
+          {t("nav.encounters")}
+        </NavLink>
       ) : null}
       {showTab("appointments") ? (
         <>

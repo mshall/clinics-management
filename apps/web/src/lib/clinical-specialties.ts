@@ -1,5 +1,5 @@
-/** Must stay aligned with Prisma `ClinicalSpecialty` enum. */
-export const CLINICAL_SPECIALTY_VALUES = [
+/** Mirrors API `ClinicalSpecialty` (excludes CUSTOM for system defaults). */
+export const CLINICAL_SPECIALTY_OPTIONS = [
   "POLYCLINIC",
   "GENERAL_MEDICINE",
   "PAIN_MANAGEMENT",
@@ -18,6 +18,18 @@ export const CLINICAL_SPECIALTY_VALUES = [
   "LABORATORY",
   "INTERNAL_MEDICINE",
   "FAMILY_MEDICINE",
+  "CUSTOM",
 ] as const;
 
-export type ClinicalSpecialtyId = (typeof CLINICAL_SPECIALTY_VALUES)[number];
+export type ClinicalSpecialtySlug = (typeof CLINICAL_SPECIALTY_OPTIONS)[number];
+
+/** Org/clinic/hr pickers — excludes CUSTOM (templates only). */
+export const CLINICAL_SPECIALTY_VALUES = CLINICAL_SPECIALTY_OPTIONS.filter(
+  (s): s is Exclude<ClinicalSpecialtySlug, "CUSTOM"> => s !== "CUSTOM",
+);
+
+export function formatClinicalSpecialty(slug: string, t: (key: string, fallback: string) => string): string {
+  if (slug === "CUSTOM") return t("clinical.specialtyCustom", "Custom specialty");
+  const key = `clinical.specialty_${slug}`;
+  return t(key, slug.replace(/_/g, " "));
+}

@@ -157,6 +157,7 @@ export class ClinicsService {
     firstNameAr: string | null;
     lastNameAr: string | null;
     email: string | null;
+    defaultExamRoomLabel?: string | null;
     user: { id: string; displayName: string; email: string } | null;
   }): ClinicPhysicianDto {
     const u = e.user!;
@@ -171,6 +172,7 @@ export class ClinicsService {
       lastNameEn: e.lastNameEn,
       firstNameAr: e.firstNameAr,
       lastNameAr: e.lastNameAr,
+      defaultExamRoomLabel: e.defaultExamRoomLabel ?? null,
     };
   }
 
@@ -296,6 +298,7 @@ export class ClinicsService {
         lastNameEn: parts.length > 1 ? parts.slice(1).join(" ") : "",
         firstNameAr: null,
         lastNameAr: null,
+        defaultExamRoomLabel: null,
       };
     });
   }
@@ -370,6 +373,31 @@ export class ClinicsService {
     return this.mapPhysicianEmployee(row as typeof row & { user: NonNullable<typeof row.user> });
   }
 
+  async patchPhysicianExamRoom(
+    tenantId: string,
+    clinicId: string,
+    userId: string,
+    viewer: JwtUser,
+    defaultExamRoomLabel?: string | null,
+  ) {
+    if (!ClinicsService.CLINIC_PHYSICIAN_MANAGE_ROLES.has(viewer.role)) {
+      throw new ForbiddenException("You do not have permission to update physicians");
+    }
+    await this.assertClinicVisible(tenantId, clinicId, viewer);
+    const row = await this.prisma.employee.findFirst({
+      where: { tenantId, clinicId, userId },
+      include: { user: { select: { id: true, displayName: true, email: true } } },
+    });
+    if (!row?.user) throw new NotFoundException("Physician is not assigned to this clinic");
+    const label = defaultExamRoomLabel === undefined ? undefined : defaultExamRoomLabel?.trim() || null;
+    const updated = await this.prisma.employee.update({
+      where: { id: row.id },
+      data: { defaultExamRoomLabel: label },
+      include: { user: { select: { id: true, displayName: true, email: true } } },
+    });
+    return this.mapPhysicianEmployee(updated as typeof updated & { user: NonNullable<typeof updated.user> });
+  }
+
   async removePhysician(tenantId: string, clinicId: string, userId: string, viewer: JwtUser): Promise<void> {
     if (!ClinicsService.CLINIC_PHYSICIAN_MANAGE_ROLES.has(viewer.role)) {
       throw new ForbiddenException("You do not have permission to remove physician assignments");
@@ -397,6 +425,7 @@ export class ClinicsService {
       lastNameEn: parts.length > 1 ? parts.slice(1).join(" ") : "",
       firstNameAr: null,
       lastNameAr: null,
+      defaultExamRoomLabel: null,
     };
   }
 

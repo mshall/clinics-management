@@ -6,6 +6,7 @@ The floating assistant is available to all organization roles (plus platform sup
 
 1. **Scope check** — topics map to required tabs; refuse if none match.
 2. **Live data** — clinics, headcount, revenue/expenses (with period), patient counts; uses the same services as REST APIs.
+2a. **Scoped database reads** — `AssistantScopedQueriesService` runs Prisma queries filtered by role and clinic scope (same rules as the dashboard and patient list). Examples: **today’s live ops** (appointments, waiting, collected today) when the user has **Appointments** or **Dashboard**; **encounter counts** for a period when they have **Encounters** (physicians only see their own encounters). Results are injected into direct replies and the OpenAI snapshot JSON — the model does not get raw SQL or unrestricted table access.
 2b. **Per-clinic revenue** — when the question asks for revenue **by clinic** / across the org, returns a posted-revenue breakdown per clinic (same rules as `GET /revenue/clinic-breakdown`) before aggregate totals.
 3. **Patient lookup** — search with chart **action buttons** (`/patients/:id`); name phrases such as *“look for a patient named …”* strip filler words; patient list search uses **contains** on first/last name (including combined first + last).
 4. **Playbook** — how-to steps + **navigate** buttons (`/hr`, `/appointments`, …).
@@ -20,6 +21,7 @@ The floating assistant is available to all organization roles (plus platform sup
 | Conceptual FAQ | `assistant-qa-extended.ts` |
 | Role tone in LLM | `assistant-role-hints.ts` |
 | New live metric | `assistant-live-data.service.ts` + `assistant-intent.ts` |
+| New scoped DB query | `assistant-scoped-queries.service.ts` (enforce clinic/role filters) + intent + snapshot |
 | New nav area | `assistant-nav-routes.ts` + `NAV_GUIDANCE` in `assistant-knowledge.ts` |
 
 ## Actions

@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Power, PowerOff } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { ClinicDoctorsPanel } from "@/features/clinics/clinic-doctors-panel";
 import { ClinicCurrencySettingsPanel } from "@/features/clinics/clinic-currency-settings-panel";
 import { ClinicHoursSettingsPanel } from "@/features/clinics/clinic-hours-settings-panel";
 import { ClinicRoomsSettingsPanel } from "@/features/clinics/clinic-rooms-settings-panel";
+import { ClinicClinicalTemplatesPanel } from "@/features/clinics/clinic-clinical-templates-panel";
 import { ClinicReactivateDialog } from "@/features/clinics/clinic-reactivate-dialog";
 import { useClinicQuery } from "@/lib/api-hooks";
 import { ApiError, apiPost } from "@/lib/http";
@@ -31,6 +32,8 @@ export function ClinicDetailPage() {
   const orgBaseCurrency = useOrgBaseCurrency();
   const canManageClinic = authUser?.role ? MANAGE_CLINIC_ROLES.has(authUser.role) : false;
   const { id } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") ?? "overview";
   const { data: c, isPending, isError, error } = useClinicQuery(id);
   const [deactivateOpen, setDeactivateOpen] = useState(false);
   const [reactivateOpen, setReactivateOpen] = useState(false);
@@ -156,7 +159,12 @@ export function ClinicDetailPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="overview">
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => {
+          setSearchParams(v === "overview" ? {} : { tab: v }, { replace: true });
+        }}
+      >
         <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 sm:w-auto">
           <TabsTrigger value="overview">{t("clinics.tabOverview", "Overview")}</TabsTrigger>
           <TabsTrigger value="settings">{t("clinics.tabSettings", "Settings")}</TabsTrigger>
@@ -267,6 +275,7 @@ export function ClinicDetailPage() {
             roomLabels={c.frontDeskRoomLabels?.length ? c.frontDeskRoomLabels : ["Room 1", "Room 2", "Room 3"]}
             canEdit={canManageClinic}
           />
+          <ClinicClinicalTemplatesPanel clinicId={c.id} canEdit={canManageClinic} />
         </TabsContent>
 
         <TabsContent value="history" className="space-y-4">
@@ -311,7 +320,10 @@ export function ClinicDetailPage() {
         </TabsContent>
 
         <TabsContent value="doctors">
-          <ClinicDoctorsPanel clinicId={c.id} />
+          <ClinicDoctorsPanel
+            clinicId={c.id}
+            examRoomLabels={c.frontDeskRoomLabels?.length ? c.frontDeskRoomLabels : ["Room 1", "Room 2", "Room 3"]}
+          />
         </TabsContent>
       </Tabs>
     </div>

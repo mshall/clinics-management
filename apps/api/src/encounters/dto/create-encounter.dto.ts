@@ -3,6 +3,7 @@ import { Type } from "class-transformer";
 import { IsArray, IsNumber, IsOptional, IsString, MaxLength, Min, MinLength, ValidateNested } from "class-validator";
 import { PatientAcquisitionFieldsDto } from "../../common/dto/patient-acquisition-fields.dto";
 import { PatientAllergyInputDto } from "../../patients/dto/patient-allergy-input.dto";
+import { VisitCollectionDto } from "../../common/dto/visit-collection.dto";
 
 export class CreateEncounterDto extends PatientAcquisitionFieldsDto {
   @ApiProperty()
@@ -60,4 +61,13 @@ export class CreateEncounterDto extends PatientAcquisitionFieldsDto {
   @ValidateNested({ each: true })
   @Type(() => PatientAllergyInputDto)
   patientAllergies?: PatientAllergyInputDto[];
+
+  @ApiPropertyOptional({
+    type: VisitCollectionDto,
+    description: "How the visit fee was collected (required when visitFeeAmount > 0)",
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => VisitCollectionDto)
+  visitCollection?: VisitCollectionDto;
 }

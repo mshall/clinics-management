@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { formatClinicalSpecialty } from "@/lib/clinical-specialties";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,6 +26,8 @@ type ClinicalTemplate = {
   name: string;
   specialty: string;
   sectionsJson: unknown;
+  customSpecialtyLabelEn?: string | null;
+  customSpecialtyLabelAr?: string | null;
 };
 
 function parseSections(json: unknown): TemplateSection[] {
@@ -37,6 +40,7 @@ function fieldKey(sectionId: string, fieldId: string) {
 }
 
 type Props = {
+  clinicId: string;
   disabled?: boolean;
   templateId: string | null;
   responses: Record<string, unknown>;
@@ -45,6 +49,7 @@ type Props = {
 };
 
 export function EncounterSpecialtyForm({
+  clinicId,
   disabled,
   templateId,
   responses,
@@ -55,8 +60,9 @@ export function EncounterSpecialtyForm({
   const isAr = i18n.language.startsWith("ar");
 
   const templatesQuery = useQuery({
-    queryKey: ["clinical", "templates"],
-    queryFn: () => apiGet<ClinicalTemplate[]>("/api/v1/clinical/form-templates"),
+    queryKey: ["clinical", "templates", clinicId],
+    queryFn: () => apiGet<ClinicalTemplate[]>(`/api/v1/clinical/form-templates?clinicId=${clinicId}`),
+    enabled: Boolean(clinicId),
   });
 
   const selected = (templatesQuery.data ?? []).find((tpl) => tpl.id === templateId);
@@ -83,15 +89,23 @@ export function EncounterSpecialtyForm({
             }}
           >
             <option value="">{t("clinical.noSpecialtyTemplate", "None (SOAP only)")}</option>
-            {(templatesQuery.data ?? []).map((tpl) => (
-              <option key={tpl.id} value={tpl.id}>
-                {tpl.name} — {tpl.specialty.replace(/_/g, " ")}
-              </option>
-            ))}
+            {(templatesQuery.data ?? []).map((tpl) => {
+              const specLabel =
+                tpl.specialty === "CUSTOM"
+                  ? (i18n.language.startsWith("ar") ? tpl.customSpecialtyLabelAr : tpl.customSpecialtyLabelEn) ||
+                    tpl.customSpecialtyLabelEn ||
+                    t("clinical.specialtyCustom", "Custom")
+                  : formatClinicalSpecialty(tpl.specialty, t);
+              return (
+                <option key={tpl.id} value={tpl.id}>
+                  {tpl.name} — {specLabel}
+                </option>
+              );
+            })}
           </select>
         </div>
-        <a href="/clinical/templates" className="text-xs text-primary hover:underline">
-          {t("clinical.templateBuilderLink", "Open template builder")}
+        <a href={`/clinics/${clinicId}?tab=settings`} className="text-xs text-primary hover:underline">
+          {t("clinical.templateBuilderLink", "Manage templates in clinic settings")}
         </a>
       </div>
       {selected && sections.length > 0 ? (

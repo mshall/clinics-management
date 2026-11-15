@@ -2,7 +2,7 @@
 
 Speed tools for reception: **global patient search**, **one-step check-in**, **live clinic board**, and **chart-header alerts** visible on patient, appointment, and encounter screens.
 
-**Migration:** `20261113213041_front_desk_flow`  
+**Migrations:** `20261113213041_front_desk_flow`, `20261115090000_visit_collection_channels`, `20261115103000_appointment_queue_flow`  
 **API module:** `FrontDeskModule` (`/api/v1/front-desk/*`)  
 **Web:** header search (⌘K / Ctrl+K), `/front-desk/board`, `/front-desk/waiting-room`, quick check-in on appointment detail
 
@@ -22,31 +22,56 @@ Speed tools for reception: **global patient search**, **one-step check-in**, **l
 
 ## Quick check-in (&lt; 30 seconds)
 
-Goal: move appointment → **CHECKED_IN** with arrival time, queue ticket, optional room, and same-step revenue.
+Goal: move appointment → **CHECKED_IN** with arrival time, queue ticket, **`queueStage = WAITING`** (waiting area — exam rooms stay free), and same-step revenue.
 
 | Field / behaviour | Detail |
 |-------------------|--------|
 | Status | Sets `CHECKED_IN` (existing enum) |
 | `checkedInAt` | Server timestamp at check-in |
 | `queueTicketNumber` | Per clinic, per calendar day, monotonic (starts at 1 each day) |
-| `roomLabel` | Optional; can pre-fill from appointment |
-| Payment | Optional `paymentAmount` + `currency` → creates **POSTED** `revenueEntry` (`VISIT`) linked to the appointment |
-| UI | **Quick check-in** card on **Appointments → detail**; after check-in shows ticket # and time |
-| API | `POST /api/v1/front-desk/appointments/:id/check-in` body: `{ paymentAmount?, roomLabel?, currency? }` |
+| `queueStage` | Set to **`WAITING`**; `roomLabel` cleared (no occupancy until visit starts) |
+| `preferredRoomLabel` | Optional body field `roomLabel` on check-in API — **hint** for auto-assign at **Start visit** |
+| Payment | Optional `paymentAmount` + `currency` + `visitCollection` → **POSTED** `revenueEntry` (`VISIT`) |
+| UI | **Quick check-in** on **Appointments → detail**; preferred exam room dropdown from clinic **Exam rooms** |
+| API | `POST /api/v1/front-desk/appointments/:id/check-in` body: `{ paymentAmount?, roomLabel?, currency?, visitCollection? }` |
 
 Staff with **Appointments** nav access can use check-in and the board (receptionist, nurse, call center, clinic roles).
 
 ---
 
+## Visit payment collection
+
+When staff collect a fee at **check-in** (appointment) or when **creating an encounter** with a visit fee:
+
+| Method | UI |
+|--------|-----|
+| **Cash on visit** | Default; posts to revenue with `collectionMode=CASH_ON_VISIT` |
+| **Money transfer** | Choose **InstaPay** or **Fawry**, enter **transaction ID** (stored on the `RevenueEntry` and check-in appointment record) |
+
+API: `visitCollection` on `POST /api/v1/front-desk/appointments/:id/check-in` and `POST/PATCH /api/v1/encounters` when `visitFeeAmount` / `paymentAmount` > 0.
+
 ## Live clinic board & waiting-room screen
+
+### Automated visit flow
+
+| Step | What happens |
+|------|----------------|
+| 1. Check-in | `WAITING` queue stage; optional **preferred exam room** (not occupied yet). |
+| 2. Call | `CALLED` + TV **Now serving** ticket. |
+| 3. Start visit | `POST /api/v1/front-desk/appointments/:id/start-visit` or create/link an **encounter** → `IN_EXAM`, **auto-assign** exam room (preferred → physician default → first free room). |
+| 4. Finalize encounter | Clears `roomLabel`, completes appointment; room shows **Free**. |
+
+Room assignment order: **preferredRoomLabel** → physician **`defaultExamRoomLabel`** (Clinics → Doctors) → first free label from **Exam rooms** settings.
 
 | Item | Detail |
 |------|--------|
-| Board UI | **Appointments → Front desk board** (`/front-desk/board`) — clinic picker, 12s poll |
-| Waiting queue | Checked-in today: patient name, MRN, clinician, ticket #, wait minutes |
-| Rooms | From clinic `frontDeskRoomLabels` JSON (default Room 1–3); **Free** vs **In use** from today’s room assignments |
-| Call ticket | `POST /api/v1/front-desk/call-ticket` `{ clinicId, ticketNumber }` updates `lastCalledTicketNumber` / `calledAt` on appointments |
-| Waiting-room TV | **Open waiting-room screen** (new tab) → `/front-desk/waiting-room?clinicId=` — large **Now serving** + queue count |
+| Board UI | **Appointments → Front desk board** — waiting list + in-exam list, 15s poll |
+| Waiting queue | `queueStage` **WAITING** or **CALLED** (checked-in today) |
+| In exam | `queueStage` **IN_EXAM** with assigned `roomLabel` |
+| Rooms | **In use** only while a patient is **IN_EXAM** with that `roomLabel` |
+| Call ticket | `POST /api/v1/front-desk/call-ticket` |
+| Start visit | `POST /api/v1/front-desk/appointments/:id/start-visit` |
+| Waiting-room TV | `/front-desk/waiting-room?clinicId=` |
 | API | `GET /api/v1/front-desk/board?clinicId=` |
 
 Configure room names under **Clinics & branches → clinic detail → Settings → Exam rooms** (group admin, clinic admin, or branch manager). There is no separate Save control:
@@ -108,6 +133,8 @@ npm run dev
 
 1. Sign in as receptionist (`receptionist@drahmedshall.com` / `demo`).
 2. Press **⌘K**, search by MRN or name, open patient.
-3. Open today’s appointment → **Check in & print ticket** with optional payment → note ticket #.
-4. Open **Front desk board** → see queue, call ticket, open waiting-room tab.
-5. Open patient / encounter → confirm allergy / VIP badges when seeded.
+3. Open today’s appointment → **Check in** (optional preferred room / payment) → ticket # and **WAITING** on **Visit flow** card.
+4. **Front desk board** → **Call** → **Start visit** (or start encounter from appointment) → patient moves to **In exam** with auto room.
+5. **Clinics → Doctors** — set **Default exam room** per physician (optional).
+6. Finalize encounter → room **Free** on board; appointment **Completed**.
+7. Open waiting-room tab for TV display; confirm chart header alerts (allergy / VIP) when seeded.

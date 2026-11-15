@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsString } from "class-validator";
+import { IsOptional, IsString, MaxLength } from "class-validator";
 
 export class ClinicPhysicianDto {
   @ApiProperty()
@@ -28,10 +28,24 @@ export class ClinicPhysicianDto {
 
   @ApiPropertyOptional({ nullable: true })
   lastNameAr!: string | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: "Default exam room for auto-assignment when this physician's encounter starts",
+  })
+  defaultExamRoomLabel!: string | null;
 }
 
 export class AssignClinicPhysicianDto {
   @ApiProperty({ description: "Physician user id to assign to this clinic" })
   @IsString()
   userId!: string;
+}
+
+export class PatchClinicPhysicianExamRoomDto {
+  @ApiPropertyOptional({ nullable: true, maxLength: 80 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  defaultExamRoomLabel?: string | null;
 }

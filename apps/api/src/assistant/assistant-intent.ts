@@ -29,6 +29,21 @@ export function messageAsksForEmployeeCount(message: string): boolean {
   );
 }
 
+export function messageAsksForTodayLive(message: string): boolean {
+  return (
+    /today|right now|live|waiting|checked.?in|queue|no.?show|هذا اليوم|الآن|انتظار|تذكرة/i.test(message) &&
+    /appointment|encounter|front desk|board|visit|collected|revenue|موعد|زيارة|استقبال|محصل/i.test(message)
+  );
+}
+
+export function messageAsksForEncounterCount(message: string): boolean {
+  return (
+    /(how many|number of|count).*(encounter|visit|زيارة)/i.test(message) ||
+    /(encounter|visit).*(count|total|how many)/i.test(message) ||
+    /(كم|عدد).*(زيارة|زيارات)/u.test(message)
+  );
+}
+
 export function messageAsksForLiveMetric(message: string): boolean {
   return (
     messageAsksForClinicList(message) ||
@@ -36,7 +51,9 @@ export function messageAsksForLiveMetric(message: string): boolean {
     messageAsksForOrgUsers(message) ||
     messageAsksForEmployeeCount(message) ||
     messageAsksForRevenue(message) ||
-    messageAsksForExpenses(message)
+    messageAsksForExpenses(message) ||
+    messageAsksForTodayLive(message) ||
+    messageAsksForEncounterCount(message)
   );
 }
 

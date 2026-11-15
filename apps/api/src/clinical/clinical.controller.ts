@@ -19,13 +19,22 @@ export class ClinicalController {
   ) {}
 
   @Get("form-templates")
-  listTemplates(@CurrentUser() user: JwtUser, @Query("specialty") specialty?: ClinicalSpecialty) {
-    return this.clinical.listTemplates(requireTenantId(user), user, specialty);
+  listTemplates(
+    @CurrentUser() user: JwtUser,
+    @Query("specialty") specialty?: ClinicalSpecialty,
+    @Query("clinicId") clinicId?: string,
+  ) {
+    return this.clinical.listTemplates(requireTenantId(user), user, specialty, clinicId);
   }
 
   @Post("form-templates")
   upsertTemplate(@CurrentUser() user: JwtUser, @Body() body: Record<string, unknown>) {
     return this.clinical.upsertTemplate(requireTenantId(user), user, body as never);
+  }
+
+  @Delete("form-templates/:id")
+  deleteTemplate(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.clinical.deleteClinicTemplate(requireTenantId(user), user, id);
   }
 
   @Get("shortcuts")

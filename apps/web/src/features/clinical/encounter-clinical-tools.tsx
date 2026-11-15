@@ -90,8 +90,8 @@ export function EncounterClinicalTools({ encounter, onApplySoap, pendingDrugName
           {t("encounters.copyLastVisit", "Copy last visit")}
         </Button>
         <ClinicalLetterDialog patientId={encounter.patientId} encounterId={encounter.id} />
-        <Link to="/clinical/templates" className="text-xs text-primary hover:underline">
-          {t("clinical.templateBuilderLink", "Open template builder")}
+        <Link to={`/clinics/${encounter.clinicId}?tab=settings`} className="text-xs text-primary hover:underline">
+          {t("clinical.templateBuilderLink", "Manage templates in clinic settings")}
         </Link>
         {encounter.noteLockedAt ? (
           <Button

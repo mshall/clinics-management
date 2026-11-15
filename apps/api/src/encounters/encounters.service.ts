@@ -12,6 +12,7 @@ import {
   EncounterStatus,
   Prisma,
   UserRole,
+  VisitCollectionMode,
 } from "@prisma/client";
 import { randomUUID } from "crypto";
 import * as path from "path";
@@ -25,7 +26,9 @@ import { CLINIC_SCOPE_ROLES, fetchPhysicianNetworkClinicIds } from "../common/cl
 import { isBaseCurrency } from "../common/base-currencies";
 import { resolveClinicCurrency } from "../common/clinic-currency";
 import { upsertEncounterVisitFeeRevenue } from "../common/visit-fee-ledger";
+import { parseVisitCollectionForAmount } from "../common/visit-collection";
 import { PrismaService } from "../prisma/prisma.service";
+import { FrontDeskFlowService } from "../front-desk/front-desk-flow.service";
 import { PatientsService } from "../patients/patients.service";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { AddDiagnosisDto } from "./dto/add-diagnosis.dto";
@@ -80,6 +83,7 @@ export class EncountersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly patients: PatientsService,
+    private readonly frontDeskFlow: FrontDeskFlowService,
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
   ) {}
 
@@ -345,7 +349,11 @@ export class EncountersService {
           where: { id: appointmentIdOpt, tenantId, patientId: dto.patientId },
         });
         if (!apt) throw new BadRequestException("Appointment not found for this patient");
-        const linkableStatuses = new Set<AppointmentStatus>([AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED]);
+        const linkableStatuses = new Set<AppointmentStatus>([
+          AppointmentStatus.SCHEDULED,
+          AppointmentStatus.CONFIRMED,
+          AppointmentStatus.CHECKED_IN,
+        ]);
         if (!linkableStatuses.has(apt.status)) {
           throw new BadRequestException("This appointment cannot be linked to a new encounter");
         }
@@ -397,12 +405,16 @@ export class EncountersService {
       if (linkAppointmentId) {
         await tx.appointment.update({
           where: { id: linkAppointmentId },
-          data: {
-            status: AppointmentStatus.CHECKED_IN,
-            feeAmount: visitFeeAmount,
-          },
+          data: { feeAmount: visitFeeAmount },
         });
+        await this.frontDeskFlow.onEncounterStarted(tx, tenantId, linkAppointmentId);
       }
+
+      const visitCollection = parseVisitCollectionForAmount(
+        visitFeeAmount,
+        dto.visitCollection ??
+          (visitFeeAmount > 0 ? { mode: VisitCollectionMode.CASH_ON_VISIT } : undefined),
+      );
 
       await upsertEncounterVisitFeeRevenue(tx, {
         tenantId,
@@ -411,6 +423,7 @@ export class EncountersService {
         appointmentId: linkAppointmentId,
         amount: visitFeeAmount,
         currency: visitFeeCurrency,
+        collection: visitCollection,
       });
 
       if (hasPatientAcquisitionInput(dto)) {
@@ -552,8 +565,24 @@ export class EncountersService {
       data.visitFeeAmount = new Prisma.Decimal(String(newFee));
     }
 
-    if (visitFeeProvided || visitFeeCurrencyProvided) {
+    const collectionProvided = dto.visitCollection !== undefined;
+    if (visitFeeProvided || visitFeeCurrencyProvided || collectionProvided) {
       const newFee = visitFeeProvided ? Number(dto.visitFeeAmount) : Number(existing.visitFeeAmount);
+      const priorRevenue = await this.prisma.revenueEntry.findFirst({
+        where: { tenantId, encounterId: id, category: "VISIT_FEE" },
+      });
+      let visitCollection: ReturnType<typeof parseVisitCollectionForAmount>;
+      if (dto.visitCollection !== undefined) {
+        visitCollection = parseVisitCollectionForAmount(newFee, dto.visitCollection);
+      } else if (newFee > 0 && priorRevenue?.collectionMode) {
+        visitCollection = {
+          collectionMode: priorRevenue.collectionMode,
+          transferChannel: priorRevenue.transferChannel,
+          transferReference: priorRevenue.transferReference,
+        };
+      } else {
+        visitCollection = parseVisitCollectionForAmount(newFee, undefined);
+      }
       const row = await this.prisma.$transaction(async (tx) => {
         const updated = await tx.encounter.update({
           where: { id },
@@ -568,6 +597,7 @@ export class EncountersService {
           appointmentId: existing.appointmentId,
           amount: newFee,
           currency: updated.visitFeeCurrency,
+          collection: visitCollection,
         });
 
         if (existing.appointmentId && visitFeeProvided) {
@@ -824,6 +854,7 @@ export class EncountersService {
         include: encounterIncludeDef,
       });
       if (aptId) {
+        await this.frontDeskFlow.onEncounterEnded(tx, aptId);
         await tx.appointment.update({
           where: { id: aptId },
           data: { status: AppointmentStatus.COMPLETED, endsAt: finalizedAt },
@@ -859,13 +890,11 @@ export class EncountersService {
         });
         if (!otherEnc) {
           const apt = await tx.appointment.findFirst({ where: { id: appointmentId, tenantId } });
-          if (
-            apt &&
-            (apt.status === AppointmentStatus.CHECKED_IN || apt.status === AppointmentStatus.COMPLETED)
-          ) {
+          if (apt && (apt.status === AppointmentStatus.CHECKED_IN || apt.status === AppointmentStatus.COMPLETED)) {
+            await this.frontDeskFlow.onEncounterCancelled(tx, tenantId, appointmentId);
             await tx.appointment.update({
               where: { id: appointmentId },
-              data: { status: AppointmentStatus.CONFIRMED },
+              data: { status: AppointmentStatus.CHECKED_IN },
             });
           }
         }

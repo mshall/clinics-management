@@ -28,16 +28,38 @@ export class ClinicalService {
     await this.safety.ensureDefaultCatalog(tenantId);
   }
 
-  async listTemplates(tenantId: string, user: JwtUser, specialty?: ClinicalSpecialty) {
+  async listTemplates(
+    tenantId: string,
+    user: JwtUser,
+    specialty?: ClinicalSpecialty,
+    clinicId?: string,
+  ) {
     assertClinicalUser(user);
     await this.ensureCatalog(tenantId);
+
+    const clinicFilter = clinicId?.trim();
+    if (clinicFilter) {
+      const clinic = await this.prisma.clinic.findFirst({ where: { id: clinicFilter, tenantId } });
+      if (!clinic) throw new NotFoundException("Clinic not found");
+    }
+
+    const or: Prisma.ClinicalFormTemplateWhereInput[] = [
+      { isSystemDefault: true, clinicId: null },
+    ];
+    if (clinicFilter) {
+      or.push({ clinicId: clinicFilter, isSystemDefault: false, isPublished: true });
+    }
+    if (user.role === UserRole.PHYSICIAN) {
+      or.push({ ownerUserId: user.userId });
+    }
+
     return this.prisma.clinicalFormTemplate.findMany({
       where: {
         tenantId,
         ...(specialty ? { specialty } : {}),
-        OR: [{ isPublished: true }, { ownerUserId: user.userId }, { ownerUserId: null }],
+        OR: or,
       },
-      orderBy: { updatedAt: "desc" },
+      orderBy: [{ isSystemDefault: "desc" }, { specialty: "asc" }, { updatedAt: "desc" }],
     });
   }
 
@@ -46,7 +68,10 @@ export class ClinicalService {
     user: JwtUser,
     body: {
       id?: string;
+      clinicId?: string;
       specialty: ClinicalSpecialty;
+      customSpecialtyLabelEn?: string;
+      customSpecialtyLabelAr?: string;
       name: string;
       description?: string;
       sectionsJson: unknown;
@@ -54,24 +79,84 @@ export class ClinicalService {
     },
   ) {
     assertClinicalUser(user);
+    const manageClinic = new Set<UserRole>([
+      UserRole.GROUP_ADMIN,
+      UserRole.CLINIC_ADMIN,
+      UserRole.BRANCH_MANAGER,
+      UserRole.GROUP_SUPERVISOR,
+    ]);
+    if (!manageClinic.has(user.role)) {
+      throw new ForbiddenException("Only clinic administrators can edit clinic form templates");
+    }
+
     const sectionsJson = body.sectionsJson;
     if (!sectionsJson || typeof sectionsJson !== "object") {
       throw new BadRequestException("sectionsJson is required");
     }
+
+    const clinicId = body.clinicId?.trim();
+    if (!clinicId) throw new BadRequestException("clinicId is required");
+    const clinic = await this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId } });
+    if (!clinic) throw new BadRequestException("Invalid clinicId");
+
+    if (body.specialty === ClinicalSpecialty.CUSTOM) {
+      const label = body.customSpecialtyLabelEn?.trim() ?? "";
+      if (label.length < 2) {
+        throw new BadRequestException("customSpecialtyLabelEn is required for custom specialty");
+      }
+    }
+
     const data = {
       specialty: body.specialty,
+      customSpecialtyLabelEn:
+        body.specialty === ClinicalSpecialty.CUSTOM ? body.customSpecialtyLabelEn?.trim() ?? null : null,
+      customSpecialtyLabelAr:
+        body.specialty === ClinicalSpecialty.CUSTOM ? body.customSpecialtyLabelAr?.trim() ?? null : null,
       name: body.name.trim(),
       description: body.description?.trim() ?? "",
       sectionsJson: sectionsJson as Prisma.InputJsonValue,
-      isPublished: body.isPublished ?? false,
-      ownerUserId: user.role === UserRole.PHYSICIAN ? user.userId : body.isPublished ? null : user.userId,
+      isPublished: true,
+      isSystemDefault: false,
+      clinicId,
+      ownerUserId: null,
     };
+
     if (body.id) {
       const existing = await this.prisma.clinicalFormTemplate.findFirst({ where: { id: body.id, tenantId } });
       if (!existing) throw new NotFoundException("Template not found");
+      if (existing.isSystemDefault) {
+        throw new BadRequestException("System default templates cannot be edited — duplicate as a custom template");
+      }
+      if (existing.clinicId !== clinicId) {
+        throw new BadRequestException("Template does not belong to this clinic");
+      }
       return this.prisma.clinicalFormTemplate.update({ where: { id: body.id }, data });
     }
     return this.prisma.clinicalFormTemplate.create({ data: { tenantId, ...data } });
+  }
+
+  async deleteClinicTemplate(tenantId: string, user: JwtUser, id: string) {
+    assertClinicalUser(user);
+    const manageClinic = new Set<UserRole>([
+      UserRole.GROUP_ADMIN,
+      UserRole.CLINIC_ADMIN,
+      UserRole.BRANCH_MANAGER,
+      UserRole.GROUP_SUPERVISOR,
+    ]);
+    if (!manageClinic.has(user.role)) throw new ForbiddenException("Not allowed");
+
+    const existing = await this.prisma.clinicalFormTemplate.findFirst({ where: { id, tenantId } });
+    if (!existing) throw new NotFoundException("Template not found");
+    if (existing.isSystemDefault) throw new BadRequestException("Cannot delete system default template");
+    if (!existing.clinicId) throw new BadRequestException("Cannot delete organization template");
+
+    const inUse = await this.prisma.encounter.count({ where: { clinicalTemplateId: id, tenantId } });
+    if (inUse > 0) {
+      throw new BadRequestException("Template is linked to encounters — retire usage before delete");
+    }
+
+    await this.prisma.clinicalFormTemplate.delete({ where: { id } });
+    return { ok: true as const, id };
   }
 
   async listShortcuts(tenantId: string, user: JwtUser) {

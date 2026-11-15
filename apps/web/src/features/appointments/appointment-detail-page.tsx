@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAppointmentQuery, useClinicsQuery, usePatientQuery, usePatientsQuery, useSchedulingPhysiciansQuery } from "@/lib/api-hooks";
+import { useAppointmentQuery, useClinicQuery, useClinicsQuery, usePatientQuery, usePatientsQuery, useSchedulingPhysiciansQuery } from "@/lib/api-hooks";
 import type { AppointmentDto } from "@/lib/api-types";
 import { ApiError, apiDelete, apiPatch } from "@/lib/http";
 import { canDeleteAppointment } from "@/lib/appointment-delete-policy";
@@ -29,6 +29,7 @@ import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { PatientChartAlerts } from "@/components/patient-chart-alerts";
+import { AppointmentVisitFlowCard } from "@/features/front-desk/appointment-visit-flow-card";
 import { QuickCheckInPanel } from "@/features/front-desk/quick-check-in-panel";
 
 function toDatetimeLocalValue(iso: string): string {
@@ -57,6 +58,7 @@ export function AppointmentDetailPage() {
   const qc = useQueryClient();
   const { data: apt, isPending, isError, error } = useAppointmentQuery(id);
   const { data: clinics = [] } = useClinicsQuery();
+  const { data: aptClinic } = useClinicQuery(apt?.clinicId);
   const resolveClinicCurrency = useClinicCurrencyResolver();
   const readOnly = apt ? isReadOnlyStatus(apt.status) : false;
 
@@ -398,7 +400,11 @@ export function AppointmentDetailPage() {
       <QuickCheckInPanel
         appointment={apt}
         currency={resolveClinicCurrency(apt.clinicId) ?? "AED"}
+        examRoomOptions={
+          aptClinic?.frontDeskRoomLabels?.length ? aptClinic.frontDeskRoomLabels : ["Room 1", "Room 2", "Room 3"]
+        }
       />
+      <AppointmentVisitFlowCard appointment={apt} />
 
       <Card>
         <CardHeader>

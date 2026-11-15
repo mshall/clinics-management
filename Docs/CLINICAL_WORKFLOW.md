@@ -4,12 +4,12 @@ Configurable specialty forms, physician shortcuts, safety checks, vitals trends,
 
 ## Template builder
 
-- **API:** `GET/POST /api/v1/clinical/form-templates`
-- Each template is tied to a `ClinicalSpecialty` (dental, OB/GYN, pediatrics, physio, etc.) and stores **`sectionsJson`**: an array of sections and fields (text, textarea, number, select, checkbox).
-- Templates can be **published** (org-wide) or owned by a physician.
+- **API:** `GET/POST /api/v1/clinical/form-templates` (`?clinicId=` on list); `DELETE /api/v1/clinical/form-templates/:id` for clinic-only customs.
+- On first use per tenant, the API seeds **built-in EN/AR templates for every `ClinicalSpecialty`** (comprehensive section/field layouts). These are **organization defaults** (`isSystemDefault`, no `clinicId`) and are not editable.
+- **Clinic admins** add **custom** templates under **Clinics → [clinic] → Settings** (JSON `sectionsJson`). Use specialty `CUSTOM` plus bilingual labels for ad-hoc specialties.
 - **Encounter:** `clinicalTemplateId` + `specialtyFormResponses` (JSON) on `PATCH /api/v1/encounters/:id` — rendered in the encounter UI atop Subjective / Objective / Assessment / Plan.
-- **Web:** `/clinical/templates` — template builder (no code deploy for new specialty layouts).
-- **Encounter UI:** template picker and dynamic fields above SOAP; saved with the encounter. Sidebar **Clinical templates** when Encounters is enabled.
+- **Web:** clinic **Settings** panel lists defaults + customs; legacy `/clinical/templates` redirects to the first clinic’s settings tab.
+- **Encounter UI:** template picker lists org defaults + that clinic’s customs; link opens clinic settings for admins.
 
 ## Doctor shortcuts
 

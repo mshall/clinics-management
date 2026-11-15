@@ -10,6 +10,8 @@
     "db:up": "bash scripts/start-local-postgres.sh",
     "db:down": "bash scripts/stop-local-postgres.sh",
     "db:ensure": "bash scripts/ensure-local-dev-db.sh",
+    "api:wait": "bash scripts/wait-api-ready.sh",
+    "api:ensure": "bash scripts/ensure-local-api.sh",
     "db:setup": "bash scripts/start-local-postgres.sh && npm run db:setup -w api",
     "predev": "bash scripts/ensure-local-dev-db.sh",
     "db:doctor": "npm run db:doctor -w api",

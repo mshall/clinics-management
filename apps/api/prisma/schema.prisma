@@ -113,6 +113,7 @@ enum ClinicalSpecialty {
   LABORATORY
   INTERNAL_MEDICINE
   FAMILY_MEDICINE
+  CUSTOM
 }
 
 enum EmployeeRecordStatus {
@@ -149,6 +150,13 @@ enum AppointmentStatus {
   COMPLETED
   CANCELLED
   NO_SHOW
+}
+
+/// Front-desk queue position after check-in (exam room uses `roomLabel` only while IN_EXAM).
+enum AppointmentQueueStage {
+  WAITING
+  CALLED
+  IN_EXAM
 }
 
 enum PatientActiveProblemStatus {
@@ -208,6 +216,16 @@ enum PaymentMethod {
   TRANSFER
   WALLET
   OTHER
+}
+
+enum VisitCollectionMode {
+  CASH_ON_VISIT
+  MONEY_TRANSFER
+}
+
+enum MoneyTransferChannel {
+  INSTAPAY
+  FAWRY
 }
 
 enum MessageChannel {
@@ -515,6 +533,7 @@ model Clinic {
   operations       Operation[]
   invoices         Invoice[]
   billingPayments  BillingPayment[]
+  clinicalFormTemplates ClinicalFormTemplate[]
   cashierShiftCloses CashierShiftClose[]
   etaReceipts      EtaReceiptSubmission[]
   auditLogs        AuditLog[]
@@ -620,22 +639,28 @@ model Patient {
 }
 
 model ClinicalFormTemplate {
-  id           String            @id @default(cuid())
-  tenantId     String
-  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  ownerUserId  String?
-  owner        User?             @relation("ClinicalFormTemplateOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
-  specialty    ClinicalSpecialty
-  name         String
-  description  String            @default("")
-  sectionsJson Json
-  isPublished  Boolean           @default(false)
-  encounters   Encounter[]
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
+  id                     String            @id @default(cuid())
+  tenantId               String
+  tenant                 Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId               String?
+  clinic                 Clinic?           @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  ownerUserId            String?
+  owner                  User?             @relation("ClinicalFormTemplateOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  specialty              ClinicalSpecialty
+  customSpecialtyLabelEn String?
+  customSpecialtyLabelAr String?
+  name                   String
+  description            String            @default("")
+  sectionsJson           Json
+  isPublished            Boolean           @default(false)
+  isSystemDefault        Boolean           @default(false)
+  encounters             Encounter[]
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
 
   @@index([tenantId, specialty])
   @@index([tenantId, ownerUserId])
+  @@index([tenantId, clinicId])
 }
 
 model ClinicianShortcut {
@@ -886,6 +911,9 @@ model RevenueEntry {
   currency      String
   postedAt      DateTime
   status        RevenueStatus @default(POSTED)
+  collectionMode VisitCollectionMode?
+  transferChannel MoneyTransferChannel?
+  transferReference String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -946,6 +974,7 @@ model Employee {
   separationReason  EmployeeSeparationReason?
   userId            String?         @unique
   user              User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  defaultExamRoomLabel String?
   idDocRelativePath String?
   idDocOriginalName String?
   idDocMimeType     String?
@@ -1027,10 +1056,16 @@ model Appointment {
   feeAmount      Decimal           @default(0) @db.Decimal(14, 2)
   status         AppointmentStatus @default(SCHEDULED)
   roomLabel      String?
+  queueStage     AppointmentQueueStage?
+  preferredRoomLabel String?
+  roomAssignedAt DateTime?
   allowDoubleBook Boolean          @default(false)
   checkedInAt    DateTime?
   queueTicketNumber Int?
   checkInPaymentAmount Decimal?    @db.Decimal(14, 2)
+  checkInCollectionMode VisitCollectionMode?
+  checkInTransferChannel MoneyTransferChannel?
+  checkInTransferReference String?
   calledAt       DateTime?
   noShowAt       DateTime?
   noShowRiskScore Decimal?  @db.Decimal(5, 2)

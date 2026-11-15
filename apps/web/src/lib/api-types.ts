@@ -196,6 +196,9 @@ export interface AppointmentDto {
   patientMrn?: string | null;
   patientName?: string | null;
   roomLabel?: string | null;
+  queueStage?: string | null;
+  preferredRoomLabel?: string | null;
+  roomAssignedAt?: string | null;
   checkedInAt?: string | null;
   queueTicketNumber?: number | null;
 }
@@ -252,6 +255,7 @@ export interface OperationDetailDto extends OperationDto {
 }
 
 export interface ClinicPhysicianDto {
+  defaultExamRoomLabel?: string | null;
   userId: string;
   displayName: string;
   email: string | null;

@@ -6,7 +6,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { ClinicDto } from "../common/dto/clinic.dto";
-import { AssignClinicPhysicianDto, ClinicPhysicianDto } from "./dto/clinic-physician.dto";
+import { AssignClinicPhysicianDto, ClinicPhysicianDto, PatchClinicPhysicianExamRoomDto } from "./dto/clinic-physician.dto";
 import { ClinicDetailDto } from "./dto/clinic-detail.dto";
 import { CreateClinicDto } from "./dto/create-clinic.dto";
 import { PatchClinicDto } from "./dto/patch-clinic.dto";
@@ -96,6 +96,18 @@ export class ClinicsController {
   @ApiCreatedResponse({ type: ClinicPhysicianDto })
   assignPhysician(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: AssignClinicPhysicianDto) {
     return this.clinics.assignPhysician(requireTenantId(user), id, body.userId, user);
+  }
+
+  @Patch(":id/physicians/:userId/exam-room")
+  @ApiOperation({ summary: "Set this physician's default exam room at the clinic" })
+  @ApiOkResponse({ type: ClinicPhysicianDto })
+  patchPhysicianExamRoom(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Param("userId") userId: string,
+    @Body() body: PatchClinicPhysicianExamRoomDto,
+  ) {
+    return this.clinics.patchPhysicianExamRoom(requireTenantId(user), id, userId, user, body.defaultExamRoomLabel);
   }
 
   @Delete(":id/physicians/:userId")

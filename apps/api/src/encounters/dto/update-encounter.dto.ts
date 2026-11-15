@@ -10,7 +10,9 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateNested,
 } from "class-validator";
+import { VisitCollectionDto } from "../../common/dto/visit-collection.dto";
 
 export class UpdateEncounterDto {
   @ApiPropertyOptional()
@@ -146,4 +148,13 @@ export class UpdateEncounterDto {
   @IsString()
   @MaxLength(500)
   followUpNote?: string;
+
+  @ApiPropertyOptional({
+    type: VisitCollectionDto,
+    description: "How the visit fee was collected (when updating fee or payment method)",
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => VisitCollectionDto)
+  visitCollection?: VisitCollectionDto;
 }

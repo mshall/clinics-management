@@ -90,6 +90,8 @@ export class ClinicalSafetyService {
   }
 
   async ensureDefaultCatalog(tenantId: string): Promise<void> {
+    const { ensureTenantDefaultClinicalFormTemplates } = await import("./clinical-default-form-templates");
+    await ensureTenantDefaultClinicalFormTemplates(this.prisma, tenantId);
     const icdCount = await this.prisma.icd10Entry.count({ where: { tenantId: null } });
     if (icdCount === 0) {
       const { DEFAULT_ICD10, DEFAULT_DRUG_INTERACTIONS } = await import("./clinical-default-catalog");
