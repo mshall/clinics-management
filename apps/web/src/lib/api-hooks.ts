@@ -19,6 +19,7 @@ import type {
   ExpenseDto,
   OperationDto,
   OperationDetailDto,
+  OperationSummaryDto,
   HrSummaryDto,
   HrManageContextDto,
   LeaveRequestDto,
@@ -494,6 +495,17 @@ export function useOperationQuery(id: string | undefined) {
     queryKey: ["operation", id],
     queryFn: () => apiGet<OperationDetailDto>(`/api/v1/operations/${id}`),
     enabled: Boolean(id) && hasToken,
+  });
+}
+
+export function useOperationsSummaryQuery(params: { from: string; to: string; clinicId?: string }) {
+  const q = new URLSearchParams();
+  q.set("from", params.from);
+  q.set("to", params.to);
+  if (params.clinicId?.trim()) q.set("clinicId", params.clinicId.trim());
+  return useQuery({
+    queryKey: ["operations", "summary", params.from, params.to, params.clinicId ?? ""],
+    queryFn: () => apiGet<OperationSummaryDto>(`/api/v1/operations/summary?${q.toString()}`),
   });
 }
 

@@ -33,6 +33,7 @@ import {
   useClinicsQuery,
   useOperationQuery,
   useOperationsQuery,
+  useOperationsSummaryQuery,
   usePatientsQuery,
   usePatientQuery,
   useSchedulingPhysiciansQuery,
@@ -58,6 +59,7 @@ import { GenerateInvoiceDialog } from "@/features/invoices/generate-invoice-dial
 import { LinkedInvoicesSection } from "@/features/invoices/linked-invoices-section";
 import { DatetimeLocalField } from "@/components/datetime-local-field";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
+import { OperationsSummaryCards } from "@/features/operations/operations-summary-cards";
 
 const CREATE_ROLES = new Set([
   "group_admin",
@@ -117,6 +119,12 @@ export function OperationsPage() {
   const [pageSize, setPageSize] = useState(10);
   const [sortBy, setSortBy] = useState("operationDate");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+
+  const opSummary = useOperationsSummaryQuery({
+    from,
+    to,
+    clinicId: filterClinicId || undefined,
+  });
 
   const { data: opData, isPending, isError, error } = useOperationsQuery({
     from,
@@ -1466,6 +1474,8 @@ export function OperationsPage() {
           ) : null}
         </CardContent>
       </Card>
+
+      <OperationsSummaryCards summary={opSummary.data} loading={opSummary.isPending} language={i18n.language} />
 
       {canCreate ? (
         <Card>

@@ -128,6 +128,19 @@ export class OperationsController {
     return this.operations.list(requireTenantId(user), user, from, to, page, pageSize, sortBy, sortOrder, clinicId, status);
   }
 
+  @Get("summary")
+  @ApiOperation({ summary: "Aggregate operation counts and revenue for the reporting window" })
+  @ApiOkResponse()
+  summary(
+    @CurrentUser() user: JwtUser,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("clinicId") clinicId?: string,
+  ) {
+    this.assertViewAccess(user);
+    return this.operations.summary(requireTenantId(user), user, from, to, clinicId);
+  }
+
   @Get("payable")
   @ApiOperation({ summary: "List operations with an outstanding balance (for revenue payments)" })
   @ApiOkResponse({ type: OperationDto, isArray: true })

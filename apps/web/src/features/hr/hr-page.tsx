@@ -71,6 +71,8 @@ import {
 } from "@/lib/employee-login-suggest";
 import { useAuthStore } from "@/stores/auth-store";
 import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel";
+import { OrgInsightsPanel } from "@/features/admin/org-insights-panel";
+import { canViewOrgInsights } from "@/lib/org-insights-access";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import {
   collectAttendanceCreateIssues,
@@ -79,9 +81,9 @@ import {
   collectLeaveCreateIssues,
 } from "@/lib/create-form-validation";
 
-type Tab = "summary" | "employees" | "attendance" | "leave";
+type Tab = "summary" | "employees" | "attendance" | "leave" | "insights";
 
-const HR_TABS: Tab[] = ["summary", "employees", "attendance", "leave"];
+const HR_TABS: Tab[] = ["summary", "employees", "attendance", "leave", "insights"];
 
 function parseHrTab(value: string | null): Tab {
   if (value && HR_TABS.includes(value as Tab)) return value as Tab;
@@ -749,11 +751,13 @@ export function HrPage() {
     setLeavePage(1);
   };
 
+  const showInsightsTab = canViewOrgInsights(authUser?.role);
   const tabs: { id: Tab; label: string }[] = [
     { id: "summary", label: t("hr.tabSummary") },
     { id: "employees", label: t("hr.employees") },
     { id: "attendance", label: t("hr.attendance") },
     { id: "leave", label: t("hr.leave") },
+    ...(showInsightsTab ? [{ id: "insights" as const, label: t("hr.tabInsights", "Insights & performance") }] : []),
   ];
 
   const attStatusItems: PickListItem[] = useMemo(
@@ -1875,6 +1879,8 @@ export function HrPage() {
           </CardContent>
         </Card>
       ) : null}
+
+      {tab === "insights" && showInsightsTab ? <OrgInsightsPanel /> : null}
 
       <Dialog open={Boolean(createdLoginCredentials)} onOpenChange={(open) => !open && setCreatedLoginCredentials(null)}>
         <DialogContent className="max-w-md" aria-describedby={undefined}>

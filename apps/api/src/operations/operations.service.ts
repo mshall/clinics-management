@@ -353,6 +353,131 @@ export class OperationsService {
     return paginate(rows.map((r) => this.mapRow(r)), total, page, pageSize);
   }
 
+  async summary(tenantId: string, user: JwtUser, fromStr?: string, toStr?: string, clinicIdStr?: string) {
+    const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
+    if (scopeIds !== null && !scopeIds.length) {
+      return {
+        totalOperations: 0,
+        revenueByCurrency: [] as { currency: string; paidTotal: number; contractTotal: number }[],
+        byClinic: [] as {
+          clinicId: string;
+          clinicNameEn: string;
+          clinicNameAr: string;
+          feeCurrency: string;
+          operationCount: number;
+          paidTotal: number;
+          contractTotal: number;
+        }[],
+        operations: [] as {
+          id: string;
+          operationDate: string;
+          clinicId: string;
+          clinicNameEn: string;
+          clinicNameAr: string;
+          patientLabel: string;
+          paidAmount: number;
+          totalCost: number;
+          feeCurrency: string;
+        }[],
+      };
+    }
+
+    const and: Prisma.OperationWhereInput[] = [{ tenantId }];
+    const { start, end } = resolveReportingRange(fromStr, toStr);
+    and.push({ operationDate: { gte: start, lte: end } });
+    if (isPhysicianRole(user.role)) {
+      and.push({ clinicianId: user.userId });
+    }
+    const clinicId = clinicIdStr?.trim();
+    if (scopeIds !== null) {
+      if (clinicId) {
+        if (!scopeIds.includes(clinicId)) throw new ForbiddenException("Clinic is outside your assigned scope");
+        and.push({ clinicId });
+      } else {
+        and.push({ clinicId: { in: scopeIds } });
+      }
+    } else if (clinicId) {
+      and.push({ clinicId });
+    }
+    const where: Prisma.OperationWhereInput = { AND: and };
+
+    const [totalOperations, revenueGroups, clinicGroups, rows] = await Promise.all([
+      this.prisma.operation.count({ where }),
+      this.prisma.operation.groupBy({
+        by: ["feeCurrency"],
+        where,
+        _sum: { paidAmount: true, totalCost: true },
+      }),
+      this.prisma.operation.groupBy({
+        by: ["clinicId", "feeCurrency"],
+        where,
+        _sum: { paidAmount: true, totalCost: true },
+        _count: { _all: true },
+      }),
+      this.prisma.operation.findMany({
+        where,
+        select: {
+          id: true,
+          operationDate: true,
+          totalCost: true,
+          paidAmount: true,
+          feeCurrency: true,
+          clinicId: true,
+          clinic: { select: { nameEn: true, nameAr: true } },
+          patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } },
+        },
+        orderBy: { operationDate: "desc" },
+        take: 300,
+      }),
+    ]);
+
+    const revenueByCurrency = revenueGroups
+      .map((g) => ({
+        currency: g.feeCurrency,
+        paidTotal: Number(g._sum.paidAmount ?? 0),
+        contractTotal: Number(g._sum.totalCost ?? 0),
+      }))
+      .sort((a, b) => a.currency.localeCompare(b.currency));
+
+    const clinicIds = [...new Set(clinicGroups.map((g) => g.clinicId))];
+    const clinicNames = clinicIds.length
+      ? await this.prisma.clinic.findMany({
+          where: { tenantId, id: { in: clinicIds } },
+          select: { id: true, nameEn: true, nameAr: true },
+        })
+      : [];
+    const clinicNameById = new Map(clinicNames.map((c) => [c.id, c]));
+
+    const byClinic = clinicGroups
+      .map((g) => {
+        const names = clinicNameById.get(g.clinicId);
+        return {
+          clinicId: g.clinicId,
+          clinicNameEn: names?.nameEn ?? "—",
+          clinicNameAr: names?.nameAr ?? "—",
+          feeCurrency: g.feeCurrency,
+          operationCount: g._count._all,
+          paidTotal: Number(g._sum.paidAmount ?? 0),
+          contractTotal: Number(g._sum.totalCost ?? 0),
+        };
+      })
+      .sort((a, b) => b.operationCount - a.operationCount);
+
+    const operations = rows.map((r) => ({
+      id: r.id,
+      operationDate: r.operationDate.toISOString(),
+      clinicId: r.clinicId,
+      clinicNameEn: r.clinic.nameEn,
+      clinicNameAr: r.clinic.nameAr,
+      patientLabel: `${r.patient.mrn} — ${r.patient.firstNameEn} ${r.patient.lastNameEn}`.trim(),
+      paidAmount: Number(r.paidAmount),
+      totalCost: Number(r.totalCost),
+      feeCurrency: r.feeCurrency,
+    }));
+
+    return { totalOperations, revenueByCurrency, byClinic, operations };
+  }
+
   async create(tenantId: string, dto: CreateOperationDto, user: JwtUser): Promise<OperationDto> {
     const downPayment = dto.downPayment ?? 0;
     if (downPayment > dto.totalCost) {

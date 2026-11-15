@@ -254,6 +254,31 @@ export interface OperationDetailDto extends OperationDto {
   documents: OperationDocumentDto[];
 }
 
+export interface OperationSummaryDto {
+  totalOperations: number;
+  revenueByCurrency: { currency: string; paidTotal: number; contractTotal: number }[];
+  byClinic: {
+    clinicId: string;
+    clinicNameEn: string;
+    clinicNameAr: string;
+    feeCurrency: string;
+    operationCount: number;
+    paidTotal: number;
+    contractTotal: number;
+  }[];
+  operations: {
+    id: string;
+    operationDate: string;
+    clinicId: string;
+    clinicNameEn: string;
+    clinicNameAr: string;
+    patientLabel: string;
+    paidAmount: number;
+    totalCost: number;
+    feeCurrency: string;
+  }[];
+}
+
 export interface ClinicPhysicianDto {
   defaultExamRoomLabel?: string | null;
   userId: string;

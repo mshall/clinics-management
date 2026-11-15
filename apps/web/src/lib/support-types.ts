@@ -100,8 +100,11 @@ export type StaffPerformanceDto = {
     metrics: {
       auditActions: number;
       encountersCreated: number;
-      appointmentsHandled: number;
+      encountersPerformed: number;
+      appointmentsCreated: number;
+      appointmentsPerformed: number;
       operationsCreated: number;
+      operationsPerformed: number;
       openSupportTickets: number;
       activityScore: number;
     };

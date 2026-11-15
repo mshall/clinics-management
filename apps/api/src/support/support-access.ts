@@ -15,6 +15,7 @@ const INSIGHTS_ROLES: Set<UserRole> = new Set([
   UserRole.GROUP_SUPERVISOR,
   UserRole.BRANCH_MANAGER,
   UserRole.CLINIC_ADMIN,
+  UserRole.HR_OFFICER,
 ]);
 
 export function assertSupportAccess(user: JwtUser): void {

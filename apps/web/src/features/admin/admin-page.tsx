@@ -54,7 +54,8 @@ export function AdminPage() {
   const isClinicAdmin = authUser?.role === "clinic_admin";
   const isBranchManager = authUser?.role === "branch_manager";
   const isGroupSupervisor = authUser?.role === "group_supervisor";
-  const canViewInsights = isGroupAdmin || isClinicAdmin || isBranchManager || isGroupSupervisor;
+  const canViewInsights =
+    isGroupAdmin || isClinicAdmin || isBranchManager || isGroupSupervisor || authUser?.role === "hr_officer";
   const canManageOrgUserNavTabs = isGroupAdmin || isClinicAdmin;
   const isPlatformSuperAdmin = Boolean(authUser?.platformSuperAdmin);
   const isPlatformRole = authUser?.role === "platform_super_admin";

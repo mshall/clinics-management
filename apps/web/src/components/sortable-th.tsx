@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -10,7 +11,7 @@ export function toggleSort(currentBy: string, currentDir: SortOrder, column: str
 }
 
 interface SortableThProps {
-  label: string;
+  label: ReactNode;
   column: string;
   sortBy: string;
   sortOrder: SortOrder;

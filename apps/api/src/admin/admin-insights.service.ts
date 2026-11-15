@@ -135,10 +135,56 @@ export class AdminInsightsService {
     const userIds = users.map((u) => u.id);
     if (!userIds.length) return { period: { from: from.toISOString(), to: to.toISOString() }, staff: [] };
 
-    const [auditCounts, encounterCounts, appointmentCounts, operationCounts, openTickets] = await Promise.all([
+    const clinicAuditFilter = scopeClinicIds?.length ? { clinicId: { in: scopeClinicIds } } : {};
+    const clinicClinicalFilter = scopeClinicIds?.length ? { clinicId: { in: scopeClinicIds } } : {};
+
+    const [
+      auditCounts,
+      auditEncCreated,
+      auditApptCreated,
+      auditOpCreated,
+      encountersPerformed,
+      appointmentsPerformed,
+      operationsCreated,
+      operationsPerformed,
+      openTickets,
+    ] = await Promise.all([
       this.prisma.auditLog.groupBy({
         by: ["actorId"],
-        where: { tenantId, actorId: { in: userIds }, createdAt: { gte: from, lte: to } },
+        where: { tenantId, actorId: { in: userIds }, createdAt: { gte: from, lte: to }, ...clinicAuditFilter },
+        _count: { _all: true },
+      }),
+      this.prisma.auditLog.groupBy({
+        by: ["actorId"],
+        where: {
+          tenantId,
+          actorId: { in: userIds },
+          action: "CREATE_ENCOUNTER",
+          createdAt: { gte: from, lte: to },
+          ...clinicAuditFilter,
+        },
+        _count: { _all: true },
+      }),
+      this.prisma.auditLog.groupBy({
+        by: ["actorId"],
+        where: {
+          tenantId,
+          actorId: { in: userIds },
+          action: "CREATE_APPOINTMENT",
+          createdAt: { gte: from, lte: to },
+          ...clinicAuditFilter,
+        },
+        _count: { _all: true },
+      }),
+      this.prisma.auditLog.groupBy({
+        by: ["actorId"],
+        where: {
+          tenantId,
+          actorId: { in: userIds },
+          action: "CREATE_OPERATION",
+          createdAt: { gte: from, lte: to },
+          ...clinicAuditFilter,
+        },
         _count: { _all: true },
       }),
       this.prisma.encounter.groupBy({
@@ -147,7 +193,7 @@ export class AdminInsightsService {
           tenantId,
           clinicianId: { in: userIds },
           createdAt: { gte: from, lte: to },
-          ...(scopeClinicIds?.length ? { clinicId: { in: scopeClinicIds } } : {}),
+          ...clinicClinicalFilter,
         },
         _count: { _all: true },
       }),
@@ -157,7 +203,7 @@ export class AdminInsightsService {
           tenantId,
           clinicianId: { in: userIds },
           createdAt: { gte: from, lte: to },
-          ...(scopeClinicIds?.length ? { clinicId: { in: scopeClinicIds } } : {}),
+          ...clinicClinicalFilter,
         },
         _count: { _all: true },
       }),
@@ -167,7 +213,17 @@ export class AdminInsightsService {
           tenantId,
           createdByUserId: { in: userIds },
           createdAt: { gte: from, lte: to },
-          ...(scopeClinicIds?.length ? { clinicId: { in: scopeClinicIds } } : {}),
+          ...clinicClinicalFilter,
+        },
+        _count: { _all: true },
+      }),
+      this.prisma.operation.groupBy({
+        by: ["clinicianId"],
+        where: {
+          tenantId,
+          clinicianId: { in: userIds },
+          operationDate: { gte: from, lte: to },
+          ...clinicClinicalFilter,
         },
         _count: { _all: true },
       }),
@@ -183,17 +239,33 @@ export class AdminInsightsService {
     ]);
 
     const auditByUser = new Map(auditCounts.map((a) => [a.actorId ?? "", a._count._all]));
-    const encByUser = new Map(encounterCounts.map((a) => [a.clinicianId, a._count._all]));
-    const apptByUser = new Map(appointmentCounts.map((a) => [a.clinicianId, a._count._all]));
-    const opByUser = new Map(operationCounts.map((a) => [a.createdByUserId ?? "", a._count._all]));
+    const encCreatedByUser = new Map(auditEncCreated.map((a) => [a.actorId ?? "", a._count._all]));
+    const apptCreatedByUser = new Map(auditApptCreated.map((a) => [a.actorId ?? "", a._count._all]));
+    const opCreatedAuditByUser = new Map(auditOpCreated.map((a) => [a.actorId ?? "", a._count._all]));
+    const encPerformedByUser = new Map(encountersPerformed.map((a) => [a.clinicianId, a._count._all]));
+    const apptPerformedByUser = new Map(appointmentsPerformed.map((a) => [a.clinicianId, a._count._all]));
+    const opCreatedByUser = new Map(operationsCreated.map((a) => [a.createdByUserId ?? "", a._count._all]));
+    const opPerformedByUser = new Map(operationsPerformed.map((a) => [a.clinicianId, a._count._all]));
     const ticketsByUser = new Map(openTickets.map((a) => [a.assigneeUserId ?? "", a._count._all]));
 
     const staff = users.map((u) => {
       const auditActions = auditByUser.get(u.id) ?? 0;
-      const encountersCreated = encByUser.get(u.id) ?? 0;
-      const appointmentsHandled = apptByUser.get(u.id) ?? 0;
-      const operationsCreated = opByUser.get(u.id) ?? 0;
+      const encountersCreated = encCreatedByUser.get(u.id) ?? 0;
+      const appointmentsCreated = apptCreatedByUser.get(u.id) ?? 0;
+      const operationsCreatedAudit = opCreatedAuditByUser.get(u.id) ?? 0;
+      const encountersPerformed = encPerformedByUser.get(u.id) ?? 0;
+      const appointmentsPerformed = apptPerformedByUser.get(u.id) ?? 0;
+      const operationsCreated = Math.max(opCreatedByUser.get(u.id) ?? 0, operationsCreatedAudit);
+      const operationsPerformed = opPerformedByUser.get(u.id) ?? 0;
       const openSupportTickets = ticketsByUser.get(u.id) ?? 0;
+      const activityScore =
+        auditActions +
+        encountersCreated +
+        encountersPerformed * 2 +
+        appointmentsCreated +
+        appointmentsPerformed +
+        operationsCreated +
+        operationsPerformed * 2;
       return {
         userId: u.id,
         email: u.email,
@@ -203,10 +275,13 @@ export class AdminInsightsService {
         metrics: {
           auditActions,
           encountersCreated,
-          appointmentsHandled,
+          encountersPerformed,
+          appointmentsCreated,
+          appointmentsPerformed,
           operationsCreated,
+          operationsPerformed,
           openSupportTickets,
-          activityScore: auditActions + encountersCreated * 2 + appointmentsHandled + operationsCreated,
+          activityScore,
         },
       };
     });
