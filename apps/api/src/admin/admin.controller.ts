@@ -363,11 +363,13 @@ export class AdminController {
   orgHierarchy(@CurrentUser() user: JwtUser) {
     const allowed: Set<UserRole> = new Set([
       UserRole.GROUP_ADMIN,
+      UserRole.GROUP_SUPERVISOR,
       UserRole.CLINIC_ADMIN,
       UserRole.BRANCH_MANAGER,
+      UserRole.HR_OFFICER,
     ]);
     if (!allowed.has(user.role) || !user.tenantId) {
-      throw new ForbiddenException("Only organization administrators can view the hierarchy");
+      throw new ForbiddenException("You do not have permission to view the organization hierarchy");
     }
     return this.admin.getOrgHierarchyForUser(user, requireTenantId(user));
   }

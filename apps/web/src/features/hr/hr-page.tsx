@@ -70,6 +70,7 @@ import {
   suggestEmployeeLoginEmail,
 } from "@/lib/employee-login-suggest";
 import { useAuthStore } from "@/stores/auth-store";
+import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import {
   collectAttendanceCreateIssues,
@@ -789,9 +790,12 @@ export function HrPage() {
       <ValidationIssuesDialog {...attValidation.dialogProps} />
       <ValidationIssuesDialog {...leaveValidation.dialogProps} />
       <ValidationIssuesDialog {...lifecycleValidation.dialogProps} />
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t("hr.title")}</h1>
-        <p className="text-muted-foreground">{t("hr.subtitle")}</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{t("hr.title")}</h1>
+          <p className="text-muted-foreground">{t("hr.subtitle")}</p>
+        </div>
+        <OrgHierarchyPanel scope="tenant" />
       </div>
 
       <div className="flex flex-wrap gap-2">
