@@ -8107,6 +8107,10 @@
             "type": "boolean",
             "description": "Whether the user uploaded a profile picture"
           },
+          "mfaEnabled": {
+            "type": "boolean",
+            "description": "Whether TOTP MFA is enabled for this account"
+          },
           "employeePrivilegeGrants": {
             "description": "Clinics where the user is assigned as HR (full clinic-scoped HR permissions)",
             "type": "array",

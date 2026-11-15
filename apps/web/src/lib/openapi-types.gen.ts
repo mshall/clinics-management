@@ -2525,6 +2525,8 @@ export interface components {
             platformSuperAdmin?: boolean;
             /** @description Whether the user uploaded a profile picture */
             hasAvatar?: boolean;
+            /** @description Whether TOTP MFA is enabled for this account */
+            mfaEnabled?: boolean;
             /** @description Clinics where the user is assigned as HR (full clinic-scoped HR permissions) */
             employeePrivilegeGrants?: components["schemas"]["EmployeePrivilegeGrantSummaryDto"][];
         };
