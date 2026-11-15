@@ -94,13 +94,13 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       allocatedStorage: 20,
       maxAllocatedStorage: 100,
       publiclyAccessible: false,
-      multiAz: false,
+      multiAz: true,
       credentials: rds.Credentials.fromGeneratedSecret("clinicapp"),
       databaseName: "clinic",
       backupRetention: cdk.Duration.days(7),
       deleteAutomatedBackups: false,
       removalPolicy: cdk.RemovalPolicy.SNAPSHOT,
-      deletionProtection: false,
+      deletionProtection: true,
       cloudwatchLogsExports: ["postgresql"],
     });
 

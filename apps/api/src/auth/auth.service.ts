@@ -12,6 +12,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { TenantRoleNavTabsService } from "../user-nav-tabs/tenant-role-nav-tabs.service";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import { MfaService, verifyTotpCode } from "./mfa.service";
+import { roleRequiresMfaEnrollment } from "./privileged-mfa";
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 const ALLOWED_AVATAR_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -76,6 +77,7 @@ export class AuthService {
       user.tenantId != null
         ? await loadEmployeePrivilegeGrantSummaries(this.prisma, user.tenantId, user.id)
         : [];
+    const mfaEnabled = Boolean(user.mfaEnabled);
     return {
       id: user.id,
       tenantId: user.tenantId,
@@ -90,7 +92,8 @@ export class AuthService {
         role: user.role,
       }),
       hasAvatar: Boolean(user.avatarRelativePath),
-      mfaEnabled: Boolean(user.mfaEnabled),
+      mfaEnabled,
+      mfaEnrollmentRequired: roleRequiresMfaEnrollment(user.role) && !mfaEnabled,
       employeePrivilegeGrants: employeePrivilegeGrants.length ? employeePrivilegeGrants : undefined,
     };
   }

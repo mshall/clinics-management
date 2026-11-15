@@ -81,7 +81,28 @@ export async function upsertEncounterVisitFeeRevenue(
   }
 
   if (existingRevenue) {
-    await tx.revenueEntry.delete({ where: { id: existingRevenue.id } });
+    const voidAmount = Number(existingRevenue.grossAmount);
+    await tx.revenueEntry.update({
+      where: { id: existingRevenue.id },
+      data: {
+        status: RevenueStatus.VOID,
+        grossAmount: new Prisma.Decimal("0"),
+        netAmount: new Prisma.Decimal("0"),
+      },
+    });
+    if (voidAmount > 0) {
+      await queueEtaReceipt(tx, {
+        tenantId,
+        clinicId,
+        patientId: params.patientId,
+        returnForRevenueEntryId: existingRevenue.id,
+        totalAmount: voidAmount,
+        currency: existingRevenue.currency,
+        vatPercent: params.vatPercent ?? 0,
+        description: `Return · ${existingRevenue.description ?? "Visit fee"}`,
+        clinicTaxRin: params.clinicTaxRin,
+      });
+    }
   }
 }
 

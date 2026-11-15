@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { APP_GUARD } from "@nestjs/core";
 import { ConfigModule } from "@nestjs/config";
 import { AuditModule } from "./audit/audit.module";
 import { AdminModule } from "./admin/admin.module";
@@ -33,6 +34,7 @@ import { ClinicAiModule } from "./clinic-ai/clinic-ai.module";
 import { MarketsModule } from "./markets/markets.module";
 import { FeatureFlagsModule } from "./feature-flags/feature-flags.module";
 import { ProvidersModule } from "./providers/providers.module";
+import { PrivilegedMfaGuard } from "./auth/privileged-mfa.guard";
 
 @Module({
   imports: [
@@ -71,5 +73,6 @@ import { ProvidersModule } from "./providers/providers.module";
     FeatureFlagsModule,
     ProvidersModule,
   ],
+  providers: [{ provide: APP_GUARD, useClass: PrivilegedMfaGuard }],
 })
 export class AppModule {}

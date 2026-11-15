@@ -8,9 +8,12 @@ import { AuthService } from "./auth.service";
 import { MfaService } from "./mfa.service";
 import { JwtStrategy } from "./jwt.strategy";
 import { resolveJwtSigningSecret } from "./jwt-secret.util";
+import { PrivilegedMfaGuard } from "./privileged-mfa.guard";
+import { PrismaModule } from "../prisma/prisma.module";
 
 @Module({
   imports: [
+    PrismaModule,
     UserNavTabsModule,
     PassportModule.register({ defaultStrategy: "jwt" }),
     JwtModule.registerAsync({
@@ -23,7 +26,7 @@ import { resolveJwtSigningSecret } from "./jwt-secret.util";
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, MfaService, JwtStrategy],
-  exports: [AuthService, MfaService],
+  providers: [AuthService, MfaService, JwtStrategy, PrivilegedMfaGuard],
+  exports: [AuthService, MfaService, PrivilegedMfaGuard],
 })
 export class AuthModule {}

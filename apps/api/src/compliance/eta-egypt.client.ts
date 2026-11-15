@@ -1,9 +1,12 @@
 import { createHmac, randomUUID } from "crypto";
+import type { EtaConnectionConfig } from "./eta-secret-resolver";
 
 export type EtaReceiptPayload = {
   issuerRin: string;
   branchCode: string;
-  documentType: "EI";
+  documentType: "R";
+  receiptUuid: string;
+  previousReceiptUuid?: string;
   taxpayerActivityCode: string;
   lines: {
     description: string;
@@ -18,14 +21,18 @@ export type EtaReceiptPayload = {
   patientId: string;
   clinicId: string;
   idempotencyKey: string;
+  documentNature: "sale" | "return";
 };
 
 export function buildIdempotencyKey(parts: string[]): string {
   return parts.filter(Boolean).join(":");
 }
 
-export function signEtaPayload(payload: EtaReceiptPayload): string {
-  const key = process.env.ETA_SIGNING_KEY?.trim() || process.env.ETA_CLIENT_SECRET?.trim();
+export function signEtaPayload(payload: EtaReceiptPayload, signingKeyOverride?: string | null): string {
+  const key =
+    signingKeyOverride?.trim() ||
+    process.env.ETA_SIGNING_KEY?.trim() ||
+    process.env.ETA_CLIENT_SECRET?.trim();
   if (!key) return "";
   const canonical = JSON.stringify(payload, Object.keys(payload).sort());
   return createHmac("sha256", key).update(canonical).digest("hex");
@@ -38,20 +45,24 @@ export type EtaSubmitResult =
 export async function submitEtaReceipt(
   payload: EtaReceiptPayload,
   signature: string,
+  connection?: EtaConnectionConfig | null,
 ): Promise<EtaSubmitResult> {
-  const baseUrl = process.env.ETA_API_BASE_URL?.trim();
-  const clientId = process.env.ETA_CLIENT_ID?.trim();
+  const baseUrl = connection?.baseUrl?.trim() || process.env.ETA_API_BASE_URL?.trim();
+  const clientId = connection?.clientId?.trim() || process.env.ETA_CLIENT_ID?.trim();
   if (!baseUrl || !clientId) {
     if (process.env.NODE_ENV === "production") {
       return { ok: false, error: "ETA credentials are not configured", mode: "unconfigured" };
     }
-    return { ok: true, etaUuid: randomUUID(), mode: "sandbox" };
+    return { ok: true, etaUuid: payload.receiptUuid || randomUUID(), mode: "sandbox" };
   }
 
-  const tokenUrl = process.env.ETA_TOKEN_URL?.trim() || `${baseUrl.replace(/\/$/, "")}/connect/token`;
-  const clientSecret = process.env.ETA_CLIENT_SECRET?.trim();
+  const tokenUrl =
+    connection?.tokenUrl?.trim() ||
+    process.env.ETA_TOKEN_URL?.trim() ||
+    `${baseUrl.replace(/\/$/, "")}/connect/token`;
+  const clientSecret = connection?.clientSecret?.trim() || process.env.ETA_CLIENT_SECRET?.trim();
   if (!clientSecret) {
-    return { ok: false, error: "ETA_CLIENT_SECRET is missing", mode: "unconfigured" };
+    return { ok: false, error: "ETA client secret is missing", mode: "unconfigured" };
   }
 
   const tokenRes = await fetch(tokenUrl, {
@@ -61,7 +72,7 @@ export async function submitEtaReceipt(
       grant_type: "client_credentials",
       client_id: clientId,
       client_secret: clientSecret,
-      scope: process.env.ETA_OAUTH_SCOPE?.trim() || "InvoicingAPI",
+      scope: connection?.oauthScope?.trim() || process.env.ETA_OAUTH_SCOPE?.trim() || "InvoicingAPI",
     }),
   });
   if (!tokenRes.ok) {
@@ -73,13 +84,13 @@ export async function submitEtaReceipt(
     return { ok: false, error: "ETA token response missing access_token", mode: "live" };
   }
 
-  const submitPath = process.env.ETA_RECEIPT_SUBMIT_PATH?.trim() || "/api/v1/receiptsubmissions";
+  const submitPath =
+    connection?.receiptSubmitPath?.trim() || process.env.ETA_RECEIPT_SUBMIT_PATH?.trim() || "/api/v1/receiptsubmissions";
   const submitRes = await fetch(`${baseUrl.replace(/\/$/, "")}${submitPath}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
-      ...(signature ? { "X-ETA-Signature": signature } : {}),
     },
     body: JSON.stringify({ documents: [payload] }),
   });
@@ -94,10 +105,9 @@ export async function submitEtaReceipt(
     uuid?: string;
     acceptedDocuments?: { uuid?: string }[];
   };
-  const etaUuid =
-    out.submissionUUID ??
-    out.uuid ??
-    out.acceptedDocuments?.[0]?.uuid ??
-    randomUUID();
-  return { ok: true, etaUuid, mode: "live" };
+  const etaUuid = out.submissionUUID ?? out.uuid ?? out.acceptedDocuments?.[0]?.uuid;
+  if (!etaUuid?.trim()) {
+    return { ok: false, error: "ETA submit response did not include a document UUID", mode: "live" };
+  }
+  return { ok: true, etaUuid: etaUuid.trim(), mode: "live" };
 }

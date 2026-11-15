@@ -1,8 +1,10 @@
+import { randomUUID } from "crypto";
 import { FiscalSubmissionStatus, Prisma, TransferVerificationStatus, type VisitCollectionMode } from "@prisma/client";
 import { fiscalProviderKeyForMarket, getFiscalProvider } from "../providers/fiscal/fiscal-provider.registry";
 import { resolveMarketForTenant } from "../markets/market-resolver";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
 import type { PrismaService } from "../prisma/prisma.service";
+import { buildFiscalIdempotencyKey, fiscalSourceRefFromQueue } from "./fiscal-idempotency";
 
 export type QueueFiscalParams = {
   tenantId: string;
@@ -19,6 +21,8 @@ export type QueueFiscalParams = {
   transferChannel?: string | null;
   transferReference?: string | null;
   clinicTaxRin?: string | null;
+  /** Void / credit receipt for a voided visit-fee revenue row */
+  returnForRevenueEntryId?: string;
 };
 
 /** @deprecated use queueFiscalDocument */
@@ -50,6 +54,20 @@ export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: 
   if (!provider) return;
 
   const currency = params.currency?.trim() || marketCtx.currency;
+  const sourceRef = fiscalSourceRefFromQueue(params);
+  const idempotencyKey = buildFiscalIdempotencyKey(providerKey, sourceRef);
+  const returnSale = sourceRef.kind === "return";
+  const lastSubmitted = await tx.fiscalSubmission.findFirst({
+    where: {
+      clinicId: params.clinicId,
+      tenantId: params.tenantId,
+      providerKey,
+      status: { in: [FiscalSubmissionStatus.SUBMITTED, FiscalSubmissionStatus.ACCEPTED] },
+      providerDocumentUuid: { not: null },
+    },
+    orderBy: { submittedAt: "desc" },
+    select: { providerDocumentUuid: true },
+  });
   const built = provider.buildPayload({
     tenantId: params.tenantId,
     clinicId: params.clinicId,
@@ -65,6 +83,10 @@ export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: 
       etaDefaultItemCode: clinic?.etaDefaultItemCode,
       taxRegistrationNumber: params.clinicTaxRin ?? clinic?.taxRegistrationNumber,
     },
+    idempotencyKey,
+    receiptUuid: randomUUID(),
+    previousReceiptUuid: lastSubmitted?.providerDocumentUuid ?? null,
+    documentNature: returnSale ? "return" : "sale",
   });
 
   const existingDoc = await tx.fiscalDocument.findFirst({

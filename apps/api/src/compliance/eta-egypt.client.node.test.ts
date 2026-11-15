@@ -5,14 +5,16 @@ import { buildIdempotencyKey, signEtaPayload, type EtaReceiptPayload } from "./e
 const samplePayload = (): EtaReceiptPayload => ({
   issuerRin: "123456789",
   branchCode: "branch01",
-  documentType: "EI",
+  documentType: "R",
+  receiptUuid: "00000000-0000-4000-8000-000000000099",
   taxpayerActivityCode: "8690",
   lines: [{ description: "Visit", quantity: 1, unitPrice: 200, vatPercent: 14, currency: "EGP" }],
   totalAmount: 200,
   currency: "EGP",
   patientId: "pat1",
   clinicId: "clinic1",
-  idempotencyKey: buildIdempotencyKey(["t1", "rev1", "", "", "200", "EGP"]),
+  idempotencyKey: buildIdempotencyKey(["eta-egypt", "revenue", "rev1"]),
+  documentNature: "sale",
 });
 
 test("signEtaPayload is stable when ETA_SIGNING_KEY is set", () => {

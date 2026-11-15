@@ -1,6 +1,8 @@
 # Egypt market go-live
 
-Instance of [MARKET_GO_LIVE_TEMPLATE.md](../MARKET_GO_LIVE_TEMPLATE.md) for market code **EG** (`market-egypt`). Data residency: **Frankfurt (`eu-central-1`)** until Egyptian government consent for in-country hosting.
+Instance of [MARKET_GO_LIVE_TEMPLATE.md](../MARKET_GO_LIVE_TEMPLATE.md) for market code **EG** (`market-egypt`).
+
+**Data residency:** production workloads run in **Frankfurt (`eu-central-1`)**. Cross-border transfer from Egypt requires a **PDPC controller/processor licence** and a **cross-border transfer licence** from Egypt’s Personal Data Protection Centre (PDPC) — not “government consent for in-country hosting”.
 
 ## 1. ETA e-receipt onboarding
 
@@ -15,17 +17,21 @@ Instance of [MARKET_GO_LIVE_TEMPLATE.md](../MARKET_GO_LIVE_TEMPLATE.md) for mark
 
 Fiscal provider key: **`eta-egypt`** (`FiscalDocument` + `FiscalSubmission`).
 
+Idempotency is keyed by **payment / revenue / invoice** source id (not amount or description). Return receipts queue when a visit fee is voided.
+
 Every posted payment path queues fiscal: check-in, visit fee, billing payment, tax invoice.
 
 ## 2. Data protection (Egypt PDPL)
 
 | Topic | Requirement |
 |-------|-------------|
-| Licensing & tax | `licenseNumber` + `taxRegistrationNumber` per branch; UI labels from `taxConfig` (ETA / RIN) — [CLINIC_TAX_AND_LICENSING.md](../CLINIC_TAX_AND_LICENSING.md) |
-| DPO | Named in HR org chart |
+| PDPC licences | **Controller** and **processor** licences from PDPC before processing Egyptian personal data |
+| Clinic TRN & licence | `licenseNumber` + `taxRegistrationNumber` per branch (MoH / ETA) — [CLINIC_TAX_AND_LICENSING.md](../CLINIC_TAX_AND_LICENSING.md) |
+| Data protection officer | **Formally appointed** DPO (contract + register with PDPC); HR org chart name alone is insufficient |
 | Consent | `POST /compliance/patients/:id/data-protection-consent` |
-| Breach handling | [COMPLIANCE_CONTROLS.md](../COMPLIANCE_CONTROLS.md) |
-| Data flows | RDS + S3 **Frankfurt**; optional OpenAI assistant (`ai_assistant` flags — [FEATURE_FLAGS.md](../FEATURE_FLAGS.md)) |
+| Breach notification | **72 hours** to PDPC; **3 days** to affected data subjects (see [COMPLIANCE_CONTROLS.md](../COMPLIANCE_CONTROLS.md)) |
+| Sub-processors | AWS (Frankfurt), optional **OpenAI** (EU API endpoint via market `providerConfig`; identifiers redacted in assistant prompts) |
+| Data flows | RDS + S3 **Frankfurt**; assistant gated by `ai_assistant` flags — [FEATURE_FLAGS.md](../FEATURE_FLAGS.md) |
 
 ## 3. Backup, restore, incident
 
@@ -54,6 +60,10 @@ Cash, InstaPay, Fawry, card — configured on `Market.paymentMethods` for EG.
 
 **Clinic:** Contact, currency, invoice logo, ETA branch.
 
-**User:** Profile → MFA.
+**User:** Profile → MFA (required for admin/finance roles).
 
 See [CLINIC_PLATFORM_CAPABILITIES.md](../CLINIC_PLATFORM_CAPABILITIES.md) and [FRONT_DESK.md](../FRONT_DESK.md).
+
+## Multi-market debt (tracked)
+
+See [MULTI_MARKET_BACKLOG.md](../MULTI_MARKET_BACKLOG.md) for ETA column migration, payment-method enums, and schema defaults.

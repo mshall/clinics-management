@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
+import { resolveEtaConnection } from "../../compliance/eta-secret-resolver";
 import {
-  buildIdempotencyKey,
   signEtaPayload,
   submitEtaReceipt,
   type EtaReceiptPayload,
@@ -25,20 +25,17 @@ export class EtaEgyptFiscalProvider implements FiscalProvider {
     const tax = ctx.taxConfig;
     const clinic = ctx.clinicOverrides;
     const issuerRin =
-      (typeof clinic.taxRegistrationNumber === "string" ? clinic.taxRegistrationNumber : null) ||
-      (typeof tax.defaultIssuerRin === "string" ? tax.defaultIssuerRin : null) ||
-      "PENDING-RIN";
-    const idempotencyKey = buildIdempotencyKey([
-      ctx.tenantId,
-      ctx.clinicId,
-      String(ctx.totalAmount),
-      ctx.currency,
-      ctx.description.slice(0, 32),
-    ]);
+      (typeof clinic.taxRegistrationNumber === "string" ? clinic.taxRegistrationNumber.trim() : "") ||
+      (typeof tax.defaultIssuerRin === "string" ? tax.defaultIssuerRin.trim() : "");
+    if (!issuerRin) {
+      throw new Error("Clinic tax registration (RIN) is required before queuing ETA receipts");
+    }
     const payload: EtaReceiptPayload = {
       issuerRin,
       branchCode: (typeof clinic.etaBranchCode === "string" ? clinic.etaBranchCode : ctx.clinicId.slice(0, 8)).trim(),
-      documentType: "EI",
+      documentType: "R",
+      receiptUuid: ctx.receiptUuid,
+      previousReceiptUuid: ctx.previousReceiptUuid?.trim() || undefined,
       taxpayerActivityCode:
         (typeof clinic.etaTaxpayerActivityCode === "string" ? clinic.etaTaxpayerActivityCode : null) ||
         (typeof tax.defaultActivityCode === "string" ? tax.defaultActivityCode : "8690"),
@@ -58,20 +55,22 @@ export class EtaEgyptFiscalProvider implements FiscalProvider {
       currency: ctx.currency,
       patientId: ctx.patientId,
       clinicId: ctx.clinicId,
-      idempotencyKey,
+      idempotencyKey: ctx.idempotencyKey,
+      documentNature: ctx.documentNature ?? "sale",
     };
     const signature = signEtaPayload(payload);
     return {
       payloadJson: payload as unknown as Prisma.InputJsonValue,
-      schemaVersion: "eta-egypt-v1",
+      schemaVersion: "eta-egypt-v2",
       signature,
-      idempotencyKey,
+      idempotencyKey: ctx.idempotencyKey,
     };
   }
 
-  async submit(payload: unknown, signature: string, _secretRef?: string | null): Promise<FiscalSubmitResult> {
-    const sig = signature?.trim() || signEtaPayload(payload as EtaReceiptPayload);
-    const result = await submitEtaReceipt(payload as EtaReceiptPayload, sig);
+  async submit(payload: unknown, signature: string, secretRef?: string | null): Promise<FiscalSubmitResult> {
+    const connection = await resolveEtaConnection(secretRef);
+    const sig = signature?.trim() || signEtaPayload(payload as EtaReceiptPayload, connection?.signingKey);
+    const result = await submitEtaReceipt(payload as EtaReceiptPayload, sig, connection);
     if (!result.ok) return result;
     return { ok: true, providerDocumentUuid: result.etaUuid, mode: result.mode };
   }

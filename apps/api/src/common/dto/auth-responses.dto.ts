@@ -64,6 +64,11 @@ export class AuthUserDto {
   mfaEnabled?: boolean;
 
   @ApiPropertyOptional({
+    description: "Privileged role must complete MFA setup before using the app (token allows /auth/mfa/* only)",
+  })
+  mfaEnrollmentRequired?: boolean;
+
+  @ApiPropertyOptional({
     type: [EmployeePrivilegeGrantSummaryDto],
     description: "Clinics where the user is assigned as HR (full clinic-scoped HR permissions)",
   })

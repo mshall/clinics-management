@@ -17,6 +17,7 @@ import { roleAssistantContent } from "./assistant-role-content";
 import type { AssistantChatActionDto } from "./dto/assistant-chat.dto";
 import { messageAllowedForNav, outOfScopeReply, requiredNavKeysForMessage } from "./assistant-scope";
 import type { AssistantChatResponseDto, AssistantContextDto } from "./dto/assistant-chat.dto";
+import { sanitizeAssistantMessageForLlm } from "./assistant-message-sanitize";
 
 function pickLocale(locale: string | undefined, message: string): "en" | "ar" {
   if (locale === "ar" || locale === "en") return locale;
@@ -143,7 +144,8 @@ export class AssistantService {
     message: string,
     locale: "en" | "ar",
   ): Promise<string | null> {
-    const userContent = locale === "ar" ? `رد بالعربية. ${message}` : message;
+    const safeMessage = sanitizeAssistantMessageForLlm(message);
+    const userContent = locale === "ar" ? `رد بالعربية. ${safeMessage}` : safeMessage;
     const result = await this.ai.chatCompletion(tenantId, {
       messages: [
         { role: "system", content: system },

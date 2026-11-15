@@ -3,6 +3,7 @@ import { AppointmentStatus, MessageChannel } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { MessagingService } from "./messaging.service";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
+import { resolveMarketForTenant } from "../markets/market-resolver";
 
 const SCAN_MS = 60_000;
 const WINDOW_MINUTES = 30;
@@ -57,6 +58,7 @@ export class AppointmentReminderScheduler implements OnModuleInit, OnModuleDestr
     const targetEnd = new Date(targetStart.getTime() + WINDOW_MINUTES * 60_000);
 
     await this.messaging.ensureDefaultTemplates(tenantId);
+    const marketCtx = await resolveMarketForTenant(this.prisma, tenantId);
 
     const appointments = await this.prisma.appointment.findMany({
       where: {
@@ -67,7 +69,7 @@ export class AppointmentReminderScheduler implements OnModuleInit, OnModuleDestr
       },
       include: {
         patient: { select: { id: true, phone: true, firstNameEn: true, lastNameEn: true } },
-        clinic: { select: { nameEn: true, nameAr: true } },
+        clinic: { select: { nameEn: true, nameAr: true, timezone: true } },
       },
       take: 50,
     });
@@ -96,7 +98,8 @@ export class AppointmentReminderScheduler implements OnModuleInit, OnModuleDestr
       const bodyTemplate =
         tpl?.bodyEn ??
         "Reminder: appointment on {{time}} at {{clinic}}. Reply CONFIRM or CANCEL.";
-      const when = apt.startsAt.toLocaleString("en-EG", { timeZone: "Africa/Cairo" });
+      const timeZone = apt.clinic.timezone?.trim() || marketCtx.timezone;
+      const when = apt.startsAt.toLocaleString("en-EG", { timeZone });
       const name = `${apt.patient.firstNameEn} ${apt.patient.lastNameEn}`.trim();
       const body = bodyTemplate
         .replace(/\{\{name\}\}/g, name)
