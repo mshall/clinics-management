@@ -69,7 +69,28 @@ env:
   AWS_REGION: eu-central-1
 
 jobs:
+  # Fail fast before OIDC/CDK when TypeScript rejects the web bundle (e.g. TS6133 unused locals).
+  # Same command as scripts/cicd-deploy.sh; avoids mislabeling the failure as App Runner NotStabilized.
+  web-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: NPM_CONFIG_LOGLEVEL=error npm ci --no-audit --no-fund
+
+      - name: Build web (tsc + vite)
+        run: npm run build -w web
+
   deploy:
+    needs: web-build
     permissions:
       id-token: write
       contents: read
