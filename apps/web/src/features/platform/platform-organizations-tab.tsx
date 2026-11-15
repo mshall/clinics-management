@@ -18,8 +18,6 @@ import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel"
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { apiGet, apiPost } from "@/lib/http";
 import type { Paginated } from "@/lib/paginated";
-import type { MarketRow } from "@/features/platform/platform-markets-tab";
-
 type DialogMode = null | "create" | { edit: string };
 
 export function PlatformOrganizationsTab() {
@@ -33,6 +31,8 @@ export function PlatformOrganizationsTab() {
   const [tenantMarketId, setTenantMarketId] = useState("");
   const [tenantCurrency, setTenantCurrency] = useState("EGP");
   const [tenantLocale, setTenantLocale] = useState("en");
+  const [tenantDefaultTax, setTenantDefaultTax] = useState("");
+  const [tenantDefaultLicense, setTenantDefaultLicense] = useState("");
   const [gaEmail, setGaEmail] = useState("");
   const [gaPassword, setGaPassword] = useState("");
   const [gaName, setGaName] = useState("");
@@ -46,12 +46,14 @@ export function PlatformOrganizationsTab() {
     queryFn: () => apiGet<Paginated<TenantRow>>("/api/v1/admin/platform/tenants?page=1&pageSize=200&sortBy=name&sortOrder=asc"),
   });
 
-  const marketsQuery = useQuery({
-    queryKey: ["platform", "markets"],
-    queryFn: () => apiGet<MarketRow[]>("/api/v1/admin/platform/markets"),
+  const operableMarketsQuery = useQuery({
+    queryKey: ["platform", "markets", "operable"],
+    queryFn: () =>
+      apiGet<Array<{ id: string; code: string; nameEn: string; defaultCurrency: string; hostCell: string }>>(
+        "/api/v1/admin/platform/markets/operable",
+      ),
   });
-
-  const liveMarkets = (marketsQuery.data ?? []).filter((m) => m.status === "LIVE");
+  const liveMarkets = operableMarketsQuery.data ?? [];
 
   const tenantRows = tenantsQuery.data?.items ?? [];
   const editTenantId = dialogMode && typeof dialogMode === "object" ? dialogMode.edit : null;
@@ -63,6 +65,8 @@ export function PlatformOrganizationsTab() {
     setTenantMarketId(liveMarkets.find((m) => m.code === "EG")?.id ?? liveMarkets[0]?.id ?? "");
     setTenantCurrency("EGP");
     setTenantLocale("en");
+    setTenantDefaultTax("");
+    setTenantDefaultLicense("");
     setGaEmail("");
     setGaPassword("");
     setGaName("");
@@ -83,9 +87,11 @@ export function PlatformOrganizationsTab() {
       const body: Record<string, unknown> = {
         name: tenantName.trim(),
         nameAr: tenantNameAr.trim(),
-        ...(tenantMarketId ? { marketId: tenantMarketId } : {}),
+        marketId: tenantMarketId,
         baseCurrency: tenantCurrency,
         defaultLocale: tenantLocale.trim() || "en",
+        ...(tenantDefaultTax.trim() ? { defaultTaxRegistrationNumber: tenantDefaultTax.trim() } : {}),
+        ...(tenantDefaultLicense.trim() ? { defaultLicenseNumber: tenantDefaultLicense.trim() } : {}),
         groupAdmin: { email: gaEmail.trim(), password: gaPassword, displayName: gaName.trim() },
       };
       if (createOrgWithHq && isClinicFormComplete(hqForm)) {
@@ -127,6 +133,9 @@ export function PlatformOrganizationsTab() {
     }
     if (!gaName.trim()) {
       errors.push(t("platform.errorGroupAdminName", "Group admin display name is required."));
+    }
+    if (!tenantMarketId.trim()) {
+      errors.push(t("platform.errorMarketRequired", "Select a launched country market."));
     }
     if (partialClinic) {
       errors.push(
@@ -219,10 +228,11 @@ export function PlatformOrganizationsTab() {
               <Input value={tenantNameAr} onChange={(e) => setTenantNameAr(e.target.value)} dir="rtl" />
             </div>
             <div className="space-y-2">
-              <Label>{t("platform.marketPack", "Market (country pack)")}</Label>
+              <Label required>{t("platform.marketPack", "Country (launched market)")}</Label>
               <select
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={tenantMarketId}
+                required
                 onChange={(e) => {
                   const id = e.target.value;
                   setTenantMarketId(id);
@@ -240,6 +250,19 @@ export function PlatformOrganizationsTab() {
                   ))
                 )}
               </select>
+            </div>
+            <div className="space-y-2">
+              <Label>{t("platform.orgDefaultTax", "Tax registration (optional)")}</Label>
+              <Input
+                className="ltr-nums"
+                value={tenantDefaultTax}
+                onChange={(e) => setTenantDefaultTax(e.target.value)}
+                placeholder={t("platform.orgDefaultTaxPh", "N/A")}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t("platform.orgDefaultLicense", "Facility license (optional)")}</Label>
+              <Input value={tenantDefaultLicense} onChange={(e) => setTenantDefaultLicense(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>{t("platform.baseCurrency")}</Label>

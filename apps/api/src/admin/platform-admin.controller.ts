@@ -14,19 +14,43 @@ import { PatchFeatureFlagDto } from "./dto/patch-feature-flag.dto";
 import { PlatformPatchTenantDto } from "./dto/platform-patch-tenant.dto";
 import { PlatformPatchTenantUserDto } from "./dto/platform-patch-tenant-user.dto";
 import { PlatformAdminService } from "./platform-admin.service";
+import { PlatformInsightsService } from "./platform-insights.service";
 
 @ApiTags("admin-platform")
 @ApiBearerAuth("bearer")
 @Controller("admin/platform")
 @UseGuards(JwtAuthGuard)
 export class PlatformAdminController {
-  constructor(private readonly platform: PlatformAdminService) {}
+  constructor(
+    private readonly platform: PlatformAdminService,
+    private readonly platformInsights: PlatformInsightsService,
+  ) {}
 
   @Get("overview")
   @ApiOperation({ summary: "Platform-wide KPIs (platform super admin)" })
   @ApiOkResponse()
   overview(@CurrentUser() user: JwtUser) {
     return this.platform.getOverview(user);
+  }
+
+  @Get("insights/organizations")
+  @ApiOperation({ summary: "360° directory of all organizations (platform super admin)" })
+  insightsOrganizations(
+    @CurrentUser() user: JwtUser,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+  ) {
+    return this.platformInsights.organizationDirectory(user, from, to);
+  }
+
+  @Get("insights/platform")
+  @ApiOperation({ summary: "Platform-wide insights and market operability" })
+  insightsPlatform(
+    @CurrentUser() user: JwtUser,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+  ) {
+    return this.platformInsights.platformOverview(user, from, to);
   }
 
   @Get("hierarchy")

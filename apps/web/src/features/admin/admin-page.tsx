@@ -437,52 +437,57 @@ export function AdminPage() {
               <CardHeader>
                 <CardTitle className="text-base">{t("admin.orgSettings", "Organization settings")}</CardTitle>
               </CardHeader>
-              <CardContent className="flex flex-wrap items-end gap-4">
-                <div className="space-y-2 max-w-xs">
-                  <Label htmlFor="org-base-currency">{t("platform.baseCurrency", "Base currency")}</Label>
-                  <BaseCurrencySelect id="org-base-currency" value={currencyDraft} onChange={setCurrencyDraft} />
-                  <p className="text-xs text-muted-foreground">
-                    {t(
-                      "admin.orgBaseCurrencyHint",
-                      "Default currency for all clinics unless a clinic sets its own override.",
-                    )}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label required>{t("admin.feeAmount", "Default visit fee ({{currency}})", { currency: currencyDraft })}</Label>
-                  <Input className="ltr-nums w-40" type="number" min="0" step="0.01" value={feeDraft} onChange={(e) => setFeeDraft(e.target.value)} />
-                </div>
-                <div className="space-y-2 max-w-xs">
-                  <Label htmlFor="org-trn">{t("admin.orgTaxRegistrationNumber", "Tax registration (TRN)")}</Label>
-                  <Input
-                    id="org-trn"
-                    className="ltr-nums"
-                    value={trnDraft}
-                    onChange={(e) => setTrnDraft(e.target.value)}
-                    placeholder="N/A"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {t(
-                      "admin.orgTrnHint",
-                      "Applied to every clinic in this organization. Use N/A when no TRN is registered yet.",
-                    )}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="org-vat">{t("admin.orgInvoiceVatPercent", "VAT % on invoices")}</Label>
-                  <Input
-                    id="org-vat"
-                    className="ltr-nums w-28"
-                    type="number"
-                    min={0}
-                    max={100}
-                    step="0.01"
-                    value={vatDraft}
-                    onChange={(e) => setVatDraft(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {t("admin.orgVatHint", "Default is 5%. Saving updates all clinics for tax invoices.")}
-                  </p>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <div className="flex min-h-[5.5rem] flex-col justify-between gap-2">
+                    <Label htmlFor="org-base-currency">{t("platform.baseCurrency", "Base currency")}</Label>
+                    <BaseCurrencySelect id="org-base-currency" value={currencyDraft} onChange={setCurrencyDraft} />
+                    <p className="text-xs text-muted-foreground">
+                      {t(
+                        "admin.orgBaseCurrencyHint",
+                        "Default currency for all clinics unless a clinic sets its own override.",
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex min-h-[5.5rem] flex-col justify-between gap-2">
+                    <Label required>{t("admin.feeAmount", "Default visit fee ({{currency}})", { currency: currencyDraft })}</Label>
+                    <Input className="ltr-nums w-full max-w-40" type="number" min="0" step="0.01" value={feeDraft} onChange={(e) => setFeeDraft(e.target.value)} />
+                    <p className="text-xs text-muted-foreground opacity-0 select-none" aria-hidden>
+                      —
+                    </p>
+                  </div>
+                  <div className="flex min-h-[5.5rem] flex-col justify-between gap-2">
+                    <Label htmlFor="org-trn">{t("admin.orgTaxRegistrationNumber", "Tax registration (TRN)")}</Label>
+                    <Input
+                      id="org-trn"
+                      className="ltr-nums"
+                      value={trnDraft}
+                      onChange={(e) => setTrnDraft(e.target.value)}
+                      placeholder="N/A"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {t(
+                        "admin.orgTrnHint",
+                        "Applied to every clinic in this organization. Use N/A when no TRN is registered yet.",
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex min-h-[5.5rem] flex-col justify-between gap-2">
+                    <Label htmlFor="org-vat">{t("admin.orgInvoiceVatPercent", "VAT % on invoices")}</Label>
+                    <Input
+                      id="org-vat"
+                      className="ltr-nums w-full max-w-28"
+                      type="number"
+                      min={0}
+                      max={100}
+                      step="0.01"
+                      value={vatDraft}
+                      onChange={(e) => setVatDraft(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {t("admin.orgVatHint", "Default is 5%. Saving updates all clinics for tax invoices.")}
+                    </p>
+                  </div>
                 </div>
                 <div className="w-full space-y-2 border-t border-border pt-4">
                   <p className="text-sm font-medium">{t("compliance.orgEtaTitle", "Egypt ETA (organization)")}</p>

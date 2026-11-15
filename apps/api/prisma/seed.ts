@@ -376,15 +376,26 @@ async function ensureDemoPatientsForClinic(
 }
 
 async function seedDrAhmedGroup(passwordHash: string) {
+  const egMarket = await prisma.market.findFirst({ where: { code: "EG" } });
   const drAhmedTenant = await (async () => {
     const existing = await prisma.tenant.findFirst({ where: { name: DR_AHMED_TENANT_NAME } });
-    if (existing) return existing;
+    if (existing) {
+      if (egMarket && !existing.marketId) {
+        return prisma.tenant.update({
+          where: { id: existing.id },
+          data: { marketId: egMarket.id, deploymentCell: egMarket.hostCell },
+        });
+      }
+      return existing;
+    }
     return prisma.tenant.create({
       data: {
         name: DR_AHMED_TENANT_NAME,
         nameAr: "مجموعة د. أحمد الشال — استشاري علاج الآلام المزمنة والمفاصل والعمود الفقري",
         baseCurrency: "EGP",
         defaultLocale: Locale.ar,
+        marketId: egMarket?.id ?? null,
+        deploymentCell: egMarket?.hostCell ?? "frankfurt",
       },
     });
   })();

@@ -247,6 +247,12 @@ enum MarketLaunchStatus {
   SUNSET
 }
 
+enum MarketOperationalStatus {
+  ACTIVE
+  PAUSED
+  DISABLED
+}
+
 enum TransferVerificationStatus {
   NOT_APPLICABLE
   PENDING
@@ -365,6 +371,9 @@ model Market {
   featureDefaults    Json                @default("{}")
   settingsSchema     Json                @default("{}")
   translations       Json                @default("{}")
+  operationalStatus  MarketOperationalStatus @default(ACTIVE)
+  pausedUntil        DateTime?
+  lastProvisionNote  String?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   tenants            Tenant[]
@@ -471,6 +480,7 @@ model Tenant {
   defaultVisitFee Decimal         @default(150) @db.Decimal(14, 2)
   encounterAutoLockHours         Int             @default(72)
   defaultTaxRegistrationNumber String          @default("N/A")
+  defaultLicenseNumber         String?
   defaultInvoiceVatPercent     Decimal         @default(5) @db.Decimal(5, 2)
   integrationFailureRetentionDays     Int       @default(30)
   integrationFailureLastSpikeAlertAt  DateTime?

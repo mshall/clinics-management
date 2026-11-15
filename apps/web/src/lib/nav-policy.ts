@@ -4,6 +4,7 @@ import { hasHrNavAccessFromGrants, type EmployeePrivilegeGrantSummary } from "@/
 export type NavItemKey =
   | "platform"
   | "platform_organizations"
+  | "platform_insights"
   | "platform_markets"
   | "platform_users"
   | "platform_clinics"
@@ -53,7 +54,15 @@ const GROUP_SUPERVISOR_NAV: NavItemKey[] = [
 ];
 
 const ROLE_KEYS: Record<DemoRole, NavItemKey[]> = {
-  platform_super_admin: ["platform", "platform_markets", "platform_organizations", "platform_users", "platform_clinics", "profile"],
+  platform_super_admin: [
+    "platform",
+    "platform_insights",
+    "platform_markets",
+    "platform_organizations",
+    "platform_users",
+    "platform_clinics",
+    "profile",
+  ],
   group_admin: FULL,
   group_supervisor: GROUP_SUPERVISOR_NAV,
   branch_manager: FULL,
@@ -151,6 +160,7 @@ export function roleNavKeysForRole(
 export const NAV_ITEM_PATH: Record<NavItemKey, string> = {
   platform: "/platform",
   platform_organizations: "/platform/organizations",
+  platform_insights: "/platform/insights",
   platform_markets: "/platform/markets",
   platform_users: "/platform/users",
   platform_clinics: "/platform/clinics",

@@ -8,10 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { apiErrorMessage } from "@/features/platform/platform-shared";
-import { apiGet, apiPatch, apiPost } from "@/lib/http";
+import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/http";
 import type { TenantFeatureFlagRow } from "@/features/admin/tenant-feature-flags-panel";
 import { Badge } from "@/components/ui/badge";
 import { featureFlagLabel } from "@/lib/feature-flag-labels";
+import { AWS_DATA_REGIONS, BASE_CURRENCY_OPTIONS, MARKET_COUNTRY_OPTIONS } from "@/lib/market-pack-options";
+import { nativeSelectClassName } from "@/lib/form-control-styles";
 
 export type MarketRow = {
   id: string;
@@ -25,13 +27,12 @@ export type MarketRow = {
   defaultCurrency: string;
   defaultTimezone: string;
   defaultPhoneRegion: string;
+  operationalStatus?: string;
+  operability?: string;
+  pausedUntil?: string | null;
+  lastProvisionNote?: string | null;
+  acceptsNewOrganizations?: boolean;
 };
-
-const HOST_CELLS = [
-  { id: "frankfurt", label: "Frankfurt (eu-central-1)" },
-  { id: "me-dubai", label: "Middle East — Dubai (planned)" },
-  { id: "egypt-local", label: "Egypt in-country (planned)" },
-] as const;
 
 export function PlatformMarketsTab() {
   const { t } = useTranslation();
@@ -76,6 +77,27 @@ export function PlatformMarketsTab() {
 
   const launchMut = useMutation({
     mutationFn: (id: string) => apiPost<MarketRow>(`/api/v1/admin/platform/markets/${encodeURIComponent(id)}/launch`, {}),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["platform", "markets"] }),
+  });
+
+  const pauseMut = useMutation({
+    mutationFn: ({ id, days }: { id: string; days: number }) =>
+      apiPost(`/api/v1/admin/platform/markets/${encodeURIComponent(id)}/pause`, { days }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["platform", "markets"] }),
+  });
+
+  const disableMut = useMutation({
+    mutationFn: (id: string) => apiPost(`/api/v1/admin/platform/markets/${encodeURIComponent(id)}/disable`, {}),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["platform", "markets"] }),
+  });
+
+  const enableMut = useMutation({
+    mutationFn: (id: string) => apiPost(`/api/v1/admin/platform/markets/${encodeURIComponent(id)}/enable`, {}),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["platform", "markets"] }),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => apiDelete(`/api/v1/admin/platform/markets/${encodeURIComponent(id)}`),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["platform", "markets"] }),
   });
 
@@ -150,15 +172,23 @@ export function PlatformMarketsTab() {
                         <td className="px-3 py-2">{m.hostCell}</td>
                         <td className="px-3 py-2 font-mono text-xs">{m.dataRegion}</td>
                         <td className="px-3 py-2">
-                          <span
-                            className={
-                              m.status === "LIVE"
-                                ? "rounded bg-emerald-500/15 px-2 py-0.5 text-emerald-700 dark:text-emerald-400"
-                                : "rounded bg-muted px-2 py-0.5"
-                            }
-                          >
-                            {m.status}
-                          </span>
+                          <div className="flex flex-col gap-1">
+                            <span
+                              className={
+                                m.status === "LIVE"
+                                  ? "rounded bg-emerald-500/15 px-2 py-0.5 text-emerald-700 dark:text-emerald-400 w-fit"
+                                  : "rounded bg-muted px-2 py-0.5 w-fit"
+                              }
+                            >
+                              {m.status}
+                            </span>
+                            {m.status === "LIVE" && m.operability ? (
+                              <Badge variant={m.operability === "active" ? "default" : "secondary"} className="w-fit">
+                                {m.operability}
+                                {m.pausedUntil ? ` → ${new Date(m.pausedUntil).toLocaleDateString()}` : ""}
+                              </Badge>
+                            ) : null}
+                          </div>
                         </td>
                         <td className="px-3 py-2 text-end">
                           <div className="flex flex-wrap justify-end gap-2">
@@ -166,15 +196,53 @@ export function PlatformMarketsTab() {
                               {t("platform.marketFlags", "Flags")}
                             </Button>
                             {m.status === "DRAFT" ? (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                disabled={launchMut.isPending}
-                                onClick={() => launchMut.mutate(m.id)}
-                              >
-                                {t("platform.launchMarket", "Go live")}
-                              </Button>
+                              <>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={launchMut.isPending}
+                                  onClick={() => launchMut.mutate(m.id)}
+                                >
+                                  {t("platform.launchMarket", "Go live")}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-destructive"
+                                  disabled={deleteMut.isPending}
+                                  onClick={() => deleteMut.mutate(m.id)}
+                                >
+                                  {t("common.delete", "Delete")}
+                                </Button>
+                              </>
+                            ) : m.status === "LIVE" ? (
+                              <>
+                                {m.operability === "disabled" || m.operability === "paused" ? (
+                                  <Button type="button" size="sm" variant="outline" onClick={() => enableMut.mutate(m.id)}>
+                                    {t("platform.marketEnable", "Enable")}
+                                  </Button>
+                                ) : (
+                                  <>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        const raw = window.prompt(t("platform.pauseDaysPrompt", "Pause for how many days?"), "7");
+                                        const days = Number.parseInt(raw ?? "", 10);
+                                        if (Number.isFinite(days) && days > 0) pauseMut.mutate({ id: m.id, days });
+                                      }}
+                                    >
+                                      {t("platform.marketPause", "Pause")}
+                                    </Button>
+                                    <Button type="button" size="sm" variant="ghost" onClick={() => disableMut.mutate(m.id)}>
+                                      {t("platform.marketDisable", "Disable")}
+                                    </Button>
+                                  </>
+                                )}
+                              </>
                             ) : m.launchedAt ? (
                               <span className="text-xs text-muted-foreground ltr-nums self-center">
                                 {new Date(m.launchedAt).toLocaleDateString()}
@@ -247,8 +315,27 @@ export function PlatformMarketsTab() {
           </DialogHeader>
           <div className="grid gap-3">
             <div>
-              <Label>{t("platform.marketCode", "ISO country code")}</Label>
-              <Input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="AE" maxLength={8} />
+              <Label>{t("platform.marketCode", "Country (ISO)")}</Label>
+              <select
+                className={`w-full ${nativeSelectClassName}`}
+                value={code}
+                onChange={(e) => {
+                  const c = MARKET_COUNTRY_OPTIONS.find((x) => x.code === e.target.value);
+                  if (!c) return;
+                  setCode(c.code);
+                  setNameEn(c.nameEn);
+                  setNameAr(c.nameAr);
+                  setCurrency(c.defaultCurrency);
+                  setTimezone(c.defaultTimezone);
+                }}
+              >
+                <option value="">{t("platform.pickCountry", "Select country…")}</option>
+                {MARKET_COUNTRY_OPTIONS.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.code} — {c.nameEn}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <Label>{t("platform.marketNameEn", "Name (English)")}</Label>
@@ -259,31 +346,38 @@ export function PlatformMarketsTab() {
               <Input value={nameAr} onChange={(e) => setNameAr(e.target.value)} dir="rtl" />
             </div>
             <div>
-              <Label>{t("platform.hostCell", "Cloud host cell")}</Label>
+              <Label>{t("platform.dataRegion", "AWS data region")}</Label>
               <select
-                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={hostCell}
+                className={`w-full ${nativeSelectClassName}`}
+                value={dataRegion}
                 onChange={(e) => {
-                  const v = e.target.value;
-                  setHostCell(v);
-                  if (v === "frankfurt") setDataRegion("eu-central-1");
+                  const id = e.target.value;
+                  setDataRegion(id);
+                  setHostCell(id.split("-").pop() ?? id);
                 }}
               >
-                {HOST_CELLS.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.label}
+                {AWS_DATA_REGIONS.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.label} ({r.id})
                   </option>
                 ))}
               </select>
             </div>
-            <div>
-              <Label>{t("platform.dataRegion", "AWS data region")}</Label>
-              <Input value={dataRegion} onChange={(e) => setDataRegion(e.target.value)} />
-            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>{t("admin.baseCurrency", "Currency")}</Label>
-                <Input value={currency} onChange={(e) => setCurrency(e.target.value.toUpperCase())} placeholder="EGP" />
+                <select
+                  className={`w-full ${nativeSelectClassName}`}
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                >
+                  <option value="">{t("platform.autoCurrency", "Auto from country")}</option>
+                  {BASE_CURRENCY_OPTIONS.map((cur) => (
+                    <option key={cur} value={cur}>
+                      {cur}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <Label>{t("platform.timezone", "Default timezone")}</Label>

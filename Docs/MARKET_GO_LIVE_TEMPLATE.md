@@ -9,7 +9,8 @@ Use this checklist when platform ops launches a **new country pack** (`Market` r
 | Create draft market | **Platform → Market launch** — ISO code, currency, timezone, **host cell**, AWS data region |
 | Configure JSON packs | `taxConfig` (incl. `taxRegistrationLabel*`, `licenseLabel*`, `taxAuthorityName*`, `fiscalProviderKey`), `providerConfig`, `paymentMethods`, `featureDefaults` — see [CLINIC_TAX_AND_LICENSING.md](./CLINIC_TAX_AND_LICENSING.md) |
 | Enable fiscal / claims / health connectors | One connector per provider key; credentials via `ProviderCredential.secretRef` only |
-| Go live | `POST /admin/platform/markets/:id/launch` — tenants may only bind to `LIVE` markets |
+| Go live | `POST /admin/platform/markets/:id/launch` — provisions shared AWS cell when region matches `PLATFORM_SHARED_DATA_REGIONS` (see [PLATFORM_MARKETS_AND_INSIGHTS.md](./PLATFORM_MARKETS_AND_INSIGHTS.md)) |
+| Operability | Pause (days) or disable market — org onboarding uses `GET …/markets/operable` only |
 | **Country feature flags** | Platform → Market launch → **Flags** — set `ai_assistant`, `eta_receipts`, payments, etc. for every tenant in that market (see [FEATURE_FLAGS.md](./FEATURE_FLAGS.md)) |
 | **AiProvider** (optional) | `providerConfig.ai` — `baseUrl`, `model`, `secretRef`; independent of flag but required for LLM phrasing |
 | Deployment cell | Egypt: **Frankfurt (`frankfurt`, `eu-central-1`)** until in-country consent |

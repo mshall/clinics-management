@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { PatchFeatureFlagDto } from "../admin/dto/patch-feature-flag.dto";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { MarketsService, type CreateMarketDto } from "./markets.service";
+import { PatchMarketDto, PauseMarketDto } from "./dto/patch-market.dto";
 
 @ApiTags("admin-platform-markets")
 @ApiBearerAuth("bearer")
@@ -18,6 +19,11 @@ export class MarketsController {
     return this.markets.list(user);
   }
 
+  @Get("operable")
+  listOperable(@CurrentUser() user: JwtUser) {
+    return this.markets.listOperable(user);
+  }
+
   @Get(":id")
   get(@CurrentUser() user: JwtUser, @Param("id") id: string) {
     return this.markets.get(user, id);
@@ -28,9 +34,34 @@ export class MarketsController {
     return this.markets.create(user, body);
   }
 
+  @Patch(":id")
+  patch(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchMarketDto) {
+    return this.markets.patch(user, id, body);
+  }
+
+  @Delete(":id")
+  remove(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.markets.remove(user, id);
+  }
+
   @Post(":id/launch")
   launch(@CurrentUser() user: JwtUser, @Param("id") id: string) {
     return this.markets.launch(user, id);
+  }
+
+  @Post(":id/pause")
+  pause(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PauseMarketDto) {
+    return this.markets.pause(user, id, body.days ?? 7);
+  }
+
+  @Post(":id/disable")
+  disable(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.markets.disable(user, id);
+  }
+
+  @Post(":id/enable")
+  enable(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.markets.enable(user, id);
   }
 
   @Get(":id/feature-flags")

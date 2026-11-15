@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ClinicsModule } from "../clinics/clinics.module";
+import { MarketsModule } from "../markets/markets.module";
 import { IntegrationsModule } from "../integrations/integrations.module";
 import { StorageModule } from "../storage/storage.module";
 import { AdminController } from "./admin.controller";
@@ -9,16 +10,18 @@ import { AdminDataExplorerController } from "./data-explorer/admin-data-explorer
 import { AdminDataExplorerService } from "./data-explorer/admin-data-explorer.service";
 import { PlatformAdminController } from "./platform-admin.controller";
 import { PlatformAdminService } from "./platform-admin.service";
+import { PlatformInsightsService } from "./platform-insights.service";
 import { IntegrationFailureAdminService } from "./integration-failure-admin.service";
 
 @Module({
-  imports: [ClinicsModule, StorageModule, IntegrationsModule],
+  imports: [ClinicsModule, StorageModule, IntegrationsModule, MarketsModule],
   controllers: [AdminController, AdminDataExplorerController, PlatformAdminController],
   providers: [
     AdminService,
     AdminInsightsService,
     AdminDataExplorerService,
     PlatformAdminService,
+    PlatformInsightsService,
     IntegrationFailureAdminService,
   ],
 })

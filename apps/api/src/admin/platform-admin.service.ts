@@ -19,6 +19,8 @@ import type { PlatformPatchTenantDto } from "./dto/platform-patch-tenant.dto";
 import type { PlatformPatchTenantUserDto } from "./dto/platform-patch-tenant-user.dto";
 import type { DeactivateTenantUserDto } from "./dto/deactivate-tenant-user.dto";
 import type { ReactivateTenantUserDto } from "./dto/reactivate-tenant-user.dto";
+import { MarketsService } from "../markets/markets.service";
+import { normalizeOrgTaxRegistrationNumber } from "../common/sync-clinic-invoice-tax";
 
 @Injectable()
 export class PlatformAdminService {
@@ -26,6 +28,7 @@ export class PlatformAdminService {
     private readonly prisma: PrismaService,
     private readonly admin: AdminService,
     private readonly clinics: ClinicsService,
+    private readonly markets: MarketsService,
   ) {}
 
   private assertPlatform(user: JwtUser): void {
@@ -154,12 +157,16 @@ export class PlatformAdminService {
       }
     }
 
-    const market =
-      dto.marketId?.trim()
-        ? await this.prisma.market.findFirst({ where: { id: dto.marketId.trim() } })
-        : await this.prisma.market.findFirst({ where: { code: "EG", status: "LIVE" } });
-    if (dto.marketId?.trim() && !market) throw new BadRequestException("Market not found");
-    const deploymentCell = dto.deploymentCell?.trim() || market?.hostCell || "frankfurt";
+    const market = dto.marketId?.trim()
+      ? await this.markets.assertMarketForNewTenant(dto.marketId.trim())
+      : await this.prisma.market.findFirst({ where: { code: "EG", status: "LIVE" } }).then(async (m) => {
+          if (!m) return null;
+          return this.markets.assertMarketForNewTenant(m.id);
+        });
+    if (!market) {
+      throw new BadRequestException("Select a live country market before creating an organization");
+    }
+    const deploymentCell = dto.deploymentCell?.trim() || market.hostCell || "frankfurt";
     const baseCurrency = dto.baseCurrency?.trim() || market?.defaultCurrency || "EGP";
     const defaultLocale = dto.defaultLocale?.trim() || market?.defaultLocale || "en";
 
@@ -168,10 +175,14 @@ export class PlatformAdminService {
         data: {
           name,
           nameAr,
-          marketId: market?.id ?? null,
+          marketId: market.id,
           deploymentCell,
           baseCurrency,
           defaultLocale,
+          ...(dto.defaultTaxRegistrationNumber?.trim()
+            ? { defaultTaxRegistrationNumber: normalizeOrgTaxRegistrationNumber(dto.defaultTaxRegistrationNumber) }
+            : {}),
+          ...(dto.defaultLicenseNumber?.trim() ? { defaultLicenseNumber: dto.defaultLicenseNumber.trim() } : {}),
         },
       });
 
@@ -197,7 +208,14 @@ export class PlatformAdminService {
 
     let initialClinic: { id: string; nameEn: string; kind: ClinicKind } | null = null;
     if (hasInitialClinic && ic) {
-      const created = await this.clinics.create(result.row.id, { ...ic, parentClinicId: undefined });
+      const license =
+        ic.licenseNumber?.trim() || result.row.defaultLicenseNumber?.trim() || undefined;
+      const created = await this.clinics.create(result.row.id, {
+        ...ic,
+        parentClinicId: undefined,
+        licenseNumber: license,
+        country: ic.country?.trim() || market.code,
+      });
       initialClinic = { id: created.id, nameEn: created.nameEn, kind: created.kind };
     }
 

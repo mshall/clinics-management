@@ -1,4 +1,5 @@
-import { useState } from "react";
+import QRCode from "qrcode";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -15,11 +16,20 @@ export function ProfileMfaPanel() {
   const refreshSessionFromServer = useAuthStore((s) => s.refreshSessionFromServer);
   const [secret, setSecret] = useState<string | null>(null);
   const [otpauthUrl, setOtpauthUrl] = useState<string | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [setupCode, setSetupCode] = useState("");
   const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
   const [disablePassword, setDisablePassword] = useState("");
   const [disableCode, setDisableCode] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!otpauthUrl) {
+      setQrDataUrl(null);
+      return;
+    }
+    void QRCode.toDataURL(otpauthUrl, { margin: 2, width: 200 }).then(setQrDataUrl).catch(() => setQrDataUrl(null));
+  }, [otpauthUrl]);
 
   async function beginSetup() {
     setBusy(true);
@@ -35,6 +45,16 @@ export function ProfileMfaPanel() {
     }
   }
 
+  async function copySecret() {
+    if (!secret) return;
+    try {
+      await navigator.clipboard.writeText(secret);
+      toast.success(t("profile.mfaSecretCopied", "Secret copied to clipboard."));
+    } catch {
+      toast.error(t("common.error", "Error"));
+    }
+  }
+
   async function confirmSetup() {
     if (!secret) return;
     setBusy(true);
@@ -45,6 +65,8 @@ export function ProfileMfaPanel() {
       });
       setRecoveryCodes(res.recoveryCodes);
       setSecret(null);
+      setOtpauthUrl(null);
+      setQrDataUrl(null);
       setSetupCode("");
       await refreshSessionFromServer();
       toast.success(t("profile.mfaEnabled", "Authenticator MFA enabled."));
@@ -113,11 +135,42 @@ export function ProfileMfaPanel() {
           </Button>
         ) : null}
         {secret ? (
-          <div className="space-y-2">
-            <p className="text-xs break-all">{otpauthUrl}</p>
-            <p className="text-xs text-muted-foreground">{t("profile.mfaManualSecret", "Manual secret:")} {secret}</p>
-            <Label htmlFor="mfa-setup-code">{t("profile.mfaConfirmCode", "6-digit code")}</Label>
-            <Input id="mfa-setup-code" className="w-40 ltr-nums" value={setupCode} onChange={(e) => setSetupCode(e.target.value.replace(/\D/g, "").slice(0, 6))} />
+          <div className="space-y-4 rounded-lg border border-border bg-muted/30 p-4">
+            <p className="text-sm font-medium">{t("profile.mfaScanQr", "1. Scan this QR code in your authenticator app")}</p>
+            {qrDataUrl ? (
+              <img
+                src={qrDataUrl}
+                alt={t("profile.mfaQrAlt", "Authenticator QR code")}
+                className="mx-auto rounded-md border bg-white p-2"
+                width={200}
+                height={200}
+              />
+            ) : (
+              <p className="text-xs text-muted-foreground">{t("common.loading")}</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              {t("profile.mfaManualHint", "Cannot scan? Copy the secret key and enter it manually in your app.")}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <code className="rounded bg-background px-2 py-1 font-mono text-xs ltr-nums">{secret}</code>
+              <Button type="button" size="sm" variant="outline" onClick={() => void copySecret()}>
+                {t("profile.mfaCopySecret", "Copy secret")}
+              </Button>
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-medium">{t("profile.mfaEnterCode", "2. Enter the 6-digit code from the app")}</p>
+              <Label htmlFor="mfa-setup-code" className="sr-only">
+                {t("profile.mfaConfirmCode", "6-digit code")}
+              </Label>
+              <Input
+                id="mfa-setup-code"
+                className="w-40 ltr-nums"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={setupCode}
+                onChange={(e) => setSetupCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              />
+            </div>
             <Button type="button" disabled={busy || setupCode.length < 6} onClick={() => void confirmSetup()}>
               {t("profile.mfaConfirm", "Enable MFA")}
             </Button>

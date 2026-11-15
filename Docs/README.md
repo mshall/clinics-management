@@ -31,6 +31,7 @@ See **[Documentation_Portal.md](./Documentation_Portal.md)** for module layout, 
 | [**ASSISTANT.md**](./ASSISTANT.md) | AI assistant architecture: permissions, playbook, live data, actions |
 | [**FEATURE_FLAGS.md**](./FEATURE_FLAGS.md) | Layered flags (platform · market · org): AI assistant, ETA, payments, WhatsApp |
 | [**CLINIC_TAX_AND_LICENSING.md**](./CLINIC_TAX_AND_LICENSING.md) | Per-branch license and tax authority numbers (market labels, invoicing, fiscal) |
+| [**PLATFORM_MARKETS_AND_INSIGHTS.md**](./PLATFORM_MARKETS_AND_INSIGHTS.md) | Market pause/disable, org country picker, AWS launch, platform insights, MFA QR |
 | [**ASSISTANT_OPENAI_SETUP.md**](./ASSISTANT_OPENAI_SETUP.md) | OpenAI API key and AWS Secrets Manager for the assistant |
 | [**CLINICAL_WORKFLOW.md**](./CLINICAL_WORKFLOW.md) | Clinic Settings templates (EN/AR defaults + custom), shortcuts, safety, vitals, letters, note lock |
 | [**PATIENT_360_AND_SCHEDULING.md**](./PATIENT_360_AND_SCHEDULING.md) | Patient summary, timeline, family merge, appointment types, series, waitlist, follow-up |

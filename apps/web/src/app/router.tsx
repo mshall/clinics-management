@@ -18,6 +18,7 @@ import { HrPage } from "@/features/hr/hr-page";
 import { PatientDetailPage } from "@/features/patients/patient-detail-page";
 import { PatientsPage } from "@/features/patients/patients-page";
 import { PlatformClinicsTab } from "@/features/platform/platform-clinics-tab";
+import { PlatformInsightsTab } from "@/features/platform/platform-insights-tab";
 import { PlatformLayout } from "@/features/platform/platform-layout";
 import { PlatformOrganizationsTab } from "@/features/platform/platform-organizations-tab";
 import { PlatformOverviewPage } from "@/features/platform/platform-overview-page";
@@ -91,6 +92,7 @@ export const router = createBrowserRouter([
           { path: "organizations", element: <PlatformOrganizationsTab /> },
           { path: "users", element: <PlatformUsersTab /> },
           { path: "clinics", element: <PlatformClinicsTab /> },
+          { path: "insights", element: <PlatformInsightsTab /> },
         ],
       },
       { path: "admin", element: <NavGate tab="admin"><AdminPage /></NavGate> },

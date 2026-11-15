@@ -42,6 +42,18 @@ export class CreateTenantDto {
   @MaxLength(16)
   defaultLocale?: string;
 
+  @ApiPropertyOptional({ description: "Default tax registration for new clinics (country-specific)" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  defaultTaxRegistrationNumber?: string;
+
+  @ApiPropertyOptional({ description: "Default facility license applied when provisioning the first clinic" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  defaultLicenseNumber?: string;
+
   @ApiPropertyOptional({
     description: "Initial group administrator for this organization (email, password, display name)",
     type: CreateTenantGroupAdminDto,
