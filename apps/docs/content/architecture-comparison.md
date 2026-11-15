@@ -20,7 +20,7 @@ This page maps the **Kiorly Clinics Management** monorepo (NestJS + React) to th
 
 ## Service mapping (conceptual)
 
-PiggyMetrics splits by **bounded context**. Kiorly keeps the same domains as **Nest modules** inside `apps/api/src/`:
+PiggyMetrics splits by **bounded context**. Kiorly keeps the same domains as **Nest modules** inside `apps/api/src/`, grouped into contexts documented in [`Docs/MODULAR_MONOLITH.md`](../../../Docs/MODULAR_MONOLITH.md) and enforced by `apps/api/src/platform/module-boundaries.node.test.ts`:
 
 | PiggyMetrics service | Responsibility | Kiorly equivalent |
 |---------------------|----------------|-------------------|

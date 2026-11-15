@@ -6,7 +6,7 @@ import type { PrismaService } from "../prisma/prisma.service";
 import { buildFiscalIdempotencyKey, fiscalSourceRefFromQueue } from "./fiscal-idempotency";
 import { resolveEtaClinicSettings } from "../providers/provider-settings";
 import { paymentMethodFromCollection } from "./fiscal-payment-method";
-import { resolveFiscalDeviceForQueue } from "../fiscal-devices/fiscal-device-resolve";
+import { resolveFiscalDeviceForQueue } from "../fiscal-devices/fiscal-devices-public";
 
 export type QueueFiscalParams = {
   tenantId: string;

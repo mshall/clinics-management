@@ -27,7 +27,7 @@ We adopt a **modular monolith** for the backend rather than microservices in v1.
 
 ### 2.1 Goals
 - One repository, one CI/CD pipeline, one deploy command.
-- Strict module boundaries enforced by linting and code review.
+- Strict module boundaries enforced by code review and **`module-boundaries.node.test.ts`** (see [MODULAR_MONOLITH.md](./MODULAR_MONOLITH.md)).
 - Strong type safety across backend, web, and mobile via shared TypeScript packages.
 - AWS-native deployment using managed services to minimize operational burden.
 - Full audit trail and compliance posture suitable for health data.

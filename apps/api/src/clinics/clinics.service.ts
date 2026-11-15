@@ -15,6 +15,7 @@ import { defaultCurrencyForCountry } from "../common/country-default-currency";
 import type { ClinicPhysicianDto } from "./dto/clinic-physician.dto";
 import type { ClinicKind } from "./clinic-kind";
 import { resolveClinicKind } from "./clinic-kind";
+import { FiscalDeviceProvisioningService } from "../fiscal-devices/fiscal-device-provisioning.service";
 import { mapEtaClinicSettingsDto } from "../providers/provider-settings";
 import { clinicInvoiceSettingsFromRow } from "../common/invoice-config";
 import { clinicPrescriptionSettingsFromRow } from "../common/prescription-config";
@@ -64,7 +65,10 @@ export interface ClinicDto {
 
 @Injectable()
 export class ClinicsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly fiscalDeviceProvisioning: FiscalDeviceProvisioningService,
+  ) {}
 
   private static readonly CLINIC_MANAGE_ROLES: ReadonlySet<UserRole> = new Set([
     UserRole.GROUP_ADMIN,
@@ -732,8 +736,7 @@ export class ClinicsService {
         },
         include: { parent: { select: { nameEn: true } }, _count: { select: { branches: true } } },
       });
-      const { provisionDefaultVirtualFiscalDevice } = await import("../fiscal-devices/fiscal-device-provision");
-      const fiscalDevice = await provisionDefaultVirtualFiscalDevice(tx, tenantId, clinic.id);
+      const fiscalDevice = await this.fiscalDeviceProvisioning.provisionDefaultVirtual(tx, tenantId, clinic.id);
       return { clinic, fiscalDevice };
     });
 

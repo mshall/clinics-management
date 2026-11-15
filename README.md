@@ -141,10 +141,12 @@ Typical flows:
 
 | Layer | Technology |
 |--------|------------|
-| API | NestJS 10, Prisma 6, PostgreSQL |
+| API | NestJS 10, Prisma 6, PostgreSQL (**modular monolith** — bounded contexts as Nest modules) |
 | Auth | Passport JWT, `bcryptjs` |
 | Web | React 18, Vite, TanStack Query, React Router, Tailwind, shadcn-style UI primitives |
 | Monorepo | npm workspaces (`apps/api`, `apps/web`) |
+
+See **[Docs/MODULAR_MONOLITH.md](./Docs/MODULAR_MONOLITH.md)** for bounded contexts, import rules, and microservice extraction. CI runs `module-boundaries.node.test.ts` with `npm run test:unit -w api`.
 
 **Local dev traffic:** Vite dev server proxies `/api` → `http://localhost:3000` (see `apps/web/vite.config.ts`). The SPA calls relative `/api/v1/...` unless `VITE_API_URL` is set.
 
