@@ -270,6 +270,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
             port: "3000",
             runtimeEnvironmentVariables: [
               { name: "NODE_ENV", value: "production" },
+              { name: "KIORLY_DEPLOY_TARGET", value: "aws" },
               { name: "PORT", value: "3000" },
               { name: "SWAGGER_ENABLED", value: "false" },
               { name: "TZ", value: "Europe/Berlin" },

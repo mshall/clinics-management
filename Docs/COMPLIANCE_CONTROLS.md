@@ -28,7 +28,7 @@ This document maps platform controls to common frameworks — **not** a certific
 
 | Control | Implementation |
 |---------|----------------|
-| A.9 Access control | RBAC, clinic scopes, JWT, TOTP MFA (required for privileged roles), bcrypt passwords |
+| A.9 Access control | RBAC, clinic scopes, JWT, TOTP MFA (privileged roles on **AWS production** only), bcrypt passwords |
 | A.10 Cryptography | TLS in transit; RDS/S3 encryption at rest (AWS) |
 | A.12 Operations | `db:ensure`, migrations, health checks, integration failure retention |
 | A.14 Supplier | ETA, WhatsApp BSP, **OpenAI** (sub-processor) — secrets in Secrets Manager |

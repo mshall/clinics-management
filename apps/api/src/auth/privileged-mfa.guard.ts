@@ -2,12 +2,7 @@ import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from
 import { PrismaService } from "../prisma/prisma.service";
 import type { JwtUser } from "./jwt-user";
 import { roleRequiresMfaEnrollment } from "./privileged-mfa";
-
-function privilegedMfaEnforced(): boolean {
-  if (process.env.PRIVILEGED_MFA_ENFORCE === "false") return false;
-  if (process.env.PRIVILEGED_MFA_ENFORCE === "true") return true;
-  return process.env.NODE_ENV === "production";
-}
+import { privilegedMfaEnforced } from "./privileged-mfa-enforcement";
 
 @Injectable()
 export class PrivilegedMfaGuard implements CanActivate {

@@ -13,11 +13,14 @@ export type CreateMarketDto = {
   code: string;
   nameEn: string;
   nameAr?: string;
-  defaultCurrency?: string;
-  defaultTimezone?: string;
+  defaultCurrency: string;
+  defaultTimezone: string;
+  defaultLocale: string;
+  defaultPhoneRegion: string;
+  weekendDays: number[];
+  enabledLanguages: string[];
   dataRegion?: string;
   hostCell?: string;
-  defaultPhoneRegion?: string;
   taxConfig?: Record<string, unknown>;
   paymentMethods?: unknown[];
 };
@@ -100,6 +103,18 @@ export class MarketsService {
     const code = dto.code.trim().toUpperCase();
     if (!code) throw new BadRequestException("Market code is required");
     const currency = dto.defaultCurrency?.trim() || defaultCurrencyForCountry(code);
+    const timezone = dto.defaultTimezone?.trim();
+    const locale = dto.defaultLocale?.trim();
+    const phoneRegion = dto.defaultPhoneRegion?.trim();
+    if (!timezone || !locale || !phoneRegion || !currency) {
+      throw new BadRequestException("defaultCurrency, defaultTimezone, defaultLocale, and defaultPhoneRegion are required");
+    }
+    if (!Array.isArray(dto.weekendDays) || !dto.weekendDays.length) {
+      throw new BadRequestException("weekendDays is required");
+    }
+    if (!Array.isArray(dto.enabledLanguages) || !dto.enabledLanguages.length) {
+      throw new BadRequestException("enabledLanguages is required");
+    }
     const dataRegion = dto.dataRegion?.trim() || "eu-central-1";
     const hostCell = dto.hostCell?.trim() || dataRegion;
     const row = await this.prisma.market.create({
@@ -109,10 +124,13 @@ export class MarketsService {
         nameAr: dto.nameAr?.trim() ?? "",
         status: MarketLaunchStatus.DRAFT,
         defaultCurrency: currency,
-        defaultTimezone: dto.defaultTimezone?.trim() || "UTC",
+        defaultTimezone: timezone,
+        defaultLocale: locale,
+        defaultPhoneRegion: phoneRegion,
+        weekendDays: dto.weekendDays as Prisma.InputJsonValue,
+        enabledLanguages: dto.enabledLanguages as Prisma.InputJsonValue,
         dataRegion,
         hostCell,
-        defaultPhoneRegion: dto.defaultPhoneRegion?.trim() || code,
         taxConfig: (dto.taxConfig ?? {}) as Prisma.InputJsonValue,
         paymentMethods: (dto.paymentMethods ?? []) as Prisma.InputJsonValue,
       },

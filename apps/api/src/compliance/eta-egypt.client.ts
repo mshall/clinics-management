@@ -1,5 +1,6 @@
 import { createHmac, randomUUID } from "crypto";
 import type { EtaConnectionConfig } from "./eta-secret-resolver";
+import { buildEtaWireReceiptDocument } from "./eta-egypt-wire";
 
 export type EtaReceiptPayload = {
   issuerRin: string;
@@ -92,7 +93,7 @@ export async function submitEtaReceipt(
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
     },
-    body: JSON.stringify({ documents: [payload] }),
+    body: JSON.stringify({ documents: [buildEtaWireReceiptDocument(payload)] }),
   });
 
   if (!submitRes.ok) {

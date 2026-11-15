@@ -76,13 +76,17 @@ export class FrontDeskService {
     const ticket = (maxTicket._max.queueTicketNumber ?? 0) + 1;
     const now = new Date();
     const pay = body.paymentAmount != null && body.paymentAmount > 0 ? body.paymentAmount : null;
-    const allowedTransfers = await this.featureFlags.allowedTransferChannels(tenantId);
+    const { resolveTenantTransferCollectionContext } = await import("../markets/market-transfer-context");
+    const transferCtx = await resolveTenantTransferCollectionContext(this.prisma, this.featureFlags, tenantId);
     const collection =
       pay != null
         ? parseVisitCollectionForAmount(
             pay,
             body.visitCollection ?? { mode: VisitCollectionMode.CASH_ON_VISIT },
-            { allowedTransferChannels: allowedTransfers },
+            {
+              allowedTransferChannels: transferCtx.allowedTransferChannels,
+              paymentMethods: transferCtx.paymentMethods,
+            },
           )
         : null;
     const collectionPatch =
@@ -106,6 +110,7 @@ export class FrontDeskService {
         collection.transferReference,
         pay,
         currency,
+        transferCtx.paymentMethods,
       );
     }
 

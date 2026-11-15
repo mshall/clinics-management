@@ -5,6 +5,7 @@ import { resolveMarketForTenant } from "../markets/market-resolver";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
 import type { PrismaService } from "../prisma/prisma.service";
 import { buildFiscalIdempotencyKey, fiscalSourceRefFromQueue } from "./fiscal-idempotency";
+import { resolveEtaClinicSettings } from "../providers/provider-settings";
 
 export type QueueFiscalParams = {
   tenantId: string;
@@ -37,16 +38,14 @@ export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: 
   const clinic = await tx.clinic.findFirst({
     where: { id: params.clinicId, tenantId: params.tenantId },
     select: {
-      etaReceiptsEnabled: true,
-      etaBranchCode: true,
-      etaTaxpayerActivityCode: true,
-      etaDefaultItemCode: true,
+      providerSettings: true,
       taxRegistrationNumber: true,
       invoiceVatPercent: true,
       tenantId: true,
     },
   });
-  if (clinic && !clinic.etaReceiptsEnabled) return;
+  const etaClinic = clinic ? resolveEtaClinicSettings(clinic) : null;
+  if (etaClinic && !etaClinic.receiptsEnabled) return;
 
   const marketCtx = await resolveMarketForTenant(tx as unknown as import("../prisma/prisma.service").PrismaService, params.tenantId);
   const providerKey = fiscalProviderKeyForMarket(marketCtx.taxConfig);
@@ -78,9 +77,9 @@ export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: 
     description: params.description,
     taxConfig: marketCtx.taxConfig,
     clinicOverrides: {
-      etaBranchCode: clinic?.etaBranchCode,
-      etaTaxpayerActivityCode: clinic?.etaTaxpayerActivityCode,
-      etaDefaultItemCode: clinic?.etaDefaultItemCode,
+      branchCode: etaClinic?.branchCode,
+      taxpayerActivityCode: etaClinic?.taxpayerActivityCode,
+      defaultItemCode: etaClinic?.defaultItemCode,
       taxRegistrationNumber: params.clinicTaxRin ?? clinic?.taxRegistrationNumber,
     },
     idempotencyKey,

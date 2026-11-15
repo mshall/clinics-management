@@ -1,9 +1,12 @@
-import type { MoneyTransferChannel } from "@prisma/client";
-
 export type MarketPaymentMethodDef = {
   key: string;
   labelKey?: string;
-  transferChannel?: MoneyTransferChannel | string;
+  /** When set, this method maps to a money-transfer channel id (market-defined, not a global enum). */
+  transferChannel?: string;
+  /** ECMAScript regex (string) for transfer reference validation */
+  referencePattern?: string;
+  /** Env var name for optional online verification URL (e.g. INSTAPAY_VERIFY_URL) */
+  verifyUrlEnv?: string;
 };
 
 export function parseMarketPaymentMethods(raw: unknown): MarketPaymentMethodDef[] {
@@ -17,18 +20,26 @@ export function parseMarketPaymentMethods(raw: unknown): MarketPaymentMethodDef[
     out.push({
       key,
       labelKey: typeof o.labelKey === "string" ? o.labelKey : undefined,
-      transferChannel: typeof o.transferChannel === "string" ? o.transferChannel : undefined,
+      transferChannel: typeof o.transferChannel === "string" ? o.transferChannel.trim().toUpperCase() : undefined,
+      referencePattern: typeof o.referencePattern === "string" ? o.referencePattern : undefined,
+      verifyUrlEnv: typeof o.verifyUrlEnv === "string" ? o.verifyUrlEnv.trim() : undefined,
     });
   }
   return out;
 }
 
-export function transferChannelsFromMarketMethods(methods: MarketPaymentMethodDef[]): Set<MoneyTransferChannel> {
-  const out = new Set<MoneyTransferChannel>();
+export function transferChannelsFromMarketMethods(methods: MarketPaymentMethodDef[]): Set<string> {
+  const out = new Set<string>();
   for (const m of methods) {
-    const ch = m.transferChannel?.toString().toUpperCase();
-    if (ch === "INSTAPAY") out.add("INSTAPAY");
-    if (ch === "FAWRY") out.add("FAWRY");
+    if (m.transferChannel) out.add(m.transferChannel.toUpperCase());
   }
   return out;
+}
+
+export function paymentMethodForTransferChannel(
+  methods: MarketPaymentMethodDef[],
+  channel: string,
+): MarketPaymentMethodDef | undefined {
+  const normalized = channel.trim().toUpperCase();
+  return methods.find((m) => m.transferChannel?.toUpperCase() === normalized);
 }

@@ -8,6 +8,11 @@ import {
   normalizeEmployeeSalaryCurrencyOverride,
 } from "../common/employee-salary-currency";
 import {
+  mapEtaTenantSettingsDto,
+  mergeProviderBlock,
+  patchEtaTenantProviderSettings,
+} from "../providers/provider-settings";
+import {
   deactivateUserAccount,
   reactivateUserAccount,
   restoreTenantUser,
@@ -138,9 +143,7 @@ export class AdminService {
             integrationFailureRetentionDays: tenant.integrationFailureRetentionDays,
             whatsAppRemindersEnabled: tenant.whatsAppRemindersEnabled,
             appointmentReminderHoursBefore: tenant.appointmentReminderHoursBefore,
-            etaDefaultTaxpayerActivityCode: tenant.etaDefaultTaxpayerActivityCode,
-            etaDefaultItemCode: tenant.etaDefaultItemCode,
-            etaEsignatureLabel: tenant.etaEsignatureLabel,
+            ...mapEtaTenantSettingsDto(tenant),
           }
         : null,
       registeredTenants: tenantCount,
@@ -662,9 +665,7 @@ export class AdminService {
       defaultInvoiceVatPercent?: number;
       whatsAppRemindersEnabled?: boolean;
       appointmentReminderHoursBefore?: number;
-      etaDefaultTaxpayerActivityCode?: string;
-      etaDefaultItemCode?: string | null;
-      etaEsignatureLabel?: string | null;
+      providerSettings?: Prisma.InputJsonValue;
     } = {};
     if (dto.defaultVisitFee !== undefined) data.defaultVisitFee = dto.defaultVisitFee;
     if (dto.baseCurrency !== undefined) {
@@ -688,14 +689,17 @@ export class AdminService {
     if (dto.appointmentReminderHoursBefore !== undefined) {
       data.appointmentReminderHoursBefore = dto.appointmentReminderHoursBefore;
     }
-    if (dto.etaDefaultTaxpayerActivityCode !== undefined) {
-      data.etaDefaultTaxpayerActivityCode = dto.etaDefaultTaxpayerActivityCode.trim() || "8690";
-    }
-    if (dto.etaDefaultItemCode !== undefined) {
-      data.etaDefaultItemCode = dto.etaDefaultItemCode?.trim() || null;
-    }
-    if (dto.etaEsignatureLabel !== undefined) {
-      data.etaEsignatureLabel = dto.etaEsignatureLabel?.trim() || null;
+    if (
+      dto.etaDefaultTaxpayerActivityCode !== undefined ||
+      dto.etaDefaultItemCode !== undefined ||
+      dto.etaEsignatureLabel !== undefined
+    ) {
+      const etaPatch = patchEtaTenantProviderSettings({
+        defaultTaxpayerActivityCode: dto.etaDefaultTaxpayerActivityCode,
+        defaultItemCode: dto.etaDefaultItemCode,
+        esignatureLabel: dto.etaEsignatureLabel,
+      });
+      data.providerSettings = mergeProviderBlock(existing.providerSettings, "eta-egypt", etaPatch);
     }
     if (!Object.keys(data).length) throw new BadRequestException("No supported fields to update");
 
@@ -729,9 +733,7 @@ export class AdminService {
       integrationFailureRetentionDays: row.integrationFailureRetentionDays,
       whatsAppRemindersEnabled: row.whatsAppRemindersEnabled,
       appointmentReminderHoursBefore: row.appointmentReminderHoursBefore,
-      etaDefaultTaxpayerActivityCode: row.etaDefaultTaxpayerActivityCode,
-      etaDefaultItemCode: row.etaDefaultItemCode,
-      etaEsignatureLabel: row.etaEsignatureLabel,
+      ...mapEtaTenantSettingsDto(row),
     };
   }
 

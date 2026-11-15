@@ -15,9 +15,9 @@ Instance of [MARKET_GO_LIVE_TEMPLATE.md](../MARKET_GO_LIVE_TEMPLATE.md) for mark
 | E-signature token or seal | Platform ops | `ProviderCredential` → Secrets Manager; `scripts/configure-apprunner-eta.sh` for legacy env bridge |
 | Production submit test | Finance | Queue from check-in/billing → submit via compliance API |
 
-Fiscal provider key: **`eta-egypt`** (`FiscalDocument` + `FiscalSubmission`).
+Fiscal provider key: **`eta-egypt`** (`FiscalDocument` + `FiscalSubmission`). Clinic/org ETA fields live in **`providerSettings["eta-egypt"]`** ([MULTI_MARKET.md](../MULTI_MARKET.md)).
 
-Idempotency is keyed by **payment / revenue / invoice** source id (not amount or description). Return receipts queue when a visit fee is voided.
+Idempotency is keyed by **payment / revenue / invoice** source id (not amount or description). Return receipts queue when a visit fee is voided. Submit uses **`header.uuid`** and **`header.previousUUID`** on the wire document — confirm field names against the current ETA e-Receipt API before go-live.
 
 Every posted payment path queues fiscal: check-in, visit fee, billing payment, tax invoice.
 

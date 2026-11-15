@@ -27,7 +27,6 @@ import { ApiError, apiDelete, apiFetchBlob, apiPatch, apiPost, apiPostFormData }
 import { formatClinicName, formatClinicNameFields, formatEmploymentType, formatUserRole, localeForLanguage } from "@/lib/locale-display";
 import { formatEmployeeName } from "@/lib/employee-display";
 import { formatEmployeeSalaryAmount } from "@/lib/money-display";
-import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
 import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -57,7 +56,6 @@ export function EmployeeDetailPage() {
   );
   const { data: clinics = [] } = useClinicsQuery();
   const orgBaseCurrency = useOrgBaseCurrency();
-  const resolveClinicCurrency = useClinicCurrencyResolver();
 
   const [editing, setEditing] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -116,7 +114,6 @@ export function EmployeeDetailPage() {
   const linkedUserRole = emp?.linkedUserRole ?? "";
   const showClinicAssignment = Boolean(linkedUserRole) && !isOrgWideUserRole(linkedUserRole);
   const requiresClinicAssignment = isClinicRequiredUserRole(linkedUserRole);
-  const primaryClinicId = showClinicAssignment ? (assignedClinicIds[0] ?? clinicId) : clinicId;
   const assignedClinicLabels = useMemo(() => {
     const ids = emp?.linkedUserClinicIds ?? (emp?.clinicId ? [emp.clinicId] : []);
     return ids

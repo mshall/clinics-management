@@ -1,48 +1,48 @@
 import { BadRequestException } from "@nestjs/common";
-import { MoneyTransferChannel } from "@prisma/client";
+import type { MarketPaymentMethodDef } from "../markets/market-payment-methods";
+import { paymentMethodForTransferChannel } from "../markets/market-payment-methods";
 
-/** InstaPay references: typically 6–32 alphanumeric characters. */
-const INSTAPAY_REF = /^[A-Za-z0-9][A-Za-z0-9\-_.]{5,31}$/;
-
-/** Fawry payment references: numeric or alphanumeric, 8–20 chars. */
-const FAWRY_REF = /^[A-Za-z0-9]{8,20}$/;
-
-export function assertValidTransferReference(channel: MoneyTransferChannel, reference: string): void {
+export function assertValidTransferReference(
+  channel: string,
+  reference: string,
+  methods: MarketPaymentMethodDef[] = [],
+): void {
   const ref = reference.trim();
-  if (channel === MoneyTransferChannel.INSTAPAY) {
-    if (!INSTAPAY_REF.test(ref)) {
-      throw new BadRequestException({
-        message: "Invalid InstaPay transaction ID format",
-        messageKey: "errors.transfer.invalidInstapay",
-      });
+  const normalized = channel.trim().toUpperCase();
+  const def = paymentMethodForTransferChannel(methods, normalized);
+  if (!def?.referencePattern) {
+    if (ref.length < 3) {
+      throw new BadRequestException("Transaction reference is too short");
     }
     return;
   }
-  if (channel === MoneyTransferChannel.FAWRY) {
-    if (!FAWRY_REF.test(ref)) {
-      throw new BadRequestException({
-        message: "Invalid Fawry reference format",
-        messageKey: "errors.transfer.invalidFawry",
-      });
-    }
-    return;
+  let pattern: RegExp;
+  try {
+    pattern = new RegExp(def.referencePattern);
+  } catch {
+    throw new BadRequestException("Invalid transfer reference pattern in market configuration");
   }
-  throw new BadRequestException("Select InstaPay or Fawry for money transfer");
+  if (!pattern.test(ref)) {
+    throw new BadRequestException({
+      message: `Invalid ${normalized} reference format`,
+      messageKey: `errors.transfer.invalid${normalized.charAt(0)}${normalized.slice(1).toLowerCase()}`,
+    });
+  }
 }
 
 /**
  * Online verification against provider APIs — returns true when matched or when verification is skipped (no API configured).
  */
 export async function verifyTransferReferenceWithProvider(
-  channel: MoneyTransferChannel,
+  channel: string,
   reference: string,
   expectedAmount: number,
   currency: string,
+  methods: MarketPaymentMethodDef[] = [],
 ): Promise<{ verified: boolean; skipped: boolean; detail?: string }> {
-  const verifyUrl =
-    channel === MoneyTransferChannel.INSTAPAY
-      ? process.env.INSTAPAY_VERIFY_URL?.trim()
-      : process.env.FAWRY_VERIFY_URL?.trim();
+  const def = paymentMethodForTransferChannel(methods, channel);
+  const envName = def?.verifyUrlEnv?.trim();
+  const verifyUrl = envName ? process.env[envName]?.trim() : undefined;
   if (!verifyUrl) {
     return { verified: false, skipped: true, detail: "Provider verification API not configured" };
   }

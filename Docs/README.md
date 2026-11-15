@@ -30,6 +30,7 @@ See **[Documentation_Portal.md](./Documentation_Portal.md)** for module layout, 
 | [**AWS_Cloud_Deployment_Guide.md**](./AWS_Cloud_Deployment_Guide.md) | RDS, App Runner, CloudFront, CI/CD deploy, post-deploy seed |
 | [**ASSISTANT.md**](./ASSISTANT.md) | AI assistant architecture: permissions, playbook, live data, actions |
 | [**FEATURE_FLAGS.md**](./FEATURE_FLAGS.md) | Layered flags (platform · market · org): AI assistant, ETA, payments, WhatsApp |
+| [**MULTI_MARKET.md**](./MULTI_MARKET.md) | `providerSettings` JSON, market payment channels, required market pack fields, ETA wire parity, privileged MFA on AWS production |
 | [**CLINIC_TAX_AND_LICENSING.md**](./CLINIC_TAX_AND_LICENSING.md) | Per-branch license and tax authority numbers (market labels, invoicing, fiscal) |
 | [**PLATFORM_MARKETS_AND_INSIGHTS.md**](./PLATFORM_MARKETS_AND_INSIGHTS.md) | Market pause/disable, org country picker, AWS launch, platform insights, MFA QR |
 | [**ASSISTANT_OPENAI_SETUP.md**](./ASSISTANT_OPENAI_SETUP.md) | OpenAI API key and AWS Secrets Manager for the assistant |

@@ -1,16 +1,18 @@
 import { BadRequestException } from "@nestjs/common";
-import { MoneyTransferChannel, TransferVerificationStatus } from "@prisma/client";
+import { TransferVerificationStatus } from "@prisma/client";
+import type { MarketPaymentMethodDef } from "../markets/market-payment-methods";
 import { assertValidTransferReference, verifyTransferReferenceWithProvider } from "./transfer-reference";
 import { transferVerificationStatusForCollection } from "../compliance/eta-receipt-queue";
 
 export async function resolveTransferVerification(
-  channel: MoneyTransferChannel,
+  channel: string,
   reference: string,
   amount: number,
   currency: string,
+  paymentMethods: MarketPaymentMethodDef[] = [],
 ): Promise<TransferVerificationStatus> {
-  assertValidTransferReference(channel, reference);
-  const result = await verifyTransferReferenceWithProvider(channel, reference, amount, currency);
+  assertValidTransferReference(channel, reference, paymentMethods);
+  const result = await verifyTransferReferenceWithProvider(channel, reference, amount, currency, paymentMethods);
   const status = transferVerificationStatusForCollection(true, result.verified, result.skipped);
   if (status === TransferVerificationStatus.REJECTED) {
     throw new BadRequestException({

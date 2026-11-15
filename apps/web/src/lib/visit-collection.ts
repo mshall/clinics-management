@@ -1,5 +1,7 @@
 export type VisitCollectionMode = "CASH_ON_VISIT" | "MONEY_TRANSFER";
-export type MoneyTransferChannel = "INSTAPAY" | "FAWRY";
+
+/** Market-defined transfer channel id (e.g. INSTAPAY, FAWRY). */
+export type MoneyTransferChannel = string;
 
 export type VisitCollectionValue = {
   mode: VisitCollectionMode;
@@ -23,8 +25,9 @@ export function validateVisitCollection(
   if (collection.mode !== "MONEY_TRANSFER") {
     return t("visitCollection.invalidMode", "Choose how payment was collected.");
   }
-  if (collection.transferChannel !== "INSTAPAY" && collection.transferChannel !== "FAWRY") {
-    return t("visitCollection.channelRequired", "Select InstaPay or Fawry.");
+  const channel = collection.transferChannel?.trim();
+  if (!channel) {
+    return t("visitCollection.channelRequired", "Select a transfer channel.");
   }
   const ref = collection.transferReference?.trim() ?? "";
   if (ref.length < 3) {

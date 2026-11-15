@@ -32,12 +32,12 @@ export class EtaEgyptFiscalProvider implements FiscalProvider {
     }
     const payload: EtaReceiptPayload = {
       issuerRin,
-      branchCode: (typeof clinic.etaBranchCode === "string" ? clinic.etaBranchCode : ctx.clinicId.slice(0, 8)).trim(),
+      branchCode: (typeof clinic.branchCode === "string" ? clinic.branchCode : ctx.clinicId.slice(0, 8)).trim(),
       documentType: "R",
       receiptUuid: ctx.receiptUuid,
       previousReceiptUuid: ctx.previousReceiptUuid?.trim() || undefined,
       taxpayerActivityCode:
-        (typeof clinic.etaTaxpayerActivityCode === "string" ? clinic.etaTaxpayerActivityCode : null) ||
+        (typeof clinic.taxpayerActivityCode === "string" ? clinic.taxpayerActivityCode : null) ||
         (typeof tax.defaultActivityCode === "string" ? tax.defaultActivityCode : "8690"),
       lines: [
         {
@@ -47,7 +47,7 @@ export class EtaEgyptFiscalProvider implements FiscalProvider {
           vatPercent: ctx.vatPercent,
           currency: ctx.currency,
           itemCode:
-            (typeof clinic.etaDefaultItemCode === "string" ? clinic.etaDefaultItemCode : undefined) ||
+            (typeof clinic.defaultItemCode === "string" ? clinic.defaultItemCode : undefined) ||
             (typeof tax.defaultItemCode === "string" ? tax.defaultItemCode : undefined),
         },
       ],

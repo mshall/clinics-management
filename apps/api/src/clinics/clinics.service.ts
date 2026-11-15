@@ -15,6 +15,7 @@ import { defaultCurrencyForCountry } from "../common/country-default-currency";
 import type { ClinicPhysicianDto } from "./dto/clinic-physician.dto";
 import type { ClinicKind } from "./clinic-kind";
 import { resolveClinicKind } from "./clinic-kind";
+import { mapEtaClinicSettingsDto } from "../providers/provider-settings";
 import { clinicInvoiceSettingsFromRow } from "../common/invoice-config";
 import { clinicPrescriptionSettingsFromRow } from "../common/prescription-config";
 import {
@@ -599,11 +600,7 @@ export class ClinicsService {
       ...clinicInvoiceSettingsFromRow(row),
       marketTaxLabels,
       ...clinicPrescriptionSettingsFromRow(row),
-      etaBranchCode: row.etaBranchCode,
-      etaTaxpayerActivityCode: row.etaTaxpayerActivityCode,
-      etaDefaultItemCode: row.etaDefaultItemCode,
-      etaReceiptsEnabled: row.etaReceiptsEnabled,
-      etaIncludeLogoOnReceipt: row.etaIncludeLogoOnReceipt,
+      ...mapEtaClinicSettingsDto(row),
     };
   }
 

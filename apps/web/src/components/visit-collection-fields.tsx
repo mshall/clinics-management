@@ -2,7 +2,8 @@ import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
-import type { MoneyTransferChannel, VisitCollectionMode, VisitCollectionValue } from "@/lib/visit-collection";
+import type { VisitCollectionMode, VisitCollectionValue } from "@/lib/visit-collection";
+import { useTenantMarket } from "@/lib/use-tenant-market";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -15,6 +16,11 @@ type Props = {
 
 export function VisitCollectionFields({ amount, value, onChange, disabled, className }: Props) {
   const { t } = useTranslation();
+  const marketQuery = useTenantMarket();
+  const transferChannels = marketQuery.data?.transferChannels?.length
+    ? marketQuery.data.transferChannels
+    : ["INSTAPAY", "FAWRY"];
+  const defaultChannel = transferChannels[0] ?? "INSTAPAY";
   if (amount <= 0) return null;
 
   return (
@@ -29,7 +35,7 @@ export function VisitCollectionFields({ amount, value, onChange, disabled, class
             const mode = e.target.value as VisitCollectionMode;
             onChange(
               mode === "MONEY_TRANSFER"
-                ? { mode, transferChannel: value.transferChannel || "INSTAPAY", transferReference: value.transferReference ?? "" }
+                ? { mode, transferChannel: value.transferChannel || defaultChannel, transferReference: value.transferReference ?? "" }
                 : { mode: "CASH_ON_VISIT", transferChannel: "", transferReference: "" },
             );
           }}
@@ -45,16 +51,23 @@ export function VisitCollectionFields({ amount, value, onChange, disabled, class
             <select
               className={nativeSelectClassName}
               disabled={disabled}
-              value={value.transferChannel || "INSTAPAY"}
+              value={value.transferChannel || defaultChannel}
               onChange={(e) =>
                 onChange({
                   ...value,
-                  transferChannel: e.target.value as MoneyTransferChannel,
+                  transferChannel: e.target.value,
                 })
               }
             >
-              <option value="INSTAPAY">{t("visitCollection.instapay", "InstaPay")}</option>
-              <option value="FAWRY">{t("visitCollection.fawry", "Fawry")}</option>
+              {transferChannels.map((ch: string) => (
+                <option key={ch} value={ch}>
+                  {ch === "INSTAPAY"
+                    ? t("visitCollection.instapay", "InstaPay")
+                    : ch === "FAWRY"
+                      ? t("visitCollection.fawry", "Fawry")
+                      : ch}
+                </option>
+              ))}
             </select>
           </div>
           <div className="space-y-1">

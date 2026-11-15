@@ -20,7 +20,6 @@ import { formatEmployeeName } from "@/lib/employee-display";
 import { formatClinicName, formatEmploymentType, formatUserRole } from "@/lib/locale-display";
 import type { Paginated } from "@/lib/paginated";
 import { apiErrorMessage, isClinicRequiredUserRole, isOrgWideUserRole, ORG_USER_ROLES, orgUserRolesForEdit, ORG_USER_ROLES_CREATABLE } from "@/features/platform/platform-shared";
-import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
 import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import {
   ORG_USER_PASSWORD_MIN_LENGTH,
@@ -64,7 +63,6 @@ export function AdminOrgUsersPanel() {
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
   const orgBaseCurrency = useOrgBaseCurrency();
-  const resolveClinicCurrency = useClinicCurrencyResolver();
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -167,7 +165,6 @@ export function AdminOrgUsersPanel() {
   const assignableRoles = isCreate
     ? ORG_USER_ROLES_CREATABLE
     : orgUserRolesForEdit(userDetailQuery.data?.role ?? uRole);
-  const uPrimaryClinicId = uClinicIds[0] ?? userDetailQuery.data?.clinicIds?.[0] ?? "";
 
   useEffect(() => {
     if (!isEdit || !userDetailQuery.data) return;

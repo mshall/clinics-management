@@ -1,8 +1,9 @@
 import type { Market, Tenant } from "@prisma/client";
 import type { PrismaService } from "../prisma/prisma.service";
+import { assertMarketPackConfigured } from "./market-pack-validation";
 
 export type ResolvedMarketContext = {
-  market: Market | null;
+  market: Market;
   currency: string;
   timezone: string;
   weekendDays: number[];
@@ -29,14 +30,19 @@ export async function resolveMarketForTenant(
     include: { market: true },
   });
   const market = tenant?.market ?? null;
-  const currency = tenant?.baseCurrency ?? market?.defaultCurrency ?? "EGP";
-  const timezone = market?.defaultTimezone ?? "Africa/Cairo";
-  const weekendRaw = market?.weekendDays;
+  assertMarketPackConfigured(market);
+
+  const currency = tenant?.baseCurrency?.trim() || market.defaultCurrency.trim();
+  const timezone = market.defaultTimezone.trim();
+  const weekendRaw = market.weekendDays;
   const weekendDays = Array.isArray(weekendRaw)
     ? weekendRaw.map((x) => Number(x)).filter((n) => Number.isFinite(n))
-    : [5, 6];
-  const taxConfig = jsonRecord(market?.taxConfig);
-  const providerConfig = jsonRecord(market?.providerConfig);
+    : [];
+  if (!weekendDays.length) {
+    throw new Error(`Market ${market.code} has invalid weekendDays`);
+  }
+  const taxConfig = jsonRecord(market.taxConfig);
+  const providerConfig = jsonRecord(market.providerConfig);
   const fiscalProviderKey =
     typeof taxConfig.fiscalProviderKey === "string" ? taxConfig.fiscalProviderKey : "eta-egypt";
   return {
@@ -46,7 +52,7 @@ export async function resolveMarketForTenant(
     weekendDays,
     taxConfig,
     providerConfig,
-    paymentMethods: jsonArray(market?.paymentMethods),
+    paymentMethods: jsonArray(market.paymentMethods),
     fiscalProviderKey,
   };
 }

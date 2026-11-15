@@ -223,10 +223,6 @@ enum VisitCollectionMode {
   MONEY_TRANSFER
 }
 
-enum MoneyTransferChannel {
-  INSTAPAY
-  FAWRY
-}
 
 enum MessageChannel {
   SMS
@@ -356,12 +352,12 @@ model Market {
   launchedAt         DateTime?
   dataRegion         String              @default("eu-central-1")
   hostCell           String              @default("frankfurt")
-  defaultCurrency    String              @default("EGP")
-  defaultLocale      String              @default("en")
-  defaultTimezone    String              @default("Africa/Cairo")
-  weekendDays        Json                @default("[5, 6]")
-  enabledLanguages   Json                @default("[\"en\", \"ar\"]")
-  defaultPhoneRegion String              @default("EG")
+  defaultCurrency    String
+  defaultLocale      String
+  defaultTimezone    String
+  weekendDays        Json
+  enabledLanguages   Json
+  defaultPhoneRegion String
   idDocumentTypes    Json                @default("[]")
   taxConfig          Json                @default("{}")
   providerConfig     Json                @default("{}")
@@ -437,7 +433,7 @@ model FiscalDocument {
   revenueEntry    RevenueEntry?    @relation(fields: [revenueEntryId], references: [id], onDelete: SetNull)
   invoiceId       String?          @unique
   invoice         Invoice?         @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-  currency        String           @default("EGP")
+  currency        String
   totalAmount     Decimal          @db.Decimal(14, 2)
   payloadJson     Json?
   schemaVersion   String           @default("1")
@@ -486,9 +482,7 @@ model Tenant {
   integrationFailureLastSpikeAlertAt  DateTime?
   whatsAppRemindersEnabled            Boolean   @default(false)
   appointmentReminderHoursBefore      Int       @default(24)
-  etaDefaultTaxpayerActivityCode      String    @default("8690")
-  etaDefaultItemCode                  String?
-  etaEsignatureLabel                  String?
+  providerSettings                    Json      @default("{}")
   users          User[]
   clinics        Clinic[]
   clinicAdminScopes ClinicAdminScope[]
@@ -678,11 +672,7 @@ model Clinic {
   openingTime        String          @default("09:00") @db.VarChar(5)
   closingTime        String          @default("00:00") @db.VarChar(5)
   frontDeskRoomLabels Json           @default("[\"Room 1\",\"Room 2\",\"Room 3\"]")
-  etaBranchCode           String?
-  etaTaxpayerActivityCode String?
-  etaDefaultItemCode      String?
-  etaReceiptsEnabled      Boolean     @default(true)
-  etaIncludeLogoOnReceipt Boolean     @default(true)
+  providerSettings        Json        @default("{}")
   lastCalledTicketNumber Int?
   patientsHome     Patient[]       @relation("PatientHomeBranch")
   encounters       Encounter[]
@@ -1078,7 +1068,7 @@ model RevenueEntry {
   postedAt      DateTime
   status        RevenueStatus @default(POSTED)
   collectionMode VisitCollectionMode?
-  transferChannel MoneyTransferChannel?
+  transferChannel String?
   transferReference String?
   transferVerificationStatus TransferVerificationStatus @default(NOT_APPLICABLE)
   createdAt     DateTime      @default(now())
@@ -1232,7 +1222,7 @@ model Appointment {
   queueTicketNumber Int?
   checkInPaymentAmount Decimal?    @db.Decimal(14, 2)
   checkInCollectionMode VisitCollectionMode?
-  checkInTransferChannel MoneyTransferChannel?
+  checkInTransferChannel String?
   checkInTransferReference String?
   calledAt       DateTime?
   noShowAt       DateTime?

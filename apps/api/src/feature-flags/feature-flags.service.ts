@@ -1,5 +1,4 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
-import type { MoneyTransferChannel } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   FEATURE_FLAG_DESCRIPTIONS,
@@ -119,11 +118,10 @@ export class FeatureFlagsService {
     });
   }
 
-  async allowedTransferChannels(tenantId: string): Promise<Set<MoneyTransferChannel>> {
-    const out = new Set<MoneyTransferChannel>();
-    if (await this.isEnabled(tenantId, "instapay")) out.add("INSTAPAY");
-    if (await this.isEnabled(tenantId, "fawry")) out.add("FAWRY");
-    return out;
+  async allowedTransferChannels(tenantId: string): Promise<Set<string>> {
+    const { resolveTenantTransferCollectionContext } = await import("../markets/market-transfer-context");
+    const ctx = await resolveTenantTransferCollectionContext(this.prisma, this, tenantId);
+    return ctx.allowedTransferChannels;
   }
 
   private async resolveRow(tenantId: string, key: string): Promise<FeatureFlagLayerView | null> {

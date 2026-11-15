@@ -50,7 +50,6 @@ import {
   formatEmployeeSalaryAmount,
   formatMultiCurrencyAmounts,
 } from "@/lib/money-display";
-import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
 import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import {
   formatAttendanceStatus,
@@ -123,7 +122,6 @@ export function HrPage() {
   const hrManageContext = useHrManageContextQuery(usesProvisionerUi && canManage);
   const { data: clinics = [] } = useClinicsQuery();
   const orgBaseCurrency = useOrgBaseCurrency();
-  const resolveClinicCurrency = useClinicCurrencyResolver();
   const [tab, setTab] = useState<Tab>(() => parseHrTab(searchParams.get("tab")));
 
   useEffect(() => {

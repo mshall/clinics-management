@@ -3,6 +3,11 @@ import { FiscalSubmissionStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import type { EtaReceiptPayload } from "./eta-egypt.client";
 import type { PatchClinicEtaSettingsDto } from "../clinics/dto/patch-clinic-eta-settings.dto";
+import {
+  mergeProviderBlock,
+  patchEtaClinicProviderSettings,
+  resolveEtaClinicSettings,
+} from "../providers/provider-settings";
 import { buildEtaReceiptQrPayload, type EtaReceiptViewDto } from "./eta-receipt-presenter";
 import { getFiscalProvider } from "../providers/fiscal/fiscal-provider.registry";
 
@@ -89,28 +94,31 @@ export class ComplianceService {
   async patchClinicEtaSettings(tenantId: string, clinicId: string, dto: PatchClinicEtaSettingsDto) {
     const clinic = await this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId } });
     if (!clinic) throw new NotFoundException("Clinic not found");
-    return this.prisma.clinic.update({
+    const etaPatch = patchEtaClinicProviderSettings({
+      branchCode: dto.etaBranchCode,
+      taxpayerActivityCode: dto.etaTaxpayerActivityCode,
+      defaultItemCode: dto.etaDefaultItemCode,
+      receiptsEnabled: dto.etaReceiptsEnabled,
+      includeLogoOnReceipt: dto.etaIncludeLogoOnReceipt,
+    });
+    const row = await this.prisma.clinic.update({
       where: { id: clinicId },
       data: {
-        ...(dto.etaBranchCode !== undefined ? { etaBranchCode: dto.etaBranchCode?.trim() || null } : {}),
-        ...(dto.etaTaxpayerActivityCode !== undefined
-          ? { etaTaxpayerActivityCode: dto.etaTaxpayerActivityCode?.trim() || null }
-          : {}),
-        ...(dto.etaDefaultItemCode !== undefined ? { etaDefaultItemCode: dto.etaDefaultItemCode?.trim() || null } : {}),
-        ...(dto.etaReceiptsEnabled !== undefined ? { etaReceiptsEnabled: dto.etaReceiptsEnabled } : {}),
-        ...(dto.etaIncludeLogoOnReceipt !== undefined
-          ? { etaIncludeLogoOnReceipt: dto.etaIncludeLogoOnReceipt }
+        ...(Object.keys(etaPatch).length
+          ? { providerSettings: mergeProviderBlock(clinic.providerSettings, "eta-egypt", etaPatch) }
           : {}),
       },
-      select: {
-        id: true,
-        etaBranchCode: true,
-        etaTaxpayerActivityCode: true,
-        etaDefaultItemCode: true,
-        etaReceiptsEnabled: true,
-        etaIncludeLogoOnReceipt: true,
-      },
+      select: { id: true, providerSettings: true },
     });
+    const eta = resolveEtaClinicSettings(row);
+    return {
+      id: row.id,
+      etaBranchCode: eta.branchCode,
+      etaTaxpayerActivityCode: eta.taxpayerActivityCode,
+      etaDefaultItemCode: eta.defaultItemCode,
+      etaReceiptsEnabled: eta.receiptsEnabled,
+      etaIncludeLogoOnReceipt: eta.includeLogoOnReceipt,
+    };
   }
 
   async getEtaReceiptView(tenantId: string, id: string): Promise<EtaReceiptViewDto> {
@@ -126,7 +134,8 @@ export class ComplianceService {
     const payload = row.payloadJson as unknown as EtaReceiptPayload | null;
     const line = payload?.lines?.[0];
     const total = line?.unitPrice ?? payload?.totalAmount ?? Number(row.fiscalDocument.totalAmount);
-    const showLogo = row.clinic.etaIncludeLogoOnReceipt && Boolean(row.clinic.invoiceLogoRelativePath);
+    const etaClinic = resolveEtaClinicSettings(row.clinic);
+    const showLogo = etaClinic.includeLogoOnReceipt && Boolean(row.clinic.invoiceLogoRelativePath);
     const submittedAt = row.submittedAt?.toISOString() ?? null;
     return {
       id: row.id,
@@ -151,9 +160,9 @@ export class ComplianceService {
       vatPercent: line?.vatPercent ?? 0,
       patientLabel: `${row.patient.firstNameEn} ${row.patient.lastNameEn}`.trim(),
       issuerRin: payload?.issuerRin ?? row.clinic.taxRegistrationNumber ?? "N/A",
-      branchCode: payload?.branchCode ?? row.clinic.etaBranchCode ?? row.clinicId.slice(0, 8),
-      taxpayerActivityCode: payload?.taxpayerActivityCode ?? "8690",
-      itemCode: line?.itemCode ?? row.clinic.etaDefaultItemCode,
+      branchCode: payload?.branchCode ?? etaClinic.branchCode ?? row.clinicId.slice(0, 8),
+      taxpayerActivityCode: payload?.taxpayerActivityCode ?? etaClinic.taxpayerActivityCode ?? "8690",
+      itemCode: line?.itemCode ?? etaClinic.defaultItemCode,
       qrPayload: buildEtaReceiptQrPayload({
         etaUuid: row.providerDocumentUuid,
         issuerRin: payload?.issuerRin ?? "N/A",

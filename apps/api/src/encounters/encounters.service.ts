@@ -362,8 +362,12 @@ export class EncountersService {
         : linkedAppointmentFeePreview != null && linkedAppointmentFeePreview >= 0
           ? linkedAppointmentFeePreview
           : Number(tenantRow?.defaultVisitFee ?? 0);
-    const allowedTransfers = await this.featureFlags.allowedTransferChannels(tenantId);
-    const collectionOpts = { allowedTransferChannels: allowedTransfers };
+    const { resolveTenantTransferCollectionContext } = await import("../markets/market-transfer-context");
+    const transferCtx = await resolveTenantTransferCollectionContext(this.prisma, this.featureFlags, tenantId);
+    const collectionOpts = {
+      allowedTransferChannels: transferCtx.allowedTransferChannels,
+      paymentMethods: transferCtx.paymentMethods,
+    };
     const visitCollectionPreview = parseVisitCollectionForAmount(
       visitFeePreview,
       dto.visitCollection ??
@@ -381,6 +385,7 @@ export class EncountersService {
         visitCollectionPreview.transferReference,
         visitFeePreview,
         visitFeeCurrencyPreview,
+        transferCtx.paymentMethods,
       );
     }
 
@@ -626,8 +631,12 @@ export class EncountersService {
       const priorRevenue = await this.prisma.revenueEntry.findFirst({
         where: { tenantId, encounterId: id, category: "VISIT_FEE" },
       });
-      const allowedTransfers = await this.featureFlags.allowedTransferChannels(tenantId);
-      const collectionOpts = { allowedTransferChannels: allowedTransfers };
+      const { resolveTenantTransferCollectionContext } = await import("../markets/market-transfer-context");
+      const transferCtx = await resolveTenantTransferCollectionContext(this.prisma, this.featureFlags, tenantId);
+      const collectionOpts = {
+        allowedTransferChannels: transferCtx.allowedTransferChannels,
+        paymentMethods: transferCtx.paymentMethods,
+      };
       let visitCollection: ReturnType<typeof parseVisitCollectionForAmount>;
       if (dto.visitCollection !== undefined) {
         visitCollection = parseVisitCollectionForAmount(newFee, dto.visitCollection, collectionOpts);
@@ -655,6 +664,7 @@ export class EncountersService {
           visitCollection.transferReference,
           newFee,
           feeCurrency,
+          transferCtx.paymentMethods,
         );
       }
       const row = await this.prisma.$transaction(async (tx) => {
