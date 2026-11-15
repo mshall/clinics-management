@@ -41,11 +41,15 @@ export function InvoiceDocumentPreview({ invoice, language, className, logoUrl }
               </p>
               {invoice.clinicTaxRegistrationNumber ? (
                 <p className="text-muted-foreground ltr-nums">
-                  {rtl ? "الرقم الضريبي (TRN)" : "TRN"}: {invoice.clinicTaxRegistrationNumber}
+                  {rtl
+                    ? invoice.clinicTaxRegistrationLabelAr ?? "رقم التسجيل لدى جهة الضرائب"
+                    : invoice.clinicTaxRegistrationLabelEn ?? "Tax authority registration number"}
+                  : {invoice.clinicTaxRegistrationNumber}
                 </p>
               ) : null}
               <p className="text-muted-foreground ltr-nums">
-                {rtl ? "الرخصة" : "License"}: {invoice.clinicLicenseNumber}
+                {rtl ? invoice.clinicLicenseLabelAr ?? "رقم ترخيص المنشأة" : invoice.clinicLicenseLabelEn ?? "Facility license number"}
+                : {invoice.clinicLicenseNumber}
               </p>
             </div>
             {resolvedLogo ? (

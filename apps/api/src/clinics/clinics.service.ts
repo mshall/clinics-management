@@ -24,6 +24,8 @@ import {
   normalizeClinicTime,
 } from "../common/clinic-hours";
 import { normalizeFrontDeskRoomLabels, parseFrontDeskRoomLabels } from "../common/front-desk-room-labels";
+import { resolveMarketTaxLabels } from "../common/market-tax-labels";
+import { normalizeOrgTaxRegistrationNumber } from "../common/sync-clinic-invoice-tax";
 import { TtlCache } from "../common/ttl-cache";
 
 const clinicListCache = new TtlCache<ClinicDto[]>(60_000);
@@ -567,6 +569,7 @@ export class ClinicsService {
       });
       if (!scope) throw new NotFoundException("Clinic not found");
     }
+    const marketTaxLabels = await this.marketTaxLabelsForTenant(tenantId);
     return {
       id: row.id,
       parentClinicId: row.parentClinicId,
@@ -594,6 +597,7 @@ export class ClinicsService {
       operatingPeriods: row.operatingPeriods.map((p) => this.mapOperatingPeriod(p)),
       frontDeskRoomLabels: parseFrontDeskRoomLabels(row.frontDeskRoomLabels),
       ...clinicInvoiceSettingsFromRow(row),
+      marketTaxLabels,
       ...clinicPrescriptionSettingsFromRow(row),
       etaBranchCode: row.etaBranchCode,
       etaTaxpayerActivityCode: row.etaTaxpayerActivityCode,
@@ -766,6 +770,9 @@ export class ClinicsService {
     if (dto.phone !== undefined) data.phone = dto.phone.trim();
     if (dto.email !== undefined) data.email = dto.email.trim().toLowerCase();
     if (dto.licenseNumber !== undefined) data.licenseNumber = dto.licenseNumber.trim();
+    if (dto.taxRegistrationNumber !== undefined) {
+      data.taxRegistrationNumber = normalizeOrgTaxRegistrationNumber(dto.taxRegistrationNumber);
+    }
     if (dto.logoUrl !== undefined) data.logoUrl = dto.logoUrl.trim() || null;
     if (dto.defaultCurrency !== undefined) {
       if (!isBaseCurrency(dto.defaultCurrency.trim())) {
@@ -815,6 +822,7 @@ export class ClinicsService {
     });
 
     bustClinicListCache(tenantId);
+    const marketTaxLabels = await this.marketTaxLabelsForTenant(tenantId);
     return {
       id: row.id,
       parentClinicId: row.parentClinicId,
@@ -842,8 +850,17 @@ export class ClinicsService {
       operatingPeriods: row.operatingPeriods.map((p) => this.mapOperatingPeriod(p)),
       frontDeskRoomLabels: parseFrontDeskRoomLabels(row.frontDeskRoomLabels),
       ...clinicInvoiceSettingsFromRow(row),
+      marketTaxLabels,
       ...clinicPrescriptionSettingsFromRow(row),
     };
+  }
+
+  private async marketTaxLabelsForTenant(tenantId: string) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { market: { select: { taxConfig: true, code: true } } },
+    });
+    return resolveMarketTaxLabels(tenant?.market?.taxConfig, tenant?.market?.code ?? null);
   }
 
   private async closeOperatingPeriod(tx: Prisma.TransactionClient, clinicId: string, endDate: Date): Promise<void> {

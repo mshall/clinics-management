@@ -31,8 +31,6 @@ export function ClinicInvoiceSettingsPanel({ clinicId, detail, disabled }: Clini
   const uploadMut = useUploadClinicInvoiceLogoMutation(clinicId);
   const [backgroundColor, setBackgroundColor] = useState(detail.invoiceBackgroundColor || "white");
   const [sections, setSections] = useState<string[]>(detail.invoiceSections ?? DEFAULT_INVOICE_SECTIONS);
-  const [taxRegistrationNumber, setTaxRegistrationNumber] = useState(detail.taxRegistrationNumber ?? "N/A");
-  const [invoiceVatPercent, setInvoiceVatPercent] = useState(String(detail.invoiceVatPercent ?? 5));
   const [logoKey, setLogoKey] = useState(0);
   const logo = useAuthenticatedImage(
     detail.hasInvoiceLogo ? `${clinicInvoiceLogoUrl(clinicId)}?v=${logoKey}` : null,
@@ -42,9 +40,7 @@ export function ClinicInvoiceSettingsPanel({ clinicId, detail, disabled }: Clini
   useEffect(() => {
     setBackgroundColor(detail.invoiceBackgroundColor || "white");
     setSections(detail.invoiceSections ?? DEFAULT_INVOICE_SECTIONS);
-    setTaxRegistrationNumber(detail.taxRegistrationNumber ?? "N/A");
-    setInvoiceVatPercent(String(detail.invoiceVatPercent ?? 5));
-  }, [detail.invoiceBackgroundColor, detail.invoiceSections, detail.taxRegistrationNumber, detail.invoiceVatPercent, clinicId]);
+  }, [detail.invoiceBackgroundColor, detail.invoiceSections, clinicId]);
 
   const toggleSection = (key: string) => {
     setSections((prev) => {
@@ -58,12 +54,9 @@ export function ClinicInvoiceSettingsPanel({ clinicId, detail, disabled }: Clini
 
   const saveSettings = async () => {
     try {
-      const vatN = Number.parseFloat(invoiceVatPercent);
       await patchMut.mutateAsync({
         invoiceBackgroundColor: backgroundColor,
         invoiceSections: sections,
-        taxRegistrationNumber: taxRegistrationNumber.trim() || "N/A",
-        invoiceVatPercent: Number.isFinite(vatN) ? vatN : 5,
       });
       toast.success(t("invoices.settingsSaved", "Invoice settings saved"));
     } catch (e) {
@@ -89,40 +82,11 @@ export function ClinicInvoiceSettingsPanel({ clinicId, detail, disabled }: Clini
       <div>
         <h3 className="text-sm font-semibold">{t("invoices.settingsTitle", "Clinic invoicing")}</h3>
         <p className="text-xs text-muted-foreground">
-          {t("invoices.settingsHint", "Configure logo, background, and sections for patient invoices.")}
+          {t(
+            "invoices.settingsHint",
+            "Configure logo, background, and sections. License and tax numbers are under Clinics → branch → Settings.",
+          )}
         </p>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-2 sm:col-span-2">
-          <Label>{t("invoices.taxRegistrationNumber", "Tax registration (TRN)")}</Label>
-          <Input
-            className="ltr-nums"
-            value={taxRegistrationNumber}
-            disabled={disabled}
-            onChange={(e) => setTaxRegistrationNumber(e.target.value)}
-            placeholder="N/A"
-          />
-          <p className="text-xs text-muted-foreground">
-            {t(
-              "invoices.clinicTrnOrgHint",
-              "Group admins can set TRN and VAT for all clinics under Administration → Organization & settings.",
-            )}
-          </p>
-        </div>
-        <div className="space-y-2">
-          <Label>{t("invoices.vatPercentSetting", "VAT % on invoices")}</Label>
-          <Input
-            className="ltr-nums"
-            type="number"
-            min={0}
-            max={100}
-            step="0.01"
-            value={invoiceVatPercent}
-            disabled={disabled}
-            onChange={(e) => setInvoiceVatPercent(e.target.value)}
-          />
-        </div>
       </div>
 
       <div className="space-y-2">

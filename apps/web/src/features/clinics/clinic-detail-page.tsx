@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClinicDeactivateConfirmDialog } from "@/features/clinics/clinic-deactivate-confirm-dialog";
 import { ClinicDoctorsPanel } from "@/features/clinics/clinic-doctors-panel";
 import { ClinicContactSettingsPanel } from "@/features/clinics/clinic-contact-settings-panel";
+import { ClinicRegulatorySettingsPanel } from "@/features/clinics/clinic-regulatory-settings-panel";
 import { ClinicCurrencySettingsPanel } from "@/features/clinics/clinic-currency-settings-panel";
 import { ClinicHoursSettingsPanel } from "@/features/clinics/clinic-hours-settings-panel";
 import { ClinicRoomsSettingsPanel } from "@/features/clinics/clinic-rooms-settings-panel";
@@ -21,6 +22,7 @@ import { useClinicQuery } from "@/lib/api-hooks";
 import { ApiError, apiPost } from "@/lib/http";
 import { formatClinicName, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
 import { formatClinicHoursRange, resolveClinicClosingTime, resolveClinicOpeningTime } from "@/lib/clinic-hours";
+import { pickMarketTaxLabel } from "@/lib/market-tax-labels";
 import { clinicKindLabel } from "@/lib/clinic-kind";
 import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import { useAuthStore } from "@/stores/auth-store";
@@ -98,6 +100,9 @@ export function ClinicDetailPage() {
 
   const name = formatClinicName(c, i18n.language);
   const formatPeriodDate = (ymd: string) => new Date(`${ymd}T12:00:00`).toLocaleDateString();
+  const lang = i18n.language === "ar" ? "ar" : "en";
+  const taxLabel = pickMarketTaxLabel(c.marketTaxLabels, "taxRegistration", lang);
+  const licenseLabel = pickMarketTaxLabel(c.marketTaxLabels, "license", lang);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -187,8 +192,12 @@ export function ClinicDetailPage() {
                   {c.defaultCurrency}
                 </p>
                 <p>
-                  <span className="text-muted-foreground">{t("clinics.licenseNumber", "License")}: </span>
-                  <span className="font-medium">{c.licenseNumber}</span>
+                  <span className="text-muted-foreground">{licenseLabel}: </span>
+                  <span className="font-medium ltr-nums">{c.licenseNumber}</span>
+                </p>
+                <p>
+                  <span className="text-muted-foreground">{taxLabel}: </span>
+                  <span className="font-medium ltr-nums">{c.taxRegistrationNumber ?? "N/A"}</span>
                 </p>
                 <p>
                   <span className="text-muted-foreground">{t("clinics.phone", "Phone")}: </span>
@@ -260,9 +269,9 @@ export function ClinicDetailPage() {
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">
+          <ClinicRegulatorySettingsPanel clinicId={c.id} detail={c} canEdit={canManageClinic} />
           <ClinicContactSettingsPanel
             clinicId={c.id}
-            licenseNumber={c.licenseNumber}
             phone={c.phone}
             email={c.email}
             defaultLanguage={c.defaultLanguage}

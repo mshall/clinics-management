@@ -21,7 +21,7 @@ Every posted payment path queues fiscal: check-in, visit fee, billing payment, t
 
 | Topic | Requirement |
 |-------|-------------|
-| Licensing | `licenseNumber` per branch |
+| Licensing & tax | `licenseNumber` + `taxRegistrationNumber` per branch; UI labels from `taxConfig` (ETA / RIN) — [CLINIC_TAX_AND_LICENSING.md](../CLINIC_TAX_AND_LICENSING.md) |
 | DPO | Named in HR org chart |
 | Consent | `POST /compliance/patients/:id/data-protection-consent` |
 | Breach handling | [COMPLIANCE_CONTROLS.md](../COMPLIANCE_CONTROLS.md) |

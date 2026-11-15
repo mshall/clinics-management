@@ -19,6 +19,7 @@ import {
   normalizeInvoiceSections,
 } from "../common/invoice-config";
 import { computeVatInclusiveBreakdown } from "../common/vat-breakdown";
+import { resolveMarketTaxLabels } from "../common/market-tax-labels";
 import { normalizeOrgTaxRegistrationNumber } from "../common/sync-clinic-invoice-tax";
 import { queueEtaReceipt } from "../compliance/eta-receipt-queue";
 import { PrismaService } from "../prisma/prisma.service";
@@ -271,7 +272,7 @@ export class InvoicesService {
       return created;
     });
 
-    return this.mapInvoice(row);
+    return this.withMarketTaxLabels(tenantId, this.mapInvoice(row));
   }
 
   async list(
@@ -343,7 +344,22 @@ export class InvoicesService {
       if (!ownsEncounter && !ownsOperation) throw new NotFoundException("Invoice not found");
     }
 
-    return this.mapInvoice(row);
+    return this.withMarketTaxLabels(tenantId, this.mapInvoice(row));
+  }
+
+  private async withMarketTaxLabels(tenantId: string, invoice: InvoiceDto): Promise<InvoiceDto> {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { market: { select: { taxConfig: true, code: true } } },
+    });
+    const labels = resolveMarketTaxLabels(tenant?.market?.taxConfig, tenant?.market?.code ?? null);
+    return {
+      ...invoice,
+      clinicTaxRegistrationLabelEn: labels.taxRegistrationLabelEn,
+      clinicTaxRegistrationLabelAr: labels.taxRegistrationLabelAr,
+      clinicLicenseLabelEn: labels.licenseLabelEn,
+      clinicLicenseLabelAr: labels.licenseLabelAr,
+    };
   }
 
   async getClinicInvoiceLogoMeta(

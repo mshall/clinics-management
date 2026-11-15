@@ -75,6 +75,18 @@ export class InvoiceDto {
   @ApiPropertyOptional({ nullable: true, description: "Tax registration number (TRN) at time of issue" })
   clinicTaxRegistrationNumber!: string | null;
 
+  @ApiPropertyOptional({ description: "Market label for tax registration line (English)" })
+  clinicTaxRegistrationLabelEn?: string;
+
+  @ApiPropertyOptional({ description: "Market label for tax registration line (Arabic)" })
+  clinicTaxRegistrationLabelAr?: string;
+
+  @ApiPropertyOptional({ description: "Market label for facility license line (English)" })
+  clinicLicenseLabelEn?: string;
+
+  @ApiPropertyOptional({ description: "Market label for facility license line (Arabic)" })
+  clinicLicenseLabelAr?: string;
+
   @ApiProperty({ description: "VAT percent snapshot at issue time" })
   vatPercent!: number;
 

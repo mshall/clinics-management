@@ -7,7 +7,7 @@ Use this checklist when platform ops launches a **new country pack** (`Market` r
 | Step | Notes |
 |------|--------|
 | Create draft market | **Platform → Market launch** — ISO code, currency, timezone, **host cell**, AWS data region |
-| Configure JSON packs | `taxConfig`, `providerConfig`, `paymentMethods`, `featureDefaults` (DB or future admin UI) |
+| Configure JSON packs | `taxConfig` (incl. `taxRegistrationLabel*`, `licenseLabel*`, `taxAuthorityName*`, `fiscalProviderKey`), `providerConfig`, `paymentMethods`, `featureDefaults` — see [CLINIC_TAX_AND_LICENSING.md](./CLINIC_TAX_AND_LICENSING.md) |
 | Enable fiscal / claims / health connectors | One connector per provider key; credentials via `ProviderCredential.secretRef` only |
 | Go live | `POST /admin/platform/markets/:id/launch` — tenants may only bind to `LIVE` markets |
 | **Country feature flags** | Platform → Market launch → **Flags** — set `ai_assistant`, `eta_receipts`, payments, etc. for every tenant in that market (see [FEATURE_FLAGS.md](./FEATURE_FLAGS.md)) |

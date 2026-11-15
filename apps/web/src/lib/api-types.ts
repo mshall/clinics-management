@@ -368,6 +368,15 @@ export interface UserListItemDto {
   clinics?: { id: string; nameEn: string }[];
 }
 
+export type MarketTaxLabels = {
+  taxAuthorityNameEn: string;
+  taxAuthorityNameAr: string;
+  taxRegistrationLabelEn: string;
+  taxRegistrationLabelAr: string;
+  licenseLabelEn: string;
+  licenseLabelAr: string;
+};
+
 export interface ClinicDetailDto {
   id: string;
   parentClinicId: string | null;
@@ -394,6 +403,7 @@ export interface ClinicDetailDto {
   invoiceSections: string[];
   hasInvoiceLogo: boolean;
   taxRegistrationNumber: string | null;
+  marketTaxLabels: MarketTaxLabels;
   invoiceVatPercent: number;
   hasPrescriptionLogo: boolean;
   prescriptionHeaderDescriptionEn: string;
@@ -444,6 +454,10 @@ export interface InvoiceDto {
   clinicEmail: string;
   clinicLicenseNumber: string;
   clinicTaxRegistrationNumber: string | null;
+  clinicTaxRegistrationLabelEn?: string;
+  clinicTaxRegistrationLabelAr?: string;
+  clinicLicenseLabelEn?: string;
+  clinicLicenseLabelAr?: string;
   vatPercent: number;
   subtotalExVat: number;
   vatAmount: number;

@@ -83,6 +83,12 @@ export class PatchClinicDto {
   @MaxLength(120)
   licenseNumber?: string;
 
+  @ApiPropertyOptional({ description: "Tax authority registration number for this clinic (market-specific label in UI)" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  taxRegistrationNumber?: string | null;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

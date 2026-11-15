@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { INVOICE_SECTION_KEYS } from "../../common/invoice-config";
+import { ClinicMarketTaxLabelsDto } from "./clinic-market-tax-labels.dto";
 import { ClinicOperatingPeriodDto } from "./clinic-operating-period.dto";
 
 export class ClinicDetailDto {
@@ -77,9 +78,12 @@ export class ClinicDetailDto {
 
   @ApiPropertyOptional({
     nullable: true,
-    description: "Tax registration number (TRN) shown on tax invoices",
+    description: "Tax authority registration number for this branch (invoices, fiscal receipts)",
   })
   taxRegistrationNumber!: string | null;
+
+  @ApiProperty({ description: "Country-pack labels for license and tax registration fields" })
+  marketTaxLabels!: ClinicMarketTaxLabelsDto;
 
   @ApiProperty({ description: "VAT percent applied on generated tax invoices (default 5)" })
   invoiceVatPercent!: number;

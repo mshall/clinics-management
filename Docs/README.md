@@ -30,6 +30,7 @@ See **[Documentation_Portal.md](./Documentation_Portal.md)** for module layout, 
 | [**AWS_Cloud_Deployment_Guide.md**](./AWS_Cloud_Deployment_Guide.md) | RDS, App Runner, CloudFront, CI/CD deploy, post-deploy seed |
 | [**ASSISTANT.md**](./ASSISTANT.md) | AI assistant architecture: permissions, playbook, live data, actions |
 | [**FEATURE_FLAGS.md**](./FEATURE_FLAGS.md) | Layered flags (platform · market · org): AI assistant, ETA, payments, WhatsApp |
+| [**CLINIC_TAX_AND_LICENSING.md**](./CLINIC_TAX_AND_LICENSING.md) | Per-branch license and tax authority numbers (market labels, invoicing, fiscal) |
 | [**ASSISTANT_OPENAI_SETUP.md**](./ASSISTANT_OPENAI_SETUP.md) | OpenAI API key and AWS Secrets Manager for the assistant |
 | [**CLINICAL_WORKFLOW.md**](./CLINICAL_WORKFLOW.md) | Clinic Settings templates (EN/AR defaults + custom), shortcuts, safety, vitals, letters, note lock |
 | [**PATIENT_360_AND_SCHEDULING.md**](./PATIENT_360_AND_SCHEDULING.md) | Patient summary, timeline, family merge, appointment types, series, waitlist, follow-up |
@@ -65,7 +66,7 @@ When signed in as **Group admin** (e.g. `admin@drahmedshall.com` or `admin@kiorl
 |------|------|-------|
 | Organization users | **Admin → Organization users** | Search, role filter; create/edit; **deactivate**, **archive** (soft), **restore**; **Active / Archived** tabs with lifecycle dates |
 | Organization patients | **Admin → Organization patients** | Search, bulk delete |
-| Clinics & branches | **Clinics & branches** (`/clinics`) | Parent/branch directory; **disable / reactivate** with **operating history**; active vs disabled tabs; **working hours** on Settings tab |
+| Clinics & branches | **Clinics & branches** (`/clinics`) | Parent/branch directory; **disable / reactivate** with **operating history**; **Settings** → license & tax authority numbers (country labels); working hours |
 | Clinics & tenants (settings) | **Admin → Clinics & tenants** | Registration, invoice & prescription branding, **opening/closing times** on create/edit |
 | Organization & settings | **Admin → Organization & settings** | Default visit fee, **organization feature flags** (incl. AI assistant on/off), staff onboarding |
 | Governance & audit | **Admin → Governance** | Audit trail (`from`/`to`/`action`/`resource`/`actorId`; default 90-day window) |

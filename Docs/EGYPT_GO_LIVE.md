@@ -23,7 +23,7 @@ Every posted payment path queues ETA: **check-in** (cash / InstaPay / Fawry), **
 
 | Topic | Requirement |
 |-------|-------------|
-| Licensing | Document clinic license on each branch (`licenseNumber`) |
+| Licensing & TRN | **Clinics** → branch → **Settings** → **License & tax authority** (`licenseNumber`, `taxRegistrationNumber`) — labels from Egypt market `taxConfig` (ETA). See [CLINIC_TAX_AND_LICENSING.md](./CLINIC_TAX_AND_LICENSING.md). |
 | Data protection officer | Named contact in clinic org chart (HR module) |
 | Consent | `POST /compliance/patients/:id/data-protection-consent` at intake |
 | Breach handling | See [COMPLIANCE_CONTROLS.md](./COMPLIANCE_CONTROLS.md) incident section |

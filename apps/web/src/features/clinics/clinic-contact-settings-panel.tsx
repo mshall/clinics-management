@@ -11,7 +11,6 @@ import { ApiError, apiPatch } from "@/lib/http";
 
 type Props = {
   clinicId: string;
-  licenseNumber: string;
   phone: string;
   email: string;
   defaultLanguage: string;
@@ -20,7 +19,6 @@ type Props = {
 
 export function ClinicContactSettingsPanel({
   clinicId,
-  licenseNumber,
   phone,
   email,
   defaultLanguage,
@@ -28,22 +26,19 @@ export function ClinicContactSettingsPanel({
 }: Props) {
   const { t } = useTranslation();
   const qc = useQueryClient();
-  const [license, setLicense] = useState(licenseNumber);
   const [phoneVal, setPhoneVal] = useState(phone);
   const [emailVal, setEmailVal] = useState(email);
   const [lang, setLang] = useState(defaultLanguage);
 
   useEffect(() => {
-    setLicense(licenseNumber);
     setPhoneVal(phone);
     setEmailVal(email);
     setLang(defaultLanguage);
-  }, [licenseNumber, phone, email, defaultLanguage]);
+  }, [phone, email, defaultLanguage]);
 
   const saveMut = useMutation({
     mutationFn: () =>
       apiPatch(`/api/v1/clinics/${clinicId}`, {
-        licenseNumber: license.trim(),
         phone: phoneVal.trim(),
         email: emailVal.trim(),
         defaultLanguage: lang,
@@ -65,33 +60,20 @@ export function ClinicContactSettingsPanel({
   });
 
   const dirty =
-    license.trim() !== licenseNumber.trim() ||
-    phoneVal.trim() !== phone.trim() ||
-    emailVal.trim() !== email.trim() ||
-    lang !== defaultLanguage;
+    phoneVal.trim() !== phone.trim() || emailVal.trim() !== email.trim() || lang !== defaultLanguage;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t("clinics.contactSettingsTitle", "Registration & contact")}</CardTitle>
+        <CardTitle className="text-base">{t("clinics.contactSettingsTitle", "Contact")}</CardTitle>
         <CardDescription>
           {t(
             "clinics.contactSettingsHint",
-            "License, phone, email, and default language shown on invoices and patient-facing flows.",
+            "Phone, email, and default language shown on invoices and patient-facing flows.",
           )}
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="clinic-license">{t("clinics.licenseNumber", "License")}</Label>
-          <Input
-            id="clinic-license"
-            value={license}
-            onChange={(e) => setLicense(e.target.value)}
-            disabled={!canEdit}
-            className="max-w-md"
-          />
-        </div>
         <div className="space-y-2">
           <Label htmlFor="clinic-phone">{t("clinics.phone", "Phone")}</Label>
           <Input

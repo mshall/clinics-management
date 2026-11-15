@@ -110,6 +110,7 @@ Typical flows:
 - **Tabs:** clinics & tenants, **organization users**, organization patients, organization & settings, **insights & performance**, governance (group admin).
 - **Organization users:** search by email or display name, **filter by role**, create/edit/delete users, clinic assignment, bulk delete.
 - Current tenant overview, **default visit fee**, audit tail, **organization feature flags** (overrides on country/platform defaults), clinic creation (parent/branch), clinic directory.
+- **Clinic regulatory IDs:** each branch → **Settings** → **License & tax authority** (market-specific labels for invoicing and fiscal) — see `Docs/CLINIC_TAX_AND_LICENSING.md`.
 - **Insights & performance:** audit volumes, clinical/financial counters, top actions/resources, staff leaderboard (configurable date range).
 - **All tenants** list and **data explorer** for platform super admin / break-glass group admin (see [Test_Data_Users.md](Docs/Test_Data_Users.md)).
 
