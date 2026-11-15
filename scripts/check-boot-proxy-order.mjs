@@ -8,18 +8,34 @@ const entry = readFileSync(entryPath, "utf8");
 
 let failed = false;
 
-if (!/createBootHealthServer|createServer\(\(req, res\)/.test(entry)) {
-  console.error(`${entryPath}: must expose a health HTTP listener during boot/migrate`);
+const mainFn = entry.match(/async function main\(\)[\s\S]*?^}/m)?.[0] ?? "";
+const listenIdx = mainFn.indexOf("await listenForever(proxy, publicPort)");
+const workerIdx = mainFn.indexOf("bootWorker(");
+if (listenIdx < 0) {
+  console.error(`${entryPath}: main() must await listenForever on PORT first`);
+  failed = true;
+} else if (workerIdx >= 0 && workerIdx < listenIdx) {
+  console.error(`${entryPath}: must bind PORT before bootWorker`);
   failed = true;
 }
 
-if (!/await listenHealthServer\(bootHealthServer\)/.test(entry)) {
-  console.error(`${entryPath}: must bind health listener before secret fetch / migrate`);
+if (/process\.exit\s*\(\s*1\s*\)/.test(entry)) {
+  console.error(`${entryPath}: must not process.exit(1) during boot`);
   failed = true;
 }
 
-if (!/spawn\(process\.execPath, \[mainJs\]/.test(entry)) {
-  console.error(`${entryPath}: must spawn Nest from dist/main.js`);
+if (!/runChild\("npx", \["prisma", "migrate", "deploy"\]\)/.test(entry)) {
+  console.error(`${entryPath}: runMigrate must use npx prisma migrate deploy`);
+  failed = true;
+}
+
+if (/^import\s+.*@aws-sdk\/client-secrets-manager/m.test(entry)) {
+  console.error(`${entryPath}: use dynamic import for @aws-sdk/client-secrets-manager`);
+  failed = true;
+}
+
+if (!/probePath === "\/"/.test(entry)) {
+  console.error(`${entryPath}: must treat "/" as App Runner deploy probe`);
   failed = true;
 }
 
