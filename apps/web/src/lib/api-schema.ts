@@ -49,6 +49,7 @@ export type AuthUserDto = components["schemas"]["AuthUserDto"] & {
   roleNavTabKeys?: string[] | null;
   platformSuperAdmin?: boolean;
   hasAvatar?: boolean;
+  mfaEnabled?: boolean;
   tenantBaseCurrency?: string | null;
   employeePrivilegeGrants?: import("@/lib/employee-manage-policy").EmployeePrivilegeGrantSummary[];
 };

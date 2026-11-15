@@ -126,7 +126,7 @@ export function ProfileMfaPanel() {
         {user?.mfaEnabled ? (
           <div className="space-y-2 border-t border-border pt-4">
             <Label>{t("auth.password")}</Label>
-            <PasswordInput value={disablePassword} onChange={(e) => setDisablePassword(e.target.value)} />
+            <PasswordInput value={disablePassword} onChange={setDisablePassword} />
             <Label>{t("profile.mfaConfirmCode", "6-digit code")}</Label>
             <Input className="w-40 ltr-nums" value={disableCode} onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, "").slice(0, 6))} />
             <div className="flex flex-wrap gap-2">
