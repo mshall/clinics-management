@@ -5,6 +5,7 @@ export const FEATURE_FLAG_KEYS = [
   "instapay",
   "fawry",
   "card_payments",
+  "ai_assistant",
 ] as const;
 
 export type FeatureFlagKey = (typeof FEATURE_FLAG_KEYS)[number];
@@ -15,6 +16,7 @@ export const FEATURE_FLAG_DESCRIPTIONS: Record<FeatureFlagKey, string> = {
   instapay: "InstaPay transfer collection at check-in and billing",
   fawry: "Fawry transfer collection",
   card_payments: "Card payment allocation at cashier",
+  ai_assistant: "In-product AI assistant (chat completions via market AiProvider)",
 };
 
 export function isKnownFeatureFlagKey(key: string): key is FeatureFlagKey {

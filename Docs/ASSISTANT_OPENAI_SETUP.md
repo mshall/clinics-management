@@ -1,6 +1,8 @@
 # AI assistant — OpenAI setup
 
-The in-app assistant is **role-aware**: it uses your navigation tabs as the permission boundary, answers from **live data** where possible, follows a **playbook** of how-to steps, and can return **action buttons** (open a patient chart, jump to a module). OpenAI improves natural language when `OPENAI_API_KEY` is set; without it, rule-based answers and live data still work.
+The in-app assistant is **role-aware**: it uses your navigation tabs as the permission boundary, answers from **live data** where possible, follows a **playbook** of how-to steps, and can return **action buttons** (open a patient chart, jump to a module). LLM replies use the market **`AiProvider`** (`Market.providerConfig.ai`: base URL, model, `secretRef`) — not hard-coded OpenAI SDK calls. Without a configured provider, rule-based answers and live data still work.
+
+Only **chat completions** (and basic tool calls if enabled later) are used — compatible with OpenAI, vLLM, Ollama OpenAI-compatible servers, etc.
 
 The in-app assistant **always** answers from **live database data** for allowed topics (clinics, revenue, patient counts, etc.) using the same rules as the REST API.
 

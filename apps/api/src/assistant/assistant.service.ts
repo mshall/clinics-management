@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
 import { TenantRoleNavTabsService } from "../user-nav-tabs/tenant-role-nav-tabs.service";
+import { AiRuntimeService } from "../providers/ai/ai-runtime.service";
 import { assertAssistantAccess, type AssistantRoleSlug } from "./assistant-access";
 import { resolveAssistantNavKeys } from "./assistant-effective-nav";
 import { NAV_GUIDANCE, TOPIC_GUIDANCE } from "./assistant-knowledge";
@@ -28,7 +28,7 @@ export class AssistantService {
     private readonly prisma: PrismaService,
     private readonly tenantRoleNav: TenantRoleNavTabsService,
     private readonly liveData: AssistantLiveDataService,
-    private readonly config: ConfigService,
+    private readonly ai: AiRuntimeService,
   ) {}
 
   private async allowedNavKeys(user: JwtUser): Promise<string[]> {
@@ -119,46 +119,30 @@ export class AssistantService {
     return composeCapabilityOverview(navKeys, locale);
   }
 
-
-  private async llmReply(system: string, message: string, locale: "en" | "ar"): Promise<string | null> {
-    const apiKey = this.config.get<string>("OPENAI_API_KEY")?.trim();
-    if (!apiKey) return null;
-    const model = this.config.get<string>("OPENAI_MODEL")?.trim() || "gpt-4o-mini";
-    try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model,
-          temperature: 0.25,
-          max_tokens: 1000,
-          messages: [
-            { role: "system", content: system },
-            {
-              role: "user",
-              content: locale === "ar" ? `رد بالعربية. ${message}` : message,
-            },
-          ],
-        }),
-      });
-      if (!res.ok) return null;
-      const data = (await res.json()) as {
-        choices?: { message?: { content?: string } }[];
-      };
-      const text = data.choices?.[0]?.message?.content?.trim();
-      return text || null;
-    } catch {
-      return null;
-    }
+  private async llmReply(
+    tenantId: string | null | undefined,
+    system: string,
+    message: string,
+    locale: "en" | "ar",
+  ): Promise<string | null> {
+    const userContent = locale === "ar" ? `رد بالعربية. ${message}` : message;
+    const result = await this.ai.chatCompletion(tenantId, {
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: userContent },
+      ],
+      temperature: 0.25,
+      maxTokens: 1000,
+    });
+    if (!result?.ok) return null;
+    return result.content?.trim() || null;
   }
 
   async chat(user: JwtUser, message: string, localeHint?: string): Promise<AssistantChatResponseDto> {
     const persona = assertAssistantAccess(user);
     const locale = pickLocale(localeHint, message);
     const navKeys = await this.allowedNavKeys(user);
+    const tenantId = user.tenantId;
 
     if (isSmallTalkOrMeta(message)) {
       return {
@@ -204,13 +188,15 @@ export class AssistantService {
     }
 
     const qaEarly = findQaAnswer(message, navKeys, locale);
-    if (qaEarly && !this.config.get<string>("OPENAI_API_KEY")?.trim()) {
+    if (qaEarly && !(await this.ai.llmAvailable(tenantId))) {
       return this.replyResponse(user, persona, locale, navKeys, qaEarly);
     }
 
+    const runtime = await this.ai.runtimeForTenant(tenantId);
+    const promptVersion = runtime?.promptVersion ?? "v1";
     const liveJson = this.liveData.snapshotForPrompt(snapshot);
-    const system = buildMatureSystemPrompt(persona, navKeys, locale, liveJson);
-    const llm = await this.llmReply(system, message, locale);
+    const system = buildMatureSystemPrompt(persona, navKeys, locale, liveJson, promptVersion);
+    const llm = await this.llmReply(tenantId, system, message, locale);
     let reply = llm ?? this.ruleBasedReply(message, locale, navKeys);
     let actions: AssistantChatActionDto[] | undefined;
     if (!llm?.trim() && snapshot.financialSummary && /revenue|expense|إيراد|مصروف/i.test(message)) {

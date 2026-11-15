@@ -147,6 +147,7 @@ export class FeatureFlagsService {
       instapay: "instapay",
       fawry: "fawry",
       card_payments: "cardPayments",
+      ai_assistant: "aiAssistant",
     };
     const v = m[legacy[key]];
     return typeof v === "boolean" ? v : null;

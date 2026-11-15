@@ -9,5 +9,6 @@ test("product feature flag keys are stable", () => {
     "instapay",
     "fawry",
     "card_payments",
+    "ai_assistant",
   ]);
 });

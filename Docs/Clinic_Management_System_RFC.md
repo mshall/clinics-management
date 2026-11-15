@@ -153,7 +153,8 @@ Local development: `docker-compose.yml` provides Postgres 16 and Redis; API + Vi
 | **Persistence** | `FiscalDocument` + `FiscalSubmission` (replaces `EtaReceiptSubmission`). |
 | **Credentials** | `ProviderCredential.secretRef` → AWS Secrets Manager (not env vars in production). |
 | **Platform admin** | `GET/POST /admin/platform/markets`, `POST …/launch`; UI **Market launch** tab. |
-| **Roadmap** | `PaymentProvider`, `MessagingProvider`, `ClaimsProvider`, `HealthExchangeProvider`, `AiProvider`; multi-region cells + login directory. |
+| **AiProvider** | `providers/ai/` — `openai-compatible` chat completions; `baseUrl` + `model` + `secretRef` per market; prompts in `assistant/prompts/v1/`. Feature flag `ai_assistant`. |
+| **Roadmap** | `PaymentProvider`, `MessagingProvider`, `ClaimsProvider`, `HealthExchangeProvider`; multi-region cells + login directory. |
 
 See [MARKET_GO_LIVE_TEMPLATE.md](./MARKET_GO_LIVE_TEMPLATE.md) and [markets/egypt.md](./markets/egypt.md).
 

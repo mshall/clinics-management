@@ -10,7 +10,7 @@ The floating assistant is available to all organization roles (plus platform sup
 2b. **Per-clinic revenue** — when the question asks for revenue **by clinic** / across the org, returns a posted-revenue breakdown per clinic (same rules as `GET /revenue/clinic-breakdown`) before aggregate totals.
 3. **Patient lookup** — search with chart **action buttons** (`/patients/:id`); name phrases such as *“look for a patient named …”* strip filler words; patient list search uses **contains** on first/last name (including combined first + last).
 4. **Playbook** — how-to steps + **navigate** buttons (`/hr`, `/appointments`, …).
-5. **OpenAI** (optional) — mature system prompt with role hints, playbook, and live JSON snapshot.
+5. **AiProvider** (optional) — chat completions via market-configured endpoint (`openai-compatible`); versioned prompt templates in `apps/api/src/assistant/prompts/v1/`.
 6. **Rule-based FAQ** — `QA_ENTRIES` + module guidance fallback.
 
 ## Extending coverage
@@ -19,7 +19,9 @@ The floating assistant is available to all organization roles (plus platform sup
 |------|------|
 | New how-to + button | `assistant-playbook-entries.ts` or `assistant-playbook.ts` |
 | Conceptual FAQ | `assistant-qa-extended.ts` |
-| Role tone in LLM | `assistant-role-hints.ts` |
+| Role tone in LLM | `assistant/prompts/v1/role-hints.json` |
+| Prompt copy / tuning | `assistant/prompts/v1/system.*.template.md` |
+| Market model & base URL | `Market.providerConfig.ai` (platform admin / DB) |
 | New live metric | `assistant-live-data.service.ts` + `assistant-intent.ts` |
 | New scoped DB query | `assistant-scoped-queries.service.ts` (enforce clinic/role filters) + intent + snapshot |
 | New nav area | `assistant-nav-routes.ts` + `NAV_GUIDANCE` in `assistant-knowledge.ts` |
@@ -39,6 +41,20 @@ Assistant replies use lightweight markdown rendered in the widget:
 - Revenue lines can render as **metric cards** (currency, net, gross)
 - OpenAI system prompt and direct-data handlers emit the same conventions so rule-based and LLM answers look consistent
 
-## OpenAI
+## AiProvider (no direct vendor SDK in app code)
 
-See [ASSISTANT_OPENAI_SETUP.md](./ASSISTANT_OPENAI_SETUP.md). Production key: AWS Secrets Manager only.
+All LLM calls go through `AiRuntimeService` → `AiProvider` (`providers/ai/`). Each **market** sets `providerConfig.ai`:
+
+| Field | Meaning |
+|-------|---------|
+| `key` | Provider implementation (`openai-compatible`) |
+| `baseUrl` | Chat API root (e.g. `https://api.openai.com/v1` or on-prem OpenAI shim) |
+| `model` | Model id |
+| `secretRef` | Secrets Manager ARN or `env:OPENAI_API_KEY` for local dev |
+| `promptVersion` | Folder under `assistant/prompts/` (default `v1`) |
+
+Supported API surface: **chat completions** and optional **function tools** — not Assistants, built-in file search, or vendor-specific structured-output modes.
+
+Feature flag: `ai_assistant` (platform / market / org layers).
+
+Credentials setup: [ASSISTANT_OPENAI_SETUP.md](./ASSISTANT_OPENAI_SETUP.md) (rename path stays; content describes secret ref wiring).

@@ -1,0 +1,11 @@
+{
+  "version": "v1",
+  "description": "Kiorly in-product assistant system prompt templates",
+  "templates": {
+    "system": {
+      "en": "system.en.template.md",
+      "ar": "system.ar.template.md"
+    }
+  },
+  "roleHints": "role-hints.json"
+}
