@@ -107,6 +107,14 @@ export class HrService {
     return `EMP-${max + 1}`;
   }
 
+  private async resolveOrgBaseCurrency(tenantId: string): Promise<string> {
+    const row = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { baseCurrency: true },
+    });
+    return effectiveEmployeeSalaryCurrency(null, row?.baseCurrency ?? "AED");
+  }
+
   private mapEmploymentPeriod(p: {
     id: string;
     startDate: Date;
@@ -161,7 +169,7 @@ export class HrService {
       endDate: Date | null;
       separationReason: EmployeeSeparationReason | null;
     }[];
-  }): EmployeeDto {
+  }, orgBaseCurrency: string): EmployeeDto {
     const periods = (e.employmentPeriods ?? []).map((p) => this.mapEmploymentPeriod(p));
     return {
       id: e.id,
@@ -182,7 +190,7 @@ export class HrService {
       hireDate: e.hireDate.toISOString().slice(0, 10),
       salaryBase: Number(e.salaryBase),
       salaryCurrency: e.salaryCurrency ?? null,
-      salaryCurrencyEffective: effectiveEmployeeSalaryCurrency(e.salaryCurrency, e.clinic?.defaultCurrency ?? "AED"),
+      salaryCurrencyEffective: effectiveEmployeeSalaryCurrency(e.salaryCurrency, orgBaseCurrency),
       userId: e.userId,
       hasIdDoc: Boolean(e.idDocRelativePath),
       linkedUserDisplayName: e.user?.displayName ?? null,
@@ -401,7 +409,7 @@ export class HrService {
     const where: Prisma.EmployeeWhereInput = and.length > 1 ? { AND: and } : { tenantId };
     const sortField = pickSortField(sortByStr, ["employeeNumber", "lastNameEn", "hireDate", "salaryBase", "jobTitle"] as const, "lastNameEn");
     const sortDir = parseSortOrder(sortOrderStr);
-    const [total, rows] = await Promise.all([
+    const [total, rows, orgBaseCurrency] = await Promise.all([
       this.prisma.employee.count({ where }),
       this.prisma.employee.findMany({
         where,
@@ -410,8 +418,9 @@ export class HrService {
         take: pageSize,
         include: this.employeeInclude,
       }),
+      this.resolveOrgBaseCurrency(tenantId),
     ]);
-    return paginate(rows.map((r) => this.mapEmployee(r)), total, page, pageSize);
+    return paginate(rows.map((r) => this.mapEmployee(r, orgBaseCurrency)), total, page, pageSize);
   }
 
   async getEmployee(tenantId: string, id: string, viewer: JwtUser): Promise<EmployeeDto> {
@@ -422,7 +431,8 @@ export class HrService {
     });
     if (!row) throw new NotFoundException("Employee not found");
     await this.assertEmployeeClinicAccess(tenantId, viewer, row.clinicId);
-    return this.mapEmployee(row);
+    const orgBaseCurrency = await this.resolveOrgBaseCurrency(tenantId);
+    return this.mapEmployee(row, orgBaseCurrency);
   }
 
   async listUnlinkedUsers(tenantId: string, viewer: JwtUser, search?: string): Promise<UnlinkedUserDto[]> {
@@ -615,15 +625,8 @@ export class HrService {
       const clinic = await this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId } });
       if (!clinic) throw new BadRequestException(`Invalid clinicId: ${clinicId}`);
     }
-    const primaryClinic = await this.prisma.clinic.findFirst({
-      where: { id: primaryClinicId, tenantId },
-      select: { defaultCurrency: true },
-    });
-    if (!primaryClinic) throw new BadRequestException("Invalid clinicId");
-    const salaryCurrency = normalizeEmployeeSalaryCurrencyOverride(
-      primaryClinic.defaultCurrency,
-      dto.salaryCurrency,
-    );
+    const orgBaseCurrency = await this.resolveOrgBaseCurrency(tenantId);
+    const salaryCurrency = normalizeEmployeeSalaryCurrencyOverride(orgBaseCurrency, dto.salaryCurrency);
 
     const phone = dto.phone.replace(/\D/g, "");
     if (phone.length < 8) throw new BadRequestException("Phone must contain at least 8 digits");
@@ -684,7 +687,7 @@ export class HrService {
         include: this.employeeInclude,
       });
       return {
-        ...this.mapEmployee(withClinic!),
+        ...this.mapEmployee(withClinic!, orgBaseCurrency),
         ...(createdLoginEmail
           ? {
               createdLoginEmail,
@@ -722,7 +725,8 @@ export class HrService {
       },
       include: this.employeeInclude,
     });
-    return this.mapEmployee(row);
+    const orgBaseCurrency = await this.resolveOrgBaseCurrency(tenantId);
+    return this.mapEmployee(row, orgBaseCurrency);
   }
 
   async updateEmployee(tenantId: string, id: string, dto: UpdateEmployeeDto, viewer: JwtUser): Promise<EmployeeDto> {
@@ -763,24 +767,11 @@ export class HrService {
     }
 
     const primaryClinicId = resolvedClinicIds?.[0];
+    const orgBaseCurrency = await this.resolveOrgBaseCurrency(tenantId);
 
     let salaryCurrency: string | null | undefined;
-    if (dto.salaryCurrency !== undefined || resolvedClinicIds !== undefined || clinicId) {
-      const targetClinicId = primaryClinicId ?? clinicId ?? existing.clinicId;
-      const clinic = await this.prisma.clinic.findFirst({
-        where: { id: targetClinicId, tenantId },
-        select: { defaultCurrency: true },
-      });
-      if (!clinic) throw new BadRequestException("Invalid clinicId");
-      if (dto.salaryCurrency !== undefined) {
-        salaryCurrency = normalizeEmployeeSalaryCurrencyOverride(clinic.defaultCurrency, dto.salaryCurrency);
-      } else if (targetClinicId !== existing.clinicId) {
-        const current = await this.prisma.employee.findFirst({
-          where: { id },
-          select: { salaryCurrency: true },
-        });
-        if (!current?.salaryCurrency) salaryCurrency = null;
-      }
+    if (dto.salaryCurrency !== undefined) {
+      salaryCurrency = normalizeEmployeeSalaryCurrencyOverride(orgBaseCurrency, dto.salaryCurrency);
     }
 
     await this.prisma.$transaction(async (tx) => {
@@ -810,7 +801,7 @@ export class HrService {
       where: { id },
       include: this.employeeInclude,
     });
-    return this.mapEmployee(row!);
+    return this.mapEmployee(row!, orgBaseCurrency);
   }
 
   async deactivateEmployee(
@@ -879,11 +870,12 @@ export class HrService {
       }
     });
 
+    const orgBaseCurrency = await this.resolveOrgBaseCurrency(tenantId);
     const row = await this.prisma.employee.findFirst({
       where: { id },
       include: this.employeeInclude,
     });
-    return this.mapEmployee(row!);
+    return this.mapEmployee(row!, orgBaseCurrency);
   }
 
   async reactivateEmployee(
@@ -923,11 +915,12 @@ export class HrService {
       }
     });
 
+    const orgBaseCurrency = await this.resolveOrgBaseCurrency(tenantId);
     const row = await this.prisma.employee.findFirst({
       where: { id },
       include: this.employeeInclude,
     });
-    return this.mapEmployee(row!);
+    return this.mapEmployee(row!, orgBaseCurrency);
   }
 
   async deleteEmployee(tenantId: string, id: string, viewer: JwtUser): Promise<{ ok: true; id: string; archived: true }> {
@@ -967,11 +960,12 @@ export class HrService {
     await this.prisma.$transaction(async (tx) => {
       await restoreEmployee(tx, tenantId, id, startDate, viewer.userId);
     });
+    const orgBaseCurrency = await this.resolveOrgBaseCurrency(tenantId);
     const row = await this.prisma.employee.findFirst({
       where: { id },
       include: this.employeeInclude,
     });
-    return this.mapEmployee(row!);
+    return this.mapEmployee(row!, orgBaseCurrency);
   }
 
   async getEmployeeIdDocumentMeta(
@@ -1187,26 +1181,23 @@ export class HrService {
 
   async hrSummary(tenantId: string) {
     await ensureClinicStaffEmployeeRecords(this.prisma, tenantId);
-    const [employeeCount, activeEmployees, pendingLeave] = await Promise.all([
+    const [employeeCount, activeEmployees, pendingLeave, orgBaseCurrency] = await Promise.all([
       this.prisma.employee.count({ where: { tenantId, recordStatus: EmployeeRecordStatus.ACTIVE } }),
       this.prisma.employee.findMany({
         where: { tenantId, recordStatus: EmployeeRecordStatus.ACTIVE },
         select: {
           salaryBase: true,
           salaryCurrency: true,
-          clinic: { select: { defaultCurrency: true } },
         },
       }),
       this.prisma.leaveRequest.count({
         where: { employee: { tenantId }, status: LeaveStatus.PENDING },
       }),
+      this.resolveOrgBaseCurrency(tenantId),
     ]);
     const payrollByCurrency = new Map<string, number>();
     for (const employee of activeEmployees) {
-      const currency = effectiveEmployeeSalaryCurrency(
-        employee.salaryCurrency,
-        employee.clinic.defaultCurrency,
-      );
+      const currency = effectiveEmployeeSalaryCurrency(employee.salaryCurrency, orgBaseCurrency);
       payrollByCurrency.set(
         currency,
         (payrollByCurrency.get(currency) ?? 0) + Number(employee.salaryBase),

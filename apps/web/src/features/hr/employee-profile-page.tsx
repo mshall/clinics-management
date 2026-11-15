@@ -109,7 +109,7 @@ export function EmployeeProfilePage() {
             <ProfileFact icon={Mail} label={t("hr.email")} value={emp.email ?? "—"} />
             <ProfileFact icon={Phone} label={t("hr.phone")} value={<span className="ltr-nums">{emp.phone}</span>} />
             <ProfileFact icon={Calendar} label={t("hr.hireDate")} value={<span className="ltr-nums">{emp.hireDate}</span>} />
-            <ProfileFact icon={UserCircle} label={t("hr.salaryBase")} value={<span className="ltr-nums">{formatEmployeeSalaryAmount(emp, clinics, locale, orgBaseCurrency)}</span>} />
+            <ProfileFact icon={UserCircle} label={t("hr.salaryBase", { currency: orgBaseCurrency })} value={<span className="ltr-nums">{formatEmployeeSalaryAmount(emp, clinics, locale, orgBaseCurrency)}</span>} />
           </dl>
 
           {emp.linkedUserDisplayName ? (

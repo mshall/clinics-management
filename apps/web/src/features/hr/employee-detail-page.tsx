@@ -101,12 +101,8 @@ export function EmployeeDetailPage() {
     setEmploymentType(emp.employmentType);
     setHireDate(emp.hireDate);
     setSalaryBase(String(emp.salaryBase));
-    setSalaryCurrency(
-      emp.salaryCurrency ??
-        emp.salaryCurrencyEffective ??
-        resolveClinicCurrency(emp.clinicId),
-    );
-  }, [emp, clinics]);
+    setSalaryCurrency(emp.salaryCurrency ?? emp.salaryCurrencyEffective ?? orgBaseCurrency);
+  }, [emp, orgBaseCurrency]);
 
   const clinicItems: PickListItem[] = useMemo(
     () => clinics.map((c) => ({ value: c.id, label: formatClinicName(c, i18n.language) })),
@@ -121,7 +117,6 @@ export function EmployeeDetailPage() {
   const showClinicAssignment = Boolean(linkedUserRole) && !isOrgWideUserRole(linkedUserRole);
   const requiresClinicAssignment = isClinicRequiredUserRole(linkedUserRole);
   const primaryClinicId = showClinicAssignment ? (assignedClinicIds[0] ?? clinicId) : clinicId;
-  const salaryClinicDefault = resolveClinicCurrency(primaryClinicId || emp?.clinicId);
   const assignedClinicLabels = useMemo(() => {
     const ids = emp?.linkedUserClinicIds ?? (emp?.clinicId ? [emp.clinicId] : []);
     return ids
@@ -132,8 +127,8 @@ export function EmployeeDetailPage() {
 
   useEffect(() => {
     if (!editing || emp?.salaryCurrency) return;
-    setSalaryCurrency(salaryClinicDefault);
-  }, [editing, emp?.salaryCurrency, salaryClinicDefault]);
+    setSalaryCurrency(orgBaseCurrency);
+  }, [editing, emp?.salaryCurrency, orgBaseCurrency]);
 
   const locale = localeForLanguage(i18n.language);
 
@@ -154,7 +149,7 @@ export function EmployeeDetailPage() {
         employmentType,
         hireDate,
         salaryBase: Number.parseFloat(salaryBase),
-        salaryCurrency: salaryCurrency === salaryClinicDefault ? null : salaryCurrency,
+        salaryCurrency: salaryCurrency === orgBaseCurrency ? null : salaryCurrency,
       });
       if (idDocFile) {
         const fd = new FormData();
@@ -610,18 +605,14 @@ export function EmployeeDetailPage() {
                 <Input className="ltr-nums" type="date" value={hireDate} onChange={(e) => setHireDate(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>{t("hr.salaryBase")}</Label>
+                <Label>{t("hr.salaryBase", { currency: orgBaseCurrency })}</Label>
                 <Input className="ltr-nums" type="number" value={salaryBase} onChange={(e) => setSalaryBase(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label>{t("hr.salaryCurrency", "Salary currency")}</Label>
                 <BaseCurrencySelect value={salaryCurrency} onChange={setSalaryCurrency} />
                 <p className="text-xs text-muted-foreground">
-                  {t(
-                    "hr.salaryCurrencyClinicDefaultHint",
-                    "Defaults to the clinic currency ({{currency}}). Choose another only when salary is paid in a different currency.",
-                    { currency: salaryClinicDefault },
-                  )}
+                  {t("hr.salaryCurrencyOrgDefaultHint", { currency: orgBaseCurrency })}
                 </p>
               </div>
               <div className="space-y-2 sm:col-span-2">
@@ -678,7 +669,7 @@ export function EmployeeDetailPage() {
               <Row label={t("hr.hireDate")} value={<span className="ltr-nums">{emp.hireDate}</span>} />
               <Separator />
               <Row
-                label={t("hr.salaryBase")}
+                label={t("hr.salaryBase", { currency: orgBaseCurrency })}
                 value={<span className="ltr-nums">{emp ? formatEmployeeSalaryAmount(emp, clinics, locale, orgBaseCurrency) : "—"}</span>}
               />
               {emp.hasIdDoc ? (

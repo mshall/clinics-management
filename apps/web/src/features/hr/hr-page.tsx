@@ -381,10 +381,9 @@ export function HrPage() {
       : empClinic;
   const provisionClinicNameEn =
     clinics.find((c) => c.id === primaryClinicForCreate)?.nameEn ?? hrManageContext.data?.clinicNameEn ?? "";
-  const empSalaryClinicDefault = resolveClinicCurrency(primaryClinicForCreate || undefined);
   useEffect(() => {
-    if (primaryClinicForCreate) setEmpSalaryCurrency(empSalaryClinicDefault);
-  }, [primaryClinicForCreate, empSalaryClinicDefault]);
+    setEmpSalaryCurrency(orgBaseCurrency);
+  }, [orgBaseCurrency]);
 
   useEffect(() => {
     if (!createEmpOpen || !provisionLogin) return;
@@ -499,7 +498,7 @@ export function HrPage() {
         employmentType: empType,
         hireDate: new Date().toISOString().slice(0, 10),
         salaryBase: Number.parseFloat(empSalary),
-        salaryCurrency: empSalaryCurrency === empSalaryClinicDefault ? null : empSalaryCurrency,
+        salaryCurrency: empSalaryCurrency === orgBaseCurrency ? null : empSalaryCurrency,
         ...(empClinicalSpecialty.trim() ? { clinicalSpecialty: empClinicalSpecialty.trim() } : {}),
         ...(empCommissionPercent.trim()
           ? { commissionPercent: Number.parseFloat(empCommissionPercent) }
@@ -1219,18 +1218,14 @@ export function HrPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>{t("hr.salaryBase")}</Label>
+                      <Label>{t("hr.salaryBase", { currency: orgBaseCurrency })}</Label>
                       <Input className="ltr-nums" type="number" value={empSalary} onChange={(e) => setEmpSalary(e.target.value)} />
                     </div>
                     <div className="space-y-2">
                       <Label>{t("hr.salaryCurrency", "Salary currency")}</Label>
                       <BaseCurrencySelect value={empSalaryCurrency} onChange={setEmpSalaryCurrency} />
                       <p className="text-xs text-muted-foreground">
-                        {t(
-                          "hr.salaryCurrencyClinicDefaultHint",
-                          "Defaults to the clinic currency ({{currency}}). Choose another only when salary is paid in a different currency.",
-                          { currency: empSalaryClinicDefault },
-                        )}
+                        {t("hr.salaryCurrencyOrgDefaultHint", { currency: orgBaseCurrency })}
                       </p>
                     </div>
                     <div className="space-y-2 sm:col-span-2">
@@ -1344,7 +1339,7 @@ export function HrPage() {
                       </>
                     ) : null}
                     <SortableTh
-                      label={t("hr.salaryBase")}
+                      label={t("hr.salaryBase", { currency: orgBaseCurrency })}
                       column="salaryBase"
                       sortBy={empSortBy}
                       sortOrder={empSortOrder}

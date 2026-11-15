@@ -51,10 +51,9 @@ export function AdminCreateEmployeePanel() {
   const [empType, setEmpType] = useState("FULL_TIME");
   const [empSalary, setEmpSalary] = useState("9000");
   const [empSalaryCurrency, setEmpSalaryCurrency] = useState<string>(orgBaseCurrency);
-  const empSalaryClinicDefault = resolveClinicCurrency(empClinic || undefined);
   useEffect(() => {
-    if (empClinic) setEmpSalaryCurrency(empSalaryClinicDefault);
-  }, [empClinic, empSalaryClinicDefault]);
+    setEmpSalaryCurrency(orgBaseCurrency);
+  }, [orgBaseCurrency]);
   const validation = useValidationIssuesDialog({ intent: "create" });
   const [empIdDocFile, setEmpIdDocFile] = useState<File | null>(null);
 
@@ -72,7 +71,7 @@ export function AdminCreateEmployeePanel() {
         employmentType: empType,
         hireDate: new Date().toISOString().slice(0, 10),
         salaryBase: Number.parseFloat(empSalary),
-        salaryCurrency: empSalaryCurrency === empSalaryClinicDefault ? null : empSalaryCurrency,
+        salaryCurrency: empSalaryCurrency === orgBaseCurrency ? null : empSalaryCurrency,
       });
       if (empIdDocFile) {
         const fd = new FormData();
@@ -199,7 +198,7 @@ export function AdminCreateEmployeePanel() {
             />
           </div>
           <div className="space-y-2">
-            <Label>{t("hr.salaryBase")}</Label>
+            <Label>{t("hr.salaryBase", { currency: orgBaseCurrency })}</Label>
             <Input className="ltr-nums" value={empSalary} onChange={(e) => setEmpSalary(e.target.value)} type="number" />
           </div>
           <div className="space-y-2">

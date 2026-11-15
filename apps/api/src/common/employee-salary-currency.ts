@@ -3,22 +3,22 @@ import { isBaseCurrency } from "./base-currencies";
 
 export function effectiveEmployeeSalaryCurrency(
   stored: string | null | undefined,
-  clinicDefaultCurrency: string,
+  orgBaseCurrency: string,
 ): string {
   const storedCode = stored?.trim();
   if (storedCode && isBaseCurrency(storedCode)) return storedCode;
-  const clinicCode = clinicDefaultCurrency.trim();
-  return isBaseCurrency(clinicCode) ? clinicCode : "AED";
+  const orgCode = orgBaseCurrency.trim();
+  return isBaseCurrency(orgCode) ? orgCode : "AED";
 }
 
-/** Persist null when salary follows the clinic default currency. */
+/** Persist null when salary follows the organization base currency. */
 export function normalizeEmployeeSalaryCurrencyOverride(
-  clinicDefaultCurrency: string,
+  orgBaseCurrency: string,
   currency: string | null | undefined,
 ): string | null {
   const code = currency?.trim();
-  const clinicDefault = clinicDefaultCurrency.trim();
-  if (!code || code === clinicDefault) return null;
+  const orgDefault = orgBaseCurrency.trim();
+  if (!code || code === orgDefault) return null;
   if (!isBaseCurrency(code)) {
     throw new BadRequestException("Invalid salary currency");
   }

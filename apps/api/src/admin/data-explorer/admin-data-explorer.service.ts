@@ -15,7 +15,10 @@ import {
 import type { JwtUser } from "../../auth/jwt-user";
 import { paginate, parsePageParams } from "../../common/pagination";
 import { assertCanAssignGroupAdminRole } from "../../common/group-admin-role-policy";
-import { normalizeEmployeeSalaryCurrencyOverride } from "../../common/employee-salary-currency";
+import {
+  effectiveEmployeeSalaryCurrency,
+  normalizeEmployeeSalaryCurrencyOverride,
+} from "../../common/employee-salary-currency";
 import { PrismaService } from "../../prisma/prisma.service";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../../storage/upload-blob.storage";
 import {
@@ -800,8 +803,13 @@ export class AdminDataExplorerService {
         if (body.hireDate !== undefined) data.hireDate = new Date(String(body.hireDate));
         if (body.salaryBase !== undefined) data.salaryBase = Number(body.salaryBase);
         if (body.salaryCurrency !== undefined) {
+          const tenant = await this.prisma.tenant.findUnique({
+            where: { id: tenantId },
+            select: { baseCurrency: true },
+          });
+          const orgBaseCurrency = effectiveEmployeeSalaryCurrency(null, tenant?.baseCurrency ?? "AED");
           data.salaryCurrency = normalizeEmployeeSalaryCurrencyOverride(
-            existing.clinic.defaultCurrency,
+            orgBaseCurrency,
             body.salaryCurrency === null ? null : String(body.salaryCurrency),
           );
         }

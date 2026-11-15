@@ -46,6 +46,11 @@ export class PayrollExpensesService {
 
   async ensureForMonth(tenantId: string, payrollMonth: string, scopeClinicIds: string[] | null): Promise<void> {
     const { start, end, incurredAt } = monthBounds(payrollMonth);
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { baseCurrency: true },
+    });
+    const orgBaseCurrency = effectiveEmployeeSalaryCurrency(null, tenant?.baseCurrency ?? "AED");
     const clinicFilter: Prisma.EmployeeWhereInput =
       scopeClinicIds != null ? { clinicId: { in: scopeClinicIds } } : {};
 
@@ -59,14 +64,13 @@ export class PayrollExpensesService {
         OR: [{ resignationDate: null }, { resignationDate: { gte: start } }],
         ...clinicFilter,
       },
-      include: { clinic: { select: { defaultCurrency: true } } },
     });
 
     const activeIds = employees.map((e) => e.id);
 
     for (const emp of employees) {
       const vendorName = `Salary — ${emp.firstNameEn} ${emp.lastNameEn}`.trim();
-      const currency = effectiveEmployeeSalaryCurrency(emp.salaryCurrency, emp.clinic.defaultCurrency);
+      const currency = effectiveEmployeeSalaryCurrency(emp.salaryCurrency, orgBaseCurrency);
       await this.prisma.expense.upsert({
         where: {
           tenantId_employeeId_payrollMonth: {

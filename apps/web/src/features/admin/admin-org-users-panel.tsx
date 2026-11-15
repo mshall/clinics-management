@@ -168,7 +168,6 @@ export function AdminOrgUsersPanel() {
     ? ORG_USER_ROLES_CREATABLE
     : orgUserRolesForEdit(userDetailQuery.data?.role ?? uRole);
   const uPrimaryClinicId = uClinicIds[0] ?? userDetailQuery.data?.clinicIds?.[0] ?? "";
-  const uSalaryClinicDefault = resolveClinicCurrency(uPrimaryClinicId || undefined);
 
   useEffect(() => {
     if (!isEdit || !userDetailQuery.data) return;
@@ -179,18 +178,14 @@ export function AdminOrgUsersPanel() {
     setUClinicIds(u.clinicIds);
     setUEmploymentType((u.employeeEmploymentType ?? "FULL_TIME") as (typeof EMP_TYPE_VALUES)[number]);
     setUSalaryBase(u.employeeSalaryBase != null ? String(u.employeeSalaryBase) : "0");
-    setUSalaryCurrency(
-      u.employeeSalaryCurrency ??
-        u.employeeSalaryCurrencyEffective ??
-        resolveClinicCurrency(u.clinicIds[0]),
-    );
+    setUSalaryCurrency(u.employeeSalaryCurrency ?? u.employeeSalaryCurrencyEffective ?? orgBaseCurrency);
     setUPassword("");
   }, [isEdit, userDetailQuery.data, clinics]);
 
   useEffect(() => {
     if (!isEdit || userDetailQuery.data?.employeeSalaryCurrency) return;
-    if (uPrimaryClinicId) setUSalaryCurrency(uSalaryClinicDefault);
-  }, [isEdit, userDetailQuery.data?.employeeSalaryCurrency, uPrimaryClinicId, uSalaryClinicDefault]);
+    setUSalaryCurrency(orgBaseCurrency);
+  }, [isEdit, userDetailQuery.data?.employeeSalaryCurrency, orgBaseCurrency]);
 
   useEffect(() => {
     if (isOrgWideUserRole(uRole)) {
@@ -246,7 +241,7 @@ export function AdminOrgUsersPanel() {
       body.clinicIds = uClinicIds;
       body.employmentType = uEmploymentType;
       body.salaryBase = Number.parseFloat(uSalaryBase);
-      body.salaryCurrency = uSalaryCurrency === uSalaryClinicDefault ? null : uSalaryCurrency;
+      body.salaryCurrency = uSalaryCurrency === orgBaseCurrency ? null : uSalaryCurrency;
       return apiPatch(`/api/v1/admin/users/${editUserId}`, body);
     },
     onSuccess: () => {
@@ -855,7 +850,7 @@ export function AdminOrgUsersPanel() {
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <Label>{t("hr.salaryBase")}</Label>
+                    <Label>{t("hr.salaryBase", { currency: orgBaseCurrency })}</Label>
                     <Input
                       className="ltr-nums"
                       type="number"
@@ -869,11 +864,7 @@ export function AdminOrgUsersPanel() {
                     <Label>{t("hr.salaryCurrency", "Salary currency")}</Label>
                     <BaseCurrencySelect value={uSalaryCurrency} onChange={setUSalaryCurrency} />
                     <p className="text-xs text-muted-foreground">
-                      {t(
-                        "hr.salaryCurrencyClinicDefaultHint",
-                        "Defaults to the clinic currency ({{currency}}). Choose another only when salary is paid in a different currency.",
-                        { currency: uSalaryClinicDefault },
-                      )}
+                      {t("hr.salaryCurrencyOrgDefaultHint", { currency: orgBaseCurrency })}
                     </p>
                   </div>
                 </>

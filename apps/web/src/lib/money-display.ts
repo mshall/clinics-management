@@ -37,12 +37,13 @@ export function resolveEmployeeSalaryCurrency(
     salaryCurrencyEffective?: string | null;
     clinicId: string;
   },
-  clinics: Array<{ id: string; defaultCurrency?: string }>,
+  _clinics: Array<{ id: string; defaultCurrency?: string }>,
   orgBaseCurrency?: string | null,
 ): BaseCurrency {
-  if (employee.salaryCurrencyEffective) return asBaseCurrency(employee.salaryCurrencyEffective);
-  if (employee.salaryCurrency) return asBaseCurrency(employee.salaryCurrency);
-  return resolveClinicCurrencyCode(clinics, employee.clinicId, orgBaseCurrency);
+  const orgDefault = asBaseCurrency(orgBaseCurrency);
+  if (employee.salaryCurrencyEffective) return asBaseCurrency(employee.salaryCurrencyEffective, orgDefault);
+  if (employee.salaryCurrency) return asBaseCurrency(employee.salaryCurrency, orgDefault);
+  return orgDefault;
 }
 
 export function formatEmployeeSalaryAmount(

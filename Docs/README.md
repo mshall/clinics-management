@@ -112,7 +112,7 @@ Supported currencies: **EGP**, **USD**, **OMR**, **SAR**, **AED**.
 | **Clinic default currency** | Admin / clinic create & edit (`defaultCurrency`) | Visit fees, expense defaults, operation defaults |
 | **Operation payment currency** | Operations create & edit (`feeCurrency`) | Per-procedure override when patient pays in another currency |
 | **Expense currency** | Expenses create form | Defaults to clinic currency; optional override |
-| **Employee salary currency** | HR → Employee profile | Override vs clinic default for payroll expense lines |
+| **Employee salary currency** | HR → Employee profile | Override vs organization base currency for payroll expense lines |
 
 Amount labels and formatted values use org/clinic/operation resolution across encounters, operations, and expenses (`apps/web/src/lib/money-display.ts`, `useOrgBaseCurrency()`).
 

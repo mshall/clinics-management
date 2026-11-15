@@ -3,7 +3,10 @@ import { EmploymentType, Prisma, UserRole } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { ensureUserEmployeeRecord } from "../common/clinic-staff-employee";
 import { assertCanAssignGroupAdminRole, assertCanCreateGroupAdminRole } from "../common/group-admin-role-policy";
-import { normalizeEmployeeSalaryCurrencyOverride } from "../common/employee-salary-currency";
+import {
+  effectiveEmployeeSalaryCurrency,
+  normalizeEmployeeSalaryCurrencyOverride,
+} from "../common/employee-salary-currency";
 import {
   deactivateUserAccount,
   reactivateUserAccount,
@@ -64,6 +67,7 @@ function mapLinkedEmployee(
     salaryCurrency: string | null;
     clinic: { defaultCurrency: string };
   } | null,
+  orgBaseCurrency: string,
 ): LinkedEmployeeSummary {
   if (!employee) {
     return {
@@ -77,8 +81,7 @@ function mapLinkedEmployee(
       employeeSalaryCurrencyEffective: null,
     };
   }
-  const effectiveCurrency =
-    employee.salaryCurrency?.trim() || employee.clinic.defaultCurrency;
+  const effectiveCurrency = effectiveEmployeeSalaryCurrency(employee.salaryCurrency, orgBaseCurrency);
   return {
     employeeId: employee.id,
     employeeNumber: employee.employeeNumber,
@@ -201,6 +204,7 @@ export class AdminService {
       role: this.parseTenantUserRoleFilter(roleRaw),
       archived,
     });
+    const orgBaseCurrency = await this.resolveTenantBaseCurrency(tenantId);
     const [total, rows] = await Promise.all([
       this.prisma.user.count({ where }),
       this.prisma.user.findMany({
@@ -237,10 +241,18 @@ export class AdminService {
         deletedAt: r.deletedAt?.toISOString() ?? null,
         archived: Boolean(r.deletedAt || r.deactivatedAt),
         ...clinics,
-        ...mapLinkedEmployee(r.employee),
+        ...mapLinkedEmployee(r.employee, orgBaseCurrency),
       };
     });
     return paginate(items, total, page, pageSize);
+  }
+
+  private async resolveTenantBaseCurrency(tenantId: string): Promise<string> {
+    const row = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { baseCurrency: true },
+    });
+    return effectiveEmployeeSalaryCurrency(null, row?.baseCurrency ?? "AED");
   }
 
   private parseTenantUserRoleFilter(roleRaw?: string): UserRole | undefined {
@@ -354,7 +366,7 @@ export class AdminService {
     const row = await this.prisma.user.findFirst({
       where: { id: userId, tenantId },
       include: {
-        tenant: { select: { id: true, name: true } },
+        tenant: { select: { id: true, name: true, baseCurrency: true } },
         clinicAdminScopes: { include: { clinic: { select: { id: true, nameEn: true } } } },
         employee: {
           select: {
@@ -371,6 +383,7 @@ export class AdminService {
       },
     });
     if (!row) throw new NotFoundException("User not found");
+    const orgBaseCurrency = effectiveEmployeeSalaryCurrency(null, row.tenant?.baseCurrency ?? "AED");
     const clinics = mapUserClinicAssignments(row.clinicAdminScopes, row.employee);
     return {
       id: row.id,
@@ -384,7 +397,7 @@ export class AdminService {
       deletedAt: row.deletedAt?.toISOString() ?? null,
       archived: Boolean(row.deletedAt || row.deactivatedAt),
       ...clinics,
-      ...mapLinkedEmployee(row.employee),
+      ...mapLinkedEmployee(row.employee, orgBaseCurrency),
     };
   }
 
@@ -440,15 +453,16 @@ export class AdminService {
       if (dto.employmentType !== undefined || dto.salaryBase !== undefined || dto.salaryCurrency !== undefined) {
         const emp = await tx.employee.findFirst({
           where: { tenantId, userId },
-          include: { clinic: { select: { defaultCurrency: true } } },
         });
         if (emp) {
+          const tenant = await tx.tenant.findUnique({
+            where: { id: tenantId },
+            select: { baseCurrency: true },
+          });
+          const orgBaseCurrency = effectiveEmployeeSalaryCurrency(null, tenant?.baseCurrency ?? "AED");
           let salaryCurrency: string | null | undefined;
           if (dto.salaryCurrency !== undefined) {
-            salaryCurrency = normalizeEmployeeSalaryCurrencyOverride(
-              emp.clinic.defaultCurrency,
-              dto.salaryCurrency,
-            );
+            salaryCurrency = normalizeEmployeeSalaryCurrencyOverride(orgBaseCurrency, dto.salaryCurrency);
           }
           await tx.employee.update({
             where: { id: emp.id },
