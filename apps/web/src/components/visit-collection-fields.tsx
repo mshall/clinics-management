@@ -17,10 +17,21 @@ type Props = {
 export function VisitCollectionFields({ amount, value, onChange, disabled, className }: Props) {
   const { t } = useTranslation();
   const marketQuery = useTenantMarket();
+  const orgByKey = new Map(
+    (marketQuery.data?.organizationPaymentChannels ?? []).map((c) => [c.channelKey.toUpperCase(), c]),
+  );
   const transferChannels = marketQuery.data?.transferChannels?.length
     ? marketQuery.data.transferChannels
     : ["INSTAPAY", "FAWRY"];
   const defaultChannel = transferChannels[0] ?? "INSTAPAY";
+
+  const labelForChannel = (ch: string) => {
+    const org = orgByKey.get(ch.toUpperCase());
+    if (org) return org.name;
+    if (ch === "INSTAPAY") return t("visitCollection.instapay", "InstaPay");
+    if (ch === "FAWRY") return t("visitCollection.fawry", "Fawry");
+    return ch;
+  };
   if (amount <= 0) return null;
 
   return (
@@ -48,6 +59,18 @@ export function VisitCollectionFields({ amount, value, onChange, disabled, class
         <>
           <div className="space-y-1">
             <Label>{t("visitCollection.transferChannel", "Transfer via")}</Label>
+            {(() => {
+              const sel = (value.transferChannel || defaultChannel).toUpperCase();
+              const org = orgByKey.get(sel);
+              if (!org?.accountNumber && !org?.mobileNumber) return null;
+              return (
+                <p className="text-xs text-muted-foreground ltr-nums">
+                  {org.accountNumber ? `${t("admin.paymentChannelAccount", "Account number")}: ${org.accountNumber}` : null}
+                  {org.accountNumber && org.mobileNumber ? " · " : null}
+                  {org.mobileNumber ? `${t("admin.paymentChannelMobile", "Mobile number")}: ${org.mobileNumber}` : null}
+                </p>
+              );
+            })()}
             <select
               className={nativeSelectClassName}
               disabled={disabled}
@@ -61,11 +84,7 @@ export function VisitCollectionFields({ amount, value, onChange, disabled, class
             >
               {transferChannels.map((ch: string) => (
                 <option key={ch} value={ch}>
-                  {ch === "INSTAPAY"
-                    ? t("visitCollection.instapay", "InstaPay")
-                    : ch === "FAWRY"
-                      ? t("visitCollection.fawry", "Fawry")
-                      : ch}
+                  {labelForChannel(ch)}
                 </option>
               ))}
             </select>

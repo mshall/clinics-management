@@ -12,6 +12,7 @@ import { PlatformAdminController } from "./platform-admin.controller";
 import { PlatformAdminService } from "./platform-admin.service";
 import { PlatformInsightsService } from "./platform-insights.service";
 import { IntegrationFailureAdminService } from "./integration-failure-admin.service";
+import { TenantPaymentChannelsService } from "./tenant-payment-channels.service";
 
 @Module({
   imports: [ClinicsModule, StorageModule, IntegrationsModule, MarketsModule],
@@ -23,6 +24,7 @@ import { IntegrationFailureAdminService } from "./integration-failure-admin.serv
     PlatformAdminService,
     PlatformInsightsService,
     IntegrationFailureAdminService,
+    TenantPaymentChannelsService,
   ],
 })
 export class AdminModule {}

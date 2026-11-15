@@ -15,13 +15,17 @@ Legacy `eta*` columns were migrated into JSON and removed.
 
 ## Payment methods
 
-`Market.paymentMethods` is the source of truth. Transfer channels are **string ids** (not a DB enum). Each method may define:
+`Market.paymentMethods` is the source of truth for **built-in** transfer types. Organizations may add **`TenantPaymentChannel`** rows (Administration → Organization settings → Payment channels): display **name**, and **account number** and/or **mobile number** (at least one required). Each row gets a stable `channelKey` used on revenue and check-in.
+
+Transfer channels are **string ids** (not a DB enum). Market methods may define:
 
 - `transferChannel` — id stored on revenue / appointments
 - `referencePattern` — regex for reference validation
 - `verifyUrlEnv` — env var for optional online verification
 
-Staff UI loads channels from `GET /api/v1/markets/current`.
+Custom org channels use generic reference validation (min length) when no pattern is set.
+
+Staff UI loads merged channels from `GET /api/v1/markets/current` (`paymentMethods`, `organizationPaymentChannels`, `transferChannels`). Group admins manage channels via `GET/POST/DELETE /api/v1/admin/payment-channels`.
 
 ## Market pack requirements
 

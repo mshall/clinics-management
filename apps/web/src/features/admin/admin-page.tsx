@@ -33,6 +33,7 @@ import {
   type ClinicFormValues,
 } from "@/features/clinics/clinic-form-utils";
 import { AdminCreateEmployeePanel } from "./admin-create-employee-panel";
+import { TenantPaymentChannelsPanel } from "./tenant-payment-channels-panel";
 import { AdminDataExplorerPanel } from "./admin-data-explorer-panel";
 import { AdminGovernancePanel } from "./admin-governance-panel";
 import { AdminInsightsPanel } from "./admin-insights-panel";
@@ -512,6 +513,7 @@ export function AdminPage() {
                     </div>
                   </div>
                 </div>
+                <TenantPaymentChannelsPanel />
                 <div className="w-full space-y-2 border-t border-border pt-4">
                   <p className="text-sm font-medium">{t("admin.whatsappReminders", "WhatsApp appointment reminders")}</p>
                   <label className="flex items-center gap-2 text-sm">

@@ -7,6 +7,14 @@ export type FiscalDeviceRegistration = {
   registrationGuideKey: string;
 };
 
+export type OrganizationPaymentChannel = {
+  id: string;
+  name: string;
+  channelKey: string;
+  accountNumber: string | null;
+  mobileNumber: string | null;
+};
+
 export type TenantMarketContext = {
   marketId: string;
   marketCode: string;
@@ -16,6 +24,7 @@ export type TenantMarketContext = {
   fiscalProviderKey: string;
   fiscalDeviceRegistration: FiscalDeviceRegistration | null;
   paymentMethods: Array<{ key: string; labelKey?: string; transferChannel?: string }>;
+  organizationPaymentChannels: OrganizationPaymentChannel[];
   transferChannels: string[];
 };
 

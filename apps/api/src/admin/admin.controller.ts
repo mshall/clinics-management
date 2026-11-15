@@ -33,6 +33,8 @@ import { ReactivateTenantUserDto } from "./dto/reactivate-tenant-user.dto";
 import { PatchTenantSettingsDto } from "./dto/patch-tenant-settings.dto";
 import { PatchIntegrationFailureDto } from "./dto/patch-integration-failure.dto";
 import { IntegrationFailureAdminService } from "./integration-failure-admin.service";
+import { TenantPaymentChannelsService } from "./tenant-payment-channels.service";
+import { CreateTenantPaymentChannelDto } from "./dto/create-tenant-payment-channel.dto";
 
 @ApiTags("admin")
 @ApiBearerAuth("bearer")
@@ -43,6 +45,7 @@ export class AdminController {
     private readonly admin: AdminService,
     private readonly insights: AdminInsightsService,
     private readonly integrationFailureAdmin: IntegrationFailureAdminService,
+    private readonly paymentChannels: TenantPaymentChannelsService,
   ) {}
 
   @Get("overview")
@@ -235,6 +238,34 @@ export class AdminController {
       throw new ForbiddenException("Only group administrators can update tenant settings");
     }
     return this.admin.patchTenantSettings(requireTenantId(user), body);
+  }
+
+  @Get("payment-channels")
+  @ApiOperation({ summary: "List organization payment channels (group admin)" })
+  listPaymentChannels(@CurrentUser() user: JwtUser) {
+    if (user.role !== UserRole.GROUP_ADMIN) {
+      throw new ForbiddenException("Only group administrators can manage payment channels");
+    }
+    return this.paymentChannels.list(requireTenantId(user));
+  }
+
+  @Post("payment-channels")
+  @ApiOperation({ summary: "Add organization payment channel (group admin)" })
+  @ApiCreatedResponse()
+  createPaymentChannel(@CurrentUser() user: JwtUser, @Body() body: CreateTenantPaymentChannelDto) {
+    if (user.role !== UserRole.GROUP_ADMIN) {
+      throw new ForbiddenException("Only group administrators can manage payment channels");
+    }
+    return this.paymentChannels.create(user, requireTenantId(user), body);
+  }
+
+  @Delete("payment-channels/:id")
+  @ApiOperation({ summary: "Remove organization payment channel (group admin)" })
+  deletePaymentChannel(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    if (user.role !== UserRole.GROUP_ADMIN) {
+      throw new ForbiddenException("Only group administrators can manage payment channels");
+    }
+    return this.paymentChannels.remove(user, requireTenantId(user), id);
   }
 
   @Get("users")
