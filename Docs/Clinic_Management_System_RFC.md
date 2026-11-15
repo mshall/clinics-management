@@ -150,7 +150,8 @@ Local development: `docker-compose.yml` provides Postgres 16 and Redis; API + Vi
 | **Tenant** | `marketId` + `deploymentCell`; defaults from market on platform create. |
 | **Clinic** | Inherits market settings; optional `timezone`, `weekendDays`, `settingsOverrides` where market allows. |
 | **FiscalProvider** | Interface in `providers/fiscal/`; **ETA Egypt** (`eta-egypt`) is first implementation. |
-| **Persistence** | `FiscalDocument` + `FiscalSubmission` (replaces `EtaReceiptSubmission`). |
+| **Persistence** | `FiscalDocument` + `FiscalSubmission` + **`FiscalPosChain`** (per-POS `lastAcceptedUuid`). |
+| **ETA submit** | Queue without uuid → `FiscalSubmitService` builds Receipt **v1.2**, SHA-256 **content uuid**, device chain; see [ETA_RECEIPT_V12.md](./ETA_RECEIPT_V12.md). |
 | **Credentials** | `ProviderCredential.secretRef` → AWS Secrets Manager (not env vars in production). |
 | **Platform admin** | `GET/POST /admin/platform/markets`, `POST …/launch`; UI **Market launch** tab. |
 | **Feature flags** | `FeatureFlag` (global), `MarketFeatureFlag`, `TenantFeatureFlag`; effective = global ∧ market ∧ org with explicit org/market overrides. APIs: `GET/PATCH /admin/platform/feature-flags/:key`, `GET/PATCH /admin/platform/markets/:id/feature-flags/:key`, `PATCH /admin/tenant-feature-flags/:key`. See [FEATURE_FLAGS.md](./FEATURE_FLAGS.md). |

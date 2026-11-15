@@ -39,6 +39,7 @@ See **[Documentation_Portal.md](./Documentation_Portal.md)** for module layout, 
 | [**FRONT_DESK.md**](./FRONT_DESK.md) | Global search (⌘K), check-in → waiting → call → start visit (auto exam room) → finalize; board, TV screen, InstaPay/Fawry at check-in |
 | [**CLINIC_PLATFORM_CAPABILITIES.md**](./CLINIC_PLATFORM_CAPABILITIES.md) | Operations pipeline, billing/compliance, messaging, reports, clinic AI — status matrix |
 | [**EGYPT_GO_LIVE.md**](./EGYPT_GO_LIVE.md) | Egypt launch: ETA, data protection, backup, legal pack, pilot |
+| [**ETA_RECEIPT_V12.md**](./ETA_RECEIPT_V12.md) | Egypt Receipt **v1.2** builder, SHA-256 UUIDs, per-POS `FiscalPosChain`, queue/submit flow |
 | [**COMPLIANCE_CONTROLS.md**](./COMPLIANCE_CONTROLS.md) | ISO 27001 / HIPAA / SOC / FISMA control mapping (non-certification) |
 | [**GUIDE_BOOK.md**](./GUIDE_BOOK.md) | In-app Guide book (`/guide`) — role-based EN/AR instructions |
 
@@ -203,6 +204,7 @@ Scheduled operations open an **edit dialog** that mirrors the **create** form: f
 | HR deactivate / archive / restore | `apps/api/src/hr/hr.service.ts`, `apps/web/src/lib/employee-manage-policy.ts` |
 | Customer support API + hints | `apps/api/src/support/`, `apps/web/src/features/support/` |
 | Admin insights (360° + staff) | `apps/api/src/admin/admin-insights.service.ts`, `apps/web/src/features/admin/admin-insights-panel.tsx` |
+| ETA Receipt v1.2 + device chain | `apps/api/src/compliance/eta-egypt-wire.ts`, `fiscal-submit.service.ts`, `eta-egypt-serialize.ts` — [ETA_RECEIPT_V12.md](./ETA_RECEIPT_V12.md) |
 | Audit query bounds / perf tests | `apps/api/src/common/audit-log-query-bounds.ts`, `scripts/load-test-slo.mjs` |
 | Operations UI | `apps/web/src/features/operations/operations-page.tsx` |
 | Invoices & clinic invoice settings | `apps/api/src/invoices/`, `apps/web/src/features/invoices/` |
