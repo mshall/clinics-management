@@ -1,62 +1,20 @@
-# Reusable quality gate: typecheck, unit tests, DB integration tests (Postgres service).
-# Called from deploy-aws.yml and pr-synth-build.yml before build/deploy/synth.
+# Required status check for merging to main (see scripts/apply-github-branch-protection.sh).
 name: CI test
 
 on:
-  workflow_call:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-test-pr-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: cms
-          POSTGRES_PASSWORD: cms
-          POSTGRES_DB: cms
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U cms -d cms"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    env:
-      DATABASE_URL: postgresql://cms:cms@localhost:5432/cms?schema=public
-      CI: "true"
-      NODE_ENV: test
-      ALLOW_DEMO_SEED: "true"
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: package-lock.json
-
-      - name: Block tracked OpenAI API keys in repo
-        run: bash scripts/check-no-openai-secrets-in-git.sh
-
-      - name: Install dependencies
-        run: NPM_CONFIG_LOGLEVEL=error npm ci --no-audit --no-fund
-
-      - name: Prisma generate
-        run: npm run prisma:generate -w api
-
-      - name: Migrate database
-        run: npm run db:deploy -w api
-
-      - name: Seed database
-        run: npm run db:seed -w api
-
-      - name: Typecheck (api + web)
-        run: npm run typecheck
-
-      - name: Unit tests (api)
-        run: npm run test:unit -w api
-
-      - name: Integration tests (api)
-        run: npm run test:integration -w api
+    name: CI test
+    uses: ./.github/workflows/ci-test-reusable.yml

@@ -23,7 +23,8 @@ concurrency:
 
 jobs:
   test:
-    uses: ./.github/workflows/ci-test.yml
+    name: CI test
+    uses: ./.github/workflows/ci-test-reusable.yml
 
   synth-and-build:
     needs: test

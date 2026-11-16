@@ -1,0 +1,63 @@
+# Direct pushes to main that change fiscal/billing/revenue code must go through a PR.
+name: Main sensitive paths
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  block-direct-sensitive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Reject direct pushes to sensitive API paths
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          msg="$(git log -1 --pretty=%B)"
+          if echo "$msg" | grep -qE '^Merge pull request #'; then
+            echo "Merge commit from pull request — OK"
+            exit 0
+          fi
+          if echo "$msg" | grep -qE '\(#[0-9]+\)$'; then
+            echo "Squash/rebase merge from pull request — OK"
+            exit 0
+          fi
+          parents="$(git rev-list --parents -n 1 HEAD | wc -w | tr -d ' ')"
+          if [ "$parents" -ge 3 ]; then
+            echo "Multi-parent merge — OK"
+            exit 0
+          fi
+
+          if [ -z "${BEFORE:-}" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            echo "No before SHA — skip path guard (initial push)"
+            exit 0
+          fi
+
+          mapfile -t changed < <(git diff --name-only "$BEFORE" HEAD)
+          sensitive=()
+          for f in "${changed[@]}"; do
+            case "$f" in
+              apps/api/src/compliance/*|apps/api/src/fiscal-devices/*|apps/api/src/billing/*|apps/api/src/revenue/*)
+                sensitive+=("$f")
+                ;;
+            esac
+          done
+
+          if [ "${#sensitive[@]}" -eq 0 ]; then
+            echo "No sensitive paths in direct push — OK"
+            exit 0
+          fi
+
+          echo "::error::Direct push to main changed sensitive fiscal/billing paths. Open a pull request instead:"
+          printf '%s\n' "${sensitive[@]}"
+          echo "Paths: apps/api/src/compliance/, fiscal-devices/, billing/, revenue/"
+          exit 1

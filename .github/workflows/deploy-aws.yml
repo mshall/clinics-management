@@ -70,7 +70,8 @@ env:
 
 jobs:
   test:
-    uses: ./.github/workflows/ci-test.yml
+    name: CI test
+    uses: ./.github/workflows/ci-test-reusable.yml
 
   # Fail fast before OIDC/CDK when TypeScript rejects the web bundle (e.g. TS6133 unused locals).
   # Same command as scripts/cicd-deploy.sh; avoids mislabeling the failure as App Runner NotStabilized.
