@@ -87,6 +87,8 @@ jobs:
         run: NPM_CONFIG_LOGLEVEL=error npm ci --no-audit --no-fund
 
       - name: Build web (tsc + vite)
+        env:
+          GITHUB_SHA: ${{ github.sha }}
         run: npm run build -w web
 
   deploy:

@@ -378,15 +378,25 @@ function handler(event) {
   if (uri.indexOf(".") !== -1) {
     return request;
   }
-  if (uri === "/" || uri === "") {
-    return request;
-  }
   request.uri = "/index.html";
   return request;
 }
 `),
       runtime: cloudfront.FunctionRuntime.JS_1_0,
     });
+
+    const s3Origin = origins.S3BucketOrigin.withOriginAccessControl(webBucket, {
+      originAccessLevels: [cloudfront.AccessLevel.READ],
+    });
+
+    const s3UncachedGetHead: cloudfront.BehaviorOptions = {
+      origin: s3Origin,
+      viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+      compress: true,
+      allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+      cachedMethods: cloudfront.CachedMethods.CACHE_GET_HEAD_OPTIONS,
+      cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+    };
 
     const dist = new cloudfront.Distribution(this, "SiteDistribution", {
       comment: "Kiorly clinic SPA + App Runner API (no ALB/NAT)",
@@ -395,9 +405,7 @@ function handler(event) {
       minimumProtocolVersion: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
       httpVersion: cloudfront.HttpVersion.HTTP2_AND_3,
       defaultBehavior: {
-        origin: origins.S3BucketOrigin.withOriginAccessControl(webBucket, {
-          originAccessLevels: [cloudfront.AccessLevel.READ],
-        }),
+        origin: s3Origin,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         compress: true,
         allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
@@ -408,6 +416,8 @@ function handler(event) {
         ],
       },
       additionalBehaviors: {
+        "/build-id.json": s3UncachedGetHead,
+        "/index.html": s3UncachedGetHead,
         "/api/*": {
           origin: new origins.HttpOrigin(apiOriginDomain, {
             protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,

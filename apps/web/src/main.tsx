@@ -7,12 +7,14 @@ import { router } from "@/app/router";
 import "@/lib/i18n";
 import "@/styles/globals.css";
 import { QUERY_GC, QUERY_STALE } from "@/lib/query-cache-policy";
+import { startDeployVersionWatch } from "@/lib/deploy-version-watch";
 import { applyThemeFromPersistedStorage } from "@/stores/theme-store";
 
 /** Default IANA timezone for clinic operations (Frankfurt); matches AWS eu-central-1 + RDS. */
 export const APP_TIME_ZONE = "Europe/Berlin";
 
 applyThemeFromPersistedStorage();
+startDeployVersionWatch();
 
 const queryClient = new QueryClient({
   defaultOptions: {

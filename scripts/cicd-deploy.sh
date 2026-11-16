@@ -19,6 +19,7 @@ if [[ "${CI:-}" == "true" ]]; then
 else
   npm ci --no-audit --no-fund
 fi
+export GITHUB_SHA="${GITHUB_SHA:-$(git -C "$ROOT" rev-parse HEAD)}"
 npm run build -w web
 node scripts/check-boot-proxy-order.mjs
 cd infra

@@ -1,8 +1,18 @@
+import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
+function loadBuildId(): string {
+  const idFile = path.resolve(__dirname, ".build-id");
+  if (existsSync(idFile)) return readFileSync(idFile, "utf8").trim();
+  return "dev-local";
+}
+
 export default defineConfig({
+  define: {
+    "import.meta.env.VITE_BUILD_ID": JSON.stringify(loadBuildId()),
+  },
   plugins: [react()],
   resolve: {
     alias: {

@@ -148,6 +148,7 @@ Production build is bundled into CDK **`BucketDeployment`** (`apps/web/dist`).
 
 - **Same-origin API:** CloudFront behavior **`/api/*`** → App Runner; SPA uses relative `/api/v1/...` (empty `VITE_API_URL`).
 - **SPA routing:** CloudFront **Function** rewrites extension-less paths to `/index.html` **only on the S3 behavior** — not on `/api/*` (prevents API JSON being replaced by HTML).
+- **Post-deploy client refresh:** Each web build writes `build-id.json` (commit SHA in CI). The SPA embeds the same id and polls `/build-id.json` (no-store). When it changes after a deploy, open tabs clear Cache Storage and hard-navigate so users pick up new hashed assets without manual refresh. CloudFront behaviors **`/build-id.json`** and **`/index.html`** use **caching disabled**; hashed files under `/assets/*` stay on the default optimized cache.
 
 Local build check:
 
