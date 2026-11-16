@@ -1097,7 +1097,7 @@ export function OperationsPage() {
                   </p>
                 ) : null}
               </div>
-              {editOp && canInvoice ? (
+              {editOp && canInvoice && editOp.financialsVisible ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -1179,11 +1179,13 @@ export function OperationsPage() {
                         ) : null}
                       </dl>
                     </div>
-                    <LinkedInvoicesSection
-                      operationId={editOp.id}
-                      clinicId={editClinicId || editOp.clinicId}
-                      onGenerate={canInvoice ? () => openOperationInvoice(editOp) : undefined}
-                    />
+                    {editOp.financialsVisible ? (
+                      <LinkedInvoicesSection
+                        operationId={editOp.id}
+                        clinicId={editClinicId || editOp.clinicId}
+                        onGenerate={canInvoice ? () => openOperationInvoice(editOp) : undefined}
+                      />
+                    ) : null}
                   </div>
                 ) : (
                 <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
@@ -1360,12 +1362,14 @@ export function OperationsPage() {
                   />
                 </fieldset>
 
-                <LinkedInvoicesSection
-                  className="lg:col-span-2"
-                  operationId={editOp.id}
-                  clinicId={editClinicId || editOp.clinicId}
-                  onGenerate={canInvoice ? () => openOperationInvoice(editOp) : undefined}
-                />
+                {editOp.financialsVisible ? (
+                  <LinkedInvoicesSection
+                    className="lg:col-span-2"
+                    operationId={editOp.id}
+                    clinicId={editClinicId || editOp.clinicId}
+                    onGenerate={canInvoice ? () => openOperationInvoice(editOp) : undefined}
+                  />
+                ) : null}
 
                 {editIsScheduled && !editOpDetailPending ? (
                   <>
@@ -1821,21 +1825,23 @@ export function OperationsPage() {
                             {money(o.totalCost, operationCurrency(o))}
                           </p>
                         ) : null}
-                        {rowOpenable && canInvoice ? (
+                        {rowOpenable ? (
                           <div className="mt-3 flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
                             <Button type="button" size="sm" variant="secondary" className="flex-1" onClick={() => openEdit(o)}>
                               {canEditOperationForm(o) ? t("operations.edit", "Edit") : t("operations.view", "View")}
                             </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className="flex-1"
-                              onClick={() => openOperationInvoice(o)}
-                            >
-                              <FileText className="me-1 h-3.5 w-3.5" />
-                              {t("invoices.generateShort", "Invoice")}
-                            </Button>
+                            {canInvoice && o.financialsVisible ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => openOperationInvoice(o)}
+                              >
+                                <FileText className="me-1 h-3.5 w-3.5" />
+                                {t("invoices.generateShort", "Invoice")}
+                              </Button>
+                            ) : null}
                           </div>
                         ) : null}
                       </div>
@@ -1993,7 +1999,7 @@ export function OperationsPage() {
                                 >
                                   {t("operations.edit", "Edit")}
                                 </Button>
-                                {canInvoice ? (
+                                {canInvoice && o.financialsVisible ? (
                                   <Button
                                     type="button"
                                     size="sm"
@@ -2037,7 +2043,7 @@ export function OperationsPage() {
                                 >
                                   {rowEditable ? t("operations.edit", "Edit") : t("operations.view", "View")}
                                 </Button>
-                                {canInvoice ? (
+                                {canInvoice && o.financialsVisible ? (
                                   <Button
                                     type="button"
                                     size="sm"
@@ -2073,7 +2079,7 @@ export function OperationsPage() {
         </CardContent>
       </Card>
 
-      {invoiceOperation && canInvoice ? (
+      {invoiceOperation && canInvoice && invoiceOperation.financialsVisible ? (
         <GenerateInvoiceDialog
           open={editInvoiceOpen}
           onOpenChange={(open) => {

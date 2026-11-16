@@ -21,6 +21,13 @@ import {
 import { computeVatInclusiveBreakdown } from "../common/vat-breakdown";
 import { resolveMarketTaxLabels } from "../common/market-tax-labels";
 import { normalizeOrgTaxRegistrationNumber } from "../common/sync-clinic-invoice-tax";
+import {
+  invoiceFinancialsVisible,
+  loadUserMoneyVisibilityOverrides,
+  operationRowFinancialsVisible,
+  type InvoiceMoneyContext,
+  type UserMoneyVisibilityOverrides,
+} from "../common/user-money-visibility";
 import { PrismaService } from "../prisma/prisma.service";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { CreateInvoiceDto } from "./dto/create-invoice.dto";
@@ -28,6 +35,14 @@ import type { InvoiceDto, InvoiceListItemDto } from "./dto/invoice.dto";
 
 const invoiceInclude = {
   lines: { orderBy: { sortOrder: "asc" as const } },
+  encounter: {
+    select: {
+      clinicianId: true,
+      appointmentId: true,
+      appointment: { select: { clinicianId: true } },
+    },
+  },
+  operation: { select: { clinicianId: true } },
 } satisfies Prisma.InvoiceInclude;
 
 type InvoiceRow = Prisma.InvoiceGetPayload<{ include: typeof invoiceInclude }>;
@@ -77,6 +92,62 @@ export class InvoicesService {
       lines,
       createdAt: row.createdAt.toISOString(),
     };
+  }
+
+  private invoiceMoneyContext(row: InvoiceRow): InvoiceMoneyContext {
+    return {
+      encounterId: row.encounterId,
+      operationId: row.operationId,
+      encounterClinicianId: row.encounter?.clinicianId,
+      operationClinicianId: row.operation?.clinicianId,
+      appointmentClinicianId: row.encounter?.appointment?.clinicianId ?? null,
+    };
+  }
+
+  private assertInvoiceMoneyVisible(
+    viewer: JwtUser,
+    moneyVis: UserMoneyVisibilityOverrides,
+    ctx: InvoiceMoneyContext,
+  ): void {
+    if (!invoiceFinancialsVisible(viewer, ctx, moneyVis)) {
+      throw new NotFoundException("Invoice not found");
+    }
+  }
+
+  private async linkedInvoiceListVisible(
+    tenantId: string,
+    viewer: JwtUser,
+    filters: { encounterId?: string; operationId?: string },
+    moneyVis: UserMoneyVisibilityOverrides,
+  ): Promise<boolean> {
+    if (filters.encounterId) {
+      const enc = await this.prisma.encounter.findFirst({
+        where: { id: filters.encounterId, tenantId },
+        select: {
+          clinicianId: true,
+          appointment: { select: { clinicianId: true } },
+        },
+      });
+      if (!enc) throw new NotFoundException("Encounter not found");
+      return invoiceFinancialsVisible(
+        viewer,
+        {
+          encounterId: filters.encounterId,
+          encounterClinicianId: enc.clinicianId,
+          appointmentClinicianId: enc.appointment?.clinicianId ?? null,
+        },
+        moneyVis,
+      );
+    }
+    if (filters.operationId) {
+      const op = await this.prisma.operation.findFirst({
+        where: { id: filters.operationId, tenantId },
+        select: { clinicianId: true },
+      });
+      if (!op) throw new NotFoundException("Operation not found");
+      return operationRowFinancialsVisible(viewer, op.clinicianId, moneyVis);
+    }
+    return true;
   }
 
   private mapListItem(row: InvoiceRow): InvoiceListItemDto {
@@ -179,10 +250,20 @@ export class InvoicesService {
     if (dto.encounterId) {
       const enc = await this.prisma.encounter.findFirst({
         where: { id: dto.encounterId, tenantId },
-        include: { patient: true, clinic: true },
+        include: {
+          patient: true,
+          clinic: true,
+          appointment: { select: { clinicianId: true } },
+        },
       });
       if (!enc) throw new NotFoundException("Encounter not found");
       await this.assertEncounterInvoiceAccess(tenantId, enc, viewer);
+      const moneyVis = await loadUserMoneyVisibilityOverrides(this.prisma, tenantId, viewer.userId);
+      this.assertInvoiceMoneyVisible(viewer, moneyVis, {
+        encounterId: enc.id,
+        encounterClinicianId: enc.clinicianId,
+        appointmentClinicianId: enc.appointment?.clinicianId ?? null,
+      });
       clinicId = enc.clinicId;
       patientId = enc.patientId;
       patientName = `${enc.patient.firstNameEn} ${enc.patient.lastNameEn}`.trim();
@@ -196,6 +277,11 @@ export class InvoicesService {
       });
       if (!op) throw new NotFoundException("Operation not found");
       await this.assertOperationInvoiceAccess(tenantId, op, viewer);
+      const moneyVis = await loadUserMoneyVisibilityOverrides(this.prisma, tenantId, viewer.userId);
+      this.assertInvoiceMoneyVisible(viewer, moneyVis, {
+        operationId: op.id,
+        operationClinicianId: op.clinicianId,
+      });
       clinicId = op.clinicId;
       patientId = op.patientId;
       patientName = `${op.patient.firstNameEn} ${op.patient.lastNameEn}`.trim();
@@ -270,6 +356,10 @@ export class InvoicesService {
     filters: { patientId?: string; encounterId?: string; operationId?: string },
   ): Promise<InvoiceListItemDto[]> {
     assertCanGenerateInvoice(viewer.role);
+    const moneyVis = await loadUserMoneyVisibilityOverrides(this.prisma, tenantId, viewer.userId);
+    if (!(await this.linkedInvoiceListVisible(tenantId, viewer, filters, moneyVis))) {
+      return [];
+    }
     const where: Prisma.InvoiceWhereInput = { tenantId };
 
     if (filters.patientId) {
@@ -299,7 +389,9 @@ export class InvoicesService {
       include: invoiceInclude,
       orderBy: [{ issueDate: "desc" }, { createdAt: "desc" }],
     });
-    return rows.map((r) => this.mapListItem(r));
+    return rows
+      .filter((r) => invoiceFinancialsVisible(viewer, this.invoiceMoneyContext(r), moneyVis))
+      .map((r) => this.mapListItem(r));
   }
 
   async getOne(tenantId: string, id: string, viewer: JwtUser): Promise<InvoiceDto> {
@@ -309,6 +401,9 @@ export class InvoicesService {
       include: invoiceInclude,
     });
     if (!row) throw new NotFoundException("Invoice not found");
+
+    const moneyVis = await loadUserMoneyVisibilityOverrides(this.prisma, tenantId, viewer.userId);
+    this.assertInvoiceMoneyVisible(viewer, moneyVis, this.invoiceMoneyContext(row));
 
     if (CLINIC_SCOPE_ROLES.has(viewer.role)) {
       const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, viewer);

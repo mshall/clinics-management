@@ -140,3 +140,32 @@ export function canEditAppointmentFeesForViewer(
   if (!viewer) return false;
   return moneyEditFromOverride(overrides.appointments, appointmentFeeEditByRole(viewer, clinicianId));
 }
+
+export type InvoiceMoneyContext = {
+  operationId?: string | null;
+  encounterId?: string | null;
+  operationClinicianId?: string;
+  encounterClinicianId?: string;
+  appointmentClinicianId?: string | null;
+};
+
+/** Invoices expose amounts; hidden when money visibility is off for the linked module (and linked appointment if any). */
+export function invoiceFinancialsVisible(
+  viewer: JwtUser | undefined,
+  ctx: InvoiceMoneyContext,
+  overrides: UserMoneyVisibilityOverrides,
+): boolean {
+  if (ctx.operationId) {
+    if (!ctx.operationClinicianId) return false;
+    return operationRowFinancialsVisible(viewer, ctx.operationClinicianId, overrides);
+  }
+  if (ctx.encounterId) {
+    if (!ctx.encounterClinicianId) return false;
+    if (!encounterFinancialsVisible(viewer, ctx.encounterClinicianId, overrides)) return false;
+    if (ctx.appointmentClinicianId) {
+      if (!appointmentFinancialsVisible(viewer, ctx.appointmentClinicianId, overrides)) return false;
+    }
+    return true;
+  }
+  return true;
+}

@@ -706,7 +706,7 @@ export function EncounterDetailPage() {
               {t("encounters.delete", "Delete")}
             </Button>
           ) : null}
-          {canInvoice ? (
+          {canInvoice && enc.financialsVisible !== false ? (
             <Button type="button" variant="outline" size="sm" onClick={() => setInvoiceDialogOpen(true)}>
               <FileText className="me-2 h-4 w-4" />
               {t("invoices.generateShort", "Invoice")}
@@ -789,7 +789,7 @@ export function EncounterDetailPage() {
       </Card>
       )}
 
-      {enc ? (
+      {enc && enc.financialsVisible !== false ? (
         <LinkedInvoicesSection
           encounterId={enc.id}
           clinicId={enc.clinicId}
@@ -1359,7 +1359,7 @@ export function EncounterDetailPage() {
         />
       ) : null}
 
-      {enc && canInvoice ? (
+      {enc && canInvoice && enc.financialsVisible !== false ? (
         <GenerateInvoiceDialog
           open={invoiceDialogOpen}
           onOpenChange={setInvoiceDialogOpen}

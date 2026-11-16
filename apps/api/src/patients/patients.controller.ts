@@ -352,7 +352,7 @@ export class PatientsController {
     @Query("types") types?: string,
     @Query("limit") limit?: string,
   ) {
-    return this.patient360.getTimeline(requireTenantId(user), id, types, limit ? Number(limit) : 80);
+    return this.patient360.getTimeline(requireTenantId(user), user, id, types, limit ? Number(limit) : 80);
   }
 
   @Get(":id/active-problems")

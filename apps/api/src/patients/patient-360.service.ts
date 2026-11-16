@@ -11,6 +11,10 @@ import {
   RevenueStatus,
 } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
+import {
+  invoiceFinancialsVisible,
+  loadUserMoneyVisibilityOverrides,
+} from "../common/user-money-visibility";
 import { PrismaService } from "../prisma/prisma.service";
 
 const ACTIVE_APPT = new Set<AppointmentStatus>([
@@ -190,10 +194,12 @@ export class Patient360Service {
 
   async getTimeline(
     tenantId: string,
+    viewer: JwtUser,
     patientId: string,
     types?: string,
     limit = 80,
   ): Promise<{ items: Record<string, unknown>[] }> {
+    const moneyVis = await loadUserMoneyVisibilityOverrides(this.prisma, tenantId, viewer.userId);
     const allowed = types
       ? new Set(types.split(",").map((t) => t.trim().toUpperCase()))
       : new Set(["VISIT", "OPERATION", "DOCUMENT", "INVOICE", "MESSAGE"]);
@@ -260,9 +266,35 @@ export class Patient360Service {
         where: { tenantId, patientId },
         orderBy: { createdAt: "desc" },
         take: limit,
-        select: { id: true, invoiceNumber: true, createdAt: true, currency: true },
+        select: {
+          id: true,
+          invoiceNumber: true,
+          createdAt: true,
+          currency: true,
+          encounterId: true,
+          operationId: true,
+          encounter: {
+            select: {
+              clinicianId: true,
+              appointment: { select: { clinicianId: true } },
+            },
+          },
+          operation: { select: { clinicianId: true } },
+        },
       });
       for (const r of rows) {
+        const visible = invoiceFinancialsVisible(
+          viewer,
+          {
+            encounterId: r.encounterId,
+            operationId: r.operationId,
+            encounterClinicianId: r.encounter?.clinicianId,
+            operationClinicianId: r.operation?.clinicianId,
+            appointmentClinicianId: r.encounter?.appointment?.clinicianId ?? null,
+          },
+          moneyVis,
+        );
+        if (!visible) continue;
         items.push({ at: r.createdAt, type: "INVOICE", payload: { invoiceId: r.id, number: r.invoiceNumber, currency: r.currency } });
       }
     }

@@ -8,6 +8,7 @@ import {
   canEditEncounterFeesForViewer,
   canEditOperationFeesForViewer,
   encounterFinancialsVisible,
+  invoiceFinancialsVisible,
   operationRowFinancialsVisible,
 } from "./user-money-visibility";
 
@@ -61,4 +62,46 @@ test("show edit only grants edit not view for call center on operations row", ()
   };
   assert.equal(operationRowFinancialsVisible(callCenter, "phy-1", overrides), false);
   assert.equal(canEditOperationFeesForViewer(callCenter, overrides), true);
+});
+
+test("invoice visibility follows linked operation or encounter overrides", () => {
+  const hideEnc = {
+    ...DEFAULT_MONEY_VISIBILITY_OVERRIDES,
+    encounters: FinancialVisibilityOverride.HIDE_VISIBILITY_AND_EDIT,
+  };
+  const hideOps = {
+    ...DEFAULT_MONEY_VISIBILITY_OVERRIDES,
+    operations: FinancialVisibilityOverride.HIDE_VISIBILITY_AND_EDIT,
+  };
+  assert.equal(
+    invoiceFinancialsVisible(receptionist, { encounterId: "e1", encounterClinicianId: "phy-1" }, hideEnc),
+    false,
+  );
+  assert.equal(
+    invoiceFinancialsVisible(receptionist, { operationId: "o1", operationClinicianId: "phy-1" }, hideOps),
+    false,
+  );
+  assert.equal(
+    invoiceFinancialsVisible(receptionist, { encounterId: "e1", encounterClinicianId: "phy-1" }, DEFAULT_MONEY_VISIBILITY_OVERRIDES),
+    true,
+  );
+});
+
+test("encounter invoice hidden when linked appointment money is hidden", () => {
+  const overrides = {
+    ...DEFAULT_MONEY_VISIBILITY_OVERRIDES,
+    appointments: FinancialVisibilityOverride.HIDE_VISIBILITY_AND_EDIT,
+  };
+  assert.equal(
+    invoiceFinancialsVisible(
+      receptionist,
+      {
+        encounterId: "e1",
+        encounterClinicianId: "phy-1",
+        appointmentClinicianId: "phy-2",
+      },
+      overrides,
+    ),
+    false,
+  );
 });
