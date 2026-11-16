@@ -22,12 +22,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  ci_test:
     name: CI test
     uses: ./.github/workflows/ci-test-reusable.yml
 
   synth-and-build:
-    needs: test
+    needs: ci_test
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

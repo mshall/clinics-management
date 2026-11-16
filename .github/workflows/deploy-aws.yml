@@ -17,7 +17,7 @@
 # 4) GitHub repo > Settings > Secrets and variables > Actions > New repository secret:
 #      Name:  AWS_DEPLOY_ROLE_ARN
 #      Value: arn:aws:iam::990597228737:role/GitHubAction-AssumeRole
-#    (Trust policy must allow this repo, e.g. repo:mshall/kiorly-clinics-management:* — see IAM OIDC role.)
+#    (Trust policy must allow this repo, e.g. repo:mshall/clinics-management:* — see IAM OIDC role.)
 #    The deploy role also needs lambda:InvokeFunction on the stack's DbSeedFn (or lambda:InvokeFunction on *).
 #
 # 5) Post-deploy cicd-post-deploy-seed.sh invokes DbSeedFn (idempotent demo users on RDS).
@@ -69,14 +69,14 @@ env:
   AWS_REGION: eu-central-1
 
 jobs:
-  test:
+  ci_test:
     name: CI test
     uses: ./.github/workflows/ci-test-reusable.yml
 
   # Fail fast before OIDC/CDK when TypeScript rejects the web bundle (e.g. TS6133 unused locals).
   # Same command as scripts/cicd-deploy.sh; avoids mislabeling the failure as App Runner NotStabilized.
   web-build:
-    needs: test
+    needs: ci_test
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -97,7 +97,7 @@ jobs:
         run: npm run build -w web
 
   deploy:
-    needs: [test, web-build]
+    needs: [ci_test, web-build]
     permissions:
       id-token: write
       contents: read

@@ -146,7 +146,7 @@ Typical flows:
 | Web | React 18, Vite, TanStack Query, React Router, Tailwind, shadcn-style UI primitives |
 | Monorepo | npm workspaces (`apps/api`, `apps/web`) |
 
-See **[Docs/MODULAR_MONOLITH.md](./Docs/MODULAR_MONOLITH.md)** for bounded contexts, import rules, and microservice extraction. CI runs all `src/**/*.node.test.ts` via `npm run test:unit -w api` (glob — add a `*.node.test.ts` file and it is picked up automatically). Enable **CI test** on `main`: `bash scripts/apply-github-branch-protection.sh` (needs `gh` + admin).
+See **[Docs/MODULAR_MONOLITH.md](./Docs/MODULAR_MONOLITH.md)** for bounded contexts, import rules, and microservice extraction. CI runs all `src/**/*.node.test.ts` via `npm run test:unit -w api` (glob — add a `*.node.test.ts` file and it is picked up automatically). Merge via PR with **CI test / CI test** required (`bash scripts/apply-github-branch-protection.sh` — needs `gh` + admin; enforces for admins too).
 
 **Local dev traffic:** Vite dev server proxies `/api` → `http://localhost:3000` (see `apps/web/vite.config.ts`). The SPA calls relative `/api/v1/...` unless `VITE_API_URL` is set.
 

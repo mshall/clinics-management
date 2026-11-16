@@ -5,7 +5,8 @@ on:
   workflow_call:
 
 jobs:
-  test:
+  ci_test:
+    name: CI test
     runs-on: ubuntu-latest
     timeout-minutes: 30
     services:

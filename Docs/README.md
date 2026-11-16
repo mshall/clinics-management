@@ -89,7 +89,7 @@ When signed in as **Group admin** (e.g. `admin@drahmedshall.com` or `admin@kiorl
 
 **Integration API (external patient platforms):** Group or clinic admins create clients under **Admin → Organization & settings → Integration API clients**. External systems use `Authorization: Bearer kio_live.<clientKey>.<secret>` on `/api/v1/integrations/*` (not staff JWT). Appointments, **operations/surgery booking**, and **signed webhooks** are documented in RFC §6.2.21. **Local DB:** `npm run dev` and `npm run test:integration-smoke` automatically run **`npm run db:ensure`** (Postgres `.pgdata/`, migrations, demo seed if empty). Manual: `npm run db:setup`, stop with `npm run db:down`.
 
-**GitHub / main:** Prefer pull requests for `compliance/`, `fiscal-devices/`, `billing/`, and `revenue/` (direct pushes fail via `main-sensitive-paths.yml`). Require **CI test** before merge: `bash scripts/apply-github-branch-protection.sh` (repo admin + `gh`). API tests: `src/**/*.node.test.ts` and `src/**/*.integration.test.ts` (glob — no manual list in `package.json`).
+**GitHub / main:** Merge via pull request with **CI test / CI test** passing (`bash scripts/apply-github-branch-protection.sh` — enforces PR + check, including for admins). API tests: `src/**/*.node.test.ts` and `src/**/*.integration.test.ts` (glob — no manual list in `package.json`).
 
 **Patient allergies:** patient chart → **Allergies** (paginated table). Set at **Patients → Register**, **Admin → Organization patients**, or **Encounters → New** (multi-select + Other). API: `GET /api/v1/patients/:id/allergies`.
 
