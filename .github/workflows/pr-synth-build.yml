@@ -22,14 +22,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  test:
+    uses: ./.github/workflows/ci-test.yml
+
   synth-and-build:
+    needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
-
-      - name: Block tracked OpenAI API keys in repo
-        run: bash scripts/check-no-openai-secrets-in-git.sh
 
       - uses: actions/setup-node@v6
         with:

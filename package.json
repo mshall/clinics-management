@@ -28,6 +28,7 @@
     "dev:web": "npm run dev -w web",
     "dev:api": "npm run dev -w api",
     "codegen": "npm run codegen -w web",
+    "typecheck": "npm run typecheck -w api && npm run typecheck -w web",
     "build": "npm run build -w api && npm run build -w web",
     "lint": "npm run lint -w web",
     "preview": "npm run preview -w web",

@@ -16,6 +16,12 @@ import { reducePostedRevenueNetWithFiscal } from "./void-revenue-fiscal-returns"
 
 config({ path: resolve(process.cwd(), ".env") });
 
+const isCi = process.env.CI === "true";
+
+function failInCi(message: string): never {
+  assert.fail(`CI requires a real database: ${message}`);
+}
+
 const ACTIVE: FiscalSubmissionStatus[] = [
   FiscalSubmissionStatus.PENDING,
   FiscalSubmissionStatus.SUBMITTING,
@@ -38,6 +44,7 @@ async function ensureEtaFlag(prisma: PrismaClient, tenantId: string): Promise<vo
 
 test("pending sale 400→300 re-queues; submitted 300→200 queues two distinct returns", async (t) => {
   if (!process.env.DATABASE_URL?.trim()) {
+    if (isCi) failInCi("DATABASE_URL is not set");
     t.skip("DATABASE_URL not set");
     return;
   }
@@ -45,7 +52,8 @@ test("pending sale 400→300 re-queues; submitted 300→200 queues two distinct 
   const prisma = new PrismaClient();
   try {
     await prisma.$connect();
-  } catch {
+  } catch (err) {
+    if (isCi) failInCi(`PostgreSQL unavailable (${err instanceof Error ? err.message : String(err)})`);
     t.skip("PostgreSQL unavailable");
     await prisma.$disconnect();
     return;
@@ -56,6 +64,7 @@ test("pending sale 400→300 re-queues; submitted 300→200 queues two distinct 
     select: { id: true, tenantId: true, taxRegistrationNumber: true, invoiceVatPercent: true },
   });
   if (!clinicRow) {
+    if (isCi) failInCi("database has no clinic — run migrations and seed");
     t.skip("No clinic in database — run db:setup");
     await prisma.$disconnect();
     return;
@@ -109,6 +118,7 @@ test("pending sale 400→300 re-queues; submitted 300→200 queues two distinct 
     orderBy: { createdAt: "asc" },
   });
   if (!patient) {
+    if (isCi) failInCi("database has no patient for clinic — run seed");
     t.skip("No patient for clinic");
     await prisma.$disconnect();
     return;
