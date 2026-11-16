@@ -301,7 +301,8 @@ export class OperationsService {
     sortByStr?: string,
     sortOrderStr?: string,
     clinicIdStr?: string,
-    statusStr?: string
+    statusStr?: string,
+    patientIdStr?: string,
   ) {
     const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
     if (scopeIds !== null && !scopeIds.length) {
@@ -329,6 +330,11 @@ export class OperationsService {
     const st = statusStr?.trim().toUpperCase();
     if (st && (Object.values(OperationStatus) as string[]).includes(st)) {
       and.push({ status: st as OperationStatus });
+    }
+
+    const patientId = patientIdStr?.trim();
+    if (patientId) {
+      and.push({ patientId });
     }
 
     const clinicId = clinicIdStr?.trim();

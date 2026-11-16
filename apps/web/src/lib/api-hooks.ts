@@ -456,11 +456,13 @@ export interface OperationsListParams {
   from: string;
   to: string;
   clinicId?: string;
+  patientId?: string;
   status?: string;
   page?: number;
   pageSize?: number;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
+  enabled?: boolean;
 }
 
 export function useOperationsQuery(params: OperationsListParams) {
@@ -468,28 +470,32 @@ export function useOperationsQuery(params: OperationsListParams) {
   const storeTo = useDateRangeStore((s) => s.to);
   const from = params.from ?? storeFrom;
   const to = params.to ?? storeTo;
+  const { enabled = true, ...listParams } = params;
   const q = new URLSearchParams();
   q.set("from", from);
   q.set("to", to);
-  q.set("page", String(params.page ?? 1));
-  q.set("pageSize", String(params.pageSize ?? 10));
-  if (params.clinicId?.trim()) q.set("clinicId", params.clinicId.trim());
-  if (params.status?.trim()) q.set("status", params.status.trim());
-  if (params.sortBy) q.set("sortBy", params.sortBy);
-  if (params.sortOrder) q.set("sortOrder", params.sortOrder);
+  q.set("page", String(listParams.page ?? 1));
+  q.set("pageSize", String(listParams.pageSize ?? 10));
+  if (listParams.clinicId?.trim()) q.set("clinicId", listParams.clinicId.trim());
+  if (listParams.patientId?.trim()) q.set("patientId", listParams.patientId.trim());
+  if (listParams.status?.trim()) q.set("status", listParams.status.trim());
+  if (listParams.sortBy) q.set("sortBy", listParams.sortBy);
+  if (listParams.sortOrder) q.set("sortOrder", listParams.sortOrder);
   return useQuery({
     queryKey: [
       "operations",
       from,
       to,
-      params.clinicId ?? "",
-      params.status ?? "",
-      params.page ?? 1,
-      params.pageSize ?? 10,
-      params.sortBy,
-      params.sortOrder,
+      listParams.clinicId ?? "",
+      listParams.patientId ?? "",
+      listParams.status ?? "",
+      listParams.page ?? 1,
+      listParams.pageSize ?? 10,
+      listParams.sortBy,
+      listParams.sortOrder,
     ],
     queryFn: () => apiGet<Paginated<OperationDto>>(`/api/v1/operations?${q.toString()}`),
+    enabled,
   });
 }
 

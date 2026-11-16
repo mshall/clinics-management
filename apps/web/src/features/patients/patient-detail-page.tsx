@@ -10,6 +10,7 @@ import { PatientEditDialog } from "@/components/patient-edit-dialog";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { PatientClinicalDocuments } from "@/components/patient-clinical-documents";
 import { PatientInvoicesSection } from "@/features/invoices/patient-invoices-section";
+import { PatientOperationsSection } from "@/features/patients/patient-operations-section";
 import { PatientAllergiesSection } from "@/components/patient-allergies-section";
 import { Patient360Summary } from "@/components/patient-360-summary";
 import { PatientTimeline } from "@/components/patient-timeline";
@@ -45,6 +46,7 @@ export function PatientDetailPage() {
   const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
   const roleNavTabKeys = useAuthStore((s) => s.user?.roleNavTabKeys);
   const canViewEncounters = showNavItem(role, "encounters", navTabKeys, roleNavTabKeys);
+  const canViewOperations = showNavItem(role, "operations", navTabKeys, roleNavTabKeys);
   const canEditPatient = canEditPatientDetails(role);
   const [editOpen, setEditOpen] = useState(false);
   const { data: patient, isPending, isError, error } = usePatientQuery(id);
@@ -455,6 +457,9 @@ export function PatientDetailPage() {
         </Card>
       </div>
       ) : null}
+
+      {canViewOperations ? <PatientOperationsSection patientId={patient.id} /> : null}
+
       {canEditPatient ? (
         <PatientEditDialog patient={patient} open={editOpen} onOpenChange={setEditOpen} />
       ) : null}

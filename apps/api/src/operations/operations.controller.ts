@@ -122,10 +122,23 @@ export class OperationsController {
     @Query("sortBy") sortBy?: string,
     @Query("sortOrder") sortOrder?: string,
     @Query("clinicId") clinicId?: string,
-    @Query("status") status?: string
+    @Query("status") status?: string,
+    @Query("patientId") patientId?: string,
   ) {
     this.assertViewAccess(user);
-    return this.operations.list(requireTenantId(user), user, from, to, page, pageSize, sortBy, sortOrder, clinicId, status);
+    return this.operations.list(
+      requireTenantId(user),
+      user,
+      from,
+      to,
+      page,
+      pageSize,
+      sortBy,
+      sortOrder,
+      clinicId,
+      status,
+      patientId,
+    );
   }
 
   @Get("summary")
