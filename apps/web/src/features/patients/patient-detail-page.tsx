@@ -10,6 +10,7 @@ import { PatientEditDialog } from "@/components/patient-edit-dialog";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { PatientClinicalDocuments } from "@/components/patient-clinical-documents";
 import { PatientInvoicesSection } from "@/features/invoices/patient-invoices-section";
+import { PatientEncountersSection } from "@/features/patients/patient-encounters-section";
 import { PatientOperationsSection } from "@/features/patients/patient-operations-section";
 import { PatientAllergiesSection } from "@/components/patient-allergies-section";
 import { Patient360Summary } from "@/components/patient-360-summary";
@@ -31,7 +32,7 @@ import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog"
 import { collectQuickEncounterIssues } from "@/lib/create-form-validation";
 import { apiFetchBlob, apiPost } from "@/lib/http";
 import { enhanceImageFile } from "@/lib/enhance-image";
-import { formatEncounterStatus, calculateAgeFromDob, formatPatientDob, localeForLanguage } from "@/lib/locale-display";
+import { calculateAgeFromDob, formatPatientDob, localeForLanguage } from "@/lib/locale-display";
 import { patientAcquisitionDisplay, type PatientAcquisitionChannel } from "@/lib/patient-acquisition";
 import { showNavItem } from "@/lib/nav-policy";
 import { canEditPatientDetails } from "@/lib/patient-edit-policy";
@@ -50,20 +51,10 @@ export function PatientDetailPage() {
   const canEditPatient = canEditPatientDetails(role);
   const [editOpen, setEditOpen] = useState(false);
   const { data: patient, isPending, isError, error } = usePatientQuery(id);
-  const [encPage, setEncPage] = useState(1);
-  const [encPageSize, setEncPageSize] = useState(10);
   const [vitalsPage, setVitalsPage] = useState(1);
   const [vitalsPageSize, setVitalsPageSize] = useState(10);
   const [avatarDataUrl, setAvatarDataUrl] = useState<string | null>(null);
   const avatarKey = id ? `patient-avatar:${id}` : null;
-  const { data: encData, isPending: encLoading } = useEncountersQuery({
-    patientId: id,
-    page: encPage,
-    pageSize: encPageSize,
-    sortBy: "updatedAt",
-    sortOrder: "desc",
-    enabled: Boolean(id) && canViewEncounters,
-  });
   const { data: vitalsData, isPending: vitalsLoading } = useEncountersQuery({
     patientId: id,
     page: vitalsPage,
@@ -72,9 +63,6 @@ export function PatientDetailPage() {
     sortOrder: "desc",
     enabled: Boolean(id) && canViewEncounters,
   });
-  const encounters = encData?.items ?? [];
-  const encTotal = encData?.total ?? 0;
-  const encTotalPages = encData?.totalPages ?? 1;
   const vitalsRowsRaw = vitalsData?.items ?? [];
   const vitalsRows = useMemo(
     () =>
@@ -396,67 +384,7 @@ export function PatientDetailPage() {
 
       <PatientInvoicesSection patientId={patient.id} clinicId={patient.homeBranchId} />
 
-      {canViewEncounters ? (
-      <div className="grid gap-4">
-        <Card>
-          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
-            <CardTitle className="text-base">{t("patients.encounters")}</CardTitle>
-            <Button variant="link" className="h-auto p-0" asChild>
-              <Link to="/encounters">{t("patients.viewAllEncounters")}</Link>
-            </Button>
-          </CardHeader>
-          <CardContent className="text-sm">
-            {encLoading ? (
-              <p className="text-muted-foreground">{t("common.loading")}</p>
-            ) : encounters.length === 0 ? (
-              <p className="text-muted-foreground">{t("patients.noEncounters")}</p>
-            ) : (
-              <div className="space-y-3">
-                <ul className="space-y-2">
-                  {encounters.map((e) => (
-                    <li
-                      key={e.id}
-                      role="link"
-                      tabIndex={0}
-                      className="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2 transition-colors hover:bg-muted/50"
-                      onClick={() => navigate(`/encounters/${e.id}`)}
-                      onKeyDown={(ev) => {
-                        if (ev.key === "Enter" || ev.key === " ") {
-                          ev.preventDefault();
-                          navigate(`/encounters/${e.id}`);
-                        }
-                      }}
-                    >
-                      <div>
-                        <Badge variant={e.status === "FINALIZED" ? "default" : "secondary"} className="me-2">
-                          {formatEncounterStatus(e.status, t)}
-                        </Badge>
-                        <span>{e.visitType}</span>
-                        <span className="ms-2 text-xs text-muted-foreground ltr-nums">
-                          {new Date(e.updatedAt).toLocaleDateString(localeForLanguage(i18n.language))}
-                        </span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-                <TablePagination
-                  page={encPage}
-                  pageSize={encPageSize}
-                  total={encTotal}
-                  totalPages={encTotalPages}
-                  disabled={encLoading}
-                  onPageChange={setEncPage}
-                  onPageSizeChange={(s) => {
-                    setEncPageSize(s);
-                    setEncPage(1);
-                  }}
-                />
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      ) : null}
+      {canViewEncounters && patient ? <PatientEncountersSection patientId={patient.id} /> : null}
 
       {canViewOperations ? <PatientOperationsSection patientId={patient.id} /> : null}
 
