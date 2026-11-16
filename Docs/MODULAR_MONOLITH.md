@@ -31,7 +31,7 @@ Definition of contexts and **allowed cross-context import edges** live in:
 
 Automated check: `apps/api/src/platform/module-boundaries.node.test.ts` (included in `npm run test:unit -w api`).
 
-**Before pushing API changes:** run `npm run ci:test` from the repo root (same steps as the GitHub **CI test** job). When you add a new top-level folder under `apps/api/src/`, register it in `platform/module-contexts.ts`. Shared logic used from multiple contexts belongs in `common/` (kernel), not direct cross-context imports.
+**Before pushing API changes:** `npm run ci:test` (or rely on the **pre-push** hook after `npm run hooks:install`). When you add a new top-level folder under `apps/api/src/`, register it in `platform/module-contexts.ts`. Shared logic used from multiple contexts belongs in `common/` (kernel), not direct cross-context imports.
 
 ## Extracting a context to a microservice
 

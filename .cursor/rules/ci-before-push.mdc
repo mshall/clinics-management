@@ -1,0 +1,16 @@
+---
+description: Run the local CI test gate before git push so GitHub CI does not fail on preventable unit/boundary errors.
+alwaysApply: true
+---
+
+# CI test before push
+
+When you **`git push`** (or the user asks to push) from this repository:
+
+1. Run **`npm run ci:test`** from the repo root first unless it already ran successfully on the **same commit** being pushed in this session.
+2. If `ci:test` fails, fix the failure and re-run until green — do **not** push.
+3. The repo **`pre-push` hook** (after `bash scripts/install-git-hooks.sh`) runs the same gate; if push fails with hook output, fix and retry.
+
+Skip only when the user explicitly sets `SKIP_CI_TEST=1` for an emergency push.
+
+`npm run ci:test` mirrors `.github/workflows/ci-test-reusable.yml`: migrate, seed, typecheck, `test:unit` and `test:integration` for API.
