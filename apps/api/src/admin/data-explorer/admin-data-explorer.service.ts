@@ -109,7 +109,7 @@ export class AdminDataExplorerService {
       { key: "operation_documents", label: "Operation documents", scope: "tenant", ops: { list: true, get: true, create: false, patch: false, delete: false } },
       { key: "operation_medications", label: "Operation medications", scope: "tenant", ops: { list: true, get: true, create: false, patch: false, delete: false } },
       { key: "expenses", label: "Expenses", scope: "tenant", ops: { list: true, get: true, create: true, patch: true, delete: true } },
-      { key: "revenue_entries", label: "Revenue entries", scope: "tenant", ops: { list: true, get: true, create: true, patch: true, delete: true } },
+      { key: "revenue_entries", label: "Revenue entries", scope: "tenant", ops: { list: true, get: true, create: false, patch: false, delete: true } },
       { key: "audit_logs", label: "Audit logs", scope: "tenant", ops: { list: true, get: true, create: false, patch: false, delete: false } },
       { key: "clinic_admin_scopes", label: "Clinic admin scopes", scope: "tenant", ops: { list: true, get: true, create: true, patch: false, delete: true } },
       { key: "user_nav_tab_grants", label: "User nav tab grants", scope: "tenant", ops: { list: true, get: true, create: true, patch: true, delete: true } },

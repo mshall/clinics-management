@@ -20,6 +20,7 @@ import { resolveReportingRange } from "../common/reporting-range";
 import { PrismaService } from "../prisma/prisma.service";
 import { postRevenueWithFiscal } from "../compliance/post-revenue-with-fiscal";
 import { assertOperationRevenuesFiscalMutable } from "../compliance/revenue-fiscal-guard";
+import { syncPostedOperationContractRevenue } from "../compliance/operation-revenue-ledger";
 import { voidPostedRevenuesWithFiscalReturns } from "../compliance/void-revenue-fiscal-returns";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { AddOperationMedicationDto, OperationDocumentDto, OperationMedicationDto } from "./dto/operation-clinical.dto";
@@ -816,15 +817,12 @@ export class OperationsService {
 
     const row = await this.prisma.$transaction(async (tx) => {
       await assertOperationRevenuesFiscalMutable(tx, tenantId, id);
-      await tx.revenueEntry.updateMany({
-        where: { tenantId, operationId: id, status: RevenueStatus.POSTED, category: "OPERATION" },
-        data: {
-          clinicId: fields.clinicId,
-          description,
-          grossAmount: totalCost,
-          netAmount: totalCost,
-          currency: feeCurrency,
-        },
+      await syncPostedOperationContractRevenue(tx, tenantId, id, {
+        clinicId: fields.clinicId,
+        description,
+        grossAmount: totalCost,
+        netAmount: totalCost,
+        currency: feeCurrency,
       });
       return tx.operation.update({
         where: { id },
@@ -908,10 +906,12 @@ export class OperationsService {
             buyerName: patientName,
           });
         }
-        await tx.revenueEntry.updateMany({
-          where: { tenantId, operationId: id, status: RevenueStatus.POSTED, category: "OPERATION" },
-          data: { status: RevenueStatus.VOID },
-        });
+        await voidPostedRevenuesWithFiscalReturns(
+          tx,
+          tenantId,
+          { operationId: id, category: "OPERATION" },
+          "Return",
+        );
         return tx.operation.update({
           where: { id },
           data: { status: OperationStatus.DISCHARGED, paidAmount: total },

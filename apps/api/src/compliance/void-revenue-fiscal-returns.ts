@@ -1,7 +1,46 @@
 import { FiscalSubmissionStatus, Prisma, RevenueStatus } from "@prisma/client";
 import { queueFiscalDocument } from "./fiscal-queue";
 
-/** Void revenue rows and queue ETA return receipts where a sale was submitted. */
+export type SubmissionVoidFiscalAction =
+  | "none"
+  | "cancel_pending"
+  | "queue_return"
+  | "return_already_rejected";
+
+/** Classify how to unwind fiscal state when voiding posted revenue. */
+export function submissionVoidFiscalAction(
+  status: FiscalSubmissionStatus | undefined,
+): SubmissionVoidFiscalAction {
+  if (!status) return "none";
+  if (status === FiscalSubmissionStatus.REJECTED) return "return_already_rejected";
+  if (status === FiscalSubmissionStatus.PENDING) return "cancel_pending";
+  if (
+    status === FiscalSubmissionStatus.SUBMITTING ||
+    status === FiscalSubmissionStatus.SUBMITTED ||
+    status === FiscalSubmissionStatus.ACCEPTED
+  ) {
+    return "queue_return";
+  }
+  return "none";
+}
+
+async function cancelPendingFiscalDocument(tx: Prisma.TransactionClient, fiscalDocumentId: string): Promise<void> {
+  const sub = await tx.fiscalSubmission.findFirst({ where: { fiscalDocumentId } });
+  if (sub && sub.status !== FiscalSubmissionStatus.PENDING) {
+    return;
+  }
+  await tx.fiscalDocument.delete({ where: { id: fiscalDocumentId } });
+}
+
+/** Remove revenue rows after fiscal void/cancel (e.g. encounter delete). */
+export async function purgeRevenueEntries(
+  tx: Prisma.TransactionClient,
+  where: Prisma.RevenueEntryWhereInput,
+): Promise<void> {
+  await tx.revenueEntry.deleteMany({ where });
+}
+
+/** Void revenue rows and unwind or return linked ETA fiscal documents. */
 export async function voidPostedRevenuesWithFiscalReturns(
   tx: Prisma.TransactionClient,
   tenantId: string,
@@ -16,8 +55,6 @@ export async function voidPostedRevenuesWithFiscalReturns(
           submission: true,
         },
       },
-      operation: { select: { patientId: true, clinicId: true } },
-      encounter: { select: { patientId: true, clinicId: true } },
     },
   });
 
@@ -25,19 +62,32 @@ export async function voidPostedRevenuesWithFiscalReturns(
     const amount = Number(row.netAmount);
     if (amount <= 0) continue;
 
+    const doc = row.fiscalDocument;
+    const sub = doc?.submission;
+    const action = doc
+      ? sub
+        ? submissionVoidFiscalAction(sub.status)
+        : "cancel_pending"
+      : "none";
+
     await tx.revenueEntry.update({
       where: { id: row.id },
       data: { status: RevenueStatus.VOID, grossAmount: 0, netAmount: 0 },
     });
 
-    const sub = row.fiscalDocument?.submission;
-    const fiscalSubmitted =
-      sub &&
-      (sub.status === FiscalSubmissionStatus.SUBMITTED || sub.status === FiscalSubmissionStatus.ACCEPTED);
+    if (!doc) continue;
 
-    const patientId =
-      row.operation?.patientId ?? row.encounter?.patientId ?? null;
-    if (!patientId || !fiscalSubmitted) continue;
+    if (action === "return_already_rejected" || action === "none") {
+      continue;
+    }
+
+    if (action === "cancel_pending") {
+      await cancelPendingFiscalDocument(tx, doc.id);
+      continue;
+    }
+
+    const patientId = doc.patientId?.trim();
+    if (!patientId) continue;
 
     await queueFiscalDocument(tx, {
       tenantId,

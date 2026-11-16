@@ -5,11 +5,27 @@ import { test } from "node:test";
 
 const SRC = join(process.cwd(), "src");
 
-/** Files allowed to call `revenueEntry.create` (must also queue fiscal or use postRevenueWithFiscal). */
+/** Files allowed to call `revenueEntry.create`. */
 const ALLOWED_REVENUE_CREATORS = new Set([
   "compliance/post-revenue-with-fiscal.ts",
   "common/visit-fee-ledger.ts",
 ]);
+
+/** Files allowed to delete / void-update posted revenue outside helpers (narrow exceptions). */
+const ALLOWED_REVENUE_MUTATORS = new Set([
+  ...ALLOWED_REVENUE_CREATORS,
+  "compliance/void-revenue-fiscal-returns.ts",
+  "compliance/operation-revenue-ledger.ts",
+  "admin/data-explorer/admin-data-explorer.service.ts",
+]);
+
+const REVENUE_MUTATION_PATTERNS = [
+  /revenueEntry\.create\s*\(/,
+  /revenueEntry\.delete\s*\(/,
+  /revenueEntry\.deleteMany\s*\(/,
+  /revenueEntry\.updateMany\s*\(/,
+  /revenueEntry\.update\s*\(/,
+] as const;
 
 function listTsFiles(dir: string, prefix = "", out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -20,6 +36,10 @@ function listTsFiles(dir: string, prefix = "", out: string[] = []): string[] {
     else if (name.endsWith(".ts") && !name.endsWith(".node.test.ts") && !name.endsWith(".d.ts")) out.push(rel);
   }
   return out;
+}
+
+function fileTouchesRevenueMutation(text: string): boolean {
+  return REVENUE_MUTATION_PATTERNS.some((p) => p.test(text));
 }
 
 test("posted revenue is created only through fiscal-aware helpers", () => {
@@ -34,5 +54,20 @@ test("posted revenue is created only through fiscal-aware helpers", () => {
     offenders,
     [],
     `These files create RevenueEntry without postRevenueWithFiscal/visit-fee-ledger: ${offenders.join(", ")}`,
+  );
+});
+
+test("revenue entry mutations stay in approved fiscal modules", () => {
+  const offenders: string[] = [];
+  for (const rel of listTsFiles(SRC)) {
+    if (rel.includes("prisma/seed")) continue;
+    const text = readFileSync(join(SRC, rel), "utf8");
+    if (!fileTouchesRevenueMutation(text)) continue;
+    if (!ALLOWED_REVENUE_MUTATORS.has(rel)) offenders.push(rel);
+  }
+  assert.deepEqual(
+    offenders,
+    [],
+    `These files mutate RevenueEntry outside approved helpers: ${offenders.join(", ")}`,
   );
 });

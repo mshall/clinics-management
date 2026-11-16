@@ -7,6 +7,7 @@ import { resolveLedgerListingRange } from "../common/reporting-range";
 import { isBaseCurrency } from "../common/base-currencies";
 import { resolveClinicCurrency } from "../common/clinic-currency";
 import type { JwtUser } from "../auth/jwt-user";
+import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { postRevenueWithFiscal } from "../compliance/post-revenue-with-fiscal";
 import type { CreateRevenueDto } from "./dto/create-revenue.dto";
@@ -33,7 +34,10 @@ const POST_REVENUE_ROLES: ReadonlySet<UserRole> = new Set([
 
 @Injectable()
 export class RevenueService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   private assertLedgerAccess(role: UserRole): void {
     if (!LEDGER_ROLES.has(role)) {
@@ -253,7 +257,12 @@ export class RevenueService {
       select: { taxRegistrationNumber: true, invoiceVatPercent: true },
     });
     if (!clinic) throw new BadRequestException("Invalid clinicId");
+    const skipEta = dto.skipEtaEReceipt === true;
+    if (skipEta && !dto.skipEtaEReceiptReason?.trim()) {
+      throw new BadRequestException("skipEtaEReceiptReason is required when skipEtaEReceipt is enabled");
+    }
     const currency = await this.resolveRevenueCurrency(tenantId, dto.clinicId, dto.currency);
+    const status = dto.status ?? RevenueStatus.POSTED;
     const row = await this.prisma.$transaction(async (tx) => {
       const { revenueEntryId } = await postRevenueWithFiscal(tx, {
         tenantId,
@@ -265,8 +274,9 @@ export class RevenueService {
         netAmount: dto.netAmount,
         currency,
         postedAt: new Date(dto.postedAt),
-        status: dto.status ?? RevenueStatus.POSTED,
-        skipFiscalQueue: (dto.status ?? RevenueStatus.POSTED) !== RevenueStatus.POSTED || dto.netAmount <= 0,
+        status,
+        skipFiscalQueue: status !== RevenueStatus.POSTED || dto.netAmount <= 0 || skipEta,
+        skipEtaEReceipt: skipEta,
         clinicTaxRin: clinic?.taxRegistrationNumber,
         vatPercent: Number(clinic?.invoiceVatPercent ?? 0),
       });
@@ -275,6 +285,22 @@ export class RevenueService {
         include: { clinic: { select: { nameEn: true, nameAr: true } } },
       });
     });
+    if (skipEta && status === RevenueStatus.POSTED && dto.netAmount > 0) {
+      await this.audit.recordEvent({
+        tenantId,
+        actorId: user.userId,
+        clinicId: dto.clinicId,
+        action: "REVENUE_SKIP_ETA_ERECEIPT",
+        resource: "revenue_entry",
+        resourceId: row.id,
+        metadata: {
+          category: dto.category,
+          reason: dto.skipEtaEReceiptReason?.trim() ?? "",
+          netAmount: dto.netAmount,
+          currency,
+        },
+      });
+    }
     return this.map(row);
   }
 

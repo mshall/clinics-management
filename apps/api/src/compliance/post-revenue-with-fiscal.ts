@@ -29,6 +29,8 @@ export type PostRevenueWithFiscalParams = {
   billingPaymentMethods?: QueueFiscalParams["billingPaymentMethods"];
   /** Skip fiscal queue (e.g. zero amount or explicit void-only rows). */
   skipFiscalQueue?: boolean;
+  /** B2B / non-patient revenue — not queued as ETA e-receipt (e-invoice later). */
+  skipEtaEReceipt?: boolean;
 };
 
 async function resolvePatientId(
@@ -91,10 +93,11 @@ export async function postRevenueWithFiscal(
   const gross = params.grossAmount;
   const tax = params.taxAmount;
 
+  const skipFiscal = params.skipFiscalQueue === true || params.skipEtaEReceipt === true;
   const patientId = await resolvePatientId(tx, params.tenantId, params);
   const buyerName = await resolveBuyerName(tx, params.tenantId, patientId, params.buyerName);
 
-  if (status === RevenueStatus.POSTED && net > 0) {
+  if (status === RevenueStatus.POSTED && net > 0 && !skipFiscal) {
     assertEtaBuyerNameAtPayment(net, currency, buyerName);
   }
 
@@ -122,12 +125,7 @@ export async function postRevenueWithFiscal(
     },
   });
 
-  if (
-    !params.skipFiscalQueue &&
-    status === RevenueStatus.POSTED &&
-    net > 0 &&
-    patientId
-  ) {
+  if (!skipFiscal && status === RevenueStatus.POSTED && net > 0 && patientId) {
     const clinic = await tx.clinic.findFirst({
       where: { id: params.clinicId, tenantId: params.tenantId },
       select: { taxRegistrationNumber: true, invoiceVatPercent: true },
@@ -148,9 +146,9 @@ export async function postRevenueWithFiscal(
       transferReference: params.transferReference,
       billingPaymentMethods: params.billingPaymentMethods,
     });
-  } else if (status === RevenueStatus.POSTED && net > 0 && !patientId && !params.skipFiscalQueue) {
+  } else if (status === RevenueStatus.POSTED && net > 0 && !patientId && !skipFiscal) {
     throw new BadRequestException(
-      "Cannot post receiptable revenue without a patient (link operation, encounter, or appointment)",
+      "Cannot post receiptable revenue without a patient (link operation, encounter, or appointment), or set skipEtaEReceipt for non-patient B2B income",
     );
   }
 

@@ -55,4 +55,16 @@ export class CreateRevenueDto {
   @IsOptional()
   @IsString()
   operationId?: string;
+
+  @ApiPropertyOptional({
+    description: "Skip ETA e-receipt queue for non-patient B2B revenue (e-invoice later); requires reason",
+  })
+  @IsOptional()
+  skipEtaEReceipt?: boolean;
+
+  @ApiPropertyOptional({ description: "Required when skipEtaEReceipt is true" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  skipEtaEReceiptReason?: string;
 }

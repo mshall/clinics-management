@@ -27,6 +27,10 @@ import { CLINIC_SCOPE_ROLES, fetchPhysicianNetworkClinicIds } from "../common/cl
 import { isBaseCurrency } from "../common/base-currencies";
 import { resolveClinicCurrency } from "../common/clinic-currency";
 import { upsertEncounterVisitFeeRevenue } from "../common/visit-fee-ledger";
+import {
+  purgeRevenueEntries,
+  voidPostedRevenuesWithFiscalReturns,
+} from "../compliance/void-revenue-fiscal-returns";
 import { parseVisitCollectionForAmount } from "../common/visit-collection";
 import { resolveTransferVerification } from "../common/visit-collection-transfer";
 import { PrismaService } from "../prisma/prisma.service";
@@ -969,7 +973,8 @@ export class EncountersService {
     const appointmentId = enc.appointmentId;
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.revenueEntry.deleteMany({ where: { tenantId, encounterId: id } });
+      await voidPostedRevenuesWithFiscalReturns(tx, tenantId, { encounterId: id }, "Return");
+      await purgeRevenueEntries(tx, { tenantId, encounterId: id });
       await tx.encounter.delete({ where: { id } });
 
       if (appointmentId) {
