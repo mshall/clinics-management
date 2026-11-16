@@ -37,17 +37,24 @@ test("reducePostedRevenueNetWithFiscal re-queues a pending 400 sale at 300 witho
           submission: { status: FiscalSubmissionStatus.PENDING },
         },
       }),
-      update: async ({ data }: { data: { netAmount?: { toString: () => string } } }) => {
-        updatedNet = Number(data.netAmount?.toString?.() ?? data.netAmount);
-        return { id: "rev-1" };
+      update: async ({
+        data,
+      }: {
+        data: { netAmount?: { toString: () => string }; fiscalSaleSeq?: { increment: number } };
+      }) => {
+        if (data.netAmount != null) {
+          updatedNet = Number(data.netAmount?.toString?.() ?? data.netAmount);
+        }
+        return { id: "rev-1", fiscalSaleSeq: data.fiscalSaleSeq ? 2 : 1 };
       },
     },
     $queryRaw: async () => [{ id: "sub-1" }],
     fiscalSubmission: {
-      findFirst: async (args: { where?: { fiscalDocumentId?: string; idempotencyKey?: string } }) => {
+      findFirst: async (args: { where?: { fiscalDocumentId?: string; idempotencyKey?: string; status?: unknown } }) => {
         if (args.where?.fiscalDocumentId) {
           return { id: "sub-1", status: FiscalSubmissionStatus.PENDING };
         }
+        if (args.where?.idempotencyKey) return null;
         return null;
       },
       update: async () => ({ id: "sub-1" }),
@@ -165,14 +172,17 @@ test("reducePostedRevenueNetWithFiscal queues partial return when sale is SUBMIT
           submission: { status: FiscalSubmissionStatus.PENDING },
         },
       }),
-      update: async () => ({ id: "rev-1" }),
+      update: async ({ data }: { data?: { netAmount?: unknown; fiscalReturnSeq?: { increment: number } } }) => {
+        return { id: "rev-1", fiscalReturnSeq: data?.fiscalReturnSeq ? 1 : 0 };
+      },
     },
     $queryRaw: async () => [{ id: "sub-1" }],
     fiscalSubmission: {
-      findFirst: async (args: { where?: { fiscalDocumentId?: string; idempotencyKey?: string } }) => {
+      findFirst: async (args: { where?: { fiscalDocumentId?: string; idempotencyKey?: string; status?: unknown } }) => {
         if (args.where?.fiscalDocumentId) {
           return { id: "sub-1", status: FiscalSubmissionStatus.SUBMITTING };
         }
+        if (args.where?.idempotencyKey) return null;
         return null;
       },
       update: async () => ({ id: "sub-1" }),

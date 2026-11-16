@@ -9,7 +9,19 @@ import { fiscalProviderKeyForMarket, getFiscalProvider } from "../providers/fisc
 import { resolveMarketForTenant } from "../markets/market-resolver";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
 import type { PrismaService } from "../prisma/prisma.service";
-import { buildFiscalIdempotencyKey, fiscalSourceRefFromQueue } from "./fiscal-idempotency";
+import {
+  buildFiscalIdempotencyKey,
+  buildRevenueReturnIdempotencyKey,
+  buildRevenueSaleIdempotencyKey,
+  fiscalSourceRefFromQueue,
+} from "./fiscal-idempotency";
+
+const ACTIVE_FISCAL_SUBMISSION_STATUSES: FiscalSubmissionStatus[] = [
+  FiscalSubmissionStatus.PENDING,
+  FiscalSubmissionStatus.SUBMITTING,
+  FiscalSubmissionStatus.SUBMITTED,
+  FiscalSubmissionStatus.ACCEPTED,
+];
 import { etaPhysicalReportingOptOut, resolveEtaClinicSettings } from "../providers/provider-settings";
 import { assertEtaBuyerNameAtPayment } from "./eta-buyer-name";
 import { resolveFiscalPaymentMethodCode } from "./fiscal-payment-method";
@@ -95,10 +107,30 @@ export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: 
 
   const currency = params.currency?.trim() || marketCtx.currency;
   assertEtaBuyerNameAtPayment(params.totalAmount, currency, params.buyerName);
-  const sourceRef = fiscalSourceRefFromQueue(params);
-  const idempotencyKey =
-    params.idempotencyKeyOverride?.trim() || buildFiscalIdempotencyKey(providerKey, sourceRef);
-  const returnSale = sourceRef.kind === "return";
+  const returnSale = Boolean(params.returnForRevenueEntryId?.trim());
+  let idempotencyKey = params.idempotencyKeyOverride?.trim() || "";
+  if (!idempotencyKey) {
+    if (returnSale && params.returnForRevenueEntryId?.trim()) {
+      const revenueId = params.returnForRevenueEntryId.trim();
+      const bumped = await tx.revenueEntry.update({
+        where: { id: revenueId },
+        data: { fiscalReturnSeq: { increment: 1 } },
+        select: { fiscalReturnSeq: true },
+      });
+      idempotencyKey = buildRevenueReturnIdempotencyKey(providerKey, revenueId, bumped.fiscalReturnSeq);
+    } else if (params.revenueEntryId?.trim()) {
+      const revenueId = params.revenueEntryId.trim();
+      const bumped = await tx.revenueEntry.update({
+        where: { id: revenueId },
+        data: { fiscalSaleSeq: { increment: 1 } },
+        select: { fiscalSaleSeq: true },
+      });
+      idempotencyKey = buildRevenueSaleIdempotencyKey(providerKey, revenueId, bumped.fiscalSaleSeq);
+    } else {
+      const sourceRef = fiscalSourceRefFromQueue(params);
+      idempotencyKey = buildFiscalIdempotencyKey(providerKey, sourceRef);
+    }
+  }
   const fiscalDevice = await resolveFiscalDeviceForQueue(tx, params.tenantId, params.clinicId, providerKey);
   if (provider.deviceRegistration?.required && !fiscalDevice) {
     await logFiscalQueueSkipped(tx, {
@@ -197,21 +229,28 @@ export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: 
   });
 
   if (!params.resubmitAfterRejection) {
-    const existingDoc = await tx.fiscalDocument.findFirst({
-      where: {
-        OR: [
-          ...(params.revenueEntryId ? [{ revenueEntryId: params.revenueEntryId }] : []),
-          ...(params.paymentId ? [{ paymentId: params.paymentId }] : []),
-          ...(params.invoiceId ? [{ invoiceId: params.invoiceId }] : []),
-        ],
-      },
-      select: { id: true },
-    });
-    if (existingDoc) return;
+    const sourceLinks: Prisma.FiscalDocumentWhereInput[] = [
+      ...(params.revenueEntryId ? [{ revenueEntryId: params.revenueEntryId }] : []),
+      ...(params.paymentId ? [{ paymentId: params.paymentId }] : []),
+      ...(params.invoiceId ? [{ invoiceId: params.invoiceId }] : []),
+    ];
+    if (sourceLinks.length) {
+      const blockingDoc = await tx.fiscalDocument.findFirst({
+        where: {
+          OR: sourceLinks,
+          submission: { status: { in: ACTIVE_FISCAL_SUBMISSION_STATUSES } },
+        },
+        select: { id: true },
+      });
+      if (blockingDoc) return;
+    }
   }
 
   const dupSubmission = await tx.fiscalSubmission.findFirst({
-    where: { idempotencyKey: built.idempotencyKey },
+    where: {
+      idempotencyKey: built.idempotencyKey,
+      status: { in: ACTIVE_FISCAL_SUBMISSION_STATUSES },
+    },
     select: { id: true },
   });
   if (dupSubmission) return;

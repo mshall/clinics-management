@@ -16,6 +16,7 @@ const ALLOWED_REVENUE_MUTATORS = new Set([
   ...ALLOWED_REVENUE_CREATORS,
   "compliance/void-revenue-fiscal-returns.ts",
   "compliance/operation-revenue-ledger.ts",
+  "compliance/fiscal-queue.ts",
   "admin/data-explorer/admin-data-explorer.service.ts",
 ]);
 
@@ -33,7 +34,13 @@ function listTsFiles(dir: string, prefix = "", out: string[] = []): string[] {
     const rel = prefix ? `${prefix}/${name}` : name;
     const full = join(dir, name);
     if (statSync(full).isDirectory()) listTsFiles(full, rel, out);
-    else if (name.endsWith(".ts") && !name.endsWith(".node.test.ts") && !name.endsWith(".d.ts")) out.push(rel);
+    else if (
+      name.endsWith(".ts") &&
+      !name.endsWith(".node.test.ts") &&
+      !name.endsWith(".integration.test.ts") &&
+      !name.endsWith(".d.ts")
+    )
+      out.push(rel);
   }
   return out;
 }

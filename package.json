@@ -38,6 +38,8 @@
     "docs:preview": "npm run preview -w docs",
     "test:e2e": "npm run test:e2e -w web",
     "test:unit": "npm run test:unit -w api",
+    "pretest:integration": "bash scripts/ensure-local-dev-db.sh",
+    "test:integration": "npm run test:integration -w api",
     "pretest:integration-smoke": "bash scripts/ensure-local-dev-db.sh",
     "test:integration-smoke": "bash scripts/integration-api-smoke.sh",
     "check:no-openai-secrets-in-git": "bash scripts/check-no-openai-secrets-in-git.sh",

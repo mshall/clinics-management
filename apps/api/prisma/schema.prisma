@@ -1170,6 +1170,10 @@ model RevenueEntry {
   transferVerificationStatus TransferVerificationStatus @default(NOT_APPLICABLE)
   counterpartyName       String?
   counterpartyTaxNumber  String?
+  /** Increments on each queued ETA sale for this revenue row (distinct idempotency keys). */
+  fiscalSaleSeq          Int           @default(0)
+  /** Increments on each queued return/credit for this revenue row. */
+  fiscalReturnSeq        Int           @default(0)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   fiscalDocument FiscalDocument?

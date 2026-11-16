@@ -513,6 +513,16 @@ export class FiscalSubmitService {
       const vatPercent = draft?.lines?.[0]?.vatPercent ?? Number(row.clinic.invoiceVatPercent ?? 0);
       const description = draft?.lines?.[0]?.description ?? "Medical service";
 
+      const linkedRevenueId = row.fiscalDocument.revenueEntryId;
+      let totalAmount = Number(row.fiscalDocument.totalAmount);
+      if (linkedRevenueId) {
+        const rev = await tx.revenueEntry.findFirst({
+          where: { id: linkedRevenueId, tenantId },
+          select: { netAmount: true },
+        });
+        if (rev) totalAmount = Number(rev.netAmount);
+      }
+
       await tx.fiscalDocument.update({
         where: { id: row.fiscalDocumentId },
         data: {
@@ -526,11 +536,11 @@ export class FiscalSubmitService {
         tenantId: row.tenantId,
         clinicId: row.clinicId,
         patientId: row.patientId,
-        totalAmount: Number(row.fiscalDocument.totalAmount),
+        totalAmount,
         currency: row.fiscalDocument.currency,
         vatPercent,
         description,
-        revenueEntryId: row.fiscalDocument.revenueEntryId ?? undefined,
+        revenueEntryId: linkedRevenueId ?? undefined,
         paymentId: row.fiscalDocument.paymentId ?? undefined,
         buyerName: patch.buyerName ?? draft?.buyerName,
         clinicTaxRin: patch.issuerRin ?? draft?.issuerRin,

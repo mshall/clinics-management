@@ -74,6 +74,7 @@ async function cancelPendingSaleForRequeue(
       data: {
         status: FiscalSubmissionStatus.CANCELLED,
         errorMessage: "Cancelled before submit (sale amount adjusted)",
+        idempotencyKey: null,
         claimedUntil: null,
         claimedBy: null,
         nextRetryAt: null,
@@ -82,6 +83,21 @@ async function cancelPendingSaleForRequeue(
     await tx.fiscalDocument.update({
       where: { id: saleFiscalDocumentId },
       data: { revenueEntryId: null },
+    });
+    return "pending_cancelled";
+  }
+
+  if (
+    sub.status === FiscalSubmissionStatus.REJECTED ||
+    sub.status === FiscalSubmissionStatus.CANCELLED
+  ) {
+    await tx.fiscalDocument.update({
+      where: { id: saleFiscalDocumentId },
+      data: { revenueEntryId: null },
+    });
+    await tx.fiscalSubmission.update({
+      where: { id: sub.id },
+      data: { idempotencyKey: null },
     });
     return "pending_cancelled";
   }
@@ -122,6 +138,7 @@ async function cancelPendingOrQueueReturn(
       data: {
         status: FiscalSubmissionStatus.CANCELLED,
         errorMessage: "Cancelled before submit (revenue voided)",
+        idempotencyKey: null,
         claimedUntil: null,
         claimedBy: null,
         nextRetryAt: null,
