@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { AppointmentQueueStage, AppointmentStatus } from "@prisma/client";
+import { AppointmentQueueStage, AppointmentStatus, VisitCollectionMode } from "@prisma/client";
 
 export class AppointmentDto {
   @ApiProperty()
@@ -46,6 +46,12 @@ export class AppointmentDto {
 
   @ApiProperty({ description: "Scheduled visit fee for this appointment" })
   feeAmount!: number;
+
+  @ApiPropertyOptional({ enum: VisitCollectionMode, nullable: true })
+  scheduledCollectionMode?: VisitCollectionMode | null;
+
+  @ApiPropertyOptional({ nullable: true, description: "Planned transfer channel when scheduled fee uses money transfer" })
+  scheduledTransferChannel?: string | null;
 
   @ApiProperty({ enum: AppointmentStatus })
   status!: AppointmentStatus;

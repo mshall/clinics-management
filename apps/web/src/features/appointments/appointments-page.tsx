@@ -46,7 +46,14 @@ import {
 } from "@/lib/clinic-hours";
 import type { AppointmentDto } from "@/lib/api-types";
 import { DatetimeLocalField } from "@/components/datetime-local-field";
+import { ScheduledFeeCollectionFields } from "@/components/scheduled-fee-collection-fields";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
+import {
+  emptyScheduledFeeCollection,
+  scheduledFeeCollectionToApi,
+  validateScheduledFeeCollection,
+  type ScheduledFeeCollectionValue,
+} from "@/lib/visit-collection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 function toAppointmentIso(localDatetime: string): string {
@@ -177,6 +184,7 @@ export function AppointmentsPage() {
     isCallCenter && clinicId.trim() && start.trim() && isStartAfterClosing(start, clinicClosingTime),
   );
   const [bookFee, setBookFee] = useState("");
+  const [bookFeeCollection, setBookFeeCollection] = useState<ScheduledFeeCollectionValue>(emptyScheduledFeeCollection());
   const [overlapConflicts, setOverlapConflicts] = useState<AppointmentDto[]>([]);
   const [showOverlapConfirm, setShowOverlapConfirm] = useState(false);
   const validation = useValidationIssuesDialog({ intent: "create" });
@@ -312,9 +320,11 @@ export function AppointmentsPage() {
     if (end.trim()) body.endsAt = toAppointmentIso(end);
     if (confirmOverlap) body.confirmOverlap = true;
     const trimmedFee = bookFee.trim();
-    if (trimmedFee !== "") {
-      const fee = Number.parseFloat(trimmedFee);
-      if (Number.isFinite(fee) && fee >= 0) body.feeAmount = fee;
+    const fee = trimmedFee !== "" ? Number.parseFloat(trimmedFee) : NaN;
+    if (Number.isFinite(fee) && fee >= 0) {
+      body.feeAmount = fee;
+      const scheduled = scheduledFeeCollectionToApi(fee, bookFeeCollection);
+      if (scheduled) body.scheduledFeeCollection = scheduled;
     }
     return body;
   };
@@ -352,6 +362,10 @@ export function AppointmentsPage() {
     mutationFn: (confirmOverlap: boolean) => {
       const issues = collectAppointmentCreateIssues(appointmentCreateInput, t);
       if (issues.length > 0) throw new Error(issues.join(" "));
+      const trimmedFee = bookFee.trim();
+      const fee = trimmedFee !== "" ? Number.parseFloat(trimmedFee) : NaN;
+      const planErr = Number.isFinite(fee) && fee > 0 ? validateScheduledFeeCollection(fee, bookFeeCollection, t) : null;
+      if (planErr) throw new Error(planErr);
       return apiPost("/api/v1/appointments", buildCreateBody(confirmOverlap));
     },
     onSuccess: () => {
@@ -371,6 +385,7 @@ export function AppointmentsPage() {
       setEnd("");
       const d = adminOv.data?.currentTenant?.defaultVisitFee;
       setBookFee(d != null && Number.isFinite(Number(d)) ? String(d) : "");
+      setBookFeeCollection(emptyScheduledFeeCollection());
       void qc.invalidateQueries({ queryKey: ["appointments"] });
       void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
     },
@@ -674,15 +689,21 @@ export function AppointmentsPage() {
                 )}
               </p>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 sm:col-span-2">
               <Label>{t("appointments.scheduledFee", "Scheduled fee ({{currency}})", { currency: bookFeeCurrency })}</Label>
               <Input
-                className="ltr-nums"
+                className="ltr-nums max-w-xs"
                 type="number"
                 min="0"
                 step="0.01"
                 value={bookFee}
                 onChange={(e) => setBookFee(e.target.value)}
+              />
+              <ScheduledFeeCollectionFields
+                className="max-w-lg"
+                feeAmount={Number.parseFloat(bookFee.trim()) > 0 ? Number.parseFloat(bookFee.trim()) : 0}
+                value={bookFeeCollection}
+                onChange={setBookFeeCollection}
               />
             </div>
             <div className="flex flex-wrap items-end gap-2 sm:col-span-2">

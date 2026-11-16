@@ -1167,6 +1167,9 @@ model RevenueEntry {
   collectionMode VisitCollectionMode?
   transferChannel String?
   transferReference String?
+  transferReceiptPath String?
+  transferReceiptMimeType String?
+  transferReceiptFileName String?
   transferVerificationStatus TransferVerificationStatus @default(NOT_APPLICABLE)
   counterpartyName       String?
   counterpartyTaxNumber  String?
@@ -1315,6 +1318,8 @@ model Appointment {
   startsAt       DateTime
   endsAt         DateTime?
   feeAmount      Decimal           @default(0) @db.Decimal(14, 2)
+  scheduledCollectionMode VisitCollectionMode?
+  scheduledTransferChannel String?
   status         AppointmentStatus @default(SCHEDULED)
   roomLabel      String?
   queueStage     AppointmentQueueStage?

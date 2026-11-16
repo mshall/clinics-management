@@ -957,6 +957,10 @@ export class EncountersService {
     }
 
     const aptId = enc.appointmentId;
+    if (aptId) {
+      const { assertScheduledTransferFeeCollected } = await import("../appointments/appointment-transfer-fee.guard");
+      await assertScheduledTransferFeeCollected(this.prisma, tenantId, aptId);
+    }
     const finalizedAt = new Date();
 
     const followPatch =

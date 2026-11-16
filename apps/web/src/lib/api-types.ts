@@ -194,6 +194,8 @@ export interface AppointmentDto {
   startsAt: string;
   endsAt: string | null;
   feeAmount: number;
+  scheduledCollectionMode?: "CASH_ON_VISIT" | "MONEY_TRANSFER" | null;
+  scheduledTransferChannel?: string | null;
   status: string;
   notes: string | null;
   patientMrn?: string | null;

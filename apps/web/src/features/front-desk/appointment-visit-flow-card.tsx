@@ -75,6 +75,8 @@ export function AppointmentVisitFlowCard({ appointment }: Props) {
             clinicId={appointment.clinicId}
             amount={appointment.visitBalanceDueAmount}
             currency={appointment.visitBalanceDueCurrency ?? "EGP"}
+            preferredTransferChannel={appointment.scheduledTransferChannel}
+            requiresTransferReceipt={appointment.scheduledCollectionMode === "MONEY_TRANSFER"}
             invalidateKeys={[["appointment", appointment.id], ["front-desk"]]}
           />
         ) : null}

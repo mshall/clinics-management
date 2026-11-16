@@ -31,6 +31,13 @@ import { useAuthStore } from "@/stores/auth-store";
 import { PatientChartAlerts } from "@/components/patient-chart-alerts";
 import { AppointmentVisitFlowCard } from "@/features/front-desk/appointment-visit-flow-card";
 import { QuickCheckInPanel } from "@/features/front-desk/quick-check-in-panel";
+import { ScheduledFeeCollectionFields } from "@/components/scheduled-fee-collection-fields";
+import {
+  emptyScheduledFeeCollection,
+  scheduledFeeCollectionToApi,
+  validateScheduledFeeCollection,
+  type ScheduledFeeCollectionValue,
+} from "@/lib/visit-collection";
 
 function toDatetimeLocalValue(iso: string): string {
   const d = new Date(iso);
@@ -87,6 +94,7 @@ export function AppointmentDetailPage() {
   const [endsLocal, setEndsLocal] = useState("");
   const [notes, setNotes] = useState("");
   const [feeAmount, setFeeAmount] = useState("");
+  const [feeCollection, setFeeCollection] = useState<ScheduledFeeCollectionValue>(emptyScheduledFeeCollection());
   const [status, setStatus] = useState("");
   const [formErr, setFormErr] = useState<string | null>(null);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
@@ -102,6 +110,10 @@ export function AppointmentDetailPage() {
     setEndsLocal(apt.endsAt ? toDatetimeLocalValue(apt.endsAt) : "");
     setNotes(apt.notes ?? "");
     setFeeAmount(apt.feeAmount != null ? String(apt.feeAmount) : "");
+    setFeeCollection({
+      mode: apt.scheduledCollectionMode === "MONEY_TRANSFER" ? "MONEY_TRANSFER" : "CASH_ON_VISIT",
+      transferChannel: apt.scheduledTransferChannel ?? "",
+    });
     setStatus(apt.status);
   }, [apt]);
 
@@ -276,7 +288,14 @@ export function AppointmentDetailPage() {
       toast.error(msg);
       return;
     }
-    saveMut.mutate({
+    const feeForPlan = parsedFee ?? (Number.parseFloat(feeAmount) || 0);
+    const planErr = feeForPlan > 0 ? validateScheduledFeeCollection(feeForPlan, feeCollection, t) : null;
+    if (planErr) {
+      setFormErr(planErr);
+      toast.error(planErr);
+      return;
+    }
+  saveMut.mutate({
       clinicId,
       patientId,
       clinicianId,
@@ -285,6 +304,7 @@ export function AppointmentDetailPage() {
       notes: notes.trim() === "" ? "" : notes,
       status,
       ...(parsedFee !== undefined ? { feeAmount: parsedFee } : {}),
+      scheduledFeeCollection: scheduledFeeCollectionToApi(feeForPlan, feeCollection) ?? { mode: "CASH_ON_VISIT" },
     });
   };
 
@@ -556,6 +576,11 @@ export function AppointmentDetailPage() {
                     "If an open encounter is linked, saving also updates that encounter visit fee.",
                   )}
                 </p>
+                <ScheduledFeeCollectionFields
+                  feeAmount={Number.parseFloat(feeAmount.trim()) > 0 ? Number.parseFloat(feeAmount.trim()) : 0}
+                  value={feeCollection}
+                  onChange={setFeeCollection}
+                />
               </>
             )}
           </div>

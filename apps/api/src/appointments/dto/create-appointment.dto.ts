@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { AppointmentStatus } from "@prisma/client";
-import { IsBoolean, IsDateString, IsEnum, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
+import { Type } from "class-transformer";
+import { IsBoolean, IsDateString, IsEnum, IsNumber, IsOptional, IsString, MaxLength, Min, ValidateNested } from "class-validator";
+import { ScheduledFeeCollectionDto } from "../../common/dto/scheduled-fee-collection.dto";
 
 export class CreateAppointmentDto {
   @ApiProperty()
@@ -72,4 +74,12 @@ export class CreateAppointmentDto {
   @IsOptional()
   @IsBoolean()
   allowDoubleBook?: boolean;
+
+  @ApiPropertyOptional({
+    description: "How the scheduled fee will be paid (cash on visit vs organization payment channel)",
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ScheduledFeeCollectionDto)
+  scheduledFeeCollection?: ScheduledFeeCollectionDto;
 }

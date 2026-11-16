@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { AppointmentStatus, EncounterStatus, Prisma, UserRole } from "@prisma/client";
+import { AppointmentStatus, EncounterStatus, Prisma, UserRole, VisitCollectionMode } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { findActiveSchedulingPhysician } from "../common/active-scheduling-physician";
 import {
@@ -17,9 +17,13 @@ import {
   syncOpenEncounterVisitFeeFromAppointment,
 } from "../common/visit-fee-ledger";
 import { PrismaService } from "../prisma/prisma.service";
+import { parseScheduledFeeCollection } from "../common/visit-collection";
+import { resolveTenantTransferCollectionContext } from "../markets/market-transfer-context";
 import { assertNoOpenEncounterForAppointmentComplete } from "./appointment-completion.guard";
+import { assertScheduledTransferFeeCollected } from "./appointment-transfer-fee.guard";
 import { ensureDraftEncounterIfCheckedIn } from "../front-desk/ensure-draft-encounter-on-check-in";
 import { FrontDeskFlowService } from "../front-desk/front-desk-flow.service";
+import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
 import { SchedulingService } from "../scheduling/scheduling.service";
 import type { CreateAppointmentDto } from "./dto/create-appointment.dto";
 import type { AppointmentDto } from "./dto/appointment.dto";
@@ -48,6 +52,7 @@ export class AppointmentsService {
     private readonly prisma: PrismaService,
     private readonly scheduling: SchedulingService,
     private readonly frontDeskFlow: FrontDeskFlowService,
+    private readonly featureFlags: FeatureFlagsService,
   ) {}
 
   private async assertAppointmentAccess(
@@ -134,6 +139,8 @@ export class AppointmentsService {
       startsAt: row.startsAt.toISOString(),
       endsAt: row.endsAt?.toISOString() ?? null,
       feeAmount: Number(row.feeAmount),
+      scheduledCollectionMode: row.scheduledCollectionMode ?? null,
+      scheduledTransferChannel: row.scheduledTransferChannel ?? null,
       status: row.status,
       notes: row.notes,
       roomLabel: row.roomLabel ?? null,
@@ -479,6 +486,14 @@ export class AppointmentsService {
           : defaultFee;
     const feeAmount = Number.isFinite(feeRaw) && feeRaw >= 0 ? feeRaw : defaultFee;
 
+    const transferCtx = await resolveTenantTransferCollectionContext(this.prisma, this.featureFlags, tenantId);
+    const scheduleInput =
+      dto.scheduledFeeCollection ??
+      (feeAmount > 0 ? { mode: VisitCollectionMode.CASH_ON_VISIT } : undefined);
+    const scheduledPlan = parseScheduledFeeCollection(feeAmount, scheduleInput, {
+      allowedTransferChannels: transferCtx.allowedTransferChannels,
+    });
+
     const row = await this.prisma.appointment.create({
       data: {
         tenantId,
@@ -492,6 +507,8 @@ export class AppointmentsService {
         startsAt: start,
         endsAt: end,
         feeAmount,
+        scheduledCollectionMode: scheduledPlan.scheduledCollectionMode,
+        scheduledTransferChannel: scheduledPlan.scheduledTransferChannel,
         status: dto.status ?? AppointmentStatus.SCHEDULED,
         notes: dto.notes ?? null,
         integrationClientId: integration.integrationClientId ?? null,
@@ -519,6 +536,7 @@ export class AppointmentsService {
     }
     if (status === AppointmentStatus.COMPLETED) {
       await assertNoOpenEncounterForAppointmentComplete(this.prisma, tenantId, id);
+      await assertScheduledTransferFeeCollected(this.prisma, tenantId, id);
     }
     const row = await this.prisma.$transaction(async (tx) => {
       const checkIn =
@@ -601,6 +619,31 @@ export class AppointmentsService {
     const nextStatus = dto.status !== undefined ? dto.status : undefined;
     if (nextStatus === AppointmentStatus.COMPLETED) {
       await assertNoOpenEncounterForAppointmentComplete(this.prisma, tenantId, id);
+      await assertScheduledTransferFeeCollected(this.prisma, tenantId, id);
+    }
+
+    const transferCtx = await resolveTenantTransferCollectionContext(this.prisma, this.featureFlags, tenantId);
+    let scheduledPatch: {
+      scheduledCollectionMode?: VisitCollectionMode | null;
+      scheduledTransferChannel?: string | null;
+    } = {};
+    if (dto.scheduledFeeCollection !== undefined) {
+      const nextFee = feeProvided
+        ? Number(dto.feeAmount)
+        : Number(existing.feeAmount);
+      if (dto.scheduledFeeCollection === null) {
+        scheduledPatch = { scheduledCollectionMode: null, scheduledTransferChannel: null };
+      } else {
+        const plan = parseScheduledFeeCollection(nextFee, dto.scheduledFeeCollection, {
+          allowedTransferChannels: transferCtx.allowedTransferChannels,
+        });
+        scheduledPatch = {
+          scheduledCollectionMode: plan.scheduledCollectionMode,
+          scheduledTransferChannel: plan.scheduledTransferChannel,
+        };
+      }
+    } else if (feeProvided && Number(dto.feeAmount) <= 0) {
+      scheduledPatch = { scheduledCollectionMode: null, scheduledTransferChannel: null };
     }
 
     const row = await this.prisma.$transaction(async (tx) => {
@@ -625,6 +668,7 @@ export class AppointmentsService {
               : undefined,
           notes: dto.notes !== undefined ? (dto.notes === "" ? null : dto.notes) : undefined,
           ...(feeProvided ? { feeAmount: new Prisma.Decimal(String(Number(dto.feeAmount))) } : {}),
+          ...scheduledPatch,
           ...(checkIn ?? (nextStatus !== undefined ? { status: nextStatus } : {})),
         },
         include: appointmentDtoInclude,

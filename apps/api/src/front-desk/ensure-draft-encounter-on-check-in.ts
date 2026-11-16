@@ -1,4 +1,5 @@
 import { AppointmentStatus, EncounterStatus, type Prisma } from "@prisma/client";
+import { syncEncounterVisitFeeFromAppointmentSchedule } from "../appointments/appointment-visit-fee-sync";
 import { resolveClinicCurrency } from "../common/clinic-currency";
 
 /** Draft encounter linked to appointment; patient stays WAITING until Start visit. Idempotent. */
@@ -45,6 +46,7 @@ export async function ensureDraftEncounterOnCheckIn(
     },
     select: { id: true },
   });
+  await syncEncounterVisitFeeFromAppointmentSchedule(tx, tenantId, apt.id, enc.id);
   return enc.id;
 }
 

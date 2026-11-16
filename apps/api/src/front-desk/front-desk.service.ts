@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import {
   AppointmentQueueStage,
   AppointmentStatus,
@@ -21,6 +21,16 @@ import {
 import { ensureDraftEncounterOnCheckIn } from "./ensure-draft-encounter-on-check-in";
 import { FrontDeskFlowService } from "./front-desk-flow.service";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
+import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
+import { basename } from "node:path";
+import { randomUUID } from "node:crypto";
+
+const RECEIPT_MIME = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+]);
 
 @Injectable()
 export class FrontDeskService {
@@ -29,6 +39,7 @@ export class FrontDeskService {
     private readonly patients: PatientsService,
     private readonly flow: FrontDeskFlowService,
     private readonly featureFlags: FeatureFlagsService,
+    @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
   ) {}
 
   quickSearch(tenantId: string, user: JwtUser, q: string) {
@@ -342,15 +353,23 @@ export class FrontDeskService {
     user: JwtUser,
     encounterId: string,
     visitCollectionInput: VisitCollectionInput,
+    receiptFile?: Express.Multer.File,
   ) {
     const enc = await this.prisma.encounter.findFirst({
       where: { id: encounterId, tenantId },
-      select: { id: true, clinicId: true, patientId: true, status: true },
+      select: { id: true, clinicId: true, patientId: true, status: true, appointmentId: true },
     });
     if (!enc) throw new NotFoundException("Encounter not found");
 
     const receivable = await getEncounterVisitFeeReceivableSummary(this.prisma, tenantId, encounterId);
     if (!receivable) throw new BadRequestException("No visit fee balance due for this encounter");
+
+    const apt = enc.appointmentId
+      ? await this.prisma.appointment.findFirst({
+          where: { id: enc.appointmentId, tenantId },
+          select: { scheduledCollectionMode: true, scheduledTransferChannel: true },
+        })
+      : null;
 
     const { resolveTenantTransferCollectionContext } = await import("../markets/market-transfer-context");
     const transferCtx = await resolveTenantTransferCollectionContext(this.prisma, this.featureFlags, tenantId);
@@ -358,6 +377,30 @@ export class FrontDeskService {
       allowedTransferChannels: transferCtx.allowedTransferChannels,
       paymentMethods: transferCtx.paymentMethods,
     });
+
+    const needsReceipt =
+      collection.collectionMode === VisitCollectionMode.MONEY_TRANSFER ||
+      apt?.scheduledCollectionMode === VisitCollectionMode.MONEY_TRANSFER;
+    if (needsReceipt && (!receiptFile || !receiptFile.buffer?.length)) {
+      throw new BadRequestException(
+        "Upload the transfer payment receipt (PDF or image) to mark this scheduled fee as collected.",
+      );
+    }
+
+    let transferReceipt:
+      | { relativePath: string; mimeType: string; originalFileName: string }
+      | undefined;
+    if (receiptFile?.buffer?.length) {
+      const mime = receiptFile.mimetype?.trim() || "application/octet-stream";
+      if (!RECEIPT_MIME.has(mime)) {
+        throw new BadRequestException("Receipt must be a PDF or image (JPEG, PNG, WebP)");
+      }
+      const base =
+        basename(receiptFile.originalname || "receipt").replace(/[^\w.\-]+/g, "_").slice(0, 120) || "receipt";
+      const relativePath = `${tenantId}/${encounterId}/${randomUUID()}-${base}`;
+      await this.uploads.put("revenue", relativePath, receiptFile.buffer, mime);
+      transferReceipt = { relativePath, mimeType: mime, originalFileName: base };
+    }
 
     const clinic = await this.prisma.clinic.findFirst({
       where: { id: enc.clinicId, tenantId },
@@ -384,15 +427,22 @@ export class FrontDeskService {
           transferVerificationStatus,
           clinicTaxRin: clinic?.taxRegistrationNumber,
           vatPercent: Number(clinic?.invoiceVatPercent ?? 0),
+          transferReceipt: transferReceipt ?? null,
         });
         return {
           ...result,
           currency: receivable.currency,
           encounterId,
           collectedByUserId: user.userId,
+          message: needsReceipt
+            ? "Transfer fee collected — receipt saved and visit fee posted."
+            : undefined,
         };
       });
     } catch (err) {
+      if (transferReceipt) {
+        await this.uploads.deleteObject("revenue", transferReceipt.relativePath).catch(() => undefined);
+      }
       if (err instanceof Error && err.message === "VISIT_BALANCE_ALREADY_COLLECTED") {
         throw new ConflictException("Visit balance was already collected");
       }

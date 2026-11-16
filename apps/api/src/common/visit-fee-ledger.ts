@@ -33,7 +33,7 @@ function isReceivableVisitBalance(row: LedgerRow) {
   return row.status === RevenueStatus.RECEIVABLE;
 }
 
-async function findPostedAppointmentVisitCharge(
+export async function findPostedAppointmentVisitCharge(
   tx: Prisma.TransactionClient,
   tenantId: string,
   appointmentId: string,
@@ -238,7 +238,7 @@ async function amendCollectedVisitFee(
 }
 
 export async function getEncounterVisitFeeReceivableSummary(
-  db: Prisma.TransactionClient,
+  db: Pick<Prisma.TransactionClient, "revenueEntry">,
   tenantId: string,
   encounterId: string,
 ): Promise<{ amount: number; currency: string; revenueEntryId: string } | null> {
@@ -254,6 +254,12 @@ export async function getEncounterVisitFeeReceivableSummary(
   };
 }
 
+export type TransferReceiptUpload = {
+  relativePath: string;
+  mimeType: string;
+  originalFileName: string;
+};
+
 export async function collectEncounterVisitFeeBalance(
   tx: Prisma.TransactionClient,
   params: {
@@ -263,6 +269,7 @@ export async function collectEncounterVisitFeeBalance(
     transferVerificationStatus?: TransferVerificationStatus;
     clinicTaxRin?: string | null;
     vatPercent?: number;
+    transferReceipt?: TransferReceiptUpload | null;
   },
 ): Promise<{ revenueEntryId: string; amount: number }> {
   const encounter = await tx.encounter.findFirst({
@@ -301,6 +308,13 @@ export async function collectEncounterVisitFeeBalance(
       ...collectionData,
       ...(params.transferVerificationStatus !== undefined
         ? { transferVerificationStatus: params.transferVerificationStatus }
+        : {}),
+      ...(params.transferReceipt
+        ? {
+            transferReceiptPath: params.transferReceipt.relativePath,
+            transferReceiptMimeType: params.transferReceipt.mimeType,
+            transferReceiptFileName: params.transferReceipt.originalFileName,
+          }
         : {}),
     },
   });
@@ -348,6 +362,9 @@ export async function upsertEncounterVisitFeeRevenue(
     transferVerificationStatus?: TransferVerificationStatus;
     clinicTaxRin?: string | null;
     vatPercent?: number;
+    /** Booking planned transfer — fee stays receivable until staff collects with receipt. */
+    pendingTransferCollection?: boolean;
+    scheduledTransferChannel?: string | null;
   },
 ): Promise<void> {
   const { tenantId, clinicId, encounterId, appointmentId, amount, currency: currencyOpt } = params;
@@ -443,6 +460,29 @@ export async function upsertEncounterVisitFeeRevenue(
     for (const bal of encounterRows.filter(isReceivableVisitBalance)) {
       await voidPostedRevenuesWithFiscalReturns(tx, tenantId, { id: bal.id }, "Return");
     }
+  }
+
+  if (params.pendingTransferCollection && amount > 0) {
+    await upsertBalanceDueRow(tx, {
+      tenantId,
+      clinicId,
+      encounterId,
+      appointmentId,
+      patientId: params.patientId,
+      currency,
+      balanceAmount: amount,
+    });
+    const balanceRow = (await listEncounterVisitFeeLedgerRows(tx, tenantId, encounterId)).find(isReceivableVisitBalance);
+    if (balanceRow && params.scheduledTransferChannel?.trim()) {
+      await tx.revenueEntry.update({
+        where: { id: balanceRow.id },
+        data: {
+          collectionMode: VisitCollectionMode.MONEY_TRANSFER,
+          transferChannel: params.scheduledTransferChannel.trim().toUpperCase(),
+        },
+      });
+    }
+    return;
   }
 
   const parsedCollection = params.collection?.collectionMode ? params.collection : undefined;

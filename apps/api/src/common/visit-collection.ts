@@ -62,3 +62,42 @@ export function collectionFieldsFromParsed(parsed: ParsedVisitCollection) {
     transferReference: parsed.transferReference,
   };
 }
+
+export type ScheduledFeePlan = {
+  scheduledCollectionMode: VisitCollectionMode | null;
+  scheduledTransferChannel: string | null;
+};
+
+/** Booking-time plan: cash vs transfer channel (no transaction ID until collection). */
+export function parseScheduledFeeCollection(
+  feeAmount: number,
+  input: { mode: VisitCollectionMode; transferChannel?: string | null } | null | undefined,
+  opts?: {
+    allowedTransferChannels?: Set<string>;
+  },
+): ScheduledFeePlan {
+  if (feeAmount <= 0) {
+    return { scheduledCollectionMode: null, scheduledTransferChannel: null };
+  }
+  if (!input?.mode) {
+    throw new BadRequestException("Select how the scheduled fee will be paid (cash or transfer channel)");
+  }
+  if (input.mode === VisitCollectionMode.CASH_ON_VISIT) {
+    return { scheduledCollectionMode: VisitCollectionMode.CASH_ON_VISIT, scheduledTransferChannel: null };
+  }
+  if (input.mode !== VisitCollectionMode.MONEY_TRANSFER) {
+    throw new BadRequestException("Invalid scheduled fee collection method");
+  }
+  const channel = input.transferChannel?.trim().toUpperCase();
+  if (!channel) {
+    throw new BadRequestException("Select a payment channel for the scheduled transfer fee");
+  }
+  const allowed = opts?.allowedTransferChannels;
+  if (allowed && !allowed.has(channel)) {
+    throw new BadRequestException("This payment channel is not enabled for your market or organization");
+  }
+  return {
+    scheduledCollectionMode: VisitCollectionMode.MONEY_TRANSFER,
+    scheduledTransferChannel: channel,
+  };
+}

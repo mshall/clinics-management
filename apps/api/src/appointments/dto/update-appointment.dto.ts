@@ -1,6 +1,8 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { AppointmentStatus } from "@prisma/client";
-import { IsDateString, IsEnum, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
+import { Type } from "class-transformer";
+import { IsDateString, IsEnum, IsNumber, IsOptional, IsString, MaxLength, Min, ValidateNested } from "class-validator";
+import { ScheduledFeeCollectionDto } from "../../common/dto/scheduled-fee-collection.dto";
 
 export class UpdateAppointmentDto {
   @ApiPropertyOptional()
@@ -44,4 +46,10 @@ export class UpdateAppointmentDto {
   @IsString()
   @MaxLength(2000)
   notes?: string | null;
+
+  @ApiPropertyOptional({ description: "Scheduled fee payment plan (cash vs transfer channel)" })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ScheduledFeeCollectionDto)
+  scheduledFeeCollection?: ScheduledFeeCollectionDto | null;
 }

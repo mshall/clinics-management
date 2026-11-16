@@ -1,5 +1,7 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
-import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { BadRequestException, Body, Controller, Get, Param, Post, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { memoryStorage } from "multer";
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
@@ -61,6 +63,46 @@ export class FrontDeskController {
       user,
       encounterId,
       body.toVisitCollectionInput(),
+    );
+  }
+
+  @Post("encounters/:encounterId/collect-visit-balance-with-receipt")
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({
+    schema: {
+      type: "object",
+      required: ["receipt", "visitCollection"],
+      properties: {
+        receipt: { type: "string", format: "binary" },
+        visitCollection: { type: "string", description: "JSON VisitCollectionDto" },
+      },
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor("receipt", {
+      storage: memoryStorage(),
+      limits: { fileSize: 15 * 1024 * 1024 },
+    }),
+  )
+  collectVisitBalanceWithReceipt(
+    @CurrentUser() user: JwtUser,
+    @Param("encounterId") encounterId: string,
+    @UploadedFile() receipt: Express.Multer.File | undefined,
+    @Body("visitCollection") visitCollectionRaw?: string,
+  ) {
+    if (!receipt?.buffer?.length) throw new BadRequestException("receipt file is required");
+    let parsed: CollectVisitBalanceDto;
+    try {
+      parsed = Object.assign(new CollectVisitBalanceDto(), JSON.parse(visitCollectionRaw ?? "{}"));
+    } catch {
+      throw new BadRequestException("visitCollection must be valid JSON");
+    }
+    return this.frontDesk.collectVisitBalance(
+      requireTenantId(user),
+      user,
+      encounterId,
+      parsed.toVisitCollectionInput(),
+      receipt,
     );
   }
 }
