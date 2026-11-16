@@ -5,7 +5,7 @@ function bodyLooksLikeDuplicate(bodySnippet: string): boolean {
 }
 
 function bodyLooksLikeAuth(bodySnippet: string): boolean {
-  return /invalid_client|invalid_grant|unauthorized|credentials|access.denied|deactivated|expired.*secret|expired.*credential/i.test(
+  return /invalid_client|invalid_grant|unauthorized_client|access_denied|access\.denied|deactivated|expired.*secret|expired.*credential|token.*expired|pos.*deactivated|client_secret/i.test(
     bodySnippet,
   );
 }

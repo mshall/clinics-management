@@ -6,7 +6,7 @@ Platform support for Egypt **Receipt v1.2**: wire document builder, **content-ha
 
 | Phase | Behavior |
 |--------|----------|
-| **Queue** | `queueFiscalDocument` on **payment paths only** (check-in, billing, visit fee) — **not** on tax invoice print. Skipped when org disables Kiorly ETA integration. **EGP ≥ 150,000** buyer name at payment time. |
+| **Queue** | `postRevenueWithFiscal` posts revenue and calls `queueFiscalDocument` in one transaction — check-in, billing, visit fee, **operation down payment / installments / discharge balance**. **Not** on tax invoice print. Skipped when org disables Kiorly ETA integration. **EGP ≥ 150,000** buyer name at payment time. |
 | **Prepare** (short DB tx) | `FOR UPDATE` submission + device, verify FIFO head, set **lease** (`claimedUntil` / `claimedBy`), build wire **once** (`dateTimeIssued`, `internalID`, serial, UUID), persist **`eta-wire-v1`** payload, status **`SUBMITTING`**. No ETA HTTP inside the transaction. |
 | **Submit** (network) | `submitEtaWireDocument` sends the **stored JSON unchanged** on every retry (same bytes, same UUID). |
 | **Finalize** (short DB tx) | Success: advance device chain, `SUBMITTED`, poll **`providerValidationStatus`**. **4xx / validation:** `REJECTED`, admin alert, queue moves on. **5xx / network:** `SUBMITTING` + backoff. **Unclear:** longer backoff + status APIs when configured. |
@@ -16,7 +16,7 @@ Manual: `POST /api/v1/compliance/egypt/eta-queue/:id/submit` (same three-step pa
 
 ## Kiorly ETA integration opt-out
 
-Group admin may disable **Kiorly-issued** ETA e-receipts under **Admin → Organization → Egypt ETA**, with consent that the org is not obliged to use this integration or issues through another ETA-registered system. Audited; billing UI shows a persistent banner. Stored as `providerSettings["eta-egypt"].physicalReportingOptOut` + `physicalReportingConsentAt`.
+Group admin controls **ETA e-invoice integration** under **Administration → Organization & settings** (dedicated card, off by default for new Egypt orgs). When off, the org declares responsibility for tax-authority submission; clinic ETA fields stay hidden. When on, org defaults and per-clinic branch codes apply. Stored as `providerSettings["eta-egypt"].physicalReportingOptOut` + `physicalReportingConsentAt` (opt-out = integration disabled). Audited; billing UI shows a banner while opt-out is active.
 
 **Failures:** HTTP **401/403** and token errors → device `CREDENTIALS_EXPIRED`, receipt stays `SUBMITTING`. Duplicate UUID → status check, not `REJECTED`. Validation **4xx** → `REJECTED`; fix via `POST …/eta-queue/:id/resubmit` with `referenceOldUUID`.
 

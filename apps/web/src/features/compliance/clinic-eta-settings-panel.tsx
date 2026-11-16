@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { ClinicDetailDto } from "@/lib/api-types";
 import { apiPatch } from "@/lib/http";
+import { useOrgEtaPhysicalOptOut } from "@/lib/use-org-eta-opt-out";
 
 type Props = {
   clinicId: string;
@@ -16,6 +17,7 @@ type Props = {
 
 export function ClinicEtaSettingsPanel({ clinicId, detail, disabled }: Props) {
   const { t } = useTranslation();
+  const { optOut, isLoading } = useOrgEtaPhysicalOptOut();
   const [branch, setBranch] = useState(detail.etaBranchCode ?? "");
   const [activity, setActivity] = useState(detail.etaTaxpayerActivityCode ?? "");
   const [itemCode, setItemCode] = useState(detail.etaDefaultItemCode ?? "");
@@ -49,14 +51,28 @@ export function ClinicEtaSettingsPanel({ clinicId, detail, disabled }: Props) {
     }
   }
 
+  if (!isLoading && optOut) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t("compliance.etaClinicTitle", "Egypt ETA (e-receipt)")}</CardTitle>
+          <CardDescription>{t("compliance.etaClinicOrgDisabled", "Organization ETA integration is off.")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">{t("compliance.etaOrgSelfReporting")}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base">{t("compliance.etaClinicTitle", "Egypt ETA (e-receipt)")}</CardTitle>
         <CardDescription>
           {t(
-            "compliance.etaClinicDesc",
-            "Branch code, activity, and item codes for this clinic. Organization TRN and e-signature are set under Admin → Organization.",
+            "compliance.etaClinicDescEnabled",
+            "Branch code, activity, and item codes for this clinic. Organization defaults and API credentials are under Administration → Organization & settings.",
           )}
         </CardDescription>
       </CardHeader>

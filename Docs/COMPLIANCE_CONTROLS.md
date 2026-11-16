@@ -36,7 +36,7 @@ This document maps platform controls to common frameworks — **not** a certific
 
 ## SOC 1 / SOC 2 themes
 
-- **Billing:** `BillingPayment`, `CashierShiftClose`, `RevenueEntry`, fiscal queue keyed by source payment/revenue/invoice id.
+- **Billing:** `BillingPayment`, `CashierShiftClose`, `RevenueEntry`, fiscal queue keyed by source payment/revenue/invoice id. Posted revenue uses `postRevenueWithFiscal` (check-in, visit fee, billing, operations); Admin Data Explorer cannot create or patch receiptable revenue — corrections use void/return receipts.
 - **Change management:** Git + CI/CD + Prisma migrations.
 - **Monitoring:** Health endpoints, integration failure UI, optional spike audit.
 

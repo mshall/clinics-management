@@ -516,37 +516,9 @@ export class AdminDataExplorerService {
         return serializeRow(row);
       }
       case "revenue_entries": {
-        const clinicId = String(body.clinicId ?? "");
-        const c = await this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId } });
-        if (!c) throw new BadRequestException("Invalid clinicId");
-        const category = String(body.category ?? "").trim();
-        const grossAmount = Number(body.grossAmount);
-        const taxAmount = Number(body.taxAmount ?? 0);
-        const netAmount = Number(body.netAmount);
-        const currency = String(body.currency ?? "AED").trim();
-        const postedAt = body.postedAt ? new Date(String(body.postedAt)) : null;
-        if (!category || !Number.isFinite(grossAmount) || !Number.isFinite(netAmount) || !postedAt || Number.isNaN(postedAt.getTime())) {
-          throw new BadRequestException("revenue_entries require clinicId, category, grossAmount, netAmount, postedAt (ISO)");
-        }
-        const status = (String(body.status ?? "POSTED") as RevenueStatus) || RevenueStatus.POSTED;
-        if (!Object.values(RevenueStatus).includes(status)) throw new BadRequestException("Invalid status");
-        const row = await this.prisma.revenueEntry.create({
-          data: {
-            tenantId,
-            clinicId,
-            appointmentId: body.appointmentId != null ? String(body.appointmentId) : null,
-            encounterId: body.encounterId != null ? String(body.encounterId) : null,
-            category,
-            description: body.description != null ? String(body.description) : null,
-            grossAmount,
-            taxAmount: Number.isFinite(taxAmount) ? taxAmount : 0,
-            netAmount,
-            currency,
-            postedAt,
-            status,
-          },
-        });
-        return serializeRow(row);
+        throw new BadRequestException(
+          "Revenue must be posted via check-in, billing, visit fee, or operation payment APIs (with ETA receipt when applicable)",
+        );
       }
       case "clinic_admin_scopes": {
         const userId = String(body.userId ?? "");
@@ -879,22 +851,9 @@ export class AdminDataExplorerService {
         return serializeRow(row);
       }
       case "revenue_entries": {
-        const data: Prisma.RevenueEntryUpdateInput = {};
-        if (body.category !== undefined) data.category = String(body.category);
-        if (body.description !== undefined) data.description = body.description === null ? null : String(body.description);
-        if (body.grossAmount !== undefined) data.grossAmount = Number(body.grossAmount);
-        if (body.taxAmount !== undefined) data.taxAmount = Number(body.taxAmount);
-        if (body.netAmount !== undefined) data.netAmount = Number(body.netAmount);
-        if (body.currency !== undefined) data.currency = String(body.currency);
-        if (body.postedAt !== undefined) data.postedAt = new Date(String(body.postedAt));
-        if (body.status !== undefined) {
-          const st = String(body.status) as RevenueStatus;
-          if (!Object.values(RevenueStatus).includes(st)) throw new BadRequestException("Invalid status");
-          data.status = st;
-        }
-        if (Object.keys(data).length === 0) throw new BadRequestException("No patchable fields");
-        const row = await this.prisma.revenueEntry.update({ where: { id }, data });
-        return serializeRow(row);
+        throw new BadRequestException(
+          "Posted revenue cannot be edited in Data Explorer; void and re-post through operational APIs",
+        );
       }
       case "user_nav_tab_grants": {
         if (body.tabKeys === undefined) throw new BadRequestException("tabKeys required");
@@ -978,8 +937,18 @@ export class AdminDataExplorerService {
         await this.prisma.expense.delete({ where: { id } });
         return { ok: true };
       case "revenue_entries":
-        await this.prisma.revenueEntry.delete({ where: { id } });
-        return { ok: true };
+        {
+          const existing = await this.prisma.revenueEntry.findFirst({
+            where: { id, tenantId },
+            include: { fiscalDocument: true },
+          });
+          if (!existing) throw new NotFoundException("Row not found");
+          if (existing.fiscalDocument) {
+            throw new BadRequestException("Cannot delete revenue linked to a fiscal document");
+          }
+          await this.prisma.revenueEntry.delete({ where: { id } });
+          return { ok: true };
+        }
       case "clinic_admin_scopes":
         await this.prisma.clinicAdminScope.delete({ where: { id } });
         return { ok: true };

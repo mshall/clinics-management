@@ -21,6 +21,7 @@ import type { DeactivateTenantUserDto } from "./dto/deactivate-tenant-user.dto";
 import type { ReactivateTenantUserDto } from "./dto/reactivate-tenant-user.dto";
 import { MarketsService } from "../markets/markets.service";
 import { normalizeOrgTaxRegistrationNumber } from "../common/sync-clinic-invoice-tax";
+import { mergeProviderBlock } from "../providers/provider-settings";
 
 @Injectable()
 export class PlatformAdminService {
@@ -174,6 +175,10 @@ export class PlatformAdminService {
     const defaultLocale = dto.defaultLocale?.trim() || market?.defaultLocale || "en";
 
     const result = await this.prisma.$transaction(async (tx) => {
+      const etaOptOutDefault =
+        market.code === "EG"
+          ? (mergeProviderBlock(null, "eta-egypt", { physicalReportingOptOut: true }) as object)
+          : undefined;
       const row = await tx.tenant.create({
         data: {
           name,
@@ -182,6 +187,7 @@ export class PlatformAdminService {
           deploymentCell,
           baseCurrency,
           defaultLocale,
+          ...(etaOptOutDefault ? { providerSettings: etaOptOutDefault } : {}),
           ...(dto.defaultTaxRegistrationNumber?.trim()
             ? { defaultTaxRegistrationNumber: normalizeOrgTaxRegistrationNumber(dto.defaultTaxRegistrationNumber) }
             : {}),

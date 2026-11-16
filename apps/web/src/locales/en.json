@@ -72,6 +72,13 @@
   },
   "compliance": {
     "orgEtaTitle": "Egypt ETA (organization)",
+    "etaOrgIntegrationTitle": "ETA e-invoice integration",
+    "etaOrgIntegrationDesc": "When enabled, Kiorly queues electronic tax receipts for payments. Configure each clinic under Clinics → Settings.",
+    "etaOrgIntegrationEnable": "Enable Kiorly ETA e-receipt integration for this organization",
+    "etaOrgSelfReporting": "Integration is off. Your organization is responsible for submitting receipts and invoices to the Egyptian Tax Authority through your own ETA-registered process or approved exemption.",
+    "etaOrgIntegrationSaved": "ETA integration settings saved.",
+    "etaClinicOrgDisabled": "Enable organization ETA integration to configure this clinic.",
+    "etaClinicDescEnabled": "Branch code, activity, and item codes for this clinic. Organization defaults and API credentials are under Administration → Organization & settings.",
     "orgEtaHint": "Production API keys live in AWS Secrets Manager (configure-apprunner-eta.sh). Per-clinic branch codes are under each clinic Settings.",
     "etaActivity": "Default activity code",
     "etaItemCode": "Default item code",

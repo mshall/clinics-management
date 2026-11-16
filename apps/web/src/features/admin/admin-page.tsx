@@ -46,6 +46,7 @@ import { ClinicInvoiceSettingsPanel } from "@/features/invoices/clinic-invoice-s
 import { ClinicPrescriptionSettingsPanel } from "@/features/prescriptions/clinic-prescription-settings-panel";
 import { TenantFeatureFlagsPanel } from "./tenant-feature-flags-panel";
 import { ProviderCredentialsPanel } from "./provider-credentials-panel";
+import { OrgEtaIntegrationCard } from "./org-eta-integration-card";
 
 export function AdminPage() {
   const { t, i18n } = useTranslation();
@@ -230,11 +231,6 @@ export function AdminPage() {
   const [vatDraft, setVatDraft] = useState("5");
   const [whatsappEnabled, setWhatsappEnabled] = useState(false);
   const [reminderHours, setReminderHours] = useState("24");
-  const [etaActivityOrg, setEtaActivityOrg] = useState("8690");
-  const [etaItemOrg, setEtaItemOrg] = useState("");
-  const [etaSealLabel, setEtaSealLabel] = useState("");
-  const [etaPhysicalOptOut, setEtaPhysicalOptOut] = useState(false);
-  const [etaPhysicalConsent, setEtaPhysicalConsent] = useState(false);
   useEffect(() => {
     if (!isPlatformSuperAdmin && !isGroupAdmin && adminSection === "data") setAdminSection("clinics");
   }, [isPlatformSuperAdmin, isGroupAdmin, adminSection]);
@@ -259,29 +255,12 @@ export function AdminPage() {
     if (t?.whatsAppRemindersEnabled != null) setWhatsappEnabled(t.whatsAppRemindersEnabled);
     const h = overview.data?.currentTenant as { appointmentReminderHoursBefore?: number } | undefined;
     if (h?.appointmentReminderHoursBefore != null) setReminderHours(String(h.appointmentReminderHoursBefore));
-    const act = overview.data?.currentTenant as { etaDefaultTaxpayerActivityCode?: string } | undefined;
-    if (act?.etaDefaultTaxpayerActivityCode) setEtaActivityOrg(act.etaDefaultTaxpayerActivityCode);
-    const item = overview.data?.currentTenant as { etaDefaultItemCode?: string | null } | undefined;
-    if (item?.etaDefaultItemCode != null) setEtaItemOrg(item.etaDefaultItemCode ?? "");
-    const seal = overview.data?.currentTenant as { etaEsignatureLabel?: string | null } | undefined;
-    if (seal?.etaEsignatureLabel != null) setEtaSealLabel(seal.etaEsignatureLabel ?? "");
-    const phys = overview.data?.currentTenant as { etaPhysicalReportingOptOut?: boolean } | undefined;
-    if (phys?.etaPhysicalReportingOptOut != null) setEtaPhysicalOptOut(phys.etaPhysicalReportingOptOut);
-    if (phys?.etaPhysicalReportingOptOut) setEtaPhysicalConsent(true);
   }, [overview.data?.currentTenant]);
 
   const patchOrgSettingsMut = useMutation({
     mutationFn: () => {
       const vatN = Number.parseFloat(vatDraft);
       const hours = Number.parseInt(reminderHours, 10);
-      if (etaPhysicalOptOut && !etaPhysicalConsent) {
-        throw new Error(
-          t(
-            "compliance.etaPhysicalConsentRequired",
-            "Confirm physical reporting responsibility before disabling ETA integration.",
-          ),
-        );
-      }
       return apiPatch("/api/v1/admin/tenant-settings", {
         defaultVisitFee: Number.parseFloat(feeDraft),
         baseCurrency: currencyDraft,
@@ -289,13 +268,6 @@ export function AdminPage() {
         defaultInvoiceVatPercent: Number.isFinite(vatN) ? vatN : 5,
         whatsAppRemindersEnabled: whatsappEnabled,
         appointmentReminderHoursBefore: Number.isFinite(hours) ? hours : 24,
-        etaDefaultTaxpayerActivityCode: etaActivityOrg.trim() || "8690",
-        etaDefaultItemCode: etaItemOrg.trim() || null,
-        etaEsignatureLabel: etaSealLabel.trim() || null,
-        etaPhysicalReportingOptOut: etaPhysicalOptOut,
-        ...(etaPhysicalOptOut
-          ? { etaPhysicalReportingConsentAt: new Date().toISOString() }
-          : { etaPhysicalReportingConsentAt: null }),
       });
     },
     onSuccess: async () => {
@@ -456,45 +428,55 @@ export function AdminPage() {
                 <CardTitle className="text-base">{t("admin.orgSettings", "Organization settings")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  <div className="flex min-h-[5.5rem] flex-col justify-between gap-2">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
                     <Label htmlFor="org-base-currency">{t("platform.baseCurrency", "Base currency")}</Label>
                     <BaseCurrencySelect id="org-base-currency" value={currencyDraft} onChange={setCurrencyDraft} />
-                    <p className="text-xs text-muted-foreground">
+                    <p className="min-h-[2.5rem] text-xs text-muted-foreground">
                       {t(
                         "admin.orgBaseCurrencyHint",
                         "Default currency for all clinics unless a clinic sets its own override.",
                       )}
                     </p>
                   </div>
-                  <div className="flex min-h-[5.5rem] flex-col justify-between gap-2">
-                    <Label required>{t("admin.feeAmount", "Default visit fee ({{currency}})", { currency: currencyDraft })}</Label>
-                    <Input className="ltr-nums w-full max-w-40" type="number" min="0" step="0.01" value={feeDraft} onChange={(e) => setFeeDraft(e.target.value)} />
-                    <p className="text-xs text-muted-foreground opacity-0 select-none" aria-hidden>
-                      —
+                  <div className="space-y-2">
+                    <Label htmlFor="org-visit-fee" required>
+                      {t("admin.feeAmount", "Default visit fee ({{currency}})", { currency: currencyDraft })}
+                    </Label>
+                    <Input
+                      id="org-visit-fee"
+                      className="ltr-nums w-full"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={feeDraft}
+                      onChange={(e) => setFeeDraft(e.target.value)}
+                    />
+                    <p className="min-h-[2.5rem] text-xs text-muted-foreground" aria-hidden>
+                      {"\u00a0"}
                     </p>
                   </div>
-                  <div className="flex min-h-[5.5rem] flex-col justify-between gap-2">
+                  <div className="space-y-2">
                     <Label htmlFor="org-trn">{t("admin.orgTaxRegistrationNumber", "Tax registration (TRN)")}</Label>
                     <Input
                       id="org-trn"
-                      className="ltr-nums"
+                      className="ltr-nums w-full"
                       value={trnDraft}
                       onChange={(e) => setTrnDraft(e.target.value)}
                       placeholder="N/A"
                     />
-                    <p className="text-xs text-muted-foreground">
+                    <p className="min-h-[2.5rem] text-xs text-muted-foreground">
                       {t(
                         "admin.orgTrnHint",
                         "Applied to every clinic in this organization. Use N/A when no TRN is registered yet.",
                       )}
                     </p>
                   </div>
-                  <div className="flex min-h-[5.5rem] flex-col justify-between gap-2">
+                  <div className="space-y-2">
                     <Label htmlFor="org-vat">{t("admin.orgInvoiceVatPercent", "VAT % on invoices")}</Label>
                     <Input
                       id="org-vat"
-                      className="ltr-nums w-full max-w-28"
+                      className="ltr-nums w-full"
                       type="number"
                       min={0}
                       max={100}
@@ -502,65 +484,9 @@ export function AdminPage() {
                       value={vatDraft}
                       onChange={(e) => setVatDraft(e.target.value)}
                     />
-                    <p className="text-xs text-muted-foreground">
+                    <p className="min-h-[2.5rem] text-xs text-muted-foreground">
                       {t("admin.orgVatHint", "Default is 5%. Saving updates all clinics for tax invoices.")}
                     </p>
-                  </div>
-                </div>
-                <div className="w-full space-y-2 border-t border-border pt-4">
-                  <p className="text-sm font-medium">{t("compliance.orgEtaTitle", "Egypt ETA (organization)")}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {t(
-                      "compliance.orgEtaHint",
-                      "Production API keys live in AWS Secrets Manager (configure-apprunner-eta.sh). Per-clinic branch codes are under each clinic Settings.",
-                    )}
-                  </p>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="org-eta-activity">{t("compliance.etaActivity", "Default activity code")}</Label>
-                      <Input id="org-eta-activity" className="ltr-nums" value={etaActivityOrg} onChange={(e) => setEtaActivityOrg(e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="org-eta-item">{t("compliance.etaItemCode", "Default item code")}</Label>
-                      <Input id="org-eta-item" value={etaItemOrg} onChange={(e) => setEtaItemOrg(e.target.value)} />
-                    </div>
-                    <div className="space-y-2 sm:col-span-2">
-                      <Label htmlFor="org-eta-seal">{t("compliance.etaSealLabel", "E-signature / seal reference")}</Label>
-                      <Input id="org-eta-seal" value={etaSealLabel} onChange={(e) => setEtaSealLabel(e.target.value)} placeholder="kiorly-clinics-management/eta-credentials" />
-                    </div>
-                    <div className="space-y-2 sm:col-span-2 border-t border-border pt-3">
-                      <label className="flex items-start gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={etaPhysicalOptOut}
-                          onChange={(e) => {
-                            setEtaPhysicalOptOut(e.target.checked);
-                            if (!e.target.checked) setEtaPhysicalConsent(false);
-                          }}
-                        />
-                        <span>
-                          {t(
-                            "compliance.etaPhysicalOptOut",
-                            "Kiorly will not issue ETA e-receipts for this organization. We confirm we are not obliged to use this integration, or we issue receipts through another ETA-registered system.",
-                          )}
-                        </span>
-                      </label>
-                      {etaPhysicalOptOut ? (
-                        <label className="flex items-start gap-2 text-sm text-muted-foreground">
-                          <input
-                            type="checkbox"
-                            checked={etaPhysicalConsent}
-                            onChange={(e) => setEtaPhysicalConsent(e.target.checked)}
-                          />
-                          <span>
-                            {t(
-                              "compliance.etaPhysicalConsent",
-                              "I confirm this choice on behalf of the organization and accept responsibility for ETA compliance through another channel or exemption, as applicable.",
-                            )}
-                          </span>
-                        </label>
-                      ) : null}
-                    </div>
                   </div>
                 </div>
                 <TenantPaymentChannelsPanel />
@@ -591,6 +517,8 @@ export function AdminPage() {
               </CardContent>
             </Card>
           ) : null}
+
+          {isGroupAdmin ? <OrgEtaIntegrationCard /> : null}
 
           {canManageOrgUserNavTabs ? <OrgRbacPanel /> : null}
 

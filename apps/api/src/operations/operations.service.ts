@@ -18,6 +18,9 @@ import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { resolveReportingRange } from "../common/reporting-range";
 import { PrismaService } from "../prisma/prisma.service";
+import { postRevenueWithFiscal } from "../compliance/post-revenue-with-fiscal";
+import { assertOperationRevenuesFiscalMutable } from "../compliance/revenue-fiscal-guard";
+import { voidPostedRevenuesWithFiscalReturns } from "../compliance/void-revenue-fiscal-returns";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { AddOperationMedicationDto, OperationDocumentDto, OperationMedicationDto } from "./dto/operation-clinical.dto";
 import type { CreateOperationDto } from "./dto/create-operation.dto";
@@ -525,23 +528,43 @@ export class OperationsService {
 
     const feeCurrency = await this.resolveOperationFeeCurrency(tenantId, clinicId, dto.feeCurrency);
 
-    const row = await this.prisma.operation.create({
-      data: {
-        tenantId,
-        clinicId,
-        patientId: dto.patientId,
-        clinicianId: dto.clinicianId,
-        createdByUserId: user.userId,
-        operationDate,
-        totalCost: dto.totalCost,
-        downPayment,
-        paidAmount: downPayment,
-        feeCurrency,
-        comments: dto.comments?.trim() || null,
-        status: OperationStatus.BOOKED,
-        noMedications: dto.noMedications ?? false,
-      },
-      include: operationInclude,
+    const row = await this.prisma.$transaction(async (tx) => {
+      const op = await tx.operation.create({
+        data: {
+          tenantId,
+          clinicId,
+          patientId: dto.patientId,
+          clinicianId: dto.clinicianId,
+          createdByUserId: user.userId,
+          operationDate,
+          totalCost: dto.totalCost,
+          downPayment,
+          paidAmount: downPayment,
+          feeCurrency,
+          comments: dto.comments?.trim() || null,
+          status: OperationStatus.BOOKED,
+          noMedications: dto.noMedications ?? false,
+        },
+        include: operationInclude,
+      });
+      if (downPayment > 0) {
+        const patientName = `${patient.firstNameEn} ${patient.lastNameEn}`.trim();
+        const clinicianName = clinician.displayName?.trim() || dto.clinicianId;
+        await postRevenueWithFiscal(tx, {
+          tenantId,
+          clinicId,
+          patientId: dto.patientId,
+          operationId: op.id,
+          category: "OPERATION_PAYMENT",
+          description: `Operation down payment · ${patientName} · ${clinicianName}`,
+          grossAmount: downPayment,
+          taxAmount: 0,
+          netAmount: downPayment,
+          currency: feeCurrency,
+          buyerName: patientName,
+        });
+      }
+      return op;
     });
     return this.mapRow(row);
   }
@@ -660,17 +683,43 @@ export class OperationsService {
         ? await this.resolveOperationFeeCurrency(tenantId, fields.clinicId, dto.feeCurrency)
         : existing.feeCurrency;
 
-    const row = await this.prisma.operation.update({
-      where: { id },
-      data: {
-        ...fields,
-        totalCost,
-        downPayment,
-        paidAmount,
-        feeCurrency,
-        ...(dto.noMedications !== undefined ? { noMedications: dto.noMedications } : {}),
-      },
-      include: operationInclude,
+    const paymentDelta =
+      dto.downPayment !== undefined ? paidAmount - Number(existing.paidAmount) : 0;
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      const op = await tx.operation.update({
+        where: { id },
+        data: {
+          ...fields,
+          totalCost,
+          downPayment,
+          paidAmount,
+          feeCurrency,
+          ...(dto.noMedications !== undefined ? { noMedications: dto.noMedications } : {}),
+        },
+        include: operationInclude,
+      });
+      if (paymentDelta > 0.001) {
+        const { patientName, clinicianName } = await this.resolveNamesForOperation(
+          tenantId,
+          op.patientId,
+          op.clinicianId,
+        );
+        await postRevenueWithFiscal(tx, {
+          tenantId,
+          clinicId: op.clinicId,
+          patientId: op.patientId,
+          operationId: op.id,
+          category: "OPERATION_PAYMENT",
+          description: `Operation payment · ${patientName} · ${clinicianName}`,
+          grossAmount: paymentDelta,
+          taxAmount: 0,
+          netAmount: paymentDelta,
+          currency: feeCurrency,
+          buyerName: patientName,
+        });
+      }
+      return op;
     });
     return this.mapRow(row);
   }
@@ -766,8 +815,9 @@ export class OperationsService {
     const description = this.operationRevenueDescription(patientName, clinicianName);
 
     const row = await this.prisma.$transaction(async (tx) => {
+      await assertOperationRevenuesFiscalMutable(tx, tenantId, id);
       await tx.revenueEntry.updateMany({
-        where: { tenantId, operationId: id, status: RevenueStatus.POSTED },
+        where: { tenantId, operationId: id, status: RevenueStatus.POSTED, category: "OPERATION" },
         data: {
           clinicId: fields.clinicId,
           description,
@@ -843,24 +893,24 @@ export class OperationsService {
       const clinicianName = this.clinicianDisplayName(existing.clinician ?? null) ?? existing.clinicianId;
 
       const row = await this.prisma.$transaction(async (tx) => {
-        await tx.revenueEntry.updateMany({
-          where: { tenantId, operationId: id, status: RevenueStatus.POSTED },
-          data: { status: RevenueStatus.VOID },
-        });
-        await tx.revenueEntry.create({
-          data: {
+        if (remaining > 0.001) {
+          await postRevenueWithFiscal(tx, {
             tenantId,
             clinicId: existing.clinicId,
+            patientId: existing.patientId,
             operationId: id,
-            category: "OPERATION",
-            description: `Operation · ${patientName} · ${clinicianName}`,
-            grossAmount: total,
+            category: "OPERATION_PAYMENT",
+            description: `Operation balance at discharge · ${patientName} · ${clinicianName}`,
+            grossAmount: remaining,
             taxAmount: 0,
-            netAmount: total,
+            netAmount: remaining,
             currency,
-            postedAt: new Date(),
-            status: RevenueStatus.POSTED,
-          },
+            buyerName: patientName,
+          });
+        }
+        await tx.revenueEntry.updateMany({
+          where: { tenantId, operationId: id, status: RevenueStatus.POSTED, category: "OPERATION" },
+          data: { status: RevenueStatus.VOID },
         });
         return tx.operation.update({
           where: { id },
@@ -873,10 +923,7 @@ export class OperationsService {
 
     if (status === OperationStatus.CANCELLED) {
       const row = await this.prisma.$transaction(async (tx) => {
-        await tx.revenueEntry.updateMany({
-          where: { tenantId, operationId: id, status: RevenueStatus.POSTED },
-          data: { status: RevenueStatus.VOID },
-        });
+        await voidPostedRevenuesWithFiscalReturns(tx, tenantId, { operationId: id }, "Return");
         return tx.operation.update({
           where: { id },
           data: { status: OperationStatus.CANCELLED, paidAmount: 0 },
@@ -1056,25 +1103,48 @@ export class OperationsService {
 
     const feeCurrency = await this.resolveOperationFeeCurrency(tenantId, dto.clinicId, dto.feeCurrency);
 
-    const row = await this.prisma.operation.create({
-      data: {
-        tenantId,
-        clinicId: dto.clinicId,
-        patientId: dto.patientId,
-        clinicianId: dto.clinicianId,
-        createdByUserId: null,
-        operationDate,
-        totalCost: dto.totalCost,
-        downPayment,
-        paidAmount: downPayment,
-        feeCurrency,
-        comments: dto.comments?.trim() || null,
-        status: OperationStatus.BOOKED,
-        noMedications: dto.noMedications ?? false,
-        integrationClientId: dto.integrationClientId,
-        externalReference: dto.externalReference ?? null,
-      },
-      include: operationInclude,
+    const patientRow = await this.prisma.patient.findFirst({
+      where: { id: dto.patientId, tenantId },
+      select: { firstNameEn: true, lastNameEn: true },
+    });
+    const row = await this.prisma.$transaction(async (tx) => {
+      const op = await tx.operation.create({
+        data: {
+          tenantId,
+          clinicId: dto.clinicId,
+          patientId: dto.patientId,
+          clinicianId: dto.clinicianId,
+          createdByUserId: null,
+          operationDate,
+          totalCost: dto.totalCost,
+          downPayment,
+          paidAmount: downPayment,
+          feeCurrency,
+          comments: dto.comments?.trim() || null,
+          status: OperationStatus.BOOKED,
+          noMedications: dto.noMedications ?? false,
+          integrationClientId: dto.integrationClientId,
+          externalReference: dto.externalReference ?? null,
+        },
+        include: operationInclude,
+      });
+      if (downPayment > 0 && patientRow) {
+        const patientName = `${patientRow.firstNameEn} ${patientRow.lastNameEn}`.trim();
+        await postRevenueWithFiscal(tx, {
+          tenantId,
+          clinicId: dto.clinicId,
+          patientId: dto.patientId,
+          operationId: op.id,
+          category: "OPERATION_PAYMENT",
+          description: `Operation down payment · ${patientName}`,
+          grossAmount: downPayment,
+          taxAmount: 0,
+          netAmount: downPayment,
+          currency: feeCurrency,
+          buyerName: patientName,
+        });
+      }
+      return op;
     });
     return this.mapRow(row);
   }
@@ -1102,10 +1172,7 @@ export class OperationsService {
     }
 
     const row = await this.prisma.$transaction(async (tx) => {
-      await tx.revenueEntry.updateMany({
-        where: { tenantId, operationId: id, status: RevenueStatus.POSTED },
-        data: { status: RevenueStatus.VOID },
-      });
+      await voidPostedRevenuesWithFiscalReturns(tx, tenantId, { operationId: id }, "Return");
       return tx.operation.update({
         where: { id },
         data: { status: OperationStatus.CANCELLED, paidAmount: 0 },

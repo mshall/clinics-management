@@ -20,6 +20,13 @@ test("422-style validation is permanent", () => {
   assert.equal(classifyEtaHttpFailure(400, "Invalid item code EG-xxx"), "permanent");
 });
 
+test("validation text mentioning credentials is not misclassified as auth", () => {
+  assert.equal(
+    classifyEtaHttpFailure(400, "Seller credentials field missing on item line"),
+    "permanent",
+  );
+});
+
 test("5xx stays temporary", () => {
   assert.equal(classifyEtaHttpFailure(502), "temporary");
 });

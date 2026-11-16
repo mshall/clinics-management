@@ -7,9 +7,9 @@ import {
   RevenueStatus,
   VisitCollectionMode,
 } from "@prisma/client";
-import { collectionFieldsFromParsed, parseVisitCollectionForAmount, type VisitCollectionInput } from "../common/visit-collection";
+import { parseVisitCollectionForAmount, type VisitCollectionInput } from "../common/visit-collection";
 import { resolveTransferVerification } from "../common/visit-collection-transfer";
-import { queueEtaReceipt } from "../compliance/eta-receipt-queue";
+import { postRevenueWithFiscal } from "../compliance/post-revenue-with-fiscal";
 import type { JwtUser } from "../auth/jwt-user";
 import { parseFrontDeskRoomLabels } from "../common/front-desk-room-labels";
 import { EncountersService } from "../encounters/encounters.service";
@@ -138,38 +138,27 @@ export class FrontDeskService {
         },
       });
       if (pay != null && collection) {
-        const revenue = await tx.revenueEntry.create({
-          data: {
-            tenantId,
-            clinicId: apt.clinicId,
-            appointmentId: apt.id,
-            category: "VISIT",
-            description: `Check-in payment · ticket #${ticket} · ${apt.patient.firstNameEn} ${apt.patient.lastNameEn}`,
-            grossAmount: new Prisma.Decimal(String(pay)),
-            taxAmount: new Prisma.Decimal("0"),
-            netAmount: new Prisma.Decimal(String(pay)),
-            currency,
-            postedAt: now,
-            status: RevenueStatus.POSTED,
-            transferVerificationStatus,
-            ...collectionFieldsFromParsed(collection),
-          },
-        });
-        const buyerName = `${apt.patient.firstNameEn} ${apt.patient.lastNameEn}`.trim() || undefined;
-        await queueEtaReceipt(tx, {
+        const buyerName = `${apt.patient.firstNameEn} ${apt.patient.lastNameEn}`.trim();
+        await postRevenueWithFiscal(tx, {
           tenantId,
           clinicId: apt.clinicId,
           patientId: apt.patientId,
-          revenueEntryId: revenue.id,
-          totalAmount: pay,
+          appointmentId: apt.id,
+          category: "VISIT",
+          description: `Check-in payment · ticket #${ticket} · ${buyerName}`,
+          grossAmount: pay,
+          taxAmount: 0,
+          netAmount: pay,
           currency,
-          vatPercent: Number(apt.clinic.invoiceVatPercent ?? 0),
-          description: revenue.description ?? "Check-in payment",
+          postedAt: now,
+          status: RevenueStatus.POSTED,
+          buyerName,
           clinicTaxRin: apt.clinic.taxRegistrationNumber,
+          vatPercent: Number(apt.clinic.invoiceVatPercent ?? 0),
           collectionMode: collection.collectionMode,
           transferChannel: collection.transferChannel,
           transferReference: collection.transferReference,
-          buyerName,
+          transferVerificationStatus,
         });
       }
       return {

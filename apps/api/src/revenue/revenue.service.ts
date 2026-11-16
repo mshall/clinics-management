@@ -8,6 +8,7 @@ import { isBaseCurrency } from "../common/base-currencies";
 import { resolveClinicCurrency } from "../common/clinic-currency";
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
+import { postRevenueWithFiscal } from "../compliance/post-revenue-with-fiscal";
 import type { CreateRevenueDto } from "./dto/create-revenue.dto";
 import type { RevenueEntryDto } from "./dto/revenue.dto";
 import type { RevenueTotalsDto } from "./dto/revenue-totals.dto";
@@ -247,11 +248,14 @@ export class RevenueService {
     if (scopeIdsCreate !== null && !scopeIdsCreate.includes(dto.clinicId)) {
       throw new ForbiddenException("Clinic is outside your assigned scope");
     }
-    const clinic = await this.prisma.clinic.findFirst({ where: { id: dto.clinicId, tenantId } });
+    const clinic = await this.prisma.clinic.findFirst({
+      where: { id: dto.clinicId, tenantId },
+      select: { taxRegistrationNumber: true, invoiceVatPercent: true },
+    });
     if (!clinic) throw new BadRequestException("Invalid clinicId");
     const currency = await this.resolveRevenueCurrency(tenantId, dto.clinicId, dto.currency);
-    const row = await this.prisma.revenueEntry.create({
-      data: {
+    const row = await this.prisma.$transaction(async (tx) => {
+      const { revenueEntryId } = await postRevenueWithFiscal(tx, {
         tenantId,
         clinicId: dto.clinicId,
         category: dto.category,
@@ -262,8 +266,14 @@ export class RevenueService {
         currency,
         postedAt: new Date(dto.postedAt),
         status: dto.status ?? RevenueStatus.POSTED,
-      },
-      include: { clinic: { select: { nameEn: true, nameAr: true } } },
+        skipFiscalQueue: (dto.status ?? RevenueStatus.POSTED) !== RevenueStatus.POSTED || dto.netAmount <= 0,
+        clinicTaxRin: clinic?.taxRegistrationNumber,
+        vatPercent: Number(clinic?.invoiceVatPercent ?? 0),
+      });
+      return tx.revenueEntry.findUniqueOrThrow({
+        where: { id: revenueEntryId },
+        include: { clinic: { select: { nameEn: true, nameAr: true } } },
+      });
     });
     return this.map(row);
   }
@@ -336,25 +346,39 @@ export class RevenueService {
       dto.description?.trim() ||
       `Operation payment · ${patientName} · ${clinicianName} · ${netAmount.toFixed(2)} ${operation.feeCurrency}`;
 
-    await this.prisma.operation.update({
-      where: { id: operationId },
-      data: { paidAmount: { increment: netAmount } },
+    const clinic = await this.prisma.clinic.findFirst({
+      where: { id: operation.clinicId, tenantId },
+      select: { taxRegistrationNumber: true, invoiceVatPercent: true },
     });
 
-    return {
-      id: operationId,
-      clinicId: operation.clinicId,
-      clinicNameEn: operation.clinic?.nameEn ?? null,
-      clinicNameAr: operation.clinic?.nameAr ?? null,
-      category: "OPERATION_PAYMENT",
-      description,
-      grossAmount: dto.grossAmount,
-      taxAmount: dto.taxAmount,
-      netAmount,
-      currency: paymentCurrency,
-      postedAt: new Date(dto.postedAt).toISOString(),
-      status: RevenueStatus.POSTED,
-    };
+    const row = await this.prisma.$transaction(async (tx) => {
+      await tx.operation.update({
+        where: { id: operationId },
+        data: { paidAmount: { increment: netAmount } },
+      });
+      const { revenueEntryId } = await postRevenueWithFiscal(tx, {
+        tenantId,
+        clinicId: operation.clinicId,
+        patientId: operation.patientId,
+        operationId,
+        category: "OPERATION_PAYMENT",
+        description,
+        grossAmount: dto.grossAmount,
+        taxAmount: dto.taxAmount,
+        netAmount,
+        currency: paymentCurrency,
+        postedAt: new Date(dto.postedAt),
+        buyerName: patientName,
+        clinicTaxRin: clinic?.taxRegistrationNumber,
+        vatPercent: Number(clinic?.invoiceVatPercent ?? 0),
+      });
+      return tx.revenueEntry.findUniqueOrThrow({
+        where: { id: revenueEntryId },
+        include: { clinic: { select: { nameEn: true, nameAr: true } } },
+      });
+    });
+
+    return this.map(row);
   }
 
   async clinicBreakdown(tenantId: string, fromStr: string | undefined, toStr: string | undefined, user: JwtUser) {

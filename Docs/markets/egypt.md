@@ -19,7 +19,9 @@ Fiscal provider key: **`eta-egypt`** (`FiscalDocument` + `FiscalSubmission`). Cl
 
 Idempotency is keyed by **payment / revenue / invoice** source id (not amount or description). **Visit fee amount changes** void the posted revenue row, queue a **return** receipt, then queue a **new sale** on a new revenue row. **UUID / chain:** receipts are **not** random — `header.uuid` is a **SHA-256** over the ETA-serialized Receipt **v1.2** body (empty uuid field) including `previousUUID`. The chain is **per `FiscalDevice`** (serial + `receiptSequence` / `lastReceiptUuid`), computed **only at submit** in device queue order. Wire body includes buyer (type P), tax totals, payment method, item/unit types, `documentTypeVersion` **1.2**, and POS headers on token + submit.
 
-Every **payment** path queues fiscal: check-in, visit fee, billing payment, revenue posting. **Tax invoices are printouts only** (no second ETA receipt if payment was already queued).
+Every **payment** path uses `postRevenueWithFiscal`: check-in, visit fee, billing, **operation payments** (down payment, installments, discharge balance). Manual revenue / Data Explorer cannot post receiptable amounts. **Tax invoices are printouts only.**
+
+**Organization ETA integration** is a separate card under Administration → Organization & settings (off by default for new Egypt tenants). When enabled, configure each clinic under **Clinics → Settings → ETA**.
 
 ### Receipt devices (virtual vs physical POS)
 

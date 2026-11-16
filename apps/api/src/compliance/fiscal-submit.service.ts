@@ -490,7 +490,7 @@ export class FiscalSubmitService {
         taxpayerActivityCodeOverride: patch.taxpayerActivityCode ?? draft?.taxpayerActivityCode,
         branchCodeOverride: patch.branchCode ?? draft?.branchCode,
         referenceReceiptUuid: priorUuid,
-        idempotencyKeyOverride: `eta-egypt:resubmit:${submissionId}:${Date.now()}`,
+        idempotencyKeyOverride: `eta-egypt:resubmit:${submissionId}`,
         resubmitAfterRejection: true,
       });
 

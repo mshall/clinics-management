@@ -237,6 +237,7 @@ export class FiscalDevicesService {
         credentialId = cred.id;
       }
 
+      const wasExpired = row.status === FiscalDeviceStatus.CREDENTIALS_EXPIRED;
       const updated = await tx.fiscalDevice.update({
         where: { id },
         data: {
@@ -247,6 +248,15 @@ export class FiscalDevicesService {
         },
         include: { credential: { select: { id: true, secretRef: true } } },
       });
+      if (wasExpired) {
+        await tx.fiscalSubmission.updateMany({
+          where: {
+            fiscalDeviceId: id,
+            status: { in: [FiscalSubmissionStatus.PENDING, FiscalSubmissionStatus.SUBMITTING] },
+          },
+          data: { nextRetryAt: null, claimedUntil: null, claimedBy: null, errorMessage: null },
+        });
+      }
       return updated;
     });
 
