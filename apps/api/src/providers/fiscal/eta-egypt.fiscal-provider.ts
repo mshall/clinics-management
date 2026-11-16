@@ -71,6 +71,7 @@ export class EtaEgyptFiscalProvider implements FiscalProvider {
       clinicId: ctx.clinicId,
       idempotencyKey: ctx.idempotencyKey,
       documentNature: ctx.documentNature ?? "sale",
+      returnForFiscalDocumentId: ctx.returnForFiscalDocumentId?.trim() || undefined,
     };
     const signature = signEtaPayload(payload);
     return {

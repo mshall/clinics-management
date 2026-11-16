@@ -28,7 +28,7 @@ import { isBaseCurrency } from "../common/base-currencies";
 import { resolveClinicCurrency } from "../common/clinic-currency";
 import { upsertEncounterVisitFeeRevenue } from "../common/visit-fee-ledger";
 import {
-  purgeRevenueEntries,
+  detachRevenueFromEncounter,
   voidPostedRevenuesWithFiscalReturns,
 } from "../compliance/void-revenue-fiscal-returns";
 import { parseVisitCollectionForAmount } from "../common/visit-collection";
@@ -974,7 +974,7 @@ export class EncountersService {
 
     await this.prisma.$transaction(async (tx) => {
       await voidPostedRevenuesWithFiscalReturns(tx, tenantId, { encounterId: id }, "Return");
-      await purgeRevenueEntries(tx, { tenantId, encounterId: id });
+      await detachRevenueFromEncounter(tx, tenantId, id);
       await tx.encounter.delete({ where: { id } });
 
       if (appointmentId) {

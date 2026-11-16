@@ -236,6 +236,7 @@ enum FiscalSubmissionStatus {
   SUBMITTED
   ACCEPTED
   REJECTED
+  CANCELLED
 }
 
 enum FiscalDeviceKind {

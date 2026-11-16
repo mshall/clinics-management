@@ -10,4 +10,5 @@ test("submissionVoidFiscalAction maps ETA submission states", () => {
   assert.equal(submissionVoidFiscalAction(FiscalSubmissionStatus.SUBMITTED), "queue_return");
   assert.equal(submissionVoidFiscalAction(FiscalSubmissionStatus.ACCEPTED), "queue_return");
   assert.equal(submissionVoidFiscalAction(FiscalSubmissionStatus.REJECTED), "return_already_rejected");
+  assert.equal(submissionVoidFiscalAction(FiscalSubmissionStatus.CANCELLED), "return_already_rejected");
 });

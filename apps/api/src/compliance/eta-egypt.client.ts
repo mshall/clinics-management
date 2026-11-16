@@ -28,6 +28,8 @@ export type EtaReceiptPayload = {
   clinicId: string;
   idempotencyKey: string;
   documentNature: "sale" | "return";
+  /** Return only: fiscal document id of the original sale (reference UUID resolved at prepare). */
+  returnForFiscalDocumentId?: string;
 };
 
 export type EtaPosHeaders = {

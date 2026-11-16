@@ -32,6 +32,13 @@ const POST_REVENUE_ROLES: ReadonlySet<UserRole> = new Set([
   UserRole.CLINIC_ADMIN,
 ]);
 
+const SKIP_ETA_ERECEIPT_ROLES: ReadonlySet<UserRole> = new Set([
+  UserRole.GROUP_ADMIN,
+  UserRole.GROUP_SUPERVISOR,
+  UserRole.FINANCE_OFFICER,
+  UserRole.CLINIC_ADMIN,
+]);
+
 @Injectable()
 export class RevenueService {
   constructor(
@@ -257,9 +264,20 @@ export class RevenueService {
       select: { taxRegistrationNumber: true, invoiceVatPercent: true },
     });
     if (!clinic) throw new BadRequestException("Invalid clinicId");
+    if (dto.operationId?.trim() && dto.skipEtaEReceipt) {
+      throw new BadRequestException("skipEtaEReceipt is only for non-operation manual revenue");
+    }
     const skipEta = dto.skipEtaEReceipt === true;
-    if (skipEta && !dto.skipEtaEReceiptReason?.trim()) {
-      throw new BadRequestException("skipEtaEReceiptReason is required when skipEtaEReceipt is enabled");
+    if (skipEta) {
+      if (!SKIP_ETA_ERECEIPT_ROLES.has(user.role)) {
+        throw new ForbiddenException("Only finance or organization admins may post non-receipt B2B revenue");
+      }
+      if (!dto.skipEtaEReceiptReason?.trim()) {
+        throw new BadRequestException("skipEtaEReceiptReason is required when skipEtaEReceipt is enabled");
+      }
+      if (!dto.counterpartyName?.trim() || !dto.counterpartyTaxNumber?.trim()) {
+        throw new BadRequestException("counterpartyName and counterpartyTaxNumber are required for B2B revenue");
+      }
     }
     const currency = await this.resolveRevenueCurrency(tenantId, dto.clinicId, dto.currency);
     const status = dto.status ?? RevenueStatus.POSTED;
@@ -296,6 +314,8 @@ export class RevenueService {
         metadata: {
           category: dto.category,
           reason: dto.skipEtaEReceiptReason?.trim() ?? "",
+          counterpartyName: dto.counterpartyName?.trim() ?? "",
+          counterpartyTaxNumber: dto.counterpartyTaxNumber?.trim() ?? "",
           netAmount: dto.netAmount,
           currency,
         },

@@ -17,6 +17,8 @@ export type FiscalPayloadBuildContext = {
   receiptUuid: string;
   /** Return receipts: UUID of the original sale receipt (referenceUUID). */
   referenceReceiptUuid?: string;
+  /** Return only: original sale fiscal document (reference resolved at prepare). */
+  returnForFiscalDocumentId?: string;
   documentNature?: "sale" | "return";
 };
 

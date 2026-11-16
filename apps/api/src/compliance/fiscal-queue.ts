@@ -13,6 +13,7 @@ import {
 } from "../markets/tenant-payment-channel-merge";
 import { parseMarketPaymentMethods } from "../markets/market-payment-methods";
 import { resolveFiscalDeviceForQueue } from "../fiscal-devices/fiscal-devices-public";
+import { logFiscalQueueSkipped } from "./fiscal-queue-skip-log";
 
 export type QueueFiscalParams = {
   tenantId: string;
@@ -33,6 +34,8 @@ export type QueueFiscalParams = {
   billingPaymentMethods?: import("@prisma/client").PaymentMethod[];
   /** Void / credit receipt for a voided visit-fee revenue row */
   returnForRevenueEntryId?: string;
+  /** Return only: original sale fiscal document id (reference UUID resolved at prepare). */
+  returnForFiscalDocumentId?: string;
   /** Resend after ETA rejection — links to the failed receipt UUID (referenceOldUUID). */
   referenceReceiptUuid?: string;
   /** Override idempotency when resubmitting a corrected document */
@@ -69,7 +72,15 @@ export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: 
     },
   });
   const etaClinic = clinic ? resolveEtaClinicSettings(clinic) : null;
-  if (etaClinic && !etaClinic.receiptsEnabled) return;
+  if (etaClinic && !etaClinic.receiptsEnabled) {
+    await logFiscalQueueSkipped(tx, {
+      tenantId: params.tenantId,
+      clinicId: params.clinicId,
+      operation: "clinic_receipts_disabled",
+      reason: "Clinic has ETA e-receipt queuing disabled in settings",
+    });
+    return;
+  }
 
   const marketCtx = await resolveMarketForTenant(tx as unknown as import("../prisma/prisma.service").PrismaService, params.tenantId);
   const providerKey = fiscalProviderKeyForMarket(marketCtx.taxConfig);
@@ -83,10 +94,19 @@ export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: 
     params.idempotencyKeyOverride?.trim() || buildFiscalIdempotencyKey(providerKey, sourceRef);
   const returnSale = sourceRef.kind === "return";
   const fiscalDevice = await resolveFiscalDeviceForQueue(tx, params.tenantId, params.clinicId, providerKey);
-  if (provider.deviceRegistration?.required && !fiscalDevice) return;
+  if (provider.deviceRegistration?.required && !fiscalDevice) {
+    await logFiscalQueueSkipped(tx, {
+      tenantId: params.tenantId,
+      clinicId: params.clinicId,
+      operation: "no_fiscal_device",
+      reason: "No active fiscal device registered for this clinic",
+    });
+    return;
+  }
 
+  const saleDocId = params.returnForFiscalDocumentId?.trim();
   let referenceReceiptUuid: string | undefined = params.referenceReceiptUuid?.trim() || undefined;
-  if (returnSale && params.returnForRevenueEntryId) {
+  if (returnSale && !saleDocId && params.returnForRevenueEntryId) {
     const prior = await tx.fiscalSubmission.findFirst({
       where: {
         tenantId: params.tenantId,
@@ -138,6 +158,7 @@ export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: 
     receiptUuid: "",
     documentNature: returnSale ? "return" : "sale",
     referenceReceiptUuid,
+    returnForFiscalDocumentId: saleDocId,
   });
 
   if (!params.resubmitAfterRejection) {

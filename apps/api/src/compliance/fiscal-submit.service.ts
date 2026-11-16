@@ -16,6 +16,7 @@ import {
   type EtaStoredSubmissionPayload,
 } from "./eta-stored-submission";
 import { queueFiscalDocument } from "./fiscal-queue";
+import { resolveSaleReferenceUuid } from "./fiscal-return-reference";
 
 const PREPARE_TX_MS = 15_000;
 const FINALIZE_TX_MS = 15_000;
@@ -79,6 +80,10 @@ export class FiscalSubmitService {
           row.claimedBy !== workerId
         ) {
           throw new BadRequestException("Submission is being processed by another instance");
+        }
+
+        if (row.status === FiscalSubmissionStatus.CANCELLED) {
+          throw new BadRequestException("Fiscal submission was cancelled");
         }
 
         if (
@@ -149,10 +154,22 @@ export class FiscalSubmitService {
         const internalId = `${locked.serialNumber}-${String(receiptNumber).padStart(8, "0")}`;
         const issuedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 
+        let referenceUuid = draft.referenceReceiptUuid?.trim() || undefined;
+        const returnForDocId = draft.returnForFiscalDocumentId?.trim();
+        if (draft.documentNature === "return" && returnForDocId) {
+          referenceUuid = await resolveSaleReferenceUuid(tx, returnForDocId);
+          if (!referenceUuid) {
+            throw new BadRequestException(
+              "Return receipt cannot be prepared until the original sale has been assigned a receipt UUID",
+            );
+          }
+        }
+
         const draftWithMeta: EtaReceiptPayload = {
           ...draft,
           receiptUuid: "",
           previousReceiptUuid: previousUUID || undefined,
+          referenceReceiptUuid: referenceUuid,
         };
 
         const buildCtx: EtaWireBuildContext = {
@@ -160,7 +177,7 @@ export class FiscalSubmitService {
           previousUUID,
           deviceSerial: locked.serialNumber,
           internalId,
-          referenceUuid: draft.referenceReceiptUuid,
+          referenceUuid,
           issuedAt,
         };
         const wire = buildEtaWireReceiptDocument(buildCtx);

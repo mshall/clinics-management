@@ -87,6 +87,7 @@
     "etaPhysicalConsent": "I confirm this choice on behalf of the organization and accept responsibility for ETA compliance through another channel or exemption, as applicable.",
     "etaPhysicalConsentRequired": "Confirm the declaration before disabling Kiorly ETA integration.",
     "etaIntegrationDisabledBanner": "ETA e-receipts are not issued through Kiorly for this organization. Use your other ETA-registered system or exemption process as agreed with the tax authority.",
+    "etaClinicReceiptsDisabledBanner": "ETA e-receipt queuing is turned off for this clinic in settings. Payments will not receive a Kiorly fiscal receipt until it is re-enabled.",
     "fiscalRejectedTitle": "Rejected ETA receipts",
     "fiscalRejectedDesc": "Fix validation issues and resend as a new document (references the rejected UUID).",
     "fiscalResubmitFix": "Fix & resend",

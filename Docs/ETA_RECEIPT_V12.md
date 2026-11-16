@@ -16,7 +16,7 @@ Manual: `POST /api/v1/compliance/egypt/eta-queue/:id/submit` (same three-step pa
 
 ## Kiorly ETA integration opt-out
 
-**Void / delete revenue** must use `voidPostedRevenuesWithFiscalReturns`: **PENDING** sales cancel the fiscal document; **SUBMITTING / SUBMITTED / ACCEPTED** queue a return receipt (check-in uses `FiscalDocument.patientId`); **REJECTED** skips a return. Encounter delete and operation discharge void through this helper—not raw `deleteMany` / `updateMany`.
+**Void / delete revenue** must use `voidPostedRevenuesWithFiscalReturns`: **PENDING** sales are marked `CANCELLED` under row lock (race with worker → queue return); **SUBMITTING / SUBMITTED / ACCEPTED** queue a return with `returnForFiscalDocumentId` (reference UUID resolved at **prepare** from the sale’s stored document); **REJECTED** skips a return. Encounter delete voids, then **detaches** revenue (`encounterId` null)—never deletes rows linked to fiscal docs.
 
 Group admin controls **ETA e-invoice integration** under **Administration → Organization & settings** (dedicated card, off by default for new Egypt orgs). When off, the org declares responsibility for tax-authority submission; clinic ETA fields stay hidden. When on, org defaults and per-clinic branch codes apply. Stored as `providerSettings["eta-egypt"].physicalReportingOptOut` + `physicalReportingConsentAt` (opt-out = integration disabled). Audited; billing UI shows a banner while opt-out is active.
 

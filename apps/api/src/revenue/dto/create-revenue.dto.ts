@@ -67,4 +67,16 @@ export class CreateRevenueDto {
   @IsString()
   @MaxLength(500)
   skipEtaEReceiptReason?: string;
+
+  @ApiPropertyOptional({ description: "B2B counterparty legal name (required with skipEtaEReceipt)" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  counterpartyName?: string;
+
+  @ApiPropertyOptional({ description: "B2B counterparty tax registration (required with skipEtaEReceipt)" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  counterpartyTaxNumber?: string;
 }

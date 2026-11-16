@@ -1,12 +1,15 @@
 import { useTranslation } from "react-i18next";
 import { AlertTriangle } from "lucide-react";
 import { useOrgEtaPhysicalOptOut } from "@/lib/use-org-eta-opt-out";
+import { useClinicEtaReceiptsEnabled } from "@/lib/use-clinic-eta-receipts-enabled";
 
 /** Shown on billing/revenue flows so staff know Kiorly is not issuing ETA receipts. */
-export function EtaIntegrationBanner() {
+export function EtaIntegrationBanner({ clinicId }: { clinicId?: string } = {}) {
   const { t } = useTranslation();
-  const { optOut, isLoading } = useOrgEtaPhysicalOptOut();
-  if (isLoading || !optOut) return null;
+  const { optOut, isLoading: orgLoading } = useOrgEtaPhysicalOptOut();
+  const clinicReceiptsOn = useClinicEtaReceiptsEnabled(clinicId);
+  if (orgLoading) return null;
+  if (!optOut && clinicReceiptsOn) return null;
 
   return (
     <div
@@ -14,7 +17,11 @@ export function EtaIntegrationBanner() {
       role="status"
     >
       <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
-      <p>{t("compliance.etaIntegrationDisabledBanner")}</p>
+      <p>
+        {optOut
+          ? t("compliance.etaIntegrationDisabledBanner")
+          : t("compliance.etaClinicReceiptsDisabledBanner")}
+      </p>
     </div>
   );
 }
