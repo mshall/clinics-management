@@ -28,6 +28,7 @@ import { ProfileGate } from "@/features/profile/profile-gate";
 import { ReportsPage } from "@/features/reports/reports-page";
 import { DoctorRevenueGate } from "@/features/revenue/doctor-revenue-gate";
 import { RevenueGate } from "@/features/revenue/revenue-gate";
+import { EncounterDetailNavGate } from "@/components/encounter-detail-nav-gate";
 import { NavGate } from "@/components/nav-gate";
 import { CustomerSupportPage } from "@/features/support/customer-support-page";
 import { ClinicalTemplatesRedirect } from "@/features/clinical/clinical-templates-redirect";
@@ -49,7 +50,14 @@ export const router = createBrowserRouter([
       { path: "patients", element: <NavGate tab="patients"><PatientsPage /></NavGate> },
       { path: "patients/:id", element: <NavGate tab="patients"><PatientDetailPage /></NavGate> },
       { path: "encounters", element: <NavGate tab="encounters"><EncountersListPage /></NavGate> },
-      { path: "encounters/:id", element: <NavGate tab="encounters"><EncounterDetailPage /></NavGate> },
+      {
+        path: "encounters/:id",
+        element: (
+          <EncounterDetailNavGate>
+            <EncounterDetailPage />
+          </EncounterDetailNavGate>
+        ),
+      },
       {
         path: "clinical/templates",
         element: (

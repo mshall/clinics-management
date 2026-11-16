@@ -246,6 +246,44 @@ export function showNavItem(
   return effectiveNavKeys(role, navTabKeys, roleNavTabKeys, employeePrivilegeGrants).has(key);
 }
 
+/** Encounter list workspace (sidebar). */
+export function canAccessEncountersList(
+  role: DemoRole | undefined,
+  navTabKeys?: string[] | null,
+  roleNavTabKeys?: string[] | null,
+  employeePrivilegeGrants?: EmployeePrivilegeGrantSummary[] | null,
+): boolean {
+  return showNavItem(role, "encounters", navTabKeys, roleNavTabKeys, employeePrivilegeGrants);
+}
+
+/**
+ * Open a single encounter (e.g. draft from appointment check-in) without full Encounters tab.
+ * Users with Appointments may open linked encounters from check-in / visit flow.
+ */
+export function canAccessEncounterDetail(
+  role: DemoRole | undefined,
+  navTabKeys?: string[] | null,
+  roleNavTabKeys?: string[] | null,
+  employeePrivilegeGrants?: EmployeePrivilegeGrantSummary[] | null,
+): boolean {
+  return (
+    canAccessEncountersList(role, navTabKeys, roleNavTabKeys, employeePrivilegeGrants) ||
+    showNavItem(role, "appointments", navTabKeys, roleNavTabKeys, employeePrivilegeGrants)
+  );
+}
+
+/** Back navigation from encounter detail when Encounters list is hidden. */
+export function encountersBackPath(
+  role: DemoRole | undefined,
+  navTabKeys?: string[] | null,
+  roleNavTabKeys?: string[] | null,
+  employeePrivilegeGrants?: EmployeePrivilegeGrantSummary[] | null,
+): string {
+  if (canAccessEncountersList(role, navTabKeys, roleNavTabKeys, employeePrivilegeGrants)) return "/encounters";
+  if (showNavItem(role, "appointments", navTabKeys, roleNavTabKeys, employeePrivilegeGrants)) return "/appointments";
+  return defaultHomeForRole(role, navTabKeys, roleNavTabKeys, employeePrivilegeGrants);
+}
+
 /** Landing path after sign-in when the dashboard is not in the role menu. */
 export function defaultHomeForRole(
   role: DemoRole | undefined,
@@ -287,6 +325,11 @@ export function resolvePostLoginPath(
 ): string {
   const home = defaultHomeForRole(role, navTabKeys, roleNavTabKeys);
   if (!from || from === "/login") return home;
+  const pathname = (from.split("?")[0] ?? "/").replace(/\/+$/, "") || "/";
+  if (/^\/encounters\/[^/]+$/.test(pathname)) {
+    if (canAccessEncounterDetail(role, navTabKeys, roleNavTabKeys)) return from;
+    return home;
+  }
   const key = navKeyForPath(from);
   if (!key || !effectiveNavKeys(role, navTabKeys, roleNavTabKeys).has(key)) return home;
   return from;

@@ -62,6 +62,7 @@ import { EncounterClinicalTools } from "@/features/clinical/encounter-clinical-t
 import { PatientChartAlerts } from "@/components/patient-chart-alerts";
 import { EncounterSpecialtyForm } from "@/features/clinical/encounter-specialty-form";
 import { loadPrescriptionBranding } from "@/lib/prescription-branding";
+import { encountersBackPath } from "@/lib/nav-policy";
 import { cn } from "@/lib/utils";
 import { registerUnsavedWork } from "@/lib/unsaved-work-registry";
 import { CollectVisitBalanceCard } from "@/features/front-desk/collect-visit-balance-card";
@@ -110,6 +111,7 @@ export function EncounterDetailPage() {
   const { id } = useParams();
   const qc = useQueryClient();
   const user = useAuthStore((s) => s.user);
+  const backPath = encountersBackPath(user?.role, user?.navTabKeys, user?.roleNavTabKeys, user?.employeePrivilegeGrants);
   const canDelete = canDeleteEncounter(user?.role);
   const canInvoice = canGenerateInvoice(user?.role);
   const { data: enc, isPending, isError, error } = useEncounterQuery(id);
@@ -503,7 +505,7 @@ export function EncounterDetailPage() {
         void qc.invalidateQueries({ queryKey: ["patient", enc.patientId] });
       }
       toast.success(t("encounters.deleteSuccess", "Encounter deleted."));
-      navigate("/encounters");
+      navigate(backPath);
     },
     onError: (e: unknown) => toast.error(apiErrorMessage(e)),
   });
@@ -521,7 +523,7 @@ export function EncounterDetailPage() {
         <CardContent className="space-y-4">
           <p className="text-sm text-destructive">{isError && error instanceof Error ? error.message : t("encounters.notFound")}</p>
           <Button asChild variant="secondary">
-            <Link to="/encounters">{t("encounters.backList")}</Link>
+            <Link to={backPath}>{t("encounters.backList")}</Link>
           </Button>
         </CardContent>
       </Card>
@@ -713,7 +715,7 @@ export function EncounterDetailPage() {
             </Button>
           ) : null}
           <Button asChild variant="outline">
-            <Link to="/encounters">{t("encounters.backList")}</Link>
+            <Link to={backPath}>{t("encounters.backList")}</Link>
           </Button>
         </div>
       </div>

@@ -45,7 +45,12 @@ export function QuickCheckInPanel({ appointment, currency = "AED", examRoomOptio
     mutationFn: () => {
       const collectErr = validateVisitCollection(effectiveAmount, collection, t);
       if (collectErr) throw new Error(collectErr);
-      return apiPost<{ queueTicketNumber: number; openEncounterId?: string | null }>(
+      return apiPost<{
+        queueTicketNumber: number;
+        openEncounterId?: string | null;
+        checkedInAt?: string;
+        status?: string;
+      }>(
         `/api/v1/front-desk/appointments/${appointment.id}/check-in`,
         {
           paymentAmount: effectiveAmount > 0 ? effectiveAmount : undefined,
@@ -57,6 +62,18 @@ export function QuickCheckInPanel({ appointment, currency = "AED", examRoomOptio
     },
     onSuccess: (data) => {
       toast.success(t("frontDesk.checkInDone", "Checked in · ticket #{{n}}", { n: data.queueTicketNumber }));
+      qc.setQueryData<AppointmentDto>(["appointment", appointment.id], (prev) =>
+        prev
+          ? {
+              ...prev,
+              status: "CHECKED_IN",
+              queueTicketNumber: data.queueTicketNumber,
+              checkedInAt: data.checkedInAt ?? prev.checkedInAt,
+              openEncounterId: data.openEncounterId ?? prev.openEncounterId,
+              queueStage: prev.queueStage ?? "WAITING",
+            }
+          : prev,
+      );
       void qc.invalidateQueries({ queryKey: ["appointment", appointment.id] });
       void qc.invalidateQueries({ queryKey: ["front-desk"] });
       void qc.invalidateQueries({ queryKey: ["encounters"] });
