@@ -29,3 +29,9 @@ export function operationClinicalFormEditable(
 export function operationShowsBookedRowActions(status: string): boolean {
   return operationStatusIsEditable(status);
 }
+
+/** Mirror API `OPERATION_COMPLETE_ROLES` — call center may book but not complete. */
+export function canMarkOperationCompleted(role: string | undefined): boolean {
+  if (!role) return false;
+  return role !== "call_center";
+}

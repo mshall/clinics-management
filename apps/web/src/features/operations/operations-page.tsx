@@ -52,6 +52,7 @@ import {
   operationClinicalFormEditable,
   operationShowsBookedRowActions,
   operationStatusIsEditable,
+  canMarkOperationCompleted,
 } from "@/lib/operation-status-policy";
 import { canGenerateInvoice } from "@/lib/invoice-generate-policy";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
@@ -114,6 +115,7 @@ export function OperationsPage() {
   const moneyOverrides = authUser?.moneyVisibilityOverrides;
   const showSummaryMoney = canViewOperationSummaryMoney(authUser?.role, moneyOverrides);
   const canEditFees = canEditOperationFees(authUser?.role, moneyOverrides);
+  const canCompleteOperation = canMarkOperationCompleted(authUser?.role);
   const showMoneyColumns = showOperationMoneyColumns(authUser?.role, moneyOverrides);
   const canAdminEditCompleted = canAdminEditCompletedOperation(authUser?.role);
   const canInvoice = canGenerateInvoice(authUser?.role);
@@ -704,7 +706,7 @@ export function OperationsPage() {
   };
 
   const handleEditCompleteClick = () => {
-    if (!editOp || !editIsScheduled) return;
+    if (!editOp || !editIsScheduled || !canCompleteOperation) return;
     const validation = collectEditValidation();
     if (validation.issues.length > 0) {
       showEditValidationIssues(validation.issues, validation.invalidDocRowIds);
@@ -1445,7 +1447,7 @@ export function OperationsPage() {
                 <Button type="button" variant="outline" className="flex-1 touch-manipulation sm:flex-none" onClick={closeEditDialog} disabled={editMut.isPending}>
                   {editFormLocked ? t("common.close", "Close") : t("common.cancel", "Cancel")}
                 </Button>
-                {!editFormLocked && editIsScheduled ? (
+                {!editFormLocked && editIsScheduled && canCompleteOperation ? (
                   <Button
                     type="button"
                     variant="secondary"
@@ -2010,7 +2012,7 @@ export function OperationsPage() {
                                     {t("invoices.generateShort", "Invoice")}
                                   </Button>
                                 ) : null}
-                                {canEditFees ? (
+                                {canCompleteOperation ? (
                                   <Button
                                     type="button"
                                     size="sm"

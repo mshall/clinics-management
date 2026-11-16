@@ -35,6 +35,7 @@ Goal: move appointment → **CHECKED_IN** with arrival time, queue ticket, **`qu
 | Payment | Optional `paymentAmount` + `currency` + `visitCollection` → **POSTED** `revenueEntry` (`VISIT`) |
 | UI | **Quick check-in** on **Appointments → detail**; preferred exam room dropdown from clinic **Exam rooms** |
 | API | `POST /api/v1/front-desk/appointments/:id/check-in` body: `{ paymentAmount?, roomLabel?, currency?, visitCollection? }` — response includes `openEncounterId`. Saving appointment status **Checked in** (`PATCH /appointments/:id` or `PATCH /appointments/:id/status`) runs the same encounter step. |
+| Revert check-in | Saving status back to **Scheduled** or **Confirmed** clears the queue ticket, visit-flow fields, and deletes the auto-created **DRAFT** encounter so **Check in & print ticket** appears again. |
 
 Staff with **Appointments** nav access can use check-in and the board (receptionist, nurse, call center, clinic roles).
 

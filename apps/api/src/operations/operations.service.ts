@@ -30,6 +30,7 @@ import {
   operationRowFinancialsVisible,
   operationSummaryFinancialsVisibleForViewer,
 } from "../common/user-money-visibility";
+import { assertCanCompleteOperation } from "./operation-complete-roles";
 import { assertDownPaymentBeforeInProgress } from "./operation-status-money";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { AddOperationMedicationDto, OperationDocumentDto, OperationMedicationDto } from "./dto/operation-clinical.dto";
@@ -905,6 +906,7 @@ export class OperationsService {
     viewer: JwtUser,
     collectionAmount?: number
   ): Promise<OperationDto> {
+    assertCanCompleteOperation(viewer, status);
     const existing = await this.prisma.operation.findFirst({
       where: { id, tenantId },
       include: operationInclude,

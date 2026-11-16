@@ -28,6 +28,11 @@ import {
 import { resolveTenantTransferCollectionContext } from "../common/market-transfer-context";
 import { assertNoOpenEncounterForAppointmentComplete } from "./appointment-completion.guard";
 import { assertScheduledTransferFeeCollected } from "./appointment-transfer-fee.guard";
+import {
+  buildRevertCheckInPatch,
+  deleteDraftEncountersOnCheckInRevert,
+  isRevertingAppointmentCheckIn,
+} from "../front-desk/appointment-check-in-revert";
 import { ensureDraftEncounterIfCheckedIn } from "../front-desk/ensure-draft-encounter-on-check-in";
 import { FrontDeskFlowService } from "../front-desk/front-desk-flow.service";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
@@ -569,18 +574,25 @@ export class AppointmentsService {
       await assertScheduledTransferFeeCollected(this.prisma, tenantId, id);
     }
     const row = await this.prisma.$transaction(async (tx) => {
-      const checkIn =
-        status === AppointmentStatus.CHECKED_IN && existing.status !== AppointmentStatus.CHECKED_IN
-          ? await this.frontDeskFlow.buildCheckInStatusPatch(tx, tenantId, existing.clinicId, {
-              existingPreferred: existing.preferredRoomLabel ?? existing.roomLabel,
-            })
-          : null;
+      let patch: Prisma.AppointmentUpdateInput;
+      if (isRevertingAppointmentCheckIn(existing.status, status)) {
+        patch = buildRevertCheckInPatch(status);
+        await deleteDraftEncountersOnCheckInRevert(tx, tenantId, id);
+      } else if (status === AppointmentStatus.CHECKED_IN && existing.status !== AppointmentStatus.CHECKED_IN) {
+        patch = await this.frontDeskFlow.buildCheckInStatusPatch(tx, tenantId, existing.clinicId, {
+          existingPreferred: existing.preferredRoomLabel ?? existing.roomLabel,
+        });
+      } else {
+        patch = { status };
+      }
       const row = await tx.appointment.update({
         where: { id },
-        data: checkIn ?? { status },
+        data: patch,
         include: appointmentDtoInclude,
       });
-      await ensureDraftEncounterIfCheckedIn(tx, tenantId, id);
+      if (!isRevertingAppointmentCheckIn(existing.status, status)) {
+        await ensureDraftEncounterIfCheckedIn(tx, tenantId, id);
+      }
       return row;
     });
     if (status === AppointmentStatus.CANCELLED) {
@@ -687,12 +699,23 @@ export class AppointmentsService {
     }
 
     const row = await this.prisma.$transaction(async (tx) => {
+      const reverting =
+        nextStatus !== undefined && isRevertingAppointmentCheckIn(existing.status, nextStatus);
+      if (reverting && nextStatus !== undefined) {
+        await deleteDraftEncountersOnCheckInRevert(tx, tenantId, id);
+      }
       const checkIn =
-        nextStatus === AppointmentStatus.CHECKED_IN && existing.status !== AppointmentStatus.CHECKED_IN
+        !reverting &&
+        nextStatus === AppointmentStatus.CHECKED_IN &&
+        existing.status !== AppointmentStatus.CHECKED_IN
           ? await this.frontDeskFlow.buildCheckInStatusPatch(tx, tenantId, existing.clinicId, {
               existingPreferred: existing.preferredRoomLabel ?? existing.roomLabel,
             })
           : null;
+      const statusFields = reverting && nextStatus !== undefined
+        ? buildRevertCheckInPatch(nextStatus)
+        : checkIn ?? (nextStatus !== undefined ? { status: nextStatus } : {});
+
       const updated = await tx.appointment.update({
         where: { id },
         data: {
@@ -709,12 +732,14 @@ export class AppointmentsService {
           notes: dto.notes !== undefined ? (dto.notes === "" ? null : dto.notes) : undefined,
           ...(feeProvided ? { feeAmount: new Prisma.Decimal(String(Number(dto.feeAmount))) } : {}),
           ...scheduledPatch,
-          ...(checkIn ?? (nextStatus !== undefined ? { status: nextStatus } : {})),
+          ...statusFields,
         },
         include: appointmentDtoInclude,
       });
 
-      await ensureDraftEncounterIfCheckedIn(tx, tenantId, id);
+      if (!reverting) {
+        await ensureDraftEncounterIfCheckedIn(tx, tenantId, id);
+      }
 
       if (feeProvided) {
         await syncOpenEncounterVisitFeeFromAppointment(tx, tenantId, id, Number(dto.feeAmount));

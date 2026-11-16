@@ -42,6 +42,7 @@ import {
   OperationMedicationDto,
 } from "./dto/operation-clinical.dto";
 import { UpdateOperationDto } from "./dto/update-operation.dto";
+import { assertCanCompleteOperation } from "./operation-complete-roles";
 import { OperationsService } from "./operations.service";
 
 const UPLOAD_LIMIT = 15 * 1024 * 1024;
@@ -275,6 +276,7 @@ export class OperationsController {
   @ApiOkResponse({ type: OperationDto })
   patchStatus(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchOperationStatusDto) {
     this.assertStatusAccess(user);
+    assertCanCompleteOperation(user, body.status);
     return this.operations.updateStatus(requireTenantId(user), id, body.status, user, body.collectionAmount);
   }
 
