@@ -8,7 +8,8 @@ Instance of [MARKET_GO_LIVE_TEMPLATE.md](../MARKET_GO_LIVE_TEMPLATE.md) for mark
 
 | Step | Owner | Notes |
 |------|--------|--------|
-| Tax registration (RIN) on organization TRN | Group admin | Admin → Organization → TRN; flows to all clinics |
+| Tax registration (RIN) on organization TRN | Group admin | Admin → **Organization & settings** → Organization settings card; flows to all clinics |
+| Custom transfer channels (InstaPay/Fawry alternatives) | Group admin | Admin → **Organization & settings** → **Payment channels** card |
 | Per-clinic branch / POS code | Clinic admin | Clinic → Settings → Egypt ETA |
 | Taxpayer activity code | Group admin | Market default `8690` (medical); clinic override if needed |
 | GPC / ETA item codes per service | Group admin + finance | Org default; clinic overrides |
@@ -39,7 +40,9 @@ Every **payment** path uses `postRevenueWithFiscal`: check-in, visit fee, billin
 
 **Automatic submit:** `FiscalSubmissionWorker` drains pending receipts per device (FIFO, stored wire document, failure classification). Set `FISCAL_SUBMIT_WORKER=false` to disable.
 
-**Troubleshooting:** Banner “finish receipt device setup” when no default `ACTIVE` device; permanent ETA validation errors mark the submission `REJECTED` so later receipts on the same device can proceed; production uses Secrets Manager refs (not `local:`/`env:`).
+**Troubleshooting:** Banner “finish receipt device setup” when no default `ACTIVE` device; permanent ETA validation errors mark the submission `REJECTED` so later receipts on the same device can proceed; production uses Secrets Manager refs (not `local:`/`env:`). Fiscal submit/queue issues appear under **Governance → Failing operations** with category **FISCAL** (not webhooks).
+
+**Pre-production billing drill:** [ETA_RECEIPT_V12.md](../ETA_RECEIPT_V12.md) § Billing go-live checklist (sale → return → resend, credentials expiry, status poll).
 
 ## 2. Data protection (Egypt PDPL)
 

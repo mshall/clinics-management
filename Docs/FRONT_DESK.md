@@ -46,7 +46,7 @@ When staff collect a fee at **check-in** (appointment) or when **creating an enc
 | Method | UI |
 |--------|-----|
 | **Cash on visit** | Default; posts to revenue with `collectionMode=CASH_ON_VISIT` |
-| **Money transfer** | Choose **InstaPay**, **Fawry**, or an **organization payment channel** (Admin → Organization settings). Account/mobile hints show for custom channels. Enter **transaction ID** (format-validated for market methods; generic min length for custom channels). Posts `RevenueEntry` and enqueues **ETA e-receipt** when fiscal is configured. |
+| **Money transfer** | Choose **InstaPay**, **Fawry**, or an **organization payment channel** (Admin → **Organization & settings** → **Payment channels**, group admin). Account/mobile hints show for custom channels. Enter **transaction ID** (format-validated for market methods; generic min length for custom channels). Posts `RevenueEntry` and enqueues **ETA e-receipt** when fiscal is configured. |
 
 API: `visitCollection` on `POST /api/v1/front-desk/appointments/:id/check-in` and `POST/PATCH /api/v1/encounters` when `visitFeeAmount` / `paymentAmount` > 0.
 

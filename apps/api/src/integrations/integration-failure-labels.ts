@@ -34,6 +34,7 @@ export function formatCategoryLabel(category: IntegrationFailureCategory): strin
     APPOINTMENT: "Appointment booking",
     OPERATION: "Surgery / operation booking",
     WEBHOOK: "Outbound webhook",
+    FISCAL: "ETA e-receipt / fiscal",
   };
   return labels[category] ?? category;
 }

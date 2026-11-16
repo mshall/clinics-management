@@ -70,6 +70,8 @@ export class RevenueService {
     currency: string;
     postedAt: Date;
     status: RevenueStatus;
+    counterpartyName?: string | null;
+    counterpartyTaxNumber?: string | null;
   }): RevenueEntryDto {
     return {
       id: r.id,
@@ -84,6 +86,8 @@ export class RevenueService {
       currency: r.currency,
       postedAt: r.postedAt.toISOString(),
       status: r.status,
+      counterpartyName: r.counterpartyName ?? null,
+      counterpartyTaxNumber: r.counterpartyTaxNumber ?? null,
     };
   }
 
@@ -295,6 +299,8 @@ export class RevenueService {
         status,
         skipFiscalQueue: status !== RevenueStatus.POSTED || dto.netAmount <= 0 || skipEta,
         skipEtaEReceipt: skipEta,
+        counterpartyName: skipEta ? dto.counterpartyName?.trim() ?? null : null,
+        counterpartyTaxNumber: skipEta ? dto.counterpartyTaxNumber?.trim() ?? null : null,
         clinicTaxRin: clinic?.taxRegistrationNumber,
         vatPercent: Number(clinic?.invoiceVatPercent ?? 0),
       });

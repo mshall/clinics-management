@@ -119,7 +119,7 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 - HR: employees, attendance, leave; employee ID document upload; **linked user ↔ employee (1:1)** with **deactivate / archive (soft) / restore / re-hire** and employment + operating period history.
 
 **Administration**
-- Organization settings, clinics (parent/branch), users, feature flags, audit log.
+- Organization settings (currency, visit fee, TRN, VAT), **payment channels** (custom transfers + ETA receipt codes), clinics (parent/branch), users, feature flags, audit log.
 - **Organization user lifecycle** — deactivate, archive (soft delete), restore; archived user list with created/deactivated/archived dates; login blocked when inactive.
 - **Clinic lifecycle** — disable/reactivate clinics and branches; operating period timeline; disabled clinics hidden from operational pickers.
 - Org patients CRUD, bulk patient delete, bulk user archive, data explorer, **SQL export** and **documents ZIP export** (group admin / break-glass).
@@ -345,7 +345,7 @@ For **group admin**, **group supervisor**, **branch/clinic admin**, and **call c
 
 **API (v1):** `GET/POST /support/tickets`, `GET/PATCH /support/tickets/:id`, `POST /support/tickets/:id/events`, `GET /support/tracking/logs`, `POST /support/tracking/logs/:auditLogId/ticket`.
 
-**Insights API:** `GET /admin/insights/overview-360`, `GET /admin/insights/staff-performance` (roles: group admin, group supervisor, branch manager, clinic admin).
+**Insights API:** `GET /admin/insights/overview-360`, `GET /admin/insights/staff-performance` (roles: group admin, group supervisor, branch manager, clinic admin, hr officer, finance officer). Same panels under **Administration → Insights & performance** and **HR → Insights & performance** (delegated employee managers with HR grants see the HR tab).
 
 **External patient platform integration (shipped):** Organization admins create **integration API clients** (Admin → Organization → Integration API clients). External systems call `/api/v1/integrations/*` with `Authorization: Bearer kio_live.<clientKey>.<secret>` — scoped `APPOINTMENTS_READ` / `APPOINTMENTS_WRITE`. In-clinic staff APIs and JWT login are **unchanged**.
 

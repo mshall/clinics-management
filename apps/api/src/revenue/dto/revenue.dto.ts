@@ -36,4 +36,10 @@ export class RevenueEntryDto {
 
   @ApiProperty()
   status!: string;
+
+  @ApiPropertyOptional({ nullable: true, description: "B2B counterparty legal name when e-receipt was skipped" })
+  counterpartyName?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, description: "B2B counterparty tax registration when e-receipt was skipped" })
+  counterpartyTaxNumber?: string | null;
 }

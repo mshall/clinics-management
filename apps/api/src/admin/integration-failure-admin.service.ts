@@ -51,7 +51,9 @@ export class IntegrationFailureAdminService {
     const createdAt = resolveAuditLogCreatedAtFilter(filters.from, filters.to);
     const categoryFilter = filters.category?.trim();
     const categoryEnum = categoryFilter
-      ? (["AUTH", "APPOINTMENT", "OPERATION", "WEBHOOK"] as const).find((c) => c === categoryFilter.toUpperCase())
+      ? (["AUTH", "APPOINTMENT", "OPERATION", "WEBHOOK", "FISCAL"] as const).find(
+          (c) => c === categoryFilter.toUpperCase(),
+        )
       : undefined;
     const statusFilter = filters.status?.trim().toUpperCase();
     const statusEnum = statusFilter

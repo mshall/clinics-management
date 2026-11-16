@@ -16,7 +16,7 @@ import {
   type EtaStoredSubmissionPayload,
 } from "./eta-stored-submission";
 import { queueFiscalDocument } from "./fiscal-queue";
-import { resolveSaleReferenceUuid } from "./fiscal-return-reference";
+import { resolveSaleReturnPrepareOutcome } from "./fiscal-return-reference";
 
 const PREPARE_TX_MS = 15_000;
 const FINALIZE_TX_MS = 15_000;
@@ -29,6 +29,12 @@ type PreparedSubmit = {
   signature: string;
   resubmission: boolean;
 };
+
+export type PrepareSubmissionResult = PreparedSubmit | { cancelled: true };
+
+function isPreparedSubmit(prepared: PrepareSubmissionResult): prepared is PreparedSubmit {
+  return !("cancelled" in prepared);
+}
 
 function workerInstanceId(): string {
   return process.env.FISCAL_WORKER_ID?.trim() || process.env.HOSTNAME?.trim() || "kiorly-worker";
@@ -62,7 +68,7 @@ export class FiscalSubmitService {
     }
   }
 
-  async prepareSubmission(tenantId: string, submissionId: string): Promise<PreparedSubmit> {
+  async prepareSubmission(tenantId: string, submissionId: string): Promise<PrepareSubmissionResult> {
     return this.prisma.$transaction(
       async (tx) => {
         await tx.$queryRaw`SELECT id FROM "FiscalSubmission" WHERE id = ${submissionId} FOR UPDATE`;
@@ -157,12 +163,26 @@ export class FiscalSubmitService {
         let referenceUuid = draft.referenceReceiptUuid?.trim() || undefined;
         const returnForDocId = draft.returnForFiscalDocumentId?.trim();
         if (draft.documentNature === "return" && returnForDocId) {
-          referenceUuid = await resolveSaleReferenceUuid(tx, returnForDocId);
-          if (!referenceUuid) {
+          const outcome = await resolveSaleReturnPrepareOutcome(tx, returnForDocId);
+          if (outcome.action === "cancel") {
+            await tx.fiscalSubmission.update({
+              where: { id: row.id },
+              data: {
+                status: FiscalSubmissionStatus.CANCELLED,
+                errorMessage: `Return cancelled: ${outcome.reason}`,
+                claimedUntil: null,
+                claimedBy: null,
+                nextRetryAt: null,
+              },
+            });
+            return { cancelled: true };
+          }
+          if (outcome.action === "wait") {
             throw new BadRequestException(
               "Return receipt cannot be prepared until the original sale has been assigned a receipt UUID",
             );
           }
+          referenceUuid = outcome.uuid;
         }
 
         const draftWithMeta: EtaReceiptPayload = {
@@ -251,7 +271,7 @@ export class FiscalSubmitService {
               data: {
                 tenantId,
                 clinicId: row.clinicId,
-                category: IntegrationFailureCategory.WEBHOOK,
+                category: IntegrationFailureCategory.FISCAL,
                 operation: "fiscal_submit_credentials",
                 operationName: "ETA device credentials expired or invalid",
                 statusCode: result.httpStatus ?? 401,
@@ -300,7 +320,7 @@ export class FiscalSubmitService {
               data: {
                 tenantId,
                 clinicId: row.clinicId,
-                category: IntegrationFailureCategory.WEBHOOK,
+                category: IntegrationFailureCategory.FISCAL,
                 operation: "fiscal_submit_rejected",
                 operationName: "ETA receipt rejected",
                 statusCode: result.httpStatus ?? 400,
@@ -388,6 +408,9 @@ export class FiscalSubmitService {
     }
 
     const prepared = await this.prepareSubmission(tenantId, submissionId);
+    if (!isPreparedSubmit(prepared)) {
+      return this.prisma.fiscalSubmission.findFirstOrThrow({ where: { id: submissionId, tenantId } });
+    }
     const device = await this.prisma.fiscalDevice.findUniqueOrThrow({
       where: { id: prepared.fiscalDeviceId },
       include: { credential: true },

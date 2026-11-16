@@ -6,7 +6,9 @@ import { buildEtaWireReceiptDocument } from "./eta-egypt-wire";
 import { assertWireUuidMatchesContentHash } from "./eta-stored-submission";
 
 /** Cross-check value from ETA SDK / toolkit for this exact fixture (fixed issue time). */
-const GOLDEN_UUID = "322d148f562c8941db36ef30ca09d0bb1f3cc9b21779c15668c6c760023b1864";
+const GOLDEN_SALE_UUID = "322d148f562c8941db36ef30ca09d0bb1f3cc9b21779c15668c6c760023b1864";
+/** Return on same device chain, `referenceUUID` = sale uuid (previousUUID = sale uuid). */
+const GOLDEN_RETURN_UUID = "bee627b8a019ec2aea08c3161ea52fcbc156e7454ba069b3489011eb1908b485";
 const GOLDEN_ISSUED_AT = "2024-01-15T10:00:00Z";
 
 const GOLDEN_PAYLOAD: EtaReceiptPayload = {
@@ -47,7 +49,31 @@ test("ETA SDK golden fixture uuid matches toolkit hash", () => {
   });
   const forHash = { ...wire, header: { ...wire.header, uuid: "" } };
   const uuid = computeEtaReceiptUuid(forHash as unknown as Record<string, unknown>);
-  assert.equal(uuid, GOLDEN_UUID);
+  assert.equal(uuid, GOLDEN_SALE_UUID);
+  wire.header.uuid = uuid;
+  assertWireUuidMatchesContentHash(wire);
+});
+
+test("ETA SDK golden return references sale uuid on wire", () => {
+  const returnPayload: EtaReceiptPayload = {
+    ...GOLDEN_PAYLOAD,
+    documentNature: "return",
+    referenceReceiptUuid: GOLDEN_SALE_UUID,
+    idempotencyKey: "eta-golden-return",
+    receiptUuid: "",
+  };
+  const wire = buildEtaWireReceiptDocument({
+    payload: returnPayload,
+    previousUUID: GOLDEN_SALE_UUID,
+    deviceSerial: GOLDEN_DEVICE_SERIAL,
+    internalId: `${GOLDEN_DEVICE_SERIAL}-00000002`,
+    referenceUuid: GOLDEN_SALE_UUID,
+    issuedAt: GOLDEN_ISSUED_AT,
+  });
+  assert.equal(wire.header.referenceUUID, GOLDEN_SALE_UUID);
+  const forHash = { ...wire, header: { ...wire.header, uuid: "" } };
+  const uuid = computeEtaReceiptUuid(forHash as unknown as Record<string, unknown>);
+  assert.equal(uuid, GOLDEN_RETURN_UUID, "update GOLDEN_RETURN_UUID if ETA toolkit hash differs");
   wire.header.uuid = uuid;
   assertWireUuidMatchesContentHash(wire);
 });

@@ -15,7 +15,7 @@ Legacy `eta*` columns were migrated into JSON and removed.
 
 ## Payment methods
 
-`Market.paymentMethods` is the source of truth for **built-in** transfer types. Organizations may add **`TenantPaymentChannel`** rows (Administration → Organization settings → Payment channels): **name**, **account number** and/or **mobile number** (at least one required), **referencePattern** (regex for transfer refs), and **fiscalPaymentCode** (`C` / `V` / `O` on ETA receipts). Each row gets a stable `channelKey` used on revenue and check-in.
+`Market.paymentMethods` is the source of truth for **built-in** transfer types. Organizations may add **`TenantPaymentChannel`** rows under **Administration → Organization & settings** (dedicated **Payment channels** card, **group admin only** — below **Organization settings**, same tab): **name**, **account number** and/or **mobile number** (at least one required), **referencePattern** (regex for transfer refs), and **fiscalPaymentCode** (`C` / `V` / `O` on ETA receipts). Each row gets a stable `channelKey` used on revenue and check-in.
 
 Transfer channels are **string ids** (not a DB enum). Market methods may define:
 

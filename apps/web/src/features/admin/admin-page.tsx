@@ -433,21 +433,30 @@ export function AdminPage() {
                 <CardTitle className="text-base">{t("admin.orgSettings", "Organization settings")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="org-base-currency">{t("platform.baseCurrency", "Base currency")}</Label>
-                    <BaseCurrencySelect id="org-base-currency" value={currencyDraft} onChange={setCurrencyDraft} />
-                    <p className="min-h-[2.5rem] text-xs text-muted-foreground">
+                <div className="grid gap-x-4 gap-y-6 sm:grid-cols-2">
+                  <div className="grid grid-rows-[auto_auto_minmax(2.75rem,auto)] gap-2">
+                    <div className="flex min-h-11 items-end">
+                      <Label htmlFor="org-base-currency">{t("platform.baseCurrency", "Base currency")}</Label>
+                    </div>
+                    <BaseCurrencySelect
+                      id="org-base-currency"
+                      className="h-11"
+                      value={currencyDraft}
+                      onChange={setCurrencyDraft}
+                    />
+                    <p className="text-xs leading-snug text-muted-foreground">
                       {t(
                         "admin.orgBaseCurrencyHint",
                         "Default currency for all clinics unless a clinic sets its own override.",
                       )}
                     </p>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="org-visit-fee" required>
-                      {t("admin.feeAmount", "Default visit fee ({{currency}})", { currency: currencyDraft })}
-                    </Label>
+                  <div className="grid grid-rows-[auto_auto_minmax(2.75rem,auto)] gap-2">
+                    <div className="flex min-h-11 items-end">
+                      <Label htmlFor="org-visit-fee" required>
+                        {t("admin.feeAmount", "Default visit fee ({{currency}})", { currency: currencyDraft })}
+                      </Label>
+                    </div>
                     <Input
                       id="org-visit-fee"
                       className="ltr-nums w-full"
@@ -457,12 +466,17 @@ export function AdminPage() {
                       value={feeDraft}
                       onChange={(e) => setFeeDraft(e.target.value)}
                     />
-                    <p className="min-h-[2.5rem] text-xs text-muted-foreground" aria-hidden>
-                      {"\u00a0"}
+                    <p className="text-xs leading-snug text-muted-foreground">
+                      {t(
+                        "admin.orgVisitFeeHint",
+                        "Used when a clinic does not set its own visit fee.",
+                      )}
                     </p>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="org-trn">{t("admin.orgTaxRegistrationNumber", "Tax registration (TRN)")}</Label>
+                  <div className="grid grid-rows-[auto_auto_minmax(2.75rem,auto)] gap-2">
+                    <div className="flex min-h-11 items-end">
+                      <Label htmlFor="org-trn">{t("admin.orgTaxRegistrationNumber", "Tax registration (TRN)")}</Label>
+                    </div>
                     <Input
                       id="org-trn"
                       className="ltr-nums w-full"
@@ -470,15 +484,17 @@ export function AdminPage() {
                       onChange={(e) => setTrnDraft(e.target.value)}
                       placeholder="N/A"
                     />
-                    <p className="min-h-[2.5rem] text-xs text-muted-foreground">
+                    <p className="text-xs leading-snug text-muted-foreground">
                       {t(
                         "admin.orgTrnHint",
                         "Applied to every clinic in this organization. Use N/A when no TRN is registered yet.",
                       )}
                     </p>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="org-vat">{t("admin.orgInvoiceVatPercent", "VAT % on invoices")}</Label>
+                  <div className="grid grid-rows-[auto_auto_minmax(2.75rem,auto)] gap-2">
+                    <div className="flex min-h-11 items-end">
+                      <Label htmlFor="org-vat">{t("admin.orgInvoiceVatPercent", "VAT % on invoices")}</Label>
+                    </div>
                     <Input
                       id="org-vat"
                       className="ltr-nums w-full"
@@ -489,12 +505,11 @@ export function AdminPage() {
                       value={vatDraft}
                       onChange={(e) => setVatDraft(e.target.value)}
                     />
-                    <p className="min-h-[2.5rem] text-xs text-muted-foreground">
+                    <p className="text-xs leading-snug text-muted-foreground">
                       {t("admin.orgVatHint", "Default is 5%. Saving updates all clinics for tax invoices.")}
                     </p>
                   </div>
                 </div>
-                <TenantPaymentChannelsPanel />
                 <div className="w-full space-y-2 border-t border-border pt-4">
                   <p className="text-sm font-medium">{t("admin.whatsappReminders", "WhatsApp appointment reminders")}</p>
                   <label className="flex items-center gap-2 text-sm">
@@ -522,6 +537,8 @@ export function AdminPage() {
               </CardContent>
             </Card>
           ) : null}
+
+          {isGroupAdmin ? <TenantPaymentChannelsPanel /> : null}
 
           {isGroupAdmin ? <OrgEtaIntegrationCard /> : null}
 

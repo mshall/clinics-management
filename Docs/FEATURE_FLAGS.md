@@ -40,6 +40,8 @@ For a signed-in user in a tenant, `FeatureFlagsService` computes **effective** p
 
 Payment and compliance code paths call `isEnabled(tenantId, key)`. The assistant uses `isEnabledForUser(tenantId, "ai_assistant")` so platform-only users without a tenant respect the global master switch only.
 
+**Organization payment channels** (custom transfer rails) are **not** feature-flag keys — group admins configure them on **Administration → Organization & settings → Payment channels** (`TenantPaymentChannel`). Market flags `instapay` / `fawry` / `card_payments` still control built-in methods; see [MULTI_MARKET.md](./MULTI_MARKET.md).
+
 ---
 
 ## AI assistant (`ai_assistant`)

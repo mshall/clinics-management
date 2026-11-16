@@ -79,7 +79,7 @@ export class FiscalSubmissionWorker implements OnModuleInit, OnModuleDestroy {
             data: {
               tenantId: device.tenantId,
               clinicId: device.clinicId,
-              category: IntegrationFailureCategory.WEBHOOK,
+              category: IntegrationFailureCategory.FISCAL,
               operation: "fiscal_submit_exhausted",
               operationName: "Fiscal receipt submit",
               statusCode: 502,

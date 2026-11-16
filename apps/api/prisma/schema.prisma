@@ -326,6 +326,7 @@ enum IntegrationFailureCategory {
   APPOINTMENT
   OPERATION
   WEBHOOK
+  FISCAL
 }
 
 enum IntegrationFailureStatus {
@@ -1166,6 +1167,8 @@ model RevenueEntry {
   transferChannel String?
   transferReference String?
   transferVerificationStatus TransferVerificationStatus @default(NOT_APPLICABLE)
+  counterpartyName       String?
+  counterpartyTaxNumber  String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   fiscalDocument FiscalDocument?

@@ -1,4 +1,10 @@
-import { FiscalSubmissionStatus, Prisma, TransferVerificationStatus, type VisitCollectionMode } from "@prisma/client";
+import {
+  FiscalDeviceStatus,
+  FiscalSubmissionStatus,
+  Prisma,
+  TransferVerificationStatus,
+  type VisitCollectionMode,
+} from "@prisma/client";
 import { fiscalProviderKeyForMarket, getFiscalProvider } from "../providers/fiscal/fiscal-provider.registry";
 import { resolveMarketForTenant } from "../markets/market-resolver";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
@@ -105,6 +111,26 @@ export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: 
   }
 
   const saleDocId = params.returnForFiscalDocumentId?.trim();
+  let fiscalDeviceForQueue = fiscalDevice;
+  if (saleDocId) {
+    const saleDoc = await tx.fiscalDocument.findFirst({
+      where: { id: saleDocId, tenantId: params.tenantId },
+      select: { fiscalDeviceId: true },
+    });
+    const saleDeviceId = saleDoc?.fiscalDeviceId?.trim();
+    if (saleDeviceId) {
+      const saleDevice = await tx.fiscalDevice.findFirst({
+        where: {
+          id: saleDeviceId,
+          tenantId: params.tenantId,
+          clinicId: params.clinicId,
+          status: FiscalDeviceStatus.ACTIVE,
+        },
+        include: { credential: true },
+      });
+      if (saleDevice) fiscalDeviceForQueue = saleDevice;
+    }
+  }
   let referenceReceiptUuid: string | undefined = params.referenceReceiptUuid?.trim() || undefined;
   if (returnSale && !saleDocId && params.returnForRevenueEntryId) {
     const prior = await tx.fiscalSubmission.findFirst({
@@ -201,7 +227,7 @@ export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: 
         transferReference: params.transferReference,
       } as Prisma.InputJsonValue,
       schemaVersion: built.schemaVersion,
-      fiscalDeviceId: fiscalDevice?.id ?? null,
+      fiscalDeviceId: fiscalDeviceForQueue?.id ?? null,
     },
   });
 
@@ -211,9 +237,9 @@ export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: 
       clinicId: params.clinicId,
       patientId: params.patientId,
       fiscalDocumentId: doc.id,
-      fiscalDeviceId: fiscalDevice?.id ?? null,
+      fiscalDeviceId: fiscalDeviceForQueue?.id ?? null,
       providerKey,
-      deviceId: fiscalDevice?.serialNumber ?? null,
+      deviceId: fiscalDeviceForQueue?.serialNumber ?? null,
       status: FiscalSubmissionStatus.PENDING,
       idempotencyKey: built.idempotencyKey,
       signature: built.signature || null,

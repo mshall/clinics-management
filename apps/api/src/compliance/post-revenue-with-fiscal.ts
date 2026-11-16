@@ -31,6 +31,8 @@ export type PostRevenueWithFiscalParams = {
   skipFiscalQueue?: boolean;
   /** B2B / non-patient revenue — not queued as ETA e-receipt (e-invoice later). */
   skipEtaEReceipt?: boolean;
+  counterpartyName?: string | null;
+  counterpartyTaxNumber?: string | null;
 };
 
 async function resolvePatientId(
@@ -121,6 +123,12 @@ export async function postRevenueWithFiscal(
       ...(params.transferReference !== undefined ? { transferReference: params.transferReference } : {}),
       ...(params.transferVerificationStatus !== undefined
         ? { transferVerificationStatus: params.transferVerificationStatus }
+        : {}),
+      ...(params.counterpartyName?.trim()
+        ? { counterpartyName: params.counterpartyName.trim() }
+        : {}),
+      ...(params.counterpartyTaxNumber?.trim()
+        ? { counterpartyTaxNumber: params.counterpartyTaxNumber.trim() }
         : {}),
     },
   });

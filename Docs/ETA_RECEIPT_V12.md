@@ -16,11 +16,20 @@ Manual: `POST /api/v1/compliance/egypt/eta-queue/:id/submit` (same three-step pa
 
 ## Kiorly ETA integration opt-out
 
-**Void / delete revenue** must use `voidPostedRevenuesWithFiscalReturns`: **PENDING** sales are marked `CANCELLED` under row lock (race with worker → queue return); **SUBMITTING / SUBMITTED / ACCEPTED** queue a return with `returnForFiscalDocumentId` (reference UUID resolved at **prepare** from the sale’s stored document); **REJECTED** skips a return. Encounter delete voids, then **detaches** revenue (`encounterId` null)—never deletes rows linked to fiscal docs.
+**Void / delete revenue** must use `voidPostedRevenuesWithFiscalReturns`: **PENDING** sales are marked `CANCELLED` under row lock (race with worker → queue return); **SUBMITTING / SUBMITTED / ACCEPTED** queue a return with `returnForFiscalDocumentId` (reference UUID resolved at **prepare** only after the sale is **SUBMITTED/ACCEPTED**); **REJECTED/CANCELLED** sales do not get a return — any queued return for that sale is **cancelled at prepare** (e.g. void while sale was still **SUBMITTING**, then ETA rejects the sale). Returns are queued on the **sale document’s `fiscalDeviceId`**, not the clinic’s current default device. Encounter delete voids, then **detaches** revenue (`encounterId` null)—never deletes rows linked to fiscal docs.
+
+### Billing go-live checklist (outside code)
+
+Before production billing with a real clinic TRN and virtual POS:
+
+1. **sale → return → corrected resend** on ETA pre-production.
+2. **Expired device credentials** — worker flags `CREDENTIALS_EXPIRED`, renewal path verified.
+3. **Submission status check** — poll / toolkit status API for an in-flight receipt.
+4. CI golden hash — `eta-sdk-golden-fixture.node.test.ts` (sale + return reference).
 
 Group admin controls **ETA e-invoice integration** under **Administration → Organization & settings** (dedicated card, off by default for new Egypt orgs). When off, the org declares responsibility for tax-authority submission; clinic ETA fields stay hidden. When on, org defaults and per-clinic branch codes apply. Stored as `providerSettings["eta-egypt"].physicalReportingOptOut` + `physicalReportingConsentAt` (opt-out = integration disabled). Audited; billing UI shows a banner while opt-out is active.
 
-**Failures:** HTTP **401/403** and token errors → device `CREDENTIALS_EXPIRED`, receipt stays `SUBMITTING`. Duplicate UUID → status check, not `REJECTED`. Validation **4xx** → `REJECTED`; fix via `POST …/eta-queue/:id/resubmit` with `referenceOldUUID`.
+**Failures:** HTTP **401/403** and token errors → device `CREDENTIALS_EXPIRED`, receipt stays `SUBMITTING`. Duplicate UUID → status check, not `REJECTED`. Validation **4xx** → `REJECTED`; fix via `POST …/eta-queue/:id/resubmit` with `referenceOldUUID`. Skipped queues, credential errors, rejections, and submit exhaustion log to **`IntegrationFailureLog`** with category **`FISCAL`** (filter in Admin → Governance → Failing operations).
 
 ## Payment method codes
 
@@ -50,7 +59,7 @@ See `eta-egypt-serialize.ts`. CI enforces a **hardcoded golden UUID** in `eta-sd
 
 State on **`FiscalDevice`** (`lastReceiptUuid`, `receiptSequence`). `previousUUID` taken at prepare time from the device row; chain advances only on successful finalize (not on `REJECTED`).
 
-Return / void receipts use `referenceOldUUID` on the wire when `referenceReceiptUuid` is set.
+Return receipts use `referenceUUID` on the wire (sale receipt uuid). Corrected resends after rejection use `referenceOldUUID` when `referenceReceiptUuid` is set.
 
 ## Notifications webhook
 

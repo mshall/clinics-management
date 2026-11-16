@@ -23,7 +23,7 @@ import { apiDownload, apiGet, apiPatch, apiPost } from "@/lib/http";
 import { localeForLanguage } from "@/lib/locale-display";
 import { useAuthStore } from "@/stores/auth-store";
 
-const CATEGORIES = ["", "AUTH", "APPOINTMENT", "OPERATION", "WEBHOOK"] as const;
+const CATEGORIES = ["", "AUTH", "APPOINTMENT", "OPERATION", "WEBHOOK", "FISCAL"] as const;
 const WORKFLOW_STATUSES = ["", "OPEN", "ACKNOWLEDGED", "RESOLVED"] as const;
 
 type IntegrationClientRow = { id: string; name: string; clientKey: string };

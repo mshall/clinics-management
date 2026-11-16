@@ -8,7 +8,7 @@ export async function logFiscalQueueSkipped(
     data: {
       tenantId: params.tenantId,
       clinicId: params.clinicId,
-      category: IntegrationFailureCategory.WEBHOOK,
+      category: IntegrationFailureCategory.FISCAL,
       operation: params.operation,
       operationName: "ETA receipt not queued",
       statusCode: 0,
