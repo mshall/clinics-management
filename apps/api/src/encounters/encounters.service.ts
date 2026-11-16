@@ -642,8 +642,21 @@ export class EncountersService {
         paymentMethods: transferCtx.paymentMethods,
       };
       let visitCollection: ReturnType<typeof parseVisitCollectionForAmount>;
+      const priorCollected =
+        priorRevenue?.collectionMode != null && Number(priorRevenue.grossAmount ?? 0) > 0;
+      const priorPaid = priorRevenue ? Number(priorRevenue.grossAmount) : 0;
       if (dto.visitCollection !== undefined) {
-        visitCollection = parseVisitCollectionForAmount(newFee, dto.visitCollection, collectionOpts);
+        if (priorCollected && newFee > priorPaid + 0.001) {
+          visitCollection = { collectionMode: null, transferChannel: null, transferReference: null };
+        } else if (priorCollected) {
+          visitCollection = {
+            collectionMode: priorRevenue!.collectionMode,
+            transferChannel: priorRevenue.transferChannel,
+            transferReference: priorRevenue.transferReference,
+          };
+        } else {
+          visitCollection = parseVisitCollectionForAmount(newFee, dto.visitCollection, collectionOpts);
+        }
       } else if (newFee > 0 && priorRevenue?.collectionMode) {
         visitCollection = {
           collectionMode: priorRevenue.collectionMode,
@@ -658,7 +671,13 @@ export class EncountersService {
         select: { taxRegistrationNumber: true, invoiceVatPercent: true },
       });
       let transferVerificationStatus: TransferVerificationStatus | undefined;
-      if (visitCollection.transferChannel && visitCollection.transferReference && newFee > 0) {
+      const feeIncreaseAfterPayment = priorCollected && newFee > priorPaid + 0.001;
+      if (
+        !feeIncreaseAfterPayment &&
+        visitCollection.transferChannel &&
+        visitCollection.transferReference &&
+        newFee > 0
+      ) {
         const feeCurrency =
           data.visitFeeCurrency !== undefined
             ? String(data.visitFeeCurrency)

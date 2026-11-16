@@ -162,3 +162,48 @@ export async function voidPostedRevenuesWithFiscalReturns(
     await queueReturnForVoidedRevenue(tx, queueReturn);
   }
 }
+
+/** Queue a partial ETA return (or cancel pending sale) without voiding the revenue row. */
+export async function queuePartialFiscalReturnForPostedRevenue(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  revenueEntryId: string,
+  returnAmount: number,
+  descriptionPrefix: string,
+): Promise<void> {
+  if (returnAmount <= 0) return;
+
+  const row = await tx.revenueEntry.findFirst({
+    where: { id: revenueEntryId, tenantId, status: RevenueStatus.POSTED },
+    include: {
+      fiscalDocument: { include: { submission: true } },
+    },
+  });
+  if (!row?.fiscalDocument) return;
+
+  const doc = row.fiscalDocument;
+  const sub = doc.submission;
+  const action = sub ? submissionVoidFiscalAction(sub.status) : "cancel_pending";
+  if (action === "return_already_rejected" || action === "none") return;
+
+  const patientId = doc.patientId?.trim();
+  if (!patientId) return;
+
+  const queueReturn: QueueReturnParams = {
+    tenantId,
+    clinicId: row.clinicId,
+    patientId,
+    amount: returnAmount,
+    currency: row.currency,
+    description: `${descriptionPrefix} · ${row.description ?? row.category}`,
+    revenueEntryId: row.id,
+    saleFiscalDocumentId: doc.id,
+  };
+
+  if (action === "cancel_pending") {
+    await cancelPendingOrQueueReturn(tx, doc.id, queueReturn);
+    return;
+  }
+
+  await queueReturnForVoidedRevenue(tx, queueReturn);
+}

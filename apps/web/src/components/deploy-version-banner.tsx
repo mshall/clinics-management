@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   dismissPendingDeploy,
@@ -8,21 +7,12 @@ import {
   subscribeDeployVersion,
   tryApplyDeployReload,
 } from "@/lib/deploy-version-watch";
-import { canAutoApplyDeployReload } from "@/lib/unsaved-work-registry";
 
 export function DeployVersionBanner() {
   const { t } = useTranslation();
-  const { pathname } = useLocation();
   const [pending, setPending] = useState(getPendingDeployBuildId);
 
   useEffect(() => subscribeDeployVersion(setPending), []);
-
-  useEffect(() => {
-    if (!pending) return;
-    if (canAutoApplyDeployReload()) {
-      tryApplyDeployReload("navigation");
-    }
-  }, [pathname, pending]);
 
   if (!pending) return null;
 

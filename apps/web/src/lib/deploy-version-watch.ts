@@ -1,5 +1,3 @@
-import { canAutoApplyDeployReload } from "@/lib/unsaved-work-registry";
-
 const BUILT_IN = (import.meta.env.VITE_BUILD_ID as string | undefined)?.trim() ?? "";
 
 type Listener = (pendingBuildId: string | null) => void;
@@ -45,9 +43,10 @@ export function observeWebBuildIdHeader(res: Response): void {
   applyWebBuildIdFromHeader(res.headers.get("X-Kiorly-Web-Build-Id"));
 }
 
-export function tryApplyDeployReload(reason: "user" | "navigation" | "auto-idle"): boolean {
+/** Reload only when the user explicitly chooses — never on navigation or idle. */
+export function tryApplyDeployReload(reason: "user"): boolean {
   if (!pendingBuildId) return false;
-  if (reason !== "user" && !canAutoApplyDeployReload()) return false;
+  if (reason !== "user") return false;
   void forceHardReload(pendingBuildId);
   return true;
 }

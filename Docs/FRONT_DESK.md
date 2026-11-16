@@ -49,7 +49,9 @@ When staff collect a fee at **check-in** (appointment) or when **creating an enc
 | **Cash on visit** | Default; posts to revenue with `collectionMode=CASH_ON_VISIT` |
 | **Money transfer** | Choose **InstaPay**, **Fawry**, or an **organization payment channel** (Admin → **Organization & settings** → **Payment channels**, group admin). Account/mobile hints show for custom channels. Enter **transaction ID** (format-validated for market methods; generic min length for custom channels). Posts `RevenueEntry` and enqueues **ETA e-receipt** when fiscal is configured. |
 
-API: `visitCollection` on `POST /api/v1/front-desk/appointments/:id/check-in` and `POST/PATCH /api/v1/encounters` when `visitFeeAmount` / `paymentAmount` > 0.
+API: `visitCollection` on `POST /api/v1/front-desk/appointments/:id/check-in` and `POST/PATCH /api/v1/encounters` when `visitFeeAmount` / `paymentAmount` > 0 (only when actually collecting — not when raising the fee after check-in payment).
+
+When the **encounter fee** is raised above what was collected at check-in, the API posts the difference as a **`Visit fee balance due`** revenue line (no collection / no e-receipt until front desk collects). A **lower** fee after payment queues a **partial fiscal return** on the collected row via the hardened void/return helper.
 
 ## Live clinic board & waiting-room screen
 
