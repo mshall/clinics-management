@@ -12,7 +12,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useClinicsQuery, useClinicRevenueBreakdownQuery, usePayableOperationsQuery, useRevenueQuery, useRevenueTotalsQuery } from "@/lib/api-hooks";
+import {
+  useClinicsQuery,
+  useClinicRevenueBreakdownQuery,
+  usePayableOperationsQuery,
+  useRevenueQuery,
+  useRevenueReceivablesQuery,
+  useRevenueTotalsQuery,
+} from "@/lib/api-hooks";
 import type { RevenueEntryDto, RevenueTotalsDto } from "@/lib/api-types";
 import { apiPost } from "@/lib/http";
 import { columnFilterIncludes } from "@/lib/utils";
@@ -91,6 +98,8 @@ export function RevenuePage() {
   const revTotal = revData?.total ?? 0;
   const revTotalPages = revData?.totalPages ?? 1;
   const totalsQ = useRevenueTotalsQuery({ from, to, clinicId: filterClinicId || undefined });
+  const receivablesQ = useRevenueReceivablesQuery({ clinicId: filterClinicId || undefined, page: 1, pageSize: 15 });
+  const receivableRows = receivablesQ.data?.items ?? [];
   const { data: clinics = [] } = useClinicsQuery();
   const orgBaseCurrency = useOrgBaseCurrency();
   const resolveClinicCurrency = useClinicCurrencyResolver();
@@ -239,7 +248,7 @@ export function RevenuePage() {
             <CardDescription className="text-xs">
               {t(
                 "revenue.searchLedgerHint",
-                "Pick a date range, then either all clinics in this organization or one clinic. Totals and the table follow this filter."
+                "Pick a date range and clinic scope. Totals and the table include posted revenue only (not outstanding receivables)."
               )}
             </CardDescription>
           </CardHeader>
@@ -328,6 +337,46 @@ export function RevenuePage() {
           </CardContent>
         </Card>
       </div>
+
+      {receivableRows.length > 0 ? (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">{t("revenue.outstandingBalances", "Outstanding balances")}</CardTitle>
+            <CardDescription className="text-xs">
+              {t(
+                "revenue.outstandingBalancesHint",
+                "Receivable visit fees and other balances owed — collect from the visit or front desk; excluded from posted revenue above.",
+              )}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveTable>
+              <table className="w-full min-w-[640px] text-sm">
+                <thead className="bg-muted/60">
+                  <tr>
+                    <th className="px-3 py-2 text-start font-medium">{t("revenue.clinic", "Clinic")}</th>
+                    <th className="px-3 py-2 text-start font-medium">{t("revenue.category", "Category")}</th>
+                    <th className="px-3 py-2 text-start font-medium">{t("revenue.net", "Net")}</th>
+                    <th className="px-3 py-2 text-start font-medium">{t("revenue.status", "Status")}</th>
+                    <th className="px-3 py-2 text-start font-medium">{t("revenue.description", "Description")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {receivableRows.map((r) => (
+                    <tr key={r.id} className="border-t border-border">
+                      <td className="px-3 py-2">{clinicDisplayName(r, i18n.language)}</td>
+                      <td className="px-3 py-2">{formatRevenueCategory(r.category, t)}</td>
+                      <td className="px-3 py-2 ltr-nums">{money(r.netAmount, r.currency)}</td>
+                      <td className="px-3 py-2">{formatRevenueStatus(r.status, t)}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{r.description ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </ResponsiveTable>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {breakdownEnabled ? (
         <Card>

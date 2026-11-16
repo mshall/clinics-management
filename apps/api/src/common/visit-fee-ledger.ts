@@ -290,8 +290,12 @@ export async function collectEncounterVisitFeeBalance(
   });
   const buyerName = patient ? `${patient.firstNameEn} ${patient.lastNameEn}`.trim() || "Patient" : "Patient";
 
-  const updated = await tx.revenueEntry.update({
-    where: { id: row.id },
+  const claimed = await tx.revenueEntry.updateMany({
+    where: {
+      id: row.id,
+      tenantId: params.tenantId,
+      status: RevenueStatus.RECEIVABLE,
+    },
     data: {
       status: RevenueStatus.POSTED,
       ...collectionData,
@@ -300,6 +304,11 @@ export async function collectEncounterVisitFeeBalance(
         : {}),
     },
   });
+  if (claimed.count !== 1) {
+    throw new Error("VISIT_BALANCE_ALREADY_COLLECTED");
+  }
+
+  const updated = await tx.revenueEntry.findFirstOrThrow({ where: { id: row.id, tenantId: params.tenantId } });
 
   const clinic = await tx.clinic.findFirst({
     where: { id: encounter.clinicId, tenantId: params.tenantId },

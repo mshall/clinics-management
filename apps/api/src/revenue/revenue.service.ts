@@ -139,6 +139,7 @@ export class RevenueService {
 
     const where: Prisma.RevenueEntryWhereInput = {
       tenantId,
+      status: RevenueStatus.POSTED,
       postedAt: { gte: start, lte: end },
       ...clinicScope,
       ...(clinicianUserId
@@ -155,6 +156,61 @@ export class RevenueService {
       this.prisma.revenueEntry.findMany({
         where,
         orderBy: { [sortField]: sortDir },
+        skip,
+        take: pageSize,
+        include: { clinic: { select: { nameEn: true, nameAr: true } } },
+      }),
+    ]);
+    return paginate(rows.map((row) => this.map(row)), total, page, pageSize);
+  }
+
+  async listReceivables(
+    tenantId: string,
+    pageStr: string | undefined,
+    pageSizeStr: string | undefined,
+    clinicIdStr: string | undefined,
+    user: JwtUser,
+  ) {
+    this.assertLedgerAccess(user.role);
+    const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
+    const clinicId = clinicIdStr?.trim();
+
+    let clinicScope: Prisma.RevenueEntryWhereInput = {};
+    if (user.role === UserRole.PHYSICIAN) {
+      const net = await fetchPhysicianNetworkClinicIds(this.prisma, tenantId, user.userId);
+      if (!net.length) return paginate([], 0, page, pageSize);
+      if (clinicId) {
+        if (!net.includes(clinicId)) throw new ForbiddenException("Clinic is outside your assigned scope");
+        clinicScope = { clinicId };
+      } else {
+        clinicScope = { clinicId: { in: net } };
+      }
+    } else {
+      const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
+      if (scopeIds !== null) {
+        if (!scopeIds.length) return paginate([], 0, page, pageSize);
+        if (clinicId) {
+          if (!scopeIds.includes(clinicId)) throw new ForbiddenException("Clinic is outside your assigned scope");
+          clinicScope = { clinicId };
+        } else {
+          clinicScope = { clinicId: { in: scopeIds } };
+        }
+      } else if (clinicId) {
+        clinicScope = { clinicId };
+      }
+    }
+
+    const where: Prisma.RevenueEntryWhereInput = {
+      tenantId,
+      status: RevenueStatus.RECEIVABLE,
+      netAmount: { gt: 0 },
+      ...clinicScope,
+    };
+    const [total, rows] = await Promise.all([
+      this.prisma.revenueEntry.count({ where }),
+      this.prisma.revenueEntry.findMany({
+        where,
+        orderBy: { postedAt: "desc" },
         skip,
         take: pageSize,
         include: { clinic: { select: { nameEn: true, nameAr: true } } },
@@ -206,6 +262,7 @@ export class RevenueService {
 
     const where: Prisma.RevenueEntryWhereInput = {
       tenantId,
+      status: RevenueStatus.POSTED,
       postedAt: { gte: start, lte: end },
       ...clinicScope,
       ...(clinicianUserId

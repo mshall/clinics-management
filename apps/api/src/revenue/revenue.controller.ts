@@ -32,6 +32,18 @@ function resolveClinicianFilter(user: JwtUser, clinicianIdParam?: string): strin
 export class RevenueController {
   constructor(private readonly revenue: RevenueService) {}
 
+  @Get("receivables")
+  @ApiOperation({ summary: "Outstanding receivable balances (excluded from posted revenue totals)" })
+  @ApiOkResponse({ description: "{ items, total, page, pageSize, totalPages }" })
+  listReceivables(
+    @CurrentUser() user: JwtUser,
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string,
+    @Query("clinicId") clinicId?: string,
+  ) {
+    return this.revenue.listReceivables(requireTenantId(user), page, pageSize, clinicId, user);
+  }
+
   @Get("totals")
   @ApiOperation({ summary: "Sum gross and net revenue for the reporting range (same filters as list, all pages)" })
   @ApiOkResponse({ type: RevenueTotalsDto })

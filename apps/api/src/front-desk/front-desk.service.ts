@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import {
   AppointmentQueueStage,
   AppointmentStatus,
@@ -348,9 +348,6 @@ export class FrontDeskService {
       select: { id: true, clinicId: true, patientId: true, status: true },
     });
     if (!enc) throw new NotFoundException("Encounter not found");
-    if (enc.status !== EncounterStatus.DRAFT && enc.status !== EncounterStatus.AMENDED) {
-      throw new BadRequestException("Visit balance can only be collected while the encounter is open");
-    }
 
     const receivable = await getEncounterVisitFeeReceivableSummary(this.prisma, tenantId, encounterId);
     if (!receivable) throw new BadRequestException("No visit fee balance due for this encounter");
@@ -378,22 +375,29 @@ export class FrontDeskService {
       );
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const result = await collectEncounterVisitFeeBalance(tx, {
-        tenantId,
-        encounterId,
-        collection,
-        transferVerificationStatus,
-        clinicTaxRin: clinic?.taxRegistrationNumber,
-        vatPercent: Number(clinic?.invoiceVatPercent ?? 0),
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const result = await collectEncounterVisitFeeBalance(tx, {
+          tenantId,
+          encounterId,
+          collection,
+          transferVerificationStatus,
+          clinicTaxRin: clinic?.taxRegistrationNumber,
+          vatPercent: Number(clinic?.invoiceVatPercent ?? 0),
+        });
+        return {
+          ...result,
+          currency: receivable.currency,
+          encounterId,
+          collectedByUserId: user.userId,
+        };
       });
-      return {
-        ...result,
-        currency: receivable.currency,
-        encounterId,
-        collectedByUserId: user.userId,
-      };
-    });
+    } catch (err) {
+      if (err instanceof Error && err.message === "VISIT_BALANCE_ALREADY_COLLECTED") {
+        throw new ConflictException("Visit balance was already collected");
+      }
+      throw err;
+    }
   }
 
   private patientAlertFlags(patient: {

@@ -51,7 +51,7 @@ When staff collect a fee at **check-in** (appointment) or when **creating an enc
 
 API: `visitCollection` on `POST /api/v1/front-desk/appointments/:id/check-in` and `POST/PATCH /api/v1/encounters` when `visitFeeAmount` / `paymentAmount` > 0 (only when actually collecting — not when raising the fee after check-in payment).
 
-When the **encounter fee** is raised above what was collected at check-in, the API posts the difference as a **`RECEIVABLE`** visit-fee row (not counted in revenue totals or cash close until collected). Use **`POST /api/v1/front-desk/encounters/:encounterId/collect-visit-balance`** (or the **Collect balance** card on the appointment / encounter) to apply payment method and queue the e-receipt on that same row.
+When the **encounter fee** is raised above what was collected at check-in, the API posts the difference as a **`RECEIVABLE`** visit-fee row (not counted in revenue totals or cash close until collected). Use **`POST /api/v1/front-desk/encounters/:encounterId/collect-visit-balance`** (or the **Collect balance** card on the appointment / encounter) to apply payment method and queue the e-receipt on that same row. Collection is allowed on **finalized** encounters while a `RECEIVABLE` row exists; duplicate collect attempts return **409**.
 
 A **lower** fee after payment uses **`reducePostedRevenueNetWithFiscal`**: partial return when the sale was already submitted; if the sale is still **PENDING**, the pending document is cancelled and a new sale is queued at the reduced amount on the same revenue row.
 

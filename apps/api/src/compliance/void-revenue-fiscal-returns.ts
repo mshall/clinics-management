@@ -50,19 +50,25 @@ async function queueReturnForVoidedRevenue(tx: Prisma.TransactionClient, p: Queu
   });
 }
 
-/** Cancel a not-yet-submitted sale and remove its fiscal document so the revenue row can be re-queued. */
-async function cancelPendingSaleDocument(tx: Prisma.TransactionClient, saleFiscalDocumentId: string): Promise<void> {
+type PendingSaleAdjustOutcome = "pending_cancelled" | "return_queued" | "noop";
+
+/** Lock submission, cancel pending sale (keep fiscal doc), or queue partial/full return (handles submit race). */
+async function cancelPendingSaleForRequeue(
+  tx: Prisma.TransactionClient,
+  saleFiscalDocumentId: string,
+  queueReturn: QueueReturnParams,
+): Promise<PendingSaleAdjustOutcome> {
   const lockedRows = await tx.$queryRaw<{ id: string }[]>`
     SELECT id FROM "FiscalSubmission"
     WHERE "fiscalDocumentId" = ${saleFiscalDocumentId}
     FOR UPDATE
   `;
-  if (!lockedRows.length) {
-    await tx.fiscalDocument.delete({ where: { id: saleFiscalDocumentId } }).catch(() => undefined);
-    return;
-  }
+  if (!lockedRows.length) return "noop";
+
   const sub = await tx.fiscalSubmission.findFirst({ where: { fiscalDocumentId: saleFiscalDocumentId } });
-  if (sub?.status === FiscalSubmissionStatus.PENDING) {
+  if (!sub) return "noop";
+
+  if (sub.status === FiscalSubmissionStatus.PENDING) {
     await tx.fiscalSubmission.update({
       where: { id: sub.id },
       data: {
@@ -73,8 +79,23 @@ async function cancelPendingSaleDocument(tx: Prisma.TransactionClient, saleFisca
         nextRetryAt: null,
       },
     });
+    await tx.fiscalDocument.update({
+      where: { id: saleFiscalDocumentId },
+      data: { revenueEntryId: null },
+    });
+    return "pending_cancelled";
   }
-  await tx.fiscalDocument.delete({ where: { id: saleFiscalDocumentId } }).catch(() => undefined);
+
+  if (
+    sub.status === FiscalSubmissionStatus.SUBMITTING ||
+    sub.status === FiscalSubmissionStatus.SUBMITTED ||
+    sub.status === FiscalSubmissionStatus.ACCEPTED
+  ) {
+    await queueReturnForVoidedRevenue(tx, queueReturn);
+    return "return_queued";
+  }
+
+  return "noop";
 }
 
 /** Lock sale submission and cancel if still PENDING; otherwise queue return (handles submit race). */
@@ -242,33 +263,8 @@ export async function reducePostedRevenueNetWithFiscal(
   const doc = row.fiscalDocument;
   if (!doc) return;
 
-  const sub = doc.submission;
-  const action = sub ? submissionVoidFiscalAction(sub.status) : "cancel_pending";
-  if (action === "return_already_rejected" || action === "none") return;
-
   const patientId = doc.patientId?.trim() ?? requeue.patientId;
   if (!patientId) return;
-
-  if (action === "cancel_pending") {
-    await cancelPendingSaleDocument(tx, doc.id);
-    if (newNetAmount > 0) {
-      await queueFiscalDocument(tx, {
-        tenantId,
-        clinicId: row.clinicId,
-        patientId,
-        revenueEntryId: row.id,
-        totalAmount: newNetAmount,
-        currency: row.currency,
-        description: requeue.description,
-        vatPercent: requeue.vatPercent,
-        clinicTaxRin: requeue.clinicTaxRin,
-        collectionMode: requeue.collectionMode,
-        transferChannel: requeue.transferChannel,
-        transferReference: requeue.transferReference,
-      });
-    }
-    return;
-  }
 
   const returnAmount = oldAmount - newNetAmount;
   if (returnAmount <= 0) return;
@@ -283,5 +279,24 @@ export async function reducePostedRevenueNetWithFiscal(
     revenueEntryId: row.id,
     saleFiscalDocumentId: doc.id,
   };
-  await queueReturnForVoidedRevenue(tx, queueReturn);
+
+  const outcome = await cancelPendingSaleForRequeue(tx, doc.id, queueReturn);
+  if (outcome === "return_queued" || outcome === "noop") return;
+
+  if (newNetAmount > 0) {
+    await queueFiscalDocument(tx, {
+      tenantId,
+      clinicId: row.clinicId,
+      patientId,
+      revenueEntryId: row.id,
+      totalAmount: newNetAmount,
+      currency: row.currency,
+      description: requeue.description,
+      vatPercent: requeue.vatPercent,
+      clinicTaxRin: requeue.clinicTaxRin,
+      collectionMode: requeue.collectionMode,
+      transferChannel: requeue.transferChannel,
+      transferReference: requeue.transferReference,
+    });
+  }
 }

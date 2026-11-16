@@ -141,7 +141,7 @@ export class EncounterDetailDto {
 
   @ApiPropertyOptional({
     nullable: true,
-    description: "Uncollected visit fee (RECEIVABLE ledger row) while the encounter is open",
+    description: "Uncollected visit fee (RECEIVABLE ledger row; collectible until collected)",
   })
   visitBalanceDueAmount?: number | null;
 

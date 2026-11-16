@@ -570,6 +570,20 @@ export function useRevenueQuery(params: RevenueListParams) {
   });
 }
 
+export function useRevenueReceivablesQuery(params: { clinicId?: string; page?: number; pageSize?: number }) {
+  const hasToken = useHasAuthToken();
+  const viewerId = useAuthStore((s) => s.user?.id ?? "");
+  const q = new URLSearchParams();
+  q.set("page", String(params.page ?? 1));
+  q.set("pageSize", String(params.pageSize ?? 20));
+  if (params.clinicId?.trim()) q.set("clinicId", params.clinicId.trim());
+  return useQuery({
+    queryKey: ["revenue", "receivables", viewerId, params.clinicId ?? "", params.page ?? 1, params.pageSize ?? 20],
+    queryFn: () => apiGet<Paginated<RevenueEntryDto>>(`/api/v1/revenue/receivables?${q.toString()}`),
+    enabled: hasToken,
+  });
+}
+
 export function useRevenueTotalsQuery(params: { from: string; to: string; clinicId?: string; clinicianId?: string }) {
   const hasToken = useHasAuthToken();
   const viewerId = useAuthStore((s) => s.user?.id ?? "");
