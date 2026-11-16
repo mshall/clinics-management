@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { OperationSummaryDto } from "@/lib/api-types";
 import { formatClinicName, localeForLanguage } from "@/lib/locale-display";
@@ -14,50 +13,16 @@ type Props = {
   language: string;
 };
 
-export function OperationsSummaryCards({ summary, loading, language }: Props) {
+export function OperationsSummaryBreakdown({ summary, loading, language }: Props) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const loc = localeForLanguage(language);
 
-  const paidLines = summary?.revenueByCurrency ?? [];
-
   return (
-  <>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t("operations.summaryTotal", "Total operations")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold ltr-nums">{loading ? "…" : (summary?.totalOperations ?? 0).toLocaleString()}</p>
-            <Button type="button" variant="link" className="mt-1 h-auto p-0 text-sm" onClick={() => setOpen(true)}>
-              {t("operations.summaryBreakdown", "View breakdown")}
-            </Button>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t("operations.summaryRevenue", "Total revenue collected")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            {loading ? (
-              <p className="text-2xl font-semibold">…</p>
-            ) : paidLines.length ? (
-              paidLines.map((row) => (
-                <p key={row.currency} className="text-lg font-semibold ltr-nums sm:text-2xl">
-                  {formatMoneyAmount(row.paidTotal, row.currency, loc)}
-                </p>
-              ))
-            ) : (
-              <p className="text-2xl font-semibold ltr-nums">0</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+    <>
+      <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)} disabled={loading}>
+        {t("operations.summaryBreakdown", "View breakdown")}
+      </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto sm:max-w-2xl">
@@ -73,7 +38,7 @@ export function OperationsSummaryCards({ summary, loading, language }: Props) {
                     <tr>
                       <th className="px-2 py-1.5 text-start font-medium">{t("operations.clinic", "Clinic")}</th>
                       <th className="px-2 py-1.5 text-end font-medium">{t("operations.summaryCount", "Count")}</th>
-                      <th className="px-2 py-1.5 text-end font-medium">{t("operations.summaryPaid", "Collected")}</th>
+                      <th className="px-2 py-1.5 text-end font-medium">{t("operations.summaryCollected", "Collected")}</th>
                     </tr>
                   </thead>
                   <tbody>

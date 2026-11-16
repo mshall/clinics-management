@@ -59,7 +59,8 @@ import { GenerateInvoiceDialog } from "@/features/invoices/generate-invoice-dial
 import { LinkedInvoicesSection } from "@/features/invoices/linked-invoices-section";
 import { DatetimeLocalField } from "@/components/datetime-local-field";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
-import { OperationsSummaryCards } from "@/features/operations/operations-summary-cards";
+import { OperationsSummaryBreakdown } from "@/features/operations/operations-summary-cards";
+import { OperationsPeriodStats } from "@/features/operations/operations-period-stats";
 
 const CREATE_ROLES = new Set([
   "group_admin",
@@ -828,10 +829,12 @@ export function OperationsPage() {
   };
 
   const loc = localeForLanguage(i18n.language);
-  const listCurrency = resolveClinicCurrency(
-    filterClinicId || singleManagedClinic?.id || rows[0]?.clinicId,
+  const tableHeaderCurrency = resolveClinicCurrency(
+    filterClinicId || singleManagedClinic?.id || undefined,
   );
-  const money = (n: number, currency?: string) => formatMoneyAmount(n, currency ?? listCurrency, loc);
+  const operationCurrency = (o: OperationDto) =>
+    (o.feeCurrency?.trim() || resolveClinicCurrency(o.clinicId)) as string;
+  const money = (n: number, currency?: string) => formatMoneyAmount(n, currency ?? orgBaseCurrency, loc);
 
   return (
     <div className="space-y-6">
@@ -919,7 +922,7 @@ export function OperationsPage() {
                 <p className="text-xs text-muted-foreground">
                   {t(
                     "operations.confirmCompleteRevenueNote",
-                    "On completion, {{amount}} {{currency}} will be added to clinic revenue.",
+                    "On completion, {{amount}} will be added to clinic revenue ({{currency}}).",
                     { amount: money(completeConfirmOp.totalCost, completeCurrency), currency: completeCurrency }
                   )}
                 </p>
@@ -1445,37 +1448,41 @@ export function OperationsPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base">{t("dateRange.label", "Reporting period")}</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-wrap items-end gap-4">
-          <div className="space-y-1">
-            <Label htmlFor="op-from">{t("dateRange.from", "From")}</Label>
-            <Input id="op-from" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="op-to">{t("dateRange.to", "To")}</Label>
-            <Input id="op-to" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
-          </div>
-          {clinics.length > 1 ? (
+        <CardContent className="space-y-5">
+          <div className="flex flex-wrap items-end gap-4">
             <div className="space-y-1">
-              <Label htmlFor="op-clinic-filter">{t("operations.clinic", "Clinic")}</Label>
-              <select
-                id="op-clinic-filter"
-                className={`${nativeSelectClassName} min-w-[180px]`}
-                value={filterClinicId}
-                onChange={(e) => { setFilterClinicId(e.target.value); setPage(1); }}
-              >
-                <option value="">{t("operations.allClinics", "All clinics")}</option>
-                {clinics.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {formatClinicName(c, i18n.language)}
-                  </option>
-                ))}
-              </select>
+              <Label htmlFor="op-from">{t("dateRange.from", "From")}</Label>
+              <Input id="op-from" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
             </div>
-          ) : null}
+            <div className="space-y-1">
+              <Label htmlFor="op-to">{t("dateRange.to", "To")}</Label>
+              <Input id="op-to" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
+            </div>
+            {clinics.length > 1 ? (
+              <div className="space-y-1">
+                <Label htmlFor="op-clinic-filter">{t("operations.clinic", "Clinic")}</Label>
+                <select
+                  id="op-clinic-filter"
+                  className={`${nativeSelectClassName} min-w-[180px]`}
+                  value={filterClinicId}
+                  onChange={(e) => { setFilterClinicId(e.target.value); setPage(1); }}
+                >
+                  <option value="">{t("operations.allClinics", "All clinics")}</option>
+                  {clinics.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {formatClinicName(c, i18n.language)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
+          </div>
+          <OperationsPeriodStats summary={opSummary.data} loading={opSummary.isPending} language={i18n.language} />
+          <div className="flex justify-end border-t border-border pt-3">
+            <OperationsSummaryBreakdown summary={opSummary.data} loading={opSummary.isPending} language={i18n.language} />
+          </div>
         </CardContent>
       </Card>
-
-      <OperationsSummaryCards summary={opSummary.data} loading={opSummary.isPending} language={i18n.language} />
 
       {canCreate ? (
         <Card>
@@ -1741,7 +1748,7 @@ export function OperationsPage() {
                         <p className="mt-2 truncate text-sm">{patientResolved.text}</p>
                         <p className="truncate text-xs text-muted-foreground">{formatClinicianDisplayName(o, i18n.language)}</p>
                         <p className="mt-2 text-sm font-medium ltr-nums">
-                          {money(o.totalCost, o.feeCurrency ?? listCurrency)}
+                          {money(o.totalCost, operationCurrency(o))}
                         </p>
                         {rowOpenable && canInvoice ? (
                           <div className="mt-3 flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
@@ -1789,7 +1796,7 @@ export function OperationsPage() {
                       onChange={setEfDoctor}
                     />
                     <SortableTh
-                      label={t("operations.totalCost", "Total cost ({{currency}})", { currency: listCurrency })}
+                      label={t("operations.totalCost", "Total cost ({{currency}})", { currency: tableHeaderCurrency })}
                       column="totalCost"
                       sortBy={sortBy}
                       sortOrder={sortOrder}
@@ -1798,7 +1805,7 @@ export function OperationsPage() {
                       onFilterChange={setEfTotal}
                     />
                     <SortableTh
-                      label={t("operations.downPayment", "Down payment ({{currency}})", { currency: listCurrency })}
+                      label={t("operations.downPayment", "Down payment ({{currency}})", { currency: tableHeaderCurrency })}
                       column="downPayment"
                       sortBy={sortBy}
                       sortOrder={sortOrder}
@@ -1807,10 +1814,10 @@ export function OperationsPage() {
                       onFilterChange={setEfDown}
                     />
                     <th className="px-3 py-2 text-start font-medium">
-                      {t("operations.paidAmount", "Paid ({{currency}})", { currency: listCurrency })}
+                      {t("operations.paidAmount", "Paid ({{currency}})", { currency: tableHeaderCurrency })}
                     </th>
                     <th className="px-3 py-2 text-start font-medium">
-                      {t("operations.balanceDue", "Balance ({{currency}})", { currency: listCurrency })}
+                      {t("operations.balanceDue", "Balance ({{currency}})", { currency: tableHeaderCurrency })}
                     </th>
                     <SortableTh
                       label={t("operations.status", "Status")}
@@ -1876,13 +1883,13 @@ export function OperationsPage() {
                           </td>
                           <td className="px-3 py-2 align-top">{formatClinicianDisplayName(o, i18n.language)}</td>
                           <td className="px-3 py-2 align-top ltr-nums">
-                            {money(o.totalCost, o.feeCurrency ?? listCurrency)}
+                            {money(o.totalCost, operationCurrency(o))}
                           </td>
                           <td className="px-3 py-2 align-top ltr-nums">
-                            {money(o.downPayment, o.feeCurrency ?? listCurrency)}
+                            {money(o.downPayment, operationCurrency(o))}
                           </td>
-                          <td className="px-3 py-2 align-top">{money(o.paidAmount ?? 0, o.feeCurrency ?? listCurrency)}</td>
-                          <td className="px-3 py-2 align-top">{money(o.balanceDue ?? o.totalCost - (o.paidAmount ?? 0), o.feeCurrency ?? listCurrency)}</td>
+                          <td className="px-3 py-2 align-top">{money(o.paidAmount ?? 0, operationCurrency(o))}</td>
+                          <td className="px-3 py-2 align-top">{money(o.balanceDue ?? o.totalCost - (o.paidAmount ?? 0), operationCurrency(o))}</td>
                           <td className="px-3 py-2 align-top">
                             <OperationStatusBadge status={o.status ?? "SCHEDULED"} />
                           </td>
