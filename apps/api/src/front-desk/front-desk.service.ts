@@ -75,7 +75,7 @@ export class FrontDeskService {
 
     const now = new Date();
     const pay = body.paymentAmount != null && body.paymentAmount > 0 ? body.paymentAmount : null;
-    const { resolveTenantTransferCollectionContext } = await import("../markets/market-transfer-context");
+    const { resolveTenantTransferCollectionContext } = await import("../common/market-transfer-context");
     const transferCtx = await resolveTenantTransferCollectionContext(this.prisma, this.featureFlags, tenantId);
     const collection =
       pay != null
@@ -371,7 +371,7 @@ export class FrontDeskService {
         })
       : null;
 
-    const { resolveTenantTransferCollectionContext } = await import("../markets/market-transfer-context");
+    const { resolveTenantTransferCollectionContext } = await import("../common/market-transfer-context");
     const transferCtx = await resolveTenantTransferCollectionContext(this.prisma, this.featureFlags, tenantId);
     const collection = parseVisitCollectionForAmount(receivable.amount, visitCollectionInput, {
       allowedTransferChannels: transferCtx.allowedTransferChannels,

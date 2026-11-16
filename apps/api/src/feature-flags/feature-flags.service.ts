@@ -119,7 +119,7 @@ export class FeatureFlagsService {
   }
 
   async allowedTransferChannels(tenantId: string): Promise<Set<string>> {
-    const { resolveTenantTransferCollectionContext } = await import("../markets/market-transfer-context");
+    const { resolveTenantTransferCollectionContext } = await import("../common/market-transfer-context");
     const ctx = await resolveTenantTransferCollectionContext(this.prisma, this, tenantId);
     return ctx.allowedTransferChannels;
   }

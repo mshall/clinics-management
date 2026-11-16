@@ -7,7 +7,7 @@ Kiorly ships as a **single deployable API** (`apps/api`) with **bounded contexts
 | Bounded context | Nest folders (`apps/api/src/`) | Future service (optional) |
 |-----------------|--------------------------------|---------------------------|
 | **Kernel** | `common`, `prisma`, `auth`, `audit`, `storage`, `health`, `feature-flags` | Shared platform (auth, tenancy) |
-| **Organization** | `clinics`, `users`, `admin`, `markets`, `user-nav-tabs`, `user-clinic-privilege-grants` | Tenant / org service |
+| **Organization** | `clinics`, `users`, `admin`, `markets`, `user-nav-tabs`, `user-clinic-privilege-grants`, `user-money-visibility` | Tenant / org service |
 | **Clinical** | `patients`, `appointments`, `encounters`, `clinical`, `scheduling`, `operations` | Clinical core |
 | **Front office** | `front-desk`, `billing`, `revenue`, `invoices`, `expenses`, `payroll`, `payroll-expenses` | Billing & cashier |
 | **Compliance & fiscal** | `compliance`, `fiscal-devices`, `providers`, `integrations` | Fiscal / ETA gateway |
@@ -30,6 +30,8 @@ Definition of contexts and **allowed cross-context import edges** live in:
 5. **Data** — single PostgreSQL schema with `tenantId`; extraction later uses **per-service schema** or event-outbox patterns (RFC backlog).
 
 Automated check: `apps/api/src/platform/module-boundaries.node.test.ts` (included in `npm run test:unit -w api`).
+
+**Before pushing API changes:** run `npm run ci:test` from the repo root (same steps as the GitHub **CI test** job). When you add a new top-level folder under `apps/api/src/`, register it in `platform/module-contexts.ts`. Shared logic used from multiple contexts belongs in `common/` (kernel), not direct cross-context imports.
 
 ## Extracting a context to a microservice
 

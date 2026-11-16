@@ -39,6 +39,7 @@
     "docs:preview": "npm run preview -w docs",
     "test:e2e": "npm run test:e2e -w web",
     "test:unit": "npm run test:unit -w api",
+    "ci:test": "bash scripts/ci-test-local.sh",
     "pretest:integration": "bash scripts/ensure-local-dev-db.sh",
     "test:integration": "npm run test:integration -w api",
     "pretest:integration-smoke": "bash scripts/ensure-local-dev-db.sh",

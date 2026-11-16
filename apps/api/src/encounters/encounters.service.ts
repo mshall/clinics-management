@@ -426,7 +426,7 @@ export class EncountersService {
         : linkedAppointmentFeePreview != null && linkedAppointmentFeePreview >= 0
           ? linkedAppointmentFeePreview
           : Number(tenantRow?.defaultVisitFee ?? 0);
-    const { resolveTenantTransferCollectionContext } = await import("../markets/market-transfer-context");
+    const { resolveTenantTransferCollectionContext } = await import("../common/market-transfer-context");
     const transferCtx = await resolveTenantTransferCollectionContext(this.prisma, this.featureFlags, tenantId);
     const collectionOpts = {
       allowedTransferChannels: transferCtx.allowedTransferChannels,
@@ -709,7 +709,7 @@ export class EncountersService {
       const priorRevenue = await this.prisma.revenueEntry.findFirst({
         where: { tenantId, encounterId: id, category: "VISIT_FEE" },
       });
-      const { resolveTenantTransferCollectionContext } = await import("../markets/market-transfer-context");
+      const { resolveTenantTransferCollectionContext } = await import("../common/market-transfer-context");
       const transferCtx = await resolveTenantTransferCollectionContext(this.prisma, this.featureFlags, tenantId);
       const collectionOpts = {
         allowedTransferChannels: transferCtx.allowedTransferChannels,

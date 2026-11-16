@@ -25,7 +25,7 @@ import {
   type UserMoneyVisibilityOverrides,
   DEFAULT_MONEY_VISIBILITY_OVERRIDES,
 } from "../common/user-money-visibility";
-import { resolveTenantTransferCollectionContext } from "../markets/market-transfer-context";
+import { resolveTenantTransferCollectionContext } from "../common/market-transfer-context";
 import { assertNoOpenEncounterForAppointmentComplete } from "./appointment-completion.guard";
 import { assertScheduledTransferFeeCollected } from "./appointment-transfer-fee.guard";
 import { ensureDraftEncounterIfCheckedIn } from "../front-desk/ensure-draft-encounter-on-check-in";
