@@ -41,7 +41,12 @@ import {
 import type { OperationDetailDto, OperationDocumentDto, OperationDto } from "@/lib/api-types";
 import { ApiError, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { canAdminEditCompletedOperation } from "@/lib/operation-admin-policy";
-import { canCreateOperation, canViewOperationMoney } from "@/lib/operation-money-policy";
+import {
+  canCreateOperation,
+  canEditOperationFees,
+  canViewOperationSummaryMoney,
+  showOperationMoneyColumns,
+} from "@/lib/operation-money-policy";
 import { canGenerateInvoice } from "@/lib/invoice-generate-policy";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
 import { formatClinicianDisplayName } from "@/lib/employee-display";
@@ -100,7 +105,9 @@ export function OperationsPage() {
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
   const canCreate = canCreateOperation(authUser?.role);
-  const showMoney = canViewOperationMoney(authUser?.role);
+  const showSummaryMoney = canViewOperationSummaryMoney(authUser?.role);
+  const canEditFees = canEditOperationFees(authUser?.role);
+  const showMoneyColumns = showOperationMoneyColumns(authUser?.role);
   const canAdminEditCompleted = canAdminEditCompletedOperation(authUser?.role);
   const canInvoice = canGenerateInvoice(authUser?.role);
   const isPhysician = authUser?.role === "physician";
@@ -491,8 +498,8 @@ export function OperationsPage() {
         const ds = new Date(o.operationDate).toLocaleString(loc);
         if (!columnFilterIncludes(ds, efDate) && !columnFilterIncludes(o.operationDate, efDate)) return false;
       }
-      if (showMoney && efTotal.trim() && !columnFilterIncludes(String(o.totalCost), efTotal)) return false;
-      if (showMoney && efDown.trim() && !columnFilterIncludes(String(o.downPayment), efDown)) return false;
+      if (showMoneyColumns && efTotal.trim() && !columnFilterIncludes(String(o.totalCost), efTotal)) return false;
+      if (showMoneyColumns && efDown.trim() && !columnFilterIncludes(String(o.downPayment), efDown)) return false;
       if (efStatus.trim() && !columnFilterIncludes(o.status, efStatus)) return false;
       return true;
     });
@@ -515,7 +522,7 @@ export function OperationsPage() {
           operationDate: editOperationDate,
           totalCost: editTotalCost,
           downPayment: editDownPayment,
-          feesOptional: !showMoney,
+          feesOptional: !canEditFees,
           docRows: editDocRows,
           medTab: editMedTab,
           prescriptionFile: editPrescriptionFile,
@@ -530,7 +537,7 @@ export function OperationsPage() {
     if (!editClinicianId.trim()) issues.push(t("operations.validationDoctor", "Select a performing doctor."));
     if (!editOperationDate.trim()) issues.push(t("operations.validationDate", "Enter the operation date."));
     if (
-      showMoney &&
+      canEditFees &&
       (!editTotalCost.trim() || Number.isNaN(Number.parseFloat(editTotalCost)))
     ) {
       issues.push(t("operations.validationTotalCost", "Enter a valid total cost."));
@@ -544,7 +551,7 @@ export function OperationsPage() {
       patientId: editPatientId,
       clinicianId: editClinicianId,
       operationDate: toOperationIso(editOperationDate),
-      ...(showMoney
+      ...(canEditFees
         ? {
             totalCost: Number.parseFloat(editTotalCost),
             downPayment: editDownPayment.trim() ? Number.parseFloat(editDownPayment) : 0,
@@ -608,7 +615,7 @@ export function OperationsPage() {
     : 0;
   const completeCollectionN = Number.parseFloat(completeCollectionAmount || "0");
   const completeCollectionValid =
-    showMoney &&
+    canEditFees &&
     (completeBalance <= 0.001 ||
       (Number.isFinite(completeCollectionN) &&
         completeCollectionN > 0 &&
@@ -731,7 +738,7 @@ export function OperationsPage() {
           {new Date(o.operationDate).toLocaleString(localeForLanguage(i18n.language))}
         </dd>
       </div>
-      {showMoney ? (
+      {o.financialsVisible ? (
         <div>
           <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {t("operations.totalCost", "Total cost ({{currency}})", { currency })}
@@ -753,8 +760,8 @@ export function OperationsPage() {
         patientId,
         clinicianId,
         operationDate: toOperationIso(operationDate),
-        totalCost: showMoney && totalCost.trim() ? Number.parseFloat(totalCost) : 0,
-        downPayment: showMoney && downPayment.trim() ? Number.parseFloat(downPayment) : 0,
+        totalCost: canEditFees && totalCost.trim() ? Number.parseFloat(totalCost) : 0,
+        downPayment: canEditFees && downPayment.trim() ? Number.parseFloat(downPayment) : 0,
         comments: comments.trim() || undefined,
         clinicId: schedulingClinicId || undefined,
         noMedications: medTab === "none",
@@ -820,7 +827,7 @@ export function OperationsPage() {
         medTab,
         prescriptionFile,
         generatedPrescriptionFile,
-        feesOptional: !showMoney,
+        feesOptional: !canEditFees,
       },
       t,
     );
@@ -834,7 +841,7 @@ export function OperationsPage() {
   };
 
   const loc = localeForLanguage(i18n.language);
-  const tableMoneyColSpan = showMoney ? 4 : 0;
+  const tableMoneyColSpan = showMoneyColumns ? 4 : 0;
   const tableColSpan = 6 + tableMoneyColSpan + 3;
   const tableHeaderCurrency = resolveClinicCurrency(
     filterClinicId || singleManagedClinic?.id || undefined,
@@ -867,7 +874,7 @@ export function OperationsPage() {
               </DialogTitle>
             </DialogHeader>
             <p className="text-sm text-muted-foreground">
-              {showMoney
+              {canEditFees
                 ? t(
                     "operations.confirmCompleteBody",
                     "Collect any remaining balance below. The full operation cost is posted to revenue only when you mark it complete.",
@@ -887,7 +894,7 @@ export function OperationsPage() {
                     registryLabel: patientLabel.get(completeConfirmOp.patientId),
                   }).text}
                 </p>
-                {showMoney ? (
+                {canEditFees ? (
                   <>
                     <div className="grid gap-1 rounded-md border border-border bg-muted/30 p-3 text-muted-foreground">
                       <p>
@@ -1130,7 +1137,7 @@ export function OperationsPage() {
                           <dt className="text-xs text-muted-foreground">{t("operations.doctor", "Performing doctor")}</dt>
                           <dd className="font-medium">{formatClinicianDisplayName(editOp, i18n.language)}</dd>
                         </div>
-                        {showMoney ? (
+                        {editOp.financialsVisible ? (
                           <>
                             <div>
                               <dt className="text-xs text-muted-foreground">
@@ -1264,7 +1271,7 @@ export function OperationsPage() {
 
                 <fieldset className="space-y-3 rounded-lg border border-border p-3 sm:p-4">
                   <legend className="px-1 text-sm font-medium">{t("operations.sectionPayment", "Cost & payment")}</legend>
-                  {showMoney ? (
+                  {canEditFees ? (
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-1">
                       <Label htmlFor="edit-op-total" required>
@@ -1305,7 +1312,7 @@ export function OperationsPage() {
                       )}
                     </p>
                   )}
-                  {showMoney ? (
+                  {canEditFees ? (
                     <>
                       <div className="space-y-1">
                         <Label htmlFor="edit-op-fee-currency">{t("operations.paymentCurrency", "Payment currency")}</Label>
@@ -1513,7 +1520,7 @@ export function OperationsPage() {
               </div>
             ) : null}
           </div>
-          {showMoney ? (
+          {showSummaryMoney ? (
             <>
               <OperationsPeriodStats summary={opSummary.data} loading={opSummary.isPending} language={i18n.language} />
               <div className="flex justify-end border-t border-border pt-3">
@@ -1631,7 +1638,7 @@ export function OperationsPage() {
 
               <fieldset className="space-y-3 rounded-lg border border-border p-4">
                 <legend className="px-1 text-sm font-medium">{t("operations.sectionPayment", "Cost & payment")}</legend>
-                {showMoney ? (
+                {canEditFees ? (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-1">
                     <Label htmlFor="op-total" required>
@@ -1672,7 +1679,7 @@ export function OperationsPage() {
                     )}
                   </p>
                 )}
-                {showMoney ? (
+                {canEditFees ? (
                 <div className="space-y-1">
                   <Label htmlFor="op-fee-currency">{t("operations.paymentCurrency", "Payment currency")}</Label>
                   <BaseCurrencySelect id="op-fee-currency" value={feeCurrency} onChange={setFeeCurrency} />
@@ -1802,7 +1809,7 @@ export function OperationsPage() {
                         </div>
                         <p className="mt-2 truncate text-sm">{patientResolved.text}</p>
                         <p className="truncate text-xs text-muted-foreground">{formatClinicianDisplayName(o, i18n.language)}</p>
-                        {showMoney ? (
+                        {o.financialsVisible ? (
                           <p className="mt-2 text-sm font-medium ltr-nums">
                             {money(o.totalCost, operationCurrency(o))}
                           </p>
@@ -1852,7 +1859,7 @@ export function OperationsPage() {
                       value={efDoctor}
                       onChange={setEfDoctor}
                     />
-                    {showMoney ? (
+                    {showMoneyColumns ? (
                       <>
                         <SortableTh
                           label={t("operations.totalCost", "Total cost ({{currency}})", { currency: tableHeaderCurrency })}
@@ -1943,17 +1950,21 @@ export function OperationsPage() {
                             )}
                           </td>
                           <td className="px-3 py-2 align-top">{formatClinicianDisplayName(o, i18n.language)}</td>
-                          {showMoney ? (
+                          {showMoneyColumns ? (
                             <>
                               <td className="px-3 py-2 align-top ltr-nums">
-                                {money(o.totalCost, operationCurrency(o))}
+                                {o.financialsVisible ? money(o.totalCost, operationCurrency(o)) : "—"}
                               </td>
                               <td className="px-3 py-2 align-top ltr-nums">
-                                {money(o.downPayment, operationCurrency(o))}
+                                {o.financialsVisible ? money(o.downPayment, operationCurrency(o)) : "—"}
                               </td>
-                              <td className="px-3 py-2 align-top">{money(o.paidAmount ?? 0, operationCurrency(o))}</td>
                               <td className="px-3 py-2 align-top">
-                                {money(o.balanceDue ?? o.totalCost - (o.paidAmount ?? 0), operationCurrency(o))}
+                                {o.financialsVisible ? money(o.paidAmount ?? 0, operationCurrency(o)) : "—"}
+                              </td>
+                              <td className="px-3 py-2 align-top">
+                                {o.financialsVisible
+                                  ? money(o.balanceDue ?? o.totalCost - (o.paidAmount ?? 0), operationCurrency(o))
+                                  : "—"}
                               </td>
                             </>
                           ) : null}
@@ -1986,7 +1997,7 @@ export function OperationsPage() {
                                     {t("invoices.generateShort", "Invoice")}
                                   </Button>
                                 ) : null}
-                                {showMoney ? (
+                                {canEditFees ? (
                                   <Button
                                     type="button"
                                     size="sm"

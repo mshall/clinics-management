@@ -22,7 +22,11 @@ import { postRevenueWithFiscal } from "../compliance/post-revenue-with-fiscal";
 import { assertOperationRevenuesFiscalMutable } from "../compliance/revenue-fiscal-guard";
 import { syncPostedOperationContractRevenue } from "../compliance/operation-revenue-ledger";
 import { voidPostedRevenuesWithFiscalReturns } from "../compliance/void-revenue-fiscal-returns";
-import { isCallCenterRole, operationFinancialsVisible } from "./operation-money-access";
+import {
+  canEditOperationFees,
+  operationFinancialsVisible,
+  operationSummaryFinancialsVisible,
+} from "./operation-money-access";
 import { assertDownPaymentBeforeInProgress } from "./operation-status-money";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { AddOperationMedicationDto, OperationDocumentDto, OperationMedicationDto } from "./dto/operation-clinical.dto";
@@ -194,7 +198,7 @@ export class OperationsService {
   private mapRow(row: OperationRow, viewer?: JwtUser): OperationDto {
     const patient = row.patient;
     const clinicianParts = this.clinicianNameParts(row.clinician ?? null);
-    const financialsVisible = operationFinancialsVisible(viewer?.role);
+    const financialsVisible = operationFinancialsVisible(viewer, row.clinicianId);
     const totalCost = Number(row.totalCost);
     const downPayment = Number(row.downPayment);
     const paidAmount = Number(row.paidAmount);
@@ -482,7 +486,7 @@ export class OperationsService {
       })
       .sort((a, b) => b.operationCount - a.operationCount);
 
-    const hideMoney = !operationFinancialsVisible(user.role);
+    const hideMoney = !operationSummaryFinancialsVisible(user.role);
     const operations = rows.map((r) => ({
       id: r.id,
       operationDate: r.operationDate.toISOString(),
@@ -508,7 +512,7 @@ export class OperationsService {
   }
 
   async create(tenantId: string, dto: CreateOperationDto, user: JwtUser): Promise<OperationDto> {
-    if (isCallCenterRole(user.role)) {
+    if (!canEditOperationFees(user)) {
       dto = { ...dto, totalCost: 0, downPayment: 0 };
     }
     const totalCost = dto.totalCost ?? 0;
@@ -674,10 +678,10 @@ export class OperationsService {
     await this.assertOperationAccess(viewer, existing);
 
     if (
-      isCallCenterRole(viewer.role) &&
+      !canEditOperationFees(viewer) &&
       (dto.totalCost !== undefined || dto.downPayment !== undefined || dto.feeCurrency !== undefined)
     ) {
-      throw new ForbiddenException("Call center cannot edit operation fees");
+      throw new ForbiddenException("You do not have permission to edit operation fees");
     }
 
     if (existing.status === OperationStatus.CANCELLED) {
