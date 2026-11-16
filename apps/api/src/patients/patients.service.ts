@@ -731,6 +731,22 @@ export class PatientsService {
     return this.uploads.getReadStream("patients", storageKey);
   }
 
+  async getClinicalPhotoMeta(
+    tenantId: string,
+    patientId: string,
+    photoId: string,
+  ): Promise<{ storageKey: string; mimeType: string; originalFileName: string }> {
+    const row = await this.prisma.patientClinicalPhoto.findFirst({
+      where: { id: photoId, patientId, tenantId },
+    });
+    if (!row) throw new NotFoundException("Clinical photo not found");
+    return {
+      storageKey: row.relativePath,
+      mimeType: row.mimeType,
+      originalFileName: row.originalFileName,
+    };
+  }
+
   async removeDocument(
     tenantId: string,
     patientId: string,

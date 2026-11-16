@@ -390,6 +390,22 @@ export class PatientsController {
     return this.patient360.listClinicalPhotos(requireTenantId(user), id);
   }
 
+  @Get(":id/clinical-photos/:photoId/file")
+  @ApiOperation({ summary: "Download a clinical comparison photo" })
+  @ApiOkResponse({ description: "Binary image stream" })
+  async getClinicalPhotoFile(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Param("photoId") photoId: string,
+  ): Promise<StreamableFile> {
+    const meta = await this.patients.getClinicalPhotoMeta(requireTenantId(user), id, photoId);
+    const stream = await this.patients.openDocumentReadStream(meta.storageKey);
+    return new StreamableFile(stream, {
+      type: meta.mimeType,
+      disposition: `inline; filename*=UTF-8''${encodeURIComponent(meta.originalFileName)}`,
+    });
+  }
+
   @Get(":id")
   @ApiOperation({ summary: "Get patient by id" })
   @ApiOkResponse({ type: PatientDto })

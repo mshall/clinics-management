@@ -15,7 +15,7 @@ type LinkRow = {
   toPatient: { id: string; mrn: string; firstNameEn: string; lastNameEn: string };
 };
 
-export function PatientFamilyPanel({ patientId }: { patientId: string }) {
+export function PatientFamilyPanel({ patientId, embedded }: { patientId: string; embedded?: boolean }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [toPatientId, setToPatientId] = useState("");
@@ -36,12 +36,8 @@ export function PatientFamilyPanel({ patientId }: { patientId: string }) {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["patient", patientId, "family"] }),
   });
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{t("patients.family", "Family links")}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 text-sm">
+  const body = (
+    <div className="space-y-3 text-sm">
         <ul className="space-y-2">
           {(q.data ?? []).map((row) => {
             const other = row.fromPatient.id === patientId ? row.toPatient : row.fromPatient;
@@ -83,7 +79,17 @@ export function PatientFamilyPanel({ patientId }: { patientId: string }) {
             {t("patients.addFamilyLink", "Link member")}
           </Button>
         </div>
-      </CardContent>
+    </div>
+  );
+
+  if (embedded) return body;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{t("patients.family", "Family links")}</CardTitle>
+      </CardHeader>
+      <CardContent>{body}</CardContent>
     </Card>
   );
 }

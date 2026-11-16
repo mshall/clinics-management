@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Camera, HeartPulse } from "lucide-react";
+import { Camera, GitMerge, HeartPulse, Images, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -14,14 +14,13 @@ import { PatientEncountersSection } from "@/features/patients/patient-encounters
 import { PatientOperationsSection } from "@/features/patients/patient-operations-section";
 import { PatientAllergiesSection } from "@/components/patient-allergies-section";
 import { Patient360Summary } from "@/components/patient-360-summary";
-import { PatientTimeline } from "@/components/patient-timeline";
-import { PatientActiveProblemsSection } from "@/components/patient-active-problems-section";
 import { PatientFamilyPanel } from "@/components/patient-family-panel";
 import { PatientMergeWizard } from "@/components/patient-merge-wizard";
 import { PatientClinicalPhotoGallery } from "@/components/patient-clinical-photo-gallery";
 import { PatientChartAlerts } from "@/components/patient-chart-alerts";
 import { PatientVitalsCharts } from "@/components/patient-vitals-charts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { ResponsiveTable } from "@/components/responsive-table";
@@ -50,6 +49,9 @@ export function PatientDetailPage() {
   const canViewOperations = showNavItem(role, "operations", navTabKeys, roleNavTabKeys);
   const canEditPatient = canEditPatientDetails(role);
   const [editOpen, setEditOpen] = useState(false);
+  const [familyOpen, setFamilyOpen] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
+  const [photosOpen, setPhotosOpen] = useState(false);
   const { data: patient, isPending, isError, error } = usePatientQuery(id);
   const [vitalsPage, setVitalsPage] = useState(1);
   const [vitalsPageSize, setVitalsPageSize] = useState(10);
@@ -194,6 +196,34 @@ export function PatientDetailPage() {
                   </Badge>
                 </div>
                 <p className="text-muted-foreground">{patient.homeBranch ?? "—"}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1.5 font-medium text-primary hover:underline"
+                    onClick={() => setFamilyOpen(true)}
+                  >
+                    <Users className="h-3.5 w-3.5" aria-hidden />
+                    {t("patients.family", "Family links")}
+                  </button>
+                  {canEditPatient ? (
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1.5 font-medium text-primary hover:underline"
+                      onClick={() => setMergeOpen(true)}
+                    >
+                      <GitMerge className="h-3.5 w-3.5" aria-hidden />
+                      {t("patients.mergeWizard", "Merge duplicate patient")}
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1.5 font-medium text-primary hover:underline"
+                    onClick={() => setPhotosOpen(true)}
+                  >
+                    <Images className="h-3.5 w-3.5" aria-hidden />
+                    {t("patients.photoGallery", "Clinical photo gallery")}
+                  </button>
+                </div>
                 <p className="mt-1 text-xs text-muted-foreground">{t("patients.photoOptional", "Profile photo is optional.")}</p>
               </div>
             </div>
@@ -222,16 +252,7 @@ export function PatientDetailPage() {
 
       <Patient360Summary patientId={patient.id} />
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <PatientTimeline patientId={patient.id} />
-        <div className="space-y-4">
-          <PatientActiveProblemsSection patientId={patient.id} canEdit={canEditPatient} />
-          <PatientAllergiesSection patientId={patient.id} />
-          <PatientFamilyPanel patientId={patient.id} />
-          {canEditPatient ? <PatientMergeWizard targetPatientId={patient.id} /> : null}
-          <PatientClinicalPhotoGallery patientId={patient.id} />
-        </div>
-      </div>
+      <PatientAllergiesSection patientId={patient.id} />
 
       <div className={`grid gap-4 ${canViewEncounters ? "xl:grid-cols-[1.1fr_1fr]" : ""}`}>
         <Card>
@@ -391,6 +412,36 @@ export function PatientDetailPage() {
       {canEditPatient ? (
         <PatientEditDialog patient={patient} open={editOpen} onOpenChange={setEditOpen} />
       ) : null}
+
+      <Dialog open={familyOpen} onOpenChange={setFamilyOpen}>
+        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto sm:max-w-xl" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>{t("patients.family", "Family links")}</DialogTitle>
+          </DialogHeader>
+          <PatientFamilyPanel patientId={patient.id} embedded />
+        </DialogContent>
+      </Dialog>
+
+      {canEditPatient ? (
+        <Dialog open={mergeOpen} onOpenChange={setMergeOpen}>
+          <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto" aria-describedby={undefined}>
+            <DialogHeader>
+              <DialogTitle>{t("patients.mergeWizard", "Merge duplicate patient")}</DialogTitle>
+            </DialogHeader>
+            <PatientMergeWizard targetPatientId={patient.id} embedded onDone={() => setMergeOpen(false)} />
+          </DialogContent>
+        </Dialog>
+      ) : null}
+
+      <Dialog open={photosOpen} onOpenChange={setPhotosOpen}>
+        <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto sm:max-w-4xl" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>{t("patients.photoGallery", "Clinical photo gallery")}</DialogTitle>
+          </DialogHeader>
+          <PatientClinicalPhotoGallery patientId={patient.id} embedded />
+        </DialogContent>
+      </Dialog>
+
       <ValidationIssuesDialog {...encounterValidation.dialogProps} />
     </div>
   );
