@@ -4,6 +4,72 @@ import { resolveClinicCurrency } from "./clinic-currency";
 import { collectionFieldsFromParsed, type ParsedVisitCollection } from "./visit-collection";
 import { queueEtaReceipt } from "../compliance/eta-receipt-queue";
 
+const VISIT_CHARGE_CATEGORIES = ["VISIT", "VISIT_FEE"] as const;
+
+async function findPostedAppointmentVisitCharge(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  appointmentId: string,
+) {
+  return tx.revenueEntry.findFirst({
+    where: {
+      tenantId,
+      appointmentId,
+      status: RevenueStatus.POSTED,
+      category: { in: [...VISIT_CHARGE_CATEGORIES] },
+    },
+    orderBy: { postedAt: "asc" },
+  });
+}
+
+/** Links check-in VISIT payment to the encounter when amounts match; returns true if ledger is satisfied without a new sale. */
+async function adoptAppointmentCheckInPayment(
+  tx: Prisma.TransactionClient,
+  params: {
+    tenantId: string;
+    encounterId: string;
+    appointmentId: string;
+    amount: number;
+  },
+): Promise<boolean> {
+  const aptCharge = await findPostedAppointmentVisitCharge(tx, params.tenantId, params.appointmentId);
+  if (!aptCharge) return false;
+
+  const paid = Number(aptCharge.grossAmount);
+  if (paid <= 0) return false;
+
+  const existingOnEncounter = await tx.revenueEntry.findFirst({
+    where: {
+      tenantId: params.tenantId,
+      encounterId: params.encounterId,
+      category: "VISIT_FEE",
+      status: RevenueStatus.POSTED,
+    },
+  });
+
+  if (existingOnEncounter && existingOnEncounter.id !== aptCharge.id) {
+    return false;
+  }
+
+  if (Math.abs(paid - params.amount) > 0.001) {
+    return false;
+  }
+
+  if (!aptCharge.encounterId || aptCharge.encounterId !== params.encounterId) {
+    await tx.revenueEntry.update({
+      where: { id: aptCharge.id },
+      data: {
+        encounterId: params.encounterId,
+        category: "VISIT_FEE",
+        description:
+          aptCharge.description ?? `Visit fee · encounter ${params.encounterId.slice(0, 8)}… (check-in payment)`,
+      },
+    });
+  }
+
+  return true;
+}
+
 export async function upsertEncounterVisitFeeRevenue(
   tx: Prisma.TransactionClient,
   params: {
@@ -21,9 +87,39 @@ export async function upsertEncounterVisitFeeRevenue(
   },
 ): Promise<void> {
   const { tenantId, clinicId, encounterId, appointmentId, amount, currency: currencyOpt } = params;
-  const existingRevenue = await tx.revenueEntry.findFirst({
+
+  if (appointmentId && amount > 0) {
+    const adopted = await adoptAppointmentCheckInPayment(tx, {
+      tenantId,
+      encounterId,
+      appointmentId,
+      amount,
+    });
+    if (adopted) return;
+  }
+
+  let existingRevenue = await tx.revenueEntry.findFirst({
     where: { tenantId, encounterId, category: "VISIT_FEE", status: RevenueStatus.POSTED },
   });
+
+  if (appointmentId && amount > 0 && !existingRevenue) {
+    const aptCharge = await findPostedAppointmentVisitCharge(tx, tenantId, appointmentId);
+    if (aptCharge && Number(aptCharge.grossAmount) > 0) {
+      await tx.revenueEntry.update({
+        where: { id: aptCharge.id },
+        data: {
+          encounterId,
+          category: "VISIT_FEE",
+          ...(aptCharge.description
+            ? {}
+            : {
+                description: `Visit fee · encounter ${encounterId.slice(0, 8)}… (check-in payment)`,
+              }),
+        },
+      });
+      existingRevenue = aptCharge;
+    }
+  }
 
   const currency =
     currencyOpt?.trim() && isBaseCurrency(currencyOpt.trim())
@@ -55,6 +151,9 @@ export async function upsertEncounterVisitFeeRevenue(
   if (amount > 0) {
     if (existingRevenue) {
       const oldAmount = Number(existingRevenue.grossAmount);
+      if (oldAmount > 0 && Math.abs(oldAmount - amount) <= 0.001) {
+        return;
+      }
       if (oldAmount > 0 && Math.abs(oldAmount - amount) > 0.001) {
         await tx.revenueEntry.update({
           where: { id: existingRevenue.id },

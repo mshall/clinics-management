@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EtaIntegrationBanner } from "@/features/compliance/eta-integration-banner";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { setPaymentFlowActive } from "@/lib/unsaved-work-registry";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -62,6 +63,12 @@ export function QuickCheckInPanel({ appointment, currency = "AED", examRoomOptio
     },
     onError: (e: unknown) => toast.error(e instanceof ApiError || e instanceof Error ? apiErrorMessage(e) : String(e)),
   });
+
+  useEffect(() => {
+    if (!checkIn.isPending) return;
+    setPaymentFlowActive(true);
+    return () => setPaymentFlowActive(false);
+  }, [checkIn.isPending]);
 
   if (appointment.status === "CHECKED_IN" && appointment.queueTicketNumber) {
     return (

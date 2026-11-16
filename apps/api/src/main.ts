@@ -11,6 +11,7 @@ import { PatientDto } from "./common/dto/patient.dto";
 import { MulterExceptionFilter } from "./common/multer-exception.filter";
 import { PrismaClientExceptionFilter } from "./common/prisma-exception.filter";
 import { IntegrationFailureExceptionFilter } from "./integrations/integration-failure.filter";
+import { webBuildIdMiddleware } from "./common/web-build-id.middleware";
 import * as compressionImport from "compression";
 
 const compressionMiddleware =
@@ -35,7 +36,8 @@ async function bootstrap() {
     new PrismaClientExceptionFilter(),
     app.get(IntegrationFailureExceptionFilter),
   );
-  app.enableCors({ origin: true, credentials: true });
+  app.enableCors({ origin: true, credentials: true, exposedHeaders: ["X-Kiorly-Web-Build-Id"] });
+  app.use(webBuildIdMiddleware);
   app.setGlobalPrefix("api/v1");
   app.useGlobalPipes(
     new ValidationPipe({

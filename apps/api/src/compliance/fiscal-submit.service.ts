@@ -30,10 +30,10 @@ type PreparedSubmit = {
   resubmission: boolean;
 };
 
-export type PrepareSubmissionResult = PreparedSubmit | { cancelled: true };
+export type PrepareSubmissionResult = PreparedSubmit | { cancelled: true } | { deferred: true };
 
 function isPreparedSubmit(prepared: PrepareSubmissionResult): prepared is PreparedSubmit {
-  return !("cancelled" in prepared);
+  return !("cancelled" in prepared) && !("deferred" in prepared);
 }
 
 function workerInstanceId(): string {
@@ -178,9 +178,17 @@ export class FiscalSubmitService {
             return { cancelled: true };
           }
           if (outcome.action === "wait") {
-            throw new BadRequestException(
-              "Return receipt cannot be prepared until the original sale has been assigned a receipt UUID",
-            );
+            await tx.fiscalSubmission.update({
+              where: { id: row.id },
+              data: {
+                status: FiscalSubmissionStatus.PENDING,
+                nextRetryAt: new Date(Date.now() + 90_000),
+                claimedUntil: null,
+                claimedBy: null,
+                errorMessage: "Waiting for original sale receipt UUID before return can be prepared",
+              },
+            });
+            return { deferred: true };
           }
           referenceUuid = outcome.uuid;
         }

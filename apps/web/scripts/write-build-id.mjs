@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Writes public/build-id.json and .build-id for Vite (deploy version polling).
+ * Writes public/build-id.json and .build-id for Vite (deploy version + WEB_BUILD_ID on API).
  * CI sets GITHUB_SHA; local uses git short sha or dev timestamp.
  */
 import { execSync } from "node:child_process";

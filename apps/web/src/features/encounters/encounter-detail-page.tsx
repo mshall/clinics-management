@@ -63,6 +63,7 @@ import { PatientChartAlerts } from "@/components/patient-chart-alerts";
 import { EncounterSpecialtyForm } from "@/features/clinical/encounter-specialty-form";
 import { loadPrescriptionBranding } from "@/lib/prescription-branding";
 import { cn } from "@/lib/utils";
+import { registerUnsavedWork } from "@/lib/unsaved-work-registry";
 
 function apiErrorMessage(e: unknown): string {
   if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
@@ -177,6 +178,12 @@ export function EncounterDetailPage() {
     setFollowUpWeeks(enc.followUpWeeks != null ? String(enc.followUpWeeks) : "");
     setFollowUpNote(enc.followUpNote ?? "");
   }, [enc?.id, enc?.noMedications, enc?.visitFeeAmount, enc?.visitFeeCurrency, clinicDefaultCurrency]);
+
+  useEffect(() => {
+    if (!enc) return;
+    if (enc.status !== "DRAFT" && enc.status !== "AMENDED") return;
+    return registerUnsavedWork();
+  }, [enc?.id, enc?.status]);
 
   useEffect(() => {
     if (generatedRxUrlRef.current) {

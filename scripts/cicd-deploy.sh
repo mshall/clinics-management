@@ -39,7 +39,7 @@ npx cdk synth --quiet
 npm run check:ascii-descriptions
 
 # In GitHub Actions, emit verbose CDK / construct logging for post-mortem artifacts.
-CDK_DEPLOY_ARGS=(--require-approval never)
+CDK_DEPLOY_ARGS=(--require-approval never -c "webBuildId=${GITHUB_SHA}")
 if [ "${CI:-}" = "true" ]; then
   export CDK_DEBUG="${CDK_DEBUG:-1}"
   CDK_DEPLOY_ARGS+=(--verbose)

@@ -145,7 +145,7 @@ export class FrontDeskService {
         });
       }
       const openEncounterId =
-        (await ensureDraftEncounterOnCheckIn(tx, tenantId, appointmentId, this.prisma)) ?? null;
+        (await ensureDraftEncounterOnCheckIn(tx, tenantId, appointmentId)) ?? null;
       return {
         appointmentId: updated.id,
         queueTicketNumber: ticket,
@@ -265,7 +265,7 @@ export class FrontDeskService {
 
     const encounterId = await this.prisma.$transaction(async (tx) => {
       const openId =
-        (await ensureDraftEncounterOnCheckIn(tx, tenantId, appointmentId, this.prisma)) ??
+        (await ensureDraftEncounterOnCheckIn(tx, tenantId, appointmentId)) ??
         hadOpen?.id ??
         null;
       if (!openId) throw new BadRequestException("Could not open visit encounter for this appointment");

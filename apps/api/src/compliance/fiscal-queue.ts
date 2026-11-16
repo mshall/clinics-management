@@ -124,11 +124,20 @@ export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: 
           id: saleDeviceId,
           tenantId: params.tenantId,
           clinicId: params.clinicId,
-          status: FiscalDeviceStatus.ACTIVE,
         },
         include: { credential: true },
       });
-      if (saleDevice) fiscalDeviceForQueue = saleDevice;
+      if (saleDevice) {
+        fiscalDeviceForQueue = saleDevice;
+      } else if (returnSale) {
+        await logFiscalQueueSkipped(tx, {
+          tenantId: params.tenantId,
+          clinicId: params.clinicId,
+          operation: "return_sale_device_missing",
+          reason: `Return must use the original sale device (${saleDeviceId}) but it was not found`,
+        });
+        return;
+      }
     }
   }
   let referenceReceiptUuid: string | undefined = params.referenceReceiptUuid?.trim() || undefined;

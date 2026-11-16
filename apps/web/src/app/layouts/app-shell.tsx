@@ -13,6 +13,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { formatUserRole } from "@/lib/locale-display";
 import { RoleAssistantWidget } from "@/features/assistant/role-assistant-widget";
 import { GlobalPatientSearch } from "@/components/global-patient-search";
+import { DeployVersionBanner } from "@/components/deploy-version-banner";
 
 export function AppShell() {
   const { t } = useTranslation();
@@ -93,6 +94,7 @@ export function AppShell() {
             </Button>
           </div>
         </header>
+        <DeployVersionBanner />
         {showReportingPeriodBar(pathname) ? <DateRangeBar /> : null}
         <main className="mx-auto w-full max-w-[min(96rem,calc(100vw-1rem))] flex-1 p-3 sm:p-4 md:p-6">
           <Outlet />

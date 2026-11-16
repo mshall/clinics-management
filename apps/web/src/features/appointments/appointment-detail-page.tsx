@@ -90,6 +90,7 @@ export function AppointmentDetailPage() {
   const [status, setStatus] = useState("");
   const [formErr, setFormErr] = useState<string | null>(null);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+  const [completeBlockedOpen, setCompleteBlockedOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -232,8 +233,20 @@ export function AppointmentDetailPage() {
     },
   });
 
+  const tryMarkCompleted = () => {
+    if (apt?.openEncounterId) {
+      setCompleteBlockedOpen(true);
+      return;
+    }
+    setCompleteDialogOpen(true);
+  };
+
   const onSave = () => {
     if (!id || readOnly) return;
+    if (status === "COMPLETED" && apt?.openEncounterId) {
+      setCompleteBlockedOpen(true);
+      return;
+    }
     const start = new Date(startsLocal);
     if (Number.isNaN(start.getTime())) {
       const msg = t("appointments.errorStartRequired", "Start date/time is required.");
@@ -344,6 +357,34 @@ export function AppointmentDetailPage() {
             >
               {t("appointments.confirmCompleteAction", "Continue")}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={completeBlockedOpen} onOpenChange={setCompleteBlockedOpen}>
+        <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>
+              {t("appointments.completeBlockedTitle", "Finalize the visit first")}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {t(
+              "appointments.completeBlockedBody",
+              "This appointment has an open encounter. Finalize the encounter to complete the appointment — or open it below to finish documentation.",
+            )}
+          </p>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setCompleteBlockedOpen(false)}>
+              {t("common.cancel", "Cancel")}
+            </Button>
+            {apt.openEncounterId ? (
+              <Button type="button" asChild>
+                <Link to={`/encounters/${apt.openEncounterId}`} onClick={() => setCompleteBlockedOpen(false)}>
+                  {t("appointments.openEncounterToFinalize", "Open encounter")}
+                </Link>
+              </Button>
+            ) : null}
           </div>
         </DialogContent>
       </Dialog>
@@ -557,7 +598,7 @@ export function AppointmentDetailPage() {
                         )}
                         onClick={() => {
                           if (code === "COMPLETED") {
-                            if (status !== "COMPLETED") setCompleteDialogOpen(true);
+                            if (status !== "COMPLETED") tryMarkCompleted();
                             return;
                           }
                           if (code === status) return;
@@ -581,7 +622,7 @@ export function AppointmentDetailPage() {
                     onChange={(e) => {
                       const v = e.target.value;
                       if (v === "COMPLETED") {
-                        setCompleteDialogOpen(true);
+                        tryMarkCompleted();
                         return;
                       }
                       setStatus(v);

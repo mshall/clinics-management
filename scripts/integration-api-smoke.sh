@@ -213,6 +213,48 @@ staff_book_http="$(echo "$staff_book_raw" | tail -1)"
 [[ "$staff_book_http" == "201" || "$staff_book_http" == "200" ]] || fail "staff POST /appointments HTTP $staff_book_http"
 echo "OK  staff internal appointment book"
 
+vf_rin_patch_http="$(curl -sS -o /dev/null -w "%{http_code}" -X PATCH "$API_BASE/clinics/$clinic_id/invoice-settings" \
+  -H "Authorization: Bearer $staff_token" \
+  -H "Content-Type: application/json" \
+  -d '{"taxRegistrationNumber":"707597870"}')"
+[[ "$vf_rin_patch_http" == "200" ]] || fail "visit-fee clinic RIN patch HTTP $vf_rin_patch_http"
+
+visit_fee_starts="$(python3 -c "from datetime import datetime, timedelta, timezone; print((datetime.now(timezone.utc)+timedelta(days=16)).replace(hour=14,minute=0,second=0,microsecond=0).isoformat().replace('+00:00','Z'))")"
+vf_fee=275
+vf_book_raw="$(curl -sS -w "\n%{http_code}" -X POST "$API_BASE/appointments" \
+  -H "Authorization: Bearer $staff_token" \
+  -H "Content-Type: application/json" \
+  -d "{\"clinicId\":\"$clinic_id\",\"patientId\":\"$patient_id\",\"clinicianId\":\"$clinician_id\",\"startsAt\":\"$visit_fee_starts\",\"feeAmount\":$vf_fee,\"confirmOverlap\":true}")"
+vf_book_http="$(echo "$vf_book_raw" | tail -1)"
+vf_book_body="$(echo "$vf_book_raw" | sed '$d')"
+[[ "$vf_book_http" == "201" || "$vf_book_http" == "200" ]] || fail "visit-fee smoke book HTTP $vf_book_http — $vf_book_body"
+vf_appt_id="$(echo "$vf_book_body" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")"
+
+vf_checkin_raw="$(curl -sS -w "\n%{http_code}" -X POST "$API_BASE/front-desk/appointments/$vf_appt_id/check-in" \
+  -H "Authorization: Bearer $staff_token" \
+  -H "Content-Type: application/json" \
+  -d "{\"paymentAmount\":$vf_fee,\"visitCollection\":{\"mode\":\"CASH_ON_VISIT\"}}")"
+vf_checkin_http="$(echo "$vf_checkin_raw" | tail -1)"
+vf_checkin_body="$(echo "$vf_checkin_raw" | sed '$d')"
+[[ "$vf_checkin_http" == "200" || "$vf_checkin_http" == "201" ]] || fail "visit-fee check-in HTTP $vf_checkin_http — $vf_checkin_body"
+vf_enc_id="$(echo "$vf_checkin_body" | python3 -c "import sys,json; print(json.load(sys.stdin).get('openEncounterId') or '')")"
+[[ -n "$vf_enc_id" ]] || fail "visit-fee check-in missing openEncounterId"
+
+vf_patch_raw="$(curl -sS -w "\n%{http_code}" -X PATCH "$API_BASE/encounters/$vf_enc_id" \
+  -H "Authorization: Bearer $staff_token" \
+  -H "Content-Type: application/json" \
+  -d "{\"visitFeeAmount\":$vf_fee,\"visitCollection\":{\"mode\":\"CASH_ON_VISIT\"}}")"
+vf_patch_http="$(echo "$vf_patch_raw" | tail -1)"
+vf_patch_body="$(echo "$vf_patch_raw" | sed '$d')"
+[[ "$vf_patch_http" == "200" ]] || fail "visit-fee encounter save HTTP $vf_patch_http — $vf_patch_body"
+
+repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+(
+  cd "$repo_root/apps/api"
+  node "$repo_root/scripts/assert-single-visit-fee.mjs" "$vf_appt_id"
+) || fail "visit-fee ledger: expected one revenue row and one fiscal receipt"
+echo "OK  check-in payment + encounter save → single visit charge and receipt"
+
 op_date="$(python3 -c "from datetime import datetime, timedelta, timezone; print((datetime.now(timezone.utc)+timedelta(days=20)).replace(hour=9,minute=0,second=0,microsecond=0).isoformat().replace('+00:00','Z'))")"
 op_ext="op-smoke-$(date +%s)"
 op_book_raw="$(curl -sS -w "\n%{http_code}" -X POST "$API_BASE/integrations/operations" \

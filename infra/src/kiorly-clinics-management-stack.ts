@@ -1,3 +1,4 @@
+import * as fs from "node:fs";
 import * as path from "node:path";
 import * as cdk from "aws-cdk-lib";
 import * as apprunner from "aws-cdk-lib/aws-apprunner";
@@ -17,6 +18,21 @@ import type { Construct } from "constructs";
 export interface KiorlyClinicsManagementStackProps extends cdk.StackProps {
   /** AWS region for VPC/RDS/App Runner (Frankfurt = eu-central-1). */
   deploymentRegion: string;
+}
+
+function resolveWebBuildId(scope: Construct, assetPath: string): string | undefined {
+  const fromCtx = scope.node.tryGetContext("webBuildId") as string | undefined;
+  if (fromCtx?.trim()) return fromCtx.trim().slice(0, 64);
+  const idFile = path.join(assetPath, "apps/web/.build-id");
+  try {
+    if (fs.existsSync(idFile)) {
+      const id = fs.readFileSync(idFile, "utf8").trim();
+      if (id) return id.slice(0, 64);
+    }
+  } catch {
+    /* optional at synth time */
+  }
+  return undefined;
 }
 
 export class KiorlyClinicsManagementStack extends cdk.Stack {
@@ -198,6 +214,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     });
 
     const assetPath = path.join(__dirname, "..", "..");
+    const webBuildId = resolveWebBuildId(this, assetPath);
     const imageAsset = new ecr_assets.DockerImageAsset(this, "ApiImage", {
       directory: assetPath,
       file: "apps/api/Dockerfile",
@@ -288,6 +305,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
               { name: "UPLOAD_STORAGE", value: "s3" },
               { name: "S3_UPLOAD_BUCKET", value: apiUploadsBucket.bucketName },
               { name: "OPENAI_MODEL", value: "gpt-4o-mini" },
+              ...(webBuildId ? [{ name: "WEB_BUILD_ID", value: webBuildId }] : []),
             ],
             runtimeEnvironmentSecrets: [
               { name: "JWT_SECRET", value: jwtSecretFieldArn },

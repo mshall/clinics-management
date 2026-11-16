@@ -1,4 +1,5 @@
 import { apiUrl } from "@/lib/api-url";
+import { observeWebBuildIdHeader } from "@/lib/deploy-version-watch";
 import { localizeApiErrorMessage } from "@/lib/api-error-message";
 import { enhanceFormDataImages } from "@/lib/enhance-image";
 import i18n from "@/lib/i18n";
@@ -69,6 +70,7 @@ function messageFromErrorBody(status: number, body: unknown, fallback: string): 
 
 export async function apiDownload(path: string, filename: string): Promise<void> {
   const res = await fetch(apiUrl(path), { headers: authHeadersAny() });
+  observeWebBuildIdHeader(res);
   if (res.status === 401) {
     useAuthStore.getState().signOut();
   }
@@ -87,6 +89,7 @@ export async function apiDownload(path: string, filename: string): Promise<void>
 
 export async function apiGet<T>(path: string): Promise<T> {
   const res = await fetch(apiUrl(path), { headers: authHeadersJson() });
+  observeWebBuildIdHeader(res);
   if (res.status === 401) {
     useAuthStore.getState().signOut();
   }
@@ -104,6 +107,7 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
     headers: { ...authHeadersJson(), "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+  observeWebBuildIdHeader(res);
   if (res.status === 401) {
     useAuthStore.getState().signOut();
   }
@@ -120,6 +124,7 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
     headers: { ...authHeadersJson(), "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+  observeWebBuildIdHeader(res);
   if (res.status === 401) {
     useAuthStore.getState().signOut();
   }
@@ -142,6 +147,7 @@ export async function apiPut<T>(path: string, body: unknown): Promise<T> {
     headers: { ...authHeadersJson(), "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+  observeWebBuildIdHeader(res);
   if (res.status === 401) {
     useAuthStore.getState().signOut();
   }
@@ -170,6 +176,7 @@ export async function apiPostFormData<T>(
     headers,
     body,
   });
+  observeWebBuildIdHeader(res);
   if (res.status === 401) {
     useAuthStore.getState().signOut();
   }
@@ -198,6 +205,7 @@ export async function apiPatchFormData<T>(
     headers,
     body,
   });
+  observeWebBuildIdHeader(res);
   if (res.status === 401) {
     useAuthStore.getState().signOut();
   }
@@ -213,6 +221,7 @@ export async function apiPatchFormData<T>(
 /** Authenticated GET returning raw bytes (e.g. PDF / image preview). */
 export async function apiFetchBlob(path: string): Promise<{ blob: Blob; contentType: string }> {
   const res = await fetch(apiUrl(path), { headers: authHeadersAny() });
+  observeWebBuildIdHeader(res);
   if (res.status === 401) {
     useAuthStore.getState().signOut();
   }
@@ -230,6 +239,7 @@ export async function apiDelete<T = unknown>(path: string): Promise<T> {
     method: "DELETE",
     headers: authHeadersJson(),
   });
+  observeWebBuildIdHeader(res);
   if (res.status === 401) {
     useAuthStore.getState().signOut();
   }

@@ -14,6 +14,7 @@ import { assertOrgClinicalDeleteRole } from "../common/org-clinical-delete-roles
 import { paginate, parsePageParams } from "../common/pagination";
 import { syncOpenEncounterVisitFeeFromAppointment } from "../common/visit-fee-ledger";
 import { PrismaService } from "../prisma/prisma.service";
+import { assertNoOpenEncounterForAppointmentComplete } from "./appointment-completion.guard";
 import { ensureDraftEncounterIfCheckedIn } from "../front-desk/ensure-draft-encounter-on-check-in";
 import { FrontDeskFlowService } from "../front-desk/front-desk-flow.service";
 import { SchedulingService } from "../scheduling/scheduling.service";
@@ -166,7 +167,7 @@ export class AppointmentsService {
 
     if (!openEncounterId) {
       openEncounterId = await this.prisma.$transaction((tx) =>
-        ensureDraftEncounterIfCheckedIn(tx, tenantId, row.id, this.prisma),
+        ensureDraftEncounterIfCheckedIn(tx, tenantId, row.id),
       );
     }
 
@@ -501,6 +502,9 @@ export class AppointmentsService {
     if (existing.status === AppointmentStatus.COMPLETED) {
       throw new BadRequestException("Cannot change status of a completed appointment");
     }
+    if (status === AppointmentStatus.COMPLETED) {
+      await assertNoOpenEncounterForAppointmentComplete(this.prisma, tenantId, id);
+    }
     const row = await this.prisma.$transaction(async (tx) => {
       const checkIn =
         status === AppointmentStatus.CHECKED_IN && existing.status !== AppointmentStatus.CHECKED_IN
@@ -513,7 +517,7 @@ export class AppointmentsService {
         data: checkIn ?? { status },
         include: appointmentDtoInclude,
       });
-      await ensureDraftEncounterIfCheckedIn(tx, tenantId, id, this.prisma);
+      await ensureDraftEncounterIfCheckedIn(tx, tenantId, id);
       return row;
     });
     if (status === AppointmentStatus.CANCELLED) {
@@ -579,8 +583,12 @@ export class AppointmentsService {
       }
     }
 
+    const nextStatus = dto.status !== undefined ? dto.status : undefined;
+    if (nextStatus === AppointmentStatus.COMPLETED) {
+      await assertNoOpenEncounterForAppointmentComplete(this.prisma, tenantId, id);
+    }
+
     const row = await this.prisma.$transaction(async (tx) => {
-      const nextStatus = dto.status !== undefined ? dto.status : undefined;
       const checkIn =
         nextStatus === AppointmentStatus.CHECKED_IN && existing.status !== AppointmentStatus.CHECKED_IN
           ? await this.frontDeskFlow.buildCheckInStatusPatch(tx, tenantId, existing.clinicId, {
@@ -607,7 +615,7 @@ export class AppointmentsService {
         include: appointmentDtoInclude,
       });
 
-      await ensureDraftEncounterIfCheckedIn(tx, tenantId, id, this.prisma);
+      await ensureDraftEncounterIfCheckedIn(tx, tenantId, id);
 
       if (feeProvided) {
         await syncOpenEncounterVisitFeeFromAppointment(tx, tenantId, id, Number(dto.feeAmount));

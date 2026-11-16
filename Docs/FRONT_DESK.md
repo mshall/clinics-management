@@ -60,7 +60,7 @@ API: `visitCollection` on `POST /api/v1/front-desk/appointments/:id/check-in` an
 | 1. Check-in | `WAITING` queue stage; **draft encounter** created; optional **preferred exam room** (not occupied yet). |
 | 2. Call | `CALLED` + TV **Now serving** ticket. |
 | 3. Start visit | `POST /api/v1/front-desk/appointments/:id/start-visit` or create/link an **encounter** → `IN_EXAM`, **auto-assign** exam room (preferred → physician default → first free room). |
-| 4. Finalize encounter | Clears `roomLabel`, completes appointment; room shows **Free**. |
+| 4. Finalize encounter | Clears `roomLabel`, sets linked appointment to **COMPLETED** (`endsAt` = finalize time); room shows **Free**. Staff cannot mark the appointment **Completed** in the UI while an open (draft/amended) encounter is still linked — finalize the encounter first. |
 
 Room assignment order: **preferredRoomLabel** → physician **`defaultExamRoomLabel`** (Clinics → Doctors) → first free label from **Exam rooms** settings.
 
