@@ -1,13 +1,15 @@
-import { EncounterStatus, type Prisma } from "@prisma/client";
+import { AppointmentStatus, EncounterStatus, type Prisma } from "@prisma/client";
 import { resolveClinicCurrency } from "../common/clinic-currency";
 import type { PrismaService } from "../prisma/prisma.service";
 
-/** Draft encounter linked to appointment; patient stays WAITING until Start visit. */
+type CurrencyClient = Pick<PrismaService, "clinic" | "tenant">;
+
+/** Draft encounter linked to appointment; patient stays WAITING until Start visit. Idempotent. */
 export async function ensureDraftEncounterOnCheckIn(
   tx: Prisma.TransactionClient,
-  prisma: PrismaService,
   tenantId: string,
   appointmentId: string,
+  currencyClient?: CurrencyClient,
 ): Promise<string | null> {
   const apt = await tx.appointment.findFirst({
     where: { id: appointmentId, tenantId },
@@ -25,9 +27,10 @@ export async function ensureDraftEncounterOnCheckIn(
   });
   if (existing) return existing.id;
 
+  const client = currencyClient ?? (tx as unknown as CurrencyClient);
   const [tenant, currency] = await Promise.all([
     tx.tenant.findUnique({ where: { id: tenantId }, select: { defaultVisitFee: true } }),
-    resolveClinicCurrency(prisma, tenantId, apt.clinicId),
+    resolveClinicCurrency(client as PrismaService, tenantId, apt.clinicId),
   ]);
   const feeFromApt = Number(apt.feeAmount);
   const visitFee =
@@ -48,4 +51,19 @@ export async function ensureDraftEncounterOnCheckIn(
     select: { id: true },
   });
   return enc.id;
+}
+
+/** Heal CHECKED_IN appointments that have no open encounter (e.g. legacy status-only check-in). */
+export async function ensureDraftEncounterIfCheckedIn(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  appointmentId: string,
+  currencyClient?: CurrencyClient,
+): Promise<string | null> {
+  const apt = await tx.appointment.findFirst({
+    where: { id: appointmentId, tenantId },
+    select: { status: true },
+  });
+  if (!apt || apt.status !== AppointmentStatus.CHECKED_IN) return null;
+  return ensureDraftEncounterOnCheckIn(tx, tenantId, appointmentId, currencyClient);
 }

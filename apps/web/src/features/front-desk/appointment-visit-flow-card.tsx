@@ -53,9 +53,18 @@ export function AppointmentVisitFlowCard({ appointment }: Props) {
         {stage === "IN_EXAM" ? (
           <p className="text-muted-foreground">{t("frontDesk.inExamHint", "Finalize the encounter to complete the visit and free the exam room.")}</p>
         ) : appointment.status === "CHECKED_IN" ? (
-          <Button type="button" disabled={startVisit.isPending} onClick={() => startVisit.mutate()}>
-            {t("frontDesk.startVisit", "Start visit")}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {appointment.openEncounterId ? (
+              <Button type="button" variant="outline" asChild>
+                <Link to={`/encounters/${appointment.openEncounterId}`}>
+                  {t("frontDesk.openEncounter", "Open encounter")}
+                </Link>
+              </Button>
+            ) : null}
+            <Button type="button" disabled={startVisit.isPending} onClick={() => startVisit.mutate()}>
+              {t("frontDesk.startVisit", "Start visit")}
+            </Button>
+          </div>
         ) : null}
         <p className="text-xs text-muted-foreground">
           <Link to="/front-desk/board" className="text-primary hover:underline">

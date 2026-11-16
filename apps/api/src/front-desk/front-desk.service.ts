@@ -12,7 +12,6 @@ import { resolveTransferVerification } from "../common/visit-collection-transfer
 import { postRevenueWithFiscal } from "../compliance/post-revenue-with-fiscal";
 import type { JwtUser } from "../auth/jwt-user";
 import { parseFrontDeskRoomLabels } from "../common/front-desk-room-labels";
-import { EncountersService } from "../encounters/encounters.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { PatientsService } from "../patients/patients.service";
 import { ensureDraftEncounterOnCheckIn } from "./ensure-draft-encounter-on-check-in";
@@ -25,7 +24,6 @@ export class FrontDeskService {
     private readonly prisma: PrismaService,
     private readonly patients: PatientsService,
     private readonly flow: FrontDeskFlowService,
-    private readonly encounters: EncountersService,
     private readonly featureFlags: FeatureFlagsService,
   ) {}
 
@@ -146,7 +144,8 @@ export class FrontDeskService {
           transferVerificationStatus,
         });
       }
-      await ensureDraftEncounterOnCheckIn(tx, this.prisma, tenantId, appointmentId);
+      const openEncounterId =
+        (await ensureDraftEncounterOnCheckIn(tx, tenantId, appointmentId, this.prisma)) ?? null;
       return {
         appointmentId: updated.id,
         queueTicketNumber: ticket,
@@ -155,6 +154,7 @@ export class FrontDeskService {
         patientMrn: updated.patient.mrn,
         clinicianName: updated.clinician.displayName,
         paymentRecorded: pay,
+        openEncounterId,
       };
     });
   }
@@ -245,6 +245,7 @@ export class FrontDeskService {
 
   /** Opens a draft encounter and auto-assigns an exam room (waiting → in exam). */
   async startVisitFromAppointment(tenantId: string, user: JwtUser, appointmentId: string) {
+    void user;
     const apt = await this.prisma.appointment.findFirst({
       where: { id: appointmentId, tenantId },
     });
@@ -252,7 +253,8 @@ export class FrontDeskService {
     if (apt.status === AppointmentStatus.CANCELLED || apt.status === AppointmentStatus.COMPLETED) {
       throw new BadRequestException("Cannot start visit");
     }
-    const existing = await this.prisma.encounter.findFirst({
+
+    const hadOpen = await this.prisma.encounter.findFirst({
       where: {
         tenantId,
         appointmentId,
@@ -260,21 +262,18 @@ export class FrontDeskService {
       },
       select: { id: true },
     });
-    if (existing) {
-      await this.prisma.$transaction(async (tx) => {
-        await this.flow.onEncounterStarted(tx, tenantId, appointmentId);
-      });
-      return { encounterId: existing.id, alreadyOpen: true as const };
-    }
 
-    const enc = await this.encounters.create(tenantId, user, {
-      clinicId: apt.clinicId,
-      patientId: apt.patientId,
-      clinicianId: apt.clinicianId,
-      appointmentId: apt.id,
-      visitType: "Outpatient",
+    const encounterId = await this.prisma.$transaction(async (tx) => {
+      const openId =
+        (await ensureDraftEncounterOnCheckIn(tx, tenantId, appointmentId, this.prisma)) ??
+        hadOpen?.id ??
+        null;
+      if (!openId) throw new BadRequestException("Could not open visit encounter for this appointment");
+      await this.flow.onEncounterStarted(tx, tenantId, appointmentId);
+      return openId;
     });
-    return { encounterId: enc.id, alreadyOpen: false as const };
+
+    return { encounterId, alreadyOpen: Boolean(hadOpen) as boolean };
   }
 
   async callTicket(tenantId: string, clinicId: string, ticketNumber: number) {

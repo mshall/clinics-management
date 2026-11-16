@@ -33,6 +33,7 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 | Contract prices per payer company | **Foundation** | `PayerCompany`, `ContractServicePrice`; resolver in `BillingService.resolvePrice` |
 | Invoice lines: qty, price, discount, tax | **Foundation** | `InvoiceLine` columns; manager flag when discount &gt; 15% |
 | Check-in collection (cash / InstaPay / Fawry) | **Shipped** | Front desk check-in; validates transfer refs; **queues ETA e-receipt** with revenue |
+| Draft encounter on check-in | **Shipped** | Quick check-in, status **Checked in**, and `GET /appointments/:id` ensure a **DRAFT** encounter linked to the appointment (`openEncounterId`) |
 | Split payment cash + card | **Foundation** | `POST /billing/payments` with `allocations[]` |
 | Refunds, credit notes, deposits, packages | **Foundation** | `CreditNote`, `PatientServicePackage` tables; APIs next slice |
 | Daily cash close per cashier/branch | **Foundation** | `POST /billing/cash-close` compares expected vs counted by method |

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EtaIntegrationBanner } from "@/features/compliance/eta-integration-banner";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { VisitCollectionFields } from "@/components/visit-collection-fields";
 import { Button } from "@/components/ui/button";
@@ -43,17 +44,21 @@ export function QuickCheckInPanel({ appointment, currency = "AED", examRoomOptio
     mutationFn: () => {
       const collectErr = validateVisitCollection(effectiveAmount, collection, t);
       if (collectErr) throw new Error(collectErr);
-      return apiPost<{ queueTicketNumber: number }>(`/api/v1/front-desk/appointments/${appointment.id}/check-in`, {
-        paymentAmount: effectiveAmount > 0 ? effectiveAmount : undefined,
-        roomLabel: room.trim() || undefined,
-        currency,
-        visitCollection: visitCollectionToApi(effectiveAmount, collection),
-      });
+      return apiPost<{ queueTicketNumber: number; openEncounterId?: string | null }>(
+        `/api/v1/front-desk/appointments/${appointment.id}/check-in`,
+        {
+          paymentAmount: effectiveAmount > 0 ? effectiveAmount : undefined,
+          roomLabel: room.trim() || undefined,
+          currency,
+          visitCollection: visitCollectionToApi(effectiveAmount, collection),
+        },
+      );
     },
     onSuccess: (data) => {
       toast.success(t("frontDesk.checkInDone", "Checked in · ticket #{{n}}", { n: data.queueTicketNumber }));
       void qc.invalidateQueries({ queryKey: ["appointment", appointment.id] });
       void qc.invalidateQueries({ queryKey: ["front-desk"] });
+      void qc.invalidateQueries({ queryKey: ["encounters"] });
     },
     onError: (e: unknown) => toast.error(e instanceof ApiError || e instanceof Error ? apiErrorMessage(e) : String(e)),
   });
@@ -61,13 +66,20 @@ export function QuickCheckInPanel({ appointment, currency = "AED", examRoomOptio
   if (appointment.status === "CHECKED_IN" && appointment.queueTicketNumber) {
     return (
       <Card>
-        <CardContent className="pt-6 text-sm">
+        <CardContent className="pt-6 space-y-3 text-sm">
           <p>
             {t("frontDesk.checkedInTicket", "Ticket")} <strong className="ltr-nums">#{appointment.queueTicketNumber}</strong>
             {appointment.checkedInAt ? (
               <span className="text-muted-foreground"> · {new Date(appointment.checkedInAt).toLocaleTimeString()}</span>
             ) : null}
           </p>
+          {appointment.openEncounterId ? (
+            <Button type="button" variant="outline" size="sm" asChild>
+              <Link to={`/encounters/${appointment.openEncounterId}`}>
+                {t("frontDesk.openEncounter", "Open encounter")}
+              </Link>
+            </Button>
+          ) : null}
         </CardContent>
       </Card>
     );

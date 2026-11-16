@@ -76,4 +76,10 @@ export class AppointmentDto {
 
   @ApiPropertyOptional({ nullable: true })
   queueTicketNumber?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: "Open draft or amended encounter created at check-in (when status is CHECKED_IN)",
+  })
+  openEncounterId?: string | null;
 }

@@ -201,6 +201,8 @@ export interface AppointmentDto {
   roomAssignedAt?: string | null;
   checkedInAt?: string | null;
   queueTicketNumber?: number | null;
+  /** Draft encounter linked at check-in */
+  openEncounterId?: string | null;
 }
 
 export interface OperationDto {

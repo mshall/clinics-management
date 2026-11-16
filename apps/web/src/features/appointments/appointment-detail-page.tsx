@@ -190,6 +190,7 @@ export function AppointmentDetailPage() {
       void qc.invalidateQueries({ queryKey: ["appointment", id] });
       void qc.invalidateQueries({ queryKey: ["appointments"] });
       void qc.invalidateQueries({ queryKey: ["encounters"] });
+      void qc.invalidateQueries({ queryKey: ["front-desk"] });
       const st = typeof variables.status === "string" ? variables.status : undefined;
       if (st) {
         toast.success(

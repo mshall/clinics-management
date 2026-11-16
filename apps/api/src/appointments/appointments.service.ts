@@ -14,7 +14,7 @@ import { assertOrgClinicalDeleteRole } from "../common/org-clinical-delete-roles
 import { paginate, parsePageParams } from "../common/pagination";
 import { syncOpenEncounterVisitFeeFromAppointment } from "../common/visit-fee-ledger";
 import { PrismaService } from "../prisma/prisma.service";
-import { ensureDraftEncounterOnCheckIn } from "../front-desk/ensure-draft-encounter-on-check-in";
+import { ensureDraftEncounterIfCheckedIn } from "../front-desk/ensure-draft-encounter-on-check-in";
 import { FrontDeskFlowService } from "../front-desk/front-desk-flow.service";
 import { SchedulingService } from "../scheduling/scheduling.service";
 import type { CreateAppointmentDto } from "./dto/create-appointment.dto";
@@ -146,6 +146,31 @@ export class AppointmentsService {
         : {}),
     };
     return dto;
+  }
+
+  private async finishAppointmentDto(tenantId: string, row: AppointmentRow): Promise<AppointmentDto> {
+    const dto = this.mapRow(row);
+    if (row.status !== AppointmentStatus.CHECKED_IN) return dto;
+
+    let openEncounterId =
+      (
+        await this.prisma.encounter.findFirst({
+          where: {
+            tenantId,
+            appointmentId: row.id,
+            status: { in: [EncounterStatus.DRAFT, EncounterStatus.AMENDED] },
+          },
+          select: { id: true },
+        })
+      )?.id ?? null;
+
+    if (!openEncounterId) {
+      openEncounterId = await this.prisma.$transaction((tx) =>
+        ensureDraftEncounterIfCheckedIn(tx, tenantId, row.id, this.prisma),
+      );
+    }
+
+    return { ...dto, openEncounterId };
   }
 
   async list(
@@ -488,9 +513,7 @@ export class AppointmentsService {
         data: checkIn ?? { status },
         include: appointmentDtoInclude,
       });
-      if (checkIn) {
-        await ensureDraftEncounterOnCheckIn(tx, this.prisma, tenantId, id);
-      }
+      await ensureDraftEncounterIfCheckedIn(tx, tenantId, id, this.prisma);
       return row;
     });
     if (status === AppointmentStatus.CANCELLED) {
@@ -501,7 +524,7 @@ export class AppointmentsService {
         row.clinicianId,
       );
     }
-    return this.mapRow(row);
+    return this.finishAppointmentDto(tenantId, row);
   }
 
   async getById(tenantId: string, id: string, viewer?: JwtUser): Promise<AppointmentDto> {
@@ -511,7 +534,7 @@ export class AppointmentsService {
     });
     if (!row) throw new NotFoundException("Appointment not found");
     await this.assertAppointmentAccess(viewer, row);
-    return this.mapRow(row);
+    return this.finishAppointmentDto(tenantId, row);
   }
 
   private isCompletedStatus(s: AppointmentStatus): boolean {
@@ -584,9 +607,7 @@ export class AppointmentsService {
         include: appointmentDtoInclude,
       });
 
-      if (checkIn) {
-        await ensureDraftEncounterOnCheckIn(tx, this.prisma, tenantId, id);
-      }
+      await ensureDraftEncounterIfCheckedIn(tx, tenantId, id, this.prisma);
 
       if (feeProvided) {
         await syncOpenEncounterVisitFeeFromAppointment(tx, tenantId, id, Number(dto.feeAmount));
@@ -594,7 +615,7 @@ export class AppointmentsService {
 
       return updated;
     });
-    return this.mapRow(row);
+    return this.finishAppointmentDto(tenantId, row);
   }
 
   private assertCanDeleteAppointment(viewer: JwtUser): void {

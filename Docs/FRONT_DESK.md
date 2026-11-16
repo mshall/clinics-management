@@ -27,14 +27,14 @@ Goal: move appointment → **CHECKED_IN** with arrival time, queue ticket, **`qu
 | Field / behaviour | Detail |
 |-------------------|--------|
 | Status | Sets `CHECKED_IN`, `checkedInAt`, daily `queueTicketNumber`, and `queueStage = WAITING` (same as **Check in & print ticket** and saving status **Checked in** on the appointment) |
-| Encounter | Opens a **draft** encounter linked to the appointment (no exam room yet — patient stays on the **waiting** list until **Start visit**) |
+| Encounter | **Always** opens a **draft** encounter linked to the appointment (`openEncounterId` on check-in response and `GET /appointments/:id` when `CHECKED_IN`). Idempotent: legacy check-ins without a draft are healed on the next read or save. No exam room until **Start visit** — patient stays on the **waiting** list. |
 | `checkedInAt` | Server timestamp at check-in |
 | `queueTicketNumber` | Per clinic, per calendar day, monotonic (starts at 1 each day) |
 | `queueStage` | Set to **`WAITING`**; `roomLabel` cleared (no occupancy until visit starts) |
 | `preferredRoomLabel` | Optional body field `roomLabel` on check-in API — **hint** for auto-assign at **Start visit** |
 | Payment | Optional `paymentAmount` + `currency` + `visitCollection` → **POSTED** `revenueEntry` (`VISIT`) |
 | UI | **Quick check-in** on **Appointments → detail**; preferred exam room dropdown from clinic **Exam rooms** |
-| API | `POST /api/v1/front-desk/appointments/:id/check-in` body: `{ paymentAmount?, roomLabel?, currency?, visitCollection? }` |
+| API | `POST /api/v1/front-desk/appointments/:id/check-in` body: `{ paymentAmount?, roomLabel?, currency?, visitCollection? }` — response includes `openEncounterId`. Saving appointment status **Checked in** (`PATCH /appointments/:id` or `PATCH /appointments/:id/status`) runs the same encounter step. |
 
 Staff with **Appointments** nav access can use check-in and the board (receptionist, nurse, call center, clinic roles).
 

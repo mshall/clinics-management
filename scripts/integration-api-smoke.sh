@@ -36,6 +36,22 @@ login_body="$(echo "$login_raw" | sed '$d')"
 staff_token="$(echo "$login_body" | python3 -c "import sys,json; print(json.load(sys.stdin)['accessToken'])")"
 echo "OK  staff login"
 
+appt_list="$(curl -sS -X GET "$API_BASE/appointments?page=1&pageSize=20&status=CONFIRMED" -H "Authorization: Bearer $staff_token")"
+appt_id="$(echo "$appt_list" | python3 -c "import sys,json; items=json.load(sys.stdin).get('items') or []; print(next((a['id'] for a in items if a.get('status')=='CONFIRMED'), ''))")"
+if [[ -n "$appt_id" ]]; then
+  checkin_raw="$(curl -sS -w "\n%{http_code}" -X POST "$API_BASE/front-desk/appointments/$appt_id/check-in" \
+    -H "Authorization: Bearer $staff_token" -H "Content-Type: application/json" -d '{}')"
+  checkin_http="$(echo "$checkin_raw" | tail -1)"
+  checkin_body="$(echo "$checkin_raw" | sed '$d')"
+  [[ "$checkin_http" == "200" || "$checkin_http" == "201" ]] || fail "front-desk check-in HTTP $checkin_http — $checkin_body"
+  echo "$checkin_body" | python3 -c "import sys,json; d=json.load(sys.stdin); assert d.get('openEncounterId'), d" || fail "check-in missing openEncounterId"
+  appt_get="$(curl -sS -X GET "$API_BASE/appointments/$appt_id" -H "Authorization: Bearer $staff_token")"
+  echo "$appt_get" | python3 -c "import sys,json; d=json.load(sys.stdin); assert d.get('status')=='CHECKED_IN' and d.get('openEncounterId'), d" || fail "GET appointment missing openEncounterId after check-in"
+  echo "OK  check-in creates draft encounter (openEncounterId)"
+else
+  echo "SKIP check-in smoke (no CONFIRMED appointment)"
+fi
+
 assistant_ctx_http="$(curl -sS -o /tmp/kio-assistant-ctx.json -w "%{http_code}" -X GET "$API_BASE/assistant/context?locale=en" \
   -H "Authorization: Bearer $staff_token")"
 [[ "$assistant_ctx_http" == "200" ]] || fail "assistant context HTTP $assistant_ctx_http (restart API after pulling assistant changes)"
