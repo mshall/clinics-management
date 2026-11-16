@@ -70,6 +70,21 @@ test("pending sale 400→300 re-queues; submitted 300→200 queues two distinct 
     return;
   }
 
+  const ciClinicRin = "12345678901234";
+  let clinicTaxRin = clinicRow.taxRegistrationNumber?.trim() ?? "";
+  let clinicVatPercent = Number(clinicRow.invoiceVatPercent ?? 0);
+  if (!clinicTaxRin) {
+    clinicTaxRin = ciClinicRin;
+    if (clinicVatPercent <= 0) clinicVatPercent = 14;
+    await prisma.clinic.update({
+      where: { id: clinicRow.id },
+      data: {
+        taxRegistrationNumber: clinicTaxRin,
+        invoiceVatPercent: clinicVatPercent,
+      },
+    });
+  }
+
   const tag = `fiscal-int-${Date.now()}`;
   let device = await prisma.fiscalDevice.findFirst({
     where: {
@@ -112,7 +127,6 @@ test("pending sale 400→300 re-queues; submitted 300→200 queues two distinct 
   }
 
   const { tenantId, clinicId } = device;
-  const clinic = clinicRow;
   const patient = await prisma.patient.findFirst({
     where: { tenantId, homeBranchId: clinicId },
     orderBy: { createdAt: "asc" },
@@ -155,8 +169,8 @@ test("pending sale 400→300 re-queues; submitted 300→200 queues two distinct 
         totalAmount: 400,
         currency: "EGP",
         description: `${tag} sale 400`,
-        clinicTaxRin: clinic.taxRegistrationNumber,
-        vatPercent: Number(clinic.invoiceVatPercent ?? 0),
+        clinicTaxRin,
+        vatPercent: clinicVatPercent,
         collectionMode: VisitCollectionMode.CASH_ON_VISIT,
         buyerName: "Integration Patient",
       });
