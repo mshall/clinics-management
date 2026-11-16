@@ -60,6 +60,10 @@ export class ComplianceService {
     return this.fiscalSubmit.submitOne(tenantId, id);
   }
 
+  async resubmitRejectedFiscal(tenantId: string, id: string, body: import("./dto/resubmit-fiscal-submission.dto").ResubmitFiscalSubmissionDto) {
+    return this.fiscalSubmit.resubmitRejected(tenantId, id, body);
+  }
+
   async patchClinicEtaSettings(tenantId: string, clinicId: string, dto: PatchClinicEtaSettingsDto) {
     const clinic = await this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId } });
     if (!clinic) throw new NotFoundException("Clinic not found");

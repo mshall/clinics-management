@@ -336,6 +336,8 @@ export interface AdminOverviewDto {
     defaultTaxRegistrationNumber: string;
     defaultInvoiceVatPercent: number;
     integrationFailureRetentionDays: number;
+    etaPhysicalReportingOptOut?: boolean;
+    etaPhysicalReportingConsentAt?: string | null;
   } | null;
   registeredTenants: number;
   featureFlags: Array<{

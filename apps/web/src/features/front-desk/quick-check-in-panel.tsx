@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { EtaIntegrationBanner } from "@/features/compliance/eta-integration-banner";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -79,6 +80,9 @@ export function QuickCheckInPanel({ appointment, currency = "AED", examRoomOptio
         <CardTitle className="text-base">{t("frontDesk.quickCheckIn", "Quick check-in")}</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <EtaIntegrationBanner />
+        </div>
         {fiscalSetup?.requiresDevice && !fiscalSetup.ready ? (
           <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100 sm:col-span-2">
             {t("fiscalDevices.setupBanner", "Tax receipts are queued but not being sent — finish receipt device setup.")}

@@ -15,6 +15,7 @@ import {
   isEtaStoredSubmissionPayload,
   type EtaStoredSubmissionPayload,
 } from "./eta-stored-submission";
+import { queueFiscalDocument } from "./fiscal-queue";
 
 const PREPARE_TX_MS = 15_000;
 const FINALIZE_TX_MS = 15_000;
@@ -100,7 +101,11 @@ export class FiscalSubmitService {
           throw new BadRequestException("Submission is not linked to a fiscal device");
         }
         const device = row.fiscalDevice;
-        if (device.status !== FiscalDeviceStatus.ACTIVE || !device.credential?.secretRef) {
+        const storedRetry =
+          row.status === FiscalSubmissionStatus.SUBMITTING &&
+          isEtaStoredSubmissionPayload(row.payloadJson);
+        const deviceReady = device.status === FiscalDeviceStatus.ACTIVE && Boolean(device.credential?.secretRef);
+        if (!deviceReady && !storedRetry) {
           throw new BadRequestException("Fiscal device is not active or has no credentials");
         }
 
@@ -108,8 +113,8 @@ export class FiscalSubmitService {
         if (!provider) throw new BadRequestException(`Unknown fiscal provider: ${row.providerKey}`);
 
         if (process.env.NODE_ENV === "production" && process.env.KIORLY_DEPLOY_TARGET === "aws") {
-          const ref = device.credential.secretRef.trim();
-          if (ref.startsWith("local:") || ref.startsWith("env:")) {
+          const ref = device.credential?.secretRef?.trim();
+          if (ref?.startsWith("local:") || ref?.startsWith("env:")) {
             throw new BadRequestException("Production submit requires Secrets Manager device credentials");
           }
         }
@@ -224,6 +229,55 @@ export class FiscalSubmitService {
 
         if (!result.ok) {
           const attempts = row.submitAttempts + 1;
+          if (result.failureClass === "credentials") {
+            await tx.integrationFailureLog.create({
+              data: {
+                tenantId,
+                clinicId: row.clinicId,
+                category: IntegrationFailureCategory.WEBHOOK,
+                operation: "fiscal_submit_credentials",
+                operationName: "ETA device credentials expired or invalid",
+                statusCode: result.httpStatus ?? 401,
+                errorMessage: result.error.slice(0, 2000),
+                fingerprint: `fiscal-credentials:${row.fiscalDeviceId}`,
+                trace: { steps: [{ step: "submit", ok: false, detail: result.error }] },
+              },
+            });
+            await tx.fiscalDevice.update({
+              where: { id: row.fiscalDeviceId },
+              data: { status: FiscalDeviceStatus.CREDENTIALS_EXPIRED },
+            });
+            const backoffMinutes = Math.min(60, Math.pow(2, Math.min(attempts, 6)));
+            return tx.fiscalSubmission.update({
+              where: { id: row.id },
+              data: {
+                status: FiscalSubmissionStatus.SUBMITTING,
+                errorMessage: result.error.slice(0, 2000),
+                submitAttempts: attempts,
+                nextRetryAt: new Date(Date.now() + backoffMinutes * 60_000),
+                claimedUntil: null,
+                claimedBy: null,
+                providerValidationStatus: "PENDING",
+              },
+            });
+          }
+
+          if (result.failureClass === "duplicate") {
+            const backoffMinutes = Math.max(10, Math.min(60, Math.pow(2, Math.min(attempts, 4))));
+            return tx.fiscalSubmission.update({
+              where: { id: row.id },
+              data: {
+                status: FiscalSubmissionStatus.SUBMITTING,
+                errorMessage: result.error.slice(0, 2000),
+                submitAttempts: attempts,
+                nextRetryAt: new Date(Date.now() + backoffMinutes * 60_000),
+                claimedUntil: null,
+                claimedBy: null,
+                providerValidationStatus: "UNKNOWN",
+              },
+            });
+          }
+
           if (result.failureClass === "permanent") {
             await tx.integrationFailureLog.create({
               data: {
@@ -342,6 +396,22 @@ export class FiscalSubmitService {
       result = { ok: false, error: msg, mode: "live", failureClass: "temporary" };
     }
 
+    if (!result.ok && result.failureClass === "duplicate") {
+      const validation = await fetchEtaReceiptValidationStatus(
+        prepared.stored.receiptUuid,
+        connection,
+        { posSerial: device.serialNumber },
+      );
+      if (validation === "VALID") {
+        result = {
+          ok: true,
+          receiptUuid: prepared.stored.receiptUuid,
+          mode: "live",
+          httpStatus: result.httpStatus,
+        };
+      }
+    }
+
     const finalized = await this.finalizeSubmission(tenantId, prepared, result);
 
     if (result.ok && finalized.status === FiscalSubmissionStatus.SUBMITTED) {
@@ -359,5 +429,72 @@ export class FiscalSubmitService {
     }
 
     return finalized;
+  }
+
+  async resubmitRejected(
+    tenantId: string,
+    submissionId: string,
+    patch: {
+      buyerName?: string | null;
+      itemCode?: string | null;
+      issuerRin?: string | null;
+      taxpayerActivityCode?: string | null;
+      branchCode?: string | null;
+    },
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const row = await tx.fiscalSubmission.findFirst({
+        where: { id: submissionId, tenantId, status: FiscalSubmissionStatus.REJECTED },
+        include: { fiscalDocument: true, clinic: { select: { invoiceVatPercent: true } } },
+      });
+      if (!row?.fiscalDocument) throw new NotFoundException("Rejected fiscal submission not found");
+
+      const priorUuid =
+        row.providerDocumentUuid?.trim() ||
+        (isEtaStoredSubmissionPayload(row.payloadJson) ? row.payloadJson.receiptUuid : undefined);
+      if (!priorUuid) {
+        throw new BadRequestException("Rejected submission has no prior receipt UUID to reference");
+      }
+
+      const docPayload = row.fiscalDocument.payloadJson as EtaReceiptPayload | null;
+      const submissionDraft = row.payloadJson as EtaReceiptPayload | EtaStoredSubmissionPayload | null;
+      const draft: EtaReceiptPayload | null =
+        docPayload ??
+        (submissionDraft && !isEtaStoredSubmissionPayload(submissionDraft) ? submissionDraft : null);
+
+      const vatPercent = draft?.lines?.[0]?.vatPercent ?? Number(row.clinic.invoiceVatPercent ?? 0);
+      const description = draft?.lines?.[0]?.description ?? "Medical service";
+
+      await tx.fiscalDocument.update({
+        where: { id: row.fiscalDocumentId },
+        data: {
+          paymentId: null,
+          revenueEntryId: null,
+          invoiceId: null,
+        },
+      });
+
+      await queueFiscalDocument(tx, {
+        tenantId: row.tenantId,
+        clinicId: row.clinicId,
+        patientId: row.patientId,
+        totalAmount: Number(row.fiscalDocument.totalAmount),
+        currency: row.fiscalDocument.currency,
+        vatPercent,
+        description,
+        revenueEntryId: row.fiscalDocument.revenueEntryId ?? undefined,
+        paymentId: row.fiscalDocument.paymentId ?? undefined,
+        buyerName: patch.buyerName ?? draft?.buyerName,
+        clinicTaxRin: patch.issuerRin ?? draft?.issuerRin,
+        itemCodeOverride: patch.itemCode,
+        taxpayerActivityCodeOverride: patch.taxpayerActivityCode ?? draft?.taxpayerActivityCode,
+        branchCodeOverride: patch.branchCode ?? draft?.branchCode,
+        referenceReceiptUuid: priorUuid,
+        idempotencyKeyOverride: `eta-egypt:resubmit:${submissionId}:${Date.now()}`,
+        resubmitAfterRejection: true,
+      });
+
+      return { ok: true, supersededSubmissionId: submissionId, referenceReceiptUuid: priorUuid };
+    });
   }
 }

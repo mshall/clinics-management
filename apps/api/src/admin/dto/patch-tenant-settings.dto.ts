@@ -89,7 +89,7 @@ export class PatchTenantSettingsDto {
 
   @ApiPropertyOptional({
     description:
-      "Org opts out of ETA e-receipt integration and will report receipts physically to the tax authority instead",
+      "Disable Kiorly-issued ETA e-receipts (org not obliged or uses another ETA-registered system)",
   })
   @IsOptional()
   @IsBoolean()

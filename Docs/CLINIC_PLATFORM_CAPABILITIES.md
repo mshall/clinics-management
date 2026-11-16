@@ -38,7 +38,7 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 | Daily cash close per cashier/branch | **Foundation** | `POST /billing/cash-close` compares expected vs counted by method |
 | Doctor commission rules & statements | **Foundation** | `CommissionRule` table; statements = reports slice |
 | Insurer billing, co-pay, pre-auth | **Foundation** | `PayerPreAuthorization`, copay % on contract prices |
-| **Egypt: ETA e-receipts** | **Shipped (core)** | Three-step submit (prepare → ETA HTTP → finalize), **`FiscalSubmissionWorker`**, payment codes **C/V/O**, per-device chain on `FiscalDevice`; Secrets Manager credentials only |
+| **Egypt: ETA e-receipts** | **Shipped (core)** | Three-step submit, worker, **C/V/O**, per-device chain; failure classes (credentials / duplicate / validation); resubmit API; tax invoices do not double-queue; org Kiorly ETA opt-out |
 | **Receipt devices (multi-market)** | **Shipped** | `GET/POST /clinics/:id/fiscal-devices`, credentials, test connection; auto-provision virtual device on clinic create when provider `deviceRegistration.required`; clinic settings **Receipt devices** panel + add-clinic tax step |
 | **Egypt: data protection consent** | **Foundation (priority)** | `POST /compliance/patients/:id/data-protection-consent` |
 

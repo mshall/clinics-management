@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { UserRole } from "@prisma/client";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
@@ -6,6 +7,14 @@ import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { ComplianceService } from "./compliance.service";
 import { PatchClinicEtaSettingsDto } from "../clinics/dto/patch-clinic-eta-settings.dto";
+import { ResubmitFiscalSubmissionDto } from "./dto/resubmit-fiscal-submission.dto";
+
+const FISCAL_GOVERNANCE_ROLES = new Set<UserRole>([
+  UserRole.GROUP_ADMIN,
+  UserRole.CLINIC_ADMIN,
+  UserRole.BRANCH_MANAGER,
+  UserRole.FINANCE_OFFICER,
+]);
 
 @ApiTags("compliance")
 @ApiBearerAuth("bearer")
@@ -35,7 +44,18 @@ export class ComplianceController {
 
   @Post("egypt/eta-queue/:id/submit")
   submitEta(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    if (user.role && !FISCAL_GOVERNANCE_ROLES.has(user.role)) {
+      throw new ForbiddenException("Insufficient permissions for fiscal submit");
+    }
     return this.compliance.submitEtaToAuthority(requireTenantId(user), id);
+  }
+
+  @Post("egypt/eta-queue/:id/resubmit")
+  resubmitEta(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: ResubmitFiscalSubmissionDto) {
+    if (user.role && !FISCAL_GOVERNANCE_ROLES.has(user.role)) {
+      throw new ForbiddenException("Insufficient permissions for fiscal resubmit");
+    }
+    return this.compliance.resubmitRejectedFiscal(requireTenantId(user), id, body);
   }
 
   @Get("egypt/eta-queue/:id/receipt")

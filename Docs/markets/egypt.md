@@ -19,7 +19,7 @@ Fiscal provider key: **`eta-egypt`** (`FiscalDocument` + `FiscalSubmission`). Cl
 
 Idempotency is keyed by **payment / revenue / invoice** source id (not amount or description). **Visit fee amount changes** void the posted revenue row, queue a **return** receipt, then queue a **new sale** on a new revenue row. **UUID / chain:** receipts are **not** random — `header.uuid` is a **SHA-256** over the ETA-serialized Receipt **v1.2** body (empty uuid field) including `previousUUID`. The chain is **per `FiscalDevice`** (serial + `receiptSequence` / `lastReceiptUuid`), computed **only at submit** in device queue order. Wire body includes buyer (type P), tax totals, payment method, item/unit types, `documentTypeVersion` **1.2**, and POS headers on token + submit.
 
-Every posted payment path queues fiscal: check-in, visit fee, billing payment, tax invoice.
+Every **payment** path queues fiscal: check-in, visit fee, billing payment, revenue posting. **Tax invoices are printouts only** (no second ETA receipt if payment was already queued).
 
 ### Receipt devices (virtual vs physical POS)
 
@@ -33,7 +33,7 @@ Every posted payment path queues fiscal: check-in, visit fee, billing payment, t
 
 **Privacy:** Patient names may be sent on e-receipts as buyer details (required above EGP 150,000 at payment time). Disclose in your patient privacy notice.
 
-**Physical reporting opt-out:** Group admin can disable ETA integration with documented consent — organization reports receipts physically to ETA instead; see Admin → Organization → Egypt ETA.
+**Kiorly ETA opt-out:** Group admin can disable **Kiorly-issued** e-receipts (org not obliged or uses another ETA-registered system); audited; banner on revenue/front desk — Admin → Organization → Egypt ETA.
 
 **Automatic submit:** `FiscalSubmissionWorker` drains pending receipts per device (FIFO, stored wire document, failure classification). Set `FISCAL_SUBMIT_WORKER=false` to disable.
 

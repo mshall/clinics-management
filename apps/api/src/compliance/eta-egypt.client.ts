@@ -93,7 +93,7 @@ async function obtainEtaAccessToken(
   const clientId = connection?.clientId?.trim() || process.env.ETA_CLIENT_ID?.trim();
   const clientSecret = connection?.clientSecret?.trim() || process.env.ETA_CLIENT_SECRET?.trim();
   if (!clientId || !clientSecret) {
-    return { ok: false, error: "ETA client credentials are missing", failureClass: "permanent" };
+    return { ok: false, error: "ETA client credentials are missing", failureClass: "credentials" };
   }
   const tokenUrl =
     connection?.tokenUrl?.trim() ||
@@ -115,7 +115,7 @@ async function obtainEtaAccessToken(
       return {
         ok: false,
         error: `ETA token request failed (${tokenRes.status}): ${text.slice(0, 300)}`,
-        failureClass: classifyEtaHttpFailure(tokenRes.status, text),
+        failureClass: classifyEtaHttpFailure(tokenRes.status, text, "token"),
         httpStatus: tokenRes.status,
       };
     }
@@ -145,7 +145,7 @@ export async function submitEtaWireDocument(
         ok: false,
         error: "ETA credentials are not configured",
         mode: "unconfigured",
-        failureClass: "permanent",
+        failureClass: "credentials",
       };
     }
     const uuid = wireDocument.header.uuid?.trim() || randomUUID().replace(/-/g, "");

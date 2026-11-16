@@ -541,7 +541,7 @@ export function AdminPage() {
                         <span>
                           {t(
                             "compliance.etaPhysicalOptOut",
-                            "Disable ETA e-receipt integration for this organization (we will report receipts physically to the tax authority instead).",
+                            "Kiorly will not issue ETA e-receipts for this organization. We confirm we are not obliged to use this integration, or we issue receipts through another ETA-registered system.",
                           )}
                         </span>
                       </label>
@@ -555,7 +555,7 @@ export function AdminPage() {
                           <span>
                             {t(
                               "compliance.etaPhysicalConsent",
-                              "I confirm our organization accepts full responsibility for timely physical reporting and will retain all required fiscal documents outside this integration.",
+                              "I confirm this choice on behalf of the organization and accept responsibility for ETA compliance through another channel or exemption, as applicable.",
                             )}
                           </span>
                         </label>

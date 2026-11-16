@@ -35,7 +35,7 @@ export type EtaEgyptTenantSettings = {
   defaultTaxpayerActivityCode: string;
   defaultItemCode: string | null;
   esignatureLabel: string | null;
-  /** Org will report receipts physically to the tax authority instead of ETA integration. */
+  /** Kiorly will not issue ETA e-receipts (org not obliged or uses another ETA-registered system). */
   physicalReportingOptOut: boolean;
   physicalReportingConsentAt: string | null;
 };

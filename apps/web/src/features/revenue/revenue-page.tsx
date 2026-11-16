@@ -33,6 +33,7 @@ import { resolvePatientListLabel } from "@/lib/patient-display";
 import { formatMoneyAmount, formatMultiCurrencyAmounts } from "@/lib/money-display";
 import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
 import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
+import { EtaIntegrationBanner } from "@/features/compliance/eta-integration-banner";
 
 function clinicDisplayName(r: RevenueEntryDto, lng: string): string {
   return formatClinicNameFields(r.clinicNameEn, r.clinicNameAr, lng, r.clinicId);
@@ -227,6 +228,7 @@ export function RevenuePage() {
         <h1 className="text-2xl font-bold tracking-tight">{t("revenue.title")}</h1>
         <p className="text-muted-foreground">{t("revenue.subtitle")}</p>
       </div>
+      <EtaIntegrationBanner />
 
       {isError ? <p className="text-sm text-destructive">{error instanceof Error ? error.message : t("common.error")}</p> : null}
 

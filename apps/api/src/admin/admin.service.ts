@@ -11,6 +11,7 @@ import {
   mapEtaTenantSettingsDto,
   mergeProviderBlock,
   patchEtaTenantProviderSettings,
+  resolveEtaTenantSettings,
 } from "../providers/provider-settings";
 import {
   deactivateUserAccount,
@@ -653,9 +654,10 @@ export class AdminService {
     return paginate(items, total, page, pageSize);
   }
 
-  async patchTenantSettings(tenantId: string, dto: PatchTenantSettingsDto) {
+  async patchTenantSettings(tenantId: string, user: import("../auth/jwt-user").JwtUser, dto: PatchTenantSettingsDto) {
     const existing = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
     if (!existing) throw new NotFoundException("Tenant not found");
+    const priorOptOut = resolveEtaTenantSettings(existing).physicalReportingOptOut;
 
     const data: {
       defaultVisitFee?: number;
@@ -736,6 +738,23 @@ export class AdminService {
           data.defaultInvoiceVatPercent ?? existing.defaultInvoiceVatPercent,
         );
         await syncClinicInvoiceTaxFromTenant(tx, tenantId, trn, vat);
+      }
+      if (dto.etaPhysicalReportingOptOut !== undefined) {
+        const nextOptOut = resolveEtaTenantSettings(updated).physicalReportingOptOut;
+        if (nextOptOut !== priorOptOut) {
+          await tx.auditLog.create({
+            data: {
+              tenantId,
+              actorId: user.userId,
+              action: nextOptOut ? "ETA_INTEGRATION_OPT_OUT_ENABLED" : "ETA_INTEGRATION_OPT_OUT_DISABLED",
+              resource: "tenant",
+              resourceId: tenantId,
+              metadata: {
+                physicalReportingConsentAt: resolveEtaTenantSettings(updated).physicalReportingConsentAt,
+              },
+            },
+          });
+        }
       }
       return updated;
     });

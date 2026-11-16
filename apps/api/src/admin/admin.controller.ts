@@ -237,7 +237,7 @@ export class AdminController {
     if (user.role !== "GROUP_ADMIN") {
       throw new ForbiddenException("Only group administrators can update tenant settings");
     }
-    return this.admin.patchTenantSettings(requireTenantId(user), body);
+    return this.admin.patchTenantSettings(requireTenantId(user), user, body);
   }
 
   @Get("payment-channels")

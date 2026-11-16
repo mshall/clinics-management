@@ -21,7 +21,6 @@ import {
 import { computeVatInclusiveBreakdown } from "../common/vat-breakdown";
 import { resolveMarketTaxLabels } from "../common/market-tax-labels";
 import { normalizeOrgTaxRegistrationNumber } from "../common/sync-clinic-invoice-tax";
-import { queueEtaReceipt } from "../compliance/eta-receipt-queue";
 import { PrismaService } from "../prisma/prisma.service";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { CreateInvoiceDto } from "./dto/create-invoice.dto";
@@ -258,17 +257,7 @@ export class InvoicesService {
         },
         include: invoiceInclude,
       });
-      await queueEtaReceipt(tx, {
-        tenantId,
-        clinicId,
-        patientId,
-        invoiceId: created.id,
-        totalAmount: lineTotal,
-        currency,
-        vatPercent: vatPercentSnapshot,
-        description: `Tax invoice ${invoiceNumber}`,
-        clinicTaxRin: clinic.taxRegistrationNumber,
-      });
+      // Tax invoices are printouts; ETA receipts are queued when payment is collected (check-in, billing, visit fee).
       return created;
     });
 

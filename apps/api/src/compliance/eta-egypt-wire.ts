@@ -44,6 +44,8 @@ export type EtaWireReceiptDocument = {
     uuid: string;
     previousUUID: string;
     referenceUUID?: string;
+    /** Correction resend after a rejected receipt (Receipt v1.2). */
+    referenceOldUUID?: string;
     currency: string;
     exchangeRate: number;
   };
@@ -106,6 +108,7 @@ export function buildEtaWireReceiptDocument(ctx: EtaWireBuildContext): EtaWireRe
     currency: payload.currency,
     exchangeRate: payload.currency === "EGP" ? 0 : payload.exchangeRate ?? 0,
     ...(isReturn && ctx.referenceUuid ? { referenceUUID: ctx.referenceUuid } : {}),
+    ...(!isReturn && ctx.referenceUuid ? { referenceOldUUID: ctx.referenceUuid } : {}),
   };
 
   return {

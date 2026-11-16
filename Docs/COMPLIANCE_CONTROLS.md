@@ -57,7 +57,7 @@ This document maps platform controls to common frameworks — **not** a certific
 
 ## Egypt-specific
 
-- ETA e-receipt queue (sale + return) and submit via per-clinic credentials when configured ([capabilities matrix](./CLINIC_PLATFORM_CAPABILITIES.md)).
+- ETA e-receipt queue on **payments** only (not tax invoice print); sale + return + **resubmit after rejection** (`referenceOldUUID`); auth failures keep submissions `SUBMITTING` and flag device credentials ([ETA_RECEIPT_V12](./ETA_RECEIPT_V12.md)).
 - Data protection consent API.
 - Arabic UI copy (`ar.json`); Egyptian Arabic in product docs (not Gulf dialect).
 

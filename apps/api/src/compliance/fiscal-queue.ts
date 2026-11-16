@@ -33,6 +33,15 @@ export type QueueFiscalParams = {
   billingPaymentMethods?: import("@prisma/client").PaymentMethod[];
   /** Void / credit receipt for a voided visit-fee revenue row */
   returnForRevenueEntryId?: string;
+  /** Resend after ETA rejection — links to the failed receipt UUID (referenceOldUUID). */
+  referenceReceiptUuid?: string;
+  /** Override idempotency when resubmitting a corrected document */
+  idempotencyKeyOverride?: string;
+  itemCodeOverride?: string | null;
+  taxpayerActivityCodeOverride?: string | null;
+  branchCodeOverride?: string | null;
+  /** New fiscal row after ETA rejection (same payment/revenue source). */
+  resubmitAfterRejection?: boolean;
 };
 
 /** @deprecated use queueFiscalDocument */
@@ -70,12 +79,13 @@ export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: 
   const currency = params.currency?.trim() || marketCtx.currency;
   assertEtaBuyerNameAtPayment(params.totalAmount, currency, params.buyerName);
   const sourceRef = fiscalSourceRefFromQueue(params);
-  const idempotencyKey = buildFiscalIdempotencyKey(providerKey, sourceRef);
+  const idempotencyKey =
+    params.idempotencyKeyOverride?.trim() || buildFiscalIdempotencyKey(providerKey, sourceRef);
   const returnSale = sourceRef.kind === "return";
   const fiscalDevice = await resolveFiscalDeviceForQueue(tx, params.tenantId, params.clinicId, providerKey);
   if (provider.deviceRegistration?.required && !fiscalDevice) return;
 
-  let referenceReceiptUuid: string | undefined;
+  let referenceReceiptUuid: string | undefined = params.referenceReceiptUuid?.trim() || undefined;
   if (returnSale && params.returnForRevenueEntryId) {
     const prior = await tx.fiscalSubmission.findFirst({
       where: {
@@ -117,9 +127,9 @@ export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: 
     description: params.description,
     taxConfig: marketCtx.taxConfig,
     clinicOverrides: {
-      branchCode: etaClinic?.branchCode,
-      taxpayerActivityCode: etaClinic?.taxpayerActivityCode,
-      defaultItemCode: etaClinic?.defaultItemCode,
+      branchCode: params.branchCodeOverride?.trim() ?? etaClinic?.branchCode,
+      taxpayerActivityCode: params.taxpayerActivityCodeOverride?.trim() ?? etaClinic?.taxpayerActivityCode,
+      defaultItemCode: params.itemCodeOverride?.trim() ?? etaClinic?.defaultItemCode,
       taxRegistrationNumber: params.clinicTaxRin ?? clinic?.taxRegistrationNumber,
       paymentMethod,
       buyerName: params.buyerName,
@@ -130,17 +140,19 @@ export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: 
     referenceReceiptUuid,
   });
 
-  const existingDoc = await tx.fiscalDocument.findFirst({
-    where: {
-      OR: [
-        ...(params.revenueEntryId ? [{ revenueEntryId: params.revenueEntryId }] : []),
-        ...(params.paymentId ? [{ paymentId: params.paymentId }] : []),
-        ...(params.invoiceId ? [{ invoiceId: params.invoiceId }] : []),
-      ],
-    },
-    select: { id: true },
-  });
-  if (existingDoc) return;
+  if (!params.resubmitAfterRejection) {
+    const existingDoc = await tx.fiscalDocument.findFirst({
+      where: {
+        OR: [
+          ...(params.revenueEntryId ? [{ revenueEntryId: params.revenueEntryId }] : []),
+          ...(params.paymentId ? [{ paymentId: params.paymentId }] : []),
+          ...(params.invoiceId ? [{ invoiceId: params.invoiceId }] : []),
+        ],
+      },
+      select: { id: true },
+    });
+    if (existingDoc) return;
+  }
 
   const dupSubmission = await tx.fiscalSubmission.findFirst({
     where: { idempotencyKey: built.idempotencyKey },

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, Star } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { FiscalRejectedPanel } from "@/features/compliance/fiscal-rejected-panel";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -99,6 +100,7 @@ export function ClinicFiscalDevicesPanel({ clinicId }: { clinicId: string }) {
 
   return (
   <>
+    <FiscalRejectedPanel clinicId={clinicId} />
     {!setup.ready ? (
       <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
         {t(
