@@ -59,21 +59,6 @@ export class FrontDeskService {
       throw new BadRequestException("Cannot check in this appointment");
     }
 
-    const dayStart = new Date();
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(dayStart);
-    dayEnd.setDate(dayEnd.getDate() + 1);
-
-    const maxTicket = await this.prisma.appointment.aggregate({
-      where: {
-        tenantId,
-        clinicId: apt.clinicId,
-        checkedInAt: { gte: dayStart, lt: dayEnd },
-        queueTicketNumber: { not: null },
-      },
-      _max: { queueTicketNumber: true },
-    });
-    const ticket = (maxTicket._max.queueTicketNumber ?? 0) + 1;
     const now = new Date();
     const pay = body.paymentAmount != null && body.paymentAmount > 0 ? body.paymentAmount : null;
     const { resolveTenantTransferCollectionContext } = await import("../markets/market-transfer-context");
@@ -119,17 +104,16 @@ export class FrontDeskService {
     }
 
     return this.prisma.$transaction(async (tx) => {
+      const checkInPatch = await this.flow.buildCheckInStatusPatch(tx, tenantId, apt.clinicId, {
+        preferredRoomLabel: body.roomLabel,
+        existingPreferred: apt.preferredRoomLabel ?? apt.roomLabel,
+      });
+      const ticket = checkInPatch.queueTicketNumber;
       const updated = await tx.appointment.update({
         where: { id: appointmentId },
         data: {
-          status: AppointmentStatus.CHECKED_IN,
-          checkedInAt: now,
-          queueTicketNumber: ticket,
+          ...checkInPatch,
           checkInPaymentAmount: pay != null ? new Prisma.Decimal(String(pay)) : null,
-          ...this.flow.applyCheckInQueueFields({
-            preferredRoomLabel: body.roomLabel,
-            existingPreferred: apt.preferredRoomLabel ?? apt.roomLabel,
-          }),
           ...collectionPatch,
         },
         include: {

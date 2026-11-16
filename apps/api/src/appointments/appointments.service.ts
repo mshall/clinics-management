@@ -14,6 +14,7 @@ import { assertOrgClinicalDeleteRole } from "../common/org-clinical-delete-roles
 import { paginate, parsePageParams } from "../common/pagination";
 import { syncOpenEncounterVisitFeeFromAppointment } from "../common/visit-fee-ledger";
 import { PrismaService } from "../prisma/prisma.service";
+import { FrontDeskFlowService } from "../front-desk/front-desk-flow.service";
 import { SchedulingService } from "../scheduling/scheduling.service";
 import type { CreateAppointmentDto } from "./dto/create-appointment.dto";
 import type { AppointmentDto } from "./dto/appointment.dto";
@@ -41,6 +42,7 @@ export class AppointmentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly scheduling: SchedulingService,
+    private readonly frontDeskFlow: FrontDeskFlowService,
   ) {}
 
   private async assertAppointmentAccess(
@@ -473,10 +475,18 @@ export class AppointmentsService {
     if (existing.status === AppointmentStatus.COMPLETED) {
       throw new BadRequestException("Cannot change status of a completed appointment");
     }
-    const row = await this.prisma.appointment.update({
-      where: { id },
-      data: { status },
-      include: appointmentDtoInclude,
+    const row = await this.prisma.$transaction(async (tx) => {
+      const checkIn =
+        status === AppointmentStatus.CHECKED_IN && existing.status !== AppointmentStatus.CHECKED_IN
+          ? await this.frontDeskFlow.buildCheckInStatusPatch(tx, tenantId, existing.clinicId, {
+              existingPreferred: existing.preferredRoomLabel ?? existing.roomLabel,
+            })
+          : null;
+      return tx.appointment.update({
+        where: { id },
+        data: checkIn ?? { status },
+        include: appointmentDtoInclude,
+      });
     });
     if (status === AppointmentStatus.CANCELLED) {
       await this.scheduling.offerWaitlistForCancelledSlot(
@@ -542,6 +552,13 @@ export class AppointmentsService {
     }
 
     const row = await this.prisma.$transaction(async (tx) => {
+      const nextStatus = dto.status !== undefined ? dto.status : undefined;
+      const checkIn =
+        nextStatus === AppointmentStatus.CHECKED_IN && existing.status !== AppointmentStatus.CHECKED_IN
+          ? await this.frontDeskFlow.buildCheckInStatusPatch(tx, tenantId, existing.clinicId, {
+              existingPreferred: existing.preferredRoomLabel ?? existing.roomLabel,
+            })
+          : null;
       const updated = await tx.appointment.update({
         where: { id },
         data: {
@@ -555,9 +572,9 @@ export class AppointmentsService {
                 ? null
                 : new Date(dto.endsAt)
               : undefined,
-          status: dto.status !== undefined ? dto.status : undefined,
           notes: dto.notes !== undefined ? (dto.notes === "" ? null : dto.notes) : undefined,
           ...(feeProvided ? { feeAmount: new Prisma.Decimal(String(Number(dto.feeAmount))) } : {}),
+          ...(checkIn ?? (nextStatus !== undefined ? { status: nextStatus } : {})),
         },
         include: appointmentDtoInclude,
       });

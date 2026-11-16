@@ -27,6 +27,35 @@ export class FrontDeskFlowService {
     return (maxTicket._max.queueTicketNumber ?? 0) + 1;
   }
 
+  /** Ticket + CHECKED_IN + waiting queue (no exam room until start visit). */
+  async buildCheckInStatusPatch(
+    tx: Tx,
+    tenantId: string,
+    clinicId: string,
+    input: { preferredRoomLabel?: string | null; existingPreferred?: string | null },
+  ): Promise<{
+    status: AppointmentStatus;
+    checkedInAt: Date;
+    queueTicketNumber: number;
+    queueStage: AppointmentQueueStage;
+    roomLabel: null;
+    roomAssignedAt: null;
+    preferredRoomLabel: string | null;
+  }> {
+    const ticket = await this.nextQueueTicket(tx, tenantId, clinicId);
+    const now = new Date();
+    const queueFields = this.applyCheckInQueueFields(input);
+    return {
+      status: AppointmentStatus.CHECKED_IN,
+      checkedInAt: now,
+      queueTicketNumber: ticket,
+      queueStage: (queueFields.queueStage ?? AppointmentQueueStage.WAITING) as AppointmentQueueStage,
+      roomLabel: null,
+      roomAssignedAt: null,
+      preferredRoomLabel: (queueFields.preferredRoomLabel as string | null | undefined) ?? null,
+    };
+  }
+
   /** Check-in queue: waiting area, no exam room occupancy yet. */
   applyCheckInQueueFields(input: {
     preferredRoomLabel?: string | null;

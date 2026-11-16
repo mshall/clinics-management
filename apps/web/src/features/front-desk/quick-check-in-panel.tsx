@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import type { AppointmentDto } from "@/lib/api-types";
-import { apiGet, apiPost } from "@/lib/http";
+import { apiGet, apiPost, ApiError } from "@/lib/http";
+import { apiErrorMessage } from "@/lib/api-error-message";
 import {
   emptyVisitCollection,
   validateVisitCollection,
@@ -54,7 +55,7 @@ export function QuickCheckInPanel({ appointment, currency = "AED", examRoomOptio
       void qc.invalidateQueries({ queryKey: ["appointment", appointment.id] });
       void qc.invalidateQueries({ queryKey: ["front-desk"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: unknown) => toast.error(e instanceof ApiError || e instanceof Error ? apiErrorMessage(e) : String(e)),
   });
 
   if (appointment.status === "CHECKED_IN" && appointment.queueTicketNumber) {

@@ -26,7 +26,7 @@ Goal: move appointment → **CHECKED_IN** with arrival time, queue ticket, **`qu
 
 | Field / behaviour | Detail |
 |-------------------|--------|
-| Status | Sets `CHECKED_IN` (existing enum) |
+| Status | Sets `CHECKED_IN`, `checkedInAt`, daily `queueTicketNumber`, and `queueStage = WAITING` (same as **Check in & print ticket** and saving status **Checked in** on the appointment) |
 | `checkedInAt` | Server timestamp at check-in |
 | `queueTicketNumber` | Per clinic, per calendar day, monotonic (starts at 1 each day) |
 | `queueStage` | Set to **`WAITING`**; `roomLabel` cleared (no occupancy until visit starts) |
