@@ -47,6 +47,7 @@ import { ClinicPrescriptionSettingsPanel } from "@/features/prescriptions/clinic
 import { TenantFeatureFlagsPanel } from "./tenant-feature-flags-panel";
 import { ProviderCredentialsPanel } from "./provider-credentials-panel";
 import { OrgEtaIntegrationCard } from "./org-eta-integration-card";
+import { OrgWhatsAppRemindersCard } from "./org-whatsapp-reminders-card";
 
 export function AdminPage() {
   const { t, i18n } = useTranslation();
@@ -234,8 +235,6 @@ export function AdminPage() {
   const [currencyDraft, setCurrencyDraft] = useState<string>(orgBaseCurrency);
   const [trnDraft, setTrnDraft] = useState("N/A");
   const [vatDraft, setVatDraft] = useState("5");
-  const [whatsappEnabled, setWhatsappEnabled] = useState(false);
-  const [reminderHours, setReminderHours] = useState("24");
   useEffect(() => {
     if (!isPlatformSuperAdmin && !isGroupAdmin && adminSection === "data") setAdminSection("clinics");
   }, [isPlatformSuperAdmin, isGroupAdmin, adminSection]);
@@ -255,24 +254,14 @@ export function AdminPage() {
     const v = overview.data?.currentTenant?.defaultInvoiceVatPercent;
     if (v != null && Number.isFinite(Number(v))) setVatDraft(String(v));
   }, [overview.data?.currentTenant?.defaultInvoiceVatPercent]);
-  useEffect(() => {
-    const t = overview.data?.currentTenant as { whatsAppRemindersEnabled?: boolean } | undefined;
-    if (t?.whatsAppRemindersEnabled != null) setWhatsappEnabled(t.whatsAppRemindersEnabled);
-    const h = overview.data?.currentTenant as { appointmentReminderHoursBefore?: number } | undefined;
-    if (h?.appointmentReminderHoursBefore != null) setReminderHours(String(h.appointmentReminderHoursBefore));
-  }, [overview.data?.currentTenant]);
-
   const patchOrgSettingsMut = useMutation({
     mutationFn: () => {
       const vatN = Number.parseFloat(vatDraft);
-      const hours = Number.parseInt(reminderHours, 10);
       return apiPatch("/api/v1/admin/tenant-settings", {
         defaultVisitFee: Number.parseFloat(feeDraft),
         baseCurrency: currencyDraft,
         defaultTaxRegistrationNumber: trnDraft.trim() || "N/A",
         defaultInvoiceVatPercent: Number.isFinite(vatN) ? vatN : 5,
-        whatsAppRemindersEnabled: whatsappEnabled,
-        appointmentReminderHoursBefore: Number.isFinite(hours) ? hours : 24,
       });
     },
     onSuccess: async () => {
@@ -510,17 +499,6 @@ export function AdminPage() {
                     </p>
                   </div>
                 </div>
-                <div className="w-full space-y-2 border-t border-border pt-4">
-                  <p className="text-sm font-medium">{t("admin.whatsappReminders", "WhatsApp appointment reminders")}</p>
-                  <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={whatsappEnabled} onChange={(e) => setWhatsappEnabled(e.target.checked)} />
-                    {t("admin.whatsappRemindersEnabled", "Send async WhatsApp reminders for confirmed appointments")}
-                  </label>
-                  <div className="space-y-2 max-w-xs">
-                    <Label htmlFor="reminder-hours">{t("admin.reminderHoursBefore", "Hours before appointment")}</Label>
-                    <Input id="reminder-hours" className="ltr-nums w-28" type="number" min={1} max={168} value={reminderHours} onChange={(e) => setReminderHours(e.target.value)} />
-                  </div>
-                </div>
                 <Button
                   type="button"
                   disabled={
@@ -537,6 +515,8 @@ export function AdminPage() {
               </CardContent>
             </Card>
           ) : null}
+
+          {isGroupAdmin ? <OrgWhatsAppRemindersCard /> : null}
 
           {isGroupAdmin ? <TenantPaymentChannelsPanel /> : null}
 
