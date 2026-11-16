@@ -71,7 +71,7 @@ import {
 import { useAuthStore } from "@/stores/auth-store";
 import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel";
 import { OrgInsightsPanel } from "@/features/admin/org-insights-panel";
-import { canViewOrgInsights } from "@/lib/org-insights-access";
+import { canViewHrInsightsTab } from "@/lib/org-insights-access";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import {
   collectAttendanceCreateIssues,
@@ -748,7 +748,7 @@ export function HrPage() {
     setLeavePage(1);
   };
 
-  const showInsightsTab = canViewOrgInsights(authUser?.role);
+  const showInsightsTab = canViewHrInsightsTab(authUser?.role, authUser?.employeePrivilegeGrants);
   const tabs: { id: Tab; label: string }[] = [
     { id: "summary", label: t("hr.tabSummary") },
     { id: "employees", label: t("hr.employees") },
