@@ -41,6 +41,7 @@ import {
 import type { OperationDetailDto, OperationDocumentDto, OperationDto } from "@/lib/api-types";
 import { ApiError, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { canAdminEditCompletedOperation } from "@/lib/operation-admin-policy";
+import { canCreateOperation, canViewOperationMoney } from "@/lib/operation-money-policy";
 import { canGenerateInvoice } from "@/lib/invoice-generate-policy";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
 import { formatClinicianDisplayName } from "@/lib/employee-display";
@@ -61,15 +62,6 @@ import { DatetimeLocalField } from "@/components/datetime-local-field";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { OperationsSummaryBreakdown } from "@/features/operations/operations-summary-cards";
 import { OperationsPeriodStats } from "@/features/operations/operations-period-stats";
-
-const CREATE_ROLES = new Set([
-  "group_admin",
-  "group_supervisor",
-  "branch_manager",
-  "clinic_admin",
-  "clinic_assistant",
-  "receptionist",
-]);
 
 function toOperationIso(localDatetime: string): string {
   const d = new Date(localDatetime);
@@ -107,7 +99,8 @@ export function OperationsPage() {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
-  const canCreate = authUser?.role ? CREATE_ROLES.has(authUser.role) : false;
+  const canCreate = canCreateOperation(authUser?.role);
+  const showMoney = canViewOperationMoney(authUser?.role);
   const canAdminEditCompleted = canAdminEditCompletedOperation(authUser?.role);
   const canInvoice = canGenerateInvoice(authUser?.role);
   const isPhysician = authUser?.role === "physician";
@@ -498,8 +491,8 @@ export function OperationsPage() {
         const ds = new Date(o.operationDate).toLocaleString(loc);
         if (!columnFilterIncludes(ds, efDate) && !columnFilterIncludes(o.operationDate, efDate)) return false;
       }
-      if (efTotal.trim() && !columnFilterIncludes(String(o.totalCost), efTotal)) return false;
-      if (efDown.trim() && !columnFilterIncludes(String(o.downPayment), efDown)) return false;
+      if (showMoney && efTotal.trim() && !columnFilterIncludes(String(o.totalCost), efTotal)) return false;
+      if (showMoney && efDown.trim() && !columnFilterIncludes(String(o.downPayment), efDown)) return false;
       if (efStatus.trim() && !columnFilterIncludes(o.status, efStatus)) return false;
       return true;
     });
@@ -522,6 +515,7 @@ export function OperationsPage() {
           operationDate: editOperationDate,
           totalCost: editTotalCost,
           downPayment: editDownPayment,
+          feesOptional: !showMoney,
           docRows: editDocRows,
           medTab: editMedTab,
           prescriptionFile: editPrescriptionFile,
@@ -535,7 +529,10 @@ export function OperationsPage() {
     if (!editPatientId.trim()) issues.push(t("operations.validationPatient", "Select a patient."));
     if (!editClinicianId.trim()) issues.push(t("operations.validationDoctor", "Select a performing doctor."));
     if (!editOperationDate.trim()) issues.push(t("operations.validationDate", "Enter the operation date."));
-    if (!editTotalCost.trim() || Number.isNaN(Number.parseFloat(editTotalCost))) {
+    if (
+      showMoney &&
+      (!editTotalCost.trim() || Number.isNaN(Number.parseFloat(editTotalCost)))
+    ) {
       issues.push(t("operations.validationTotalCost", "Enter a valid total cost."));
     }
     return { issues, invalidDocRowIds: new Set<string>() };
@@ -547,11 +544,15 @@ export function OperationsPage() {
       patientId: editPatientId,
       clinicianId: editClinicianId,
       operationDate: toOperationIso(editOperationDate),
-      totalCost: Number.parseFloat(editTotalCost),
-      downPayment: editDownPayment.trim() ? Number.parseFloat(editDownPayment) : 0,
+      ...(showMoney
+        ? {
+            totalCost: Number.parseFloat(editTotalCost),
+            downPayment: editDownPayment.trim() ? Number.parseFloat(editDownPayment) : 0,
+            feeCurrency: editFeeCurrency,
+          }
+        : {}),
       comments: editComments.trim() || undefined,
       clinicId: editClinicId || undefined,
-      feeCurrency: editFeeCurrency,
       ...(editIsScheduled ? { noMedications: editMedTab === "none" } : {}),
     });
 
@@ -607,10 +608,11 @@ export function OperationsPage() {
     : 0;
   const completeCollectionN = Number.parseFloat(completeCollectionAmount || "0");
   const completeCollectionValid =
-    completeBalance <= 0.001 ||
-    (Number.isFinite(completeCollectionN) &&
-      completeCollectionN > 0 &&
-      Math.abs(completeCollectionN - completeBalance) < 0.001);
+    showMoney &&
+    (completeBalance <= 0.001 ||
+      (Number.isFinite(completeCollectionN) &&
+        completeCollectionN > 0 &&
+        Math.abs(completeCollectionN - completeBalance) < 0.001));
 
   const statusMut = useMutation({
     mutationFn: ({
@@ -729,12 +731,14 @@ export function OperationsPage() {
           {new Date(o.operationDate).toLocaleString(localeForLanguage(i18n.language))}
         </dd>
       </div>
-      <div>
-        <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {t("operations.totalCost", "Total cost ({{currency}})", { currency })}
-        </dt>
-        <dd className="ltr-nums font-medium">{money(o.totalCost, currency)}</dd>
-      </div>
+      {showMoney ? (
+        <div>
+          <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {t("operations.totalCost", "Total cost ({{currency}})", { currency })}
+          </dt>
+          <dd className="ltr-nums font-medium">{money(o.totalCost, currency)}</dd>
+        </div>
+      ) : null}
     </dl>
   );
 
@@ -749,8 +753,8 @@ export function OperationsPage() {
         patientId,
         clinicianId,
         operationDate: toOperationIso(operationDate),
-        totalCost: Number.parseFloat(totalCost),
-        downPayment: downPayment.trim() ? Number.parseFloat(downPayment) : 0,
+        totalCost: showMoney && totalCost.trim() ? Number.parseFloat(totalCost) : 0,
+        downPayment: showMoney && downPayment.trim() ? Number.parseFloat(downPayment) : 0,
         comments: comments.trim() || undefined,
         clinicId: schedulingClinicId || undefined,
         noMedications: medTab === "none",
@@ -816,6 +820,7 @@ export function OperationsPage() {
         medTab,
         prescriptionFile,
         generatedPrescriptionFile,
+        feesOptional: !showMoney,
       },
       t,
     );
@@ -829,6 +834,8 @@ export function OperationsPage() {
   };
 
   const loc = localeForLanguage(i18n.language);
+  const tableMoneyColSpan = showMoney ? 4 : 0;
+  const tableColSpan = 6 + tableMoneyColSpan + 3;
   const tableHeaderCurrency = resolveClinicCurrency(
     filterClinicId || singleManagedClinic?.id || undefined,
   );
@@ -860,10 +867,15 @@ export function OperationsPage() {
               </DialogTitle>
             </DialogHeader>
             <p className="text-sm text-muted-foreground">
-              {t(
-                "operations.confirmCompleteBody",
-                "Collect any remaining balance below. The full operation cost is posted to revenue only when you mark it complete."
-              )}
+              {showMoney
+                ? t(
+                    "operations.confirmCompleteBody",
+                    "Collect any remaining balance below. The full operation cost is posted to revenue only when you mark it complete.",
+                  )
+                : t(
+                    "operations.confirmCompleteBodyNoFees",
+                    "Clinic staff must record the full fee and payments before discharge.",
+                  )}
             </p>
             {completeConfirmOp ? (
               <div className="space-y-3 text-sm">
@@ -875,57 +887,61 @@ export function OperationsPage() {
                     registryLabel: patientLabel.get(completeConfirmOp.patientId),
                   }).text}
                 </p>
-                <div className="grid gap-1 rounded-md border border-border bg-muted/30 p-3 text-muted-foreground">
-                  <p>
-                    {t("operations.totalCost", "Total cost ({{currency}})", { currency: completeCurrency })}:{" "}
-                    <span className="font-medium text-foreground">{money(completeConfirmOp.totalCost, completeCurrency)}</span>
-                  </p>
-                  <p>
-                    {t("operations.downPayment", "Down payment ({{currency}})", { currency: completeCurrency })}:{" "}
-                    <span className="font-medium text-foreground">{money(completeConfirmOp.downPayment, completeCurrency)}</span>
-                  </p>
-                  <p>
-                    {t("operations.paidAmount", "Paid ({{currency}})", { currency: completeCurrency })}:{" "}
-                    <span className="font-medium text-foreground">{money(completeConfirmOp.paidAmount ?? 0, completeCurrency)}</span>
-                  </p>
-                  <p className="font-medium text-foreground">
-                    {t("operations.confirmCompleteRemaining", "Remaining to collect")}: {money(completeBalance, completeCurrency)}
-                  </p>
-                </div>
-                {completeBalance > 0.001 ? (
-                  <div className="space-y-1">
-                    <Label htmlFor="complete-collection" required>
-                      {t("operations.collectRemaining", "Amount collected now ({{currency}})", {
-                        currency: completeCurrency,
-                      })}
-                    </Label>
-                    <Input
-                      id="complete-collection"
-                      className="ltr-nums"
-                      type="text"
-                      inputMode="decimal"
-                      autoComplete="off"
-                      value={completeCollectionAmount}
-                      onChange={(e) => {
-                        setCompleteCollectionAmount(e.target.value);
-                        setCompleteFormErr(null);
-                      }}
-                      placeholder={money(completeBalance, completeCurrency)}
-                    />
-                    {!completeCollectionValid && completeCollectionAmount.trim() ? (
-                      <p className="text-xs text-destructive">
-                        {t("operations.collectRemainingHint", "Enter the full remaining amount to continue.")}
+                {showMoney ? (
+                  <>
+                    <div className="grid gap-1 rounded-md border border-border bg-muted/30 p-3 text-muted-foreground">
+                      <p>
+                        {t("operations.totalCost", "Total cost ({{currency}})", { currency: completeCurrency })}:{" "}
+                        <span className="font-medium text-foreground">{money(completeConfirmOp.totalCost, completeCurrency)}</span>
                       </p>
+                      <p>
+                        {t("operations.downPayment", "Down payment ({{currency}})", { currency: completeCurrency })}:{" "}
+                        <span className="font-medium text-foreground">{money(completeConfirmOp.downPayment, completeCurrency)}</span>
+                      </p>
+                      <p>
+                        {t("operations.paidAmount", "Paid ({{currency}})", { currency: completeCurrency })}:{" "}
+                        <span className="font-medium text-foreground">{money(completeConfirmOp.paidAmount ?? 0, completeCurrency)}</span>
+                      </p>
+                      <p className="font-medium text-foreground">
+                        {t("operations.confirmCompleteRemaining", "Remaining to collect")}: {money(completeBalance, completeCurrency)}
+                      </p>
+                    </div>
+                    {completeBalance > 0.001 ? (
+                      <div className="space-y-1">
+                        <Label htmlFor="complete-collection" required>
+                          {t("operations.collectRemaining", "Amount collected now ({{currency}})", {
+                            currency: completeCurrency,
+                          })}
+                        </Label>
+                        <Input
+                          id="complete-collection"
+                          className="ltr-nums"
+                          type="text"
+                          inputMode="decimal"
+                          autoComplete="off"
+                          value={completeCollectionAmount}
+                          onChange={(e) => {
+                            setCompleteCollectionAmount(e.target.value);
+                            setCompleteFormErr(null);
+                          }}
+                          placeholder={money(completeBalance, completeCurrency)}
+                        />
+                        {!completeCollectionValid && completeCollectionAmount.trim() ? (
+                          <p className="text-xs text-destructive">
+                            {t("operations.collectRemainingHint", "Enter the full remaining amount to continue.")}
+                          </p>
+                        ) : null}
+                      </div>
                     ) : null}
-                  </div>
+                    <p className="text-xs text-muted-foreground">
+                      {t(
+                        "operations.confirmCompleteRevenueNote",
+                        "On completion, {{amount}} will be added to clinic revenue ({{currency}}).",
+                        { amount: money(completeConfirmOp.totalCost, completeCurrency), currency: completeCurrency },
+                      )}
+                    </p>
+                  </>
                 ) : null}
-                <p className="text-xs text-muted-foreground">
-                  {t(
-                    "operations.confirmCompleteRevenueNote",
-                    "On completion, {{amount}} will be added to clinic revenue ({{currency}}).",
-                    { amount: money(completeConfirmOp.totalCost, completeCurrency), currency: completeCurrency }
-                  )}
-                </p>
               </div>
             ) : null}
             {completeFormErr ? <p className="text-sm text-destructive">{completeFormErr}</p> : null}
@@ -1114,26 +1130,33 @@ export function OperationsPage() {
                           <dt className="text-xs text-muted-foreground">{t("operations.doctor", "Performing doctor")}</dt>
                           <dd className="font-medium">{formatClinicianDisplayName(editOp, i18n.language)}</dd>
                         </div>
-                        <div>
-                          <dt className="text-xs text-muted-foreground">
-                            {t("operations.totalCost", "Total cost ({{currency}})", {
-                              currency: editOp.feeCurrency ?? editFeeCurrency,
-                            })}
-                          </dt>
-                          <dd className="font-medium ltr-nums">
-                            {money(editOp.totalCost, editOp.feeCurrency ?? editFeeCurrency)}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-xs text-muted-foreground">
-                            {t("operations.balanceDue", "Balance ({{currency}})", {
-                              currency: editOp.feeCurrency ?? editFeeCurrency,
-                            })}
-                          </dt>
-                          <dd className="font-medium ltr-nums">
-                            {money(editOp.balanceDue ?? editOp.totalCost - (editOp.paidAmount ?? 0), editOp.feeCurrency ?? editFeeCurrency)}
-                          </dd>
-                        </div>
+                        {showMoney ? (
+                          <>
+                            <div>
+                              <dt className="text-xs text-muted-foreground">
+                                {t("operations.totalCost", "Total cost ({{currency}})", {
+                                  currency: editOp.feeCurrency ?? editFeeCurrency,
+                                })}
+                              </dt>
+                              <dd className="font-medium ltr-nums">
+                                {money(editOp.totalCost, editOp.feeCurrency ?? editFeeCurrency)}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-xs text-muted-foreground">
+                                {t("operations.balanceDue", "Balance ({{currency}})", {
+                                  currency: editOp.feeCurrency ?? editFeeCurrency,
+                                })}
+                              </dt>
+                              <dd className="font-medium ltr-nums">
+                                {money(
+                                  editOp.balanceDue ?? editOp.totalCost - (editOp.paidAmount ?? 0),
+                                  editOp.feeCurrency ?? editFeeCurrency,
+                                )}
+                              </dd>
+                            </div>
+                          </>
+                        ) : null}
                         {editOp.comments?.trim() ? (
                           <div className="sm:col-span-2">
                             <dt className="text-xs text-muted-foreground">{t("operations.comments", "Comments")}</dt>
@@ -1241,6 +1264,7 @@ export function OperationsPage() {
 
                 <fieldset className="space-y-3 rounded-lg border border-border p-3 sm:p-4">
                   <legend className="px-1 text-sm font-medium">{t("operations.sectionPayment", "Cost & payment")}</legend>
+                  {showMoney ? (
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-1">
                       <Label htmlFor="edit-op-total" required>
@@ -1273,28 +1297,40 @@ export function OperationsPage() {
                       />
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="edit-op-fee-currency">{t("operations.paymentCurrency", "Payment currency")}</Label>
-                    <BaseCurrencySelect
-                      id="edit-op-fee-currency"
-                      value={editFeeCurrency}
-                      onChange={setEditFeeCurrency}
-                    />
-                    <p className="text-xs text-muted-foreground">
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
                       {t(
-                        "operations.paymentCurrencyHint",
-                        "Defaults to the clinic currency ({{currency}}). Choose another if the patient paid in a different currency.",
-                        { currency: editClinicDefaultCurrency },
+                        "operations.feesAddedLater",
+                        "Fees can be added later by clinic staff. You can book the procedure now without payment amounts.",
                       )}
                     </p>
-                  </div>
-                  {(editOp.paidAmount ?? 0) > 0 ? (
-                    <p className="text-xs text-muted-foreground">
-                      {t("operations.paidAmount", "Paid ({{currency}})", { currency: editFeeCurrency })}:{" "}
-                      {money(editOp.paidAmount ?? 0, editFeeCurrency)} ·{" "}
-                      {t("operations.balanceDue", "Balance ({{currency}})", { currency: editFeeCurrency })}:{" "}
-                      {money(editOp.balanceDue ?? 0, editFeeCurrency)}
-                    </p>
+                  )}
+                  {showMoney ? (
+                    <>
+                      <div className="space-y-1">
+                        <Label htmlFor="edit-op-fee-currency">{t("operations.paymentCurrency", "Payment currency")}</Label>
+                        <BaseCurrencySelect
+                          id="edit-op-fee-currency"
+                          value={editFeeCurrency}
+                          onChange={setEditFeeCurrency}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {t(
+                            "operations.paymentCurrencyHint",
+                            "Defaults to the clinic currency ({{currency}}). Choose another if the patient paid in a different currency.",
+                            { currency: editClinicDefaultCurrency },
+                          )}
+                        </p>
+                      </div>
+                      {(editOp.paidAmount ?? 0) > 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          {t("operations.paidAmount", "Paid ({{currency}})", { currency: editFeeCurrency })}:{" "}
+                          {money(editOp.paidAmount ?? 0, editFeeCurrency)} ·{" "}
+                          {t("operations.balanceDue", "Balance ({{currency}})", { currency: editFeeCurrency })}:{" "}
+                          {money(editOp.balanceDue ?? 0, editFeeCurrency)}
+                        </p>
+                      ) : null}
+                    </>
                   ) : null}
                 </fieldset>
 
@@ -1477,10 +1513,18 @@ export function OperationsPage() {
               </div>
             ) : null}
           </div>
-          <OperationsPeriodStats summary={opSummary.data} loading={opSummary.isPending} language={i18n.language} />
-          <div className="flex justify-end border-t border-border pt-3">
-            <OperationsSummaryBreakdown summary={opSummary.data} loading={opSummary.isPending} language={i18n.language} />
-          </div>
+          {showMoney ? (
+            <>
+              <OperationsPeriodStats summary={opSummary.data} loading={opSummary.isPending} language={i18n.language} />
+              <div className="flex justify-end border-t border-border pt-3">
+                <OperationsSummaryBreakdown summary={opSummary.data} loading={opSummary.isPending} language={i18n.language} />
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {t("operations.revenueHiddenForRole", "Revenue totals are hidden for your role.")}
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -1587,6 +1631,7 @@ export function OperationsPage() {
 
               <fieldset className="space-y-3 rounded-lg border border-border p-4">
                 <legend className="px-1 text-sm font-medium">{t("operations.sectionPayment", "Cost & payment")}</legend>
+                {showMoney ? (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-1">
                     <Label htmlFor="op-total" required>
@@ -1619,6 +1664,15 @@ export function OperationsPage() {
                     />
                   </div>
                 </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    {t(
+                      "operations.feesAddedLater",
+                      "Fees can be added later by clinic staff. You can book the procedure now without payment amounts.",
+                    )}
+                  </p>
+                )}
+                {showMoney ? (
                 <div className="space-y-1">
                   <Label htmlFor="op-fee-currency">{t("operations.paymentCurrency", "Payment currency")}</Label>
                   <BaseCurrencySelect id="op-fee-currency" value={feeCurrency} onChange={setFeeCurrency} />
@@ -1630,6 +1684,7 @@ export function OperationsPage() {
                     )}
                   </p>
                 </div>
+                ) : null}
               </fieldset>
 
               <fieldset className="space-y-3 rounded-lg border border-border p-4">
@@ -1747,9 +1802,11 @@ export function OperationsPage() {
                         </div>
                         <p className="mt-2 truncate text-sm">{patientResolved.text}</p>
                         <p className="truncate text-xs text-muted-foreground">{formatClinicianDisplayName(o, i18n.language)}</p>
-                        <p className="mt-2 text-sm font-medium ltr-nums">
-                          {money(o.totalCost, operationCurrency(o))}
-                        </p>
+                        {showMoney ? (
+                          <p className="mt-2 text-sm font-medium ltr-nums">
+                            {money(o.totalCost, operationCurrency(o))}
+                          </p>
+                        ) : null}
                         {rowOpenable && canInvoice ? (
                           <div className="mt-3 flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
                             <Button type="button" size="sm" variant="secondary" className="flex-1" onClick={() => openEdit(o)}>
@@ -1795,30 +1852,34 @@ export function OperationsPage() {
                       value={efDoctor}
                       onChange={setEfDoctor}
                     />
-                    <SortableTh
-                      label={t("operations.totalCost", "Total cost ({{currency}})", { currency: tableHeaderCurrency })}
-                      column="totalCost"
-                      sortBy={sortBy}
-                      sortOrder={sortOrder}
-                      onSort={onSort}
-                      filterValue={efTotal}
-                      onFilterChange={setEfTotal}
-                    />
-                    <SortableTh
-                      label={t("operations.downPayment", "Down payment ({{currency}})", { currency: tableHeaderCurrency })}
-                      column="downPayment"
-                      sortBy={sortBy}
-                      sortOrder={sortOrder}
-                      onSort={onSort}
-                      filterValue={efDown}
-                      onFilterChange={setEfDown}
-                    />
-                    <th className="px-3 py-2 text-start font-medium">
-                      {t("operations.paidAmount", "Paid ({{currency}})", { currency: tableHeaderCurrency })}
-                    </th>
-                    <th className="px-3 py-2 text-start font-medium">
-                      {t("operations.balanceDue", "Balance ({{currency}})", { currency: tableHeaderCurrency })}
-                    </th>
+                    {showMoney ? (
+                      <>
+                        <SortableTh
+                          label={t("operations.totalCost", "Total cost ({{currency}})", { currency: tableHeaderCurrency })}
+                          column="totalCost"
+                          sortBy={sortBy}
+                          sortOrder={sortOrder}
+                          onSort={onSort}
+                          filterValue={efTotal}
+                          onFilterChange={setEfTotal}
+                        />
+                        <SortableTh
+                          label={t("operations.downPayment", "Down payment ({{currency}})", { currency: tableHeaderCurrency })}
+                          column="downPayment"
+                          sortBy={sortBy}
+                          sortOrder={sortOrder}
+                          onSort={onSort}
+                          filterValue={efDown}
+                          onFilterChange={setEfDown}
+                        />
+                        <th className="px-3 py-2 text-start font-medium">
+                          {t("operations.paidAmount", "Paid ({{currency}})", { currency: tableHeaderCurrency })}
+                        </th>
+                        <th className="px-3 py-2 text-start font-medium">
+                          {t("operations.balanceDue", "Balance ({{currency}})", { currency: tableHeaderCurrency })}
+                        </th>
+                      </>
+                    ) : null}
                     <SortableTh
                       label={t("operations.status", "Status")}
                       column="status"
@@ -1835,7 +1896,7 @@ export function OperationsPage() {
                 <tbody>
                   {filteredRows.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="px-3 py-8 text-center text-muted-foreground">
+                      <td colSpan={tableColSpan} className="px-3 py-8 text-center text-muted-foreground">
                         {t("operations.empty", "No operations in this period.")}
                       </td>
                     </tr>
@@ -1882,14 +1943,20 @@ export function OperationsPage() {
                             )}
                           </td>
                           <td className="px-3 py-2 align-top">{formatClinicianDisplayName(o, i18n.language)}</td>
-                          <td className="px-3 py-2 align-top ltr-nums">
-                            {money(o.totalCost, operationCurrency(o))}
-                          </td>
-                          <td className="px-3 py-2 align-top ltr-nums">
-                            {money(o.downPayment, operationCurrency(o))}
-                          </td>
-                          <td className="px-3 py-2 align-top">{money(o.paidAmount ?? 0, operationCurrency(o))}</td>
-                          <td className="px-3 py-2 align-top">{money(o.balanceDue ?? o.totalCost - (o.paidAmount ?? 0), operationCurrency(o))}</td>
+                          {showMoney ? (
+                            <>
+                              <td className="px-3 py-2 align-top ltr-nums">
+                                {money(o.totalCost, operationCurrency(o))}
+                              </td>
+                              <td className="px-3 py-2 align-top ltr-nums">
+                                {money(o.downPayment, operationCurrency(o))}
+                              </td>
+                              <td className="px-3 py-2 align-top">{money(o.paidAmount ?? 0, operationCurrency(o))}</td>
+                              <td className="px-3 py-2 align-top">
+                                {money(o.balanceDue ?? o.totalCost - (o.paidAmount ?? 0), operationCurrency(o))}
+                              </td>
+                            </>
+                          ) : null}
                           <td className="px-3 py-2 align-top">
                             <OperationStatusBadge status={o.status ?? "SCHEDULED"} />
                           </td>
@@ -1919,15 +1986,17 @@ export function OperationsPage() {
                                     {t("invoices.generateShort", "Invoice")}
                                   </Button>
                                 ) : null}
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  disabled={statusMut.isPending}
-                                  onClick={() => setCompletePromptOp(o)}
-                                >
-                                  {t("operations.markCompleted", "Mark completed")}
-                                </Button>
+                                {showMoney ? (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={statusMut.isPending}
+                                    onClick={() => setCompletePromptOp(o)}
+                                  >
+                                    {t("operations.markCompleted", "Mark completed")}
+                                  </Button>
+                                ) : null}
                                 <Button
                                   type="button"
                                   size="sm"

@@ -53,6 +53,7 @@ const OPERATIONS_VIEW_ROLES: Set<UserRole> = new Set([
   UserRole.BRANCH_MANAGER,
   UserRole.CLINIC_ASSISTANT,
   UserRole.RECEPTIONIST,
+  UserRole.CALL_CENTER,
   UserRole.PHYSICIAN,
 ]);
 
@@ -63,6 +64,7 @@ const OPERATIONS_CREATE_ROLES: Set<UserRole> = new Set([
   UserRole.BRANCH_MANAGER,
   UserRole.CLINIC_ASSISTANT,
   UserRole.RECEPTIONIST,
+  UserRole.CALL_CENTER,
 ]);
 
 const OPERATIONS_STATUS_ROLES: Set<UserRole> = new Set([

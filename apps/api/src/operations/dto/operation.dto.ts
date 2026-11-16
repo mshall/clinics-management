@@ -66,4 +66,9 @@ export class OperationDto {
 
   @ApiProperty()
   createdAt!: string;
+
+  @ApiPropertyOptional({
+    description: "When false, fee amounts are withheld for this viewer (e.g. call center)",
+  })
+  financialsVisible?: boolean;
 }

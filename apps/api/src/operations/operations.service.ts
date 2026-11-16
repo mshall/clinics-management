@@ -22,6 +22,8 @@ import { postRevenueWithFiscal } from "../compliance/post-revenue-with-fiscal";
 import { assertOperationRevenuesFiscalMutable } from "../compliance/revenue-fiscal-guard";
 import { syncPostedOperationContractRevenue } from "../compliance/operation-revenue-ledger";
 import { voidPostedRevenuesWithFiscalReturns } from "../compliance/void-revenue-fiscal-returns";
+import { isCallCenterRole, operationFinancialsVisible } from "./operation-money-access";
+import { assertDownPaymentBeforeInProgress } from "./operation-status-money";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { AddOperationMedicationDto, OperationDocumentDto, OperationMedicationDto } from "./dto/operation-clinical.dto";
 import type { CreateOperationDto } from "./dto/create-operation.dto";
@@ -189,9 +191,14 @@ export class OperationsService {
     return resolveClinicCurrency(this.prisma, tenantId, clinicId);
   }
 
-  private mapRow(row: OperationRow): OperationDto {
+  private mapRow(row: OperationRow, viewer?: JwtUser): OperationDto {
     const patient = row.patient;
     const clinicianParts = this.clinicianNameParts(row.clinician ?? null);
+    const financialsVisible = operationFinancialsVisible(viewer?.role);
+    const totalCost = Number(row.totalCost);
+    const downPayment = Number(row.downPayment);
+    const paidAmount = Number(row.paidAmount);
+    const balanceDue = Math.max(0, totalCost - paidAmount);
     return {
       id: row.id,
       clinicId: row.clinicId,
@@ -207,14 +214,15 @@ export class OperationsService {
       clinicianFirstNameAr: clinicianParts.firstNameAr,
       clinicianLastNameAr: clinicianParts.lastNameAr,
       operationDate: row.operationDate.toISOString(),
-      totalCost: Number(row.totalCost),
-      downPayment: Number(row.downPayment),
-      paidAmount: Number(row.paidAmount),
-      balanceDue: Math.max(0, Number(row.totalCost) - Number(row.paidAmount)),
+      totalCost: financialsVisible ? totalCost : 0,
+      downPayment: financialsVisible ? downPayment : 0,
+      paidAmount: financialsVisible ? paidAmount : 0,
+      balanceDue: financialsVisible ? balanceDue : 0,
       feeCurrency: row.feeCurrency,
       comments: row.comments,
       status: row.status,
       createdAt: row.createdAt.toISOString(),
+      financialsVisible,
     };
   }
 
@@ -251,9 +259,10 @@ export class OperationsService {
         createdAt: Date;
       }>;
     },
+    viewer: JwtUser,
   ): OperationDetailDto {
     return {
-      ...this.mapRow(row),
+      ...this.mapRow(row, viewer),
       noMedications: row.noMedications,
       medications: row.medications.map((m) => this.mapMed(m)),
       documents: row.documents.map((d) => this.mapDoc(d)),
@@ -271,7 +280,7 @@ export class OperationsService {
     });
     if (!row) throw new NotFoundException("Operation not found");
     await this.assertOperationAccess(viewer, row);
-    return this.mapDetailRow(row);
+    return this.mapDetailRow(row, viewer);
   }
 
   async resetClinical(
@@ -360,7 +369,7 @@ export class OperationsService {
         take: pageSize,
       }),
     ]);
-    return paginate(rows.map((r) => this.mapRow(r)), total, page, pageSize);
+    return paginate(rows.map((r) => this.mapRow(r, user)), total, page, pageSize);
   }
 
   async summary(tenantId: string, user: JwtUser, fromStr?: string, toStr?: string, clinicIdStr?: string) {
@@ -473,6 +482,7 @@ export class OperationsService {
       })
       .sort((a, b) => b.operationCount - a.operationCount);
 
+    const hideMoney = !operationFinancialsVisible(user.role);
     const operations = rows.map((r) => ({
       id: r.id,
       operationDate: r.operationDate.toISOString(),
@@ -480,17 +490,30 @@ export class OperationsService {
       clinicNameEn: r.clinic.nameEn,
       clinicNameAr: r.clinic.nameAr,
       patientLabel: `${r.patient.mrn} — ${r.patient.firstNameEn} ${r.patient.lastNameEn}`.trim(),
-      paidAmount: Number(r.paidAmount),
-      totalCost: Number(r.totalCost),
+      paidAmount: hideMoney ? 0 : Number(r.paidAmount),
+      totalCost: hideMoney ? 0 : Number(r.totalCost),
       feeCurrency: r.feeCurrency,
     }));
+
+    if (hideMoney) {
+      return {
+        totalOperations,
+        revenueByCurrency: [],
+        byClinic: byClinic.map((c) => ({ ...c, paidTotal: 0, contractTotal: 0 })),
+        operations,
+      };
+    }
 
     return { totalOperations, revenueByCurrency, byClinic, operations };
   }
 
   async create(tenantId: string, dto: CreateOperationDto, user: JwtUser): Promise<OperationDto> {
+    if (isCallCenterRole(user.role)) {
+      dto = { ...dto, totalCost: 0, downPayment: 0 };
+    }
+    const totalCost = dto.totalCost ?? 0;
     const downPayment = dto.downPayment ?? 0;
-    if (downPayment > dto.totalCost) {
+    if (downPayment > totalCost) {
       throw new BadRequestException("Down payment cannot exceed total cost");
     }
 
@@ -544,7 +567,7 @@ export class OperationsService {
           clinicianId: dto.clinicianId,
           createdByUserId: user.userId,
           operationDate,
-          totalCost: dto.totalCost,
+          totalCost,
           downPayment,
           paidAmount: downPayment,
           feeCurrency,
@@ -573,7 +596,7 @@ export class OperationsService {
       }
       return op;
     });
-    return this.mapRow(row);
+    return this.mapRow(row, user);
   }
 
   async listPayable(tenantId: string, user: JwtUser, clinicIdStr?: string): Promise<OperationDto[]> {
@@ -610,7 +633,7 @@ export class OperationsService {
 
     return rows
       .filter((r) => Number(r.paidAmount) + 0.001 < Number(r.totalCost))
-      .map((r) => this.mapRow(r));
+      .map((r) => this.mapRow(r, user));
   }
 
   private operationRevenueDescription(patientName: string, clinicianName: string): string {
@@ -649,6 +672,13 @@ export class OperationsService {
     });
     if (!existing) throw new NotFoundException("Operation not found");
     await this.assertOperationAccess(viewer, existing);
+
+    if (
+      isCallCenterRole(viewer.role) &&
+      (dto.totalCost !== undefined || dto.downPayment !== undefined || dto.feeCurrency !== undefined)
+    ) {
+      throw new ForbiddenException("Call center cannot edit operation fees");
+    }
 
     if (existing.status === OperationStatus.CANCELLED) {
       throw new BadRequestException("Cancelled operations cannot be edited");
@@ -728,7 +758,7 @@ export class OperationsService {
       }
       return op;
     });
-    return this.mapRow(row);
+    return this.mapRow(row, viewer);
   }
 
   private async resolveOperationUpdateFields(
@@ -842,7 +872,7 @@ export class OperationsService {
         include: operationInclude,
       });
     });
-    return this.mapRow(row);
+    return this.mapRow(row, viewer);
   }
 
   async updateStatus(
@@ -860,10 +890,11 @@ export class OperationsService {
     await this.assertOperationAccess(viewer, existing);
 
     if (existing.status === status) {
-      return this.mapRow(existing);
+      return this.mapRow(existing, viewer);
     }
 
     assertOperationStatusTransition(existing.status, status);
+    assertDownPaymentBeforeInProgress(existing, status);
 
     const completesRevenue =
       status === OperationStatus.COMPLETED ||
@@ -924,7 +955,7 @@ export class OperationsService {
           include: operationInclude,
         });
       });
-      return this.mapRow(row);
+      return this.mapRow(row, viewer);
     }
 
     if (status === OperationStatus.CANCELLED) {
@@ -936,7 +967,7 @@ export class OperationsService {
           include: operationInclude,
         });
       });
-      return this.mapRow(row);
+      return this.mapRow(row, viewer);
     }
 
   const row = await this.prisma.operation.update({
@@ -944,7 +975,7 @@ export class OperationsService {
       data: { status },
       include: operationInclude,
     });
-    return this.mapRow(row);
+    return this.mapRow(row, viewer);
   }
 
   async addMedication(
@@ -1085,8 +1116,9 @@ export class OperationsService {
       if (existing) return this.mapRow(existing);
     }
 
+    const totalCost = dto.totalCost ?? 0;
     const downPayment = dto.downPayment ?? 0;
-    if (downPayment > dto.totalCost) {
+    if (downPayment > totalCost) {
       throw new BadRequestException("Down payment cannot exceed total cost");
     }
 
@@ -1122,7 +1154,7 @@ export class OperationsService {
           clinicianId: dto.clinicianId,
           createdByUserId: null,
           operationDate,
-          totalCost: dto.totalCost,
+          totalCost,
           downPayment,
           paidAmount: downPayment,
           feeCurrency,

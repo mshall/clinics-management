@@ -234,6 +234,7 @@ export interface OperationDto {
   comments: string | null;
   status: string;
   createdAt: string;
+  financialsVisible?: boolean;
 }
 
 export interface OperationMedicationDto {

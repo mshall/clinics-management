@@ -71,7 +71,7 @@ const ROLE_KEYS: Record<DemoRole, NavItemKey[]> = {
   physician: ["patients", "encounters", "appointments", "operations", "doctor_revenue", "profile", "reports"],
   nurse: ["patients", "appointments", "encounters", "profile"],
   receptionist: ["patients", "appointments", "encounters", "operations", "profile"],
-  call_center: ["patients", "appointments", "customer_support", "profile"],
+  call_center: ["patients", "appointments", "operations", "customer_support", "profile"],
   clinic_admin: [
     "dashboard",
     "patients",

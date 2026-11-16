@@ -14,6 +14,8 @@ export type OperationCreateValidationInput = {
   operationDate: string;
   totalCost: string;
   downPayment: string;
+  /** When true, total cost may be omitted (e.g. call center booking). */
+  feesOptional?: boolean;
   docRows: PendingDocumentRow[];
   medTab: MedTab;
   prescriptionFile: File | null;
@@ -47,9 +49,18 @@ export function collectOperationCreateValidationIssues(
       issues.push(t("operations.errorDateInvalid", "Enter a valid operation date and time."));
     }
   }
-  if (!input.totalCost.trim()) {
-    issues.push(t("operations.errorTotalRequired", "Enter the total cost."));
-  } else {
+  if (!input.feesOptional) {
+    if (!input.totalCost.trim()) {
+      issues.push(t("operations.errorTotalRequired", "Enter the total cost."));
+    } else {
+      const total = Number.parseFloat(input.totalCost);
+      if (Number.isNaN(total)) {
+        issues.push(t("operations.errorTotalInvalid", "Enter a valid total cost amount."));
+      } else if (total < 0) {
+        issues.push(t("operations.errorTotalNegative", "Total cost cannot be negative."));
+      }
+    }
+  } else if (input.totalCost.trim()) {
     const total = Number.parseFloat(input.totalCost);
     if (Number.isNaN(total)) {
       issues.push(t("operations.errorTotalInvalid", "Enter a valid total cost amount."));
@@ -57,7 +68,12 @@ export function collectOperationCreateValidationIssues(
       issues.push(t("operations.errorTotalNegative", "Total cost cannot be negative."));
     }
   }
-  if (input.downPayment.trim()) {
+  if (input.feesOptional && input.downPayment.trim()) {
+    issues.push(
+      t("operations.errorDownNotAllowed", "Down payment is recorded later by clinic staff for your role."),
+    );
+  }
+  if (!input.feesOptional && input.downPayment.trim()) {
     const down = Number.parseFloat(input.downPayment);
     if (Number.isNaN(down)) {
       issues.push(t("operations.errorDownInvalid", "Enter a valid down payment amount."));

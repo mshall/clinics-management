@@ -15,10 +15,14 @@ export class CreateOperationDto {
   @IsDateString()
   operationDate!: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional({
+    default: 0,
+    description: "Optional at booking; required before discharge",
+  })
+  @IsOptional()
   @IsNumber()
   @Min(0)
-  totalCost!: number;
+  totalCost?: number;
 
   @ApiPropertyOptional({ default: 0 })
   @IsOptional()

@@ -14,6 +14,8 @@ import type { OperationDocumentDto, OperationDto } from "@/lib/api-types";
 import { apiFetchBlob } from "@/lib/http";
 import { formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
 import { formatMoneyAmount } from "@/lib/money-display";
+import { canViewOperationMoney } from "@/lib/operation-money-policy";
+import { useAuthStore } from "@/stores/auth-store";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { Label } from "@/components/ui/label";
 
@@ -35,6 +37,7 @@ type Props = {
 export function PatientOperationsSection({ patientId }: Props) {
   const { t, i18n } = useTranslation();
   const locale = localeForLanguage(i18n.language);
+  const showMoney = canViewOperationMoney(useAuthStore((s) => s.user?.role));
   const range = useMemo(() => patientOperationsDateRange(), []);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PATIENT_OPS_PAGE_SIZE);
@@ -116,13 +119,23 @@ export function PatientOperationsSection({ patientId }: Props) {
                       <th className="px-3 py-2 text-start font-medium">{t("operations.operationDate", "Date")}</th>
                       <th className="px-3 py-2 text-start font-medium">{t("operations.status", "Status")}</th>
                       <th className="px-3 py-2 text-start font-medium">{t("operations.clinician", "Clinician")}</th>
-                      <th className="px-3 py-2 text-start font-medium ltr-nums">{t("operations.totalCost", "Total")}</th>
-                      <th className="px-3 py-2 text-start font-medium ltr-nums">{t("operations.balanceDue", "Balance")}</th>
+                      {showMoney ? (
+                        <>
+                          <th className="px-3 py-2 text-start font-medium ltr-nums">{t("operations.totalCost", "Total")}</th>
+                          <th className="px-3 py-2 text-start font-medium ltr-nums">{t("operations.balanceDue", "Balance")}</th>
+                        </>
+                      ) : null}
                     </tr>
                   </thead>
                   <tbody>
                     {rows.map((op) => (
-                      <OperationRow key={op.id} op={op} locale={locale} onSelect={() => setSelectedId(op.id)} />
+                      <OperationRow
+                        key={op.id}
+                        op={op}
+                        locale={locale}
+                        showMoney={showMoney}
+                        onSelect={() => setSelectedId(op.id)}
+                      />
                     ))}
                   </tbody>
                 </table>
@@ -152,7 +165,7 @@ export function PatientOperationsSection({ patientId }: Props) {
           {detailPending || !detail ? (
             <p className="text-muted-foreground">{t("common.loading")}</p>
           ) : (
-            <OperationDetailView detail={detail} locale={locale} onOpenDoc={openDoc} />
+            <OperationDetailView detail={detail} locale={locale} showMoney={showMoney} onOpenDoc={openDoc} />
           )}
         </DialogContent>
       </Dialog>
@@ -163,10 +176,12 @@ export function PatientOperationsSection({ patientId }: Props) {
 function OperationRow({
   op,
   locale,
+  showMoney,
   onSelect,
 }: {
   op: OperationDto;
   locale: string;
+  showMoney: boolean;
   onSelect: () => void;
 }) {
   const { i18n } = useTranslation();
@@ -192,8 +207,12 @@ function OperationRow({
         <OperationStatusBadge status={op.status} />
       </td>
       <td className="px-3 py-2">{op.clinicianName ?? "—"}</td>
-      <td className="px-3 py-2 ltr-nums">{money(op.totalCost)}</td>
-      <td className="px-3 py-2 ltr-nums">{money(op.balanceDue)}</td>
+      {showMoney ? (
+        <>
+          <td className="px-3 py-2 ltr-nums">{money(op.totalCost)}</td>
+          <td className="px-3 py-2 ltr-nums">{money(op.balanceDue)}</td>
+        </>
+      ) : null}
     </tr>
   );
 }
@@ -201,10 +220,12 @@ function OperationRow({
 function OperationDetailView({
   detail,
   locale,
+  showMoney,
   onOpenDoc,
 }: {
   detail: NonNullable<ReturnType<typeof useOperationQuery>["data"]>;
   locale: string;
+  showMoney: boolean;
   onOpenDoc: (operationId: string, doc: OperationDocumentDto) => void;
 }) {
   const { t, i18n } = useTranslation();
@@ -223,10 +244,14 @@ function OperationDetailView({
           {formatClinicNameFields(detail.clinicNameEn, detail.clinicNameAr, i18n.language, detail.clinicId)}
         </DetailRow>
         <DetailRow label={t("operations.clinician", "Clinician")}>{detail.clinicianName ?? "—"}</DetailRow>
-        <DetailRow label={t("operations.totalCost", "Total")}>{money(detail.totalCost)}</DetailRow>
-        <DetailRow label={t("operations.downPayment", "Down payment")}>{money(detail.downPayment)}</DetailRow>
-        <DetailRow label={t("operations.paidAmount", "Paid")}>{money(detail.paidAmount)}</DetailRow>
-        <DetailRow label={t("operations.balanceDue", "Balance")}>{money(detail.balanceDue)}</DetailRow>
+        {showMoney ? (
+          <>
+            <DetailRow label={t("operations.totalCost", "Total")}>{money(detail.totalCost)}</DetailRow>
+            <DetailRow label={t("operations.downPayment", "Down payment")}>{money(detail.downPayment)}</DetailRow>
+            <DetailRow label={t("operations.paidAmount", "Paid")}>{money(detail.paidAmount)}</DetailRow>
+            <DetailRow label={t("operations.balanceDue", "Balance")}>{money(detail.balanceDue)}</DetailRow>
+          </>
+        ) : null}
       </dl>
 
       {detail.comments?.trim() ? (
