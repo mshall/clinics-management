@@ -7,6 +7,7 @@ import { allergyLabel, type PatientAllergyCode } from "@/lib/patient-allergies";
 import { apiGet } from "@/lib/http";
 import { formatMoneyAmount } from "@/lib/money-display";
 import { localeForLanguage } from "@/lib/locale-display";
+import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 
 type Summary = {
   allergies: { code: string; otherComment?: string | null }[];
@@ -20,6 +21,8 @@ type Summary = {
   } | null;
   alerts: { kind: string; messageEn: string; messageAr: string }[];
   outstandingBalance: number;
+  outstandingBalanceCurrency?: string;
+  outstandingBalances?: { currency: string; amount: number }[];
   upcomingAppointments: { id: string; startsAt: string; clinicianName: string; typeName?: string | null }[];
   pendingFollowUps: { encounterId: string; dueAt?: string | null; note?: string | null }[];
 };
@@ -27,6 +30,8 @@ type Summary = {
 export function Patient360Summary({ patientId }: { patientId: string }) {
   const { t, i18n } = useTranslation();
   const isAr = i18n.language.startsWith("ar");
+  const orgCurrency = useOrgBaseCurrency();
+  const locale = localeForLanguage(i18n.language);
   const q = useQuery({
     queryKey: ["patient", patientId, "summary"],
     queryFn: () => apiGet<Summary>(`/api/v1/patients/${patientId}/summary`),
@@ -104,7 +109,27 @@ export function Patient360Summary({ patientId }: { patientId: string }) {
             {s.alerts.length === 0 ? <li className="text-muted-foreground">{t("patients.noAlerts", "None")}</li> : null}
           </ul>
           <p className="text-xs font-medium uppercase text-muted-foreground pt-2">{t("patients.outstandingBalance", "Outstanding balance")}</p>
-          <p className="font-medium ltr-nums">{formatMoneyAmount(s.outstandingBalance, "AED", localeForLanguage(i18n.language))}</p>
+          {(() => {
+            const rows =
+              s.outstandingBalances && s.outstandingBalances.length > 0
+                ? s.outstandingBalances
+                : [
+                    {
+                      currency: s.outstandingBalanceCurrency ?? orgCurrency,
+                      amount: s.outstandingBalance,
+                    },
+                  ];
+            const multi = rows.length > 1;
+            return (
+              <ul className={multi ? "space-y-1" : undefined}>
+                {rows.map((row) => (
+                  <li key={row.currency} className="font-medium ltr-nums">
+                    {formatMoneyAmount(row.amount, row.currency, locale)}
+                  </li>
+                ))}
+              </ul>
+            );
+          })()}
           <p className="text-xs font-medium uppercase text-muted-foreground pt-2">{t("patients.upcomingAppts", "Upcoming appointments")}</p>
           <ul className="space-y-1">
             {s.upcomingAppointments.map((a) => (

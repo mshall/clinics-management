@@ -1,31 +1,7 @@
 import type { DemoRole } from "@/lib/roles";
+import type { GuideSection, GuideStep, RoleGuide } from "@/features/guide/guide-types";
 
-export type GuideStep = {
-  titleEn: string;
-  titleAr: string;
-  bodyEn: string;
-  bodyAr: string;
-  path?: string;
-};
-
-export type GuideSection = {
-  id: string;
-  titleEn: string;
-  titleAr: string;
-  summaryEn: string;
-  summaryAr: string;
-  steps: GuideStep[];
-  tipsEn?: string[];
-  tipsAr?: string[];
-};
-
-export type RoleGuide = {
-  headlineEn: string;
-  headlineAr: string;
-  subtitleEn: string;
-  subtitleAr: string;
-  sections: GuideSection[];
-};
+export type { GuideSection, GuideStep, RoleGuide } from "@/features/guide/guide-types";
 
 function s(
   titleEn: string,
@@ -318,6 +294,39 @@ const CALL_CENTER: RoleGuide = {
           bodyEn: "Messaging API seeds WhatsApp/SMS templates (confirm, 24h/2h reminders, results ready) — queue until provider is connected.",
           bodyAr: "قوالب واتساب/رسائل للتأكيد والتذكير والنتائج — تُرسل عند ربط المزود.",
         },
+      ],
+    ),
+    s(
+      "Surgical operations (no fees on phone)",
+      "العمليات الجراحية (بدون عرض الرسوم)",
+      "Create and track operations; amounts stay hidden until finance or the surgeon needs them.",
+      "أنشئ وتتبع العمليات؛ المبالغ مخفية حتى يحتاجها المالية أو الطبيب.",
+      [
+        {
+          titleEn: "Open operations",
+          titleAr: "فتح العمليات",
+          bodyEn: "Operations list: search by patient, filter by status, and open a case to see schedule, assigned physician, and notes.",
+          bodyAr: "قائمة العمليات: ابحث بالمريض، رشّح بالحالة، وافتح الحالة لرؤية الموعد والطبيب والملاحظات.",
+          detailEn: "Call center can register a new operation without entering fees; payment gates apply later when status moves to in-progress or complete.",
+          detailAr: "يمكن لمركز الاتصال تسجيل عملية بدون رسوم؛ قيود الدفع تُطبّق لاحقاً عند التقدم في الحالة.",
+          path: "/operations",
+          visual: "operations",
+        },
+        {
+          titleEn: "Status without payment detail",
+          titleAr: "الحالة بدون تفاصيل الدفع",
+          bodyEn: "You see workflow status (planned, pre-op, in-progress, complete) but not fee totals unless your role allows financials.",
+          bodyAr: "ترى حالة سير العمل دون إجمالي الرسوم ما لم يسمح دورك بعرض المالية.",
+          visual: "operations",
+        },
+      ],
+      [
+        "If a patient asks about cost, create a finance callback ticket rather than guessing amounts.",
+        "Link the operation to the patient chart so front desk and clinical teams see one timeline.",
+      ],
+      [
+        "إذا سأل المريض عن التكلفة، أنشئ تذكرة لاستدعاء المالية بدلاً من تخمين المبالغ.",
+        "اربط العملية بملف المريض ليرى الفريق نفس الخط الزمني.",
       ],
     ),
   ],

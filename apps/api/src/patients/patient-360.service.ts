@@ -4,9 +4,11 @@ import {
   ClinicalPhotoKind,
   EncounterFollowUpStatus,
   EncounterStatus,
+  OperationStatus,
   PatientActiveProblemStatus,
   PatientFamilyRelation,
   Prisma,
+  RevenueStatus,
 } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
@@ -25,7 +27,7 @@ export class Patient360Service {
     const patient = await this.prisma.patient.findFirst({ where: { id: patientId, tenantId, deletedAt: null } });
     if (!patient) throw new NotFoundException("Patient not found");
 
-    const [allergies, problems, latestEnc, upcomingAppts, invoices, followUps] = await Promise.all([
+    const [allergies, problems, latestEnc, upcomingAppts, followUps] = await Promise.all([
       this.prisma.patientAllergy.findMany({ where: { tenantId, patientId }, orderBy: { createdAt: "desc" } }),
       this.prisma.patientActiveProblem.findMany({
         where: { tenantId, patientId, status: PatientActiveProblemStatus.ACTIVE },
@@ -41,10 +43,6 @@ export class Patient360Service {
         orderBy: { startsAt: "asc" },
         take: 5,
         include: { clinician: { select: { displayName: true } }, appointmentType: true },
-      }),
-      this.prisma.invoice.findMany({
-        where: { tenantId, patientId },
-        include: { lines: true },
       }),
       this.prisma.encounter.findMany({
         where: {
@@ -78,18 +76,58 @@ export class Patient360Service {
         }
       : null;
 
-    const operations = await this.prisma.operation.findMany({
-      where: { tenantId, patientId },
-      select: { totalCost: true, paidAmount: true },
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { baseCurrency: true },
     });
-    let outstandingBalance = 0;
+    const orgCurrency = (tenant?.baseCurrency ?? "AED").trim().toUpperCase();
+
+    const byCurrency = new Map<string, number>();
+    const addOutstanding = (currency: string | null | undefined, amount: number) => {
+      if (!Number.isFinite(amount) || amount <= 0.001) return;
+      const code = (currency?.trim() || orgCurrency).toUpperCase();
+      const rounded = Math.round(amount * 100) / 100;
+      byCurrency.set(code, Math.round(((byCurrency.get(code) ?? 0) + rounded) * 100) / 100);
+    };
+
+    const [receivables, operations] = await Promise.all([
+      this.prisma.revenueEntry.findMany({
+        where: {
+          tenantId,
+          status: RevenueStatus.RECEIVABLE,
+          netAmount: { gt: 0 },
+          operationId: null,
+          OR: [{ encounter: { patientId } }, { appointment: { patientId } }],
+        },
+        select: { netAmount: true, currency: true },
+      }),
+      this.prisma.operation.findMany({
+        where: { tenantId, patientId, status: { not: OperationStatus.CANCELLED } },
+        select: { totalCost: true, paidAmount: true, feeCurrency: true },
+      }),
+    ]);
+
+    for (const r of receivables) {
+      addOutstanding(r.currency, Number(r.netAmount));
+    }
     for (const op of operations) {
-      outstandingBalance += Math.max(0, Number(op.totalCost) - Number(op.paidAmount));
+      addOutstanding(op.feeCurrency, Math.max(0, Number(op.totalCost) - Number(op.paidAmount)));
     }
-    for (const inv of invoices) {
-      const lineSum = inv.lines.reduce((s, l) => s + Number(l.amountPaid), 0);
-      if (lineSum > 0) outstandingBalance += lineSum;
-    }
+
+    const outstandingBalances = [...byCurrency.entries()]
+      .map(([currency, amount]) => ({ currency, amount }))
+      .filter((row) => row.amount > 0.001)
+      .sort((a, b) => b.amount - a.amount || a.currency.localeCompare(b.currency));
+
+    const primary =
+      outstandingBalances.length === 1
+        ? outstandingBalances[0]!
+        : outstandingBalances.find((b) => b.currency === orgCurrency) ?? {
+            currency: orgCurrency,
+            amount: 0,
+          };
+    const outstandingBalance = primary.amount;
+    const outstandingBalanceCurrency = primary.currency;
 
     const alerts: { kind: string; messageEn: string; messageAr: string }[] = [];
     if (allergies.length > 0) {
@@ -130,7 +168,9 @@ export class Patient360Service {
       currentMedications,
       lastVitals,
       alerts,
-      outstandingBalance: Math.round(outstandingBalance * 100) / 100,
+      outstandingBalance,
+      outstandingBalanceCurrency,
+      outstandingBalances,
       upcomingAppointments: upcomingAppts.map((a) => ({
         id: a.id,
         startsAt: a.startsAt.toISOString(),

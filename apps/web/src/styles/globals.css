@@ -77,4 +77,59 @@
   .native-select {
     @apply flex h-11 min-h-11 w-full touch-manipulation rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50;
   }
+
+  .guide-wizard-playing .guide-wizard-cursor {
+    animation: guide-cursor-pulse 1.8s ease-in-out infinite;
+  }
+
+  .guide-wizard-typing::after {
+    content: "|";
+    animation: guide-blink 1s step-end infinite;
+    margin-inline-start: 1px;
+  }
+
+  .guide-wizard-grow {
+    animation: guide-grow 2s ease-in-out infinite alternate;
+  }
+
+  .guide-wizard-line {
+    stroke-dasharray: 240;
+    animation: guide-draw 2.5s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes guide-cursor-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.85;
+  }
+}
+
+@keyframes guide-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes guide-grow {
+  from {
+    max-width: 20%;
+  }
+  to {
+    max-width: 95%;
+  }
+}
+
+@keyframes guide-draw {
+  from {
+    stroke-dashoffset: 240;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }

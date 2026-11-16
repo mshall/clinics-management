@@ -1,0 +1,464 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useClinicsQuery } from "@/lib/api-hooks";
+import { ApiError, apiDelete, apiGet, apiPut } from "@/lib/http";
+import type { NavItemKey } from "@/lib/nav-policy";
+import {
+  canCustomizeOrgRoleNavTabs,
+  canExtendUserNavTabs,
+  canManageOrgUserNavTabs,
+  organizationNavKeySet,
+  organizationNavOrderedKeys,
+  roleNavKeysForRole,
+} from "@/lib/nav-policy";
+import { formatClinicName, formatUserRole } from "@/lib/locale-display";
+import type { DemoRole } from "@/lib/roles";
+import { useAuthStore } from "@/stores/auth-store";
+import { NavTabChecklist, NAV_TAB_I18N } from "@/features/admin/org-nav-tab-checklist";
+
+type UserClinicHrAssignmentDto = {
+  id: string;
+  userId: string;
+  clinicId: string;
+  clinicNameEn: string;
+};
+
+function apiRoleParam(role: DemoRole): string {
+  return role.toUpperCase();
+}
+
+function fullRoleTabKeysSorted(role: DemoRole, roleNavTabKeys?: string[] | null): string[] {
+  return [...roleNavKeysForRole(role, roleNavTabKeys)].sort((a, b) => a.localeCompare(b));
+}
+
+export type OrgUserPermissionsEditorProps = {
+  userId: string;
+  userRole: DemoRole;
+  displayName?: string;
+  /** When false, hide HR assignment block (embedded in compact layouts). */
+  showHrAssignmentSection?: boolean;
+};
+
+export function OrgUserPermissionsEditor({
+  userId,
+  userRole,
+  displayName,
+  showHrAssignmentSection = true,
+}: OrgUserPermissionsEditorProps) {
+  const { t, i18n } = useTranslation();
+  const qc = useQueryClient();
+  const viewer = useAuthStore((s) => s.user);
+  const canManagePrivilegeGrants = canManageOrgUserNavTabs(viewer?.role);
+  const canCustomizeRoles = canCustomizeOrgRoleNavTabs(viewer?.role);
+  const canExtendUsers = canExtendUserNavTabs(viewer?.role);
+  const isClinicAdminViewer = viewer?.role === "clinic_admin";
+  const { data: viewerClinics = [] } = useClinicsQuery();
+  const viewerClinicIds = useMemo(() => viewerClinics.map((c) => c.id), [viewerClinics]);
+  const assignableClinics = useMemo(() => {
+    if (!isClinicAdminViewer) return viewerClinics;
+    return viewerClinics.filter((c) => viewerClinicIds.includes(c.id));
+  }, [viewerClinics, isClinicAdminViewer, viewerClinicIds]);
+
+  const organizationOrderedKeys = useMemo(() => organizationNavOrderedKeys(), []);
+  const organizationTabSet = useMemo(() => organizationNavKeySet(), []);
+
+  const [userDraft, setUserDraft] = useState<Set<NavItemKey>>(() => new Set());
+  const [userErr, setUserErr] = useState<string | null>(null);
+
+  const userRoleGrantQ = useQuery({
+    queryKey: ["tenant-role-nav-tabs", userRole],
+    queryFn: () => apiGet<{ tabKeys: string[] | null }>(`/api/v1/admin/role-nav-tabs/${apiRoleParam(userRole)}`),
+    enabled: canCustomizeRoles && Boolean(userRole),
+  });
+
+  const userGrantQ = useQuery({
+    queryKey: ["user-nav-tabs", userId],
+    queryFn: () => apiGet<{ tabKeys: string[] | null }>(`/api/v1/user-nav-tabs/${userId}`),
+    enabled: Boolean(userId),
+  });
+
+  const userRoleBase = useMemo(
+    () => roleNavKeysForRole(userRole, userRoleGrantQ.data?.tabKeys),
+    [userRole, userRoleGrantQ.data?.tabKeys],
+  );
+
+  const userGrantFingerprint = userGrantQ.data ? JSON.stringify(userGrantQ.data.tabKeys ?? null) : "";
+  const userDraftSeedRef = useRef("");
+
+  useEffect(() => {
+    if (!userId) {
+      setUserDraft(new Set());
+      userDraftSeedRef.current = "";
+      return;
+    }
+    if (!userGrantQ.isSuccess) return;
+    if (canCustomizeRoles && !userRoleGrantQ.isSuccess) return;
+
+    const seedKey = `${userId}:${userRole}:${userGrantFingerprint}:${canCustomizeRoles ? JSON.stringify(userRoleGrantQ.data?.tabKeys ?? null) : "clinic"}`;
+    if (userDraftSeedRef.current === seedKey) return;
+    userDraftSeedRef.current = seedKey;
+
+    const roleEffective = roleNavKeysForRole(userRole, userRoleGrantQ.data?.tabKeys);
+    const raw = userGrantQ.data?.tabKeys;
+    if (raw == null || raw.length === 0) {
+      setUserDraft(new Set(roleEffective));
+      return;
+    }
+    const next = new Set<NavItemKey>();
+    for (const k of raw) {
+      if (organizationTabSet.has(k as NavItemKey)) next.add(k as NavItemKey);
+    }
+    next.add("profile");
+    setUserDraft(next);
+  }, [
+    userId,
+    userRole,
+    userGrantFingerprint,
+    userGrantQ.isSuccess,
+    userGrantQ.data?.tabKeys,
+    canCustomizeRoles,
+    userRoleGrantQ.isSuccess,
+    userRoleGrantQ.data?.tabKeys,
+    organizationTabSet,
+  ]);
+
+  const saveUserMut = useMutation({
+    mutationFn: (payload: { tabKeys: string[]; hrClinicId?: string }) =>
+      apiPut<{ tabKeys: string[] | null }>(`/api/v1/user-nav-tabs/${userId}`, payload),
+    onSuccess: async () => {
+      setUserErr(null);
+      setHrAssignDialogOpen(false);
+      setHrAssignClinicIds(new Set());
+      await qc.invalidateQueries({ queryKey: ["user-nav-tabs", userId] });
+      await qc.invalidateQueries({ queryKey: ["user-clinic-hr-assignments", userId] });
+      if (userId === viewer?.id) await useAuthStore.getState().refreshSessionFromServer();
+    },
+    onError: (e: unknown) => {
+      setUserErr(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e));
+    },
+  });
+
+  const [hrAssignErr, setHrAssignErr] = useState<string | null>(null);
+  const [hrAssignDialogOpen, setHrAssignDialogOpen] = useState(false);
+  const [hrAssignClinicIds, setHrAssignClinicIds] = useState<Set<string>>(() => new Set());
+  const [hrDialogSubmitting, setHrDialogSubmitting] = useState(false);
+
+  const hrAssignmentsQ = useQuery({
+    queryKey: ["user-clinic-hr-assignments", userId],
+    queryFn: () =>
+      apiGet<UserClinicHrAssignmentDto[]>(
+        `/api/v1/admin/user-clinic-hr-assignments?userId=${encodeURIComponent(userId)}`,
+      ),
+    enabled: canManagePrivilegeGrants && Boolean(userId),
+  });
+
+  const assignedClinicIds = useMemo(
+    () => new Set((hrAssignmentsQ.data ?? []).map((a) => a.clinicId)),
+    [hrAssignmentsQ.data],
+  );
+
+  const unassignedClinics = useMemo(
+    () => assignableClinics.filter((c) => !assignedClinicIds.has(c.id)),
+    [assignableClinics, assignedClinicIds],
+  );
+
+  const saveHrAssignmentMut = useMutation({
+    mutationFn: (clinicId: string) =>
+      apiPut<UserClinicHrAssignmentDto>(`/api/v1/admin/user-clinic-hr-assignments`, {
+        userId,
+        clinicId,
+      }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["user-clinic-hr-assignments", userId] });
+      if (userId === viewer?.id) await useAuthStore.getState().refreshSessionFromServer();
+    },
+  });
+
+  const deleteHrAssignmentMut = useMutation({
+    mutationFn: (assignmentId: string) =>
+      apiDelete<{ ok: true }>(`/api/v1/admin/user-clinic-hr-assignments/${assignmentId}`),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["user-clinic-hr-assignments", userId] });
+      if (userId === viewer?.id) await useAuthStore.getState().refreshSessionFromServer();
+    },
+  });
+
+  const openHrClinicDialog = () => {
+    const preselect = new Set<string>();
+    if (unassignedClinics.length === 1) preselect.add(unassignedClinics[0]!.id);
+    setHrAssignClinicIds(preselect);
+    setHrAssignErr(null);
+    setHrAssignDialogOpen(true);
+  };
+
+  const toggleHrClinicPick = (clinicId: string) => {
+    setHrAssignClinicIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(clinicId)) next.delete(clinicId);
+      else next.add(clinicId);
+      return next;
+    });
+  };
+
+  const confirmHrClinicDialog = async () => {
+    if (!userId || hrAssignClinicIds.size === 0) return;
+    setHrDialogSubmitting(true);
+    setHrAssignErr(null);
+    try {
+      for (const clinicId of hrAssignClinicIds) {
+        await saveHrAssignmentMut.mutateAsync(clinicId);
+      }
+      const nextDraft = new Set(userDraft);
+      nextDraft.add("hr");
+      nextDraft.add("profile");
+      const tabKeys = [...nextDraft].sort((a, b) => a.localeCompare(b));
+      setUserDraft(nextDraft);
+      await saveUserMut.mutateAsync({ tabKeys, hrClinicId: [...hrAssignClinicIds][0] });
+    } catch (e: unknown) {
+      setHrAssignErr(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e));
+    } finally {
+      setHrDialogSubmitting(false);
+    }
+  };
+
+  const assignHrForClinic = (clinicId: string) => {
+    if (!userId || !clinicId) return;
+    saveHrAssignmentMut.mutate(clinicId, {
+      onError: (e: unknown) => {
+        setHrAssignErr(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e));
+      },
+    });
+  };
+
+  const saveUserNavTabs = (tabKeys: string[]) => {
+    const sorted = [...tabKeys].sort((a, b) => a.localeCompare(b));
+    if (
+      sorted.includes("hr") &&
+      canExtendUsers &&
+      userRole !== "hr_officer" &&
+      (hrAssignmentsQ.data?.length ?? 0) === 0
+    ) {
+      setUserErr(
+        t("admin.rbacHrSaveNeedsAssignment", "Use the HR checkbox to choose clinics before saving HR access."),
+      );
+      return;
+    }
+    setUserErr(null);
+    saveUserMut.mutate({ tabKeys: sorted });
+  };
+
+  const toggleUser = (key: NavItemKey) => {
+    if (key === "profile") return;
+
+    if (key === "hr" && canExtendUsers && userRole !== "hr_officer" && userDraft.has("hr")) {
+      setUserDraft((prev) => {
+        const n = new Set(prev);
+        n.delete("hr");
+        n.add("profile");
+        return n;
+      });
+      for (const a of hrAssignmentsQ.data ?? []) {
+        deleteHrAssignmentMut.mutate(a.id);
+      }
+      return;
+    }
+
+    if (key === "hr" && canExtendUsers && userRole !== "hr_officer" && !userDraft.has("hr")) {
+      if ((hrAssignmentsQ.data?.length ?? 0) > 0) {
+        setUserDraft((prev) => {
+          const n = new Set(prev);
+          n.add("hr");
+          n.add("profile");
+          return n;
+        });
+        return;
+      }
+      openHrClinicDialog();
+      return;
+    }
+
+    setUserDraft((prev) => {
+      const n = new Set(prev);
+      if (n.has(key)) n.delete(key);
+      else n.add(key);
+      n.add("profile");
+      return n;
+    });
+  };
+
+  const userIsFullRole =
+    userDraft.size === userRoleBase.size && [...userRoleBase].every((k) => userDraft.has(k));
+
+  const extraBeyondRole = useMemo(() => {
+    const extras: NavItemKey[] = [];
+    for (const k of userDraft) {
+      if (k !== "profile" && !userRoleBase.has(k)) extras.push(k);
+    }
+    return extras.sort((a, b) => a.localeCompare(b));
+  }, [userDraft, userRoleBase]);
+
+  const hrDialogClinics = useMemo(
+    () => assignableClinics.map((c) => ({ id: c.id, label: formatClinicName(c, i18n.language) })),
+    [assignableClinics, i18n.language],
+  );
+
+  if (!canManageOrgUserNavTabs(viewer?.role)) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">
+        <p className="font-medium">
+          {displayName?.trim() || t("admin.orgUserAccessTarget", "This user")}
+          <span className="ms-2 font-normal text-muted-foreground">· {formatUserRole(userRole, t)}</span>
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {canExtendUsers
+            ? t(
+                "admin.orgUserAccessHint",
+                "Upgrade or downgrade sidebar access. Check extra modules beyond this role, or uncheck to restrict. Save role defaults to remove personal overrides.",
+              )
+            : t(
+                "admin.orgUserAccessHintClinicAdmin",
+                "Adjust tabs within this role. Organization-wide extras require a group administrator.",
+              )}
+        </p>
+        {extraBeyondRole.length > 0 ? (
+          <p className="mt-2 text-xs">
+            <span className="text-muted-foreground">{t("admin.orgUserExtraTabs", "Extra vs role")}: </span>
+            {extraBeyondRole.map((k) => t(NAV_TAB_I18N[k])).join(", ")}
+          </p>
+        ) : null}
+      </div>
+
+      {userGrantQ.isError ? (
+        <p className="text-sm text-destructive">{userGrantQ.error instanceof Error ? userGrantQ.error.message : t("common.error")}</p>
+      ) : null}
+      {userErr ? <p className="text-sm text-destructive">{userErr}</p> : null}
+
+      {userGrantQ.isPending ? (
+        <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+      ) : userGrantQ.isSuccess && (!canCustomizeRoles || userRoleGrantQ.isSuccess) ? (
+        <NavTabChecklist
+          orderedKeys={organizationOrderedKeys}
+          draft={userDraft}
+          onToggle={toggleUser}
+          allowedKeys={canExtendUsers ? undefined : userRoleBase}
+        />
+      ) : null}
+
+      <p className="text-xs text-muted-foreground">
+        {userIsFullRole
+          ? t("admin.navTabsFullRoleHint", "Saving with all tabs checked removes the custom override.")
+          : canExtendUsers
+            ? t("admin.orgUserDowngradeHint", "Unchecked tabs hide sections even if the role normally includes them.")
+            : null}
+      </p>
+
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          disabled={!userId || saveUserMut.isPending || userGrantQ.isPending}
+          onClick={() => saveUserNavTabs([...userDraft])}
+        >
+          {t("admin.navTabsSave", "Save user permissions")}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={!userId || saveUserMut.isPending || userGrantQ.isPending}
+          onClick={() => saveUserNavTabs(fullRoleTabKeysSorted(userRole, userRoleGrantQ.data?.tabKeys))}
+        >
+          {t("admin.navTabsReset", "Use role defaults")}
+        </Button>
+      </div>
+
+      {showHrAssignmentSection && canManagePrivilegeGrants && isClinicAdminViewer ? (
+        <div className="space-y-3 rounded-lg border border-border p-3">
+          <p className="text-sm font-medium">{t("admin.rbacHrAssignmentSection", "Clinic HR assignment")}</p>
+          {userRole === "hr_officer" ? (
+            <p className="text-sm text-muted-foreground">
+              {t("admin.rbacHrAssignmentAlreadyOfficer", "This user is already an organization HR officer.")}
+            </p>
+          ) : (
+            <>
+              {hrAssignErr ? <p className="text-sm text-destructive">{hrAssignErr}</p> : null}
+              {(hrAssignmentsQ.data ?? []).map((a) => (
+                <div key={a.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <span>{a.clinicNameEn}</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={deleteHrAssignmentMut.isPending}
+                    onClick={() => deleteHrAssignmentMut.mutate(a.id)}
+                  >
+                    {t("admin.rbacHrAssignmentRemove", "Remove HR role")}
+                  </Button>
+                </div>
+              ))}
+              {unassignedClinics.map((c) => (
+                <Button key={c.id} type="button" size="sm" variant="outline" onClick={() => assignHrForClinic(c.id)}>
+                  {t("admin.rbacHrAssignmentAssignClinicShort", "HR — {{clinic}}", {
+                    clinic: formatClinicName(c, i18n.language),
+                  })}
+                </Button>
+              ))}
+            </>
+          )}
+        </div>
+      ) : null}
+
+      {canExtendUsers ? (
+        <Dialog open={hrAssignDialogOpen} onOpenChange={setHrAssignDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>{t("admin.rbacHrNavDialogTitle", "HR access — select clinics")}</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              {t(
+                "admin.rbacHrNavDialogHint",
+                "Choose clinics where this user will have full HR permissions.",
+              )}
+            </p>
+            <div className="max-h-[min(50vh,20rem)] space-y-2 overflow-y-auto rounded-md border border-border p-3">
+              {hrDialogClinics.map((c) => (
+                <label key={c.id} className="flex cursor-pointer items-start gap-3 rounded-md px-2 py-2 hover:bg-muted/50">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 size-4 shrink-0 rounded border-input"
+                    checked={hrAssignClinicIds.has(c.id)}
+                    onChange={() => toggleHrClinicPick(c.id)}
+                  />
+                  <span className="text-sm leading-snug">{c.label}</span>
+                </label>
+              ))}
+            </div>
+            {hrAssignErr ? <p className="text-sm text-destructive">{hrAssignErr}</p> : null}
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button type="button" variant="outline" disabled={hrDialogSubmitting} onClick={() => setHrAssignDialogOpen(false)}>
+                {t("common.cancel", "Cancel")}
+              </Button>
+              <Button
+                type="button"
+                disabled={hrAssignClinicIds.size === 0 || hrDialogSubmitting}
+                onClick={() => void confirmHrClinicDialog()}
+              >
+                {hrDialogSubmitting ? t("common.saving", "Saving…") : t("admin.rbacHrNavDialogConfirm", "Enable HR access")}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      ) : null}
+    </div>
+  );
+}

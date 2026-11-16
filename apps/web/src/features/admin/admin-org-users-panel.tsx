@@ -30,6 +30,9 @@ import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { useAuthStore } from "@/stores/auth-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectOrgUserCreateIssues } from "@/lib/create-form-validation";
+import { OrgUserPermissionsEditor } from "@/features/admin/org-user-permissions-editor";
+import { mapApiRole } from "@/lib/roles";
+import { cn } from "@/lib/utils";
 
 type OrgUserRow = {
   id: string;
@@ -56,7 +59,7 @@ const EMP_TYPE_VALUES = ["FULL_TIME", "PART_TIME", "CONTRACTOR", "LOCUM"] as con
 
 type UserDetail = OrgUserRow & { tenantId: string | null; tenantName: string | null };
 
-type DialogMode = null | "create" | { edit: string };
+type DialogMode = null | "create" | { edit: string; tab?: "account" | "access" };
 
 export function AdminOrgUsersPanel() {
   const { t, i18n } = useTranslation();
@@ -145,9 +148,12 @@ export function AdminOrgUsersPanel() {
   }
 
   const editUserId = dialogMode && typeof dialogMode === "object" ? dialogMode.edit : null;
+  const editUserTab =
+    dialogMode && typeof dialogMode === "object" ? (dialogMode.tab ?? "account") : "account";
   const isCreate = dialogMode === "create";
   const isEdit = Boolean(editUserId);
   const dialogOpen = isCreate || isEdit;
+  const isOrgAdmin = authUser?.role === "group_admin";
 
   const { data: clinics = [] } = useClinicsQuery();
 
@@ -465,7 +471,12 @@ export function AdminOrgUsersPanel() {
         <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
           <div>
             <CardTitle className="text-base">{t("admin.tabOrgUsers", "Organization users")}</CardTitle>
-            <CardDescription>{t("admin.orgUsersHint", "Manage login accounts, roles, and clinic assignments for your organization.")}</CardDescription>
+            <CardDescription>
+              {t(
+                "admin.orgUsersHint",
+                "Manage login accounts, upgrade or downgrade roles, assign clinics, and customize each user's sidebar permissions.",
+              )}
+            </CardDescription>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant={usersView === "active" ? "default" : "outline"} onClick={() => { setUsersView("active"); setPage(1); }}>
@@ -652,9 +663,19 @@ export function AdminOrgUsersPanel() {
                           <td className="px-3 py-2 text-end whitespace-nowrap">
                             {usersView === "active" ? (
                               <>
-                                <Button type="button" size="sm" variant="outline" onClick={() => setDialogMode({ edit: row.id })}>
+                                <Button type="button" size="sm" variant="outline" onClick={() => setDialogMode({ edit: row.id, tab: "account" })}>
                                   {t("common.edit", "Edit")}
                                 </Button>
+                                {isOrgAdmin ? (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={() => setDialogMode({ edit: row.id, tab: "access" })}
+                                  >
+                                    {t("admin.orgUserPermissionsShort", "Permissions")}
+                                  </Button>
+                                ) : null}
                                 {!isSelf ? (
                                   <>
                                     <Button
@@ -736,16 +757,51 @@ export function AdminOrgUsersPanel() {
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={(open) => !open && closeDialog()}>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto" aria-describedby={undefined}>
+        <DialogContent
+          className={cn(
+            "max-h-[90vh] overflow-y-auto",
+            isEdit && editUserTab === "access" ? "max-w-3xl" : "max-w-2xl",
+          )}
+          aria-describedby={undefined}
+        >
           <DialogHeader>
             <DialogTitle>
               {isEdit ? t("admin.orgUsersEdit", "Edit user") : t("admin.createUser", "Create user")}
             </DialogTitle>
           </DialogHeader>
 
-          {isEdit && userDetailQuery.isPending ? (
+          {isEdit && isOrgAdmin ? (
+            <div className="flex flex-wrap gap-2 border-b border-border pb-3">
+              <Button
+                type="button"
+                size="sm"
+                variant={editUserTab === "account" ? "default" : "outline"}
+                onClick={() => editUserId && setDialogMode({ edit: editUserId, tab: "account" })}
+              >
+                {t("admin.orgUserTabAccount", "Account & role")}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={editUserTab === "access" ? "default" : "outline"}
+                onClick={() => editUserId && setDialogMode({ edit: editUserId, tab: "access" })}
+              >
+                {t("admin.orgUserTabAccess", "Permissions & access")}
+              </Button>
+            </div>
+          ) : null}
+
+          {isEdit && editUserTab === "access" && editUserId ? (
+            <OrgUserPermissionsEditor
+              userId={editUserId}
+              userRole={mapApiRole(userDetailQuery.data?.role ?? uRole)}
+              displayName={userDetailQuery.data?.displayName ?? uName}
+            />
+          ) : null}
+
+          {isEdit && userDetailQuery.isPending && editUserTab === "account" ? (
             <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-          ) : (
+          ) : editUserTab === "account" || isCreate ? (
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-2">
                 <Label required>{t("auth.email")}</Label>
@@ -782,6 +838,14 @@ export function AdminOrgUsersPanel() {
                     </option>
                   ))}
                 </select>
+                {isEdit && isOrgAdmin ? (
+                  <p className="text-xs text-muted-foreground">
+                    {t(
+                      "admin.orgUserRoleAccessHint",
+                      "Changing role upgrades or downgrades baseline access. Use the Permissions tab to add or remove extra modules for this person.",
+                    )}
+                  </p>
+                ) : null}
               </div>
               {showClinicAssignment ? (
                 <div className="space-y-2 md:col-span-2">
@@ -902,7 +966,7 @@ export function AdminOrgUsersPanel() {
               </div>
               {userErr ? <p className="text-sm text-destructive md:col-span-2">{userErr}</p> : null}
             </div>
-          )}
+          ) : null}
         </DialogContent>
       </Dialog>
 
