@@ -133,7 +133,12 @@ export async function postRevenueWithFiscal(
     },
   });
 
-  if (!skipFiscal && status === RevenueStatus.POSTED && net > 0 && patientId) {
+  if (
+    !skipFiscal &&
+    status === RevenueStatus.POSTED &&
+    net > 0 &&
+    patientId
+  ) {
     const clinic = await tx.clinic.findFirst({
       where: { id: params.clinicId, tenantId: params.tenantId },
       select: { taxRegistrationNumber: true, invoiceVatPercent: true },

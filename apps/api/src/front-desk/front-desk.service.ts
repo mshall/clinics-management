@@ -14,6 +14,10 @@ import type { JwtUser } from "../auth/jwt-user";
 import { parseFrontDeskRoomLabels } from "../common/front-desk-room-labels";
 import { PrismaService } from "../prisma/prisma.service";
 import { PatientsService } from "../patients/patients.service";
+import {
+  collectEncounterVisitFeeBalance,
+  getEncounterVisitFeeReceivableSummary,
+} from "../common/visit-fee-ledger";
 import { ensureDraftEncounterOnCheckIn } from "./ensure-draft-encounter-on-check-in";
 import { FrontDeskFlowService } from "./front-desk-flow.service";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
@@ -331,6 +335,65 @@ export class FrontDeskService {
           : []),
       ],
     };
+  }
+
+  async collectVisitBalance(
+    tenantId: string,
+    user: JwtUser,
+    encounterId: string,
+    visitCollectionInput: VisitCollectionInput,
+  ) {
+    const enc = await this.prisma.encounter.findFirst({
+      where: { id: encounterId, tenantId },
+      select: { id: true, clinicId: true, patientId: true, status: true },
+    });
+    if (!enc) throw new NotFoundException("Encounter not found");
+    if (enc.status !== EncounterStatus.DRAFT && enc.status !== EncounterStatus.AMENDED) {
+      throw new BadRequestException("Visit balance can only be collected while the encounter is open");
+    }
+
+    const receivable = await getEncounterVisitFeeReceivableSummary(this.prisma, tenantId, encounterId);
+    if (!receivable) throw new BadRequestException("No visit fee balance due for this encounter");
+
+    const { resolveTenantTransferCollectionContext } = await import("../markets/market-transfer-context");
+    const transferCtx = await resolveTenantTransferCollectionContext(this.prisma, this.featureFlags, tenantId);
+    const collection = parseVisitCollectionForAmount(receivable.amount, visitCollectionInput, {
+      allowedTransferChannels: transferCtx.allowedTransferChannels,
+      paymentMethods: transferCtx.paymentMethods,
+    });
+
+    const clinic = await this.prisma.clinic.findFirst({
+      where: { id: enc.clinicId, tenantId },
+      select: { taxRegistrationNumber: true, invoiceVatPercent: true, defaultCurrency: true },
+    });
+
+    let transferVerificationStatus: import("@prisma/client").TransferVerificationStatus | undefined;
+    if (collection.transferChannel && collection.transferReference) {
+      transferVerificationStatus = await resolveTransferVerification(
+        collection.transferChannel,
+        collection.transferReference,
+        receivable.amount,
+        receivable.currency,
+        transferCtx.paymentMethods,
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const result = await collectEncounterVisitFeeBalance(tx, {
+        tenantId,
+        encounterId,
+        collection,
+        transferVerificationStatus,
+        clinicTaxRin: clinic?.taxRegistrationNumber,
+        vatPercent: Number(clinic?.invoiceVatPercent ?? 0),
+      });
+      return {
+        ...result,
+        currency: receivable.currency,
+        encounterId,
+        collectedByUserId: user.userId,
+      };
+    });
   }
 
   private patientAlertFlags(patient: {

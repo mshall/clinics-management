@@ -64,6 +64,7 @@ import { EncounterSpecialtyForm } from "@/features/clinical/encounter-specialty-
 import { loadPrescriptionBranding } from "@/lib/prescription-branding";
 import { cn } from "@/lib/utils";
 import { registerUnsavedWork } from "@/lib/unsaved-work-registry";
+import { CollectVisitBalanceCard } from "@/features/front-desk/collect-visit-balance-card";
 
 function apiErrorMessage(e: unknown): string {
   if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
@@ -716,6 +717,16 @@ export function EncounterDetailPage() {
           </Button>
         </div>
       </div>
+
+      {enc.visitBalanceDueAmount != null && enc.visitBalanceDueAmount > 0 && enc.clinicId ? (
+        <CollectVisitBalanceCard
+          encounterId={enc.id}
+          clinicId={enc.clinicId}
+          amount={enc.visitBalanceDueAmount}
+          currency={enc.visitBalanceDueCurrency ?? visitFeeCurrency}
+          invalidateKeys={[["appointment", enc.appointmentId], ["front-desk"]]}
+        />
+      ) : null}
 
       <Card>
         <CardHeader className="pb-2">

@@ -1,18 +1,27 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   dismissPendingDeploy,
   getPendingDeployBuildId,
+  isBelowMandatoryWebBuild,
   subscribeDeployVersion,
   tryApplyDeployReload,
 } from "@/lib/deploy-version-watch";
 
 export function DeployVersionBanner() {
   const { t } = useTranslation();
+  const { pathname } = useLocation();
   const [pending, setPending] = useState(getPendingDeployBuildId);
 
   useEffect(() => subscribeDeployVersion(setPending), []);
+
+  useEffect(() => {
+    if (isBelowMandatoryWebBuild()) {
+      tryApplyDeployReload("mandatory");
+    }
+  }, [pathname]);
 
   if (!pending) return null;
 

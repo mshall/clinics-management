@@ -27,3 +27,4 @@ const payload = { buildId, builtAt: new Date().toISOString() };
 mkdirSync(publicDir, { recursive: true });
 writeFileSync(path.join(publicDir, "build-id.json"), `${JSON.stringify(payload)}\n`, "utf8");
 writeFileSync(path.join(webRoot, ".build-id"), `${buildId}\n`, "utf8");
+writeFileSync(path.join(webRoot, ".build-built-at"), `${payload.builtAt}\n`, "utf8");

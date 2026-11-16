@@ -50,6 +50,33 @@ async function queueReturnForVoidedRevenue(tx: Prisma.TransactionClient, p: Queu
   });
 }
 
+/** Cancel a not-yet-submitted sale and remove its fiscal document so the revenue row can be re-queued. */
+async function cancelPendingSaleDocument(tx: Prisma.TransactionClient, saleFiscalDocumentId: string): Promise<void> {
+  const lockedRows = await tx.$queryRaw<{ id: string }[]>`
+    SELECT id FROM "FiscalSubmission"
+    WHERE "fiscalDocumentId" = ${saleFiscalDocumentId}
+    FOR UPDATE
+  `;
+  if (!lockedRows.length) {
+    await tx.fiscalDocument.delete({ where: { id: saleFiscalDocumentId } }).catch(() => undefined);
+    return;
+  }
+  const sub = await tx.fiscalSubmission.findFirst({ where: { fiscalDocumentId: saleFiscalDocumentId } });
+  if (sub?.status === FiscalSubmissionStatus.PENDING) {
+    await tx.fiscalSubmission.update({
+      where: { id: sub.id },
+      data: {
+        status: FiscalSubmissionStatus.CANCELLED,
+        errorMessage: "Cancelled before submit (sale amount adjusted)",
+        claimedUntil: null,
+        claimedBy: null,
+        nextRetryAt: null,
+      },
+    });
+  }
+  await tx.fiscalDocument.delete({ where: { id: saleFiscalDocumentId } }).catch(() => undefined);
+}
+
 /** Lock sale submission and cancel if still PENDING; otherwise queue return (handles submit race). */
 async function cancelPendingOrQueueReturn(
   tx: Prisma.TransactionClient,
@@ -111,7 +138,7 @@ export async function voidPostedRevenuesWithFiscalReturns(
   descriptionPrefix: string,
 ): Promise<void> {
   const rows = await tx.revenueEntry.findMany({
-    where: { tenantId, status: RevenueStatus.POSTED, ...where },
+    where: { tenantId, status: { in: [RevenueStatus.POSTED, RevenueStatus.RECEIVABLE] }, ...where },
     include: {
       fiscalDocument: {
         include: {
@@ -124,6 +151,14 @@ export async function voidPostedRevenuesWithFiscalReturns(
   for (const row of rows) {
     const amount = Number(row.netAmount);
     if (amount <= 0) continue;
+
+    if (row.status === RevenueStatus.RECEIVABLE) {
+      await tx.revenueEntry.update({
+        where: { id: row.id },
+        data: { status: RevenueStatus.VOID, grossAmount: 0, netAmount: 0 },
+      });
+      continue;
+    }
 
     const doc = row.fiscalDocument;
     const sub = doc?.submission;
@@ -163,31 +198,80 @@ export async function voidPostedRevenuesWithFiscalReturns(
   }
 }
 
-/** Queue a partial ETA return (or cancel pending sale) without voiding the revenue row. */
-export async function queuePartialFiscalReturnForPostedRevenue(
+export type RequeueFiscalSaleParams = {
+  tenantId: string;
+  clinicId: string;
+  patientId: string;
+  description: string;
+  currency: string;
+  vatPercent?: number;
+  clinicTaxRin?: string | null;
+  collectionMode?: import("@prisma/client").VisitCollectionMode | null;
+  transferChannel?: string | null;
+  transferReference?: string | null;
+};
+
+/** Lower a collected revenue amount and fix fiscal state (pending sale re-queued; submitted sale gets partial return). */
+export async function reducePostedRevenueNetWithFiscal(
   tx: Prisma.TransactionClient,
   tenantId: string,
   revenueEntryId: string,
-  returnAmount: number,
+  newNetAmount: number,
+  requeue: RequeueFiscalSaleParams,
   descriptionPrefix: string,
 ): Promise<void> {
-  if (returnAmount <= 0) return;
+  if (newNetAmount < 0) return;
 
   const row = await tx.revenueEntry.findFirst({
     where: { id: revenueEntryId, tenantId, status: RevenueStatus.POSTED },
-    include: {
-      fiscalDocument: { include: { submission: true } },
+    include: { fiscalDocument: { include: { submission: true } } },
+  });
+  if (!row) return;
+
+  const oldAmount = Number(row.netAmount);
+  if (oldAmount <= 0 || Math.abs(oldAmount - newNetAmount) <= 0.001) return;
+
+  await tx.revenueEntry.update({
+    where: { id: row.id },
+    data: {
+      grossAmount: new Prisma.Decimal(String(newNetAmount)),
+      netAmount: new Prisma.Decimal(String(newNetAmount)),
     },
   });
-  if (!row?.fiscalDocument) return;
 
   const doc = row.fiscalDocument;
+  if (!doc) return;
+
   const sub = doc.submission;
   const action = sub ? submissionVoidFiscalAction(sub.status) : "cancel_pending";
   if (action === "return_already_rejected" || action === "none") return;
 
-  const patientId = doc.patientId?.trim();
+  const patientId = doc.patientId?.trim() ?? requeue.patientId;
   if (!patientId) return;
+
+  if (action === "cancel_pending") {
+    await cancelPendingSaleDocument(tx, doc.id);
+    if (newNetAmount > 0) {
+      await queueFiscalDocument(tx, {
+        tenantId,
+        clinicId: row.clinicId,
+        patientId,
+        revenueEntryId: row.id,
+        totalAmount: newNetAmount,
+        currency: row.currency,
+        description: requeue.description,
+        vatPercent: requeue.vatPercent,
+        clinicTaxRin: requeue.clinicTaxRin,
+        collectionMode: requeue.collectionMode,
+        transferChannel: requeue.transferChannel,
+        transferReference: requeue.transferReference,
+      });
+    }
+    return;
+  }
+
+  const returnAmount = oldAmount - newNetAmount;
+  if (returnAmount <= 0) return;
 
   const queueReturn: QueueReturnParams = {
     tenantId,
@@ -199,11 +283,5 @@ export async function queuePartialFiscalReturnForPostedRevenue(
     revenueEntryId: row.id,
     saleFiscalDocumentId: doc.id,
   };
-
-  if (action === "cancel_pending") {
-    await cancelPendingOrQueueReturn(tx, doc.id, queueReturn);
-    return;
-  }
-
   await queueReturnForVoidedRevenue(tx, queueReturn);
 }

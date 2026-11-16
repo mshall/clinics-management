@@ -26,7 +26,10 @@ import { assertActiveSchedulingPhysician } from "../common/active-scheduling-phy
 import { CLINIC_SCOPE_ROLES, fetchPhysicianNetworkClinicIds } from "../common/clinic-scope";
 import { isBaseCurrency } from "../common/base-currencies";
 import { resolveClinicCurrency } from "../common/clinic-currency";
-import { upsertEncounterVisitFeeRevenue } from "../common/visit-fee-ledger";
+import {
+  getEncounterVisitFeeReceivableSummary,
+  upsertEncounterVisitFeeRevenue,
+} from "../common/visit-fee-ledger";
 import {
   detachRevenueFromEncounter,
   voidPostedRevenuesWithFiscalReturns,
@@ -147,6 +150,24 @@ export class EncountersService {
       sizeBytes: d.sizeBytes,
       createdAt: d.createdAt.toISOString(),
     };
+  }
+
+  private async enrichVisitBalanceDue(
+    tenantId: string,
+    encounterId: string,
+    dto: EncounterDetailDto,
+  ): Promise<EncounterDetailDto> {
+    const receivable = await getEncounterVisitFeeReceivableSummary(this.prisma, tenantId, encounterId);
+    if (receivable) {
+      dto.visitBalanceDueAmount = receivable.amount;
+      dto.visitBalanceDueCurrency = receivable.currency;
+      dto.visitBalanceRevenueId = receivable.revenueEntryId;
+    } else {
+      dto.visitBalanceDueAmount = null;
+      dto.visitBalanceDueCurrency = null;
+      dto.visitBalanceRevenueId = null;
+    }
+    return dto;
   }
 
   private mapEncounter(e: EncounterRow, opts?: { lite?: boolean }): EncounterDetailDto {
@@ -293,7 +314,7 @@ export class EncountersService {
     }
     await this.applyAutoNoteLockIfDue(tenantId, row.id);
     const fresh = await this.prisma.encounter.findFirst({ where: { id, tenantId }, include: encounterIncludeDef });
-    return this.mapEncounter(fresh ?? row);
+    return this.enrichVisitBalanceDue(tenantId, id, this.mapEncounter(fresh ?? row));
   }
 
   private async applyAutoNoteLockIfDue(tenantId: string, encounterId: string): Promise<void> {
@@ -720,7 +741,7 @@ export class EncountersService {
 
         return updated;
       });
-      return this.mapEncounter(row);
+      return this.enrichVisitBalanceDue(tenantId, id, this.mapEncounter(row));
     }
 
     const row = await this.prisma.encounter.update({

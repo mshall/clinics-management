@@ -36,7 +36,11 @@ async function bootstrap() {
     new PrismaClientExceptionFilter(),
     app.get(IntegrationFailureExceptionFilter),
   );
-  app.enableCors({ origin: true, credentials: true, exposedHeaders: ["X-Kiorly-Web-Build-Id"] });
+  app.enableCors({
+    origin: true,
+    credentials: true,
+    exposedHeaders: ["X-Kiorly-Web-Build-Id", "X-Kiorly-Web-Build-Built-At", "X-Kiorly-Web-Min-Built-At"],
+  });
   app.use(webBuildIdMiddleware);
   app.setGlobalPrefix("api/v1");
   app.useGlobalPipes(

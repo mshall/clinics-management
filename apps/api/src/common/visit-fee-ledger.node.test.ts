@@ -198,5 +198,6 @@ test("fee increase after check-in posts balance due without a second collected s
   };
   assert.equal(created.grossAmount?.toString?.() ?? String(created.grossAmount), "100");
   assert.equal(created.collectionMode, undefined);
+  assert.equal((created as { status?: string }).status, RevenueStatus.RECEIVABLE);
   assert.match(created.description ?? "", /balance due/i);
 });

@@ -7,22 +7,30 @@ import {
 } from "@prisma/client";
 import { isBaseCurrency } from "./base-currencies";
 import { resolveClinicCurrency } from "./clinic-currency";
-import type { ParsedVisitCollection } from "./visit-collection";
+import { collectionFieldsFromParsed, type ParsedVisitCollection } from "./visit-collection";
 import { postRevenueWithFiscal } from "../compliance/post-revenue-with-fiscal";
-import {
-  queuePartialFiscalReturnForPostedRevenue,
-  voidPostedRevenuesWithFiscalReturns,
-} from "../compliance/void-revenue-fiscal-returns";
+import { queueFiscalDocument } from "../compliance/fiscal-queue";
+import { reducePostedRevenueNetWithFiscal, voidPostedRevenuesWithFiscalReturns } from "../compliance/void-revenue-fiscal-returns";
 
 const VISIT_CHARGE_CATEGORIES = ["VISIT", "VISIT_FEE"] as const;
-const BALANCE_DUE_PHRASE = "balance due";
 
-function isCollectedVisitFee(row: { collectionMode: VisitCollectionMode | null; grossAmount: unknown }) {
-  return row.collectionMode != null && Number(row.grossAmount) > 0;
+type LedgerRow = {
+  id: string;
+  grossAmount: unknown;
+  status: RevenueStatus;
+  collectionMode: VisitCollectionMode | null;
+  description: string | null;
+  currency: string;
+  transferChannel: string | null;
+  transferReference: string | null;
+};
+
+function isCollectedVisitFee(row: LedgerRow) {
+  return row.status === RevenueStatus.POSTED && row.collectionMode != null && Number(row.grossAmount) > 0;
 }
 
-function isBalanceDueRow(row: { collectionMode: VisitCollectionMode | null; description: string | null }) {
-  return row.collectionMode == null && (row.description?.toLowerCase().includes(BALANCE_DUE_PHRASE) ?? false);
+function isReceivableVisitBalance(row: LedgerRow) {
+  return row.status === RevenueStatus.RECEIVABLE;
 }
 
 async function findPostedAppointmentVisitCharge(
@@ -41,9 +49,14 @@ async function findPostedAppointmentVisitCharge(
   });
 }
 
-async function listPostedEncounterVisitFees(tx: Prisma.TransactionClient, tenantId: string, encounterId: string) {
+async function listEncounterVisitFeeLedgerRows(tx: Prisma.TransactionClient, tenantId: string, encounterId: string) {
   return tx.revenueEntry.findMany({
-    where: { tenantId, encounterId, category: "VISIT_FEE", status: RevenueStatus.POSTED },
+    where: {
+      tenantId,
+      encounterId,
+      category: "VISIT_FEE",
+      status: { in: [RevenueStatus.POSTED, RevenueStatus.RECEIVABLE] },
+    },
     orderBy: { postedAt: "asc" },
   });
 }
@@ -108,17 +121,12 @@ async function upsertBalanceDueRow(
     balanceAmount: number;
   },
 ): Promise<void> {
-  const rows = await listPostedEncounterVisitFees(tx, params.tenantId, params.encounterId);
-  const balanceRow = rows.find(isBalanceDueRow);
+  const rows = await listEncounterVisitFeeLedgerRows(tx, params.tenantId, params.encounterId);
+  const balanceRow = rows.find(isReceivableVisitBalance);
 
   if (params.balanceAmount <= 0.001) {
     if (balanceRow) {
-      await voidPostedRevenuesWithFiscalReturns(
-        tx,
-        params.tenantId,
-        { id: balanceRow.id },
-        "Return",
-      );
+      await voidPostedRevenuesWithFiscalReturns(tx, params.tenantId, { id: balanceRow.id }, "Return");
     }
     return;
   }
@@ -131,6 +139,7 @@ async function upsertBalanceDueRow(
         netAmount: new Prisma.Decimal(String(params.balanceAmount)),
         currency: params.currency,
         appointmentId: params.appointmentId,
+        status: RevenueStatus.RECEIVABLE,
       },
     });
     return;
@@ -148,6 +157,7 @@ async function upsertBalanceDueRow(
     netAmount: params.balanceAmount,
     taxAmount: 0,
     currency: params.currency,
+    status: RevenueStatus.RECEIVABLE,
     skipFiscalQueue: true,
   });
 }
@@ -161,14 +171,14 @@ async function amendCollectedVisitFee(
     appointmentId: string | null;
     patientId: string;
     currency: string;
-    collectedRowId: string;
+    collectedRow: LedgerRow;
     paidAmount: number;
     targetAmount: number;
     clinicTaxRin?: string | null;
     vatPercent?: number;
   },
 ): Promise<void> {
-  const { paidAmount, targetAmount } = params;
+  const { paidAmount, targetAmount, collectedRow } = params;
 
   if (targetAmount > paidAmount + 0.001) {
     const balance = targetAmount - paidAmount;
@@ -185,21 +195,25 @@ async function amendCollectedVisitFee(
   }
 
   if (targetAmount < paidAmount - 0.001) {
-    const refund = paidAmount - targetAmount;
-    await queuePartialFiscalReturnForPostedRevenue(
+    await reducePostedRevenueNetWithFiscal(
       tx,
       params.tenantId,
-      params.collectedRowId,
-      refund,
+      collectedRow.id,
+      targetAmount,
+      {
+        tenantId: params.tenantId,
+        clinicId: params.clinicId,
+        patientId: params.patientId,
+        description: collectedRow.description ?? `Visit fee · encounter ${params.encounterId.slice(0, 8)}…`,
+        currency: params.currency,
+        vatPercent: params.vatPercent,
+        clinicTaxRin: params.clinicTaxRin,
+        collectionMode: collectedRow.collectionMode,
+        transferChannel: collectedRow.transferChannel,
+        transferReference: collectedRow.transferReference,
+      },
       "Partial return",
     );
-    await tx.revenueEntry.update({
-      where: { id: params.collectedRowId },
-      data: {
-        grossAmount: new Prisma.Decimal(String(targetAmount)),
-        netAmount: new Prisma.Decimal(String(targetAmount)),
-      },
-    });
     await upsertBalanceDueRow(tx, {
       tenantId: params.tenantId,
       clinicId: params.clinicId,
@@ -221,6 +235,94 @@ async function amendCollectedVisitFee(
     currency: params.currency,
     balanceAmount: 0,
   });
+}
+
+export async function getEncounterVisitFeeReceivableSummary(
+  db: Prisma.TransactionClient,
+  tenantId: string,
+  encounterId: string,
+): Promise<{ amount: number; currency: string; revenueEntryId: string } | null> {
+  const row = await db.revenueEntry.findFirst({
+    where: { tenantId, encounterId, category: "VISIT_FEE", status: RevenueStatus.RECEIVABLE },
+    orderBy: { postedAt: "desc" },
+  });
+  if (!row || Number(row.netAmount) <= 0) return null;
+  return {
+    amount: Number(row.netAmount),
+    currency: row.currency,
+    revenueEntryId: row.id,
+  };
+}
+
+export async function collectEncounterVisitFeeBalance(
+  tx: Prisma.TransactionClient,
+  params: {
+    tenantId: string;
+    encounterId: string;
+    collection: ParsedVisitCollection;
+    transferVerificationStatus?: TransferVerificationStatus;
+    clinicTaxRin?: string | null;
+    vatPercent?: number;
+  },
+): Promise<{ revenueEntryId: string; amount: number }> {
+  const encounter = await tx.encounter.findFirst({
+    where: { id: params.encounterId, tenantId: params.tenantId },
+    select: { id: true, clinicId: true, patientId: true },
+  });
+  if (!encounter) throw new Error("Encounter not found");
+
+  const row = await tx.revenueEntry.findFirst({
+    where: {
+      tenantId: params.tenantId,
+      encounterId: params.encounterId,
+      category: "VISIT_FEE",
+      status: RevenueStatus.RECEIVABLE,
+    },
+  });
+  if (!row) throw new Error("No visit fee balance due for this encounter");
+
+  const amount = Number(row.netAmount);
+  const collectionData = collectionFieldsFromParsed(params.collection);
+
+  const patient = await tx.patient.findFirst({
+    where: { id: encounter.patientId, tenantId: params.tenantId },
+    select: { firstNameEn: true, lastNameEn: true },
+  });
+  const buyerName = patient ? `${patient.firstNameEn} ${patient.lastNameEn}`.trim() || "Patient" : "Patient";
+
+  const updated = await tx.revenueEntry.update({
+    where: { id: row.id },
+    data: {
+      status: RevenueStatus.POSTED,
+      ...collectionData,
+      ...(params.transferVerificationStatus !== undefined
+        ? { transferVerificationStatus: params.transferVerificationStatus }
+        : {}),
+    },
+  });
+
+  const clinic = await tx.clinic.findFirst({
+    where: { id: encounter.clinicId, tenantId: params.tenantId },
+    select: { taxRegistrationNumber: true, invoiceVatPercent: true },
+  });
+
+  await queueFiscalDocument(tx, {
+    tenantId: params.tenantId,
+    clinicId: encounter.clinicId,
+    patientId: encounter.patientId,
+    revenueEntryId: updated.id,
+    totalAmount: amount,
+    currency: updated.currency,
+    vatPercent: params.vatPercent ?? Number(clinic?.invoiceVatPercent ?? 0),
+    description: updated.description?.trim() || "Visit fee balance",
+    clinicTaxRin: params.clinicTaxRin ?? clinic?.taxRegistrationNumber,
+    buyerName,
+    collectionMode: params.collection.collectionMode,
+    transferChannel: params.collection.transferChannel,
+    transferReference: params.collection.transferReference,
+  });
+
+  return { revenueEntryId: updated.id, amount };
 }
 
 export async function upsertEncounterVisitFeeRevenue(
@@ -256,7 +358,7 @@ export async function upsertEncounterVisitFeeRevenue(
       ? currencyOpt.trim()
       : await resolveClinicCurrency(tx, tenantId, clinicId);
 
-  let encounterRows = await listPostedEncounterVisitFees(tx, tenantId, encounterId);
+  let encounterRows = await listEncounterVisitFeeLedgerRows(tx, tenantId, encounterId);
 
   if (appointmentId && encounterRows.length === 0) {
     const aptCharge = await findPostedAppointmentVisitCharge(tx, tenantId, appointmentId);
@@ -273,16 +375,11 @@ export async function upsertEncounterVisitFeeRevenue(
               }),
         },
       });
-      encounterRows = await listPostedEncounterVisitFees(tx, tenantId, encounterId);
-      if (encounterRows.length === 0) {
-        encounterRows = [aptCharge];
-      }
+      encounterRows = await listEncounterVisitFeeLedgerRows(tx, tenantId, encounterId);
     }
   }
 
-  const collectedRow =
-    encounterRows.find(isCollectedVisitFee) ??
-  encounterRows.find((r) => !isBalanceDueRow(r) && Number(r.grossAmount) > 0);
+  const collectedRow = encounterRows.find(isCollectedVisitFee);
 
   if (amount <= 0) {
     await voidPostedRevenuesWithFiscalReturns(
@@ -315,7 +412,7 @@ export async function upsertEncounterVisitFeeRevenue(
       appointmentId,
       patientId: params.patientId,
       currency,
-      collectedRowId: collectedRow.id,
+      collectedRow,
       paidAmount: paid,
       targetAmount: amount,
       clinicTaxRin: params.clinicTaxRin,
@@ -324,7 +421,9 @@ export async function upsertEncounterVisitFeeRevenue(
     return;
   }
 
-  const uncollapsedPrimary = collectedRow ?? encounterRows.find((r) => !isBalanceDueRow(r));
+  const uncollapsedPrimary = encounterRows.find(
+    (r) => !isReceivableVisitBalance(r) && Number(r.grossAmount) > 0,
+  );
 
   if (uncollapsedPrimary && Math.abs(Number(uncollapsedPrimary.grossAmount) - amount) <= 0.001) {
     return;
@@ -332,7 +431,7 @@ export async function upsertEncounterVisitFeeRevenue(
 
   if (uncollapsedPrimary && Math.abs(Number(uncollapsedPrimary.grossAmount) - amount) > 0.001) {
     await voidPostedRevenuesWithFiscalReturns(tx, tenantId, { id: uncollapsedPrimary.id }, "Return");
-    for (const bal of encounterRows.filter(isBalanceDueRow)) {
+    for (const bal of encounterRows.filter(isReceivableVisitBalance)) {
       await voidPostedRevenuesWithFiscalReturns(tx, tenantId, { id: bal.id }, "Return");
     }
   }

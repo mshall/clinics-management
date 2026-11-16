@@ -12,7 +12,10 @@ import { CLINIC_SCOPE_ROLES, fetchPhysicianNetworkClinicIds } from "../common/cl
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { assertOrgClinicalDeleteRole } from "../common/org-clinical-delete-roles";
 import { paginate, parsePageParams } from "../common/pagination";
-import { syncOpenEncounterVisitFeeFromAppointment } from "../common/visit-fee-ledger";
+import {
+  getEncounterVisitFeeReceivableSummary,
+  syncOpenEncounterVisitFeeFromAppointment,
+} from "../common/visit-fee-ledger";
 import { PrismaService } from "../prisma/prisma.service";
 import { assertNoOpenEncounterForAppointmentComplete } from "./appointment-completion.guard";
 import { ensureDraftEncounterIfCheckedIn } from "../front-desk/ensure-draft-encounter-on-check-in";
@@ -171,7 +174,19 @@ export class AppointmentsService {
       );
     }
 
-    return { ...dto, openEncounterId };
+    let withEncounter = { ...dto, openEncounterId };
+    if (openEncounterId) {
+      const receivable = await getEncounterVisitFeeReceivableSummary(this.prisma, tenantId, openEncounterId);
+      if (receivable) {
+        withEncounter = {
+          ...withEncounter,
+          visitBalanceDueAmount: receivable.amount,
+          visitBalanceDueCurrency: receivable.currency,
+          visitBalanceRevenueId: receivable.revenueEntryId,
+        };
+      }
+    }
+    return withEncounter;
   }
 
   async list(

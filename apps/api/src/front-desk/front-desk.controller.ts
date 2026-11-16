@@ -4,6 +4,7 @@ import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
+import { CollectVisitBalanceDto } from "./dto/collect-visit-balance.dto";
 import { FrontDeskCheckInDto } from "./dto/check-in.dto";
 import { FrontDeskService } from "./front-desk.service";
 
@@ -47,5 +48,19 @@ export class FrontDeskController {
   @Get("patients/:patientId/header-alerts")
   headerAlerts(@CurrentUser() user: JwtUser, @Param("patientId") patientId: string) {
     return this.frontDesk.patientHeaderAlerts(requireTenantId(user), patientId);
+  }
+
+  @Post("encounters/:encounterId/collect-visit-balance")
+  collectVisitBalance(
+    @CurrentUser() user: JwtUser,
+    @Param("encounterId") encounterId: string,
+    @Body() body: CollectVisitBalanceDto,
+  ) {
+    return this.frontDesk.collectVisitBalance(
+      requireTenantId(user),
+      user,
+      encounterId,
+      body.toVisitCollectionInput(),
+    );
   }
 }

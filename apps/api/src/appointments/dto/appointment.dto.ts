@@ -82,4 +82,13 @@ export class AppointmentDto {
     description: "Open draft or amended encounter created at check-in (when status is CHECKED_IN)",
   })
   openEncounterId?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, description: "Uncollected visit fee while encounter is open" })
+  visitBalanceDueAmount?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  visitBalanceDueCurrency?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  visitBalanceRevenueId?: string | null;
 }

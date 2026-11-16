@@ -139,6 +139,18 @@ export class EncounterDetailDto {
   @ApiProperty({ description: "Currency for the visit fee and linked revenue" })
   visitFeeCurrency!: string;
 
+  @ApiPropertyOptional({
+    nullable: true,
+    description: "Uncollected visit fee (RECEIVABLE ledger row) while the encounter is open",
+  })
+  visitBalanceDueAmount?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  visitBalanceDueCurrency?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  visitBalanceRevenueId?: string | null;
+
   @ApiPropertyOptional({ nullable: true, description: "Linked booked appointment, if any" })
   appointmentId?: string | null;
 

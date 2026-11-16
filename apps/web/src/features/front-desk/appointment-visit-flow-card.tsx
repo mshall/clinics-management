@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AppointmentDto } from "@/lib/api-types";
 import { apiPost } from "@/lib/http";
+import { CollectVisitBalanceCard } from "@/features/front-desk/collect-visit-balance-card";
 
 type Props = { appointment: AppointmentDto };
 
@@ -65,6 +66,17 @@ export function AppointmentVisitFlowCard({ appointment }: Props) {
               {t("frontDesk.startVisit", "Start visit")}
             </Button>
           </div>
+        ) : null}
+        {appointment.openEncounterId &&
+        appointment.visitBalanceDueAmount != null &&
+        appointment.visitBalanceDueAmount > 0 ? (
+          <CollectVisitBalanceCard
+            encounterId={appointment.openEncounterId}
+            clinicId={appointment.clinicId}
+            amount={appointment.visitBalanceDueAmount}
+            currency={appointment.visitBalanceDueCurrency ?? "EGP"}
+            invalidateKeys={[["appointment", appointment.id], ["front-desk"]]}
+          />
         ) : null}
         <p className="text-xs text-muted-foreground">
           <Link to="/front-desk/board" className="text-primary hover:underline">

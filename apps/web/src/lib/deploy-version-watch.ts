@@ -1,8 +1,10 @@
 const BUILT_IN = (import.meta.env.VITE_BUILD_ID as string | undefined)?.trim() ?? "";
+const BUILT_IN_AT = (import.meta.env.VITE_BUILD_BUILT_AT as string | undefined)?.trim() ?? "";
 
 type Listener = (pendingBuildId: string | null) => void;
 
 let pendingBuildId: string | null = null;
+let mandatoryMinBuiltAt: string | null = null;
 const listeners = new Set<Listener>();
 
 export function subscribeDeployVersion(listener: Listener): () => void {
@@ -13,6 +15,11 @@ export function subscribeDeployVersion(listener: Listener): () => void {
 
 export function getPendingDeployBuildId(): string | null {
   return pendingBuildId;
+}
+
+export function isBelowMandatoryWebBuild(): boolean {
+  if (!import.meta.env.PROD || !BUILT_IN_AT || !mandatoryMinBuiltAt) return false;
+  return BUILT_IN_AT < mandatoryMinBuiltAt;
 }
 
 function notify(): void {
@@ -39,21 +46,29 @@ export function applyWebBuildIdFromHeader(headerValue: string | null): void {
   if (remote) noteNewBuild(remote);
 }
 
-export function observeWebBuildIdHeader(res: Response): void {
-  applyWebBuildIdFromHeader(res.headers.get("X-Kiorly-Web-Build-Id"));
+export function applyMinWebBuiltAtFromHeader(headerValue: string | null): void {
+  mandatoryMinBuiltAt = headerValue?.trim() || null;
 }
 
-/** Reload only when the user explicitly chooses — never on navigation or idle. */
-export function tryApplyDeployReload(reason: "user"): boolean {
+export function observeWebBuildIdHeader(res: Response): void {
+  applyWebBuildIdFromHeader(res.headers.get("X-Kiorly-Web-Build-Id"));
+  applyMinWebBuiltAtFromHeader(res.headers.get("X-Kiorly-Web-Min-Built-At"));
+}
+
+/** Reload when the user chooses, or when mandatory min build requires it. */
+export function tryApplyDeployReload(reason: "user" | "mandatory"): boolean {
+  if (reason === "mandatory") {
+    void forceHardReload(pendingBuildId ?? BUILT_IN);
+    return true;
+  }
   if (!pendingBuildId) return false;
-  if (reason !== "user") return false;
   void forceHardReload(pendingBuildId);
   return true;
 }
 
 /**
  * After AWS deploy: surface a new build via API headers / optional build-id check on tab focus.
- * Does not force reload while forms or payments are in progress.
+ * Optional banner reload is user-only; mandatory min build reloads on navigation.
  */
 export function startDeployVersionWatch(): void {
   if (!import.meta.env.PROD || !BUILT_IN || BUILT_IN === "dev-local" || BUILT_IN.startsWith("dev-")) {
@@ -73,8 +88,9 @@ async function checkBuildIdManifestOnce(): Promise<void> {
       credentials: "same-origin",
     });
     if (!res.ok) return;
-    const data = (await res.json()) as { buildId?: string };
+    const data = (await res.json()) as { buildId?: string; builtAt?: string };
     applyWebBuildIdFromHeader(data.buildId ?? null);
+    if (data.builtAt) applyMinWebBuiltAtFromHeader(data.builtAt);
   } catch {
     // offline — retry next visibility
   }

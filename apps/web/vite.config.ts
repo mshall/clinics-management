@@ -9,9 +9,16 @@ function loadBuildId(): string {
   return "dev-local";
 }
 
+function loadBuildBuiltAt(): string {
+  const atFile = path.resolve(__dirname, ".build-built-at");
+  if (existsSync(atFile)) return readFileSync(atFile, "utf8").trim();
+  return new Date(0).toISOString();
+}
+
 export default defineConfig({
   define: {
     "import.meta.env.VITE_BUILD_ID": JSON.stringify(loadBuildId()),
+    "import.meta.env.VITE_BUILD_BUILT_AT": JSON.stringify(loadBuildBuiltAt()),
   },
   plugins: [react()],
   resolve: {

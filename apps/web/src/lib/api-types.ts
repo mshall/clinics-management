@@ -56,6 +56,9 @@ export interface EncounterDetailDto {
   noMedications: boolean;
   visitFeeAmount: number;
   visitFeeCurrency: string;
+  visitBalanceDueAmount?: number | null;
+  visitBalanceDueCurrency?: string | null;
+  visitBalanceRevenueId?: string | null;
   appointmentId?: string | null;
   finalizedAt: string | null;
   clinicalTemplateId?: string | null;
@@ -203,6 +206,9 @@ export interface AppointmentDto {
   queueTicketNumber?: number | null;
   /** Draft encounter linked at check-in */
   openEncounterId?: string | null;
+  visitBalanceDueAmount?: number | null;
+  visitBalanceDueCurrency?: string | null;
+  visitBalanceRevenueId?: string | null;
 }
 
 export interface OperationDto {

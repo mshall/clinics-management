@@ -78,6 +78,7 @@ enum ClinicalShortcutType {
 
 enum RevenueStatus {
   POSTED
+  RECEIVABLE
   VOID
 }
 
