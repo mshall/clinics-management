@@ -15,6 +15,7 @@ import { parseFrontDeskRoomLabels } from "../common/front-desk-room-labels";
 import { EncountersService } from "../encounters/encounters.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { PatientsService } from "../patients/patients.service";
+import { ensureDraftEncounterOnCheckIn } from "./ensure-draft-encounter-on-check-in";
 import { FrontDeskFlowService } from "./front-desk-flow.service";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
 
@@ -145,6 +146,7 @@ export class FrontDeskService {
           transferVerificationStatus,
         });
       }
+      await ensureDraftEncounterOnCheckIn(tx, this.prisma, tenantId, appointmentId);
       return {
         appointmentId: updated.id,
         queueTicketNumber: ticket,
@@ -164,13 +166,18 @@ export class FrontDeskService {
 
     const dayStart = new Date();
     dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayEnd.getDate() + 1);
 
     const dayAppointments = await this.prisma.appointment.findMany({
       where: {
         tenantId,
         clinicId,
         status: AppointmentStatus.CHECKED_IN,
-        checkedInAt: { gte: dayStart },
+        OR: [
+          { checkedInAt: { gte: dayStart, lt: dayEnd } },
+          { checkedInAt: null, startsAt: { gte: dayStart, lt: dayEnd } },
+        ],
       },
       orderBy: { checkedInAt: "asc" },
       include: {
@@ -253,7 +260,12 @@ export class FrontDeskService {
       },
       select: { id: true },
     });
-    if (existing) return { encounterId: existing.id, alreadyOpen: true as const };
+    if (existing) {
+      await this.prisma.$transaction(async (tx) => {
+        await this.flow.onEncounterStarted(tx, tenantId, appointmentId);
+      });
+      return { encounterId: existing.id, alreadyOpen: true as const };
+    }
 
     const enc = await this.encounters.create(tenantId, user, {
       clinicId: apt.clinicId,

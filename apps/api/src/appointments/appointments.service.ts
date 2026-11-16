@@ -14,6 +14,7 @@ import { assertOrgClinicalDeleteRole } from "../common/org-clinical-delete-roles
 import { paginate, parsePageParams } from "../common/pagination";
 import { syncOpenEncounterVisitFeeFromAppointment } from "../common/visit-fee-ledger";
 import { PrismaService } from "../prisma/prisma.service";
+import { ensureDraftEncounterOnCheckIn } from "../front-desk/ensure-draft-encounter-on-check-in";
 import { FrontDeskFlowService } from "../front-desk/front-desk-flow.service";
 import { SchedulingService } from "../scheduling/scheduling.service";
 import type { CreateAppointmentDto } from "./dto/create-appointment.dto";
@@ -482,11 +483,15 @@ export class AppointmentsService {
               existingPreferred: existing.preferredRoomLabel ?? existing.roomLabel,
             })
           : null;
-      return tx.appointment.update({
+      const row = await tx.appointment.update({
         where: { id },
         data: checkIn ?? { status },
         include: appointmentDtoInclude,
       });
+      if (checkIn) {
+        await ensureDraftEncounterOnCheckIn(tx, this.prisma, tenantId, id);
+      }
+      return row;
     });
     if (status === AppointmentStatus.CANCELLED) {
       await this.scheduling.offerWaitlistForCancelledSlot(
@@ -578,6 +583,10 @@ export class AppointmentsService {
         },
         include: appointmentDtoInclude,
       });
+
+      if (checkIn) {
+        await ensureDraftEncounterOnCheckIn(tx, this.prisma, tenantId, id);
+      }
 
       if (feeProvided) {
         await syncOpenEncounterVisitFeeFromAppointment(tx, tenantId, id, Number(dto.feeAmount));
