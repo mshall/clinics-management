@@ -23,10 +23,13 @@ import { assertOperationRevenuesFiscalMutable } from "../compliance/revenue-fisc
 import { syncPostedOperationContractRevenue } from "../compliance/operation-revenue-ledger";
 import { voidPostedRevenuesWithFiscalReturns } from "../compliance/void-revenue-fiscal-returns";
 import {
-  canEditOperationFees,
-  operationFinancialsVisible,
-  operationSummaryFinancialsVisible,
-} from "./operation-money-access";
+  DEFAULT_MONEY_VISIBILITY_OVERRIDES,
+  loadUserMoneyVisibilityOverrides,
+  type UserMoneyVisibilityOverrides,
+  canEditOperationFeesForViewer,
+  operationRowFinancialsVisible,
+  operationSummaryFinancialsVisibleForViewer,
+} from "../common/user-money-visibility";
 import { assertDownPaymentBeforeInProgress } from "./operation-status-money";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { AddOperationMedicationDto, OperationDocumentDto, OperationMedicationDto } from "./dto/operation-clinical.dto";
@@ -195,10 +198,18 @@ export class OperationsService {
     return resolveClinicCurrency(this.prisma, tenantId, clinicId);
   }
 
-  private mapRow(row: OperationRow, viewer?: JwtUser): OperationDto {
+  private async moneyOverrides(tenantId: string, viewer?: JwtUser): Promise<UserMoneyVisibilityOverrides> {
+    return loadUserMoneyVisibilityOverrides(this.prisma, tenantId, viewer?.userId);
+  }
+
+  private mapRow(
+    row: OperationRow,
+    viewer?: JwtUser,
+    overrides: UserMoneyVisibilityOverrides = DEFAULT_MONEY_VISIBILITY_OVERRIDES,
+  ): OperationDto {
     const patient = row.patient;
     const clinicianParts = this.clinicianNameParts(row.clinician ?? null);
-    const financialsVisible = operationFinancialsVisible(viewer, row.clinicianId);
+    const financialsVisible = operationRowFinancialsVisible(viewer, row.clinicianId, overrides);
     const totalCost = Number(row.totalCost);
     const downPayment = Number(row.downPayment);
     const paidAmount = Number(row.paidAmount);
@@ -264,9 +275,10 @@ export class OperationsService {
       }>;
     },
     viewer: JwtUser,
+    overrides: UserMoneyVisibilityOverrides = DEFAULT_MONEY_VISIBILITY_OVERRIDES,
   ): OperationDetailDto {
     return {
-      ...this.mapRow(row, viewer),
+      ...this.mapRow(row, viewer, overrides),
       noMedications: row.noMedications,
       medications: row.medications.map((m) => this.mapMed(m)),
       documents: row.documents.map((d) => this.mapDoc(d)),
@@ -284,7 +296,8 @@ export class OperationsService {
     });
     if (!row) throw new NotFoundException("Operation not found");
     await this.assertOperationAccess(viewer, row);
-    return this.mapDetailRow(row, viewer);
+    const moneyVis = await this.moneyOverrides(tenantId, viewer);
+    return this.mapDetailRow(row, viewer, moneyVis);
   }
 
   async resetClinical(
@@ -373,7 +386,8 @@ export class OperationsService {
         take: pageSize,
       }),
     ]);
-    return paginate(rows.map((r) => this.mapRow(r, user)), total, page, pageSize);
+    const moneyVis = await this.moneyOverrides(tenantId, user);
+    return paginate(rows.map((r) => this.mapRow(r, user, moneyVis)), total, page, pageSize);
   }
 
   async summary(tenantId: string, user: JwtUser, fromStr?: string, toStr?: string, clinicIdStr?: string) {
@@ -486,7 +500,8 @@ export class OperationsService {
       })
       .sort((a, b) => b.operationCount - a.operationCount);
 
-    const hideMoney = !operationSummaryFinancialsVisible(user.role);
+    const moneyVis = await this.moneyOverrides(tenantId, user);
+    const hideMoney = !operationSummaryFinancialsVisibleForViewer(user, moneyVis);
     const operations = rows.map((r) => ({
       id: r.id,
       operationDate: r.operationDate.toISOString(),
@@ -512,7 +527,8 @@ export class OperationsService {
   }
 
   async create(tenantId: string, dto: CreateOperationDto, user: JwtUser): Promise<OperationDto> {
-    if (!canEditOperationFees(user)) {
+    const moneyVis = await this.moneyOverrides(tenantId, user);
+    if (!canEditOperationFeesForViewer(user, moneyVis)) {
       dto = { ...dto, totalCost: 0, downPayment: 0 };
     }
     const totalCost = dto.totalCost ?? 0;
@@ -600,7 +616,7 @@ export class OperationsService {
       }
       return op;
     });
-    return this.mapRow(row, user);
+    return this.mapRow(row, user, moneyVis);
   }
 
   async listPayable(tenantId: string, user: JwtUser, clinicIdStr?: string): Promise<OperationDto[]> {
@@ -635,9 +651,10 @@ export class OperationsService {
       take: 200,
     });
 
+    const moneyVis = await this.moneyOverrides(tenantId, user);
     return rows
       .filter((r) => Number(r.paidAmount) + 0.001 < Number(r.totalCost))
-      .map((r) => this.mapRow(r, user));
+      .map((r) => this.mapRow(r, user, moneyVis));
   }
 
   private operationRevenueDescription(patientName: string, clinicianName: string): string {
@@ -670,6 +687,7 @@ export class OperationsService {
   }
 
   async update(tenantId: string, id: string, dto: UpdateOperationDto, viewer: JwtUser): Promise<OperationDto> {
+    const moneyVis = await this.moneyOverrides(tenantId, viewer);
     const existing = await this.prisma.operation.findFirst({
       where: { id, tenantId },
       include: operationInclude,
@@ -678,7 +696,7 @@ export class OperationsService {
     await this.assertOperationAccess(viewer, existing);
 
     if (
-      !canEditOperationFees(viewer) &&
+      !canEditOperationFeesForViewer(viewer, moneyVis) &&
       (dto.totalCost !== undefined || dto.downPayment !== undefined || dto.feeCurrency !== undefined)
     ) {
       throw new ForbiddenException("You do not have permission to edit operation fees");
@@ -762,7 +780,7 @@ export class OperationsService {
       }
       return op;
     });
-    return this.mapRow(row, viewer);
+    return this.mapRow(row, viewer, moneyVis);
   }
 
   private async resolveOperationUpdateFields(
@@ -876,7 +894,8 @@ export class OperationsService {
         include: operationInclude,
       });
     });
-    return this.mapRow(row, viewer);
+    const moneyVis = await this.moneyOverrides(tenantId, viewer);
+    return this.mapRow(row, viewer, moneyVis);
   }
 
   async updateStatus(
@@ -892,9 +911,10 @@ export class OperationsService {
     });
     if (!existing) throw new NotFoundException("Operation not found");
     await this.assertOperationAccess(viewer, existing);
+    const moneyVis = await this.moneyOverrides(tenantId, viewer);
 
     if (existing.status === status) {
-      return this.mapRow(existing, viewer);
+      return this.mapRow(existing, viewer, moneyVis);
     }
 
     assertOperationStatusTransition(existing.status, status);
@@ -959,7 +979,7 @@ export class OperationsService {
           include: operationInclude,
         });
       });
-      return this.mapRow(row, viewer);
+      return this.mapRow(row, viewer, moneyVis);
     }
 
     if (status === OperationStatus.CANCELLED) {
@@ -971,7 +991,7 @@ export class OperationsService {
           include: operationInclude,
         });
       });
-      return this.mapRow(row, viewer);
+      return this.mapRow(row, viewer, moneyVis);
     }
 
   const row = await this.prisma.operation.update({
@@ -979,7 +999,7 @@ export class OperationsService {
       data: { status },
       include: operationInclude,
     });
-    return this.mapRow(row, viewer);
+    return this.mapRow(row, viewer, moneyVis);
   }
 
   async addMedication(

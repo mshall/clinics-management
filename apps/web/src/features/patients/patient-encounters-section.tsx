@@ -196,10 +196,14 @@ function EncounterDetailView({
         <DetailRow label={t("encounters.updated", "Updated")}>
           {new Date(detail.updatedAt).toLocaleString(localeForLanguage(i18n.language))}
         </DetailRow>
-        <DetailRow label={t("encounters.visitFee", "Visit fee")}>
-          {money(detail.visitFeeAmount, detail.visitFeeCurrency)}
-        </DetailRow>
-        {detail.visitBalanceDueAmount != null && detail.visitBalanceDueCurrency ? (
+        {detail.financialsVisible !== false ? (
+          <DetailRow label={t("encounters.visitFee", "Visit fee")}>
+            {money(detail.visitFeeAmount, detail.visitFeeCurrency)}
+          </DetailRow>
+        ) : null}
+        {detail.financialsVisible !== false &&
+        detail.visitBalanceDueAmount != null &&
+        detail.visitBalanceDueCurrency ? (
           <DetailRow label={t("encounters.balanceDue", "Balance due")}>
             {money(detail.visitBalanceDueAmount, detail.visitBalanceDueCurrency)}
           </DetailRow>

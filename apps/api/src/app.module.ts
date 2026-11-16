@@ -19,6 +19,7 @@ import { ReportsModule } from "./reports/reports.module";
 import { RevenueModule } from "./revenue/revenue.module";
 import { StorageModule } from "./storage/storage.module";
 import { UserNavTabsModule } from "./user-nav-tabs/user-nav-tabs.module";
+import { UserMoneyVisibilityModule } from "./user-money-visibility/user-money-visibility.module";
 import { UserClinicPrivilegeGrantsModule } from "./user-clinic-privilege-grants/user-clinic-privilege-grants.module";
 import { SupportModule } from "./support/support.module";
 import { IntegrationsModule } from "./integrations/integrations.module";
@@ -59,6 +60,7 @@ import { PrivilegedMfaGuard } from "./auth/privileged-mfa.guard";
     ReportsModule,
     UsersModule,
     UserNavTabsModule,
+    UserMoneyVisibilityModule,
     UserClinicPrivilegeGrantsModule,
     SupportModule,
     IntegrationsModule,

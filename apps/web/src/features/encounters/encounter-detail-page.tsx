@@ -718,7 +718,10 @@ export function EncounterDetailPage() {
         </div>
       </div>
 
-      {enc.visitBalanceDueAmount != null && enc.visitBalanceDueAmount > 0 && enc.clinicId ? (
+      {enc.financialsVisible !== false &&
+      enc.visitBalanceDueAmount != null &&
+      enc.visitBalanceDueAmount > 0 &&
+      enc.clinicId ? (
         <CollectVisitBalanceCard
           encounterId={enc.id}
           clinicId={enc.clinicId}
@@ -728,6 +731,11 @@ export function EncounterDetailPage() {
         />
       ) : null}
 
+      {enc.financialsVisible === false ? (
+        <p className="text-sm text-muted-foreground">
+          {t("admin.moneyVisibilityHiddenHint", "Money amounts for this section are hidden for your account.")}
+        </p>
+      ) : (
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">
@@ -779,6 +787,7 @@ export function EncounterDetailPage() {
           )}
         </CardContent>
       </Card>
+      )}
 
       {enc ? (
         <LinkedInvoicesSection

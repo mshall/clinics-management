@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import type { AuthUserDto } from "@/lib/api-schema";
 import { apiUrl } from "@/lib/api-url";
 import { mapApiRole } from "@/lib/roles";
+import type { MoneyVisibilityOverrides } from "@/lib/money-visibility-policy";
 import type { DemoRole } from "@/lib/roles";
 
 export type { DemoRole } from "@/lib/roles";
@@ -25,6 +26,7 @@ export interface AuthUser {
   /** Organization base currency (default for clinics that inherit org settings) */
   tenantBaseCurrency?: string | null;
   mfaEnabled?: boolean;
+  moneyVisibilityOverrides?: MoneyVisibilityOverrides | null;
 }
 
 interface AuthState {
@@ -41,6 +43,7 @@ interface AuthState {
       hasAvatar?: boolean;
       mfaEnabled?: boolean;
       tenantBaseCurrency?: string | null;
+      moneyVisibilityOverrides?: MoneyVisibilityOverrides | null;
     },
   ) => void;
   signOut: () => void;
@@ -69,6 +72,7 @@ export const useAuthStore = create<AuthState>()(
             hasAvatar: Boolean(raw.hasAvatar),
             tenantBaseCurrency: raw.tenantBaseCurrency ?? null,
             mfaEnabled: Boolean(raw.mfaEnabled),
+            moneyVisibilityOverrides: raw.moneyVisibilityOverrides ?? undefined,
           },
         }),
       signOut: () => set({ accessToken: null, user: null }),
@@ -100,6 +104,8 @@ export const useAuthStore = create<AuthState>()(
             hasAvatar: Boolean((me as { hasAvatar?: boolean }).hasAvatar),
             tenantBaseCurrency: (me as AuthUserDto).tenantBaseCurrency ?? null,
             mfaEnabled: Boolean((me as AuthUserDto).mfaEnabled),
+            moneyVisibilityOverrides: (me as AuthUserDto & { moneyVisibilityOverrides?: MoneyVisibilityOverrides | null })
+              .moneyVisibilityOverrides ?? undefined,
           },
         });
       },

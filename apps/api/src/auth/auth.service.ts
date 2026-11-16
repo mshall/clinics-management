@@ -7,6 +7,7 @@ import * as path from "path";
 import type { Readable } from "stream";
 import { isPlatformSuperAdmin } from "../common/platform-super-admin";
 import { loadEmployeePrivilegeGrantSummaries } from "../common/employee-privilege-grants";
+import { loadUserMoneyVisibilityOverrides } from "../common/user-money-visibility";
 import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { TenantRoleNavTabsService } from "../user-nav-tabs/tenant-role-nav-tabs.service";
@@ -77,6 +78,10 @@ export class AuthService {
       user.tenantId != null
         ? await loadEmployeePrivilegeGrantSummaries(this.prisma, user.tenantId, user.id)
         : [];
+    const moneyVisibilityOverrides =
+      user.tenantId != null
+        ? await loadUserMoneyVisibilityOverrides(this.prisma, user.tenantId, user.id)
+        : undefined;
     const mfaEnabled = Boolean(user.mfaEnabled);
     return {
       id: user.id,
@@ -95,6 +100,13 @@ export class AuthService {
       mfaEnabled,
       mfaEnrollmentRequired: roleRequiresMfaEnrollment(user.role) && !mfaEnabled,
       employeePrivilegeGrants: employeePrivilegeGrants.length ? employeePrivilegeGrants : undefined,
+      moneyVisibilityOverrides:
+        moneyVisibilityOverrides &&
+        (moneyVisibilityOverrides.operations !== "ROLE_DEFAULT" ||
+          moneyVisibilityOverrides.encounters !== "ROLE_DEFAULT" ||
+          moneyVisibilityOverrides.appointments !== "ROLE_DEFAULT")
+          ? moneyVisibilityOverrides
+          : undefined,
     };
   }
 

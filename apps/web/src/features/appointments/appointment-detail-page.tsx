@@ -554,6 +554,11 @@ export function AppointmentDetailPage() {
               </p>
             ) : null}
           </div>
+          {apt?.financialsVisible === false ? (
+            <p className="text-sm text-muted-foreground sm:col-span-2">
+              {t("admin.moneyVisibilityHiddenHint", "Money amounts for this section are hidden for your account.")}
+            </p>
+          ) : (
           <div className="space-y-2">
             <Label>{t("appointments.scheduledFee", "Scheduled fee ({{currency}})", { currency: feeCurrency })}</Label>
             {readOnly ? (
@@ -584,6 +589,7 @@ export function AppointmentDetailPage() {
               </>
             )}
           </div>
+          )}
           <div className="space-y-2 sm:col-span-2">
             <Label>{t("appointments.status")}</Label>
             {readOnly ? (

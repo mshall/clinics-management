@@ -133,6 +133,9 @@ export class EncounterDetailDto {
   @ApiProperty()
   noMedications!: boolean;
 
+  @ApiPropertyOptional({ description: "Whether visit fees and balances are visible for this viewer" })
+  financialsVisible?: boolean;
+
   @ApiProperty({ description: "Visit fee captured when the encounter was created" })
   visitFeeAmount!: number;
 

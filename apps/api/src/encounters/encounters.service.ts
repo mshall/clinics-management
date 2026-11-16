@@ -36,6 +36,13 @@ import {
 } from "../compliance/void-revenue-fiscal-returns";
 import { parseVisitCollectionForAmount } from "../common/visit-collection";
 import { resolveTransferVerification } from "../common/visit-collection-transfer";
+import {
+  DEFAULT_MONEY_VISIBILITY_OVERRIDES,
+  canEditEncounterFeesForViewer,
+  encounterFinancialsVisible,
+  loadUserMoneyVisibilityOverrides,
+  type UserMoneyVisibilityOverrides,
+} from "../common/user-money-visibility";
 import { PrismaService } from "../prisma/prisma.service";
 import { FrontDeskFlowService } from "../front-desk/front-desk-flow.service";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
@@ -157,6 +164,12 @@ export class EncountersService {
     encounterId: string,
     dto: EncounterDetailDto,
   ): Promise<EncounterDetailDto> {
+    if (dto.financialsVisible === false) {
+      dto.visitBalanceDueAmount = null;
+      dto.visitBalanceDueCurrency = null;
+      dto.visitBalanceRevenueId = null;
+      return dto;
+    }
     const receivable = await getEncounterVisitFeeReceivableSummary(this.prisma, tenantId, encounterId);
     if (receivable) {
       dto.visitBalanceDueAmount = receivable.amount;
@@ -170,8 +183,19 @@ export class EncountersService {
     return dto;
   }
 
-  private mapEncounter(e: EncounterRow, opts?: { lite?: boolean }): EncounterDetailDto {
+  private async moneyOverrides(tenantId: string, viewer?: JwtUser): Promise<UserMoneyVisibilityOverrides> {
+    return loadUserMoneyVisibilityOverrides(this.prisma, tenantId, viewer?.userId);
+  }
+
+  private mapEncounter(
+    e: EncounterRow,
+    opts?: { lite?: boolean; viewer?: JwtUser; overrides?: UserMoneyVisibilityOverrides },
+  ): EncounterDetailDto {
     const lite = opts?.lite ?? false;
+    const overrides = opts?.overrides ?? DEFAULT_MONEY_VISIBILITY_OVERRIDES;
+    const financialsVisible = opts?.viewer
+      ? encounterFinancialsVisible(opts.viewer, e.clinicianId, overrides)
+      : true;
     const patient = e.patient;
     return {
       id: e.id,
@@ -205,8 +229,9 @@ export class EncountersService {
       weightKg: e.weightKg != null ? Number(e.weightKg) : null,
       heightCm: e.heightCm != null ? Number(e.heightCm) : null,
       noMedications: e.noMedications,
-      visitFeeAmount: Number(e.visitFeeAmount),
+      visitFeeAmount: financialsVisible ? Number(e.visitFeeAmount) : 0,
       visitFeeCurrency: e.visitFeeCurrency,
+      financialsVisible,
       appointmentId: e.appointmentId ?? null,
       finalizedAt: e.finalizedAt ? e.finalizedAt.toISOString() : null,
       clinicalTemplateId: e.clinicalTemplateId ?? null,
@@ -295,8 +320,9 @@ export class EncountersService {
         include: encounterIncludeDef,
       }),
     ]);
+    const moneyVis = await this.moneyOverrides(tenantId, viewer);
     return paginate(
-      rows.map((r) => this.mapEncounter(r, { lite: true })),
+      rows.map((r) => this.mapEncounter(r, { lite: true, viewer, overrides: moneyVis })),
       total,
       page,
       pageSize
@@ -314,7 +340,12 @@ export class EncountersService {
     }
     await this.applyAutoNoteLockIfDue(tenantId, row.id);
     const fresh = await this.prisma.encounter.findFirst({ where: { id, tenantId }, include: encounterIncludeDef });
-    return this.enrichVisitBalanceDue(tenantId, id, this.mapEncounter(fresh ?? row));
+    const moneyVis = await this.moneyOverrides(tenantId, viewer);
+    return this.enrichVisitBalanceDue(
+      tenantId,
+      id,
+      this.mapEncounter(fresh ?? row, { viewer, overrides: moneyVis }),
+    );
   }
 
   private async applyAutoNoteLockIfDue(tenantId: string, encounterId: string): Promise<void> {
@@ -351,6 +382,14 @@ export class EncountersService {
       if (!raw) throw new BadRequestException("clinicianId is required (or link a booked appointment to infer the physician)");
       await assertActiveSchedulingPhysician(this.prisma, tenantId, raw);
       clinicianId = raw;
+    }
+
+    const moneyVisCreate = await this.moneyOverrides(tenantId, actor);
+    const canSetVisitFees = canEditEncounterFeesForViewer(actor, clinicianId, moneyVisCreate);
+    if (!canSetVisitFees) {
+      dto.visitFeeAmount = undefined;
+      dto.visitFeeCurrency = undefined;
+      dto.visitCollection = undefined;
     }
 
     const [clinic, patient] = await Promise.all([
@@ -523,7 +562,12 @@ export class EncountersService {
     if (dto.patientAllergies?.length) {
       await this.patients.mergePatientAllergies(tenantId, dto.patientId, actor, dto.patientAllergies, row.id);
     }
-    return this.mapEncounter(row);
+    const moneyVis = await this.moneyOverrides(tenantId, actor);
+    return this.enrichVisitBalanceDue(
+      tenantId,
+      row.id,
+      this.mapEncounter(row, { viewer: actor, overrides: moneyVis }),
+    );
   }
 
   private async ensureEditableEncounter(enc: { id: string; tenantId: string; status: EncounterStatus; noteLockedAt: Date | null }) {
@@ -560,7 +604,8 @@ export class EncountersService {
       },
       include: encounterIncludeDef,
     });
-    return this.mapEncounter(row);
+    const moneyVis = await this.moneyOverrides(tenantId, viewer);
+    return this.mapEncounter(row, { viewer, overrides: moneyVis });
   }
 
   private async deletePrescriptionDocuments(tenantId: string, encounterId: string): Promise<void> {
@@ -579,6 +624,7 @@ export class EncountersService {
     if (!existing) throw new NotFoundException("Encounter not found");
     assertPhysicianEncounterAccess(viewer, existing);
     await this.ensureEditableEncounter(existing);
+    const moneyVis = viewer ? await this.moneyOverrides(tenantId, viewer) : DEFAULT_MONEY_VISIBILITY_OVERRIDES;
 
     const data: Prisma.EncounterUpdateInput = {};
     if (dto.visitType !== undefined) data.visitType = dto.visitType;
@@ -635,6 +681,14 @@ export class EncountersService {
 
     const visitFeeProvided = dto.visitFeeAmount !== undefined && dto.visitFeeAmount !== null;
     const visitFeeCurrencyProvided = dto.visitFeeCurrency !== undefined;
+    const collectionProvided = dto.visitCollection !== undefined;
+    if (
+      viewer &&
+      (visitFeeProvided || visitFeeCurrencyProvided || collectionProvided) &&
+      !canEditEncounterFeesForViewer(viewer, existing.clinicianId, moneyVis)
+    ) {
+      throw new ForbiddenException("You do not have permission to edit encounter visit fees");
+    }
     if (visitFeeCurrencyProvided) {
       data.visitFeeCurrency = await this.resolveVisitFeeCurrency(
         tenantId,
@@ -650,7 +704,6 @@ export class EncountersService {
       data.visitFeeAmount = new Prisma.Decimal(String(newFee));
     }
 
-    const collectionProvided = dto.visitCollection !== undefined;
     if (visitFeeProvided || visitFeeCurrencyProvided || collectionProvided) {
       const newFee = visitFeeProvided ? Number(dto.visitFeeAmount) : Number(existing.visitFeeAmount);
       const priorRevenue = await this.prisma.revenueEntry.findFirst({
@@ -741,7 +794,11 @@ export class EncountersService {
 
         return updated;
       });
-      return this.enrichVisitBalanceDue(tenantId, id, this.mapEncounter(row));
+      return this.enrichVisitBalanceDue(
+        tenantId,
+        id,
+        this.mapEncounter(row, { viewer, overrides: moneyVis }),
+      );
     }
 
     const row = await this.prisma.encounter.update({
@@ -749,7 +806,7 @@ export class EncountersService {
       data,
       include: encounterIncludeDef,
     });
-    return this.mapEncounter(row);
+    return this.mapEncounter(row, { viewer, overrides: moneyVis });
   }
 
   async addDiagnosis(
@@ -998,7 +1055,12 @@ export class EncountersService {
       }
       return updated;
     });
-    return this.mapEncounter(row);
+    const moneyVis = await this.moneyOverrides(tenantId, viewer);
+    return this.enrichVisitBalanceDue(
+      tenantId,
+      encounterId,
+      this.mapEncounter(row, { viewer, overrides: moneyVis }),
+    );
   }
 
   private assertCanDeleteEncounter(viewer: JwtUser): void {

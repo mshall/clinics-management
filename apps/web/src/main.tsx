@@ -31,7 +31,7 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
-      <Toaster richColors closeButton position="top-center" />
+      <Toaster richColors closeButton position="top-center" style={{ zIndex: 9999 }} />
     </QueryClientProvider>
   </StrictMode>
 );

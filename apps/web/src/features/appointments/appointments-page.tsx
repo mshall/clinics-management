@@ -28,6 +28,7 @@ import { physicianToPickListItem } from "@/lib/physician-display";
 import { formatClinicName, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
 import { columnFilterIncludes } from "@/lib/utils";
 import { useDebouncedPickListSearch } from "@/lib/pick-list-utils";
+import { canEditAppointmentFees } from "@/lib/appointment-encounter-money-policy";
 import { useAuthStore } from "@/stores/auth-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectAppointmentCreateIssues } from "@/lib/create-form-validation";
@@ -75,6 +76,7 @@ export function AppointmentsPage() {
   const authUser = useAuthStore((s) => s.user);
   const isPhysician = authUser?.role === "physician";
   const canDelete = canDeleteAppointment(authUser?.role);
+  const canSetAppointmentFees = canEditAppointmentFees(authUser?.role, authUser?.moneyVisibilityOverrides);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [sortBy, setSortBy] = useState("startsAt");
@@ -319,12 +321,14 @@ export function AppointmentsPage() {
     };
     if (end.trim()) body.endsAt = toAppointmentIso(end);
     if (confirmOverlap) body.confirmOverlap = true;
-    const trimmedFee = bookFee.trim();
-    const fee = trimmedFee !== "" ? Number.parseFloat(trimmedFee) : NaN;
-    if (Number.isFinite(fee) && fee >= 0) {
-      body.feeAmount = fee;
-      const scheduled = scheduledFeeCollectionToApi(fee, bookFeeCollection);
-      if (scheduled) body.scheduledFeeCollection = scheduled;
+    if (canSetAppointmentFees) {
+      const trimmedFee = bookFee.trim();
+      const fee = trimmedFee !== "" ? Number.parseFloat(trimmedFee) : NaN;
+      if (Number.isFinite(fee) && fee >= 0) {
+        body.feeAmount = fee;
+        const scheduled = scheduledFeeCollectionToApi(fee, bookFeeCollection);
+        if (scheduled) body.scheduledFeeCollection = scheduled;
+      }
     }
     return body;
   };
@@ -362,10 +366,12 @@ export function AppointmentsPage() {
     mutationFn: (confirmOverlap: boolean) => {
       const issues = collectAppointmentCreateIssues(appointmentCreateInput, t);
       if (issues.length > 0) throw new Error(issues.join(" "));
-      const trimmedFee = bookFee.trim();
-      const fee = trimmedFee !== "" ? Number.parseFloat(trimmedFee) : NaN;
-      const planErr = Number.isFinite(fee) && fee > 0 ? validateScheduledFeeCollection(fee, bookFeeCollection, t) : null;
-      if (planErr) throw new Error(planErr);
+      if (canSetAppointmentFees) {
+        const trimmedFee = bookFee.trim();
+        const fee = trimmedFee !== "" ? Number.parseFloat(trimmedFee) : NaN;
+        const planErr = Number.isFinite(fee) && fee > 0 ? validateScheduledFeeCollection(fee, bookFeeCollection, t) : null;
+        if (planErr) throw new Error(planErr);
+      }
       return apiPost("/api/v1/appointments", buildCreateBody(confirmOverlap));
     },
     onSuccess: () => {
@@ -689,6 +695,7 @@ export function AppointmentsPage() {
                 )}
               </p>
             </div>
+            {canSetAppointmentFees ? (
             <div className="space-y-2 sm:col-span-2">
               <Label>{t("appointments.scheduledFee", "Scheduled fee ({{currency}})", { currency: bookFeeCurrency })}</Label>
               <Input
@@ -706,6 +713,14 @@ export function AppointmentsPage() {
                 onChange={setBookFeeCollection}
               />
             </div>
+            ) : (
+              <p className="text-sm text-muted-foreground sm:col-span-2">
+                {t(
+                  "appointments.scheduledFeeHiddenRole",
+                  "Scheduled fees use organization defaults for your role. An administrator can enable fee fields per user.",
+                )}
+              </p>
+            )}
             <div className="flex flex-wrap items-end gap-2 sm:col-span-2">
               <CreateActionButton
                 type="button"

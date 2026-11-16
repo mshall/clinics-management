@@ -18,6 +18,13 @@ import {
 } from "../common/visit-fee-ledger";
 import { PrismaService } from "../prisma/prisma.service";
 import { parseScheduledFeeCollection } from "../common/visit-collection";
+import {
+  appointmentFinancialsVisible,
+  canEditAppointmentFeesForViewer,
+  loadUserMoneyVisibilityOverrides,
+  type UserMoneyVisibilityOverrides,
+  DEFAULT_MONEY_VISIBILITY_OVERRIDES,
+} from "../common/user-money-visibility";
 import { resolveTenantTransferCollectionContext } from "../markets/market-transfer-context";
 import { assertNoOpenEncounterForAppointmentComplete } from "./appointment-completion.guard";
 import { assertScheduledTransferFeeCollected } from "./appointment-transfer-fee.guard";
@@ -120,7 +127,18 @@ export class AppointmentsService {
     return this.clinicianNameParts(clinician).display;
   }
 
-  private mapRow(row: AppointmentRow): AppointmentDto {
+  private async moneyOverrides(tenantId: string, viewer?: JwtUser): Promise<UserMoneyVisibilityOverrides> {
+    return loadUserMoneyVisibilityOverrides(this.prisma, tenantId, viewer?.userId);
+  }
+
+  private mapRow(
+    row: AppointmentRow,
+    viewer?: JwtUser,
+    overrides: UserMoneyVisibilityOverrides = DEFAULT_MONEY_VISIBILITY_OVERRIDES,
+  ): AppointmentDto {
+    const financialsVisible = viewer
+      ? appointmentFinancialsVisible(viewer, row.clinicianId, overrides)
+      : true;
     const patient = row.patient;
     const clinician = row.clinician;
     const clinicianParts = this.clinicianNameParts(clinician ?? null);
@@ -138,7 +156,8 @@ export class AppointmentsService {
       clinicianLastNameAr: clinicianParts.lastNameAr,
       startsAt: row.startsAt.toISOString(),
       endsAt: row.endsAt?.toISOString() ?? null,
-      feeAmount: Number(row.feeAmount),
+      feeAmount: financialsVisible ? Number(row.feeAmount) : 0,
+      financialsVisible,
       scheduledCollectionMode: row.scheduledCollectionMode ?? null,
       scheduledTransferChannel: row.scheduledTransferChannel ?? null,
       status: row.status,
@@ -159,8 +178,9 @@ export class AppointmentsService {
     return dto;
   }
 
-  private async finishAppointmentDto(tenantId: string, row: AppointmentRow): Promise<AppointmentDto> {
-    const dto = this.mapRow(row);
+  private async finishAppointmentDto(tenantId: string, row: AppointmentRow, viewer?: JwtUser): Promise<AppointmentDto> {
+    const moneyVis = await this.moneyOverrides(tenantId, viewer);
+    const dto = this.mapRow(row, viewer, moneyVis);
     if (row.status !== AppointmentStatus.CHECKED_IN) return dto;
 
     let openEncounterId =
@@ -184,7 +204,7 @@ export class AppointmentsService {
     let withEncounter = { ...dto, openEncounterId };
     if (openEncounterId) {
       const receivable = await getEncounterVisitFeeReceivableSummary(this.prisma, tenantId, openEncounterId);
-      if (receivable) {
+      if (receivable && dto.financialsVisible !== false) {
         withEncounter = {
           ...withEncounter,
           visitBalanceDueAmount: receivable.amount,
@@ -327,8 +347,9 @@ export class AppointmentsService {
         include: appointmentDtoInclude,
       }),
     ]);
+    const moneyVis = await this.moneyOverrides(tenantId, viewer);
     return paginate(
-      rows.map((r: AppointmentRow) => this.mapRow(r)),
+      rows.map((r: AppointmentRow) => this.mapRow(r, viewer, moneyVis)),
       total,
       page,
       pageSize
@@ -437,13 +458,14 @@ export class AppointmentsService {
     if (isPhysicianRole(actor.role) && dto.clinicianId.trim() !== actor.userId) {
       throw new BadRequestException("Physicians may only book appointments as themselves");
     }
-    return this.createInternal(tenantId, dto, {});
+    return this.createInternal(tenantId, dto, {}, actor);
   }
 
   private async createInternal(
     tenantId: string,
     dto: CreateAppointmentDto,
     integration: { integrationClientId?: string; externalReference?: string | null },
+    actor?: JwtUser,
   ): Promise<AppointmentDto> {
     const [clinic, patient, clinician] = await Promise.all([
       this.prisma.clinic.findFirst({ where: { id: dto.clinicId, tenantId } }),
@@ -478,18 +500,26 @@ export class AppointmentsService {
     if (!tenant) throw new BadRequestException("Tenant not found");
     const defaultFee = Number(tenant.defaultVisitFee);
     const typeFee = apptType ? Number(apptType.feeAmount) : null;
-    const feeRaw =
-      dto.feeAmount !== undefined && dto.feeAmount !== null
+    const clinicianIdForFees = dto.clinicianId.trim();
+    const moneyVis = actor ? await this.moneyOverrides(tenantId, actor) : DEFAULT_MONEY_VISIBILITY_OVERRIDES;
+    const canSetFees = actor ? canEditAppointmentFeesForViewer(actor, clinicianIdForFees, moneyVis) : true;
+    const feeRaw = canSetFees
+      ? dto.feeAmount !== undefined && dto.feeAmount !== null
         ? Number(dto.feeAmount)
         : typeFee != null
           ? typeFee
-          : defaultFee;
+          : defaultFee
+      : typeFee != null
+        ? typeFee
+        : defaultFee;
     const feeAmount = Number.isFinite(feeRaw) && feeRaw >= 0 ? feeRaw : defaultFee;
 
     const transferCtx = await resolveTenantTransferCollectionContext(this.prisma, this.featureFlags, tenantId);
-    const scheduleInput =
-      dto.scheduledFeeCollection ??
-      (feeAmount > 0 ? { mode: VisitCollectionMode.CASH_ON_VISIT } : undefined);
+    const scheduleInput = canSetFees
+      ? dto.scheduledFeeCollection ?? (feeAmount > 0 ? { mode: VisitCollectionMode.CASH_ON_VISIT } : undefined)
+      : feeAmount > 0
+        ? { mode: VisitCollectionMode.CASH_ON_VISIT }
+        : undefined;
     const scheduledPlan = parseScheduledFeeCollection(feeAmount, scheduleInput, {
       allowedTransferChannels: transferCtx.allowedTransferChannels,
     });
@@ -516,7 +546,7 @@ export class AppointmentsService {
       },
       include: appointmentDtoInclude,
     });
-    return this.mapRow(row);
+    return this.finishAppointmentDto(tenantId, row, actor);
   }
 
   async updateStatus(
@@ -561,7 +591,7 @@ export class AppointmentsService {
         row.clinicianId,
       );
     }
-    return this.finishAppointmentDto(tenantId, row);
+    return this.finishAppointmentDto(tenantId, row, viewer);
   }
 
   async getById(tenantId: string, id: string, viewer?: JwtUser): Promise<AppointmentDto> {
@@ -571,7 +601,7 @@ export class AppointmentsService {
     });
     if (!row) throw new NotFoundException("Appointment not found");
     await this.assertAppointmentAccess(viewer, row);
-    return this.finishAppointmentDto(tenantId, row);
+    return this.finishAppointmentDto(tenantId, row, viewer);
   }
 
   private isCompletedStatus(s: AppointmentStatus): boolean {
@@ -614,6 +644,16 @@ export class AppointmentsService {
       if (!Number.isFinite(newFee) || newFee < 0) {
         throw new BadRequestException("feeAmount must be a non-negative number");
       }
+    }
+
+    const moneyVis = viewer ? await this.moneyOverrides(tenantId, viewer) : DEFAULT_MONEY_VISIBILITY_OVERRIDES;
+    const touchesFees = feeProvided || dto.scheduledFeeCollection !== undefined;
+    if (
+      viewer &&
+      touchesFees &&
+      !canEditAppointmentFeesForViewer(viewer, clinicianId, moneyVis)
+    ) {
+      throw new ForbiddenException("You do not have permission to edit appointment fees");
     }
 
     const nextStatus = dto.status !== undefined ? dto.status : undefined;
@@ -682,7 +722,7 @@ export class AppointmentsService {
 
       return updated;
     });
-    return this.finishAppointmentDto(tenantId, row);
+    return this.finishAppointmentDto(tenantId, row, viewer);
   }
 
   private assertCanDeleteAppointment(viewer: JwtUser): void {

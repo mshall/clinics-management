@@ -1,3 +1,9 @@
+import type { MoneyVisibilityOverrides } from "@/lib/money-visibility-policy";
+import {
+  operationFeeEditForUser,
+  operationMoneyVisibleForUser,
+  showOperationMoneyColumnsForUser,
+} from "@/lib/money-visibility-policy";
 import type { DemoRole } from "@/lib/roles";
 
 const OPERATION_MONEY_ROLES = new Set<DemoRole>([
@@ -8,17 +14,28 @@ const OPERATION_MONEY_ROLES = new Set<DemoRole>([
 ]);
 
 /** Revenue / period stats on the operations page. */
-export function canViewOperationSummaryMoney(role: DemoRole | undefined): boolean {
+export function canViewOperationSummaryMoney(
+  role: DemoRole | undefined,
+  overrides?: MoneyVisibilityOverrides | null,
+): boolean {
+  if (overrides) return operationMoneyVisibleForUser(role, overrides);
   return role != null && OPERATION_MONEY_ROLES.has(role);
 }
 
 /** Fee fields on create / edit / complete dialogs. */
-export function canEditOperationFees(role: DemoRole | undefined): boolean {
-  return canViewOperationSummaryMoney(role);
+export function canEditOperationFees(
+  role: DemoRole | undefined,
+  overrides?: MoneyVisibilityOverrides | null,
+): boolean {
+  return operationFeeEditForUser(role, overrides);
 }
 
 /** Money columns: privileged roles see all rows; physicians only their assignments (per-row API flag). */
-export function showOperationMoneyColumns(role: DemoRole | undefined): boolean {
+export function showOperationMoneyColumns(
+  role: DemoRole | undefined,
+  overrides?: MoneyVisibilityOverrides | null,
+): boolean {
+  if (overrides) return showOperationMoneyColumnsForUser(role, overrides);
   return canViewOperationSummaryMoney(role) || role === "physician";
 }
 
@@ -37,6 +54,9 @@ export function canCreateOperation(role: DemoRole | undefined): boolean {
 }
 
 /** @deprecated Prefer `operation.financialsVisible` from the API for row-level display. */
-export function canViewOperationMoney(role: DemoRole | undefined): boolean {
-  return canViewOperationSummaryMoney(role);
+export function canViewOperationMoney(
+  role: DemoRole | undefined,
+  overrides?: MoneyVisibilityOverrides | null,
+): boolean {
+  return canViewOperationSummaryMoney(role, overrides);
 }

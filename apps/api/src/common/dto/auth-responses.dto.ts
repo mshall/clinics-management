@@ -1,5 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { UserRole } from "@prisma/client";
+import { FinancialVisibilityOverride, UserRole } from "@prisma/client";
+
+export class MoneyVisibilityOverridesDto {
+  @ApiProperty({ enum: FinancialVisibilityOverride })
+  operations!: FinancialVisibilityOverride;
+
+  @ApiProperty({ enum: FinancialVisibilityOverride })
+  encounters!: FinancialVisibilityOverride;
+
+  @ApiProperty({ enum: FinancialVisibilityOverride })
+  appointments!: FinancialVisibilityOverride;
+}
 
 export class EmployeePrivilegeGrantSummaryDto {
   @ApiProperty()
@@ -73,6 +84,12 @@ export class AuthUserDto {
     description: "Clinics where the user is assigned as HR (full clinic-scoped HR permissions)",
   })
   employeePrivilegeGrants?: EmployeePrivilegeGrantSummaryDto[];
+
+  @ApiPropertyOptional({
+    type: MoneyVisibilityOverridesDto,
+    description: "Per-user override for showing money on operations, encounters, and appointments",
+  })
+  moneyVisibilityOverrides?: MoneyVisibilityOverridesDto;
 }
 
 export class LoginResponseDto {

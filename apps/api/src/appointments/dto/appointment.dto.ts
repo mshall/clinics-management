@@ -47,6 +47,9 @@ export class AppointmentDto {
   @ApiProperty({ description: "Scheduled visit fee for this appointment" })
   feeAmount!: number;
 
+  @ApiPropertyOptional({ description: "Whether scheduled fee and balances are visible for this viewer" })
+  financialsVisible?: boolean;
+
   @ApiPropertyOptional({ enum: VisitCollectionMode, nullable: true })
   scheduledCollectionMode?: VisitCollectionMode | null;
 

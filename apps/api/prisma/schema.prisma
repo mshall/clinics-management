@@ -224,6 +224,18 @@ enum VisitCollectionMode {
   MONEY_TRANSFER
 }
 
+enum FinancialVisibilityOverride {
+  ROLE_DEFAULT
+  SHOW_VISIBILITY_AND_EDIT
+  SHOW_VISIBILITY_ONLY
+  SHOW_EDIT_ONLY
+  HIDE_VISIBILITY_AND_EDIT
+  HIDE_VISIBILITY_ONLY
+  HIDE_EDIT_ONLY
+  SHOW // legacy DB values; migrated on read/write to granular options
+  HIDE
+}
+
 
 enum MessageChannel {
   SMS
@@ -613,6 +625,7 @@ model Tenant {
   providerCredentials            ProviderCredential[]
   tenantFeatureFlags             TenantFeatureFlag[]
   paymentChannels                TenantPaymentChannel[]
+  userMoneyVisibilityOverrides   UserMoneyVisibilityOverride[]
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
 }
@@ -660,6 +673,8 @@ model User {
   tenantRoleNavTabGrantsUpdated TenantRoleNavTabGrant[] @relation("TenantRoleNavTabGrantUpdatedBy")
   employeePrivilegeGrants UserClinicEmployeePrivilegeGrant[] @relation("EmployeePrivilegeGrantUser")
   employeePrivilegeGrantsUpdated UserClinicEmployeePrivilegeGrant[] @relation("EmployeePrivilegeGrantUpdatedBy")
+  moneyVisibilityOverride UserMoneyVisibilityOverride? @relation("UserMoneyVisibilityOverrideUser")
+  moneyVisibilityOverridesUpdated UserMoneyVisibilityOverride[] @relation("UserMoneyVisibilityOverrideUpdatedBy")
   supportTicketsReported         SupportTicket[] @relation("SupportTicketReporter")
   supportTicketsAssigned         SupportTicket[] @relation("SupportTicketAssignee")
   supportTicketEvents            SupportTicketEvent[] @relation("SupportTicketEventActor")
@@ -712,6 +727,23 @@ model TenantRoleNavTabGrant {
 
   @@unique([tenantId, role])
   @@index([tenantId])
+}
+
+model UserMoneyVisibilityOverride {
+  id                  String                      @id @default(cuid())
+  tenantId            String
+  tenant              Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId              String                      @unique
+  user                User                        @relation("UserMoneyVisibilityOverrideUser", fields: [userId], references: [id], onDelete: Cascade)
+  operationsOverride  FinancialVisibilityOverride @default(ROLE_DEFAULT)
+  encountersOverride  FinancialVisibilityOverride @default(ROLE_DEFAULT)
+  appointmentsOverride FinancialVisibilityOverride @default(ROLE_DEFAULT)
+  updatedByUserId     String?
+  updatedBy           User?                       @relation("UserMoneyVisibilityOverrideUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+
+  @@index([tenantId, userId])
 }
 
 model UserClinicEmployeePrivilegeGrant {

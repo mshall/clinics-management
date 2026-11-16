@@ -47,6 +47,12 @@ import {
   canViewOperationSummaryMoney,
   showOperationMoneyColumns,
 } from "@/lib/operation-money-policy";
+import {
+  operationCanOpenInWorkspace,
+  operationClinicalFormEditable,
+  operationShowsBookedRowActions,
+  operationStatusIsEditable,
+} from "@/lib/operation-status-policy";
 import { canGenerateInvoice } from "@/lib/invoice-generate-policy";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
 import { formatClinicianDisplayName } from "@/lib/employee-display";
@@ -105,9 +111,10 @@ export function OperationsPage() {
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
   const canCreate = canCreateOperation(authUser?.role);
-  const showSummaryMoney = canViewOperationSummaryMoney(authUser?.role);
-  const canEditFees = canEditOperationFees(authUser?.role);
-  const showMoneyColumns = showOperationMoneyColumns(authUser?.role);
+  const moneyOverrides = authUser?.moneyVisibilityOverrides;
+  const showSummaryMoney = canViewOperationSummaryMoney(authUser?.role, moneyOverrides);
+  const canEditFees = canEditOperationFees(authUser?.role, moneyOverrides);
+  const showMoneyColumns = showOperationMoneyColumns(authUser?.role, moneyOverrides);
   const canAdminEditCompleted = canAdminEditCompletedOperation(authUser?.role);
   const canInvoice = canGenerateInvoice(authUser?.role);
   const isPhysician = authUser?.role === "physician";
@@ -364,9 +371,9 @@ export function OperationsPage() {
   };
 
   const canEditOperationForm = (o: OperationDto) =>
-    o.status === "SCHEDULED" || (o.status === "COMPLETED" && canAdminEditCompleted);
+    operationClinicalFormEditable(o.status ?? "BOOKED", canAdminEditCompleted);
 
-  const canOpenOperation = (o: OperationDto) => o.status === "SCHEDULED" || o.status === "COMPLETED";
+  const canOpenOperation = (o: OperationDto) => operationCanOpenInWorkspace(o.status ?? "BOOKED");
 
   const openEdit = (o: OperationDto) => {
     resetEditClinicalForm();
@@ -386,7 +393,7 @@ export function OperationsPage() {
     editDoctorPickSearch.resetSearch();
   };
 
-  const editIsScheduled = editOp?.status === "SCHEDULED";
+  const editIsScheduled = editOp != null && operationStatusIsEditable(editOp.status ?? "BOOKED");
   const editFormLocked = editOp != null && !canEditOperationForm(editOp);
   const { data: editOpDetail, isPending: editOpDetailPending } = useOperationQuery(
     editIsScheduled ? editOp?.id : undefined,
@@ -1975,7 +1982,7 @@ export function OperationsPage() {
                             {o.comments?.trim() || "—"}
                           </td>
                           <td className="px-3 py-2 align-top text-end" onClick={(e) => e.stopPropagation()}>
-                            {o.status === "SCHEDULED" ? (
+                            {operationShowsBookedRowActions(o.status ?? "BOOKED") ? (
                               <div className="flex flex-wrap justify-end gap-1">
                                 <Button
                                   type="button"

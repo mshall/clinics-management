@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useClinicsQuery } from "@/lib/api-hooks";
+import { apiErrorMessage } from "@/lib/api-error-message";
 import { ApiError, apiDelete, apiGet, apiPut } from "@/lib/http";
 import type { NavItemKey } from "@/lib/nav-policy";
 import {
@@ -20,8 +22,17 @@ import {
   roleNavKeysForRole,
 } from "@/lib/nav-policy";
 import { formatClinicName, formatUserRole } from "@/lib/locale-display";
+import {
+  MONEY_ACCESS_OVERRIDE_I18N,
+  MONEY_ACCESS_OVERRIDE_OPTIONS,
+  normalizeMoneyAccessOverride,
+  type MoneyAccessOverride,
+} from "@/lib/money-access-override";
+import type { MoneyVisibilityOverrides } from "@/lib/money-visibility-policy";
+import { nativeSelectClassName } from "@/lib/form-control-styles";
 import type { DemoRole } from "@/lib/roles";
 import { useAuthStore } from "@/stores/auth-store";
+import { Label } from "@/components/ui/label";
 import { NavTabChecklist, NAV_TAB_I18N } from "@/features/admin/org-nav-tab-checklist";
 
 type UserClinicHrAssignmentDto = {
@@ -57,6 +68,7 @@ export function OrgUserPermissionsEditor({
   const qc = useQueryClient();
   const viewer = useAuthStore((s) => s.user);
   const canManagePrivilegeGrants = canManageOrgUserNavTabs(viewer?.role);
+  const canEditMoneyVisibility = canManagePrivilegeGrants && userRole !== "group_admin";
   const canCustomizeRoles = canCustomizeOrgRoleNavTabs(viewer?.role);
   const canExtendUsers = canExtendUserNavTabs(viewer?.role);
   const isClinicAdminViewer = viewer?.role === "clinic_admin";
@@ -72,6 +84,14 @@ export function OrgUserPermissionsEditor({
 
   const [userDraft, setUserDraft] = useState<Set<NavItemKey>>(() => new Set());
   const [userErr, setUserErr] = useState<string | null>(null);
+  const [moneyDraft, setMoneyDraft] = useState<MoneyVisibilityOverrides>({
+    operations: "ROLE_DEFAULT",
+    encounters: "ROLE_DEFAULT",
+    appointments: "ROLE_DEFAULT",
+  });
+  const [moneyErr, setMoneyErr] = useState<string | null>(null);
+  const [moneySaveBanner, setMoneySaveBanner] = useState<"ok" | null>(null);
+  const moneyDraftSeedRef = useRef("");
 
   const userRoleGrantQ = useQuery({
     queryKey: ["tenant-role-nav-tabs", userRole],
@@ -84,6 +104,24 @@ export function OrgUserPermissionsEditor({
     queryFn: () => apiGet<{ tabKeys: string[] | null }>(`/api/v1/user-nav-tabs/${userId}`),
     enabled: Boolean(userId),
   });
+
+  const moneyVisQ = useQuery({
+    queryKey: ["user-money-visibility", userId],
+    queryFn: () => apiGet<MoneyVisibilityOverrides>(`/api/v1/user-money-visibility/${userId}`),
+    enabled: canEditMoneyVisibility && Boolean(userId),
+  });
+
+  useEffect(() => {
+    if (!canEditMoneyVisibility || !moneyVisQ.isSuccess) return;
+    const seed = `${userId}:${JSON.stringify(moneyVisQ.data)}`;
+    if (moneyDraftSeedRef.current === seed) return;
+    moneyDraftSeedRef.current = seed;
+    setMoneyDraft({
+      operations: normalizeMoneyAccessOverride(moneyVisQ.data.operations),
+      encounters: normalizeMoneyAccessOverride(moneyVisQ.data.encounters),
+      appointments: normalizeMoneyAccessOverride(moneyVisQ.data.appointments),
+    });
+  }, [canEditMoneyVisibility, userId, moneyVisQ.isSuccess, moneyVisQ.data]);
 
   const userRoleBase = useMemo(
     () => roleNavKeysForRole(userRole, userRoleGrantQ.data?.tabKeys),
@@ -129,6 +167,28 @@ export function OrgUserPermissionsEditor({
     userRoleGrantQ.data?.tabKeys,
     organizationTabSet,
   ]);
+
+  const saveMoneyMut = useMutation({
+    mutationFn: (body: MoneyVisibilityOverrides) =>
+      apiPut<MoneyVisibilityOverrides>(`/api/v1/user-money-visibility/${userId}`, body),
+    onSuccess: async (data) => {
+      setMoneyErr(null);
+      setMoneySaveBanner("ok");
+      setMoneyDraft(data);
+      moneyDraftSeedRef.current = `${userId}:${JSON.stringify(data)}`;
+      qc.setQueryData(["user-money-visibility", userId], data);
+      toast.success(t("admin.moneyVisibilitySaveSuccess", "Money visibility saved."));
+      await qc.invalidateQueries({ queryKey: ["user-money-visibility", userId] });
+      if (userId === viewer?.id) await useAuthStore.getState().refreshSessionFromServer();
+      window.setTimeout(() => setMoneySaveBanner(null), 4000);
+    },
+    onError: (e: unknown) => {
+      const msg = apiErrorMessage(e, t);
+      setMoneySaveBanner(null);
+      setMoneyErr(msg);
+      toast.error(msg);
+    },
+  });
 
   const saveUserMut = useMutation({
     mutationFn: (payload: { tabKeys: string[]; hrClinicId?: string }) =>
@@ -381,6 +441,102 @@ export function OrgUserPermissionsEditor({
           {t("admin.navTabsReset", "Use role defaults")}
         </Button>
       </div>
+
+      {canEditMoneyVisibility ? (
+        <div className="space-y-3 rounded-lg border border-border p-3">
+          <div>
+            <p className="text-sm font-medium">{t("admin.moneyVisibilityTitle", "Money visibility")}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t(
+                "admin.moneyVisibilityHint",
+                "Control whether this user sees fee and balance amounts. Fee editing still follows role rules; this only affects visibility. Click Save money visibility to apply changes.",
+              )}
+            </p>
+          </div>
+          {moneyVisQ.isError ? (
+            <p className="text-sm text-destructive">
+              {moneyVisQ.error instanceof Error ? moneyVisQ.error.message : t("common.error")}
+            </p>
+          ) : null}
+          {moneySaveBanner === "ok" ? (
+            <p className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-900 dark:text-emerald-100" role="status">
+              {t("admin.moneyVisibilitySaveSuccess", "Money visibility saved.")}
+            </p>
+          ) : null}
+          {moneyErr ? (
+            <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+              {moneyErr}
+            </p>
+          ) : null}
+          {moneyVisQ.isPending ? (
+            <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+          ) : moneyVisQ.isSuccess ? (
+            <div className="grid gap-4 sm:grid-cols-3">
+              {(
+                [
+                  ["operations", t("admin.moneyVisibilityOperations", "Operations")],
+                  ["encounters", t("admin.moneyVisibilityEncounters", "Encounters")],
+                  ["appointments", t("admin.moneyVisibilityAppointments", "Appointments")],
+                ] as const
+              ).map(([key, label]) => (
+                <div key={key} className="space-y-1.5">
+                  <Label>{label}</Label>
+                  <select
+                    className={nativeSelectClassName}
+                    value={moneyDraft[key]}
+                    disabled={saveMoneyMut.isPending}
+                    onChange={(e) => {
+                      const next = e.target.value as MoneyAccessOverride;
+                      setMoneyDraft((prev) => ({ ...prev, [key]: next }));
+                    }}
+                  >
+                    {MONEY_ACCESS_OVERRIDE_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {t(MONEY_ACCESS_OVERRIDE_I18N[opt], opt)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              disabled={!moneyVisQ.isSuccess || saveMoneyMut.isPending}
+              onClick={() => {
+                setMoneySaveBanner(null);
+                setMoneyErr(null);
+                saveMoneyMut.mutate(moneyDraft);
+              }}
+            >
+              {saveMoneyMut.isPending
+                ? t("common.saving", "Saving…")
+                : t("admin.moneyVisibilitySave", "Save money visibility")}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={!moneyVisQ.isSuccess || saveMoneyMut.isPending}
+              onClick={() => {
+                setMoneySaveBanner(null);
+                setMoneyErr(null);
+                saveMoneyMut.mutate({
+                  operations: "ROLE_DEFAULT",
+                  encounters: "ROLE_DEFAULT",
+                  appointments: "ROLE_DEFAULT",
+                });
+              }}
+            >
+              {saveMoneyMut.isPending
+                ? t("common.saving", "Saving…")
+                : t("admin.moneyVisibilityReset", "Use role defaults")}
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {showHrAssignmentSection && canManagePrivilegeGrants && isClinicAdminViewer ? (
         <div className="space-y-3 rounded-lg border border-border p-3">

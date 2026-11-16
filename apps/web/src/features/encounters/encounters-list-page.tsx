@@ -57,6 +57,7 @@ import {
 } from "@/lib/visit-collection";
 import { ENCOUNTER_VISIT_TYPES, formatVisitType } from "@/lib/visit-types";
 import { defaultEncounterListRange, defaultMonthRange } from "@/stores/date-range-store";
+import { canEditEncounterVisitFees } from "@/lib/appointment-encounter-money-policy";
 import { useAuthStore } from "@/stores/auth-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectEncounterCreateIssues } from "@/lib/create-form-validation";
@@ -69,6 +70,7 @@ export function EncountersListPage() {
   const authUser = useAuthStore((s) => s.user);
   const isPhysician = authUser?.role === "physician";
   const canDelete = canDeleteEncounter(authUser?.role);
+  const canSetVisitFees = canEditEncounterVisitFees(authUser?.role, authUser?.moneyVisibilityOverrides);
   const initialRange = useMemo(() => defaultEncounterListRange(), []);
   const [from, setFrom] = useState(initialRange.from);
   const [to, setTo] = useState(initialRange.to);
@@ -291,17 +293,19 @@ export function EncountersListPage() {
         ...patientAcquisitionFormToBody(acquisitionValues),
         ...(patientAllergies.length ? { patientAllergies } : {}),
       };
-      const trimmed = createVisitFee.trim();
-      let feeAmount = 0;
-      if (trimmed !== "") {
-        const fee = Number.parseFloat(trimmed);
-        if (Number.isFinite(fee) && fee >= 0) {
-          body.visitFeeAmount = fee;
-          feeAmount = fee;
+      if (canSetVisitFees) {
+        const trimmed = createVisitFee.trim();
+        let feeAmount = 0;
+        if (trimmed !== "") {
+          const fee = Number.parseFloat(trimmed);
+          if (Number.isFinite(fee) && fee >= 0) {
+            body.visitFeeAmount = fee;
+            feeAmount = fee;
+          }
         }
+        const visitCollection = visitCollectionToApi(feeAmount, createVisitCollection);
+        if (visitCollection) body.visitCollection = visitCollection;
       }
-      const visitCollection = visitCollectionToApi(feeAmount, createVisitCollection);
-      if (visitCollection) body.visitCollection = visitCollection;
       if (selectedAppointmentId.trim()) body.appointmentId = selectedAppointmentId.trim();
       if (!isPhysician && createClinicianId.trim()) body.clinicianId = createClinicianId.trim();
       return apiPost<EncounterDetailDto>("/api/v1/encounters", body);
@@ -587,6 +591,7 @@ export function EncountersListPage() {
                     ))}
                   </select>
                 </div>
+                {canSetVisitFees ? (
                 <div className="space-y-2">
                   <Label>{t("encounters.visitFee", "Visit fee ({{currency}})", { currency: createVisitFeeCurrency })}</Label>
                   <Input
@@ -614,6 +619,14 @@ export function EncountersListPage() {
                     disabled={createMut.isPending}
                   />
                 </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    {t(
+                      "encounters.visitFeeHiddenRole",
+                      "Visit fees use organization defaults for your role. An administrator can enable fee fields per user.",
+                    )}
+                  </p>
+                )}
                 <PatientAllergiesField
                   className="border-t border-border pt-3"
                   value={allergyItems}

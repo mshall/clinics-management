@@ -59,6 +59,7 @@ export interface EncounterDetailDto {
   visitBalanceDueAmount?: number | null;
   visitBalanceDueCurrency?: string | null;
   visitBalanceRevenueId?: string | null;
+  financialsVisible?: boolean;
   appointmentId?: string | null;
   finalizedAt: string | null;
   clinicalTemplateId?: string | null;
@@ -211,6 +212,7 @@ export interface AppointmentDto {
   visitBalanceDueAmount?: number | null;
   visitBalanceDueCurrency?: string | null;
   visitBalanceRevenueId?: string | null;
+  financialsVisible?: boolean;
 }
 
 export interface OperationDto {

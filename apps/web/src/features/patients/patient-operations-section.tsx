@@ -37,7 +37,8 @@ type Props = {
 export function PatientOperationsSection({ patientId }: Props) {
   const { t, i18n } = useTranslation();
   const locale = localeForLanguage(i18n.language);
-  const showMoneyColumns = showOperationMoneyColumns(useAuthStore((s) => s.user?.role));
+  const authUser = useAuthStore((s) => s.user);
+  const showMoneyColumns = showOperationMoneyColumns(authUser?.role, authUser?.moneyVisibilityOverrides);
   const range = useMemo(() => patientOperationsDateRange(), []);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PATIENT_OPS_PAGE_SIZE);
