@@ -692,13 +692,30 @@ export class AdminService {
     if (
       dto.etaDefaultTaxpayerActivityCode !== undefined ||
       dto.etaDefaultItemCode !== undefined ||
-      dto.etaEsignatureLabel !== undefined
+      dto.etaEsignatureLabel !== undefined ||
+      dto.etaPhysicalReportingOptOut !== undefined ||
+      dto.etaPhysicalReportingConsentAt !== undefined
     ) {
+      if (dto.etaPhysicalReportingOptOut === true && !dto.etaPhysicalReportingConsentAt?.trim()) {
+        throw new BadRequestException(
+          "Physical ETA reporting opt-out requires consent timestamp (etaPhysicalReportingConsentAt)",
+        );
+      }
       const etaPatch = patchEtaTenantProviderSettings({
         defaultTaxpayerActivityCode: dto.etaDefaultTaxpayerActivityCode,
         defaultItemCode: dto.etaDefaultItemCode,
         esignatureLabel: dto.etaEsignatureLabel,
+        physicalReportingOptOut: dto.etaPhysicalReportingOptOut,
+        physicalReportingConsentAt:
+          dto.etaPhysicalReportingConsentAt !== undefined
+            ? dto.etaPhysicalReportingConsentAt
+            : dto.etaPhysicalReportingOptOut === true
+              ? new Date().toISOString()
+              : undefined,
       });
+      if (dto.etaPhysicalReportingOptOut === false) {
+        etaPatch.physicalReportingConsentAt = null;
+      }
       data.providerSettings = mergeProviderBlock(existing.providerSettings, "eta-egypt", etaPatch);
     }
     if (!Object.keys(data).length) throw new BadRequestException("No supported fields to update");

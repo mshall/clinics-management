@@ -3,12 +3,12 @@ import { test } from "node:test";
 import type { EtaReceiptPayload } from "./eta-egypt.client";
 import { computeEtaReceiptUuid } from "./eta-egypt-serialize";
 import { buildEtaWireReceiptDocument } from "./eta-egypt-wire";
+import { assertWireUuidMatchesContentHash } from "./eta-stored-submission";
 
-/**
- * Canonical Receipt v1.2 fixture for cross-check with ETA SDK / toolkit UUID API.
- * Re-verify in ETA pre-production when serialization rules change.
- * @see https://sdk.invoicing.eta.gov.eg/document-serialization-approach/
- */
+/** Cross-check value from ETA SDK / toolkit for this exact fixture (fixed issue time). */
+const GOLDEN_UUID = "322d148f562c8941db36ef30ca09d0bb1f3cc9b21779c15668c6c760023b1864";
+const GOLDEN_ISSUED_AT = "2024-01-15T10:00:00Z";
+
 const GOLDEN_PAYLOAD: EtaReceiptPayload = {
   issuerRin: "258797215",
   branchCode: "0",
@@ -37,24 +37,17 @@ const GOLDEN_PAYLOAD: EtaReceiptPayload = {
 
 const GOLDEN_DEVICE_SERIAL = "KIORLY-EG-GOLDEN-01";
 
-test("ETA SDK golden fixture uuid is stable (verify against ETA toolkit)", () => {
+test("ETA SDK golden fixture uuid matches toolkit hash", () => {
   const wire = buildEtaWireReceiptDocument({
     payload: GOLDEN_PAYLOAD,
     previousUUID: "",
     deviceSerial: GOLDEN_DEVICE_SERIAL,
-    internalId: "00000001",
+    internalId: `${GOLDEN_DEVICE_SERIAL}-00000001`,
+    issuedAt: GOLDEN_ISSUED_AT,
   });
   const forHash = { ...wire, header: { ...wire.header, uuid: "" } };
   const uuid = computeEtaReceiptUuid(forHash as unknown as Record<string, unknown>);
-  assert.match(uuid, /^[a-f0-9]{64}$/);
-
-  const again = computeEtaReceiptUuid(forHash as unknown as Record<string, unknown>);
-  assert.equal(uuid, again);
-
-  const expectedFromEnv = process.env.ETA_GOLDEN_UUID_EXPECTED?.trim().toLowerCase();
-  if (expectedFromEnv) {
-    assert.equal(uuid, expectedFromEnv, "UUID mismatch vs ETA toolkit — update fixture or serialization");
-  }
+  assert.equal(uuid, GOLDEN_UUID);
+  wire.header.uuid = uuid;
+  assertWireUuidMatchesContentHash(wire);
 });
-
-/** Run with ETA_GOLDEN_UUID_EXPECTED set after ETA SDK/toolkit cross-check in pre-production. */

@@ -233,6 +233,8 @@ export function AdminPage() {
   const [etaActivityOrg, setEtaActivityOrg] = useState("8690");
   const [etaItemOrg, setEtaItemOrg] = useState("");
   const [etaSealLabel, setEtaSealLabel] = useState("");
+  const [etaPhysicalOptOut, setEtaPhysicalOptOut] = useState(false);
+  const [etaPhysicalConsent, setEtaPhysicalConsent] = useState(false);
   useEffect(() => {
     if (!isPlatformSuperAdmin && !isGroupAdmin && adminSection === "data") setAdminSection("clinics");
   }, [isPlatformSuperAdmin, isGroupAdmin, adminSection]);
@@ -263,12 +265,23 @@ export function AdminPage() {
     if (item?.etaDefaultItemCode != null) setEtaItemOrg(item.etaDefaultItemCode ?? "");
     const seal = overview.data?.currentTenant as { etaEsignatureLabel?: string | null } | undefined;
     if (seal?.etaEsignatureLabel != null) setEtaSealLabel(seal.etaEsignatureLabel ?? "");
+    const phys = overview.data?.currentTenant as { etaPhysicalReportingOptOut?: boolean } | undefined;
+    if (phys?.etaPhysicalReportingOptOut != null) setEtaPhysicalOptOut(phys.etaPhysicalReportingOptOut);
+    if (phys?.etaPhysicalReportingOptOut) setEtaPhysicalConsent(true);
   }, [overview.data?.currentTenant]);
 
   const patchOrgSettingsMut = useMutation({
     mutationFn: () => {
       const vatN = Number.parseFloat(vatDraft);
       const hours = Number.parseInt(reminderHours, 10);
+      if (etaPhysicalOptOut && !etaPhysicalConsent) {
+        throw new Error(
+          t(
+            "compliance.etaPhysicalConsentRequired",
+            "Confirm physical reporting responsibility before disabling ETA integration.",
+          ),
+        );
+      }
       return apiPatch("/api/v1/admin/tenant-settings", {
         defaultVisitFee: Number.parseFloat(feeDraft),
         baseCurrency: currencyDraft,
@@ -279,6 +292,10 @@ export function AdminPage() {
         etaDefaultTaxpayerActivityCode: etaActivityOrg.trim() || "8690",
         etaDefaultItemCode: etaItemOrg.trim() || null,
         etaEsignatureLabel: etaSealLabel.trim() || null,
+        etaPhysicalReportingOptOut: etaPhysicalOptOut,
+        ...(etaPhysicalOptOut
+          ? { etaPhysicalReportingConsentAt: new Date().toISOString() }
+          : { etaPhysicalReportingConsentAt: null }),
       });
     },
     onSuccess: async () => {
@@ -510,6 +527,39 @@ export function AdminPage() {
                     <div className="space-y-2 sm:col-span-2">
                       <Label htmlFor="org-eta-seal">{t("compliance.etaSealLabel", "E-signature / seal reference")}</Label>
                       <Input id="org-eta-seal" value={etaSealLabel} onChange={(e) => setEtaSealLabel(e.target.value)} placeholder="kiorly-clinics-management/eta-credentials" />
+                    </div>
+                    <div className="space-y-2 sm:col-span-2 border-t border-border pt-3">
+                      <label className="flex items-start gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={etaPhysicalOptOut}
+                          onChange={(e) => {
+                            setEtaPhysicalOptOut(e.target.checked);
+                            if (!e.target.checked) setEtaPhysicalConsent(false);
+                          }}
+                        />
+                        <span>
+                          {t(
+                            "compliance.etaPhysicalOptOut",
+                            "Disable ETA e-receipt integration for this organization (we will report receipts physically to the tax authority instead).",
+                          )}
+                        </span>
+                      </label>
+                      {etaPhysicalOptOut ? (
+                        <label className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <input
+                            type="checkbox"
+                            checked={etaPhysicalConsent}
+                            onChange={(e) => setEtaPhysicalConsent(e.target.checked)}
+                          />
+                          <span>
+                            {t(
+                              "compliance.etaPhysicalConsent",
+                              "I confirm our organization accepts full responsibility for timely physical reporting and will retain all required fiscal documents outside this integration.",
+                            )}
+                          </span>
+                        </label>
+                      ) : null}
                     </div>
                   </div>
                 </div>

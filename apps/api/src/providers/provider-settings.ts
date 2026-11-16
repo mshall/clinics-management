@@ -35,7 +35,15 @@ export type EtaEgyptTenantSettings = {
   defaultTaxpayerActivityCode: string;
   defaultItemCode: string | null;
   esignatureLabel: string | null;
+  /** Org will report receipts physically to the tax authority instead of ETA integration. */
+  physicalReportingOptOut: boolean;
+  physicalReportingConsentAt: string | null;
 };
+
+export function etaPhysicalReportingOptOut(tenant: { providerSettings?: unknown }): boolean {
+  const block = readProviderSettings(tenant.providerSettings)[ETA_KEY] ?? {};
+  return block.physicalReportingOptOut === true;
+}
 
 const ETA_KEY = "eta-egypt";
 
@@ -69,6 +77,9 @@ export function resolveEtaTenantSettings(tenant: {
       typeof block.defaultItemCode === "string" ? block.defaultItemCode.trim() || null : null,
     esignatureLabel:
       typeof block.esignatureLabel === "string" ? block.esignatureLabel.trim() || null : null,
+    physicalReportingOptOut: block.physicalReportingOptOut === true,
+    physicalReportingConsentAt:
+      typeof block.physicalReportingConsentAt === "string" ? block.physicalReportingConsentAt : null,
   };
 }
 
@@ -105,6 +116,8 @@ export function mapEtaTenantSettingsDto(tenant: { providerSettings?: unknown }) 
     etaDefaultTaxpayerActivityCode: eta.defaultTaxpayerActivityCode,
     etaDefaultItemCode: eta.defaultItemCode,
     etaEsignatureLabel: eta.esignatureLabel,
+    etaPhysicalReportingOptOut: eta.physicalReportingOptOut,
+    etaPhysicalReportingConsentAt: eta.physicalReportingConsentAt,
   };
 }
 
@@ -112,12 +125,18 @@ export function patchEtaTenantProviderSettings(patch: {
   defaultTaxpayerActivityCode?: string;
   defaultItemCode?: string | null;
   esignatureLabel?: string | null;
+  physicalReportingOptOut?: boolean;
+  physicalReportingConsentAt?: string | null;
 }): Record<string, unknown> {
   const eta: Record<string, unknown> = {};
   if (patch.defaultTaxpayerActivityCode !== undefined) {
     eta.defaultTaxpayerActivityCode = patch.defaultTaxpayerActivityCode.trim() || "8690";
   }
   if (patch.defaultItemCode !== undefined) eta.defaultItemCode = patch.defaultItemCode?.trim() || null;
+  if (patch.physicalReportingOptOut !== undefined) eta.physicalReportingOptOut = patch.physicalReportingOptOut;
+  if (patch.physicalReportingConsentAt !== undefined) {
+    eta.physicalReportingConsentAt = patch.physicalReportingConsentAt;
+  }
   if (patch.esignatureLabel !== undefined) eta.esignatureLabel = patch.esignatureLabel?.trim() || null;
   return eta;
 }

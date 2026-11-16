@@ -133,6 +133,13 @@ export class BillingService {
       where: { id: body.clinicId, tenantId },
       select: { taxRegistrationNumber: true, invoiceVatPercent: true },
     });
+    const patient = await this.prisma.patient.findFirst({
+      where: { id: body.patientId, tenantId },
+      select: { firstNameEn: true, lastNameEn: true },
+    });
+    const buyerName = patient
+      ? `${patient.firstNameEn} ${patient.lastNameEn}`.trim() || undefined
+      : undefined;
     const currency = await this.resolveTenantCurrency(tenantId, body.currency);
 
     return this.prisma.$transaction(async (tx) => {
@@ -166,6 +173,7 @@ export class BillingService {
           description: `Billing payment ${payment.id.slice(0, 8)}…`,
           clinicTaxRin: clinic?.taxRegistrationNumber,
           billingPaymentMethods: body.allocations.map((a) => a.method),
+          buyerName,
         });
       }
       return payment;

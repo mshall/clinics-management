@@ -7,6 +7,10 @@ const POLL_MS = 20_000;
 const DEVICE_BATCH = 40;
 const ALERT_AFTER_ATTEMPTS = 8;
 
+function workerInstanceId(): string {
+  return process.env.FISCAL_WORKER_ID?.trim() || process.env.HOSTNAME?.trim() || "kiorly-worker";
+}
+
 @Injectable()
 export class FiscalSubmissionWorker implements OnModuleInit, OnModuleDestroy {
   private readonly log = new Logger(FiscalSubmissionWorker.name);
@@ -35,6 +39,7 @@ export class FiscalSubmissionWorker implements OnModuleInit, OnModuleDestroy {
       take: DEVICE_BATCH,
     });
     const now = new Date();
+    const workerId = workerInstanceId();
     for (const device of devices) {
       const head = await this.prisma.fiscalSubmission.findFirst({
         where: {
@@ -45,6 +50,14 @@ export class FiscalSubmissionWorker implements OnModuleInit, OnModuleDestroy {
         orderBy: { createdAt: "asc" },
       });
       if (!head) continue;
+      if (
+        head.claimedUntil &&
+        head.claimedUntil > now &&
+        head.claimedBy &&
+        head.claimedBy !== workerId
+      ) {
+        continue;
+      }
 
       try {
         await this.submit.submitOne(head.tenantId, head.id);

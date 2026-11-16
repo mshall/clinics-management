@@ -56,6 +56,8 @@ export type EtaWireBuildContext = {
   deviceSerial: string;
   internalId: string;
   referenceUuid?: string;
+  /** Freeze issue time at prepare (tests pass a fixed timestamp). */
+  issuedAt?: string;
 };
 
 function roundMoney(n: number): number {
@@ -69,7 +71,7 @@ export function buildEtaWireReceiptDocument(ctx: EtaWireBuildContext): EtaWireRe
   const taxAmount = roundMoney((netAmount * vatPercent) / (100 + vatPercent));
   const netSale = roundMoney(netAmount - taxAmount);
   const itemCode = payload.lines[0]?.itemCode?.trim() || "EG-8690000000001";
-  const issued = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+  const issued = ctx.issuedAt ?? new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
   const receiptNumber = ctx.internalId.replace(/[^A-Za-z0-9]/g, "").slice(-50) || ctx.internalId.slice(-12);
   const paymentMethod = payload.paymentMethod?.trim() || "C";
   const isReturn = payload.documentNature === "return";

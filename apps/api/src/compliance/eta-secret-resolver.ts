@@ -12,6 +12,7 @@ export type EtaConnectionConfig = {
   tokenUrl?: string;
   oauthScope?: string;
   receiptSubmitPath?: string;
+  receiptStatusPath?: string;
   posSerial?: string;
   posOsVersion?: string;
   posModelFramework?: string;
@@ -33,6 +34,8 @@ type EtaSecretJson = {
   ETA_OAUTH_SCOPE?: string;
   receiptSubmitPath?: string;
   ETA_RECEIPT_SUBMIT_PATH?: string;
+  receiptStatusPath?: string;
+  ETA_RECEIPT_STATUS_PATH?: string;
   posSerial?: string;
   posOsVersion?: string;
   posModelFramework?: string;
@@ -52,6 +55,7 @@ function fromEnv(): EtaConnectionConfig | null {
       tokenUrl: process.env.ETA_TOKEN_URL?.trim(),
       oauthScope: process.env.ETA_OAUTH_SCOPE?.trim(),
       receiptSubmitPath: process.env.ETA_RECEIPT_SUBMIT_PATH?.trim(),
+      receiptStatusPath: process.env.ETA_RECEIPT_STATUS_PATH?.trim(),
       posSerial: process.env.ETA_POS_SERIAL?.trim(),
       posOsVersion: process.env.ETA_POS_OS_VERSION?.trim(),
       posModelFramework: process.env.ETA_POS_MODEL_FRAMEWORK?.trim(),
@@ -75,6 +79,7 @@ function parseSecretJson(raw: string): EtaConnectionConfig | null {
       tokenUrl: j.tokenUrl?.trim() || j.ETA_TOKEN_URL?.trim(),
       oauthScope: j.oauthScope?.trim() || j.ETA_OAUTH_SCOPE?.trim(),
       receiptSubmitPath: j.receiptSubmitPath?.trim() || j.ETA_RECEIPT_SUBMIT_PATH?.trim(),
+      receiptStatusPath: j.receiptStatusPath?.trim() || j.ETA_RECEIPT_STATUS_PATH?.trim(),
       posSerial: j.posSerial?.trim(),
       posOsVersion: j.posOsVersion?.trim(),
       posModelFramework: j.posModelFramework?.trim(),

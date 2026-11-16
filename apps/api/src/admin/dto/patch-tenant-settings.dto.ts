@@ -86,4 +86,20 @@ export class PatchTenantSettingsDto {
   @IsString()
   @MaxLength(120)
   etaEsignatureLabel?: string | null;
+
+  @ApiPropertyOptional({
+    description:
+      "Org opts out of ETA e-receipt integration and will report receipts physically to the tax authority instead",
+  })
+  @IsOptional()
+  @IsBoolean()
+  etaPhysicalReportingOptOut?: boolean;
+
+  @ApiPropertyOptional({
+    description: "ISO timestamp when the organization admin acknowledged physical reporting responsibility",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  etaPhysicalReportingConsentAt?: string | null;
 }

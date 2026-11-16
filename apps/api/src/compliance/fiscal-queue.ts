@@ -4,7 +4,8 @@ import { resolveMarketForTenant } from "../markets/market-resolver";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
 import type { PrismaService } from "../prisma/prisma.service";
 import { buildFiscalIdempotencyKey, fiscalSourceRefFromQueue } from "./fiscal-idempotency";
-import { resolveEtaClinicSettings } from "../providers/provider-settings";
+import { etaPhysicalReportingOptOut, resolveEtaClinicSettings } from "../providers/provider-settings";
+import { assertEtaBuyerNameAtPayment } from "./eta-buyer-name";
 import { resolveFiscalPaymentMethodCode } from "./fiscal-payment-method";
 import {
   mapOrganizationPaymentChannel,
@@ -43,6 +44,12 @@ export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: 
   const flags = new FeatureFlagsService(tx as unknown as PrismaService);
   if (!(await flags.isEnabled(params.tenantId, "eta_receipts"))) return;
 
+  const tenant = await tx.tenant.findUnique({
+    where: { id: params.tenantId },
+    select: { providerSettings: true },
+  });
+  if (tenant && etaPhysicalReportingOptOut(tenant)) return;
+
   const clinic = await tx.clinic.findFirst({
     where: { id: params.clinicId, tenantId: params.tenantId },
     select: {
@@ -61,6 +68,7 @@ export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: 
   if (!provider) return;
 
   const currency = params.currency?.trim() || marketCtx.currency;
+  assertEtaBuyerNameAtPayment(params.totalAmount, currency, params.buyerName);
   const sourceRef = fiscalSourceRefFromQueue(params);
   const idempotencyKey = buildFiscalIdempotencyKey(providerKey, sourceRef);
   const returnSale = sourceRef.kind === "return";

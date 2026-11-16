@@ -1,0 +1,3 @@
+ALTER TABLE "FiscalSubmission" ADD COLUMN IF NOT EXISTS "claimedUntil" TIMESTAMP(3);
+ALTER TABLE "FiscalSubmission" ADD COLUMN IF NOT EXISTS "claimedBy" TEXT;
+ALTER TABLE "FiscalSubmission" ADD COLUMN IF NOT EXISTS "providerValidationStatus" TEXT NOT NULL DEFAULT 'PENDING';

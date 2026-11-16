@@ -31,11 +31,13 @@ Every posted payment path queues fiscal: check-in, visit fee, billing payment, t
 
 **Callback URL (general notifications):** `POST /api/v1/integrations/fiscal/eta-egypt/notifications/{tenantId}` (register the org id in the path on the ETA portal — **not** in the JSON body). Header `Authorization: ApiKey <pre-shared key>` (`ETA_NOTIFICATION_API_KEY` in AWS, compared with `timingSafeEqual`). Ping: `POST …/notifications/ping`.
 
-**Privacy:** Patient names may be sent on e-receipts as buyer details (required above EGP 150,000). Disclose in your patient privacy notice.
+**Privacy:** Patient names may be sent on e-receipts as buyer details (required above EGP 150,000 at payment time). Disclose in your patient privacy notice.
 
-**Automatic submit:** `FiscalSubmissionWorker` drains pending receipts per device (set `FISCAL_SUBMIT_WORKER=false` to disable).
+**Physical reporting opt-out:** Group admin can disable ETA integration with documented consent — organization reports receipts physically to ETA instead; see Admin → Organization → Egypt ETA.
 
-**Troubleshooting:** Banner “finish receipt device setup” when no default `ACTIVE` device; submit rejected if queue order broken or production uses `local:`/`env:` secret refs.
+**Automatic submit:** `FiscalSubmissionWorker` drains pending receipts per device (FIFO, stored wire document, failure classification). Set `FISCAL_SUBMIT_WORKER=false` to disable.
+
+**Troubleshooting:** Banner “finish receipt device setup” when no default `ACTIVE` device; permanent ETA validation errors mark the submission `REJECTED` so later receipts on the same device can proceed; production uses Secrets Manager refs (not `local:`/`env:`).
 
 ## 2. Data protection (Egypt PDPL)
 

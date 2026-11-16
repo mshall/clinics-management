@@ -1,45 +1,42 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
-import { FiscalDeviceStatus, FiscalSubmissionStatus, Prisma } from "@prisma/client";
+import { FiscalDeviceStatus, FiscalSubmissionStatus, IntegrationFailureCategory, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { getFiscalProvider } from "../providers/fiscal/fiscal-provider.registry";
 import type { EtaReceiptPayload } from "./eta-egypt.client";
-import { signEtaPayload, submitEtaReceipt } from "./eta-egypt.client";
+import {
+  fetchEtaReceiptValidationStatus,
+  signEtaWireDocument,
+  submitEtaWireDocument,
+} from "./eta-egypt.client";
 import { resolveEtaConnection } from "./eta-secret-resolver";
 import { buildEtaWireReceiptDocument, type EtaWireBuildContext } from "./eta-egypt-wire";
+import {
+  assertWireUuidMatchesContentHash,
+  isEtaStoredSubmissionPayload,
+  type EtaStoredSubmissionPayload,
+} from "./eta-stored-submission";
 
 const PREPARE_TX_MS = 15_000;
 const FINALIZE_TX_MS = 15_000;
-const EGP_BUYER_NAME_THRESHOLD = 150_000;
+const CLAIM_MS = 5 * 60_000;
 
 type PreparedSubmit = {
   submissionId: string;
   fiscalDeviceId: string;
-  finalPayload: EtaReceiptPayload;
+  stored: EtaStoredSubmissionPayload;
   signature: string;
-  receiptNumber: number;
-  receiptUuid: string;
   resubmission: boolean;
 };
+
+function workerInstanceId(): string {
+  return process.env.FISCAL_WORKER_ID?.trim() || process.env.HOSTNAME?.trim() || "kiorly-worker";
+}
 
 @Injectable()
 export class FiscalSubmitService {
   private readonly log = new Logger(FiscalSubmitService.name);
 
   constructor(private readonly prisma: PrismaService) {}
-
-  private assertBuyerNameForAmount(payload: EtaReceiptPayload): void {
-    if (payload.currency !== "EGP" || payload.totalAmount < EGP_BUYER_NAME_THRESHOLD) return;
-    const name = payload.buyerName?.trim();
-    if (!name || name.toLowerCase() === "patient") {
-      throw new BadRequestException(
-        "Buyer name is required on ETA receipts at or above EGP 150,000 (operations / high-value care)",
-      );
-    }
-  }
-
-  private payloadIsFinalized(payload: EtaReceiptPayload | null): payload is EtaReceiptPayload {
-    return Boolean(payload?.receiptUuid?.trim());
-  }
 
   private async assertHeadOfDeviceQueue(
     fiscalDeviceId: string,
@@ -66,29 +63,39 @@ export class FiscalSubmitService {
   async prepareSubmission(tenantId: string, submissionId: string): Promise<PreparedSubmit> {
     return this.prisma.$transaction(
       async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "FiscalSubmission" WHERE id = ${submissionId} FOR UPDATE`;
         const row = await tx.fiscalSubmission.findFirst({
           where: { id: submissionId, tenantId },
           include: { fiscalDevice: { include: { credential: true } } },
         });
         if (!row) throw new NotFoundException("Fiscal submission not found");
+
+        const workerId = workerInstanceId();
+        if (
+          row.claimedUntil &&
+          row.claimedUntil > new Date() &&
+          row.claimedBy &&
+          row.claimedBy !== workerId
+        ) {
+          throw new BadRequestException("Submission is being processed by another instance");
+        }
+
         if (
           row.status === FiscalSubmissionStatus.SUBMITTED ||
           row.status === FiscalSubmissionStatus.ACCEPTED
         ) {
-          const existing = row.payloadJson as unknown as EtaReceiptPayload;
-          if (!this.payloadIsFinalized(existing)) {
-            throw new BadRequestException("Submission already completed without finalized payload");
+          if (!isEtaStoredSubmissionPayload(row.payloadJson)) {
+            throw new BadRequestException("Submission already completed without stored wire document");
           }
           return {
             submissionId: row.id,
             fiscalDeviceId: row.fiscalDeviceId!,
-            finalPayload: existing,
+            stored: row.payloadJson,
             signature: row.signature?.trim() || "",
-            receiptNumber: row.receiptNumber ?? 0,
-            receiptUuid: existing.receiptUuid,
             resubmission: true,
           };
         }
+
         if (!row.fiscalDeviceId || !row.fiscalDevice) {
           throw new BadRequestException("Submission is not linked to a fiscal device");
         }
@@ -107,22 +114,25 @@ export class FiscalSubmitService {
           }
         }
 
-        await this.assertHeadOfDeviceQueue(row.fiscalDeviceId, row.id, tx);
         await tx.$queryRaw`SELECT id FROM "FiscalDevice" WHERE id = ${row.fiscalDeviceId} FOR UPDATE`;
+        await this.assertHeadOfDeviceQueue(row.fiscalDeviceId, row.id, tx);
 
-        const draft = row.payloadJson as unknown as EtaReceiptPayload | null;
-        if (!draft) throw new BadRequestException("Submission is missing payload");
-
-        if (row.status === FiscalSubmissionStatus.SUBMITTING && this.payloadIsFinalized(draft)) {
+        if (
+          row.status === FiscalSubmissionStatus.SUBMITTING &&
+          isEtaStoredSubmissionPayload(row.payloadJson)
+        ) {
           return {
             submissionId: row.id,
             fiscalDeviceId: row.fiscalDeviceId,
-            finalPayload: draft,
-            signature: row.signature?.trim() || signEtaPayload(draft),
-            receiptNumber: row.receiptNumber ?? 0,
-            receiptUuid: draft.receiptUuid,
+            stored: row.payloadJson,
+            signature: row.signature?.trim() || signEtaWireDocument(row.payloadJson.wireDocument),
             resubmission: true,
           };
+        }
+
+        const draft = row.payloadJson as unknown as EtaReceiptPayload | EtaStoredSubmissionPayload | null;
+        if (!draft || isEtaStoredSubmissionPayload(draft)) {
+          throw new BadRequestException("Submission is missing draft payload");
         }
 
         const locked = await tx.fiscalDevice.findUniqueOrThrow({
@@ -132,13 +142,21 @@ export class FiscalSubmitService {
         const previousUUID = locked.lastReceiptUuid?.trim() ?? "";
         const receiptNumber = locked.receiptSequence + 1;
         const internalId = `${locked.serialNumber}-${String(receiptNumber).padStart(8, "0")}`;
+        const issuedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+
+        const draftWithMeta: EtaReceiptPayload = {
+          ...draft,
+          receiptUuid: "",
+          previousReceiptUuid: previousUUID || undefined,
+        };
 
         const buildCtx: EtaWireBuildContext = {
-          payload: draft,
+          payload: draftWithMeta,
           previousUUID,
           deviceSerial: locked.serialNumber,
           internalId,
           referenceUuid: draft.referenceReceiptUuid,
+          issuedAt,
         };
         const wire = buildEtaWireReceiptDocument(buildCtx);
         const receiptUuid =
@@ -147,14 +165,18 @@ export class FiscalSubmitService {
 
         if (!receiptUuid) throw new BadRequestException("Provider did not compute receipt UUID");
 
-        const finalPayload: EtaReceiptPayload = {
-          ...draft,
+        wire.header.uuid = receiptUuid;
+        assertWireUuidMatchesContentHash(wire);
+
+        const stored: EtaStoredSubmissionPayload = {
+          schemaVersion: "eta-wire-v1",
+          wireDocument: wire,
           receiptUuid,
-          previousReceiptUuid: previousUUID || undefined,
+          receiptNumber,
         };
-        this.assertBuyerNameForAmount(finalPayload);
+
         const connection = await resolveEtaConnection(device.credential?.secretRef ?? null);
-        const signature = signEtaPayload(finalPayload, connection?.signingKey);
+        const signature = signEtaWireDocument(wire, connection?.signingKey);
 
         await tx.fiscalSubmission.update({
           where: { id: row.id },
@@ -162,19 +184,19 @@ export class FiscalSubmitService {
             status: FiscalSubmissionStatus.SUBMITTING,
             deviceId: locked.serialNumber,
             receiptNumber,
-            payloadJson: finalPayload as unknown as Prisma.InputJsonValue,
+            payloadJson: stored as unknown as Prisma.InputJsonValue,
             signature,
             errorMessage: null,
+            claimedUntil: new Date(Date.now() + CLAIM_MS),
+            claimedBy: workerId,
           },
         });
 
         return {
           submissionId: row.id,
           fiscalDeviceId: row.fiscalDeviceId,
-          finalPayload,
+          stored,
           signature,
-          receiptNumber,
-          receiptUuid,
           resubmission: false,
         };
       },
@@ -185,7 +207,7 @@ export class FiscalSubmitService {
   private async finalizeSubmission(
     tenantId: string,
     prepared: PreparedSubmit,
-    result: Awaited<ReturnType<typeof submitEtaReceipt>>,
+    result: Awaited<ReturnType<typeof submitEtaWireDocument>>,
   ) {
     return this.prisma.$transaction(
       async (tx) => {
@@ -202,26 +224,61 @@ export class FiscalSubmitService {
 
         if (!result.ok) {
           const attempts = row.submitAttempts + 1;
+          if (result.failureClass === "permanent") {
+            await tx.integrationFailureLog.create({
+              data: {
+                tenantId,
+                clinicId: row.clinicId,
+                category: IntegrationFailureCategory.WEBHOOK,
+                operation: "fiscal_submit_rejected",
+                operationName: "ETA receipt rejected",
+                statusCode: result.httpStatus ?? 400,
+                errorMessage: result.error.slice(0, 2000),
+                fingerprint: `fiscal-reject:${prepared.submissionId}`,
+                trace: { steps: [{ step: "submit", ok: false, detail: result.error }] },
+              },
+            });
+            return tx.fiscalSubmission.update({
+              where: { id: row.id },
+              data: {
+                status: FiscalSubmissionStatus.REJECTED,
+                errorMessage: result.error.slice(0, 2000),
+                submitAttempts: attempts,
+                nextRetryAt: null,
+                claimedUntil: null,
+                claimedBy: null,
+                providerValidationStatus: "INVALID",
+              },
+            });
+          }
+
           const backoffMinutes = Math.min(60, Math.pow(2, Math.min(attempts, 6)));
-          const nextRetryAt = new Date(Date.now() + backoffMinutes * 60_000);
+          const nextRetryAt =
+            result.failureClass === "unclear"
+              ? new Date(Date.now() + Math.max(backoffMinutes, 10) * 60_000)
+              : new Date(Date.now() + backoffMinutes * 60_000);
+
           return tx.fiscalSubmission.update({
             where: { id: row.id },
             data: {
               status: FiscalSubmissionStatus.SUBMITTING,
-              errorMessage: result.error,
+              errorMessage: result.error.slice(0, 2000),
               submitAttempts: attempts,
               nextRetryAt,
+              claimedUntil: null,
+              claimedBy: null,
+              providerValidationStatus: result.failureClass === "unclear" ? "UNKNOWN" : "PENDING",
             },
           });
         }
 
-        const acceptedUuid = result.receiptUuid?.trim() || prepared.receiptUuid;
+        const acceptedUuid = result.receiptUuid?.trim() || prepared.stored.receiptUuid;
 
         await tx.fiscalDevice.update({
           where: { id: row.fiscalDeviceId },
           data: {
             lastReceiptUuid: acceptedUuid,
-            receiptSequence: prepared.receiptNumber,
+            receiptSequence: prepared.stored.receiptNumber,
             lastSubmittedAt: new Date(),
           },
         });
@@ -235,7 +292,10 @@ export class FiscalSubmitService {
             errorMessage: result.mode === "sandbox" ? "Sandbox (device credentials not configured)" : null,
             submitAttempts: row.submitAttempts + 1,
             nextRetryAt: null,
-            payloadJson: prepared.finalPayload as unknown as Prisma.InputJsonValue,
+            claimedUntil: null,
+            claimedBy: null,
+            payloadJson: prepared.stored as unknown as Prisma.InputJsonValue,
+            providerValidationStatus: "PENDING",
           },
         });
       },
@@ -263,20 +323,41 @@ export class FiscalSubmitService {
     });
     const connection = await resolveEtaConnection(device.credential?.secretRef ?? null);
 
-    let result: Awaited<ReturnType<typeof submitEtaReceipt>>;
+    let result: Awaited<ReturnType<typeof submitEtaWireDocument>>;
     try {
-      result = await submitEtaReceipt(prepared.finalPayload, prepared.signature, connection, {
-        posSerial: connection?.posSerial?.trim() || device.serialNumber,
-        posOsVersion: connection?.posOsVersion,
-        posModelFramework: connection?.posModelFramework,
-        presharedKey: connection?.presharedKey,
-      });
+      result = await submitEtaWireDocument(
+        prepared.stored.wireDocument,
+        prepared.signature,
+        connection,
+        {
+          posSerial: connection?.posSerial?.trim() || device.serialNumber,
+          posOsVersion: connection?.posOsVersion,
+          posModelFramework: connection?.posModelFramework,
+          presharedKey: connection?.presharedKey,
+        },
+      );
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       this.log.warn(`ETA submit network error for ${submissionId}: ${msg}`);
-      result = { ok: false, error: msg, mode: "live" };
+      result = { ok: false, error: msg, mode: "live", failureClass: "temporary" };
     }
 
-    return this.finalizeSubmission(tenantId, prepared, result);
+    const finalized = await this.finalizeSubmission(tenantId, prepared, result);
+
+    if (result.ok && finalized.status === FiscalSubmissionStatus.SUBMITTED) {
+      const validation = await fetchEtaReceiptValidationStatus(
+        finalized.providerDocumentUuid ?? prepared.stored.receiptUuid,
+        connection,
+        { posSerial: device.serialNumber },
+      );
+      if (validation && validation !== "UNKNOWN") {
+        await this.prisma.fiscalSubmission.update({
+          where: { id: submissionId },
+          data: { providerValidationStatus: validation },
+        });
+      }
+    }
+
+    return finalized;
   }
 }
