@@ -221,9 +221,17 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     // so App Runner env values never embed "HostedZoneId:host" URL quirks.
     const stsVpceHost = vpceHostnameFromEndpoint(stsEndpoint);
 
+    // Stable per-stack suffix (matches ApiService naming). Global connector names caused
+    // UPDATE_FAILED AlreadyExists when CloudFormation replaces the connector before delete.
+    const appRunnerResourceSuffix = cdk.Names.uniqueId(this).slice(-8).toLowerCase();
+    const publicSubnetIds = vpc
+      .selectSubnets({ subnetType: ec2.SubnetType.PUBLIC })
+      .subnetIds.slice()
+      .sort();
+
     const vpcConnector = new apprunner.CfnVpcConnector(this, "AppRunnerVpcConnector", {
-      vpcConnectorName: "kiorly-clinic-connector",
-      subnets: vpc.selectSubnets({ subnetType: ec2.SubnetType.PUBLIC }).subnetIds,
+      vpcConnectorName: `kiorly-conn-${appRunnerResourceSuffix}`,
+      subnets: publicSubnetIds,
       securityGroups: [connectorSg.securityGroupId],
     });
 
@@ -260,10 +268,10 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     const openAiApiKeyFieldArn = `${openAiSecret.secretArn}:apiKey::`;
 
     const apiObservability = new apprunner.CfnObservabilityConfiguration(this, "ApiObservability", {
-      observabilityConfigurationName: "kiorly-api-observability",
+      observabilityConfigurationName: `kiorly-api-obs-${appRunnerResourceSuffix}`,
     });
 
-    const apiAutoScalingName = "kiorly-api-autoscale";
+    const apiAutoScalingName = `kiorly-api-autoscale-${appRunnerResourceSuffix}`;
     const apiAutoScaling = new apprunner.CfnAutoScalingConfiguration(this, "ApiAutoScaling", {
       autoScalingConfigurationName: apiAutoScalingName,
       maxConcurrency: 100,
