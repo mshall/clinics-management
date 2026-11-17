@@ -16,7 +16,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "openapi:export": "tsx scripts/openapi-export.ts",
-    "test:integration": "node --import tsx --test \"src/**/*.integration.test.ts\"",
+    "test:integration": "node --import tsx --test --test-concurrency=1 \"src/**/*.integration.test.ts\"",
     "test:unit": "node --import tsx --test \"src/**/*.node.test.ts\""
   },
   "dependencies": {
