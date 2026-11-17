@@ -85,20 +85,20 @@ describe("PL-01 plan catalog", () => {
 
     const tenant = await prisma.tenant.findFirstOrThrow({ orderBy: { createdAt: "asc" } });
     const periodEnd = new Date(Date.now() + 30 * 86_400_000);
+    const subBase = {
+      planId: pro.id,
+      planPriceId: v1.id,
+      status: "ACTIVE" as const,
+      interval: BillingInterval.MONTHLY,
+      clinicianSeats: 1,
+      currentPeriodStart: new Date(),
+      currentPeriodEnd: periodEnd,
+      activatedAt: new Date(),
+    };
     await prisma.subscription.upsert({
       where: { tenantId: tenant.id },
-      create: {
-        tenantId: tenant.id,
-        planId: pro.id,
-        planPriceId: v1.id,
-        status: "ACTIVE",
-        interval: "MONTHLY",
-        clinicianSeats: 1,
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: periodEnd,
-        activatedAt: new Date(),
-      },
-      update: {},
+      create: { tenantId: tenant.id, ...subBase },
+      update: subBase,
     });
 
     const validFrom = new Date("2027-01-01T00:00:00Z");

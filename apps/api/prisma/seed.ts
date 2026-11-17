@@ -73,6 +73,7 @@ type UserSeed = {
   email: string;
   displayName: string;
   role: UserRole;
+  isTenantOwner?: boolean;
 };
 
 async function ensureUser(passwordHash: string, data: UserSeed) {
@@ -96,13 +97,21 @@ async function ensureUser(passwordHash: string, data: UserSeed) {
       if (!matchesDemo) {
         return prisma.user.update({
           where: { id: existing.id },
-          data: { passwordHash },
+          data: { passwordHash, ...(data.isTenantOwner ? { isTenantOwner: true } : {}) },
         });
       }
     }
+    if (data.isTenantOwner && !existing.isTenantOwner) {
+      return prisma.user.update({
+        where: { id: existing.id },
+        data: { isTenantOwner: true },
+      });
+    }
     return existing;
   }
-  return prisma.user.create({ data: { ...data, passwordHash } });
+  return prisma.user.create({
+    data: { ...data, passwordHash, isTenantOwner: data.isTenantOwner ?? false },
+  });
 }
 
 async function ensureSuperAdmin(passwordHash: string) {
@@ -526,6 +535,7 @@ async function seedDrAhmedGroup(passwordHash: string) {
     email: "admin@drahmedshall.com",
     displayName: "Dr Ahmed Shall Group Admin",
     role: UserRole.GROUP_ADMIN,
+    isTenantOwner: true,
   });
 
   await ensureUser(passwordHash, {
@@ -1229,6 +1239,7 @@ async function seedFreshDatabase(passwordHash: string) {
     "| per clinic slug hel/cmc/moh/dok/oct/abc: branchmgr, clinicadmin, assistant, nurse, receptionist, physician @drahmedshall.com (password: demo)"
   );
 
+  await ensureEgyptDrugCatalog(prisma);
   await ensurePlanCatalog(prisma);
   await ensureAllTenantSubscriptions(prisma);
   if (pilotSeedEnabled()) {
