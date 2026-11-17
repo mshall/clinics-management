@@ -39,8 +39,10 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const roleNavTabKeys = useAuthStore((s) => s.user?.roleNavTabKeys);
   const employeePrivilegeGrants = useAuthStore((s) => s.user?.employeePrivilegeGrants);
   const allRoles = useAuthStore((s) => s.user?.roles);
+  const planEntitlements = useAuthStore((s) => s.user?.entitlements);
+  const planKey = useAuthStore((s) => s.user?.plan?.key ?? null);
   const showTab = (key: Parameters<typeof showNavItem>[1]) =>
-    showNavItem(role, key, navTabKeys, roleNavTabKeys, employeePrivilegeGrants, allRoles);
+    showNavItem(role, key, navTabKeys, roleNavTabKeys, employeePrivilegeGrants, allRoles, planEntitlements, planKey);
   const isPhysician = role === "physician";
   const showRevenue = canViewRevenue(role) && showTab("revenue");
   const showPlatformNav =
@@ -74,6 +76,18 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
             <NavLink to="/platform/markets" className={navClass} onClick={() => onNavigate?.()}>
               <Globe2 className="size-4 shrink-0" />
               {t("nav.platformMarkets", "Market launch")}
+            </NavLink>
+          ) : null}
+          {showTab("platform_markets") ? (
+            <NavLink to="/platform/drug-datasets" className={navClass} onClick={() => onNavigate?.()}>
+              <Globe2 className="size-4 shrink-0" />
+              {t("nav.platformDrugDatasets", "Drug datasets")}
+            </NavLink>
+          ) : null}
+          {showTab("platform_markets") ? (
+            <NavLink to="/platform/plans" className={navClass} onClick={() => onNavigate?.()}>
+              <Globe2 className="size-4 shrink-0" />
+              {t("nav.platformPlans", "Plans & pricing")}
             </NavLink>
           ) : null}
           {showTab("platform_organizations") ? (

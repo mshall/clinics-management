@@ -1,14 +1,26 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { syncThemeFonts } from "../lib/theme-fonts";
 
 /** Resolved theme applied to `document.documentElement`. */
-export type ThemeId = "default-light" | "default-dark" | "material-light" | "material-dark";
+export type ThemeId =
+  | "default-light"
+  | "default-dark"
+  | "material-light"
+  | "material-dark"
+  | "clinical-os-light"
+  | "clinical-os-dark";
+
+/** Product default (Clinical OS light) for new sessions and devices without a saved preference. */
+export const DEFAULT_THEME_ID = "clinical-os-light" as const satisfies ThemeId;
 
 export const THEME_IDS: ThemeId[] = [
   "default-light",
   "default-dark",
   "material-light",
   "material-dark",
+  "clinical-os-light",
+  "clinical-os-dark",
 ];
 
 const SESSION_THEME_KEY = "cms-theme-session";
@@ -18,11 +30,19 @@ export function isThemeId(value: string): value is ThemeId {
 }
 
 export function isDarkTheme(themeId: ThemeId): boolean {
-  return themeId === "default-dark" || themeId === "material-dark";
+  return (
+    themeId === "default-dark" ||
+    themeId === "material-dark" ||
+    themeId === "clinical-os-dark"
+  );
 }
 
 export function isMaterialTheme(themeId: ThemeId): boolean {
   return themeId.startsWith("material");
+}
+
+export function isClinicalOsTheme(themeId: ThemeId): boolean {
+  return themeId.startsWith("clinical-os");
 }
 
 export function applyThemeDom(themeId: ThemeId) {
@@ -30,6 +50,8 @@ export function applyThemeDom(themeId: ThemeId) {
   root.dataset.theme = themeId;
   root.classList.toggle("dark", isDarkTheme(themeId));
   root.classList.toggle("theme-material", isMaterialTheme(themeId));
+  root.classList.toggle("theme-clinical-os", isClinicalOsTheme(themeId));
+  syncThemeFonts(themeId);
 }
 
 function readSessionTheme(): ThemeId | null {
@@ -55,33 +77,48 @@ function migrateLegacyTheme(state: Record<string, unknown> | undefined): ThemeId
   }
   if (state?.persistDefault && state.mode === "dark") return "default-dark";
   if (state?.persistDefault && state.mode === "light") return "default-light";
-  return "material-light";
+  return DEFAULT_THEME_ID;
+}
+
+function userPersistedThemeChoice(): boolean {
+  try {
+    const raw = localStorage.getItem("cms-theme");
+    if (!raw) return false;
+    const parsed = JSON.parse(raw) as { state?: { persistDefault?: boolean } };
+    return Boolean(parsed.state?.persistDefault);
+  } catch {
+    return false;
+  }
 }
 
 /** Run before React mounts so the first paint matches persisted preference. */
 export function applyThemeFromPersistedStorage() {
   try {
     const sessionTheme = readSessionTheme();
+    const persistedChoice = userPersistedThemeChoice();
     if (sessionTheme) {
-      applyThemeDom(sessionTheme);
+      const theme =
+        !persistedChoice && sessionTheme === "material-light" ? DEFAULT_THEME_ID : sessionTheme;
+      applyThemeDom(theme);
+      if (theme !== sessionTheme) writeSessionTheme(theme);
       return;
     }
     const raw = localStorage.getItem("cms-theme");
     if (!raw) {
-      applyThemeDom("material-light");
+      applyThemeDom(DEFAULT_THEME_ID);
       return;
     }
     const parsed = JSON.parse(raw) as { state?: Record<string, unknown> };
     const st = parsed.state;
     if (!st?.persistDefault) {
-      applyThemeDom("material-light");
+      applyThemeDom(DEFAULT_THEME_ID);
       return;
     }
     const themeId = migrateLegacyTheme(st);
     applyThemeDom(themeId);
     writeSessionTheme(themeId);
   } catch {
-    applyThemeDom("material-light");
+    applyThemeDom(DEFAULT_THEME_ID);
   }
 }
 
@@ -96,7 +133,7 @@ interface ThemeState {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
-      themeId: "material-light",
+      themeId: DEFAULT_THEME_ID,
       persistDefault: false,
       setThemeId: (themeId) => {
         applyThemeDom(themeId);
@@ -135,18 +172,21 @@ export const useThemeStore = create<ThemeState>()(
           return;
         }
         if (state.persistDefault) {
-          applyThemeDom(state.themeId ?? "material-light");
+          applyThemeDom(state.themeId ?? DEFAULT_THEME_ID);
         }
       },
       migrate: (persisted: unknown) => {
         const p = persisted as { themeId?: string; mode?: string; persistDefault?: boolean } | undefined;
-        if (!p) return { themeId: "material-light" as ThemeId, persistDefault: false };
+        if (!p) return { themeId: DEFAULT_THEME_ID, persistDefault: false };
+        const themeId = migrateLegacyTheme(p as Record<string, unknown>);
+        const upgraded =
+          !p.persistDefault && themeId === "material-light" ? DEFAULT_THEME_ID : themeId;
         return {
-          themeId: migrateLegacyTheme(p as Record<string, unknown>),
+          themeId: upgraded,
           persistDefault: Boolean(p.persistDefault),
         };
       },
-      version: 3,
+      version: 5,
     },
   ),
 );

@@ -5,6 +5,8 @@ import { AppointmentDto } from "../appointments/dto/appointment.dto";
 import { IntegrationBookAppointmentDto } from "./dto/integration-book-appointment.dto";
 import { IntegrationClient, RequireIntegrationScopes } from "./integration-auth.decorator";
 import { IntegrationAuthGuard } from "./integration-auth.guard";
+import { EntitlementGuard } from "../entitlements/entitlement.guard";
+import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import type { IntegrationPrincipal } from "./integration.types";
 import { IntegrationsAppointmentsService } from "./integrations-appointments.service";
 import { IntegrationFailureExceptionFilter } from "./integration-failure.filter";
@@ -12,7 +14,8 @@ import { IntegrationFailureExceptionFilter } from "./integration-failure.filter"
 @ApiTags("integrations")
 @ApiBearerAuth("integration")
 @Controller("integrations")
-@UseGuards(IntegrationAuthGuard)
+@UseGuards(IntegrationAuthGuard, EntitlementGuard)
+@RequiresEntitlement("mod_integrations")
 @UseFilters(IntegrationFailureExceptionFilter)
 export class IntegrationsAppointmentsController {
   constructor(private readonly integrationAppointments: IntegrationsAppointmentsService) {}

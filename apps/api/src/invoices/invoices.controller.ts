@@ -24,6 +24,8 @@ import {
 import { memoryStorage } from "multer";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { EntitlementGuard } from "../entitlements/entitlement.guard";
+import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { PatchClinicInvoiceSettingsDto } from "../clinics/dto/patch-clinic-invoice-settings.dto";
@@ -37,7 +39,8 @@ const LOGO_UPLOAD_LIMIT = 5 * 1024 * 1024;
 @ApiTags("invoices")
 @ApiBearerAuth("bearer")
 @Controller()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard)
+@RequiresEntitlement("mod_invoices")
 export class InvoicesController {
   constructor(private readonly invoices: InvoicesService) {}
 

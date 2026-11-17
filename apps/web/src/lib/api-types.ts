@@ -13,6 +13,9 @@ export interface DiagnosisDto {
 export interface EncounterMedicationDto {
   id: string;
   drugName: string;
+  drugProductId?: string | null;
+  safetyOverrideReason?: string | null;
+  drugUnverified?: boolean;
   dosage: string | null;
   route: string | null;
   frequency: string | null;
@@ -213,6 +216,7 @@ export interface AppointmentDto {
   visitBalanceDueCurrency?: string | null;
   visitBalanceRevenueId?: string | null;
   financialsVisible?: boolean;
+  whatsappConfirmedAt?: string | null;
 }
 
 export interface OperationDto {

@@ -1,5 +1,6 @@
 import type { Market, Tenant } from "@prisma/client";
 import type { PrismaService } from "../prisma/prisma.service";
+import { attestTenantResidency, getDeploymentCell } from "./data-cells";
 import { assertMarketPackConfigured } from "./market-pack-validation";
 
 export type ResolvedMarketContext = {
@@ -64,5 +65,20 @@ export function deploymentCellForTenant(
 }
 
 export function dataRegionForTenant(tenant: { market?: Pick<Market, "dataRegion"> | null }) {
-  return tenant.market?.dataRegion ?? "eu-central-1";
+  return tenant.market?.dataRegion?.trim() || "eu-central-1";
+}
+
+export function tenantResidencyAttestation(
+  tenant: Pick<Tenant, "deploymentCell"> & { market?: Pick<Market, "code" | "hostCell" | "dataRegion"> | null },
+) {
+  const market = tenant.market;
+  if (!market) {
+    const cell = deploymentCellForTenant(tenant);
+    return {
+      deploymentCell: cell,
+      dataRegion: getDeploymentCell(cell).awsRegion,
+      dataStores: getDeploymentCell(cell).dataStores,
+    };
+  }
+  return attestTenantResidency({ deploymentCell: tenant.deploymentCell }, market);
 }

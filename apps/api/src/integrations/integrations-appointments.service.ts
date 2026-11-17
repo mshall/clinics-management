@@ -8,6 +8,8 @@ import type { IntegrationBookAppointmentDto } from "./dto/integration-book-appoi
 import type { IntegrationPrincipal } from "./integration.types";
 import { IntegrationClientService } from "./integration-client.service";
 import { IntegrationWebhookService } from "./integration-webhook.service";
+import { ConsentPolicyService } from "../compliance/consent-policy.service";
+import { CONSENT_PURPOSE_MARKETPLACE } from "../compliance/consent-policy.constants";
 
 @Injectable()
 export class IntegrationsAppointmentsService {
@@ -17,6 +19,7 @@ export class IntegrationsAppointmentsService {
     private readonly clientService: IntegrationClientService,
     private readonly audit: AuditService,
     private readonly webhooks: IntegrationWebhookService,
+    private readonly consent: ConsentPolicyService,
   ) {}
 
   async listClinics(principal: IntegrationPrincipal) {
@@ -149,6 +152,13 @@ export class IntegrationsAppointmentsService {
       throw new ForbiddenException("Clinic not permitted for this integration client");
     }
     const patientId = await this.resolvePatientId(principal.tenantId, dto);
+    if (dto.marketplaceConsentGranted) {
+      await this.consent.capture(principal.tenantId, patientId, CONSENT_PURPOSE_MARKETPLACE, {
+        granted: true,
+        source: "kiorex_booking",
+      });
+    }
+    await this.consent.require(principal.tenantId, patientId, CONSENT_PURPOSE_MARKETPLACE);
     const created = await this.appointments.createForIntegration(principal.tenantId, {
       clinicId: dto.clinicId,
       patientId,

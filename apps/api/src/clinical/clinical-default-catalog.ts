@@ -23,32 +23,40 @@ export const DEFAULT_ICD10: {
   { icd10Code: "M25.50", descriptionEn: "Joint pain unspecified", descriptionAr: "ألم مفصل", keywords: "arthralgia joint physio" },
 ];
 
+/** Curated starter set — medical advisory board review required before production reliance. */
 export const DEFAULT_DRUG_INTERACTIONS: {
-  drugA: string;
-  drugB: string;
+  ingredientA: string;
+  ingredientB: string;
   severity: string;
   messageEn: string;
   messageAr: string;
 }[] = [
   {
-    drugA: "warfarin",
-    drugB: "aspirin",
-    severity: "high",
+    ingredientA: "warfarin",
+    ingredientB: "aspirin",
+    severity: "major",
     messageEn: "Increased bleeding risk when combining warfarin and aspirin.",
     messageAr: "خطر نزيف أعلى عند الجمع بين الوارفارين والأسبرين.",
   },
   {
-    drugA: "metformin",
-    drugB: "contrast",
+    ingredientA: "metformin",
+    ingredientB: "iopamidol",
     severity: "moderate",
     messageEn: "Hold metformin around iodinated contrast when kidney risk is present.",
     messageAr: "أوقف الميتفورمين حول صبغة اليود عند وجود خطر كلوي.",
   },
   {
-    drugA: "ibuprofen",
-    drugB: "lisinopril",
+    ingredientA: "ibuprofen",
+    ingredientB: "lisinopril",
     severity: "moderate",
     messageEn: "NSAIDs may reduce ACE inhibitor efficacy and worsen renal function.",
     messageAr: "مضادات الالتهاب قد تقلل فاعلية مثبطات ACE وتؤثر على الكلى.",
+  },
+  {
+    ingredientA: "methotrexate",
+    ingredientB: "amoxicillin",
+    severity: "major",
+    messageEn: "Penicillins may increase methotrexate toxicity — monitor closely.",
+    messageAr: "البنسلينات قد تزيد سمية الميثوتريكسات — راقب عن كثب.",
   },
 ];

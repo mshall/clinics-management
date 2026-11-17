@@ -3,19 +3,26 @@ import { ClinicalLetterType, ClinicalShortcutType, ClinicalSpecialty } from "@pr
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { EntitlementGuard } from "../entitlements/entitlement.guard";
+import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { ClinicalService } from "./clinical.service";
 import { ClinicalSafetyService } from "./clinical-safety.service";
+import { RxSafetyCheckService } from "./rx-safety-check.service";
+import { DrugCatalogService } from "./drug-catalog.service";
 
 @ApiTags("clinical")
 @ApiBearerAuth("bearer")
 @Controller("clinical")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard)
+@RequiresEntitlement("mod_clinical")
 export class ClinicalController {
   constructor(
     private readonly clinical: ClinicalService,
     private readonly safety: ClinicalSafetyService,
+    private readonly rxSafety: RxSafetyCheckService,
+    private readonly drugCatalog: DrugCatalogService,
   ) {}
 
   @Get("form-templates")
@@ -81,16 +88,45 @@ export class ClinicalController {
     return this.clinical.generateLetter(requireTenantId(user), user, body);
   }
 
+  @Get("drugs/search")
+  searchDrugs(
+    @CurrentUser() user: JwtUser,
+    @Query("q") q?: string,
+    @Query("limit") limit?: string,
+  ) {
+    const tenantId = requireTenantId(user);
+    const lim = limit ? Number(limit) : 20;
+    return this.drugCatalog.searchProducts(tenantId, user, q ?? "", Number.isFinite(lim) ? lim : 20);
+  }
+
+  @Post("rx/check")
+  rxCheck(
+    @CurrentUser() user: JwtUser,
+    @Body()
+    body: {
+      patientId: string;
+      items: { drugName: string; drugProductId?: string | null }[];
+    },
+  ) {
+    return this.rxSafety.checkRx(requireTenantId(user), body.patientId, body.items ?? []);
+  }
+
   @Post("medications/safety-check")
   safetyCheck(
     @CurrentUser() user: JwtUser,
-    @Body() body: { patientId: string; drugName: string; existingDrugNames?: string[] },
+    @Body() body: {
+      patientId: string;
+      drugName: string;
+      drugProductId?: string;
+      existingDrugNames?: string[];
+    },
   ) {
     return this.safety.checkMedicationSafety(
       requireTenantId(user),
       body.patientId,
       body.drugName,
       body.existingDrugNames ?? [],
+      { drugProductId: body.drugProductId },
     );
   }
 }

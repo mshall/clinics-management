@@ -24,6 +24,10 @@ Configurable specialty forms, physician shortcuts, safety checks, vitals trends,
 - **Favorites:** `POST /api/v1/clinical/icd10/favorites` — starred codes surface first for each clinician.
 - Catalog seeds on first use (global + per-tenant copy); extend via admin/data explorer later.
 
+## Egyptian drug catalog (CL-01)
+
+Encounter **medications** use brand autocomplete (`GET /clinical/drugs/search`) backed by `DrugProduct` / `ActiveIngredient`. Free-text rows are flagged **Unverified**. See [EGYPT_DRUG_DATABASE.md](./EGYPT_DRUG_DATABASE.md).
+
 ## Structured prescriptions & QR
 
 - Existing **Generate prescription** image flow (`generatePrescriptionPng`) now embeds a **QR code** (clinic name, address, phone, MRN, date) for verification at pharmacy.

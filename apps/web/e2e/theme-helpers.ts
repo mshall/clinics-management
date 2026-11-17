@@ -1,6 +1,12 @@
 import type { Page } from "@playwright/test";
 
-export type E2EThemeId = "default-light" | "default-dark" | "material-light" | "material-dark";
+export type E2EThemeId =
+  | "default-light"
+  | "default-dark"
+  | "material-light"
+  | "material-dark"
+  | "clinical-os-light"
+  | "clinical-os-dark";
 
 /** Open theme menu and pick a theme by English label (matches en locale). */
 export async function selectTheme(page: Page, label: RegExp): Promise<void> {
@@ -18,7 +24,7 @@ export async function expectThemeApplied(page: Page, themeId: E2EThemeId): Promi
     },
     themeId,
   );
-  if (themeId === "default-dark" || themeId === "material-dark") {
+  if (themeId === "default-dark" || themeId === "material-dark" || themeId === "clinical-os-dark") {
     await html.evaluate((el) => {
       if (!el.classList.contains("dark")) throw new Error("Expected .dark class on html");
     });
@@ -30,6 +36,13 @@ export async function expectThemeApplied(page: Page, themeId: E2EThemeId): Promi
   if (themeId.startsWith("material")) {
     await html.evaluate((el) => {
       if (!el.classList.contains("theme-material")) throw new Error("Expected .theme-material on html");
+      if (el.classList.contains("theme-clinical-os")) throw new Error("Unexpected .theme-clinical-os on html");
+    });
+  }
+  if (themeId.startsWith("clinical-os")) {
+    await html.evaluate((el) => {
+      if (!el.classList.contains("theme-clinical-os")) throw new Error("Expected .theme-clinical-os on html");
+      if (el.classList.contains("theme-material")) throw new Error("Unexpected .theme-material on html");
     });
   }
 }

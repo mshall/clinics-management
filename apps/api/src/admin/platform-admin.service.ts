@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { UserRole } from "@prisma/client";
+import { PlanKey, UserRole } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import type { JwtUser } from "../auth/jwt-user";
 import { isPlatformSuperAdmin } from "../common/platform-super-admin";
@@ -23,7 +23,10 @@ import { MarketsService } from "../markets/markets.service";
 import { tenantCreateDefaultsFromMarket } from "../markets/market-tax-pack";
 import { normalizeOrgTaxRegistrationNumber } from "../common/sync-clinic-invoice-tax";
 import { mergeProviderBlock } from "../providers/provider-settings";
+import { ensureTenantSubscription } from "../subscriptions/subscription-provision";
+import { EntitlementsService } from "../entitlements/entitlements.service";
 import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
+import { assertTenantDeploymentCellMatchesMarket } from "../markets/data-cells";
 
 @Injectable()
 export class PlatformAdminService {
@@ -32,7 +35,26 @@ export class PlatformAdminService {
     private readonly admin: AdminService,
     private readonly clinics: ClinicsService,
     private readonly markets: MarketsService,
+    private readonly entitlements: EntitlementsService,
   ) {}
+
+  putTenantEntitlementOverride(
+    user: JwtUser,
+    tenantId: string,
+    key: string,
+    body: { valueJson: unknown; reason: string; expiresAt?: string | null },
+  ) {
+    this.assertPlatform(user);
+    const id = tenantId.trim();
+    return this.entitlements.setTenantOverride(
+      id,
+      key.trim(),
+      body.valueJson,
+      body.reason.trim(),
+      user.userId,
+      body.expiresAt ? new Date(body.expiresAt) : null,
+    );
+  }
 
   private assertPlatform(user: JwtUser): void {
     if (!isPlatformSuperAdmin(user)) {
@@ -171,6 +193,7 @@ export class PlatformAdminService {
     }
     const packDefaults = tenantCreateDefaultsFromMarket(market);
     const deploymentCell = dto.deploymentCell?.trim() || packDefaults.deploymentCell;
+    assertTenantDeploymentCellMatchesMarket({ deploymentCell }, market);
     const baseCurrency = dto.baseCurrency?.trim() || market?.defaultCurrency?.trim();
     if (!baseCurrency) {
       throw new BadRequestException("baseCurrency is required (or set defaultCurrency on the market pack)");
@@ -219,6 +242,12 @@ export class PlatformAdminService {
       }
 
       return { row, groupAdmin };
+    });
+
+    await ensureTenantSubscription(this.prisma, result.row.id, {
+      planKey: PlanKey.LITE,
+      trialDays: 14,
+      trialPlanKey: PlanKey.PRO,
     });
 
     let initialClinic: { id: string; nameEn: string; kind: ClinicKind } | null = null;

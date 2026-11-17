@@ -371,6 +371,7 @@ Use **Amazon Lightsail** (fixed monthly) **or** one **EC2** instance (e.g. **t4g
 
 - **Documentation portal (local UI):** [`Docs/Documentation_Portal.md`](Docs/Documentation_Portal.md) — run `npm run docs:dev` → [http://localhost:5175](http://localhost:5175). Includes synced [PiggyMetrics](https://github.com/sqshq/PiggyMetrics) reference (`npm run docs:sync`).
 - **Documentation index:** [`Docs/README.md`](Docs/README.md)
+- **UI design catalog:** [`Design/README.md`](Design/README.md) — shipped themes plus **Kiorly Clinical OS** Screen Explorer (`npm run design:clinical-os`)
 - **Test users & passwords (QA / demos):** [`Docs/Test_Data_Users.md`](Docs/Test_Data_Users.md)
 - Product / requirements context: [`Docs/Clinic_Management_System_PRD.md`](Docs/Clinic_Management_System_PRD.md) (v1.9 — customer support, admin insights, scale/perf notes)
 - Technical RFC: [`Docs/Clinic_Management_System_RFC.md`](Docs/Clinic_Management_System_RFC.md) (v1.8)

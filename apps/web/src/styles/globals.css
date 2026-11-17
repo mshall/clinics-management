@@ -1,4 +1,5 @@
 @import "./material-theme.css";
+@import "./clinical-os-theme.css";
 
 @tailwind base;
 @tailwind components;

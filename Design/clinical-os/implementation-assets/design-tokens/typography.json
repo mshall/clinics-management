@@ -1,0 +1,45 @@
+{
+  "english": {
+    "family": "Inter",
+    "fallback": "system-ui",
+    "weights": [
+      400,
+      500,
+      600,
+      700
+    ]
+  },
+  "arabic": {
+    "family": "Tajawal",
+    "headingWeight": 700,
+    "bodyWeight": 600,
+    "fallback": "sans-serif"
+  },
+  "scale": {
+    "display": {
+      "size": 32,
+      "lineHeight": 40
+    },
+    "heading": {
+      "size": 24,
+      "lineHeight": 32
+    },
+    "section": {
+      "size": 20,
+      "lineHeight": 28
+    },
+    "body": {
+      "size": 16,
+      "lineHeight": 24
+    },
+    "small": {
+      "size": 14,
+      "lineHeight": 20
+    },
+    "caption": {
+      "size": 12,
+      "lineHeight": 16
+    }
+  },
+  "notes": "Font files not included. Configure legal font source as part of application build."
+}

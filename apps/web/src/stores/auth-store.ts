@@ -30,10 +30,13 @@ export interface AuthUser {
   tenantBaseCurrency?: string | null;
   mfaEnabled?: boolean;
   moneyVisibilityOverrides?: MoneyVisibilityOverrides | null;
+  plan?: { key: string; status: string } | null;
+  entitlements?: Record<string, unknown> | null;
 }
 
 interface AuthState {
   accessToken: string | null;
+  refreshToken: string | null;
   user: AuthUser | null;
   setSession: (
     accessToken: string,
@@ -50,7 +53,10 @@ interface AuthState {
       mfaEnabled?: boolean;
       tenantBaseCurrency?: string | null;
       moneyVisibilityOverrides?: MoneyVisibilityOverrides | null;
+      plan?: { key: string; status: string } | null;
+      entitlements?: Record<string, unknown> | null;
     },
+    refreshToken?: string | null,
   ) => void;
   signOut: () => void;
   refreshSessionFromServer: () => Promise<void>;
@@ -61,10 +67,12 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       accessToken: null,
+      refreshToken: null,
       user: null,
-      setSession: (accessToken, raw) =>
+      setSession: (accessToken, raw, refreshToken) =>
         set({
           accessToken,
+          refreshToken: refreshToken ?? null,
           user: {
             id: raw.id,
             tenantId: raw.tenantId,
@@ -82,9 +90,11 @@ export const useAuthStore = create<AuthState>()(
             tenantBaseCurrency: raw.tenantBaseCurrency ?? null,
             mfaEnabled: Boolean(raw.mfaEnabled),
             moneyVisibilityOverrides: raw.moneyVisibilityOverrides ?? undefined,
+            plan: raw.plan ?? undefined,
+            entitlements: raw.entitlements ?? undefined,
           },
         }),
-      signOut: () => set({ accessToken: null, user: null }),
+      signOut: () => set({ accessToken: null, refreshToken: null, user: null }),
       setHasAvatar: (hasAvatar) =>
         set((state) => (state.user ? { user: { ...state.user, hasAvatar } } : state)),
       refreshSessionFromServer: async () => {
@@ -115,6 +125,8 @@ export const useAuthStore = create<AuthState>()(
             mfaEnabled: Boolean((me as AuthUserDto).mfaEnabled),
             moneyVisibilityOverrides: (me as AuthUserDto & { moneyVisibilityOverrides?: MoneyVisibilityOverrides | null })
               .moneyVisibilityOverrides ?? undefined,
+            plan: (me as AuthUserDto).plan ?? undefined,
+            entitlements: (me as AuthUserDto).entitlements ?? undefined,
           },
         });
       },
@@ -122,7 +134,7 @@ export const useAuthStore = create<AuthState>()(
     {
       name: "cms-auth",
       storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({ accessToken: s.accessToken, user: s.user }),
+      partialize: (s) => ({ accessToken: s.accessToken, refreshToken: s.refreshToken, user: s.user }),
       merge: (persisted, current) => {
         const p = persisted as Partial<AuthState> | undefined;
         if (!p?.user) return { ...current, ...p };

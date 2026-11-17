@@ -44,6 +44,8 @@
     "platformOverview": "نظرة عامة",
     "platformInsights": "التحليلات",
     "platformMarkets": "إطلاق السوق",
+    "platformDrugDatasets": "الدليل الدوائي",
+    "platformPlans": "الخطط والأسعار",
     "platformOrganizations": "المنظمات",
     "platformUsers": "المستخدمون",
     "platformClinics": "العيادات",
@@ -51,6 +53,14 @@
     "governance": "الحوكمة والتدقيق",
     "frontDeskBoard": "لوحة الاستقبال",
     "guideBook": "كتيب التعليمات"
+  },
+  "entitlements": {
+    "upgradeTitle": "يتطلب ترقية",
+    "upgradeBody": "{{feature}} غير متاح على خطة {{current}}. رقِّ إلى {{target}} لفتحها.",
+    "currentPlan": "الحالية",
+    "upgradeCta": "عرض الخطط",
+    "modalTitle": "ترقية خطتك",
+    "modalDescription": "هذه الميزة تتطلب خطة أعلى. يمكن لمالك المنظمة تغيير الخطة من الإدارة ← الخطة والفوترة."
   },
   "guide": {
     "roleOnly": "مخصص لدور تسجيل الدخول",
@@ -154,7 +164,135 @@
     "email": "البريد الإلكتروني",
     "password": "كلمة المرور",
     "mfaPlaceholder": "رمز التحقق (تجريبي — أي 6 أرقام)",
-    "signOut": "تسجيل الخروج"
+    "signOut": "تسجيل الخروج",
+    "startSignup": "إنشاء حساب عيادتك",
+    "forgotPassword": "نسيت كلمة المرور؟",
+    "phoneLogin": "جوال",
+    "forgot": {
+      "title": "إعادة تعيين كلمة المرور",
+      "submit": "إرسال رابط أو رمز",
+      "sent": "إذا وُجد حساب، أرسلنا التعليمات.",
+      "devLink": "رابط التطوير: {{link}}",
+      "error": "تعذر بدء إعادة التعيين."
+    },
+    "reset": {
+      "title": "كلمة مرور جديدة",
+      "newPassword": "كلمة المرور الجديدة",
+      "submit": "تحديث كلمة المرور",
+      "error": "تعذر إعادة التعيين."
+    },
+    "otp": {
+      "sendCode": "إرسال الرمز",
+      "optionalHint": "اتركه فارغاً أولاً ثم أدخل الرمز بعد واتساب",
+      "sent": "تم إرسال الرمز — أدخله أعلاه وسجّل الدخول.",
+      "requestFailed": "تعذر إرسال الرمز."
+    }
+  },
+  "signup": {
+    "title": "ابدأ مع كيورلي",
+    "backToLogin": "لديك حساب بالفعل؟",
+    "progress": "الخطوة {{progress}}",
+    "market": "الدولة",
+    "phone": "رقم الجوال",
+    "sendOtp": "إرسال رمز التحقق",
+    "otpHint": "نرسل الرمز عبر واتساب عند الإمكان.",
+    "otp": "رمز التحقق",
+    "verifyOtp": "تحقق",
+    "displayName": "اسمك",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "specialty": "التخصص الطبي",
+    "continue": "متابعة",
+    "clinicName": "اسم العيادة",
+    "city": "المدينة / المنطقة",
+    "locationUrl": "رابط موقع العيادة",
+    "planIntro": "اختر طريقة البدء",
+    "planLite": "لايت — أساسيات تشغيل العيادة",
+    "planProTrial": "برو — تجربة 14 يوماً للميزات المتقدمة",
+    "capabilityIntro": "ما الذي تحصل عليه (بوضوح):",
+    "capabilityBullets": {
+      "preVisitSummary": "ملخص ذكي قبل الزيارة — قالب من السجل، وليس نموذج لغوي",
+      "noShowRisk": "تقدير مخاطر عدم الحضور — معادلة من السجل وتوقيت الحجز",
+      "roleAssistant": "مساعد كيورلي بالذكاء الاصطناعي — محادثة حسب الدور عبر نموذج السوق",
+      "chartScribe": "مسار المساعد السريري — مراجعة قبل الاعتماد؛ كتابة الصوت لاحقاً"
+    },
+    "finish": "إنشاء العيادة وتسجيل الدخول",
+    "legalIntro": "الاتفاقيات القانونية (مطلوبة)",
+    "legalAgree": "أوافق على {{doc}}",
+    "legalView": "اقرأ",
+    "errors": {
+      "markets": "تعذر تحميل الدول. حاول مرة أخرى.",
+      "generic": "حدث خطأ. حاول مرة أخرى."
+    }
+  },
+  "legal": {
+    "documentTitle": "وثيقة قانونية",
+    "version": "الإصدار {{version}}",
+    "errors": {
+      "load": "تعذر تحميل الوثائق القانونية."
+    },
+    "banner": {
+      "prompt": "شروط قانونية محدّثة تتطلب موافقتك قبل الميزات المدفوعة.",
+      "accept": "قبول الكل"
+    },
+    "patientPrivacyNotice": "إشعار خصوصية المريض"
+  },
+  "liteAdmin": {
+    "pageTitle": "الإعدادات",
+    "title": "إعدادات عيادتك",
+    "subtitle": "كل ما تحتاجه للعمل بمفردك — دون تعقيد المؤسسة.",
+    "profile": "الملف الشخصي",
+    "clinicHours": "مواعيد العمل",
+    "appointmentTypes": "أنواع المواعيد والرسوم",
+    "marketplaceTitle": "السوق",
+    "marketplaceHint": "اعرض عيادتك على سوق كيورلي عند الترقية إلى برو."
+  },
+  "messaging": {
+    "logTitle": "الرسائل",
+    "governanceTitle": "أخطاء تسليم واتساب",
+    "governanceSubtitle": "أخطاء قوالب وإعادة المحاولة — صنّف قبل التصعيد للدعم.",
+    "governanceTab": "تسليم واتساب",
+    "governanceEmpty": "لا توجد رسائل واتساب فاشلة في نافذة الاحتفاظ.",
+    "colWhen": "وقت الإرسال",
+    "colTemplate": "القالب",
+    "colStatus": "الحالة",
+    "colClass": "التصنيف",
+    "colError": "الخطأ",
+    "status": {
+      "QUEUED": "في الانتظار",
+      "SENT": "أُرسلت",
+      "DELIVERED": "وصلت",
+      "READ": "قُرئت",
+      "FAILED": "فشلت",
+      "RETRY": "إعادة محاولة"
+    }
+  },
+  "onboarding": {
+    "title": "مرحباً — إعداد سريع",
+    "subtitle": "أكمل هذه الخطوات لاستقبال المرضى اليوم.",
+    "goToDashboard": "فتح لوحة التحكم",
+    "viewAll": "كل الخطوات",
+    "dismiss": "إخفاء مؤقتاً",
+    "skip": "تخطي",
+    "optional": "اختياري",
+    "progress": "تقدّم الإعداد",
+    "progressLabel": "{{percent}}٪ من الخطوات المطلوبة",
+    "activationTitle": "تم التفعيل!",
+    "activationBody": "أكملت عيادتك أول حجز وتسجيل وصول. يمكنك بدء الزيارات الحقيقية.",
+    "checklist": {
+      "clinic_profile": "تأكيد ملف العيادة والترخيص",
+      "clinic_logo": "رفع شعار العيادة",
+      "working_hours": "ضبط مواعيد العمل",
+      "appointment_types": "إعداد أنواع المواعيد والرسوم",
+      "doctor_availability": "تحديد أوقات توفرك",
+      "invite_receptionist": "دعوة موظف استقبال",
+      "whatsapp_reminders": "تفعيل تذكيرات واتساب",
+      "import_patients": "استيراد أو إضافة مرضى",
+      "first_appointment": "حجز أول موعد",
+      "first_check_in": "إتمام أول تسجيل وصول",
+      "eta_setup": "إعداد إيصالات الضريبة ETA",
+      "kiorex_profile": "نشر ملف العيادة على Kiorex"
+    }
   },
   "theme": {
     "label": "المظهر",
@@ -167,6 +305,9 @@
     "defaultDark": "الافتراضي — داكن",
     "materialLight": "Material — فاتح",
     "materialDark": "Material — داكن",
+    "groupClinicalOs": "Kiorly Clinical OS",
+    "clinicalOsLight": "Clinical OS — فاتح",
+    "clinicalOsDark": "Clinical OS — داكن",
     "rememberForNextLogin": "استخدامه افتراضيًا عند تسجيل الدخول لاحقًا"
   },
   "dateRange": {
@@ -608,6 +749,7 @@
     "create": "إنشاء",
     "list": "القائمة",
     "status": "الحالة",
+    "whatsappConfirmedChip": "مؤكد عبر واتساب",
     "markDone": "تم الإكمال",
     "bookedOk": "تم إنشاء الموعد.",
     "scheduledFeeHiddenRole": "تُستخدم رسوم الموعد افتراضيات المنظمة لدورك. يمكن للمسؤول تفعيل حقول الرسوم لكل مستخدم.",
@@ -684,6 +826,33 @@
       "sat": "سب",
       "sun": "أح"
     }
+  },
+  "scheduling": {
+    "appointmentTypesTitle": "أنواع المواعيد",
+    "appointmentTypesHint": "المدة، والفواصل الزمنية، وقواعد السوق، ومتطلبات الغرفة لهذا الفرع.",
+    "typeSaved": "تم حفظ نوع الموعد",
+    "typeNameEn": "الاسم (EN)",
+    "typeNameAr": "الاسم (AR)",
+    "durationMin": "المدة (دقائق)",
+    "feeAmount": "الرسوم",
+    "bufferBefore": "فاصل قبل (دقائق)",
+    "bufferAfter": "فاصل بعد (دقائق)",
+    "minNotice": "إشعار أدنى (دقائق)",
+    "maxDaysAhead": "أقصى أيام مقدمًا",
+    "depositAmount": "مبلغ العربون",
+    "requiresRoom": "يتطلب غرفة",
+    "marketplaceBookable": "متاح في السوق",
+    "newPatientOnly": "للمرضى الجدد فقط",
+    "addType": "إضافة نوع",
+    "minShort": "د",
+    "bufferShort": "فاصل",
+    "typeOverridesTitle": "تجاوزات النوع لكل طبيب",
+    "typeOverridesHint": "مدة ورسوم اختيارية لكل طبيب. اتركها فارغة لاستخدام الإعدادات الافتراضية لنوع العيادة.",
+    "overridesSaved": "تم حفظ تجاوزات النوع",
+    "noTypesForOverrides": "أضف أنواع المواعيد أولًا.",
+    "typeDefault": "افتراضي",
+    "overrideDuration": "مدة بديلة",
+    "overrideFee": "رسوم بديلة"
   },
   "fiscalDevices": {
     "title": "أجهزة الإيصال",
@@ -854,7 +1023,18 @@
     "changeAvatar": "تغيير صورة الملف الشخصي",
     "avatarHint": "اضغط على أيقونة الكاميرا لرفع صورة الملف الشخصي أو تغييرها.",
     "avatarImageOnly": "يرجى اختيار ملف صورة.",
-    "avatarUpdated": "تم تحديث صورة الملف الشخصي."
+    "avatarUpdated": "تم تحديث صورة الملف الشخصي.",
+    "sessions": {
+      "title": "الجلسات النشطة",
+      "signOutAll": "تسجيل الخروج من كل الأجهزة",
+      "thisDevice": "هذا الجهاز",
+      "unknownDevice": "متصفح غير معروف",
+      "lastActive": "آخر نشاط {{when}}",
+      "revoke": "إنهاء",
+      "revoked": "تم إنهاء الجلسة.",
+      "revokedAll": "تم تسجيل الخروج من كل الأجهزة.",
+      "empty": "لا توجد جلسات أخرى."
+    }
   },
   "doctorRevenue": {
     "subtitle": "إيرادات الزيارات المكتملة وقيود أخرى مرتبطة بك (وليس المواعيد). استخدم شريط فترة التقارير أعلاه لتغيير التواريخ.",
@@ -1390,6 +1570,27 @@
     "createUserBtn": "إنشاء مستخدم",
     "featureFlags": "مفاتيح الميزات العامة",
     "featureFlagsHint": "تبديل مفاتيح الميزات على مستوى المنصة لجميع المنظمات. يجب تفعيل مساعد الذكاء الاصطناعي هنا وفي سوق البلد حتى تتمكن المنظمات من استخدامه.",
+    "plans": {
+      "title": "الخطط والأسعار",
+      "hint": "كتالوج مرقم لكل سوق. إصدارات الأسعار الجديدة لا تغيّر اشتراكات العملاء الحاليين.",
+      "saved": "تم تحديث الخطة",
+      "priceSaved": "تم حفظ إصدار السعر",
+      "public": "عام",
+      "hidden": "مخفي",
+      "addPrice": "إضافة سعر",
+      "entitlements": "الصلاحيات",
+      "newPriceVersion": "إصدار سعر جديد",
+      "amount": "المبلغ",
+      "interval": "الفترة",
+      "monthly": "شهري",
+      "annual": "سنوي",
+      "unit": "الوحدة",
+      "perTenant": "لكل منظمة",
+      "perClinician": "لكل طبيب",
+      "includedClinicians": "الأطباء المشمولون",
+      "extraClinician": "سعر الطبيب الإضافي",
+      "publishPrice": "نشر إصدار السعر"
+    },
     "marketCountryFlags": "مفاتيح الميزات حسب البلد",
     "marketFlagsHint": "تشغيل أو إيقاف الميزات لكل المنظمات في {{market}}. استخدم «مساعد الذكاء الاصطناعي» لتفعيل المساعد داخل التطبيق لذلك البلد.",
     "flagOn": "مفعّل",
@@ -1486,6 +1687,24 @@
     "letterFitness": "شهادة لياقة",
     "safetyWarnings": "سلامة الدواء",
     "safetyNoIssues": "لا تحذيرات حساسية أو تفاعلات لهذا الدواء.",
+    "safetyUnavailable": "فحص السلامة غير متاح — اختر دواءً من الدليل لفحص المواد الفعالة.",
+    "safetyUnavailableShort": "لم يُفحص",
+    "rxOverrideRequired": "يلزم سبب التجاوز للحفظ.",
+    "rxOverrideReason": "سبب تجاوز السلامة",
+    "rxOverrideReasonPh": "مطلوب عند تنبيه خطير أو ممنوع",
+    "rxSeverity": {
+      "minor": "بسيط",
+      "moderate": "متوسط",
+      "major": "كبير",
+      "contraindicated": "ممنوع",
+      "info": "معلومة"
+    },
+    "rxKind": {
+      "allergy": "حساسية",
+      "interaction": "تفاعل",
+      "duplication": "تكرار علاجي",
+      "unavailable": "غير متاح"
+    },
     "noteLocked": "الملاحظة مقفلة — استخدم التعديل للتحرير.",
     "signedAt": "موقَّع",
     "specialtyFormTemplate": "قالب نموذج التخصص",
@@ -1500,6 +1719,25 @@
     "letterGenerated": "تم إنشاء الخطاب.",
     "letterPrint": "طباعة (ثنائي اللغة)",
     "letterCreate": "إنشاء الخطاب"
+  },
+  "drugs": {
+    "searchPlaceholder": "الاسم التجاري (عربي أو إنجليزي)",
+    "unverifiedHint": "غير موثّق — اختر من الدليل الدوائي لفحص المكوّنات",
+    "unverifiedBadge": "غير موثّق",
+    "noMatches": "لا نتائج في الدليل"
+  },
+  "platformDrugs": {
+    "title": "إصدارات الدليل الدوائي",
+    "subtitle": "استيراد JSON لإصدار جديد (يتطلب مصدراً مرخّصاً للإنتاج).",
+    "import": "استيراد",
+    "versionLabel": "رمز الإصدار",
+    "sourceName": "اسم المصدر",
+    "sourceLicense": "الترخيص / الشروط",
+    "marketCode": "رمز السوق",
+    "jsonPayload": "محتوى JSON",
+    "importOk": "تم استيراد الدليل",
+    "recentVersions": "الإصدارات الأخيرة",
+    "productCount": "{{count}} منتج"
   },
   "orgHierarchy": {
     "title": "خريطة المنظمة",
@@ -1522,12 +1760,32 @@
     "turnOnOrg": "تشغيل للمنظمة",
     "turnOffOrg": "إيقاف للمنظمة",
     "featureFlag": {
-      "ai_assistant": "مساعد الذكاء الاصطناعي",
+      "ai_assistant": "مساعد كيورلي بالذكاء الاصطناعي (نموذج لغوي)",
       "eta_receipts": "إيصالات ضريبية / ETA",
       "whatsapp_reminders": "تذكيرات واتساب",
       "instapay": "مدفوعات InstaPay",
       "fawry": "مدفوعات فوري",
       "card_payments": "مدفوعات بالبطاقة"
+    },
+    "billing": {
+      "title": "الخطة والفوترة",
+      "hint": "اشتراك Kiorly للمنظمة، والتجربة، وعدد المقاعد.",
+      "trialDaysLeft": "{{count}} يوم متبقٍ في التجربة",
+      "trialEnded": "انتهت التجربة",
+      "seats": "مقاعد الأطباء",
+      "periodEnd": "نهاية الفترة الحالية",
+      "nextInvoice": "معاينة الفاتورة التالية",
+      "changePlan": "تغيير الخطة",
+      "plan": "الخطة",
+      "interval": "الفترة",
+      "preview": "معاينة",
+      "confirmChange": "تأكيد التغيير",
+      "planChanged": "تم تحديث الخطة",
+      "previewReady": "المعاينة جاهزة — أكّد للتطبيق",
+      "cancel": "إلغاء عند نهاية الفترة",
+      "cancelScheduled": "تم جدولة الإلغاء عند نهاية الفترة",
+      "cancelsAtPeriodEnd": "يُلغى عند نهاية الفترة",
+      "none": "لا يوجد اشتراك مسجّل."
     },
     "toggle": "تبديل",
     "allTenants": "كل المستأجرين",
@@ -1938,9 +2196,29 @@
     "openTicketFromLog": "فتح تذكرة دعم",
     "statusUpdated": "تم تحديث الحالة"
   },
+  "aiFeatures": {
+    "badge": "ذكاء اصطناعي",
+    "roleAssistant": {
+      "title": "مساعد كيورلي بالذكاء الاصطناعي",
+      "disclosure": "الإجابات عبر نموذج اللغة المُعد لسوقكم (متوافق مع OpenAI). تُنقّح البيانات الصحية حسب سياسة السوق قبل الإرسال."
+    },
+    "preVisitSummary": {
+      "title": "ملخص ذكي (قبل الزيارة)",
+      "disclosure": "موجز من خمسة أسطر من الحساسية والزيارات والأدوية والنتائج المعلقة في قاعدة البيانات — وليس من نموذج لغوي.",
+      "footer": "قالب من السجل · يُحدَّث عند فتح ملف المريض."
+    },
+    "noShowRisk": {
+      "title": "تقدير مخاطر عدم الحضور",
+      "disclosure": "درجة من عدد مرات عدم الحضور ومتطلب العربون وساعات الموعد — معادلة جدولة وليست تعلم آلة."
+    },
+    "chartScribe": {
+      "title": "مساعد التوثيق (مسار عمل)",
+      "disclosure": "مسودة ملاحظة ووصفة للمراجعة قبل الاعتماد. الكتابة الصوتية والمسودة التوليدية تحتاج مزوّد إنتاج."
+    }
+  },
   "assistant": {
-    "title": "مساعد كيورلي",
-    "toggle": "فتح المساعد الذكي",
+    "title": "مساعد كيورلي بالذكاء الاصطناعي",
+    "toggle": "فتح مساعد كيورلي بالذكاء الاصطناعي",
     "send": "إرسال",
     "thinking": "جاري التفكير…",
     "inputPlaceholder": "اسأل سؤالاً أو خطوة عمل بالعربية أو الإنجليزية…",
@@ -2005,5 +2283,33 @@
     "slideNOfM": "{{current}} / {{total}}",
     "gallerySwipeHint": "اسحب يميناً أو يساراً أو استخدم الأسهم للتنقل. قرّب أو بعّد للتكبير.",
     "pinchZoomHint": "قرّب أو بعّد للتكبير. اسحب عند التكبير. استخدم قلب يسار/يمين للتدوير. انقر على نسبة التكبير لإعادة الضبط."
+  },
+  "patientConsent": {
+    "header": "حالة الموافقة",
+    "data": "معالجة البيانات",
+    "ai": "معالجة بالذكاء الاصطناعي",
+    "marketplace": "مشاركة السوق",
+    "marketing": "رسائل تسويقية",
+    "granted": "موافق",
+    "missing": "غير مسجّل"
+  },
+  "messagingConsent": {
+    "title": "موافقة الرسائل",
+    "hint": "تشمل الرسائل المعاملاتية تذكيرات المواعيد. التسويق يشمل حملات الاستدعاء. يمكن للمرضى الرد بـ STOP أو إلغاء على واتساب لإلغاء الاشتراك.",
+    "channelWhatsapp": "واتساب",
+    "channelSms": "رسائل نصية",
+    "purposeTransactional": "معاملاتية (تذكيرات)",
+    "purposeMarketing": "تسويق واستدعاء"
+  },
+  "reschedule": {
+    "title": "إعادة جدولة موعدك",
+    "clinicPatient": "{{clinic}} · {{patient}}",
+    "newTime": "التاريخ والوقت الجديدان",
+    "submit": "تأكيد الموعد الجديد",
+    "success": "تم حفظ موعدك الجديد. نراك حينها!",
+    "invalidLink": "رابط إعادة الجدولة غير صالح.",
+    "loadError": "تعذّر تحميل الموعد.",
+    "saveError": "تعذّر الحفظ.",
+    "missingTime": "اختر تاريخًا ووقتًا جديدين"
   }
 }

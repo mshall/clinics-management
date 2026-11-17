@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,9 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [apiReady, setApiReady] = useState<boolean | null>(null);
+  const [loginMode, setLoginMode] = useState<"email" | "phone">("email");
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -62,7 +65,7 @@ export function LoginPage() {
     setSubmitting(true);
     try {
       const res = await loginRequest(email, password, mfa);
-      setSession(res.accessToken, res.user);
+      setSession(res.accessToken, res.user, res.refreshToken);
       const from = (location.state as { from?: string } | null)?.from;
       const { user: signedIn } = useAuthStore.getState();
       navigate(resolvePostLoginPath(signedIn?.role, signedIn?.navTabKeys, from, signedIn?.roleNavTabKeys), { replace: true });
@@ -72,6 +75,45 @@ export function LoginPage() {
       } else {
         setError(err instanceof Error ? err.message : t("auth.signIn"));
       }
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handlePhoneLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      if (!otp.trim()) {
+        await fetch(apiUrl("/api/v1/auth/otp/request"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone }),
+        }).then(async (r) => {
+          if (!r.ok) {
+            const d = (await r.json().catch(() => ({}))) as { message?: string };
+            throw new Error(d.message ?? t("auth.otp.requestFailed"));
+          }
+        });
+        setError(t("auth.otp.sent"));
+        return;
+      }
+      const res = await fetch(apiUrl("/api/v1/auth/otp/verify"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ phone, code: otp, ...(mfa.trim() ? { mfaCode: mfa } : {}) }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error((data as { message?: string }).message ?? t("auth.signIn"));
+      setSession(data.accessToken, data.user, data.refreshToken);
+      const from = (location.state as { from?: string } | null)?.from;
+      const { user: signedIn } = useAuthStore.getState();
+      navigate(resolvePostLoginPath(signedIn?.role, signedIn?.navTabKeys, from, signedIn?.roleNavTabKeys), {
+        replace: true,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("auth.signIn"));
     } finally {
       setSubmitting(false);
     }
@@ -98,6 +140,15 @@ export function LoginPage() {
             <CardTitle>{t("auth.signIn")}</CardTitle>
           </CardHeader>
           <CardContent>
+            <div className="mb-4 flex gap-2">
+              <Button type="button" variant={loginMode === "email" ? "default" : "outline"} onClick={() => setLoginMode("email")}>
+                {t("auth.email")}
+              </Button>
+              <Button type="button" variant={loginMode === "phone" ? "default" : "outline"} onClick={() => setLoginMode("phone")}>
+                {t("auth.phoneLogin")}
+              </Button>
+            </div>
+            {loginMode === "email" ? (
             <form className="space-y-4" onSubmit={(e) => void handleSubmit(e)}>
               {apiReady === false ? (
                 <p className="text-sm text-muted-foreground">
@@ -144,7 +195,36 @@ export function LoginPage() {
               <Button type="submit" className="w-full" disabled={submitting || apiReady === false}>
                 {submitting ? t("common.loading") : t("auth.signIn")}
               </Button>
+              <p className="text-center text-sm text-muted-foreground">
+                <Link to="/forgot-password" className="underline">
+                  {t("auth.forgotPassword")}
+                </Link>
+                {" · "}
+                <Link to="/signup" className="underline">
+                  {t("auth.startSignup")}
+                </Link>
+              </p>
             </form>
+            ) : (
+              <form className="space-y-4" onSubmit={(e) => void handlePhoneLogin(e)}>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">{t("signup.phone")}</Label>
+                  <Input id="phone" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="otp">{t("signup.otp")}</Label>
+                  <Input id="otp" value={otp} onChange={(e) => setOtp(e.target.value)} placeholder={t("auth.otp.optionalHint")} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="mfa-phone">{t("auth.mfaPlaceholder")}</Label>
+                  <Input id="mfa-phone" inputMode="numeric" maxLength={6} value={mfa} onChange={(e) => setMfa(e.target.value.replace(/\D/g, ""))} />
+                </div>
+                {error ? <p className="text-sm text-destructive">{error}</p> : null}
+                <Button type="submit" className="w-full" disabled={submitting || apiReady === false}>
+                  {submitting ? t("common.loading") : otp ? t("auth.signIn") : t("auth.otp.sendCode")}
+                </Button>
+              </form>
+            )}
           </CardContent>
         </Card>
       </div>

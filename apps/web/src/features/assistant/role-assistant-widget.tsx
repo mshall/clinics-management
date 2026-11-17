@@ -1,4 +1,4 @@
-import { Bot, Loader2, Send, X } from "lucide-react";
+import { Bot, Loader2, Send, Sparkles, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -11,6 +11,7 @@ import { useAssistantChatMutation, useAssistantContextQuery } from "@/lib/assist
 import { useAuthStore } from "@/stores/auth-store";
 import { isAssistantEnabledForRole } from "@/lib/assistant-policy";
 import { AssistantMessageBody } from "@/features/assistant/assistant-message-body";
+import { Badge } from "@/components/ui/badge";
 
 type ChatLine = { role: "user" | "assistant"; text: string; actions?: AssistantChatAction[] };
 
@@ -94,8 +95,12 @@ export function RoleAssistantWidget() {
             <div className="flex min-w-0 items-center gap-2">
               <Bot className="size-5 shrink-0 text-primary" aria-hidden />
               <p className="truncate text-sm font-semibold">
-                {contextQ.data?.title ?? t("assistant.title", "Kiorly assistant")}
+                {contextQ.data?.title ?? t("assistant.title", "Kiorly AI assistant")}
               </p>
+              <Badge variant="secondary" className="shrink-0 gap-0.5 text-[10px]">
+                <Sparkles className="size-2.5" aria-hidden />
+                {t("aiFeatures.badge", "AI")}
+              </Badge>
             </div>
             <Button type="button" size="icon" variant="ghost" className="size-8" onClick={() => setOpen(false)}>
               <X className="size-4" />

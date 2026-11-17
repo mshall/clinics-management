@@ -3,6 +3,12 @@ import { login } from "./helpers";
 import { expectThemeApplied, selectTheme } from "./theme-helpers";
 
 test.describe("Theme switcher", () => {
+  test("login page defaults to Clinical OS Light", async ({ page }) => {
+    await page.goto("/login");
+    await expectThemeApplied(page, "clinical-os-light");
+    await expect(page.locator("html")).toHaveClass(/theme-clinical-os/);
+  });
+
   test("login page applies Material Light", async ({ page }) => {
     await page.goto("/login");
     await selectTheme(page, /material — light/i);
@@ -21,6 +27,19 @@ test.describe("Theme switcher", () => {
     await selectTheme(page, /default — dark/i);
     await expectThemeApplied(page, "default-dark");
     await expect(page.locator("html")).not.toHaveClass(/theme-material/);
+  });
+
+  test("login page applies Clinical OS Light", async ({ page }) => {
+    await page.goto("/login");
+    await selectTheme(page, /clinical os — light/i);
+    await expectThemeApplied(page, "clinical-os-light");
+    await expect(page.locator("html")).toHaveClass(/theme-clinical-os/);
+  });
+
+  test("login page applies Clinical OS Dark", async ({ page }) => {
+    await page.goto("/login");
+    await selectTheme(page, /clinical os — dark/i);
+    await expectThemeApplied(page, "clinical-os-dark");
   });
 
   test("authenticated shell keeps theme after navigation", async ({ page }) => {
@@ -53,6 +72,15 @@ test.describe("Theme + core flows smoke", () => {
     await page.goto("/patients");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 60_000 });
     await expect(page.locator("table, [role='table']").first()).toBeVisible({ timeout: 60_000 });
+  });
+
+  test("encounters page loads under Clinical OS Light", async ({ page }) => {
+    await page.goto("/login");
+    await selectTheme(page, /clinical os — light/i);
+    await login(page, "admin@kiorly.com");
+    await page.goto("/encounters");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 60_000 });
+    await expectThemeApplied(page, "clinical-os-light");
   });
 
   test("appointments page loads under Material Dark on mobile viewport", async ({ page }) => {

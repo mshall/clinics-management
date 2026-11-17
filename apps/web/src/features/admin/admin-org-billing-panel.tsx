@@ -1,0 +1,175 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { apiGet, apiPost } from "@/lib/http";
+import { nativeSelectClassName } from "@/lib/form-control-styles";
+type SubscriptionDto = {
+  status: string;
+  interval: string;
+  clinicianSeats: number;
+  trialEndsAt: string | null;
+  currentPeriodEnd: string;
+  cancelAtPeriodEnd: boolean;
+  plan: { key: string; nameEn: string; nameAr: string };
+  planPrice: { amount: string; currency: string } | null;
+  nextInvoicePreview: { currency: string; subtotal: string; description: string } | null;
+};
+
+const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline" | "muted"> = {
+  TRIALING: "secondary",
+  ACTIVE: "default",
+  PAST_DUE: "muted",
+  GRACE: "muted",
+  READ_ONLY: "outline",
+  SUSPENDED: "muted",
+  CANCELLED: "outline",
+};
+
+export function AdminOrgBillingPanel({ canManage }: { canManage: boolean }) {
+  const { t, i18n } = useTranslation();
+  const qc = useQueryClient();
+  const [planKey, setPlanKey] = useState("PRO");
+  const [interval, setInterval] = useState("MONTHLY");
+  const [seats, setSeats] = useState("1");
+
+  const subQuery = useQuery({
+    queryKey: ["billing", "subscription"],
+    queryFn: () => apiGet<SubscriptionDto>("/api/v1/billing/subscription"),
+  });
+
+  const trialCountdown = useMemo(() => {
+    const end = subQuery.data?.trialEndsAt;
+    if (!end) return null;
+    const ms = new Date(end).getTime() - Date.now();
+    if (ms <= 0) return t("admin.billing.trialEnded", "Trial ended");
+    const days = Math.ceil(ms / 86_400_000);
+    return t("admin.billing.trialDaysLeft", "{{count}} day(s) left in trial", { count: days });
+  }, [subQuery.data?.trialEndsAt, t]);
+
+  const changeMut = useMutation({
+    mutationFn: (confirm: boolean) =>
+      apiPost<{ applied?: boolean; preview?: unknown }>("/api/v1/billing/subscription/change-plan", {
+        planKey,
+        interval,
+        seats: Number(seats),
+        confirm,
+      }),
+    onSuccess: (data) => {
+      if (data?.applied) {
+        toast.success(t("admin.billing.planChanged", "Plan updated"));
+        void qc.invalidateQueries({ queryKey: ["billing", "subscription"] });
+      } else {
+        toast.message(t("admin.billing.previewReady", "Preview ready — confirm to apply"));
+      }
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const cancelMut = useMutation({
+    mutationFn: () => apiPost("/api/v1/billing/subscription/cancel", { atPeriodEnd: true }),
+    onSuccess: () => {
+      toast.success(t("admin.billing.cancelScheduled", "Cancellation scheduled for period end"));
+      void qc.invalidateQueries({ queryKey: ["billing", "subscription"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const sub = subQuery.data;
+  const planLabel =
+    sub && i18n.language.startsWith("ar") ? sub.plan.nameAr || sub.plan.nameEn : sub?.plan.nameEn;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{t("admin.billing.title", "Plan & billing")}</CardTitle>
+        <CardDescription>
+          {t("admin.billing.hint", "Your organization's Kiorly subscription, trial, and seat count.")}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {subQuery.isPending ? (
+          <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+        ) : sub ? (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-medium">{planLabel}</span>
+              <Badge variant={STATUS_VARIANT[sub.status] ?? "outline"}>{sub.status}</Badge>
+              {sub.cancelAtPeriodEnd ? (
+                <Badge variant="outline">{t("admin.billing.cancelsAtPeriodEnd", "Cancels at period end")}</Badge>
+              ) : null}
+            </div>
+            {trialCountdown ? <p className="text-sm text-muted-foreground">{trialCountdown}</p> : null}
+            <p className="text-sm text-muted-foreground">
+              {t("admin.billing.seats", "Clinician seats")}: {sub.clinicianSeats} · {sub.interval}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {t("admin.billing.periodEnd", "Current period ends")}: {new Date(sub.currentPeriodEnd).toLocaleString()}
+            </p>
+            {sub.nextInvoicePreview ? (
+              <p className="text-sm">
+                {t("admin.billing.nextInvoice", "Next invoice preview")}: {sub.nextInvoicePreview.subtotal}{" "}
+                {sub.nextInvoicePreview.currency} — {sub.nextInvoicePreview.description}
+              </p>
+            ) : null}
+            {canManage ? (
+              <div className="space-y-3 rounded border border-border p-3">
+                <p className="text-sm font-medium">{t("admin.billing.changePlan", "Change plan")}</p>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <PlanKeySelect planKey={planKey} setPlanKey={setPlanKey} />
+                  <div className="space-y-1">
+                    <Label>{t("admin.billing.interval", "Interval")}</Label>
+                    <select className={nativeSelectClassName} value={interval} onChange={(e) => setInterval(e.target.value)}>
+                      <option value="MONTHLY">{t("platform.plans.monthly", "Monthly")}</option>
+                      <option value="ANNUAL">{t("platform.plans.annual", "Annual")}</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>{t("admin.billing.seats", "Clinician seats")}</Label>
+                    <Input type="number" min={1} value={seats} onChange={(e) => setSeats(e.target.value)} />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" size="sm" variant="outline" disabled={changeMut.isPending} onClick={() => changeMut.mutate(false)}>
+                    {t("admin.billing.preview", "Preview")}
+                  </Button>
+                  <Button type="button" size="sm" disabled={changeMut.isPending} onClick={() => changeMut.mutate(true)}>
+                    {t("admin.billing.confirmChange", "Confirm change")}
+                  </Button>
+                  {!sub.cancelAtPeriodEnd && sub.status !== "CANCELLED" ? (
+                    <Button type="button" size="sm" variant="destructive" disabled={cancelMut.isPending} onClick={() => cancelMut.mutate()}>
+                      {t("admin.billing.cancel", "Cancel at period end")}
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">{t("admin.billing.none", "No subscription on file.")}</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function PlanKeySelect({ planKey, setPlanKey }: { planKey: string; setPlanKey: (v: string) => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="space-y-1">
+      <Label>{t("admin.billing.plan", "Plan")}</Label>
+      <select className={nativeSelectClassName} value={planKey} onChange={(e) => setPlanKey(e.target.value)}>
+        {["LITE", "PRO", "CLINIC", "ENTERPRISE"].map((k) => (
+          <option key={k} value={k}>
+            {k}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}

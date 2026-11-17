@@ -1,6 +1,8 @@
 import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { EntitlementGuard } from "../entitlements/entitlement.guard";
+import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
@@ -8,7 +10,8 @@ import { ClinicAiService } from "./clinic-ai.service";
 
 @ApiTags("clinic-ai")
 @ApiBearerAuth("bearer")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard)
+@RequiresEntitlement("ai_assistant")
 @Controller("clinic-ai")
 export class ClinicAiController {
   constructor(private readonly clinicAi: ClinicAiService) {}

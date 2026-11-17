@@ -12,6 +12,7 @@ export const DOC_LINKS: DocLink[] = [
   { id: "test-users", label: "Test data & QA users", path: "/kiorly/test-users", group: "kiorly" },
   { id: "aws", label: "AWS deployment guide", path: "/kiorly/aws", group: "kiorly" },
   { id: "portal", label: "Documentation portal", path: "/kiorly/portal", group: "kiorly" },
+  { id: "ui-design", label: "UI design directions", path: "/kiorly/ui-design", group: "kiorly" },
   { id: "compare", label: "Architecture comparison", path: "/reference/architecture", group: "reference" },
   { id: "piggymetrics", label: "PiggyMetrics (synced)", path: "/reference/piggymetrics", group: "reference" },
 ];
@@ -23,6 +24,7 @@ export const KIORLY_DOC_FILES: Record<string, string> = {
   "test-users": "../../../Docs/Test_Data_Users.md",
   aws: "../../../Docs/AWS_Cloud_Deployment_Guide.md",
   portal: "../../../Docs/Documentation_Portal.md",
+  "ui-design": "../../../Docs/UI_DESIGN_DIRECTIONS.md",
 };
 
 export const REFERENCE_DOC_FILES: Record<string, string> = {

@@ -47,4 +47,11 @@ export class IntegrationBookAppointmentDto {
   @IsString()
   @MaxLength(2000)
   notes?: string;
+
+  @ApiPropertyOptional({
+    description: "When true (Kiorex booking flow), records MARKETPLACE_SHARING consent for the patient",
+  })
+  @IsOptional()
+  @IsBoolean()
+  marketplaceConsentGranted?: boolean;
 }

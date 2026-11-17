@@ -2,7 +2,7 @@
 
 Instance of [MARKET_GO_LIVE_TEMPLATE.md](../MARKET_GO_LIVE_TEMPLATE.md) for market code **EG** (`market-egypt`).
 
-**Data residency:** production workloads run in **Frankfurt (`eu-central-1`)**. Cross-border transfer from Egypt requires a **PDPC controller/processor licence** and a **cross-border transfer licence** from Egypt’s Personal Data Protection Centre (PDPC) — not “government consent for in-country hosting”.
+**Data residency (SC-01 Path A):** production workloads run in **Frankfurt** cell **`frankfurt`** (`eu-central-1`) — DB, uploads, and RDS automated backups. Cross-border transfer requires **PDPC controller/processor** and **cross-border transfer** licences. Decision memo: [DATA_RESIDENCY_DECISION.md](../DATA_RESIDENCY_DECISION.md). Sub-processors: [SUB_PROCESSORS_BY_MARKET.md](../SUB_PROCESSORS_BY_MARKET.md).
 
 ## 1. ETA e-receipt onboarding
 
@@ -53,7 +53,7 @@ Every **payment** path uses `postRevenueWithFiscal`: check-in, visit fee, billin
 | Data protection officer | **Formally appointed** DPO (contract + register with PDPC); HR org chart name alone is insufficient |
 | Consent | `POST /compliance/patients/:id/data-protection-consent` |
 | Breach notification | **72 hours** to PDPC; **3 days** to affected data subjects (see [COMPLIANCE_CONTROLS.md](../COMPLIANCE_CONTROLS.md)) |
-| Sub-processors | AWS (Frankfurt), optional **OpenAI** (EU API endpoint via market `providerConfig`; identifiers redacted in assistant prompts) |
+| Sub-processors | [SUB_PROCESSORS_BY_MARKET.md](../SUB_PROCESSORS_BY_MARKET.md) — AWS Frankfurt, optional OpenAI EU endpoint, ETA, WhatsApp BSP |
 | Data flows | RDS + S3 **Frankfurt**; assistant gated by `ai_assistant` flags — [FEATURE_FLAGS.md](../FEATURE_FLAGS.md) |
 
 ## 3. Backup, restore, incident
@@ -62,7 +62,7 @@ See [COMPLIANCE_CONTROLS.md](../COMPLIANCE_CONTROLS.md#backup-and-restore) and [
 
 ## 4. Legal pack (per clinic)
 
-Arabic privacy notice, terms, DPA — legal review required.
+Platform pack shipped (GT-02): terms, subscription, Kiorex fees, DPA, patient privacy notice (AR), AUP, refund — see [LEGAL_PACK.md](../LEGAL_PACK.md). **Counsel review still required** before charging or Kiorex listing.
 
 ## 5. Support & pilot
 

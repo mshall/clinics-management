@@ -36,7 +36,12 @@ import { MarketsModule } from "./markets/markets.module";
 import { FeatureFlagsModule } from "./feature-flags/feature-flags.module";
 import { ProvidersModule } from "./providers/providers.module";
 import { FiscalDevicesModule } from "./fiscal-devices/fiscal-devices.module";
+import { PlansModule } from "./plans/plans.module";
+import { EntitlementsModule } from "./entitlements/entitlements.module";
 import { PrivilegedMfaGuard } from "./auth/privileged-mfa.guard";
+import { SignupModule } from "./signup/signup.module";
+import { OnboardingModule } from "./onboarding/onboarding.module";
+import { LegalModule } from "./legal/legal.module";
 
 @Module({
   imports: [
@@ -76,6 +81,11 @@ import { PrivilegedMfaGuard } from "./auth/privileged-mfa.guard";
     FeatureFlagsModule,
     ProvidersModule,
     FiscalDevicesModule,
+    PlansModule,
+    EntitlementsModule,
+    SignupModule,
+    OnboardingModule,
+    LegalModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: PrivilegedMfaGuard }],
 })

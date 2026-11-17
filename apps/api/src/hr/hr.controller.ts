@@ -15,6 +15,8 @@ import { memoryStorage } from "multer";
 import { IsEnum } from "class-validator";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { EntitlementGuard } from "../entitlements/entitlement.guard";
+import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { CreateAttendanceDto } from "./dto/create-attendance.dto";
@@ -42,7 +44,8 @@ class PatchLeaveStatusDto {
 @ApiTags("hr")
 @ApiBearerAuth("bearer")
 @Controller("hr")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard)
+@RequiresEntitlement("mod_hr")
 export class HrController {
   constructor(private readonly hr: HrService) {}
 

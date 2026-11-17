@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { getDeploymentCell } from "./data-cells";
 
 const execFileAsync = promisify(execFile);
 
@@ -19,7 +20,13 @@ export class MarketProvisionService {
   private readonly log = new Logger(MarketProvisionService.name);
 
   resolveProvision(dataRegion: string, hostCell: string): MarketProvisionResult {
-    const region = dataRegion.trim() || "eu-central-1";
+    const cellRegion = getDeploymentCell(hostCell.trim() || "frankfurt").awsRegion;
+    const region = dataRegion.trim() || cellRegion;
+    if (region !== cellRegion) {
+      this.log.warn(
+        `Market hostCell ${hostCell} expects AWS region ${cellRegion} but dataRegion=${region}; deploy must target ${cellRegion}`,
+      );
+    }
     const shared = (process.env.PLATFORM_SHARED_DATA_REGIONS ?? "eu-central-1")
       .split(",")
       .map((s) => s.trim())
@@ -34,7 +41,7 @@ export class MarketProvisionService {
     return {
       mode: "deploy_required",
       dataRegion: region,
-      message: `New AWS deploy required for ${region}. Run: deploy-aws.sh with CDK context deployRegion=${region}`,
+      message: `New AWS deploy required for cell ${hostCell} (${cellRegion}). Run: KIORLY_HOST_CELL=${hostCell} AWS_REGION=${cellRegion} bash scripts/deploy-aws.sh`,
     };
   }
 

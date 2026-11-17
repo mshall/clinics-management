@@ -2,6 +2,8 @@ import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { EntitlementGuard } from "../entitlements/entitlement.guard";
+import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { CreateIntegrationWebhookDto } from "./dto/create-integration-webhook.dto";
@@ -11,7 +13,8 @@ import { IntegrationWebhookService } from "./integration-webhook.service";
 @ApiTags("admin")
 @ApiBearerAuth("bearer")
 @Controller("admin/integration-clients/:clientId/webhooks")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard)
+@RequiresEntitlement("mod_integrations")
 export class IntegrationWebhooksAdminController {
   constructor(
     private readonly clients: IntegrationClientService,

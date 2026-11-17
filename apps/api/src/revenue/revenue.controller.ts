@@ -3,6 +3,8 @@ import { UserRole } from "@prisma/client";
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { EntitlementGuard } from "../entitlements/entitlement.guard";
+import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { CreateRevenueDto } from "./dto/create-revenue.dto";
@@ -27,7 +29,8 @@ function resolveClinicianFilter(user: JwtUser, clinicianIdParam?: string): strin
 @ApiTags("revenue")
 @ApiBearerAuth("bearer")
 @Controller("revenue")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard)
+@RequiresEntitlement("mod_revenue")
 export class RevenueController {
   constructor(private readonly revenue: RevenueService) {}
 

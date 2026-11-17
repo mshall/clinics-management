@@ -12,6 +12,7 @@ interface JwtPayload {
   tenantId: string | null;
   email: string;
   role: JwtUser["role"];
+  sid?: string;
 }
 
 @Injectable()
@@ -36,13 +37,27 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
     if (!user) throw new UnauthorizedException();
     if (user.deletedAt || user.deactivatedAt) throw new UnauthorizedException();
-    return jwtUserFromRow({
-      id: user.id,
-      tenantId: user.tenantId,
-      email: user.email,
-      role: user.role,
-      additionalRoles: user.additionalRoles,
-      isTenantOwner: user.isTenantOwner,
-    });
+    if (payload.sid) {
+      const session = await this.prisma.userSession.findFirst({
+        where: {
+          id: payload.sid,
+          userId: user.id,
+          revokedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+      });
+      if (!session) throw new UnauthorizedException();
+    }
+    return {
+      ...jwtUserFromRow({
+        id: user.id,
+        tenantId: user.tenantId,
+        email: user.email,
+        role: user.role,
+        additionalRoles: user.additionalRoles,
+        isTenantOwner: user.isTenantOwner,
+      }),
+      sessionId: payload.sid,
+    };
   }
 }

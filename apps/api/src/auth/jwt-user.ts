@@ -10,4 +10,6 @@ export interface JwtUser {
   /** Extra roles beyond primary (FD-01); default empty when omitted in tests/legacy payloads). */
   additionalRoles?: UserRole[];
   isTenantOwner?: boolean;
+  /** Active auth session id when using refresh rotation (ON-02). */
+  sessionId?: string;
 }

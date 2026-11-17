@@ -2,7 +2,7 @@ import { ForbiddenException, Injectable } from "@nestjs/common";
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
 import { TenantRoleNavTabsService } from "../user-nav-tabs/tenant-role-nav-tabs.service";
-import { AiRuntimeService } from "../providers/ai/ai-runtime.service";
+import { AiGatewayService } from "../providers/ai/ai-gateway.service";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
 import { assertAssistantAccess, type AssistantRoleSlug } from "./assistant-access";
 import { resolveAssistantNavKeys } from "./assistant-effective-nav";
@@ -32,7 +32,7 @@ export class AssistantService {
     private readonly prisma: PrismaService,
     private readonly tenantRoleNav: TenantRoleNavTabsService,
     private readonly liveData: AssistantLiveDataService,
-    private readonly ai: AiRuntimeService,
+    private readonly ai: AiGatewayService,
     private readonly featureFlags: FeatureFlagsService,
   ) {}
 
@@ -145,6 +145,7 @@ export class AssistantService {
     system: string,
     message: string,
     locale: "en" | "ar",
+    patientId?: string | null,
   ): Promise<string | null> {
     let redaction = null;
     if (tenantId) {
@@ -157,14 +158,18 @@ export class AssistantService {
     }
     const safeMessage = sanitizeAssistantMessageForLlm(message, redaction);
     const userContent = locale === "ar" ? `رد بالعربية. ${safeMessage}` : safeMessage;
-    const result = await this.ai.chatCompletion(tenantId, {
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: userContent },
-      ],
-      temperature: 0.25,
-      maxTokens: 1000,
-    });
+    const result = await this.ai.chatCompletion(
+      tenantId,
+      {
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: userContent },
+        ],
+        temperature: 0.25,
+        maxTokens: 1000,
+      },
+      patientId ? { patientId, locale } : { locale },
+    );
     if (!result?.ok) return null;
     return result.content?.trim() || null;
   }

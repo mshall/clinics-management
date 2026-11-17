@@ -100,4 +100,10 @@ export class AppointmentDto {
 
   @ApiPropertyOptional({ nullable: true })
   visitBalanceRevenueId?: string | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: "Set when the patient confirmed via WhatsApp quick reply (MS-02)",
+  })
+  whatsappConfirmedAt?: string | null;
 }

@@ -1,6 +1,6 @@
 import { BadRequestException, Inject, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { UserRole } from "@prisma/client";
+import { PlanKey, UserRole } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import * as path from "path";
@@ -15,27 +15,17 @@ import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-b
 import { MfaService, verifyTotpCode } from "./mfa.service";
 import { effectiveRoles } from "../common/effective-roles";
 import { principalRequiresMfaEnrollment } from "./privileged-mfa";
+import { EntitlementsService } from "../entitlements/entitlements.service";
+import { applyPlanNavPipeline } from "../entitlements/plan-nav-preset";
+import { loginEmailLookupVariants, normalizeLoginEmail } from "./auth-email.util";
+import { AuthSessionService } from "./auth-session.service";
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 const ALLOWED_AVATAR_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 type AvatarFile = { buffer: Buffer; originalname: string; mimetype: string; size: number };
 
-function normalizeLoginEmail(raw: string): string {
-  return raw.normalize("NFKC").trim().toLowerCase();
-}
-
-/** Same mailbox on old demo domain vs current product domain (DB may still store either). */
-function loginEmailLookupVariants(normalized: string): string[] {
-  const out = new Set<string>([normalized]);
-  if (normalized.endsWith("@kiorly.com")) {
-    out.add(`${normalized.slice(0, -"@kiorly.com".length)}@demo.clinic`);
-  }
-  if (normalized.endsWith("@demo.clinic")) {
-    out.add(`${normalized.slice(0, -"@demo.clinic".length)}@kiorly.com`);
-  }
-  return [...out];
-}
+export type LoginSessionMeta = { userAgent?: string; ipHash?: string };
 
 function passwordMatches(password: string, passwordHash: string | null | undefined): boolean {
   if (!passwordHash) return false;
@@ -55,6 +45,8 @@ export class AuthService {
     private readonly tenantRoleNav: TenantRoleNavTabsService,
     private readonly mfa: MfaService,
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
+    private readonly entitlements: EntitlementsService,
+    private readonly sessions: AuthSessionService,
   ) {}
 
   private async navTabKeysForUser(tenantId: string, userId: string): Promise<string[] | null> {
@@ -86,6 +78,17 @@ export class AuthService {
         ? await loadUserMoneyVisibilityOverrides(this.prisma, user.tenantId, user.id)
         : undefined;
     const mfaEnabled = Boolean(user.mfaEnabled);
+    const entitlementsBundle =
+      user.tenantId != null ? await this.entitlements.resolve(user.tenantId) : null;
+    const planEntitlements = entitlementsBundle?.entitlements;
+    const planKey = entitlementsBundle?.plan?.key ?? PlanKey.ENTERPRISE;
+    const effectiveNavTabKeys =
+      navTabKeys?.length
+        ? applyPlanNavPipeline(navTabKeys, planKey, planEntitlements)
+        : navTabKeys;
+    const effectiveRoleNavTabKeys = roleNavTabKeys?.length
+      ? applyPlanNavPipeline(roleNavTabKeys, planKey, planEntitlements)
+      : roleNavTabKeys;
     return {
       id: user.id,
       tenantId: user.tenantId,
@@ -95,8 +98,8 @@ export class AuthService {
       roles: effectiveRoles(user),
       additionalRoles: user.additionalRoles ?? [],
       isTenantOwner: Boolean(user.isTenantOwner),
-      navTabKeys,
-      roleNavTabKeys,
+      navTabKeys: effectiveNavTabKeys,
+      roleNavTabKeys: effectiveRoleNavTabKeys,
       tenantBaseCurrency,
       platformSuperAdmin: isPlatformSuperAdmin({
         email: user.email,
@@ -114,10 +117,17 @@ export class AuthService {
           moneyVisibilityOverrides.appointments !== "ROLE_DEFAULT")
           ? moneyVisibilityOverrides
           : undefined,
+      plan: entitlementsBundle?.plan ?? undefined,
+      entitlements: entitlementsBundle?.entitlements ?? undefined,
     };
   }
 
-  async login(email: string, password: string, mfaCode?: string) {
+  async login(
+    email: string,
+    password: string,
+    mfaCode?: string,
+    meta: LoginSessionMeta = {},
+  ) {
     const normalized = normalizeLoginEmail(email);
     const variants = loginEmailLookupVariants(normalized);
     const candidates = await this.prisma.user.findMany({
@@ -147,6 +157,58 @@ export class AuthService {
     if (user.deletedAt || user.deactivatedAt) {
       throw new UnauthorizedException("This account is deactivated or archived");
     }
+    return this.issueLoginSession(user.id, mfaCode, meta, user);
+  }
+
+  async createSessionForUserId(userId: string, meta: LoginSessionMeta = {}) {
+    return this.issueLoginSession(userId, undefined, meta);
+  }
+
+  async refreshSession(refreshToken: string) {
+    const rotated = await this.sessions.rotateRefresh(refreshToken);
+    return this.issueLoginSession(rotated.userId, undefined, {}, undefined, {
+      sessionId: rotated.sessionId,
+      refreshToken: rotated.refreshToken,
+    });
+  }
+
+  async issueLoginSession(
+    userId: string,
+    mfaCode?: string,
+    meta: LoginSessionMeta = {},
+    preloaded?: {
+      id: string;
+      tenantId: string | null;
+      email: string;
+      displayName: string;
+      role: UserRole;
+      additionalRoles?: UserRole[];
+      isTenantOwner?: boolean;
+      avatarRelativePath?: string | null;
+      mfaEnabled?: boolean;
+      mfaTotpSecret?: string | null;
+    },
+    existingSession?: { sessionId: string; refreshToken: string },
+  ) {
+    const user =
+      preloaded ??
+      (await this.prisma.user.findFirst({
+        where: { id: userId, deletedAt: null, deactivatedAt: null },
+        select: {
+          id: true,
+          tenantId: true,
+          email: true,
+          displayName: true,
+          role: true,
+          additionalRoles: true,
+          isTenantOwner: true,
+          avatarRelativePath: true,
+          mfaEnabled: true,
+          mfaTotpSecret: true,
+        },
+      }));
+    if (!user) throw new UnauthorizedException("User not found");
+
     if (user.mfaEnabled) {
       if (!mfaCode?.trim()) {
         throw new UnauthorizedException({
@@ -162,11 +224,14 @@ export class AuthService {
       }
     }
 
+    const session =
+      existingSession ?? (await this.sessions.createSession(user.id, meta));
     const accessToken = this.jwt.sign({
       sub: user.id,
       tenantId: user.tenantId,
       email: user.email,
       role: user.role,
+      sid: session.sessionId,
     });
 
     const navTabKeys =
@@ -182,6 +247,31 @@ export class AuthService {
 
     void this.audit.recordLogin(user, user.email);
 
+    const base = await this.buildLoginResponse(user, accessToken, navTabKeys, roleNavTabKeys, tenantBaseCurrency);
+    return {
+      ...base,
+      refreshToken: session.refreshToken,
+      sessionId: session.sessionId,
+    };
+  }
+
+  private async buildLoginResponse(
+    user: {
+      id: string;
+      tenantId: string | null;
+      email: string;
+      displayName: string;
+      role: UserRole;
+      additionalRoles?: UserRole[];
+      isTenantOwner?: boolean;
+      avatarRelativePath?: string | null;
+      mfaEnabled?: boolean;
+    },
+    accessToken: string,
+    navTabKeys: string[] | null,
+    roleNavTabKeys: string[] | null,
+    tenantBaseCurrency: string | null,
+  ) {
     return {
       accessToken,
       user: await this.mapAuthUser(user, navTabKeys, roleNavTabKeys, tenantBaseCurrency),
@@ -209,6 +299,7 @@ export class AuthService {
       where: { id: user.id },
       data: { passwordHash: bcrypt.hashSync(newPassword, 10) },
     });
+    await this.sessions.revokeAllSessions(user.id);
     return { ok: true as const };
   }
 

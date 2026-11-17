@@ -10,6 +10,7 @@
     "prisma:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "demo:reset": "tsx scripts/reset-sales-demo-tenant.ts",
     "db:setup": "prisma generate && prisma migrate deploy && PRISMA_SEED_ENSURE_DEMO_PASSWORDS=true tsx prisma/seed.ts",
     "db:doctor": "tsx scripts/db-doctor.mjs",
     "db:migrate": "prisma migrate dev",
@@ -40,6 +41,7 @@
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "zod": "^3.24.1",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {

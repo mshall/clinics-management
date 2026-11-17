@@ -2,6 +2,8 @@ import { Body, Controller, Get, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { EntitlementGuard } from "../entitlements/entitlement.guard";
+import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { AssistantService } from "./assistant.service";
 import { AssistantChatDto, AssistantChatResponseDto, AssistantContextDto } from "./dto/assistant-chat.dto";
@@ -9,7 +11,8 @@ import { AssistantChatDto, AssistantChatResponseDto, AssistantContextDto } from 
 @ApiTags("assistant")
 @ApiBearerAuth("bearer")
 @Controller("assistant")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard)
+@RequiresEntitlement("ai_assistant")
 export class AssistantController {
   constructor(private readonly assistant: AssistantService) {}
 

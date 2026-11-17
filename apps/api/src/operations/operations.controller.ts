@@ -31,6 +31,8 @@ import { IsEnum, IsNumber, IsOptional, Min } from "class-validator";
 import { memoryStorage } from "multer";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { EntitlementGuard } from "../entitlements/entitlement.guard";
+import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { CreateOperationDto } from "./dto/create-operation.dto";
@@ -93,7 +95,8 @@ class PatchOperationStatusDto {
 @ApiTags("operations")
 @ApiBearerAuth("bearer")
 @Controller("operations")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard)
+@RequiresEntitlement("mod_operations")
 export class OperationsController {
   constructor(private readonly operations: OperationsService) {}
 

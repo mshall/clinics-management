@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { ComplianceModule } from "../compliance/compliance.module";
 import { ProvidersModule } from "../providers/providers.module";
 import { FeatureFlagsModule } from "../feature-flags/feature-flags.module";
 import { ClinicsModule } from "../clinics/clinics.module";
@@ -11,7 +12,15 @@ import { AssistantScopedQueriesService } from "./assistant-scoped-queries.servic
 import { AssistantService } from "./assistant.service";
 
 @Module({
-  imports: [FeatureFlagsModule, ProvidersModule, UserNavTabsModule, ClinicsModule, RevenueModule, PatientsModule],
+  imports: [
+    FeatureFlagsModule,
+    ProvidersModule,
+    ComplianceModule,
+    UserNavTabsModule,
+    ClinicsModule,
+    RevenueModule,
+    PatientsModule,
+  ],
   controllers: [AssistantController],
   providers: [AssistantService, AssistantLiveDataService, AssistantScopedQueriesService],
 })

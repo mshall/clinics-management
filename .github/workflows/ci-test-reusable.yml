@@ -55,8 +55,14 @@ jobs:
       - name: Typecheck (api + web)
         run: npm run typecheck
 
+      - name: Unit tests (web)
+        run: npm run test:unit -w web
+
       - name: Unit tests (api)
         run: npm run test:unit -w api
+
+      - name: Unit tests (infra SC-01)
+        run: npm run test:unit --prefix infra
 
       - name: Integration tests (api)
         run: npm run test:integration -w api

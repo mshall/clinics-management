@@ -2,6 +2,8 @@ import { Body, Controller, Delete, ForbiddenException, Get, Param, Post, UseGuar
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { EntitlementGuard } from "../entitlements/entitlement.guard";
+import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
@@ -13,7 +15,8 @@ import {
 
 @ApiTags("provider-credentials")
 @ApiBearerAuth("bearer")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard)
+@RequiresEntitlement("eta_receipts")
 @Controller("admin/provider-credentials")
 export class ProviderCredentialsController {
   constructor(private readonly credentials: ProviderCredentialsService) {}

@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import { applyStagingEnvDefaults } from "./staging/staging-profile";
 import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
@@ -20,7 +21,8 @@ const compressionMiddleware =
     : (compressionImport as { default: typeof compressionImport }).default;
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  applyStagingEnvDefaults();
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   app.enableShutdownHooks();
   app.use(
     compressionMiddleware({

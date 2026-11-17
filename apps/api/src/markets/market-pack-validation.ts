@@ -1,5 +1,6 @@
 import { BadRequestException } from "@nestjs/common";
 import { MarketLaunchStatus, type Market } from "@prisma/client";
+import { assertMarketMatchesProductionBinding } from "./data-cells";
 import { parseMarketTaxPack } from "./market-tax-pack";
 
 const REQUIRED_MARKET_STRINGS = [
@@ -23,6 +24,7 @@ export function assertMarketPackConfigured(market: Market | null | undefined): a
   if (!Array.isArray(market.weekendDays)) {
     throw new BadRequestException(`Market pack ${market.code} is missing weekendDays`);
   }
+  assertMarketMatchesProductionBinding(market);
 }
 
 /** LIVE markets must ship a complete tax pack (FD-00). */

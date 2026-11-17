@@ -1,0 +1,2 @@
+export const OTP_PURPOSE_LOGIN = "LOGIN";
+export const OTP_PURPOSE_PASSWORD_RESET = "PASSWORD_RESET";

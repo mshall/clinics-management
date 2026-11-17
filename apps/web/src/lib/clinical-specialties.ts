@@ -28,6 +28,9 @@ export const CLINICAL_SPECIALTY_VALUES = CLINICAL_SPECIALTY_OPTIONS.filter(
   (s): s is Exclude<ClinicalSpecialtySlug, "CUSTOM"> => s !== "CUSTOM",
 );
 
+/** Alias for signup wizard */
+export const CLINICAL_SPECIALTY_KEYS = CLINICAL_SPECIALTY_VALUES;
+
 export function formatClinicalSpecialty(slug: string, t: (key: string, fallback: string) => string): string {
   if (slug === "CUSTOM") return t("clinical.specialtyCustom", "Custom specialty");
   const key = `clinical.specialty_${slug}`;

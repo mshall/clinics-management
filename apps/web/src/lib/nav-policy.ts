@@ -1,5 +1,7 @@
 import type { DemoRole } from "@/lib/roles";
 import { hasHrNavAccessFromGrants, type EmployeePrivilegeGrantSummary } from "@/lib/employee-manage-policy";
+import { NAV_TAB_ENTITLEMENT, applyPlanNavPipeline } from "@/lib/plan-nav-entitlements";
+import { intersectNavTabsWithPlanPreset, requiredPlanForNavTab } from "@/lib/plan-nav-presets";
 
 export type NavItemKey =
   | "platform"
@@ -218,6 +220,8 @@ export function effectiveNavKeys(
   roleNavTabKeys?: string[] | null,
   employeePrivilegeGrants?: EmployeePrivilegeGrantSummary[] | null,
   allRoles?: DemoRole[] | null,
+  planEntitlements?: Record<string, unknown> | null,
+  planKey?: string | null,
 ): Set<NavItemKey> {
   const base = (() => {
     if (roleNavTabKeys?.length && allRoles && allRoles.length > 1) {
@@ -252,8 +256,14 @@ export function effectiveNavKeys(
   if (hasHrNavAccessFromGrants(employeePrivilegeGrants)) {
     out.add("hr");
   }
+  if (planKey || planEntitlements) {
+    const filtered = applyPlanNavPipeline(out, planKey, planEntitlements);
+    return new Set(filtered as NavItemKey[]);
+  }
   return out;
 }
+
+export { NAV_TAB_ENTITLEMENT };
 
 export function showNavItem(
   role: DemoRole | undefined,
@@ -262,8 +272,18 @@ export function showNavItem(
   roleNavTabKeys?: string[] | null,
   employeePrivilegeGrants?: EmployeePrivilegeGrantSummary[] | null,
   allRoles?: DemoRole[] | null,
+  planEntitlements?: Record<string, unknown> | null,
+  planKey?: string | null,
 ): boolean {
-  return effectiveNavKeys(role, navTabKeys, roleNavTabKeys, employeePrivilegeGrants, allRoles).has(key);
+  return effectiveNavKeys(
+    role,
+    navTabKeys,
+    roleNavTabKeys,
+    employeePrivilegeGrants,
+    allRoles,
+    planEntitlements,
+    planKey,
+  ).has(key);
 }
 
 /** Encounter list workspace (sidebar). */
@@ -337,6 +357,48 @@ export function navKeyForPath(path: string): NavItemKey | null {
 }
 
 /** After sign-in, only return `from` when the user's role may access that route. */
+export type NavBlockReason = "plan" | "entitlement" | "role";
+
+export function navTabBlockReason(
+  tab: NavItemKey,
+  role: DemoRole | undefined,
+  navTabKeys?: string[] | null,
+  roleNavTabKeys?: string[] | null,
+  employeePrivilegeGrants?: EmployeePrivilegeGrantSummary[] | null,
+  allRoles?: DemoRole[] | null,
+  planEntitlements?: Record<string, unknown> | null,
+  planKey?: string | null,
+): NavBlockReason | null {
+  const roleSet = effectiveNavKeys(
+    role,
+    navTabKeys,
+    roleNavTabKeys,
+    employeePrivilegeGrants,
+    allRoles,
+    null,
+    null,
+  );
+  if (!roleSet.has(tab)) return "role";
+  const full = effectiveNavKeys(
+    role,
+    navTabKeys,
+    roleNavTabKeys,
+    employeePrivilegeGrants,
+    allRoles,
+    planEntitlements,
+    planKey,
+  );
+  if (full.has(tab)) return null;
+  const afterPlan = intersectNavTabsWithPlanPreset([...roleSet], planKey);
+  if (!afterPlan.includes(tab)) return "plan";
+  return "entitlement";
+}
+
+export function upgradePlanLabelForNavTab(tab: NavItemKey): string | null {
+  const plan = requiredPlanForNavTab(tab);
+  return plan;
+}
+
 export function resolvePostLoginPath(
   role: DemoRole | undefined,
   navTabKeys: string[] | null | undefined,

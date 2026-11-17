@@ -8,6 +8,8 @@ Reference for QA, demos, and onboarding. All seeded accounts use password **`dem
 
 **Live demo (AWS):** [https://d92iz83i79c05.cloudfront.net](https://d92iz83i79c05.cloudfront.net) — sign in with any account below (password **`demo`**). Uses **CloudFront** for SPA + `/api/*` to **App Runner** (see [`AWS_Cloud_Deployment_Guide.md`](./AWS_Cloud_Deployment_Guide.md)). After seed, **Dr Ahmed Shall Group** exposes **42 organization users** in **Admin → Organization users** (`GET /api/v1/admin/users`); smoke tests expect `total ≥ 30`.
 
+**Sales pilot tenants (QA-06):** when `KIORLY_ENV=staging` or `SEED_PILOT_TENANTS=true`, seed ensures **Lite / Pro / Clinic** orgs (`sales-*@pilot.kiorly.com`, password **`demo`**). Reset a demo before a sales call: `npm run demo:reset -- --tier=pro` (see [QA_STAGING.md](./QA_STAGING.md)).
+
 **Idempotent seed:** if **any** database content already exists (tenants, users, clinics, or patients), the seed **does not delete or replace** existing rows and **never resets passwords** on accounts that already exist. It only ensures missing demo records (platform super admin, Kiorly login accounts, Dr Ahmed Shall clinics/staff/patients) are created. A full demo dataset is inserted **only** on a completely empty database.
 
 **Primary organization:** `Kiorly Clinic Group (Demo)` — 1 HQ clinic + 14 branches (see [Clinic hierarchy](#clinic-hierarchy)).

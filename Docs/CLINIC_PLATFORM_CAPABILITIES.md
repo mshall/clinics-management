@@ -42,7 +42,7 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 | Insurer billing, co-pay, pre-auth | **Foundation** | `PayerPreAuthorization`, copay % on contract prices |
 | **Egypt: ETA e-receipts** | **Shipped (core)** | Three-step submit, worker, **C/V/O**, per-device chain; failure classes (credentials / duplicate / validation); resubmit API; tax invoices do not double-queue; org Kiorly ETA opt-out |
 | **Receipt devices (multi-market)** | **Shipped** | `GET/POST /clinics/:id/fiscal-devices`, credentials, test connection; auto-provision virtual device on clinic create when provider `deviceRegistration.required`; clinic settings **Receipt devices** panel + add-clinic tax step |
-| **Egypt: data protection consent** | **Foundation (priority)** | `POST /compliance/patients/:id/data-protection-consent` |
+| **Egypt: data protection consent** | **Shipped (SC-03)** | `ConsentPolicy.require`; `GET /patients/:id/consents`; check-in + Kiorex capture — [PATIENT_CONSENT.md](./PATIENT_CONSENT.md) |
 
 ---
 
@@ -51,8 +51,9 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 | Requirement | Status | Notes |
 |-------------|--------|--------|
 | WhatsApp/SMS templates (EN/AR) | **Foundation** | `GET /messaging/templates` seeds confirm, 24h/2h reminders, results ready |
-| Automated reminder queue | **Foundation** | `OutboundMessage` QUEUED; background worker + optional `WHATSAPP_*` env; org enables in Admin → Organization |
-| Confirm/cancel replies | **Planned** | Webhook handler + appointment status |
+| Automated reminder queue | **Shipped** | Meta Cloud templates + webhooks ([MESSAGING_WHATSAPP.md](./MESSAGING_WHATSAPP.md)); delivery in patient/appointment UI |
+| Confirm/cancel replies | **Shipped** | MS-02 quick replies + waitlist on cancel ([MESSAGING_WHATSAPP.md](./MESSAGING_WHATSAPP.md)) |
+| Messaging consent / STOP | **Shipped** | MS-03 transactional vs marketing + PDPL opt-out ([MESSAGING_CONSENT.md](./MESSAGING_CONSENT.md)) |
 | Recall / campaigns (check-up, lapsed, birthday) | **Foundation** | `GET /messaging/recall-campaigns`; tie to `Patient.acquisitionChannel` in next slice |
 | Post-visit satisfaction → doctor score | **Foundation** | `SatisfactionSurveyResponse` table; trigger on encounter finalize (next) |
 
@@ -83,15 +84,16 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 
 ---
 
-## 6. AI inside the clinic module (three features only)
+## 6. Clinic intelligence (honest labels — AI-03)
 
-| Feature | Status | API |
-|---------|--------|-----|
-| **AI scribe** (AR/EN, approve note + Rx) | **Foundation** | `POST /clinic-ai/encounters/:id/scribe/start`, `POST /clinic-ai/scribe/:id/approve` — add speech provider for production |
-| **Pre-visit summary** (5 lines) | **Shipped** | `GET /clinic-ai/patients/:id/pre-visit-summary` |
-| **No-show risk** on appointments | **Foundation** | `POST /clinic-ai/appointments/refresh-no-show-risk`; `Appointment.noShowRiskScore` — show in UI next |
+| Feature | Label in product | Backing | Status | API |
+|---------|------------------|---------|--------|-----|
+| **Kiorly AI assistant** | AI badge | Language model (market `AiProvider`) | **Shipped** | `POST /assistant/chat` — flag `ai_assistant` |
+| **Smart summary (pre-visit)** | No AI badge | Rule template from chart rows | **Shipped** | `GET /clinic-ai/patients/:id/pre-visit-summary` |
+| **No-show risk estimate** | No AI badge | Formula (`noShowCount`, deposit, lead time) | **Foundation** | `POST /clinic-ai/appointments/refresh-no-show-risk` |
+| **Chart scribe (workflow)** | No AI badge | Clinician-approve draft; speech TBD | **Foundation** | `POST /clinic-ai/encounters/:id/scribe/start` |
 
-Distinct from the **role assistant** (`/assistant/chat`): that remains Q&A; clinic-ai is chart workflow. The role assistant is gated by layered flag `ai_assistant` — see [FEATURE_FLAGS.md](./FEATURE_FLAGS.md).
+Copy registry: [AI_HONEST_LABELS.md](./AI_HONEST_LABELS.md). The role assistant is gated by layered flag `ai_assistant` — see [FEATURE_FLAGS.md](./FEATURE_FLAGS.md).
 
 ---
 

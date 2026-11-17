@@ -65,6 +65,9 @@ import type {
 } from "./dto/encounter-response.dto";
 import type { UpdateEncounterDto } from "./dto/update-encounter.dto";
 import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
+import { AuditService } from "../audit/audit.service";
+import { DrugCatalogService } from "../clinical/drug-catalog.service";
+import { RxSafetyCheckService } from "../clinical/rx-safety-check.service";
 
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 const ALLOWED_MIME = new Set([
@@ -104,6 +107,9 @@ export class EncountersService {
     private readonly patients: PatientsService,
     private readonly frontDeskFlow: FrontDeskFlowService,
     private readonly featureFlags: FeatureFlagsService,
+    private readonly drugCatalog: DrugCatalogService,
+    private readonly rxSafety: RxSafetyCheckService,
+    private readonly audit: AuditService,
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
   ) {}
 
@@ -126,6 +132,9 @@ export class EncountersService {
   private mapMed(m: {
     id: string;
     drugName: string;
+    drugProductId: string | null;
+    drugUnverified: boolean;
+    safetyOverrideReason: string | null;
     dosage: string | null;
     route: string | null;
     frequency: string | null;
@@ -135,6 +144,9 @@ export class EncountersService {
     return {
       id: m.id,
       drugName: m.drugName,
+      drugProductId: m.drugProductId,
+      drugUnverified: m.drugUnverified,
+      safetyOverrideReason: m.safetyOverrideReason,
       dosage: m.dosage,
       route: m.route,
       frequency: m.frequency,
@@ -874,15 +886,58 @@ export class EncountersService {
     assertPhysicianEncounterAccess(viewer, enc);
     await this.ensureEditableEncounter(enc);
 
-    const existing = await this.prisma.encounterMedication.findMany({
+    const marketId = await this.drugCatalog.resolveMarketIdForTenant(tenantId);
+    let drugName = dto.drugName.trim();
+    let drugProductId: string | null = dto.drugProductId?.trim() || null;
+    let drugUnverified = false;
+    if (drugProductId) {
+      const product = await this.prisma.drugProduct.findFirst({
+        where: { id: drugProductId, marketId, isActive: true },
+      });
+      if (!product) throw new BadRequestException("Drug product not found in market catalog");
+      drugName = this.drugCatalog.formatPrintedDrugName(product);
+    } else {
+      drugUnverified = true;
+    }
+
+    const existingMeds = await this.prisma.encounterMedication.findMany({
       where: { encounterId, tenantId },
-      select: { drugName: true },
+      select: { drugName: true, drugProductId: true },
     });
+    const items = [
+      ...existingMeds.map((m) => ({ drugName: m.drugName, drugProductId: m.drugProductId })),
+      { drugName, drugProductId },
+    ];
+    const safety = await this.rxSafety.checkRx(tenantId, enc.patientId, items);
+    const blocking = safety.alerts.filter((a) => a.requiresOverride);
+    const overrideReason = dto.safetyOverrideReason?.trim() || null;
+    if (blocking.length > 0 && !overrideReason) {
+      throw new BadRequestException({
+        message: "Documented override required for major or contraindicated medication alerts",
+        errorCode: "RX_SAFETY_OVERRIDE_REQUIRED",
+        alerts: blocking,
+      });
+    }
+    if (overrideReason && blocking.length > 0) {
+      await this.audit.recordEvent({
+        tenantId,
+        actorId: viewer?.userId ?? null,
+        clinicId: enc.clinicId,
+        action: "RX_SAFETY_OVERRIDE",
+        resource: "Encounter",
+        resourceId: encounterId,
+        metadata: { patientId: enc.patientId, reason: overrideReason, alerts: blocking, drugName },
+      });
+    }
+
     const m = await this.prisma.encounterMedication.create({
       data: {
         tenantId,
         encounterId,
-        drugName: dto.drugName.trim(),
+        drugName,
+        drugProductId,
+        drugUnverified,
+        safetyOverrideReason: overrideReason,
         dosage: dto.dosage?.trim() || null,
         route: dto.route?.trim() || null,
         frequency: dto.frequency?.trim() || null,
@@ -890,6 +945,9 @@ export class EncountersService {
         instructions: dto.instructions?.trim() || null,
       },
     });
+    if (drugProductId && enc.clinicianId) {
+      await this.drugCatalog.recordClinicianUsage(tenantId, enc.clinicianId, drugProductId);
+    }
     await this.prisma.encounter.update({
       where: { id: encounterId },
       data: { noMedications: false },

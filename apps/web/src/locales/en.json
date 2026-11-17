@@ -44,6 +44,8 @@
     "platformOverview": "Overview",
     "platformInsights": "Insights",
     "platformMarkets": "Market launch",
+    "platformDrugDatasets": "Drug datasets",
+    "platformPlans": "Plans & pricing",
     "platformOrganizations": "Organizations",
     "platformUsers": "Users",
     "platformClinics": "Clinics",
@@ -51,6 +53,14 @@
     "governance": "Governance & audit",
     "frontDeskBoard": "Front desk board",
     "guideBook": "Guide book"
+  },
+  "entitlements": {
+    "upgradeTitle": "Upgrade required",
+    "upgradeBody": "{{feature}} is not included on your {{current}} plan. Upgrade to {{target}} to unlock it.",
+    "currentPlan": "current",
+    "upgradeCta": "View plans",
+    "modalTitle": "Upgrade your plan",
+    "modalDescription": "This capability requires a higher plan. Organization owners can change plan under Admin → Plan & billing."
   },
   "guide": {
     "roleOnly": "Tailored to your sign-in role",
@@ -154,7 +164,135 @@
     "email": "Email",
     "password": "Password",
     "mfaPlaceholder": "MFA code (demo — any 6 digits)",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "startSignup": "Create your clinic account",
+    "forgotPassword": "Forgot password?",
+    "phoneLogin": "Phone",
+    "forgot": {
+      "title": "Reset your password",
+      "submit": "Send reset link or code",
+      "sent": "If an account exists, we sent instructions.",
+      "devLink": "Dev reset link: {{link}}",
+      "error": "Could not start password reset."
+    },
+    "reset": {
+      "title": "Choose a new password",
+      "newPassword": "New password",
+      "submit": "Update password",
+      "error": "Could not reset password."
+    },
+    "otp": {
+      "sendCode": "Send code",
+      "optionalHint": "Leave empty first, then enter code after SMS/WhatsApp",
+      "sent": "Code sent — enter it above and sign in.",
+      "requestFailed": "Could not send code."
+    }
+  },
+  "signup": {
+    "title": "Start with Kiorly",
+    "backToLogin": "Already have an account?",
+    "progress": "Step {{progress}}",
+    "market": "Country",
+    "phone": "Mobile number",
+    "sendOtp": "Send verification code",
+    "otpHint": "We sent a code on WhatsApp when possible.",
+    "otp": "Verification code",
+    "verifyOtp": "Verify",
+    "displayName": "Your name",
+    "email": "Work email",
+    "password": "Password",
+    "specialty": "Medical specialty",
+    "continue": "Continue",
+    "clinicName": "Clinic name",
+    "city": "City / area",
+    "locationUrl": "Clinic location link",
+    "planIntro": "Choose how you start",
+    "planLite": "Lite — essentials to run your clinic",
+    "planProTrial": "Pro — 14-day trial of advanced features",
+    "capabilityIntro": "What’s included (accurate labels):",
+    "capabilityBullets": {
+      "preVisitSummary": "Smart pre-visit summary — chart template, not a language model",
+      "noShowRisk": "No-show risk estimate — formula from visit history and booking timing",
+      "roleAssistant": "Kiorly AI assistant — role-aware chat via your market’s language model",
+      "chartScribe": "Chart scribe workflow — review before approve; speech AI ships separately"
+    },
+    "finish": "Create clinic & sign in",
+    "legalIntro": "Legal agreements (required)",
+    "legalAgree": "I agree to the {{doc}}",
+    "legalView": "Read",
+    "errors": {
+      "markets": "Could not load countries. Try again shortly.",
+      "generic": "Something went wrong. Please try again."
+    }
+  },
+  "legal": {
+    "documentTitle": "Legal document",
+    "version": "Version {{version}}",
+    "errors": {
+      "load": "Could not load legal documents."
+    },
+    "banner": {
+      "prompt": "Updated legal terms require your acceptance before paid features.",
+      "accept": "Accept all"
+    },
+    "patientPrivacyNotice": "Patient privacy notice"
+  },
+  "liteAdmin": {
+    "pageTitle": "Settings",
+    "title": "Your clinic settings",
+    "subtitle": "Everything you need to run solo — without org complexity.",
+    "profile": "Profile",
+    "clinicHours": "Clinic hours",
+    "appointmentTypes": "Appointment types & fees",
+    "marketplaceTitle": "Marketplace",
+    "marketplaceHint": "List your clinic on Kiorly marketplace when you upgrade to Pro."
+  },
+  "messaging": {
+    "logTitle": "Messages",
+    "governanceTitle": "WhatsApp delivery failures",
+    "governanceSubtitle": "Template send errors and retry queue — classify before contacting support.",
+    "governanceTab": "WhatsApp delivery",
+    "governanceEmpty": "No failed WhatsApp messages in the retention window.",
+    "colWhen": "Queued",
+    "colTemplate": "Template",
+    "colStatus": "Status",
+    "colClass": "Class",
+    "colError": "Error",
+    "status": {
+      "QUEUED": "Queued",
+      "SENT": "Sent",
+      "DELIVERED": "Delivered",
+      "READ": "Read",
+      "FAILED": "Failed",
+      "RETRY": "Retry scheduled"
+    }
+  },
+  "onboarding": {
+    "title": "Welcome — quick setup",
+    "subtitle": "Finish these steps to go live with patients today.",
+    "goToDashboard": "Open dashboard",
+    "viewAll": "Full checklist",
+    "dismiss": "Hide for now",
+    "skip": "Skip",
+    "optional": "optional",
+    "progress": "Setup progress",
+    "progressLabel": "{{percent}}% of required steps done",
+    "activationTitle": "You're activated!",
+    "activationBody": "Your clinic completed its first booking and check-in. Real visits can start.",
+    "checklist": {
+      "clinic_profile": "Confirm clinic profile and license details",
+      "clinic_logo": "Upload clinic logo",
+      "working_hours": "Set working hours",
+      "appointment_types": "Configure appointment types and fees",
+      "doctor_availability": "Set your availability",
+      "invite_receptionist": "Invite a receptionist",
+      "whatsapp_reminders": "Turn on WhatsApp reminders",
+      "import_patients": "Import or add patients",
+      "first_appointment": "Book your first appointment",
+      "first_check_in": "Complete your first check-in",
+      "eta_setup": "Set up ETA e-receipts",
+      "kiorex_profile": "Publish Kiorex marketplace profile"
+    }
   },
   "theme": {
     "label": "Theme",
@@ -167,6 +305,9 @@
     "defaultDark": "Default — Dark",
     "materialLight": "Material — Light",
     "materialDark": "Material — Dark",
+    "groupClinicalOs": "Kiorly Clinical OS",
+    "clinicalOsLight": "Clinical OS — Light",
+    "clinicalOsDark": "Clinical OS — Dark",
     "rememberForNextLogin": "Use as default when I sign in again"
   },
   "dateRange": {
@@ -607,6 +748,7 @@
     "create": "Create",
     "list": "Upcoming & recent",
     "status": "Status",
+    "whatsappConfirmedChip": "Confirmed by WhatsApp",
     "markDone": "Mark completed",
     "bookedOk": "Appointment created.",
     "scheduledFeeHiddenRole": "Scheduled fees use organization defaults for your role. An administrator can enable fee fields per user.",
@@ -683,6 +825,33 @@
       "sat": "Sat",
       "sun": "Sun"
     }
+  },
+  "scheduling": {
+    "appointmentTypesTitle": "Appointment types",
+    "appointmentTypesHint": "Duration, buffers, marketplace rules, and room requirements for this branch.",
+    "typeSaved": "Appointment type saved",
+    "typeNameEn": "Name (EN)",
+    "typeNameAr": "Name (AR)",
+    "durationMin": "Duration (min)",
+    "feeAmount": "Fee",
+    "bufferBefore": "Buffer before (min)",
+    "bufferAfter": "Buffer after (min)",
+    "minNotice": "Minimum notice (min)",
+    "maxDaysAhead": "Max days ahead",
+    "depositAmount": "Deposit amount",
+    "requiresRoom": "Requires room",
+    "marketplaceBookable": "Marketplace bookable",
+    "newPatientOnly": "New patients only",
+    "addType": "Add type",
+    "minShort": "min",
+    "bufferShort": "buffer",
+    "typeOverridesTitle": "Per-doctor type overrides",
+    "typeOverridesHint": "Optional duration and fee per doctor. Leave blank to use the clinic type defaults.",
+    "overridesSaved": "Type overrides saved",
+    "noTypesForOverrides": "Add appointment types first.",
+    "typeDefault": "Default",
+    "overrideDuration": "Override duration",
+    "overrideFee": "Override fee"
   },
   "fiscalDevices": {
     "title": "Receipt devices",
@@ -853,7 +1022,18 @@
     "changeAvatar": "Change profile picture",
     "avatarHint": "Tap the camera icon to upload or change your profile picture.",
     "avatarImageOnly": "Please choose an image file.",
-    "avatarUpdated": "Profile picture updated."
+    "avatarUpdated": "Profile picture updated.",
+    "sessions": {
+      "title": "Active sessions",
+      "signOutAll": "Sign out all devices",
+      "thisDevice": "This device",
+      "unknownDevice": "Unknown browser",
+      "lastActive": "Last active {{when}}",
+      "revoke": "Sign out",
+      "revoked": "Session ended.",
+      "revokedAll": "Signed out everywhere.",
+      "empty": "No other active sessions."
+    }
   },
   "doctorRevenue": {
     "subtitle": "Revenue from completed encounters and other ledger rows tied to you (not appointments). Use the reporting period bar above to change dates; demo data spans the current and prior two months after a fresh seed.",
@@ -1389,6 +1569,27 @@
     "createUserBtn": "Create user",
     "featureFlags": "Global feature flags",
     "featureFlagsHint": "Toggle platform-wide feature flags for all organizations. AI assistant must be on here and in the org's country market for orgs to use it.",
+    "plans": {
+      "title": "Plans & pricing",
+      "hint": "Versioned catalog per market. New price versions grandfather existing subscriptions.",
+      "saved": "Plan updated",
+      "priceSaved": "Price version saved",
+      "public": "Public",
+      "hidden": "Hidden",
+      "addPrice": "Add price",
+      "entitlements": "Entitlements",
+      "newPriceVersion": "New price version",
+      "amount": "Amount",
+      "interval": "Interval",
+      "monthly": "Monthly",
+      "annual": "Annual",
+      "unit": "Unit",
+      "perTenant": "Per organization",
+      "perClinician": "Per clinician",
+      "includedClinicians": "Included clinicians",
+      "extraClinician": "Extra clinician amount",
+      "publishPrice": "Publish price version"
+    },
     "marketCountryFlags": "Country feature flags",
     "marketFlagsHint": "Turn features on or off for every organization in {{market}}. Use AI assistant to enable or disable the in-app assistant for that country.",
     "flagOn": "Enabled",
@@ -1485,6 +1686,24 @@
     "letterFitness": "Fitness certificate",
     "safetyWarnings": "Medication safety",
     "safetyNoIssues": "No allergy or interaction warnings for this drug.",
+    "safetyUnavailable": "Safety check unavailable — select a catalog drug for ingredient-level checks.",
+    "safetyUnavailableShort": "Not checked",
+    "rxOverrideRequired": "Override reason required to save.",
+    "rxOverrideReason": "Safety override reason",
+    "rxOverrideReasonPh": "Required if major or contraindicated alert",
+    "rxSeverity": {
+      "minor": "Minor",
+      "moderate": "Moderate",
+      "major": "Major",
+      "contraindicated": "Contraindicated",
+      "info": "Info"
+    },
+    "rxKind": {
+      "allergy": "Allergy",
+      "interaction": "Interaction",
+      "duplication": "Duplication",
+      "unavailable": "Unavailable"
+    },
     "noteLocked": "Note is locked — use Amend to edit.",
     "signedAt": "Signed",
     "specialtyFormTemplate": "Specialty form template",
@@ -1499,6 +1718,25 @@
     "letterGenerated": "Letter generated.",
     "letterPrint": "Print (bilingual)",
     "letterCreate": "Create letter"
+  },
+  "drugs": {
+    "searchPlaceholder": "Brand name (Arabic or English)",
+    "unverifiedHint": "Unverified — pick from catalog for ingredient-level safety checks",
+    "unverifiedBadge": "Unverified",
+    "noMatches": "No catalog matches"
+  },
+  "platformDrugs": {
+    "title": "Drug datasets",
+    "subtitle": "Import versioned Egyptian drug catalog JSON (licensed source required for production).",
+    "import": "Import dataset",
+    "versionLabel": "Version label",
+    "sourceName": "Source name",
+    "sourceLicense": "Source licence / terms",
+    "marketCode": "Market code",
+    "jsonPayload": "Dataset JSON",
+    "importOk": "Drug dataset imported",
+    "recentVersions": "Recent versions",
+    "productCount": "{{count}} products"
   },
   "orgHierarchy": {
     "title": "Organization map",
@@ -1521,12 +1759,32 @@
     "turnOnOrg": "Turn on for org",
     "turnOffOrg": "Turn off for org",
     "featureFlag": {
-      "ai_assistant": "AI assistant",
+      "ai_assistant": "Kiorly AI assistant (language model)",
       "eta_receipts": "ETA / fiscal receipts",
       "whatsapp_reminders": "WhatsApp reminders",
       "instapay": "InstaPay payments",
       "fawry": "Fawry payments",
       "card_payments": "Card payments"
+    },
+    "billing": {
+      "title": "Plan & billing",
+      "hint": "Your organization's Kiorly subscription, trial, and seat count.",
+      "trialDaysLeft": "{{count}} day(s) left in trial",
+      "trialEnded": "Trial ended",
+      "seats": "Clinician seats",
+      "periodEnd": "Current period ends",
+      "nextInvoice": "Next invoice preview",
+      "changePlan": "Change plan",
+      "plan": "Plan",
+      "interval": "Interval",
+      "preview": "Preview",
+      "confirmChange": "Confirm change",
+      "planChanged": "Plan updated",
+      "previewReady": "Preview ready — confirm to apply",
+      "cancel": "Cancel at period end",
+      "cancelScheduled": "Cancellation scheduled for period end",
+      "cancelsAtPeriodEnd": "Cancels at period end",
+      "none": "No subscription on file."
     },
     "toggle": "Toggle",
     "allTenants": "All tenants",
@@ -1937,9 +2195,29 @@
     "openTicketFromLog": "Open support ticket",
     "statusUpdated": "Status updated"
   },
+  "aiFeatures": {
+    "badge": "AI",
+    "roleAssistant": {
+      "title": "Kiorly AI assistant",
+      "disclosure": "Answers use your organization’s configured language model (OpenAI-compatible). PHI is redacted per market policy before requests leave Kiorly."
+    },
+    "preVisitSummary": {
+      "title": "Smart summary (pre-visit)",
+      "disclosure": "Five-line brief built from allergies, visits, medications, and pending results in your database — not generated by a language model.",
+      "footer": "Rule-based chart template · refreshes when you open the patient."
+    },
+    "noShowRisk": {
+      "title": "No-show risk estimate",
+      "disclosure": "Score from patient no-show count, deposit flag, and hours until appointment — a scheduling formula, not machine learning."
+    },
+    "chartScribe": {
+      "title": "Chart scribe (workflow)",
+      "disclosure": "Draft note and Rx workflow for clinician review. Ambient speech and generative drafts need a production speech provider."
+    }
+  },
   "assistant": {
-    "title": "Kiorly assistant",
-    "toggle": "Open AI assistant",
+    "title": "Kiorly AI assistant",
+    "toggle": "Open Kiorly AI assistant",
     "send": "Send",
     "thinking": "Thinking…",
     "inputPlaceholder": "Ask a question or how-to in English or Arabic…",
@@ -2004,5 +2282,33 @@
     "slideNOfM": "{{current}} / {{total}}",
     "gallerySwipeHint": "Swipe left or right, or use the arrows, to browse images. Pinch to zoom.",
     "pinchZoomHint": "Pinch to zoom. Drag when zoomed in. Use flip left/right to rotate. Click zoom % to reset."
+  },
+  "patientConsent": {
+    "header": "Consent status",
+    "data": "Data processing",
+    "ai": "AI processing",
+    "marketplace": "Marketplace sharing",
+    "marketing": "Marketing messages",
+    "granted": "Granted",
+    "missing": "Missing"
+  },
+  "messagingConsent": {
+    "title": "Messaging consent",
+    "hint": "Transactional messages include appointment reminders. Marketing covers recall campaigns. Patients can reply STOP or إلغاء on WhatsApp to opt out.",
+    "channelWhatsapp": "WhatsApp",
+    "channelSms": "SMS",
+    "purposeTransactional": "Transactional (reminders)",
+    "purposeMarketing": "Marketing & recalls"
+  },
+  "reschedule": {
+    "title": "Reschedule your visit",
+    "clinicPatient": "{{clinic}} · {{patient}}",
+    "newTime": "New date & time",
+    "submit": "Confirm new time",
+    "success": "Your new appointment time is saved. See you then!",
+    "invalidLink": "Invalid reschedule link.",
+    "loadError": "Could not load appointment.",
+    "saveError": "Could not save.",
+    "missingTime": "Pick a new date and time"
   }
 }

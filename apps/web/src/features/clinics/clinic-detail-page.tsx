@@ -10,12 +10,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClinicDeactivateConfirmDialog } from "@/features/clinics/clinic-deactivate-confirm-dialog";
 import { ClinicDoctorsPanel } from "@/features/clinics/clinic-doctors-panel";
+import { ClinicianTypeOverridesPanel } from "@/features/clinics/clinician-type-overrides-panel";
 import { ClinicContactSettingsPanel } from "@/features/clinics/clinic-contact-settings-panel";
 import { ClinicRegulatorySettingsPanel } from "@/features/clinics/clinic-regulatory-settings-panel";
 import { ClinicFiscalDevicesPanel } from "@/features/clinics/clinic-fiscal-devices-panel";
 import { ClinicCurrencySettingsPanel } from "@/features/clinics/clinic-currency-settings-panel";
 import { ClinicHoursSettingsPanel } from "@/features/clinics/clinic-hours-settings-panel";
 import { ClinicRoomsSettingsPanel } from "@/features/clinics/clinic-rooms-settings-panel";
+import { ClinicAppointmentTypesPanel } from "@/features/clinics/clinic-appointment-types-panel";
 import { ClinicEtaSettingsPanel } from "@/features/compliance/clinic-eta-settings-panel";
 import { ClinicClinicalTemplatesPanel } from "@/features/clinics/clinic-clinical-templates-panel";
 import { ClinicReactivateDialog } from "@/features/clinics/clinic-reactivate-dialog";
@@ -296,6 +298,7 @@ export function ClinicDetailPage() {
             roomLabels={c.frontDeskRoomLabels?.length ? c.frontDeskRoomLabels : ["Room 1", "Room 2", "Room 3"]}
             canEdit={canManageClinic}
           />
+          <ClinicAppointmentTypesPanel clinicId={c.id} canEdit={canManageClinic} />
           <ClinicClinicalTemplatesPanel clinicId={c.id} canEdit={canManageClinic} />
           <ClinicEtaSettingsPanel clinicId={c.id} detail={c} disabled={!canManageClinic} />
         </TabsContent>
@@ -346,6 +349,7 @@ export function ClinicDetailPage() {
             clinicId={c.id}
             examRoomLabels={c.frontDeskRoomLabels?.length ? c.frontDeskRoomLabels : ["Room 1", "Room 2", "Room 3"]}
           />
+          <ClinicianTypeOverridesPanel clinicId={c.id} canEdit={canManageClinic} />
         </TabsContent>
       </Tabs>
     </div>

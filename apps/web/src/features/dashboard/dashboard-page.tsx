@@ -8,6 +8,7 @@ import { useDashboardKpisQuery, useDashboardTodayQuery } from "@/lib/api-hooks";
 import { canViewDashboardFinancialKpis, canViewDashboardHrKpis } from "@/lib/dashboard-kpi-policy";
 import { formatMultiCurrencyAmounts } from "@/lib/money-display";
 import { localeForLanguage } from "@/lib/locale-display";
+import { OnboardingChecklistCard } from "@/features/dashboard/onboarding-checklist-card";
 
 export function DashboardPage() {
   const { t, i18n } = useTranslation();
@@ -50,6 +51,7 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <OnboardingChecklistCard />
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("dashboard.title")}</h1>
         <p className="text-muted-foreground">{t("dashboard.subtitle")}</p>

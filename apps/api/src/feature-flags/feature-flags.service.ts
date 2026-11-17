@@ -1,5 +1,8 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { PLAN_GATED_FEATURE_FLAGS } from "../entitlements/plans-matrix";
+import { EntitlementsService } from "../entitlements/entitlements.service";
+import { entitlementTruthy } from "../entitlements/entitlement-value";
 import {
   FEATURE_FLAG_DESCRIPTIONS,
   FEATURE_FLAG_KEYS,
@@ -18,7 +21,10 @@ export type FeatureFlagLayerView = {
 
 @Injectable()
 export class FeatureFlagsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly entitlements: EntitlementsService,
+  ) {}
 
   async isEnabled(tenantId: string, key: FeatureFlagKey | string): Promise<boolean> {
     const row = await this.resolveRow(tenantId, key);
@@ -42,6 +48,8 @@ export class FeatureFlagsService {
     });
     if (!tenant) return [];
 
+    const entSnapshot = await this.entitlements.resolve(tenantId);
+
     const globals = await this.prisma.featureFlag.findMany({ where: { key: { in: [...FEATURE_FLAG_KEYS] } } });
     const globalByKey = new Map(globals.map((g) => [g.key, g.enabled]));
 
@@ -55,7 +63,9 @@ export class FeatureFlagsService {
       if (key === "whatsapp_reminders" && tenantFlag == null) {
         tenantEnabled = tenant.whatsAppRemindersEnabled;
       }
-      const effective = this.computeEffective(globalEnabled, marketEnabled, tenantEnabled);
+      const entKey = PLAN_GATED_FEATURE_FLAGS[key];
+      const planEntitled = entKey ? entitlementTruthy(entSnapshot.entitlements[entKey]) : true;
+      const effective = this.computeEffective(globalEnabled, marketEnabled, tenantEnabled, planEntitled);
       return {
         key,
         description,
@@ -133,8 +143,10 @@ export class FeatureFlagsService {
     globalEnabled: boolean,
     marketEnabled: boolean | null,
     tenantEnabled: boolean | null,
+    planEntitled = true,
   ): boolean {
     if (!globalEnabled) return false;
+    if (!planEntitled) return false;
     if (marketEnabled === false) return false;
     if (tenantEnabled === false) return false;
     if (tenantEnabled === true) return true;

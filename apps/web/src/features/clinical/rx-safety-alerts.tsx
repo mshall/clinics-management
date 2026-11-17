@@ -1,0 +1,62 @@
+import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
+
+export type RxSafetyAlert = {
+  kind: string;
+  severity: string;
+  messageEn: string;
+  messageAr: string;
+  requiresOverride?: boolean;
+  itemIndex?: number;
+  relatedItemIndex?: number;
+};
+
+function severityClass(severity: string): string {
+  switch (severity) {
+    case "contraindicated":
+      return "border-red-600/50 bg-red-500/15 text-red-950 dark:text-red-100";
+    case "major":
+      return "border-orange-600/50 bg-orange-500/15 text-orange-950 dark:text-orange-100";
+    case "moderate":
+      return "border-amber-600/50 bg-amber-500/15 text-amber-950 dark:text-amber-100";
+    case "minor":
+      return "border-blue-600/40 bg-blue-500/10 text-blue-950 dark:text-blue-100";
+    case "unavailable":
+    case "info":
+    default:
+      return "border-border bg-muted/50 text-muted-foreground";
+  }
+}
+
+type Props = { alerts: RxSafetyAlert[]; className?: string };
+
+export function RxSafetyAlerts({ alerts, className }: Props) {
+  const { t, i18n } = useTranslation();
+  const isAr = i18n.language.startsWith("ar");
+  if (!alerts.length) return null;
+
+  return (
+    <ul className={cn("space-y-1.5 text-xs", className)}>
+      {alerts.map((w, i) => (
+        <li key={i} className={cn("rounded-md border px-2 py-1.5", severityClass(w.severity))}>
+          <span className="font-medium uppercase tracking-wide opacity-80">
+            {t(`clinical.rxSeverity.${w.severity}`, w.severity)}
+            {w.kind === "unavailable"
+              ? ` · ${t("clinical.safetyUnavailableShort", "Not checked")}`
+              : w.kind
+                ? ` · ${t(`clinical.rxKind.${w.kind}`, w.kind)}`
+                : null}
+          </span>
+          <p className="mt-0.5">{isAr && w.messageAr ? w.messageAr : w.messageEn}</p>
+          {w.requiresOverride ? (
+            <p className="mt-1 font-medium">{t("clinical.rxOverrideRequired", "Override reason required to save.")}</p>
+          ) : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export function hasBlockingRxAlerts(alerts: RxSafetyAlert[] | undefined): boolean {
+  return Boolean(alerts?.some((a) => a.requiresOverride));
+}

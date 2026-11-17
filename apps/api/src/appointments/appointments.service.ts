@@ -174,6 +174,7 @@ export class AppointmentsService {
       roomAssignedAt: row.roomAssignedAt?.toISOString() ?? null,
       checkedInAt: row.checkedInAt?.toISOString() ?? null,
       queueTicketNumber: row.queueTicketNumber ?? null,
+      whatsappConfirmedAt: row.whatsappConfirmedAt?.toISOString() ?? null,
       ...(patient
         ? {
             patientMrn: patient.mrn,
@@ -484,16 +485,34 @@ export class AppointmentsService {
     const apptType = dto.appointmentTypeId
       ? await this.prisma.appointmentType.findFirst({ where: { id: dto.appointmentTypeId, tenantId } })
       : null;
-  let end: Date;
+    let effective = null;
+    if (dto.appointmentTypeId && apptType) {
+      try {
+        effective = await this.scheduling.assertAppointmentTypeBookingRules(
+          tenantId,
+          dto.clinicId,
+          dto.patientId,
+          dto.clinicianId.trim(),
+          dto.appointmentTypeId,
+          start,
+          dto.roomLabel,
+        );
+      } catch (err) {
+        if (err instanceof BadRequestException) throw err;
+        throw err;
+      }
+    }
+    let end: Date;
     try {
       end = dto.endsAt
         ? resolveCreateAppointmentEnd(start, dto.endsAt)
-        : this.scheduling.resolveDurationFromType(apptType, null, start);
+        : this.scheduling.resolveDurationFromType(effective ?? apptType, null, start);
     } catch {
       throw new BadRequestException("endsAt must be after startsAt");
     }
 
-    let conflicts = await this.findSchedulingConflicts(tenantId, dto.clinicianId.trim(), start, end);
+    const { blockStart, blockEnd } = this.scheduling.expandConflictWindow(start, end, effective);
+    let conflicts = await this.findSchedulingConflicts(tenantId, dto.clinicianId.trim(), blockStart, blockEnd);
     if (dto.allowDoubleBook) conflicts = [];
     if (conflicts.length > 0 && !dto.confirmOverlap) {
       throw new ConflictException({
@@ -505,7 +524,7 @@ export class AppointmentsService {
     const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
     if (!tenant) throw new BadRequestException("Tenant not found");
     const defaultFee = Number(tenant.defaultVisitFee);
-    const typeFee = apptType ? Number(apptType.feeAmount) : null;
+    const typeFee = effective ? effective.feeAmount : apptType ? Number(apptType.feeAmount) : null;
     const clinicianIdForFees = dto.clinicianId.trim();
     const moneyVis = actor ? await this.moneyOverrides(tenantId, actor) : DEFAULT_MONEY_VISIBILITY_OVERRIDES;
     const canSetFees = actor ? canEditAppointmentFeesForViewer(actor, clinicianIdForFees, moneyVis) : true;

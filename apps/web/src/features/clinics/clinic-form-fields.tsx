@@ -9,6 +9,7 @@ import { clinicKindLabel, type ClinicKind } from "@/lib/clinic-kind";
 import { CLINICAL_SPECIALTY_VALUES } from "@/lib/clinical-specialties";
 import { formatClinicalSpecialty } from "@/lib/locale-display";
 import type { ClinicFormValues } from "./clinic-form-utils";
+import { useEntitlement } from "@/hooks/use-entitlement";
 
 type ClinicFormFieldsProps = {
   values: ClinicFormValues;
@@ -36,7 +37,8 @@ export function ClinicFormFields({
   idPrefix = "clinic",
 }: ClinicFormFieldsProps) {
   const { t } = useTranslation();
-  const structureVisible = showStructureEditor || showParentPicker;
+  const multiBranch = useEntitlement("multi_branch");
+  const structureVisible = (showStructureEditor || showParentPicker) && multiBranch;
   const branchOptionDisabled = branchCount > 0;
 
   const countryPickItems: PickListItem[] = useMemo(

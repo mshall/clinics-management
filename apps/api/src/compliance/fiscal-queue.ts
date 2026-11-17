@@ -7,6 +7,7 @@ import {
 } from "@prisma/client";
 import { fiscalProviderKeyForMarket, getFiscalProvider } from "../providers/fiscal/fiscal-provider.registry";
 import { resolveMarketForTenant } from "../markets/market-resolver";
+import { EntitlementsService } from "../entitlements/entitlements.service";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
 import type { PrismaService } from "../prisma/prisma.service";
 import {
@@ -71,7 +72,8 @@ export const queueEtaReceipt = queueFiscalDocument;
 export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: QueueFiscalParams): Promise<void> {
   if (params.totalAmount <= 0) return;
 
-  const flags = new FeatureFlagsService(tx as unknown as PrismaService);
+  const prismaSvc = tx as unknown as PrismaService;
+  const flags = new FeatureFlagsService(prismaSvc, new EntitlementsService(prismaSvc));
   if (!(await flags.isEnabled(params.tenantId, "eta_receipts"))) return;
 
   const tenant = await tx.tenant.findUnique({

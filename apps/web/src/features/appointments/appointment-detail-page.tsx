@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { AppointmentStatusBadge, appointmentStatusClassName } from "@/components/appointment-status-badge";
+import { Badge } from "@/components/ui/badge";
 import { AppointmentDeleteConfirmDialog } from "@/features/appointments/appointment-delete-confirm-dialog";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { PatientChartAlerts } from "@/components/patient-chart-alerts";
 import { AppointmentVisitFlowCard } from "@/features/front-desk/appointment-visit-flow-card";
+import { OutboundMessageLog } from "@/features/messaging/outbound-message-log";
 import { QuickCheckInPanel } from "@/features/front-desk/quick-check-in-panel";
 import { ScheduledFeeCollectionFields } from "@/components/scheduled-fee-collection-fields";
 import {
@@ -448,6 +450,11 @@ export function AppointmentDetailPage() {
             </Button>
           ) : null}
           <AppointmentStatusBadge status={apt.status} />
+          {apt.whatsappConfirmedAt ? (
+            <Badge variant="secondary" className="font-normal">
+              {t("appointments.whatsappConfirmedChip", "Confirmed by WhatsApp")}
+            </Badge>
+          ) : null}
         </div>
       </div>
 
@@ -467,6 +474,7 @@ export function AppointmentDetailPage() {
         }
       />
       <AppointmentVisitFlowCard appointment={apt} />
+      <OutboundMessageLog patientId={apt.patientId} appointmentId={apt.id} />
 
       <Card>
         <CardHeader>

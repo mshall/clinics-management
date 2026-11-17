@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "decisionId": "SC-01-2026-11",
+  "egyptProduction": {
+    "path": "A",
+    "hostCell": "frankfurt",
+    "dataRegion": "eu-central-1",
+    "legalGate": "pdpc-controller-processor-and-cross-border-transfer-licence-before-live-phi"
+  },
+  "cells": {
+    "frankfurt": {
+      "awsRegion": "eu-central-1",
+      "runtimeTimezone": "Europe/Berlin",
+      "stackId": "kiorly-clinics-management",
+      "dataStores": {
+        "primaryDatabase": { "service": "rds-postgresql", "region": "eu-central-1" },
+        "uploads": { "service": "s3", "region": "eu-central-1" },
+        "webAssets": { "service": "s3", "region": "eu-central-1" },
+        "rdsAutomatedBackups": { "service": "rds-automated-backup", "region": "eu-central-1" }
+      }
+    },
+    "cairo": {
+      "awsRegion": "me-south-1",
+      "runtimeTimezone": "Africa/Cairo",
+      "stackId": "kiorly-cell-cairo",
+      "status": "prepared-not-deployed",
+      "dataStores": {
+        "primaryDatabase": { "service": "rds-postgresql", "region": "me-south-1" },
+        "uploads": { "service": "s3", "region": "me-south-1" },
+        "webAssets": { "service": "s3", "region": "me-south-1" },
+        "rdsAutomatedBackups": { "service": "rds-automated-backup", "region": "me-south-1" }
+      }
+    }
+  },
+  "marketProductionBinding": {
+    "EG": {
+      "hostCell": "frankfurt",
+      "dataRegion": "eu-central-1",
+      "path": "A"
+    }
+  }
+}

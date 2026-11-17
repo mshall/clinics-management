@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { AppointmentsModule } from "../appointments/appointments.module";
 import { AuditModule } from "../audit/audit.module";
+import { ComplianceModule } from "../compliance/compliance.module";
 import { OperationsModule } from "../operations/operations.module";
 import { IntegrationAdminController } from "./integration-admin.controller";
 import { IntegrationAuthGuard } from "./integration-auth.guard";
@@ -18,7 +19,7 @@ import { IntegrationFailureGovernanceService } from "./integration-failure-gover
 import { FiscalEtaNotificationsController } from "./fiscal-eta-notifications.controller";
 
 @Module({
-  imports: [AppointmentsModule, OperationsModule, AuditModule],
+  imports: [AppointmentsModule, OperationsModule, AuditModule, ComplianceModule],
   controllers: [
     IntegrationsAppointmentsController,
     IntegrationsOperationsController,

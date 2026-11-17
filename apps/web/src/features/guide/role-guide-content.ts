@@ -1,5 +1,6 @@
 import type { DemoRole } from "@/lib/roles";
 import type { GuideSection, GuideStep, RoleGuide } from "@/features/guide/guide-types";
+import { GUIDE_HONEST_AI_EN } from "@/lib/ai-feature-disclosure";
 
 export type { GuideSection, GuideStep, RoleGuide } from "@/features/guide/guide-types";
 
@@ -124,10 +125,11 @@ const PHYSICIAN: RoleGuide = {
       "راجع السياق في مكان واحد.",
       [
         {
-          titleEn: "Pre-visit summary (AI)",
-          titleAr: "ملخص ما قبل الزيارة",
-          bodyEn: "Use the clinic AI pre-visit summary API or Patient 360 on the chart: last visits, meds, allergies, and alerts.",
-          bodyAr: "استخدم ملخص ما قبل الزيارة أو Patient 360: آخر الزيارات والأدوية والحساسية والتنبيهات.",
+          titleEn: GUIDE_HONEST_AI_EN.preVisitTitle,
+          titleAr: "ملخص ذكي (قبل الزيارة)",
+          bodyEn: GUIDE_HONEST_AI_EN.preVisitBody,
+          bodyAr:
+            "افتح الملخص الذكي في ملف المريض أو Patient 360: آخر الزيارات والأدوية والحساسية والتنبيهات — من السجل وليس نموذج لغوي.",
           path: "/patients",
         },
         {
@@ -159,10 +161,11 @@ const PHYSICIAN: RoleGuide = {
           path: "/clinics",
         },
         {
-          titleEn: "AI scribe (approve)",
-          titleAr: "المساعد السريري (اعتماد)",
-          bodyEn: "Start scribe on an encounter, review draft note and Rx, then approve into the chart (production speech provider required).",
-          bodyAr: "ابدأ المساعد على الزيارة، راجع المسودة، ثم اعتمدها في الملف.",
+          titleEn: GUIDE_HONEST_AI_EN.scribeTitle,
+          titleAr: "مساعد التوثيق (مسار عمل)",
+          bodyEn: GUIDE_HONEST_AI_EN.scribeBody,
+          bodyAr:
+            "ابدأ جلسة مساعد على الزيارة، راجع مسودة الملاحظة والوصفة، ثم اعتمدها. الكتابة الصوتية والمسودة التوليدية تحتاج مزوّد إنتاج.",
           path: "/encounters",
         },
       ],
@@ -263,8 +266,8 @@ const CALL_CENTER: RoleGuide = {
         {
           titleEn: "Appointments",
           titleAr: "المواعيد",
-          bodyEn: "Create and reschedule appointments; watch no-show risk flags for extra reminders or deposit policy.",
-          bodyAr: "أنشئ وأعد جدولة المواعيد؛ راقب مخاطر عدم الحضور للتذكير أو العربون.",
+          bodyEn: GUIDE_HONEST_AI_EN.noShowRiskBody,
+          bodyAr: "أنشئ وأعد جدولة المواعيد؛ استخدم تقدير مخاطر عدم الحضور (معادلة من السجل والتوقيت) للتذكير أو سياسة العربون.",
           path: "/appointments",
         },
         {

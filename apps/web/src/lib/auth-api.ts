@@ -2,7 +2,7 @@ import type { LoginResponseDto } from "@/lib/api-schema";
 import { apiUrl } from "@/lib/api-url";
 import { ApiError } from "@/lib/http";
 
-export type LoginResponse = LoginResponseDto;
+export type LoginResponse = LoginResponseDto & { refreshToken?: string; sessionId?: string };
 
 function isEmptyErrorBody(data: unknown): boolean {
   return (

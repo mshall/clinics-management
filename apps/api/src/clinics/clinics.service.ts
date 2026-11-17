@@ -36,6 +36,7 @@ import {
 } from "../markets/market-tax-pack";
 import { TtlCache } from "../common/ttl-cache";
 import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
+import { EntitlementsService } from "../entitlements/entitlements.service";
 
 const clinicListCache = new TtlCache<ClinicDto[]>(60_000);
 
@@ -75,6 +76,7 @@ export class ClinicsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly fiscalDeviceProvisioning: FiscalDeviceProvisioningService,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   private static readonly CLINIC_MANAGE_ROLES: ReadonlySet<UserRole> = new Set([
@@ -344,6 +346,8 @@ export class ClinicsService {
       where: { id: userId, tenantId, role: UserRole.PHYSICIAN },
     });
     if (!physician) throw new BadRequestException("User must be a physician in your organization");
+
+    await this.entitlements.assertCanAddClinician(tenantId, physician.id);
 
     const existingAtClinic = await this.prisma.employee.findFirst({
       where: { tenantId, clinicId, userId: physician.id },

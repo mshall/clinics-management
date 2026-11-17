@@ -3,6 +3,7 @@ import { Type } from "class-transformer";
 import { IsNumber, IsOptional, IsString, MaxLength, Min, ValidateNested } from "class-validator";
 import { VisitCollectionDto } from "../../common/dto/visit-collection.dto";
 import type { VisitCollectionInput } from "../../common/visit-collection";
+import { CheckInConsentCaptureDto } from "./check-in-consent.dto";
 
 export class FrontDeskCheckInDto {
   @ApiPropertyOptional()
@@ -29,6 +30,12 @@ export class FrontDeskCheckInDto {
   @ValidateNested()
   @Type(() => VisitCollectionDto)
   visitCollection?: VisitCollectionDto;
+
+  @ApiPropertyOptional({ type: CheckInConsentCaptureDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CheckInConsentCaptureDto)
+  consentCapture?: CheckInConsentCaptureDto;
 
   toVisitCollectionInput(): VisitCollectionInput | undefined {
     if (!this.visitCollection) return undefined;

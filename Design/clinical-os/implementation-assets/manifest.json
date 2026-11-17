@@ -1,0 +1,947 @@
+{
+  "version": "1.1.0",
+  "generated": "2026-11-17",
+  "file_count": 235,
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 5107
+    },
+    {
+      "path": "branding/png/kiorly-dark-1024.png",
+      "bytes": 22669
+    },
+    {
+      "path": "branding/png/kiorly-dark-128.png",
+      "bytes": 2197
+    },
+    {
+      "path": "branding/png/kiorly-dark-16.png",
+      "bytes": 334
+    },
+    {
+      "path": "branding/png/kiorly-dark-24.png",
+      "bytes": 444
+    },
+    {
+      "path": "branding/png/kiorly-dark-256.png",
+      "bytes": 4392
+    },
+    {
+      "path": "branding/png/kiorly-dark-32.png",
+      "bytes": 534
+    },
+    {
+      "path": "branding/png/kiorly-dark-48.png",
+      "bytes": 942
+    },
+    {
+      "path": "branding/png/kiorly-dark-512.png",
+      "bytes": 10538
+    },
+    {
+      "path": "branding/png/kiorly-dark-64.png",
+      "bytes": 1315
+    },
+    {
+      "path": "branding/png/kiorly-monochrome-1024.png",
+      "bytes": 23069
+    },
+    {
+      "path": "branding/png/kiorly-monochrome-128.png",
+      "bytes": 2193
+    },
+    {
+      "path": "branding/png/kiorly-monochrome-16.png",
+      "bytes": 363
+    },
+    {
+      "path": "branding/png/kiorly-monochrome-24.png",
+      "bytes": 527
+    },
+    {
+      "path": "branding/png/kiorly-monochrome-256.png",
+      "bytes": 4340
+    },
+    {
+      "path": "branding/png/kiorly-monochrome-32.png",
+      "bytes": 695
+    },
+    {
+      "path": "branding/png/kiorly-monochrome-48.png",
+      "bytes": 1054
+    },
+    {
+      "path": "branding/png/kiorly-monochrome-512.png",
+      "bytes": 10808
+    },
+    {
+      "path": "branding/png/kiorly-monochrome-64.png",
+      "bytes": 1367
+    },
+    {
+      "path": "branding/png/kiorly-monochrome-white-1024.png",
+      "bytes": 19341
+    },
+    {
+      "path": "branding/png/kiorly-monochrome-white-128.png",
+      "bytes": 1461
+    },
+    {
+      "path": "branding/png/kiorly-monochrome-white-16.png",
+      "bytes": 265
+    },
+    {
+      "path": "branding/png/kiorly-monochrome-white-24.png",
+      "bytes": 329
+    },
+    {
+      "path": "branding/png/kiorly-monochrome-white-256.png",
+      "bytes": 3570
+    },
+    {
+      "path": "branding/png/kiorly-monochrome-white-32.png",
+      "bytes": 388
+    },
+    {
+      "path": "branding/png/kiorly-monochrome-white-48.png",
+      "bytes": 558
+    },
+    {
+      "path": "branding/png/kiorly-monochrome-white-512.png",
+      "bytes": 8903
+    },
+    {
+      "path": "branding/png/kiorly-monochrome-white-64.png",
+      "bytes": 795
+    },
+    {
+      "path": "branding/png/kiorly-original-1024.png",
+      "bytes": 23306
+    },
+    {
+      "path": "branding/png/kiorly-original-128.png",
+      "bytes": 2243
+    },
+    {
+      "path": "branding/png/kiorly-original-16.png",
+      "bytes": 375
+    },
+    {
+      "path": "branding/png/kiorly-original-24.png",
+      "bytes": 533
+    },
+    {
+      "path": "branding/png/kiorly-original-256.png",
+      "bytes": 4465
+    },
+    {
+      "path": "branding/png/kiorly-original-32.png",
+      "bytes": 711
+    },
+    {
+      "path": "branding/png/kiorly-original-48.png",
+      "bytes": 1085
+    },
+    {
+      "path": "branding/png/kiorly-original-512.png",
+      "bytes": 10880
+    },
+    {
+      "path": "branding/png/kiorly-original-64.png",
+      "bytes": 1380
+    },
+    {
+      "path": "branding/svg/kiorly-dark.svg",
+      "bytes": 582
+    },
+    {
+      "path": "branding/svg/kiorly-monochrome-white.svg",
+      "bytes": 582
+    },
+    {
+      "path": "branding/svg/kiorly-monochrome.svg",
+      "bytes": 582
+    },
+    {
+      "path": "branding/svg/kiorly-original.svg",
+      "bytes": 582
+    },
+    {
+      "path": "design-tokens/tokens.json",
+      "bytes": 1999
+    },
+    {
+      "path": "design-tokens/typography.json",
+      "bytes": 761
+    },
+    {
+      "path": "docs/SCREEN_INVENTORY.md",
+      "bytes": 3818
+    },
+    {
+      "path": "docs/screen-inventory.json",
+      "bytes": 8626
+    },
+    {
+      "path": "icons/icon-names.txt",
+      "bytes": 1409
+    },
+    {
+      "path": "icons/icon-registry.json",
+      "bytes": 1915
+    },
+    {
+      "path": "icons/png/bars-24.png",
+      "bytes": 303
+    },
+    {
+      "path": "icons/png/bars-48.png",
+      "bytes": 589
+    },
+    {
+      "path": "icons/png/bars-96.png",
+      "bytes": 927
+    },
+    {
+      "path": "icons/png/calendar-24.png",
+      "bytes": 429
+    },
+    {
+      "path": "icons/png/calendar-48.png",
+      "bytes": 808
+    },
+    {
+      "path": "icons/png/calendar-96.png",
+      "bytes": 1510
+    },
+    {
+      "path": "icons/png/calendar-range-24.png",
+      "bytes": 474
+    },
+    {
+      "path": "icons/png/calendar-range-48.png",
+      "bytes": 854
+    },
+    {
+      "path": "icons/png/calendar-range-96.png",
+      "bytes": 1570
+    },
+    {
+      "path": "icons/png/chart-24.png",
+      "bytes": 514
+    },
+    {
+      "path": "icons/png/chart-48.png",
+      "bytes": 915
+    },
+    {
+      "path": "icons/png/chart-96.png",
+      "bytes": 1589
+    },
+    {
+      "path": "icons/png/check-24.png",
+      "bytes": 328
+    },
+    {
+      "path": "icons/png/check-48.png",
+      "bytes": 509
+    },
+    {
+      "path": "icons/png/check-96.png",
+      "bytes": 832
+    },
+    {
+      "path": "icons/png/check-in-24.png",
+      "bytes": 449
+    },
+    {
+      "path": "icons/png/check-in-48.png",
+      "bytes": 769
+    },
+    {
+      "path": "icons/png/check-in-96.png",
+      "bytes": 1464
+    },
+    {
+      "path": "icons/png/chevron-left-24.png",
+      "bytes": 314
+    },
+    {
+      "path": "icons/png/chevron-left-48.png",
+      "bytes": 464
+    },
+    {
+      "path": "icons/png/chevron-left-96.png",
+      "bytes": 790
+    },
+    {
+      "path": "icons/png/chevron-right-24.png",
+      "bytes": 311
+    },
+    {
+      "path": "icons/png/chevron-right-48.png",
+      "bytes": 458
+    },
+    {
+      "path": "icons/png/chevron-right-96.png",
+      "bytes": 793
+    },
+    {
+      "path": "icons/png/clinic-24.png",
+      "bytes": 444
+    },
+    {
+      "path": "icons/png/clinic-48.png",
+      "bytes": 809
+    },
+    {
+      "path": "icons/png/clinic-96.png",
+      "bytes": 1527
+    },
+    {
+      "path": "icons/png/clipboard-24.png",
+      "bytes": 427
+    },
+    {
+      "path": "icons/png/clipboard-48.png",
+      "bytes": 868
+    },
+    {
+      "path": "icons/png/clipboard-96.png",
+      "bytes": 1719
+    },
+    {
+      "path": "icons/png/collapse-24.png",
+      "bytes": 372
+    },
+    {
+      "path": "icons/png/collapse-48.png",
+      "bytes": 594
+    },
+    {
+      "path": "icons/png/collapse-96.png",
+      "bytes": 913
+    },
+    {
+      "path": "icons/png/expand-24.png",
+      "bytes": 379
+    },
+    {
+      "path": "icons/png/expand-48.png",
+      "bytes": 591
+    },
+    {
+      "path": "icons/png/expand-96.png",
+      "bytes": 929
+    },
+    {
+      "path": "icons/png/file-24.png",
+      "bytes": 335
+    },
+    {
+      "path": "icons/png/file-48.png",
+      "bytes": 526
+    },
+    {
+      "path": "icons/png/file-96.png",
+      "bytes": 882
+    },
+    {
+      "path": "icons/png/heart-24.png",
+      "bytes": 627
+    },
+    {
+      "path": "icons/png/heart-48.png",
+      "bytes": 1232
+    },
+    {
+      "path": "icons/png/heart-96.png",
+      "bytes": 2277
+    },
+    {
+      "path": "icons/png/help-24.png",
+      "bytes": 890
+    },
+    {
+      "path": "icons/png/help-48.png",
+      "bytes": 1946
+    },
+    {
+      "path": "icons/png/help-96.png",
+      "bytes": 4009
+    },
+    {
+      "path": "icons/png/home-24.png",
+      "bytes": 611
+    },
+    {
+      "path": "icons/png/home-48.png",
+      "bytes": 1031
+    },
+    {
+      "path": "icons/png/home-96.png",
+      "bytes": 1509
+    },
+    {
+      "path": "icons/png/hr-24.png",
+      "bytes": 606
+    },
+    {
+      "path": "icons/png/hr-48.png",
+      "bytes": 1306
+    },
+    {
+      "path": "icons/png/hr-96.png",
+      "bytes": 2626
+    },
+    {
+      "path": "icons/png/integrations-24.png",
+      "bytes": 261
+    },
+    {
+      "path": "icons/png/integrations-48.png",
+      "bytes": 432
+    },
+    {
+      "path": "icons/png/integrations-96.png",
+      "bytes": 787
+    },
+    {
+      "path": "icons/png/invoice-24.png",
+      "bytes": 316
+    },
+    {
+      "path": "icons/png/invoice-48.png",
+      "bytes": 586
+    },
+    {
+      "path": "icons/png/invoice-96.png",
+      "bytes": 1105
+    },
+    {
+      "path": "icons/png/language-24.png",
+      "bytes": 893
+    },
+    {
+      "path": "icons/png/language-48.png",
+      "bytes": 2028
+    },
+    {
+      "path": "icons/png/language-96.png",
+      "bytes": 4470
+    },
+    {
+      "path": "icons/png/lock-24.png",
+      "bytes": 524
+    },
+    {
+      "path": "icons/png/lock-48.png",
+      "bytes": 1019
+    },
+    {
+      "path": "icons/png/lock-96.png",
+      "bytes": 1912
+    },
+    {
+      "path": "icons/png/menu-24.png",
+      "bytes": 132
+    },
+    {
+      "path": "icons/png/menu-48.png",
+      "bytes": 219
+    },
+    {
+      "path": "icons/png/menu-96.png",
+      "bytes": 363
+    },
+    {
+      "path": "icons/png/notification-24.png",
+      "bytes": 423
+    },
+    {
+      "path": "icons/png/notification-48.png",
+      "bytes": 859
+    },
+    {
+      "path": "icons/png/notification-96.png",
+      "bytes": 1491
+    },
+    {
+      "path": "icons/png/operations-24.png",
+      "bytes": 481
+    },
+    {
+      "path": "icons/png/operations-48.png",
+      "bytes": 905
+    },
+    {
+      "path": "icons/png/operations-96.png",
+      "bytes": 1791
+    },
+    {
+      "path": "icons/png/patient-24.png",
+      "bytes": 588
+    },
+    {
+      "path": "icons/png/patient-48.png",
+      "bytes": 1294
+    },
+    {
+      "path": "icons/png/patient-96.png",
+      "bytes": 2563
+    },
+    {
+      "path": "icons/png/patients-24.png",
+      "bytes": 741
+    },
+    {
+      "path": "icons/png/patients-48.png",
+      "bytes": 1611
+    },
+    {
+      "path": "icons/png/patients-96.png",
+      "bytes": 3208
+    },
+    {
+      "path": "icons/png/pill-24.png",
+      "bytes": 646
+    },
+    {
+      "path": "icons/png/pill-48.png",
+      "bytes": 1104
+    },
+    {
+      "path": "icons/png/pill-96.png",
+      "bytes": 2199
+    },
+    {
+      "path": "icons/png/plus-24.png",
+      "bytes": 171
+    },
+    {
+      "path": "icons/png/plus-48.png",
+      "bytes": 319
+    },
+    {
+      "path": "icons/png/plus-96.png",
+      "bytes": 546
+    },
+    {
+      "path": "icons/png/prescription-24.png",
+      "bytes": 549
+    },
+    {
+      "path": "icons/png/prescription-48.png",
+      "bytes": 1061
+    },
+    {
+      "path": "icons/png/prescription-96.png",
+      "bytes": 2100
+    },
+    {
+      "path": "icons/png/queue-24.png",
+      "bytes": 137
+    },
+    {
+      "path": "icons/png/queue-48.png",
+      "bytes": 228
+    },
+    {
+      "path": "icons/png/queue-96.png",
+      "bytes": 392
+    },
+    {
+      "path": "icons/png/search-24.png",
+      "bytes": 586
+    },
+    {
+      "path": "icons/png/search-48.png",
+      "bytes": 1254
+    },
+    {
+      "path": "icons/png/search-96.png",
+      "bytes": 2478
+    },
+    {
+      "path": "icons/png/settings-24.png",
+      "bytes": 842
+    },
+    {
+      "path": "icons/png/settings-48.png",
+      "bytes": 1724
+    },
+    {
+      "path": "icons/png/settings-96.png",
+      "bytes": 3272
+    },
+    {
+      "path": "icons/png/stethoscope-24.png",
+      "bytes": 469
+    },
+    {
+      "path": "icons/png/stethoscope-48.png",
+      "bytes": 1008
+    },
+    {
+      "path": "icons/png/stethoscope-96.png",
+      "bytes": 2047
+    },
+    {
+      "path": "icons/png/wallet-24.png",
+      "bytes": 372
+    },
+    {
+      "path": "icons/png/wallet-48.png",
+      "bytes": 708
+    },
+    {
+      "path": "icons/png/wallet-96.png",
+      "bytes": 1314
+    },
+    {
+      "path": "icons/png/warning-24.png",
+      "bytes": 635
+    },
+    {
+      "path": "icons/png/warning-48.png",
+      "bytes": 1056
+    },
+    {
+      "path": "icons/png/warning-96.png",
+      "bytes": 1809
+    },
+    {
+      "path": "icons/svg/bars.svg",
+      "bytes": 392
+    },
+    {
+      "path": "icons/svg/calendar-range.svg",
+      "bytes": 330
+    },
+    {
+      "path": "icons/svg/calendar.svg",
+      "bytes": 318
+    },
+    {
+      "path": "icons/svg/chart.svg",
+      "bytes": 263
+    },
+    {
+      "path": "icons/svg/check-in.svg",
+      "bytes": 284
+    },
+    {
+      "path": "icons/svg/check.svg",
+      "bytes": 245
+    },
+    {
+      "path": "icons/svg/chevron-left.svg",
+      "bytes": 251
+    },
+    {
+      "path": "icons/svg/chevron-right.svg",
+      "bytes": 251
+    },
+    {
+      "path": "icons/svg/clinic.svg",
+      "bytes": 317
+    },
+    {
+      "path": "icons/svg/clipboard.svg",
+      "bytes": 345
+    },
+    {
+      "path": "icons/svg/collapse.svg",
+      "bytes": 274
+    },
+    {
+      "path": "icons/svg/expand.svg",
+      "bytes": 271
+    },
+    {
+      "path": "icons/svg/file.svg",
+      "bytes": 269
+    },
+    {
+      "path": "icons/svg/heart.svg",
+      "bytes": 279
+    },
+    {
+      "path": "icons/svg/help.svg",
+      "bytes": 300
+    },
+    {
+      "path": "icons/svg/home.svg",
+      "bytes": 286
+    },
+    {
+      "path": "icons/svg/hr.svg",
+      "bytes": 304
+    },
+    {
+      "path": "icons/svg/integrations.svg",
+      "bytes": 275
+    },
+    {
+      "path": "icons/svg/invoice.svg",
+      "bytes": 281
+    },
+    {
+      "path": "icons/svg/language.svg",
+      "bytes": 312
+    },
+    {
+      "path": "icons/svg/lock.svg",
+      "bytes": 311
+    },
+    {
+      "path": "icons/svg/menu.svg",
+      "bytes": 253
+    },
+    {
+      "path": "icons/svg/notification.svg",
+      "bytes": 286
+    },
+    {
+      "path": "icons/svg/operations.svg",
+      "bytes": 397
+    },
+    {
+      "path": "icons/svg/patient.svg",
+      "bytes": 288
+    },
+    {
+      "path": "icons/svg/patients.svg",
+      "bytes": 327
+    },
+    {
+      "path": "icons/svg/pill.svg",
+      "bytes": 324
+    },
+    {
+      "path": "icons/svg/plus.svg",
+      "bytes": 246
+    },
+    {
+      "path": "icons/svg/prescription.svg",
+      "bytes": 311
+    },
+    {
+      "path": "icons/svg/queue.svg",
+      "bytes": 277
+    },
+    {
+      "path": "icons/svg/search.svg",
+      "bytes": 273
+    },
+    {
+      "path": "icons/svg/settings.svg",
+      "bytes": 358
+    },
+    {
+      "path": "icons/svg/stethoscope.svg",
+      "bytes": 323
+    },
+    {
+      "path": "icons/svg/wallet.svg",
+      "bytes": 296
+    },
+    {
+      "path": "icons/svg/warning.svg",
+      "bytes": 263
+    },
+    {
+      "path": "illustrations/png/ai-assistant-240.png",
+      "bytes": 6674
+    },
+    {
+      "path": "illustrations/png/ai-assistant-480.png",
+      "bytes": 13931
+    },
+    {
+      "path": "illustrations/png/ai-assistant-960.png",
+      "bytes": 30651
+    },
+    {
+      "path": "illustrations/png/empty-appointments-240.png",
+      "bytes": 2422
+    },
+    {
+      "path": "illustrations/png/empty-appointments-480.png",
+      "bytes": 4792
+    },
+    {
+      "path": "illustrations/png/empty-appointments-960.png",
+      "bytes": 10869
+    },
+    {
+      "path": "illustrations/png/empty-documents-240.png",
+      "bytes": 2283
+    },
+    {
+      "path": "illustrations/png/empty-documents-480.png",
+      "bytes": 4578
+    },
+    {
+      "path": "illustrations/png/empty-documents-960.png",
+      "bytes": 10911
+    },
+    {
+      "path": "illustrations/png/empty-patients-240.png",
+      "bytes": 4696
+    },
+    {
+      "path": "illustrations/png/empty-patients-480.png",
+      "bytes": 8865
+    },
+    {
+      "path": "illustrations/png/empty-patients-960.png",
+      "bytes": 19872
+    },
+    {
+      "path": "illustrations/png/empty-reports-240.png",
+      "bytes": 1959
+    },
+    {
+      "path": "illustrations/png/empty-reports-480.png",
+      "bytes": 3811
+    },
+    {
+      "path": "illustrations/png/empty-reports-960.png",
+      "bytes": 10449
+    },
+    {
+      "path": "illustrations/png/error-240.png",
+      "bytes": 4682
+    },
+    {
+      "path": "illustrations/png/error-480.png",
+      "bytes": 10157
+    },
+    {
+      "path": "illustrations/png/error-960.png",
+      "bytes": 22208
+    },
+    {
+      "path": "illustrations/png/success-240.png",
+      "bytes": 5436
+    },
+    {
+      "path": "illustrations/png/success-480.png",
+      "bytes": 11467
+    },
+    {
+      "path": "illustrations/png/success-960.png",
+      "bytes": 25311
+    },
+    {
+      "path": "illustrations/png/welcome-240.png",
+      "bytes": 5014
+    },
+    {
+      "path": "illustrations/png/welcome-480.png",
+      "bytes": 10395
+    },
+    {
+      "path": "illustrations/png/welcome-960.png",
+      "bytes": 22395
+    },
+    {
+      "path": "illustrations/svg/ai-assistant.svg",
+      "bytes": 503
+    },
+    {
+      "path": "illustrations/svg/empty-appointments.svg",
+      "bytes": 723
+    },
+    {
+      "path": "illustrations/svg/empty-documents.svg",
+      "bytes": 532
+    },
+    {
+      "path": "illustrations/svg/empty-patients.svg",
+      "bytes": 478
+    },
+    {
+      "path": "illustrations/svg/empty-reports.svg",
+      "bytes": 456
+    },
+    {
+      "path": "illustrations/svg/error.svg",
+      "bytes": 297
+    },
+    {
+      "path": "illustrations/svg/success.svg",
+      "bytes": 327
+    },
+    {
+      "path": "illustrations/svg/welcome.svg",
+      "bytes": 651
+    },
+    {
+      "path": "preview.html",
+      "bytes": 13984
+    },
+    {
+      "path": "reference-boards/arabic-desktop.png",
+      "bytes": 1875245
+    },
+    {
+      "path": "reference-boards/arabic-mobile.png",
+      "bytes": 1843417
+    },
+    {
+      "path": "reference-boards/design-system.png",
+      "bytes": 1924824
+    },
+    {
+      "path": "reference-boards/desktop-dark.png",
+      "bytes": 1990768
+    },
+    {
+      "path": "reference-boards/desktop-light.png",
+      "bytes": 1993696
+    },
+    {
+      "path": "reference-boards/english-mobile.png",
+      "bytes": 1968550
+    },
+    {
+      "path": "src/components/CollapsibleSidebar.tsx",
+      "bytes": 2685
+    },
+    {
+      "path": "src/components/KiorlyBrand.tsx",
+      "bytes": 566
+    },
+    {
+      "path": "src/components/KiorlyEmptyState.tsx",
+      "bytes": 582
+    },
+    {
+      "path": "src/components/KiorlyMobileNav.tsx",
+      "bytes": 845
+    },
+    {
+      "path": "src/components/KiorlyStatCard.tsx",
+      "bytes": 579
+    },
+    {
+      "path": "src/components/KiorlyStatusChip.tsx",
+      "bytes": 1003
+    },
+    {
+      "path": "src/components/kiorly-icons.ts",
+      "bytes": 2648
+    },
+    {
+      "path": "src/demo/ExampleDashboard.tsx",
+      "bytes": 2330
+    },
+    {
+      "path": "src/styles/kiorly-tokens.css",
+      "bytes": 2757
+    }
+  ]
+}

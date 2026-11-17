@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Put, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -21,6 +21,25 @@ export class SchedulingController {
   @Post("appointment-types")
   saveType(@CurrentUser() user: JwtUser, @Body() body: Record<string, unknown>) {
     return this.scheduling.upsertAppointmentType(requireTenantId(user), body);
+  }
+
+  @Patch("appointment-types/:id")
+  patchType(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: Record<string, unknown>) {
+    return this.scheduling.patchAppointmentType(requireTenantId(user), id, body);
+  }
+
+  @Get("clinicians/:clinicianId/type-overrides")
+  listTypeOverrides(@CurrentUser() user: JwtUser, @Param("clinicianId") clinicianId: string) {
+    return this.scheduling.listClinicianTypeOverrides(requireTenantId(user), clinicianId);
+  }
+
+  @Put("clinicians/:clinicianId/type-overrides")
+  putTypeOverrides(
+    @CurrentUser() user: JwtUser,
+    @Param("clinicianId") clinicianId: string,
+    @Body() body: { overrides: Array<{ appointmentTypeId: string; durationMinutes?: number | null; feeAmount?: number | null }> },
+  ) {
+    return this.scheduling.putClinicianTypeOverrides(requireTenantId(user), clinicianId, body.overrides ?? []);
   }
 
   @Get("availability")

@@ -146,7 +146,7 @@ Local development: `docker-compose.yml` provides Postgres 16 and Redis; API + Vi
 
 | Concept | Implementation |
 |---|---|
-| **Market** | Country pack: currency, timezone, weekend days, `taxConfig`, `paymentMethods`, `providerConfig`, `hostCell`, `dataRegion`. Seeded **EG** live on Frankfurt. |
+| **Market** | Country pack: currency, timezone, weekend days, `taxConfig`, `paymentMethods`, `providerConfig`, `hostCell`, `dataRegion`. Seeded **EG** live on Frankfurt (SC-01 Path A; registry `platform/data-cells.json`). |
 | **Tenant** | `marketId` + `deploymentCell`; defaults from market on platform create. |
 | **Clinic** | Inherits market settings; optional `timezone`, `weekendDays`, `settingsOverrides` where market allows. |
 | **FiscalProvider** | Interface in `providers/fiscal/`; **ETA Egypt** (`eta-egypt`) is first implementation. |
@@ -156,7 +156,7 @@ Local development: `docker-compose.yml` provides Postgres 16 and Redis; API + Vi
 | **Platform admin** | `GET/POST /admin/platform/markets`, `POST …/launch`; UI **Market launch** tab. |
 | **Feature flags** | `FeatureFlag` (global), `MarketFeatureFlag`, `TenantFeatureFlag`; effective = global ∧ market ∧ org with explicit org/market overrides. APIs: `GET/PATCH /admin/platform/feature-flags/:key`, `GET/PATCH /admin/platform/markets/:id/feature-flags/:key`, `PATCH /admin/tenant-feature-flags/:key`. See [FEATURE_FLAGS.md](./FEATURE_FLAGS.md). |
 | **AiProvider** | `providers/ai/` — `openai-compatible` chat completions; `baseUrl` + `model` + `secretRef` per market; prompts in `assistant/prompts/v1/`. Gated by layered flag `ai_assistant` (widget, chat API, LLM runtime). |
-| **Roadmap** | `PaymentProvider`, `MessagingProvider`, `ClaimsProvider`, `HealthExchangeProvider`; multi-region cells + login directory. |
+| **Roadmap** | `PaymentProvider`, `MessagingProvider`, `ClaimsProvider`, `HealthExchangeProvider`; multi-region cells + login directory. **SC-01 done:** decision memo, cairo cell CDK parameterization, sub-processor list, infra tests. |
 
 See [MARKET_GO_LIVE_TEMPLATE.md](./MARKET_GO_LIVE_TEMPLATE.md) and [markets/egypt.md](./markets/egypt.md).
 

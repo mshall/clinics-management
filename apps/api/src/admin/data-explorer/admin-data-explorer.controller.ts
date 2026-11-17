@@ -3,13 +3,16 @@ import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swa
 import type { Response } from "express";
 import { CurrentUser } from "../../auth/current-user.decorator";
 import { JwtAuthGuard } from "../../auth/jwt-auth.guard";
+import { EntitlementGuard } from "../../entitlements/entitlement.guard";
+import { RequiresEntitlement } from "../../entitlements/requires-entitlement.decorator";
 import type { JwtUser } from "../../auth/jwt-user";
 import { AdminDataExplorerService } from "./admin-data-explorer.service";
 
 @ApiTags("admin-data-explorer")
 @ApiBearerAuth("bearer")
 @Controller("admin/data-explorer")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard)
+@RequiresEntitlement("mod_data_explorer")
 export class AdminDataExplorerController {
   constructor(private readonly explorer: AdminDataExplorerService) {}
 

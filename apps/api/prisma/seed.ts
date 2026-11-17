@@ -15,6 +15,11 @@ import {
 } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { assertDemoPasswordAllowedInProduction, isDemoSeedBlockedInProduction } from "../src/common/seed-demo-guard";
+import { ensureEgyptDrugCatalog } from "./egypt-drug-catalog-seed";
+import { ensurePlanCatalog } from "./plan-catalog-seed";
+import { ensureAllTenantSubscriptions } from "../src/subscriptions/subscription-provision";
+import { ensureAllPilotTenants, pilotSeedEnabled } from "./pilot-tenants.seed";
+import { shellTenantSeedRow } from "./seed-tenant-fields";
 
 const prisma = new PrismaClient();
 
@@ -577,6 +582,12 @@ async function ensureIncrementalSeed(passwordHash: string) {
   }
 
   const { tenant, clinics } = await seedDrAhmedGroup(passwordHash);
+  await ensureEgyptDrugCatalog(prisma);
+  await ensurePlanCatalog(prisma);
+  await ensureAllTenantSubscriptions(prisma);
+  if (pilotSeedEnabled()) {
+    await ensureAllPilotTenants(prisma, passwordHash);
+  }
   console.log(
     "Seed OK (incremental — existing rows preserved, only missing demo records added) — Dr Ahmed Shall Group:",
     tenant.id,
@@ -594,27 +605,17 @@ async function seedFreshDatabase(passwordHash: string) {
     return;
   }
 
+  const egMarketForSeed = await prisma.market.findFirst({ where: { code: "EG" } });
   const tenants = await Promise.all(
     Array.from({ length: 15 }, (_, i) =>
       prisma.tenant.create({
-        data: {
-          name:
-            i === 0
-              ? KIORLY_TENANT_NAME
-              : i === 1
-                ? DR_AHMED_TENANT_NAME
-                : `Shell Organization ${i + 1}`,
-          nameAr:
-            i === 0
-              ? "مجموعة كيورلي للعيادات (تجريبي)"
-              : i === 1
-                ? "مجموعة د. أحمد الشال — استشاري علاج الآلام المزمنة والمفاصل والعمود الفقري"
-                : `منظمة ${i + 1}`,
-          baseCurrency: i === 1 ? "EGP" : "AED",
-          defaultLocale: i === 1 ? "ar" : "en",
-        },
-      })
-    )
+        data: shellTenantSeedRow(
+          i,
+          { kiorly: KIORLY_TENANT_NAME, drAhmed: DR_AHMED_TENANT_NAME },
+          egMarketForSeed,
+        ),
+      }),
+    ),
   );
   const t0 = tenants[0]!;
   const { tenant: drAhmedTenant, clinics: drAhmedClinics } = await seedDrAhmedGroup(passwordHash);
@@ -1228,6 +1229,11 @@ async function seedFreshDatabase(passwordHash: string) {
     "| per clinic slug hel/cmc/moh/dok/oct/abc: branchmgr, clinicadmin, assistant, nurse, receptionist, physician @drahmedshall.com (password: demo)"
   );
 
+  await ensurePlanCatalog(prisma);
+  await ensureAllTenantSubscriptions(prisma);
+  if (pilotSeedEnabled()) {
+    await ensureAllPilotTenants(prisma, passwordHash);
+  }
   await ensureSuperAdmin(passwordHash);
 }
 

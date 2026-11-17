@@ -10,14 +10,18 @@ import { PatientEditDialog } from "@/components/patient-edit-dialog";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { PatientClinicalDocuments } from "@/components/patient-clinical-documents";
 import { PatientInvoicesSection } from "@/features/invoices/patient-invoices-section";
+import { OutboundMessageLog } from "@/features/messaging/outbound-message-log";
+import { PatientMessagingConsentCard } from "@/features/patients/patient-messaging-consent-card";
 import { PatientEncountersSection } from "@/features/patients/patient-encounters-section";
 import { PatientOperationsSection } from "@/features/patients/patient-operations-section";
 import { PatientAllergiesSection } from "@/components/patient-allergies-section";
 import { Patient360Summary } from "@/components/patient-360-summary";
+import { PreVisitSmartSummaryCard } from "@/features/clinical/pre-visit-smart-summary-card";
 import { PatientFamilyPanel } from "@/components/patient-family-panel";
 import { PatientMergeWizard } from "@/components/patient-merge-wizard";
 import { PatientClinicalPhotoGallery } from "@/components/patient-clinical-photo-gallery";
 import { PatientChartAlerts } from "@/components/patient-chart-alerts";
+import { PatientConsentChips } from "@/features/patients/patient-consent-chips";
 import { PatientVitalsCharts } from "@/components/patient-vitals-charts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -191,6 +195,15 @@ export function PatientDetailPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-2xl font-bold tracking-tight">{name}</h1>
                   <PatientChartAlerts patientId={patient.id} />
+                  <PatientConsentChips patientId={patient.id} />
+                  <Link
+                    to="/legal/patient_privacy_notice"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-muted-foreground underline"
+                  >
+                    {t("legal.patientPrivacyNotice")}
+                  </Link>
                   <Badge variant="secondary" className="font-mono text-xs ltr-nums">
                     {patient.mrn}
                   </Badge>
@@ -250,6 +263,7 @@ export function PatientDetailPage() {
         </CardContent>
       </Card>
 
+      <PreVisitSmartSummaryCard patientId={patient.id} />
       <Patient360Summary patientId={patient.id} />
 
       <PatientAllergiesSection patientId={patient.id} />
@@ -403,6 +417,8 @@ export function PatientDetailPage() {
 
       <PatientClinicalDocuments patientId={patient.id} />
 
+      <PatientMessagingConsentCard patientId={patient.id} />
+      <OutboundMessageLog patientId={patient.id} />
       <PatientInvoicesSection patientId={patient.id} clinicId={patient.homeBranchId} />
 
       {canViewEncounters && patient ? <PatientEncountersSection patientId={patient.id} /> : null}

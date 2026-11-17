@@ -1,13 +1,40 @@
-export type WhatsAppSendResult = { ok: true } | { ok: false; error: string };
+import type { WhatsAppSendResult } from "./whatsapp-provider.types";
 
-export async function sendWhatsAppMessage(toPhone: string, body: string): Promise<WhatsAppSendResult> {
+export type WhatsAppSendResultLegacy = { ok: true } | { ok: false; error: string };
+
+function normalizePhoneE164(phone: string): string {
+  return phone.replace(/\s/g, "");
+}
+
+function whatsAppSandboxAllowed(toPhone: string): boolean {
+  const list = process.env.WHATSAPP_SANDBOX_NUMBERS?.split(/[,;\s]+/).map((s) => s.trim()).filter(Boolean);
+  if (!list?.length) return true;
+  const norm = normalizePhoneE164(toPhone);
+  return list.some((n) => normalizePhoneE164(n) === norm);
+}
+
+/** @deprecated MS-01 — use {@link WhatsAppSendService.sendTemplateForTenant} in production. */
+export async function sendWhatsAppMessage(toPhone: string, body: string): Promise<WhatsAppSendResultLegacy> {
+  if (process.env.NODE_ENV === "production") {
+    return {
+      ok: false,
+      error: "Free-form WhatsApp is disabled outside the 24h session window. Use an approved template.",
+    };
+  }
+  return sendWhatsAppMessageLegacy(toPhone, body);
+}
+
+export async function sendWhatsAppMessageLegacy(toPhone: string, body: string): Promise<WhatsAppSendResult> {
   const url = process.env.WHATSAPP_API_URL?.trim();
   const token = process.env.WHATSAPP_API_TOKEN?.trim();
+  if (process.env.WHATSAPP_SANDBOX_NUMBERS?.trim() && !whatsAppSandboxAllowed(toPhone)) {
+    return { ok: true, providerMessageId: `sandbox-legacy-${Date.now()}` };
+  }
   if (!url || !token) {
     if (process.env.NODE_ENV === "production") {
-      return { ok: false, error: "WHATSAPP_API_URL or WHATSAPP_API_TOKEN not configured" };
+      return { ok: false, error: "WHATSAPP_API_URL or WHATSAPP_API_TOKEN not configured", failureClass: "AUTH", retryable: false };
     }
-    return { ok: true };
+    return { ok: true, providerMessageId: `dev-legacy-${Date.now()}` };
   }
   try {
     const res = await fetch(url, {
@@ -20,10 +47,10 @@ export async function sendWhatsAppMessage(toPhone: string, body: string): Promis
     });
     if (!res.ok) {
       const text = await res.text();
-      return { ok: false, error: `WhatsApp API ${res.status}: ${text.slice(0, 300)}` };
+      return { ok: false, error: `WhatsApp API ${res.status}: ${text.slice(0, 300)}`, failureClass: "UNKNOWN", retryable: res.status >= 500 };
     }
-    return { ok: true };
+    return { ok: true, providerMessageId: `http-stub-${Date.now()}` };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    return { ok: false, error: e instanceof Error ? e.message : String(e), failureClass: "TRANSIENT", retryable: true };
   }
 }

@@ -2,11 +2,17 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { IsOptional, IsString, MaxLength, MinLength } from "class-validator";
 
 export class AddEncounterMedicationDto {
-  @ApiProperty({ example: "Metformin 500mg" })
+  @ApiProperty({ example: "Augmentin 1g tablets" })
   @IsString()
   @MinLength(1)
   @MaxLength(200)
   drugName!: string;
+
+  @ApiPropertyOptional({ description: "Linked Egyptian drug catalog product (CL-01)" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  drugProductId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -37,4 +43,10 @@ export class AddEncounterMedicationDto {
   @IsString()
   @MaxLength(500)
   instructions?: string;
+
+  @ApiPropertyOptional({ description: "Required when CL-02 alerts are major or contraindicated" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  safetyOverrideReason?: string;
 }

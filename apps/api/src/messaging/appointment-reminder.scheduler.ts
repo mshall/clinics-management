@@ -2,6 +2,8 @@ import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/commo
 import { AppointmentStatus, MessageChannel } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { MessagingService } from "./messaging.service";
+import { MessagingConsentService } from "../patients/messaging-consent.service";
+import { MESSAGING_CONSENT_TRANSACTIONAL } from "../patients/messaging-consent.constants";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
 import { resolveMarketForTenant } from "../markets/market-resolver";
 
@@ -17,6 +19,7 @@ export class AppointmentReminderScheduler implements OnModuleInit, OnModuleDestr
     private readonly prisma: PrismaService,
     private readonly messaging: MessagingService,
     private readonly featureFlags: FeatureFlagsService,
+    private readonly consent: MessagingConsentService,
   ) {}
 
   onModuleInit() {
@@ -87,6 +90,14 @@ export class AppointmentReminderScheduler implements OnModuleInit, OnModuleDestr
       });
       if (existing) continue;
 
+      const transactionalOk = await this.consent.isGranted(
+        tenantId,
+        apt.patient.id,
+        MessageChannel.WHATSAPP,
+        MESSAGING_CONSENT_TRANSACTIONAL,
+      );
+      if (!transactionalOk) continue;
+
       const tpl = await this.prisma.messageTemplate.findFirst({
         where: {
           tenantId,
@@ -101,9 +112,11 @@ export class AppointmentReminderScheduler implements OnModuleInit, OnModuleDestr
       const timeZone = apt.clinic.timezone?.trim() || marketCtx.timezone;
       const when = apt.startsAt.toLocaleString("en-EG", { timeZone });
       const name = `${apt.patient.firstNameEn} ${apt.patient.lastNameEn}`.trim();
+      const clinicName = apt.clinic.nameEn;
+      const variables = { name, clinic: clinicName, time: when };
       const body = bodyTemplate
         .replace(/\{\{name\}\}/g, name)
-        .replace(/\{\{clinic\}\}/g, apt.clinic.nameEn)
+        .replace(/\{\{clinic\}\}/g, clinicName)
         .replace(/\{\{time\}\}/g, when);
 
       await this.prisma.outboundMessage.create({
@@ -115,6 +128,7 @@ export class AppointmentReminderScheduler implements OnModuleInit, OnModuleDestr
           templateKey: "appointment_reminder_whatsapp",
           toPhone: phone,
           body,
+          variablesJson: variables,
           status: "QUEUED",
           metadata: { hoursBefore: hours, scheduledStart: apt.startsAt.toISOString() },
         },

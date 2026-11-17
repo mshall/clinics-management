@@ -517,7 +517,7 @@ Authorization model:
 | Area | Status |
 |---|---|
 | **Organization base currency** — tenant default; new clinics inherit; org change syncs inherited clinic currencies; per-clinic override on Settings → Currency | Shipped |
-| **UI themes** — Kiorly Light/Dark + Material Design 3 Light/Dark; theme switcher on login & shell; optional persist on sign-in | Shipped |
+| **UI themes** — Kiorly Default, Material Design 3, and **Kiorly Clinical OS** (each light/dark); theme switcher on login & shell; optional persist on sign-in | Shipped |
 | **Material theme accent** — light-blue primary (buttons, focus ring, highlights) | Shipped |
 | **Appointment overlap UX** — paginated conflict list in confirm dialog (“+N more booking(s)”) | Shipped |
 | **Org hierarchy mindmap** — Admin / Platform tree dialog (`GET .../admin/org-hierarchy`) | Shipped |

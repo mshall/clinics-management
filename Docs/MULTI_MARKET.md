@@ -31,6 +31,8 @@ Staff UI loads merged channels from `GET /api/v1/markets/current` (`paymentMetho
 
 `Market` rows must define `defaultCurrency`, `defaultTimezone`, `defaultPhoneRegion`, `weekendDays`, `enabledLanguages`, `dataRegion`, and `hostCell` explicitly (no DB-level Egypt defaults). `resolveMarketForTenant` rejects organizations without a complete market pack.
 
+**Data residency (SC-01):** canonical cell registry is [`platform/data-cells.json`](../platform/data-cells.json). Egypt production uses Path A (`frankfurt`, `eu-central-1`); packs and tenants are validated against the registry. See [DATA_RESIDENCY_DECISION.md](./DATA_RESIDENCY_DECISION.md).
+
 ## Fiscal devices (provider-agnostic)
 
 `FiscalDevice` models **virtual** (Kiorly-hosted POS) or **physical** receipt issuers. Markets whose fiscal provider sets `deviceRegistration.required` auto-provision a virtual device on clinic create. Submission chains **`lastReceiptUuid`** per device (future markets e.g. ZATCA EGS can reuse the same model). API: `/api/v1/clinics/:clinicId/fiscal-devices`, `/api/v1/fiscal-devices/:id/credentials` (secrets never returned).

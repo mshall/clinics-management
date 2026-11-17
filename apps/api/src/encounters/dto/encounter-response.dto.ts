@@ -25,6 +25,15 @@ export class EncounterMedicationDto {
   drugName!: string;
 
   @ApiPropertyOptional({ nullable: true })
+  drugProductId!: string | null;
+
+  @ApiProperty()
+  drugUnverified!: boolean;
+
+  @ApiPropertyOptional({ nullable: true, description: "CL-02 override reason when high-severity alerts were acknowledged" })
+  safetyOverrideReason!: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
   dosage!: string | null;
 
   @ApiPropertyOptional({ nullable: true })

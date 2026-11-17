@@ -4,6 +4,8 @@ import { memoryStorage } from "multer";
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { EntitlementGuard } from "../entitlements/entitlement.guard";
+import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { CollectVisitBalanceDto } from "./dto/collect-visit-balance.dto";
@@ -13,7 +15,8 @@ import { FrontDeskService } from "./front-desk.service";
 @ApiTags("front-desk")
 @ApiBearerAuth("bearer")
 @Controller("front-desk")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard)
+@RequiresEntitlement("mod_front_desk")
 export class FrontDeskController {
   constructor(private readonly frontDesk: FrontDeskService) {}
 
@@ -34,6 +37,7 @@ export class FrontDeskController {
       roomLabel: body.roomLabel,
       currency: body.currency,
       visitCollection: body.toVisitCollectionInput(),
+      consentCapture: body.consentCapture,
     });
   }
 

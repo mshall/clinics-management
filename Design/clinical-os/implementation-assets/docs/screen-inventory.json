@@ -1,0 +1,400 @@
+{
+  "repository": "mshall/clinics-management",
+  "checked": "2026-11-17",
+  "routes": [
+    {
+      "title": "Dashboard",
+      "path": "/",
+      "icon": "dashboard",
+      "group": "Core"
+    },
+    {
+      "title": "Patients",
+      "path": "/patients",
+      "icon": "patients",
+      "group": "Clinical"
+    },
+    {
+      "title": "Patient detail",
+      "path": "/patients/:id",
+      "icon": "patient",
+      "group": "Clinical"
+    },
+    {
+      "title": "Encounters",
+      "path": "/encounters",
+      "icon": "encounters",
+      "group": "Clinical"
+    },
+    {
+      "title": "Encounter detail",
+      "path": "/encounters/:id",
+      "icon": "clinical",
+      "group": "Clinical"
+    },
+    {
+      "title": "Clinical templates",
+      "path": "/clinical/templates",
+      "icon": "document",
+      "group": "Clinical"
+    },
+    {
+      "title": "Appointments",
+      "path": "/appointments",
+      "icon": "appointments",
+      "group": "Scheduling"
+    },
+    {
+      "title": "Appointment detail",
+      "path": "/appointments/:id",
+      "icon": "calendar",
+      "group": "Scheduling"
+    },
+    {
+      "title": "Front desk board",
+      "path": "/front-desk/board",
+      "icon": "frontDesk",
+      "group": "Scheduling"
+    },
+    {
+      "title": "Waiting room display",
+      "path": "/front-desk/waiting-room",
+      "icon": "waitingRoom",
+      "group": "Scheduling"
+    },
+    {
+      "title": "Operations",
+      "path": "/operations",
+      "icon": "operations",
+      "group": "Operations"
+    },
+    {
+      "title": "Clinics",
+      "path": "/clinics",
+      "icon": "clinics",
+      "group": "Operations"
+    },
+    {
+      "title": "Clinic detail",
+      "path": "/clinics/:id",
+      "icon": "branch",
+      "group": "Operations"
+    },
+    {
+      "title": "Expenses",
+      "path": "/expenses",
+      "icon": "expenses",
+      "group": "Finance"
+    },
+    {
+      "title": "Revenue",
+      "path": "/revenue",
+      "icon": "revenue",
+      "group": "Finance"
+    },
+    {
+      "title": "Doctor revenue",
+      "path": "/doctor-revenue",
+      "icon": "revenue",
+      "group": "Finance"
+    },
+    {
+      "title": "HR",
+      "path": "/hr",
+      "icon": "hr",
+      "group": "People"
+    },
+    {
+      "title": "Employee detail",
+      "path": "/hr/employees/:id",
+      "icon": "hr",
+      "group": "People"
+    },
+    {
+      "title": "Employee profile",
+      "path": "/hr/employees/:id/profile",
+      "icon": "profile",
+      "group": "People"
+    },
+    {
+      "title": "Reports",
+      "path": "/reports",
+      "icon": "report",
+      "group": "Analytics"
+    },
+    {
+      "title": "Admin",
+      "path": "/admin",
+      "icon": "settings",
+      "group": "Administration"
+    },
+    {
+      "title": "Support",
+      "path": "/customer-support",
+      "icon": "support",
+      "group": "Administration"
+    },
+    {
+      "title": "Profile",
+      "path": "/profile",
+      "icon": "profile",
+      "group": "Administration"
+    },
+    {
+      "title": "Guide",
+      "path": "/guide",
+      "icon": "guide",
+      "group": "Administration"
+    },
+    {
+      "title": "Platform overview",
+      "path": "/platform",
+      "icon": "platform",
+      "group": "Platform"
+    },
+    {
+      "title": "Platform markets",
+      "path": "/platform/markets",
+      "icon": "markets",
+      "group": "Platform"
+    },
+    {
+      "title": "Platform organizations",
+      "path": "/platform/organizations",
+      "icon": "organizations",
+      "group": "Platform"
+    },
+    {
+      "title": "Platform users",
+      "path": "/platform/users",
+      "icon": "patients",
+      "group": "Platform"
+    },
+    {
+      "title": "Platform clinics",
+      "path": "/platform/clinics",
+      "icon": "clinics",
+      "group": "Platform"
+    },
+    {
+      "title": "Platform insights",
+      "path": "/platform/insights",
+      "icon": "report",
+      "group": "Platform"
+    },
+    {
+      "title": "Sign in",
+      "path": "/login",
+      "icon": "authorization",
+      "group": "Authentication"
+    }
+  ],
+  "subscreens": [
+    {
+      "title": "Calendar / week",
+      "parent": "/appointments",
+      "group": "Scheduling"
+    },
+    {
+      "title": "Calendar / day",
+      "parent": "/appointments",
+      "group": "Scheduling"
+    },
+    {
+      "title": "Calendar / month",
+      "parent": "/appointments",
+      "group": "Scheduling"
+    },
+    {
+      "title": "Book appointment dialog",
+      "parent": "/appointments",
+      "group": "Scheduling"
+    },
+    {
+      "title": "Appointment overlap confirmation",
+      "parent": "/appointments",
+      "group": "Scheduling"
+    },
+    {
+      "title": "Quick check-in",
+      "parent": "/front-desk/board",
+      "group": "Scheduling"
+    },
+    {
+      "title": "Collect outstanding visit balance",
+      "parent": "/front-desk/board",
+      "group": "Finance"
+    },
+    {
+      "title": "Patient 360 / overview",
+      "parent": "/patients/:id",
+      "group": "Clinical"
+    },
+    {
+      "title": "Patient 360 / timeline",
+      "parent": "/patients/:id",
+      "group": "Clinical"
+    },
+    {
+      "title": "Patient 360 / allergies",
+      "parent": "/patients/:id",
+      "group": "Clinical"
+    },
+    {
+      "title": "Patient 360 / documents",
+      "parent": "/patients/:id",
+      "group": "Clinical"
+    },
+    {
+      "title": "Patient 360 / clinical photos",
+      "parent": "/patients/:id",
+      "group": "Clinical"
+    },
+    {
+      "title": "Patient 360 / family",
+      "parent": "/patients/:id",
+      "group": "Clinical"
+    },
+    {
+      "title": "Patient duplicate merge",
+      "parent": "/patients/:id",
+      "group": "Clinical"
+    },
+    {
+      "title": "Encounter / SOAP",
+      "parent": "/encounters/:id",
+      "group": "Clinical"
+    },
+    {
+      "title": "Encounter / prescriptions",
+      "parent": "/encounters/:id",
+      "group": "Clinical"
+    },
+    {
+      "title": "Encounter / documents",
+      "parent": "/encounters/:id",
+      "group": "Clinical"
+    },
+    {
+      "title": "Specialty consultation form",
+      "parent": "/encounters/:id",
+      "group": "Clinical"
+    },
+    {
+      "title": "Clinical letter",
+      "parent": "/encounters/:id",
+      "group": "Clinical"
+    },
+    {
+      "title": "Clinic / doctors",
+      "parent": "/clinics/:id",
+      "group": "Operations"
+    },
+    {
+      "title": "Clinic / hours",
+      "parent": "/clinics/:id",
+      "group": "Operations"
+    },
+    {
+      "title": "Clinic / rooms",
+      "parent": "/clinics/:id",
+      "group": "Operations"
+    },
+    {
+      "title": "Clinic / currency",
+      "parent": "/clinics/:id",
+      "group": "Operations"
+    },
+    {
+      "title": "Clinic / fiscal devices",
+      "parent": "/clinics/:id",
+      "group": "Operations"
+    },
+    {
+      "title": "Clinic / clinical templates",
+      "parent": "/clinics/:id",
+      "group": "Operations"
+    },
+    {
+      "title": "Invoices / issue",
+      "parent": "/revenue",
+      "group": "Finance"
+    },
+    {
+      "title": "Invoices / preview",
+      "parent": "/revenue",
+      "group": "Finance"
+    },
+    {
+      "title": "Payment channels",
+      "parent": "/admin",
+      "group": "Finance"
+    },
+    {
+      "title": "Financial / ETA receipts",
+      "parent": "/admin",
+      "group": "Finance"
+    },
+    {
+      "title": "HR / attendance",
+      "parent": "/hr",
+      "group": "People"
+    },
+    {
+      "title": "HR / leave",
+      "parent": "/hr",
+      "group": "People"
+    },
+    {
+      "title": "Employee onboarding",
+      "parent": "/hr",
+      "group": "People"
+    },
+    {
+      "title": "Feature flags",
+      "parent": "/admin",
+      "group": "Administration"
+    },
+    {
+      "title": "Users & roles",
+      "parent": "/admin",
+      "group": "Administration"
+    },
+    {
+      "title": "Integration clients",
+      "parent": "/admin",
+      "group": "Administration"
+    },
+    {
+      "title": "Integration failures",
+      "parent": "/admin",
+      "group": "Administration"
+    },
+    {
+      "title": "Security / MFA",
+      "parent": "/profile",
+      "group": "Administration"
+    },
+    {
+      "title": "AI assistant",
+      "parent": "/",
+      "group": "Assistant"
+    },
+    {
+      "title": "Empty states",
+      "parent": "/",
+      "group": "States"
+    },
+    {
+      "title": "Confirm/delete dialogs",
+      "parent": "/",
+      "group": "States"
+    },
+    {
+      "title": "Loading/error states",
+      "parent": "/",
+      "group": "States"
+    }
+  ],
+  "note": "Concept coverage manifest, not assertions that all screens are separate React routes or production-complete."
+}

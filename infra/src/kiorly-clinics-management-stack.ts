@@ -18,6 +18,10 @@ import type { Construct } from "constructs";
 export interface KiorlyClinicsManagementStackProps extends cdk.StackProps {
   /** AWS region for VPC/RDS/App Runner (Frankfurt = eu-central-1). */
   deploymentRegion: string;
+  /** Logical host cell id (frankfurt | cairo) — SC-01 data residency tagging. */
+  hostCell: string;
+  /** API/RDS clock timezone for the cell. */
+  runtimeTimezone: string;
 }
 
 function resolveWebBuildId(scope: Construct, assetPath: string): string | undefined {
@@ -39,7 +43,11 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: KiorlyClinicsManagementStackProps) {
     super(scope, id, props);
 
-    const { deploymentRegion } = props;
+    const { deploymentRegion, hostCell, runtimeTimezone } = props;
+
+    cdk.Tags.of(this).add("KiorlyHostCell", hostCell);
+    cdk.Tags.of(this).add("KiorlyDataRegion", deploymentRegion);
+    cdk.Tags.of(this).add("KiorlyStackRole", "clinic-platform-cell");
 
     const vpc = new ec2.Vpc(this, "Vpc", {
       maxAzs: 2,
@@ -62,6 +70,8 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
     });
+    cdk.Tags.of(webBucket).add("KiorlyDataClass", "web-static");
+    cdk.Tags.of(webBucket).add("KiorlyHostCell", hostCell);
 
     const apiUploadsBucket = new s3.Bucket(this, "ApiUploadsBucket", {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
@@ -69,6 +79,8 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       enforceSSL: true,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
+    cdk.Tags.of(apiUploadsBucket).add("KiorlyDataClass", "tenant-uploads");
+    cdk.Tags.of(apiUploadsBucket).add("KiorlyHostCell", hostCell);
 
     const jwtSecret = new secretsmanager.Secret(this, "JwtSecret", {
       description: "JWT signing secret for Nest API (JSON jwt key; App Runner injects jwt field only)",
@@ -94,7 +106,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     const dbParams = new rds.ParameterGroup(this, "DbParams", {
       engine: rds.DatabaseInstanceEngine.postgres({ version: rds.PostgresEngineVersion.VER_16 }),
       parameters: {
-        timezone: "Europe/Berlin",
+        timezone: runtimeTimezone,
       },
     });
 
@@ -120,6 +132,8 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       deletionProtection: true,
       cloudwatchLogsExports: ["postgresql"],
     });
+    cdk.Tags.of(db).add("KiorlyDataClass", "primary-database");
+    cdk.Tags.of(db).add("KiorlyHostCell", hostCell);
 
     const connectorSg = new ec2.SecurityGroup(this, "AppRunnerConnectorSg", {
       vpc,
@@ -291,7 +305,8 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
               { name: "KIORLY_DEPLOY_TARGET", value: "aws" },
               { name: "PORT", value: "3000" },
               { name: "SWAGGER_ENABLED", value: "false" },
-              { name: "TZ", value: "Europe/Berlin" },
+              { name: "TZ", value: runtimeTimezone },
+              { name: "KIORLY_HOST_CELL", value: hostCell },
               { name: "AWS_REGION", value: deploymentRegion },
               { name: "AWS_DEFAULT_REGION", value: deploymentRegion },
               { name: "SECRETS_MANAGER_VPCE_HOST", value: secretsManagerVpceHost },
@@ -461,7 +476,7 @@ function handler(event) {
 
     new cdk.CfnOutput(this, "AppUrl", {
       value: `https://${dist.distributionDomainName}`,
-      description: "HTTPS URL: SPA and /api/* to App Runner (Frankfurt eu-central-1)",
+      description: `HTTPS URL: SPA and /api/* (cell ${hostCell}, region ${deploymentRegion})`,
     });
 
     new cdk.CfnOutput(this, "AppRunnerServiceUrl", {
@@ -483,8 +498,18 @@ function handler(event) {
       description: "Post-deploy idempotent Prisma seed Lambda (ensures demo org users on RDS)",
     });
 
+    new cdk.CfnOutput(this, "HostCell", {
+      value: hostCell,
+      description: "Logical data residency cell (SC-01)",
+    });
+
+    new cdk.CfnOutput(this, "DataRegion", {
+      value: deploymentRegion,
+      description: "AWS region where RDS, S3, and backups for this cell reside",
+    });
+
     new cdk.CfnOutput(this, "RegionNote", {
-      value: "All resources in eu-central-1; DB timezone Europe/Berlin; runtime TZ=Europe/Berlin",
+      value: `Cell ${hostCell}: all stack data stores in ${deploymentRegion}; runtime TZ=${runtimeTimezone}`,
     });
   }
 }

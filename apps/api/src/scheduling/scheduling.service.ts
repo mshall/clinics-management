@@ -8,6 +8,14 @@ import {
 import type { JwtUser } from "../auth/jwt-user";
 import { addMinutes, resolveCreateAppointmentEnd } from "../common/appointment-scheduling";
 import { PrismaService } from "../prisma/prisma.service";
+import {
+  mapEffectiveAppointmentType,
+  patchAppointmentTypeData,
+  schedulingBlockWithBuffers,
+  type EffectiveAppointmentType,
+} from "./appointment-type-rules";
+import { normalizeWeekJson, parseAndValidateWeekJson, parseBlockedJson } from "./availability-week-schema";
+import { resolveClinicTimezone } from "./clinic-scheduling-timezone";
 
 @Injectable()
 export class SchedulingService {
@@ -31,35 +39,176 @@ export class SchedulingService {
       colorHex: String(body.colorHex ?? "#3b82f6"),
       isActive: body.isActive !== false,
       clinicId: body.clinicId ? String(body.clinicId) : null,
+      bufferBeforeMin: Number(body.bufferBeforeMin ?? 0),
+      bufferAfterMin: Number(body.bufferAfterMin ?? 0),
+      requiresRoom: Boolean(body.requiresRoom),
+      marketplaceBookable: Boolean(body.marketplaceBookable),
+      minNoticeMinutes: Number(body.minNoticeMinutes ?? 120),
+      maxDaysAhead: Number(body.maxDaysAhead ?? 30),
+      newPatientOnly: Boolean(body.newPatientOnly),
+      depositAmount:
+        body.depositAmount != null && body.depositAmount !== ""
+          ? new Prisma.Decimal(String(body.depositAmount))
+          : null,
     };
     if (body.id) {
-      return this.prisma.appointmentType.update({ where: { id: String(body.id) }, data });
+      const existing = await this.prisma.appointmentType.findFirst({
+        where: { id: String(body.id), tenantId },
+      });
+      if (!existing) throw new NotFoundException("Appointment type not found");
+      return this.prisma.appointmentType.update({ where: { id: existing.id }, data });
     }
     return this.prisma.appointmentType.create({ data: { tenantId, ...data } });
   }
 
-  getAvailability(tenantId: string, clinicId: string, clinicianId: string) {
-    return this.prisma.clinicianAvailabilityTemplate.findFirst({
-      where: { tenantId, clinicId, clinicianId },
+  async patchAppointmentType(tenantId: string, typeId: string, body: Record<string, unknown>) {
+    const existing = await this.prisma.appointmentType.findFirst({ where: { id: typeId, tenantId } });
+    if (!existing) throw new NotFoundException("Appointment type not found");
+    const data = patchAppointmentTypeData(body);
+    if (Object.keys(data).length === 0) throw new BadRequestException("No fields to update");
+    return this.prisma.appointmentType.update({ where: { id: typeId }, data });
+  }
+
+  async resolveEffectiveAppointmentType(
+    tenantId: string,
+    appointmentTypeId: string,
+    clinicianId: string,
+  ): Promise<EffectiveAppointmentType> {
+    const type = await this.prisma.appointmentType.findFirst({ where: { id: appointmentTypeId, tenantId } });
+    if (!type) throw new NotFoundException("Appointment type not found");
+    const override = await this.prisma.clinicianAppointmentTypeOverride.findUnique({
+      where: { clinicianId_appointmentTypeId: { clinicianId, appointmentTypeId } },
+    });
+    return mapEffectiveAppointmentType(type, override);
+  }
+
+  listClinicianTypeOverrides(tenantId: string, clinicianId: string) {
+    return this.prisma.clinicianAppointmentTypeOverride.findMany({
+      where: { tenantId, clinicianId },
+      orderBy: { appointmentTypeId: "asc" },
     });
   }
 
-  upsertAvailability(
+  async putClinicianTypeOverrides(
+    tenantId: string,
+    clinicianId: string,
+    items: Array<{ appointmentTypeId: string; durationMinutes?: number | null; feeAmount?: number | null }>,
+  ) {
+    const physician = await this.prisma.user.findFirst({
+      where: { id: clinicianId, tenantId },
+    });
+    if (!physician) throw new NotFoundException("Clinician not found");
+
+    return this.prisma.$transaction(async (tx) => {
+      const results: unknown[] = [];
+      for (const item of items) {
+        const typeId = item.appointmentTypeId?.trim();
+        if (!typeId) continue;
+        const type = await tx.appointmentType.findFirst({ where: { id: typeId, tenantId } });
+        if (!type) throw new BadRequestException(`Unknown appointment type ${typeId}`);
+        const duration = item.durationMinutes ?? null;
+        const fee = item.feeAmount ?? null;
+        if (duration == null && fee == null) {
+          await tx.clinicianAppointmentTypeOverride.deleteMany({
+            where: { clinicianId, appointmentTypeId: typeId },
+          });
+          continue;
+        }
+        const row = await tx.clinicianAppointmentTypeOverride.upsert({
+          where: { clinicianId_appointmentTypeId: { clinicianId, appointmentTypeId: typeId } },
+          create: {
+            tenantId,
+            clinicianId,
+            appointmentTypeId: typeId,
+            durationMinutes: duration,
+            feeAmount: fee != null ? new Prisma.Decimal(String(fee)) : null,
+          },
+          update: {
+            durationMinutes: duration,
+            feeAmount: fee != null ? new Prisma.Decimal(String(fee)) : null,
+          },
+        });
+        results.push(row);
+      }
+      return results;
+    });
+  }
+
+  async assertAppointmentTypeBookingRules(
+    tenantId: string,
+    clinicId: string,
+    patientId: string,
+    clinicianId: string,
+    appointmentTypeId: string,
+    startsAt: Date,
+    roomLabel?: string | null,
+  ): Promise<EffectiveAppointmentType> {
+    const effective = await this.resolveEffectiveAppointmentType(tenantId, appointmentTypeId, clinicianId);
+    const now = new Date();
+    const minStart = addMinutes(now, effective.minNoticeMinutes);
+    if (startsAt < minStart) {
+      throw new BadRequestException(
+        `Appointment must be at least ${effective.minNoticeMinutes} minutes from now for this type`,
+      );
+    }
+    const maxStart = addMinutes(now, effective.maxDaysAhead * 24 * 60);
+    if (startsAt > maxStart) {
+      throw new BadRequestException(`Appointment cannot be more than ${effective.maxDaysAhead} days ahead`);
+    }
+    if (effective.requiresRoom && !roomLabel?.trim()) {
+      throw new BadRequestException("roomLabel is required for this appointment type");
+    }
+    if (effective.newPatientOnly) {
+      const priorEnc = await this.prisma.encounter.count({
+        where: { tenantId, patientId, status: { in: ["FINALIZED", "AMENDED"] } },
+      });
+      const priorApt = await this.prisma.appointment.count({
+        where: {
+          tenantId,
+          patientId,
+          status: { in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED, AppointmentStatus.COMPLETED] },
+        },
+      });
+      if (priorEnc > 0 || priorApt > 0) {
+        throw new BadRequestException("This appointment type is for new patients only");
+      }
+    }
+    void clinicId;
+    return effective;
+  }
+
+  async getAvailability(tenantId: string, clinicId: string, clinicianId: string) {
+    const row = await this.prisma.clinicianAvailabilityTemplate.findFirst({
+      where: { tenantId, clinicId, clinicianId },
+    });
+    if (!row) return null;
+    const tz = await resolveClinicTimezone(this.prisma, tenantId, clinicId);
+    return {
+      ...row,
+      weekJson: normalizeWeekJson(row.weekJson, tz),
+    };
+  }
+
+  async upsertAvailability(
     tenantId: string,
     body: { clinicId: string; clinicianId: string; weekJson: unknown; blockedJson?: unknown },
   ) {
+    const tz = await resolveClinicTimezone(this.prisma, tenantId, body.clinicId);
+    const weekJson = parseAndValidateWeekJson(body.weekJson, tz);
+    weekJson.timezone = tz;
+    const blockedJson = parseBlockedJson(body.blockedJson);
     return this.prisma.clinicianAvailabilityTemplate.upsert({
       where: { tenantId_clinicId_clinicianId: { tenantId, clinicId: body.clinicId, clinicianId: body.clinicianId } },
       create: {
         tenantId,
         clinicId: body.clinicId,
         clinicianId: body.clinicianId,
-        weekJson: body.weekJson as Prisma.InputJsonValue,
-        blockedJson: (body.blockedJson ?? []) as Prisma.InputJsonValue,
+        weekJson: weekJson as Prisma.InputJsonValue,
+        blockedJson: blockedJson as Prisma.InputJsonValue,
       },
       update: {
-        weekJson: body.weekJson as Prisma.InputJsonValue,
-        blockedJson: (body.blockedJson ?? []) as Prisma.InputJsonValue,
+        weekJson: weekJson as Prisma.InputJsonValue,
+        blockedJson: blockedJson as Prisma.InputJsonValue,
       },
     });
   }
@@ -139,11 +288,17 @@ export class SchedulingService {
   ) {
     const total = Math.min(Math.max(body.totalSessions, 1), 52);
     const cadence = body.cadenceDays ?? 7;
-    const type = body.appointmentTypeId
-      ? await this.prisma.appointmentType.findFirst({ where: { id: body.appointmentTypeId, tenantId } })
-      : null;
-    const duration = type?.durationMinutes ?? 15;
-    const fee = type ? Number(type.feeAmount) : 0;
+    let duration = 15;
+    let fee = 0;
+    if (body.appointmentTypeId) {
+      const effective = await this.resolveEffectiveAppointmentType(
+        tenantId,
+        body.appointmentTypeId,
+        body.clinicianId,
+      );
+      duration = effective.durationMinutes;
+      fee = effective.feeAmount;
+    }
 
     return this.prisma.$transaction(async (tx) => {
       const series = await tx.appointmentSeries.create({
@@ -224,9 +379,22 @@ export class SchedulingService {
     });
   }
 
-  resolveDurationFromType(type: { durationMinutes: number } | null | undefined, endsAtRaw?: string | null, start?: Date) {
+  resolveDurationFromType(
+    type: { durationMinutes: number } | EffectiveAppointmentType | null | undefined,
+    endsAtRaw?: string | null,
+    start?: Date,
+  ) {
     if (endsAtRaw?.trim()) return resolveCreateAppointmentEnd(start!, endsAtRaw);
     const mins = type?.durationMinutes ?? 15;
     return addMinutes(start!, mins);
+  }
+
+  expandConflictWindow(
+    start: Date,
+    end: Date,
+    type?: Pick<EffectiveAppointmentType, "bufferBeforeMin" | "bufferAfterMin"> | null,
+  ) {
+    if (!type) return { blockStart: start, blockEnd: end };
+    return schedulingBlockWithBuffers(start, end, type.bufferBeforeMin, type.bufferAfterMin);
   }
 }

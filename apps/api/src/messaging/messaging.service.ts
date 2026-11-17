@@ -1,5 +1,8 @@
-import { Injectable } from "@nestjs/common";
-import { MessageChannel, RecallCampaignKind } from "@prisma/client";
+import { BadRequestException, Injectable } from "@nestjs/common";
+import { MessageChannel, Prisma, RecallCampaignKind } from "@prisma/client";
+import { MessagingConsentService } from "../patients/messaging-consent.service";
+import { resolveMarketTemplate, whatsAppConfigFromMarket } from "./whatsapp-market-config";
+import { resolveMarketForTenant } from "../markets/market-resolver";
 import { PrismaService } from "../prisma/prisma.service";
 
 const DEFAULT_TEMPLATES: { key: string; channel: MessageChannel; bodyEn: string; bodyAr: string }[] = [
@@ -37,7 +40,10 @@ const DEFAULT_TEMPLATES: { key: string; channel: MessageChannel; bodyEn: string;
 
 @Injectable()
 export class MessagingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly consent: MessagingConsentService,
+  ) {}
 
   async ensureDefaultTemplates(tenantId: string) {
     for (const t of DEFAULT_TEMPLATES) {
@@ -54,18 +60,89 @@ export class MessagingService {
     return this.prisma.messageTemplate.findMany({ where: { tenantId }, orderBy: [{ key: "asc" }, { channel: "asc" }] });
   }
 
-  async queueMessage(tenantId: string, body: { patientId?: string; channel: MessageChannel; toPhone: string; templateKey?: string; body: string }) {
+  async queueMessage(
+    tenantId: string,
+    body: {
+      patientId?: string;
+      appointmentId?: string;
+      channel: MessageChannel;
+      toPhone: string;
+      templateKey?: string;
+      body: string;
+      variables?: Record<string, string>;
+    },
+  ) {
+    if (body.channel === MessageChannel.WHATSAPP && !body.templateKey?.trim()) {
+      throw new BadRequestException("WhatsApp messages require an approved templateKey");
+    }
+    await this.consent.assertCanSend(tenantId, body.patientId, body.channel, body.templateKey);
+    const ctx = await resolveMarketForTenant(this.prisma, tenantId);
+    const wa = whatsAppConfigFromMarket(ctx.providerConfig);
+    const marketTpl = body.templateKey ? resolveMarketTemplate(wa, body.templateKey) : null;
     return this.prisma.outboundMessage.create({
       data: {
         tenantId,
         patientId: body.patientId,
+        appointmentId: body.appointmentId,
         channel: body.channel,
         templateKey: body.templateKey,
+        templateName: marketTpl?.name ?? null,
+        variablesJson: body.variables ? (body.variables as Prisma.InputJsonValue) : undefined,
         toPhone: body.toPhone.trim(),
         body: body.body,
         status: "QUEUED",
       },
     });
+  }
+
+  listOutbound(
+    tenantId: string,
+    filter: { patientId?: string; appointmentId?: string; limit?: number },
+  ) {
+    const take = Math.min(50, filter.limit ?? 20);
+    return this.prisma.outboundMessage.findMany({
+      where: {
+        tenantId,
+        ...(filter.patientId ? { patientId: filter.patientId } : {}),
+        ...(filter.appointmentId ? { appointmentId: filter.appointmentId } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+      take,
+    });
+  }
+
+  listFailures(tenantId: string, take = 50) {
+    return this.prisma.outboundMessage.findMany({
+      where: {
+        tenantId,
+        channel: MessageChannel.WHATSAPP,
+        status: { in: ["FAILED", "RETRY"] },
+      },
+      orderBy: { createdAt: "desc" },
+      take: Math.min(100, take),
+    });
+  }
+
+  /**
+   * Recall / marketing outreach — requires MARKETING consent (MS-03).
+   */
+  async queueRecallCampaignMessage(
+    tenantId: string,
+    body: {
+      patientId: string;
+      channel: MessageChannel;
+      toPhone: string;
+      templateKey: string;
+      body: string;
+      variables?: Record<string, string>;
+    },
+  ) {
+    const key = body.templateKey?.trim();
+    if (!key.startsWith("recall_")) {
+      throw new BadRequestException("Recall campaigns require a recall_* templateKey");
+    }
+    await this.consent.assertCanSend(tenantId, body.patientId, body.channel, key);
+    return this.queueMessage(tenantId, { ...body, templateKey: key });
   }
 
   async listRecallCampaigns(tenantId: string) {

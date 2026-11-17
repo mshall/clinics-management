@@ -59,6 +59,7 @@ import {
 } from "@/lib/visit-collection";
 import { generatePrescriptionPng } from "@/lib/prescription-image";
 import { EncounterClinicalTools } from "@/features/clinical/encounter-clinical-tools";
+import { DrugSearchAutocomplete, type DrugSearchHit } from "@/features/clinical/drug-search-autocomplete";
 import { PatientChartAlerts } from "@/components/patient-chart-alerts";
 import { EncounterSpecialtyForm } from "@/features/clinical/encounter-specialty-form";
 import { loadPrescriptionBranding } from "@/lib/prescription-branding";
@@ -137,8 +138,10 @@ export function EncounterDetailPage() {
   const [visitFeeCurrencyDraft, setVisitFeeCurrencyDraft] = useState<string>(orgBaseCurrency);
   const [visitCollection, setVisitCollection] = useState<VisitCollectionValue>(emptyVisitCollection);
   const [drugName, setDrugName] = useState("");
+  const [drugProductId, setDrugProductId] = useState<string | null>(null);
   const [dosage, setDosage] = useState("");
   const [frequency, setFrequency] = useState("");
+  const [safetyOverrideReason, setSafetyOverrideReason] = useState("");
   const [noMedications, setNoMedications] = useState(false);
   const [medTab, setMedTab] = useState<MedTab>("manual");
   const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false);
@@ -289,13 +292,17 @@ export function EncounterDetailPage() {
     mutationFn: () =>
       apiPost(`/api/v1/encounters/${id}/medications`, {
         drugName,
+        drugProductId: drugProductId ?? undefined,
         dosage: dosage || undefined,
         frequency: frequency || undefined,
+        safetyOverrideReason: safetyOverrideReason.trim() || undefined,
       }),
     onSuccess: () => {
       setDrugName("");
+      setDrugProductId(null);
       setDosage("");
       setFrequency("");
+      setSafetyOverrideReason("");
       setNoMedications(false);
       setMedTab("manual");
       toast.success(t("encounters.medAdded"));
@@ -927,6 +934,7 @@ export function EncounterDetailPage() {
               <EncounterClinicalTools
                 encounter={enc}
                 pendingDrugName={drugName}
+                pendingDrugProductId={drugProductId}
                 onApplySoap={(partial) => {
                   if (partial.subjective !== undefined) setSubjective(partial.subjective ?? "");
                   if (partial.objective !== undefined) setObjective(partial.objective ?? "");
@@ -1183,6 +1191,11 @@ export function EncounterDetailPage() {
                       <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border bg-background px-2 py-1.5">
                         <div className="min-w-0">
                           <span className="font-medium">{m.drugName}</span>
+                          {m.drugUnverified ? (
+                            <Badge variant="outline" className="ms-1 text-xs">
+                              {t("drugs.unverifiedBadge", "Unverified")}
+                            </Badge>
+                          ) : null}
                           {m.dosage ? <span className="text-muted-foreground"> · {m.dosage}</span> : null}
                           {m.frequency ? <span className="text-muted-foreground"> · {m.frequency}</span> : null}
                         </div>
@@ -1258,7 +1271,20 @@ export function EncounterDetailPage() {
                     <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                       <div className="space-y-1">
                         <Label required>{t("encounters.drugName")}</Label>
-                        <Input value={drugName} onChange={(e) => setDrugName(e.target.value)} />
+                        <DrugSearchAutocomplete
+                          value={drugName}
+                          onValueChange={setDrugName}
+                          drugProductId={drugProductId}
+                          onProductSelect={(hit: DrugSearchHit | null) => {
+                            setDrugProductId(hit?.id ?? null);
+                            if (hit) {
+                              const sig = i18n.language.startsWith("ar")
+                                ? hit.defaultSigAr ?? hit.defaultSigEn
+                                : hit.defaultSigEn;
+                              if (sig && !frequency.trim()) setFrequency(sig);
+                            }
+                          }}
+                        />
                       </div>
                       <div className="space-y-1">
                         <Label>{t("encounters.dosage")}</Label>
@@ -1268,7 +1294,15 @@ export function EncounterDetailPage() {
                         <Label>{t("encounters.frequency")}</Label>
                         <Input value={frequency} onChange={(e) => setFrequency(e.target.value)} />
                       </div>
-                      <div className="flex items-end">
+                      <div className="space-y-1 sm:col-span-2 lg:col-span-4">
+                        <Label optional>{t("clinical.rxOverrideReason", "Safety override reason")}</Label>
+                        <Input
+                          value={safetyOverrideReason}
+                          onChange={(e) => setSafetyOverrideReason(e.target.value)}
+                          placeholder={t("clinical.rxOverrideReasonPh", "Required if major/contraindicated alert")}
+                        />
+                      </div>
+                      <div className="flex items-end sm:col-span-2 lg:col-span-4">
                         <Button type="button" className="w-full" onClick={() => addMedMutation.mutate()} disabled={!drugName.trim() || addMedMutation.isPending}>
                           {t("encounters.addMed")}
                         </Button>

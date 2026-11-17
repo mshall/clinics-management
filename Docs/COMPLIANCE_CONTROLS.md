@@ -6,7 +6,7 @@ Kiorly is a multi-market clinic platform. Controls below apply globally; **marke
 
 | Market | Data protection | Fiscal / e-invoice | Health data / exchange | Payments & messaging | Notes |
 |--------|-----------------|--------------------|-------------------------|----------------------|--------|
-| **Egypt (EG)** | PDPL — consent API, PDPC breach deadlines | **ETA** via `eta-egypt` fiscal provider | MoH licensing on clinic | InstaPay / Fawry in market JSON | Frankfurt hosting + **PDPC cross-border licence** |
+| **Egypt (EG)** | PDPL — consent API, PDPC breach deadlines | **ETA** via `eta-egypt` fiscal provider | MoH licensing on clinic | InstaPay / Fawry in market JSON | SC-01 Path A: **Frankfurt** cell + **PDPC cross-border licence** ([DATA_RESIDENCY_DECISION.md](./DATA_RESIDENCY_DECISION.md)) |
 | **KSA** | PDPL | **ZATCA** (connector TBD) | **NPHIES** (TBD) | Mada / local rails (TBD) | Planned GCC cell |
 | **UAE** | ICT health law, DHA/DOH | **FTA** (TBD) | **NABIDH** / **Malaffi** (TBD) | Card + local (TBD) | Planned ME cell |
 | **EU / EMEA** | **GDPR** | Country fiscal providers | National HIE where required | SEPA / local | Frankfurt cell default |

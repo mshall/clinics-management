@@ -5,6 +5,8 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
+import { BillingInterval, PlanKey } from "@prisma/client";
+import { SubscriptionService } from "../subscriptions/subscription.service";
 import { BillingService } from "./billing.service";
 
 @ApiTags("billing")
@@ -12,7 +14,32 @@ import { BillingService } from "./billing.service";
 @UseGuards(JwtAuthGuard)
 @Controller("billing")
 export class BillingController {
-  constructor(private readonly billing: BillingService) {}
+  constructor(
+    private readonly billing: BillingService,
+    private readonly subscriptions: SubscriptionService,
+  ) {}
+
+  @Get("subscription")
+  getSubscription(@CurrentUser() user: JwtUser) {
+    return this.subscriptions.getForTenant(user, requireTenantId(user));
+  }
+
+  @Post("subscription/change-plan")
+  changePlan(
+    @CurrentUser() user: JwtUser,
+    @Body()
+    body: { planKey: PlanKey; interval: BillingInterval; seats: number; confirm?: boolean },
+  ) {
+    return this.subscriptions.changePlan(user, requireTenantId(user), body);
+  }
+
+  @Post("subscription/cancel")
+  cancelSubscription(
+    @CurrentUser() user: JwtUser,
+    @Body() body: { atPeriodEnd?: boolean },
+  ) {
+    return this.subscriptions.requestCancelAtPeriodEnd(user, requireTenantId(user), body.atPeriodEnd !== false);
+  }
 
   @Get("catalog")
   listCatalog(@CurrentUser() user: JwtUser, @Query("q") q?: string) {

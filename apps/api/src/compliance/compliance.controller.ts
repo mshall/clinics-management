@@ -1,4 +1,6 @@
 import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { EntitlementGuard } from "../entitlements/entitlement.guard";
+import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import { UserRole } from "@prisma/client";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -44,6 +46,8 @@ export class ComplianceController {
   }
 
   @Post("egypt/eta-queue/:id/submit")
+  @UseGuards(EntitlementGuard)
+  @RequiresEntitlement("eta_receipts")
   submitEta(@CurrentUser() user: JwtUser, @Param("id") id: string) {
     if (user.role && !hasAnyRoleInSet(user, FISCAL_GOVERNANCE_ROLES)) {
       throw new ForbiddenException("Insufficient permissions for fiscal submit");
@@ -52,6 +56,8 @@ export class ComplianceController {
   }
 
   @Post("egypt/eta-queue/:id/resubmit")
+  @UseGuards(EntitlementGuard)
+  @RequiresEntitlement("eta_receipts")
   resubmitEta(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: ResubmitFiscalSubmissionDto) {
     if (user.role && !hasAnyRoleInSet(user, FISCAL_GOVERNANCE_ROLES)) {
       throw new ForbiddenException("Insufficient permissions for fiscal resubmit");

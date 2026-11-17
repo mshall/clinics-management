@@ -40,7 +40,7 @@ CI/CD (push main) ──► build web + api image ──► cdk deploy ──►
 ```
 
 **Design choices in this stack:**
-- **Region:** `eu-central-1` (Frankfurt); DB timezone `Europe/Berlin`; API `TZ=Europe/Berlin`.
+- **Region / cell (SC-01):** default cell **`frankfurt`** in `eu-central-1`; DB timezone `Europe/Berlin`. Optional cell **`cairo`** in `me-south-1` via `KIORLY_HOST_CELL` — see [DATA_RESIDENCY_DECISION.md](./DATA_RESIDENCY_DECISION.md).
 - **No NAT gateway** — App Runner VPC connector + **interface VPC endpoints** (Secrets Manager, KMS, STS) to avoid NAT cost.
 - **No ALB** — App Runner is the compute target; CloudFront talks to App Runner’s HTTPS URL via a custom resource that parses the origin host.
 - **Migrations on boot** — `PRISMA_MIGRATE_ON_BOOT=true` on App Runner; interim health listener in Docker entrypoint during migrate.
@@ -82,13 +82,17 @@ PR validation: **`.github/workflows/pr-synth-build.yml`** runs CDK synth without
 From repository root:
 
 ```bash
-npm ci
-npm run build -w web
-npm run build -w api   # if your pipeline builds before CDK
-cd infra
-npm ci
-npx cdk deploy
+# Frankfurt (production Egypt Path A)
+bash scripts/deploy-aws.sh
+
+# Or explicitly:
+KIORLY_HOST_CELL=frankfurt AWS_REGION=eu-central-1 bash scripts/deploy-aws.sh
+
+# Prepared Path B (not used for EG production until migration runbook):
+KIORLY_HOST_CELL=cairo AWS_REGION=me-south-1 bash scripts/deploy-aws.sh
 ```
+
+Stack outputs include **`HostCell`** and **`DataRegion`** for residency attestation. RDS and upload buckets are tagged `KiorlyHostCell`.
 
 Note stack outputs:
 - **`AppUrl`** — give users this HTTPS URL.
@@ -149,6 +153,8 @@ Production build is bundled into CDK **`BucketDeployment`** (`apps/web/dist`).
 - **Same-origin API:** CloudFront behavior **`/api/*`** → App Runner; SPA uses relative `/api/v1/...` (empty `VITE_API_URL`).
 - **SPA routing:** CloudFront **Function** rewrites extension-less paths to `/index.html` **only on the S3 behavior** — not on `/api/*` (prevents API JSON being replaced by HTML).
 - **Post-deploy client refresh:** Each web build writes `build-id.json` and sets **`WEB_BUILD_ID`** on App Runner (same commit SHA). The SPA embeds the id in the bundle. **No forced reload loop.** After deploy, the API returns **`X-Kiorly-Web-Build-Id`** on responses; when it differs from the embedded id the app shows a **“New version available”** banner (**Reload now** / **Later**). Automatic reload does **not** run on navigation or idle — only **Reload now** on the banner (after save your work). When you ship a **breaking** API change, set **`WEB_MIN_BUILT_AT`** on App Runner (ISO timestamp); clients below that build reload **on the next navigation** (`X-Kiorly-Web-Min-Built-At` header). Optional updates still use the banner only. Tabs may fetch `/build-id.json` once when the user returns to the tab. CloudFront behaviors **`/build-id.json`** and **`/index.html`** use **caching disabled**; hashed files under `/assets/*` stay on the default optimized cache.
+
+**Mobile performance (AWS):** CloudFront compresses responses (`compress: true`) and caches hashed `/assets/*`. Prior bottlenecks were (1) a single **~2.2 MB** JS chunk on first load and (2) render-blocking **Google Fonts** for all theme families. The web app now **lazy-loads route modules**, splits **vendor** chunks (React, TanStack Query, i18n, Radix), and loads **theme-specific fonts** only when that theme is active. Default theme is **Clinical OS** (`clinical-os-light`). After deploy, verify `dist/assets/index-*.js` is well under 500 KB gzipped and feature routes load separate chunks in DevTools → Network.
 
 Local build check:
 

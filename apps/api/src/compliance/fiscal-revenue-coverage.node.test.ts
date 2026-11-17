@@ -18,6 +18,7 @@ const ALLOWED_REVENUE_MUTATORS = new Set([
   "compliance/operation-revenue-ledger.ts",
   "compliance/fiscal-queue.ts",
   "admin/data-explorer/admin-data-explorer.service.ts",
+  "staging/sales-demo-reset.ts",
 ]);
 
 const REVENUE_MUTATION_PATTERNS = [

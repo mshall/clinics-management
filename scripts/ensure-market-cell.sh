@@ -14,5 +14,15 @@ for r in "${REGIONS[@]}"; do
   fi
 done
 
-echo "No shared stack for $TARGET_REGION. To provision: AWS_REGION=$TARGET_REGION bash scripts/deploy-aws.sh"
+CELL_FROM_REGION="$(node -e "
+const fs=require('fs');
+const j=JSON.parse(fs.readFileSync('platform/data-cells.json','utf8'));
+const hit=Object.entries(j.cells).find(([,c])=>c.awsRegion==='$TARGET_REGION');
+process.stdout.write(hit?hit[0]:'');
+" 2>/dev/null || true)"
+if [[ -n "$CELL_FROM_REGION" ]]; then
+  echo "No shared stack for $TARGET_REGION. To provision: KIORLY_HOST_CELL=$CELL_FROM_REGION AWS_REGION=$TARGET_REGION bash scripts/deploy-aws.sh"
+else
+  echo "No shared stack for $TARGET_REGION. To provision: AWS_REGION=$TARGET_REGION KIORLY_HOST_CELL=<cell-id> bash scripts/deploy-aws.sh"
+fi
 exit 0

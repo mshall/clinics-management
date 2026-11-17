@@ -2,6 +2,8 @@ import { Controller, Get, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { EntitlementGuard } from "../entitlements/entitlement.guard";
+import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { ReportsService } from "./reports.service";
@@ -9,7 +11,8 @@ import { ReportsService } from "./reports.service";
 @ApiTags("reports")
 @ApiBearerAuth("bearer")
 @Controller("reports")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard)
+@RequiresEntitlement("mod_reports")
 export class ReportsController {
   constructor(private readonly reports: ReportsService) {}
 

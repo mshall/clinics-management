@@ -32,11 +32,16 @@ Org admins see **Platform · Market** status on each row; toggles set an explici
 For a signed-in user in a tenant, `FeatureFlagsService` computes **effective** per key:
 
 1. If **global** is off → **off**.
-2. If **market** is explicitly off → **off**.
-3. If **org** is explicitly off → **off**.
-4. If **org** is explicitly on → **on** (subject to global and market not being off).
-5. Else if **market** is explicitly on → **on**.
-6. Else fall back to market `featureDefaults` JSON (legacy camelCase keys) when present; otherwise conservative defaults.
+2. If **plan** does not entitle the capability (`eta_receipts`, `ai_assistant` only — see `PLAN_GATED_FEATURE_FLAGS`) → **off**.
+3. If **market** is explicitly off → **off**.
+4. If **org** is explicitly off → **off**.
+5. If **org** is explicitly on → **on** (subject to global, plan, and market not blocking).
+6. Else if **market** is explicitly on → **on**.
+7. Else fall back to market `featureDefaults` JSON (legacy camelCase keys) when present; otherwise conservative defaults.
+
+Plan entitlements come from `EntitlementsService.resolve` (plan catalog + `TenantEntitlementOverride`, trial plan while `TRIALING`). Paid API surfaces use `@RequiresEntitlement` → HTTP **402** `{ code: "PLAN_UPGRADE_REQUIRED", entitlement, requiredPlan }`.
+
+**PL-04:** Feature-flag keys `eta_receipts`, `ai_assistant`, `whatsapp_reminders`, `card_payments`, `instapay`, and `fawry` map to plan entitlement keys in `plans-matrix.ts` (`FEATURE_FLAG_ENTITLEMENT`). Module controllers are gated per [PLANS_AND_ENTITLEMENTS.md](./PLANS_AND_ENTITLEMENTS.md).
 
 Payment and compliance code paths call `isEnabled(tenantId, key)`. The assistant uses `isEnabledForUser(tenantId, "ai_assistant")` so platform-only users without a tenant respect the global master switch only.
 

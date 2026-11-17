@@ -21,6 +21,8 @@ import {
 import { ensureDraftEncounterOnCheckIn } from "./ensure-draft-encounter-on-check-in";
 import { FrontDeskFlowService } from "./front-desk-flow.service";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
+import { ConsentPolicyService } from "../compliance/consent-policy.service";
+import type { CheckInConsentCaptureDto } from "./dto/check-in-consent.dto";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import { basename } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -40,6 +42,7 @@ export class FrontDeskService {
     private readonly flow: FrontDeskFlowService,
     private readonly featureFlags: FeatureFlagsService,
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
+    private readonly consent: ConsentPolicyService,
   ) {}
 
   quickSearch(tenantId: string, user: JwtUser, q: string) {
@@ -59,6 +62,7 @@ export class FrontDeskService {
       roomLabel?: string;
       currency?: string;
       visitCollection?: VisitCollectionInput;
+      consentCapture?: CheckInConsentCaptureDto;
     },
   ) {
     const apt = await this.prisma.appointment.findFirst({
@@ -71,6 +75,10 @@ export class FrontDeskService {
     if (!apt) throw new NotFoundException("Appointment not found");
     if (apt.status === AppointmentStatus.CANCELLED || apt.status === AppointmentStatus.COMPLETED) {
       throw new BadRequestException("Cannot check in this appointment");
+    }
+
+    if (body.consentCapture) {
+      await this.consent.captureCheckInBundle(tenantId, apt.patientId, user.userId, body.consentCapture);
     }
 
     const now = new Date();

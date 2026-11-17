@@ -9,13 +9,15 @@
     "check:ascii-cfn": "node scripts/check-ascii-cfn-template.mjs",
     "check:boot-proxy-order": "node ../scripts/check-boot-proxy-order.mjs",
     "synth": "npm run check:ascii-descriptions && npm run check:boot-proxy-order && npm run build && cdk synth && npm run check:ascii-cfn",
-    "deploy": "npm run check:ascii-descriptions && npm run check:boot-proxy-order && npm run build && cdk synth && npm run check:ascii-cfn && cdk deploy --app cdk.out --require-approval never"
+    "deploy": "npm run check:ascii-descriptions && npm run check:boot-proxy-order && npm run build && cdk synth && npm run check:ascii-cfn && cdk deploy --app cdk.out --require-approval never",
+    "test:unit": "node --import tsx --test src/**/*.node.test.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
     "aws-cdk": "^2.170.0",
     "aws-cdk-lib": "^2.170.0",
     "constructs": "^10.4.2",
+    "tsx": "^4.23.15",
     "typescript": "~5.7.2"
   }
 }

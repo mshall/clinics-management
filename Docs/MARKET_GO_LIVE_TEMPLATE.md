@@ -13,7 +13,7 @@ Use this checklist when platform ops launches a **new country pack** (`Market` r
 | Operability | Pause (days) or disable market — org onboarding uses `GET …/markets/operable` only |
 | **Country feature flags** | Platform → Market launch → **Flags** — set `ai_assistant`, `eta_receipts`, payments, etc. for every tenant in that market (see [FEATURE_FLAGS.md](./FEATURE_FLAGS.md)) |
 | **AiProvider** (optional) | `providerConfig.ai` — `baseUrl`, `model`, `secretRef`; independent of flag but required for LLM phrasing |
-| Deployment cell | Egypt: **Frankfurt (`frankfurt`, `eu-central-1`)** until in-country consent |
+| Deployment cell | Egypt (SC-01 Path A): **Frankfurt (`frankfurt`, `eu-central-1`)** + PDPC licences — see [DATA_RESIDENCY_DECISION.md](./DATA_RESIDENCY_DECISION.md) |
 
 ## B. Legal & compliance (per market)
 

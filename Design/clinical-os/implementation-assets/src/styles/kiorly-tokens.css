@@ -1,0 +1,39 @@
+/* Import AFTER the existing Kiorly global styles. This overrides semantic HSL tokens, compatible with Tailwind's hsl(var(--primary)) pattern. */
+/* Arabic font: install Tajawal locally in your licensed build or enable the optional @import shown in README. No font binaries included. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Tajawal:wght@600;700&display=swap');
+:root, html[data-theme="default-light"], html[data-theme="material-light"] {
+  --background: 216 45% 98%; --foreground: 220 43% 11%;
+  --card: 0 0% 100%; --card-foreground: 220 43% 11%;
+  --popover: 0 0% 100%; --popover-foreground: 220 43% 11%;
+  --primary: 221 83% 53%; --primary-foreground: 0 0% 100%;
+  --secondary: 215 39% 95%; --secondary-foreground: 220 43% 11%;
+  --muted: 215 38% 95%; --muted-foreground: 215 13% 43%;
+  --accent: 216 90% 96%; --accent-foreground: 221 83% 43%;
+  --destructive: 0 65% 55%; --destructive-foreground: 0 0% 100%;
+  --border: 214 32% 91%; --input: 214 32% 91%; --ring: 221 83% 53%;
+  --radius: 0.75rem;
+  --kiorly-gold: #b8964a; --kiorly-surface-alt: #f1f5fa;
+}
+html[data-theme="default-dark"], html[data-theme="material-dark"] {
+  --background: 218 45% 10%; --foreground: 215 53% 97%;
+  --card: 216 38% 15%; --card-foreground: 215 53% 97%;
+  --popover: 216 38% 15%; --popover-foreground: 215 53% 97%;
+  --primary: 216 100% 75%; --primary-foreground: 213 70% 17%;
+  --secondary: 214 36% 19%; --secondary-foreground: 215 53% 97%;
+  --muted: 214 36% 19%; --muted-foreground: 213 20% 74%;
+  --accent: 214 36% 21%; --accent-foreground: 216 100% 75%;
+  --destructive: 356 100% 78%; --destructive-foreground: 218 45% 10%;
+  --border: 215 27% 27%; --input: 215 27% 27%; --ring: 215 100% 88%;
+  --radius: 0.75rem;
+  --kiorly-gold: #d8b76e; --kiorly-surface-alt: #1e2c40;
+}
+html, body { font-family: Inter, system-ui, sans-serif; }
+html[lang="ar"], html[lang="ar"] body, html[dir="rtl"], html[dir="rtl"] body,
+html[dir="rtl"] input, html[dir="rtl"] button, html[dir="rtl"] textarea { font-family: Tajawal, sans-serif; font-weight: 600; }
+html[dir="rtl"] h1, html[dir="rtl"] h2, html[dir="rtl"] h3, html[dir="rtl"] strong { font-weight: 700; }
+.kiorly-num, .kiorly-mrn, .kiorly-phone { direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums; }
+.kiorly-card { background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: 18px; box-shadow: 0 2px 10px rgba(22,35,54,.05); }
+.kiorly-focus:focus-visible { outline: 3px solid hsl(var(--ring)); outline-offset: 2px; }
+.kiorly-nav-transition { transition: width .18s ease, padding .18s ease; }
+.kiorly-touch { min-height: 44px; min-width: 44px; }
+@media (prefers-reduced-motion: reduce) { .kiorly-nav-transition { transition: none; } }

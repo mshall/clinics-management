@@ -1,7 +1,27 @@
 import assert from "node:assert/strict";
-import { FiscalSubmissionStatus, RevenueStatus } from "@prisma/client";
+import { FiscalSubmissionStatus, PlanKey, RevenueStatus, SubscriptionStatus } from "@prisma/client";
 import { test } from "node:test";
 import { reducePostedRevenueNetWithFiscal, submissionVoidFiscalAction } from "./void-revenue-fiscal-returns";
+
+/** Minimal subscription rows so FeatureFlagsService plan layer allows ETA in fiscal-queue unit mocks. */
+const planEntitledSubscriptionMock = {
+  subscription: {
+    findUnique: async () => ({
+      status: SubscriptionStatus.ACTIVE,
+      planId: "plan-pro",
+      trialPlanId: null,
+      clinicianSeats: 10,
+      plan: { key: PlanKey.PRO, id: "plan-pro" },
+      trialPlan: null,
+    }),
+  },
+  planEntitlement: {
+    findMany: async () => [{ key: "eta_receipts", valueJson: true }],
+  },
+  tenantEntitlementOverride: {
+    findMany: async () => [],
+  },
+};
 
 test("submissionVoidFiscalAction maps ETA submission states", () => {
   assert.equal(submissionVoidFiscalAction(undefined), "none");
@@ -19,6 +39,7 @@ test("reducePostedRevenueNetWithFiscal re-queues a pending 400 sale at 300 witho
   let updatedNet = 0;
 
   const tx = {
+    ...planEntitledSubscriptionMock,
     revenueEntry: {
       findFirst: async () => ({
         id: "rev-1",
@@ -81,8 +102,8 @@ test("reducePostedRevenueNetWithFiscal re-queues a pending 400 sale at 300 witho
           defaultCurrency: "EGP",
           defaultTimezone: "Africa/Cairo",
           defaultPhoneRegion: "EG",
-          dataRegion: "eg",
-          hostCell: "eg",
+          dataRegion: "eu-central-1",
+          hostCell: "frankfurt",
           weekendDays: [5, 6],
           taxConfig: { fiscalProvider: "eta_egypt" },
           providerConfig: {},
@@ -154,6 +175,7 @@ test("reducePostedRevenueNetWithFiscal queues partial return when sale is SUBMIT
   let returnQueued = false;
 
   const tx = {
+    ...planEntitledSubscriptionMock,
     revenueEntry: {
       findFirst: async () => ({
         id: "rev-1",
@@ -169,7 +191,7 @@ test("reducePostedRevenueNetWithFiscal queues partial return when sale is SUBMIT
         fiscalDocument: {
           id: "doc-1",
           patientId: "p1",
-          submission: { status: FiscalSubmissionStatus.PENDING },
+          submission: { status: FiscalSubmissionStatus.SUBMITTING },
         },
       }),
       update: async ({ data }: { data?: { netAmount?: unknown; fiscalReturnSeq?: { increment: number } } }) => {
@@ -210,8 +232,8 @@ test("reducePostedRevenueNetWithFiscal queues partial return when sale is SUBMIT
           defaultCurrency: "EGP",
           defaultTimezone: "Africa/Cairo",
           defaultPhoneRegion: "EG",
-          dataRegion: "eg",
-          hostCell: "eg",
+          dataRegion: "eu-central-1",
+          hostCell: "frankfurt",
           weekendDays: [5, 6],
           taxConfig: { fiscalProvider: "eta_egypt" },
           providerConfig: {},

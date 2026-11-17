@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UseGuards } from "@nestjs/common";
 import { DeactivateTenantUserDto } from "./dto/deactivate-tenant-user.dto";
 import { ReactivateTenantUserDto } from "./dto/reactivate-tenant-user.dto";
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
@@ -15,6 +15,7 @@ import { PlatformPatchTenantDto } from "./dto/platform-patch-tenant.dto";
 import { PlatformPatchTenantUserDto } from "./dto/platform-patch-tenant-user.dto";
 import { PlatformAdminService } from "./platform-admin.service";
 import { PlatformInsightsService } from "./platform-insights.service";
+import { DrugDatasetImportService, type DrugDatasetImportPayload } from "../clinical/drug-dataset-import.service";
 
 @ApiTags("admin-platform")
 @ApiBearerAuth("bearer")
@@ -24,6 +25,7 @@ export class PlatformAdminController {
   constructor(
     private readonly platform: PlatformAdminService,
     private readonly platformInsights: PlatformInsightsService,
+    private readonly drugDatasets: DrugDatasetImportService,
   ) {}
 
   @Get("overview")
@@ -253,5 +255,28 @@ export class PlatformAdminController {
     @Body() body: ReactivateTenantUserDto,
   ) {
     return this.platform.restoreUser(user, tenantId, userId, body);
+  }
+
+  @Put("tenants/:tenantId/entitlement-overrides/:key")
+  @ApiOperation({ summary: "Set an ops entitlement override for an organization (platform super admin)" })
+  putEntitlementOverride(
+    @CurrentUser() user: JwtUser,
+    @Param("tenantId") tenantId: string,
+    @Param("key") key: string,
+    @Body() body: { valueJson: unknown; reason: string; expiresAt?: string | null },
+  ) {
+    return this.platform.putTenantEntitlementOverride(user, tenantId, key, body);
+  }
+
+  @Get("drug-datasets")
+  @ApiOperation({ summary: "List drug dataset versions (platform super admin)" })
+  listDrugDatasets(@CurrentUser() user: JwtUser, @Query("marketCode") marketCode?: string) {
+    return this.drugDatasets.listVersions(user, marketCode);
+  }
+
+  @Post("drug-datasets")
+  @ApiOperation({ summary: "Import a versioned market drug dataset (platform super admin)" })
+  importDrugDataset(@CurrentUser() user: JwtUser, @Body() body: DrugDatasetImportPayload) {
+    return this.drugDatasets.importDataset(user, body);
   }
 }

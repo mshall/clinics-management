@@ -16,8 +16,9 @@
 
 | Feature | API | Web |
 |--------|-----|-----|
-| Appointment types (duration, fee, colour) | `GET/POST /api/v1/scheduling/appointment-types` | Use `appointmentTypeId` when booking |
-| Doctor availability template | `GET/PUT /api/v1/scheduling/availability` | Admin JSON (weekly `weekJson`, `blockedJson`) |
+| Appointment types (duration, fee, colour, buffers, marketplace rules) | `GET/POST/PATCH /api/v1/scheduling/appointment-types` | `ClinicAppointmentTypesPanel` on clinic settings |
+| Per-clinician duration/fee overrides | `GET/PUT /api/v1/scheduling/clinicians/:id/type-overrides` | `ClinicianTypeOverridesPanel` on clinic doctors tab |
+| Doctor availability template | `GET/PUT /api/v1/scheduling/availability` | Admin JSON (weekly `weekJson` v1 + `blockedJson`, clinic timezone) |
 | HR leave blocks | `GET /api/v1/scheduling/clinicians/:id/leave-blocks` | From approved `LeaveRequest` |
 | Recurring / physio series | `POST /api/v1/scheduling/series` | API creates N linked appointments |
 | Waitlist | `GET/POST /api/v1/scheduling/waitlist` | First waitlist entry marked `OFFERED` on cancel |
@@ -25,6 +26,16 @@
 | Double booking | `allowDoubleBook` on create | Existing overlap dialog + flag |
 | Follow-up from visit | `followUpWeeks` on encounter save/finalize | Encounter SOAP → pending booking |
 
+## FS-01 appointment type fields
+
+- `bufferBeforeMin` / `bufferAfterMin` — expand clinician conflict checks; stored on the type (not overridden per doctor).
+- `requiresRoom` — booking must include `roomLabel` when true.
+- `marketplaceBookable`, `minNoticeMinutes`, `maxDaysAhead`, `depositAmount`, `newPatientOnly` — channel and booking window rules (Kiorex/marketplace wiring follow-up).
+- `ClinicianAppointmentTypeOverride` — optional `durationMinutes` and `feeAmount` per clinician + type.
+
+Availability `weekJson` **version 1** shape: `{ "version": 1, "timezone": "<IANA>", "days": [{ "dow": 0-6, "slots": [{ "start": "HH:mm", "end": "HH:mm" }] }] }`. Legacy array-shaped rows are normalized on migrate and on `PUT /availability`.
+
 ## Migration
 
-`20261113212611_patient_360_scheduling` — enums, patient scheduling tables, encounter follow-up fields.
+- `20261113212611_patient_360_scheduling` — enums, patient scheduling tables, encounter follow-up fields.
+- `20261117200000_fs01_scheduling_engine` — FS-01 columns, override table, weekJson normalization.

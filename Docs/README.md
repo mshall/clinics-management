@@ -25,11 +25,15 @@ See **[Documentation_Portal.md](./Documentation_Portal.md)** for module layout, 
 |----------|---------|
 | [**Documentation_Portal.md**](./Documentation_Portal.md) | Docs workspace (`apps/docs`), PiggyMetrics sync, how to view locally |
 | [**Test_Data_Users.md**](./Test_Data_Users.md) | Demo logins, passwords, roles, QA scenarios, org user counts |
+| [**QA_STAGING.md**](./QA_STAGING.md) | Staging ETA pre-prod, WhatsApp sandbox, pilot tenants, `demo:reset` |
 | [**Clinic_Management_System_PRD.md**](./Clinic_Management_System_PRD.md) | Product requirements, shipped scope, and **production feature backlog** (§12.3) |
 | [**Clinic_Management_System_RFC.md**](./Clinic_Management_System_RFC.md) | Technical RFC — API behaviour, RBAC, data model notes |
 | [**MODULAR_MONOLITH.md**](./MODULAR_MONOLITH.md) | Bounded contexts, Nest module map, import rules, microservice extraction |
 | [**AWS_Cloud_Deployment_Guide.md**](./AWS_Cloud_Deployment_Guide.md) | RDS, App Runner, CloudFront, CI/CD deploy, post-deploy seed |
 | [**ASSISTANT.md**](./ASSISTANT.md) | AI assistant architecture: permissions, playbook, live data, actions |
+| [**AI_HONEST_LABELS.md**](./AI_HONEST_LABELS.md) | AI-03: which features are model-backed vs rule-based (product copy) |
+| [**PATIENT_CONSENT.md**](./PATIENT_CONSENT.md) | SC-03: consent purposes, enforcement, capture |
+| [**LEGAL_PACK.md**](./LEGAL_PACK.md) | GT-02: legal documents, versioned acceptance, billing gate |
 | [**FEATURE_FLAGS.md**](./FEATURE_FLAGS.md) | Layered flags (platform · market · org): AI assistant, ETA, payments, WhatsApp |
 | [**MULTI_MARKET.md**](./MULTI_MARKET.md) | `providerSettings` JSON, market payment channels, required market pack fields, ETA wire parity, privileged MFA on AWS production |
 | [**CLINIC_TAX_AND_LICENSING.md**](./CLINIC_TAX_AND_LICENSING.md) | Per-branch license and tax authority numbers (market labels, invoicing, fiscal) |
@@ -44,6 +48,12 @@ See **[Documentation_Portal.md](./Documentation_Portal.md)** for module layout, 
 | [**COMPLIANCE_CONTROLS.md**](./COMPLIANCE_CONTROLS.md) | ISO 27001 / HIPAA / SOC / FISMA control mapping (non-certification) |
 | [**GUIDE_BOOK.md**](./GUIDE_BOOK.md) | In-app Guide book (`/guide`) — role-based EN/AR instructions |
 | [**RBAC_MULTI_ROLE.md**](./RBAC_MULTI_ROLE.md) | FD-01 — multiple roles per user, tenant owner flag, nav tab union |
+| [**DATA_RESIDENCY_DECISION.md**](./DATA_RESIDENCY_DECISION.md) | SC-01 — Egypt Path A/B decision, cell registry, enforcement |
+| [**SUB_PROCESSORS_BY_MARKET.md**](./SUB_PROCESSORS_BY_MARKET.md) | SC-01 — sub-processors and AWS regions per market |
+| [**runbooks/EG_TENANT_CELL_MIGRATION.md**](./runbooks/EG_TENANT_CELL_MIGRATION.md) | SC-01 — pilot tenant migration Frankfurt → Cairo |
+| [**EGYPT_DRUG_DATABASE.md**](./EGYPT_DRUG_DATABASE.md) | CL-01 — brand → ingredient catalog, search, Rx autocomplete |
+| [**PLANS_AND_PRICING.md**](./PLANS_AND_PRICING.md) | PL-01 — plan catalog, versioned market prices, public pricing API |
+| [**UI_DESIGN_DIRECTIONS.md**](./UI_DESIGN_DIRECTIONS.md) | Kiorly Default, Material 3, and **Kiorly Clinical OS** design prototype |
 
 ---
 
@@ -146,6 +156,9 @@ Configure hours: **Clinic detail → Settings → Working hours**, or group admi
 |-------|-------------|
 | **Kiorly Light / Dark** | Default product tokens (`data-theme="default-*"`) |
 | **Material Light / Dark** | Material Design 3 layer — Roboto, pill buttons, M3 surfaces, light-blue primary accent |
+| **Kiorly Clinical OS** | Shipped theme (`clinical-os-light` / `clinical-os-dark`) + Screen Explorer reference ([`Design/clinical-os/`](../Design/clinical-os/)) |
+
+See **[UI_DESIGN_DIRECTIONS.md](./UI_DESIGN_DIRECTIONS.md)** for the full design catalog (`npm run design:clinical-os` to open the prototype).
 
 **Theme switcher:** app shell (and login). Optional **“Use as default when I sign in again”** persists via `localStorage`; in-tab choice uses `sessionStorage` until sign-out.
 

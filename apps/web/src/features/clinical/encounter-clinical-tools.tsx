@@ -9,24 +9,19 @@ import { apiGet, apiPost } from "@/lib/http";
 import type { EncounterDetailDto } from "@/lib/api-types";
 import { ClinicalLetterDialog } from "@/features/clinical/clinical-letter-dialog";
 import { Link } from "react-router-dom";
+import { RxSafetyAlerts, type RxSafetyAlert } from "@/features/clinical/rx-safety-alerts";
 
 type IcdRow = { icd10Code: string; descriptionEn: string; descriptionAr: string };
 type Shortcut = { id: string; label: string; type: string; payload: unknown };
-type ClinicalWarning = {
-  kind: string;
-  severity: string;
-  messageEn: string;
-  messageAr: string;
-  limitedCheck?: boolean;
-};
 
 type Props = {
   encounter: EncounterDetailDto;
   onApplySoap: (partial: Partial<Pick<EncounterDetailDto, "subjective" | "objective" | "assessment" | "plan">>) => void;
   pendingDrugName?: string;
+  pendingDrugProductId?: string | null;
 };
 
-export function EncounterClinicalTools({ encounter, onApplySoap, pendingDrugName }: Props) {
+export function EncounterClinicalTools({ encounter, onApplySoap, pendingDrugName, pendingDrugProductId }: Props) {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const [icdQ, setIcdQ] = useState("");
@@ -43,15 +38,24 @@ export function EncounterClinicalTools({ encounter, onApplySoap, pendingDrugName
     queryFn: () => apiGet<Shortcut[]>("/api/v1/clinical/shortcuts"),
   });
 
+  const rxItems = [
+    ...encounter.medications.map((m) => ({
+      drugName: m.drugName,
+      drugProductId: m.drugProductId ?? undefined,
+    })),
+    ...(pendingDrugName?.trim()
+      ? [{ drugName: pendingDrugName, drugProductId: pendingDrugProductId ?? undefined }]
+      : []),
+  ];
+
   const safetyQuery = useQuery({
-    queryKey: ["clinical", "safety", encounter.patientId, pendingDrugName],
+    queryKey: ["clinical", "rx-check", encounter.patientId, rxItems],
     queryFn: () =>
-      apiPost<ClinicalWarning[]>("/api/v1/clinical/medications/safety-check", {
+      apiPost<{ alerts: RxSafetyAlert[] }>("/api/v1/clinical/rx/check", {
         patientId: encounter.patientId,
-        drugName: pendingDrugName,
-        existingDrugNames: encounter.medications.map((m) => m.drugName),
-      }),
-    enabled: Boolean(pendingDrugName && pendingDrugName.trim().length > 1),
+        items: rxItems,
+      }).then((r) => r.alerts ?? []),
+    enabled: rxItems.length > 0 && Boolean(pendingDrugName?.trim()),
   });
 
   const copyLast = useMutation({
@@ -85,6 +89,8 @@ export function EncounterClinicalTools({ encounter, onApplySoap, pendingDrugName
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const alerts = safetyQuery.data ?? [];
 
   return (
     <div className="space-y-4 rounded-lg border border-border bg-muted/20 p-3">
@@ -157,21 +163,17 @@ export function EncounterClinicalTools({ encounter, onApplySoap, pendingDrugName
           ))}
         </ul>
       </div>
-      {safetyQuery.data?.length ? (
-        <ul className="space-y-1 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-950 dark:text-amber-100">
-          {safetyQuery.data.map((w, i) => (
-            <li key={i}>
-              {isAr && w.messageAr ? w.messageAr : w.messageEn}
-              {w.limitedCheck ? (
-                <span className="mt-0.5 block font-medium text-amber-900/80 dark:text-amber-50/90">
-                  {t("clinical.safetyLimitedCheck", "Limited check — not the full Egyptian drug catalog.")}
-                </span>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      ) : pendingDrugName && pendingDrugName.trim().length > 1 && safetyQuery.isSuccess && !safetyQuery.data?.length ? (
-        <p className="text-xs text-muted-foreground">{t("clinical.safetyNoIssues")}</p>
+      {pendingDrugName && pendingDrugName.trim().length > 1 ? (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">{t("clinical.safetyWarnings")}</p>
+          {safetyQuery.isPending ? (
+            <p className="text-xs text-muted-foreground">{t("common.loading", "Loading…")}</p>
+          ) : alerts.length ? (
+            <RxSafetyAlerts alerts={alerts} />
+          ) : safetyQuery.isSuccess ? (
+            <p className="text-xs text-muted-foreground">{t("clinical.safetyNoIssues")}</p>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

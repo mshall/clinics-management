@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { AdminGovernanceIntegrationFailures } from "./admin-governance-integration-failures";
+import { AdminGovernanceWhatsappFailures } from "./admin-governance-whatsapp-failures";
 import { useTranslation } from "react-i18next";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
@@ -11,7 +12,7 @@ import { useAdminAuditLogsQuery } from "@/lib/api-hooks";
 import type { AdminAuditLogItemDto } from "@/lib/api-types";
 import { localeForLanguage, formatUserRole } from "@/lib/locale-display";
 
-type GovernanceTab = "audit" | "integration-failures";
+type GovernanceTab = "audit" | "integration-failures" | "whatsapp-failures";
 
 export function AdminGovernancePanel() {
   const { t, i18n } = useTranslation();
@@ -51,9 +52,18 @@ export function AdminGovernancePanel() {
         >
           {t("admin.governanceTabFailures", "Failing operations")}
         </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={tab === "whatsapp-failures" ? "default" : "outline"}
+          onClick={() => setTab("whatsapp-failures")}
+        >
+          {t("messaging.governanceTab", "WhatsApp delivery")}
+        </Button>
       </div>
 
       {tab === "integration-failures" ? <AdminGovernanceIntegrationFailures /> : null}
+      {tab === "whatsapp-failures" ? <AdminGovernanceWhatsappFailures /> : null}
 
       {tab === "audit" ? <Card>
         <CardHeader>

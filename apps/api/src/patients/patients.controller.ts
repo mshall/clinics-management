@@ -6,6 +6,7 @@ import {
   HttpCode,
   Param,
   Patch,
+  Put,
   Post,
   Query,
   StreamableFile,
@@ -37,6 +38,9 @@ import { BulkDeletePatientsDto } from "./dto/bulk-delete-patients.dto";
 import { PatientPhoneConflictDto } from "./dto/patient-phone-conflict.dto";
 import { PatientsService } from "./patients.service";
 import { Patient360Service } from "./patient-360.service";
+import { MessagingConsentService } from "./messaging-consent.service";
+import { MessagingConsentItemDto, PutMessagingConsentDto } from "./dto/messaging-consent.dto";
+import { ConsentPolicyService } from "../compliance/consent-policy.service";
 
 const PATIENT_DOC_UPLOAD_LIMIT = 15 * 1024 * 1024;
 
@@ -48,7 +52,15 @@ export class PatientsController {
   constructor(
     private readonly patients: PatientsService,
     private readonly patient360: Patient360Service,
+    private readonly messagingConsent: MessagingConsentService,
+    private readonly consentPolicy: ConsentPolicyService,
   ) {}
+
+  @Get(":id/consents")
+  @ApiOperation({ summary: "SC-03 — consent status by purpose (AI, marketplace, messaging, data)" })
+  listConsents(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.consentPolicy.listForPatient(requireTenantId(user), id);
+  }
 
   @Get()
   @ApiOperation({ summary: "List patients with pagination and optional filters" })
@@ -404,6 +416,24 @@ export class PatientsController {
       type: meta.mimeType,
       disposition: `inline; filename*=UTF-8''${encodeURIComponent(meta.originalFileName)}`,
     });
+  }
+
+  @Get(":id/messaging-consent")
+  @ApiOperation({ summary: "MS-03 — messaging consent by channel and purpose" })
+  @ApiOkResponse({ type: [MessagingConsentItemDto] })
+  getMessagingConsent(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.messagingConsent.listForPatient(requireTenantId(user), id);
+  }
+
+  @Put(":id/messaging-consent")
+  @ApiOperation({ summary: "MS-03 — update messaging consent toggles" })
+  @ApiOkResponse({ type: [MessagingConsentItemDto] })
+  putMessagingConsent(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Body() body: PutMessagingConsentDto,
+  ) {
+    return this.messagingConsent.putForPatient(requireTenantId(user), id, user.userId, body);
   }
 
   @Get(":id")

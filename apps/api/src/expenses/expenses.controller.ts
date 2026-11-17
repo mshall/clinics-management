@@ -28,6 +28,8 @@ import { IsEnum } from "class-validator";
 import { memoryStorage } from "multer";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { EntitlementGuard } from "../entitlements/entitlement.guard";
+import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { CreateExpenseDto } from "./dto/create-expense.dto";
@@ -57,7 +59,8 @@ const EXPENSE_ROLES: Set<UserRole> = new Set([
 @ApiTags("expenses")
 @ApiBearerAuth("bearer")
 @Controller("expenses")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard)
+@RequiresEntitlement("mod_expenses")
 export class ExpensesController {
   constructor(private readonly expenses: ExpensesService) {}
 

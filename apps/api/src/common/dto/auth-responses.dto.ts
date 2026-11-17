@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { FinancialVisibilityOverride, UserRole } from "@prisma/client";
+import { FinancialVisibilityOverride, PlanKey, SubscriptionStatus, UserRole } from "@prisma/client";
 
 export class MoneyVisibilityOverridesDto {
   @ApiProperty({ enum: FinancialVisibilityOverride })
@@ -99,11 +99,31 @@ export class AuthUserDto {
     description: "Per-user override for showing money on operations, encounters, and appointments",
   })
   moneyVisibilityOverrides?: MoneyVisibilityOverridesDto;
+
+  @ApiPropertyOptional({
+    description: "Resolved SaaS plan for the organization",
+    type: "object",
+    properties: { key: { enum: Object.values(PlanKey) }, status: { enum: Object.values(SubscriptionStatus) } },
+  })
+  plan?: { key: PlanKey; status: SubscriptionStatus };
+
+  @ApiPropertyOptional({
+    description: "Merged plan entitlements and ops overrides for the tenant",
+    type: "object",
+    additionalProperties: true,
+  })
+  entitlements?: Record<string, unknown>;
 }
 
 export class LoginResponseDto {
   @ApiProperty()
   accessToken!: string;
+
+  @ApiPropertyOptional({ description: "Rotating refresh token (ON-02)" })
+  refreshToken?: string;
+
+  @ApiPropertyOptional()
+  sessionId?: string;
 
   @ApiProperty({ type: AuthUserDto })
   user!: AuthUserDto;

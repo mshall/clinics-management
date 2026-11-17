@@ -53,4 +53,6 @@ export type AuthUserDto = components["schemas"]["AuthUserDto"] & {
   tenantBaseCurrency?: string | null;
   employeePrivilegeGrants?: import("@/lib/employee-manage-policy").EmployeePrivilegeGrantSummary[];
   moneyVisibilityOverrides?: import("@/lib/money-visibility-policy").MoneyVisibilityOverrides | null;
+  plan?: { key: string; status: string };
+  entitlements?: Record<string, unknown>;
 };

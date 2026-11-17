@@ -2,6 +2,8 @@ import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { EntitlementGuard } from "../entitlements/entitlement.guard";
+import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { CreateIntegrationClientDto } from "./dto/create-integration-client.dto";
@@ -10,7 +12,8 @@ import { IntegrationClientService } from "./integration-client.service";
 @ApiTags("admin")
 @ApiBearerAuth("bearer")
 @Controller("admin/integration-clients")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard)
+@RequiresEntitlement("mod_integrations")
 export class IntegrationAdminController {
   constructor(private readonly clients: IntegrationClientService) {}
 

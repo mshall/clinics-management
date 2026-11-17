@@ -48,6 +48,9 @@ import { TenantFeatureFlagsPanel } from "./tenant-feature-flags-panel";
 import { ProviderCredentialsPanel } from "./provider-credentials-panel";
 import { OrgEtaIntegrationCard } from "./org-eta-integration-card";
 import { OrgWhatsAppRemindersCard } from "./org-whatsapp-reminders-card";
+import { AdminOrgBillingPanel } from "./admin-org-billing-panel";
+import { EntitlementGate } from "@/components/entitlement-gate";
+import { LiteAdminSettings } from "./lite-admin-settings";
 
 export function AdminPage() {
   const { t, i18n } = useTranslation();
@@ -67,8 +70,12 @@ export function AdminPage() {
     authUser?.role === "hr_officer" ||
     authUser?.role === "finance_officer";
   const canManageOrgUserNavTabs = isGroupAdmin || isClinicAdmin;
+  const canManageOrgBilling =
+    isGroupAdmin || authUser?.role === "finance_officer" || Boolean(authUser?.isTenantOwner);
+  const canViewOrgBilling = canManageOrgBilling || canViewInsights;
   const isPlatformSuperAdmin = Boolean(authUser?.platformSuperAdmin);
   const isPlatformRole = authUser?.role === "platform_super_admin";
+  const isLitePlan = authUser?.plan?.key?.toUpperCase() === "LITE";
   const overview = useAdminOverviewQuery();
   const { data: clinics = [] } = useClinicsQuery();
   const [tPage, setTPage] = useState(1);
@@ -368,6 +375,18 @@ export function AdminPage() {
     );
   }
 
+  if (isLitePlan && !isPlatformRole) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{t("liteAdmin.pageTitle")}</h1>
+          <p className="text-muted-foreground">{t("liteAdmin.subtitle")}</p>
+        </div>
+        <LiteAdminSettings />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -439,6 +458,7 @@ export function AdminPage() {
         ) : null
       ) : adminSection === "organization" ? (
         <div className="space-y-6">
+          {canViewOrgBilling ? <AdminOrgBillingPanel canManage={canManageOrgBilling} /> : null}
           {isGroupAdmin ? (
             <Card>
               <CardHeader>
@@ -573,7 +593,11 @@ export function AdminPage() {
 
           {isGroupAdmin ? <TenantPaymentChannelsPanel /> : null}
 
-          {isGroupAdmin ? <OrgEtaIntegrationCard /> : null}
+          {isGroupAdmin ? (
+            <EntitlementGate entitlement="eta_receipts" requiredPlan="PRO">
+              <OrgEtaIntegrationCard />
+            </EntitlementGate>
+          ) : null}
 
           {canManageOrgUserNavTabs ? <OrgRbacPanel /> : null}
 

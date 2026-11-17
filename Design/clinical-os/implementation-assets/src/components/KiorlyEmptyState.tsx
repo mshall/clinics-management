@@ -1,0 +1,2 @@
+import React from 'react';
+export function KiorlyEmptyState({kind='empty-appointments',title,description,action}:{kind?:'empty-appointments'|'empty-patients'|'empty-documents'|'empty-reports';title:string;description?:string;action?:React.ReactNode}) {return <section className="kiorly-card flex flex-col items-center gap-3 p-10 text-center"><img alt="" src={`/kiorly-assets/illustrations/${kind}.svg`} className="h-36 w-44"/><h2 className="text-lg font-semibold">{title}</h2>{description&&<p className="text-muted-foreground text-sm max-w-md">{description}</p>}{action}</section>}

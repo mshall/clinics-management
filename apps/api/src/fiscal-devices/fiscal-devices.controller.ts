@@ -2,13 +2,16 @@ import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post,
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { FiscalDeviceKind } from "@prisma/client";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { EntitlementGuard } from "../entitlements/entitlement.guard";
+import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { FiscalDevicesService } from "./fiscal-devices.service";
 
 @ApiTags("fiscal-devices")
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard)
+@RequiresEntitlement("eta_receipts")
 @Controller()
 export class FiscalDevicesController {
   constructor(private readonly devices: FiscalDevicesService) {}
