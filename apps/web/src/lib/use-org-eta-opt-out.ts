@@ -1,18 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
-import { apiGet } from "@/lib/http";
-import type { AdminOverviewDto } from "@/lib/api-types";
+import { useOrgEtaIntegration } from "@/lib/use-org-eta-integration";
 
-/** True when the org disabled Kiorly ETA e-receipt integration (group admin setting). */
+/** @deprecated Prefer useOrgEtaIntegration */
 export function useOrgEtaPhysicalOptOut(enabled = true) {
-  const q = useQuery({
-    queryKey: ["admin", "overview", "eta-opt-out"],
-    queryFn: () => apiGet<AdminOverviewDto>("/api/v1/admin/overview"),
-    enabled,
-    staleTime: 60_000,
-  });
-  const tenant = q.data?.currentTenant as { etaPhysicalReportingOptOut?: boolean } | null | undefined;
+  const { optOut, platformEnabled, isLoading } = useOrgEtaIntegration(enabled);
   return {
-    optOut: tenant?.etaPhysicalReportingOptOut === true,
-    isLoading: q.isLoading,
+    optOut: !platformEnabled || optOut,
+    isLoading,
   };
 }

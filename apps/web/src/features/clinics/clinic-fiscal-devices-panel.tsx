@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiGet, apiPost, apiDelete, apiPatch } from "@/lib/http";
+import { useOrgEtaIntegration } from "@/lib/use-org-eta-integration";
 
 type FiscalDeviceRow = {
   id: string;
@@ -37,6 +38,7 @@ type SetupStatus = {
 
 export function ClinicFiscalDevicesPanel({ clinicId }: { clinicId: string }) {
   const { t } = useTranslation();
+  const { showEtaUi, isLoading: etaLoading } = useOrgEtaIntegration();
   const qc = useQueryClient();
   const [credDevice, setCredDevice] = useState<FiscalDeviceRow | null>(null);
   const [credForm, setCredForm] = useState<Record<string, string>>({});
@@ -44,11 +46,13 @@ export function ClinicFiscalDevicesPanel({ clinicId }: { clinicId: string }) {
   const { data: list } = useQuery({
     queryKey: ["fiscal-devices", clinicId],
     queryFn: () => apiGet<{ devices: FiscalDeviceRow[] }>(`/api/v1/clinics/${clinicId}/fiscal-devices`),
+    enabled: showEtaUi,
   });
 
   const { data: setup } = useQuery({
     queryKey: ["fiscal-devices-setup", clinicId],
     queryFn: () => apiGet<SetupStatus>(`/api/v1/clinics/${clinicId}/fiscal-devices/setup-status`),
+    enabled: showEtaUi,
   });
 
   const fields = setup?.deviceRegistration?.credentialFields ?? [];
@@ -95,6 +99,7 @@ export function ClinicFiscalDevicesPanel({ clinicId }: { clinicId: string }) {
     onSuccess: refresh,
   });
 
+  if (!etaLoading && !showEtaUi) return null;
   if (!setup?.requiresDevice) return null;
 
   const devices = list?.devices ?? [];

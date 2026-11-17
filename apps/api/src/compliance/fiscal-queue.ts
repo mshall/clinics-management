@@ -23,7 +23,7 @@ const ACTIVE_FISCAL_SUBMISSION_STATUSES: FiscalSubmissionStatus[] = [
   FiscalSubmissionStatus.SUBMITTED,
   FiscalSubmissionStatus.ACCEPTED,
 ];
-import { etaPhysicalReportingOptOut, resolveEtaClinicSettings } from "../providers/provider-settings";
+import { kiorlyEtaIssuingActive, resolveEtaClinicSettings } from "../providers/provider-settings";
 import { assertEtaBuyerNameAtPayment } from "./eta-buyer-name";
 import { resolveFiscalPaymentMethodCode } from "./fiscal-payment-method";
 import {
@@ -80,7 +80,7 @@ export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: 
     where: { id: params.tenantId },
     select: { providerSettings: true },
   });
-  if (tenant && etaPhysicalReportingOptOut(tenant)) return;
+  if (tenant && !kiorlyEtaIssuingActive(tenant)) return;
 
   const clinic = await tx.clinic.findFirst({
     where: { id: params.clinicId, tenantId: params.tenantId },

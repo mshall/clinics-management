@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiDelete, apiGet, apiPost } from "@/lib/http";
+import { useOrgEtaIntegration } from "@/lib/use-org-eta-integration";
 
 type CredRow = {
   id: string;
@@ -18,6 +19,7 @@ type CredRow = {
 
 export function ProviderCredentialsPanel() {
   const { t } = useTranslation();
+  const { showEtaUi, isLoading: etaLoading } = useOrgEtaIntegration();
   const qc = useQueryClient();
   const [providerKey, setProviderKey] = useState("eta-egypt");
   const [secretRef, setSecretRef] = useState("");
@@ -26,6 +28,7 @@ export function ProviderCredentialsPanel() {
   const listQ = useQuery({
     queryKey: ["admin", "provider-credentials"],
     queryFn: () => apiGet<CredRow[]>("/api/v1/admin/provider-credentials"),
+    enabled: showEtaUi,
   });
 
   const createMut = useMutation({
@@ -45,6 +48,8 @@ export function ProviderCredentialsPanel() {
     mutationFn: (id: string) => apiDelete(`/api/v1/admin/provider-credentials/${encodeURIComponent(id)}`),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["admin", "provider-credentials"] }),
   });
+
+  if (!etaLoading && !showEtaUi) return null;
 
   return (
     <Card>

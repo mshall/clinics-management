@@ -6,11 +6,13 @@ import { OrgWhatsAppRemindersCard } from "./org-whatsapp-reminders-card";
 import { OrgEtaIntegrationCard } from "./org-eta-integration-card";
 import { EntitlementGate } from "@/components/entitlement-gate";
 import { useClinicsQuery } from "@/lib/api-hooks";
+import { useOrgEtaIntegration } from "@/lib/use-org-eta-integration";
 
 export function LiteAdminSettings() {
   const { t } = useTranslation();
   const { data: clinics = [] } = useClinicsQuery();
   const primaryClinic = clinics[0];
+  const { showEtaUi } = useOrgEtaIntegration();
 
   return (
     <div className="space-y-4">
@@ -38,9 +40,11 @@ export function LiteAdminSettings() {
       <EntitlementGate entitlement="whatsapp_reminders" requiredPlan="PRO">
         <OrgWhatsAppRemindersCard />
       </EntitlementGate>
-      <EntitlementGate entitlement="eta_receipts" requiredPlan="PRO">
-        <OrgEtaIntegrationCard />
-      </EntitlementGate>
+      {showEtaUi ? (
+        <EntitlementGate entitlement="eta_receipts" requiredPlan="PRO">
+          <OrgEtaIntegrationCard />
+        </EntitlementGate>
+      ) : null}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{t("liteAdmin.marketplaceTitle")}</CardTitle>

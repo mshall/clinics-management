@@ -23,6 +23,10 @@ const planEntitledSubscriptionMock = {
   },
 };
 
+const ETA_ENABLED_PROVIDER_SETTINGS = {
+  "eta-egypt": { platformEtaIntegrationEnabled: true, physicalReportingOptOut: false },
+};
+
 test("submissionVoidFiscalAction maps ETA submission states", () => {
   assert.equal(submissionVoidFiscalAction(undefined), "none");
   assert.equal(submissionVoidFiscalAction(FiscalSubmissionStatus.PENDING), "cancel_pending");
@@ -95,7 +99,7 @@ test("reducePostedRevenueNetWithFiscal re-queues a pending 400 sale at 300 witho
     },
     tenant: {
       findUnique: async () => ({
-        providerSettings: null,
+        providerSettings: ETA_ENABLED_PROVIDER_SETTINGS,
         baseCurrency: "EGP",
         market: {
           code: "EG",
@@ -225,7 +229,7 @@ test("reducePostedRevenueNetWithFiscal queues partial return when sale is SUBMIT
     },
     tenant: {
       findUnique: async () => ({
-        providerSettings: null,
+        providerSettings: ETA_ENABLED_PROVIDER_SETTINGS,
         baseCurrency: "EGP",
         market: {
           code: "EG",

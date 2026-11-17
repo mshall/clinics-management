@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { ClinicDetailDto } from "@/lib/api-types";
 import { apiPatch } from "@/lib/http";
-import { useOrgEtaPhysicalOptOut } from "@/lib/use-org-eta-opt-out";
+import { useOrgEtaIntegration } from "@/lib/use-org-eta-integration";
 
 type Props = {
   clinicId: string;
@@ -17,7 +17,7 @@ type Props = {
 
 export function ClinicEtaSettingsPanel({ clinicId, detail, disabled }: Props) {
   const { t } = useTranslation();
-  const { optOut, isLoading } = useOrgEtaPhysicalOptOut();
+  const { showEtaUi, optOut, isLoading } = useOrgEtaIntegration();
   const [branch, setBranch] = useState(detail.etaBranchCode ?? "");
   const [activity, setActivity] = useState(detail.etaTaxpayerActivityCode ?? "");
   const [itemCode, setItemCode] = useState(detail.etaDefaultItemCode ?? "");
@@ -50,6 +50,8 @@ export function ClinicEtaSettingsPanel({ clinicId, detail, disabled }: Props) {
       setSaving(false);
     }
   }
+
+  if (!isLoading && !showEtaUi) return null;
 
   if (!isLoading && optOut) {
     return (

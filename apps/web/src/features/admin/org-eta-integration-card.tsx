@@ -16,6 +16,8 @@ export function OrgEtaIntegrationCard() {
   const refreshSession = useAuthStore((s) => s.refreshSessionFromServer);
   const overview = useAdminOverviewQuery();
   const tenant = overview.data?.currentTenant;
+  const platformEnabled =
+    (tenant as { etaPlatformIntegrationEnabled?: boolean } | undefined)?.etaPlatformIntegrationEnabled === true;
 
   const [integrationEnabled, setIntegrationEnabled] = useState(false);
   const [disableConsent, setDisableConsent] = useState(false);
@@ -70,6 +72,8 @@ export function OrgEtaIntegrationCard() {
       } else toast.error(e instanceof Error ? e.message : String(e));
     },
   });
+
+  if (overview.isSuccess && !platformEnabled) return null;
 
   return (
     <Card>

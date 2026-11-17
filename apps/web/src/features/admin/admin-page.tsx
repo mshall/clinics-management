@@ -48,6 +48,7 @@ import { TenantFeatureFlagsPanel } from "./tenant-feature-flags-panel";
 import { ProviderCredentialsPanel } from "./provider-credentials-panel";
 import { OrgEtaIntegrationCard } from "./org-eta-integration-card";
 import { EtaHealthCard } from "@/features/compliance/eta-health-card";
+import { useOrgEtaIntegration } from "@/lib/use-org-eta-integration";
 import { useTenantMarket } from "@/lib/use-tenant-market";
 import { OrgWhatsAppRemindersCard } from "./org-whatsapp-reminders-card";
 import { AdminOrgBillingPanel } from "./admin-org-billing-panel";
@@ -83,8 +84,10 @@ export function AdminPage() {
   const overview = useAdminOverviewQuery();
   const tenantMarket = useTenantMarket();
   const isEgMarket = tenantMarket.data?.marketCode === "EG";
+  const { showEtaUi } = useOrgEtaIntegration(isEgMarket);
   const showEtaHealth =
     isEgMarket &&
+    showEtaUi &&
     (isGroupAdmin || Boolean(authUser?.isTenantOwner) || authUser?.role === "finance_officer");
   const { data: clinics = [] } = useClinicsQuery();
   const [tPage, setTPage] = useState(1);
@@ -608,7 +611,7 @@ export function AdminPage() {
 
           {isGroupAdmin ? <TenantPaymentChannelsPanel /> : null}
 
-          {isGroupAdmin ? (
+          {isGroupAdmin && showEtaUi ? (
             <EntitlementGate entitlement="eta_receipts" requiredPlan="PRO">
               <OrgEtaIntegrationCard />
             </EntitlementGate>
@@ -630,7 +633,7 @@ export function AdminPage() {
             <TenantFeatureFlagsPanel flags={overview.data?.featureFlags ?? []} canEdit={false} />
           )}
 
-          {isGroupAdmin ? <ProviderCredentialsPanel /> : null}
+          {isGroupAdmin && showEtaUi ? <ProviderCredentialsPanel /> : null}
 
         </div>
       ) : null}

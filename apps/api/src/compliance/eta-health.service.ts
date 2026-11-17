@@ -16,6 +16,7 @@ import {
   pilotWeekOneWindow,
   type EtaSubmissionMetricRow,
 } from "./eta-pilot-success";
+import { kiorlyEtaPlatformEnabled } from "../providers/provider-settings";
 
 const ALERT_COOLDOWN_MS = 20 * 60 * 60 * 1000;
 
@@ -50,10 +51,14 @@ export class EtaHealthService {
       select: {
         etaPilotProductionStartedAt: true,
         etaHealthLastAlertAt: true,
+        providerSettings: true,
         market: { select: { code: true } },
       },
     });
     if (!tenant) throw new ForbiddenException();
+    if (!kiorlyEtaPlatformEnabled(tenant)) {
+      throw new ForbiddenException("ETA integration is not enabled for this organization");
+    }
 
     const pilotWindow = tenant.etaPilotProductionStartedAt
       ? pilotWeekOneWindow(tenant.etaPilotProductionStartedAt)

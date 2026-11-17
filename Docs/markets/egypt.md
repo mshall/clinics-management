@@ -22,7 +22,9 @@ Idempotency is keyed by **payment / revenue / invoice** source id (not amount or
 
 Every **payment** path uses `postRevenueWithFiscal`: check-in, visit fee, billing, **operation payments** (down payment, installments, discharge balance). Manual revenue / Data Explorer cannot post receiptable amounts. **Tax invoices are printouts only.**
 
-**Organization ETA integration** is a separate card under Administration → Organization & settings (off by default for new Egypt tenants). When enabled, configure each clinic under **Clinics → Settings → ETA**.
+**Organization ETA integration** is **disabled by default**. Platform super admin enables it per organization under **Platform → Organizations**; then group admins configure opt-out and defaults under **Administration → Organization & settings**, and each clinic under **Clinics → Settings → ETA**.
+
+**Tax filing:** Clinics and physicians are **solely responsible** for providing their taxes and fiscal receipts to the Egyptian Tax Authority. Kiorly’s optional ETA integration is a tooling aid only — it does not replace the clinic’s or doctor’s legal obligations.
 
 ### Receipt devices (virtual vs physical POS)
 

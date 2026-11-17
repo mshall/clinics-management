@@ -22,7 +22,12 @@ import type { ReactivateTenantUserDto } from "./dto/reactivate-tenant-user.dto";
 import { MarketsService } from "../markets/markets.service";
 import { tenantCreateDefaultsFromMarket } from "../markets/market-tax-pack";
 import { normalizeOrgTaxRegistrationNumber } from "../common/sync-clinic-invoice-tax";
-import { mergeProviderBlock } from "../providers/provider-settings";
+import {
+  mapEtaTenantSettingsDto,
+  mergeProviderBlock,
+  patchEtaTenantProviderSettings,
+  resolveEtaTenantSettings,
+} from "../providers/provider-settings";
 import { ensureTenantSubscription } from "../subscriptions/subscription-provision";
 import { TrialEngineService } from "../subscriptions/trial-engine.service";
 import { CreditWalletService } from "../credits/credit-wallet.service";
@@ -196,6 +201,8 @@ export class PlatformAdminService {
         defaultLocale: true,
         defaultVisitFee: true,
         createdAt: true,
+        providerSettings: true,
+        market: { select: { code: true } },
         _count: { select: { users: true, clinics: true, patients: true } },
       },
     });
@@ -208,8 +215,58 @@ export class PlatformAdminService {
       defaultLocale: row.defaultLocale,
       defaultVisitFee: Number(row.defaultVisitFee),
       createdAt: row.createdAt.toISOString(),
+      marketCode: row.market?.code ?? null,
       counts: row._count,
+      ...mapEtaTenantSettingsDto(row),
     };
+  }
+
+  async patchTenantEtaIntegration(user: JwtUser, tenantId: string, enabled: boolean) {
+    this.assertPlatform(user);
+    const id = this.normalizeTenantId(tenantId);
+    const existing = await this.prisma.tenant.findUnique({
+      where: { id },
+      include: { market: true },
+    });
+    if (!existing) throw new NotFoundException("Organization not found");
+    if (existing.market?.code !== "EG") {
+      throw new BadRequestException("ETA integration applies to Egypt market organizations only");
+    }
+    const priorEnabled = resolveEtaTenantSettings(existing).platformEtaIntegrationEnabled;
+    const etaPatch = patchEtaTenantProviderSettings(
+      enabled
+        ? {
+            platformEtaIntegrationEnabled: true,
+            physicalReportingOptOut: false,
+            physicalReportingConsentAt: null,
+          }
+        : {
+            platformEtaIntegrationEnabled: false,
+            physicalReportingOptOut: true,
+          },
+    );
+    const row = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.tenant.update({
+        where: { id },
+        data: {
+          providerSettings: mergeProviderBlock(existing.providerSettings, "eta-egypt", etaPatch),
+        },
+      });
+      if (priorEnabled !== enabled) {
+        await tx.auditLog.create({
+          data: {
+            tenantId: id,
+            actorId: user.userId,
+            action: enabled ? "ETA_PLATFORM_INTEGRATION_ENABLED" : "ETA_PLATFORM_INTEGRATION_DISABLED",
+            resource: "tenant",
+            resourceId: id,
+            metadata: { enabled },
+          },
+        });
+      }
+      return updated;
+    });
+    return mapEtaTenantSettingsDto(row);
   }
 
   async createTenant(user: JwtUser, dto: CreateTenantDto) {
@@ -266,7 +323,10 @@ export class PlatformAdminService {
     const result = await this.prisma.$transaction(async (tx) => {
       const etaOptOutDefault =
         market.code === "EG"
-          ? (mergeProviderBlock(null, "eta-egypt", { physicalReportingOptOut: true }) as object)
+          ? (mergeProviderBlock(null, "eta-egypt", {
+              platformEtaIntegrationEnabled: false,
+              physicalReportingOptOut: true,
+            }) as object)
           : undefined;
       const row = await tx.tenant.create({
         data: {

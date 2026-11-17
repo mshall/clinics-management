@@ -369,6 +369,7 @@ export interface AdminOverviewDto {
       saasVatPercent: number;
     } | null;
     integrationFailureRetentionDays: number;
+    etaPlatformIntegrationEnabled?: boolean;
     etaPhysicalReportingOptOut?: boolean;
     etaPhysicalReportingConsentAt?: string | null;
   } | null;

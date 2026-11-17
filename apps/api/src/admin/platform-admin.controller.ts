@@ -150,6 +150,16 @@ export class PlatformAdminController {
     return this.platform.patchTenant(user, tenantId, body);
   }
 
+  @Patch("tenants/:tenantId/eta-integration")
+  @ApiOperation({ summary: "Enable or disable Kiorly ETA integration for an Egypt organization (platform super admin)" })
+  patchTenantEtaIntegration(
+    @CurrentUser() user: JwtUser,
+    @Param("tenantId") tenantId: string,
+    @Body() body: { enabled: boolean },
+  ) {
+    return this.platform.patchTenantEtaIntegration(user, tenantId, body.enabled === true);
+  }
+
   @Get("tenants/:tenantId/users")
   @ApiOperation({ summary: "List users in an organization" })
   @ApiOkResponse()

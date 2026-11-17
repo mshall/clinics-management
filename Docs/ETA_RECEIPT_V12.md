@@ -28,7 +28,11 @@ Before production billing with a real clinic TRN and virtual POS:
 4. CI golden hash — `eta-sdk-golden-fixture.node.test.ts` (sale + return reference).
 5. Registry — `mn04-eta-preprod-drill.node.test.ts` (MN-04 links all drill tests).
 
-Group admin controls **ETA e-invoice integration** under **Administration → Organization & settings** (dedicated card, off by default for new Egypt orgs). When off, the org declares responsibility for tax-authority submission; clinic ETA fields stay hidden. When on, org defaults and per-clinic branch codes apply. Stored as `providerSettings["eta-egypt"].physicalReportingOptOut` + `physicalReportingConsentAt` (opt-out = integration disabled). Audited; billing UI shows a banner while opt-out is active.
+**Platform super admin** enables Kiorly ETA per Egypt organization (**Platform → Organizations** → organization → **ETA e-invoice integration**). Integration is **off by default** for new Egypt tenants (`platformEtaIntegrationEnabled: false`); ETA-related UI stays hidden until enabled. When enabled, Kiorly integration is **on by default** for that org (`physicalReportingOptOut: false`) until the group admin opts out with consent.
+
+Group admins manage opt-out and org defaults under **Administration → Organization & settings** only after platform enable. Stored in `providerSettings["eta-egypt"]` (`platformEtaIntegrationEnabled`, `physicalReportingOptOut`, `physicalReportingConsentAt`). Audited; billing UI shows a banner while integration is off or opted out.
+
+**Tax authority responsibility:** Kiorly does not file taxes on behalf of clinics or physicians. Each clinic and doctor remains **solely responsible** for submitting accurate receipts, invoices, and tax data to the Egyptian Tax Authority (whether using Kiorly ETA, another ETA-registered system, or an approved exemption).
 
 **Failures:** HTTP **401/403** and token errors → device `CREDENTIALS_EXPIRED`, receipt stays `SUBMITTING`. Duplicate UUID → status check, not `REJECTED`. Validation **4xx** → `REJECTED`; fix via `POST …/eta-queue/:id/resubmit` with `referenceOldUUID`. Skipped queues, credential errors, rejections, and submit exhaustion log to **`IntegrationFailureLog`** with category **`FISCAL`** (filter in Admin → Governance → Failing operations).
 

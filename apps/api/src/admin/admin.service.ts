@@ -761,6 +761,12 @@ export class AdminService {
       dto.etaPhysicalReportingOptOut !== undefined ||
       dto.etaPhysicalReportingConsentAt !== undefined
     ) {
+      const platformEtaOn = resolveEtaTenantSettings(existing).platformEtaIntegrationEnabled;
+      if (!platformEtaOn) {
+        throw new ForbiddenException(
+          "ETA integration is not enabled for this organization. Contact Kiorly platform support to enable it.",
+        );
+      }
       if (dto.etaPhysicalReportingOptOut === true && !dto.etaPhysicalReportingConsentAt?.trim()) {
         throw new BadRequestException(
           "Physical ETA reporting opt-out requires consent timestamp (etaPhysicalReportingConsentAt)",

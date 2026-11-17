@@ -35,14 +35,26 @@ export type EtaEgyptTenantSettings = {
   defaultTaxpayerActivityCode: string;
   defaultItemCode: string | null;
   esignatureLabel: string | null;
+  /** Platform super admin enables Kiorly ETA for the organization (default off for new Egypt tenants). */
+  platformEtaIntegrationEnabled: boolean;
   /** Kiorly will not issue ETA e-receipts (org not obliged or uses another ETA-registered system). */
   physicalReportingOptOut: boolean;
   physicalReportingConsentAt: string | null;
 };
 
+export function kiorlyEtaPlatformEnabled(tenant: { providerSettings?: unknown }): boolean {
+  const block = readProviderSettings(tenant.providerSettings)[ETA_KEY] ?? {};
+  return block.platformEtaIntegrationEnabled === true;
+}
+
 export function etaPhysicalReportingOptOut(tenant: { providerSettings?: unknown }): boolean {
   const block = readProviderSettings(tenant.providerSettings)[ETA_KEY] ?? {};
   return block.physicalReportingOptOut === true;
+}
+
+/** Whether Kiorly may queue/submit ETA e-receipts for this organization. */
+export function kiorlyEtaIssuingActive(tenant: { providerSettings?: unknown }): boolean {
+  return kiorlyEtaPlatformEnabled(tenant) && !etaPhysicalReportingOptOut(tenant);
 }
 
 const ETA_KEY = "eta-egypt";
@@ -77,6 +89,7 @@ export function resolveEtaTenantSettings(tenant: {
       typeof block.defaultItemCode === "string" ? block.defaultItemCode.trim() || null : null,
     esignatureLabel:
       typeof block.esignatureLabel === "string" ? block.esignatureLabel.trim() || null : null,
+    platformEtaIntegrationEnabled: block.platformEtaIntegrationEnabled === true,
     physicalReportingOptOut: block.physicalReportingOptOut === true,
     physicalReportingConsentAt:
       typeof block.physicalReportingConsentAt === "string" ? block.physicalReportingConsentAt : null,
@@ -116,6 +129,7 @@ export function mapEtaTenantSettingsDto(tenant: { providerSettings?: unknown }) 
     etaDefaultTaxpayerActivityCode: eta.defaultTaxpayerActivityCode,
     etaDefaultItemCode: eta.defaultItemCode,
     etaEsignatureLabel: eta.esignatureLabel,
+    etaPlatformIntegrationEnabled: eta.platformEtaIntegrationEnabled,
     etaPhysicalReportingOptOut: eta.physicalReportingOptOut,
     etaPhysicalReportingConsentAt: eta.physicalReportingConsentAt,
   };
@@ -125,6 +139,7 @@ export function patchEtaTenantProviderSettings(patch: {
   defaultTaxpayerActivityCode?: string;
   defaultItemCode?: string | null;
   esignatureLabel?: string | null;
+  platformEtaIntegrationEnabled?: boolean;
   physicalReportingOptOut?: boolean;
   physicalReportingConsentAt?: string | null;
 }): Record<string, unknown> {
@@ -133,6 +148,9 @@ export function patchEtaTenantProviderSettings(patch: {
     eta.defaultTaxpayerActivityCode = patch.defaultTaxpayerActivityCode.trim() || "8690";
   }
   if (patch.defaultItemCode !== undefined) eta.defaultItemCode = patch.defaultItemCode?.trim() || null;
+  if (patch.platformEtaIntegrationEnabled !== undefined) {
+    eta.platformEtaIntegrationEnabled = patch.platformEtaIntegrationEnabled;
+  }
   if (patch.physicalReportingOptOut !== undefined) eta.physicalReportingOptOut = patch.physicalReportingOptOut;
   if (patch.physicalReportingConsentAt !== undefined) {
     eta.physicalReportingConsentAt = patch.physicalReportingConsentAt;

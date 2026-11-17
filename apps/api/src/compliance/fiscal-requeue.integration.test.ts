@@ -11,6 +11,7 @@ import {
   RevenueStatus,
   VisitCollectionMode,
 } from "@prisma/client";
+import { mergeProviderBlock, patchEtaTenantProviderSettings } from "../providers/provider-settings";
 import { queueFiscalDocument } from "./fiscal-queue";
 import { reducePostedRevenueNetWithFiscal } from "./void-revenue-fiscal-returns";
 
@@ -39,6 +40,21 @@ async function ensureEtaFlag(prisma: PrismaClient, tenantId: string): Promise<vo
     where: { tenantId_key: { tenantId, key: "eta_receipts" } },
     create: { tenantId, key: "eta_receipts", enabled: true },
     update: { enabled: true },
+  });
+}
+
+async function ensureTenantEtaPlatformEnabled(prisma: PrismaClient, tenantId: string): Promise<void> {
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { providerSettings: true } });
+  const etaPatch = patchEtaTenantProviderSettings({
+    platformEtaIntegrationEnabled: true,
+    physicalReportingOptOut: false,
+    physicalReportingConsentAt: null,
+  });
+  await prisma.tenant.update({
+    where: { id: tenantId },
+    data: {
+      providerSettings: mergeProviderBlock(tenant?.providerSettings, "eta-egypt", etaPatch) as Prisma.InputJsonValue,
+    },
   });
 }
 
@@ -139,6 +155,7 @@ test("pending sale 400→300 re-queues; submitted 300→200 queues two distinct 
   }
 
   await ensureEtaFlag(prisma, tenantId);
+  await ensureTenantEtaPlatformEnabled(prisma, tenantId);
 
   let revenueId = "";
 

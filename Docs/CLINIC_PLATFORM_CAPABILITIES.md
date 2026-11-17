@@ -41,7 +41,7 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 | Daily cash close per cashier/branch | **Foundation** | `POST /billing/cash-close` compares expected vs counted by method |
 | Doctor commission rules & statements | **Foundation** | `CommissionRule` table; statements = reports slice |
 | Insurer billing, co-pay, pre-auth | **Foundation** | `PayerPreAuthorization`, copay % on contract prices |
-| **Egypt: ETA e-receipts** | **Shipped (core)** | Three-step submit, worker, **C/V/O**, per-device chain; failure classes (credentials / duplicate / validation); resubmit API; tax invoices do not double-queue; org Kiorly ETA opt-out |
+| **Egypt: ETA e-receipts** | **Shipped (core)** | Platform super admin enables per org (default off; UI hidden until on); three-step submit, worker, **C/V/O**, per-device chain; clinics/doctors remain solely responsible for tax filing; org opt-out after enable |
 | **Receipt devices (multi-market)** | **Shipped** | `GET/POST /clinics/:id/fiscal-devices`, credentials, test connection; auto-provision virtual device on clinic create when provider `deviceRegistration.required`; clinic settings **Receipt devices** panel + add-clinic tax step |
 | **Egypt: data protection consent** | **Shipped (SC-03)** | `ConsentPolicy.require`; `GET /patients/:id/consents`; check-in + Kiorex capture — [PATIENT_CONSENT.md](./PATIENT_CONSENT.md) |
 

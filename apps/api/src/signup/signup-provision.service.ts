@@ -142,7 +142,10 @@ export class SignupProvisionService {
 
       const etaOptOutDefault =
         market.code === "EG"
-          ? (mergeProviderBlock(null, "eta-egypt", { physicalReportingOptOut: true }) as object)
+          ? (mergeProviderBlock(null, "eta-egypt", {
+              platformEtaIntegrationEnabled: false,
+              physicalReportingOptOut: true,
+            }) as object)
           : undefined;
 
       const tenant = await tx.tenant.create({
