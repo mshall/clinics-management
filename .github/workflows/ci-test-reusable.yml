@@ -43,6 +43,9 @@ jobs:
       - name: Install dependencies
         run: NPM_CONFIG_LOGLEVEL=error npm ci --no-audit --no-fund
 
+      - name: Install infra dependencies (not an npm workspace)
+        run: NPM_CONFIG_LOGLEVEL=error npm ci --no-audit --no-fund --prefix infra
+
       - name: Prisma generate
         run: npm run prisma:generate -w api
 

@@ -9,6 +9,7 @@ export NODE_ENV=test
 export ALLOW_DEMO_SEED="${ALLOW_DEMO_SEED:-true}"
 
 bash scripts/ensure-local-dev-db.sh
+NPM_CONFIG_LOGLEVEL=error npm ci --no-audit --no-fund --prefix infra
 npm run prisma:generate -w api
 npm run db:deploy -w api
 npm run db:seed -w api
