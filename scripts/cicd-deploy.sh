@@ -47,6 +47,7 @@ fi
 npx cdk synth "${CDK_DEPLOY_ARGS[@]}"
 npm run check:ascii-cfn
 npm run check:apprunner-connector-cfn
+bash "$ROOT/scripts/cicd-cleanup-orphan-vpc-connectors.sh"
 npx cdk deploy --app cdk.out "${CDK_DEPLOY_ARGS[@]}"
 APPRUNNER_OK=0
 bash "$ROOT/scripts/cicd-wait-apprunner-deploy.sh" || APPRUNNER_OK=1

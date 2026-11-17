@@ -1,7 +1,9 @@
 /**
- * App Runner connector / config names are unique per AWS account+region. The live frankfurt cell
- * already owns legacy autoscale/observability names. VPC connector replacement must use a new
- * global name (e.g. v2); create-before-delete with the same name fails HandlerErrorCode AlreadyExists.
+ * App Runner connector / config names are unique per AWS account+region. The live frankfurt stack
+ * already owns `kiorly-clinic-connector`; renaming triggers CloudFormation replacement
+ * (create-before-delete) and fails with HandlerErrorCode AlreadyExists when a prior attempt left
+ * the old or interim name in the account. Keep frankfurt on the legacy connector name; sort subnets
+ * in the stack so property drift does not force replacement. CI deletes known orphan names before deploy.
  */
 export function appRunnerPhysicalNames(hostCell: string): {
   vpcConnectorName: string;
@@ -10,8 +12,7 @@ export function appRunnerPhysicalNames(hostCell: string): {
 } {
   if (hostCell === "frankfurt") {
     return {
-      // v2: subnet sort + stable naming requires CFN replacement; same-name create-before-delete hits AlreadyExists.
-      vpcConnectorName: "kiorly-clinic-connector-v2",
+      vpcConnectorName: "kiorly-clinic-connector",
       autoScalingName: "kiorly-api-autoscale",
       observabilityName: "kiorly-api-observability",
     };
