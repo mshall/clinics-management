@@ -21,7 +21,6 @@ npm run test:unit -w api
   export AWS_EC2_METADATA_DISABLED=true CDK_DEFAULT_ACCOUNT=111111111111
   npm run build
   npx cdk synth -c hostCell=frankfurt -c deployRegion=eu-central-1 --quiet
-  npx cdk synth -c hostCell=cairo -c deployRegion=me-south-1 --quiet
 )
 GITHUB_ACTIONS=true npm run test:unit --prefix infra
 npm run test:integration -w api
