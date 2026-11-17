@@ -475,6 +475,7 @@ Authorization model:
 | Admin (org patients/users, data explorer, SQL + documents ZIP export, expanded audit) | Shipped |
 | Bilingual EN/AR web SPA | Shipped |
 | AWS deploy (App Runner + RDS + CloudFront + S3 uploads) | Shipped |
+| AWS deploy CI gate (DbSeedFn post-deploy seed + `cicd-post-deploy-smoke.sh` on `/health/ready` + demo login) | Shipped |
 
 #### July 2026 increments
 

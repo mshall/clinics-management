@@ -4,9 +4,15 @@ Reference for QA, demos, and onboarding. All seeded accounts use password **`dem
 
 **Load data (local):** from the repo root run `npm run db:setup -w api` (migrations + seed).
 
-**Load data (AWS):** each successful [Deploy to AWS](https://github.com/mshall/clinics-management/actions/workflows/deploy-aws.yml) run invokes the **DbSeedFn** Lambda (`scripts/cicd-post-deploy-seed.sh`) after CDK deploy. It runs `prisma migrate deploy`, repairs enum values if needed, then the **idempotent** seed — safe on non-empty RDS.
+**Load data (AWS):** each successful [Deploy to AWS](https://github.com/mshall/clinics-management/actions/workflows/deploy-aws.yml) run:
 
-**Live demo (AWS):** [https://d92iz83i79c05.cloudfront.net](https://d92iz83i79c05.cloudfront.net) — sign in with any account below (password **`demo`**). Uses **CloudFront** for SPA + `/api/*` to **App Runner** (see [`AWS_Cloud_Deployment_Guide.md`](./AWS_Cloud_Deployment_Guide.md)). After seed, **Dr Ahmed Shall Group** exposes **42 organization users** in **Admin → Organization users** (`GET /api/v1/admin/users`); smoke tests expect `total ≥ 30`.
+1. **`cdk deploy`** — API image (App Runner), web (S3), RDS, CloudFront.
+2. **`cicd-post-deploy-seed.sh`** — **DbSeedFn** Lambda: `migrate deploy`, enum repair, **idempotent** `prisma/seed.ts` (safe on non-empty RDS). Requires bundled `../src/…` imports in `apps/api/Dockerfile.seed`.
+3. **`cicd-post-deploy-smoke.sh`** — `GET /api/v1/health/ready` (`database: ok`), login **`admin@drahmedshall.com`** / **`demo`**, assistant + org user checks.
+
+If step 3 fails with login **503** / `"starting"`, the API container may not have booted Nest (see [`AWS_Cloud_Deployment_Guide.md` §16](./AWS_Cloud_Deployment_Guide.md#16-deploy-troubleshooting-common-failures)).
+
+**Live demo (AWS):** [https://d92iz83i79c05.cloudfront.net](https://d92iz83i79c05.cloudfront.net) — sign in with any account below (password **`demo`**). Uses **CloudFront** for SPA + `/api/*` to **App Runner** (see [`AWS_Cloud_Deployment_Guide.md`](./AWS_Cloud_Deployment_Guide.md)). After seed, **Dr Ahmed Shall Group** exposes **42 organization users** in **Admin → Organization users** (`GET /api/v1/admin/users`); smoke tests expect `total ≥ 3` (full seed: **≥ 30**).
 
 **Sales pilot tenants (QA-06):** when `KIORLY_ENV=staging` or `SEED_PILOT_TENANTS=true`, seed ensures **Lite / Pro / Clinic** orgs (`sales-*@pilot.kiorly.com`, password **`demo`**). Reset a demo before a sales call: `npm run demo:reset -- --tier=pro` (see [QA_STAGING.md](./QA_STAGING.md)).
 

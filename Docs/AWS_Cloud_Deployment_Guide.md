@@ -36,7 +36,7 @@ Users ──HTTPS──► CloudFront (AppUrl)
    (SPA path rewrite)              ├──► RDS PostgreSQL (isolated subnets)
                                   └──► S3 ApiUploadsBucket
 
-CI/CD (push main) ──► build web + api image ──► cdk deploy ──► invoke DbSeedFn
+CI/CD (push main) ──► CI test + web build ──► cdk deploy ──► DbSeedFn ──► smoke (ready + login)
 ```
 
 **Design choices in this stack:**
@@ -69,9 +69,13 @@ Workflow: **`.github/workflows/deploy-aws.yml`**
 | **workflow_dispatch** | Same, manual |
 
 Steps (summary):
-1. `npm ci`, `npm run build -w web`, Prisma generate.
-2. `npm run infra:deploy` (or equivalent CDK deploy script in repo).
-3. `scripts/cicd-post-deploy-seed.sh` — invokes **DbSeedFn** with `PRISMA_SEED_ENSURE_DEMO_PASSWORDS=true`.
+1. Reusable **CI test** (`ci-test-reusable.yml`) — migrate, typecheck, unit + integration tests.
+2. **Web build** — `npm run build -w web` (fail fast before CDK).
+3. **`scripts/cicd-deploy.sh`** — build API image + web assets, `check:apprunner-connector-cfn`, orphan VPC connector cleanup, `cdk deploy`, `cicd-wait-apprunner-deploy.sh`.
+4. **`scripts/cicd-post-deploy-seed.sh`** — invokes **DbSeedFn** (`PRISMA_SEED_ENSURE_DEMO_PASSWORDS=true`) unless seed already ran in the deploy log.
+5. **`scripts/cicd-post-deploy-smoke.sh`** — waits for **`GET /api/v1/health/ready`** (`database: ok`), then demo login + assistant + org users checks.
+
+Workflow **`concurrency: cancel-in-progress: true`** — only the latest push to `main` should finish deploy.
 
 PR validation: **`.github/workflows/pr-synth-build.yml`** runs CDK synth without AWS credentials.
 
@@ -123,7 +127,11 @@ npx prisma migrate deploy
 ## 7. API container (App Runner)
 
 - **Image:** Built from repo root, `apps/api/Dockerfile`, **linux/amd64**.
-- **Port:** 3000; health check **`GET /api/v1/health/live`** (liveness). Optional **`GET /api/v1/health/ready`** checks RDS (`SELECT 1`) for monitoring smoke.
+- **PID 1:** `apps/api/docker-entrypoint.mjs` — binds **public `PORT` (3000)** immediately, proxies to Nest on **`NEST_INTERNAL_PORT` (3001)** after boot.
+- **Nest entry:** `nest build` emits **`dist/src/main.js`** (not `dist/main.js`); the entrypoint resolves that path (see `docker-entrypoint-main-path.node.test.ts`).
+- **Ports / probes:**
+  - **`GET /api/v1/health/live`** — App Runner health check path. During boot the **proxy** may return `{ status: "ok", phase: "starting" }` **before Nest listens** — do not use live alone for “API is ready”.
+  - **`GET /api/v1/health/ready`** — Nest **`HealthController`**: `200` + `{ status: "ok", database: "ok" }` when Prisma can `SELECT 1`. Post-deploy smoke and `npm run sync:aws:smoke` gate on this.
 - **CPU / memory:** 1 vCPU, 2 GB (stack default — supports migrate-on-boot).
 - **Auto scaling (shipped):** `CfnAutoScalingConfiguration` — **maxConcurrency** 100 per instance, **maxSize** 25 instances (thousands of concurrent API requests via horizontal scale-out).
 - **Secrets:** `JWT_SECRET` from Secrets Manager JSON key `jwt`.
@@ -173,7 +181,8 @@ VITE_API_URL="https://YOUR_APP_URL" npm run build
 - Does **not** wipe existing data or reset passwords on existing accounts.
 - Ensures demo orgs, users, clinics, patients when missing.
 - Documented accounts: [`Test_Data_Users.md`](./Test_Data_Users.md).
-- **`apps/api/Dockerfile.seed`** must **COPY** every `../src/…` import used under `apps/api/prisma/` (enforced by `dockerfile-seed-src-coverage.node.test.ts`).
+- **Lambda image:** `apps/api/Dockerfile.seed` (Node 22 Lambda base). Handler: `infra/lambda/db-seed/run.mjs` → `prisma migrate deploy`, enum repair, `tsx prisma/seed.ts`.
+- **Bundling:** any `prisma/*.ts` import of `../src/…` must have a matching **`COPY`** in `Dockerfile.seed` (enforced by `dockerfile-seed-src-coverage.node.test.ts`). Current copies include at least: `src/entitlements`, `src/subscriptions`, `src/feature-flags/feature-flag-keys.ts`, `src/common/seed-demo-guard.ts`, `src/staging`.
 
 Re-invoke manually:
 
@@ -224,8 +233,8 @@ Supported in product: patient registration documents, national ID scan, encounte
 - **RDS** enhanced monitoring optional; **7-day** automated backups in default stack.
 - **Alarms:** add CloudWatch alarms for 5xx, unhealthy targets, RDS storage (not all wired in minimal stack).
 - **Load SLO smoke (local or CI):** with API running, `npm run test:perf` issues **2000** concurrent `GET /api/v1/health/live` requests and fails if success rate &lt; **99.9%** (tune via `LOAD_TEST_*` env vars in `scripts/load-test-slo.mjs`).
-- **Post-deploy:** `npm run sync:aws:smoke` waits for `GET /api/v1/health/ready` (`database: ok`) then demo login — not `/health/live` alone (entrypoint proxy returns 200 while Nest boots).
-- **CDK `AppRunnerVpcConnector` `AlreadyExists`:** App Runner application logs are often empty on this failure (CloudFormation never updates `ApiService`). Check stack events for `HandlerErrorCode: AlreadyExists` on `AppRunnerVpcConnector` — **`Tags.of(stack)`** tags App Runner connector/autoscale configs and forces **replacement**; create-before-delete cannot reuse global names (`kiorly-clinic-connector` or interim `kiorly-clinic-connector-v2`). Frankfurt keeps **`kiorly-clinic-connector`**; cell tags apply only to VPC/RDS/S3 (not App Runner). CI runs `check:apprunner-connector-cfn`, `cicd-cleanup-orphan-vpc-connectors.sh`, then `cdk deploy`. Deploy workflow uses `cancel-in-progress: true`.
+- **Post-deploy:** `npm run sync:aws:smoke` → `scripts/cicd-post-deploy-smoke.sh` (readiness + demo login; see §7 probes).
+- **Deploy failures:** see [§16 Deploy troubleshooting](#16-deploy-troubleshooting-common-failures).
 
 ---
 
@@ -258,4 +267,26 @@ These remain valid if you outgrow App Runner or need different compliance postur
 - [`Clinic_Management_System_PRD.md`](./Clinic_Management_System_PRD.md) — product scope (v1.9), shipped features, **§12.3** production backlog, and **§12.3.13** enhancements to shipped modules.
 - [`Test_Data_Users.md`](./Test_Data_Users.md) — demo logins and QA matrix.
 
-**Infrastructure code:** `infra/src/kiorly-clinics-management-stack.ts`, `apps/api/Dockerfile`, `apps/api/Dockerfile.seed`.
+**Infrastructure code:** `infra/src/kiorly-clinics-management-stack.ts`, `apps/api/Dockerfile`, `apps/api/Dockerfile.seed`, `apps/api/docker-entrypoint.mjs`, `scripts/cicd-*.sh`.
+
+---
+
+## 16. Deploy troubleshooting (common failures)
+
+| Symptom / CI step | Likely cause | Fix / prevention |
+|-------------------|--------------|------------------|
+| CloudFormation **`AppRunnerVpcConnector` `UPDATE_FAILED`** `AlreadyExists` (`kiorly-clinic-connector` or `…-v2`) | Stack-wide **`cdk.Tags`** on App Runner resources force **replacement**; create-before-delete collides on global connector names | **Do not** `Tags.of(stack)` App Runner resources. Frankfurt connector name **`kiorly-clinic-connector`** only. Run `infra/scripts/check-apprunner-connector-cfn.mjs`; `scripts/cicd-cleanup-orphan-vpc-connectors.sh` before deploy. |
+| CDK ✅, **`cicd-post-deploy-seed.sh`** `Cannot find module '../src/entitlements/plans-matrix'` | **DbSeedFn** image missing `prisma/seed` TypeScript dependencies | Add **`COPY`** lines to `apps/api/Dockerfile.seed`; keep `dockerfile-seed-src-coverage.node.test.ts` green. |
+| CDK ✅, seed ✅, **`Post-deploy smoke`** login **503** `{"status":"starting"}` | Entrypoint spawned **`dist/main.js`** but Nest builds **`dist/src/main.js`**; proxy answers **live** while Nest never starts | `resolveNestMainJs()` in `docker-entrypoint.mjs`; smoke waits on **`/health/ready`**, not live alone. |
+| Smoke timeout on **ready** | App Runner still rolling out image, migrate-on-boot slow, or Nest crash loop | CloudWatch log group `/aws/apprunner/.../application` — search `[boot]` and `Nest exited`. Re-run workflow after fix. |
+| Stack **`ROLLBACK_COMPLETE`** | Any resource hard failure | Delete stack in CloudFormation console, fix template, redeploy (see §5). |
+
+**Manual smoke (after deploy):**
+
+```bash
+export STACK_NAME=kiorly-clinics-management AWS_REGION=eu-central-1
+bash scripts/cicd-post-deploy-smoke.sh
+# or: npm run sync:aws:smoke   # uses stack AppUrl when AWS CLI + credentials available
+```
+
+**Residency tags (SC-01):** `KiorlyHostCell` / `KiorlyDataRegion` on **Vpc**, **RDS**, **S3** buckets — not on App Runner `VpcConnector` / autoscale / observability CFN resources.

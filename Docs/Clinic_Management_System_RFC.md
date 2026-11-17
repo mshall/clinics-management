@@ -834,8 +834,8 @@ GET    /health/live        # process up (App Runner health check path: /api/v1/h
 GET    /health/ready       # SELECT 1 against PostgreSQL via Prisma
 ```
 
-- **Liveness** — always `{ status: "ok" }` when the Nest process is listening (used during migrate-on-boot interim listener).
-- **Readiness** — returns `503` when the database is unreachable; use for post-deploy smoke and monitoring (not wired to App Runner health check today).
+- **Liveness** — Nest returns `{ status: "ok" }` when listening. On App Runner, **`docker-entrypoint.mjs`** may answer **`/health/live`** with `{ status: "ok", phase: "starting" }` from the **proxy** before Nest is up — App Runner health check uses this path.
+- **Readiness** — `503` when DB unreachable or Nest not ready; **`200` + `database: "ok"`** when healthy. **CI post-deploy smoke** and `npm run sync:aws:smoke` gate on **`/api/v1/health/ready`**, not live alone.
 
 #### 6.2.19 SupportModule *(implemented)*
 
@@ -1206,9 +1206,9 @@ npm run lint
 
 ### 13.2 Container Image
 
-Multi-stage Dockerfile at **`apps/api/Dockerfile`** (not `infra/docker/`). Used by App Runner and the DbSeed Lambda build. Seed image: `apps/api/Dockerfile.seed`.
+Multi-stage Dockerfile at **`apps/api/Dockerfile`** (not `infra/docker/`). Used by App Runner; **PID 1** is **`docker-entrypoint.mjs`** (proxy on `PORT`, Nest on `NEST_INTERNAL_PORT`, main module **`dist/src/main.js`**). Seed image: **`apps/api/Dockerfile.seed`** (Lambda; must COPY all `prisma/../src` imports).
 
-On deploy, GitHub Actions builds and pushes to ECR; App Runner pulls by tag (commit SHA / `latest` per workflow).
+On deploy, GitHub Actions builds and pushes to ECR via CDK `DockerImageAsset`; App Runner rolls out on stack update.
 
 ### 13.3 Infrastructure as Code
 
@@ -1278,7 +1278,7 @@ Post-deploy: Lambda DbSeedFn (idempotent demo seed on RDS)
 |----------|------|
 | VPC | Public + isolated DB subnets; **no NAT** (cost control) |
 | RDS PostgreSQL 16 | Private; `db.t4g.micro`; 7-day backups |
-| App Runner | API container from `apps/api/Dockerfile`; health `/api/v1/health/live`; autoscaling max 25 × 100 concurrent requests |
+| App Runner | API container from `apps/api/Dockerfile`; App Runner health `/api/v1/health/live`; operational smoke uses `/api/v1/health/ready`; autoscaling max 25 × 100 concurrent requests |
 | S3 | Web static assets + **API uploads** (`UPLOAD_STORAGE=s3`) |
 | CloudFront | One HTTPS URL for SPA and `/api/*` (avoids CORS split-brain) |
 | Secrets Manager | JWT + RDS credentials |
@@ -1297,7 +1297,7 @@ Workflows in `.github/workflows/`:
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
-| `deploy-aws.yml` | Push to `main` (and manual `workflow_dispatch`) | Build API Docker image → ECR; build web → S3; `cdk deploy`; invoke DbSeed Lambda |
+| `deploy-aws.yml` | Push to `main` (and manual `workflow_dispatch`) | CI test + web build → `cdk deploy` → DbSeed Lambda → post-deploy smoke (ready + demo login) |
 | `pr-synth-build.yml` | Pull requests | CDK synth + build smoke (no AWS deploy) |
 
 Authentication to AWS uses **GitHub OIDC** (`AWS_DEPLOY_ROLE_ARN` secret). There is no separate `ci.yml`, `e2e.yml`, or multi-env promote pipeline in this repo yet — add before hardening production release gates.

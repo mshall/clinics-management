@@ -264,7 +264,7 @@ API output is under `apps/api/dist`; web static assets under `apps/web/dist`.
 | `npm run dev:web:aws` | Local Vite UI against live AWS API (`sync:aws` writes `apps/web/.env.aws`) |
 | `npm run sync:github` | Fetch + fast-forward pull `origin/main` |
 | `npm run sync:aws` | Stack `AppUrl`, health check, write `.env.aws` |
-| `npm run sync:aws:smoke` | Post-deploy health + demo login (CI smoke) |
+| `npm run sync:aws:smoke` | Post-deploy smoke: `/health/ready` + demo login (`scripts/cicd-post-deploy-smoke.sh`) |
 | `npm run sync:aws:deploy` | Pull GitHub + local CDK deploy (needs AWS CLI + Docker) |
 | `npm run sync:all` | `sync` (GitHub + DB) then `sync:aws` |
 | `npm run db:ensure` | Postgres up + migrate + seed-if-empty (also runs before `dev` / integration smoke) |
@@ -308,7 +308,7 @@ Use **Amazon Lightsail** (fixed monthly) **or** one **EC2** instance (e.g. **t4g
 
 1. **One VM** runs:
    - **PostgreSQL** in Docker (same pattern as `docker-compose.yml`), **or** a managed DB (adds cost; see Option B).
-   - **Nest API** via `node dist/main.js` behind **Nginx** reverse proxy (TLS with Let’s Encrypt).
+   - **Nest API** via `node dist/src/main.js` (after `npm run build -w api`) behind **Nginx** reverse proxy (TLS with Let’s Encrypt).
    - **Static SPA**: build `npm run build -w web` and serve `apps/web/dist` with Nginx, or run a tiny static file server.
 
 2. **Process manager:** `systemd` or **PM2** for the API.
