@@ -2,6 +2,7 @@
  * App Runner PID 1: bind PORT immediately, answer deploy health probes, then secret → migrate → Nest.
  */
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import { createServer, request as httpRequest } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -116,6 +117,18 @@ function runChild(command, args) {
   });
 }
 
+/** Nest CLI emits `dist/src/main.js` (not `dist/main.js`). */
+function resolveNestMainJs(apiRoot) {
+  const candidates = [
+    path.join(apiRoot, "dist", "src", "main.js"),
+    path.join(apiRoot, "dist", "main.js"),
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+  return candidates[0];
+}
+
 async function runMigrate() {
   let attempt = 0;
   while (true) {
@@ -179,7 +192,7 @@ async function bootWorker(internalPort) {
   if (dbSecretArn) await loadDbSecretFromArn(dbSecretArn);
   if (process.env.PRISMA_MIGRATE_ON_BOOT === "true") await runMigrate();
 
-  const mainJs = path.join(__dirname, "dist", "main.js");
+  const mainJs = resolveNestMainJs(__dirname);
   const nestEnv = { ...process.env, PORT: String(internalPort), LISTEN_HOST: "127.0.0.1" };
   let nestRestarts = 0;
 

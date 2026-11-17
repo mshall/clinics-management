@@ -23,19 +23,30 @@ fi
 APP_URL="${APP_URL%/}"
 echo "Post-deploy smoke: $APP_URL"
 
-health_ok=false
+# Entrypoint proxy returns 200 on /health/live while Nest is still booting — wait for readiness.
+ready_ok=false
 for i in $(seq 1 "$HEALTH_ATTEMPTS"); do
-  if curl -sf "$APP_URL/api/v1/health/live" >/dev/null 2>&1; then
-    echo "OK  GET /api/v1/health/live"
-    health_ok=true
+  ready_body="$(curl -sS "$APP_URL/api/v1/health/ready" 2>/dev/null || true)"
+  ready_http="$(curl -sS -o /dev/null -w "%{http_code}" "$APP_URL/api/v1/health/ready" 2>/dev/null || echo 000)"
+  if [[ "$ready_http" == "200" ]] && echo "$ready_body" | grep -q '"database":"ok"'; then
+    echo "OK  GET /api/v1/health/ready (database ok)"
+    ready_ok=true
     break
   fi
-  echo "Waiting for API health ($i/$HEALTH_ATTEMPTS)..."
+  if echo "$ready_body" | grep -q '"phase":"starting"' || echo "$ready_body" | grep -q '"status":"starting"'; then
+    echo "Waiting for Nest/API ready ($i/$HEALTH_ATTEMPTS) — still starting…"
+  else
+    echo "Waiting for API ready ($i/$HEALTH_ATTEMPTS) HTTP ${ready_http} …"
+  fi
   sleep "$HEALTH_SLEEP_SEC"
 done
 
-if [[ "$health_ok" != true ]]; then
-  echo "::error::API health check did not pass within $((HEALTH_ATTEMPTS * HEALTH_SLEEP_SEC))s"
+if [[ "$ready_ok" != true ]]; then
+  echo "::error::API readiness did not pass within $((HEALTH_ATTEMPTS * HEALTH_SLEEP_SEC))s"
+  curl -sS "$APP_URL/api/v1/health/live" 2>/dev/null | head -c 500 || true
+  echo ""
+  curl -sS "$APP_URL/api/v1/health/ready" 2>/dev/null | head -c 500 || true
+  echo ""
   exit 1
 fi
 

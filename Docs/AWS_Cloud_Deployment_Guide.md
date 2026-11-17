@@ -224,7 +224,7 @@ Supported in product: patient registration documents, national ID scan, encounte
 - **RDS** enhanced monitoring optional; **7-day** automated backups in default stack.
 - **Alarms:** add CloudWatch alarms for 5xx, unhealthy targets, RDS storage (not all wired in minimal stack).
 - **Load SLO smoke (local or CI):** with API running, `npm run test:perf` issues **2000** concurrent `GET /api/v1/health/live` requests and fails if success rate &lt; **99.9%** (tune via `LOAD_TEST_*` env vars in `scripts/load-test-slo.mjs`).
-- **Post-deploy:** `npm run sync:aws:smoke` (health + demo login). Optionally probe `GET /api/v1/health/ready` after RDS is warm.
+- **Post-deploy:** `npm run sync:aws:smoke` waits for `GET /api/v1/health/ready` (`database: ok`) then demo login — not `/health/live` alone (entrypoint proxy returns 200 while Nest boots).
 - **CDK `AppRunnerVpcConnector` `AlreadyExists`:** App Runner application logs are often empty on this failure (CloudFormation never updates `ApiService`). Check stack events for `HandlerErrorCode: AlreadyExists` on `AppRunnerVpcConnector` — **`Tags.of(stack)`** tags App Runner connector/autoscale configs and forces **replacement**; create-before-delete cannot reuse global names (`kiorly-clinic-connector` or interim `kiorly-clinic-connector-v2`). Frankfurt keeps **`kiorly-clinic-connector`**; cell tags apply only to VPC/RDS/S3 (not App Runner). CI runs `check:apprunner-connector-cfn`, `cicd-cleanup-orphan-vpc-connectors.sh`, then `cdk deploy`. Deploy workflow uses `cancel-in-progress: true`.
 
 ---

@@ -6,7 +6,7 @@
     "typecheck": "prisma generate && tsc --noEmit -p tsconfig.json",
     "build": "prisma generate && nest build",
     "dev": "nest start --watch",
-    "start": "node dist/main.js",
+    "start": "node dist/src/main.js",
     "prisma:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
