@@ -1,15 +1,19 @@
 #!/usr/bin/env node
 /**
- * After `cdk synth`, fail if Frankfurt would deploy a legacy or orphan-prone VPC connector name.
+ * After `cdk synth`, ensure Frankfurt keeps the live connector name and App Runner resources
+ * are not tag-replacement traps (interim names from failed deploys).
  */
 import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const FRANKFURT_STACK_NAME = "kiorly-clinics-management";
-const FRANKFURT_CONNECTOR_NAME = "kiorly-clinic-connector-v2";
-const LEGACY_CONNECTOR_NAME = "kiorly-clinic-connector";
-const FORBIDDEN_NAMES = new Set([LEGACY_CONNECTOR_NAME, "kiorly-conn-nagement"]);
+const FRANKFURT_CONNECTOR_NAME = "kiorly-clinic-connector";
+const FORBIDDEN_NAMES = new Set([
+  "kiorly-clinic-connector-v2",
+  "kiorly-conn-nagement",
+  "kiorly-conn-frankfurt",
+]);
 
 const cdkOut = join(dirname(fileURLToPath(import.meta.url)), "..", "cdk.out");
 const stackName = process.env.CDK_STACK_NAME ?? FRANKFURT_STACK_NAME;
@@ -35,6 +39,13 @@ for (const [resourceId, resource] of Object.entries(template.Resources ?? {})) {
   if (stackName === FRANKFURT_STACK_NAME && name !== FRANKFURT_CONNECTOR_NAME) {
     console.error(
       `${templatePath}: ${resourceId} VpcConnectorName is "${name}" — ${FRANKFURT_STACK_NAME} must use ${FRANKFURT_CONNECTOR_NAME}`,
+    );
+    failed = true;
+  }
+  const tags = resource.Properties?.Tags;
+  if (Array.isArray(tags) && tags.length > 0) {
+    console.error(
+      `${templatePath}: ${resourceId} must not carry stack tags (forces CFN replacement / AlreadyExists)`,
     );
     failed = true;
   }

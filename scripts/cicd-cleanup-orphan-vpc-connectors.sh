@@ -24,10 +24,6 @@ ORPHAN_NAME_PATTERNS=(
   "kiorly-conn-nagement"
   "kiorly-conn-frankfurt"
 )
-# After a successful migration to v2, the legacy connector may remain unused in the account.
-LEGACY_ORPHAN_NAMES=(
-  "kiorly-clinic-connector"
-)
 
 list_json="$(aws apprunner list-vpc-connectors --region "$REGION" --output json 2>/dev/null || echo '{"VpcConnectors":[]}')"
 
@@ -43,7 +39,7 @@ while IFS= read -r line; do
   fi
 
   should_delete=0
-  for pattern in "${ORPHAN_NAME_PATTERNS[@]}" "${LEGACY_ORPHAN_NAMES[@]}"; do
+  for pattern in "${ORPHAN_NAME_PATTERNS[@]}"; do
     if [[ "$name" == "$pattern" ]]; then
       should_delete=1
       break

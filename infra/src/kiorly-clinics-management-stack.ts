@@ -46,9 +46,12 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
 
     const { deploymentRegion, hostCell, runtimeTimezone } = props;
 
-    cdk.Tags.of(this).add("KiorlyHostCell", hostCell);
-    cdk.Tags.of(this).add("KiorlyDataRegion", deploymentRegion);
-    cdk.Tags.of(this).add("KiorlyStackRole", "clinic-platform-cell");
+    // Do not use Tags.of(stack) — it tags App Runner resources and CloudFormation replaces them (AlreadyExists).
+    const tagCellResources = (scope: Construct) => {
+      cdk.Tags.of(scope).add("KiorlyHostCell", hostCell);
+      cdk.Tags.of(scope).add("KiorlyDataRegion", deploymentRegion);
+      cdk.Tags.of(scope).add("KiorlyStackRole", "clinic-platform-cell");
+    };
 
     const vpc = new ec2.Vpc(this, "Vpc", {
       maxAzs: 2,
@@ -59,6 +62,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
         { name: "Database", subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
       ],
     });
+    tagCellResources(vpc);
 
     vpc.addGatewayEndpoint("S3Gateway", {
       service: ec2.GatewayVpcEndpointAwsService.S3,
@@ -73,6 +77,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     });
     cdk.Tags.of(webBucket).add("KiorlyDataClass", "web-static");
     cdk.Tags.of(webBucket).add("KiorlyHostCell", hostCell);
+    tagCellResources(webBucket);
 
     const apiUploadsBucket = new s3.Bucket(this, "ApiUploadsBucket", {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
@@ -82,6 +87,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     });
     cdk.Tags.of(apiUploadsBucket).add("KiorlyDataClass", "tenant-uploads");
     cdk.Tags.of(apiUploadsBucket).add("KiorlyHostCell", hostCell);
+    tagCellResources(apiUploadsBucket);
 
     const jwtSecret = new secretsmanager.Secret(this, "JwtSecret", {
       description: "JWT signing secret for Nest API (JSON jwt key; App Runner injects jwt field only)",
@@ -135,6 +141,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     });
     cdk.Tags.of(db).add("KiorlyDataClass", "primary-database");
     cdk.Tags.of(db).add("KiorlyHostCell", hostCell);
+    tagCellResources(db);
 
     const connectorSg = new ec2.SecurityGroup(this, "AppRunnerConnectorSg", {
       vpc,
