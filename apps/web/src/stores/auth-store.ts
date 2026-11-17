@@ -14,6 +14,9 @@ export interface AuthUser {
   email: string;
   displayName: string;
   role: DemoRole;
+  roles?: DemoRole[];
+  additionalRoles?: DemoRole[];
+  isTenantOwner?: boolean;
   /** Subset of tabs from clinic/group admin; undefined/null = full role menu */
   navTabKeys?: string[] | null;
   /** Organization override for this user's role; undefined/null = platform role defaults */
@@ -36,6 +39,9 @@ interface AuthState {
     accessToken: string,
     user: Omit<AuthUser, "role"> & {
       role: string;
+      roles?: string[];
+      additionalRoles?: string[];
+      isTenantOwner?: boolean;
       navTabKeys?: string[] | null;
       roleNavTabKeys?: string[] | null;
       employeePrivilegeGrants?: AuthUser["employeePrivilegeGrants"];
@@ -65,6 +71,9 @@ export const useAuthStore = create<AuthState>()(
             email: raw.email,
             displayName: raw.displayName,
             role: mapApiRole(raw.role),
+            roles: raw.roles?.map((r) => mapApiRole(r)) ?? [mapApiRole(raw.role)],
+            additionalRoles: raw.additionalRoles?.map((r) => mapApiRole(r)) ?? [],
+            isTenantOwner: Boolean(raw.isTenantOwner),
             navTabKeys: raw.navTabKeys !== undefined ? raw.navTabKeys : undefined,
             roleNavTabKeys: raw.roleNavTabKeys !== undefined ? raw.roleNavTabKeys : undefined,
             employeePrivilegeGrants: raw.employeePrivilegeGrants,

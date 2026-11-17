@@ -217,8 +217,27 @@ export function effectiveNavKeys(
   navTabKeys: string[] | null | undefined,
   roleNavTabKeys?: string[] | null,
   employeePrivilegeGrants?: EmployeePrivilegeGrantSummary[] | null,
+  allRoles?: DemoRole[] | null,
 ): Set<NavItemKey> {
-  const base = roleNavKeysForRole(role, roleNavTabKeys);
+  const base = (() => {
+    if (roleNavTabKeys?.length && allRoles && allRoles.length > 1) {
+      const out = new Set<NavItemKey>();
+      for (const k of roleNavTabKeys) {
+        if (organizationNavKeySet().has(k as NavItemKey)) out.add(k as NavItemKey);
+      }
+      out.add("profile");
+      return out;
+    }
+    if (allRoles && allRoles.length > 1) {
+      const out = new Set<NavItemKey>();
+      for (const r of allRoles) {
+        for (const k of navKeysForRole(r)) out.add(k);
+      }
+      out.add("profile");
+      return out;
+    }
+    return roleNavKeysForRole(role, roleNavTabKeys);
+  })();
   const out = (() => {
     if (!navTabKeys?.length) return new Set(base);
     const org = organizationNavKeySet();
@@ -242,8 +261,9 @@ export function showNavItem(
   navTabKeys?: string[] | null,
   roleNavTabKeys?: string[] | null,
   employeePrivilegeGrants?: EmployeePrivilegeGrantSummary[] | null,
+  allRoles?: DemoRole[] | null,
 ): boolean {
-  return effectiveNavKeys(role, navTabKeys, roleNavTabKeys, employeePrivilegeGrants).has(key);
+  return effectiveNavKeys(role, navTabKeys, roleNavTabKeys, employeePrivilegeGrants, allRoles).has(key);
 }
 
 /** Encounter list workspace (sidebar). */

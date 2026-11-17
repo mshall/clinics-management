@@ -1,5 +1,6 @@
 import { EmploymentType, Prisma, UserRole } from "@prisma/client";
 import type { PrismaService } from "../prisma/prisma.service";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "./effective-roles";
 
 export const CLINIC_EMPLOYEE_ROLES = new Set<UserRole>([
   UserRole.CLINIC_ADMIN,
@@ -107,7 +108,7 @@ export async function ensureUserEmployeeRecord(
   user: { id: string; email: string; displayName: string; role: UserRole },
   primaryClinicId?: string | null,
 ): Promise<void> {
-  if (!TENANT_USER_EMPLOYEE_ROLES.has(user.role)) return;
+  if (!hasAnyRoleInSet(user, TENANT_USER_EMPLOYEE_ROLES)) return;
 
   const clinicId = primaryClinicId ?? (await resolvePrimaryClinicForUser(tx, tenantId, user.id));
   if (!clinicId) return;

@@ -5,6 +5,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
+import { hasAnyRoleInSet } from "../common/effective-roles";
 import {
   ProviderCredentialsService,
   type CreateProviderCredentialDto,
@@ -25,14 +26,14 @@ export class ProviderCredentialsController {
   @Post()
   create(@CurrentUser() user: JwtUser, @Body() body: CreateProviderCredentialDto) {
     const allowed: Set<UserRole> = new Set([UserRole.GROUP_ADMIN, UserRole.GROUP_SUPERVISOR, UserRole.CLINIC_ADMIN]);
-    if (!allowed.has(user.role)) throw new ForbiddenException();
+    if (!hasAnyRoleInSet(user, allowed)) throw new ForbiddenException();
     return this.credentials.create(requireTenantId(user), body);
   }
 
   @Delete(":id")
   remove(@CurrentUser() user: JwtUser, @Param("id") id: string) {
     const allowed: Set<UserRole> = new Set([UserRole.GROUP_ADMIN, UserRole.GROUP_SUPERVISOR]);
-    if (!allowed.has(user.role)) throw new ForbiddenException();
+    if (!hasAnyRoleInSet(user, allowed)) throw new ForbiddenException();
     return this.credentials.remove(requireTenantId(user), id);
   }
 }

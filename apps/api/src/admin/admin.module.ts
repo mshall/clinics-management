@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { AuthModule } from "../auth/auth.module";
 import { ClinicsModule } from "../clinics/clinics.module";
 import { MarketsModule } from "../markets/markets.module";
 import { IntegrationsModule } from "../integrations/integrations.module";
@@ -15,7 +16,7 @@ import { IntegrationFailureAdminService } from "./integration-failure-admin.serv
 import { TenantPaymentChannelsService } from "./tenant-payment-channels.service";
 
 @Module({
-  imports: [ClinicsModule, StorageModule, IntegrationsModule, MarketsModule],
+  imports: [AuthModule, ClinicsModule, StorageModule, IntegrationsModule, MarketsModule],
   controllers: [AdminController, AdminDataExplorerController, PlatformAdminController],
   providers: [
     AdminService,

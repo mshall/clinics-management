@@ -13,6 +13,7 @@ import { PatchClinicDto } from "./dto/patch-clinic.dto";
 import { DeactivateClinicDto } from "./dto/deactivate-clinic.dto";
 import { ReactivateClinicDto } from "./dto/reactivate-clinic.dto";
 import { ClinicsService } from "./clinics.service";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 const SCHEDULING_ROLES: Set<UserRole> = new Set([
   UserRole.GROUP_ADMIN,
@@ -44,7 +45,7 @@ export class ClinicsController {
   @ApiOkResponse({ type: ClinicDto, isArray: true })
   list(@CurrentUser() user: JwtUser, @Query("includeInactive") includeInactive?: string) {
     const showInactive =
-      includeInactive === "true" && CLINIC_MANAGE_ROLES.has(user.role);
+      includeInactive === "true" && hasAnyRoleInSet(user, CLINIC_MANAGE_ROLES);
     return this.clinics.list(requireTenantId(user), user, showInactive);
   }
 
@@ -56,7 +57,7 @@ export class ClinicsController {
     @Query("clinicId") clinicId?: string,
     @Query("search") search?: string
   ) {
-    if (!SCHEDULING_ROLES.has(user.role)) {
+    if (!hasAnyRoleInSet(user, SCHEDULING_ROLES)) {
       throw new ForbiddenException("You do not have permission to list physicians");
     }
     return this.clinics.listSchedulingPhysicians(requireTenantId(user), user, clinicId, search);
@@ -128,7 +129,7 @@ export class ClinicsController {
   @ApiOperation({ summary: "Update clinic registration fields" })
   @ApiOkResponse({ type: ClinicDetailDto })
   patch(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchClinicDto) {
-    if (!CLINIC_UPDATE_ROLES.has(user.role)) {
+    if (!hasAnyRoleInSet(user, CLINIC_UPDATE_ROLES)) {
       throw new ForbiddenException("You do not have permission to update this clinic");
     }
     return this.clinics.update(requireTenantId(user), id, body, user);

@@ -1,7 +1,9 @@
 import { FinancialVisibilityOverride, UserRole, type Prisma } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { moneyEditFromOverride, moneyVisibilityFromOverride, normalizeMoneyAccessOverride } from "./money-access-override";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "./effective-roles";
 import {
+  isOperationMoneyPrincipal,
   isOperationMoneyRole,
   operationFinancialsVisible,
   operationSummaryFinancialsVisible,
@@ -61,9 +63,9 @@ const ENCOUNTER_MONEY_FRONT_DESK: ReadonlySet<UserRole> = new Set([
 /** Role-based visibility for encounter visit fees and balances (before user override). */
 export function encounterFinancialsVisibleByRole(viewer: JwtUser | undefined, clinicianId: string): boolean {
   if (!viewer) return false;
-  if (isOperationMoneyRole(viewer.role)) return true;
-  if (viewer.role === UserRole.PHYSICIAN && viewer.userId === clinicianId) return true;
-  if (ENCOUNTER_MONEY_FRONT_DESK.has(viewer.role)) return true;
+  if (isOperationMoneyPrincipal(viewer)) return true;
+  if (hasRole(viewer, UserRole.PHYSICIAN) && viewer.userId === clinicianId) return true;
+  if (hasAnyRoleInSet(viewer, ENCOUNTER_MONEY_FRONT_DESK)) return true;
   return false;
 }
 
@@ -74,7 +76,7 @@ function encounterFeeEditByRole(viewer: JwtUser | undefined, clinicianId: string
 function appointmentFeeEditByRole(viewer: JwtUser | undefined, clinicianId: string): boolean {
   return (
     encounterFinancialsVisibleByRole(viewer, clinicianId) ||
-    operationSummaryFinancialsVisible(viewer?.role)
+    isOperationMoneyPrincipal(viewer)
   );
 }
 
@@ -96,7 +98,7 @@ export function appointmentFinancialsVisible(
 ): boolean {
   const roleDefault =
     encounterFinancialsVisibleByRole(viewer, clinicianId) ||
-    operationSummaryFinancialsVisible(viewer?.role);
+    isOperationMoneyPrincipal(viewer);
   return moneyVisibilityFromOverride(overrides.appointments, roleDefault);
 }
 
@@ -120,7 +122,7 @@ export function canEditOperationFeesForViewer(
   overrides: UserMoneyVisibilityOverrides,
 ): boolean {
   if (!viewer) return false;
-  return moneyEditFromOverride(overrides.operations, isOperationMoneyRole(viewer.role));
+  return moneyEditFromOverride(overrides.operations, isOperationMoneyPrincipal(viewer));
 }
 
 export function canEditEncounterFeesForViewer(

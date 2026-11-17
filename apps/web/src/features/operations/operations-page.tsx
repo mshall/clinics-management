@@ -52,8 +52,10 @@ import {
   operationClinicalFormEditable,
   operationShowsBookedRowActions,
   operationStatusIsEditable,
+  operationStatusIsDischarged,
   canMarkOperationCompleted,
 } from "@/lib/operation-status-policy";
+import { OperationPostSurgeryDocumentsSection } from "@/features/operations/operation-post-surgery-documents";
 import { canGenerateInvoice } from "@/lib/invoice-generate-policy";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
 import { formatClinicianDisplayName } from "@/lib/employee-display";
@@ -396,9 +398,11 @@ export function OperationsPage() {
   };
 
   const editIsScheduled = editOp != null && operationStatusIsEditable(editOp.status ?? "BOOKED");
+  const editIsDischarged = editOp != null && operationStatusIsDischarged(editOp.status ?? "BOOKED");
   const editFormLocked = editOp != null && !canEditOperationForm(editOp);
+  const editNeedsDetail = editOp != null && (editIsScheduled || editIsDischarged);
   const { data: editOpDetail, isPending: editOpDetailPending } = useOperationQuery(
-    editIsScheduled ? editOp?.id : undefined,
+    editNeedsDetail ? editOp?.id : undefined,
   );
   const editClinicDefaultCurrency = resolveClinicCurrency(editClinicId || editOp?.clinicId);
 
@@ -1188,6 +1192,16 @@ export function OperationsPage() {
                         onGenerate={canInvoice ? () => openOperationInvoice(editOp) : undefined}
                       />
                     ) : null}
+                    {editIsDischarged && editOpDetailPending ? (
+                      <p className="text-sm text-muted-foreground">{t("common.loading", "Loading…")}</p>
+                    ) : null}
+                    {editIsDischarged && editOpDetail ? (
+                      <OperationPostSurgeryDocumentsSection
+                        operationId={editOp.id}
+                        documents={editOpDetail.documents}
+                        canUpload={canCreate}
+                      />
+                    ) : null}
                   </div>
                 ) : (
                 <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
@@ -1371,6 +1385,16 @@ export function OperationsPage() {
                     clinicId={editClinicId || editOp.clinicId}
                     onGenerate={canInvoice ? () => openOperationInvoice(editOp) : undefined}
                   />
+                ) : null}
+
+                {editIsDischarged && !editIsScheduled && editOpDetail ? (
+                  <div className="lg:col-span-2">
+                    <OperationPostSurgeryDocumentsSection
+                      operationId={editOp.id}
+                      documents={editOpDetail.documents}
+                      canUpload={canCreate}
+                    />
+                  </div>
                 ) : null}
 
                 {editIsScheduled && !editOpDetailPending ? (

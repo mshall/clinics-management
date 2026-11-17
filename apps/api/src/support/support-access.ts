@@ -1,6 +1,7 @@
 import { ForbiddenException } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 const SUPPORT_ROLES: Set<UserRole> = new Set([
   UserRole.GROUP_ADMIN,
@@ -21,18 +22,18 @@ const INSIGHTS_ROLES: Set<UserRole> = new Set([
 
 export function assertSupportAccess(user: JwtUser): void {
   if (!user.tenantId) throw new ForbiddenException("Tenant membership required");
-  if (!SUPPORT_ROLES.has(user.role)) {
+  if (!hasAnyRoleInSet(user, SUPPORT_ROLES)) {
     throw new ForbiddenException("You do not have access to customer support tools");
   }
 }
 
 export function assertInsightsAccess(user: JwtUser): void {
   if (!user.tenantId) throw new ForbiddenException("Tenant membership required");
-  if (!INSIGHTS_ROLES.has(user.role)) {
+  if (!hasAnyRoleInSet(user, INSIGHTS_ROLES)) {
     throw new ForbiddenException("Only organization administrators can view insights");
   }
 }
 
 export function canUseSupport(user: JwtUser): boolean {
-  return Boolean(user.tenantId && SUPPORT_ROLES.has(user.role));
+  return Boolean(user.tenantId && hasAnyRoleInSet(user, SUPPORT_ROLES));
 }

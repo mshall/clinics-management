@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { useClinicsQuery } from "@/lib/api-hooks";
 import { apiErrorMessage } from "@/lib/api-error-message";
-import { ApiError, apiDelete, apiGet, apiPut } from "@/lib/http";
+import { ApiError, apiDelete, apiGet, apiPatch, apiPut } from "@/lib/http";
 import type { NavItemKey } from "@/lib/nav-policy";
 import {
   canCustomizeOrgRoleNavTabs,
@@ -103,6 +103,30 @@ export function OrgUserPermissionsEditor({
     queryKey: ["user-nav-tabs", userId],
     queryFn: () => apiGet<{ tabKeys: string[] | null }>(`/api/v1/user-nav-tabs/${userId}`),
     enabled: Boolean(userId),
+  });
+
+  const userDetailQ = useQuery({
+    queryKey: ["admin", "user-detail", userId],
+    queryFn: () =>
+      apiGet<{ additionalRoles: string[]; role: string }>(`/api/v1/admin/users/${userId}`),
+    enabled: Boolean(userId) && canManagePrivilegeGrants,
+  });
+  const [extraRolesDraft, setExtraRolesDraft] = useState<Set<DemoRole>>(new Set());
+  useEffect(() => {
+    const extras = userDetailQ.data?.additionalRoles ?? [];
+    setExtraRolesDraft(new Set(extras.map((r) => r.toLowerCase() as DemoRole)));
+  }, [userDetailQ.data?.additionalRoles]);
+
+  const saveRolesMut = useMutation({
+    mutationFn: () =>
+      apiPatch(`/api/v1/admin/users/${userId}/roles`, {
+        additionalRoles: [...extraRolesDraft].map((r) => r.toUpperCase()),
+      }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["admin", "user-detail", userId] });
+      toast.success(t("admin.additionalRolesSave", "Save additional roles"));
+    },
+    onError: (e: unknown) => toast.error(apiErrorMessage(e)),
   });
 
   const moneyVisQ = useQuery({
@@ -614,6 +638,46 @@ export function OrgUserPermissionsEditor({
             </div>
           </DialogContent>
         </Dialog>
+      ) : null}
+      {canManagePrivilegeGrants ? (
+        <section className="space-y-3 rounded-lg border p-4">
+          <h3 className="text-sm font-semibold">{t("admin.additionalRolesTitle", "Additional roles")}</h3>
+          <p className="text-xs text-muted-foreground">
+            {t("admin.additionalRolesHint", "Extra capabilities alongside the primary role (plan limits apply).")}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {(
+              [
+                "group_admin",
+                "physician",
+                "receptionist",
+                "finance_officer",
+                "clinic_admin",
+              ] as DemoRole[]
+            )
+              .filter((r) => r !== userRole)
+              .map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  className={`rounded-full border px-3 py-1 text-xs ${
+                    extraRolesDraft.has(r) ? "border-primary bg-primary/10" : "border-muted"
+                  }`}
+                  onClick={() => {
+                    const next = new Set(extraRolesDraft);
+                    if (next.has(r)) next.delete(r);
+                    else next.add(r);
+                    setExtraRolesDraft(next);
+                  }}
+                >
+                  {formatUserRole(r, t)}
+                </button>
+              ))}
+          </div>
+          <Button type="button" size="sm" disabled={saveRolesMut.isPending} onClick={() => saveRolesMut.mutate()}>
+            {t("admin.additionalRolesSave", "Save additional roles")}
+          </Button>
+        </section>
       ) : null}
     </div>
   );

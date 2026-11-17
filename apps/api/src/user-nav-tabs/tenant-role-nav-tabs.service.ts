@@ -2,12 +2,14 @@ import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/commo
 import { UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
+import { effectiveRoles, hasRole } from "../common/effective-roles";
 import {
   defaultNavTabsForRole,
   isFullRoleNav,
   maxNavTabsForOrganization,
   parseStoredNavTabKeys,
   sanitizeNavTabKeysForRole,
+  unionNavTabsForRoles,
 } from "./nav-tab-keys";
 
 const TENANT_MANAGE_ROLES = new Set<UserRole>([UserRole.GROUP_ADMIN]);
@@ -32,7 +34,7 @@ export class TenantRoleNavTabsService {
   constructor(private readonly prisma: PrismaService) {}
 
   private assertGroupAdmin(actor: JwtUser): void {
-    if (actor.role !== UserRole.GROUP_ADMIN) {
+    if (!hasRole(actor, UserRole.GROUP_ADMIN)) {
       throw new ForbiddenException("Only group administrators may manage role permissions");
     }
   }
@@ -92,5 +94,19 @@ export class TenantRoleNavTabsService {
   async effectiveRoleBaseForUser(tenantId: string, role: UserRole): Promise<string[]> {
     const grant = await this.roleNavTabKeysForTenantUser(tenantId, role);
     return grant?.length ? grant : defaultNavTabsForRole(role);
+  }
+
+  async effectiveRoleNavTabKeysForPrincipal(
+    tenantId: string,
+    principal: { role: UserRole; additionalRoles?: UserRole[] },
+  ): Promise<string[]> {
+    const roles = effectiveRoles(principal);
+    const grantMap = new Map<UserRole, string[] | null>();
+    await Promise.all(
+      roles.map(async (role) => {
+        grantMap.set(role, await this.roleNavTabKeysForTenantUser(tenantId, role));
+      }),
+    );
+    return unionNavTabsForRoles(roles, grantMap);
   }
 }

@@ -15,6 +15,7 @@ import { apiFetchBlob } from "@/lib/http";
 import { formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
 import { formatMoneyAmount } from "@/lib/money-display";
 import { showOperationMoneyColumns } from "@/lib/operation-money-policy";
+import { operationStatusIsDischarged } from "@/lib/operation-status-policy";
 import { useAuthStore } from "@/stores/auth-store";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { Label } from "@/components/ui/label";
@@ -218,6 +219,48 @@ function OperationRow({
   );
 }
 
+function OperationDocumentsBlock({
+  title,
+  documents,
+  operationId,
+  onOpenDoc,
+  emptyLabel,
+}: {
+  title: string;
+  documents: OperationDocumentDto[];
+  operationId: string;
+  onOpenDoc: (operationId: string, doc: OperationDocumentDto) => void;
+  emptyLabel: string;
+}) {
+  const { t, i18n } = useTranslation();
+  return (
+    <div>
+      <p className="mb-2 text-xs font-medium text-muted-foreground">
+        {title} ({documents.length})
+      </p>
+      {documents.length === 0 ? (
+        <p className="text-muted-foreground">{emptyLabel}</p>
+      ) : (
+        <ul className="space-y-2">
+          {documents.map((doc) => (
+            <li key={doc.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2">
+              <div>
+                <p className="font-medium">{doc.description?.trim() || doc.originalFileName}</p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(doc.createdAt).toLocaleDateString(localeForLanguage(i18n.language))}
+                </p>
+              </div>
+              <Button type="button" size="sm" variant="outline" onClick={() => onOpenDoc(operationId, doc)}>
+                {t("common.view", "View")}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function OperationDetailView({
   detail,
   locale,
@@ -277,30 +320,22 @@ function OperationDetailView({
         <p className="text-muted-foreground">{t("encounters.noMedicationsRecorded", "No medications recorded")}</p>
       ) : null}
 
-      <div>
-        <p className="mb-2 text-xs font-medium text-muted-foreground">
-          {t("operations.existingDocuments", "Saved documents")} ({detail.documents.length})
-        </p>
-        {detail.documents.length === 0 ? (
-          <p className="text-muted-foreground">{t("patients.noDocuments", "No documents")}</p>
-        ) : (
-          <ul className="space-y-2">
-            {detail.documents.map((doc) => (
-              <li key={doc.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2">
-                <div>
-                  <p className="font-medium">{doc.description?.trim() || doc.originalFileName}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {doc.kind} · {new Date(doc.createdAt).toLocaleDateString(localeForLanguage(i18n.language))}
-                  </p>
-                </div>
-                <Button type="button" size="sm" variant="outline" onClick={() => onOpenDoc(detail.id, doc)}>
-                  {t("common.view", "View")}
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <OperationDocumentsBlock
+        title={t("operations.preSurgeryDocuments", "Pre-surgery documents")}
+        documents={detail.documents.filter((d) => d.kind !== "POST_SURGERY")}
+        operationId={detail.id}
+        onOpenDoc={onOpenDoc}
+        emptyLabel={t("patients.noDocuments", "No documents")}
+      />
+      {operationStatusIsDischarged(detail.status) ? (
+        <OperationDocumentsBlock
+          title={t("operations.postSurgeryTitle", "Post-surgery documents")}
+          documents={detail.documents.filter((d) => d.kind === "POST_SURGERY")}
+          operationId={detail.id}
+          onOpenDoc={onOpenDoc}
+          emptyLabel={t("operations.postSurgeryEmpty", "No post-surgery documents yet.")}
+        />
+      ) : null}
 
       <Button asChild variant="secondary" className="w-full sm:w-auto">
         <Link to="/operations">{t("patients.openInOperations", "Open in operations workspace")}</Link>

@@ -6,6 +6,7 @@ import {
   UserRole,
 } from "@prisma/client";
 import type { PrismaService } from "../prisma/prisma.service";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "./effective-roles";
 
 type DbClient = Prisma.TransactionClient | PrismaService;
 
@@ -22,7 +23,7 @@ export async function assertTenantUserDeletable(
     select: { role: true },
   });
   if (!user) return;
-  if (user.role === UserRole.PLATFORM_SUPER_ADMIN) {
+  if (hasRole(user, UserRole.PLATFORM_SUPER_ADMIN)) {
     throw new BadRequestException("Cannot delete platform super administrators");
   }
   if (options?.allowClinicalRecords) return;

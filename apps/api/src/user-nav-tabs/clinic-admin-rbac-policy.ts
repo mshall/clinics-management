@@ -3,6 +3,7 @@ import { UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { fetchClinicScopeIds } from "../common/clinic-scope";
 import type { PrismaService } from "../prisma/prisma.service";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 /** Organization-wide roles — clinic admins must not change their sidebar grants. */
 export const CLINIC_ADMIN_FORBIDDEN_RBAC_TARGET_ROLES = new Set<UserRole>([
@@ -39,9 +40,9 @@ export async function assertClinicAdminCanManageUserNavTabs(
   actor: JwtUser,
   target: { id: string; role: UserRole },
 ): Promise<void> {
-  if (actor.role !== UserRole.CLINIC_ADMIN) return;
+  if (!hasRole(actor, UserRole.CLINIC_ADMIN)) return;
 
-  if (CLINIC_ADMIN_FORBIDDEN_RBAC_TARGET_ROLES.has(target.role)) {
+  if (hasAnyRoleInSet(target, CLINIC_ADMIN_FORBIDDEN_RBAC_TARGET_ROLES)) {
     throw new ForbiddenException("Clinic administrators cannot change permissions for organization-wide roles");
   }
 

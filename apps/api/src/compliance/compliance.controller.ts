@@ -8,6 +8,7 @@ import { requireTenantId } from "../auth/require-tenant";
 import { ComplianceService } from "./compliance.service";
 import { PatchClinicEtaSettingsDto } from "../clinics/dto/patch-clinic-eta-settings.dto";
 import { ResubmitFiscalSubmissionDto } from "./dto/resubmit-fiscal-submission.dto";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 const FISCAL_GOVERNANCE_ROLES = new Set<UserRole>([
   UserRole.GROUP_ADMIN,
@@ -44,7 +45,7 @@ export class ComplianceController {
 
   @Post("egypt/eta-queue/:id/submit")
   submitEta(@CurrentUser() user: JwtUser, @Param("id") id: string) {
-    if (user.role && !FISCAL_GOVERNANCE_ROLES.has(user.role)) {
+    if (user.role && !hasAnyRoleInSet(user, FISCAL_GOVERNANCE_ROLES)) {
       throw new ForbiddenException("Insufficient permissions for fiscal submit");
     }
     return this.compliance.submitEtaToAuthority(requireTenantId(user), id);
@@ -52,7 +53,7 @@ export class ComplianceController {
 
   @Post("egypt/eta-queue/:id/resubmit")
   resubmitEta(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: ResubmitFiscalSubmissionDto) {
-    if (user.role && !FISCAL_GOVERNANCE_ROLES.has(user.role)) {
+    if (user.role && !hasAnyRoleInSet(user, FISCAL_GOVERNANCE_ROLES)) {
       throw new ForbiddenException("Insufficient permissions for fiscal resubmit");
     }
     return this.compliance.resubmitRejectedFiscal(requireTenantId(user), id, body);

@@ -21,6 +21,7 @@ import {
 import { computeVatInclusiveBreakdown } from "../common/vat-breakdown";
 import { resolveMarketTaxLabels } from "../common/market-tax-labels";
 import { normalizeOrgTaxRegistrationNumber } from "../common/sync-clinic-invoice-tax";
+import { effectiveClinicInvoiceVatPercent } from "../markets/market-tax-pack";
 import {
   invoiceFinancialsVisible,
   loadUserMoneyVisibilityOverrides,
@@ -32,6 +33,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { CreateInvoiceDto } from "./dto/create-invoice.dto";
 import type { InvoiceDto, InvoiceListItemDto } from "./dto/invoice.dto";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 const invoiceInclude = {
   lines: { orderBy: { sortOrder: "asc" as const } },
@@ -170,7 +172,7 @@ export class InvoicesService {
       select: { id: true },
     });
     if (!row) throw new NotFoundException("Patient not found");
-    if (viewer.role === UserRole.PHYSICIAN) {
+    if (hasRole(viewer, UserRole.PHYSICIAN)) {
       const net = await fetchPhysicianNetworkClinicIds(this.prisma, tenantId, viewer.userId);
       if (!net.length) throw new NotFoundException("Patient not found");
     }
@@ -290,7 +292,10 @@ export class InvoicesService {
       linkedCurrency = op.feeCurrency;
     }
 
-    const clinic = await this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId } });
+    const [clinic, tenantRow] = await Promise.all([
+      this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId } }),
+      this.prisma.tenant.findUnique({ where: { id: tenantId }, include: { market: true } }),
+    ]);
     if (!clinic) throw new NotFoundException("Clinic not found");
 
     const defaultCurrency = linkedCurrency ?? clinic.defaultCurrency;
@@ -310,7 +315,10 @@ export class InvoicesService {
     const invoiceNumber = await this.nextInvoiceNumber(clinicId, issueDate);
     const backgroundColor = clinic.invoiceBackgroundColor || "white";
     const sections = normalizeInvoiceSections(clinic.invoiceSections);
-    const vatPercentSnapshot = Number(clinic.invoiceVatPercent ?? 5);
+    const vatPercentSnapshot =
+      tenantRow?.market != null
+        ? effectiveClinicInvoiceVatPercent(clinic, tenantRow.market, tenantRow)
+        : Number(clinic.invoiceVatPercent ?? 0);
 
     const lineTotal = lines.reduce((sum, l) => sum + Number(l.amountPaid), 0);
 
@@ -369,7 +377,7 @@ export class InvoicesService {
     if (filters.encounterId) where.encounterId = filters.encounterId;
     if (filters.operationId) where.operationId = filters.operationId;
 
-    if (CLINIC_SCOPE_ROLES.has(viewer.role)) {
+    if (hasAnyRoleInSet(viewer, CLINIC_SCOPE_ROLES)) {
       const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, viewer);
       if (scopeIds !== null) {
         if (!scopeIds.length) return [];
@@ -405,7 +413,7 @@ export class InvoicesService {
     const moneyVis = await loadUserMoneyVisibilityOverrides(this.prisma, tenantId, viewer.userId);
     this.assertInvoiceMoneyVisible(viewer, moneyVis, this.invoiceMoneyContext(row));
 
-    if (CLINIC_SCOPE_ROLES.has(viewer.role)) {
+    if (hasAnyRoleInSet(viewer, CLINIC_SCOPE_ROLES)) {
       const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, viewer);
       if (scopeIds !== null && !scopeIds.includes(row.clinicId)) {
         throw new NotFoundException("Invoice not found");
@@ -490,16 +498,16 @@ export class InvoicesService {
       UserRole.CLINIC_ADMIN,
       UserRole.BRANCH_MANAGER,
     ]);
-    if (requireAdmin && !adminRoles.has(viewer.role)) {
+    if (requireAdmin && !hasAnyRoleInSet(viewer, adminRoles)) {
       throw new ForbiddenException("You do not have permission to update invoice settings");
     }
 
-    if (viewer.role === UserRole.PHYSICIAN) {
+    if (hasRole(viewer, UserRole.PHYSICIAN)) {
       const net = await fetchPhysicianNetworkClinicIds(this.prisma, tenantId, viewer.userId);
       if (!net.includes(clinicId)) throw new NotFoundException("Clinic not found");
       return;
     }
-    if (CLINIC_SCOPE_ROLES.has(viewer.role)) {
+    if (hasAnyRoleInSet(viewer, CLINIC_SCOPE_ROLES)) {
       const scope = await this.prisma.clinicAdminScope.findFirst({
         where: { tenantId, userId: viewer.userId, clinicId },
       });
@@ -516,6 +524,7 @@ export class InvoicesService {
       invoiceSections?: string[];
       taxRegistrationNumber?: string | null;
       invoiceVatPercent?: number;
+      invoiceVatPercentUseMarketDefault?: boolean;
     },
   ) {
     await this.assertClinicInvoiceSettingsAccess(tenantId, clinicId, viewer, true);
@@ -534,7 +543,9 @@ export class InvoicesService {
     if (body.taxRegistrationNumber !== undefined) {
       data.taxRegistrationNumber = normalizeOrgTaxRegistrationNumber(body.taxRegistrationNumber);
     }
-    if (body.invoiceVatPercent !== undefined) {
+    if (body.invoiceVatPercentUseMarketDefault) {
+      data.invoiceVatPercent = null;
+    } else if (body.invoiceVatPercent !== undefined) {
       if (body.invoiceVatPercent < 0 || body.invoiceVatPercent > 100) {
         throw new BadRequestException("VAT percent must be between 0 and 100");
       }
@@ -562,7 +573,7 @@ export class InvoicesService {
       invoiceSections: normalizeInvoiceSections(row.invoiceSections),
       hasInvoiceLogo: Boolean(row.invoiceLogoRelativePath),
       taxRegistrationNumber: normalizeOrgTaxRegistrationNumber(row.taxRegistrationNumber),
-      invoiceVatPercent: Number(row.invoiceVatPercent ?? 5),
+      invoiceVatPercent: Number(row.invoiceVatPercent ?? 0),
     };
   }
 

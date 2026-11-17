@@ -1,7 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import type { JwtUser } from "./jwt-user";
-import { roleRequiresMfaEnrollment } from "./privileged-mfa";
+import { principalRequiresMfaEnrollment } from "./privileged-mfa";
 import { privilegedMfaEnforced } from "./privileged-mfa-enforcement";
 
 @Injectable()
@@ -14,7 +14,7 @@ export class PrivilegedMfaGuard implements CanActivate {
     if (!user?.userId) return true;
 
     if (!privilegedMfaEnforced()) return true;
-    if (!roleRequiresMfaEnrollment(user.role)) return true;
+    if (!principalRequiresMfaEnrollment(user)) return true;
 
     const path = (req.route?.path ?? req.path ?? req.url ?? "").split("?")[0] ?? "";
     if (

@@ -3,6 +3,7 @@ import { ClinicalLetterType, ClinicalShortcutType, ClinicalSpecialty, Prisma, Us
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
 import { ClinicalSafetyService } from "./clinical-safety.service";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 const TEMPLATE_ROLES: ReadonlySet<UserRole> = new Set([
   UserRole.GROUP_ADMIN,
@@ -14,7 +15,7 @@ const TEMPLATE_ROLES: ReadonlySet<UserRole> = new Set([
 
 function assertClinicalUser(user: JwtUser): void {
   if (!user.tenantId) throw new ForbiddenException("Tenant required");
-  if (!TEMPLATE_ROLES.has(user.role)) throw new ForbiddenException("Not allowed");
+  if (!hasAnyRoleInSet(user, TEMPLATE_ROLES)) throw new ForbiddenException("Not allowed");
 }
 
 @Injectable()
@@ -49,7 +50,7 @@ export class ClinicalService {
     if (clinicFilter) {
       or.push({ clinicId: clinicFilter, isSystemDefault: false, isPublished: true });
     }
-    if (user.role === UserRole.PHYSICIAN) {
+    if (hasRole(user, UserRole.PHYSICIAN)) {
       or.push({ ownerUserId: user.userId });
     }
 
@@ -85,7 +86,7 @@ export class ClinicalService {
       UserRole.BRANCH_MANAGER,
       UserRole.GROUP_SUPERVISOR,
     ]);
-    if (!manageClinic.has(user.role)) {
+    if (!hasAnyRoleInSet(user, manageClinic)) {
       throw new ForbiddenException("Only clinic administrators can edit clinic form templates");
     }
 
@@ -143,7 +144,7 @@ export class ClinicalService {
       UserRole.BRANCH_MANAGER,
       UserRole.GROUP_SUPERVISOR,
     ]);
-    if (!manageClinic.has(user.role)) throw new ForbiddenException("Not allowed");
+    if (!hasAnyRoleInSet(user, manageClinic)) throw new ForbiddenException("Not allowed");
 
     const existing = await this.prisma.clinicalFormTemplate.findFirst({ where: { id, tenantId } });
     if (!existing) throw new NotFoundException("Template not found");

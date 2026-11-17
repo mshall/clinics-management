@@ -121,6 +121,21 @@ export function effectiveRoleNavTabs(role: UserRole, tenantGrant: string[] | nul
   return defaultNavTabsForRole(role);
 }
 
+/** Union of nav tabs for users holding several roles (FD-01). */
+export function unionNavTabsForRoles(
+  roles: UserRole[],
+  tenantGrantPerRole: Map<UserRole, string[] | null>,
+): string[] {
+  const uniq = new Set<string>();
+  for (const role of roles) {
+    const grant = tenantGrantPerRole.get(role) ?? null;
+    const tabs = effectiveRoleNavTabs(role, grant);
+    for (const k of tabs) uniq.add(k);
+  }
+  if (!uniq.has("profile")) uniq.add("profile");
+  return [...uniq].sort((a, b) => a.localeCompare(b));
+}
+
 /** Intersect requested keys with role max, enforce `profile`, drop unknown keys. */
 export function sanitizeNavTabKeysForRole(role: UserRole, requested: string[], roleBase?: string[] | null): string[] {
   const max = roleBase?.length ? new Set(roleBase) : maxNavTabsForRole(role);

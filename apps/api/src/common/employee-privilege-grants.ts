@@ -1,6 +1,7 @@
 import { UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import type { PrismaService } from "../prisma/prisma.service";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "./effective-roles";
 import {
   roleCanArchiveEmployees,
   roleCanManageEmployees,
@@ -107,14 +108,14 @@ export async function viewerHasEmployeeManageAccessAtClinic(
   viewer: JwtUser,
   clinicId: string,
 ): Promise<boolean> {
-  if (viewer.role === UserRole.GROUP_ADMIN) return true;
-  if (CLINIC_SCOPE_ROLES.has(viewer.role)) {
+  if (hasRole(viewer, UserRole.GROUP_ADMIN)) return true;
+  if (hasAnyRoleInSet(viewer, CLINIC_SCOPE_ROLES)) {
     const scope = await prisma.clinicAdminScope.findFirst({
       where: { tenantId, userId: viewer.userId, clinicId },
     });
     return Boolean(scope);
   }
-  if (viewer.role === UserRole.HR_OFFICER) {
+  if (hasRole(viewer, UserRole.HR_OFFICER)) {
     const link = await prisma.employee.findFirst({
       where: { tenantId, userId: viewer.userId, deletedAt: null },
       select: { clinicId: true },

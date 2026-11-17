@@ -32,25 +32,38 @@ export function ClinicRegulatorySettingsPanel({ clinicId, detail, canEdit }: Pro
     : null;
 
   const [license, setLicense] = useState(detail.licenseNumber);
-  const [taxReg, setTaxReg] = useState(detail.taxRegistrationNumber ?? "N/A");
-  const [vatPercent, setVatPercent] = useState(String(detail.invoiceVatPercent ?? 5));
+  const [taxReg, setTaxReg] = useState(detail.taxRegistrationNumber ?? "");
+  const [vatPercent, setVatPercent] = useState(String(detail.invoiceVatPercent ?? 0));
+  const [vatOverride, setVatOverride] = useState(!detail.invoiceVatPercentUsesMarketDefault);
 
   useEffect(() => {
     setLicense(detail.licenseNumber);
-    setTaxReg(detail.taxRegistrationNumber ?? "N/A");
-    setVatPercent(String(detail.invoiceVatPercent ?? 5));
-  }, [detail.licenseNumber, detail.taxRegistrationNumber, detail.invoiceVatPercent]);
+    setTaxReg(detail.taxRegistrationNumber ?? "");
+    setVatOverride(!detail.invoiceVatPercentUsesMarketDefault);
+    const v = detail.invoiceVatPercentUsesMarketDefault
+      ? (detail.marketInvoiceVatPercent ?? detail.invoiceVatPercent)
+      : detail.invoiceVatPercent;
+    setVatPercent(String(v ?? 0));
+  }, [
+    detail.licenseNumber,
+    detail.taxRegistrationNumber,
+    detail.invoiceVatPercent,
+    detail.invoiceVatPercentUsesMarketDefault,
+    detail.marketInvoiceVatPercent,
+  ]);
 
   const saveMut = useMutation({
     mutationFn: async () => {
       const vatN = Number.parseFloat(vatPercent);
       await apiPatch(`/api/v1/clinics/${clinicId}`, {
         licenseNumber: license.trim(),
-        taxRegistrationNumber: taxReg.trim() || "N/A",
+        taxRegistrationNumber: taxReg.trim() || null,
       });
-      await invoiceMut.mutateAsync({
-        invoiceVatPercent: Number.isFinite(vatN) ? vatN : 5,
-      });
+      await invoiceMut.mutateAsync(
+        vatOverride
+          ? { invoiceVatPercent: Number.isFinite(vatN) ? vatN : 0 }
+          : { invoiceVatPercentUseMarketDefault: true },
+      );
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["clinic", clinicId] });
@@ -70,8 +83,9 @@ export function ClinicRegulatorySettingsPanel({ clinicId, detail, canEdit }: Pro
 
   const dirty =
     license.trim() !== detail.licenseNumber.trim() ||
-    (taxReg.trim() || "N/A") !== (detail.taxRegistrationNumber ?? "N/A").trim() ||
-    String(detail.invoiceVatPercent ?? 5) !== vatPercent.trim();
+    (taxReg.trim() || "") !== (detail.taxRegistrationNumber ?? "").trim() ||
+    vatOverride !== !detail.invoiceVatPercentUsesMarketDefault ||
+    String(detail.invoiceVatPercent ?? 0) !== vatPercent.trim();
 
   return (
     <Card>
@@ -111,7 +125,7 @@ export function ClinicRegulatorySettingsPanel({ clinicId, detail, canEdit }: Pro
             value={taxReg}
             onChange={(e) => setTaxReg(e.target.value)}
             disabled={!canEdit}
-            placeholder="N/A"
+            placeholder={t("clinics.trnPlaceholder", "Organization or market default")}
           />
           <p className="text-xs text-muted-foreground">
             {t(
@@ -130,9 +144,18 @@ export function ClinicRegulatorySettingsPanel({ clinicId, detail, canEdit }: Pro
             max={100}
             step="0.01"
             value={vatPercent}
+            disabled={!canEdit || !vatOverride}
             onChange={(e) => setVatPercent(e.target.value)}
-            disabled={!canEdit}
           />
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={vatOverride}
+              disabled={!canEdit}
+              onChange={(e) => setVatOverride(e.target.checked)}
+            />
+            {t("admin.orgOverrideMarketDefault", "Override market default")}
+          </label>
         </div>
         {canEdit ? (
           <div className="sm:col-span-2">

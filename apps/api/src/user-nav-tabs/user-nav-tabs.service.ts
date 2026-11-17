@@ -10,6 +10,7 @@ import {
   loadNavTabTargetUser,
 } from "./clinic-admin-rbac-policy";
 import { TenantRoleNavTabsService } from "./tenant-role-nav-tabs.service";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 @Injectable()
 export class UserNavTabsService {
@@ -21,9 +22,9 @@ export class UserNavTabsService {
 
   private assertCanManage(actor: JwtUser, target: { id: string; role: UserRole; tenantId: string | null }): void {
     if (actor.tenantId == null || target.tenantId !== actor.tenantId) throw new ForbiddenException();
-    if (actor.role === UserRole.GROUP_ADMIN) return;
-    if (actor.role === UserRole.CLINIC_ADMIN) {
-      if (target.role === UserRole.GROUP_ADMIN || target.role === UserRole.CLINIC_ADMIN) {
+    if (hasRole(actor, UserRole.GROUP_ADMIN)) return;
+    if (hasRole(actor, UserRole.CLINIC_ADMIN)) {
+      if (hasAnyRole(target, [UserRole.GROUP_ADMIN, UserRole.CLINIC_ADMIN])) {
         throw new ForbiddenException("Clinic administrators cannot change navigation for this role");
       }
       return;
@@ -58,7 +59,7 @@ export class UserNavTabsService {
     await this.assertCanManageAsync(actor, tenantId, targetUserId);
 
     const roleBase = await this.tenantRoleNav.effectiveRoleBaseForUser(tenantId, target.role);
-    const allowOrganizationTabs = actor.role === UserRole.GROUP_ADMIN;
+    const allowOrganizationTabs = hasRole(actor, UserRole.GROUP_ADMIN);
     const sanitized = sanitizeUserNavTabGrant(target.role, tabKeys, {
       allowOrganizationTabs,
       roleBase,

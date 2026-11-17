@@ -34,6 +34,7 @@ import { extractPatientSearchTerm, messageAsksForPatientLookup } from "./assista
 import { mdCallout, mdHeading, mdMetric } from "./assistant-markdown";
 import { resolveAssistantPeriod, type AssistantPeriod } from "./assistant-period";
 import type { AssistantChatActionDto } from "./dto/assistant-chat.dto";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 const ASSISTANT_PATIENT_SEARCH_LIMIT = 8;
 
@@ -114,7 +115,7 @@ export class AssistantLiveDataService {
     }
 
     const loadClinics =
-      user.role !== UserRole.PLATFORM_SUPER_ADMIN &&
+      !hasRole(user, UserRole.PLATFORM_SUPER_ADMIN) &&
       (messageNeedsClinicContext(message) ||
         navKeys.includes("clinics") ||
         navKeys.includes("admin") ||

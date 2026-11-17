@@ -52,22 +52,54 @@ export type ClinicInvoiceSettingsDto = {
   invoiceVatPercent: number;
 };
 
-export function clinicInvoiceSettingsFromRow(row: {
-  invoiceBackgroundColor: string;
-  invoiceSections: unknown;
-  invoiceLogoRelativePath: string | null;
-  taxRegistrationNumber?: string | null;
-  invoiceVatPercent?: { toString(): string } | number | null;
-}): ClinicInvoiceSettingsDto {
+export type ClinicInvoiceSettingsExtras = {
+  invoiceVatPercentUsesMarketDefault?: boolean;
+  marketInvoiceVatPercent?: number;
+  taxRegistrationNumberUsesMarketDefault?: boolean;
+};
+
+export function clinicInvoiceSettingsFromRow(
+  row: {
+    invoiceBackgroundColor: string;
+    invoiceSections: unknown;
+    invoiceLogoRelativePath: string | null;
+    taxRegistrationNumber?: string | null;
+    invoiceVatPercent?: { toString(): string } | number | null;
+  },
+  opts?: {
+    effectiveVatPercent: number;
+    effectiveTaxRegistrationNumber: string | null;
+    marketInvoiceVatPercent: number;
+    vatUsesMarketDefault: boolean;
+    trnUsesMarketDefault: boolean;
+  },
+): ClinicInvoiceSettingsDto & ClinicInvoiceSettingsExtras {
   const vatRaw = row.invoiceVatPercent;
-  const invoiceVatPercent =
-    vatRaw == null ? 5 : typeof vatRaw === "number" ? vatRaw : Number(vatRaw);
+  const storedVat =
+    vatRaw == null ? null : typeof vatRaw === "number" ? vatRaw : Number(vatRaw);
+  const invoiceVatPercent = opts
+    ? opts.effectiveVatPercent
+    : storedVat == null
+      ? 0
+      : Number.isFinite(storedVat)
+        ? storedVat
+        : 0;
+  const taxRegistrationNumber = opts
+    ? opts.effectiveTaxRegistrationNumber
+    : row.taxRegistrationNumber?.trim() || null;
   return {
     invoiceBackgroundColor: row.invoiceBackgroundColor || "white",
     invoiceBackgroundHex: invoiceBackgroundHex(row.invoiceBackgroundColor || "white"),
     invoiceSections: normalizeInvoiceSections(row.invoiceSections),
     hasInvoiceLogo: Boolean(row.invoiceLogoRelativePath),
-    taxRegistrationNumber: row.taxRegistrationNumber?.trim() || "N/A",
-    invoiceVatPercent: Number.isFinite(invoiceVatPercent) ? invoiceVatPercent : 5,
+    taxRegistrationNumber,
+    invoiceVatPercent,
+    ...(opts
+      ? {
+          invoiceVatPercentUsesMarketDefault: opts.vatUsesMarketDefault,
+          marketInvoiceVatPercent: opts.marketInvoiceVatPercent,
+          taxRegistrationNumberUsesMarketDefault: opts.trnUsesMarketDefault,
+        }
+      : {}),
   };
 }

@@ -20,8 +20,10 @@ import type { PlatformPatchTenantUserDto } from "./dto/platform-patch-tenant-use
 import type { DeactivateTenantUserDto } from "./dto/deactivate-tenant-user.dto";
 import type { ReactivateTenantUserDto } from "./dto/reactivate-tenant-user.dto";
 import { MarketsService } from "../markets/markets.service";
+import { tenantCreateDefaultsFromMarket } from "../markets/market-tax-pack";
 import { normalizeOrgTaxRegistrationNumber } from "../common/sync-clinic-invoice-tax";
 import { mergeProviderBlock } from "../providers/provider-settings";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 @Injectable()
 export class PlatformAdminService {
@@ -167,7 +169,8 @@ export class PlatformAdminService {
     if (!market) {
       throw new BadRequestException("Select a live country market before creating an organization");
     }
-    const deploymentCell = dto.deploymentCell?.trim() || market.hostCell || "frankfurt";
+    const packDefaults = tenantCreateDefaultsFromMarket(market);
+    const deploymentCell = dto.deploymentCell?.trim() || packDefaults.deploymentCell;
     const baseCurrency = dto.baseCurrency?.trim() || market?.defaultCurrency?.trim();
     if (!baseCurrency) {
       throw new BadRequestException("baseCurrency is required (or set defaultCurrency on the market pack)");
@@ -187,10 +190,12 @@ export class PlatformAdminService {
           deploymentCell,
           baseCurrency,
           defaultLocale,
+          defaultVisitFee: packDefaults.defaultVisitFee,
+          defaultInvoiceVatPercent: packDefaults.defaultInvoiceVatPercent,
+          defaultTaxRegistrationNumber: dto.defaultTaxRegistrationNumber?.trim()
+            ? normalizeOrgTaxRegistrationNumber(dto.defaultTaxRegistrationNumber)
+            : packDefaults.defaultTaxRegistrationNumber,
           ...(etaOptOutDefault ? { providerSettings: etaOptOutDefault } : {}),
-          ...(dto.defaultTaxRegistrationNumber?.trim()
-            ? { defaultTaxRegistrationNumber: normalizeOrgTaxRegistrationNumber(dto.defaultTaxRegistrationNumber) }
-            : {}),
           ...(dto.defaultLicenseNumber?.trim() ? { defaultLicenseNumber: dto.defaultLicenseNumber.trim() } : {}),
         },
       });
@@ -207,6 +212,7 @@ export class PlatformAdminService {
             displayName: ga.displayName.trim(),
             passwordHash: bcrypt.hashSync(ga.password, 10),
             role: UserRole.GROUP_ADMIN,
+            isTenantOwner: true,
           },
         });
         groupAdmin = { id: u.id, email: u.email, displayName: u.displayName, role: u.role };
@@ -505,7 +511,7 @@ export class PlatformAdminService {
   async createUser(user: JwtUser, tenantId: string, dto: CreateTenantUserDto) {
     this.assertPlatform(user);
     await this.assertTenant(tenantId);
-    if (dto.role === UserRole.PLATFORM_SUPER_ADMIN) {
+    if (hasRole(dto, UserRole.PLATFORM_SUPER_ADMIN)) {
       throw new BadRequestException("Cannot assign PLATFORM_SUPER_ADMIN through organization user creation");
     }
     return this.admin.createTenantUser(tenantId, dto);

@@ -40,6 +40,7 @@ import { SchedulingService } from "../scheduling/scheduling.service";
 import type { CreateAppointmentDto } from "./dto/create-appointment.dto";
 import type { AppointmentDto } from "./dto/appointment.dto";
 import type { UpdateAppointmentDto } from "./dto/update-appointment.dto";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 const appointmentDtoInclude = {
   patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } },
@@ -75,7 +76,7 @@ export class AppointmentsService {
     if (isPhysicianRole(viewer.role) && row.clinicianId !== viewer.userId) {
       throw new ForbiddenException("You can only access appointments where you are the clinician");
     }
-    if (CLINIC_SCOPE_ROLES.has(viewer.role)) {
+    if (hasAnyRoleInSet(viewer, CLINIC_SCOPE_ROLES)) {
       if (viewer.tenantId == null) throw new ForbiddenException();
       const ok = await this.prisma.clinicAdminScope.findFirst({
         where: { tenantId: viewer.tenantId, userId: viewer.userId, clinicId: row.clinicId },
@@ -319,7 +320,7 @@ export class AppointmentsService {
       } else {
         and.push({ clinicId: { in: net } });
       }
-    } else if (viewer && CLINIC_SCOPE_ROLES.has(viewer.role)) {
+    } else if (viewer && hasAnyRoleInSet(viewer, CLINIC_SCOPE_ROLES)) {
       const scopes = await this.prisma.clinicAdminScope.findMany({
         where: { tenantId, userId: viewer.userId },
         select: { clinicId: true },

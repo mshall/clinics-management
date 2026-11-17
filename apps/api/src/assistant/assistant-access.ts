@@ -1,6 +1,7 @@
 import { ForbiddenException } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 export const ASSISTANT_ROLE_SLUGS = [
   "platform_super_admin",
@@ -40,7 +41,7 @@ export function assistantRoleSlugForRole(role: UserRole): AssistantRoleSlug {
 
 export function assertAssistantAccess(user: JwtUser): AssistantRoleSlug {
   const slug = assistantRoleSlugForRole(user.role);
-  if (user.role === UserRole.PLATFORM_SUPER_ADMIN) {
+  if (hasRole(user, UserRole.PLATFORM_SUPER_ADMIN)) {
     return slug;
   }
   if (!user.tenantId) {

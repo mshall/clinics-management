@@ -15,6 +15,7 @@ import {
 } from "../user-nav-tabs/clinic-admin-rbac-policy";
 import type { UserClinicHrAssignmentDto } from "./dto/user-clinic-privilege-grant.dto";
 import type { SetUserClinicHrAssignmentDto } from "./dto/set-user-clinic-privilege-grant.dto";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 const HR_ASSIGNMENT_MANAGER_ROLES = new Set<UserRole>([UserRole.GROUP_ADMIN, UserRole.CLINIC_ADMIN]);
 
@@ -23,7 +24,7 @@ export class UserClinicPrivilegeGrantsService {
   constructor(private readonly prisma: PrismaService) {}
 
   private assertHrAssignmentManager(actor: JwtUser): void {
-    if (!HR_ASSIGNMENT_MANAGER_ROLES.has(actor.role)) {
+    if (!hasAnyRoleInSet(actor, HR_ASSIGNMENT_MANAGER_ROLES)) {
       throw new ForbiddenException("Only group or clinic administrators may assign clinic HR roles");
     }
   }
@@ -35,15 +36,15 @@ export class UserClinicPrivilegeGrantsService {
     clinicId?: string,
   ): Promise<void> {
     const target = await loadNavTabTargetUser(this.prisma, tenantId, targetUserId);
-    if (target.role === UserRole.GROUP_ADMIN || target.role === UserRole.PLATFORM_SUPER_ADMIN) {
+    if (hasAnyRole(target, [UserRole.GROUP_ADMIN, UserRole.PLATFORM_SUPER_ADMIN])) {
       throw new ForbiddenException("Cannot assign clinic HR role to organization administrators");
     }
-    if (target.role === UserRole.HR_OFFICER) {
+    if (hasRole(target, UserRole.HR_OFFICER)) {
       throw new BadRequestException("This user is already an organization HR officer");
     }
     await assertClinicAdminCanManageUserNavTabs(this.prisma, tenantId, actor, target);
 
-    if (actor.role === UserRole.CLINIC_ADMIN && clinicId) {
+    if (hasRole(actor, UserRole.CLINIC_ADMIN) && clinicId) {
       const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, actor);
       if (!scopeIds?.includes(clinicId)) {
         throw new ForbiddenException("Clinic is outside your assignment");
@@ -56,7 +57,7 @@ export class UserClinicPrivilegeGrantsService {
     await this.assertCanManageHrAssignmentForUser(tenantId, actor, userId);
 
     const assignments = await loadResolvedEmployeePrivilegeGrants(this.prisma, tenantId, userId);
-    if (actor.role === UserRole.CLINIC_ADMIN) {
+    if (hasRole(actor, UserRole.CLINIC_ADMIN)) {
       const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, actor);
       const allowed = new Set(scopeIds ?? []);
       return assignments

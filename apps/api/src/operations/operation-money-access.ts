@@ -1,5 +1,6 @@
 import { UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 /** Roles that see operation money org-wide (lists, summaries, all operations). */
 const OPERATION_MONEY_ROLES: ReadonlySet<UserRole> = new Set([
@@ -13,6 +14,11 @@ export function isOperationMoneyRole(role: UserRole | undefined): boolean {
   return role != null && OPERATION_MONEY_ROLES.has(role);
 }
 
+export function isOperationMoneyPrincipal(principal: JwtUser | undefined): boolean {
+  if (!principal) return false;
+  return hasAnyRoleInSet(principal, OPERATION_MONEY_ROLES);
+}
+
 /** Period / revenue summaries on the operations workspace. */
 export function operationSummaryFinancialsVisible(role: UserRole | undefined): boolean {
   return isOperationMoneyRole(role);
@@ -24,14 +30,14 @@ export function operationFinancialsVisible(
   clinicianId: string,
 ): boolean {
   if (!viewer) return false;
-  if (isOperationMoneyRole(viewer.role)) return true;
-  if (viewer.role === UserRole.PHYSICIAN && viewer.userId === clinicianId) return true;
+  if (isOperationMoneyPrincipal(viewer)) return true;
+  if (hasRole(viewer, UserRole.PHYSICIAN) && viewer.userId === clinicianId) return true;
   return false;
 }
 
 /** Creating or PATCHing fee fields on an operation. */
 export function canEditOperationFees(viewer: JwtUser | undefined): boolean {
-  return isOperationMoneyRole(viewer?.role);
+  return isOperationMoneyPrincipal(viewer);
 }
 
 export function isCallCenterRole(role: UserRole | undefined): boolean {

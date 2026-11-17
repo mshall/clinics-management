@@ -38,8 +38,9 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
   const roleNavTabKeys = useAuthStore((s) => s.user?.roleNavTabKeys);
   const employeePrivilegeGrants = useAuthStore((s) => s.user?.employeePrivilegeGrants);
+  const allRoles = useAuthStore((s) => s.user?.roles);
   const showTab = (key: Parameters<typeof showNavItem>[1]) =>
-    showNavItem(role, key, navTabKeys, roleNavTabKeys, employeePrivilegeGrants);
+    showNavItem(role, key, navTabKeys, roleNavTabKeys, employeePrivilegeGrants, allRoles);
   const isPhysician = role === "physician";
   const showRevenue = canViewRevenue(role) && showTab("revenue");
   const showPlatformNav =

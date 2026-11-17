@@ -2,6 +2,7 @@ import { ForbiddenException } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
 import type { JwtUser } from "../../auth/jwt-user";
 import { isPlatformSuperAdmin } from "../../common/platform-super-admin";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../../common/effective-roles";
 
 export function assertExplorerTenant(user: JwtUser): string {
   if (user.tenantId != null) return user.tenantId;
@@ -12,7 +13,7 @@ export function assertExplorerTenant(user: JwtUser): string {
 
 export function assertDataExplorerAccess(user: JwtUser): void {
   if (isPlatformSuperAdmin(user)) return;
-  if (user.role === UserRole.GROUP_ADMIN && user.tenantId) return;
+  if (hasRole(user, UserRole.GROUP_ADMIN) && user.tenantId) return;
   throw new ForbiddenException("Only group administrators or platform super administrators can use the data explorer");
 }
 

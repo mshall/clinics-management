@@ -34,6 +34,7 @@ import { CreateExpenseDto } from "./dto/create-expense.dto";
 import { ExpenseDto } from "./dto/expense.dto";
 import { UpdateExpenseDto } from "./dto/update-expense.dto";
 import { ExpensesService } from "./expenses.service";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 const PROOF_UPLOAD_LIMIT = 15 * 1024 * 1024;
 
@@ -61,7 +62,7 @@ export class ExpensesController {
   constructor(private readonly expenses: ExpensesService) {}
 
   private assertExpenseAccess(user: JwtUser): void {
-    if (!EXPENSE_ROLES.has(user.role)) {
+    if (!hasAnyRoleInSet(user, EXPENSE_ROLES)) {
       throw new ForbiddenException("You do not have permission to access expenses");
     }
   }

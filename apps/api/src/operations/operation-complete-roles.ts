@@ -2,6 +2,7 @@ import { ForbiddenException } from "@nestjs/common";
 import { OperationStatus, UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { normalizeOperationStatus } from "./operation-status-flow";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 /** Roles that may mark an operation completed / discharged (excludes call center). */
 export const OPERATION_COMPLETE_ROLES: ReadonlySet<UserRole> = new Set([
@@ -24,7 +25,7 @@ export function operationStatusCompletesRevenue(status: OperationStatus): boolea
 
 export function assertCanCompleteOperation(viewer: JwtUser, status: OperationStatus): void {
   if (!operationStatusCompletesRevenue(status)) return;
-  if (!OPERATION_COMPLETE_ROLES.has(viewer.role)) {
+  if (!hasAnyRoleInSet(viewer, OPERATION_COMPLETE_ROLES)) {
     throw new ForbiddenException("You do not have permission to mark operations as completed");
   }
 }

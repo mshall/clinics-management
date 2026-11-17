@@ -46,6 +46,7 @@ import {
   throwUploadUnsupportedType,
 } from "../common/upload-errors";
 import type { PatientPhoneConflictDto, PatientPhoneConflictPatientDto } from "./dto/patient-phone-conflict.dto";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 const MAX_PATIENT_DOC_BYTES = 15 * 1024 * 1024;
 const ALLOWED_PATIENT_DOC_MIME = new Set(["application/pdf", "image/jpeg", "image/png", "image/gif", "image/webp"]);
@@ -549,7 +550,7 @@ export class PatientsService {
   }
 
   private async assertCanManagePatient(user: JwtUser): Promise<void> {
-    if (!PATIENT_MANAGE_ROLES.has(user.role)) {
+    if (!hasAnyRoleInSet(user, PATIENT_MANAGE_ROLES)) {
       throw new ForbiddenException("You are not allowed to modify patients");
     }
   }
@@ -918,7 +919,7 @@ export class PatientsService {
       } else {
         encounterWhere.clinicId = { in: net };
       }
-    } else if (CLINIC_SCOPE_ROLES.has(user.role)) {
+    } else if (hasAnyRoleInSet(user, CLINIC_SCOPE_ROLES)) {
       const scopes = await this.prisma.clinicAdminScope.findMany({
         where: { tenantId, userId: user.userId },
         select: { clinicId: true },

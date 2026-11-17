@@ -1,18 +1,17 @@
 import type { Prisma } from "@prisma/client";
 
-export const DEFAULT_ORG_TAX_REGISTRATION_NUMBER = "N/A";
-export const DEFAULT_ORG_INVOICE_VAT_PERCENT = 5;
-
-export function normalizeOrgTaxRegistrationNumber(value: string | null | undefined): string {
+/** Stored org TRN: empty/null means inherit market pack (no placeholder). */
+export function normalizeOrgTaxRegistrationNumber(value: string | null | undefined): string | null {
   const trimmed = value?.trim();
-  return trimmed?.length ? trimmed : DEFAULT_ORG_TAX_REGISTRATION_NUMBER;
+  if (!trimmed || trimmed.toUpperCase() === "N/A") return null;
+  return trimmed;
 }
 
 /** Apply organization invoice tax settings to every clinic in the tenant. */
 export async function syncClinicInvoiceTaxFromTenant(
   db: Prisma.TransactionClient,
   tenantId: string,
-  taxRegistrationNumber: string,
+  taxRegistrationNumber: string | null,
   invoiceVatPercent: number,
 ): Promise<number> {
   const result = await db.clinic.updateMany({

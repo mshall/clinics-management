@@ -28,7 +28,14 @@ import {
 import { normalizeFrontDeskRoomLabels, parseFrontDeskRoomLabels } from "../common/front-desk-room-labels";
 import { resolveMarketTaxLabels } from "../common/market-tax-labels";
 import { normalizeOrgTaxRegistrationNumber } from "../common/sync-clinic-invoice-tax";
+import {
+  assertTrnForMarket,
+  clinicInvoiceDefaultsFromTenant,
+  clinicRegulatoryEffective,
+  requireMarketTaxPack,
+} from "../markets/market-tax-pack";
 import { TtlCache } from "../common/ttl-cache";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 const clinicListCache = new TtlCache<ClinicDto[]>(60_000);
 
@@ -93,7 +100,7 @@ export class ClinicsService {
   ]);
 
   private assertCanManageClinicLifecycle(viewer: JwtUser): void {
-    if (!ClinicsService.CLINIC_MANAGE_ROLES.has(viewer.role)) {
+    if (!hasAnyRoleInSet(viewer, ClinicsService.CLINIC_MANAGE_ROLES)) {
       throw new ForbiddenException("You do not have permission to change clinic status");
     }
   }
@@ -160,12 +167,12 @@ export class ClinicsService {
   private async assertClinicVisible(tenantId: string, clinicId: string, user: JwtUser): Promise<void> {
     const row = await this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId }, select: { id: true } });
     if (!row) throw new NotFoundException("Clinic not found");
-    if (user.role === UserRole.PHYSICIAN) {
+    if (hasRole(user, UserRole.PHYSICIAN)) {
       const net = await fetchPhysicianNetworkClinicIds(this.prisma, tenantId, user.userId);
       if (!net.includes(clinicId)) throw new NotFoundException("Clinic not found");
       return;
     }
-    if (CLINIC_SCOPE_ROLES.has(user.role)) {
+    if (hasAnyRoleInSet(user, CLINIC_SCOPE_ROLES)) {
       const scope = await this.prisma.clinicAdminScope.findFirst({
         where: { tenantId, userId: user.userId, clinicId },
       });
@@ -245,7 +252,7 @@ export class ClinicsService {
     user: JwtUser,
     search?: string
   ): Promise<ClinicPhysicianDto[]> {
-    if (!ClinicsService.CLINIC_PHYSICIAN_MANAGE_ROLES.has(user.role)) {
+    if (!hasAnyRoleInSet(user, ClinicsService.CLINIC_PHYSICIAN_MANAGE_ROLES)) {
       throw new ForbiddenException("You do not have permission to assign physicians");
     }
     await this.assertClinicVisible(tenantId, clinicId, user);
@@ -328,7 +335,7 @@ export class ClinicsService {
   }
 
   async assignPhysician(tenantId: string, clinicId: string, userId: string, viewer: JwtUser): Promise<ClinicPhysicianDto> {
-    if (!ClinicsService.CLINIC_PHYSICIAN_MANAGE_ROLES.has(viewer.role)) {
+    if (!hasAnyRoleInSet(viewer, ClinicsService.CLINIC_PHYSICIAN_MANAGE_ROLES)) {
       throw new ForbiddenException("You do not have permission to assign physicians");
     }
     await this.assertClinicVisible(tenantId, clinicId, viewer);
@@ -404,7 +411,7 @@ export class ClinicsService {
     viewer: JwtUser,
     defaultExamRoomLabel?: string | null,
   ) {
-    if (!ClinicsService.CLINIC_PHYSICIAN_MANAGE_ROLES.has(viewer.role)) {
+    if (!hasAnyRoleInSet(viewer, ClinicsService.CLINIC_PHYSICIAN_MANAGE_ROLES)) {
       throw new ForbiddenException("You do not have permission to update physicians");
     }
     await this.assertClinicVisible(tenantId, clinicId, viewer);
@@ -423,7 +430,7 @@ export class ClinicsService {
   }
 
   async removePhysician(tenantId: string, clinicId: string, userId: string, viewer: JwtUser): Promise<void> {
-    if (!ClinicsService.CLINIC_PHYSICIAN_MANAGE_ROLES.has(viewer.role)) {
+    if (!hasAnyRoleInSet(viewer, ClinicsService.CLINIC_PHYSICIAN_MANAGE_ROLES)) {
       throw new ForbiddenException("You do not have permission to remove physician assignments");
     }
     await this.assertClinicVisible(tenantId, clinicId, viewer);
@@ -460,7 +467,7 @@ export class ClinicsService {
     clinicId?: string,
     search?: string
   ): Promise<ClinicPhysicianDto[]> {
-    if (!ClinicsService.SCHEDULING_ROLES.has(user.role)) {
+    if (!hasAnyRoleInSet(user, ClinicsService.SCHEDULING_ROLES)) {
       throw new ForbiddenException("You do not have permission to list physicians");
     }
 
@@ -573,17 +580,21 @@ export class ClinicsService {
       },
     });
     if (!row) throw new NotFoundException("Clinic not found");
-    if (user.role === UserRole.PHYSICIAN) {
+    if (hasRole(user, UserRole.PHYSICIAN)) {
       const net = await fetchPhysicianNetworkClinicIds(this.prisma, tenantId, user.userId);
       if (!net.includes(id)) throw new NotFoundException("Clinic not found");
     }
-    if (user.role === UserRole.CLINIC_ADMIN || user.role === UserRole.BRANCH_MANAGER) {
+    if (hasAnyRole(user, [UserRole.CLINIC_ADMIN, UserRole.BRANCH_MANAGER])) {
       const scope = await this.prisma.clinicAdminScope.findFirst({
         where: { tenantId, userId: user.userId, clinicId: id },
       });
       if (!scope) throw new NotFoundException("Clinic not found");
     }
     const marketTaxLabels = await this.marketTaxLabelsForTenant(tenantId);
+    const tenantRow = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      include: { market: true },
+    });
     return {
       id: row.id,
       parentClinicId: row.parentClinicId,
@@ -610,7 +621,12 @@ export class ClinicsService {
       createdAt: row.createdAt.toISOString(),
       operatingPeriods: row.operatingPeriods.map((p) => this.mapOperatingPeriod(p)),
       frontDeskRoomLabels: parseFrontDeskRoomLabels(row.frontDeskRoomLabels),
-      ...clinicInvoiceSettingsFromRow(row),
+      ...clinicInvoiceSettingsFromRow(
+        row,
+        tenantRow?.market
+          ? clinicRegulatoryEffective(row, tenantRow.market, tenantRow)
+          : undefined,
+      ),
       marketTaxLabels,
       ...clinicPrescriptionSettingsFromRow(row),
       ...mapEtaClinicSettingsDto(row),
@@ -626,11 +642,11 @@ export class ClinicsService {
     if (!includeInactive) {
       where.recordStatus = ClinicRecordStatus.ACTIVE;
     }
-    if (user.role === UserRole.PHYSICIAN) {
+    if (hasRole(user, UserRole.PHYSICIAN)) {
       const ids = await fetchPhysicianNetworkClinicIds(this.prisma, tenantId, user.userId);
       if (!ids.length) return [];
       where = { ...where, id: { in: ids } };
-    } else if (user.role === UserRole.CLINIC_ADMIN || user.role === UserRole.BRANCH_MANAGER) {
+    } else if (hasAnyRole(user, [UserRole.CLINIC_ADMIN, UserRole.BRANCH_MANAGER])) {
       const scopes = await this.prisma.clinicAdminScope.findMany({
         where: { tenantId, userId: user.userId },
         select: { clinicId: true },
@@ -652,8 +668,29 @@ export class ClinicsService {
   async create(tenantId: string, dto: CreateClinicDto): Promise<ClinicDto> {
     const tenantForMarket = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { baseCurrency: true, defaultTaxRegistrationNumber: true, defaultInvoiceVatPercent: true, market: { select: { defaultPhoneRegion: true, defaultTimezone: true, weekendDays: true } } },
+      select: {
+        baseCurrency: true,
+        defaultTaxRegistrationNumber: true,
+        defaultInvoiceVatPercent: true,
+        defaultVisitFee: true,
+        deploymentCell: true,
+        market: {
+          select: {
+            id: true,
+            code: true,
+            taxConfig: true,
+            hostCell: true,
+            defaultPhoneRegion: true,
+            defaultTimezone: true,
+            weekendDays: true,
+          },
+        },
+      },
     });
+    if (!tenantForMarket?.market) {
+      throw new BadRequestException("Organization must belong to a country market before adding clinics");
+    }
+    const clinicTax = clinicInvoiceDefaultsFromTenant(tenantForMarket.market, tenantForMarket);
     const country =
       dto.country?.trim() ||
       tenantForMarket?.market?.defaultPhoneRegion?.trim() ||
@@ -722,8 +759,8 @@ export class ClinicsService {
           logoUrl,
           defaultCurrency,
           clinicalSpecialty: dto.clinicalSpecialty ?? undefined,
-          taxRegistrationNumber: tenant?.defaultTaxRegistrationNumber ?? "N/A",
-          invoiceVatPercent: tenant?.defaultInvoiceVatPercent ?? 5,
+          taxRegistrationNumber: clinicTax.taxRegistrationNumber,
+          invoiceVatPercent: clinicTax.invoiceVatPercent,
           openingTime,
           closingTime,
           timezone: tenant?.market?.defaultTimezone ?? undefined,
@@ -797,7 +834,15 @@ export class ClinicsService {
     if (dto.email !== undefined) data.email = dto.email.trim().toLowerCase();
     if (dto.licenseNumber !== undefined) data.licenseNumber = dto.licenseNumber.trim();
     if (dto.taxRegistrationNumber !== undefined) {
-      data.taxRegistrationNumber = normalizeOrgTaxRegistrationNumber(dto.taxRegistrationNumber);
+      const tenantRow = await this.prisma.tenant.findUnique({
+        where: { id: tenantId },
+        include: { market: true },
+      });
+      const normalized = normalizeOrgTaxRegistrationNumber(dto.taxRegistrationNumber);
+      if (tenantRow?.market) {
+        assertTrnForMarket(normalized, requireMarketTaxPack(tenantRow.market));
+      }
+      data.taxRegistrationNumber = normalized;
     }
     if (dto.logoUrl !== undefined) data.logoUrl = dto.logoUrl.trim() || null;
     if (dto.defaultCurrency !== undefined) {

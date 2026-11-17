@@ -10,6 +10,7 @@ import {
   hashIntegrationSecret,
   verifyIntegrationSecret,
 } from "./integration-token";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 import {
   findInvalidClinicAllowlistIds,
   normalizeAllowedClinicIds,
@@ -22,7 +23,7 @@ export class IntegrationClientService {
   constructor(private readonly prisma: PrismaService) {}
 
   assertAdminManage(user: JwtUser): void {
-    if (!user.tenantId || !ADMIN_ROLES.has(user.role)) {
+    if (!user.tenantId || !hasAnyRoleInSet(user, ADMIN_ROLES)) {
       throw new UnauthorizedException("Only organization administrators can manage integration clients");
     }
   }

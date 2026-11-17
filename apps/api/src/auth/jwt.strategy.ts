@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
+import { jwtUserFromRow } from "../common/effective-roles";
 import type { JwtUser } from "./jwt-user";
 import { resolveJwtSigningSecret } from "./jwt-secret.util";
 import { PrismaService } from "../prisma/prisma.service";
@@ -35,11 +36,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
     if (!user) throw new UnauthorizedException();
     if (user.deletedAt || user.deactivatedAt) throw new UnauthorizedException();
-    return {
-      userId: user.id,
+    return jwtUserFromRow({
+      id: user.id,
       tenantId: user.tenantId,
       email: user.email,
       role: user.role,
-    };
+      additionalRoles: user.additionalRoles,
+      isTenantOwner: user.isTenantOwner,
+    });
   }
 }

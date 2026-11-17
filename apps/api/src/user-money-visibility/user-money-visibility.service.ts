@@ -9,6 +9,7 @@ import {
 import { PrismaService } from "../prisma/prisma.service";
 import { loadNavTabTargetUser } from "../user-nav-tabs/clinic-admin-rbac-policy";
 import type { UserMoneyVisibilityDto, UserMoneyVisibilityResponseDto } from "./dto/user-money-visibility.dto";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 const MANAGE_ROLES = new Set<UserRole>([UserRole.GROUP_ADMIN, UserRole.CLINIC_ADMIN]);
 
@@ -17,7 +18,7 @@ export class UserMoneyVisibilityService {
   constructor(private readonly prisma: PrismaService) {}
 
   private assertManager(actor: JwtUser): void {
-    if (!MANAGE_ROLES.has(actor.role)) {
+    if (!hasAnyRoleInSet(actor, MANAGE_ROLES)) {
       throw new ForbiddenException("Only organization administrators may edit money visibility");
     }
   }
@@ -36,7 +37,7 @@ export class UserMoneyVisibilityService {
   ): Promise<UserMoneyVisibilityResponseDto> {
     this.assertManager(actor);
     const target = await loadNavTabTargetUser(this.prisma, tenantId, userId);
-    if (target.role === UserRole.GROUP_ADMIN || target.role === UserRole.PLATFORM_SUPER_ADMIN) {
+    if (hasAnyRole(target, [UserRole.GROUP_ADMIN, UserRole.PLATFORM_SUPER_ADMIN])) {
       throw new ForbiddenException("Cannot customize money visibility for organization administrators");
     }
 

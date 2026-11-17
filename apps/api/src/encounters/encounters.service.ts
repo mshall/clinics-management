@@ -43,6 +43,7 @@ import {
   loadUserMoneyVisibilityOverrides,
   type UserMoneyVisibilityOverrides,
 } from "../common/user-money-visibility";
+import { effectiveTenantVisitFee } from "../common/effective-tenant-visit-fee";
 import { PrismaService } from "../prisma/prisma.service";
 import { FrontDeskFlowService } from "../front-desk/front-desk-flow.service";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
@@ -63,6 +64,7 @@ import type {
   EncounterMedicationDto,
 } from "./dto/encounter-response.dto";
 import type { UpdateEncounterDto } from "./dto/update-encounter.dto";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 const ALLOWED_MIME = new Set([
@@ -282,7 +284,7 @@ export class EncountersService {
         return paginate([], 0, page, pageSize);
       }
       where.clinicId = { in: net };
-    } else if (viewer && CLINIC_SCOPE_ROLES.has(viewer.role)) {
+    } else if (viewer && hasAnyRoleInSet(viewer, CLINIC_SCOPE_ROLES)) {
       const scopes = await this.prisma.clinicAdminScope.findMany({
         where: { tenantId, userId: viewer.userId },
         select: { clinicId: true },
@@ -407,8 +409,12 @@ export class EncountersService {
 
     const tenantRow = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { defaultVisitFee: true },
+      select: { defaultVisitFee: true, market: true },
     });
+    const orgDefaultVisitFee = effectiveTenantVisitFee(
+      tenantRow ?? { defaultVisitFee: null },
+      tenantRow?.market ?? null,
+    );
     const visitFeeCurrencyPreview = await this.resolveVisitFeeCurrency(tenantId, dto.clinicId, dto.visitFeeCurrency);
     let linkedAppointmentFeePreview: number | null = null;
     if (appointmentIdOpt) {
@@ -425,7 +431,7 @@ export class EncountersService {
         ? visitFeeFromDtoPreview
         : linkedAppointmentFeePreview != null && linkedAppointmentFeePreview >= 0
           ? linkedAppointmentFeePreview
-          : Number(tenantRow?.defaultVisitFee ?? 0);
+          : orgDefaultVisitFee;
     const { resolveTenantTransferCollectionContext } = await import("../common/market-transfer-context");
     const transferCtx = await resolveTenantTransferCollectionContext(this.prisma, this.featureFlags, tenantId);
     const collectionOpts = {
@@ -454,9 +460,9 @@ export class EncountersService {
     }
 
     const row = await this.prisma.$transaction(async (tx) => {
-      const tenant = await tx.tenant.findUnique({ where: { id: tenantId } });
+      const tenant = await tx.tenant.findUnique({ where: { id: tenantId }, include: { market: true } });
       if (!tenant) throw new BadRequestException("Tenant not found");
-      const defaultFee = Number(tenant.defaultVisitFee);
+      const defaultFee = effectiveTenantVisitFee(tenant, tenant.market);
 
       let linkAppointmentId: string | null = null;
       let linkedAppointmentFee: number | null = null;
@@ -997,7 +1003,7 @@ export class EncountersService {
       throw new BadRequestException("Already finalized");
     }
     const canFinalizeAny =
-      viewer.role === UserRole.GROUP_SUPERVISOR || viewer.role === UserRole.GROUP_ADMIN;
+      hasAnyRole(viewer, [UserRole.GROUP_SUPERVISOR, UserRole.GROUP_ADMIN]);
     if (!canFinalizeAny && enc.clinicianId !== viewer.userId) {
       throw new ForbiddenException("Only the assigned clinician can finalize this encounter");
     }

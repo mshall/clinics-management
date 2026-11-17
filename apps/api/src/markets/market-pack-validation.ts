@@ -1,5 +1,6 @@
 import { BadRequestException } from "@nestjs/common";
-import type { Market } from "@prisma/client";
+import { MarketLaunchStatus, type Market } from "@prisma/client";
+import { parseMarketTaxPack } from "./market-tax-pack";
 
 const REQUIRED_MARKET_STRINGS = [
   "defaultCurrency",
@@ -21,5 +22,15 @@ export function assertMarketPackConfigured(market: Market | null | undefined): a
   }
   if (!Array.isArray(market.weekendDays)) {
     throw new BadRequestException(`Market pack ${market.code} is missing weekendDays`);
+  }
+}
+
+/** LIVE markets must ship a complete tax pack (FD-00). */
+export function assertLiveMarketHasTaxPack(market: Market): void {
+  if (market.status !== MarketLaunchStatus.LIVE) return;
+  if (!parseMarketTaxPack(market.taxConfig)) {
+    throw new BadRequestException(
+      `Market pack ${market.code} must define taxConfig (invoiceVatPercent, saasVatPercent, defaultVisitFee) before going live`,
+    );
   }
 }

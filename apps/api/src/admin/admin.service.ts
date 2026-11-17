@@ -37,9 +37,19 @@ import {
   normalizeOrgTaxRegistrationNumber,
   syncClinicInvoiceTaxFromTenant,
 } from "../common/sync-clinic-invoice-tax";
+import {
+  assertTrnForMarket,
+  mapTenantTaxSettingsApi,
+  requireMarketTaxPack,
+  tenantTaxEffectiveFromMarket,
+} from "../markets/market-tax-pack";
 import type { BulkDeleteUsersDto } from "./dto/bulk-delete-users.dto";
 import type { DeactivateTenantUserDto } from "./dto/deactivate-tenant-user.dto";
 import type { ReactivateTenantUserDto } from "./dto/reactivate-tenant-user.dto";
+import type { PatchUserRolesDto } from "./dto/patch-user-roles.dto";
+import type { TransferTenantOwnershipDto } from "./dto/transfer-tenant-ownership.dto";
+import { hasAnyRole, hasAnyRoleInSet, hasRole, isTenantOwnerPrincipal, sanitizeAdditionalRoles } from "../common/effective-roles";
+import { MfaService, verifyTotpCode } from "../auth/mfa.service";
 import {
   buildPlatformHierarchy,
   buildTenantHierarchy,
@@ -119,11 +129,12 @@ export class AdminService {
     private readonly prisma: PrismaService,
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
     private readonly featureFlags: FeatureFlagsService,
+    private readonly mfa: MfaService,
   ) {}
 
   async overview(currentTenantId: string) {
     const [tenant, tenantCount, tenantFeatureFlags, recentAudit] = await Promise.all([
-      this.prisma.tenant.findUnique({ where: { id: currentTenantId } }),
+      this.prisma.tenant.findUnique({ where: { id: currentTenantId }, include: { market: true } }),
       this.prisma.tenant.count(),
       this.featureFlags.listForTenant(currentTenantId),
       this.prisma.auditLog.findMany({
@@ -138,12 +149,10 @@ export class AdminService {
             id: tenant.id,
             name: tenant.name,
             baseCurrency: tenant.baseCurrency,
-            defaultVisitFee: Number(tenant.defaultVisitFee),
-            defaultTaxRegistrationNumber: tenant.defaultTaxRegistrationNumber,
-            defaultInvoiceVatPercent: Number(tenant.defaultInvoiceVatPercent),
             integrationFailureRetentionDays: tenant.integrationFailureRetentionDays,
             whatsAppRemindersEnabled: tenant.whatsAppRemindersEnabled,
             appointmentReminderHoursBefore: tenant.appointmentReminderHoursBefore,
+            ...mapTenantTaxSettingsApi(tenant),
             ...mapEtaTenantSettingsDto(tenant),
           }
         : null,
@@ -335,13 +344,13 @@ export class AdminService {
 
   async createTenantUser(tenantId: string, dto: CreateTenantUserDto) {
     const email = dto.email.toLowerCase().trim();
-    if (dto.role === UserRole.PLATFORM_SUPER_ADMIN) {
+    if (hasRole(dto, UserRole.PLATFORM_SUPER_ADMIN)) {
       throw new BadRequestException("Cannot create platform super administrators through this endpoint");
     }
     assertCanCreateGroupAdminRole(dto.role);
     const existing = await this.prisma.user.findFirst({ where: { tenantId, email } });
     if (existing) throw new BadRequestException("Email already in use for this organization");
-    if (CLINIC_SCOPE_ROLES.has(dto.role) && !(dto.clinicIds?.length ?? 0)) {
+    if (hasAnyRoleInSet(dto, CLINIC_SCOPE_ROLES) && !(dto.clinicIds?.length ?? 0)) {
       throw new BadRequestException("clinicIds is required when creating a clinic administrator or branch manager");
     }
     const passwordHash = bcrypt.hashSync(dto.password, 10);
@@ -396,6 +405,8 @@ export class AdminService {
       email: row.email,
       displayName: row.displayName,
       role: row.role,
+      additionalRoles: row.additionalRoles ?? [],
+      isTenantOwner: Boolean(row.isTenantOwner),
       createdAt: row.createdAt.toISOString(),
       deactivatedAt: row.deactivatedAt?.toISOString() ?? null,
       deletedAt: row.deletedAt?.toISOString() ?? null,
@@ -409,7 +420,11 @@ export class AdminService {
     await this.assertTenantExists(tenantId);
     const existing = await this.prisma.user.findFirst({ where: { id: userId, tenantId } });
     if (!existing) throw new NotFoundException("User not found");
-    if (existing.role === UserRole.PLATFORM_SUPER_ADMIN || dto.role === UserRole.PLATFORM_SUPER_ADMIN) {
+    const nextRoleCandidate = dto.role ?? existing.role;
+    if (
+      hasRole(existing, UserRole.PLATFORM_SUPER_ADMIN) ||
+      nextRoleCandidate === UserRole.PLATFORM_SUPER_ADMIN
+    ) {
       throw new BadRequestException("Cannot modify platform super administrators through this endpoint");
     }
 
@@ -489,7 +504,7 @@ export class AdminService {
     await this.assertTenantExists(tenantId);
     const existing = await this.prisma.user.findFirst({ where: { id: userId, tenantId } });
     if (!existing) throw new NotFoundException("User not found");
-    if (existing.role === UserRole.PLATFORM_SUPER_ADMIN) {
+    if (hasRole(existing, UserRole.PLATFORM_SUPER_ADMIN)) {
       throw new BadRequestException("Cannot archive platform super administrators");
     }
     if (actor.userId === userId) {
@@ -506,7 +521,7 @@ export class AdminService {
     await this.assertTenantExists(tenantId);
     const existing = await this.prisma.user.findFirst({ where: { id: userId, tenantId } });
     if (!existing) throw new NotFoundException("User not found");
-    if (existing.role === UserRole.PLATFORM_SUPER_ADMIN) {
+    if (hasRole(existing, UserRole.PLATFORM_SUPER_ADMIN)) {
       throw new BadRequestException("Cannot deactivate platform super administrators");
     }
     if (actor.userId === userId) {
@@ -587,7 +602,7 @@ export class AdminService {
     user: JwtUser,
     filters?: { from?: string; to?: string; action?: string; resource?: string; actorId?: string },
   ) {
-    if (user.role !== UserRole.GROUP_ADMIN && user.role !== UserRole.CLINIC_ADMIN && user.role !== UserRole.BRANCH_MANAGER) {
+    if (!hasRole(user, UserRole.GROUP_ADMIN) && !hasRole(user, UserRole.CLINIC_ADMIN) && !hasRole(user, UserRole.BRANCH_MANAGER)) {
       throw new ForbiddenException("Only administrators may list audit logs");
     }
     const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
@@ -655,21 +670,27 @@ export class AdminService {
   }
 
   async patchTenantSettings(tenantId: string, user: import("../auth/jwt-user").JwtUser, dto: PatchTenantSettingsDto) {
-    const existing = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
+    const existing = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      include: { market: true },
+    });
     if (!existing) throw new NotFoundException("Tenant not found");
+    if (!existing.market) throw new BadRequestException("Organization has no country market assigned");
     const priorOptOut = resolveEtaTenantSettings(existing).physicalReportingOptOut;
+    const marketPack = requireMarketTaxPack(existing.market);
 
     const data: {
-      defaultVisitFee?: number;
+      defaultVisitFee?: number | null;
       baseCurrency?: string;
       integrationFailureRetentionDays?: number;
-      defaultTaxRegistrationNumber?: string;
-      defaultInvoiceVatPercent?: number;
+      defaultTaxRegistrationNumber?: string | null;
+      defaultInvoiceVatPercent?: number | null;
       whatsAppRemindersEnabled?: boolean;
       appointmentReminderHoursBefore?: number;
       providerSettings?: Prisma.InputJsonValue;
     } = {};
-    if (dto.defaultVisitFee !== undefined) data.defaultVisitFee = dto.defaultVisitFee;
+    if (dto.defaultVisitFeeUseMarketDefault) data.defaultVisitFee = null;
+    else if (dto.defaultVisitFee !== undefined) data.defaultVisitFee = dto.defaultVisitFee;
     if (dto.baseCurrency !== undefined) {
       const next = dto.baseCurrency.trim();
       if (!isBaseCurrency(next)) throw new BadRequestException("Invalid base currency");
@@ -678,14 +699,26 @@ export class AdminService {
     if (dto.integrationFailureRetentionDays !== undefined) {
       data.integrationFailureRetentionDays = dto.integrationFailureRetentionDays;
     }
-    if (dto.defaultTaxRegistrationNumber !== undefined) {
+    if (dto.defaultTaxRegistrationNumberUseMarketDefault) {
+      data.defaultTaxRegistrationNumber = null;
+    } else if (dto.defaultTaxRegistrationNumber !== undefined) {
       data.defaultTaxRegistrationNumber = normalizeOrgTaxRegistrationNumber(dto.defaultTaxRegistrationNumber);
     }
-    if (dto.defaultInvoiceVatPercent !== undefined) {
+    if (dto.defaultInvoiceVatPercentUseMarketDefault) {
+      data.defaultInvoiceVatPercent = null;
+    } else if (dto.defaultInvoiceVatPercent !== undefined) {
       if (dto.defaultInvoiceVatPercent < 0 || dto.defaultInvoiceVatPercent > 100) {
         throw new BadRequestException("VAT percent must be between 0 and 100");
       }
       data.defaultInvoiceVatPercent = dto.defaultInvoiceVatPercent;
+    }
+
+    const trnAfterPatch =
+      data.defaultTaxRegistrationNumber !== undefined
+        ? data.defaultTaxRegistrationNumber
+        : existing.defaultTaxRegistrationNumber;
+    if (data.defaultTaxRegistrationNumber !== undefined) {
+      assertTrnForMarket(trnAfterPatch, marketPack);
     }
     if (dto.whatsAppRemindersEnabled !== undefined) data.whatsAppRemindersEnabled = dto.whatsAppRemindersEnabled;
     if (dto.appointmentReminderHoursBefore !== undefined) {
@@ -702,6 +735,9 @@ export class AdminService {
         throw new BadRequestException(
           "Physical ETA reporting opt-out requires consent timestamp (etaPhysicalReportingConsentAt)",
         );
+      }
+      if (dto.etaPhysicalReportingOptOut === false) {
+        assertTrnForMarket(trnAfterPatch, marketPack);
       }
       const etaPatch = patchEtaTenantProviderSettings({
         defaultTaxpayerActivityCode: dto.etaDefaultTaxpayerActivityCode,
@@ -731,13 +767,18 @@ export class AdminService {
       if (data.baseCurrency && data.baseCurrency !== existing.baseCurrency) {
         await syncInheritedClinicCurrencies(tx, tenantId, existing.baseCurrency, data.baseCurrency);
       }
-      if (data.defaultTaxRegistrationNumber !== undefined || data.defaultInvoiceVatPercent !== undefined) {
-        const trn =
-          data.defaultTaxRegistrationNumber ?? normalizeOrgTaxRegistrationNumber(existing.defaultTaxRegistrationNumber);
-        const vat = Number(
-          data.defaultInvoiceVatPercent ?? existing.defaultInvoiceVatPercent,
+      if (
+        data.defaultTaxRegistrationNumber !== undefined ||
+        data.defaultInvoiceVatPercent !== undefined
+      ) {
+        const merged = { ...existing, ...updated };
+        const effective = tenantTaxEffectiveFromMarket(existing.market!, merged);
+        await syncClinicInvoiceTaxFromTenant(
+          tx,
+          tenantId,
+          effective.defaultTaxRegistrationNumber,
+          effective.defaultInvoiceVatPercent,
         );
-        await syncClinicInvoiceTaxFromTenant(tx, tenantId, trn, vat);
       }
       if (dto.etaPhysicalReportingOptOut !== undefined) {
         const nextOptOut = resolveEtaTenantSettings(updated).physicalReportingOptOut;
@@ -759,17 +800,20 @@ export class AdminService {
       return updated;
     });
 
+    const withMarket = await this.prisma.tenant.findUnique({
+      where: { id: row.id },
+      include: { market: true },
+    });
+    if (!withMarket) throw new NotFoundException("Tenant not found");
     return {
-      id: row.id,
-      name: row.name,
-      baseCurrency: row.baseCurrency,
-      defaultVisitFee: Number(row.defaultVisitFee),
-      defaultTaxRegistrationNumber: row.defaultTaxRegistrationNumber,
-      defaultInvoiceVatPercent: Number(row.defaultInvoiceVatPercent),
-      integrationFailureRetentionDays: row.integrationFailureRetentionDays,
-      whatsAppRemindersEnabled: row.whatsAppRemindersEnabled,
-      appointmentReminderHoursBefore: row.appointmentReminderHoursBefore,
-      ...mapEtaTenantSettingsDto(row),
+      id: withMarket.id,
+      name: withMarket.name,
+      baseCurrency: withMarket.baseCurrency,
+      integrationFailureRetentionDays: withMarket.integrationFailureRetentionDays,
+      whatsAppRemindersEnabled: withMarket.whatsAppRemindersEnabled,
+      appointmentReminderHoursBefore: withMarket.appointmentReminderHoursBefore,
+      ...mapTenantTaxSettingsApi(withMarket),
+      ...mapEtaTenantSettingsDto(withMarket),
     };
   }
 
@@ -796,5 +840,84 @@ export class AdminService {
 
   getPlatformHierarchy(tenantIdFilter?: string): Promise<OrgHierarchyNode> {
     return buildPlatformHierarchy(this.prisma, tenantIdFilter);
+  }
+
+  async patchUserAdditionalRoles(
+    tenantId: string,
+    userId: string,
+    actor: JwtUser,
+    dto: PatchUserRolesDto,
+  ) {
+    if (!hasAnyRole(actor, [UserRole.GROUP_ADMIN, UserRole.CLINIC_ADMIN]) || actor.tenantId !== tenantId) {
+      throw new ForbiddenException("Not allowed to manage user roles");
+    }
+    const target = await this.prisma.user.findFirst({ where: { id: userId, tenantId, deletedAt: null } });
+    if (!target) throw new NotFoundException("User not found");
+    const additionalRoles = sanitizeAdditionalRoles(target.role, dto.additionalRoles);
+    if (additionalRoles.length > 3) {
+      throw new BadRequestException("Too many additional roles for current plan");
+    }
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: { additionalRoles },
+    });
+    await this.prisma.auditLog.create({
+      data: {
+        tenantId,
+        actorId: actor.userId,
+        action: "USER_ADDITIONAL_ROLES_UPDATED",
+        resource: "user",
+        resourceId: userId,
+        metadata: { additionalRoles, primaryRole: updated.role },
+      },
+    });
+    return this.getTenantUser(tenantId, userId);
+  }
+
+  async transferTenantOwnership(
+    tenantId: string,
+    actor: JwtUser,
+    dto: TransferTenantOwnershipDto,
+  ) {
+    if (!isTenantOwnerPrincipal(actor) && !hasRole(actor, UserRole.GROUP_ADMIN)) {
+      throw new ForbiddenException("Only the tenant owner may transfer ownership");
+    }
+  const actorRow = await this.prisma.user.findFirst({
+      where: { id: actor.userId, tenantId, deletedAt: null },
+      select: { mfaEnabled: true, mfaTotpSecret: true, isTenantOwner: true },
+    });
+    if (!actorRow?.isTenantOwner && !hasRole(actor, UserRole.GROUP_ADMIN)) {
+      throw new ForbiddenException("Only the tenant owner may transfer ownership");
+    }
+    if (actorRow?.mfaEnabled) {
+      const code = dto.mfaCode?.trim();
+      if (!code) throw new BadRequestException("mfaCode is required");
+      const ok = verifyTotpCode(actorRow.mfaTotpSecret, code);
+      if (!ok) {
+        const recovery = await this.mfa.consumeRecoveryCode(actor.userId, code);
+        if (!recovery) throw new BadRequestException("Invalid MFA code");
+      }
+    }
+    const next = await this.prisma.user.findFirst({
+      where: { id: dto.toUserId.trim(), tenantId, deletedAt: null, deactivatedAt: null },
+    });
+    if (!next) throw new NotFoundException("Target user not found");
+    if (next.id === actor.userId) throw new BadRequestException("Already the tenant owner");
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.updateMany({ where: { tenantId, isTenantOwner: true }, data: { isTenantOwner: false } });
+      await tx.user.update({ where: { id: next.id }, data: { isTenantOwner: true } });
+      await tx.auditLog.create({
+        data: {
+          tenantId,
+          actorId: actor.userId,
+          action: "TENANT_OWNERSHIP_TRANSFERRED",
+          resource: "tenant",
+          resourceId: tenantId,
+          metadata: { fromUserId: actor.userId, toUserId: next.id },
+        },
+      });
+    });
+    return { ok: true as const, ownerUserId: next.id };
   }
 }

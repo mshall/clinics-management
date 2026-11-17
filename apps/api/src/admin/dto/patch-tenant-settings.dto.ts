@@ -36,7 +36,6 @@ export class PatchTenantSettingsDto {
 
   @ApiPropertyOptional({
     description: "Tax registration (TRN) applied to all clinics in the organization",
-    default: "N/A",
   })
   @IsOptional()
   @IsString()
@@ -44,8 +43,14 @@ export class PatchTenantSettingsDto {
   defaultTaxRegistrationNumber?: string;
 
   @ApiPropertyOptional({
-    description: "VAT percent on tax invoices for all clinics (default 5)",
-    default: 5,
+    description: "Clear org TRN override and use the market pack default",
+  })
+  @IsOptional()
+  @IsBoolean()
+  defaultTaxRegistrationNumberUseMarketDefault?: boolean;
+
+  @ApiPropertyOptional({
+    description: "VAT percent on tax invoices for all clinics",
   })
   @IsOptional()
   @Type(() => Number)
@@ -53,6 +58,16 @@ export class PatchTenantSettingsDto {
   @Min(0)
   @Max(100)
   defaultInvoiceVatPercent?: number;
+
+  @ApiPropertyOptional({ description: "Clear org VAT override and use the market pack default" })
+  @IsOptional()
+  @IsBoolean()
+  defaultInvoiceVatPercentUseMarketDefault?: boolean;
+
+  @ApiPropertyOptional({ description: "Clear org visit fee override and use the market pack default" })
+  @IsOptional()
+  @IsBoolean()
+  defaultVisitFeeUseMarketDefault?: boolean;
 
   @ApiPropertyOptional({ description: "Enable WhatsApp appointment reminders (async outbound queue)" })
   @IsOptional()

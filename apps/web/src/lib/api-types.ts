@@ -346,8 +346,19 @@ export interface AdminOverviewDto {
     name: string;
     baseCurrency: string;
     defaultVisitFee: number;
-    defaultTaxRegistrationNumber: string;
+    defaultVisitFeeOverride: number | null;
+    defaultVisitFeeUsesMarketDefault: boolean;
+    defaultTaxRegistrationNumber: string | null;
+    defaultTaxRegistrationNumberOverride: string | null;
+    defaultTaxRegistrationNumberUsesMarketDefault: boolean;
     defaultInvoiceVatPercent: number;
+    defaultInvoiceVatPercentOverride: number | null;
+    defaultInvoiceVatPercentUsesMarketDefault: boolean;
+    marketTaxDefaults: {
+      defaultVisitFee: number;
+      invoiceVatPercent: number;
+      saasVatPercent: number;
+    } | null;
     integrationFailureRetentionDays: number;
     etaPhysicalReportingOptOut?: boolean;
     etaPhysicalReportingConsentAt?: string | null;
@@ -418,8 +429,11 @@ export interface ClinicDetailDto {
   invoiceSections: string[];
   hasInvoiceLogo: boolean;
   taxRegistrationNumber: string | null;
+  taxRegistrationNumberUsesMarketDefault?: boolean;
   marketTaxLabels: MarketTaxLabels;
   invoiceVatPercent: number;
+  invoiceVatPercentUsesMarketDefault?: boolean;
+  marketInvoiceVatPercent?: number;
   hasPrescriptionLogo: boolean;
   prescriptionHeaderDescriptionEn: string;
   prescriptionHeaderDescriptionAr: string;

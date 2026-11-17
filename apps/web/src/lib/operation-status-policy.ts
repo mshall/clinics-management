@@ -35,3 +35,7 @@ export function canMarkOperationCompleted(role: string | undefined): boolean {
   if (!role) return false;
   return role !== "call_center";
 }
+
+export function operationStatusIsDischarged(status: string): boolean {
+  return normalizeOperationStatus(status) === "DISCHARGED";
+}

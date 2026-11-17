@@ -3,6 +3,7 @@ import { AppointmentStatus, EncounterStatus, Prisma, RevenueStatus, UserRole } f
 import type { JwtUser } from "../auth/jwt-user";
 import { fetchClinicScopeIds } from "../common/clinic-scope";
 import { PrismaService } from "../prisma/prisma.service";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 export type AssistantTodaySnapshot = {
   date: string;
@@ -120,7 +121,7 @@ export class AssistantScopedQueriesService {
       ...clinicClause,
     };
 
-    if (user.role === UserRole.PHYSICIAN) {
+    if (hasRole(user, UserRole.PHYSICIAN)) {
       periodWhere.clinicianId = user.userId;
     }
 

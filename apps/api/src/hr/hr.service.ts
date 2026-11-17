@@ -57,6 +57,7 @@ import type { EmployeeDto } from "./dto/employee.dto";
 import type { LeaveRequestDto } from "./dto/leave-request.dto";
 import type { CreateEmployeeResultDto } from "./dto/create-employee-result.dto";
 import type { HrManageContextDto } from "./dto/hr-manage-context.dto";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 import {
   assertHrCanAssignLoginRole,
   HR_ORG_WIDE_PROVISION_ROLES,
@@ -670,7 +671,7 @@ export class HrService {
             salaryCurrency,
           },
         });
-        const adminScopeClinicIds = CLINIC_SCOPE_ROLES.has(linkedUser.role) ? clinicIds : [];
+        const adminScopeClinicIds = hasAnyRoleInSet(linkedUser, CLINIC_SCOPE_ROLES) ? clinicIds : [];
         if (adminScopeClinicIds.length > 0) {
           await syncUserClinicAdminScopes(tx, tenantId, userRecord.id, adminScopeClinicIds);
         }

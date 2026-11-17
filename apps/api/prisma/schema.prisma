@@ -198,6 +198,7 @@ enum OperationDocumentKind {
   PRESCRIPTION
   CONSENT
   OPERATION_NOTE
+  POST_SURGERY
 }
 
 enum OperationStatus {
@@ -381,7 +382,7 @@ model Market {
   status             MarketLaunchStatus  @default(DRAFT)
   launchedAt         DateTime?
   dataRegion         String              @default("eu-central-1")
-  hostCell           String              @default("frankfurt")
+  hostCell           String
   defaultCurrency    String
   defaultLocale      String
   defaultTimezone    String
@@ -559,14 +560,14 @@ model Tenant {
   nameAr                String          @default("")
   marketId              String?
   market                Market?         @relation(fields: [marketId], references: [id], onDelete: SetNull)
-  deploymentCell        String          @default("frankfurt")
+  deploymentCell        String
   baseCurrency          String          @default("EGP")
   defaultLocale         String          @default("en")
-  defaultVisitFee Decimal         @default(150) @db.Decimal(14, 2)
+  defaultVisitFee                Decimal?        @db.Decimal(14, 2)
   encounterAutoLockHours         Int             @default(72)
-  defaultTaxRegistrationNumber String          @default("N/A")
+  defaultTaxRegistrationNumber String?
   defaultLicenseNumber         String?
-  defaultInvoiceVatPercent     Decimal         @default(5) @db.Decimal(5, 2)
+  defaultInvoiceVatPercent     Decimal?        @db.Decimal(5, 2)
   integrationFailureRetentionDays     Int       @default(30)
   integrationFailureLastSpikeAlertAt  DateTime?
   whatsAppRemindersEnabled            Boolean   @default(false)
@@ -654,7 +655,9 @@ model User {
   email        String
   passwordHash String
   displayName  String
-  role         UserRole
+  role             UserRole
+  additionalRoles  UserRole[]     @default([])
+  isTenantOwner    Boolean        @default(false)
   mfaEnabled   Boolean        @default(false)
   mfaTotpSecret String?
   mfaRecoveryHashes Json?
@@ -784,7 +787,7 @@ model Clinic {
   licenseNumber    String
   clinicalSpecialty ClinicalSpecialty @default(POLYCLINIC)
   taxRegistrationNumber String?
-  invoiceVatPercent   Decimal       @default(5) @db.Decimal(5, 2)
+  invoiceVatPercent   Decimal?      @db.Decimal(5, 2)
   defaultLanguage  Locale          @default(en)
   defaultCurrency  String          @default("EGP")
   invoiceLogoRelativePath String?

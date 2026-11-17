@@ -1,5 +1,6 @@
 import { UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "./effective-roles";
 
 /** Comma-separated emails in PLATFORM_SUPER_ADMIN_EMAILS (legacy env gate). */
 export function platformSuperAdminEmailSet(): Set<string> {
@@ -15,7 +16,7 @@ export function isPlatformSuperAdminEmail(email: string | undefined | null): boo
 }
 
 /** Platform operator: dedicated role and/or legacy email allowlist. */
-export function isPlatformSuperAdmin(user: Pick<JwtUser, "email" | "role">): boolean {
-  if (user.role === UserRole.PLATFORM_SUPER_ADMIN) return true;
+export function isPlatformSuperAdmin(user: Pick<JwtUser, "email" | "role" | "additionalRoles">): boolean {
+  if (hasRole(user, UserRole.PLATFORM_SUPER_ADMIN)) return true;
   return isPlatformSuperAdminEmail(user.email);
 }

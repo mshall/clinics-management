@@ -42,6 +42,15 @@ export class AuthUserDto {
   @ApiProperty({ enum: UserRole })
   role!: UserRole;
 
+  @ApiProperty({ type: [String], enum: UserRole, description: "Primary + additional roles" })
+  roles!: UserRole[];
+
+  @ApiProperty({ type: [String], enum: UserRole })
+  additionalRoles!: UserRole[];
+
+  @ApiProperty({ description: "Single tenant owner (billing / ownership transfer)" })
+  isTenantOwner!: boolean;
+
   @ApiPropertyOptional({
     description: "Subset of sidebar tabs allowed for this user; omit or null = role defaults",
     type: [String],

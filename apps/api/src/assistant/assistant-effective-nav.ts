@@ -6,9 +6,9 @@ import {
 } from "../common/employee-privilege-grants";
 import type { PrismaService } from "../prisma/prisma.service";
 import type { TenantRoleNavTabsService } from "../user-nav-tabs/tenant-role-nav-tabs.service";
+import { hasRole } from "../common/effective-roles";
 import {
   defaultNavTabsForRole,
-  effectiveRoleNavTabs,
   maxNavTabsForOrganization,
   parseStoredNavTabKeys,
   sanitizeNavTabKeysForRole,
@@ -24,21 +24,19 @@ export async function resolveAssistantNavKeys(
   tenantRoleNav: TenantRoleNavTabsService,
   user: JwtUser,
 ): Promise<string[]> {
-  if (user.role === UserRole.PLATFORM_SUPER_ADMIN) {
+  if (hasRole(user, UserRole.PLATFORM_SUPER_ADMIN)) {
     return defaultNavTabsForRole(user.role);
   }
   const tenantId = user.tenantId;
   if (!tenantId) return defaultNavTabsForRole(user.role);
 
-  const [userGrant, roleGrantRaw, hrGrants] = await Promise.all([
+  const [userGrant, roleBase, hrGrants] = await Promise.all([
     prisma.userNavTabGrant.findUnique({
       where: { tenantId_userId: { tenantId, userId: user.userId } },
     }),
-    tenantRoleNav.roleNavTabKeysForTenantUser(tenantId, user.role),
+    tenantRoleNav.effectiveRoleNavTabKeysForPrincipal(tenantId, user),
     loadEmployeePrivilegeGrantSummaries(prisma, tenantId, user.userId),
   ]);
-
-  const roleBase = effectiveRoleNavTabs(user.role, roleGrantRaw);
   const parsedUser = userGrant ? parseStoredNavTabKeys(userGrant.tabKeys) : null;
 
   let keys: string[];
@@ -51,7 +49,8 @@ export async function resolveAssistantNavKeys(
     uniq.add("profile");
     keys = [...uniq];
   } else {
-    keys = sanitizeNavTabKeysForRole(user.role, roleBase, roleBase);
+    const primary = user.role;
+    keys = sanitizeNavTabKeysForRole(primary, roleBase, roleBase);
   }
 
   if (hasHrNavAccessFromGrants(hrGrants)) {

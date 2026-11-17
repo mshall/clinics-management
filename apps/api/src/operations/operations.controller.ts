@@ -44,6 +44,7 @@ import {
 import { UpdateOperationDto } from "./dto/update-operation.dto";
 import { assertCanCompleteOperation } from "./operation-complete-roles";
 import { OperationsService } from "./operations.service";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 const UPLOAD_LIMIT = 15 * 1024 * 1024;
 
@@ -97,19 +98,19 @@ export class OperationsController {
   constructor(private readonly operations: OperationsService) {}
 
   private assertViewAccess(user: JwtUser): void {
-    if (!OPERATIONS_VIEW_ROLES.has(user.role)) {
+    if (!hasAnyRoleInSet(user, OPERATIONS_VIEW_ROLES)) {
       throw new ForbiddenException("You do not have permission to access operations");
     }
   }
 
   private assertCreateAccess(user: JwtUser): void {
-    if (!OPERATIONS_CREATE_ROLES.has(user.role)) {
+    if (!hasAnyRoleInSet(user, OPERATIONS_CREATE_ROLES)) {
       throw new ForbiddenException("You do not have permission to schedule operations");
     }
   }
 
   private assertStatusAccess(user: JwtUser): void {
-    if (!OPERATIONS_STATUS_ROLES.has(user.role)) {
+    if (!hasAnyRoleInSet(user, OPERATIONS_STATUS_ROLES)) {
       throw new ForbiddenException("You do not have permission to update operation status");
     }
   }
@@ -229,13 +230,18 @@ export class OperationsController {
   ): Promise<OperationDocumentDto> {
     this.assertCreateAccess(user);
     if (!file) throw new BadRequestException("file is required");
+    const normalized = kindRaw?.trim().toUpperCase();
     const kind =
-      kindRaw === "PRESCRIPTION"
+      normalized === "PRESCRIPTION"
         ? OperationDocumentKind.PRESCRIPTION
-        : kindRaw === "ATTACHMENT"
+        : normalized === "ATTACHMENT"
           ? OperationDocumentKind.ATTACHMENT
-          : null;
-    if (!kind) throw new BadRequestException("kind must be ATTACHMENT or PRESCRIPTION");
+          : normalized === "POST_SURGERY"
+            ? OperationDocumentKind.POST_SURGERY
+            : null;
+    if (!kind) {
+      throw new BadRequestException("kind must be ATTACHMENT, PRESCRIPTION, or POST_SURGERY");
+    }
     return this.operations.uploadDocument(requireTenantId(user), id, kind, description, file, user);
   }
 

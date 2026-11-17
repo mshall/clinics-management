@@ -233,35 +233,58 @@ export function AdminPage() {
   );
   const [feeDraft, setFeeDraft] = useState("");
   const [currencyDraft, setCurrencyDraft] = useState<string>(orgBaseCurrency);
-  const [trnDraft, setTrnDraft] = useState("N/A");
-  const [vatDraft, setVatDraft] = useState("5");
+  const [trnDraft, setTrnDraft] = useState("");
+  const [vatDraft, setVatDraft] = useState("");
+  const [feeOverride, setFeeOverride] = useState(false);
+  const [trnOverride, setTrnOverride] = useState(false);
+  const [vatOverride, setVatOverride] = useState(false);
   useEffect(() => {
     if (!isPlatformSuperAdmin && !isGroupAdmin && adminSection === "data") setAdminSection("clinics");
   }, [isPlatformSuperAdmin, isGroupAdmin, adminSection]);
   useEffect(() => {
-    const v = overview.data?.currentTenant?.defaultVisitFee;
-    if (v != null && Number.isFinite(Number(v))) setFeeDraft(String(v));
-  }, [overview.data?.currentTenant?.defaultVisitFee]);
+    const t = overview.data?.currentTenant;
+    if (!t) return;
+    setFeeOverride(!t.defaultVisitFeeUsesMarketDefault);
+    setTrnOverride(!t.defaultTaxRegistrationNumberUsesMarketDefault);
+    setVatOverride(!t.defaultInvoiceVatPercentUsesMarketDefault);
+    setFeeDraft(
+      String(
+        t.defaultVisitFeeUsesMarketDefault
+          ? (t.marketTaxDefaults?.defaultVisitFee ?? t.defaultVisitFee)
+          : (t.defaultVisitFeeOverride ?? t.defaultVisitFee),
+      ),
+    );
+  }, [overview.data?.currentTenant]);
   useEffect(() => {
     const bc = overview.data?.currentTenant?.baseCurrency;
     if (bc) setCurrencyDraft(bc);
   }, [overview.data?.currentTenant?.baseCurrency]);
   useEffect(() => {
-    const trn = overview.data?.currentTenant?.defaultTaxRegistrationNumber;
-    if (trn != null) setTrnDraft(trn);
-  }, [overview.data?.currentTenant?.defaultTaxRegistrationNumber]);
-  useEffect(() => {
-    const v = overview.data?.currentTenant?.defaultInvoiceVatPercent;
-    if (v != null && Number.isFinite(Number(v))) setVatDraft(String(v));
-  }, [overview.data?.currentTenant?.defaultInvoiceVatPercent]);
+    const t = overview.data?.currentTenant;
+    if (!t) return;
+  const trn = t.defaultTaxRegistrationNumberUsesMarketDefault
+      ? (t.defaultTaxRegistrationNumber ?? "")
+      : (t.defaultTaxRegistrationNumberOverride ?? t.defaultTaxRegistrationNumber ?? "");
+    setTrnDraft(trn);
+    const vat = t.defaultInvoiceVatPercentUsesMarketDefault
+      ? (t.marketTaxDefaults?.invoiceVatPercent ?? t.defaultInvoiceVatPercent)
+      : (t.defaultInvoiceVatPercentOverride ?? t.defaultInvoiceVatPercent);
+    if (Number.isFinite(Number(vat))) setVatDraft(String(vat));
+  }, [overview.data?.currentTenant]);
   const patchOrgSettingsMut = useMutation({
     mutationFn: () => {
       const vatN = Number.parseFloat(vatDraft);
       return apiPatch("/api/v1/admin/tenant-settings", {
-        defaultVisitFee: Number.parseFloat(feeDraft),
         baseCurrency: currencyDraft,
-        defaultTaxRegistrationNumber: trnDraft.trim() || "N/A",
-        defaultInvoiceVatPercent: Number.isFinite(vatN) ? vatN : 5,
+        ...(feeOverride
+          ? { defaultVisitFee: Number.parseFloat(feeDraft) }
+          : { defaultVisitFeeUseMarketDefault: true }),
+        ...(trnOverride
+          ? { defaultTaxRegistrationNumber: trnDraft.trim() || null }
+          : { defaultTaxRegistrationNumberUseMarketDefault: true }),
+        ...(vatOverride
+          ? { defaultInvoiceVatPercent: Number.isFinite(vatN) ? vatN : 0 }
+          : { defaultInvoiceVatPercentUseMarketDefault: true }),
       });
     },
     onSuccess: async () => {
@@ -453,12 +476,21 @@ export function AdminPage() {
                       min="0"
                       step="0.01"
                       value={feeDraft}
+                      disabled={!feeOverride}
                       onChange={(e) => setFeeDraft(e.target.value)}
                     />
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={feeOverride}
+                        onChange={(e) => setFeeOverride(e.target.checked)}
+                      />
+                      {t("admin.orgOverrideMarketDefault", "Override market default")}
+                    </label>
                     <p className="text-xs leading-snug text-muted-foreground">
                       {t(
                         "admin.orgVisitFeeHint",
-                        "Used when a clinic does not set its own visit fee.",
+                        "From your country market pack unless overridden. Used when a clinic does not set its own visit fee.",
                       )}
                     </p>
                   </div>
@@ -470,13 +502,22 @@ export function AdminPage() {
                       id="org-trn"
                       className="ltr-nums w-full"
                       value={trnDraft}
+                      disabled={!trnOverride}
                       onChange={(e) => setTrnDraft(e.target.value)}
-                      placeholder="N/A"
+                      placeholder={t("admin.orgTrnPlaceholder", "Market default")}
                     />
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={trnOverride}
+                        onChange={(e) => setTrnOverride(e.target.checked)}
+                      />
+                      {t("admin.orgOverrideMarketDefault", "Override market default")}
+                    </label>
                     <p className="text-xs leading-snug text-muted-foreground">
                       {t(
                         "admin.orgTrnHint",
-                        "Applied to every clinic in this organization. Use N/A when no TRN is registered yet.",
+                        "Required for ETA e-receipts when enabled. Format is validated for your market.",
                       )}
                     </p>
                   </div>
@@ -492,10 +533,22 @@ export function AdminPage() {
                       max={100}
                       step="0.01"
                       value={vatDraft}
+                      disabled={!vatOverride}
                       onChange={(e) => setVatDraft(e.target.value)}
                     />
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={vatOverride}
+                        onChange={(e) => setVatOverride(e.target.checked)}
+                      />
+                      {t("admin.orgOverrideMarketDefault", "Override market default")}
+                    </label>
                     <p className="text-xs leading-snug text-muted-foreground">
-                      {t("admin.orgVatHint", "Default is 5%. Saving updates all clinics for tax invoices.")}
+                      {t(
+                        "admin.orgVatHint",
+                        "Medical services VAT from your market pack unless overridden. Saving updates all clinics for tax invoices.",
+                      )}
                     </p>
                   </div>
                 </div>

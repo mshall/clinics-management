@@ -13,6 +13,7 @@ import { postRevenueWithFiscal } from "../compliance/post-revenue-with-fiscal";
 import type { CreateRevenueDto } from "./dto/create-revenue.dto";
 import type { RevenueEntryDto } from "./dto/revenue.dto";
 import type { RevenueTotalsDto } from "./dto/revenue-totals.dto";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 const LEDGER_ROLES: ReadonlySet<UserRole> = new Set([
   UserRole.GROUP_ADMIN,
@@ -109,7 +110,7 @@ export class RevenueService {
     const clinicId = clinicIdStr?.trim();
 
     let clinicScope: Prisma.RevenueEntryWhereInput = {};
-    if (user.role === UserRole.PHYSICIAN) {
+    if (hasRole(user, UserRole.PHYSICIAN)) {
       const net = await fetchPhysicianNetworkClinicIds(this.prisma, tenantId, user.userId);
       if (!net.length) {
         return paginate([], 0, page, pageSize);
@@ -176,7 +177,7 @@ export class RevenueService {
     const clinicId = clinicIdStr?.trim();
 
     let clinicScope: Prisma.RevenueEntryWhereInput = {};
-    if (user.role === UserRole.PHYSICIAN) {
+    if (hasRole(user, UserRole.PHYSICIAN)) {
       const net = await fetchPhysicianNetworkClinicIds(this.prisma, tenantId, user.userId);
       if (!net.length) return paginate([], 0, page, pageSize);
       if (clinicId) {
@@ -232,7 +233,7 @@ export class RevenueService {
     const clinicId = clinicIdStr?.trim();
 
     let clinicScope: Prisma.RevenueEntryWhereInput = {};
-    if (user.role === UserRole.PHYSICIAN) {
+    if (hasRole(user, UserRole.PHYSICIAN)) {
       const net = await fetchPhysicianNetworkClinicIds(this.prisma, tenantId, user.userId);
       if (!net.length) {
         return { grossTotal: 0, netTotal: 0, byCurrency: [] };
@@ -330,7 +331,7 @@ export class RevenueService {
     }
     const skipEta = dto.skipEtaEReceipt === true;
     if (skipEta) {
-      if (!SKIP_ETA_ERECEIPT_ROLES.has(user.role)) {
+      if (!hasAnyRoleInSet(user, SKIP_ETA_ERECEIPT_ROLES)) {
         throw new ForbiddenException("Only finance or organization admins may post non-receipt B2B revenue");
       }
       if (!dto.skipEtaEReceiptReason?.trim()) {
@@ -498,7 +499,7 @@ export class RevenueService {
       UserRole.BRANCH_MANAGER,
       UserRole.FINANCE_OFFICER,
     ]);
-    if (!allowed.has(user.role)) {
+    if (!hasAnyRoleInSet(user, allowed)) {
       throw new ForbiddenException("Only administrators may view clinic revenue breakdown");
     }
     const { start, end } = resolveLedgerListingRange(fromStr, toStr);

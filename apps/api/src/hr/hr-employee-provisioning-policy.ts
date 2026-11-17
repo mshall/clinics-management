@@ -3,6 +3,7 @@ import { UserRole } from "@prisma/client";
 import { assertCanCreateGroupAdminRole } from "../common/group-admin-role-policy";
 import { isPlatformSuperAdmin } from "../common/platform-super-admin";
 import type { JwtUser } from "../auth/jwt-user";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 /** Roles a clinic HR officer may assign when provisioning a login for a new employee. */
 export const HR_ASSIGNABLE_USER_ROLES: ReadonlySet<UserRole> = new Set([
@@ -60,9 +61,9 @@ export function assertHrCanDeactivateOrArchiveLinkedUser(
   viewer: Pick<JwtUser, "userId" | "email" | "role">,
   linkedUser: Pick<{ id: string; role: UserRole }, "id" | "role"> | null | undefined,
 ): void {
-  if (!linkedUser || linkedUser.role !== UserRole.GROUP_ADMIN) return;
+  if (!linkedUser || !hasRole(linkedUser, UserRole.GROUP_ADMIN)) return;
   if (isPlatformSuperAdmin(viewer)) return;
-  if (viewer.role === UserRole.GROUP_ADMIN && viewer.userId !== linkedUser.id) return;
+  if (hasRole(viewer, UserRole.GROUP_ADMIN) && viewer.userId !== linkedUser.id) return;
   throw new ForbiddenException(
     "Organization group administrators can only be deactivated or archived by another group administrator or platform super administrator",
   );
@@ -73,9 +74,9 @@ export function assertCanEditGroupAdminEmployeeProfile(
   viewer: Pick<JwtUser, "userId" | "email" | "role">,
   linkedUser: Pick<{ id: string; role: UserRole }, "id" | "role"> | null | undefined,
 ): void {
-  if (!linkedUser || linkedUser.role !== UserRole.GROUP_ADMIN) return;
+  if (!linkedUser || !hasRole(linkedUser, UserRole.GROUP_ADMIN)) return;
   if (isPlatformSuperAdmin(viewer)) return;
-  if (viewer.role === UserRole.GROUP_ADMIN) return;
+  if (hasRole(viewer, UserRole.GROUP_ADMIN)) return;
   throw new ForbiddenException(
     "Organization group administrator profiles can only be edited by a group administrator",
   );

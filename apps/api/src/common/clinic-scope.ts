@@ -2,6 +2,7 @@ import { ClinicRecordStatus, Prisma, UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { loadResolvedEmployeePrivilegeGrants } from "./employee-privilege-grants";
 import type { PrismaService } from "../prisma/prisma.service";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "./effective-roles";
 
 /**
  * ClinicAdminScope rows gate visibility for both CLINIC_ADMIN and BRANCH_MANAGER (same join table).
@@ -10,7 +11,7 @@ import type { PrismaService } from "../prisma/prisma.service";
 export const CLINIC_SCOPE_ROLES: ReadonlySet<UserRole> = new Set([UserRole.CLINIC_ADMIN, UserRole.BRANCH_MANAGER]);
 
 export async function fetchClinicScopeIds(prisma: PrismaService, tenantId: string, user: JwtUser): Promise<string[] | null> {
-  if (!CLINIC_SCOPE_ROLES.has(user.role)) return null;
+  if (!hasAnyRoleInSet(user, CLINIC_SCOPE_ROLES)) return null;
   const scopes = await prisma.clinicAdminScope.findMany({
     where: { tenantId, userId: user.userId },
     select: { clinicId: true },
@@ -39,9 +40,9 @@ export async function fetchEmployeeManageScopeIds(
   tenantId: string,
   user: JwtUser,
 ): Promise<string[] | null> {
-  if (CLINIC_SCOPE_ROLES.has(user.role)) return fetchClinicScopeIds(prisma, tenantId, user);
-  if (user.role === UserRole.HR_OFFICER) return fetchHrOfficerClinicScopeIds(prisma, tenantId, user.userId);
-  if (user.role === UserRole.GROUP_ADMIN) return null;
+  if (hasAnyRoleInSet(user, CLINIC_SCOPE_ROLES)) return fetchClinicScopeIds(prisma, tenantId, user);
+  if (hasRole(user, UserRole.HR_OFFICER)) return fetchHrOfficerClinicScopeIds(prisma, tenantId, user.userId);
+  if (hasRole(user, UserRole.GROUP_ADMIN)) return null;
   const delegated = await loadResolvedEmployeePrivilegeGrants(prisma, tenantId, user.userId);
   const clinicIds = delegated.filter((g) => g.canManageEmployees).map((g) => g.clinicId);
   return clinicIds.length ? [...new Set(clinicIds)] : null;
@@ -134,7 +135,7 @@ export async function fetchPatientListClinicScopeIds(
   tenantId: string,
   user: JwtUser
 ): Promise<string[] | null> {
-  if (user.role === UserRole.PHYSICIAN) {
+  if (hasRole(user, UserRole.PHYSICIAN)) {
     return await fetchPhysicianNetworkClinicIds(prisma, tenantId, user.userId);
   }
   return await fetchClinicScopeIds(prisma, tenantId, user);

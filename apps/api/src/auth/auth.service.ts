@@ -13,7 +13,8 @@ import { PrismaService } from "../prisma/prisma.service";
 import { TenantRoleNavTabsService } from "../user-nav-tabs/tenant-role-nav-tabs.service";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import { MfaService, verifyTotpCode } from "./mfa.service";
-import { roleRequiresMfaEnrollment } from "./privileged-mfa";
+import { effectiveRoles } from "../common/effective-roles";
+import { principalRequiresMfaEnrollment } from "./privileged-mfa";
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 const ALLOWED_AVATAR_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -71,6 +72,8 @@ export class AuthService {
     email: string;
     displayName: string;
     role: UserRole;
+    additionalRoles?: UserRole[];
+    isTenantOwner?: boolean;
     avatarRelativePath?: string | null;
     mfaEnabled?: boolean;
   }, navTabKeys: string[] | null, roleNavTabKeys: string[] | null, tenantBaseCurrency: string | null = null) {
@@ -89,16 +92,20 @@ export class AuthService {
       email: user.email,
       displayName: user.displayName,
       role: user.role,
+      roles: effectiveRoles(user),
+      additionalRoles: user.additionalRoles ?? [],
+      isTenantOwner: Boolean(user.isTenantOwner),
       navTabKeys,
       roleNavTabKeys,
       tenantBaseCurrency,
       platformSuperAdmin: isPlatformSuperAdmin({
         email: user.email,
         role: user.role,
+        additionalRoles: user.additionalRoles ?? [],
       }),
       hasAvatar: Boolean(user.avatarRelativePath),
       mfaEnabled,
-      mfaEnrollmentRequired: roleRequiresMfaEnrollment(user.role) && !mfaEnabled,
+      mfaEnrollmentRequired: principalRequiresMfaEnrollment(user) && !mfaEnabled,
       employeePrivilegeGrants: employeePrivilegeGrants.length ? employeePrivilegeGrants : undefined,
       moneyVisibilityOverrides:
         moneyVisibilityOverrides &&
@@ -125,6 +132,8 @@ export class AuthService {
         email: true,
         displayName: true,
         role: true,
+        additionalRoles: true,
+        isTenantOwner: true,
         passwordHash: true,
         avatarRelativePath: true,
         mfaEnabled: true,
@@ -163,7 +172,9 @@ export class AuthService {
     const navTabKeys =
       user.tenantId != null ? await this.navTabKeysForUser(user.tenantId, user.id) : null;
     const roleNavTabKeys =
-      user.tenantId != null ? await this.tenantRoleNav.roleNavTabKeysForTenantUser(user.tenantId, user.role) : null;
+      user.tenantId != null
+        ? await this.tenantRoleNav.effectiveRoleNavTabKeysForPrincipal(user.tenantId, user)
+        : null;
     const tenantBaseCurrency = user.tenantId
       ? (await this.prisma.tenant.findUnique({ where: { id: user.tenantId }, select: { baseCurrency: true } }))
           ?.baseCurrency ?? null
@@ -209,7 +220,9 @@ export class AuthService {
     const navTabKeys =
       user.tenantId != null ? await this.navTabKeysForUser(user.tenantId, userId) : null;
     const roleNavTabKeys =
-      user.tenantId != null ? await this.tenantRoleNav.roleNavTabKeysForTenantUser(user.tenantId, user.role) : null;
+      user.tenantId != null
+        ? await this.tenantRoleNav.effectiveRoleNavTabKeysForPrincipal(user.tenantId, user)
+        : null;
     const tenantBaseCurrency = user.tenantId
       ? (await this.prisma.tenant.findUnique({ where: { id: user.tenantId }, select: { baseCurrency: true } }))
           ?.baseCurrency ?? null

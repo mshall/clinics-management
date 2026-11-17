@@ -31,10 +31,13 @@ import { PlatformPatchTenantUserDto } from "./dto/platform-patch-tenant-user.dto
 import { DeactivateTenantUserDto } from "./dto/deactivate-tenant-user.dto";
 import { ReactivateTenantUserDto } from "./dto/reactivate-tenant-user.dto";
 import { PatchTenantSettingsDto } from "./dto/patch-tenant-settings.dto";
+import { PatchUserRolesDto } from "./dto/patch-user-roles.dto";
+import { TransferTenantOwnershipDto } from "./dto/transfer-tenant-ownership.dto";
 import { PatchIntegrationFailureDto } from "./dto/patch-integration-failure.dto";
 import { IntegrationFailureAdminService } from "./integration-failure-admin.service";
 import { TenantPaymentChannelsService } from "./tenant-payment-channels.service";
 import { CreateTenantPaymentChannelDto } from "./dto/create-tenant-payment-channel.dto";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 @ApiTags("admin")
 @ApiBearerAuth("bearer")
@@ -53,7 +56,7 @@ export class AdminController {
   @ApiOkResponse()
   overview(@CurrentUser() user: JwtUser) {
     const allowed: Set<UserRole> = new Set([UserRole.GROUP_ADMIN, UserRole.CLINIC_ADMIN, UserRole.BRANCH_MANAGER]);
-    if (!allowed.has(user.role) || !user.tenantId) {
+    if (!hasAnyRoleInSet(user, allowed) || !user.tenantId) {
       throw new ForbiddenException("Only administrators can access the admin overview");
     }
     return this.admin.overview(requireTenantId(user));
@@ -243,7 +246,7 @@ export class AdminController {
   @Get("payment-channels")
   @ApiOperation({ summary: "List organization payment channels (group admin)" })
   listPaymentChannels(@CurrentUser() user: JwtUser) {
-    if (user.role !== UserRole.GROUP_ADMIN) {
+    if (!hasRole(user, UserRole.GROUP_ADMIN)) {
       throw new ForbiddenException("Only group administrators can manage payment channels");
     }
     return this.paymentChannels.list(requireTenantId(user));
@@ -253,7 +256,7 @@ export class AdminController {
   @ApiOperation({ summary: "Add organization payment channel (group admin)" })
   @ApiCreatedResponse()
   createPaymentChannel(@CurrentUser() user: JwtUser, @Body() body: CreateTenantPaymentChannelDto) {
-    if (user.role !== UserRole.GROUP_ADMIN) {
+    if (!hasRole(user, UserRole.GROUP_ADMIN)) {
       throw new ForbiddenException("Only group administrators can manage payment channels");
     }
     return this.paymentChannels.create(user, requireTenantId(user), body);
@@ -262,7 +265,7 @@ export class AdminController {
   @Delete("payment-channels/:id")
   @ApiOperation({ summary: "Remove organization payment channel (group admin)" })
   deletePaymentChannel(@CurrentUser() user: JwtUser, @Param("id") id: string) {
-    if (user.role !== UserRole.GROUP_ADMIN) {
+    if (!hasRole(user, UserRole.GROUP_ADMIN)) {
       throw new ForbiddenException("Only group administrators can manage payment channels");
     }
     return this.paymentChannels.remove(user, requireTenantId(user), id);
@@ -279,7 +282,7 @@ export class AdminController {
     @Query("role") role?: string,
     @Query("archived") archived?: string,
   ) {
-    if (user.role !== UserRole.GROUP_ADMIN || !user.tenantId) {
+    if (!hasRole(user, UserRole.GROUP_ADMIN) || !user.tenantId) {
       throw new ForbiddenException("Only group administrators can list organization users");
     }
     return this.admin.listTenantUsers(requireTenantId(user), page, pageSize, q, role, archived);
@@ -289,7 +292,7 @@ export class AdminController {
   @ApiOperation({ summary: "Organization user detail (group admin only)" })
   @ApiOkResponse()
   getUser(@CurrentUser() user: JwtUser, @Param("userId") userId: string) {
-    if (user.role !== UserRole.GROUP_ADMIN || !user.tenantId) {
+    if (!hasRole(user, UserRole.GROUP_ADMIN) || !user.tenantId) {
       throw new ForbiddenException("Only group administrators can view organization users");
     }
     return this.admin.getTenantUser(requireTenantId(user), userId);
@@ -299,7 +302,7 @@ export class AdminController {
   @ApiOperation({ summary: "Create a user in the current tenant with a fixed platform role (group admin only)" })
   @ApiCreatedResponse()
   createUser(@CurrentUser() user: JwtUser, @Body() body: CreateTenantUserDto) {
-    if (user.role !== "GROUP_ADMIN" || !user.tenantId) {
+    if (!hasRole(user, UserRole.GROUP_ADMIN) || !user.tenantId) {
       throw new ForbiddenException("Only group administrators can create users");
     }
     return this.admin.createTenantUser(requireTenantId(user), body);
@@ -310,17 +313,34 @@ export class AdminController {
   @ApiOperation({ summary: "Delete multiple organization users (group admin only)" })
   @ApiOkResponse({ description: "{ ok: true, deleted: number, failed: { id, message }[] }" })
   bulkDeleteUsers(@CurrentUser() user: JwtUser, @Body() body: BulkDeleteUsersDto) {
-    if (user.role !== UserRole.GROUP_ADMIN || !user.tenantId) {
+    if (!hasRole(user, UserRole.GROUP_ADMIN) || !user.tenantId) {
       throw new ForbiddenException("Only group administrators can delete organization users");
     }
     return this.admin.deleteTenantUsersBulk(requireTenantId(user), body, user);
+  }
+
+  @Patch("users/:userId/roles")
+  @ApiOperation({ summary: "Set additional roles for an organization user" })
+  patchUserRoles(
+    @CurrentUser() user: JwtUser,
+    @Param("userId") userId: string,
+    @Body() body: PatchUserRolesDto,
+  ) {
+    return this.admin.patchUserAdditionalRoles(requireTenantId(user), userId, user, body);
+  }
+
+  @Post("tenant/transfer-ownership")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Transfer tenant ownership to another user (owner, MFA re-check)" })
+  transferOwnership(@CurrentUser() user: JwtUser, @Body() body: TransferTenantOwnershipDto) {
+    return this.admin.transferTenantOwnership(requireTenantId(user), user, body);
   }
 
   @Patch("users/:userId")
   @ApiOperation({ summary: "Update an organization user (group admin only)" })
   @ApiOkResponse()
   patchUser(@CurrentUser() user: JwtUser, @Param("userId") userId: string, @Body() body: PlatformPatchTenantUserDto) {
-    if (user.role !== UserRole.GROUP_ADMIN || !user.tenantId) {
+    if (!hasRole(user, UserRole.GROUP_ADMIN) || !user.tenantId) {
       throw new ForbiddenException("Only group administrators can update organization users");
     }
     return this.admin.updateTenantUser(requireTenantId(user), userId, body);
@@ -330,7 +350,7 @@ export class AdminController {
   @ApiOperation({ summary: "Archive an organization user and linked employee (soft delete, group admin only)" })
   @ApiOkResponse()
   deleteUser(@CurrentUser() user: JwtUser, @Param("userId") userId: string) {
-    if (user.role !== UserRole.GROUP_ADMIN || !user.tenantId) {
+    if (!hasRole(user, UserRole.GROUP_ADMIN) || !user.tenantId) {
       throw new ForbiddenException("Only group administrators can archive organization users");
     }
     return this.admin.deleteTenantUser(requireTenantId(user), userId, user);
@@ -344,7 +364,7 @@ export class AdminController {
     @Param("userId") userId: string,
     @Body() body: DeactivateTenantUserDto,
   ) {
-    if (user.role !== UserRole.GROUP_ADMIN || !user.tenantId) {
+    if (!hasRole(user, UserRole.GROUP_ADMIN) || !user.tenantId) {
       throw new ForbiddenException("Only group administrators can deactivate organization users");
     }
     return this.admin.deactivateTenantUser(requireTenantId(user), userId, body, user);
@@ -358,7 +378,7 @@ export class AdminController {
     @Param("userId") userId: string,
     @Body() body: ReactivateTenantUserDto,
   ) {
-    if (user.role !== UserRole.GROUP_ADMIN || !user.tenantId) {
+    if (!hasRole(user, UserRole.GROUP_ADMIN) || !user.tenantId) {
       throw new ForbiddenException("Only group administrators can reactivate organization users");
     }
     return this.admin.reactivateTenantUser(requireTenantId(user), userId, body);
@@ -372,7 +392,7 @@ export class AdminController {
     @Param("userId") userId: string,
     @Body() body: ReactivateTenantUserDto,
   ) {
-    if (user.role !== UserRole.GROUP_ADMIN || !user.tenantId) {
+    if (!hasRole(user, UserRole.GROUP_ADMIN) || !user.tenantId) {
       throw new ForbiddenException("Only group administrators can restore organization users");
     }
     return this.admin.restoreTenantUserAccount(requireTenantId(user), userId, body);
@@ -386,7 +406,7 @@ export class AdminController {
     @Param("key") key: string,
     @Body() body: PatchFeatureFlagDto,
   ) {
-    if (user.role !== UserRole.GROUP_ADMIN) {
+    if (!hasRole(user, UserRole.GROUP_ADMIN)) {
       throw new ForbiddenException("Only group administrators can change organization feature flags");
     }
     return this.admin.setTenantFeatureFlag(requireTenantId(user), key, body.enabled);
@@ -403,7 +423,7 @@ export class AdminController {
       UserRole.BRANCH_MANAGER,
       UserRole.HR_OFFICER,
     ]);
-    if (!allowed.has(user.role) || !user.tenantId) {
+    if (!hasAnyRoleInSet(user, allowed) || !user.tenantId) {
       throw new ForbiddenException("You do not have permission to view the organization hierarchy");
     }
     return this.admin.getOrgHierarchyForUser(user, requireTenantId(user));

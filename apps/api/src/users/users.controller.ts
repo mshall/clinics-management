@@ -6,6 +6,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { UsersService } from "./users.service";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 @ApiTags("users")
 @ApiBearerAuth("bearer")
@@ -31,7 +32,7 @@ export class UsersController {
     @Query("pageSize") pageSize?: string,
     @Query("q") q?: string,
   ) {
-    if (!UsersController.USER_LIST_ROLES.has(user.role)) {
+    if (!hasAnyRoleInSet(user, UsersController.USER_LIST_ROLES)) {
       throw new ForbiddenException("You do not have permission to list users");
     }
     return this.users.listForTenant(requireTenantId(user), page, pageSize, q);

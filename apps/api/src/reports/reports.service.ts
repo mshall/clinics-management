@@ -11,6 +11,7 @@ import {
 } from "@prisma/client";
 import { formatLocalYmd, resolveLedgerListingRange, resolveReportingRange } from "../common/reporting-range";
 import type { JwtUser } from "../auth/jwt-user";
+import { hasRole } from "../common/effective-roles";
 import { fetchClinicScopeIds } from "../common/clinic-scope";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
@@ -144,7 +145,7 @@ export class ReportsService {
       status: AppointmentStatus.COMPLETED,
       startsAt: { gte: start, lte: end },
       ...(clinicId ? { clinicId } : scopeClinicIds?.length ? { clinicId: { in: scopeClinicIds } } : {}),
-      ...(viewer?.role === UserRole.PHYSICIAN ? { clinicianId: viewer.userId } : {}),
+      ...(viewer && hasRole(viewer, UserRole.PHYSICIAN) ? { clinicianId: viewer.userId } : {}),
     };
 
     const [revenueByCurrency, expensesByCurrency, visits, newPatients, appointmentsCompleted, tenant] =
@@ -176,7 +177,7 @@ export class ReportsService {
   }
 
   async clinicBreakdown(tenantId: string, fromStr?: string, toStr?: string, viewer?: JwtUser) {
-    if (viewer?.role === UserRole.PHYSICIAN) {
+    if (viewer && hasRole(viewer, UserRole.PHYSICIAN)) {
       throw new ForbiddenException("Physicians cannot view organization clinic breakdown");
     }
 

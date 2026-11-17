@@ -30,8 +30,14 @@ Optional keys (merged with country defaults — see `apps/api/src/common/market-
 | `taxAuthorityNameEn` / `taxAuthorityNameAr` | Hint text in settings |
 | `taxRegistrationLabelEn` / `taxRegistrationLabelAr` | Label on forms and printed invoices |
 | `licenseLabelEn` / `licenseLabelAr` | Facility license label |
-| `defaultVatPercent` | Suggested VAT when provisioning |
+| `invoiceVatPercent` | VAT on **medical service** invoices (EG pack: often `0` — confirm with tax adviser) |
+| `saasVatPercent` | VAT on Kiorly SaaS invoices (EG pack: `14`) |
+| `defaultVisitFee` | Default encounter visit fee when provisioning tenants |
+| `trnFormat` / `trnRequired` | TRN validation on org/clinic save; blocks ETA enablement when invalid |
+| `defaultVatPercent` | Legacy alias for `invoiceVatPercent` |
 | `fiscalProviderKey` | Fiscal connector (e.g. `eta-egypt`) |
+
+**FD-00:** Tenant/clinic columns no longer ship UAE-style DB defaults (`5%` VAT, `150` visit fee, `N/A` TRN). New orgs get values from `market-tax-pack` at provision time; existing EG rows were backfilled in migration `20261117160000_fd00_market_tax_defaults` with `AuditLog` rows.
 
 Egypt live pack includes ETA labels (migration `20261116220000_market_tax_registration_labels`).
 

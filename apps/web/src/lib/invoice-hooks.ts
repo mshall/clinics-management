@@ -46,6 +46,7 @@ export function usePatchClinicInvoiceSettingsMutation(clinicId: string | undefin
       invoiceSections?: string[];
       taxRegistrationNumber?: string | null;
       invoiceVatPercent?: number;
+      invoiceVatPercentUseMarketDefault?: boolean;
     }) =>
       apiPatch(`/api/v1/clinics/${clinicId}/invoice-settings`, body),
     onSuccess: () => {

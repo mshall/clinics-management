@@ -6,6 +6,7 @@ import { defaultCurrencyForCountry } from "../common/country-default-currency";
 import { PrismaService } from "../prisma/prisma.service";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
 import { effectiveOperationalStatus, marketAcceptsNewTenants, marketOperabilityLabel } from "./market-operational";
+import { assertLiveMarketHasTaxPack } from "./market-pack-validation";
 import { MarketProvisionService } from "./market-provision.service";
 import type { PatchMarketDto } from "./dto/patch-market.dto";
 
@@ -95,6 +96,7 @@ export class MarketsService {
       const op = marketOperabilityLabel(row);
       throw new BadRequestException(`Market is not accepting new organizations (${op})`);
     }
+    assertLiveMarketHasTaxPack(row);
     return row;
   }
 
@@ -192,6 +194,7 @@ export class MarketsService {
     if (existing.status === MarketLaunchStatus.LIVE) {
       throw new BadRequestException("Market is already live");
     }
+    assertLiveMarketHasTaxPack(existing);
     const provision = this.provision.resolveProvision(existing.dataRegion, existing.hostCell);
     let note = provision.message;
     const deployLog = await this.provision.tryTriggerDeploy(provision.dataRegion);

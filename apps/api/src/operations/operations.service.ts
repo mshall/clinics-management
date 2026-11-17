@@ -4,6 +4,7 @@ import {
   assertOperationStatusTransition,
   isTerminalOperationStatus,
   normalizeOperationStatus,
+  operationAllowsPostSurgeryDocuments,
   operationStatusIsEditable,
 } from "./operation-status-flow";
 import { randomUUID } from "crypto";
@@ -77,6 +78,20 @@ export class OperationsService {
     if (!operationStatusIsEditable(status)) {
       throw new BadRequestException("Only booked or pre-op operations can be edited");
     }
+  }
+
+  private assertCanUploadDocument(kind: OperationDocumentKind, status: OperationStatus): void {
+    if (kind === OperationDocumentKind.POST_SURGERY) {
+      if (!operationAllowsPostSurgeryDocuments(status)) {
+        throw new BadRequestException("Post-surgery documents can only be added to discharged operations");
+      }
+      return;
+    }
+    if (kind === OperationDocumentKind.ATTACHMENT || kind === OperationDocumentKind.PRESCRIPTION) {
+      this.ensureEditableStatus(status);
+      return;
+    }
+    throw new BadRequestException("This document kind cannot be uploaded through this endpoint");
   }
 
   private mapDoc(row: {
@@ -1045,7 +1060,7 @@ export class OperationsService {
     const op = await this.prisma.operation.findFirst({ where: { id: operationId, tenantId } });
     if (!op) throw new NotFoundException("Operation not found");
     await this.assertOperationAccess(viewer, op);
-    this.ensureEditableStatus(op.status);
+    this.assertCanUploadDocument(kind, op.status);
 
     if (!file?.buffer?.length) throw new BadRequestException("Missing file");
     if (file.size > MAX_UPLOAD_BYTES) throw new BadRequestException("File too large (max 15MB)");
@@ -1053,7 +1068,10 @@ export class OperationsService {
     if (!ALLOWED_MIME.has(mime)) throw new BadRequestException(`Unsupported file type: ${mime}`);
 
     const desc = description?.trim() || null;
-    if (kind === OperationDocumentKind.ATTACHMENT && !desc) {
+    if (
+      (kind === OperationDocumentKind.ATTACHMENT || kind === OperationDocumentKind.POST_SURGERY) &&
+      !desc
+    ) {
       throw new BadRequestException("Document description is required");
     }
 
@@ -1076,7 +1094,8 @@ export class OperationsService {
         tenantId,
         operationId,
         kind,
-        description: kind === OperationDocumentKind.ATTACHMENT ? desc : null,
+        description:
+          kind === OperationDocumentKind.ATTACHMENT || kind === OperationDocumentKind.POST_SURGERY ? desc : null,
         originalFileName: file.originalname || base,
         mimeType: mime,
         sizeBytes: file.size,

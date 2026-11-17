@@ -48,3 +48,8 @@ export function operationStatusIsEditable(status: OperationStatus): boolean {
   const n = normalizeOperationStatus(status);
   return n === OperationStatus.BOOKED || n === OperationStatus.PRE_OP;
 }
+
+/** Discharged operations may receive additional post-surgery file uploads. */
+export function operationAllowsPostSurgeryDocuments(status: OperationStatus): boolean {
+  return normalizeOperationStatus(status) === OperationStatus.DISCHARGED;
+}

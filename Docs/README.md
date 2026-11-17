@@ -43,6 +43,7 @@ See **[Documentation_Portal.md](./Documentation_Portal.md)** for module layout, 
 | [**ETA_RECEIPT_V12.md**](./ETA_RECEIPT_V12.md) | Egypt Receipt **v1.2** builder, SHA-256 UUIDs, per-POS `FiscalPosChain`, queue/submit flow |
 | [**COMPLIANCE_CONTROLS.md**](./COMPLIANCE_CONTROLS.md) | ISO 27001 / HIPAA / SOC / FISMA control mapping (non-certification) |
 | [**GUIDE_BOOK.md**](./GUIDE_BOOK.md) | In-app Guide book (`/guide`) — role-based EN/AR instructions |
+| [**RBAC_MULTI_ROLE.md**](./RBAC_MULTI_ROLE.md) | FD-01 — multiple roles per user, tenant owner flag, nav tab union |
 
 ---
 

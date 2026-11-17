@@ -17,6 +17,7 @@ import { IntegrationFailureRetentionService } from "../integrations/integration-
 import { IntegrationWebhookService } from "../integrations/integration-webhook.service";
 import { PrismaService } from "../prisma/prisma.service";
 import type { PatchIntegrationFailureDto } from "./dto/patch-integration-failure.dto";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 type FailureFilters = {
   from?: string;
@@ -38,9 +39,9 @@ export class IntegrationFailureAdminService {
 
   private assertAdmin(user: JwtUser) {
     if (
-      user.role !== UserRole.GROUP_ADMIN &&
-      user.role !== UserRole.CLINIC_ADMIN &&
-      user.role !== UserRole.BRANCH_MANAGER
+      !hasRole(user, UserRole.GROUP_ADMIN) &&
+      !hasRole(user, UserRole.CLINIC_ADMIN) &&
+      !hasRole(user, UserRole.BRANCH_MANAGER)
     ) {
       throw new ForbiddenException("Only administrators may access integration failures");
     }
@@ -339,7 +340,7 @@ export class IntegrationFailureAdminService {
   }
 
   async purgeNow(tenantId: string, user: JwtUser) {
-    if (user.role !== UserRole.GROUP_ADMIN) {
+    if (!hasRole(user, UserRole.GROUP_ADMIN)) {
       throw new ForbiddenException("Only group administrators may run retention purge");
     }
     const tenant = await this.prisma.tenant.findUnique({

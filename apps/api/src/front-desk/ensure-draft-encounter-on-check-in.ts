@@ -1,6 +1,7 @@
 import { AppointmentStatus, EncounterStatus, type Prisma } from "@prisma/client";
 import { syncEncounterVisitFeeFromAppointmentSchedule } from "../appointments/appointment-visit-fee-sync";
 import { resolveClinicCurrency } from "../common/clinic-currency";
+import { effectiveTenantVisitFee } from "../common/effective-tenant-visit-fee";
 
 /** Draft encounter linked to appointment; patient stays WAITING until Start visit. Idempotent. */
 export async function ensureDraftEncounterOnCheckIn(
@@ -25,12 +26,14 @@ export async function ensureDraftEncounterOnCheckIn(
   if (existing) return existing.id;
 
   const [tenant, currency] = await Promise.all([
-    tx.tenant.findUnique({ where: { id: tenantId }, select: { defaultVisitFee: true } }),
+    tx.tenant.findUnique({ where: { id: tenantId }, select: { defaultVisitFee: true, market: true } }),
     resolveClinicCurrency(tx, tenantId, apt.clinicId),
   ]);
   const feeFromApt = Number(apt.feeAmount);
   const visitFee =
-    Number.isFinite(feeFromApt) && feeFromApt >= 0 ? feeFromApt : Number(tenant?.defaultVisitFee ?? 0);
+    Number.isFinite(feeFromApt) && feeFromApt >= 0
+      ? feeFromApt
+      : effectiveTenantVisitFee(tenant ?? { defaultVisitFee: null }, tenant?.market ?? null);
 
   const enc = await tx.encounter.create({
     data: {

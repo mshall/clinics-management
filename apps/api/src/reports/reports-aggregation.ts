@@ -6,6 +6,7 @@ import {
   UserRole,
 } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
+import { hasRole } from "../common/effective-roles";
 import type { PrismaService } from "../prisma/prisma.service";
 
 export type ReportsCurrencyTotals = {
@@ -73,7 +74,7 @@ export function buildReportsRevenueWhere(
     where.clinicId = { in: scopeClinicIds };
   }
 
-  if (viewer?.role === UserRole.PHYSICIAN) {
+  if (viewer && hasRole(viewer, UserRole.PHYSICIAN)) {
     where.encounterId = { not: null };
     where.encounter = { is: { clinicianId: viewer.userId } };
   }
@@ -123,7 +124,7 @@ export function buildReportsEncounterWhere(
     where.clinicId = { in: scopeClinicIds };
   }
 
-  if (viewer?.role === UserRole.PHYSICIAN) {
+  if (viewer && hasRole(viewer, UserRole.PHYSICIAN)) {
     where.clinicianId = viewer.userId;
   }
 

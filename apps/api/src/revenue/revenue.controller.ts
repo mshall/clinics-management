@@ -9,16 +9,15 @@ import { CreateRevenueDto } from "./dto/create-revenue.dto";
 import { RevenueEntryDto } from "./dto/revenue.dto";
 import { RevenueTotalsDto } from "./dto/revenue-totals.dto";
 import { RevenueService } from "./revenue.service";
+import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 
 function resolveClinicianFilter(user: JwtUser, clinicianIdParam?: string): string | undefined {
-  if (user.role === UserRole.PHYSICIAN) return user.userId;
+  if (hasRole(user, UserRole.PHYSICIAN)) return user.userId;
   const raw = clinicianIdParam?.trim();
   if (!raw) return undefined;
   if (
-    user.role === UserRole.GROUP_ADMIN ||
-    user.role === UserRole.GROUP_SUPERVISOR ||
-    user.role === UserRole.BRANCH_MANAGER ||
-    user.role === UserRole.FINANCE_OFFICER
+    hasAnyRole(user, [UserRole.GROUP_ADMIN, UserRole.GROUP_SUPERVISOR]) ||
+    hasAnyRole(user, [UserRole.BRANCH_MANAGER, UserRole.FINANCE_OFFICER])
   ) {
     return raw;
   }

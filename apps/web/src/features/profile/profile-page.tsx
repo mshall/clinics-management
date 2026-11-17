@@ -200,9 +200,19 @@ export function ProfilePage() {
                     <span className="truncate">{user?.email ?? "—"}</span>
                   </p>
                   {user?.role ? (
-                    <Badge variant="secondary" className="mt-1">
-                      {formatUserRole(user.role, t)}
-                    </Badge>
+                    <div className="mt-1 flex flex-wrap gap-2">
+                      <Badge variant="secondary">{formatUserRole(user.role, t)}</Badge>
+                      {user.isTenantOwner ? (
+                        <Badge variant="outline">{t("profile.tenantOwnerBadge", "Owner")}</Badge>
+                      ) : null}
+                      {user.additionalRoles?.length
+                        ? user.additionalRoles.map((r) => (
+                            <Badge key={r} variant="outline">
+                              {formatUserRole(r, t)}
+                            </Badge>
+                          ))
+                        : null}
+                    </div>
                   ) : null}
                   <p className="text-xs text-muted-foreground">
                     {t("profile.avatarHint", "Tap the camera icon to upload or change your profile picture.")}

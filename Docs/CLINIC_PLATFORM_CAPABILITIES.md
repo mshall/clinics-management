@@ -22,6 +22,7 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 | Operation note template | **Foundation** | `PATCH /operations/:id/operation-note` JSON; pair with clinical templates in UI |
 | Supplies used | **Foundation** | `POST /operations/:id/supplies` |
 | Installment schedule (down payment / paid amount) | **Foundation** | `POST /operations/:id/installments` rows `{ dueOn, amount }` |
+| Post-surgery documents on discharged ops | **Shipped** | `POST /operations/:id/documents` with `kind=POST_SURGERY` after discharge; operations detail + patient 360 |
 
 ---
 
