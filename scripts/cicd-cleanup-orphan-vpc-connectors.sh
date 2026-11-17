@@ -48,8 +48,21 @@ while IFS= read -r line; do
 
   if [[ "$should_delete" -eq 1 ]]; then
     echo "  delete orphan connector: ${name} (${arn})"
-    aws apprunner delete-vpc-connector --vpc-connector-arn "$arn" --region "$REGION" || true
-    deleted=$((deleted + 1))
+    if aws apprunner delete-vpc-connector --vpc-connector-arn "$arn" --region "$REGION" 2>/dev/null; then
+      deleted=$((deleted + 1))
+      for _wait in $(seq 1 24); do
+        still_there="$(
+          aws apprunner list-vpc-connectors --region "$REGION" --output json 2>/dev/null \
+            | python3 -c "import json,sys; arn=sys.argv[1]; d=json.load(sys.stdin); print(any(c.get('VpcConnectorArn')==arn for c in d.get('VpcConnectors') or []))" \
+                "$arn"
+        )"
+        if [[ "$still_there" != "True" ]]; then
+          break
+        fi
+        echo "    waiting for delete (${name})…"
+        sleep 5
+      done
+    fi
   fi
 done < <(
   echo "$list_json" | python3 -c "

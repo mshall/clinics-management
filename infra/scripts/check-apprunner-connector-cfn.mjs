@@ -28,7 +28,18 @@ if (!readdirSync(cdkOut).includes(templateFile)) {
 
 const template = JSON.parse(readFileSync(templatePath, "utf8"));
 for (const [resourceId, resource] of Object.entries(template.Resources ?? {})) {
-  if (resource.Type !== "AWS::AppRunner::VpcConnector") continue;
+  const type = resource.Type ?? "";
+  if (!type.startsWith("AWS::AppRunner::")) continue;
+
+  const tags = resource.Properties?.Tags;
+  if (Array.isArray(tags) && tags.length > 0) {
+    console.error(
+      `${templatePath}: ${resourceId} (${type}) must not carry stack tags (forces CFN replacement / AlreadyExists)`,
+    );
+    failed = true;
+  }
+
+  if (type !== "AWS::AppRunner::VpcConnector") continue;
   const name = resource.Properties?.VpcConnectorName;
   if (FORBIDDEN_NAMES.has(name)) {
     console.error(
@@ -39,13 +50,6 @@ for (const [resourceId, resource] of Object.entries(template.Resources ?? {})) {
   if (stackName === FRANKFURT_STACK_NAME && name !== FRANKFURT_CONNECTOR_NAME) {
     console.error(
       `${templatePath}: ${resourceId} VpcConnectorName is "${name}" — ${FRANKFURT_STACK_NAME} must use ${FRANKFURT_CONNECTOR_NAME}`,
-    );
-    failed = true;
-  }
-  const tags = resource.Properties?.Tags;
-  if (Array.isArray(tags) && tags.length > 0) {
-    console.error(
-      `${templatePath}: ${resourceId} must not carry stack tags (forces CFN replacement / AlreadyExists)`,
     );
     failed = true;
   }
