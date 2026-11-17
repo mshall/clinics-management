@@ -21,6 +21,7 @@ export interface AuthUser {
   navTabKeys?: string[] | null;
   /** Organization override for this user's role; undefined/null = platform role defaults */
   roleNavTabKeys?: string[] | null;
+  navTabAccessModes?: Record<string, "read" | "write"> | null;
   /** Clinic-scoped privileges mirrored from template employees */
   employeePrivilegeGrants?: import("@/lib/employee-manage-policy").EmployeePrivilegeGrantSummary[];
   /** Legacy email gate: data explorer on Admin, not platform routes */
@@ -84,6 +85,7 @@ export const useAuthStore = create<AuthState>()(
             isTenantOwner: Boolean(raw.isTenantOwner),
             navTabKeys: raw.navTabKeys !== undefined ? raw.navTabKeys : undefined,
             roleNavTabKeys: raw.roleNavTabKeys !== undefined ? raw.roleNavTabKeys : undefined,
+            navTabAccessModes: raw.navTabAccessModes ?? undefined,
             employeePrivilegeGrants: raw.employeePrivilegeGrants,
             platformSuperAdmin: Boolean(raw.platformSuperAdmin),
             hasAvatar: Boolean(raw.hasAvatar),
@@ -118,6 +120,7 @@ export const useAuthStore = create<AuthState>()(
             role: mapApiRole(me.role),
             navTabKeys: me.navTabKeys ?? null,
             roleNavTabKeys: me.roleNavTabKeys ?? null,
+            navTabAccessModes: me.navTabAccessModes ?? null,
             employeePrivilegeGrants: (me as AuthUserDto).employeePrivilegeGrants,
             platformSuperAdmin: Boolean(me.platformSuperAdmin),
             hasAvatar: Boolean((me as { hasAvatar?: boolean }).hasAvatar),

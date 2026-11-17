@@ -12,6 +12,7 @@ import {
 import { useClinicsQuery } from "@/lib/api-hooks";
 import { apiErrorMessage } from "@/lib/api-error-message";
 import { ApiError, apiDelete, apiGet, apiPatch, apiPut } from "@/lib/http";
+import type { NavTabAccessMode } from "@/lib/nav-tab-access-policy";
 import type { NavItemKey } from "@/lib/nav-policy";
 import {
   canCustomizeOrgRoleNavTabs,
@@ -96,6 +97,7 @@ export function OrgUserPermissionsEditor({
   const organizationTabSet = useMemo(() => organizationNavKeySet(), []);
 
   const [userDraft, setUserDraft] = useState<Set<NavItemKey>>(() => new Set());
+  const [tabAccessModesDraft, setTabAccessModesDraft] = useState<Record<string, NavTabAccessMode>>({});
   const [userErr, setUserErr] = useState<string | null>(null);
   const [moneyDraft, setMoneyDraft] = useState<MoneyVisibilityOverrides>({
     operations: "ROLE_DEFAULT",
@@ -126,7 +128,12 @@ export function OrgUserPermissionsEditor({
 
   const userGrantQ = useQuery({
     queryKey: ["user-nav-tabs", userId],
-    queryFn: () => apiGet<{ tabKeys: string[] | null }>(`/api/v1/user-nav-tabs/${userId}`),
+    queryFn: () =>
+      apiGet<{
+        tabKeys: string[] | null;
+        tabAccessModes?: Record<string, NavTabAccessMode> | null;
+        roleTabKeys?: string[];
+      }>(`/api/v1/user-nav-tabs/${userId}`),
     enabled: Boolean(userId),
   });
 
@@ -247,10 +254,12 @@ export function OrgUserPermissionsEditor({
   const effectiveRoleForNav = roleDraft;
   const effectiveRoleGrantQ = rolePreviewActive ? draftRoleGrantQ : userRoleGrantQ;
 
-  const userRoleBase = useMemo(
-    () => roleNavKeysForRole(effectiveRoleForNav, effectiveRoleGrantQ.data?.tabKeys),
-    [effectiveRoleForNav, effectiveRoleGrantQ.data?.tabKeys],
-  );
+  const userRoleBase = useMemo(() => {
+    const roleTabs = canCustomizeRoles
+      ? effectiveRoleGrantQ.data?.tabKeys
+      : userGrantQ.data?.roleTabKeys;
+    return roleNavKeysForRole(effectiveRoleForNav, roleTabs);
+  }, [canCustomizeRoles, effectiveRoleForNav, effectiveRoleGrantQ.data?.tabKeys, userGrantQ.data?.roleTabKeys]);
 
   const userGrantFingerprint = userGrantQ.data ? JSON.stringify(userGrantQ.data.tabKeys ?? null) : "";
   const userDraftSeedRef = useRef("");
@@ -264,12 +273,15 @@ export function OrgUserPermissionsEditor({
     if (rolePreviewActive) return;
     if (!userGrantQ.isSuccess) return;
     if (canCustomizeRoles && !userRoleGrantQ.isSuccess) return;
+    if (!canCustomizeRoles && !userGrantQ.isSuccess) return;
 
-    const seedKey = `${userId}:${userRole}:${userGrantFingerprint}:${canCustomizeRoles ? JSON.stringify(userRoleGrantQ.data?.tabKeys ?? null) : "clinic"}`;
+    const seedKey = `${userId}:${userRole}:${userGrantFingerprint}:${canCustomizeRoles ? JSON.stringify(userRoleGrantQ.data?.tabKeys ?? null) : JSON.stringify(userGrantQ.data?.roleTabKeys ?? null)}`;
     if (userDraftSeedRef.current === seedKey) return;
     userDraftSeedRef.current = seedKey;
 
-    const roleEffective = roleNavKeysForRole(userRole, userRoleGrantQ.data?.tabKeys);
+    const roleEffective = canCustomizeRoles
+      ? roleNavKeysForRole(userRole, userRoleGrantQ.data?.tabKeys)
+      : roleNavKeysForRole(userRole, userGrantQ.data?.roleTabKeys);
     const raw = userGrantQ.data?.tabKeys;
     if (raw == null || raw.length === 0) {
       setUserDraft(new Set(roleEffective));
@@ -281,6 +293,7 @@ export function OrgUserPermissionsEditor({
     }
     next.add("profile");
     setUserDraft(next);
+    setTabAccessModesDraft(userGrantQ.data?.tabAccessModes ?? {});
   }, [
     userId,
     userRole,
@@ -317,15 +330,24 @@ export function OrgUserPermissionsEditor({
   });
 
   const saveUserMut = useMutation({
-    mutationFn: (payload: { tabKeys: string[]; hrClinicId?: string }) =>
-      apiPut<{ tabKeys: string[] | null }>(`/api/v1/user-nav-tabs/${userId}`, payload),
+    mutationFn: (payload: {
+      tabKeys: string[];
+      hrClinicId?: string;
+      tabAccessModes?: Record<string, NavTabAccessMode>;
+    }) => apiPut<{ tabKeys: string[] | null }>(`/api/v1/user-nav-tabs/${userId}`, payload),
     onSuccess: async () => {
       setUserErr(null);
       setHrAssignDialogOpen(false);
       setHrAssignClinicIds(new Set());
       await qc.invalidateQueries({ queryKey: ["user-nav-tabs", userId] });
       await qc.invalidateQueries({ queryKey: ["user-clinic-hr-assignments", userId] });
-      if (userId === viewer?.id) await useAuthStore.getState().refreshSessionFromServer();
+      if (userId === viewer?.id) {
+        await useAuthStore.getState().refreshSessionFromServer();
+      } else {
+        toast.success(
+          t("admin.navTabsSavedReloginHint", "Tab permissions saved. The user should sign in again to see changes."),
+        );
+      }
     },
     onError: (e: unknown) => {
       setUserErr(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e));
@@ -438,7 +460,12 @@ export function OrgUserPermissionsEditor({
       return;
     }
     setUserErr(null);
-    saveUserMut.mutate({ tabKeys: sorted });
+    const tabAccessModes: Record<string, NavTabAccessMode> = {};
+    for (const k of sorted) {
+      if (k === "profile") continue;
+      tabAccessModes[k] = tabAccessModesDraft[k] ?? "write";
+    }
+    saveUserMut.mutate({ tabKeys: sorted, tabAccessModes });
   };
 
   const toggleUser = (key: NavItemKey) => {
@@ -473,9 +500,16 @@ export function OrgUserPermissionsEditor({
 
     setUserDraft((prev) => {
       const n = new Set(prev);
-      if (n.has(key)) n.delete(key);
+      const removing = n.has(key);
+      if (removing) n.delete(key);
       else n.add(key);
       n.add("profile");
+      setTabAccessModesDraft((modes) => {
+        const next = { ...modes };
+        if (removing) delete next[key];
+        else next[key] = modes[key] ?? "write";
+        return next;
+      });
       return n;
     });
   };
@@ -596,13 +630,39 @@ export function OrgUserPermissionsEditor({
 
       {userGrantQ.isPending ? (
         <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-      ) : userGrantQ.isSuccess && (!canCustomizeRoles || effectiveRoleGrantQ.isSuccess) ? (
-        <NavTabChecklist
-          orderedKeys={organizationOrderedKeys}
-          draft={userDraft}
-          onToggle={toggleUser}
-          allowedKeys={canExtendUsers ? undefined : userRoleBase}
-        />
+      ) : userGrantQ.isSuccess && (canCustomizeRoles ? effectiveRoleGrantQ.isSuccess : true) ? (
+        <>
+          <NavTabChecklist
+            orderedKeys={organizationOrderedKeys}
+            draft={userDraft}
+            onToggle={toggleUser}
+            allowedKeys={canExtendUsers ? undefined : userRoleBase}
+          />
+          {[...userDraft]
+            .filter((k) => k !== "profile")
+            .sort((a, b) => a.localeCompare(b))
+            .map((key) => (
+              <div
+                key={key}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm"
+              >
+                <span>{t(NAV_TAB_I18N[key])}</span>
+                <select
+                  className={nativeSelectClassName}
+                  value={tabAccessModesDraft[key] ?? "write"}
+                  onChange={(e) =>
+                    setTabAccessModesDraft((prev) => ({
+                      ...prev,
+                      [key]: e.target.value === "read" ? "read" : "write",
+                    }))
+                  }
+                >
+                  <option value="write">{t("admin.navTabAccessWrite", "Full access (view and edit)")}</option>
+                  <option value="read">{t("admin.navTabAccessRead", "View only")}</option>
+                </select>
+              </div>
+            ))}
+        </>
       ) : null}
 
       <p className="text-xs text-muted-foreground">

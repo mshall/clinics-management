@@ -66,6 +66,13 @@ export class AuthUserDto {
   roleNavTabKeys?: string[] | null;
 
   @ApiPropertyOptional({
+    description: "Per-tab read or write access from user nav grant",
+    type: "object",
+    additionalProperties: { type: "string", enum: ["read", "write"] },
+  })
+  navTabAccessModes?: Record<string, "read" | "write">;
+
+  @ApiPropertyOptional({
     type: String,
     description: "Organization base currency (tenant default for clinics that inherit org settings)",
     nullable: true,

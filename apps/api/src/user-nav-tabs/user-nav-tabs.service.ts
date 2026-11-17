@@ -1,10 +1,11 @@
 import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
-import { UserRole } from "@prisma/client";
+import { Prisma, UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { loadResolvedEmployeePrivilegeGrants } from "../common/employee-privilege-grants";
 import { PrismaService } from "../prisma/prisma.service";
 import { UserClinicPrivilegeGrantsService } from "../user-clinic-privilege-grants/user-clinic-privilege-grants.service";
 import { isFullRoleNav, sanitizeUserNavTabGrant } from "./nav-tab-keys";
+import { parseTabAccessModes, sanitizeTabAccessModes } from "./nav-tab-access-modes";
 import {
   assertClinicAdminCanManageUserNavTabs,
   loadNavTabTargetUser,
@@ -38,14 +39,26 @@ export class UserNavTabsService {
     await assertClinicAdminCanManageUserNavTabs(this.prisma, tenantId, actor, target);
   }
 
-  async getForUser(tenantId: string, targetUserId: string, actor: JwtUser): Promise<{ tabKeys: string[] | null }> {
+  async getForUser(
+    tenantId: string,
+    targetUserId: string,
+    actor: JwtUser,
+  ): Promise<{
+    tabKeys: string[] | null;
+    tabAccessModes: Record<string, "read" | "write"> | null;
+    roleTabKeys: string[];
+  }> {
     await this.assertCanManageAsync(actor, tenantId, targetUserId);
+    const target = await loadNavTabTargetUser(this.prisma, tenantId, targetUserId);
+    const roleTabKeys = await this.tenantRoleNav.effectiveRoleBaseForUser(tenantId, target.role);
     const row = await this.prisma.userNavTabGrant.findUnique({
       where: { tenantId_userId: { tenantId, userId: targetUserId } },
     });
-    if (!row) return { tabKeys: null };
+    if (!row) return { tabKeys: null, tabAccessModes: null, roleTabKeys };
     const arr = Array.isArray(row.tabKeys) ? (row.tabKeys as unknown[]).map((x) => String(x)) : [];
-    return { tabKeys: arr.length ? arr : null };
+    const modes = parseTabAccessModes(row.tabAccessModes);
+    const modesOrNull = Object.keys(modes).length ? modes : null;
+    return { tabKeys: arr.length ? arr : null, tabAccessModes: modesOrNull, roleTabKeys };
   }
 
   async setForUser(
@@ -54,7 +67,8 @@ export class UserNavTabsService {
     tabKeys: string[],
     actor: JwtUser,
     hrClinicId?: string,
-  ): Promise<{ tabKeys: string[] | null }> {
+    tabAccessModes?: Record<string, "read" | "write"> | null,
+  ): Promise<{ tabKeys: string[] | null; tabAccessModes: Record<string, "read" | "write"> | null }> {
     const target = await loadNavTabTargetUser(this.prisma, tenantId, targetUserId);
     await this.assertCanManageAsync(actor, tenantId, targetUserId);
 
@@ -64,27 +78,34 @@ export class UserNavTabsService {
       allowOrganizationTabs,
       roleBase,
     });
-    if (isFullRoleNav(target.role, sanitized, roleBase)) {
+    const sanitizedModes = sanitizeTabAccessModes(sanitized, tabAccessModes ?? undefined);
+
+    if (isFullRoleNav(target.role, sanitized, roleBase) && sanitizedModes == null) {
       await this.prisma.userNavTabGrant.deleteMany({ where: { tenantId, userId: targetUserId } });
-      return { tabKeys: null };
+      return { tabKeys: null, tabAccessModes: null };
     }
 
+    const modesData =
+      sanitizedModes === null ? Prisma.DbNull : (sanitizedModes as Prisma.InputJsonValue);
     await this.prisma.userNavTabGrant.upsert({
       where: { tenantId_userId: { tenantId, userId: targetUserId } },
       create: {
         tenantId,
         userId: targetUserId,
         tabKeys: sanitized,
+        tabAccessModes: modesData,
         updatedByUserId: actor.userId,
       },
       update: {
         tabKeys: sanitized,
+        tabAccessModes: modesData,
         updatedByUserId: actor.userId,
       },
     });
 
     await this.ensureHrTabHasClinicAssignment(tenantId, targetUserId, target.role, actor, sanitized, hrClinicId);
-    return { tabKeys: sanitized };
+    const modesOut = sanitizedModes ? parseTabAccessModes(sanitizedModes) : null;
+    return { tabKeys: sanitized, tabAccessModes: modesOut };
   }
 
   private async ensureHrTabHasClinicAssignment(

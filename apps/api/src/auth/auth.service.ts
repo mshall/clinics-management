@@ -10,6 +10,7 @@ import { loadEmployeePrivilegeGrantSummaries } from "../common/employee-privileg
 import { loadUserMoneyVisibilityOverrides } from "../common/user-money-visibility";
 import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { parseTabAccessModes } from "../user-nav-tabs/nav-tab-access-modes";
 import { TenantRoleNavTabsService } from "../user-nav-tabs/tenant-role-nav-tabs.service";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import { MfaService, verifyTotpCode } from "./mfa.service";
@@ -58,6 +59,18 @@ export class AuthService {
     return arr.length ? arr : null;
   }
 
+  private async navTabAccessModesForUser(
+    tenantId: string,
+    userId: string,
+  ): Promise<Record<string, "read" | "write"> | null> {
+    const row = await this.prisma.userNavTabGrant.findUnique({
+      where: { tenantId_userId: { tenantId, userId } },
+    });
+    if (!row?.tabAccessModes) return null;
+    const parsed = parseTabAccessModes(row.tabAccessModes);
+    return Object.keys(parsed).length ? parsed : null;
+  }
+
   private async mapAuthUser(user: {
     id: string;
     tenantId: string | null;
@@ -68,7 +81,12 @@ export class AuthService {
     isTenantOwner?: boolean;
     avatarRelativePath?: string | null;
     mfaEnabled?: boolean;
-  }, navTabKeys: string[] | null, roleNavTabKeys: string[] | null, tenantBaseCurrency: string | null = null) {
+  },
+    navTabKeys: string[] | null,
+    roleNavTabKeys: string[] | null,
+    navTabAccessModes: Record<string, "read" | "write"> | null = null,
+    tenantBaseCurrency: string | null = null,
+  ) {
     const employeePrivilegeGrants =
       user.tenantId != null
         ? await loadEmployeePrivilegeGrantSummaries(this.prisma, user.tenantId, user.id)
@@ -100,6 +118,7 @@ export class AuthService {
       isTenantOwner: Boolean(user.isTenantOwner),
       navTabKeys: effectiveNavTabKeys,
       roleNavTabKeys: effectiveRoleNavTabKeys,
+      navTabAccessModes: navTabAccessModes ?? undefined,
       tenantBaseCurrency,
       platformSuperAdmin: isPlatformSuperAdmin({
         email: user.email,
@@ -248,6 +267,8 @@ export class AuthService {
 
     const navTabKeys =
       user.tenantId != null ? await this.navTabKeysForUser(user.tenantId, user.id) : null;
+    const navTabAccessModes =
+      user.tenantId != null ? await this.navTabAccessModesForUser(user.tenantId, user.id) : null;
     const roleNavTabKeys =
       user.tenantId != null
         ? await this.tenantRoleNav.effectiveRoleNavTabKeysForPrincipal(user.tenantId, user)
@@ -259,7 +280,14 @@ export class AuthService {
 
     void this.audit.recordLogin(user, user.email);
 
-    const base = await this.buildLoginResponse(user, accessToken, navTabKeys, roleNavTabKeys, tenantBaseCurrency);
+    const base = await this.buildLoginResponse(
+      user,
+      accessToken,
+      navTabKeys,
+      roleNavTabKeys,
+      navTabAccessModes,
+      tenantBaseCurrency,
+    );
     return {
       ...base,
       refreshToken: session.refreshToken,
@@ -282,11 +310,12 @@ export class AuthService {
     accessToken: string,
     navTabKeys: string[] | null,
     roleNavTabKeys: string[] | null,
+    navTabAccessModes: Record<string, "read" | "write"> | null,
     tenantBaseCurrency: string | null,
   ) {
     return {
       accessToken,
-      user: await this.mapAuthUser(user, navTabKeys, roleNavTabKeys, tenantBaseCurrency),
+      user: await this.mapAuthUser(user, navTabKeys, roleNavTabKeys, navTabAccessModes, tenantBaseCurrency),
     };
   }
 
@@ -322,6 +351,8 @@ export class AuthService {
     if (!user) throw new UnauthorizedException();
     const navTabKeys =
       user.tenantId != null ? await this.navTabKeysForUser(user.tenantId, userId) : null;
+    const navTabAccessModes =
+      user.tenantId != null ? await this.navTabAccessModesForUser(user.tenantId, userId) : null;
     const roleNavTabKeys =
       user.tenantId != null
         ? await this.tenantRoleNav.effectiveRoleNavTabKeysForPrincipal(user.tenantId, user)
@@ -330,7 +361,7 @@ export class AuthService {
       ? (await this.prisma.tenant.findUnique({ where: { id: user.tenantId }, select: { baseCurrency: true } }))
           ?.baseCurrency ?? null
       : null;
-    return await this.mapAuthUser(user, navTabKeys, roleNavTabKeys, tenantBaseCurrency);
+    return await this.mapAuthUser(user, navTabKeys, roleNavTabKeys, navTabAccessModes, tenantBaseCurrency);
   }
 
   async attachMyAvatar(

@@ -4,6 +4,7 @@ import {
   operationMoneyVisibleForUser,
   showOperationMoneyColumnsForUser,
 } from "@/lib/money-visibility-policy";
+import { canMutateOperations, type NavTabAccessMode } from "@/lib/nav-tab-access-policy";
 import type { DemoRole } from "@/lib/roles";
 
 const OPERATION_MONEY_ROLES = new Set<DemoRole>([
@@ -39,18 +40,12 @@ export function showOperationMoneyColumns(
   return canViewOperationSummaryMoney(role) || role === "physician";
 }
 
-export function canCreateOperation(role: DemoRole | undefined): boolean {
-  if (!role) return false;
-  const allowed = new Set<DemoRole>([
-    "group_admin",
-    "group_supervisor",
-    "branch_manager",
-    "clinic_admin",
-    "clinic_assistant",
-    "receptionist",
-    "call_center",
-  ]);
-  return allowed.has(role);
+export function canCreateOperation(
+  role: DemoRole | undefined,
+  navTabKeys?: string[] | null,
+  navTabAccessModes?: Record<string, NavTabAccessMode> | null,
+): boolean {
+  return canMutateOperations(role, navTabKeys, navTabAccessModes);
 }
 
 /** @deprecated Prefer `operation.financialsVisible` from the API for row-level display. */

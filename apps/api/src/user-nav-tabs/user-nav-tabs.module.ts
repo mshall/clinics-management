@@ -4,12 +4,13 @@ import { UserClinicPrivilegeGrantsModule } from "../user-clinic-privilege-grants
 import { TenantRoleNavTabsController } from "./tenant-role-nav-tabs.controller";
 import { TenantRoleNavTabsService } from "./tenant-role-nav-tabs.service";
 import { UserNavTabsController } from "./user-nav-tabs.controller";
+import { NavTabAccessService } from "./nav-tab-access.service";
 import { UserNavTabsService } from "./user-nav-tabs.service";
 
 @Module({
   imports: [PrismaModule, UserClinicPrivilegeGrantsModule],
   controllers: [UserNavTabsController, TenantRoleNavTabsController],
-  providers: [UserNavTabsService, TenantRoleNavTabsService],
-  exports: [UserNavTabsService, TenantRoleNavTabsService],
+  providers: [UserNavTabsService, TenantRoleNavTabsService, NavTabAccessService],
+  exports: [UserNavTabsService, TenantRoleNavTabsService, NavTabAccessService],
 })
 export class UserNavTabsModule {}

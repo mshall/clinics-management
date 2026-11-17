@@ -1,6 +1,6 @@
 # Multi-role users (FD-01)
 
-| Status | Done |
+| Status | Done (user nav tab grants include per-tab read/write; API enforces on operations & expenses) |
 |--------|------|
 
 ## Model

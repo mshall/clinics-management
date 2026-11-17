@@ -18,9 +18,10 @@ export function NavGate({ tab, children }: { tab: NavItemKey; children: ReactNod
   const employeePrivilegeGrants = useAuthStore((s) => s.user?.employeePrivilegeGrants);
   const planEntitlements = useAuthStore((s) => s.user?.entitlements);
   const planKey = useAuthStore((s) => s.user?.plan?.key ?? null);
+  const allRoles = useAuthStore((s) => s.user?.roles);
 
   if (
-    showNavItem(role, tab, navTabKeys, roleNavTabKeys, employeePrivilegeGrants, undefined, planEntitlements, planKey)
+    showNavItem(role, tab, navTabKeys, roleNavTabKeys, employeePrivilegeGrants, allRoles, planEntitlements, planKey)
   ) {
     return <>{children}</>;
   }
@@ -31,7 +32,7 @@ export function NavGate({ tab, children }: { tab: NavItemKey; children: ReactNod
     navTabKeys,
     roleNavTabKeys,
     employeePrivilegeGrants,
-    undefined,
+    allRoles,
     planEntitlements,
     planKey,
   );

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsArray, IsOptional, IsString } from "class-validator";
+import { IsArray, IsObject, IsOptional, IsString } from "class-validator";
 
 export class SetUserNavTabsDto {
   @ApiProperty({
@@ -17,4 +17,12 @@ export class SetUserNavTabsDto {
   @IsOptional()
   @IsString()
   hrClinicId?: string;
+
+  @ApiPropertyOptional({
+    description: "Per-tab access: read (view only) or write (full CRUD). Omitted tabs default to write.",
+    example: { operations: "read", expenses: "write" },
+  })
+  @IsOptional()
+  @IsObject()
+  tabAccessModes?: Record<string, "read" | "write">;
 }

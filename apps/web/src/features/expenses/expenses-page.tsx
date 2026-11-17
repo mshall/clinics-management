@@ -21,7 +21,7 @@ import { useClinicsQuery, useExpensesQuery } from "@/lib/api-hooks";
 import { EXPENSE_CATEGORIES } from "@/lib/expense-categories";
 import type { ExpenseDto } from "@/lib/api-types";
 import { ApiError, apiFetchBlob, apiPatch, apiPatchFormData, apiPostFormData } from "@/lib/http";
-import { canEditPendingExpense } from "@/lib/expense-edit-policy";
+import { canEditExpenses, canEditPendingExpense } from "@/lib/expense-edit-policy";
 import { columnFilterIncludes } from "@/lib/utils";
 import {
   formatClinicName,
@@ -50,6 +50,9 @@ export function ExpensesPage() {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const role = useAuthStore((s) => s.user?.role);
+  const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
+  const navTabAccessModes = useAuthStore((s) => s.user?.navTabAccessModes);
+  const canMutateExpense = canEditExpenses(role, navTabKeys, navTabAccessModes);
   const initialRange = useMemo(() => defaultMonthRange(), []);
   const [from, setFrom] = useState(initialRange.from);
   const [to, setTo] = useState(initialRange.to);
@@ -257,7 +260,7 @@ export function ExpensesPage() {
   };
 
   const handleExpenseRowActivate = (e: ExpenseDto) => {
-    if (canEditPendingExpense(e, role)) {
+    if (canEditPendingExpense(e, role, navTabKeys, navTabAccessModes)) {
       openEditExpense(e);
       return;
     }
@@ -469,6 +472,7 @@ export function ExpensesPage() {
         </Card>
       </div>
 
+      {canMutateExpense ? (
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{t("expenses.add")}</CardTitle>
@@ -568,6 +572,7 @@ export function ExpensesPage() {
           {validation.formErr ? <p className="text-sm text-destructive sm:col-span-full">{validation.formErr}</p> : null}
         </CardContent>
       </Card>
+      ) : null}
 
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
@@ -654,7 +659,7 @@ export function ExpensesPage() {
                 ) : null}
                 {!isPending &&
                   filteredExpenses.map((e) => {
-                    const rowEditable = canEditPendingExpense(e, role);
+                    const rowEditable = canEditPendingExpense(e, role, navTabKeys, navTabAccessModes);
                     return (
                     <tr
                       key={e.id}
@@ -725,12 +730,16 @@ export function ExpensesPage() {
                                 {t("operations.edit", "Edit")}
                               </Button>
                             ) : null}
+                            {canMutateExpense ? (
+                              <>
                             <Button size="sm" variant="secondary" onClick={() => statusMut.mutate({ id: e.id, status: "APPROVED" })}>
                               {t("expenses.approve")}
                             </Button>
                             <Button size="sm" variant="outline" onClick={() => statusMut.mutate({ id: e.id, status: "REJECTED" })}>
                               {t("expenses.reject")}
                             </Button>
+                              </>
+                            ) : null}
                           </div>
                         ) : (
                           <Button type="button" size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setDetail(e)}>

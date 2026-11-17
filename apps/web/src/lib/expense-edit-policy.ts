@@ -1,26 +1,21 @@
-import { mapApiRole, type DemoRole } from "@/lib/roles";
 import type { ExpenseDto } from "@/lib/api-types";
+import { canMutateExpenses, type NavTabAccessMode } from "@/lib/nav-tab-access-policy";
+import { mapApiRole, type DemoRole } from "@/lib/roles";
 
-/** Matches `EXPENSE_ROLES` in `apps/api/src/expenses/expenses.controller.ts`. */
-const EXPENSE_EDIT_ROLES: ReadonlySet<DemoRole> = new Set([
-  "group_admin",
-  "group_supervisor",
-  "clinic_admin",
-  "branch_manager",
-  "finance_officer",
-  "hr_officer",
-  "clinic_assistant",
-]);
-
-export function canEditExpenses(role: string | DemoRole | undefined | null): boolean {
+export function canEditExpenses(
+  role: string | DemoRole | undefined | null,
+  navTabKeys?: string[] | null,
+  navTabAccessModes?: Record<string, NavTabAccessMode> | null,
+): boolean {
   if (!role) return false;
-  const mapped = mapApiRole(String(role));
-  return EXPENSE_EDIT_ROLES.has(mapped);
+  return canMutateExpenses(mapApiRole(String(role)), navTabKeys, navTabAccessModes);
 }
 
 export function canEditPendingExpense(
   expense: Pick<ExpenseDto, "status">,
   role: string | DemoRole | undefined | null,
+  navTabKeys?: string[] | null,
+  navTabAccessModes?: Record<string, NavTabAccessMode> | null,
 ): boolean {
-  return expense.status === "PENDING" && canEditExpenses(role);
+  return expense.status === "PENDING" && canEditExpenses(role, navTabKeys, navTabAccessModes);
 }

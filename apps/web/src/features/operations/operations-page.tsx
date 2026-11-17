@@ -118,7 +118,11 @@ export function OperationsPage() {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
-  const canCreate = canCreateOperation(authUser?.role);
+  const canCreate = canCreateOperation(
+    authUser?.role,
+    authUser?.navTabKeys,
+    authUser?.navTabAccessModes,
+  );
   const moneyOverrides = authUser?.moneyVisibilityOverrides;
   const showSummaryMoney = canViewOperationSummaryMoney(authUser?.role, moneyOverrides);
   const canEditFees = canEditOperationFees(authUser?.role, moneyOverrides);

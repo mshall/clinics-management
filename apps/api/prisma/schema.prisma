@@ -1028,6 +1028,8 @@ model UserNavTabGrant {
   userId            String   @unique
   user              User     @relation("UserNavTabGrantUser", fields: [userId], references: [id], onDelete: Cascade)
   tabKeys           Json
+  /// Per-tab access when granted beyond role defaults: "read" (view only) or "write" (create/update).
+  tabAccessModes    Json?
   updatedByUserId   String?
   updatedBy         User?    @relation("UserNavTabGrantUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
   createdAt         DateTime @default(now())

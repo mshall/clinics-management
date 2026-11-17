@@ -37,6 +37,7 @@ import { ExpenseDto } from "./dto/expense.dto";
 import { UpdateExpenseDto } from "./dto/update-expense.dto";
 import { ExpensesService } from "./expenses.service";
 import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
+import { NavTabAccessService } from "../user-nav-tabs/nav-tab-access.service";
 
 const PROOF_UPLOAD_LIMIT = 15 * 1024 * 1024;
 
@@ -62,18 +63,33 @@ const EXPENSE_ROLES: Set<UserRole> = new Set([
 @UseGuards(JwtAuthGuard, EntitlementGuard)
 @RequiresEntitlement("mod_expenses")
 export class ExpensesController {
-  constructor(private readonly expenses: ExpensesService) {}
+  constructor(
+    private readonly expenses: ExpensesService,
+    private readonly navTabAccess: NavTabAccessService,
+  ) {}
 
-  private assertExpenseAccess(user: JwtUser): void {
-    if (!hasAnyRoleInSet(user, EXPENSE_ROLES)) {
-      throw new ForbiddenException("You do not have permission to access expenses");
-    }
+  private async assertExpenseView(user: JwtUser): Promise<void> {
+    await this.navTabAccess.assertViewTab(
+      user,
+      "expenses",
+      EXPENSE_ROLES,
+      "You do not have permission to access expenses",
+    );
+  }
+
+  private async assertExpenseMutate(user: JwtUser): Promise<void> {
+    await this.navTabAccess.assertMutateTab(
+      user,
+      "expenses",
+      EXPENSE_ROLES,
+      "You do not have permission to edit expenses",
+    );
   }
 
   @Get()
   @ApiOperation({ summary: "List expenses" })
   @ApiOkResponse({ description: "{ items, total, page, pageSize, totalPages }" })
-  list(
+  async list(
     @CurrentUser() user: JwtUser,
     @Query("from") from?: string,
     @Query("to") to?: string,
@@ -83,7 +99,7 @@ export class ExpensesController {
     @Query("sortOrder") sortOrder?: string,
     @Query("clinicId") clinicId?: string
   ) {
-    this.assertExpenseAccess(user);
+    await this.assertExpenseView(user);
     return this.expenses.list(requireTenantId(user), user, from, to, page, pageSize, sortBy, sortOrder, clinicId);
   }
 
@@ -94,6 +110,7 @@ export class ExpensesController {
     @CurrentUser() user: JwtUser,
     @Param("id") id: string
   ): Promise<StreamableFile> {
+    await this.assertExpenseView(user);
     const meta = await this.expenses.getProofFileMeta(requireTenantId(user), id, user);
     const stream = await this.expenses.openProofReadStream(meta.storageKey);
     return new StreamableFile(stream, {
@@ -128,20 +145,20 @@ export class ExpensesController {
     })
   )
   @ApiCreatedResponse({ type: ExpenseDto })
-  create(
+  async create(
     @CurrentUser() user: JwtUser,
     @Body() body: CreateExpenseDto,
     @UploadedFile() proof?: Express.Multer.File
   ) {
-    this.assertExpenseAccess(user);
+    await this.assertExpenseMutate(user);
     return this.expenses.create(requireTenantId(user), body, user, proof);
   }
 
   @Patch(":id/status")
   @ApiOperation({ summary: "Approve or reject expense" })
   @ApiOkResponse({ type: ExpenseDto })
-  patchStatus(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchExpenseStatusDto) {
-    this.assertExpenseAccess(user);
+  async patchStatus(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchExpenseStatusDto) {
+    await this.assertExpenseMutate(user);
     return this.expenses.updateStatus(requireTenantId(user), id, body.status, user);
   }
 
@@ -169,13 +186,13 @@ export class ExpensesController {
     })
   )
   @ApiOkResponse({ type: ExpenseDto })
-  update(
+  async update(
     @CurrentUser() user: JwtUser,
     @Param("id") id: string,
     @Body() body: UpdateExpenseDto,
     @UploadedFile() proof?: Express.Multer.File
   ) {
-    this.assertExpenseAccess(user);
+    await this.assertExpenseMutate(user);
     return this.expenses.update(requireTenantId(user), id, body, user, proof);
   }
 }

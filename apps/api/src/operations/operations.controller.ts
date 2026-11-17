@@ -47,6 +47,7 @@ import { UpdateOperationDto } from "./dto/update-operation.dto";
 import { assertCanCompleteOperation } from "./operation-complete-roles";
 import { OperationsService } from "./operations.service";
 import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
+import { NavTabAccessService } from "../user-nav-tabs/nav-tab-access.service";
 
 const UPLOAD_LIMIT = 15 * 1024 * 1024;
 
@@ -98,30 +99,42 @@ class PatchOperationStatusDto {
 @UseGuards(JwtAuthGuard, EntitlementGuard)
 @RequiresEntitlement("mod_operations")
 export class OperationsController {
-  constructor(private readonly operations: OperationsService) {}
+  constructor(
+    private readonly operations: OperationsService,
+    private readonly navTabAccess: NavTabAccessService,
+  ) {}
 
-  private assertViewAccess(user: JwtUser): void {
-    if (!hasAnyRoleInSet(user, OPERATIONS_VIEW_ROLES)) {
-      throw new ForbiddenException("You do not have permission to access operations");
-    }
+  private async assertViewAccess(user: JwtUser): Promise<void> {
+    await this.navTabAccess.assertViewTab(
+      user,
+      "operations",
+      OPERATIONS_VIEW_ROLES,
+      "You do not have permission to access operations",
+    );
   }
 
-  private assertCreateAccess(user: JwtUser): void {
-    if (!hasAnyRoleInSet(user, OPERATIONS_CREATE_ROLES)) {
-      throw new ForbiddenException("You do not have permission to schedule operations");
-    }
+  private async assertCreateAccess(user: JwtUser): Promise<void> {
+    await this.navTabAccess.assertMutateTab(
+      user,
+      "operations",
+      OPERATIONS_CREATE_ROLES,
+      "You do not have permission to schedule operations",
+    );
   }
 
-  private assertStatusAccess(user: JwtUser): void {
-    if (!hasAnyRoleInSet(user, OPERATIONS_STATUS_ROLES)) {
-      throw new ForbiddenException("You do not have permission to update operation status");
-    }
+  private async assertStatusAccess(user: JwtUser): Promise<void> {
+    await this.navTabAccess.assertMutateTab(
+      user,
+      "operations",
+      OPERATIONS_STATUS_ROLES,
+      "You do not have permission to update operation status",
+    );
   }
 
   @Get()
   @ApiOperation({ summary: "List operations (physicians see only their assigned procedures)" })
   @ApiOkResponse({ description: "{ items, total, page, pageSize, totalPages }" })
-  list(
+  async list(
     @CurrentUser() user: JwtUser,
     @Query("from") from?: string,
     @Query("to") to?: string,
@@ -133,7 +146,7 @@ export class OperationsController {
     @Query("status") status?: string,
     @Query("patientId") patientId?: string,
   ) {
-    this.assertViewAccess(user);
+    await this.assertViewAccess(user);
     return this.operations.list(
       requireTenantId(user),
       user,
@@ -152,37 +165,37 @@ export class OperationsController {
   @Get("summary")
   @ApiOperation({ summary: "Aggregate operation counts and revenue for the reporting window" })
   @ApiOkResponse()
-  summary(
+  async summary(
     @CurrentUser() user: JwtUser,
     @Query("from") from?: string,
     @Query("to") to?: string,
     @Query("clinicId") clinicId?: string,
   ) {
-    this.assertViewAccess(user);
+    await this.assertViewAccess(user);
     return this.operations.summary(requireTenantId(user), user, from, to, clinicId);
   }
 
   @Get("payable")
   @ApiOperation({ summary: "List operations with an outstanding balance (for revenue payments)" })
   @ApiOkResponse({ type: OperationDto, isArray: true })
-  listPayable(@CurrentUser() user: JwtUser, @Query("clinicId") clinicId?: string) {
-    this.assertViewAccess(user);
+  async listPayable(@CurrentUser() user: JwtUser, @Query("clinicId") clinicId?: string) {
+    await this.assertViewAccess(user);
     return this.operations.listPayable(requireTenantId(user), user, clinicId);
   }
 
   @Post()
   @ApiOperation({ summary: "Schedule a new operation" })
   @ApiCreatedResponse({ type: OperationDto })
-  create(@CurrentUser() user: JwtUser, @Body() body: CreateOperationDto) {
-    this.assertCreateAccess(user);
+  async create(@CurrentUser() user: JwtUser, @Body() body: CreateOperationDto) {
+    await this.assertCreateAccess(user);
     return this.operations.create(requireTenantId(user), body, user);
   }
 
   @Get(":id")
   @ApiOperation({ summary: "Get operation with medications and documents" })
   @ApiOkResponse({ type: OperationDetailDto })
-  getOne(@CurrentUser() user: JwtUser, @Param("id") id: string) {
-    this.assertViewAccess(user);
+  async getOne(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    await this.assertViewAccess(user);
     return this.operations.getOne(requireTenantId(user), id, user);
   }
 
@@ -194,7 +207,7 @@ export class OperationsController {
     @Param("id") operationId: string,
     @Param("docId") docId: string,
   ): Promise<StreamableFile> {
-    this.assertViewAccess(user);
+    await this.assertViewAccess(user);
     const meta = await this.operations.getDocumentFileMeta(requireTenantId(user), operationId, docId, user);
     const stream = await this.operations.openDocumentReadStream(meta.storageKey);
     return new StreamableFile(stream, {
@@ -231,7 +244,7 @@ export class OperationsController {
     @Body("kind") kindRaw?: string,
     @Body("description") description?: string,
   ): Promise<OperationDocumentDto> {
-    this.assertCreateAccess(user);
+    await this.assertCreateAccess(user);
     if (!file) throw new BadRequestException("file is required");
     const normalized = kindRaw?.trim().toUpperCase();
     const kind =
@@ -251,46 +264,47 @@ export class OperationsController {
   @Post(":id/medications")
   @ApiOperation({ summary: "Add medication for this operation" })
   @ApiCreatedResponse({ type: OperationMedicationDto })
-  addMedication(
+  async addMedication(
     @CurrentUser() user: JwtUser,
     @Param("id") id: string,
     @Body() body: AddOperationMedicationDto,
   ) {
-    this.assertCreateAccess(user);
+    await this.assertCreateAccess(user);
     return this.operations.addMedication(requireTenantId(user), id, body, user);
   }
 
   @Post(":id/reset-clinical")
   @ApiOperation({ summary: "Clear medications and optionally prescription documents (scheduled operations only)" })
   @ApiOkResponse({ description: "Clinical data cleared" })
-  resetClinical(
+  async resetClinical(
     @CurrentUser() user: JwtUser,
     @Param("id") id: string,
     @Body() body?: { clearPrescription?: boolean },
   ) {
-    this.assertCreateAccess(user);
+    await this.assertCreateAccess(user);
     return this.operations.resetClinical(requireTenantId(user), id, user, body);
   }
 
   @Patch(":id")
   @ApiOperation({ summary: "Edit a scheduled operation, or correct a completed operation (admin only)" })
   @ApiOkResponse({ type: OperationDto })
-  update(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: UpdateOperationDto) {
-    this.assertStatusAccess(user);
+  async update(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: UpdateOperationDto) {
+    await this.assertStatusAccess(user);
     return this.operations.update(requireTenantId(user), id, body, user);
   }
 
   @Patch(":id/status")
   @ApiOperation({ summary: "Update operation status (completed posts revenue; cancelled voids revenue)" })
   @ApiOkResponse({ type: OperationDto })
-  patchStatus(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchOperationStatusDto) {
-    this.assertStatusAccess(user);
+  async patchStatus(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchOperationStatusDto) {
+    await this.assertStatusAccess(user);
     assertCanCompleteOperation(user, body.status);
     return this.operations.updateStatus(requireTenantId(user), id, body.status, user, body.collectionAmount);
   }
 
   @Get(":id/pre-op-checklist")
-  preOpList(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+  async preOpList(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    await this.assertViewAccess(user);
     return this.operations.ensurePreOpChecklist(requireTenantId(user), id);
   }
 
@@ -300,28 +314,28 @@ export class OperationsController {
   }
 
   @Post(":id/supplies")
-  addSupply(
+  async addSupply(
     @CurrentUser() user: JwtUser,
     @Param("id") id: string,
     @Body() body: { itemName: string; quantity?: number; unit?: string; catalogCode?: string },
   ) {
-    this.assertCreateAccess(user);
+    await this.assertCreateAccess(user);
     return this.operations.addSupply(requireTenantId(user), id, body);
   }
 
   @Post(":id/installments")
-  setInstallments(
+  async setInstallments(
     @CurrentUser() user: JwtUser,
     @Param("id") id: string,
     @Body() body: { rows: { dueOn: string; amount: number }[] },
   ) {
-    this.assertStatusAccess(user);
+    await this.assertStatusAccess(user);
     return this.operations.setInstallments(requireTenantId(user), id, body.rows ?? []);
   }
 
   @Patch(":id/operation-note")
-  saveNote(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: Record<string, unknown>) {
-    this.assertCreateAccess(user);
+  async saveNote(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: Record<string, unknown>) {
+    await this.assertCreateAccess(user);
     return this.operations.saveOperationNote(requireTenantId(user), id, body);
   }
 }
