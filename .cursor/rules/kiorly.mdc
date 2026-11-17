@@ -1,0 +1,25 @@
+---
+description: Kiorly monorepo conventions (API, web, Prisma, markets, fiscal, RBAC, tests, docs).
+alwaysApply: true
+---
+
+# Kiorly repo rules (mshall/clinics-management)
+
+You are working in a TypeScript monorepo:
+- apps/api: NestJS 10 + Prisma (PostgreSQL). Modules live in apps/api/src/<module>. Keep module boundaries (see apps/api/src/platform/module-boundaries.node.test.ts and Docs/MODULAR_MONOLITH.md).
+- apps/web: React + Vite + Tailwind + i18next. Features in apps/web/src/features/<feature>. Every user-facing string goes into BOTH apps/web/src/locales/en.json and ar.json (Arabic is first-class, RTL).
+- apps/docs: documentation portal. Docs/*.md are the product docs.
+
+Conventions:
+1. Schema changes: edit apps/api/prisma/schema.prisma and create a named Prisma migration. Never rely on column defaults for market-specific business values; read them from the Market pack (Market.taxConfig, providerConfig, clinicalConfig, commercialConfig).
+2. Multi-market: never hard-code Egypt. Use market-resolver and market packs. Currency and VAT come from the market.
+3. Feature gating: FeatureFlagsService resolves platform → market → plan → org. Paid features use @RequiresEntitlement and return HTTP 402 { code: "PLAN_UPGRADE_REQUIRED", entitlement, requiredPlan }.
+4. Money: every receiptable patient payment goes through postRevenueWithFiscal (compliance module). Never create/patch RevenueEntry elsewhere (fiscal-revenue-coverage.node.test.ts enforces this). Kiorly's own SaaS billing uses KiorlyInvoice models, never the patient Invoice models.
+5. RBAC: use the effectiveRoles/hasRole helper (users can hold several roles). Respect nav tab grants and money visibility overrides.
+6. Audit: every state change affecting money, access, plans or credits writes an AuditLog entry.
+7. Events to external systems go through the OutboxEvent table (transactional outbox), never direct HTTP inside a request.
+8. Tests: unit/integration tests as *.node.test.ts next to the code (node:test); E2E in apps/web/e2e (Playwright). Add tests for every acceptance criterion.
+9. Security: no PHI in logs or AI prompts without a passing consent check; secrets in Secrets Manager refs, never in code.
+10. Docs: update the relevant Docs/*.md status row in the same change.
+
+Output: small, reviewable commits; explain any schema change and migration; list follow-ups you did not do.
