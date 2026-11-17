@@ -6,12 +6,23 @@ import { describe, it } from "node:test";
 
 const infraDir = join(__dirname, "..");
 
+const synthEnvBase = {
+  ...process.env,
+  CDK_DEFAULT_ACCOUNT: "111111111111",
+  AWS_EC2_METADATA_DISABLED: "true",
+};
+
 function synthTemplate(hostCell: string): Record<string, unknown> {
   execFileSync("npm", ["run", "build"], { cwd: infraDir, stdio: "pipe" });
   execFileSync(
     "npx",
     ["cdk", "synth", "-c", `hostCell=${hostCell}`, "-c", "deployRegion=eu-central-1", "--quiet"],
-    { cwd: infraDir, stdio: "pipe", env: { ...process.env, CDK_DEFAULT_ACCOUNT: "111111111111" } },
+    {
+      cwd: infraDir,
+      stdio: "pipe",
+      env: synthEnvBase,
+      timeout: 180_000,
+    },
   );
   const stackId = hostCell === "frankfurt" ? "kiorly-clinics-management" : `kiorly-cell-${hostCell}`;
   const templatePath = join(infraDir, "cdk.out", `${stackId}.template.json`);
@@ -42,10 +53,8 @@ describe("SC-01 CDK cell tagging", () => {
   it("cairo stack synthesizes separate stack id and me-south-1 region", () => {
     execFileSync("npm", ["run", "build"], { cwd: infraDir, stdio: "pipe" });
     const synthEnv = {
-      ...process.env,
-      CDK_DEFAULT_ACCOUNT: "111111111111",
+      ...synthEnvBase,
       CDK_DEFAULT_REGION: "me-south-1",
-      AWS_EC2_METADATA_DISABLED: "true",
     };
     execFileSync(
       "npx",
