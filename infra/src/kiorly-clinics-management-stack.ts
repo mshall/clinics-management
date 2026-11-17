@@ -14,6 +14,7 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import type { Construct } from "constructs";
+import { appRunnerPhysicalNames } from "./apprunner-physical-names";
 
 export interface KiorlyClinicsManagementStackProps extends cdk.StackProps {
   /** AWS region for VPC/RDS/App Runner (Frankfurt = eu-central-1). */
@@ -221,16 +222,14 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     // so App Runner env values never embed "HostedZoneId:host" URL quirks.
     const stsVpceHost = vpceHostnameFromEndpoint(stsEndpoint);
 
-    // Stable per-stack suffix (matches ApiService naming). Global connector names caused
-    // UPDATE_FAILED AlreadyExists when CloudFormation replaces the connector before delete.
-    const appRunnerResourceSuffix = cdk.Names.uniqueId(this).slice(-8).toLowerCase();
+    const appRunnerNames = appRunnerPhysicalNames(hostCell);
     const publicSubnetIds = vpc
       .selectSubnets({ subnetType: ec2.SubnetType.PUBLIC })
       .subnetIds.slice()
       .sort();
 
     const vpcConnector = new apprunner.CfnVpcConnector(this, "AppRunnerVpcConnector", {
-      vpcConnectorName: `kiorly-conn-${appRunnerResourceSuffix}`,
+      vpcConnectorName: appRunnerNames.vpcConnectorName,
       subnets: publicSubnetIds,
       securityGroups: [connectorSg.securityGroupId],
     });
@@ -268,10 +267,10 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     const openAiApiKeyFieldArn = `${openAiSecret.secretArn}:apiKey::`;
 
     const apiObservability = new apprunner.CfnObservabilityConfiguration(this, "ApiObservability", {
-      observabilityConfigurationName: `kiorly-api-obs-${appRunnerResourceSuffix}`,
+      observabilityConfigurationName: appRunnerNames.observabilityName,
     });
 
-    const apiAutoScalingName = `kiorly-api-autoscale-${appRunnerResourceSuffix}`;
+    const apiAutoScalingName = appRunnerNames.autoScalingName;
     const apiAutoScaling = new apprunner.CfnAutoScalingConfiguration(this, "ApiAutoScaling", {
       autoScalingConfigurationName: apiAutoScalingName,
       maxConcurrency: 100,
