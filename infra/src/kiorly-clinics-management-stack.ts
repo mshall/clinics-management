@@ -25,6 +25,13 @@ export interface KiorlyClinicsManagementStackProps extends cdk.StackProps {
   runtimeTimezone: string;
 }
 
+/** Stack residency tags on App Runner named resources force replacement (create-before-delete → AlreadyExists). */
+function excludeStackResidencyTags(scope: Construct): void {
+  for (const tagKey of ["KiorlyHostCell", "KiorlyDataRegion", "KiorlyStackRole"] as const) {
+    cdk.Tags.of(scope).remove(tagKey);
+  }
+}
+
 function resolveWebBuildId(scope: Construct, assetPath: string): string | undefined {
   const fromCtx = scope.node.tryGetContext("webBuildId") as string | undefined;
   if (fromCtx?.trim()) return fromCtx.trim().slice(0, 64);
@@ -233,6 +240,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       subnets: publicSubnetIds,
       securityGroups: [connectorSg.securityGroupId],
     });
+    excludeStackResidencyTags(vpcConnector);
 
     const assetPath = path.join(__dirname, "..", "..");
     const webBuildId = resolveWebBuildId(this, assetPath);
@@ -269,6 +277,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     const apiObservability = new apprunner.CfnObservabilityConfiguration(this, "ApiObservability", {
       observabilityConfigurationName: appRunnerNames.observabilityName,
     });
+    excludeStackResidencyTags(apiObservability);
 
     const apiAutoScalingName = appRunnerNames.autoScalingName;
     const apiAutoScaling = new apprunner.CfnAutoScalingConfiguration(this, "ApiAutoScaling", {
@@ -277,6 +286,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       maxSize: 25,
       minSize: 1,
     });
+    excludeStackResidencyTags(apiAutoScaling);
     // Avoid Fn::GetAtt AutoScalingConfigurationArn on CfnService — CloudFormation can fail resolving it
     // ("The security token included in the request is invalid") even when the config exists. App Runner
     // accepts a name-only ARN and uses the latest active revision (same as our CfnAutoScalingConfiguration).

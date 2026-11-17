@@ -22,5 +22,9 @@ describe("App Runner infra naming", () => {
     assert.ok(src.includes("appRunnerPhysicalNames(hostCell)"));
     assert.ok(!src.includes("kiorly-conn-${appRunnerResourceSuffix}"));
     assert.ok(src.includes(".sort()"), "public subnet ids should be sorted to avoid spurious replacement");
+    assert.ok(
+      src.includes("excludeStackResidencyTags(vpcConnector)"),
+      "VpcConnector must not inherit stack tags (CFN replacement AlreadyExists)",
+    );
   });
 });

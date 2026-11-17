@@ -60,6 +60,19 @@ describe("SC-01 CDK cell tagging", { skip: skipCdkSynth }, () => {
     assert.equal(outputs.DataRegion?.Value, "eu-central-1");
   });
 
+  it("frankfurt App Runner VPC connector omits stack residency tags (replacement AlreadyExists)", () => {
+    const template = synthTemplate("frankfurt");
+    const resources = template.Resources as Record<
+      string,
+      { Type?: string; Properties?: { Tags?: unknown[]; VpcConnectorName?: string } }
+    >;
+    const connector = resources.AppRunnerVpcConnector;
+    assert.equal(connector?.Type, "AWS::AppRunner::VpcConnector");
+    assert.equal(connector?.Properties?.VpcConnectorName, "kiorly-clinic-connector-v2");
+    const tags = connector?.Properties?.Tags;
+    assert.ok(!tags || tags.length === 0, "VpcConnector must not inherit stack tags");
+  });
+
   it("cairo stack synthesizes separate stack id and me-south-1 region", () => {
     execFileSync("npm", ["run", "build"], { cwd: infraDir, stdio: "pipe" });
     const synthEnv = {

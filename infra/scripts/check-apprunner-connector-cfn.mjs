@@ -38,6 +38,13 @@ for (const [resourceId, resource] of Object.entries(template.Resources ?? {})) {
     );
     failed = true;
   }
+  const tags = resource.Properties?.Tags;
+  if (Array.isArray(tags) && tags.length > 0) {
+    console.error(
+      `${templatePath}: ${resourceId} must not carry stack Tags (forces replacement / AlreadyExists on ${name})`,
+    );
+    failed = true;
+  }
 }
 
 if (failed) process.exit(1);
