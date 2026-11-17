@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 
 const infraDir = join(__dirname, "..");
+const skipCdkSynth = process.env.SKIP_INFRA_CDK_SYNTH === "1" || process.env.GITHUB_ACTIONS === "true";
 
 const synthEnvBase = {
   ...process.env,
@@ -39,7 +40,16 @@ function resourcesTagged(template: Record<string, unknown>, key: string, value: 
   return hits;
 }
 
-describe("SC-01 CDK cell tagging", () => {
+describe("SC-01 data cells registry", () => {
+  it("platform/data-cells.json defines frankfurt and cairo host cells", () => {
+    const path = join(infraDir, "..", "platform", "data-cells.json");
+    const reg = JSON.parse(readFileSync(path, "utf8")) as { cells: Record<string, { awsRegion: string }> };
+    assert.ok(reg.cells.frankfurt?.awsRegion);
+    assert.ok(reg.cells.cairo?.awsRegion);
+  });
+});
+
+describe("SC-01 CDK cell tagging", { skip: skipCdkSynth }, () => {
   it("frankfurt stack tags RDS and uploads bucket with KiorlyHostCell", () => {
     const template = synthTemplate("frankfurt");
     const tagged = resourcesTagged(template, "KiorlyHostCell", "frankfurt");
