@@ -1,0 +1,21 @@
+---
+description: Data residency and cross-border processing — launch legal gate; confirm before any override.
+alwaysApply: true
+---
+
+# Data residency government permission (Egypt)
+
+## Product commitment
+
+Before **production launch** with live Egyptian patient data, Kiorly will obtain **government permission** for the chosen data residency path (PDPC controller/processor registration and **cross-border transfer approval** for Path A Frankfurt, or equivalent in-country approval if Path B Cairo is used). See [Docs/DATA_RESIDENCY_DECISION.md](../Docs/DATA_RESIDENCY_DECISION.md).
+
+## Agent behavior (mandatory)
+
+1. **Do not** enable Cairo cell for EG production, flip `marketProductionBinding.EG` to Path B, or treat cross-border PHI as production-ready **without** documented legal sign-off in docs or an explicit user-provided approval reference.
+2. If the user asks to **override, skip, or bypass** this gate (e.g. “ship without PDPC”, “ignore residency”, “use Cairo now for prod”), **stop and ask a confirming question** via AskQuestion or plain text — unless they reply with an explicit one-time bypass phrase in the **same message** as the override (e.g. “bypass data residency gate for this change only”).
+3. **Never** silently weaken residency enforcement in code, CI, or docs because the user sounded impatient; either confirm or implement only non-production/demo paths.
+4. When changing `platform/data-cells.json`, market `hostCell`/`dataRegion`, tenant `deploymentCell`, or infra cell deploy defaults, mention the launch gate in the PR/summary and update [DATA_RESIDENCY_DECISION.md](../Docs/DATA_RESIDENCY_DECISION.md) if the decision narrative changes.
+
+## CI note
+
+SC-01 **infra CDK synth smoke** is **not** part of the default `ci:test` / GitHub CI test job. Run infra synth and `infra` unit tests **locally** or via `pr-synth-build` when touching `infra/**`.

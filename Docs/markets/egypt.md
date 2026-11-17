@@ -2,7 +2,7 @@
 
 Instance of [MARKET_GO_LIVE_TEMPLATE.md](../MARKET_GO_LIVE_TEMPLATE.md) for market code **EG** (`market-egypt`).
 
-**Data residency (SC-01 Path A):** production workloads run in **Frankfurt** cell **`frankfurt`** (`eu-central-1`) — DB, uploads, and RDS automated backups. Cross-border transfer requires **PDPC controller/processor** and **cross-border transfer** licences. Decision memo: [DATA_RESIDENCY_DECISION.md](../DATA_RESIDENCY_DECISION.md). Sub-processors: [SUB_PROCESSORS_BY_MARKET.md](../SUB_PROCESSORS_BY_MARKET.md).
+**Data residency (SC-01 Path A):** production workloads run in **Frankfurt** cell **`frankfurt`** (`eu-central-1`) — DB, uploads, and RDS automated backups. **Government permission** (PDPC controller/processor registration and **cross-border transfer** approval) must be obtained **right before production launch** — not assumed at pilot/engineering time. Decision memo: [DATA_RESIDENCY_DECISION.md](../DATA_RESIDENCY_DECISION.md) § Launch gate. Sub-processors: [SUB_PROCESSORS_BY_MARKET.md](../SUB_PROCESSORS_BY_MARKET.md).
 
 ## 1. ETA e-receipt onboarding
 

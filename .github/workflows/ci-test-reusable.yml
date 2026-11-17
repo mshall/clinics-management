@@ -43,9 +43,6 @@ jobs:
       - name: Install dependencies
         run: NPM_CONFIG_LOGLEVEL=error npm ci --no-audit --no-fund
 
-      - name: Install infra dependencies (not an npm workspace)
-        run: NPM_CONFIG_LOGLEVEL=error npm ci --no-audit --no-fund --prefix infra
-
       - name: Prisma generate
         run: npm run prisma:generate -w api
 
@@ -63,22 +60,6 @@ jobs:
 
       - name: Unit tests (api)
         run: npm run test:unit -w api
-
-      - name: Infra CDK synth smoke (SC-01)
-        working-directory: infra
-        env:
-          AWS_EC2_METADATA_DISABLED: "true"
-          CDK_DEFAULT_ACCOUNT: "111111111111"
-          CDK_DEFAULT_REGION: eu-central-1
-        run: |
-          npm run build
-          npx cdk synth -c hostCell=frankfurt -c deployRegion=eu-central-1 --quiet
-
-      - name: Unit tests (infra SC-01)
-        working-directory: infra
-        env:
-          GITHUB_ACTIONS: "true"
-        run: npm run test:unit
 
       - name: Integration tests (api)
         run: npm run test:integration -w api

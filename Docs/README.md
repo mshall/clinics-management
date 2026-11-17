@@ -48,7 +48,7 @@ See **[Documentation_Portal.md](./Documentation_Portal.md)** for module layout, 
 | [**COMPLIANCE_CONTROLS.md**](./COMPLIANCE_CONTROLS.md) | ISO 27001 / HIPAA / SOC / FISMA control mapping (non-certification) |
 | [**GUIDE_BOOK.md**](./GUIDE_BOOK.md) | In-app Guide book (`/guide`) — role-based EN/AR instructions |
 | [**RBAC_MULTI_ROLE.md**](./RBAC_MULTI_ROLE.md) | FD-01 — multiple roles per user, tenant owner flag, nav tab union |
-| [**DATA_RESIDENCY_DECISION.md**](./DATA_RESIDENCY_DECISION.md) | SC-01 — Egypt Path A/B decision, cell registry, enforcement |
+| [**DATA_RESIDENCY_DECISION.md**](./DATA_RESIDENCY_DECISION.md) | SC-01 — Egypt Path A/B decision, **launch government-permission gate**, cell registry, enforcement |
 | [**SUB_PROCESSORS_BY_MARKET.md**](./SUB_PROCESSORS_BY_MARKET.md) | SC-01 — sub-processors and AWS regions per market |
 | [**runbooks/EG_TENANT_CELL_MIGRATION.md**](./runbooks/EG_TENANT_CELL_MIGRATION.md) | SC-01 — pilot tenant migration Frankfurt → Cairo |
 | [**EGYPT_DRUG_DATABASE.md**](./EGYPT_DRUG_DATABASE.md) | CL-01 — brand → ingredient catalog, search, Rx autocomplete |

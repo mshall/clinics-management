@@ -1,8 +1,19 @@
 # SC-01 — Data residency decision (Egypt)
 
 **Decision ID:** `SC-01-2026-11` (canonical registry: [`platform/data-cells.json`](../platform/data-cells.json))  
-**Status:** **Done** — Path **A** for production Egypt tenants (Frankfurt); Path **B** infra prepared, not activated until in-country hosting is required  
+**Status:** **Done (engineering)** — Path **A** for production Egypt tenants (Frankfurt); Path **B** infra prepared, not activated until in-country hosting is required  
 **Owner:** Platform / Legal / Security
+
+---
+
+## 0. Launch gate — government permission (mandatory)
+
+**No production Egypt go-live** with live patient (PHI) data until Kiorly has obtained **government permission** for the residency and cross-border processing model in use:
+
+- **Path A (Frankfurt):** PDPC **controller** and **processor** registration plus **cross-border transfer** approval (or equivalent government authorization to process Egyptian health data in the EU cell).
+- **Path B (Cairo):** in-country hosting approvals as required by PDPC and applicable sector rules, if EG production is moved to `me-south-1`.
+
+Engineering may continue on Frankfurt with synthetic/demo data and pilots, but **marketing “live” clinics**, contractual PHI processing, and regulator-facing claims must wait until Legal documents the permission **immediately before launch**. This gate is a standing project rule (see `.cursor/rules/data-residency-gate.mdc`).
 
 ---
 
@@ -46,7 +57,7 @@
 | **Market pack** | `assertMarketMatchesProductionBinding` on pack validation |
 | **Tenant create** | `assertTenantDeploymentCellMatchesMarket` in platform admin |
 | **Infra** | CDK tags `KiorlyHostCell`, `KiorlyDataRegion` on RDS and S3; outputs `HostCell`, `DataRegion` |
-| **Tests** | `data-residency.node.test.ts`, `data-residency.integration.test.ts`, `data-residency-infra.node.test.ts` |
+| **Tests** | API: `data-residency.node.test.ts`, `data-residency.integration.test.ts`. Infra CDK tagging tests run **outside** the default GitHub `ci:test` job (local / `infra` package when changing CDK). |
 
 ---
 
