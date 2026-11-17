@@ -173,6 +173,7 @@ VITE_API_URL="https://YOUR_APP_URL" npm run build
 - Does **not** wipe existing data or reset passwords on existing accounts.
 - Ensures demo orgs, users, clinics, patients when missing.
 - Documented accounts: [`Test_Data_Users.md`](./Test_Data_Users.md).
+- **`apps/api/Dockerfile.seed`** must **COPY** every `../src/…` import used under `apps/api/prisma/` (enforced by `dockerfile-seed-src-coverage.node.test.ts`).
 
 Re-invoke manually:
 

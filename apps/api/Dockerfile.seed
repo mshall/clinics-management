@@ -19,8 +19,11 @@ RUN dnf install -y openssl ca-certificates && dnf clean all
 COPY --from=build /repo/node_modules ${LAMBDA_TASK_ROOT}/node_modules
 COPY --from=build /repo/apps/api/prisma ${LAMBDA_TASK_ROOT}/prisma
 COPY --from=build /repo/apps/api/prisma.config.ts ${LAMBDA_TASK_ROOT}/prisma.config.ts
-# prisma/seed.ts imports ../src/common/seed-demo-guard (tsx resolves .ts at runtime).
+# prisma/*.ts imports under ../src (tsx resolves .ts at runtime) — keep in sync with dockerfile-seed-src-coverage.node.test.ts
 COPY apps/api/src/common/seed-demo-guard.ts ${LAMBDA_TASK_ROOT}/src/common/seed-demo-guard.ts
+COPY apps/api/src/entitlements ${LAMBDA_TASK_ROOT}/src/entitlements
+COPY apps/api/src/feature-flags/feature-flag-keys.ts ${LAMBDA_TASK_ROOT}/src/feature-flags/feature-flag-keys.ts
+COPY apps/api/src/subscriptions ${LAMBDA_TASK_ROOT}/src/subscriptions
 COPY apps/api/src/staging ${LAMBDA_TASK_ROOT}/src/staging
 COPY apps/api/prisma/pilot-tenants.seed.ts ${LAMBDA_TASK_ROOT}/prisma/pilot-tenants.seed.ts
 COPY infra/lambda/db-seed/run.mjs ${LAMBDA_TASK_ROOT}/index.mjs
