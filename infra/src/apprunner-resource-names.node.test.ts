@@ -10,7 +10,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 describe("App Runner infra naming", () => {
   it("keeps frankfurt legacy connector/config names (no CFN replace AlreadyExists)", () => {
     assert.deepEqual(appRunnerPhysicalNames("frankfurt"), {
-      vpcConnectorName: "kiorly-clinic-connector",
+      vpcConnectorName: "kiorly-clinic-connector-v2",
       autoScalingName: "kiorly-api-autoscale",
       observabilityName: "kiorly-api-observability",
     });
