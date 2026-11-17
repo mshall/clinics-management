@@ -89,7 +89,7 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: NPM_CONFIG_LOGLEVEL=error npm ci --no-audit --no-fund
+        run: bash scripts/npm-ci-workflow.sh
 
       - name: Build web (tsc + vite)
         env:
@@ -260,7 +260,8 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies (for @cursor/sdk)
-        run: npm ci
+        run: |
+          NPM_CONFIG_LOGLEVEL=error npm install @cursor/sdk@^1.0.12 --no-save --no-audit --no-fund
 
       - name: Cursor cloud agent (PR + job summary)
         continue-on-error: true

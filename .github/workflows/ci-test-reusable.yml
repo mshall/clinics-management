@@ -41,7 +41,7 @@ jobs:
         run: bash scripts/check-no-openai-secrets-in-git.sh
 
       - name: Install dependencies
-        run: NPM_CONFIG_LOGLEVEL=error npm ci --no-audit --no-fund
+        run: bash scripts/npm-ci-workflow.sh
 
       - name: Prisma generate
         run: npm run prisma:generate -w api

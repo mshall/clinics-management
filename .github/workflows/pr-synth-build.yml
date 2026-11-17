@@ -42,7 +42,7 @@ jobs:
             infra/package-lock.json
 
       - name: Install dependencies
-        run: NPM_CONFIG_LOGLEVEL=error npm ci --no-audit --no-fund
+        run: bash scripts/npm-ci-workflow.sh
 
       - name: Install infra dependencies
         run: NPM_CONFIG_LOGLEVEL=error npm ci --prefix infra --no-audit --no-fund

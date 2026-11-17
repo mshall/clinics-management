@@ -56,7 +56,6 @@
     "infra:deploy:ci": "bash scripts/cicd-deploy.sh"
   },
   "devDependencies": {
-    "@cursor/sdk": "^1.0.12",
     "concurrently": "^9.1.2"
   }
 }
