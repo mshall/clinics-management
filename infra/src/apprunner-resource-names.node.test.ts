@@ -3,23 +3,24 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
+import { appRunnerPhysicalNames } from "./apprunner-physical-names";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-/**
- * Regression: fixed App Runner resource names (e.g. kiorly-clinic-connector) fail CDK deploy
- * with HandlerErrorCode AlreadyExists when CloudFormation replaces resources create-before-delete.
- */
 describe("App Runner infra naming", () => {
-  it("uses stack-scoped connector / autoscale / observability names", () => {
+  it("keeps frankfurt legacy connector/config names (no CFN replace AlreadyExists)", () => {
+    assert.deepEqual(appRunnerPhysicalNames("frankfurt"), {
+      vpcConnectorName: "kiorly-clinic-connector",
+      autoScalingName: "kiorly-api-autoscale",
+      observabilityName: "kiorly-api-observability",
+    });
+    assert.equal(appRunnerPhysicalNames("cairo").vpcConnectorName, "kiorly-conn-cairo");
+  });
+
+  it("wires appRunnerPhysicalNames and sorts public subnet ids in the stack", () => {
     const src = readFileSync(join(__dirname, "kiorly-clinics-management-stack.ts"), "utf8");
-    assert.ok(
-      !src.includes('vpcConnectorName: "kiorly-clinic-connector"'),
-      "VpcConnector must not use a global fixed name",
-    );
-    assert.ok(src.includes("kiorly-conn-${appRunnerResourceSuffix}"));
-    assert.ok(src.includes("kiorly-api-autoscale-${appRunnerResourceSuffix}"));
-    assert.ok(src.includes("kiorly-api-obs-${appRunnerResourceSuffix}"));
+    assert.ok(src.includes("appRunnerPhysicalNames(hostCell)"));
+    assert.ok(!src.includes("kiorly-conn-${appRunnerResourceSuffix}"));
     assert.ok(src.includes(".sort()"), "public subnet ids should be sorted to avoid spurious replacement");
   });
 });

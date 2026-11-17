@@ -224,7 +224,7 @@ Supported in product: patient registration documents, national ID scan, encounte
 - **Alarms:** add CloudWatch alarms for 5xx, unhealthy targets, RDS storage (not all wired in minimal stack).
 - **Load SLO smoke (local or CI):** with API running, `npm run test:perf` issues **2000** concurrent `GET /api/v1/health/live` requests and fails if success rate &lt; **99.9%** (tune via `LOAD_TEST_*` env vars in `scripts/load-test-slo.mjs`).
 - **Post-deploy:** `npm run sync:aws:smoke` (health + demo login). Optionally probe `GET /api/v1/health/ready` after RDS is warm.
-- **CDK `AppRunnerVpcConnector` `AlreadyExists`:** CloudWatch application logs are often empty; check CloudFormation for `identifier 'kiorly-clinic-connector' already exists`. Stack-scoped names (`kiorly-conn-<suffix>`) and sorted public subnet ids avoid create-before-delete collisions on replacement.
+- **CDK `AppRunnerVpcConnector` `AlreadyExists`:** App Runner application logs are often empty on this failure (CloudFormation never updates `ApiService`). Check stack events for `HandlerErrorCode: AlreadyExists` on `AppRunnerVpcConnector` — renaming the connector triggers create-before-delete while the old name still exists. Keep frankfurt on `kiorly-clinic-connector` / `kiorly-api-autoscale`; delete orphaned `kiorly-conn-*` connectors in App Runner if a prior deploy left them. Sorted public subnet ids in CDK reduce spurious connector replacements.
 
 ---
 
