@@ -27,27 +27,37 @@ if (!readdirSync(cdkOut).includes(templateFile)) {
 }
 
 const template = JSON.parse(readFileSync(templatePath, "utf8"));
+const APP_RUNNER_NO_TAG_TYPES = new Set([
+  "AWS::AppRunner::VpcConnector",
+  "AWS::AppRunner::AutoScalingConfiguration",
+  "AWS::AppRunner::ObservabilityConfiguration",
+]);
+
 for (const [resourceId, resource] of Object.entries(template.Resources ?? {})) {
-  if (resource.Type !== "AWS::AppRunner::VpcConnector") continue;
-  const name = resource.Properties?.VpcConnectorName;
-  if (FORBIDDEN_NAMES.has(name)) {
-    console.error(
-      `${templatePath}: ${resourceId} VpcConnectorName is "${name}" — use ${FRANKFURT_CONNECTOR_NAME} for frankfurt`,
-    );
-    failed = true;
+  if (resource.Type === "AWS::AppRunner::VpcConnector") {
+    const name = resource.Properties?.VpcConnectorName;
+    if (FORBIDDEN_NAMES.has(name)) {
+      console.error(
+        `${templatePath}: ${resourceId} VpcConnectorName is "${name}" — use ${FRANKFURT_CONNECTOR_NAME} for frankfurt`,
+      );
+      failed = true;
+    }
+    if (stackName === FRANKFURT_STACK_NAME && name !== FRANKFURT_CONNECTOR_NAME) {
+      console.error(
+        `${templatePath}: ${resourceId} VpcConnectorName is "${name}" — ${FRANKFURT_STACK_NAME} must use ${FRANKFURT_CONNECTOR_NAME}`,
+      );
+      failed = true;
+    }
   }
-  if (stackName === FRANKFURT_STACK_NAME && name !== FRANKFURT_CONNECTOR_NAME) {
-    console.error(
-      `${templatePath}: ${resourceId} VpcConnectorName is "${name}" — ${FRANKFURT_STACK_NAME} must use ${FRANKFURT_CONNECTOR_NAME}`,
-    );
-    failed = true;
-  }
-  const tags = resource.Properties?.Tags;
-  if (Array.isArray(tags) && tags.length > 0) {
-    console.error(
-      `${templatePath}: ${resourceId} must not carry stack tags (forces CFN replacement / AlreadyExists)`,
-    );
-    failed = true;
+
+  if (APP_RUNNER_NO_TAG_TYPES.has(resource.Type)) {
+    const tags = resource.Properties?.Tags;
+    if (Array.isArray(tags) && tags.length > 0) {
+      console.error(
+        `${templatePath}: ${resourceId} must not carry stack tags (forces CFN replacement / AlreadyExists)`,
+      );
+      failed = true;
+    }
   }
 }
 

@@ -28,6 +28,7 @@ ORPHAN_NAME_PATTERNS=(
 list_json="$(aws apprunner list-vpc-connectors --region "$REGION" --output json 2>/dev/null || echo '{"VpcConnectors":[]}')"
 
 deleted=0
+DELETE_ARNS=()
 while IFS= read -r line; do
   [[ -z "$line" ]] && continue
   arn="${line%%$'\t'*}"
@@ -48,8 +49,10 @@ while IFS= read -r line; do
 
   if [[ "$should_delete" -eq 1 ]]; then
     echo "  delete orphan connector: ${name} (${arn})"
-    aws apprunner delete-vpc-connector --vpc-connector-arn "$arn" --region "$REGION" || true
-    deleted=$((deleted + 1))
+    if aws apprunner delete-vpc-connector --vpc-connector-arn "$arn" --region "$REGION" 2>/dev/null; then
+      DELETE_ARNS+=("$arn")
+      deleted=$((deleted + 1))
+    fi
   fi
 done < <(
   echo "$list_json" | python3 -c "
@@ -59,5 +62,29 @@ for c in data.get('VpcConnectors') or []:
     print(c.get('VpcConnectorArn', '') + '\t' + c.get('VpcConnectorName', ''))
 "
 )
+
+if [[ "${#DELETE_ARNS[@]}" -gt 0 ]]; then
+  echo "  waiting for connector delete to finish (avoids immediate AlreadyExists on CDK replace)…"
+  deadline=$(( $(date +%s) + 300 ))
+  all_clear=0
+  while [[ $(date +%s) -lt $deadline ]]; do
+    remaining=0
+    for arn in "${DELETE_ARNS[@]}"; do
+      if aws apprunner describe-vpc-connector --vpc-connector-arn "$arn" --region "$REGION" &>/dev/null; then
+        remaining=$((remaining + 1))
+      fi
+    done
+    if [[ "$remaining" -eq 0 ]]; then
+      echo "  all orphan connectors deleted"
+      all_clear=1
+      break
+    fi
+    echo "  still deleting (${remaining} connector(s))…"
+    sleep 10
+  done
+  if [[ "$all_clear" -ne 1 ]]; then
+    echo "::warning::Timed out waiting for VPC connector delete — CDK deploy may hit AlreadyExists"
+  fi
+fi
 
 echo "cicd-cleanup-orphan-vpc-connectors: removed ${deleted} orphan connector(s); stack holds ${stack_connector_arn:-<none>}"
