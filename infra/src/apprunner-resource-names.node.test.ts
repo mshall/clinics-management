@@ -8,9 +8,9 @@ import { appRunnerPhysicalNames } from "./apprunner-physical-names";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 describe("App Runner infra naming", () => {
-  it("keeps frankfurt legacy connector/config names (no CFN replace AlreadyExists)", () => {
+  it("uses frankfurt v2 connector name (tag-driven CFN replace cannot reuse legacy name)", () => {
     assert.deepEqual(appRunnerPhysicalNames("frankfurt"), {
-      vpcConnectorName: "kiorly-clinic-connector",
+      vpcConnectorName: "kiorly-clinic-connector-v2",
       autoScalingName: "kiorly-api-autoscale",
       observabilityName: "kiorly-api-observability",
     });

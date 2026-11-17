@@ -18,10 +18,15 @@ if [[ "$stack_connector_arn" == "None" ]]; then
   stack_connector_arn=""
 fi
 
-# Names from failed deploy attempts (stack events: AlreadyExists on these identifiers).
+# Names from failed deploy attempts — never delete the connector currently bound to the stack ARN.
 ORPHAN_NAME_PATTERNS=(
   "kiorly-clinic-connector-v2"
   "kiorly-conn-nagement"
+  "kiorly-conn-frankfurt"
+)
+# After a successful migration to v2, the legacy connector may remain unused in the account.
+LEGACY_ORPHAN_NAMES=(
+  "kiorly-clinic-connector"
 )
 
 list_json="$(aws apprunner list-vpc-connectors --region "$REGION" --output json 2>/dev/null || echo '{"VpcConnectors":[]}')"
@@ -38,7 +43,7 @@ while IFS= read -r line; do
   fi
 
   should_delete=0
-  for pattern in "${ORPHAN_NAME_PATTERNS[@]}"; do
+  for pattern in "${ORPHAN_NAME_PATTERNS[@]}" "${LEGACY_ORPHAN_NAMES[@]}"; do
     if [[ "$name" == "$pattern" ]]; then
       should_delete=1
       break
