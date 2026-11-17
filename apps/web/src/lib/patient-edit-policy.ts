@@ -1,3 +1,4 @@
+import { canMutatePatients, type NavTabAccessMode } from "@/lib/nav-tab-access-policy";
 import { mapApiRole, type DemoRole } from "@/lib/roles";
 
 /** Roles that may edit or delete patients from the registry (list + profile). */
@@ -18,16 +19,27 @@ export function resolvePatientManageRole(role: string | DemoRole | undefined | n
   return PATIENT_MANAGE_ROLES.has(mapped) ? mapped : undefined;
 }
 
-export function canEditPatientDetails(role: string | DemoRole | undefined | null): boolean {
-  const normalized = resolvePatientManageRole(role);
-  if (!normalized) return false;
-  return PATIENT_MANAGE_ROLES.has(normalized);
+export function canEditPatientDetails(
+  role: string | DemoRole | undefined | null,
+  navTabKeys?: string[] | null,
+  navTabAccessModes?: Record<string, NavTabAccessMode> | null,
+): boolean {
+  const mapped = role ? mapApiRole(String(role)) : undefined;
+  return canMutatePatients(mapped, navTabKeys, navTabAccessModes);
 }
 
-export function canDeletePatient(role: string | DemoRole | undefined | null): boolean {
-  return canEditPatientDetails(role);
+export function canDeletePatient(
+  role: string | DemoRole | undefined | null,
+  navTabKeys?: string[] | null,
+  navTabAccessModes?: Record<string, NavTabAccessMode> | null,
+): boolean {
+  return canEditPatientDetails(role, navTabKeys, navTabAccessModes);
 }
 
-export function canManagePatientsInList(role: string | DemoRole | undefined | null): boolean {
-  return canEditPatientDetails(role);
+export function canManagePatientsInList(
+  role: string | DemoRole | undefined | null,
+  navTabKeys?: string[] | null,
+  navTabAccessModes?: Record<string, NavTabAccessMode> | null,
+): boolean {
+  return canEditPatientDetails(role, navTabKeys, navTabAccessModes);
 }

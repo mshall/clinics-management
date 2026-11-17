@@ -48,20 +48,13 @@ import {
 } from "../common/upload-errors";
 import type { PatientPhoneConflictDto, PatientPhoneConflictPatientDto } from "./dto/patient-phone-conflict.dto";
 import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
+import { NavTabAccessService } from "../user-nav-tabs/nav-tab-access.service";
+import { PATIENT_MUTATE_ROLES } from "../user-nav-tabs/nav-tab-module-roles";
 
 const MAX_PATIENT_DOC_BYTES = 15 * 1024 * 1024;
 const ALLOWED_PATIENT_DOC_MIME = new Set(["application/pdf", "image/jpeg", "image/png", "image/gif", "image/webp"]);
 
 type PatientDocFile = { buffer: Buffer; originalname: string; mimetype: string; size: number };
-
-const PATIENT_MANAGE_ROLES: ReadonlySet<UserRole> = new Set([
-  UserRole.GROUP_ADMIN,
-  UserRole.GROUP_SUPERVISOR,
-  UserRole.CLINIC_ADMIN,
-  UserRole.CLINIC_ASSISTANT,
-  UserRole.BRANCH_MANAGER,
-  UserRole.CALL_CENTER,
-]);
 
 function isPhysicianRole(role: UserRole | undefined): boolean {
   return role === UserRole.PHYSICIAN;
@@ -88,6 +81,7 @@ export class PatientsService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
+    private readonly navTabAccess: NavTabAccessService,
   ) {}
 
   private mapDoc(d: {
@@ -551,9 +545,12 @@ export class PatientsService {
   }
 
   private async assertCanManagePatient(user: JwtUser): Promise<void> {
-    if (!hasAnyRoleInSet(user, PATIENT_MANAGE_ROLES)) {
-      throw new ForbiddenException("You are not allowed to modify patients");
-    }
+    await this.navTabAccess.assertMutateTab(
+      user,
+      "patients",
+      PATIENT_MUTATE_ROLES,
+      "You are not allowed to modify patients",
+    );
   }
 
   async update(tenantId: string, id: string, dto: UpdatePatientDto, user: JwtUser): Promise<PatientDto> {

@@ -41,13 +41,13 @@ export class NavTabAccessService {
     return tabAccessModeForTab(modes, tab);
   }
 
-  async canViewTab(user: JwtUser, tab: string, viewRoles: Set<UserRole>): Promise<boolean> {
+  async canViewTab(user: JwtUser, tab: string, viewRoles: ReadonlySet<UserRole>): Promise<boolean> {
     if (hasAnyRoleInSet(user, viewRoles)) return true;
     const tabs = await this.effectiveTabKeysForUser(user);
     return tabs.has(tab);
   }
 
-  async canMutateTab(user: JwtUser, tab: string, mutateRoles: Set<UserRole>): Promise<boolean> {
+  async canMutateTab(user: JwtUser, tab: string, mutateRoles: ReadonlySet<UserRole>): Promise<boolean> {
     if ((await this.modeForTabResolved(user, tab)) === "read") return false;
     if (hasAnyRoleInSet(user, mutateRoles)) return true;
     const grant = user.tenantId != null ? await this.loadUserGrant(user.tenantId, user.userId) : null;
@@ -56,13 +56,13 @@ export class NavTabAccessService {
     return true;
   }
 
-  async assertViewTab(user: JwtUser, tab: string, viewRoles: Set<UserRole>, message: string): Promise<void> {
+  async assertViewTab(user: JwtUser, tab: string, viewRoles: ReadonlySet<UserRole>, message: string): Promise<void> {
     if (!(await this.canViewTab(user, tab, viewRoles))) {
       throw new ForbiddenException(message);
     }
   }
 
-  async assertMutateTab(user: JwtUser, tab: string, mutateRoles: Set<UserRole>, message: string): Promise<void> {
+  async assertMutateTab(user: JwtUser, tab: string, mutateRoles: ReadonlySet<UserRole>, message: string): Promise<void> {
     if (!(await this.canMutateTab(user, tab, mutateRoles))) {
       throw new ForbiddenException(message);
     }

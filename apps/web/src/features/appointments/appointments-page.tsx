@@ -30,6 +30,7 @@ import { formatClinicName, formatClinicNameFields, localeForLanguage } from "@/l
 import { columnFilterIncludes } from "@/lib/utils";
 import { useDebouncedPickListSearch } from "@/lib/pick-list-utils";
 import { canEditAppointmentFees } from "@/lib/appointment-encounter-money-policy";
+import { canMutateAppointmentsNav } from "@/lib/nav-tab-access-policy";
 import { useAuthStore } from "@/stores/auth-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectAppointmentCreateIssues } from "@/lib/create-form-validation";
@@ -75,6 +76,11 @@ export function AppointmentsPage() {
   };
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
+  const canBookAppointments = canMutateAppointmentsNav(
+    authUser?.role,
+    authUser?.navTabKeys,
+    authUser?.navTabAccessModes,
+  );
   const isPhysician = authUser?.role === "physician";
   const canDelete = canDeleteAppointment(authUser?.role);
   const canSetAppointmentFees = canEditAppointmentFees(authUser?.role, authUser?.moneyVisibilityOverrides);
@@ -511,9 +517,11 @@ export function AppointmentsPage() {
           <Button type="button" variant={showSearchPanel ? "default" : "outline"} onClick={() => setShowSearchPanel((s) => !s)}>
             {showSearchPanel ? t("appointments.hideSearch", "Hide search") : t("appointments.showSearch", "Search appointments")}
           </Button>
+          {canBookAppointments ? (
           <CreateActionButton type="button" onClick={() => setShowBookPanel((s) => !s)}>
             {showBookPanel ? t("appointments.hideBook", "Hide booking") : t("appointments.showBook", "Book an appointment")}
           </CreateActionButton>
+          ) : null}
         </div>
       )}
 
@@ -571,7 +579,7 @@ export function AppointmentsPage() {
         </Card>
       ) : null}
 
-      {!isPhysician && showBookPanel ? (
+      {!isPhysician && canBookAppointments && showBookPanel ? (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">{t("appointments.book")}</CardTitle>

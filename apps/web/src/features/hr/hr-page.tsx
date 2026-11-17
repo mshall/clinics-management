@@ -107,7 +107,12 @@ export function HrPage() {
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
   const privilegeGrants = authUser?.employeePrivilegeGrants;
-  const canManage = canManageEmployees(authUser?.role, privilegeGrants);
+  const canManage = canManageEmployees(
+    authUser?.role,
+    privilegeGrants,
+    authUser?.navTabKeys,
+    authUser?.navTabAccessModes,
+  );
   const canArchive = canArchiveEmployees(authUser?.role, privilegeGrants);
   const usesProvisionerUi = usesHrProvisionerCreateFlow(authUser?.role, privilegeGrants);
 

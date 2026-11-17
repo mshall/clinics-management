@@ -58,6 +58,8 @@ import type { LeaveRequestDto } from "./dto/leave-request.dto";
 import type { CreateEmployeeResultDto } from "./dto/create-employee-result.dto";
 import type { HrManageContextDto } from "./dto/hr-manage-context.dto";
 import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
+import { NavTabAccessService } from "../user-nav-tabs/nav-tab-access.service";
+import { HR_MUTATE_ROLES, HR_VIEW_ROLES } from "../user-nav-tabs/nav-tab-module-roles";
 import {
   assertHrCanAssignLoginRole,
   HR_ORG_WIDE_PROVISION_ROLES,
@@ -75,12 +77,31 @@ export class HrService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
+    private readonly navTabAccess: NavTabAccessService,
   ) {}
 
+  private async assertHrView(viewer: JwtUser): Promise<void> {
+    await this.navTabAccess.assertViewTab(
+      viewer,
+      "hr",
+      HR_VIEW_ROLES,
+      "You do not have permission to view HR",
+    );
+  }
+
   private async assertCanManageEmployees(tenantId: string, viewer: JwtUser): Promise<void> {
-    if (!(await viewerCanManageEmployees(this.prisma, tenantId, viewer))) {
-      throw new ForbiddenException("You do not have permission to manage employees");
+    if (await viewerCanManageEmployees(this.prisma, tenantId, viewer)) {
+      if ((await this.navTabAccess.modeForTabResolved(viewer, "hr")) === "read") {
+        throw new ForbiddenException("You do not have permission to manage employees");
+      }
+      return;
     }
+    await this.navTabAccess.assertMutateTab(
+      viewer,
+      "hr",
+      HR_MUTATE_ROLES,
+      "You do not have permission to manage employees",
+    );
   }
 
   private async assertCanDeleteEmployee(tenantId: string, viewer: JwtUser): Promise<void> {
@@ -356,6 +377,7 @@ export class HrService {
     recordStatusStr?: string,
     archivedStr?: string,
   ) {
+    await this.assertHrView(viewer);
     await ensureClinicStaffEmployeeRecords(this.prisma, tenantId);
     await this.ensureEmployeeEmploymentPeriods(tenantId);
     const scopeIds = await fetchEmployeeManageScopeIds(this.prisma, tenantId, viewer);
@@ -425,6 +447,7 @@ export class HrService {
   }
 
   async getEmployee(tenantId: string, id: string, viewer: JwtUser): Promise<EmployeeDto> {
+    await this.assertHrView(viewer);
     await this.ensureEmployeeEmploymentPeriods(tenantId);
     const row = await this.prisma.employee.findFirst({
       where: { id, tenantId },
@@ -1013,6 +1036,7 @@ export class HrService {
 
   async listAttendance(
     tenantId: string,
+    viewer: JwtUser,
     pageStr?: string,
     pageSizeStr?: string,
     employeeIdStr?: string,
@@ -1022,6 +1046,7 @@ export class HrService {
     sortByStr?: string,
     sortOrderStr?: string
   ) {
+    await this.assertHrView(viewer);
     const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
     const employeeId = employeeIdStr?.trim();
     const st = statusStr?.trim().toUpperCase();
@@ -1105,6 +1130,7 @@ export class HrService {
 
   async listLeaveRequests(
     tenantId: string,
+    viewer: JwtUser,
     pageStr?: string,
     pageSizeStr?: string,
     employeeIdStr?: string,
@@ -1114,6 +1140,7 @@ export class HrService {
     sortByStr?: string,
     sortOrderStr?: string
   ) {
+    await this.assertHrView(viewer);
     const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
     const employeeId = employeeIdStr?.trim();
     const st = statusStr?.trim().toUpperCase();
@@ -1180,7 +1207,8 @@ export class HrService {
     return this.mapLeave(updated);
   }
 
-  async hrSummary(tenantId: string) {
+  async hrSummary(tenantId: string, viewer: JwtUser) {
+    await this.assertHrView(viewer);
     await ensureClinicStaffEmployeeRecords(this.prisma, tenantId);
     const [employeeCount, activeEmployees, pendingLeave, orgBaseCurrency] = await Promise.all([
       this.prisma.employee.count({ where: { tenantId, recordStatus: EmployeeRecordStatus.ACTIVE } }),

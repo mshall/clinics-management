@@ -1,6 +1,6 @@
 # Multi-role users (FD-01)
 
-| Status | Done (user nav tab grants include per-tab read/write; API enforces on operations & expenses) |
+| Status | Done (per-tab read/write grants; API + web on org modules: patients, encounters, appointments, operations, expenses, revenue, HR, reports, support, clinics) |
 |--------|------|
 
 ## Model

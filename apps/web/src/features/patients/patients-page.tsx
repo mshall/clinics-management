@@ -119,7 +119,9 @@ export function PatientsPage() {
 
   const { data: clinics = [] } = useClinicsQuery();
   const authRole = useAuthStore((s) => s.user?.role);
-  const canManagePatients = canManagePatientsInList(authRole);
+  const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
+  const navTabAccessModes = useAuthStore((s) => s.user?.navTabAccessModes);
+  const canManagePatients = canManagePatientsInList(authRole, navTabKeys, navTabAccessModes);
   const singleManagedClinic = clinics.length === 1 ? clinics[0]! : null;
   const defaultHomeBranchId = singleManagedClinic?.id ?? clinics[0]?.id ?? "";
   const [open, setOpen] = useState(false);

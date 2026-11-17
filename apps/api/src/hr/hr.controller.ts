@@ -53,7 +53,7 @@ export class HrController {
   @ApiOperation({ summary: "HR KPIs: headcount, payroll estimate, pending leave" })
   @ApiOkResponse()
   summary(@CurrentUser() user: JwtUser) {
-    return this.hr.hrSummary(requireTenantId(user));
+    return this.hr.hrSummary(requireTenantId(user), user);
   }
 
   @Get("employees")
@@ -212,7 +212,18 @@ export class HrController {
     @Query("sortBy") sortBy?: string,
     @Query("sortOrder") sortOrder?: string
   ) {
-    return this.hr.listAttendance(requireTenantId(user), page, pageSize, employeeId, workDateFrom, workDateTo, status, sortBy, sortOrder);
+    return this.hr.listAttendance(
+      requireTenantId(user),
+      user,
+      page,
+      pageSize,
+      employeeId,
+      workDateFrom,
+      workDateTo,
+      status,
+      sortBy,
+      sortOrder,
+    );
   }
 
   @Post("attendance")
@@ -236,7 +247,18 @@ export class HrController {
     @Query("sortBy") sortBy?: string,
     @Query("sortOrder") sortOrder?: string
   ) {
-    return this.hr.listLeaveRequests(requireTenantId(user), page, pageSize, employeeId, status, startFrom, startTo, sortBy, sortOrder);
+    return this.hr.listLeaveRequests(
+      requireTenantId(user),
+      user,
+      page,
+      pageSize,
+      employeeId,
+      status,
+      startFrom,
+      startTo,
+      sortBy,
+      sortOrder,
+    );
   }
 
   @Post("leave-requests")

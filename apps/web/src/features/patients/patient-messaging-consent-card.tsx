@@ -19,7 +19,9 @@ type Props = { patientId: string };
 export function PatientMessagingConsentCard({ patientId }: Props) {
   const { t } = useTranslation();
   const role = useAuthStore((s) => s.user?.role);
-  const canEdit = canEditPatientDetails(role);
+  const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
+  const navTabAccessModes = useAuthStore((s) => s.user?.navTabAccessModes);
+  const canEdit = canEditPatientDetails(role, navTabKeys, navTabAccessModes);
   const qc = useQueryClient();
 
   const { data: consents = [], isPending } = useQuery({

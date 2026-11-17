@@ -6,6 +6,8 @@ import { EntitlementGuard } from "../entitlements/entitlement.guard";
 import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
+import { NavTabAccessService } from "../user-nav-tabs/nav-tab-access.service";
+import { REPORTS_VIEW_ROLES } from "../user-nav-tabs/nav-tab-module-roles";
 import { ReportsService } from "./reports.service";
 
 @ApiTags("reports")
@@ -14,55 +16,66 @@ import { ReportsService } from "./reports.service";
 @UseGuards(JwtAuthGuard, EntitlementGuard)
 @RequiresEntitlement("mod_reports")
 export class ReportsController {
-  constructor(private readonly reports: ReportsService) {}
+  constructor(
+    private readonly reports: ReportsService,
+    private readonly navTabAccess: NavTabAccessService,
+  ) {}
+
+  private async assertView(user: JwtUser): Promise<void> {
+    await this.navTabAccess.assertViewTab(user, "reports", REPORTS_VIEW_ROLES, "You do not have permission to view reports");
+  }
 
   @Get("profit-loss")
   @ApiOperation({ summary: "Revenue, expenses, and net profit for a period (multi-currency)" })
   @ApiOkResponse()
-  profitLoss(
+  async profitLoss(
     @CurrentUser() user: JwtUser,
     @Query("from") from?: string,
     @Query("to") to?: string,
     @Query("clinicId") clinicId?: string,
   ) {
+    await this.assertView(user);
     return this.reports.profitLoss(requireTenantId(user), from, to, clinicId, user);
   }
 
   @Get("performance")
   @ApiOperation({ summary: "Organization or clinic performance KPIs for a period" })
   @ApiOkResponse()
-  performance(
+  async performance(
     @CurrentUser() user: JwtUser,
     @Query("from") from?: string,
     @Query("to") to?: string,
     @Query("clinicId") clinicId?: string,
   ) {
+    await this.assertView(user);
     return this.reports.performanceSummary(requireTenantId(user), from, to, clinicId, user);
   }
 
   @Get("clinic-breakdown")
   @ApiOperation({ summary: "Per-clinic revenue, expenses, and operational metrics" })
   @ApiOkResponse()
-  clinicBreakdown(@CurrentUser() user: JwtUser, @Query("from") from?: string, @Query("to") to?: string) {
+  async clinicBreakdown(@CurrentUser() user: JwtUser, @Query("from") from?: string, @Query("to") to?: string) {
+    await this.assertView(user);
     return this.reports.clinicBreakdown(requireTenantId(user), from, to, user);
   }
 
   @Get("monthly-series")
   @ApiOperation({ summary: "Per-month visits, posted revenue, expenses, and new patients (multi-currency)" })
   @ApiOkResponse()
-  monthlySeries(
+  async monthlySeries(
     @CurrentUser() user: JwtUser,
     @Query("from") from?: string,
     @Query("to") to?: string,
     @Query("clinicId") clinicId?: string,
   ) {
+    await this.assertView(user);
     return this.reports.monthlySeries(requireTenantId(user), from, to, clinicId, user);
   }
 
   @Get("patient-acquisition/patients")
   @ApiOperation({ summary: "Paginated patients for one acquisition channel in a date range" })
   @ApiOkResponse()
-  patientAcquisitionPatients(
+  async patientAcquisitionPatients(
     @CurrentUser() user: JwtUser,
     @Query("channel") channel?: string,
     @Query("from") from?: string,
@@ -78,6 +91,7 @@ export class ReportsController {
     @Query("sortBy") sortBy?: string,
     @Query("sortOrder") sortOrder?: string,
   ) {
+    await this.assertView(user);
     return this.reports.patientAcquisitionPatients(requireTenantId(user), {
       channel: channel ?? "",
       from,
@@ -98,7 +112,8 @@ export class ReportsController {
   @Get("patient-acquisition")
   @ApiOperation({ summary: "New patient registrations grouped by acquisition channel (how they found us)" })
   @ApiOkResponse()
-  patientAcquisition(@CurrentUser() user: JwtUser, @Query("from") from?: string, @Query("to") to?: string) {
+  async patientAcquisition(@CurrentUser() user: JwtUser, @Query("from") from?: string, @Query("to") to?: string) {
+    await this.assertView(user);
     return this.reports.patientAcquisitionBreakdown(requireTenantId(user), from, to);
   }
 }

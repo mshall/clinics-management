@@ -45,7 +45,9 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const role = useAuthStore((s) => s.user?.role);
-  const canManage = canEditPatientDetails(role);
+  const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
+  const navTabAccessModes = useAuthStore((s) => s.user?.navTabAccessModes);
+  const canManage = canEditPatientDetails(role, navTabKeys, navTabAccessModes);
   const { data, isPending } = usePatientClinicalDocumentsQuery(patientId);
   const [viewer, setViewer] = useState<ViewerState | null>(null);
   const [docToDelete, setDocToDelete] = useState<PatientClinicalDocumentItem | null>(null);

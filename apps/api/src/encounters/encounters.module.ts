@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { UserNavTabsModule } from "../user-nav-tabs/user-nav-tabs.module";
 import { AuditModule } from "../audit/audit.module";
 import { KiorexModule } from "../kiorex/kiorex.module";
 import { ClinicalModule } from "../clinical/clinical.module";
@@ -8,7 +9,7 @@ import { EncountersController } from "./encounters.controller";
 import { EncountersService } from "./encounters.service";
 
 @Module({
-  imports: [PatientsModule, FrontDeskFlowModule, ClinicalModule, AuditModule, KiorexModule],
+  imports: [UserNavTabsModule, PatientsModule, FrontDeskFlowModule, ClinicalModule, AuditModule, KiorexModule],
   controllers: [EncountersController],
   providers: [EncountersService],
   exports: [EncountersService],

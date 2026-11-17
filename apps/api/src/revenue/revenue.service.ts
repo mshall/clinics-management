@@ -14,24 +14,8 @@ import type { CreateRevenueDto } from "./dto/create-revenue.dto";
 import type { RevenueEntryDto } from "./dto/revenue.dto";
 import type { RevenueTotalsDto } from "./dto/revenue-totals.dto";
 import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
-
-const LEDGER_ROLES: ReadonlySet<UserRole> = new Set([
-  UserRole.GROUP_ADMIN,
-  UserRole.GROUP_SUPERVISOR,
-  UserRole.BRANCH_MANAGER,
-  UserRole.FINANCE_OFFICER,
-  UserRole.CLINIC_ADMIN,
-  UserRole.CLINIC_ASSISTANT,
-  UserRole.PHYSICIAN,
-]);
-
-const POST_REVENUE_ROLES: ReadonlySet<UserRole> = new Set([
-  UserRole.GROUP_ADMIN,
-  UserRole.GROUP_SUPERVISOR,
-  UserRole.BRANCH_MANAGER,
-  UserRole.FINANCE_OFFICER,
-  UserRole.CLINIC_ADMIN,
-]);
+import { NavTabAccessService } from "../user-nav-tabs/nav-tab-access.service";
+import { REVENUE_MUTATE_ROLES, REVENUE_VIEW_ROLES } from "../user-nav-tabs/nav-tab-module-roles";
 
 const SKIP_ETA_ERECEIPT_ROLES: ReadonlySet<UserRole> = new Set([
   UserRole.GROUP_ADMIN,
@@ -45,18 +29,25 @@ export class RevenueService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly navTabAccess: NavTabAccessService,
   ) {}
 
-  private assertLedgerAccess(role: UserRole): void {
-    if (!LEDGER_ROLES.has(role)) {
-      throw new ForbiddenException("You may not view the revenue ledger");
-    }
+  private async assertLedgerAccess(user: JwtUser): Promise<void> {
+    await this.navTabAccess.assertViewTab(
+      user,
+      "revenue",
+      REVENUE_VIEW_ROLES,
+      "You may not view the revenue ledger",
+    );
   }
 
-  private assertPostRevenue(role: UserRole): void {
-    if (!POST_REVENUE_ROLES.has(role)) {
-      throw new ForbiddenException("You may not post revenue entries");
-    }
+  private async assertPostRevenue(user: JwtUser): Promise<void> {
+    await this.navTabAccess.assertMutateTab(
+      user,
+      "revenue",
+      REVENUE_MUTATE_ROLES,
+      "You may not post revenue entries",
+    );
   }
 
   private map(r: {
@@ -104,7 +95,7 @@ export class RevenueService {
     clinicianUserId: string | undefined,
     user: JwtUser
   ) {
-    this.assertLedgerAccess(user.role);
+    await this.assertLedgerAccess(user);
     const { start, end } = resolveLedgerListingRange(fromStr, toStr);
     const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
     const clinicId = clinicIdStr?.trim();
@@ -172,7 +163,7 @@ export class RevenueService {
     clinicIdStr: string | undefined,
     user: JwtUser,
   ) {
-    this.assertLedgerAccess(user.role);
+    await this.assertLedgerAccess(user);
     const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
     const clinicId = clinicIdStr?.trim();
 
@@ -228,7 +219,7 @@ export class RevenueService {
     clinicianUserId: string | undefined,
     user: JwtUser
   ): Promise<RevenueTotalsDto> {
-    this.assertLedgerAccess(user.role);
+    await this.assertLedgerAccess(user);
     const { start, end } = resolveLedgerListingRange(fromStr, toStr);
     const clinicId = clinicIdStr?.trim();
 
@@ -313,7 +304,7 @@ export class RevenueService {
   }
 
   async create(tenantId: string, dto: CreateRevenueDto, user: JwtUser): Promise<RevenueEntryDto> {
-    this.assertPostRevenue(user.role);
+    await this.assertPostRevenue(user);
     if (dto.operationId?.trim()) {
       return this.createOperationPayment(tenantId, dto, user);
     }

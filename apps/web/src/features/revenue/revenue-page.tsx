@@ -41,6 +41,7 @@ import { formatMoneyAmount, formatMultiCurrencyAmounts } from "@/lib/money-displ
 import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
 import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import { EtaIntegrationBanner } from "@/features/compliance/eta-integration-banner";
+import { canMutateRevenue } from "@/lib/nav-tab-access-policy";
 
 function clinicDisplayName(r: RevenueEntryDto, lng: string): string {
   return formatClinicNameFields(r.clinicNameEn, r.clinicNameAr, lng, r.clinicId);
@@ -67,6 +68,7 @@ export function RevenuePage() {
   const qc = useQueryClient();
   const { from, to, setRange, resetToCurrentMonth } = useDateRangeStore();
   const authUser = useAuthStore((s) => s.user);
+  const canPostRevenue = canMutateRevenue(authUser?.role, authUser?.navTabKeys, authUser?.navTabAccessModes);
   const breakdownEnabled =
     authUser?.role === "group_admin" ||
     authUser?.role === "group_supervisor" ||
@@ -425,6 +427,7 @@ export function RevenuePage() {
         </Card>
       ) : null}
 
+      {canPostRevenue ? (
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{t("revenue.post")}</CardTitle>
@@ -554,6 +557,7 @@ export function RevenuePage() {
           {validation.formErr ? <p className="text-sm text-destructive sm:col-span-full">{validation.formErr}</p> : null}
         </CardContent>
       </Card>
+      ) : null}
 
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">

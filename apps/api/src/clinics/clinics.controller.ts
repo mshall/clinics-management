@@ -14,6 +14,8 @@ import { DeactivateClinicDto } from "./dto/deactivate-clinic.dto";
 import { ReactivateClinicDto } from "./dto/reactivate-clinic.dto";
 import { ClinicsService } from "./clinics.service";
 import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
+import { NavTabAccessService } from "../user-nav-tabs/nav-tab-access.service";
+import { CLINICS_MUTATE_ROLES } from "../user-nav-tabs/nav-tab-module-roles";
 
 const SCHEDULING_ROLES: Set<UserRole> = new Set([
   UserRole.GROUP_ADMIN,
@@ -38,14 +40,28 @@ const CLINIC_MANAGE_ROLES = CLINIC_UPDATE_ROLES;
 @Controller("clinics")
 @UseGuards(JwtAuthGuard)
 export class ClinicsController {
-  constructor(private readonly clinics: ClinicsService) {}
+  constructor(
+    private readonly clinics: ClinicsService,
+    private readonly navTabAccess: NavTabAccessService,
+  ) {}
+
+  private async assertClinicMutate(user: JwtUser): Promise<void> {
+    await this.navTabAccess.assertMutateTab(
+      user,
+      "clinics",
+      CLINICS_MUTATE_ROLES,
+      "You do not have permission to manage clinics",
+    );
+  }
 
   @Get()
   @ApiOperation({ summary: "List clinics and branches for the tenant" })
   @ApiOkResponse({ type: ClinicDto, isArray: true })
-  list(@CurrentUser() user: JwtUser, @Query("includeInactive") includeInactive?: string) {
-    const showInactive =
-      includeInactive === "true" && hasAnyRoleInSet(user, CLINIC_MANAGE_ROLES);
+  async list(@CurrentUser() user: JwtUser, @Query("includeInactive") includeInactive?: string) {
+    const canManage =
+      hasAnyRoleInSet(user, CLINIC_MANAGE_ROLES) ||
+      (await this.navTabAccess.canMutateTab(user, "clinics", CLINICS_MUTATE_ROLES));
+    const showInactive = includeInactive === "true" && canManage;
     return this.clinics.list(requireTenantId(user), user, showInactive);
   }
 
@@ -66,7 +82,8 @@ export class ClinicsController {
   @Post()
   @ApiOperation({ summary: "Create a parent clinic or a branch under a parent" })
   @ApiCreatedResponse({ description: "ClinicDto" })
-  create(@CurrentUser() user: JwtUser, @Body() body: CreateClinicDto) {
+  async create(@CurrentUser() user: JwtUser, @Body() body: CreateClinicDto) {
+    await this.assertClinicMutate(user);
     return this.clinics.create(requireTenantId(user), body);
   }
 
@@ -128,24 +145,24 @@ export class ClinicsController {
   @Patch(":id")
   @ApiOperation({ summary: "Update clinic registration fields" })
   @ApiOkResponse({ type: ClinicDetailDto })
-  patch(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchClinicDto) {
-    if (!hasAnyRoleInSet(user, CLINIC_UPDATE_ROLES)) {
-      throw new ForbiddenException("You do not have permission to update this clinic");
-    }
+  async patch(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchClinicDto) {
+    await this.assertClinicMutate(user);
     return this.clinics.update(requireTenantId(user), id, body, user);
   }
 
   @Post(":id/deactivate")
   @ApiOperation({ summary: "Disable a clinic or branch (hidden from active directory)" })
   @ApiOkResponse({ type: ClinicDetailDto })
-  deactivate(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: DeactivateClinicDto) {
+  async deactivate(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: DeactivateClinicDto) {
+    await this.assertClinicMutate(user);
     return this.clinics.deactivateClinic(requireTenantId(user), id, body, user);
   }
 
   @Post(":id/reactivate")
   @ApiOperation({ summary: "Reactivate a disabled clinic or branch" })
   @ApiOkResponse({ type: ClinicDetailDto })
-  reactivate(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: ReactivateClinicDto) {
+  async reactivate(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: ReactivateClinicDto) {
+    await this.assertClinicMutate(user);
     return this.clinics.reactivateClinic(requireTenantId(user), id, body, user);
   }
 }

@@ -34,6 +34,8 @@ import { AddEncounterMedicationDto } from "./dto/add-encounter-medication.dto";
 import { CreateEncounterDto } from "./dto/create-encounter.dto";
 import { DiagnosisDto, EncounterDetailDto, EncounterDocumentDto, EncounterMedicationDto } from "./dto/encounter-response.dto";
 import { UpdateEncounterDto } from "./dto/update-encounter.dto";
+import { NavTabAccessService } from "../user-nav-tabs/nav-tab-access.service";
+import { ENCOUNTERS_MUTATE_ROLES, ENCOUNTERS_VIEW_ROLES } from "../user-nav-tabs/nav-tab-module-roles";
 import { EncountersService } from "./encounters.service";
 
 const UPLOAD_LIMIT = 15 * 1024 * 1024;
@@ -43,12 +45,33 @@ const UPLOAD_LIMIT = 15 * 1024 * 1024;
 @Controller("encounters")
 @UseGuards(JwtAuthGuard)
 export class EncountersController {
-  constructor(private readonly encounters: EncountersService) {}
+  constructor(
+    private readonly encounters: EncountersService,
+    private readonly navTabAccess: NavTabAccessService,
+  ) {}
+
+  private async assertView(user: JwtUser): Promise<void> {
+    await this.navTabAccess.assertViewTab(
+      user,
+      "encounters",
+      ENCOUNTERS_VIEW_ROLES,
+      "You do not have permission to view encounters",
+    );
+  }
+
+  private async assertMutate(user: JwtUser): Promise<void> {
+    await this.navTabAccess.assertMutateTab(
+      user,
+      "encounters",
+      ENCOUNTERS_MUTATE_ROLES,
+      "You do not have permission to change encounters",
+    );
+  }
 
   @Get()
   @ApiOperation({ summary: "List encounters (optional patientId, paginated)" })
   @ApiOkResponse({ description: "{ items, total, page, pageSize, totalPages }" })
-  list(
+  async list(
     @CurrentUser() user: JwtUser,
     @Query("patientId") patientId?: string,
     @Query("patientSearch") patientSearch?: string,
@@ -59,6 +82,7 @@ export class EncountersController {
     @Query("sortBy") sortBy?: string,
     @Query("sortOrder") sortOrder?: string
   ) {
+    await this.assertView(user);
     return this.encounters.listForTenant(
       requireTenantId(user),
       patientId,
@@ -76,7 +100,8 @@ export class EncountersController {
   @Post()
   @ApiOperation({ summary: "Create draft encounter for a patient" })
   @ApiCreatedResponse({ type: EncounterDetailDto })
-  create(@CurrentUser() user: JwtUser, @Body() body: CreateEncounterDto) {
+  async create(@CurrentUser() user: JwtUser, @Body() body: CreateEncounterDto) {
+    await this.assertMutate(user);
     return this.encounters.create(requireTenantId(user), user, body);
   }
 
@@ -88,6 +113,7 @@ export class EncountersController {
     @Param("id") encounterId: string,
     @Param("docId") docId: string
   ): Promise<StreamableFile> {
+    await this.assertView(user);
     const meta = await this.encounters.getDocumentFileMeta(requireTenantId(user), encounterId, docId, user);
     const stream = await this.encounters.openDocumentReadStream(meta.storageKey);
     return new StreamableFile(stream, {
@@ -99,14 +125,16 @@ export class EncountersController {
   @Get(":id")
   @ApiOperation({ summary: "Get encounter with diagnoses, medications, documents" })
   @ApiOkResponse({ type: EncounterDetailDto })
-  get(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+  async get(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    await this.assertView(user);
     return this.encounters.getById(requireTenantId(user), id, user);
   }
 
   @Patch(":id")
   @ApiOperation({ summary: "Update SOAP / vitals / no-medications (draft only)" })
   @ApiOkResponse({ type: EncounterDetailDto })
-  patch(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: UpdateEncounterDto) {
+  async patch(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: UpdateEncounterDto) {
+    await this.assertMutate(user);
     return this.encounters.update(requireTenantId(user), id, body, user);
   }
 
@@ -146,6 +174,7 @@ export class EncountersController {
             ? EncounterDocumentKind.PRESCRIPTION
             : null;
     if (!kind) throw new BadRequestException("kind must be LAB, RADIOLOGY, or PRESCRIPTION");
+    await this.assertMutate(user);
     return this.encounters.uploadDocument(requireTenantId(user), id, kind, file, user);
   }
 
@@ -157,6 +186,7 @@ export class EncountersController {
     @Param("id") encounterId: string,
     @Param("docId") docId: string
   ) {
+    await this.assertMutate(user);
     await this.encounters.removeDocument(requireTenantId(user), encounterId, docId, user);
     return { ok: true };
   }
@@ -164,11 +194,12 @@ export class EncountersController {
   @Post(":id/medications")
   @ApiOperation({ summary: "Add prescribed medication" })
   @ApiCreatedResponse({ type: EncounterMedicationDto })
-  addMedication(
+  async addMedication(
     @CurrentUser() user: JwtUser,
     @Param("id") id: string,
     @Body() body: AddEncounterMedicationDto
   ) {
+    await this.assertMutate(user);
     return this.encounters.addMedication(requireTenantId(user), id, body, user);
   }
 
@@ -180,6 +211,7 @@ export class EncountersController {
     @Param("id") encounterId: string,
     @Param("medicationId") medicationId: string
   ) {
+    await this.assertMutate(user);
     await this.encounters.removeMedication(requireTenantId(user), encounterId, medicationId, user);
     return { ok: true };
   }
@@ -187,7 +219,8 @@ export class EncountersController {
   @Post(":id/diagnoses")
   @ApiOperation({ summary: "Add ICD-10 diagnosis to encounter" })
   @ApiCreatedResponse({ type: DiagnosisDto })
-  addDiagnosis(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: AddDiagnosisDto) {
+  async addDiagnosis(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: AddDiagnosisDto) {
+    await this.assertMutate(user);
     return this.encounters.addDiagnosis(requireTenantId(user), id, body, user);
   }
 
@@ -199,6 +232,7 @@ export class EncountersController {
     @Param("id") id: string,
     @Param("diagnosisId") diagnosisId: string
   ) {
+    await this.assertMutate(user);
     await this.encounters.removeDiagnosis(requireTenantId(user), id, diagnosisId, user);
     return { ok: true };
   }
@@ -206,21 +240,24 @@ export class EncountersController {
   @Post(":id/amend")
   @ApiOperation({ summary: "Reopen a finalized locked encounter for correction (AMENDED status + reason)" })
   @ApiOkResponse({ type: EncounterDetailDto })
-  amend(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: { reason: string }) {
+  async amend(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: { reason: string }) {
+    await this.assertMutate(user);
     return this.encounters.amend(requireTenantId(user), user, id, body.reason ?? "");
   }
 
   @Post(":id/finalize")
   @ApiOperation({ summary: "Finalize encounter (clinician only; diagnoses + medications policy)" })
   @ApiOkResponse({ type: EncounterDetailDto })
-  finalize(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+  async finalize(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    await this.assertMutate(user);
     return this.encounters.finalize(requireTenantId(user), user, id);
   }
 
   @Delete(":id")
   @ApiOperation({ summary: "Delete encounter (group admin, supervisor, call center)" })
   @ApiOkResponse({ description: "{ ok: true, id }" })
-  remove(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+  async remove(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    await this.assertMutate(user);
     return this.encounters.delete(requireTenantId(user), id, user);
   }
 }

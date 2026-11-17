@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { UserNavTabsModule } from "../user-nav-tabs/user-nav-tabs.module";
 import { SubscriptionsModule } from "../subscriptions/subscriptions.module";
 import { FeatureFlagsModule } from "../feature-flags/feature-flags.module";
 import { FrontDeskFlowModule } from "../front-desk/front-desk-flow.module";
@@ -9,7 +10,15 @@ import { AppointmentsController } from "./appointments.controller";
 import { AppointmentsService } from "./appointments.service";
 
 @Module({
-  imports: [SchedulingModule, FrontDeskFlowModule, FeatureFlagsModule, PatientsModule, KiorexModule, SubscriptionsModule],
+  imports: [
+    UserNavTabsModule,
+    SchedulingModule,
+    FrontDeskFlowModule,
+    FeatureFlagsModule,
+    PatientsModule,
+    KiorexModule,
+    SubscriptionsModule,
+  ],
   controllers: [AppointmentsController],
   providers: [AppointmentsService],
   exports: [AppointmentsService],

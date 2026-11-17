@@ -48,10 +48,11 @@ export function PatientDetailPage() {
   const qc = useQueryClient();
   const role = useAuthStore((s) => s.user?.role);
   const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
+  const navTabAccessModes = useAuthStore((s) => s.user?.navTabAccessModes);
   const roleNavTabKeys = useAuthStore((s) => s.user?.roleNavTabKeys);
   const canViewEncounters = showNavItem(role, "encounters", navTabKeys, roleNavTabKeys);
   const canViewOperations = showNavItem(role, "operations", navTabKeys, roleNavTabKeys);
-  const canEditPatient = canEditPatientDetails(role);
+  const canEditPatient = canEditPatientDetails(role, navTabKeys, navTabAccessModes);
   const [editOpen, setEditOpen] = useState(false);
   const [familyOpen, setFamilyOpen] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);

@@ -58,6 +58,7 @@ import {
 import { ENCOUNTER_VISIT_TYPES, formatVisitType } from "@/lib/visit-types";
 import { defaultEncounterListRange, defaultMonthRange } from "@/stores/date-range-store";
 import { canEditEncounterVisitFees } from "@/lib/appointment-encounter-money-policy";
+import { canMutateEncountersNav } from "@/lib/nav-tab-access-policy";
 import { useAuthStore } from "@/stores/auth-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectEncounterCreateIssues } from "@/lib/create-form-validation";
@@ -68,6 +69,11 @@ export function EncountersListPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
+  const canCreateEncounter = canMutateEncountersNav(
+    authUser?.role,
+    authUser?.navTabKeys,
+    authUser?.navTabAccessModes,
+  );
   const isPhysician = authUser?.role === "physician";
   const canDelete = canDeleteEncounter(authUser?.role);
   const canSetVisitFees = canEditEncounterVisitFees(authUser?.role, authUser?.moneyVisibilityOverrides);
@@ -431,6 +437,7 @@ export function EncountersListPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {canCreateEncounter ? (
           <CreateActionButton
             type="button"
             disabled={patientRegistryTotal === 0}
@@ -443,6 +450,7 @@ export function EncountersListPage() {
           >
             {t("encounters.newEncounter", "New encounter")}
           </CreateActionButton>
+          ) : null}
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogContent className="max-h-[min(90dvh,40rem)] overflow-y-auto overflow-x-visible overscroll-contain" aria-describedby={undefined}>
               <DialogHeader>

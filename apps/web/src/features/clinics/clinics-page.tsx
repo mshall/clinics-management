@@ -13,15 +13,18 @@ import { useClinicsQuery } from "@/lib/api-hooks";
 import { columnFilterIncludes } from "@/lib/utils";
 import { formatClinicName } from "@/lib/locale-display";
 import { clinicKindLabel } from "@/lib/clinic-kind";
+import { canMutateClinicsNav } from "@/lib/nav-tab-access-policy";
 import { useAuthStore } from "@/stores/auth-store";
-
-const MANAGE_CLINIC_ROLES = new Set(["group_admin", "clinic_admin", "branch_manager"]);
 
 export function ClinicsPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const authUser = useAuthStore((s) => s.user);
-  const canManageClinic = authUser?.role ? MANAGE_CLINIC_ROLES.has(authUser.role) : false;
+  const canManageClinic = canMutateClinicsNav(
+    authUser?.role,
+    authUser?.navTabKeys,
+    authUser?.navTabAccessModes,
+  );
   const [clinicView, setClinicView] = useState<"active" | "disabled">("active");
   const [addClinicOpen, setAddClinicOpen] = useState(false);
   const { data = [], isPending, isError, error } = useClinicsQuery({

@@ -94,6 +94,16 @@ export function maxNavTabsForRole(role: UserRole): Set<string> {
   return new Set(ROLE_MAX[role] ?? FULL);
 }
 
+/** Roles whose default nav set includes this sidebar tab (for nav-tab grant fallbacks). */
+export function rolesWithNavTab(tab: string): Set<UserRole> {
+  const out = new Set<UserRole>();
+  for (const role of Object.values(UserRole)) {
+    const tabs = ROLE_MAX[role];
+    if (tabs?.includes(tab)) out.add(role);
+  }
+  return out;
+}
+
 /** Union of every sidebar tab used by any tenant role (excludes platform-only tabs). */
 const ORGANIZATION_NAV_TABS = new Set([...FULL, "doctor_revenue"]);
 

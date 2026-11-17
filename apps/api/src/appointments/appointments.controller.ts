@@ -9,6 +9,8 @@ import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
+import { NavTabAccessService } from "../user-nav-tabs/nav-tab-access.service";
+import { APPOINTMENTS_MUTATE_ROLES, APPOINTMENTS_VIEW_ROLES } from "../user-nav-tabs/nav-tab-module-roles";
 import { AppointmentsService } from "./appointments.service";
 import { AppointmentDto } from "./dto/appointment.dto";
 import { CreateAppointmentDto } from "./dto/create-appointment.dto";
@@ -25,12 +27,33 @@ class PatchAppointmentStatusDto {
 @Controller("appointments")
 @UseGuards(JwtAuthGuard, SubscriptionAccessGuard)
 export class AppointmentsController {
-  constructor(private readonly appointments: AppointmentsService) {}
+  constructor(
+    private readonly appointments: AppointmentsService,
+    private readonly navTabAccess: NavTabAccessService,
+  ) {}
+
+  private async assertView(user: JwtUser): Promise<void> {
+    await this.navTabAccess.assertViewTab(
+      user,
+      "appointments",
+      APPOINTMENTS_VIEW_ROLES,
+      "You do not have permission to view appointments",
+    );
+  }
+
+  private async assertMutate(user: JwtUser): Promise<void> {
+    await this.navTabAccess.assertMutateTab(
+      user,
+      "appointments",
+      APPOINTMENTS_MUTATE_ROLES,
+      "You do not have permission to change appointments",
+    );
+  }
 
   @Get()
   @ApiOperation({ summary: "List appointments" })
   @ApiOkResponse({ description: "{ items, total, page, pageSize, totalPages }" })
-  list(
+  async list(
     @CurrentUser() user: JwtUser,
     @Query("page") page?: string,
     @Query("pageSize") pageSize?: string,
@@ -46,6 +69,7 @@ export class AppointmentsController {
     @Query("bookableOnly") bookableOnly?: string,
     @Query("bookingSource") bookingSource?: string
   ) {
+    await this.assertView(user);
     return this.appointments.list(
       requireTenantId(user),
       page,
@@ -68,12 +92,13 @@ export class AppointmentsController {
   @Get("scheduling-conflicts")
   @ApiOperation({ summary: "List overlapping appointments for a clinician and time window" })
   @ApiOkResponse({ type: [AppointmentDto] })
-  schedulingConflicts(
+  async schedulingConflicts(
     @CurrentUser() user: JwtUser,
     @Query("clinicianId") clinicianId: string,
     @Query("startsAt") startsAt: string,
     @Query("endsAt") endsAt?: string,
   ) {
+    await this.assertView(user);
     return this.appointments.listSchedulingConflicts(
       requireTenantId(user),
       user,
@@ -87,14 +112,16 @@ export class AppointmentsController {
   @RequiresSubscriptionAccess(SubscriptionAccessAction.SCHEDULING_WRITE)
   @ApiOperation({ summary: "Book appointment" })
   @ApiCreatedResponse({ type: AppointmentDto })
-  create(@CurrentUser() user: JwtUser, @Body() body: CreateAppointmentDto) {
+  async create(@CurrentUser() user: JwtUser, @Body() body: CreateAppointmentDto) {
+    await this.assertMutate(user);
     return this.appointments.create(requireTenantId(user), user, body);
   }
 
   @Get(":id")
   @ApiOperation({ summary: "Get appointment by id" })
   @ApiOkResponse({ type: AppointmentDto })
-  getOne(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+  async getOne(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    await this.assertView(user);
     return this.appointments.getById(requireTenantId(user), id, user);
   }
 
@@ -102,7 +129,8 @@ export class AppointmentsController {
   @RequiresSubscriptionAccess(SubscriptionAccessAction.SCHEDULING_WRITE)
   @ApiOperation({ summary: "Update appointment status" })
   @ApiOkResponse({ type: AppointmentDto })
-  patchStatus(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchAppointmentStatusDto) {
+  async patchStatus(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchAppointmentStatusDto) {
+    await this.assertMutate(user);
     return this.appointments.updateStatus(requireTenantId(user), id, body.status, user);
   }
 
@@ -110,14 +138,16 @@ export class AppointmentsController {
   @RequiresSubscriptionAccess(SubscriptionAccessAction.SCHEDULING_WRITE)
   @ApiOperation({ summary: "Update appointment (not allowed when completed or cancelled)" })
   @ApiOkResponse({ type: AppointmentDto })
-  update(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: UpdateAppointmentDto) {
+  async update(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: UpdateAppointmentDto) {
+    await this.assertMutate(user);
     return this.appointments.update(requireTenantId(user), id, body, user);
   }
 
   @Delete(":id")
   @ApiOperation({ summary: "Delete appointment (group admin, supervisor, call center)" })
   @ApiOkResponse({ description: "{ ok: true, id }" })
-  remove(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+  async remove(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    await this.assertMutate(user);
     return this.appointments.delete(requireTenantId(user), id, user);
   }
 }

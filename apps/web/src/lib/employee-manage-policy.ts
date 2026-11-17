@@ -1,3 +1,4 @@
+import { canMutateHrNav, type NavTabAccessMode } from "@/lib/nav-tab-access-policy";
 import { mapApiRole, type DemoRole } from "@/lib/roles";
 
 export type EmployeePrivilegeGrantSummary = {
@@ -38,12 +39,18 @@ function hasDelegatedHrProvisioner(grants?: EmployeePrivilegeGrantSummary[] | nu
 export function canManageEmployees(
   role: string | DemoRole | undefined | null,
   grants?: EmployeePrivilegeGrantSummary[] | null,
+  navTabKeys?: string[] | null,
+  navTabAccessModes?: Record<string, NavTabAccessMode> | null,
 ): boolean {
-  if (hasDelegatedManage(grants)) return true;
-  if (!role) return false;
+  const mapped = role ? mapApiRole(String(role)) : undefined;
+  if (hasDelegatedManage(grants)) {
+    return canMutateHrNav(mapped, navTabKeys, navTabAccessModes);
+  }
+  if (!role) return canMutateHrNav(mapped, navTabKeys, navTabAccessModes);
   const raw = String(role).trim();
-  if (EMPLOYEE_MANAGE_ROLES.has(raw as DemoRole)) return true;
-  return EMPLOYEE_MANAGE_ROLES.has(mapApiRole(raw));
+  if (EMPLOYEE_MANAGE_ROLES.has(raw as DemoRole)) return canMutateHrNav(mapped, navTabKeys, navTabAccessModes);
+  if (EMPLOYEE_MANAGE_ROLES.has(mapApiRole(raw))) return canMutateHrNav(mapped, navTabKeys, navTabAccessModes);
+  return canMutateHrNav(mapped, navTabKeys, navTabAccessModes);
 }
 
 export function canArchiveEmployees(

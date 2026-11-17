@@ -21,6 +21,8 @@ import {
   useSupportTrackingLogsQuery,
 } from "@/lib/support-hooks";
 import type { SupportProductModule, SupportTicketDto, SupportTrackingLogDto } from "@/lib/support-types";
+import { canMutateSupportNav } from "@/lib/nav-tab-access-policy";
+import { useAuthStore } from "@/stores/auth-store";
 
 const MODULES: SupportProductModule[] = [
   "PATIENTS",
@@ -46,6 +48,12 @@ const TRACK_PAGE_SIZE = 20;
 export function CustomerSupportPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
+  const authUser = useAuthStore((s) => s.user);
+  const canMutateSupport = canMutateSupportNav(
+    authUser?.role,
+    authUser?.navTabKeys,
+    authUser?.navTabAccessModes,
+  );
   const [tab, setTab] = useState<"tickets" | "tracking">("tickets");
   const [ticketPage, setTicketPage] = useState(1);
   const [ticketQ, setTicketQ] = useState("");
@@ -132,10 +140,12 @@ export function CustomerSupportPage() {
             )}
           </p>
         </div>
+        {canMutateSupport ? (
         <Button type="button" className="gap-1" onClick={() => setCreateOpen(true)}>
           <Plus className="h-4 w-4" />
           {t("support.newTicket", "New ticket")}
         </Button>
+        ) : null}
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as "tickets" | "tracking")}>

@@ -4,7 +4,8 @@ import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
-import { assertSupportAccess } from "./support-access";
+import { NavTabAccessService } from "../user-nav-tabs/nav-tab-access.service";
+import { assertSupportAccess, assertSupportMutate } from "./support-access";
 import { CreateSupportTicketDto } from "./dto/create-support-ticket.dto";
 import { CreateSupportTicketEventDto } from "./dto/create-support-ticket-event.dto";
 import { PatchSupportTicketDto } from "./dto/patch-support-ticket.dto";
@@ -15,12 +16,15 @@ import { SupportService } from "./support.service";
 @Controller("support")
 @UseGuards(JwtAuthGuard)
 export class SupportController {
-  constructor(private readonly support: SupportService) {}
+  constructor(
+    private readonly support: SupportService,
+    private readonly navTabAccess: NavTabAccessService,
+  ) {}
 
   @Get("tickets")
   @ApiOperation({ summary: "List customer support tickets" })
   @ApiOkResponse()
-  listTickets(
+  async listTickets(
     @CurrentUser() user: JwtUser,
     @Query("page") page?: string,
     @Query("pageSize") pageSize?: string,
@@ -29,46 +33,46 @@ export class SupportController {
     @Query("q") q?: string,
     @Query("assigneeUserId") assigneeUserId?: string,
   ) {
-    assertSupportAccess(user);
+    await assertSupportAccess(user, this.navTabAccess);
     return this.support.listTickets(requireTenantId(user), { page, pageSize, status, module, q, assigneeUserId });
   }
 
   @Get("tickets/:id")
   @ApiOperation({ summary: "Get support ticket detail" })
   @ApiOkResponse()
-  getTicket(@CurrentUser() user: JwtUser, @Param("id") id: string) {
-    assertSupportAccess(user);
+  async getTicket(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    await assertSupportAccess(user, this.navTabAccess);
     return this.support.getTicket(requireTenantId(user), id);
   }
 
   @Post("tickets")
   @ApiOperation({ summary: "Create support ticket" })
   @ApiOkResponse()
-  createTicket(@CurrentUser() user: JwtUser, @Body() body: CreateSupportTicketDto) {
-    assertSupportAccess(user);
+  async createTicket(@CurrentUser() user: JwtUser, @Body() body: CreateSupportTicketDto) {
+    await assertSupportMutate(user, this.navTabAccess);
     return this.support.createTicket(requireTenantId(user), user, body);
   }
 
   @Patch("tickets/:id")
   @ApiOperation({ summary: "Update ticket status, priority, assignee" })
   @ApiOkResponse()
-  patchTicket(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchSupportTicketDto) {
-    assertSupportAccess(user);
+  async patchTicket(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchSupportTicketDto) {
+    await assertSupportMutate(user, this.navTabAccess);
     return this.support.patchTicket(requireTenantId(user), user, id, body);
   }
 
   @Post("tickets/:id/events")
   @ApiOperation({ summary: "Add comment or timeline event" })
   @ApiOkResponse()
-  addEvent(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: CreateSupportTicketEventDto) {
-    assertSupportAccess(user);
+  async addEvent(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: CreateSupportTicketEventDto) {
+    await assertSupportMutate(user, this.navTabAccess);
     return this.support.addEvent(requireTenantId(user), user, id, body);
   }
 
   @Get("tracking/logs")
   @ApiOperation({ summary: "Detailed audit trail with resolution hints" })
   @ApiOkResponse()
-  trackingLogs(
+  async trackingLogs(
     @CurrentUser() user: JwtUser,
     @Query("page") page?: string,
     @Query("pageSize") pageSize?: string,
@@ -80,15 +84,25 @@ export class SupportController {
     @Query("to") to?: string,
     @Query("clinicId") clinicId?: string,
   ) {
-    assertSupportAccess(user);
-    return this.support.trackingLogs(requireTenantId(user), { page, pageSize, q, action, resource, actorId, from, to, clinicId });
+    await assertSupportAccess(user, this.navTabAccess);
+    return this.support.trackingLogs(requireTenantId(user), {
+      page,
+      pageSize,
+      q,
+      action,
+      resource,
+      actorId,
+      from,
+      to,
+      clinicId,
+    });
   }
 
   @Post("tracking/logs/:auditLogId/ticket")
   @ApiOperation({ summary: "Open ticket from audit log" })
   @ApiOkResponse()
-  ticketFromAudit(@CurrentUser() user: JwtUser, @Param("auditLogId") auditLogId: string) {
-    assertSupportAccess(user);
+  async ticketFromAudit(@CurrentUser() user: JwtUser, @Param("auditLogId") auditLogId: string) {
+    await assertSupportMutate(user, this.navTabAccess);
     return this.support.createTicketFromAuditLog(requireTenantId(user), user, auditLogId);
   }
 }
