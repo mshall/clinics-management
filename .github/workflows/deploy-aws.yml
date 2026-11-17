@@ -63,7 +63,8 @@ permissions:
 
 concurrency:
   group: deploy-aws-${{ github.ref }}
-  cancel-in-progress: false
+  # Avoid a stale deploy (pre stack-scoped connector name) racing a newer main push.
+  cancel-in-progress: true
 
 env:
   AWS_REGION: eu-central-1
