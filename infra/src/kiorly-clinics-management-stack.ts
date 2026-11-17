@@ -223,10 +223,9 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     const stsVpceHost = vpceHostnameFromEndpoint(stsEndpoint);
 
     const appRunnerNames = appRunnerPhysicalNames(hostCell);
-    const publicSubnetIds = vpc
-      .selectSubnets({ subnetType: ec2.SubnetType.PUBLIC })
-      .subnetIds.slice()
-      .sort();
+    // Use CDK subnet order (not lexicographic sort) so frankfurt updates stay in-place — sorted
+    // subnet ids triggered CloudFormation replacement and AlreadyExists on kiorly-clinic-connector.
+    const publicSubnetIds = vpc.selectSubnets({ subnetType: ec2.SubnetType.PUBLIC }).subnetIds;
 
     const vpcConnector = new apprunner.CfnVpcConnector(this, "AppRunnerVpcConnector", {
       vpcConnectorName: appRunnerNames.vpcConnectorName,

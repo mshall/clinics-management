@@ -33,6 +33,14 @@ echo "::group::Stack events (FAILED / ROLLBACK — may include older attempts)"
 aws cloudformation describe-stack-events --stack-name "$STACK" --region "$REGION" \
   --query "StackEvents[?contains(ResourceStatus, 'FAILED') || contains(ResourceStatus, 'ROLLBACK')].[Timestamp,LogicalResourceId,ResourceStatus,ResourceStatusReason]" \
   --output table 2>&1 | head -160
+if aws cloudformation describe-stack-events --stack-name "$STACK" --region "$REGION" --max-items 40 \
+  --query "StackEvents[?LogicalResourceId=='AppRunnerVpcConnector' && ResourceStatus=='UPDATE_FAILED'].ResourceStatusReason" \
+  --output text 2>/dev/null | grep -q AlreadyExists; then
+  echo ""
+  echo "HINT: AppRunnerVpcConnector AlreadyExists — CloudFormation tried to replace the connector while" \
+    "the name was still taken (create-before-delete). App Runner service logs are usually empty;" \
+    "fix in CDK/CI (stable kiorly-clinic-connector + no connector subnet reorder); run cicd-cleanup-orphan-vpc-connectors.sh."
+fi
 echo "::endgroup::"
 
 echo "::group::Recent stack events (newest ${STACK_EVENTS_RECENT}, any status — timeline)"

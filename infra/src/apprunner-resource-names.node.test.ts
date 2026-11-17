@@ -17,10 +17,17 @@ describe("App Runner infra naming", () => {
     assert.equal(appRunnerPhysicalNames("cairo").vpcConnectorName, "kiorly-conn-cairo");
   });
 
-  it("wires appRunnerPhysicalNames and sorts public subnet ids in the stack", () => {
+  it("wires appRunnerPhysicalNames and avoids lex-sort on VPC connector subnets", () => {
     const src = readFileSync(join(__dirname, "kiorly-clinics-management-stack.ts"), "utf8");
     assert.ok(src.includes("appRunnerPhysicalNames(hostCell)"));
     assert.ok(!src.includes("kiorly-conn-${appRunnerResourceSuffix}"));
-    assert.ok(src.includes(".sort()"), "public subnet ids should be sorted to avoid spurious replacement");
+    const connectorSlice = src.slice(
+      src.indexOf('CfnVpcConnector(this, "AppRunnerVpcConnector"'),
+      src.indexOf("const assetPath"),
+    );
+    assert.ok(
+      !connectorSlice.includes(".sort()"),
+      "lexicographic sort on connector subnets forces CloudFormation replacement",
+    );
   });
 });

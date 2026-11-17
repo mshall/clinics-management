@@ -18,11 +18,14 @@ if [[ "$stack_connector_arn" == "None" ]]; then
   stack_connector_arn=""
 fi
 
-# Names from failed deploy attempts (stack events: AlreadyExists on these identifiers).
-ORPHAN_NAME_PATTERNS=(
-  "kiorly-clinic-connector-v2"
-  "kiorly-conn-nagement"
-)
+is_orphan_connector_name() {
+  local name="$1"
+  case "$name" in
+    kiorly-clinic-connector-v2 | kiorly-conn-nagement) return 0 ;;
+    kiorly-conn-*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
 
 list_json="$(aws apprunner list-vpc-connectors --region "$REGION" --output json 2>/dev/null || echo '{"VpcConnectors":[]}')"
 
@@ -37,15 +40,7 @@ while IFS= read -r line; do
     continue
   fi
 
-  should_delete=0
-  for pattern in "${ORPHAN_NAME_PATTERNS[@]}"; do
-    if [[ "$name" == "$pattern" ]]; then
-      should_delete=1
-      break
-    fi
-  done
-
-  if [[ "$should_delete" -eq 1 ]]; then
+  if is_orphan_connector_name "$name"; then
     echo "  delete orphan connector: ${name} (${arn})"
     aws apprunner delete-vpc-connector --vpc-connector-arn "$arn" --region "$REGION" || true
     deleted=$((deleted + 1))
