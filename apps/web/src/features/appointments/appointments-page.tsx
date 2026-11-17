@@ -14,6 +14,7 @@ import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/s
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { AppointmentStatusBadge, appointmentStatusLabel } from "@/components/appointment-status-badge";
+import { AppointmentSourceBadges } from "@/components/appointment-source-badges";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -853,7 +854,13 @@ export function AppointmentsPage() {
                         </Badge>
                       </td>
                       <td className="px-3 py-2">
-                        <AppointmentStatusBadge status={a.status} />
+                        <div className="flex flex-col gap-1">
+                          <AppointmentStatusBadge status={a.status} />
+                          <AppointmentSourceBadges
+                            bookingSource={a.bookingSource}
+                            isNewPatientAtBooking={a.isNewPatientAtBooking}
+                          />
+                        </div>
                       </td>
                       {canDelete ? (
                         <td className="px-3 py-2 text-end">

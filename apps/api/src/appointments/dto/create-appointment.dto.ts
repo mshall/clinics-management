@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { AppointmentStatus } from "@prisma/client";
+import { AppointmentStatus, BookingSource } from "@prisma/client";
 import { Type } from "class-transformer";
 import { IsBoolean, IsDateString, IsEnum, IsNumber, IsOptional, IsString, MaxLength, Min, ValidateNested } from "class-validator";
 import { ScheduledFeeCollectionDto } from "../../common/dto/scheduled-fee-collection.dto";
@@ -82,4 +82,13 @@ export class CreateAppointmentDto {
   @ValidateNested()
   @Type(() => ScheduledFeeCollectionDto)
   scheduledFeeCollection?: ScheduledFeeCollectionDto;
+
+  @ApiPropertyOptional({ enum: BookingSource, description: "Defaults to FRONT_DESK for staff-created bookings" })
+  @IsOptional()
+  @IsEnum(BookingSource)
+  bookingSource?: BookingSource;
+
+  @ApiPropertyOptional({ description: "Kiorex / campaign attribution (search id, campaign, landing page)" })
+  @IsOptional()
+  attributionJson?: Record<string, unknown>;
 }

@@ -342,12 +342,12 @@ export class AdminService {
     }));
   }
 
-  async createTenantUser(tenantId: string, dto: CreateTenantUserDto) {
+  async createTenantUser(tenantId: string, dto: CreateTenantUserDto, actor?: JwtUser) {
     const email = dto.email.toLowerCase().trim();
     if (hasRole(dto, UserRole.PLATFORM_SUPER_ADMIN)) {
       throw new BadRequestException("Cannot create platform super administrators through this endpoint");
     }
-    assertCanCreateGroupAdminRole(dto.role);
+    assertCanCreateGroupAdminRole(dto.role, actor);
     const existing = await this.prisma.user.findFirst({ where: { tenantId, email } });
     if (existing) throw new BadRequestException("Email already in use for this organization");
     if (hasAnyRoleInSet(dto, CLINIC_SCOPE_ROLES) && !(dto.clinicIds?.length ?? 0)) {
@@ -416,7 +416,17 @@ export class AdminService {
     };
   }
 
-  async updateTenantUser(tenantId: string, userId: string, dto: PlatformPatchTenantUserDto) {
+  private async resetUserAccessForPrimaryRoleChange(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    userId: string,
+  ): Promise<void> {
+    await tx.userNavTabGrant.deleteMany({ where: { tenantId, userId } });
+    await tx.userMoneyVisibilityOverride.deleteMany({ where: { tenantId, userId } });
+    await tx.userClinicEmployeePrivilegeGrant.deleteMany({ where: { tenantId, userId } });
+  }
+
+  async updateTenantUser(tenantId: string, userId: string, dto: PlatformPatchTenantUserDto, actor?: JwtUser) {
     await this.assertTenantExists(tenantId);
     const existing = await this.prisma.user.findFirst({ where: { id: userId, tenantId } });
     if (!existing) throw new NotFoundException("User not found");
@@ -430,7 +440,7 @@ export class AdminService {
 
     const nextRole = dto.role ?? existing.role;
     if (dto.role !== undefined) {
-      assertCanAssignGroupAdminRole(existing.role, nextRole);
+      assertCanAssignGroupAdminRole(existing.role, nextRole, actor);
     }
     if (nextRole === UserRole.CLINIC_ADMIN || nextRole === UserRole.BRANCH_MANAGER) {
       if (dto.clinicIds !== undefined && !dto.clinicIds.length) {
@@ -444,6 +454,8 @@ export class AdminService {
       if (clash) throw new BadRequestException("Email already in use for this organization");
     }
 
+    const roleChanged = dto.role !== undefined && dto.role !== existing.role;
+
     const row = await this.prisma.$transaction(async (tx) => {
       const u = await tx.user.update({
         where: { id: userId },
@@ -451,9 +463,14 @@ export class AdminService {
           ...(dto.email !== undefined ? { email: dto.email.toLowerCase().trim() } : {}),
           ...(dto.displayName !== undefined ? { displayName: dto.displayName.trim() } : {}),
           ...(dto.role !== undefined ? { role: dto.role } : {}),
+          ...(roleChanged ? { additionalRoles: [] } : {}),
           ...(dto.password !== undefined ? { passwordHash: bcrypt.hashSync(dto.password, 10) } : {}),
         },
       });
+
+      if (roleChanged) {
+        await this.resetUserAccessForPrimaryRoleChange(tx, tenantId, userId);
+      }
 
       if (dto.clinicIds !== undefined) {
         await this.syncClinicAdminScopes(tx, tenantId, userId, dto.clinicIds);
@@ -496,6 +513,19 @@ export class AdminService {
 
       return u;
     });
+
+    if (roleChanged && actor?.userId) {
+      await this.prisma.auditLog.create({
+        data: {
+          tenantId,
+          actorId: actor.userId,
+          action: "USER_PRIMARY_ROLE_CHANGED",
+          resource: "user",
+          resourceId: userId,
+          metadata: { previousRole: existing.role, newRole: row.role },
+        },
+      });
+    }
 
     return this.getTenantUser(tenantId, row.id);
   }

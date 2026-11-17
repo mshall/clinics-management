@@ -7,6 +7,13 @@ export type PatientAcquisitionInput = {
   acquisitionOtherDetail?: string;
 };
 
+export function requirePatientAcquisition(dto: PatientAcquisitionInput): void {
+  if (dto.acquisitionChannel === undefined || dto.acquisitionChannel === null) {
+    throw new BadRequestException("How the patient found the clinic is required");
+  }
+  validatePatientAcquisition(dto);
+}
+
 export function validatePatientAcquisition(dto: PatientAcquisitionInput): void {
   if (dto.acquisitionChannel === PatientAcquisitionChannel.DOCTOR_REFERRAL) {
     if (!dto.acquisitionReferralName?.trim()) {

@@ -52,7 +52,9 @@ test("controllers match open / gated / mixed entitlement decoration rules", () =
     if (policy.kind === "mixed") {
       assert.ok(decorators.length >= policy.minDecorators, `${rel} needs at least ${policy.minDecorators} entitlement decorators`);
       assert.ok(
-        decorators.some((d) => d.includes(`"${policy.entitlement}"`) || d.includes(`'${policy.entitlement}'`)),
+        decorators.some(
+          (d: string) => d.includes(`"${policy.entitlement}"`) || d.includes(`'${policy.entitlement}'`),
+        ),
         `${rel} must gate ${policy.entitlement}`,
       );
     }

@@ -5,7 +5,8 @@
     "path": "A",
     "hostCell": "frankfurt",
     "dataRegion": "eu-central-1",
-    "legalGate": "pdpc-controller-processor-and-cross-border-transfer-licence-before-live-phi"
+    "legalGate": "pdpc-controller-processor-and-cross-border-transfer-licence-or-gov-approval-frankfurt-before-live-phi",
+    "note": "Production EG patients remain in frankfurt (eu-central-1); cairo cell is prepared only for a future in-country cutover."
   },
   "cells": {
     "frankfurt": {

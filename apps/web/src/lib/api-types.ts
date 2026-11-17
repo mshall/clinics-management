@@ -217,6 +217,11 @@ export interface AppointmentDto {
   visitBalanceRevenueId?: string | null;
   financialsVisible?: boolean;
   whatsappConfirmedAt?: string | null;
+  bookingSource?: string;
+  attributionJson?: Record<string, unknown> | null;
+  isNewPatientAtBooking?: boolean | null;
+  newPatientCheckedAt?: string | null;
+  commissionChargeableAtBooking?: boolean;
 }
 
 export interface OperationDto {

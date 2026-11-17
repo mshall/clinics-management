@@ -371,7 +371,24 @@ enum PatientAcquisitionChannel {
   SOCIAL_TIKTOK
   WEBSITE_GOOGLE
   DOCTOR_REFERRAL
+  KIOREX
   OTHER
+}
+
+enum FeeType {
+  FLAT
+  PERCENT
+}
+
+enum BookingSource {
+  FRONT_DESK
+  PHONE
+  WALK_IN
+  CLINIC_LINK
+  KIOREX_MARKETPLACE
+  KIOREX_WHATSAPP
+  INTEGRATION
+  IMPORT
 }
 
 model Market {
@@ -396,6 +413,7 @@ model Market {
   legalConfig        Json                @default("{}")
   paymentMethods     Json                @default("[]")
   featureDefaults    Json                @default("{}")
+  commercialConfig   Json                @default("{}")
   settingsSchema     Json                @default("{}")
   translations       Json                @default("{}")
   operationalStatus  MarketOperationalStatus @default(ACTIVE)
@@ -408,6 +426,71 @@ model Market {
   drugDatasetVersions DrugDatasetVersion[]
   drugProducts       DrugProduct[]
   planPrices         PlanPrice[]
+  kiorexCommissionRates KiorexCommissionRate[]
+  kiorlyInvoiceNumberSequences KiorlyInvoiceNumberSequence[]
+}
+
+model KiorexCommissionRate {
+  id                 String              @id @default(cuid())
+  marketId           String
+  market             Market              @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  specialty          ClinicalSpecialty?
+  feeType            FeeType             @default(FLAT)
+  amount             Decimal?            @db.Decimal(14, 2)
+  percent            Decimal?            @db.Decimal(5, 2)
+  minAmount          Decimal?            @db.Decimal(14, 2)
+  maxAmount          Decimal?            @db.Decimal(14, 2)
+  benchmarkFlat      Decimal?            @db.Decimal(14, 2)
+  benchmarkPercent   Decimal?            @db.Decimal(5, 2)
+  benchmarkSource    String?
+  benchmarkCheckedAt DateTime?
+  validFrom          DateTime            @default(now())
+  validTo            DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  commissionCharges    KiorexCommissionCharge[]
+  @@index([marketId, specialty])
+  @@index([marketId, validFrom, validTo])
+}
+
+enum CommissionChargeStatus {
+  PENDING
+  CONFIRMED
+  DISPUTED
+  REVERSED
+  WAIVED
+  BILLED
+}
+
+model KiorexCommissionCharge {
+  id              String                 @id @default(cuid())
+  tenantId        String
+  tenant          Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId        String
+  clinic          Clinic                 @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  appointmentId   String                 @unique
+  appointment     Appointment            @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  patientId       String
+  patient         Patient                @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  clinicianId     String
+  clinician       User                   @relation("KiorexCommissionClinician", fields: [clinicianId], references: [id], onDelete: Restrict)
+  rateId          String
+  rate            KiorexCommissionRate   @relation(fields: [rateId], references: [id], onDelete: Restrict)
+  amount          Decimal                @db.Decimal(14, 2)
+  currency        String
+  status          CommissionChargeStatus @default(PENDING)
+  attendedAt      DateTime
+  confirmedAt     DateTime?
+  disputeDeadline DateTime
+  kiorlyInvoiceId String?
+  kiorlyInvoice   KiorlyInvoice?         @relation(fields: [kiorlyInvoiceId], references: [id], onDelete: SetNull)
+  reversalReason  String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  @@index([tenantId, status, attendedAt])
+  @@index([tenantId, attendedAt])
 }
 
 enum PlanKey {
@@ -415,6 +498,58 @@ enum PlanKey {
   PRO
   CLINIC
   ENTERPRISE
+}
+
+enum CreditEntryType {
+  GRANT
+  CONSUME
+  EXPIRE
+  REVERSE
+}
+
+enum CreditReason {
+  KIOREX_LATE_REVERSAL
+  REFERRAL
+  PROMO
+  NO_SHOW_GUARANTEE
+  GOODWILL
+  DOWNGRADE_PRORATION
+  ADJUSTMENT
+}
+
+enum KiorlyInvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  PARTIALLY_PAID
+  VOID
+  UNCOLLECTIBLE
+}
+
+enum KiorlyLineType {
+  SUBSCRIPTION
+  SEAT
+  ADDON
+  USAGE_OVERAGE
+  KIOREX_COMMISSION
+  KIOREX_COMMISSION_OFFSET
+  PREPAID
+  CREDIT
+  DISCOUNT
+  TAX
+}
+
+enum KiorlyPaymentMethodKind {
+  CARD_TOKEN
+  MANUAL
+}
+
+enum KiorlyPaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  UNDER_REVIEW
 }
 
 enum BillingInterval {
@@ -511,6 +646,12 @@ model Subscription {
   priceLockUntil         DateTime?
   cancelAtPeriodEnd      Boolean            @default(false)
   defaultPaymentMethodId String?
+  defaultPaymentMethod   KiorlyPaymentMethod? @relation(fields: [defaultPaymentMethodId], references: [id], onDelete: SetNull)
+  kiorlyDunningPausedUntil DateTime?
+  trialQualifiedAt       DateTime?
+  trialShortenWarnedAt   DateTime?
+  trialConfigOverride    Json?
+  postTrialGraceUntil    DateTime?
   salesRepCode           String?
   referralCodeUsed       String?
   events                 SubscriptionEvent[]
@@ -714,6 +855,10 @@ model Tenant {
   defaultInvoiceVatPercent     Decimal?        @db.Decimal(5, 2)
   integrationFailureRetentionDays     Int       @default(30)
   integrationFailureLastSpikeAlertAt  DateTime?
+  /** MN-04: first production ETA day for pilot success week-1 metric */
+  etaPilotProductionStartedAt         DateTime?
+  /** MN-04: cooldown for ETA success rate below-threshold audit alerts */
+  etaHealthLastAlertAt                DateTime?
   whatsAppRemindersEnabled            Boolean   @default(false)
   appointmentReminderHoursBefore      Int       @default(24)
   providerSettings                    Json      @default("{}")
@@ -777,6 +922,11 @@ model Tenant {
   salesRepCode                   String?
   referralCode                   String?
   creditWallet                   CreditWallet?
+  kiorlyInvoices                 KiorlyInvoice[]
+  kiorlyPaymentMethods           KiorlyPaymentMethod[]
+  kiorlyPayments                 KiorlyPayment[]
+  kiorexCommissionCharges        KiorexCommissionCharge[]
+  kiorlySettlementCarry          Decimal?               @db.Decimal(14, 2)
   onboardingProgress             OnboardingProgress?
   outboxEvents                   OutboxEvent[]
   appointmentRescheduleTokens    AppointmentRescheduleToken[]
@@ -831,6 +981,7 @@ model User {
   employee     Employee?
   encounters   Encounter[]    @relation("EncounterClinician")
   appointments Appointment[] @relation("AppointmentClinician")
+  kiorexCommissionCharges KiorexCommissionCharge[] @relation("KiorexCommissionClinician")
   operationsPerformed Operation[] @relation("OperationClinician")
   operationsCreated   Operation[] @relation("OperationCreatedBy")
   invoicesCreated     Invoice[]   @relation("InvoiceCreatedBy")
@@ -1004,6 +1155,7 @@ model Clinic {
   clinicianAvailabilityTemplates ClinicianAvailabilityTemplate[]
   appointmentSeries      AppointmentSeries[]
   appointmentWaitlist    AppointmentWaitlistEntry[]
+  kiorexCommissionCharges KiorexCommissionCharge[]
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
@@ -1088,6 +1240,7 @@ model Patient {
   fiscalDocuments      FiscalDocument[]
   fiscalSubmissions    FiscalSubmission[]
   satisfactionSurveys  SatisfactionSurveyResponse[]
+  kiorexCommissionCharges KiorexCommissionCharge[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -1628,6 +1781,10 @@ model Appointment {
   noShowRiskScore Decimal?  @db.Decimal(5, 2)
   recurrenceIndex Int?
   notes          String?
+  bookingSource          BookingSource @default(FRONT_DESK)
+  attributionJson        Json?
+  isNewPatientAtBooking  Boolean?
+  newPatientCheckedAt    DateTime?
   satisfactionSurveys SatisfactionSurveyResponse[]
   integrationClientId String?
   integrationClient   IntegrationClient? @relation(fields: [integrationClientId], references: [id], onDelete: SetNull)
@@ -1635,6 +1792,7 @@ model Appointment {
   revenueEntries RevenueEntry[]
   encounters     Encounter[]
   rescheduleToken AppointmentRescheduleToken?
+  kiorexCommissionCharge KiorexCommissionCharge?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
@@ -2575,13 +2733,153 @@ model OtpChallenge {
 }
 
 model CreditWallet {
-  id        String   @id @default(cuid())
-  tenantId  String   @unique
-  balance   Int      @default(0)
-  currency  String   @default("credits")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id        String              @id @default(cuid())
+  tenantId  String              @unique
+  currency  String
+  balance   Decimal             @default(0) @db.Decimal(14, 2)
+  version   Int                 @default(0)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  tenant    Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  entries   CreditLedgerEntry[]
+}
+
+model CreditLedgerEntry {
+  id        String           @id @default(cuid())
+  walletId  String
+  wallet    CreditWallet     @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  type      CreditEntryType
+  reason    CreditReason
+  amount    Decimal          @db.Decimal(14, 2)
+  remaining Decimal?         @db.Decimal(14, 2)
+  expiresAt DateTime?
+  sourceRef String?
+  invoiceId String?
+  note      String?
+  createdBy String?
+  createdAt DateTime         @default(now())
+
+  @@index([walletId, createdAt])
+  @@index([walletId, expiresAt])
+}
+
+model KiorlyInvoiceNumberSequence {
+  id         String   @id @default(cuid())
+  marketId   String
+  market     Market   @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  year       Int
+  lastNumber Int      @default(0)
+  updatedAt  DateTime @updatedAt
+
+  @@unique([marketId, year])
+}
+
+model KiorlyInvoice {
+  id              String              @id @default(cuid())
+  tenantId        String
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  number          String              @unique
+  periodKey       String
+  periodStart     DateTime
+  periodEnd       DateTime
+  status          KiorlyInvoiceStatus @default(DRAFT)
+  currency        String
+  subtotal        Decimal             @db.Decimal(14, 2)
+  creditsApplied  Decimal             @default(0) @db.Decimal(14, 2)
+  tax             Decimal             @db.Decimal(14, 2)
+  total           Decimal             @db.Decimal(14, 2)
+  amountPaid      Decimal             @default(0) @db.Decimal(14, 2)
+  issuedAt        DateTime?
+  dueAt           DateTime?
+  paidAt          DateTime?
+  etaUuid         String?
+  creditMemo      Boolean             @default(false)
+  voidOfInvoiceId String?
+  voidOfInvoice   KiorlyInvoice?      @relation("KiorlyInvoiceVoid", fields: [voidOfInvoiceId], references: [id], onDelete: SetNull)
+  voidCredits        KiorlyInvoice[]     @relation("KiorlyInvoiceVoid")
+  lines              KiorlyInvoiceLine[]
+  payments           KiorlyPayment[]
+  kiorexCommissionCharges KiorexCommissionCharge[]
+  paymentUnderReview Boolean             @default(false)
+  autoChargeAttempts Int                 @default(0)
+  nextAutoChargeAt   DateTime?
+  settlementSummaryJson Json?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  @@unique([tenantId, periodKey])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@index([nextAutoChargeAt])
+}
+
+model KiorlyPaymentMethod {
+  id        String                  @id @default(cuid())
+  tenantId  String
+  tenant    Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  provider  String
+  kind      KiorlyPaymentMethodKind
+  tokenRef  String?
+  brand     String?
+  last4     String?
+  expMonth  Int?
+  expYear   Int?
+  isDefault Boolean                 @default(false)
+  createdAt DateTime                @default(now())
+  defaultForSubscriptions Subscription[]
+
+  @@index([tenantId, isDefault])
+  @@index([tenantId, provider])
+}
+
+model KiorlyPayment {
+  id             String              @id @default(cuid())
+  tenantId       String
+  tenant         Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoiceId      String?
+  invoice        KiorlyInvoice?      @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  provider       String
+  providerRef    String              @unique
+  amount         Decimal             @db.Decimal(14, 2)
+  currency       String
+  status         KiorlyPaymentStatus
+  proofUploadKey String?
+  verifiedBy     String?
+  idempotencyKey String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([tenantId, createdAt])
+  @@index([invoiceId, status])
+  @@unique([provider, idempotencyKey])
+}
+
+model KiorlyPaymentWebhookEvent {
+  id             String   @id @default(cuid())
+  provider       String
+  idempotencyKey String
+  paymentId      String?
+  payloadHash    String
+  createdAt      DateTime @default(now())
+
+  @@unique([provider, idempotencyKey])
+}
+
+model KiorlyInvoiceLine {
+  id         String          @id @default(cuid())
+  invoiceId  String
+  invoice    KiorlyInvoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  type       KiorlyLineType
+  descEn     String
+  descAr     String
+  quantity   Decimal         @db.Decimal(14, 2)
+  unitAmount Decimal         @db.Decimal(14, 2)
+  amount     Decimal         @db.Decimal(14, 2)
+  refId      String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([invoiceId])
 }
 
 model PasswordResetToken {

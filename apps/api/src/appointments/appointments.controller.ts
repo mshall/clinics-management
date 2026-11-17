@@ -1,4 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { SubscriptionAccessGuard } from "../subscriptions/subscription-access.guard";
+import { RequiresSubscriptionAccess } from "../subscriptions/requires-subscription-access.decorator";
+import { SubscriptionAccessAction } from "../subscriptions/subscription-access-policy";
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from "@nestjs/swagger";
 import { AppointmentStatus } from "@prisma/client";
 import { IsEnum } from "class-validator";
@@ -20,7 +23,7 @@ class PatchAppointmentStatusDto {
 @ApiTags("appointments")
 @ApiBearerAuth("bearer")
 @Controller("appointments")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, SubscriptionAccessGuard)
 export class AppointmentsController {
   constructor(private readonly appointments: AppointmentsService) {}
 
@@ -40,7 +43,8 @@ export class AppointmentsController {
     @Query("clinicId") clinicId?: string,
     @Query("sortBy") sortBy?: string,
     @Query("sortOrder") sortOrder?: string,
-    @Query("bookableOnly") bookableOnly?: string
+    @Query("bookableOnly") bookableOnly?: string,
+    @Query("bookingSource") bookingSource?: string
   ) {
     return this.appointments.list(
       requireTenantId(user),
@@ -56,6 +60,7 @@ export class AppointmentsController {
       sortBy,
       sortOrder,
       bookableOnly,
+      bookingSource,
       user
     );
   }
@@ -79,6 +84,7 @@ export class AppointmentsController {
   }
 
   @Post()
+  @RequiresSubscriptionAccess(SubscriptionAccessAction.SCHEDULING_WRITE)
   @ApiOperation({ summary: "Book appointment" })
   @ApiCreatedResponse({ type: AppointmentDto })
   create(@CurrentUser() user: JwtUser, @Body() body: CreateAppointmentDto) {
@@ -93,6 +99,7 @@ export class AppointmentsController {
   }
 
   @Patch(":id/status")
+  @RequiresSubscriptionAccess(SubscriptionAccessAction.SCHEDULING_WRITE)
   @ApiOperation({ summary: "Update appointment status" })
   @ApiOkResponse({ type: AppointmentDto })
   patchStatus(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchAppointmentStatusDto) {
@@ -100,6 +107,7 @@ export class AppointmentsController {
   }
 
   @Patch(":id")
+  @RequiresSubscriptionAccess(SubscriptionAccessAction.SCHEDULING_WRITE)
   @ApiOperation({ summary: "Update appointment (not allowed when completed or cancelled)" })
   @ApiOkResponse({ type: AppointmentDto })
   update(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: UpdateAppointmentDto) {

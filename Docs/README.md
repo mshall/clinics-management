@@ -206,7 +206,7 @@ Scheduled operations open an **edit dialog** that mirrors the **create** form: f
 | Seed users & roles | `apps/api/prisma/seed.ts` |
 | RBAC / nav tabs | `apps/web/src/lib/nav-policy.ts` |
 | API admin users | `apps/api/src/admin/admin.service.ts` |
-| Web org users UI | `apps/web/src/features/admin/admin-org-users-panel.tsx` |
+| Web org users UI | `apps/web/src/features/admin/admin-org-users-panel.tsx` (Permissions tab: change primary role + confirm; resets nav/money/HR grants server-side) |
 | User ↔ employee cascade | `apps/api/src/common/user-employee-cascade.ts` |
 | Clinic disable / operating periods | `apps/api/src/clinics/clinics.service.ts` |
 | Clinic working hours | `apps/api/src/common/clinic-hours.ts`, `apps/web/src/lib/clinic-hours.ts`, `ClinicHoursSettingsPanel` |

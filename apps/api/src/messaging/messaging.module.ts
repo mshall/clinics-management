@@ -27,6 +27,6 @@ import { PublicAppointmentRescheduleController } from "./public-appointment-resc
     OutboundMessageWorker,
     AppointmentReminderScheduler,
   ],
-  exports: [MessagingService, AppointmentReminderScheduler, WhatsAppSendService],
+  exports: [MessagingService, AppointmentReminderScheduler, WhatsAppSendService, OutboxEventService],
 })
 export class MessagingModule {}

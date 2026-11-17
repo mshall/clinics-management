@@ -1,8 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { IsBoolean, IsDateString, IsIn, IsNumber, IsOptional, IsString, MaxLength, Min, ValidateIf } from "class-validator";
+import { PatientAcquisitionFieldsDto } from "../../common/dto/patient-acquisition-fields.dto";
 import { BASE_CURRENCIES } from "../../common/base-currencies";
 
-export class IntegrationBookOperationDto {
+export class IntegrationBookOperationDto extends PatientAcquisitionFieldsDto {
   @ApiProperty()
   @IsString()
   clinicId!: string;

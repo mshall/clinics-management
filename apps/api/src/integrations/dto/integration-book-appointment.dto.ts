@@ -54,4 +54,17 @@ export class IntegrationBookAppointmentDto {
   @IsOptional()
   @IsBoolean()
   marketplaceConsentGranted?: boolean;
+
+  @ApiPropertyOptional({ enum: ["marketplace", "whatsapp"], description: "Kiorex connector channel when not inferred from consent" })
+  @IsOptional()
+  @IsString()
+  kiorexChannel?: "marketplace" | "whatsapp";
+
+  @ApiPropertyOptional({ description: "Kiorex search / campaign attribution" })
+  @IsOptional()
+  attribution?: {
+    searchId?: string;
+    campaign?: string;
+    landingPage?: string;
+  };
 }

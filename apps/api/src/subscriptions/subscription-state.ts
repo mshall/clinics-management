@@ -1,7 +1,7 @@
 import { SubscriptionStatus } from "@prisma/client";
 
 const ALLOWED: Record<SubscriptionStatus, ReadonlySet<SubscriptionStatus>> = {
-  TRIALING: new Set([SubscriptionStatus.ACTIVE, SubscriptionStatus.CANCELLED]),
+  TRIALING: new Set([SubscriptionStatus.ACTIVE, SubscriptionStatus.CANCELLED, SubscriptionStatus.GRACE]),
   ACTIVE: new Set([
     SubscriptionStatus.PAST_DUE,
     SubscriptionStatus.CANCELLED,
@@ -10,6 +10,7 @@ const ALLOWED: Record<SubscriptionStatus, ReadonlySet<SubscriptionStatus>> = {
   PAST_DUE: new Set([
     SubscriptionStatus.GRACE,
     SubscriptionStatus.ACTIVE,
+    SubscriptionStatus.READ_ONLY,
     SubscriptionStatus.SUSPENDED,
   ]),
   GRACE: new Set([

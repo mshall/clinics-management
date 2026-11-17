@@ -1,5 +1,28 @@
 import type { TFunction } from "i18next";
 import type { MedTab } from "@/components/medications-prescription-draft-panel";
+import type { PatientAcquisitionChannel } from "@/lib/patient-acquisition";
+
+export type OperationAcquisitionFormValues = {
+  channel: PatientAcquisitionChannel | "";
+  referralName: string;
+  otherDetail: string;
+};
+
+function validatePatientAcquisitionRequired(
+  values: OperationAcquisitionFormValues,
+  t: TFunction,
+): string | null {
+  if (!values.channel) {
+    return t("operations.errorAcquisitionRequired", "Select how the patient found the clinic.");
+  }
+  if (values.channel === "DOCTOR_REFERRAL" && !values.referralName.trim()) {
+    return t("patients.errorExplainMoreRequired", "Explain more is required.");
+  }
+  if (values.channel === "OTHER" && !values.otherDetail.trim()) {
+    return t("patients.errorExplainMoreRequired", "Explain more is required.");
+  }
+  return null;
+}
 import {
   collectPendingDocumentFieldErrors,
   pendingDocumentValidationMessage,
@@ -21,6 +44,9 @@ export type OperationCreateValidationInput = {
   prescriptionFile: File | null;
   generatedPrescriptionFile: File | null;
   hasExistingPrescription?: boolean;
+  acquisition: OperationAcquisitionFormValues;
+  /** When false, skip acquisition (e.g. scheduled operation edit). */
+  requireAcquisition?: boolean;
 };
 
 export type OperationCreateValidationResult = {
@@ -96,6 +122,11 @@ export function collectOperationCreateValidationIssues(
         "Upload a prescription or generate one from manual medications.",
       ),
     );
+  }
+
+  if (input.requireAcquisition !== false) {
+    const acquisitionErr = validatePatientAcquisitionRequired(input.acquisition, t);
+    if (acquisitionErr) issues.push(acquisitionErr);
   }
 
   return { issues, invalidDocRowIds };

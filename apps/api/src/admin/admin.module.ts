@@ -15,9 +15,24 @@ import { PlatformAdminService } from "./platform-admin.service";
 import { PlatformInsightsService } from "./platform-insights.service";
 import { IntegrationFailureAdminService } from "./integration-failure-admin.service";
 import { TenantPaymentChannelsService } from "./tenant-payment-channels.service";
+import { SubscriptionsModule } from "../subscriptions/subscriptions.module";
+import { CreditsModule } from "../credits/credits.module";
+import { BillingPlatformModule } from "../billing-platform/billing-platform.module";
+import { ComplianceModule } from "../compliance/compliance.module";
 
 @Module({
-  imports: [AuthModule, ClinicsModule, StorageModule, IntegrationsModule, MarketsModule, ClinicalModule],
+  imports: [
+    AuthModule,
+    ClinicsModule,
+    StorageModule,
+    IntegrationsModule,
+    MarketsModule,
+    ClinicalModule,
+    SubscriptionsModule,
+    CreditsModule,
+    BillingPlatformModule,
+    ComplianceModule,
+  ],
   controllers: [AdminController, AdminDataExplorerController, PlatformAdminController],
   providers: [
     AdminService,

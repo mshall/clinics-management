@@ -1,7 +1,7 @@
 import {
   patientAcquisitionFormToBody,
   patientAcquisitionFormValuesFromPatient,
-  validatePatientAcquisitionForm,
+  validatePatientAcquisitionRequired,
   type PatientAcquisitionFormValues,
 } from "@/components/patient-acquisition-fields";
 import type { PatientDto } from "@/lib/api-schema";
@@ -70,7 +70,7 @@ export function collectPatientDemographicsValidationIssues(
   if (!values.phone.trim()) {
     issues.push(t("patients.errorPhoneRequired", "Phone is required."));
   }
-  const acquisitionError = validatePatientAcquisitionForm(values.acquisition, t);
+  const acquisitionError = validatePatientAcquisitionRequired(values.acquisition, t);
   if (acquisitionError) issues.push(acquisitionError);
   return issues;
 }

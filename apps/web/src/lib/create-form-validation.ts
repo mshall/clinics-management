@@ -9,7 +9,10 @@ import {
   pendingDocumentValidationMessage,
   type PendingDocumentRow,
 } from "@/components/pending-document-attachments";
-import { validatePatientAcquisitionForm, type PatientAcquisitionFormValues } from "@/components/patient-acquisition-fields";
+import {
+  validatePatientAcquisitionForm,
+  type PatientAcquisitionFormValues,
+} from "@/components/patient-acquisition-fields";
 import type { ClinicFormValues } from "@/features/clinics/clinic-form-utils";
 import { collectClinicFormErrors } from "@/features/clinics/clinic-form-utils";
 import { getOrgUserCreateMissingLabels } from "@/features/platform/org-user-form-validation";

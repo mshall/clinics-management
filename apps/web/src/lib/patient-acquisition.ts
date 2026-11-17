@@ -4,6 +4,7 @@ export const PATIENT_ACQUISITION_CHANNELS = [
   "SOCIAL_TIKTOK",
   "WEBSITE_GOOGLE",
   "DOCTOR_REFERRAL",
+  "KIOREX",
   "OTHER",
 ] as const;
 
@@ -16,6 +17,7 @@ export function patientAcquisitionLabel(channel: PatientAcquisitionChannel, t: (
     SOCIAL_TIKTOK: "patients.acquisitionSocialTiktok",
     WEBSITE_GOOGLE: "patients.acquisitionWebsiteGoogle",
     DOCTOR_REFERRAL: "patients.acquisitionDoctorReferral",
+    KIOREX: "patients.acquisitionKiorex",
     OTHER: "patients.acquisitionOther",
   };
   const fallbacks: Record<PatientAcquisitionChannel, string> = {
@@ -24,6 +26,7 @@ export function patientAcquisitionLabel(channel: PatientAcquisitionChannel, t: (
     SOCIAL_TIKTOK: "Social Media — TikTok",
     WEBSITE_GOOGLE: "Website — Google",
     DOCTOR_REFERRAL: "Doctor Referral",
+    KIOREX: "Kiorex",
     OTHER: "Other",
   };
   return t(keys[channel], fallbacks[channel]);

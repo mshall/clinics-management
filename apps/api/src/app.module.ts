@@ -42,6 +42,9 @@ import { PrivilegedMfaGuard } from "./auth/privileged-mfa.guard";
 import { SignupModule } from "./signup/signup.module";
 import { OnboardingModule } from "./onboarding/onboarding.module";
 import { LegalModule } from "./legal/legal.module";
+import { KiorexModule } from "./kiorex/kiorex.module";
+import { CreditsModule } from "./credits/credits.module";
+import { BillingPlatformModule } from "./billing-platform/billing-platform.module";
 
 @Module({
   imports: [
@@ -86,6 +89,9 @@ import { LegalModule } from "./legal/legal.module";
     SignupModule,
     OnboardingModule,
     LegalModule,
+    KiorexModule,
+    CreditsModule,
+    BillingPlatformModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: PrivilegedMfaGuard }],
 })

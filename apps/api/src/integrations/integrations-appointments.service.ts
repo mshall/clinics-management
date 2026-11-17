@@ -10,6 +10,7 @@ import { IntegrationClientService } from "./integration-client.service";
 import { IntegrationWebhookService } from "./integration-webhook.service";
 import { ConsentPolicyService } from "../compliance/consent-policy.service";
 import { CONSENT_PURPOSE_MARKETPLACE } from "../compliance/consent-policy.constants";
+import { defaultBookingSourceForIntegration } from "../appointments/booking-attribution";
 
 @Injectable()
 export class IntegrationsAppointmentsService {
@@ -159,6 +160,10 @@ export class IntegrationsAppointmentsService {
       });
     }
     await this.consent.require(principal.tenantId, patientId, CONSENT_PURPOSE_MARKETPLACE);
+    const bookingSource = defaultBookingSourceForIntegration({
+      marketplaceConsentGranted: dto.marketplaceConsentGranted,
+      kiorexChannel: dto.kiorexChannel,
+    });
     const created = await this.appointments.createForIntegration(principal.tenantId, {
       clinicId: dto.clinicId,
       patientId,
@@ -169,6 +174,8 @@ export class IntegrationsAppointmentsService {
       notes: dto.notes,
       integrationClientId: principal.id,
       externalReference: dto.externalReference?.trim() || undefined,
+      bookingSource,
+      attributionJson: dto.attribution ?? undefined,
     });
 
     await this.audit.recordIntegration({

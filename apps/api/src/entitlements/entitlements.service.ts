@@ -55,6 +55,12 @@ export class EntitlementsService {
       map[o.key] = parseEntitlementValue(o.valueJson);
     }
 
+    if (sub.status === SubscriptionStatus.READ_ONLY || sub.status === SubscriptionStatus.SUSPENDED) {
+      for (const key of Object.keys(map)) {
+        if (key.startsWith("mod_")) map[key] = false;
+      }
+    }
+
     // Billing seats cap (PL-02) intersects with max_clinicians from plan.
     const planMax = entitlementLimit(map.max_clinicians);
     if (planMax != null && planMax >= 0) {

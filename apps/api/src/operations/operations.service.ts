@@ -12,6 +12,11 @@ import * as path from "path";
 import type { JwtUser } from "../auth/jwt-user";
 import { findActiveSchedulingPhysician } from "../common/active-scheduling-physician";
 import { fetchClinicScopeIds } from "../common/clinic-scope";
+import { hasRole } from "../common/effective-roles";
+import {
+  patientAcquisitionUpdateData,
+  requirePatientAcquisition,
+} from "../common/patient-acquisition";
 import { resolveClinicCurrency } from "../common/clinic-currency";
 import { isBaseCurrency } from "../common/base-currencies";
 import { canAdminEditCompletedOperation } from "../common/operation-admin-roles";
@@ -62,10 +67,6 @@ const operationInclude = {
 } as const;
 
 type OperationRow = Prisma.OperationGetPayload<{ include: typeof operationInclude }>;
-
-function isPhysicianRole(role: UserRole | undefined): boolean {
-  return role === UserRole.PHYSICIAN || String(role) === "PHYSICIAN";
-}
 
 @Injectable()
 export class OperationsService {
@@ -258,7 +259,7 @@ export class OperationsService {
   }
 
   private async assertOperationAccess(viewer: JwtUser, row: { clinicianId: string; clinicId: string }): Promise<void> {
-    if (isPhysicianRole(viewer.role) && row.clinicianId !== viewer.userId) {
+    if (hasRole(viewer, UserRole.PHYSICIAN) && row.clinicianId !== viewer.userId) {
       throw new ForbiddenException("You can only manage operations assigned to you");
     }
     if (viewer.tenantId == null) throw new ForbiddenException();
@@ -365,7 +366,7 @@ export class OperationsService {
     const { start, end } = resolveReportingRange(fromStr, toStr);
     and.push({ operationDate: { gte: start, lte: end } });
 
-    if (isPhysicianRole(user.role)) {
+    if (hasRole(user, UserRole.PHYSICIAN)) {
       and.push({ clinicianId: user.userId });
     }
 
@@ -438,7 +439,7 @@ export class OperationsService {
     const and: Prisma.OperationWhereInput[] = [{ tenantId }];
     const { start, end } = resolveReportingRange(fromStr, toStr);
     and.push({ operationDate: { gte: start, lte: end } });
-    if (isPhysicianRole(user.role)) {
+    if (hasRole(user, UserRole.PHYSICIAN)) {
       and.push({ clinicianId: user.userId });
     }
     const clinicId = clinicIdStr?.trim();
@@ -582,6 +583,8 @@ export class OperationsService {
     const clinic = await this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId }, select: { id: true } });
     if (!clinic) throw new BadRequestException("Clinic not found");
 
+    requirePatientAcquisition(dto);
+
     const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
     if (scopeIds !== null && !scopeIds.includes(clinicId)) {
       throw new ForbiddenException("Clinic is outside your assigned scope");
@@ -595,6 +598,11 @@ export class OperationsService {
     const feeCurrency = await this.resolveOperationFeeCurrency(tenantId, clinicId, dto.feeCurrency);
 
     const row = await this.prisma.$transaction(async (tx) => {
+      await tx.patient.update({
+        where: { id: dto.patientId },
+        data: patientAcquisitionUpdateData(dto),
+      });
+
       const op = await tx.operation.create({
         data: {
           tenantId,
@@ -644,7 +652,7 @@ export class OperationsService {
       { status: { not: OperationStatus.CANCELLED } },
     ];
 
-    if (isPhysicianRole(user.role)) {
+    if (hasRole(user, UserRole.PHYSICIAN)) {
       and.push({ clinicianId: user.userId });
     }
 
@@ -1179,6 +1187,8 @@ export class OperationsService {
       throw new BadRequestException("Invalid clinic, patient, or clinician");
     }
 
+    requirePatientAcquisition(dto);
+
     const operationDate = new Date(dto.operationDate);
     if (Number.isNaN(operationDate.getTime())) {
       throw new BadRequestException("Invalid operation date");
@@ -1191,6 +1201,11 @@ export class OperationsService {
       select: { firstNameEn: true, lastNameEn: true },
     });
     const row = await this.prisma.$transaction(async (tx) => {
+      await tx.patient.update({
+        where: { id: dto.patientId },
+        data: patientAcquisitionUpdateData(dto),
+      });
+
       const op = await tx.operation.create({
         data: {
           tenantId,

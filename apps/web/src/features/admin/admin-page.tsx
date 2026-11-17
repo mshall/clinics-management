@@ -47,8 +47,12 @@ import { ClinicPrescriptionSettingsPanel } from "@/features/prescriptions/clinic
 import { TenantFeatureFlagsPanel } from "./tenant-feature-flags-panel";
 import { ProviderCredentialsPanel } from "./provider-credentials-panel";
 import { OrgEtaIntegrationCard } from "./org-eta-integration-card";
+import { EtaHealthCard } from "@/features/compliance/eta-health-card";
+import { useTenantMarket } from "@/lib/use-tenant-market";
 import { OrgWhatsAppRemindersCard } from "./org-whatsapp-reminders-card";
 import { AdminOrgBillingPanel } from "./admin-org-billing-panel";
+import { AdminKiorlyInvoicesPanel } from "./admin-kiorly-invoices-panel";
+import { AdminKiorexChargesPanel } from "./admin-kiorex-charges-panel";
 import { EntitlementGate } from "@/components/entitlement-gate";
 import { LiteAdminSettings } from "./lite-admin-settings";
 
@@ -77,6 +81,11 @@ export function AdminPage() {
   const isPlatformRole = authUser?.role === "platform_super_admin";
   const isLitePlan = authUser?.plan?.key?.toUpperCase() === "LITE";
   const overview = useAdminOverviewQuery();
+  const tenantMarket = useTenantMarket();
+  const isEgMarket = tenantMarket.data?.marketCode === "EG";
+  const showEtaHealth =
+    isEgMarket &&
+    (isGroupAdmin || Boolean(authUser?.isTenantOwner) || authUser?.role === "finance_officer");
   const { data: clinics = [] } = useClinicsQuery();
   const [tPage, setTPage] = useState(1);
   const [tPs, setTPs] = useState(10);
@@ -458,7 +467,13 @@ export function AdminPage() {
         ) : null
       ) : adminSection === "organization" ? (
         <div className="space-y-6">
-          {canViewOrgBilling ? <AdminOrgBillingPanel canManage={canManageOrgBilling} /> : null}
+          {canViewOrgBilling ? (
+            <>
+              <AdminOrgBillingPanel canManage={canManageOrgBilling} />
+              <AdminKiorexChargesPanel />
+              <AdminKiorlyInvoicesPanel />
+            </>
+          ) : null}
           {isGroupAdmin ? (
             <Card>
               <CardHeader>
@@ -596,6 +611,12 @@ export function AdminPage() {
           {isGroupAdmin ? (
             <EntitlementGate entitlement="eta_receipts" requiredPlan="PRO">
               <OrgEtaIntegrationCard />
+            </EntitlementGate>
+          ) : null}
+
+          {showEtaHealth ? (
+            <EntitlementGate entitlement="eta_receipts" requiredPlan="PRO">
+              <EtaHealthCard />
             </EntitlementGate>
           ) : null}
 

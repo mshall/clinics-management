@@ -15,10 +15,14 @@ import {
   ValidateNested,
 } from "class-validator";
 import { Type } from "class-transformer";
+import { PatientAcquisitionChannel } from "@prisma/client";
 import { PatientAcquisitionFieldsDto } from "../../common/dto/patient-acquisition-fields.dto";
 import { PatientAllergyInputDto } from "./patient-allergy-input.dto";
 
 export class CreatePatientDto extends PatientAcquisitionFieldsDto {
+  @ApiProperty({ enum: PatientAcquisitionChannel, description: "How the patient found the clinic" })
+  @IsEnum(PatientAcquisitionChannel)
+  declare acquisitionChannel: PatientAcquisitionChannel;
   @ApiProperty({ minLength: 1, maxLength: 120 })
   @IsString()
   @MinLength(1)

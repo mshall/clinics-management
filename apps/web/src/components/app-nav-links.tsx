@@ -90,6 +90,12 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
               {t("nav.platformPlans", "Plans & pricing")}
             </NavLink>
           ) : null}
+          {showTab("platform_markets") ? (
+            <NavLink to="/platform/kiorex-rates" className={navClass} onClick={() => onNavigate?.()}>
+              <Globe2 className="size-4 shrink-0" />
+              {t("nav.platformKiorex", "Kiorex fees")}
+            </NavLink>
+          ) : null}
           {showTab("platform_organizations") ? (
             <NavLink to="/platform/organizations" className={navClass} onClick={() => onNavigate?.()}>
               <Building2 className="size-4 shrink-0" />

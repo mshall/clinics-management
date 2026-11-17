@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { featureFlagLabel } from "@/lib/feature-flag-labels";
 import { AWS_DATA_REGIONS, BASE_CURRENCY_OPTIONS, MARKET_COUNTRY_OPTIONS } from "@/lib/market-pack-options";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
+import { PlatformCommercialConfigDialog } from "./platform-commercial-config-dialog";
 
 export type MarketRow = {
   id: string;
@@ -47,6 +48,7 @@ export function PlatformMarketsTab() {
   const [timezone, setTimezone] = useState("UTC");
   const [err, setErr] = useState<string | null>(null);
   const [flagsMarketId, setFlagsMarketId] = useState<string | null>(null);
+  const [commercialMarketId, setCommercialMarketId] = useState<string | null>(null);
 
   const marketsQuery = useQuery({
     queryKey: ["platform", "markets"],
@@ -102,6 +104,7 @@ export function PlatformMarketsTab() {
   });
 
   const rows = marketsQuery.data ?? [];
+  const commercialMarket = rows.find((m) => m.id === commercialMarketId);
   const live = rows.filter((m) => m.status === "LIVE");
 
   const marketFlagsQuery = useQuery({
@@ -194,6 +197,9 @@ export function PlatformMarketsTab() {
                           <div className="flex flex-wrap justify-end gap-2">
                             <Button type="button" size="sm" variant="ghost" onClick={() => setFlagsMarketId(m.id)}>
                               {t("platform.marketFlags", "Flags")}
+                            </Button>
+                            <Button type="button" size="sm" variant="ghost" onClick={() => setCommercialMarketId(m.id)}>
+                              {t("platform.commercial.open", "Commercial")}
                             </Button>
                             {m.status === "DRAFT" ? (
                               <>
@@ -395,6 +401,15 @@ export function PlatformMarketsTab() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <PlatformCommercialConfigDialog
+        marketId={commercialMarketId}
+        marketLabel={commercialMarket ? `${commercialMarket.code} — ${commercialMarket.nameEn}` : undefined}
+        open={Boolean(commercialMarketId)}
+        onOpenChange={(next) => {
+          if (!next) setCommercialMarketId(null);
+        }}
+      />
     </div>
   );
 }

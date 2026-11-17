@@ -26,6 +26,7 @@ Before production billing with a real clinic TRN and virtual POS:
 2. **Expired device credentials** — worker flags `CREDENTIALS_EXPIRED`, renewal path verified.
 3. **Submission status check** — poll / toolkit status API for an in-flight receipt.
 4. CI golden hash — `eta-sdk-golden-fixture.node.test.ts` (sale + return reference).
+5. Registry — `mn04-eta-preprod-drill.node.test.ts` (MN-04 links all drill tests).
 
 Group admin controls **ETA e-invoice integration** under **Administration → Organization & settings** (dedicated card, off by default for new Egypt orgs). When off, the org declares responsibility for tax-authority submission; clinic ETA fields stay hidden. When on, org defaults and per-clinic branch codes apply. Stored as `providerSettings["eta-egypt"].physicalReportingOptOut` + `physicalReportingConsentAt` (opt-out = integration disabled). Audited; billing UI shows a banner while opt-out is active.
 

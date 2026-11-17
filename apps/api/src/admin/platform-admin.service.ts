@@ -24,6 +24,11 @@ import { tenantCreateDefaultsFromMarket } from "../markets/market-tax-pack";
 import { normalizeOrgTaxRegistrationNumber } from "../common/sync-clinic-invoice-tax";
 import { mergeProviderBlock } from "../providers/provider-settings";
 import { ensureTenantSubscription } from "../subscriptions/subscription-provision";
+import { TrialEngineService } from "../subscriptions/trial-engine.service";
+import { CreditWalletService } from "../credits/credit-wallet.service";
+import { CreditReason } from "@prisma/client";
+import { KiorlyPaymentService } from "../billing-platform/kiorly-payment.service";
+import type { TrialConfigOverride } from "../subscriptions/trial-config";
 import { EntitlementsService } from "../entitlements/entitlements.service";
 import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 import { assertTenantDeploymentCellMatchesMarket } from "../markets/data-cells";
@@ -36,9 +41,50 @@ export class PlatformAdminService {
     private readonly clinics: ClinicsService,
     private readonly markets: MarketsService,
     private readonly entitlements: EntitlementsService,
+    private readonly trialEngine: TrialEngineService,
+    private readonly creditWallet: CreditWalletService,
+    private readonly kiorlyPayments: KiorlyPaymentService,
   ) {}
 
-  putTenantEntitlementOverride(
+  verifyKiorlyPayment(user: JwtUser, paymentId: string, body: { approved: boolean }) {
+    this.assertPlatform(user);
+    return this.kiorlyPayments.verifyManualPayment(user, paymentId, body.approved);
+  }
+
+  grantTenantCredits(
+    user: JwtUser,
+    tenantId: string,
+    body: {
+      amount: number;
+      reason: CreditReason;
+      expiresAt?: string | null;
+      note?: string;
+      secondApproverUserId?: string;
+    },
+  ) {
+    return this.creditWallet.grantManual(user, tenantId, body);
+  }
+
+  extendTenantTrial(
+    user: JwtUser,
+    tenantId: string,
+    body: { days: number; reason: string; trialConfigOverride?: TrialConfigOverride },
+  ) {
+    this.assertPlatform(user);
+    return this.trialEngine.extendTrial(tenantId, body.days, body.reason.trim(), user.userId).then(async (r) => {
+      if (body.trialConfigOverride) {
+        await this.trialEngine.patchTrialConfigOverride(
+          tenantId,
+          body.trialConfigOverride,
+          body.reason.trim(),
+          user.userId,
+        );
+      }
+      return r;
+    });
+  }
+
+  async putTenantEntitlementOverride(
     user: JwtUser,
     tenantId: string,
     key: string,
@@ -46,14 +92,31 @@ export class PlatformAdminService {
   ) {
     this.assertPlatform(user);
     const id = tenantId.trim();
-    return this.entitlements.setTenantOverride(
+    const trimmedKey = key.trim();
+    const row = await this.entitlements.setTenantOverride(
       id,
-      key.trim(),
+      trimmedKey,
       body.valueJson,
       body.reason.trim(),
       user.userId,
       body.expiresAt ? new Date(body.expiresAt) : null,
     );
+    await this.prisma.auditLog.create({
+      data: {
+        tenantId: id,
+        actorId: user.userId,
+        action: "entitlement.override_set",
+        resource: "TenantEntitlementOverride",
+        resourceId: `${id}:${trimmedKey}`,
+        metadata: {
+          key: trimmedKey,
+          reason: body.reason.trim(),
+          expiresAt: body.expiresAt ?? null,
+          overrideId: row.id,
+        },
+      },
+    });
+    return row;
   }
 
   private assertPlatform(user: JwtUser): void {
@@ -420,7 +483,7 @@ export class PlatformAdminService {
 
   patchUser(user: JwtUser, tenantId: string, userId: string, dto: PlatformPatchTenantUserDto) {
     this.assertPlatform(user);
-    return this.admin.updateTenantUser(tenantId, userId, dto);
+    return this.admin.updateTenantUser(tenantId, userId, dto, user);
   }
 
   deleteUser(user: JwtUser, tenantId: string, userId: string) {
@@ -543,7 +606,7 @@ export class PlatformAdminService {
     if (hasRole(dto, UserRole.PLATFORM_SUPER_ADMIN)) {
       throw new BadRequestException("Cannot assign PLATFORM_SUPER_ADMIN through organization user creation");
     }
-    return this.admin.createTenantUser(tenantId, dto);
+    return this.admin.createTenantUser(tenantId, dto, user);
   }
 
   listFeatureFlags(user: JwtUser) {

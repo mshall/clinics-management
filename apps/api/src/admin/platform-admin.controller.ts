@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UseGuards } from "@nestjs/common";
+import { CreditReason } from "@prisma/client";
 import { DeactivateTenantUserDto } from "./dto/deactivate-tenant-user.dto";
 import { ReactivateTenantUserDto } from "./dto/reactivate-tenant-user.dto";
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
@@ -16,6 +17,8 @@ import { PlatformPatchTenantUserDto } from "./dto/platform-patch-tenant-user.dto
 import { PlatformAdminService } from "./platform-admin.service";
 import { PlatformInsightsService } from "./platform-insights.service";
 import { DrugDatasetImportService, type DrugDatasetImportPayload } from "../clinical/drug-dataset-import.service";
+import { SettlementService } from "../billing-platform/settlement.service";
+import { PlatformMoneyAuditService } from "../audit/platform-money-audit.service";
 
 @ApiTags("admin-platform")
 @ApiBearerAuth("bearer")
@@ -26,7 +29,24 @@ export class PlatformAdminController {
     private readonly platform: PlatformAdminService,
     private readonly platformInsights: PlatformInsightsService,
     private readonly drugDatasets: DrugDatasetImportService,
+    private readonly settlement: SettlementService,
+    private readonly platformAudit: PlatformMoneyAuditService,
   ) {}
+
+  @Get("audit")
+  @ApiOperation({ summary: "Billing, credits, and plan change audit trail (platform super admin)" })
+  listBillingAudit(
+    @CurrentUser() user: JwtUser,
+    @Query("entity") entity?: string,
+    @Query("tenantId") tenantId?: string,
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string,
+    @Query("q") q?: string,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+  ) {
+    return this.platformAudit.list(user, { entity, tenantId, page, pageSize, q, from, to });
+  }
 
   @Get("overview")
   @ApiOperation({ summary: "Platform-wide KPIs (platform super admin)" })
@@ -255,6 +275,55 @@ export class PlatformAdminController {
     @Body() body: ReactivateTenantUserDto,
   ) {
     return this.platform.restoreUser(user, tenantId, userId, body);
+  }
+
+  @Post("payments/:id/verify")
+  @ApiOperation({ summary: "Verify manual Kiorly payment (InstaPay / bank proof)" })
+  verifyKiorlyPayment(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Body() body: { approved: boolean },
+  ) {
+    return this.platform.verifyKiorlyPayment(user, id, body);
+  }
+
+  @Post("tenants/:tenantId/credits")
+  @ApiOperation({ summary: "Grant SaaS billing credits to an organization (platform super admin)" })
+  grantCredits(
+    @CurrentUser() user: JwtUser,
+    @Param("tenantId") tenantId: string,
+    @Body()
+    body: {
+      amount: number;
+      reason: string;
+      expiresAt?: string | null;
+      note?: string;
+      secondApproverUserId?: string;
+    },
+  ) {
+    return this.platform.grantTenantCredits(user, tenantId, {
+      ...body,
+      reason: body.reason as CreditReason,
+    });
+  }
+
+  @Post("settlement/run")
+  @ApiOperation({ summary: "Run monthly Kiorly settlement for one or all tenants (platform super admin)" })
+  runSettlement(
+    @CurrentUser() user: JwtUser,
+    @Body() body: { period: string; tenantIds?: string[] },
+  ) {
+    return this.settlement.runForPlatform(user, body);
+  }
+
+  @Post("tenants/:tenantId/extend-trial")
+  @ApiOperation({ summary: "Extend an organization SaaS trial (platform super admin)" })
+  extendTrial(
+    @CurrentUser() user: JwtUser,
+    @Param("tenantId") tenantId: string,
+    @Body() body: { days: number; reason: string; trialConfigOverride?: Record<string, unknown> },
+  ) {
+    return this.platform.extendTenantTrial(user, tenantId, body);
   }
 
   @Put("tenants/:tenantId/entitlement-overrides/:key")

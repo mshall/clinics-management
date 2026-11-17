@@ -19,6 +19,7 @@ import { assertValidFiscalSerial, formatVirtualSerial } from "./generate-virtual
 import { countVirtualDevicesForClinic, nextVirtualSerial } from "./fiscal-device-provision";
 import { FiscalDeviceSecretsService, type FiscalCredentialPayload } from "./fiscal-device-secrets.service";
 import { resolveEtaConnection } from "../compliance/eta-secret-resolver";
+import { resolveEtaApiEnvironment } from "../compliance/eta-api-environment";
 
 function mapDevice(row: {
   id: string;
@@ -362,7 +363,7 @@ export class FiscalDevicesService {
     const providerKey = fiscalProviderKeyForMarket(marketCtx.taxConfig);
     const provider = getFiscalProvider(providerKey);
     if (!provider?.deviceRegistration?.required) {
-      return { requiresDevice: false, ready: true, providerKey };
+      return { requiresDevice: false, ready: true, providerKey, etaApiEnvironment: resolveEtaApiEnvironment() };
     }
     const active = await this.prisma.fiscalDevice.findFirst({
       where: {
@@ -378,6 +379,7 @@ export class FiscalDevicesService {
       requiresDevice: true,
       ready: Boolean(active),
       providerKey,
+      etaApiEnvironment: resolveEtaApiEnvironment(),
       deviceRegistration: provider.deviceRegistration,
     };
   }

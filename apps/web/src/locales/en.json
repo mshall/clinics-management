@@ -46,6 +46,7 @@
     "platformMarkets": "Market launch",
     "platformDrugDatasets": "Drug datasets",
     "platformPlans": "Plans & pricing",
+    "platformKiorex": "Kiorex fees",
     "platformOrganizations": "Organizations",
     "platformUsers": "Users",
     "platformClinics": "Clinics",
@@ -115,7 +116,50 @@
     "etaReceiptTitle": "Electronic tax receipt",
     "etaPatient": "Patient",
     "etaService": "Service",
-    "etaTrn": "TRN"
+    "etaTrn": "TRN",
+    "etaHealth": {
+      "title": "ETA production health",
+      "subtitle": "Pilot week 1 target: ≥ 95% of automatic submissions reach VALID on ETA without manual resubmit.",
+      "successRate": "Success rate",
+      "submitted": "Submitted",
+      "valid": "VALID",
+      "manual": "Manual resubmits",
+      "topRejections": "Top rejection classes",
+      "alertBelowThreshold": "Yesterday’s ETA success rate fell below 95%. Review failing operations and the runbook below.",
+      "startPilotClock": "Start production pilot week 1",
+      "pilotStarted": "Pilot started {{at}}",
+      "env": {
+        "preprod": "Pre-production",
+        "production": "Production",
+        "unknown": "Unknown"
+      }
+    },
+    "etaRunbook": {
+      "credentials": {
+        "title": "Expired or invalid POS credentials"
+      },
+      "validation": {
+        "title": "ETA validation rejection (4xx)"
+      },
+      "duplicate": {
+        "title": "Duplicate UUID (already registered)"
+      },
+      "temporary": {
+        "title": "Temporary outage or timeout"
+      },
+      "buyer_name": {
+        "title": "Buyer name / high-value threshold"
+      },
+      "item_code": {
+        "title": "Item / GPC code mismatch"
+      },
+      "branch_trn": {
+        "title": "Branch, TRN, or activity code"
+      },
+      "unknown": {
+        "title": "Other — review error detail"
+      }
+    }
   },
   "frontDesk": {
     "searchPatients": "Find patient",
@@ -208,7 +252,7 @@
     "locationUrl": "Clinic location link",
     "planIntro": "Choose how you start",
     "planLite": "Lite — essentials to run your clinic",
-    "planProTrial": "Pro — 14-day trial of advanced features",
+    "planProTrial": "Pro — founding trial (up to 6 months when activated)",
     "capabilityIntro": "What’s included (accurate labels):",
     "capabilityBullets": {
       "preVisitSummary": "Smart pre-visit summary — chart template, not a language model",
@@ -236,6 +280,33 @@
       "accept": "Accept all"
     },
     "patientPrivacyNotice": "Patient privacy notice"
+  },
+  "trial": {
+    "banner": {
+      "daysLeft": "{{count}} day(s) left in your Kiorly trial",
+      "activationProgress": "{{current}} of {{required}} visits to unlock your full founding trial",
+      "activated": "Founding trial unlocked — enjoy the full period",
+      "manageBilling": "Billing & plan"
+    }
+  },
+  "dunning": {
+    "grace": {
+      "owner": "Payment overdue — pay now to avoid losing scheduling and Pro features.",
+      "staff": "Payment overdue — contact the clinic owner to pay Kiorly."
+    },
+    "readOnly": {
+      "owner": "Account is read-only until payment — patients records stay accessible; pay to restore scheduling.",
+      "staff": "Clinic is read-only — contact the clinic owner to pay Kiorly."
+    },
+    "suspended": {
+      "owner": "Organization suspended — pay or export data. Staff cannot sign in until payment.",
+      "staff": "Organization suspended — contact the clinic owner."
+    },
+    "reminder": {
+      "owner": "Upcoming Kiorly invoice due — review billing to avoid interruption.",
+      "staff": "Kiorly billing reminder — contact the clinic owner if needed."
+    },
+    "payCta": "Pay Kiorly invoice"
   },
   "liteAdmin": {
     "pageTitle": "Settings",
@@ -541,6 +612,7 @@
     "acquisitionSocialTiktok": "Social Media — TikTok",
     "acquisitionWebsiteGoogle": "Website — Google",
     "acquisitionDoctorReferral": "Doctor Referral",
+    "acquisitionKiorex": "Kiorex marketplace",
     "acquisitionOther": "Other",
     "errorDocDescriptionRequired": "Each attached document needs a description.",
     "errorDocCategoryRequired": "Each attached document needs a type.",
@@ -549,6 +621,8 @@
     "errorReferralNameRequired": "Enter the referring doctor's name.",
     "errorOtherChannelRequired": "Describe how the patient found the clinic.",
     "errorExplainMoreRequired": "Explain more is required.",
+    "errorAcquisitionRequired": "Select how the patient found the clinic.",
+    "acquisitionSelect": "Select an option…",
     "errorFirstNameAr": "Arabic first name is required.",
     "errorLastNameAr": "Arabic last name is required.",
     "errorPhoneRequired": "Phone is required.",
@@ -749,6 +823,17 @@
     "list": "Upcoming & recent",
     "status": "Status",
     "whatsappConfirmedChip": "Confirmed by WhatsApp",
+    "newPatientChip": "New",
+    "bookingSource": {
+      "FRONT_DESK": "Front desk",
+      "PHONE": "Phone",
+      "WALK_IN": "Walk-in",
+      "CLINIC_LINK": "Clinic link",
+      "KIOREX_MARKETPLACE": "Kiorex",
+      "KIOREX_WHATSAPP": "Kiorex WhatsApp",
+      "INTEGRATION": "Integration",
+      "IMPORT": "Import"
+    },
     "markDone": "Mark completed",
     "bookedOk": "Appointment created.",
     "scheduledFeeHiddenRole": "Scheduled fees use organization defaults for your role. An administrator can enable fee fields per user.",
@@ -858,6 +943,8 @@
     "subtitle": "Virtual or physical POS devices registered with your tax authority.",
     "virtualLabel": "Kiorly virtual POS",
     "setupBanner": "Tax receipts are queued but not being sent — finish receipt device setup.",
+    "etaEnvironment": "ETA API environment: {{env}}",
+    "productionCredsHint": "For production cutover, enter each clinic’s live client ID and secret here after the pre-production billing drill.",
     "addVirtual": "Add virtual device",
     "addPhysical": "Add physical device",
     "colLabel": "Label",
@@ -1142,6 +1229,9 @@
     "errorDownInvalid": "Enter a valid down payment amount.",
     "errorDownNegative": "Down payment cannot be negative.",
     "errorPrescriptionRequired": "Upload a prescription or generate one from manual medications.",
+    "errorAcquisitionRequired": "Select how the patient found the clinic.",
+    "acquisitionSelect": "Select an option…",
+    "acquisitionHint": "Updates how this patient is recorded as having found the clinic on their profile.",
     "preSurgeryDocuments": "Pre-surgery documents",
     "postSurgeryTitle": "Post-surgery documents",
     "postSurgeryHint": "Add reports, pathology, or imaging after the operation is discharged.",
@@ -1590,6 +1680,79 @@
       "extraClinician": "Extra clinician amount",
       "publishPrice": "Publish price version"
     },
+    "kiorex": {
+      "title": "Kiorex commission rates",
+      "hint": "Per-market fees with competitor benchmarks. Warnings appear when a rate exceeds the target ratio (default 50% of lowest competitor).",
+      "saved": "Kiorex rate saved",
+      "settingsSaved": "Market Kiorex settings saved",
+      "filterMarket": "Filter by market",
+      "allMarkets": "All markets",
+      "colMarket": "Market",
+      "colSpecialty": "Specialty",
+      "colFee": "Fee",
+      "colBenchmark": "Benchmark",
+      "colStatus": "Guardrail",
+      "empty": "No Kiorex rates configured yet.",
+      "marketDefault": "Market default",
+      "example": "e.g.",
+      "aboveTarget": "Above {{pct}}% target",
+      "onTarget": "On target",
+      "addRate": "Add rate",
+      "market": "Market",
+      "specialty": "Specialty (optional)",
+      "feeType": "Fee type",
+      "amount": "Amount",
+      "percent": "Percent",
+      "minAmount": "Min amount",
+      "maxAmount": "Max amount",
+      "benchmarkFlat": "Lowest competitor (flat)",
+      "benchmarkPercent": "Lowest competitor (%)",
+      "benchmarkSource": "Benchmark source note",
+      "saveRate": "Save rate",
+      "marketSettings": "Market settings",
+      "targetRatio": "Benchmark target ratio",
+      "liteCap": "Lite monthly cap (optional)",
+      "saveSettings": "Save settings"
+    },
+    "commercial": {
+      "open": "Commercial",
+      "title": "Commercial config",
+      "saved": "Commercial config saved",
+      "preview": "Preview changes",
+      "previewReady": "Preview updated",
+      "changedKeys": "Changed: {{keys}}",
+      "trial": "Trial",
+      "trialHint": "Trial length, activation visits, and commission policy during trial months.",
+      "standardDays": "Standard trial (days)",
+      "foundingDays": "Founding trial (days)",
+      "minVisits": "Activation visits",
+      "withinDays": "Activation window (days)",
+      "commissionPolicy": "Trial commission policy",
+      "policyWaiveUpToPlan": "Waive up to plan price",
+      "policyWaiveAll": "Waive all commission",
+      "policyCharge": "Charge full commission",
+      "kiorex": "Kiorex",
+      "kiorexHint": "New-patient lookback, dispute window, benchmark guardrail, auto-confirm delay.",
+      "lookbackMonths": "New patient lookback (months)",
+      "disputeDays": "Dispute window (days)",
+      "benchmarkRatio": "Benchmark target ratio",
+      "autoConfirmHours": "Auto-confirm (hours)",
+      "lite": "Lite",
+      "liteHint": "Minimum invoice and optional monthly commission cap for Lite plans.",
+      "minInvoice": "Minimum invoice",
+      "commissionCap": "Monthly commission cap",
+      "noCap": "No cap",
+      "dunning": "Dunning",
+      "dunningHint": "Grace period, read-only, and suspension thresholds (days after invoice due).",
+      "graceDays": "Grace (full access)",
+      "readOnlyAfter": "Read-only from",
+      "suspendAfter": "Suspend from",
+      "referral": "Referral rewards",
+      "referralHint": "Referral credit months and annual limits.",
+      "rewardMonths": "Reward months",
+      "expiryMonths": "Credit expiry (months)",
+      "maxPerYear": "Max referrals / year"
+    },
     "marketCountryFlags": "Country feature flags",
     "marketFlagsHint": "Turn features on or off for every organization in {{market}}. Use AI assistant to enable or disable the in-app assistant for that country.",
     "flagOn": "Enabled",
@@ -1630,7 +1793,25 @@
     "confirmRevealPassword": "Stored passwords are encrypted and cannot be viewed. Confirm to set a new password for this user.",
     "passwordNotRetrievable": "The current password cannot be displayed. You can set a new one below.",
     "showPassword": "Show password",
-    "hidePassword": "Hide password"
+    "hidePassword": "Hide password",
+    "audit": {
+      "tab": "Audit",
+      "title": "Billing & plan audit",
+      "subtitle": "Subscription, credits, invoices, Kiorex commissions, entitlements, and settlement events for this organization.",
+      "entityFilter": "Category",
+      "entity": {
+        "all": "All billing events",
+        "subscription": "Subscription & dunning",
+        "credit": "Credits",
+        "kiorly_invoice": "Kiorly invoices",
+        "kiorex": "Kiorex commissions & rates",
+        "entitlement": "Entitlement overrides",
+        "plan_price": "Plan prices",
+        "market": "Market commercial config",
+        "settlement": "Monthly settlement",
+        "payment": "Kiorly payments"
+      }
+    }
   },
   "clinical": {
     "clinicTemplatesTitle": "Clinical form templates",
@@ -1784,7 +1965,84 @@
       "cancel": "Cancel at period end",
       "cancelScheduled": "Cancellation scheduled for period end",
       "cancelsAtPeriodEnd": "Cancels at period end",
-      "none": "No subscription on file."
+      "none": "No subscription on file.",
+      "wallet": {
+        "title": "Credit wallet",
+        "hint": "Kiorly SaaS billing credits (promos, referrals, goodwill). Consumed against subscription invoices.",
+        "balance": "Available balance",
+        "upcomingExpiries": "Expiring soon",
+        "expiresOn": "Expires {{date}}",
+        "ledger": "Ledger",
+        "type": "Type",
+        "reason": "Reason",
+        "amount": "Amount",
+        "remaining": "Remaining",
+        "date": "Date",
+        "empty": "No credit activity yet.",
+        "loadError": "Could not load credit wallet."
+      },
+      "invoices": {
+        "title": "Kiorly invoices",
+        "hint": "SaaS subscription and platform charges from Kiorly — not patient clinic invoices.",
+        "number": "Number",
+        "period": "Period",
+        "status": "Status",
+        "total": "Total",
+        "due": "Due date",
+        "pay": "Pay",
+        "pdf": "PDF",
+        "paid": "Payment recorded",
+        "empty": "No Kiorly invoices yet.",
+        "loadError": "Could not load Kiorly invoices.",
+        "status_DRAFT": "Draft",
+        "status_ISSUED": "Issued",
+        "status_PAID": "Paid",
+        "status_PARTIALLY_PAID": "Partially paid",
+        "status_VOID": "Void",
+        "status_UNCOLLECTIBLE": "Uncollectible",
+        "pdfError": "Could not open PDF",
+        "payTitle": "Pay invoice",
+        "payMethod": "Payment method",
+        "methodCard": "Saved card",
+        "methodFawry": "Fawry",
+        "methodInstapay": "InstaPay",
+        "methodBank": "Bank transfer",
+        "chargeCard": "Charge default card",
+        "addCard": "Add card (hosted)",
+        "cardSession": "Complete card entry in the secure Paymob window",
+        "getFawryCode": "Get Fawry code",
+        "fawryCode": "Fawry reference",
+        "proof": "Upload proof",
+        "payUnderReview": "Payment submitted for review",
+        "payPending": "Payment initiated",
+        "underReview": "Under review",
+        "underReviewBanner": "Payment under review — dunning paused",
+        "detail": "Details",
+        "detailTitle": "Invoice details",
+        "noSettlementSummary": "No settlement summary on this invoice."
+      },
+      "kiorex": {
+        "title": "Kiorex commission charges",
+        "hint": "Attended new-patient bookings from Kiorex — frozen at check-in. Dispute before the deadline if needed.",
+        "period": "Period (YYYY-MM)",
+        "filterStatus": "Status",
+        "allStatuses": "All statuses",
+        "colDate": "Date",
+        "colDoctor": "Doctor",
+        "colPatient": "Patient",
+        "colAmount": "Amount",
+        "colStatus": "Status",
+        "empty": "No Kiorex charges in this period.",
+        "loadError": "Could not load Kiorex charges.",
+        "dispute": "Dispute",
+        "disputeOpened": "Dispute submitted",
+        "status_PENDING": "Pending",
+        "status_CONFIRMED": "Confirmed",
+        "status_DISPUTED": "Disputed",
+        "status_REVERSED": "Reversed",
+        "status_BILLED": "Billed",
+        "status_WAIVED": "Waived"
+      }
     },
     "toggle": "Toggle",
     "allTenants": "All tenants",
@@ -1900,8 +2158,8 @@
       "tipEncountersPerformed": "Encounters where this user is the assigned clinician (doctor who performed the visit).",
       "tipApptsCreated": "Appointments this user created in the system (audit).",
       "tipApptsPerformed": "Appointments where this user is the assigned clinician.",
-      "tipOpsCreated": "Surgeries/operations this user scheduled or logged (creator).",
-      "tipOpsPerformed": "Operations where this user is the assigned surgeon/clinician.",
+      "tipOpsCreated": "Operations this user created in the system (by record creation date, not operation date).",
+      "tipOpsPerformed": "Operations where this user is the assigned surgeon/clinician, counted by operation date (matches the Operations page).",
       "tipTickets": "Open support tickets currently assigned to this user.",
       "inactive": "Inactive",
       "staffEmpty": "No staff metrics for this period."
@@ -2009,6 +2267,18 @@
     "orgUsersSearchPh": "Email or display name…",
     "orgUsersRoleAll": "All roles",
     "orgUsersEdit": "Edit user",
+    "orgUserPrimaryRoleTitle": "Primary role type",
+    "orgUserPrimaryRoleHint": "Choose a new role to preview default access below. Confirm to apply — this resets custom permissions to the new role’s defaults.",
+    "orgUserPrimaryRoleConfirm": "Confirm role change",
+    "orgUserPrimaryRolePreview": "Previewing defaults for {{role}}. Nothing is saved until you confirm.",
+    "orgUserRolePreviewBadge": "preview",
+    "orgUserRoleChangeConfirmTitle": "Change primary role?",
+    "orgUserRoleChangeConfirmIntro": "This updates the user’s primary role and resets sidebar access, money visibility, and additional roles to the defaults for the new role. Other permission tweaks on this screen are only previews until you save them separately.",
+    "orgUserRoleChangeConfirmAction": "Confirm role change",
+    "orgUserRoleChangeFrom": "Current role",
+    "orgUserRoleChangeTo": "New role",
+    "orgUserRoleChangeResetNote": "Navigation tabs, money visibility overrides, additional roles, and delegated HR clinic access will be cleared.",
+    "orgUserRoleChangeSuccess": "Primary role updated.",
     "orgUserHrSection": "HR & payroll",
     "orgUserHrSectionHint": "Contract type and monthly salary for the linked employee record. Salaries appear automatically in monthly PAYROLL expenses.",
     "orgUsersDeleteConfirm": "Delete this user? This cannot be undone.",

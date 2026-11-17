@@ -7,6 +7,9 @@ import { IntegrationClient, RequireIntegrationScopes } from "./integration-auth.
 import { IntegrationAuthGuard } from "./integration-auth.guard";
 import { EntitlementGuard } from "../entitlements/entitlement.guard";
 import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
+import { SubscriptionAccessGuard } from "../subscriptions/subscription-access.guard";
+import { RequiresSubscriptionAccess } from "../subscriptions/requires-subscription-access.decorator";
+import { SubscriptionAccessAction } from "../subscriptions/subscription-access-policy";
 import type { IntegrationPrincipal } from "./integration.types";
 import { IntegrationsAppointmentsService } from "./integrations-appointments.service";
 import { IntegrationFailureExceptionFilter } from "./integration-failure.filter";
@@ -14,7 +17,7 @@ import { IntegrationFailureExceptionFilter } from "./integration-failure.filter"
 @ApiTags("integrations")
 @ApiBearerAuth("integration")
 @Controller("integrations")
-@UseGuards(IntegrationAuthGuard, EntitlementGuard)
+@UseGuards(IntegrationAuthGuard, EntitlementGuard, SubscriptionAccessGuard)
 @RequiresEntitlement("mod_integrations")
 @UseFilters(IntegrationFailureExceptionFilter)
 export class IntegrationsAppointmentsController {
@@ -60,6 +63,7 @@ export class IntegrationsAppointmentsController {
   }
 
   @Post("appointments")
+  @RequiresSubscriptionAccess(SubscriptionAccessAction.KIOREX_BOOKING)
   @RequireIntegrationScopes(IntegrationScope.APPOINTMENTS_WRITE)
   @ApiOperation({ summary: "Book an appointment from an external patient platform" })
   book(@IntegrationClient() client: IntegrationPrincipal, @Body() body: IntegrationBookAppointmentDto) {

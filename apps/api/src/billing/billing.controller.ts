@@ -6,7 +6,10 @@ import { CurrentUser } from "../auth/current-user.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { BillingInterval, PlanKey } from "@prisma/client";
+import { DunningService } from "../subscriptions/dunning.service";
 import { SubscriptionService } from "../subscriptions/subscription.service";
+import { TrialEngineService } from "../subscriptions/trial-engine.service";
+import { CreditWalletService } from "../credits/credit-wallet.service";
 import { BillingService } from "./billing.service";
 
 @ApiTags("billing")
@@ -17,11 +20,38 @@ export class BillingController {
   constructor(
     private readonly billing: BillingService,
     private readonly subscriptions: SubscriptionService,
+    private readonly dunning: DunningService,
+    private readonly trialEngine: TrialEngineService,
+    private readonly creditWallet: CreditWalletService,
   ) {}
 
   @Get("subscription")
   getSubscription(@CurrentUser() user: JwtUser) {
     return this.subscriptions.getForTenant(user, requireTenantId(user));
+  }
+
+  @Get("access-state")
+  getAccessState(@CurrentUser() user: JwtUser) {
+    return this.dunning.getAccessState(requireTenantId(user), user);
+  }
+
+  @Get("trial")
+  getTrial(@CurrentUser() user: JwtUser) {
+    return this.trialEngine.getTrialStatus(user, requireTenantId(user));
+  }
+
+  @Get("wallet")
+  getCreditWallet(
+    @CurrentUser() user: JwtUser,
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string,
+  ) {
+    return this.creditWallet.getWalletForTenant(
+      user,
+      requireTenantId(user),
+      page ? Number(page) : undefined,
+      pageSize ? Number(pageSize) : undefined,
+    );
   }
 
   @Post("subscription/change-plan")

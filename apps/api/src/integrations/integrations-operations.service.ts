@@ -5,6 +5,7 @@ import { AuditService } from "../audit/audit.service";
 import { OperationsService } from "../operations/operations.service";
 import { PrismaService } from "../prisma/prisma.service";
 import type { IntegrationBookOperationDto } from "./dto/integration-book-operation.dto";
+import type { PatientAcquisitionChannel } from "@prisma/client";
 import type { IntegrationPrincipal } from "./integration.types";
 import { IntegrationClientService } from "./integration-client.service";
 import { IntegrationWebhookService } from "./integration-webhook.service";
@@ -124,6 +125,21 @@ export class IntegrationsOperationsService {
       throw new ForbiddenException("Clinic not permitted for this integration client");
     }
     const patientId = await this.resolvePatientId(principal.tenantId, dto);
+    const patientAcquisition = await this.prisma.patient.findFirst({
+      where: { id: patientId, tenantId: principal.tenantId, deletedAt: null },
+      select: {
+        acquisitionChannel: true,
+        acquisitionReferralName: true,
+        acquisitionOtherDetail: true,
+      },
+    });
+    const acquisitionChannel =
+      dto.acquisitionChannel ?? patientAcquisition?.acquisitionChannel ?? undefined;
+    if (!acquisitionChannel) {
+      throw new BadRequestException(
+        "acquisitionChannel is required when the patient has no acquisition source on file",
+      );
+    }
     const created = await this.operations.createForIntegration(principal.tenantId, {
       clinicId: dto.clinicId,
       patientId,
@@ -136,6 +152,11 @@ export class IntegrationsOperationsService {
       feeCurrency: dto.feeCurrency,
       integrationClientId: principal.id,
       externalReference: dto.externalReference?.trim() || undefined,
+      acquisitionChannel: acquisitionChannel as PatientAcquisitionChannel,
+      acquisitionReferralName:
+        dto.acquisitionReferralName ?? patientAcquisition?.acquisitionReferralName ?? undefined,
+      acquisitionOtherDetail:
+        dto.acquisitionOtherDetail ?? patientAcquisition?.acquisitionOtherDetail ?? undefined,
     });
 
     await this.audit.recordIntegration({

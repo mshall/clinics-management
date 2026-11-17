@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { AppointmentStatus, EncounterStatus, Prisma, UserRole, VisitCollectionMode } from "@prisma/client";
+import { AppointmentStatus, BookingSource, EncounterStatus, Prisma, UserRole, VisitCollectionMode } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { findActiveSchedulingPhysician } from "../common/active-scheduling-physician";
 import {
@@ -41,6 +41,9 @@ import type { CreateAppointmentDto } from "./dto/create-appointment.dto";
 import type { AppointmentDto } from "./dto/appointment.dto";
 import type { UpdateAppointmentDto } from "./dto/update-appointment.dto";
 import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
+import { NewPatientService } from "../patients/new-patient.service";
+import { isCommissionChargeableBooking } from "./booking-attribution";
+import { CommissionChargeService, type BilledReversalCreditIntent } from "../kiorex/commission-charge.service";
 
 const appointmentDtoInclude = {
   patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } },
@@ -66,6 +69,8 @@ export class AppointmentsService {
     private readonly scheduling: SchedulingService,
     private readonly frontDeskFlow: FrontDeskFlowService,
     private readonly featureFlags: FeatureFlagsService,
+    private readonly newPatients: NewPatientService,
+    private readonly commissionCharges: CommissionChargeService,
   ) {}
 
   private async assertAppointmentAccess(
@@ -175,6 +180,17 @@ export class AppointmentsService {
       checkedInAt: row.checkedInAt?.toISOString() ?? null,
       queueTicketNumber: row.queueTicketNumber ?? null,
       whatsappConfirmedAt: row.whatsappConfirmedAt?.toISOString() ?? null,
+      bookingSource: row.bookingSource,
+      attributionJson:
+        row.attributionJson && typeof row.attributionJson === "object" && !Array.isArray(row.attributionJson)
+          ? (row.attributionJson as Record<string, unknown>)
+          : null,
+      isNewPatientAtBooking: row.isNewPatientAtBooking,
+      newPatientCheckedAt: row.newPatientCheckedAt?.toISOString() ?? null,
+      commissionChargeableAtBooking: isCommissionChargeableBooking(
+        row.bookingSource,
+        row.isNewPatientAtBooking,
+      ),
       ...(patient
         ? {
             patientMrn: patient.mrn,
@@ -237,6 +253,7 @@ export class AppointmentsService {
     sortByStr?: string,
     sortOrderStr?: string,
     bookableOnlyStr?: string,
+    bookingSourceStr?: string,
     viewer?: JwtUser
   ) {
     const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
@@ -303,6 +320,11 @@ export class AppointmentsService {
     const st = statusStr?.trim().toUpperCase();
     if (st && (Object.values(AppointmentStatus) as string[]).includes(st)) {
       and.push({ status: st as AppointmentStatus });
+    }
+
+    const bs = bookingSourceStr?.trim().toUpperCase();
+    if (bs && (Object.values(BookingSource) as string[]).includes(bs)) {
+      and.push({ bookingSource: bs as BookingSource });
     }
 
     const clinicId = clinicIdStr?.trim();
@@ -416,7 +438,12 @@ export class AppointmentsService {
 
   async createForIntegration(
     tenantId: string,
-    dto: CreateAppointmentDto & { integrationClientId: string; externalReference?: string },
+    dto: CreateAppointmentDto & {
+      integrationClientId: string;
+      externalReference?: string;
+      bookingSource?: BookingSource;
+      attributionJson?: Record<string, unknown>;
+    },
   ): Promise<AppointmentDto> {
     if (dto.externalReference) {
       const existing = await this.prisma.appointment.findFirst({
@@ -432,6 +459,8 @@ export class AppointmentsService {
     return this.createInternal(tenantId, dto, {
       integrationClientId: dto.integrationClientId,
       externalReference: dto.externalReference ?? null,
+      bookingSource: dto.bookingSource,
+      attributionJson: dto.attributionJson ?? null,
     });
   }
 
@@ -471,7 +500,12 @@ export class AppointmentsService {
   private async createInternal(
     tenantId: string,
     dto: CreateAppointmentDto,
-    integration: { integrationClientId?: string; externalReference?: string | null },
+    integration: {
+      integrationClientId?: string;
+      externalReference?: string | null;
+      bookingSource?: BookingSource;
+      attributionJson?: Record<string, unknown> | null;
+    },
     actor?: JwtUser,
   ): Promise<AppointmentDto> {
     const [clinic, patient, clinician] = await Promise.all([
@@ -549,6 +583,14 @@ export class AppointmentsService {
       allowedTransferChannels: transferCtx.allowedTransferChannels,
     });
 
+    const bookingSource =
+      integration.bookingSource ??
+      dto.bookingSource ??
+      (integration.integrationClientId ? BookingSource.INTEGRATION : BookingSource.FRONT_DESK);
+    const attributionJson =
+      integration.attributionJson ?? dto.attributionJson ?? null;
+    const newPatientStamp = await this.newPatients.stampNewPatientAtBooking(tenantId, dto.patientId, start);
+
     const row = await this.prisma.appointment.create({
       data: {
         tenantId,
@@ -568,6 +610,10 @@ export class AppointmentsService {
         notes: dto.notes ?? null,
         integrationClientId: integration.integrationClientId ?? null,
         externalReference: integration.externalReference ?? null,
+        bookingSource,
+        attributionJson: attributionJson ? (attributionJson as Prisma.InputJsonValue) : undefined,
+        isNewPatientAtBooking: newPatientStamp.isNewPatientAtBooking,
+        newPatientCheckedAt: newPatientStamp.newPatientCheckedAt,
       },
       include: appointmentDtoInclude,
     });
@@ -593,11 +639,14 @@ export class AppointmentsService {
       await assertNoOpenEncounterForAppointmentComplete(this.prisma, tenantId, id);
       await assertScheduledTransferFeeCollected(this.prisma, tenantId, id);
     }
+    const creditIntents: BilledReversalCreditIntent[] = [];
     const row = await this.prisma.$transaction(async (tx) => {
       let patch: Prisma.AppointmentUpdateInput;
+      let credit: BilledReversalCreditIntent | null = null;
       if (isRevertingAppointmentCheckIn(existing.status, status)) {
         patch = buildRevertCheckInPatch(status);
         await deleteDraftEncountersOnCheckInRevert(tx, tenantId, id);
+        credit = await this.commissionCharges.onRevert(tx, tenantId, id, "check_in_reverted");
       } else if (status === AppointmentStatus.CHECKED_IN && existing.status !== AppointmentStatus.CHECKED_IN) {
         patch = await this.frontDeskFlow.buildCheckInStatusPatch(tx, tenantId, existing.clinicId, {
           existingPreferred: existing.preferredRoomLabel ?? existing.roomLabel,
@@ -613,8 +662,21 @@ export class AppointmentsService {
       if (!isRevertingAppointmentCheckIn(existing.status, status)) {
         await ensureDraftEncounterIfCheckedIn(tx, tenantId, id);
       }
+      if (status === AppointmentStatus.CHECKED_IN && existing.status !== AppointmentStatus.CHECKED_IN) {
+        await this.commissionCharges.onCheckIn(tx, tenantId, id, row.checkedInAt ?? new Date());
+      } else if (
+        status === AppointmentStatus.CANCELLED ||
+        status === AppointmentStatus.NO_SHOW
+      ) {
+        const c = await this.commissionCharges.onCancelOrNoShow(tx, tenantId, id);
+        if (c) credit = c;
+      } else if (status === AppointmentStatus.COMPLETED) {
+        await this.commissionCharges.onComplete(tx, tenantId, id);
+      }
+      if (credit) creditIntents.push(credit);
       return row;
     });
+    await this.commissionCharges.applyCreditIntents(creditIntents);
     if (status === AppointmentStatus.CANCELLED) {
       await this.scheduling.offerWaitlistForCancelledSlot(
         tenantId,
@@ -718,11 +780,14 @@ export class AppointmentsService {
       scheduledPatch = { scheduledCollectionMode: null, scheduledTransferChannel: null };
     }
 
+    const creditIntents: BilledReversalCreditIntent[] = [];
     const row = await this.prisma.$transaction(async (tx) => {
       const reverting =
         nextStatus !== undefined && isRevertingAppointmentCheckIn(existing.status, nextStatus);
       if (reverting && nextStatus !== undefined) {
         await deleteDraftEncountersOnCheckInRevert(tx, tenantId, id);
+        const credit = await this.commissionCharges.onRevert(tx, tenantId, id, "check_in_reverted");
+        if (credit) creditIntents.push(credit);
       }
       const checkIn =
         !reverting &&
@@ -761,12 +826,21 @@ export class AppointmentsService {
         await ensureDraftEncounterIfCheckedIn(tx, tenantId, id);
       }
 
+      if (
+        !reverting &&
+        nextStatus === AppointmentStatus.CHECKED_IN &&
+        existing.status !== AppointmentStatus.CHECKED_IN
+      ) {
+        await this.commissionCharges.onCheckIn(tx, tenantId, id, updated.checkedInAt ?? new Date());
+      }
+
       if (feeProvided) {
         await syncOpenEncounterVisitFeeFromAppointment(tx, tenantId, id, Number(dto.feeAmount));
       }
 
       return updated;
     });
+    await this.commissionCharges.applyCreditIntents(creditIntents);
     return this.finishAppointmentDto(tenantId, row, viewer);
   }
 
@@ -778,6 +852,7 @@ export class AppointmentsService {
     this.assertCanDeleteAppointment(viewer);
     const existing = await this.prisma.appointment.findFirst({ where: { id, tenantId } });
     if (!existing) throw new NotFoundException("Appointment not found");
+    await this.commissionCharges.beforeAppointmentDelete(tenantId, id);
     await this.prisma.appointment.delete({ where: { id } });
     return { ok: true, id };
   }

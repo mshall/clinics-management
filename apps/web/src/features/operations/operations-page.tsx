@@ -76,6 +76,11 @@ import { DatetimeLocalField } from "@/components/datetime-local-field";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { OperationsSummaryBreakdown } from "@/features/operations/operations-summary-cards";
 import { OperationsPeriodStats } from "@/features/operations/operations-period-stats";
+import {
+  PatientAcquisitionFields,
+  emptyPatientAcquisitionFormValues,
+  patientAcquisitionFormToBody,
+} from "@/components/patient-acquisition-fields";
 
 function toOperationIso(localDatetime: string): string {
   const d = new Date(localDatetime);
@@ -196,6 +201,7 @@ export function OperationsPage() {
   const [prescriptionFile, setPrescriptionFile] = useState<File | null>(null);
   const [generatedPrescriptionFile, setGeneratedPrescriptionFile] = useState<File | null>(null);
   const [pinnedPhysicianItem, setPinnedPhysicianItem] = useState<PickListItem | null>(null);
+  const [acquisition, setAcquisition] = useState(emptyPatientAcquisitionFormValues);
 
   const bookPatientPickSearch = useDebouncedPickListSearch();
   const bookDoctorPickSearch = useDebouncedPickListSearch();
@@ -303,6 +309,7 @@ export function OperationsPage() {
     setMedications(medReset.medications);
     setPrescriptionFile(medReset.prescriptionFile);
     setGeneratedPrescriptionFile(medReset.generatedPrescriptionFile);
+    setAcquisition(emptyPatientAcquisitionFormValues());
   };
 
   const [efPatient, setEfPatient] = useState("");
@@ -490,9 +497,10 @@ export function OperationsPage() {
   useEffect(() => {
     if (singleManagedClinic) {
       setClinicId(singleManagedClinic.id);
-      setFilterClinicId(singleManagedClinic.id);
+      // Physicians may perform procedures across branches; do not narrow the list to one clinic.
+      if (!isPhysician) setFilterClinicId(singleManagedClinic.id);
     }
-  }, [singleManagedClinic?.id]);
+  }, [singleManagedClinic?.id, isPhysician]);
 
   const filteredRows = useMemo(() => {
     const loc = localeForLanguage(i18n.language);
@@ -541,6 +549,8 @@ export function OperationsPage() {
           prescriptionFile: editPrescriptionFile,
           generatedPrescriptionFile: editGeneratedPrescriptionFile,
           hasExistingPrescription: editHadExistingPrescription,
+          acquisition: emptyPatientAcquisitionFormValues(),
+          requireAcquisition: false,
         },
         t,
       );
@@ -779,6 +789,7 @@ export function OperationsPage() {
         clinicId: schedulingClinicId || undefined,
         noMedications: medTab === "none",
         feeCurrency,
+        ...patientAcquisitionFormToBody(acquisition),
       });
 
       for (const row of docRows) {
@@ -841,6 +852,7 @@ export function OperationsPage() {
         prescriptionFile,
         generatedPrescriptionFile,
         feesOptional: !canEditFees,
+        acquisition,
       },
       t,
     );
@@ -1768,6 +1780,17 @@ export function OperationsPage() {
                   onGeneratedPrescriptionFileChange={setGeneratedPrescriptionFile}
                   prescriptionContext={prescriptionContext}
                 />
+              </fieldset>
+
+              <fieldset className="space-y-3 rounded-lg border border-border p-4">
+                <legend className="px-1 text-sm font-medium">{t("patients.howDidTheyFindUs", "How did they find us?")}</legend>
+                <PatientAcquisitionFields required values={acquisition} onChange={setAcquisition} />
+                <p className="text-xs text-muted-foreground">
+                  {t(
+                    "operations.acquisitionHint",
+                    "Updates how this patient is recorded as having found the clinic on their profile.",
+                  )}
+                </p>
               </fieldset>
 
               {formErr ? <p className="text-sm text-destructive">{formErr}</p> : null}

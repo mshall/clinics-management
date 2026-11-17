@@ -4,6 +4,7 @@ import { BillingInterval, PlanKey, PrismaClient, SubscriptionStatus } from "@pri
 import { ensureAllTenantSubscriptions } from "./subscription-provision";
 import { SubscriptionLifecycleService } from "./subscription-lifecycle.service";
 import { SubscriptionService } from "./subscription.service";
+import { TrialEngineService } from "./trial-engine.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { LegalAcceptanceService } from "../legal/legal-acceptance.service";
@@ -12,7 +13,8 @@ const prisma = new PrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 const legal = new LegalAcceptanceService(prismaSvc, new AuditService(prismaSvc));
 const subs = new SubscriptionService(prismaSvc, legal);
-const lifecycle = new SubscriptionLifecycleService(prisma as unknown as PrismaService, subs);
+const trialEngine = new TrialEngineService(prismaSvc, subs);
+const lifecycle = new SubscriptionLifecycleService(prisma as unknown as PrismaService, subs, trialEngine);
 
 describe("PL-02 subscriptions", () => {
   before(async () => {

@@ -89,3 +89,7 @@ export const PlatformPlansTab = lazyNamed(
   () => import("@/features/platform/platform-plans-tab"),
   "PlatformPlansTab",
 );
+export const PlatformKiorexRatesTab = lazyNamed(
+  () => import("@/features/platform/platform-kiorex-rates-tab"),
+  "PlatformKiorexRatesTab",
+);

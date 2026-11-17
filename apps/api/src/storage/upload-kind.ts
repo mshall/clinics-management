@@ -7,4 +7,5 @@ export type UploadKind =
   | "operations"
   | "users"
   | "clinics"
-  | "revenue";
+  | "revenue"
+  | "kiorly-payments";

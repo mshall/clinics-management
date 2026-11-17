@@ -23,6 +23,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import {
   hasPatientAcquisitionInput,
   patientAcquisitionUpdateData,
+  requirePatientAcquisition,
   validatePatientAcquisition,
 } from "../common/patient-acquisition";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
@@ -423,7 +424,7 @@ export class PatientsService {
 
   async create(tenantId: string, dto: CreatePatientDto, user: JwtUser): Promise<PatientDto> {
     await this.assertHomeBranchInScope(tenantId, user, dto.homeBranchId ?? null);
-    validatePatientAcquisition(dto);
+    requirePatientAcquisition(dto);
     if (dto.homeBranchId) {
       const branch = await this.prisma.clinic.findFirst({
         where: { id: dto.homeBranchId, tenantId },

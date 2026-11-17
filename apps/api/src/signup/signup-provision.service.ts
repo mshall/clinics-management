@@ -26,6 +26,7 @@ import { assertTenantDeploymentCellMatchesMarket } from "../markets/data-cells";
 import { mergeProviderBlock } from "../providers/provider-settings";
 import { PrismaService } from "../prisma/prisma.service";
 import { addBillingPeriod } from "../subscriptions/subscription-period";
+import { TrialEngineService } from "../subscriptions/trial-engine.service";
 import { defaultAppointmentTypesForSpecialty } from "./signup-appointment-types";
 import { availabilityWeekFromClinicHours } from "./signup-availability";
 import { isDisposableEmail } from "./signup-disposable-email";
@@ -228,7 +229,7 @@ export class SignupProvisionService {
       });
 
       await tx.creditWallet.create({
-        data: { tenantId: tenant.id, balance: 0, currency: "credits" },
+        data: { tenantId: tenant.id, balance: 0, currency: tenant.baseCurrency, version: 0 },
       });
 
       const plan = await tx.plan.findUnique({ where: { key: planKey } });
@@ -242,18 +243,18 @@ export class SignupProvisionService {
 
       const now = new Date();
       const periodEnd = addBillingPeriod(now, interval);
-      const trialDays = planKey === PlanKey.PRO ? 14 : 0;
+      const paidTrial = planKey === PlanKey.PRO || planKey === PlanKey.CLINIC;
       const trialPlan =
-        trialDays > 0 ? await tx.plan.findUnique({ where: { key: PlanKey.PRO } }) : null;
+        paidTrial ? await tx.plan.findUnique({ where: { key: planKey === PlanKey.CLINIC ? PlanKey.CLINIC : PlanKey.PRO } }) : null;
 
       let status: SubscriptionStatus = SubscriptionStatus.ACTIVE;
       let trialStartsAt: Date | null = null;
       let trialEndsAt: Date | null = null;
       let trialPlanId: string | null = null;
-      if (trialDays > 0 && trialPlan) {
+      if (paidTrial && trialPlan) {
         status = SubscriptionStatus.TRIALING;
         trialStartsAt = now;
-        trialEndsAt = new Date(now.getTime() + trialDays * 86_400_000);
+        trialEndsAt = TrialEngineService.trialEndsAtForNewSignup(now, market.featureDefaults, null);
         trialPlanId = trialPlan.id;
       }
 

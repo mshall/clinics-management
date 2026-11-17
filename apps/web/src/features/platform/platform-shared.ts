@@ -55,8 +55,13 @@ export const ORG_USER_ROLES = [
   "CLINIC_ASSISTANT",
 ] as const;
 
-/** Roles assignable when creating a tenant user (group admin is provisioned with the org). */
+/** Roles assignable when creating a tenant user (excludes group admin unless caller is org admin). */
 export const ORG_USER_ROLES_CREATABLE = ORG_USER_ROLES.filter((r) => r !== "GROUP_ADMIN");
+
+export function orgUserRolesForCreate(viewerRole?: string): readonly (typeof ORG_USER_ROLES)[number][] {
+  if (viewerRole === "group_admin" || viewerRole === "GROUP_ADMIN") return ORG_USER_ROLES;
+  return ORG_USER_ROLES_CREATABLE;
+}
 
 /** Roles assignable when editing — group admin only if the user already is one. */
 export function orgUserRolesForEdit(currentRole: string): readonly (typeof ORG_USER_ROLES)[number][] {

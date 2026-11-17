@@ -46,6 +46,7 @@
     "platformMarkets": "إطلاق السوق",
     "platformDrugDatasets": "الدليل الدوائي",
     "platformPlans": "الخطط والأسعار",
+    "platformKiorex": "رسوم كيوركس",
     "platformOrganizations": "المنظمات",
     "platformUsers": "المستخدمون",
     "platformClinics": "العيادات",
@@ -115,7 +116,50 @@
     "etaReceiptTitle": "إيصال ضريبي إلكتروني",
     "etaPatient": "المريض",
     "etaService": "الخدمة",
-    "etaTrn": "الرقم الضريبي"
+    "etaTrn": "الرقم الضريبي",
+    "etaHealth": {
+      "title": "صحة إنتاج ETA",
+      "subtitle": "هدف الأسبوع الأول للتجريب: ≥ 95٪ من الإرسال التلقائي يصل إلى VALID دون إعادة إرسال يدوية.",
+      "successRate": "نسبة النجاح",
+      "submitted": "مُرسَل",
+      "valid": "VALID",
+      "manual": "إعادة إرسال يدوية",
+      "topRejections": "أبرز أسباب الرفض",
+      "alertBelowThreshold": "انخفضت نسبة نجاح ETA عن 95٪ أمس. راجع العمليات الفاشلة ودليل التشغيل أدناه.",
+      "startPilotClock": "بدء أسبوع الإنتاج التجريبي 1",
+      "pilotStarted": "بدأ التجريب {{at}}",
+      "env": {
+        "preprod": "ما قبل الإنتاج",
+        "production": "إنتاج",
+        "unknown": "غير معروف"
+      }
+    },
+    "etaRunbook": {
+      "credentials": {
+        "title": "بيانات اعتماد منتهية أو غير صالحة"
+      },
+      "validation": {
+        "title": "رفض تحقق ETA (4xx)"
+      },
+      "duplicate": {
+        "title": "UUID مكرر (مسجل مسبقًا)"
+      },
+      "temporary": {
+        "title": "انقطاع أو مهلة مؤقتة"
+      },
+      "buyer_name": {
+        "title": "اسم المشتري / عتبة المبلغ الكبير"
+      },
+      "item_code": {
+        "title": "رمز الصنف / GPC"
+      },
+      "branch_trn": {
+        "title": "الفرع أو الرقم الضريبي أو رمز النشاط"
+      },
+      "unknown": {
+        "title": "أخرى — راجع تفاصيل الخطأ"
+      }
+    }
   },
   "frontDesk": {
     "searchPatients": "البحث عن مريض",
@@ -208,7 +252,7 @@
     "locationUrl": "رابط موقع العيادة",
     "planIntro": "اختر طريقة البدء",
     "planLite": "لايت — أساسيات تشغيل العيادة",
-    "planProTrial": "برو — تجربة 14 يوماً للميزات المتقدمة",
+    "planProTrial": "برو — تجربة تأسيس (حتى 6 أشهر عند التفعيل)",
     "capabilityIntro": "ما الذي تحصل عليه (بوضوح):",
     "capabilityBullets": {
       "preVisitSummary": "ملخص ذكي قبل الزيارة — قالب من السجل، وليس نموذج لغوي",
@@ -236,6 +280,33 @@
       "accept": "قبول الكل"
     },
     "patientPrivacyNotice": "إشعار خصوصية المريض"
+  },
+  "trial": {
+    "banner": {
+      "daysLeft": "{{count}} يوم متبقٍ في تجربة كيورلي",
+      "activationProgress": "{{current}} من {{required}} زيارة لفتح تجربة التأسيس الكاملة",
+      "activated": "تم فتح تجربة التأسيس — استمتع بالمدة الكاملة",
+      "manageBilling": "الفوترة والخطة"
+    }
+  },
+  "dunning": {
+    "grace": {
+      "owner": "تأخر الدفع — ادفع الآن لتجنب فقدان الجدولة وميزات برو.",
+      "staff": "تأخر الدفع — تواصل مع مالك العيادة لدفع كيورلي."
+    },
+    "readOnly": {
+      "owner": "الحساب للقراءة فقط حتى السداد — سجلات المرضى متاحة؛ ادفع لاستعادة الجدولة.",
+      "staff": "العيادة للقراءة فقط — تواصل مع مالك العيادة لدفع كيورلي."
+    },
+    "suspended": {
+      "owner": "المؤسسة موقوفة — ادفع أو صدّر البيانات. لا يمكن للموظفين تسجيل الدخول حتى السداد.",
+      "staff": "المؤسسة موقوفة — تواصل مع مالك العيادة."
+    },
+    "reminder": {
+      "owner": "فاتورة كيورلي قريبة الاستحقاق — راجع الفوترة لتجنب الانقطاع.",
+      "staff": "تذكير فوترة كيورلي — تواصل مع مالك العيادة عند الحاجة."
+    },
+    "payCta": "دفع فاتورة كيورلي"
   },
   "liteAdmin": {
     "pageTitle": "الإعدادات",
@@ -542,6 +613,7 @@
     "acquisitionSocialTiktok": "وسائل التواصل — تيك توك",
     "acquisitionWebsiteGoogle": "الموقع — جوجل",
     "acquisitionDoctorReferral": "تحويل من طبيب",
+    "acquisitionKiorex": "سوق كيوركس",
     "acquisitionOther": "أخرى",
     "errorDocDescriptionRequired": "كل مستند مرفق يحتاج وصفاً.",
     "errorDocCategoryRequired": "كل مستند مرفق يحتاج نوعاً.",
@@ -550,6 +622,8 @@
     "errorReferralNameRequired": "أدخل اسم الطبيب المحوّل.",
     "errorOtherChannelRequired": "صف كيف وجد المريض العيادة.",
     "errorExplainMoreRequired": "حقل «اشرح أكثر» مطلوب.",
+    "errorAcquisitionRequired": "اختر كيف عثر المريض على العيادة.",
+    "acquisitionSelect": "اختر خيارًا…",
     "errorFirstNameAr": "الاسم الأول بالعربية مطلوب.",
     "errorLastNameAr": "اسم العائلة بالعربية مطلوب.",
     "errorPhoneRequired": "رقم الهاتف مطلوب.",
@@ -750,6 +824,17 @@
     "list": "القائمة",
     "status": "الحالة",
     "whatsappConfirmedChip": "مؤكد عبر واتساب",
+    "newPatientChip": "جديد",
+    "bookingSource": {
+      "FRONT_DESK": "مكتب الاستقبال",
+      "PHONE": "هاتف",
+      "WALK_IN": "حضوري",
+      "CLINIC_LINK": "رابط العيادة",
+      "KIOREX_MARKETPLACE": "كيوركس",
+      "KIOREX_WHATSAPP": "كيوركس واتساب",
+      "INTEGRATION": "تكامل",
+      "IMPORT": "استيراد"
+    },
     "markDone": "تم الإكمال",
     "bookedOk": "تم إنشاء الموعد.",
     "scheduledFeeHiddenRole": "تُستخدم رسوم الموعد افتراضيات المنظمة لدورك. يمكن للمسؤول تفعيل حقول الرسوم لكل مستخدم.",
@@ -859,6 +944,8 @@
     "subtitle": "أجهزة نقاط بيع افتراضية أو فعلية مسجلة لدى مصلحة الضرائب.",
     "virtualLabel": "نقطة بيع Kiorly الافتراضية",
     "setupBanner": "إيصالات الضرائب في قائمة الانتظار ولا تُرسَل — أكمل إعداد جهاز الإيصال.",
+    "etaEnvironment": "بيئة واجهة ETA: {{env}}",
+    "productionCredsHint": "للانتقال إلى الإنتاج، أدخل معرّف العميل والسر الحيّ لكل عيادة هنا بعد تمرين الفوترة في ما قبل الإنتاج.",
     "addVirtual": "إضافة جهاز افتراضي",
     "addPhysical": "إضافة جهاز فعلي",
     "colLabel": "التسمية",
@@ -1143,6 +1230,9 @@
     "errorDownInvalid": "أدخل مبلغاً صالحاً للدفعة المقدمة.",
     "errorDownNegative": "لا يمكن أن تكون الدفعة المقدمة سالبة.",
     "errorPrescriptionRequired": "ارفع وصفة طبية أو أنشئ واحدة من الأدوية اليدوية.",
+    "errorAcquisitionRequired": "اختر كيف عثر المريض على العيادة.",
+    "acquisitionSelect": "اختر خيارًا…",
+    "acquisitionHint": "يحدّث طريقة وصول المريض إلى العيادة كما تظهر في ملفه.",
     "preSurgeryDocuments": "مستندات ما قبل الجراحة",
     "postSurgeryTitle": "مستندات ما بعد الجراحة",
     "postSurgeryHint": "أضف تقارير أو تشريحاً أو تصويراً بعد خروج العملية.",
@@ -1591,6 +1681,79 @@
       "extraClinician": "سعر الطبيب الإضافي",
       "publishPrice": "نشر إصدار السعر"
     },
+    "kiorex": {
+      "title": "رسوم عمولة كيوركس",
+      "hint": "رسوم لكل سوق مع معايير المنافسين. تظهر تحذيرات عندما تتجاوز الرسوم نسبة الهدف (افتراضيًا 50٪ من أقل منافس).",
+      "saved": "تم حفظ رسوم كيوركس",
+      "settingsSaved": "تم حفظ إعدادات السوق",
+      "filterMarket": "تصفية حسب السوق",
+      "allMarkets": "كل الأسواق",
+      "colMarket": "السوق",
+      "colSpecialty": "التخصص",
+      "colFee": "الرسوم",
+      "colBenchmark": "المعيار",
+      "colStatus": "الحارس",
+      "empty": "لا توجد رسوم كيوركس بعد.",
+      "marketDefault": "افتراضي للسوق",
+      "example": "مثال",
+      "aboveTarget": "أعلى من هدف {{pct}}٪",
+      "onTarget": "ضمن الهدف",
+      "addRate": "إضافة سعر",
+      "market": "السوق",
+      "specialty": "التخصص (اختياري)",
+      "feeType": "نوع الرسوم",
+      "amount": "المبلغ",
+      "percent": "النسبة",
+      "minAmount": "الحد الأدنى",
+      "maxAmount": "الحد الأقصى",
+      "benchmarkFlat": "أقل منافس (مبلغ ثابت)",
+      "benchmarkPercent": "أقل منافس (%)",
+      "benchmarkSource": "مصدر المعيار",
+      "saveRate": "حفظ السعر",
+      "marketSettings": "إعدادات السوق",
+      "targetRatio": "نسبة هدف المعيار",
+      "liteCap": "سقف لايت الشهري (اختياري)",
+      "saveSettings": "حفظ الإعدادات"
+    },
+    "commercial": {
+      "open": "تجاري",
+      "title": "الإعداد التجاري",
+      "saved": "تم حفظ الإعداد التجاري",
+      "preview": "معاينة التغييرات",
+      "previewReady": "تم تحديث المعاينة",
+      "changedKeys": "تغيّر: {{keys}}",
+      "trial": "التجربة",
+      "trialHint": "مدة التجربة وزيارات التفعيل وسياسة العمولة خلال التجربة.",
+      "standardDays": "تجربة قياسية (أيام)",
+      "foundingDays": "تجربة تأسيس (أيام)",
+      "minVisits": "زيارات التفعيل",
+      "withinDays": "نافذة التفعيل (أيام)",
+      "commissionPolicy": "سياسة عمولة التجربة",
+      "policyWaiveUpToPlan": "إعفاء حتى سعر الخطة",
+      "policyWaiveAll": "إعفاء كل العمولة",
+      "policyCharge": "تحصيل العمولة كاملة",
+      "kiorex": "كيوركس",
+      "kiorexHint": "أفق المريض الجديد، نافذة النزاع، نسبة المعيار، تأكيد تلقائي.",
+      "lookbackMonths": "أفق مريض جديد (شهور)",
+      "disputeDays": "نافذة النزاع (أيام)",
+      "benchmarkRatio": "نسبة هدف المعيار",
+      "autoConfirmHours": "تأكيد تلقائي (ساعات)",
+      "lite": "لايت",
+      "liteHint": "الحد الأدنى للفاتورة وسقف عمولة شهري اختياري.",
+      "minInvoice": "الحد الأدنى للفاتورة",
+      "commissionCap": "سقف العمولة الشهري",
+      "noCap": "بدون سقف",
+      "dunning": "التذكير بالدفع",
+      "dunningHint": "أيام السماح، القراءة فقط، والإيقاف بعد استحقاق الفاتورة.",
+      "graceDays": "سماح (وصول كامل)",
+      "readOnlyAfter": "قراءة فقط من",
+      "suspendAfter": "إيقاف من",
+      "referral": "مكافآت الإحالة",
+      "referralHint": "أشهر رصيد الإحالة والحد السنوي.",
+      "rewardMonths": "أشهر المكافأة",
+      "expiryMonths": "انتهاء الرصيد (شهور)",
+      "maxPerYear": "أقصى إحالات / سنة"
+    },
     "marketCountryFlags": "مفاتيح الميزات حسب البلد",
     "marketFlagsHint": "تشغيل أو إيقاف الميزات لكل المنظمات في {{market}}. استخدم «مساعد الذكاء الاصطناعي» لتفعيل المساعد داخل التطبيق لذلك البلد.",
     "flagOn": "مفعّل",
@@ -1631,7 +1794,25 @@
     "confirmRevealPassword": "كلمات المرور المخزنة مشفرة ولا يمكن عرضها. أكّد لتعيين كلمة مرور جديدة لهذا المستخدم.",
     "passwordNotRetrievable": "لا يمكن عرض كلمة المرور الحالية. يمكنك تعيين كلمة جديدة أدناه.",
     "showPassword": "إظهار كلمة المرور",
-    "hidePassword": "إخفاء كلمة المرور"
+    "hidePassword": "إخفاء كلمة المرور",
+    "audit": {
+      "tab": "التدقيق",
+      "title": "تدقيق الفوترة والخطط",
+      "subtitle": "الاشتراك والأرصدة والفواتير وعمولات كيوركس وتجاوزات الاستحقاقات والتسوية لهذه المنظمة.",
+      "entityFilter": "الفئة",
+      "entity": {
+        "all": "كل أحداث الفوترة",
+        "subscription": "الاشتراك والتحصيل",
+        "credit": "الأرصدة",
+        "kiorly_invoice": "فواتير كيورلي",
+        "kiorex": "عمولات وأسعار كيوركس",
+        "entitlement": "تجاوزات الاستحقاقات",
+        "plan_price": "أسعار الخطط",
+        "market": "الإعداد التجاري للسوق",
+        "settlement": "التسوية الشهرية",
+        "payment": "مدفوعات كيورلي"
+      }
+    }
   },
   "clinical": {
     "clinicTemplatesTitle": "قوالب النماذج السريرية",
@@ -1785,7 +1966,84 @@
       "cancel": "إلغاء عند نهاية الفترة",
       "cancelScheduled": "تم جدولة الإلغاء عند نهاية الفترة",
       "cancelsAtPeriodEnd": "يُلغى عند نهاية الفترة",
-      "none": "لا يوجد اشتراك مسجّل."
+      "none": "لا يوجد اشتراك مسجّل.",
+      "wallet": {
+        "title": "محفظة الرصيد",
+        "hint": "أرصدة فوترة Kiorly (عروض، إحالات، تعويضات). تُستخدم ضد فواتير الاشتراك.",
+        "balance": "الرصيد المتاح",
+        "upcomingExpiries": "تنتهي قريباً",
+        "expiresOn": "تنتهي {{date}}",
+        "ledger": "سجل الحركات",
+        "type": "النوع",
+        "reason": "السبب",
+        "amount": "المبلغ",
+        "remaining": "المتبقي",
+        "date": "التاريخ",
+        "empty": "لا توجد حركات رصيد بعد.",
+        "loadError": "تعذّر تحميل محفظة الرصيد."
+      },
+      "invoices": {
+        "title": "فواتير Kiorly",
+        "hint": "اشتراك المنصة ورسوم Kiorly — وليست فواتير مرضى العيادة.",
+        "number": "الرقم",
+        "period": "الفترة",
+        "status": "الحالة",
+        "total": "الإجمالي",
+        "due": "تاريخ الاستحقاق",
+        "pay": "دفع",
+        "pdf": "PDF",
+        "paid": "تم تسجيل الدفع",
+        "empty": "لا توجد فواتير Kiorly بعد.",
+        "loadError": "تعذّر تحميل فواتير Kiorly.",
+        "status_DRAFT": "مسودة",
+        "status_ISSUED": "صادرة",
+        "status_PAID": "مدفوعة",
+        "status_PARTIALLY_PAID": "مدفوعة جزئياً",
+        "status_VOID": "ملغاة",
+        "status_UNCOLLECTIBLE": "غير قابلة للتحصيل",
+        "pdfError": "تعذّر فتح ملف PDF",
+        "payTitle": "دفع الفاتورة",
+        "payMethod": "طريقة الدفع",
+        "methodCard": "بطاقة محفوظة",
+        "methodFawry": "فوري",
+        "methodInstapay": "إنستاباي",
+        "methodBank": "تحويل بنكي",
+        "chargeCard": "خصم البطاقة الافتراضية",
+        "addCard": "إضافة بطاقة (نافذة آمنة)",
+        "cardSession": "أكمل إدخال البطاقة في نافذة Paymob الآمنة",
+        "getFawryCode": "الحصول على رمز فوري",
+        "fawryCode": "رمز فوري",
+        "proof": "رفع إثبات الدفع",
+        "payUnderReview": "تم إرسال الدفع للمراجعة",
+        "payPending": "جاري بدء الدفع",
+        "underReview": "قيد المراجعة",
+        "underReviewBanner": "الدفع قيد المراجعة — تم إيقاف التذكير مؤقتاً",
+        "detail": "التفاصيل",
+        "detailTitle": "تفاصيل الفاتورة",
+        "noSettlementSummary": "لا يوجد ملخص تسوية على هذه الفاتورة."
+      },
+      "kiorex": {
+        "title": "رسوم عمولة كيوركس",
+        "hint": "حجوزات مرضى جدد من كيوركس بعد الحضور — المبلغ يُثبَّت عند تسجيل الدخول. يمكنك الاعتراض قبل انتهاء المهلة.",
+        "period": "الفترة (YYYY-MM)",
+        "filterStatus": "الحالة",
+        "allStatuses": "كل الحالات",
+        "colDate": "التاريخ",
+        "colDoctor": "الطبيب",
+        "colPatient": "المريض",
+        "colAmount": "المبلغ",
+        "colStatus": "الحالة",
+        "empty": "لا توجد رسوم كيوركس في هذه الفترة.",
+        "loadError": "تعذّر تحميل رسوم كيوركس.",
+        "dispute": "اعتراض",
+        "disputeOpened": "تم تقديم الاعتراض",
+        "status_PENDING": "قيد الانتظار",
+        "status_CONFIRMED": "مؤكد",
+        "status_DISPUTED": "معترض عليه",
+        "status_REVERSED": "معكوس",
+        "status_BILLED": "مُفوتر",
+        "status_WAIVED": "معفى"
+      }
     },
     "toggle": "تبديل",
     "allTenants": "كل المستأجرين",
@@ -1901,8 +2159,8 @@
       "tipEncountersPerformed": "الزيارات التي يكون فيها هذا المستخدم الطبيب المعيّن.",
       "tipApptsCreated": "المواعيد التي أنشأها هذا المستخدم في النظام (تدقيق).",
       "tipApptsPerformed": "المواعيد التي يكون فيها هذا المستخدم الطبيب المعيّن.",
-      "tipOpsCreated": "العمليات/الجراحات التي جدولها أو سجّلها هذا المستخدم (المنشئ).",
-      "tipOpsPerformed": "العمليات التي يكون فيها هذا المستخدم الجراح/الطبيب المعيّن.",
+      "tipOpsCreated": "العمليات التي أنشأها هذا المستخدم في النظام (حسب تاريخ الإنشاء، وليس تاريخ العملية).",
+      "tipOpsPerformed": "العمليات التي يكون فيها هذا المستخدم الجراح/الطبيب المعيّن، بحسب تاريخ العملية (يطابق صفحة العمليات).",
       "tipTickets": "تذاكر الدعم المفتوحة المسندة حاليًا لهذا المستخدم.",
       "inactive": "غير نشط",
       "staffEmpty": "لا توجد مقاييس للموظفين في هذه الفترة."
@@ -2010,6 +2268,18 @@
     "orgUsersSearchPh": "البريد أو الاسم المعروض…",
     "orgUsersRoleAll": "جميع الأدوار",
     "orgUsersEdit": "تعديل مستخدم",
+    "orgUserPrimaryRoleTitle": "نوع الدور الأساسي",
+    "orgUserPrimaryRoleHint": "اختر دورًا جديدًا لمعاينة الوصول الافتراضي أدناه. أكّد لتطبيق التغيير — يُعاد ضبط الصلاحيات المخصصة وفق افتراضيات الدور الجديد.",
+    "orgUserPrimaryRoleConfirm": "تأكيد تغيير الدور",
+    "orgUserPrimaryRolePreview": "معاينة افتراضيات {{role}}. لن يُحفظ شيء حتى تؤكد.",
+    "orgUserRolePreviewBadge": "معاينة",
+    "orgUserRoleChangeConfirmTitle": "تغيير الدور الأساسي؟",
+    "orgUserRoleChangeConfirmIntro": "يحدّث هذا الدور الأساسي للمستخدم ويعيد ضبط الوصول في القائمة الجانبية وعرض المبالغ والأدوار الإضافية وفق افتراضيات الدور الجديد. أي تعديلات أخرى في هذه الشاشة تبقى معاينة حتى تحفظها بشكل منفصل.",
+    "orgUserRoleChangeConfirmAction": "تأكيد تغيير الدور",
+    "orgUserRoleChangeFrom": "الدور الحالي",
+    "orgUserRoleChangeTo": "الدور الجديد",
+    "orgUserRoleChangeResetNote": "ستُمسح تبويبات التنقل وتجاوزات عرض المبالغ والأدوار الإضافية وصلاحيات الموارد البشرية المفوّضة للعيادات.",
+    "orgUserRoleChangeSuccess": "تم تحديث الدور الأساسي.",
     "orgUserHrSection": "الموارد البشرية والرواتب",
     "orgUserHrSectionHint": "نوع العقد والراتب الشهري للسجل الوظيفي المرتبط. تظهر الرواتب تلقائيًا في مصروفات PAYROLL الشهرية.",
     "orgUsersDeleteConfirm": "حذف هذا المستخدم؟ لا يمكن التراجع.",

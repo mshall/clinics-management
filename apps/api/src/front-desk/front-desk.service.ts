@@ -26,6 +26,8 @@ import type { CheckInConsentCaptureDto } from "./dto/check-in-consent.dto";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import { basename } from "node:path";
 import { randomUUID } from "node:crypto";
+import { TrialEngineService } from "../subscriptions/trial-engine.service";
+import { CommissionChargeService } from "../kiorex/commission-charge.service";
 
 const RECEIPT_MIME = new Set([
   "image/jpeg",
@@ -43,6 +45,8 @@ export class FrontDeskService {
     private readonly featureFlags: FeatureFlagsService,
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
     private readonly consent: ConsentPolicyService,
+    private readonly trialEngine: TrialEngineService,
+    private readonly commissionCharges: CommissionChargeService,
   ) {}
 
   quickSearch(tenantId: string, user: JwtUser, q: string) {
@@ -125,7 +129,7 @@ export class FrontDeskService {
       );
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const checkInPatch = await this.flow.buildCheckInStatusPatch(tx, tenantId, apt.clinicId, {
         preferredRoomLabel: body.roomLabel,
         existingPreferred: apt.preferredRoomLabel ?? apt.roomLabel,
@@ -167,6 +171,7 @@ export class FrontDeskService {
           transferVerificationStatus,
         });
       }
+      await this.commissionCharges.onCheckIn(tx, tenantId, appointmentId, now);
       const openEncounterId =
         (await ensureDraftEncounterOnCheckIn(tx, tenantId, appointmentId)) ?? null;
       return {
@@ -180,6 +185,8 @@ export class FrontDeskService {
         openEncounterId,
       };
     });
+    void this.trialEngine.onQualifyingVisit(tenantId).catch(() => undefined);
+    return result;
   }
 
   async clinicBoard(tenantId: string, clinicId: string) {

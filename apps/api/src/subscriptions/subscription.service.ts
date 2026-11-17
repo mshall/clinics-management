@@ -145,6 +145,33 @@ export class SubscriptionService {
     };
   }
 
+  async recordSubscriptionEvent(
+    tx: Tx,
+    subscriptionId: string,
+    tenantId: string,
+    type: string,
+    fromJson: Record<string, unknown> | null,
+    toJson: Record<string, unknown>,
+    actorUserId: string | null,
+    action: string,
+  ): Promise<void> {
+    await this.appendEvent(tx, subscriptionId, type, fromJson, toJson, actorUserId, tenantId, action);
+  }
+
+  async recordSubscriptionEventOutsideTx(
+    subscriptionId: string,
+    tenantId: string,
+    type: string,
+    fromJson: Record<string, unknown> | null,
+    toJson: Record<string, unknown>,
+    actorUserId: string | null,
+    action: string,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await this.appendEvent(tx, subscriptionId, type, fromJson, toJson, actorUserId, tenantId, action);
+    });
+  }
+
   private async appendEvent(
     tx: Tx,
     subscriptionId: string,
@@ -483,14 +510,29 @@ export class SubscriptionService {
     });
   }
 
-  async recordTrialEndingNotice(subscriptionId: string, tenantId: string, trialEndsAt: Date): Promise<boolean> {
+  async recordTrialEndingNotice(
+    subscriptionId: string,
+    tenantId: string,
+    trialEndsAt: Date,
+    daysBeforeEnd?: number,
+  ): Promise<boolean> {
     const notices = await this.prisma.subscriptionEvent.findMany({
       where: { subscriptionId, type: "trial_ending_notice" },
-      take: 20,
+      take: 50,
       orderBy: { createdAt: "desc" },
     });
     const iso = trialEndsAt.toISOString();
-  if (notices.some((n) => (n.toJson as { trialEndsAt?: string } | null)?.trialEndsAt === iso)) {
+    const thresholdKey = daysBeforeEnd != null ? `${iso}:${daysBeforeEnd}` : iso;
+    if (
+      notices.some((n) => {
+        const t = n.toJson as { trialEndsAt?: string; daysBeforeEnd?: number } | null;
+        if (!t?.trialEndsAt) return false;
+        if (daysBeforeEnd != null) {
+          return t.trialEndsAt === iso && t.daysBeforeEnd === daysBeforeEnd;
+        }
+        return t.trialEndsAt === iso;
+      })
+    ) {
       return false;
     }
 
@@ -499,7 +541,10 @@ export class SubscriptionService {
         data: {
           subscriptionId,
           type: "trial_ending_notice",
-          toJson: { trialEndsAt: trialEndsAt.toISOString() },
+          toJson: {
+            trialEndsAt: trialEndsAt.toISOString(),
+            ...(daysBeforeEnd != null ? { daysBeforeEnd } : {}),
+          },
         },
       });
       await tx.auditLog.create({
@@ -510,7 +555,7 @@ export class SubscriptionService {
           action: "subscription.trial_ending_notice",
           resource: "Subscription",
           resourceId: subscriptionId,
-          metadata: { trialEndsAt: trialEndsAt.toISOString() },
+          metadata: { trialEndsAt: trialEndsAt.toISOString(), daysBeforeEnd, thresholdKey },
         },
       });
     });
@@ -521,6 +566,9 @@ export class SubscriptionService {
   async transitionToPastDue(tenantId: string): Promise<Subscription | null> {
     const sub = await this.prisma.subscription.findUnique({ where: { tenantId } });
     if (!sub || sub.status !== SubscriptionStatus.ACTIVE) return null;
+    if (sub.kiorlyDunningPausedUntil && sub.kiorlyDunningPausedUntil > new Date()) {
+      return null;
+    }
     return this.transitionStatus(tenantId, SubscriptionStatus.PAST_DUE, null, "dunning");
   }
 }

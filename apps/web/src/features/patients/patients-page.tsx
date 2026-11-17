@@ -32,6 +32,7 @@ import {
   pendingDocumentDescription,
   type PendingDocumentRow,
 } from "@/components/pending-document-attachments";
+import { patientAcquisitionFormToBody } from "@/components/patient-acquisition-fields";
 import {
   PATIENT_ACQUISITION_CHANNELS,
   patientAcquisitionLabel,
@@ -256,15 +257,11 @@ export function PatientsPage() {
         homeBranchId: homeBranchId || undefined,
         ...(allergies.length ? { allergies } : {}),
       };
-      if (acquisitionChannel) {
-        body.acquisitionChannel = acquisitionChannel;
-        if (acquisitionChannel === "DOCTOR_REFERRAL") {
-          body.acquisitionReferralName = acquisitionReferralName.trim();
-        }
-        if (acquisitionChannel === "OTHER") {
-          body.acquisitionOtherDetail = acquisitionOtherDetail.trim();
-        }
-      }
+      Object.assign(body, patientAcquisitionFormToBody({
+        channel: acquisitionChannel,
+        referralName: acquisitionReferralName,
+        otherDetail: acquisitionOtherDetail,
+      }));
 
       const patient = await apiPost<PatientDto>("/api/v1/patients", body);
       if (nationalIdDocFile) {
@@ -492,7 +489,7 @@ export function PatientsPage() {
               />
 
               <div className="space-y-2 border-t border-border pt-3">
-                <Label>{t("patients.howDidTheyFindUs", "How did they find us?")}</Label>
+                <Label required>{t("patients.howDidTheyFindUs", "How did they find us?")}</Label>
                 <select
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={acquisitionChannel}
@@ -503,7 +500,7 @@ export function PatientsPage() {
                     if (v !== "OTHER") setAcquisitionOtherDetail("");
                   }}
                 >
-                  <option value="">{t("patients.cameThroughOptional", "Optional")}</option>
+                  <option value="">{t("patients.acquisitionSelect", "Select an option…")}</option>
                   {PATIENT_ACQUISITION_CHANNELS.map((ch) => (
                     <option key={ch} value={ch}>
                       {patientAcquisitionLabel(ch, t)}

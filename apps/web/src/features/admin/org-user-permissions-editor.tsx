@@ -34,6 +34,12 @@ import type { DemoRole } from "@/lib/roles";
 import { useAuthStore } from "@/stores/auth-store";
 import { Label } from "@/components/ui/label";
 import { NavTabChecklist, NAV_TAB_I18N } from "@/features/admin/org-nav-tab-checklist";
+import { orgUserRolesForEdit } from "@/features/platform/platform-shared";
+import {
+  AdminOrgUserRoleChangeConfirmDialog,
+  type OrgUserRoleChangeTarget,
+} from "@/features/admin/admin-org-user-role-change-confirm-dialog";
+import { mapApiRole } from "@/lib/roles";
 
 type UserClinicHrAssignmentDto = {
   id: string;
@@ -56,6 +62,8 @@ export type OrgUserPermissionsEditorProps = {
   displayName?: string;
   /** When false, hide HR assignment block (embedded in compact layouts). */
   showHrAssignmentSection?: boolean;
+  /** Called after primary role is saved (API uppercase role, e.g. PHYSICIAN). */
+  onPrimaryRoleChanged?: (roleApi: string) => void;
 };
 
 export function OrgUserPermissionsEditor({
@@ -63,6 +71,7 @@ export function OrgUserPermissionsEditor({
   userRole,
   displayName,
   showHrAssignmentSection = true,
+  onPrimaryRoleChanged,
 }: OrgUserPermissionsEditorProps) {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
@@ -71,7 +80,11 @@ export function OrgUserPermissionsEditor({
   const canEditMoneyVisibility = canManagePrivilegeGrants && userRole !== "group_admin";
   const canCustomizeRoles = canCustomizeOrgRoleNavTabs(viewer?.role);
   const canExtendUsers = canExtendUserNavTabs(viewer?.role);
+  const canChangePrimaryRole = viewer?.role === "group_admin" && viewer.id !== userId;
   const isClinicAdminViewer = viewer?.role === "clinic_admin";
+  const [roleDraft, setRoleDraft] = useState<DemoRole>(userRole);
+  const [roleConfirmOpen, setRoleConfirmOpen] = useState(false);
+  const rolePreviewActive = roleDraft !== userRole;
   const { data: viewerClinics = [] } = useClinicsQuery();
   const viewerClinicIds = useMemo(() => viewerClinics.map((c) => c.id), [viewerClinics]);
   const assignableClinics = useMemo(() => {
@@ -92,11 +105,23 @@ export function OrgUserPermissionsEditor({
   const [moneyErr, setMoneyErr] = useState<string | null>(null);
   const [moneySaveBanner, setMoneySaveBanner] = useState<"ok" | null>(null);
   const moneyDraftSeedRef = useRef("");
+  const previewGrantFingerprintRef = useRef("");
+
+  useEffect(() => {
+    setRoleDraft(userRole);
+    previewGrantFingerprintRef.current = "";
+  }, [userRole, userId]);
 
   const userRoleGrantQ = useQuery({
     queryKey: ["tenant-role-nav-tabs", userRole],
     queryFn: () => apiGet<{ tabKeys: string[] | null }>(`/api/v1/admin/role-nav-tabs/${apiRoleParam(userRole)}`),
     enabled: canCustomizeRoles && Boolean(userRole),
+  });
+
+  const draftRoleGrantQ = useQuery({
+    queryKey: ["tenant-role-nav-tabs", roleDraft],
+    queryFn: () => apiGet<{ tabKeys: string[] | null }>(`/api/v1/admin/role-nav-tabs/${apiRoleParam(roleDraft)}`),
+    enabled: canCustomizeRoles && Boolean(roleDraft),
   });
 
   const userGrantQ = useQuery({
@@ -108,7 +133,9 @@ export function OrgUserPermissionsEditor({
   const userDetailQ = useQuery({
     queryKey: ["admin", "user-detail", userId],
     queryFn: () =>
-      apiGet<{ additionalRoles: string[]; role: string }>(`/api/v1/admin/users/${userId}`),
+      apiGet<{ additionalRoles: string[]; role: string; email: string; displayName: string }>(
+        `/api/v1/admin/users/${userId}`,
+      ),
     enabled: Boolean(userId) && canManagePrivilegeGrants,
   });
   const [extraRolesDraft, setExtraRolesDraft] = useState<Set<DemoRole>>(new Set());
@@ -135,8 +162,78 @@ export function OrgUserPermissionsEditor({
     enabled: canEditMoneyVisibility && Boolean(userId),
   });
 
+  const applyDefaultsForRoleDraft = (draftRole: DemoRole, roleTabKeys?: string[] | null) => {
+    const keys = roleNavKeysForRole(draftRole, roleTabKeys);
+    setUserDraft(new Set(keys));
+    setMoneyDraft({
+      operations: "ROLE_DEFAULT",
+      encounters: "ROLE_DEFAULT",
+      appointments: "ROLE_DEFAULT",
+    });
+    setExtraRolesDraft(new Set());
+    userDraftSeedRef.current = `preview:${draftRole}`;
+    moneyDraftSeedRef.current = `preview:${draftRole}`;
+    setUserErr(null);
+    setMoneyErr(null);
+    setMoneySaveBanner(null);
+  };
+
+  const onPrimaryRoleDraftChange = (roleApi: string) => {
+    const demo = mapApiRole(roleApi);
+    setRoleDraft(demo);
+    previewGrantFingerprintRef.current = "";
+    applyDefaultsForRoleDraft(demo, null);
+  };
+
+  useEffect(() => {
+    if (!rolePreviewActive) return;
+    if (!draftRoleGrantQ.isSuccess) return;
+    const fp = `${roleDraft}:${JSON.stringify(draftRoleGrantQ.data?.tabKeys ?? null)}`;
+    if (previewGrantFingerprintRef.current === fp) return;
+    previewGrantFingerprintRef.current = fp;
+    applyDefaultsForRoleDraft(roleDraft, draftRoleGrantQ.data?.tabKeys);
+  }, [rolePreviewActive, roleDraft, draftRoleGrantQ.isSuccess, draftRoleGrantQ.data?.tabKeys]);
+
+  const applyPrimaryRoleMut = useMutation({
+    mutationFn: () =>
+      apiPatch<{ role: string }>(`/api/v1/admin/users/${userId}`, { role: apiRoleParam(roleDraft) }),
+    onSuccess: async (data) => {
+      const nextApi = data.role ?? apiRoleParam(roleDraft);
+      onPrimaryRoleChanged?.(nextApi);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["admin", "user-detail", userId] }),
+        qc.invalidateQueries({ queryKey: ["admin", "org-user", userId] }),
+        qc.invalidateQueries({ queryKey: ["user-nav-tabs", userId] }),
+        qc.invalidateQueries({ queryKey: ["user-money-visibility", userId] }),
+        qc.invalidateQueries({ queryKey: ["user-clinic-hr-assignments", userId] }),
+        qc.invalidateQueries({ queryKey: ["admin", "org-users"] }),
+      ]);
+      userDraftSeedRef.current = "";
+      moneyDraftSeedRef.current = "";
+      setRoleConfirmOpen(false);
+      toast.success(t("admin.orgUserRoleChangeSuccess", "Primary role updated."));
+      if (userId === viewer?.id) await useAuthStore.getState().refreshSessionFromServer();
+    },
+    onError: (e: unknown) => toast.error(apiErrorMessage(e)),
+  });
+
+  const roleChangeTarget: OrgUserRoleChangeTarget | null =
+    rolePreviewActive && userDetailQ.data
+      ? {
+          userId,
+          displayName: displayName?.trim() || userDetailQ.data.displayName || userId,
+          email: userDetailQ.data.email,
+          fromRole: userRole,
+          toRole: roleDraft,
+        }
+      : null;
+
+  const savedRoleApi = userDetailQ.data?.role ?? apiRoleParam(userRole);
+  const assignablePrimaryRoles = orgUserRolesForEdit(savedRoleApi);
+
   useEffect(() => {
     if (!canEditMoneyVisibility || !moneyVisQ.isSuccess) return;
+    if (rolePreviewActive) return;
     const seed = `${userId}:${JSON.stringify(moneyVisQ.data)}`;
     if (moneyDraftSeedRef.current === seed) return;
     moneyDraftSeedRef.current = seed;
@@ -145,11 +242,14 @@ export function OrgUserPermissionsEditor({
       encounters: normalizeMoneyAccessOverride(moneyVisQ.data.encounters),
       appointments: normalizeMoneyAccessOverride(moneyVisQ.data.appointments),
     });
-  }, [canEditMoneyVisibility, userId, moneyVisQ.isSuccess, moneyVisQ.data]);
+  }, [canEditMoneyVisibility, userId, moneyVisQ.isSuccess, moneyVisQ.data, rolePreviewActive]);
+
+  const effectiveRoleForNav = roleDraft;
+  const effectiveRoleGrantQ = rolePreviewActive ? draftRoleGrantQ : userRoleGrantQ;
 
   const userRoleBase = useMemo(
-    () => roleNavKeysForRole(userRole, userRoleGrantQ.data?.tabKeys),
-    [userRole, userRoleGrantQ.data?.tabKeys],
+    () => roleNavKeysForRole(effectiveRoleForNav, effectiveRoleGrantQ.data?.tabKeys),
+    [effectiveRoleForNav, effectiveRoleGrantQ.data?.tabKeys],
   );
 
   const userGrantFingerprint = userGrantQ.data ? JSON.stringify(userGrantQ.data.tabKeys ?? null) : "";
@@ -161,6 +261,7 @@ export function OrgUserPermissionsEditor({
       userDraftSeedRef.current = "";
       return;
     }
+    if (rolePreviewActive) return;
     if (!userGrantQ.isSuccess) return;
     if (canCustomizeRoles && !userRoleGrantQ.isSuccess) return;
 
@@ -190,6 +291,7 @@ export function OrgUserPermissionsEditor({
     userRoleGrantQ.isSuccess,
     userRoleGrantQ.data?.tabKeys,
     organizationTabSet,
+    rolePreviewActive,
   ]);
 
   const saveMoneyMut = useMutation({
@@ -327,7 +429,7 @@ export function OrgUserPermissionsEditor({
     if (
       sorted.includes("hr") &&
       canExtendUsers &&
-      userRole !== "hr_officer" &&
+      effectiveRoleForNav !== "hr_officer" &&
       (hrAssignmentsQ.data?.length ?? 0) === 0
     ) {
       setUserErr(
@@ -342,7 +444,7 @@ export function OrgUserPermissionsEditor({
   const toggleUser = (key: NavItemKey) => {
     if (key === "profile") return;
 
-    if (key === "hr" && canExtendUsers && userRole !== "hr_officer" && userDraft.has("hr")) {
+    if (key === "hr" && canExtendUsers && effectiveRoleForNav !== "hr_officer" && userDraft.has("hr")) {
       setUserDraft((prev) => {
         const n = new Set(prev);
         n.delete("hr");
@@ -355,7 +457,7 @@ export function OrgUserPermissionsEditor({
       return;
     }
 
-    if (key === "hr" && canExtendUsers && userRole !== "hr_officer" && !userDraft.has("hr")) {
+    if (key === "hr" && canExtendUsers && effectiveRoleForNav !== "hr_officer" && !userDraft.has("hr")) {
       if ((hrAssignmentsQ.data?.length ?? 0) > 0) {
         setUserDraft((prev) => {
           const n = new Set(prev);
@@ -400,10 +502,73 @@ export function OrgUserPermissionsEditor({
 
   return (
     <div className="space-y-4">
+      {canChangePrimaryRole ? (
+        <section className="space-y-3 rounded-lg border border-border bg-muted/20 p-4">
+          <div>
+            <p className="text-sm font-semibold">{t("admin.orgUserPrimaryRoleTitle", "Primary role type")}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t(
+                "admin.orgUserPrimaryRoleHint",
+                "Choose a new role to preview default access below. Confirm to apply — this resets custom permissions to the new role’s defaults.",
+              )}
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <Label htmlFor="org-user-primary-role">{t("admin.role", "Role")}</Label>
+              <select
+                id="org-user-primary-role"
+                className={nativeSelectClassName}
+                value={apiRoleParam(roleDraft)}
+                disabled={applyPrimaryRoleMut.isPending || userDetailQ.isPending}
+                onChange={(e) => onPrimaryRoleDraftChange(e.target.value)}
+              >
+                {assignablePrimaryRoles.map((r) => (
+                  <option key={r} value={r}>
+                    {formatUserRole(mapApiRole(r), t)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Button
+              type="button"
+              disabled={!rolePreviewActive || applyPrimaryRoleMut.isPending || !userDetailQ.data}
+              onClick={() => setRoleConfirmOpen(true)}
+            >
+              {t("admin.orgUserPrimaryRoleConfirm", "Confirm role change")}
+            </Button>
+          </div>
+          {rolePreviewActive ? (
+            <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-100">
+              {t(
+                "admin.orgUserPrimaryRolePreview",
+                "Previewing defaults for {{role}}. Nothing is saved until you confirm.",
+                { role: formatUserRole(roleDraft, t) },
+              )}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
+      <AdminOrgUserRoleChangeConfirmDialog
+        open={roleConfirmOpen}
+        onOpenChange={setRoleConfirmOpen}
+        target={roleChangeTarget}
+        pending={applyPrimaryRoleMut.isPending}
+        onConfirm={() => applyPrimaryRoleMut.mutate()}
+      />
+
       <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">
         <p className="font-medium">
           {displayName?.trim() || t("admin.orgUserAccessTarget", "This user")}
-          <span className="ms-2 font-normal text-muted-foreground">· {formatUserRole(userRole, t)}</span>
+          <span className="ms-2 font-normal text-muted-foreground">
+            · {formatUserRole(rolePreviewActive ? roleDraft : userRole, t)}
+            {rolePreviewActive ? (
+              <span className="ms-1 text-amber-700 dark:text-amber-300">
+                ({t("admin.orgUserRolePreviewBadge", "preview")})
+              </span>
+            ) : null}
+          </span>
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
           {canExtendUsers
@@ -431,7 +596,7 @@ export function OrgUserPermissionsEditor({
 
       {userGrantQ.isPending ? (
         <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-      ) : userGrantQ.isSuccess && (!canCustomizeRoles || userRoleGrantQ.isSuccess) ? (
+      ) : userGrantQ.isSuccess && (!canCustomizeRoles || effectiveRoleGrantQ.isSuccess) ? (
         <NavTabChecklist
           orderedKeys={organizationOrderedKeys}
           draft={userDraft}
@@ -460,7 +625,9 @@ export function OrgUserPermissionsEditor({
           type="button"
           variant="outline"
           disabled={!userId || saveUserMut.isPending || userGrantQ.isPending}
-          onClick={() => saveUserNavTabs(fullRoleTabKeysSorted(userRole, userRoleGrantQ.data?.tabKeys))}
+          onClick={() =>
+            saveUserNavTabs(fullRoleTabKeysSorted(effectiveRoleForNav, effectiveRoleGrantQ.data?.tabKeys))
+          }
         >
           {t("admin.navTabsReset", "Use role defaults")}
         </Button>
@@ -565,7 +732,7 @@ export function OrgUserPermissionsEditor({
       {showHrAssignmentSection && canManagePrivilegeGrants && isClinicAdminViewer ? (
         <div className="space-y-3 rounded-lg border border-border p-3">
           <p className="text-sm font-medium">{t("admin.rbacHrAssignmentSection", "Clinic HR assignment")}</p>
-          {userRole === "hr_officer" ? (
+          {effectiveRoleForNav === "hr_officer" ? (
             <p className="text-sm text-muted-foreground">
               {t("admin.rbacHrAssignmentAlreadyOfficer", "This user is already an organization HR officer.")}
             </p>

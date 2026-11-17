@@ -38,6 +38,7 @@ import { IntegrationFailureAdminService } from "./integration-failure-admin.serv
 import { TenantPaymentChannelsService } from "./tenant-payment-channels.service";
 import { CreateTenantPaymentChannelDto } from "./dto/create-tenant-payment-channel.dto";
 import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
+import { EtaHealthService } from "../compliance/eta-health.service";
 
 @ApiTags("admin")
 @ApiBearerAuth("bearer")
@@ -49,7 +50,37 @@ export class AdminController {
     private readonly insights: AdminInsightsService,
     private readonly integrationFailureAdmin: IntegrationFailureAdminService,
     private readonly paymentChannels: TenantPaymentChannelsService,
+    private readonly etaHealthService: EtaHealthService,
   ) {}
+
+  @Get("eta-health")
+  @ApiOperation({ summary: "ETA pilot success dashboard (Egypt owners / finance / admins)" })
+  getEtaHealth(
+    @CurrentUser() user: JwtUser,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("clinicId") clinicId?: string,
+  ) {
+    return this.etaHealthService.getHealth(user, requireTenantId(user), { from, to, clinicId });
+  }
+
+  @Post("eta-pilot/start")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Mark ETA production pilot week 1 start (group admin / tenant owner)" })
+  startEtaPilot(@CurrentUser() user: JwtUser) {
+    const tenantId = requireTenantId(user);
+    if (
+      !user.isTenantOwner &&
+      user.role &&
+      !hasAnyRoleInSet(
+        user,
+        new Set([UserRole.GROUP_ADMIN, UserRole.CLINIC_ADMIN, UserRole.FINANCE_OFFICER]),
+      )
+    ) {
+      throw new ForbiddenException("Only organization owners or administrators can start the ETA pilot clock");
+    }
+    return this.etaHealthService.markPilotProductionStart(tenantId, user.userId);
+  }
 
   @Get("overview")
   @ApiOperation({ summary: "Admin dashboard: tenant, flags, audit tail" })
@@ -305,7 +336,7 @@ export class AdminController {
     if (!hasRole(user, UserRole.GROUP_ADMIN) || !user.tenantId) {
       throw new ForbiddenException("Only group administrators can create users");
     }
-    return this.admin.createTenantUser(requireTenantId(user), body);
+    return this.admin.createTenantUser(requireTenantId(user), body, user);
   }
 
   @Post("users/bulk-delete")
@@ -343,7 +374,7 @@ export class AdminController {
     if (!hasRole(user, UserRole.GROUP_ADMIN) || !user.tenantId) {
       throw new ForbiddenException("Only group administrators can update organization users");
     }
-    return this.admin.updateTenantUser(requireTenantId(user), userId, body);
+    return this.admin.updateTenantUser(requireTenantId(user), userId, body, user);
   }
 
   @Delete("users/:userId")

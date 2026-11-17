@@ -1,0 +1,57 @@
+/** SB-03 dunning timeline defaults (overridable per market pack). */
+export const DEFAULT_DUNNING_TIMELINE = {
+  /** Invoice payment reminder offsets before due date (days). */
+  reminderDaysBeforeDue: [3, 0] as const,
+  /** First calendar day after due when subscription enters past-due dunning. */
+  pastDueFromDay: 1,
+  /** Last day of grace (inclusive) — full product access with banner. */
+  graceEndDay: 14,
+  readOnlyFromDay: 15,
+  suspendedFromDay: 45,
+  /** Lite plan: pause Kiorex marketplace after this many days with unpaid commission invoice. */
+  liteCommissionMarketplacePauseDays: 30,
+} as const;
+
+export type DunningTimelineConfig = {
+  reminderDaysBeforeDue: number[];
+  pastDueFromDay: number;
+  graceEndDay: number;
+  readOnlyFromDay: number;
+  suspendedFromDay: number;
+  liteCommissionMarketplacePauseDays: number;
+};
+
+export function dunningTimelineFromFeatureDefaults(featureDefaults: unknown): DunningTimelineConfig {
+  if (!featureDefaults || typeof featureDefaults !== "object" || Array.isArray(featureDefaults)) {
+    return { ...DEFAULT_DUNNING_TIMELINE, reminderDaysBeforeDue: [...DEFAULT_DUNNING_TIMELINE.reminderDaysBeforeDue] };
+  }
+  const billing = (featureDefaults as Record<string, unknown>).kiorlyBilling;
+  if (!billing || typeof billing !== "object" || Array.isArray(billing)) {
+    return { ...DEFAULT_DUNNING_TIMELINE, reminderDaysBeforeDue: [...DEFAULT_DUNNING_TIMELINE.reminderDaysBeforeDue] };
+  }
+  const d = (billing as Record<string, unknown>).dunning;
+  if (!d || typeof d !== "object" || Array.isArray(d)) {
+    return { ...DEFAULT_DUNNING_TIMELINE, reminderDaysBeforeDue: [...DEFAULT_DUNNING_TIMELINE.reminderDaysBeforeDue] };
+  }
+  const row = d as Record<string, unknown>;
+  const reminders = row.reminderDaysBeforeDue;
+  const readInt = (key: string, fallback: number) => {
+    const v = row[key];
+    return typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.floor(v) : fallback;
+  };
+  return {
+    reminderDaysBeforeDue: Array.isArray(reminders)
+      ? reminders
+          .map((x) => (typeof x === "number" && Number.isFinite(x) ? Math.floor(x) : NaN))
+          .filter((x) => Number.isFinite(x) && x >= 0)
+      : [...DEFAULT_DUNNING_TIMELINE.reminderDaysBeforeDue],
+    pastDueFromDay: readInt("pastDueFromDay", DEFAULT_DUNNING_TIMELINE.pastDueFromDay),
+    graceEndDay: readInt("graceEndDay", DEFAULT_DUNNING_TIMELINE.graceEndDay),
+    readOnlyFromDay: readInt("readOnlyFromDay", DEFAULT_DUNNING_TIMELINE.readOnlyFromDay),
+    suspendedFromDay: readInt("suspendedFromDay", DEFAULT_DUNNING_TIMELINE.suspendedFromDay),
+    liteCommissionMarketplacePauseDays: readInt(
+      "liteCommissionMarketplacePauseDays",
+      DEFAULT_DUNNING_TIMELINE.liteCommissionMarketplacePauseDays,
+    ),
+  };
+}

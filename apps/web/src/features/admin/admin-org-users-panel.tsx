@@ -19,7 +19,14 @@ import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from "@/lib/http";
 import { formatEmployeeName } from "@/lib/employee-display";
 import { formatClinicName, formatEmploymentType, formatUserRole } from "@/lib/locale-display";
 import type { Paginated } from "@/lib/paginated";
-import { apiErrorMessage, isClinicRequiredUserRole, isOrgWideUserRole, ORG_USER_ROLES, orgUserRolesForEdit, ORG_USER_ROLES_CREATABLE } from "@/features/platform/platform-shared";
+import {
+  apiErrorMessage,
+  isClinicRequiredUserRole,
+  isOrgWideUserRole,
+  ORG_USER_ROLES,
+  orgUserRolesForCreate,
+  orgUserRolesForEdit,
+} from "@/features/platform/platform-shared";
 import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import {
   ORG_USER_PASSWORD_MIN_LENGTH,
@@ -169,7 +176,7 @@ export function AdminOrgUsersPanel() {
   });
 
   const assignableRoles = isCreate
-    ? ORG_USER_ROLES_CREATABLE
+    ? orgUserRolesForCreate(authUser?.role)
     : orgUserRolesForEdit(userDetailQuery.data?.role ?? uRole);
 
   useEffect(() => {
@@ -796,6 +803,12 @@ export function AdminOrgUsersPanel() {
               userId={editUserId}
               userRole={mapApiRole(userDetailQuery.data?.role ?? uRole)}
               displayName={userDetailQuery.data?.displayName ?? uName}
+              onPrimaryRoleChanged={(roleApi) => {
+                setURole(roleApi as (typeof ORG_USER_ROLES)[number]);
+                void qc.invalidateQueries({ queryKey: ["admin", "org-user", editUserId] });
+                void qc.invalidateQueries({ queryKey: ["admin", "org-users"] });
+                void userDetailQuery.refetch();
+              }}
             />
           ) : null}
 

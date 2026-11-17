@@ -1,7 +1,7 @@
 # SC-01 — Data residency decision (Egypt)
 
 **Decision ID:** `SC-01-2026-11` (canonical registry: [`platform/data-cells.json`](../platform/data-cells.json))  
-**Status:** **Done** — Path **A** for production Egypt tenants; Path **B** infra prepared, not activated  
+**Status:** **Done** — Path **A** for production Egypt tenants (Frankfurt); Path **B** infra prepared, not activated until in-country hosting is required  
 **Owner:** Platform / Legal / Security
 
 ---
@@ -30,7 +30,7 @@
 
 **Production Egypt tenants use Path A:**
 
-1. All **EG** organizations remain on cell **`frankfurt`** / AWS **`eu-central-1`** until Legal signs off on Path B cutover.
+1. All **EG** organizations remain on cell **`frankfurt`** / AWS **`eu-central-1`**. Patient data stays in Frankfurt while **PDPC controller/processor** registration and a **cross-border transfer licence** (or equivalent government approval to process Egyptian patient data in the EU cell) are pursued with Legal — not Cairo unless regulators require Path B.
 2. **No live Egyptian PHI** in production without documented **PDPC controller/processor** status and **cross-border transfer licence** (customer + Kiorly processor obligations — see [markets/egypt.md](./markets/egypt.md)).
 3. **Path B** is **engineered but not deployed**: CDK accepts `-c hostCell=cairo`; deploy via `KIORLY_HOST_CELL=cairo AWS_REGION=me-south-1 bash scripts/deploy-aws.sh`. Market `EG` must **not** point at `cairo` until the go-live gate in [runbooks/EG_TENANT_CELL_MIGRATION.md](./runbooks/EG_TENANT_CELL_MIGRATION.md) is completed.
 

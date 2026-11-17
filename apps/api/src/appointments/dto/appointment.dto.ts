@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { AppointmentQueueStage, AppointmentStatus, VisitCollectionMode } from "@prisma/client";
+import { AppointmentQueueStage, AppointmentStatus, BookingSource, VisitCollectionMode } from "@prisma/client";
 
 export class AppointmentDto {
   @ApiProperty()
@@ -106,4 +106,19 @@ export class AppointmentDto {
     description: "Set when the patient confirmed via WhatsApp quick reply (MS-02)",
   })
   whatsappConfirmedAt?: string | null;
+
+  @ApiProperty({ enum: BookingSource })
+  bookingSource!: BookingSource;
+
+  @ApiPropertyOptional({ nullable: true })
+  attributionJson?: Record<string, unknown> | null;
+
+  @ApiPropertyOptional({ nullable: true, description: "Frozen at booking time for commission attribution" })
+  isNewPatientAtBooking?: boolean | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  newPatientCheckedAt?: string | null;
+
+  @ApiPropertyOptional({ description: "Whether this booking may incur Kiorex commission (CR-02)" })
+  commissionChargeableAtBooking?: boolean;
 }

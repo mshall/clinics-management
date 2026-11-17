@@ -17,6 +17,7 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 | Requirement | Status | Notes |
 |-------------|--------|--------|
 | Status pipeline booked → pre-op → in progress → recovery → discharged | **Shipped** | `OperationStatus` extended; legacy `SCHEDULED`/`COMPLETED` map to booked/discharged; `PATCH /operations/:id/status` one step at a time |
+| “How did they find us?” on operation create (updates patient profile) | **Shipped** | Mandatory on `POST /operations`; same acquisition fields as patient/encounter create |
 | Pre-op checklist (tablet) | **Foundation** | `GET /operations/:id/pre-op-checklist`, `POST .../:itemId/complete`; default EN/AR items |
 | Consent on tablet | **Foundation** | Upload `CONSENT` via existing operation documents API; checklist includes consent line |
 | Operation note template | **Foundation** | `PATCH /operations/:id/operation-note` JSON; pair with clinical templates in UI |
@@ -55,6 +56,7 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 | Confirm/cancel replies | **Shipped** | MS-02 quick replies + waitlist on cancel ([MESSAGING_WHATSAPP.md](./MESSAGING_WHATSAPP.md)) |
 | Messaging consent / STOP | **Shipped** | MS-03 transactional vs marketing + PDPL opt-out ([MESSAGING_CONSENT.md](./MESSAGING_CONSENT.md)) |
 | Recall / campaigns (check-up, lapsed, birthday) | **Foundation** | `GET /messaging/recall-campaigns`; tie to `Patient.acquisitionChannel` in next slice |
+| Booking attribution & new-patient rule (CR-02) | **Done** | See [BOOKING_ATTRIBUTION.md](./BOOKING_ATTRIBUTION.md) |
 | Post-visit satisfaction → doctor score | **Foundation** | `SatisfactionSurveyResponse` table; trigger on encounter finalize (next) |
 
 ---

@@ -31,6 +31,16 @@ export function patientAcquisitionFormValuesFromPatient(patient: {
   };
 }
 
+export function validatePatientAcquisitionRequired(
+  values: PatientAcquisitionFormValues,
+  t: (key: string, fallback: string) => string,
+): string | null {
+  if (!values.channel) {
+    return t("patients.errorAcquisitionRequired", "Select how the patient found the clinic.");
+  }
+  return validatePatientAcquisitionForm(values, t);
+}
+
 export function validatePatientAcquisitionForm(
   values: PatientAcquisitionFormValues,
   t: (key: string, fallback: string) => string,
@@ -60,15 +70,17 @@ type PatientAcquisitionFieldsProps = {
   values: PatientAcquisitionFormValues;
   onChange: (values: PatientAcquisitionFormValues) => void;
   className?: string;
+  /** When true, channel selection is required (e.g. operation booking). */
+  required?: boolean;
 };
 
-export function PatientAcquisitionFields({ values, onChange, className }: PatientAcquisitionFieldsProps) {
+export function PatientAcquisitionFields({ values, onChange, className, required }: PatientAcquisitionFieldsProps) {
   const { t } = useTranslation();
 
   return (
     <div className={className}>
       <div className="space-y-2">
-        <Label>{t("patients.howDidTheyFindUs", "How did they find us?")}</Label>
+        <Label required={required}>{t("patients.howDidTheyFindUs", "How did they find us?")}</Label>
         <select
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           value={values.channel}
@@ -81,7 +93,11 @@ export function PatientAcquisitionFields({ values, onChange, className }: Patien
             });
           }}
         >
-          <option value="">{t("patients.cameThroughOptional", "Optional")}</option>
+          <option value="">
+            {required
+              ? t("operations.acquisitionSelect", "Select an option…")
+              : t("patients.cameThroughOptional", "Optional")}
+          </option>
           {PATIENT_ACQUISITION_CHANNELS.map((ch) => (
             <option key={ch} value={ch}>
               {patientAcquisitionLabel(ch, t)}

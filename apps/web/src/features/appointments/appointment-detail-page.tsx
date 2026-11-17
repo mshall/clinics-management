@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { AppointmentStatusBadge, appointmentStatusClassName } from "@/components/appointment-status-badge";
+import { AppointmentSourceBadges } from "@/components/appointment-source-badges";
 import { Badge } from "@/components/ui/badge";
 import { AppointmentDeleteConfirmDialog } from "@/features/appointments/appointment-delete-confirm-dialog";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
@@ -450,6 +451,10 @@ export function AppointmentDetailPage() {
             </Button>
           ) : null}
           <AppointmentStatusBadge status={apt.status} />
+          <AppointmentSourceBadges
+            bookingSource={apt.bookingSource}
+            isNewPatientAtBooking={apt.isNewPatientAtBooking}
+          />
           {apt.whatsappConfirmedAt ? (
             <Badge variant="secondary" className="font-normal">
               {t("appointments.whatsappConfirmedChip", "Confirmed by WhatsApp")}

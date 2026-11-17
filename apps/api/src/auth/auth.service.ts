@@ -1,6 +1,6 @@
 import { BadRequestException, Inject, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { PlanKey, UserRole } from "@prisma/client";
+import { PlanKey, SubscriptionStatus, UserRole } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import * as path from "path";
@@ -156,6 +156,18 @@ export class AuthService {
     if (!user) throw new UnauthorizedException("Invalid credentials");
     if (user.deletedAt || user.deactivatedAt) {
       throw new UnauthorizedException("This account is deactivated or archived");
+    }
+    if (user.tenantId && !user.isTenantOwner) {
+      const sub = await this.prisma.subscription.findUnique({
+        where: { tenantId: user.tenantId },
+        select: { status: true },
+      });
+      if (sub?.status === SubscriptionStatus.SUSPENDED) {
+        throw new UnauthorizedException({
+          message: "Organization suspended — contact the clinic owner",
+          errorCode: "SUBSCRIPTION_SUSPENDED",
+        });
+      }
     }
     return this.issueLoginSession(user.id, mfaCode, meta, user);
   }

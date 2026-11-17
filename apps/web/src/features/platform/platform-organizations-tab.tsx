@@ -13,18 +13,21 @@ import { ResponsiveTable } from "@/components/responsive-table";
 import { ClinicFormFields } from "@/features/clinics/clinic-form-fields";
 import { clinicFormToCreatePayload, emptyClinicForm, hasPartialClinicForm, isClinicFormComplete, type ClinicFormValues } from "@/features/clinics/clinic-form-utils";
 import { PlatformOrgSettingsPanel } from "@/features/platform/platform-org-settings-panel";
+import { PlatformOrgAuditPanel } from "@/features/platform/platform-org-audit-panel";
 import { apiErrorMessage, type TenantRow } from "@/features/platform/platform-shared";
 import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { apiGet, apiPost } from "@/lib/http";
 import type { Paginated } from "@/lib/paginated";
 type DialogMode = null | "create" | { edit: string };
+type OrgEditTab = "settings" | "audit";
 
 export function PlatformOrganizationsTab() {
   const { t } = useTranslation();
   const qc = useQueryClient();
 
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
+  const [orgEditTab, setOrgEditTab] = useState<OrgEditTab>("settings");
 
   const [tenantName, setTenantName] = useState("");
   const [tenantNameAr, setTenantNameAr] = useState("");
@@ -80,7 +83,10 @@ export function PlatformOrganizationsTab() {
     setDialogMode("create");
   };
 
-  const closeDialog = () => setDialogMode(null);
+  const closeDialog = () => {
+    setDialogMode(null);
+    setOrgEditTab("settings");
+  };
 
   const createTenantMut = useMutation({
     mutationFn: () => {
@@ -365,7 +371,31 @@ export function PlatformOrganizationsTab() {
             </div>
           ) : null}
           {editTenantId ? (
-            <PlatformOrgSettingsPanel key={editTenantId} tenantId={editTenantId} onSaved={closeDialog} />
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={orgEditTab === "settings" ? "default" : "outline"}
+                  onClick={() => setOrgEditTab("settings")}
+                >
+                  {t("platform.orgSettings", "Organization settings")}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={orgEditTab === "audit" ? "default" : "outline"}
+                  onClick={() => setOrgEditTab("audit")}
+                >
+                  {t("platform.audit.tab", "Audit")}
+                </Button>
+              </div>
+              {orgEditTab === "settings" ? (
+                <PlatformOrgSettingsPanel key={editTenantId} tenantId={editTenantId} onSaved={closeDialog} />
+              ) : (
+                <PlatformOrgAuditPanel key={`${editTenantId}-audit`} tenantId={editTenantId} />
+              )}
+            </div>
           ) : null}
         </DialogContent>
       </Dialog>

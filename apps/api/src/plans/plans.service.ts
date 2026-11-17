@@ -267,6 +267,30 @@ export class PlansService {
         },
       });
 
+      const auditTenant = await tx.tenant.findFirst({
+        where: { marketId: body.marketId },
+        orderBy: { createdAt: "asc" },
+        select: { id: true },
+      });
+      if (auditTenant) {
+        await tx.auditLog.create({
+          data: {
+            tenantId: auditTenant.id,
+            actorId: user.userId,
+            action: "plan.price.published",
+            resource: "PlanPrice",
+            resourceId: created.id,
+            metadata: {
+              planId,
+              marketId: body.marketId,
+              amount: created.amount.toFixed(2),
+              currency: created.currency,
+              priceVersion,
+            } as Prisma.InputJsonValue,
+          },
+        });
+      }
+
       return this.mapPrice(created);
     });
   }

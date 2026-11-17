@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Prisma, UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { fetchClinicScopeIds } from "../common/clinic-scope";
-import { parseInsightsRange } from "../common/insights-range";
+import { parseInsightsRange, resolveStaffPerformanceRange } from "../common/insights-range";
 import { PrismaService } from "../prisma/prisma.service";
 
 const MAX_STAFF_ROWS = 500;
@@ -104,7 +104,7 @@ export class AdminInsightsService {
   }
 
   async staffPerformance(tenantId: string, user: JwtUser, fromStr?: string, toStr?: string) {
-    const { from, to } = parseInsightsRange(fromStr, toStr);
+    const { from, to } = resolveStaffPerformanceRange(fromStr, toStr);
     const scopeClinicIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
 
     const users = await this.prisma.user.findMany({

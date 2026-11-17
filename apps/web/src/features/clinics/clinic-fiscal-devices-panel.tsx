@@ -27,6 +27,7 @@ type FiscalDeviceRow = {
 type SetupStatus = {
   requiresDevice: boolean;
   ready: boolean;
+  etaApiEnvironment?: string;
   deviceRegistration?: {
     required: boolean;
     credentialFields: Array<{ key: string; type: string; labelKey: string }>;
@@ -112,8 +113,23 @@ export function ClinicFiscalDevicesPanel({ clinicId }: { clinicId: string }) {
     <Card>
       <CardHeader>
         <CardTitle className="text-base">{t("fiscalDevices.title", "Receipt devices")}</CardTitle>
-        <CardDescription>
-          {t("fiscalDevices.subtitle", "Virtual or physical POS devices registered with your tax authority.")}
+        <CardDescription className="space-y-1">
+          <span>
+            {t("fiscalDevices.subtitle", "Virtual or physical POS devices registered with your tax authority.")}
+          </span>
+          {setup?.etaApiEnvironment ? (
+            <span className="block text-xs">
+              {t("fiscalDevices.etaEnvironment", "ETA API environment: {{env}}", {
+                env: t(`compliance.etaHealth.env.${setup.etaApiEnvironment}`, setup.etaApiEnvironment),
+              })}
+            </span>
+          ) : null}
+          <span className="block text-xs text-muted-foreground">
+            {t(
+              "fiscalDevices.productionCredsHint",
+              "For production cutover, enter each clinic’s live client ID and secret here after the pre-production billing drill.",
+            )}
+          </span>
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">

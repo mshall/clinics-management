@@ -7,11 +7,14 @@ import { EntitlementGuard } from "../../entitlements/entitlement.guard";
 import { RequiresEntitlement } from "../../entitlements/requires-entitlement.decorator";
 import type { JwtUser } from "../../auth/jwt-user";
 import { AdminDataExplorerService } from "./admin-data-explorer.service";
+import { SubscriptionAccessGuard } from "../../subscriptions/subscription-access.guard";
+import { RequiresSubscriptionAccess } from "../../subscriptions/requires-subscription-access.decorator";
+import { SubscriptionAccessAction } from "../../subscriptions/subscription-access-policy";
 
 @ApiTags("admin-data-explorer")
 @ApiBearerAuth("bearer")
 @Controller("admin/data-explorer")
-@UseGuards(JwtAuthGuard, EntitlementGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard, SubscriptionAccessGuard)
 @RequiresEntitlement("mod_data_explorer")
 export class AdminDataExplorerController {
   constructor(private readonly explorer: AdminDataExplorerService) {}
@@ -24,6 +27,7 @@ export class AdminDataExplorerController {
   }
 
   @Get("export/sql")
+  @RequiresSubscriptionAccess(SubscriptionAccessAction.EXPORT)
   @ApiOperation({ summary: "Download selected organization entities as a single SQL file" })
   @ApiOkResponse({ description: "SQL script with INSERT statements for selected entities" })
   async exportSql(@CurrentUser() user: JwtUser, @Res() res: Response, @Query("tables") tables?: string) {
@@ -36,6 +40,7 @@ export class AdminDataExplorerController {
   }
 
   @Get("export/documents")
+  @RequiresSubscriptionAccess(SubscriptionAccessAction.EXPORT)
   @ApiOperation({ summary: "Download uploaded files linked to selected organization entities as a ZIP archive" })
   @ApiOkResponse({ description: "ZIP archive of documents from object storage with manifest.json" })
   async exportDocuments(@CurrentUser() user: JwtUser, @Res() res: Response, @Query("tables") tables?: string) {

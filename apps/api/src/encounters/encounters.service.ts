@@ -16,6 +16,7 @@ import {
   type TransferVerificationStatus,
 } from "@prisma/client";
 import { randomUUID } from "crypto";
+import { CommissionChargeService } from "../kiorex/commission-charge.service";
 import * as path from "path";
 import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { assertOrgClinicalDeleteRole } from "../common/org-clinical-delete-roles";
@@ -111,6 +112,7 @@ export class EncountersService {
     private readonly rxSafety: RxSafetyCheckService,
     private readonly audit: AuditService,
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
+    private readonly commissionCharges: CommissionChargeService,
   ) {}
 
   private mapDiag(d: {
@@ -1116,6 +1118,7 @@ export class EncountersService {
           where: { id: aptId },
           data: { status: AppointmentStatus.COMPLETED, endsAt: finalizedAt },
         });
+        await this.commissionCharges.onComplete(tx, tenantId, aptId);
       }
       return updated;
     });

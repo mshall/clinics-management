@@ -3,6 +3,7 @@ import { AppointmentsModule } from "../appointments/appointments.module";
 import { AuditModule } from "../audit/audit.module";
 import { ComplianceModule } from "../compliance/compliance.module";
 import { OperationsModule } from "../operations/operations.module";
+import { SubscriptionsModule } from "../subscriptions/subscriptions.module";
 import { IntegrationAdminController } from "./integration-admin.controller";
 import { IntegrationAuthGuard } from "./integration-auth.guard";
 import { IntegrationClientService } from "./integration-client.service";
@@ -19,7 +20,7 @@ import { IntegrationFailureGovernanceService } from "./integration-failure-gover
 import { FiscalEtaNotificationsController } from "./fiscal-eta-notifications.controller";
 
 @Module({
-  imports: [AppointmentsModule, OperationsModule, AuditModule, ComplianceModule],
+  imports: [AppointmentsModule, OperationsModule, AuditModule, ComplianceModule, SubscriptionsModule],
   controllers: [
     IntegrationsAppointmentsController,
     IntegrationsOperationsController,

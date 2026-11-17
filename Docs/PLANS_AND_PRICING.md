@@ -60,9 +60,41 @@ See **[PLANS_AND_ENTITLEMENTS.md](./PLANS_AND_ENTITLEMENTS.md)** for the module 
 - Admin → Organization → **Plan & billing** (`AdminOrgBillingPanel`).
 - See lifecycle detail in migration `20261117220000_pl02_subscription_lifecycle`.
 
+## CR-01 trial engine
+
+- See **[TRIAL_ENGINE.md](./TRIAL_ENGINE.md)** — founding vs standard trial, activation visits, extend-trial, `GET /billing/trial`, web banner.
+
+## CR-04 Kiorex fees
+
+- See **[KIOREX_FEES.md](./KIOREX_FEES.md)** — commission rates, benchmark guardrail, `GET /public/kiorex-fees`, platform admin UI.
+
+## CR-05 credit wallet
+
+- See **[CREDIT_WALLET.md](./CREDIT_WALLET.md)** — ledger, FIFO expiry, `GET /billing/wallet`, platform grant API, org billing UI.
+
+## SB-01 Kiorly invoices
+
+- See **[KIORLY_INVOICES.md](./KIORLY_INVOICES.md)** — SaaS invoices vs patient `Invoice`, gapless numbering, `GET /billing/invoices`, org UI.
+
+## SB-02 Kiorly payments
+
+- See **[KIORLY_PAYMENTS.md](./KIORLY_PAYMENTS.md)** — Paymob/Fawry/InstaPay/bank, webhooks, auto-charge, pay modal.
+
+## SB-03 dunning & access
+
+- See **[DUNNING.md](./DUNNING.md)** — config-driven timeline, `SubscriptionAccessGuard`, banners, clinical read/export never blocked.
+
+## PA-02 commercial config
+
+- See **[COMMERCIAL_CONFIG.md](./COMMERCIAL_CONFIG.md)** — `Market.commercialConfig`, platform Markets UI, Zod validation, audit.
+
+## CR-06 monthly settlement
+
+- See **[MONTHLY_SETTLEMENT.md](./MONTHLY_SETTLEMENT.md)** — higher-of engine, preview/run APIs, Cairo scheduler.
+
 ## Follow-ups
 
 - Wire `FeatureFlagsService` / `@RequiresEntitlement` to `PlanEntitlement` and tenant subscription.
 - Signup + Kiorly billing invoices (`KiorlyInvoice`) charging against subscribed `planPrice`.
 - Public marketing site consuming `GET /public/plans`.
-- Platform audit log rows for price publishes.
+- See **[AUDIT_BILLING.md](./AUDIT_BILLING.md)** — SC-07 billing audit catalog, `GET /admin/platform/audit`, platform org Audit tab.

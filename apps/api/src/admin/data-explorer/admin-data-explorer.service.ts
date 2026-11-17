@@ -676,7 +676,7 @@ export class AdminDataExplorerService {
         if (body.role !== undefined) {
           const role = String(body.role) as UserRole;
           if (!Object.values(UserRole).includes(role)) throw new BadRequestException("Invalid role");
-          assertCanAssignGroupAdminRole(existing.role, role);
+          assertCanAssignGroupAdminRole(existing.role, role, user);
           data.role = role;
         }
         if (Object.keys(data).length === 0) throw new BadRequestException("No patchable fields");

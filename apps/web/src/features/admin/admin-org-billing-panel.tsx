@@ -9,6 +9,34 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiGet, apiPost } from "@/lib/http";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+type CreditWalletDto = {
+  balance: string;
+  currency: string;
+  upcomingExpiries: { expiresAt: string; amount: string; entryId: string }[];
+  entries: {
+    id: string;
+    type: string;
+    reason: string;
+    amount: string;
+    remaining: string | null;
+    expiresAt: string | null;
+    note: string | null;
+    createdAt: string;
+  }[];
+  page: number;
+  pageSize: number;
+  total: number;
+};
+
 type SubscriptionDto = {
   status: string;
   interval: string;
@@ -41,6 +69,11 @@ export function AdminOrgBillingPanel({ canManage }: { canManage: boolean }) {
   const subQuery = useQuery({
     queryKey: ["billing", "subscription"],
     queryFn: () => apiGet<SubscriptionDto>("/api/v1/billing/subscription"),
+  });
+
+  const walletQuery = useQuery({
+    queryKey: ["billing", "wallet"],
+    queryFn: () => apiGet<CreditWalletDto>("/api/v1/billing/wallet?page=1&pageSize=25"),
   });
 
   const trialCountdown = useMemo(() => {
@@ -84,7 +117,10 @@ export function AdminOrgBillingPanel({ canManage }: { canManage: boolean }) {
   const planLabel =
     sub && i18n.language.startsWith("ar") ? sub.plan.nameAr || sub.plan.nameEn : sub?.plan.nameEn;
 
+  const wallet = walletQuery.data;
+
   return (
+    <div className="space-y-4">
     <Card>
       <CardHeader>
         <CardTitle className="text-base">{t("admin.billing.title", "Plan & billing")}</CardTitle>
@@ -155,6 +191,73 @@ export function AdminOrgBillingPanel({ canManage }: { canManage: boolean }) {
         )}
       </CardContent>
     </Card>
+
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{t("admin.billing.wallet.title", "Credit wallet")}</CardTitle>
+        <CardDescription>{t("admin.billing.wallet.hint")}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {walletQuery.isPending ? (
+          <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+        ) : walletQuery.isError ? (
+          <p className="text-sm text-destructive">{t("admin.billing.wallet.loadError")}</p>
+        ) : wallet ? (
+          <>
+            <p className="text-lg font-semibold">
+              {t("admin.billing.wallet.balance")}: {wallet.balance} {wallet.currency}
+            </p>
+            {wallet.upcomingExpiries.length > 0 ? (
+              <div className="space-y-1">
+                <p className="text-sm font-medium">{t("admin.billing.wallet.upcomingExpiries")}</p>
+                <ul className="text-sm text-muted-foreground">
+                  {wallet.upcomingExpiries.map((row) => (
+                    <li key={row.entryId}>
+                      {row.amount} {wallet.currency} —{" "}
+                      {t("admin.billing.wallet.expiresOn", {
+                        date: new Date(row.expiresAt).toLocaleDateString(),
+                      })}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            <div className="space-y-2">
+              <p className="text-sm font-medium">{t("admin.billing.wallet.ledger")}</p>
+              {wallet.entries.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t("admin.billing.wallet.empty")}</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t("admin.billing.wallet.date")}</TableHead>
+                      <TableHead>{t("admin.billing.wallet.type")}</TableHead>
+                      <TableHead>{t("admin.billing.wallet.reason")}</TableHead>
+                      <TableHead className="text-end">{t("admin.billing.wallet.amount")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {wallet.entries.map((row) => (
+                      <TableRow key={row.id}>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {new Date(row.createdAt).toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-xs">{row.type}</TableCell>
+                        <TableCell className="text-xs">{row.reason}</TableCell>
+                        <TableCell className="text-end text-xs font-mono">
+                          {row.amount} {wallet.currency}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          </>
+        ) : null}
+      </CardContent>
+    </Card>
+    </div>
   );
 }
 
