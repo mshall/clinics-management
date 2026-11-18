@@ -5,7 +5,7 @@ import { useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiUrl } from "@/lib/api-url";
 import { localeForLanguage } from "@/lib/locale-display";
-import { printedItemLabel, type PrintedRxItem } from "./signed-prescription-actions";
+import { printedItemLabel, type PrintedRxItem } from "@/lib/prescription-print";
 
 type RxVerification =
   | {

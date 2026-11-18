@@ -18,6 +18,7 @@ export const CLINICAL_SPECIALTY_OPTIONS = [
   "LABORATORY",
   "INTERNAL_MEDICINE",
   "FAMILY_MEDICINE",
+  "UROLOGY",
   "CUSTOM",
 ] as const;
 
