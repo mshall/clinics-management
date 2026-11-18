@@ -74,7 +74,11 @@ import { collectOperationCreateValidationIssues } from "@/features/operations/op
 import { GenerateInvoiceDialog } from "@/features/invoices/generate-invoice-dialog";
 import { LinkedInvoicesSection } from "@/features/invoices/linked-invoices-section";
 import { DatetimeLocalField } from "@/components/datetime-local-field";
-import { nativeSelectClassName } from "@/lib/form-control-styles";
+import {
+  filterFieldClassName,
+  filterToolbarClassName,
+  nativeSelectClassName,
+} from "@/lib/form-control-styles";
 import { OperationsSummaryBreakdown } from "@/features/operations/operations-summary-cards";
 import { OperationsPeriodStats } from "@/features/operations/operations-period-stats";
 import {
@@ -1586,21 +1590,21 @@ export function OperationsPage() {
           <CardTitle className="text-base">{t("dateRange.label", "Reporting period")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="space-y-1">
+          <div className={filterToolbarClassName}>
+            <div className={filterFieldClassName}>
               <Label htmlFor="op-from">{t("dateRange.from", "From")}</Label>
-              <Input id="op-from" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
+              <Input id="op-from" className="ltr-nums" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
             </div>
-            <div className="space-y-1">
+            <div className={filterFieldClassName}>
               <Label htmlFor="op-to">{t("dateRange.to", "To")}</Label>
-              <Input id="op-to" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
+              <Input id="op-to" className="ltr-nums" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
             </div>
             {clinics.length > 1 ? (
-              <div className="space-y-1">
+              <div className={filterFieldClassName}>
                 <Label htmlFor="op-clinic-filter">{t("operations.clinic", "Clinic")}</Label>
                 <select
                   id="op-clinic-filter"
-                  className={`${nativeSelectClassName} min-w-[180px]`}
+                  className={nativeSelectClassName}
                   value={filterClinicId}
                   onChange={(e) => { setFilterClinicId(e.target.value); setPage(1); }}
                 >

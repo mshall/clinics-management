@@ -17,7 +17,7 @@ import { formatMoneyAmount } from "@/lib/money-display";
 import { showOperationMoneyColumns } from "@/lib/operation-money-policy";
 import { operationStatusIsDischarged } from "@/lib/operation-status-policy";
 import { useAuthStore } from "@/stores/auth-store";
-import { nativeSelectClassName } from "@/lib/form-control-styles";
+import { filterFieldClassName, filterToolbarCompactClassName, nativeSelectClassName } from "@/lib/form-control-styles";
 import { Label } from "@/components/ui/label";
 import { OperationPostSurgeryDocumentsSection } from "@/features/operations/operation-post-surgery-documents";
 import { OperationPreSurgeryProfileDocs } from "@/features/patients/operation-pre-surgery-profile-docs";
@@ -89,8 +89,8 @@ export function PatientOperationsSection({ patientId, canUploadDocs = false }: P
             <Scissors className="h-4 w-4" />
             {t("operations.title", "Operations")}
           </CardTitle>
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="space-y-1">
+          <div className={filterToolbarCompactClassName}>
+            <div className={filterFieldClassName}>
               <Label className="text-xs">{t("operations.status", "Status")}</Label>
               <select
                 className={nativeSelectClassName}

@@ -50,13 +50,13 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       <OnboardingChecklistCard />
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t("dashboard.title")}</h1>
-        <p className="text-muted-foreground">{t("dashboard.subtitle")}</p>
+        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{t("dashboard.title")}</h1>
+        <p className="text-sm text-muted-foreground sm:text-base">{t("dashboard.subtitle")}</p>
         {data?.periodFrom && data?.periodTo ? (
-          <p className="mt-1 text-xs text-muted-foreground ltr-nums">
+          <p className="mt-1 break-words text-xs text-muted-foreground ltr-nums">
             {t("dashboard.period")}: {data.periodFrom} → {data.periodTo}
           </p>
         ) : null}
@@ -74,7 +74,7 @@ export function DashboardPage() {
             <CardTitle className="text-base">{t("dashboard.todayLive")}</CardTitle>
             <CardDescription className="ltr-nums">{todayDateLabel}</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6 text-sm">
+          <CardContent className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 lg:grid-cols-6">
             <TodayStat label={t("dashboard.today.appointments")} value={todayQ.data.appointments} locale={locale} />
             <TodayStat label={t("dashboard.today.waiting")} value={todayQ.data.waiting} locale={locale} />
             <TodayStat label={t("dashboard.today.seen")} value={todayQ.data.seen} locale={locale} />

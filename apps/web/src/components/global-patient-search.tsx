@@ -2,6 +2,7 @@ import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { apiGet } from "@/lib/http";
@@ -51,14 +52,24 @@ export function GlobalPatientSearch() {
 
   return (
     <>
-      <button
+      <Button
         type="button"
-        className="hidden items-center gap-2 rounded-md border border-border bg-muted/40 px-2 py-1 text-xs text-muted-foreground hover:bg-muted md:flex"
+        variant="outline"
+        size="icon"
+        className="size-9 shrink-0 md:hidden"
+        aria-label={t("frontDesk.searchPatients", "Find patient")}
         onClick={() => setOpen(true)}
       >
-        <Search className="size-3.5" />
-        {t("frontDesk.searchPatients", "Find patient")}
-        <kbd className="rounded border bg-background px-1 font-mono text-[10px]">⌘K</kbd>
+        <Search className="size-4" />
+      </Button>
+      <button
+        type="button"
+        className="hidden min-w-0 items-center gap-2 rounded-md border border-border bg-muted/40 px-2 py-1 text-xs text-muted-foreground hover:bg-muted md:inline-flex"
+        onClick={() => setOpen(true)}
+      >
+        <Search className="size-3.5 shrink-0" />
+        <span className="truncate">{t("frontDesk.searchPatients", "Find patient")}</span>
+        <kbd className="hidden shrink-0 rounded border bg-background px-1 font-mono text-[10px] lg:inline">⌘K</kbd>
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="gap-3 sm:max-w-lg">

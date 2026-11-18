@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { SearchInput } from "@/components/search-input";
 import { apiGet } from "@/lib/http";
 import type { Paginated } from "@/lib/paginated";
+import { filterFieldClassName, filterToolbarCompactClassName, nativeSelectClassName } from "@/lib/form-control-styles";
 
 type PlatformAuditRow = {
   id: string;
@@ -70,12 +71,12 @@ export function PlatformOrgAuditPanel({ tenantId }: { tenantId: string }) {
           "Subscription, credits, invoices, Kiorex commissions, entitlements, and settlement events for this organization.",
         )}
       </p>
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="space-y-1">
+      <div className={filterToolbarCompactClassName}>
+        <div className={filterFieldClassName}>
           <Label htmlFor="platform-audit-entity">{t("platform.audit.entityFilter", "Category")}</Label>
           <select
             id="platform-audit-entity"
-            className="h-9 min-w-[10rem] rounded-md border border-input bg-background px-2 text-sm"
+            className={nativeSelectClassName}
             value={entity}
             onChange={(e) => {
               setEntity(e.target.value);

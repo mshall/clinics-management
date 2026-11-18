@@ -1,6 +1,18 @@
 import type { ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Camera, GitMerge, HeartPulse, Images, LayoutGrid, Scissors, Users } from "lucide-react";
+import {
+  Bell,
+  Camera,
+  FileStack,
+  GitMerge,
+  HeartPulse,
+  Images,
+  LayoutGrid,
+  Receipt,
+  Scissors,
+  Sparkles,
+  Users,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -54,11 +66,21 @@ export function PatientDetailPage() {
   const navTabAccessModes = useAuthStore((s) => s.user?.navTabAccessModes);
   const roleNavTabKeys = useAuthStore((s) => s.user?.roleNavTabKeys);
   const canViewEncounters = showNavItem(role, "encounters", navTabKeys, roleNavTabKeys);
-  const canViewOperations = showNavItem(role, "operations", navTabKeys, roleNavTabKeys);
+  const canViewOperationsNav = showNavItem(role, "operations", navTabKeys, roleNavTabKeys);
+  /** Patient chart: show operations beside encounters when either tab is granted. */
+  const canViewPatientOperations = canViewOperationsNav || canViewEncounters;
   const canEditPatient = canEditPatientDetails(role, navTabKeys, navTabAccessModes);
   const canUploadEncounterDocs = canMutateNavTab("encounters", role, navTabKeys, navTabAccessModes);
   const canUploadOperationDocs = canCreateOperation(role, navTabKeys, navTabAccessModes);
-  const [profileTab, setProfileTab] = useState<"overview" | "encounters" | "operations">("overview");
+  type ProfileTab =
+    | "overview"
+    | "smartSummary"
+    | "encounters"
+    | "operations"
+    | "medicalDocuments"
+    | "invoices"
+    | "notifications";
+  const [profileTab, setProfileTab] = useState<ProfileTab>("overview");
   const [editOpen, setEditOpen] = useState(false);
   const [familyOpen, setFamilyOpen] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
@@ -270,28 +292,47 @@ export function PatientDetailPage() {
         </CardContent>
       </Card>
 
-      <Tabs value={profileTab} onValueChange={(v) => setProfileTab(v as typeof profileTab)} className="space-y-4">
-        <TabsList className="w-full sm:w-auto">
-          <TabsTrigger value="overview">
+      <Tabs
+        value={profileTab}
+        onValueChange={(v) => setProfileTab(v as ProfileTab)}
+        className="space-y-4"
+      >
+        <TabsList className="h-auto w-full max-w-full justify-start">
+          <TabsTrigger value="overview" className="gap-1.5">
             <LayoutGrid className="h-4 w-4 shrink-0" aria-hidden />
             {t("patients.tabOverview", "Overview")}
           </TabsTrigger>
+          <TabsTrigger value="smartSummary" className="gap-1.5">
+            <Sparkles className="h-4 w-4 shrink-0 text-violet-500" aria-hidden />
+            {t("patients.tabSmartSummary", "Smart summary")}
+          </TabsTrigger>
           {canViewEncounters ? (
-            <TabsTrigger value="encounters">
+            <TabsTrigger value="encounters" className="gap-1.5">
               <HeartPulse className="h-4 w-4 shrink-0" aria-hidden />
               {t("patients.encounters")}
             </TabsTrigger>
           ) : null}
-          {canViewOperations ? (
-            <TabsTrigger value="operations">
+          {canViewPatientOperations ? (
+            <TabsTrigger value="operations" className="gap-1.5">
               <Scissors className="h-4 w-4 shrink-0" aria-hidden />
               {t("patients.tabOperations", "Operations")}
             </TabsTrigger>
           ) : null}
+          <TabsTrigger value="medicalDocuments" className="gap-1.5">
+            <FileStack className="h-4 w-4 shrink-0" aria-hidden />
+            {t("patients.tabMedicalDocuments", "Medical documents")}
+          </TabsTrigger>
+          <TabsTrigger value="invoices" className="gap-1.5">
+            <Receipt className="h-4 w-4 shrink-0" aria-hidden />
+            {t("patients.tabInvoices", "Invoices")}
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="gap-1.5">
+            <Bell className="h-4 w-4 shrink-0" aria-hidden />
+            {t("patients.tabNotificationSettings", "Notification settings")}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-0 space-y-6">
-      <PreVisitSmartSummaryCard patientId={patient.id} />
       <Patient360Summary patientId={patient.id} />
 
       <PatientAllergiesSection patientId={patient.id} />
@@ -443,11 +484,10 @@ export function PatientDetailPage() {
         </Card>
       ) : null}
 
-      <PatientClinicalDocuments patientId={patient.id} />
+        </TabsContent>
 
-      <PatientMessagingConsentCard patientId={patient.id} />
-      <OutboundMessageLog patientId={patient.id} />
-      <PatientInvoicesSection patientId={patient.id} clinicId={patient.homeBranchId} />
+        <TabsContent value="smartSummary" className="mt-0">
+          <PreVisitSmartSummaryCard patientId={patient.id} />
         </TabsContent>
 
         {canViewEncounters && patient ? (
@@ -456,11 +496,24 @@ export function PatientDetailPage() {
           </TabsContent>
         ) : null}
 
-        {canViewOperations ? (
+        {canViewPatientOperations ? (
           <TabsContent value="operations" className="mt-0">
             <PatientOperationsSection patientId={patient.id} canUploadDocs={canUploadOperationDocs} />
           </TabsContent>
         ) : null}
+
+        <TabsContent value="medicalDocuments" className="mt-0">
+          <PatientClinicalDocuments patientId={patient.id} />
+        </TabsContent>
+
+        <TabsContent value="invoices" className="mt-0">
+          <PatientInvoicesSection patientId={patient.id} clinicId={patient.homeBranchId} />
+        </TabsContent>
+
+        <TabsContent value="notifications" className="mt-0 space-y-6">
+          <PatientMessagingConsentCard patientId={patient.id} />
+          <OutboundMessageLog patientId={patient.id} />
+        </TabsContent>
       </Tabs>
 
       {canEditPatient ? (

@@ -35,7 +35,12 @@ import { useDateRangeStore } from "@/stores/date-range-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectRevenueSubmitIssues } from "@/lib/create-form-validation";
-import { nativeSelectClassName } from "@/lib/form-control-styles";
+import {
+  filterActionsClassName,
+  filterFieldClassName,
+  filterToolbarClassName,
+  nativeSelectClassName,
+} from "@/lib/form-control-styles";
 import { resolvePatientListLabel } from "@/lib/patient-display";
 import { formatMoneyAmount, formatMultiCurrencyAmounts } from "@/lib/money-display";
 import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
@@ -254,11 +259,11 @@ export function RevenuePage() {
               )}
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-wrap items-end gap-3 pb-4">
-            <div className="space-y-1.5">
+          <CardContent className={`${filterToolbarClassName} pb-4`}>
+            <div className={filterFieldClassName}>
               <Label className="text-xs">{t("dateRange.from")}</Label>
               <Input
-                className="h-9 ltr-nums"
+                className="ltr-nums"
                 type="date"
                 value={from}
                 onChange={(e) => {
@@ -267,10 +272,10 @@ export function RevenuePage() {
                 }}
               />
             </div>
-            <div className="space-y-1.5">
+            <div className={filterFieldClassName}>
               <Label className="text-xs">{t("common.to", "To")}</Label>
               <Input
-                className="h-9 ltr-nums"
+                className="ltr-nums"
                 type="date"
                 value={to}
                 onChange={(e) => {
@@ -279,7 +284,7 @@ export function RevenuePage() {
                 }}
               />
             </div>
-            <div className="min-w-[11rem] flex-1 space-y-1.5">
+            <div className={filterFieldClassName}>
               <Label className="text-xs">{t("revenue.ledgerClinicFilter", "Clinic scope")}</Label>
               {singleManagedClinic ? (
                 <p className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-2 text-sm">
@@ -303,19 +308,21 @@ export function RevenuePage() {
                 </select>
               )}
             </div>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="h-9"
-              onClick={() => {
-                resetToCurrentMonth();
-                setPage(1);
-                void qc.invalidateQueries();
-              }}
-            >
-              {t("revenue.thisMonth", "This month")}
-            </Button>
+            <div className={filterActionsClassName}>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="h-11 w-full min-[420px]:w-auto"
+                onClick={() => {
+                  resetToCurrentMonth();
+                  setPage(1);
+                  void qc.invalidateQueries();
+                }}
+              >
+                {t("revenue.thisMonth", "This month")}
+              </Button>
+            </div>
           </CardContent>
         </Card>
         <Card>

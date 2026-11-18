@@ -51,9 +51,9 @@ export function AppShell() {
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-3 border-b border-border bg-card/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-card/80 md:ps-6">
-          <div className="flex items-center gap-2 md:hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-x-clip">
+        <header className="sticky top-0 z-10 flex min-h-14 flex-wrap items-center justify-between gap-2 border-b border-border bg-card/95 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-card/80 sm:gap-3 sm:px-4 md:h-14 md:flex-nowrap md:py-0 md:ps-6">
+          <div className="flex min-w-0 flex-1 items-center gap-2 md:hidden">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
                 <Button variant="outline" size="icon" aria-label={t("common.menu")}>
@@ -74,7 +74,7 @@ export function AppShell() {
             </Sheet>
             <span className="truncate text-sm font-semibold">{t("app.name")}</span>
           </div>
-          <div className="ms-auto flex items-center gap-2">
+          <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-1.5 sm:w-auto sm:gap-2">
             <GlobalPatientSearch />
             {user ? (
               <span className="hidden max-w-[12rem] truncate text-sm text-muted-foreground sm:inline">
@@ -102,7 +102,7 @@ export function AppShell() {
         <DunningBanner />
         <LegalAcceptanceBanner />
         {showReportingPeriodBar(pathname) ? <DateRangeBar /> : null}
-        <main className="mx-auto w-full max-w-[min(96rem,calc(100vw-1rem))] flex-1 p-3 sm:p-4 md:p-6">
+        <main className="mx-auto w-full min-w-0 max-w-[min(96rem,calc(100vw-1rem))] flex-1 p-3 sm:p-4 md:p-6">
           <Outlet />
         </main>
         <RoleAssistantWidget />

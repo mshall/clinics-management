@@ -50,7 +50,7 @@ import {
 import type { AppointmentDto } from "@/lib/api-types";
 import { DatetimeLocalField } from "@/components/datetime-local-field";
 import { ScheduledFeeCollectionFields } from "@/components/scheduled-fee-collection-fields";
-import { nativeSelectClassName } from "@/lib/form-control-styles";
+import { filterFieldClassName, filterToolbarClassName, nativeSelectClassName } from "@/lib/form-control-styles";
 import {
   emptyScheduledFeeCollection,
   scheduledFeeCollectionToApi,
@@ -464,8 +464,8 @@ export function AppointmentsPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">{t("appointments.dateRange", "Date range")}</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-wrap items-end gap-4">
-            <div className="space-y-1">
+          <CardContent className={filterToolbarClassName}>
+            <div className={filterFieldClassName}>
               <Label htmlFor="phys-apt-from">{t("appointments.filterFrom", "From date")}</Label>
               <Input
                 id="phys-apt-from"
@@ -478,7 +478,7 @@ export function AppointmentsPage() {
                 }}
               />
             </div>
-            <div className="space-y-1">
+            <div className={filterFieldClassName}>
               <Label htmlFor="phys-apt-to">{t("appointments.filterTo", "To date")}</Label>
               <Input
                 id="phys-apt-to"
@@ -491,11 +491,11 @@ export function AppointmentsPage() {
                 }}
               />
             </div>
-            <div className="space-y-1">
+            <div className={filterFieldClassName}>
               <Label htmlFor="phys-apt-status">{t("appointments.status")}</Label>
               <select
                 id="phys-apt-status"
-                className={`${nativeSelectClassName} min-w-[160px]`}
+                className={nativeSelectClassName}
                 value={fltStatus}
                 onChange={(e) => {
                   setFltStatus(e.target.value);

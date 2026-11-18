@@ -44,6 +44,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useEncounterQuery } from "@/lib/api-hooks";
 import type { EncounterDetailDto, EncounterDocumentDto } from "@/lib/api-types";
 import { ApiError, apiDelete, apiFetchBlob, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
+import { filterToolbarClassName } from "@/lib/form-control-styles";
 import { uploadFilesWithConcurrency } from "@/lib/upload-files-sequentially";
 import { canDeleteEncounter } from "@/lib/encounter-delete-policy";
 import { canGenerateInvoice } from "@/lib/invoice-generate-policy";
@@ -814,7 +815,7 @@ export function EncounterDetailPage() {
           </CardTitle>
           <CardDescription>{draft ? t("encounters.editable") : t("encounters.readOnly")}</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-wrap items-end gap-x-6 gap-y-4">
+        <CardContent className={filterToolbarClassName}>
           <div className="flex min-w-[7rem] items-center gap-2">
             <Heart className="h-4 w-4 shrink-0 text-rose-500" aria-hidden />
             <div className="min-w-0 flex-1 space-y-1">

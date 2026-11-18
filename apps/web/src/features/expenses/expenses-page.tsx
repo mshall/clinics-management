@@ -36,6 +36,12 @@ import { formatMoneyAmount } from "@/lib/money-display";
 import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
 import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import { useAuthStore } from "@/stores/auth-store";
+import {
+  filterActionsClassName,
+  filterFieldClassName,
+  filterToolbarClassName,
+  nativeSelectClassName,
+} from "@/lib/form-control-styles";
 
 function expenseDateInputValue(iso: string): string {
   const d = new Date(iso);
@@ -395,36 +401,36 @@ export function ExpensesPage() {
         />
       ) : null}
 
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t("expenses.title")}</h1>
-        <p className="text-muted-foreground">{t("expenses.subtitle")}</p>
+      <div className="min-w-0">
+        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{t("expenses.title")}</h1>
+        <p className="text-sm text-muted-foreground sm:text-base">{t("expenses.subtitle")}</p>
       </div>
 
       {isError ? <p className="text-sm text-destructive">{error instanceof Error ? error.message : t("common.error")}</p> : null}
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <Card className="lg:max-w-2xl">
+      <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <Card className="min-w-0 lg:max-w-2xl">
           <CardHeader className="pb-2 pt-4">
             <CardTitle className="text-sm font-medium">{t("expenses.searchLedger", "Search ledger")}</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-wrap items-end gap-3 pb-4">
-            <div className="space-y-1.5">
+          <CardContent className={`${filterToolbarClassName} pb-4`}>
+            <div className={filterFieldClassName}>
               <Label className="text-xs">{t("expenses.from", "From")}</Label>
-              <Input className="h-9 ltr-nums" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
+              <Input className="ltr-nums" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
             </div>
-            <div className="space-y-1.5">
+            <div className={filterFieldClassName}>
               <Label className="text-xs">{t("expenses.to", "To")}</Label>
-              <Input className="h-9 ltr-nums" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
+              <Input className="ltr-nums" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
             </div>
-            <div className="min-w-[10rem] flex-1 space-y-1.5">
+            <div className={filterFieldClassName}>
               <Label className="text-xs">{t("expenses.clinic")}</Label>
               {singleManagedClinic ? (
-                <p className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-2 text-sm">
+                <p className="flex min-h-11 items-center rounded-md border border-input bg-muted/40 px-2 text-sm">
                   {formatClinicName(singleManagedClinic, i18n.language)}
                 </p>
               ) : (
                 <select
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+                  className={nativeSelectClassName}
                   value={filterClinicId}
                   onChange={(e) => {
                     setFilterClinicId(e.target.value);
@@ -440,20 +446,22 @@ export function ExpensesPage() {
                 </select>
               )}
             </div>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="h-9"
-              onClick={() => {
-                const r = defaultMonthRange();
-                setFrom(r.from);
-                setTo(r.to);
-                setPage(1);
-              }}
-            >
-              {t("expenses.thisMonth", "This month")}
-            </Button>
+            <div className={filterActionsClassName}>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="h-11 w-full min-[420px]:w-auto"
+                onClick={() => {
+                  const r = defaultMonthRange();
+                  setFrom(r.from);
+                  setTo(r.to);
+                  setPage(1);
+                }}
+              >
+                {t("expenses.thisMonth", "This month")}
+              </Button>
+            </div>
           </CardContent>
         </Card>
         <Card>

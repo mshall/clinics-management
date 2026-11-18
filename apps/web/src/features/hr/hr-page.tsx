@@ -47,6 +47,11 @@ import {
 import { ApiError, apiDelete, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { columnFilterIncludes } from "@/lib/utils";
 import {
+  filterActionsClassName,
+  filterFieldClassName,
+  filterToolbarClassName,
+} from "@/lib/form-control-styles";
+import {
   formatEmployeeSalaryAmount,
   formatMultiCurrencyAmounts,
 } from "@/lib/money-display";
@@ -1542,8 +1547,8 @@ export function HrPage() {
           <CardContent className="flex flex-col gap-4">
             <div>
               <CardTitle className="mb-2 text-sm font-medium">{t("hr.recordAttendance")}</CardTitle>
-              <div className="flex flex-wrap items-end gap-3">
-                <div className="min-w-[12rem] flex-1 space-y-2">
+              <div className={filterToolbarClassName}>
+                <div className={filterFieldClassName}>
                   <Label required>{t("hr.employee")}</Label>
                   <SearchablePickList
                     items={employeePickItems}
@@ -1553,13 +1558,15 @@ export function HrPage() {
                     placeholder={t("hr.pickEmployee")}
                   />
                 </div>
-                <div className="space-y-2">
+                <div className={filterFieldClassName}>
                   <Label>{t("hr.workDate")}</Label>
                   <Input className="ltr-nums" type="date" value={attDate} onChange={(e) => setAttDate(e.target.value)} />
                 </div>
-                <CreateActionButton type="button" disabled={createAtt.isPending} onClick={handleCreateAttendance}>
-                  {t("hr.submitAttendance")}
-                </CreateActionButton>
+                <div className={filterActionsClassName}>
+                  <CreateActionButton type="button" disabled={createAtt.isPending} onClick={handleCreateAttendance}>
+                    {t("hr.submitAttendance")}
+                  </CreateActionButton>
+                </div>
               </div>
               {attValidation.formErr ? <p className="text-sm text-destructive">{attValidation.formErr}</p> : null}
             </div>
@@ -1582,8 +1589,8 @@ export function HrPage() {
                   {t("patients.clearColFilters", "Clear column filters")}
                 </Button>
               </div>
-              <div className="flex flex-wrap items-end gap-3">
-                <div className="min-w-[12rem] flex-1 space-y-2">
+              <div className={filterToolbarClassName}>
+                <div className={filterFieldClassName}>
                   <Label>{t("hr.filterEmployee", "Filter employee")}</Label>
                   <SearchablePickList
                     items={[{ value: "", label: t("hr.anyEmployee", "Any") }, ...employeePickItems]}
@@ -1596,15 +1603,15 @@ export function HrPage() {
                     placeholder={t("hr.employee")}
                   />
                 </div>
-                <div className="space-y-2">
+                <div className={filterFieldClassName}>
                   <Label>{t("hr.from", "From")}</Label>
                   <Input className="ltr-nums" type="date" value={attFrom} onChange={(e) => { setAttFrom(e.target.value); setAttPage(1); }} />
                 </div>
-                <div className="space-y-2">
+                <div className={filterFieldClassName}>
                   <Label>{t("hr.to", "To")}</Label>
                   <Input className="ltr-nums" type="date" value={attTo} onChange={(e) => { setAttTo(e.target.value); setAttPage(1); }} />
                 </div>
-                <div className="min-w-[10rem] space-y-2">
+                <div className={filterFieldClassName}>
                   <Label>{t("hr.status")}</Label>
                   <SearchablePickList
                     items={attStatusItems}
@@ -1744,8 +1751,8 @@ export function HrPage() {
             </Dialog>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="min-w-[12rem] flex-1 space-y-2">
+            <div className={filterToolbarClassName}>
+              <div className={filterFieldClassName}>
                 <Label>{t("hr.filterEmployee", "Filter employee")}</Label>
                 <SearchablePickList
                   items={[{ value: "", label: t("hr.anyEmployee", "Any") }, ...employeePickItems]}
@@ -1758,7 +1765,7 @@ export function HrPage() {
                   placeholder={t("hr.employee")}
                 />
               </div>
-              <div className="min-w-[10rem] space-y-2">
+              <div className={filterFieldClassName}>
                 <Label>{t("hr.status")}</Label>
                 <SearchablePickList
                   items={leaveStatusItems}
@@ -1771,11 +1778,11 @@ export function HrPage() {
                   placeholder={t("hr.status")}
                 />
               </div>
-              <div className="space-y-2">
+              <div className={filterFieldClassName}>
                 <Label>{t("hr.startFrom", "Start from")}</Label>
                 <Input className="ltr-nums" type="date" value={leaveFrom} onChange={(e) => { setLeaveFrom(e.target.value); setLeavePage(1); }} />
               </div>
-              <div className="space-y-2">
+              <div className={filterFieldClassName}>
                 <Label>{t("hr.startTo", "Start to")}</Label>
                 <Input className="ltr-nums" type="date" value={leaveTo} onChange={(e) => { setLeaveTo(e.target.value); setLeavePage(1); }} />
               </div>
