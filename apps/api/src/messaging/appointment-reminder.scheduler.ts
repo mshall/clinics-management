@@ -68,7 +68,7 @@ export class AppointmentReminderScheduler implements OnModuleInit, OnModuleDestr
         tenantId,
         status: { in: [AppointmentStatus.CONFIRMED, AppointmentStatus.SCHEDULED] },
         startsAt: { gte: targetStart, lt: targetEnd },
-        patient: { phone: { not: "" } },
+        patient: { phone: { not: "" }, isSample: false },
       },
       include: {
         patient: { select: { id: true, phone: true, firstNameEn: true, lastNameEn: true } },

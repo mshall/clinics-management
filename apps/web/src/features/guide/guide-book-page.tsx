@@ -105,7 +105,7 @@ function SectionBlock({
   const summary = section.summaryEn;
 
   return (
-    <Card className="overflow-hidden border-border/80 shadow-sm lg:col-span-2">
+    <Card id={section.id} className="scroll-mt-20 overflow-hidden border-border/80 shadow-sm lg:col-span-2">
       <div className={cn("h-1 w-full bg-gradient-to-r", SECTION_ACCENTS[index % SECTION_ACCENTS.length] ?? SECTION_ACCENTS[0])} />
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-start justify-between gap-2">

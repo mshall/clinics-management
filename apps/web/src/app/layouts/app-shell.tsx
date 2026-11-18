@@ -1,4 +1,4 @@
-import { LogOut, Menu } from "lucide-react";
+import { CircleHelp, LogOut, Menu } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -18,6 +18,9 @@ import { LegalAcceptanceBanner } from "@/components/legal-acceptance-banner";
 import { TrialBanner } from "@/components/trial-banner";
 import { DunningBanner } from "@/components/dunning-banner";
 import { UpgradePaywallModal } from "@/components/upgrade-paywall-modal";
+import { FirstRunTour } from "@/features/help/first-run-tour";
+import { HelpDrawer } from "@/features/help/help-drawer";
+import { useHelpStore } from "@/stores/help-store";
 
 export function AppShell() {
   const { t } = useTranslation();
@@ -26,6 +29,7 @@ export function AppShell() {
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const openHelp = useHelpStore((s) => s.setDrawerOpen);
 
   useEffect(() => {
     const syncNav = () => {
@@ -82,6 +86,10 @@ export function AppShell() {
                 {user.displayName} · {formatUserRole(user.role, t)}
               </span>
             ) : null}
+            <Button variant="ghost" size="sm" className="gap-1" onClick={() => openHelp(true)} data-testid="help-open">
+              <CircleHelp className="size-4" />
+              <span className="hidden sm:inline">{t("help.button")}</span>
+            </Button>
             <ThemeSwitcher />
             <LanguageSwitcher />
             <Button
@@ -108,6 +116,8 @@ export function AppShell() {
         </main>
         <RoleAssistantWidget />
         <UpgradePaywallModal />
+        <HelpDrawer />
+        <FirstRunTour />
       </div>
     </div>
   );

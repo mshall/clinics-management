@@ -136,12 +136,14 @@ export class ReportsService {
     const patientWhere: Prisma.PatientWhereInput = {
       tenantId,
       deletedAt: null,
+      isSample: false,
       createdAt: { gte: start, lte: end },
       ...(clinicId ? { homeBranchId: clinicId } : scopeClinicIds?.length ? { homeBranchId: { in: scopeClinicIds } } : {}),
     };
 
     const appointmentWhere: Prisma.AppointmentWhereInput = {
       tenantId,
+      patient: { isSample: false },
       status: AppointmentStatus.COMPLETED,
       startsAt: { gte: start, lte: end },
       ...(clinicId ? { clinicId } : scopeClinicIds?.length ? { clinicId: { in: scopeClinicIds } } : {}),
@@ -271,6 +273,7 @@ export class ReportsService {
           tenantId,
           status: { in: [EncounterStatus.FINALIZED, EncounterStatus.AMENDED] },
           finalizedAt: { gte: start, lte: end },
+          patient: { isSample: false },
           ...(scopeClinicIds?.length ? { clinicId: { in: scopeClinicIds } } : {}),
         },
         _count: { _all: true },
@@ -280,6 +283,7 @@ export class ReportsService {
         where: {
           tenantId,
           deletedAt: null,
+          isSample: false,
           createdAt: { gte: start, lte: end },
           homeBranchId: { not: null },
           ...(scopeClinicIds?.length ? { homeBranchId: { in: scopeClinicIds } } : {}),
@@ -452,6 +456,7 @@ export class ReportsService {
       const patientWhere: Prisma.PatientWhereInput = {
         tenantId,
         deletedAt: null,
+        isSample: false,
         createdAt: { gte: bucketStart, lte: bucketEnd },
         ...(clinicId
           ? { homeBranchId: clinicId }
@@ -526,6 +531,7 @@ export class ReportsService {
         where: {
           tenantId,
           deletedAt: null,
+          isSample: false,
           createdAt: { gte: start, lte: end },
         },
         select: { acquisitionChannel: true },
@@ -637,6 +643,7 @@ export class ReportsService {
     const where: Prisma.PatientWhereInput = {
       tenantId,
       deletedAt: null,
+      isSample: false,
       createdAt: { gte: start, lte: end },
       AND: and,
     };

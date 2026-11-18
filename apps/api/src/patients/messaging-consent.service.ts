@@ -90,12 +90,19 @@ export class MessagingConsentService {
     return this.listForPatient(tenantId, patientId);
   }
 
+  /** ON-08 — sample ("try it") patients never receive WhatsApp/SMS. */
+  async isSamplePatient(tenantId: string, patientId: string): Promise<boolean> {
+    const p = await this.prisma.patient.findFirst({ where: { id: patientId, tenantId }, select: { isSample: true } });
+    return p?.isSample === true;
+  }
+
   async isGranted(
     tenantId: string,
     patientId: string,
     channel: MessageChannel,
     purpose: MessagingConsentPurpose,
   ): Promise<boolean> {
+    if (await this.isSamplePatient(tenantId, patientId)) return false;
     const row = await this.prisma.messagingConsent.findUnique({
       where: { patientId_channel_purpose: { patientId, channel, purpose } },
     });
@@ -110,6 +117,13 @@ export class MessagingConsentService {
     templateKey: string | null | undefined,
   ): Promise<void> {
     if (!patientId?.trim()) return;
+    if (await this.isSamplePatient(tenantId, patientId)) {
+      throw new ForbiddenException({
+        message: "Sample patient — messages are never sent",
+        errorCode: "SAMPLE_PATIENT_NO_MESSAGES",
+        channel,
+      });
+    }
     const purpose = resolveMessagingPurpose(templateKey);
     if (purpose === MESSAGING_CONSENT_MARKETING) {
       await this.consentPolicy.require(tenantId, patientId, CONSENT_PURPOSE_MESSAGING_MARKETING, { channel });

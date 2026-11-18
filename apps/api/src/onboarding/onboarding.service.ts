@@ -210,10 +210,10 @@ export class OnboardingService {
           },
         })
         .then((n) => n > 0),
-      this.prisma.patient.count({ where: { tenantId } }),
-      this.prisma.appointment.count({ where: { tenantId } }),
+      this.prisma.patient.count({ where: { tenantId, isSample: false } }),
+      this.prisma.appointment.count({ where: { tenantId, patient: { isSample: false } } }),
       this.prisma.appointment.count({
-        where: { tenantId, status: AppointmentStatus.CHECKED_IN },
+        where: { tenantId, status: AppointmentStatus.CHECKED_IN, patient: { isSample: false } },
       }),
       this.prisma.fiscalDevice
         .count({

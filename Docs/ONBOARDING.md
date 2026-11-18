@@ -7,6 +7,7 @@
 | ON-05 Data import from Excel / CSV (patients, appointments, price list, staff) | **Done** — see [Data import](#data-import-on-05) |
 | ON-06 Staff invitations by WhatsApp or email | **Done** — see [Staff invitations](#staff-invitations-on-06) (delivery template: NH-005) |
 | ON-07 Field-sales assisted onboarding & rep attribution | **Done** — see [Field-sales reps](#field-sales-reps-on-07) (OTP / welcome templates: NH-006) |
+| ON-08 First-run tour, sample data & in-app help | **Done** — see [Tour, sample patient & help](#tour-sample-patient--help-on-08) (Arabic videos: NH-007) |
 
 ## Purpose
 
@@ -84,6 +85,15 @@ Kiorly field reps sign clinics in person from a mobile console at `/rep` (login 
 
 Tests: `sales-reps/on07-sales-reps.integration.test.ts` (PENDING_OWNER until OTP, login blocked, wrong code/other rep rejected, legal recorded, welcome outbox, portfolio and retained commission), `on07-sales-reps.node.test.ts`, `e2e/on07-rep-console.spec.ts` (mobile viewport).
 
+## Tour, sample patient & help (ON-08)
+
+- **First-run tour:** a non-blocking 5-step card per role group — physician, front desk (receptionist / clinic assistant / call center / nurse), admin (owner, group / clinic admin, branch manager, supervisor, HR, finance). Opens once on `/onboarding` (setup checklist) and can be restarted from Help; "seen" is stored per user in the browser. Step 5 offers the sample patient. No tour for platform admins or field reps.
+- **Help drawer:** `Help` button in the app header → role guide sections (deep links into `/guide#<section>`), five 60-second Arabic videos (served from `VITE_HELP_VIDEO_BASE_URL/<id>-ar.mp4`; listed as "coming soon" until set), restart tour, sample patient.
+- **Sample data:** `GET|POST|DELETE /api/v1/onboarding/sample-data` creates (idempotent) one patient `Patient.isSample = true` — MRN `SAMPLE-DEMO`, "Sample Patient (demo)" / "مريض تجريبي", no phone — plus a fee-free appointment later today with a physician; DELETE removes all sample patients (cascade). Audit `SAMPLE_DATA_CREATED|REMOVED`. A **Sample** badge shows on the patient list and chart.
+- **Guarantees (acceptance):** `postRevenue` rejects anything linked to a sample patient (`400 SAMPLE_PATIENT_NO_REVENUE`) and encounter visit-fee auto-posting skips it; Kiorex commission charging returns early on check-in; messaging consent treats sample patients as never consented (`assertCanSend` → `403 SAMPLE_PATIENT_NO_MESSAGES`), the reminder scheduler skips them and the outbound worker fails any queued row (`POLICY`). Sample patients/appointments/encounters are excluded from reports, dashboard KPIs, onboarding auto-steps and trial-activation visit counts.
+
+Tests: `onboarding/on08-sample-data.integration.test.ts` (no revenue, no commission, no WhatsApp, dashboard exclusion, idempotent create, delete + audit), `messaging/on08-sample-outbound.node.test.ts`, `e2e/on08-help-sample.spec.ts`.
+
 ## Follow-ups
 
 - Dedicated scheduling UI deep link for clinician availability.
@@ -92,3 +102,4 @@ Tests: `sales-reps/on07-sales-reps.integration.test.ts` (PENDING_OWNER until OTP
 - ON-05: a durable job queue (the commit runs in-process; a restart mid-commit leaves the job `COMMITTING`); undo of `MERGE` field fills.
 - ON-06: INTERNAL outbox sender for `staff.invitation` (WhatsApp template + transactional email) — NH-005.
 - ON-07: INTERNAL sender for `rep.owner_welcome`; platform UI to manage reps (API only); payout workflow for rep commission (report only); platform-level audit for rep account creation (no tenant to attach it to).
+- ON-08: record and host the five Arabic 60-second videos (NH-007); tour completion is per browser (no server-side flag); sample encounter/prescription content is not pre-filled.

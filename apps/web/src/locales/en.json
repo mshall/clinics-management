@@ -2952,5 +2952,104 @@
     "period": "Month",
     "noCommission": "No paid invoices from your clinics this month.",
     "commissionLine": "{{commission}} {{currency}} ({{percent}}%) on {{eligible}} of {{total}} paid invoices from clinics retained {{days}}+ days"
+  },
+  "help": {
+    "button": "Help",
+    "title": "Help",
+    "subtitle": "Guides, short videos and a safe sample patient to practise on.",
+    "guideTitle": "Guide for your role",
+    "fullGuide": "Open the full guide",
+    "videosTitle": "60-second videos (Arabic)",
+    "videoSoon": "coming soon",
+    "videos": {
+      "bookAppointment": "Book an appointment",
+      "checkInAndPay": "Check in and take payment",
+      "writeVisit": "Write and finalize a visit",
+      "importPatients": "Import your patients from Excel",
+      "inviteTeam": "Invite your team"
+    },
+    "practiceTitle": "Practise safely",
+    "restartTour": "Restart the quick tour",
+    "sample": {
+      "try": "Try with sample patient",
+      "open": "Open sample patient",
+      "remove": "Remove sample data",
+      "badge": "Sample",
+      "explain": "The sample patient is clearly marked, never appears in reports, and never creates payments, commissions or WhatsApp messages."
+    },
+    "tour": {
+      "progress": "Quick tour · {{current}} of {{total}}",
+      "skip": "Skip tour",
+      "back": "Back",
+      "next": "Next",
+      "done": "Done",
+      "show": "Show me",
+      "physician": {
+        "welcome": {
+          "title": "Welcome to Kiorly",
+          "body": "Five quick stops to get you seeing patients. You can reopen this tour any time from Help."
+        },
+        "schedule": {
+          "title": "Your schedule",
+          "body": "Appointments shows today's patients by time. Front desk check-ins appear here as they arrive."
+        },
+        "chart": {
+          "title": "Patient chart",
+          "body": "Search by phone, name or national ID (Ctrl/⌘ K) to open history, allergies and documents."
+        },
+        "visit": {
+          "title": "Write the visit",
+          "body": "Start a visit from the appointment, write notes and prescriptions, then finalize to lock the record."
+        },
+        "sample": {
+          "title": "Practise on a sample patient",
+          "body": "Create a demo patient with an appointment today. It never counts in reports, payments or messages, and you can remove it from Help."
+        }
+      },
+      "frontDesk": {
+        "welcome": {
+          "title": "Welcome to Kiorly",
+          "body": "Five quick stops for the front desk. You can reopen this tour any time from Help."
+        },
+        "book": {
+          "title": "Book appointments",
+          "body": "Pick the doctor and a free slot, then search or add the patient by phone."
+        },
+        "checkIn": {
+          "title": "Check in & waiting room",
+          "body": "Check patients in when they arrive; the waiting room shows who is next for each doctor."
+        },
+        "payment": {
+          "title": "Take payment",
+          "body": "Collect the visit fee at check-in or after the visit, by cash, card or transfer, and print the receipt."
+        },
+        "sample": {
+          "title": "Practise on a sample patient",
+          "body": "Create a demo patient to try booking and check-in. It never creates payments, commissions or WhatsApp messages."
+        }
+      },
+      "admin": {
+        "welcome": {
+          "title": "Welcome to Kiorly",
+          "body": "Five quick stops to set up your clinic. You can reopen this tour any time from Help."
+        },
+        "checklist": {
+          "title": "Setup checklist",
+          "body": "Finish clinic profile, hours, visit types and doctor availability — each step links to the right screen."
+        },
+        "team": {
+          "title": "Invite your team",
+          "body": "Send WhatsApp or email invitations to receptionists and doctors with the right roles."
+        },
+        "import": {
+          "title": "Bring your data",
+          "body": "Import patients, appointments, prices and staff from Excel or CSV with Arabic or English headers."
+        },
+        "sample": {
+          "title": "Practise on a sample patient",
+          "body": "Create a demo patient to walk through a visit. It is excluded from reports and billing and can be removed from Help."
+        }
+      }
+    }
   }
 }

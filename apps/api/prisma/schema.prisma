@@ -1585,6 +1585,8 @@ model Patient {
   requiresAppointmentDeposit Boolean @default(false)
   isVip                Boolean  @default(false)
   needsChaperone       Boolean  @default(false)
+  /// ON-08 — "Try with sample patient": excluded from reports, never revenue, commissions or messages.
+  isSample             Boolean  @default(false)
   dataProtectionConsents PatientDataProtectionConsent[]
   consents             PatientConsent[]
   messagingConsents      MessagingConsent[]

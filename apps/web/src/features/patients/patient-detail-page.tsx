@@ -230,6 +230,11 @@ export function PatientDetailPage() {
                   <Badge variant="secondary" className="font-mono text-xs ltr-nums">
                     {patient.mrn}
                   </Badge>
+                  {patient.isSample ? (
+                    <Badge variant="outline" className="border-amber-400 text-amber-700 dark:text-amber-300" data-testid="sample-patient-badge">
+                      {t("help.sample.badge")}
+                    </Badge>
+                  ) : null}
                 </div>
                 <p className="text-muted-foreground">{patient.homeBranch ?? "—"}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">

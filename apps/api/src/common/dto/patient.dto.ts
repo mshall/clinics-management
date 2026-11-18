@@ -47,6 +47,9 @@ export class PatientDto {
   @ApiPropertyOptional()
   needsChaperone?: boolean;
 
+  @ApiPropertyOptional({ description: "ON-08 demo patient (excluded from reports, revenue, commissions and messages)" })
+  isSample?: boolean;
+
   @ApiPropertyOptional({ description: "Whether a national ID / SSN scan is on file" })
   hasNationalIdDoc?: boolean;
 
