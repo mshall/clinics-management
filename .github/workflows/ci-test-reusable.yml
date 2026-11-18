@@ -70,8 +70,8 @@ jobs:
       - name: Money-path coverage gate (QA-02)
         run: npm run test:money-coverage -w api
 
-      - name: Build API for E2E
-        run: npm run build -w api
+      - name: Build API and web for E2E
+        run: npm run build -w api && npm run build -w web
 
       - name: Install Playwright (Chromium)
         run: npx playwright install chromium --with-deps
