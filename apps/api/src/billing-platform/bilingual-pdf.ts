@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { deflateSync } from "node:zlib";
+import * as QRCode from "qrcode";
 
 /**
  * Dependency-free bilingual (EN + AR) PDF builder.
@@ -18,7 +19,8 @@ export type PdfRow =
   | { kind: "pair"; label: string; value: string; size?: number; bold?: boolean }
   | { kind: "columns"; cells: string[]; widths: number[]; size?: number; bold?: boolean }
   | { kind: "rule" }
-  | { kind: "gap"; height?: number };
+  | { kind: "gap"; height?: number }
+  | { kind: "qr"; text: string; size?: number };
 
 export type PdfSection = { direction: PdfDirection; rows: PdfRow[] };
 
@@ -380,6 +382,21 @@ class TextShaper {
   }
 }
 
+/** QR code as filled squares (bottom-left at x,y). */
+function qrOps(text: string, x: number, y: number, side: number): string {
+  const { modules } = QRCode.create(text, { errorCorrectionLevel: "M" });
+  const n = modules.size;
+  const cell = side / n;
+  const rects: string[] = [];
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      if (!modules.get(r, c)) continue;
+      rects.push(`${(x + c * cell).toFixed(2)} ${(y + (n - 1 - r) * cell).toFixed(2)} ${cell.toFixed(2)} ${cell.toFixed(2)} re`);
+    }
+  }
+  return `q 0 g ${rects.join(" ")} f Q`;
+}
+
 // --- Document assembly ----------------------------------------------------------------------
 
 const PAGE_W = 595.28;
@@ -421,6 +438,14 @@ export function buildBilingualPdf(sections: PdfSection[]): Buffer {
         ensure(10);
         ops.push(`0.6 w ${MARGIN} ${(y + 4).toFixed(2)} m ${PAGE_W - MARGIN} ${(y + 4).toFixed(2)} l S`);
         y -= 8;
+        continue;
+      }
+      if (row.kind === "qr") {
+        const side = row.size ?? 100;
+        ensure(side + 6);
+        const x0 = rtl ? PAGE_W - MARGIN - side : MARGIN;
+        ops.push(qrOps(row.text, x0, y - side, side));
+        y -= side + 6;
         continue;
       }
       const size = row.size ?? 10;

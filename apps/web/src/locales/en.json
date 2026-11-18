@@ -3185,5 +3185,29 @@
     "services": "Visit types",
     "minutes": "{{count}} min",
     "poweredBy": "Free to book · Powered by Kiorex"
+  },
+  "rxShare": {
+    "title": "Signed prescription",
+    "hint": "Print with a pharmacy verification QR or send the PDF to the patient on WhatsApp.",
+    "print": "Print verified prescription",
+    "printTitle": "Prescription",
+    "sendToPatient": "Send to patient",
+    "sent": "Prescription queued to the patient on WhatsApp.",
+    "errorNotSigned": "Sign the visit before printing or sharing a verified prescription.",
+    "errorEmpty": "This visit has no prescribed medications.",
+    "errorNoPhone": "The patient has no phone number on file.",
+    "errorConsent": "The patient has not agreed to receive WhatsApp messages."
+  },
+  "rxVerify": {
+    "valid": "Valid prescription",
+    "expired": "This verification link has expired. Ask the clinic for a new copy.",
+    "revoked": "This prescription is no longer valid.",
+    "notFound": "Prescription not found. Check the QR code or link.",
+    "clinic": "Clinic",
+    "doctor": "Doctor",
+    "patient": "Patient",
+    "date": "Date",
+    "items": "Prescribed items",
+    "expiresAt": "Verification link valid until {{date}}."
   }
 }

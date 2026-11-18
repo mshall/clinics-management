@@ -64,6 +64,7 @@ import { DrugSearchAutocomplete, type DrugSearchHit } from "@/features/clinical/
 import { PatientChartAlerts } from "@/components/patient-chart-alerts";
 import { EncounterSpecialtyForm } from "@/features/clinical/encounter-specialty-form";
 import { loadPrescriptionBranding } from "@/lib/prescription-branding";
+import { SignedPrescriptionActions } from "@/features/prescriptions/signed-prescription-actions";
 import { encountersBackPath } from "@/lib/nav-policy";
 import { cn } from "@/lib/utils";
 import { registerUnsavedWork } from "@/lib/unsaved-work-registry";
@@ -1218,6 +1219,7 @@ export function EncounterDetailPage() {
                   </ul>
                   {meds.length > 0 ? (
                     <div className="mt-4 space-y-3">
+                      {enc.signedAt ? <SignedPrescriptionActions encounterId={enc.id} clinicId={enc.clinicId} /> : null}
                       {draft && medsPanelActive ? (
                         <div className="flex flex-wrap items-center gap-2">
                           <Button

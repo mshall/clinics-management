@@ -28,10 +28,20 @@ Configurable specialty forms, physician shortcuts, safety checks, vitals trends,
 
 Encounter **medications** use brand autocomplete (`GET /clinical/drugs/search`) backed by `DrugProduct` / `ActiveIngredient`. Free-text rows are flagged **Unverified**. See [EGYPT_DRUG_DATABASE.md](./EGYPT_DRUG_DATABASE.md).
 
-## Structured prescriptions & QR
+## Prescription print, verification QR & WhatsApp share (CL-03)
 
-- Existing **Generate prescription** image flow (`generatePrescriptionPng`) now embeds a **QR code** (clinic name, address, phone, MRN, date) for verification at pharmacy.
-- Future: signed JSON payload / national eRx standards (PRD N.7).
+| Item | Status |
+|---|---|
+| CL-03 Signed Rx print (brand + ingredient + Arabic instructions) | **Done** |
+| CL-03 Pharmacy verification QR (`GET /public/rx/verify/:token`) | **Done** |
+| CL-03 "Send to patient" (WhatsApp PDF, approved template) | **Done** — Meta template approval pending (NH-009) |
+
+- **Print:** `POST /api/v1/encounters/:id/prescription/print` (view role) — only for **signed** visits with medications (`409 RX_NOT_SIGNED` / `RX_EMPTY` otherwise). Returns the print model: brand + strength, **active ingredients** from the CL-01 catalog, the doctor's sig as written and an **Arabic instruction line** (`sigToArabic`: OD/BID/TID/QID, q*N*h, PRN, before/after meals, bedtime, "for N days"; unknown English is never guessed — falls back to the catalog `defaultSigAr`). Each call mints a fresh `PrescriptionVerificationToken` (SHA-256 hashed, TTL from market pack `clinicalConfig.rxVerification.tokenTtlDays`, default **14**) and audits `RX_VERIFICATION_ISSUED`.
+- **QR:** the printed Rx encodes only `${APP_WEB_URL}/rx/<token>`. Draft prints (`Generate prescription`) carry **no QR** — the old clinic + MRN payload is removed.
+- **Verification page:** `GET /api/v1/public/rx/verify/:token` (no auth, `no-store`, `noindex`) + web `/rx/:token`. The response is a projection of the printed Rx (`toVerificationView`): clinic, doctor, signed date, items, and the patient **reduced to initials**. Never MRN, phone, national ID, DOB, diagnoses or notes (tests). Expired / revoked tokens return only `{ status }`; unknown tokens 404.
+- **Send to patient:** `POST /api/v1/encounters/:id/prescription/send` (mutate role) queues an `OutboundMessage` with template `prescription_ready` (`name`, `clinic`, `link`) and the bilingual PDF (`GET /public/rx/verify/:token/pdf`, built with the shared `buildBilingualPdf` incl. vector QR) as the WhatsApp **document** link. Goes through MS-03 consent (`MESSAGING_CONSENT_REQUIRED` → 403) and WhatsApp quota; sample patients are never messaged. Audited `RX_SENT_TO_PATIENT`.
+- **Web:** encounter medications panel shows a **Signed prescription** card (Print verified prescription · Send to patient) once `signedAt` is set.
+- Future: national eRx standards (PRD N.7).
 
 ## Vitals & growth charts
 

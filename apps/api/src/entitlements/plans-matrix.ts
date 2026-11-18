@@ -57,6 +57,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "billing-platform/monthly-statement.controller.ts": { kind: "open" },
   "clinic-ai/clinic-ai.controller.ts": { kind: "gated", entitlement: "ai_assistant" },
   "clinical/clinical.controller.ts": { kind: "gated", entitlement: "mod_clinical" },
+  "clinical/rx-share.controller.ts": { kind: "open" },
   "cohorts/public-cohorts.controller.ts": { kind: "open" },
   "clinician-verification/clinician-verification.controller.ts": { kind: "open" },
   "clinician-verification/platform-verifications.controller.ts": { kind: "platform" },
