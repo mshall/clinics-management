@@ -89,4 +89,4 @@
 | 005–048 | — | 2026-11-18 backfill: §5 ticked **verified on main** (see `Docs/kiorly-cursor-build-sequence.md` §5) |
 | 051 PL-08 | `e7d9d33` | Global 402 paywall modal, paywall audit events, owner-only SaaS pay |
 | 052 CR-08 | `0bf6d1b` | CommissionDispute model, auto-resolve, platform ops queue, owner outbox |
-| 053 CR-09 | _(pending push)_ | ReferralCode/Referral, signup ref, dual REFERRAL grants on first paid invoice |
+| 053 CR-09 | `fcfbdad` | ReferralCode/Referral, `GET /growth/referral`, dual REFERRAL grants on first paid invoice |
