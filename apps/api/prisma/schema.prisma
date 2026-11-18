@@ -1137,6 +1137,8 @@ model Tenant {
   commissionDisputes             CommissionDispute[]
   clinicianVerifications         ClinicianVerification[]
   marketplaceListings            MarketplaceListing[]
+  kiorexRatings                  KiorexRating[]
+  kiorexReviews                  KiorexReview[]
   kiorlySettlementCarry          Decimal?               @db.Decimal(14, 2)
   /// SB-05: period whose settlement last wrote `kiorlySettlementCarry` (re-runs reuse `kiorlySettlementCarryIn`).
   kiorlySettlementCarryPeriodKey String?
@@ -2413,6 +2415,46 @@ model MarketplaceListing {
   @@index([clinicId, status])
 }
 
+/// KX-08 — aggregate Kiorex rating per doctor at a clinic, synced from Kiorex.
+model KiorexRating {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId      String
+  clinicianId   String
+  averageRating Decimal  @db.Decimal(3, 2)
+  reviewCount   Int
+  syncedAt      DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([clinicId, clinicianId])
+  @@index([tenantId])
+}
+
+/// KX-08 — individual verified review (completed visit only) synced from Kiorex; clinic may reply once.
+model KiorexReview {
+  id               String    @id @default(cuid())
+  tenantId         String
+  tenant           Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId         String
+  clinicianId      String
+  kiorexReviewId   String    @unique
+  appointmentId    String
+  rating           Int
+  comment          String?
+  /// VISIBLE | HIDDEN (moderation is done by Kiorex: abuse, PHI).
+  moderationStatus String    @default("VISIBLE")
+  reviewedAt       DateTime
+  replyText        String?
+  repliedAt        DateTime?
+  repliedByUserId  String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([tenantId, clinicId, clinicianId, reviewedAt])
+}
+
 model PlatformIntegrationClient {
   id            String    @id @default(cuid())
   name          String
@@ -3110,6 +3152,7 @@ model RecallCampaign {
   @@index([tenantId, kind])
 }
 
+/// Retired by KX-08: Kiorex is the single source of reviews (see KiorexRating / KiorexReview). Kept read-only; no writers.
 model SatisfactionSurveyResponse {
   id            String   @id @default(cuid())
   tenantId      String

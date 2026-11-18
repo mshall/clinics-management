@@ -12,6 +12,7 @@
 | KX-04 Booking intake (holds, idempotency) | **Done** |
 | KX-05 Transactional outbox & status events | **Done** |
 | KX-06 Reschedule & cancellation policies (both directions) | **Done** |
+| KX-08 Verified reviews after completed visits | **Done** |
 
 ## Platform client
 
@@ -87,6 +88,14 @@ Marketplace calls carry `clinicId`; tenant resolves from listing rows.
 - Confirmation-timeout cancellations are stamped `cancelledBy = SYSTEM`, deposit refundable.
 - Appointment fields: `cancelledAt`, `cancelledBy`, `cancellationReason`, `depositRefundable`, `rescheduleCount`.
 
+## KX-08 verified reviews
+
+- **Kiorex is the single source of reviews.** When a `KIOREX_MARKETPLACE` / `KIOREX_WHATSAPP` / `CLINIC_LINK` appointment moves to **COMPLETED**, the outbox emits **`REVIEW_INVITATION_ELIGIBLE`** (same transaction) and Kiorex sends the invitation. No-shows, cancellations and non-Kiorex bookings never emit it (`isReviewInvitationEligible`).
+- **Sync back:** `POST /marketplace/v1/reviews/aggregate` `{ clinicId, clinicianId, averageRating, reviewCount, reviews?[] }` upserts `KiorexRating` (per doctor per clinic) and `KiorexReview` rows. A review is accepted only if its `appointmentId` is a completed Kiorex visit of that doctor at that clinic; others come back in `rejected` as `NOT_A_COMPLETED_VISIT`. Kiorex moderation (`moderationStatus: HIDDEN` for abuse / PHI) hides a review in Kiorly. Audited `marketplace.reviews.synced`.
+- **Clinic:** `GET /api/v1/kiorex/ratings?clinicId=` (doctor scores + 20 latest visible reviews) and `POST /api/v1/kiorex/reviews/:id/reply` `{ text }` → `REVIEW_REPLY_POSTED` outbox to Kiorex, audited `kiorex.review.replied`. UI: **Kiorex** tab → Ratings & reviews card.
+- **Reports:** `GET /reports/performance` returns `kiorexRating { averageRating, reviewCount }` (review-weighted; physicians see their own) shown as a KPI tile.
+- `SatisfactionSurveyResponse` is **retired** (no writers; table kept, no data dropped).
+
 ## Tests
 
 - `marketplace-listing-eligibility.node.test.ts`
@@ -102,6 +111,7 @@ Marketplace calls carry `clinicId`; tenant resolves from listing rows.
 - `outbox-delivery.node.test.ts`
 - `kx05-outbox.integration.test.ts`
 - `kx06-booking-policy.node.test.ts`, `kx06-cancellation-policy.integration.test.ts`
+- `kx08-review-invitation.node.test.ts`, `kx08-verified-reviews.integration.test.ts`
 
 ## Follow-ups
 

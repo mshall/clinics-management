@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { useClinicsQuery } from "@/lib/api-hooks";
 import { apiGet } from "@/lib/http";
 import { KiorexPolicyCard } from "./kiorex-policy-card";
+import { KiorexRatingsCard } from "./kiorex-ratings-card";
 import type { KiorexSettingsDto } from "./kiorex-types";
 
 export function KiorexPage() {
@@ -54,7 +55,12 @@ export function KiorexPage() {
           {t("kiorexTab.loadError", "Kiorex settings are available to clinic owners and managers.")}
         </p>
       ) : null}
-      {settings.data ? <KiorexPolicyCard clinicId={clinicId} settings={settings.data} /> : null}
+      {settings.data ? (
+        <>
+          <KiorexRatingsCard clinicId={clinicId} />
+          <KiorexPolicyCard clinicId={clinicId} settings={settings.data} />
+        </>
+      ) : null}
     </div>
   );
 }

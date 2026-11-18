@@ -21,6 +21,7 @@ import { MarketplacePatientIntakeService } from "./marketplace-patient-intake.se
 import { SlotHoldExpiryScheduler } from "./slot-hold-expiry.scheduler";
 import { KiorexSettingsController } from "./kiorex-settings.controller";
 import { KiorexSettingsService } from "./kiorex-settings.service";
+import { KiorexReviewsService } from "./kiorex-reviews.service";
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { KiorexSettingsService } from "./kiorex-settings.service";
   ],
   providers: [
     KiorexSettingsService,
+    KiorexReviewsService,
     PlatformIntegrationClientService,
     MarketplaceAuthGuard,
     MarketplaceAccessService,

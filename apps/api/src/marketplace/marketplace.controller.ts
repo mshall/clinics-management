@@ -8,6 +8,7 @@ import { MarketplaceClient } from "./marketplace-client.decorator";
 import type { PlatformIntegrationPrincipal } from "./platform-integration-client.service";
 import { SlotHoldService } from "./slot-hold.service";
 import { MarketplaceBookingService, type MarketplaceBookingBody } from "./marketplace-booking.service";
+import { KiorexReviewsService, type ReviewAggregateBody } from "./kiorex-reviews.service";
 
 @ApiTags("marketplace")
 @Controller("marketplace/v1")
@@ -23,6 +24,7 @@ export class MarketplaceController {
     private readonly profiles: MarketplaceProviderProfileService,
     private readonly holds: SlotHoldService,
     private readonly bookings: MarketplaceBookingService,
+    private readonly reviews: KiorexReviewsService,
   ) {}
 
   @Get("auth/verify")
@@ -133,6 +135,13 @@ export class MarketplaceController {
     @Body() body: { startsAt: string; endsAt?: string; holdId?: string },
   ) {
     return this.bookings.rescheduleByPatient(client, externalRef, body);
+  }
+
+  @Post("reviews/aggregate")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Kiorex pushes a doctor's rating aggregate and verified reviews (KX-08)" })
+  syncReviews(@MarketplaceClient() client: PlatformIntegrationPrincipal, @Body() body: ReviewAggregateBody) {
+    return this.reviews.syncAggregate(client, body);
   }
 
   @Post("appointments")
