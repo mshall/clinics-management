@@ -77,6 +77,6 @@ jobs:
         working-directory: apps/web
 
       - name: E2E golden flow (Playwright)
-        run: npm run test:e2e -w web
+        run: npm run test:e2e:golden -w web
         env:
           SEED_PILOT_TENANTS: "true"

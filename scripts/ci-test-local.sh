@@ -18,5 +18,11 @@ npm run test:unit -w web
 npm run test:unit -w api
 npm run test:integration -w api
 npm run test:money-coverage -w api
+npm run build -w api
+if command -v npx >/dev/null 2>&1 && npx playwright --version >/dev/null 2>&1; then
+  npm run test:e2e:golden -w web
+else
+  echo "ci-test-local: skip E2E (install Playwright: npx playwright install chromium)"
+fi
 
 echo "ci-test-local: all steps passed (same gate as GitHub CI test job)."
