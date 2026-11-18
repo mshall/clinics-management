@@ -79,6 +79,7 @@ export class OutboundMessageWorker implements OnModuleInit, OnModuleDestroy {
     toPhone: string;
     body: string;
     attemptCount: number;
+    metadata: unknown;
   }): Promise<void> {
     if (row.patientId) {
       try {
@@ -115,8 +116,14 @@ export class OutboundMessageWorker implements OnModuleInit, OnModuleDestroy {
       row.templateKey === "appointment_reminder_whatsapp"
         ? marketTpl?.quickReplyButtons ?? [...DEFAULT_REMINDER_QUICK_REPLIES]
         : marketTpl?.quickReplyButtons;
+    const meta =
+      row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+        ? (row.metadata as Record<string, unknown>)
+        : {};
     const result = await this.whatsapp.sendTemplateForTenant(row.tenantId, row.templateKey, row.toPhone, variables, {
       quickReplies,
+      documentLink: typeof meta.documentLink === "string" ? meta.documentLink : undefined,
+      documentFilename: typeof meta.documentFilename === "string" ? meta.documentFilename : undefined,
     });
     if (result.ok) {
       await this.prisma.outboundMessage.update({

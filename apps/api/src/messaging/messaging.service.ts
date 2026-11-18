@@ -72,6 +72,7 @@ export class MessagingService {
       templateKey?: string;
       body: string;
       variables?: Record<string, string>;
+      metadata?: Record<string, unknown>;
     },
   ) {
     if (body.channel === MessageChannel.WHATSAPP && !body.templateKey?.trim()) {
@@ -95,6 +96,7 @@ export class MessagingService {
         variablesJson: body.variables ? (body.variables as Prisma.InputJsonValue) : undefined,
         toPhone: body.toPhone.trim(),
         body: body.body,
+        metadata: body.metadata ? (body.metadata as Prisma.InputJsonValue) : undefined,
         status: "QUEUED",
       },
     });

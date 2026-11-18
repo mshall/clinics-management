@@ -27,7 +27,7 @@ export type PrescriptionImageInput = {
     logo?: HTMLImageElement | null;
     headerDescription?: string | null;
   };
-  /** Encoded clinic + patient verification payload for pharmacy QR scan */
+  /** Server-issued verification URL (CL-03); no QR is drawn without it. */
   qrPayload?: string;
 };
 
@@ -171,20 +171,17 @@ export async function generatePrescriptionPng(input: PrescriptionImageInput): Pr
     ctx.fillText(input.physicianName.trim(), rtl ? width - 95 : 95, height - 120);
   }
 
-  const qrText =
-    input.qrPayload?.trim() ||
-    JSON.stringify({
-      clinic: input.clinicName,
-      mrn: input.patientMrn ?? "",
-      at: input.date.toISOString(),
-    });
-  try {
-    const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 1, width: 140 });
-    const qrImg = await loadPrescriptionImage(qrDataUrl);
-    const qrSize = 120;
-    ctx.drawImage(qrImg, width / 2 - qrSize / 2, height - qrSize - 28, qrSize, qrSize);
-  } catch {
-    // QR optional if canvas/library fails
+  // Only signed prescriptions carry a QR (server-issued verification link); drafts never encode PHI.
+  const qrText = input.qrPayload?.trim();
+  if (qrText) {
+    try {
+      const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 1, width: 140 });
+      const qrImg = await loadPrescriptionImage(qrDataUrl);
+      const qrSize = 120;
+      ctx.drawImage(qrImg, width / 2 - qrSize / 2, height - qrSize - 28, qrSize, qrSize);
+    } catch {
+      // QR optional if canvas/library fails
+    }
   }
 
   return new Promise((resolve, reject) => {
