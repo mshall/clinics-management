@@ -1935,6 +1935,7 @@
     "specialty_LABORATORY": "مختبر",
     "specialty_INTERNAL_MEDICINE": "باطنة",
     "specialty_FAMILY_MEDICINE": "طب أسرة",
+    "specialty_UROLOGY": "مسالك بولية",
     "templatesTitle": "قوالب النماذج السريرية",
     "templatesDesc": "حقول تخصصية منظمة فوق ملاحظات SOAP (أسنان، نساء، أطفال، علاج طبيعي، …).",
     "templateBuilderLink": "إدارة القوالب من إعدادات العيادة",

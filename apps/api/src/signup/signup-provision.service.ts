@@ -27,7 +27,7 @@ import { assertTenantDeploymentCellMatchesMarket } from "../markets/data-cells";
 import { PrismaService } from "../prisma/prisma.service";
 import { addBillingPeriod } from "../subscriptions/subscription-period";
 import { TrialEngineService } from "../subscriptions/trial-engine.service";
-import { defaultAppointmentTypesForSpecialty } from "./signup-appointment-types";
+import { defaultAppointmentTypesForSpecialty, seedFeeAmount } from "./signup-appointment-types";
 import { availabilityWeekFromClinicHours } from "./signup-availability";
 import { isDisposableEmail } from "./signup-disposable-email";
 import { ensureOnboardingProgress } from "../onboarding/onboarding-progress.provision";
@@ -308,7 +308,7 @@ export class SignupProvisionService {
             nameEn: seed.nameEn,
             nameAr: seed.nameAr,
             durationMinutes: seed.durationMinutes,
-            feeAmount: seed.feeUsesTenantDefault ? visitFee : 0,
+            feeAmount: seedFeeAmount(seed, visitFee),
           },
         });
       }

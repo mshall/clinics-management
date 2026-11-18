@@ -11,6 +11,21 @@ Configurable specialty forms, physician shortcuts, safety checks, vitals trends,
 - **Web:** clinic **Settings** panel lists defaults + customs; legacy `/clinical/templates` redirects to the first clinic’s settings tab.
 - **Encounter UI:** template picker lists org defaults + that clinic’s customs; link opens clinic settings for admins.
 
+## Launch specialty templates (CL-04)
+
+| Item | Status |
+|---|---|
+| CL-04 Built-in templates for 11 launch specialties (content review v2) | **Done** |
+| CL-04 Default appointment types + fee factors per specialty at signup | **Done** |
+| CL-04 CMO-led advisory board sign-off per template | **Pending** (NH-010) |
+
+- **Launch specialties** (`LAUNCH_SPECIALTIES` in `apps/api/src/clinical/launch-specialty-templates.ts`): dermatology, pediatrics, OB/GYN, orthopedics, ENT, internal medicine, cardiology, psychiatry, ophthalmology, **urology** (new `ClinicalSpecialty.UROLOGY`), dentistry basics.
+- **Reviewed** means: the template contains the specialty's `requiredElements` (e.g. OB/GYN `lmp_date` → computed `edd` / `ga`, gravida/para, FHR, fundal height; pediatrics weight/height/head circumference + percentiles + milestones; psychiatry full MSE + suicide risk + PHQ-9/GAD-7; ophthalmology VA/IOP per eye; urology IPSS/PSA/US KUB) — enforced by `cl04-specialty-templates.node.test.ts`. `boardSignOff` stays `null` until a named clinician signs.
+- **Field types:** `date` and `computed` (`EDD_FROM_LMP` = LMP + 280 days, `GA_FROM_LMP` = weeks + days) in addition to text/textarea/number/select/checkbox; computed values are stored with the responses.
+- **Versioning:** `ClinicalFormTemplate.systemTemplateVersion`; built-in rows below `SYSTEM_TEMPLATE_VERSION` (2) are upgraded in place on first use. Existing field ids are kept, so encounters saved on v1 still render.
+- **Signup (ON-01):** each launch specialty seeds its own appointment types (EN + AR) with a fee factor on the market-derived default visit fee (consult ×1, follow-up ×0.5, procedure/scan ×1.5); clinics edit fees afterwards.
+- **Web:** the encounter template picker groups templates by specialty (custom specialties last).
+
 ## Doctor shortcuts
 
 - **API:** `GET/POST/DELETE /api/v1/clinical/shortcuts`

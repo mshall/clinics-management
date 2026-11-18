@@ -1934,6 +1934,7 @@
     "specialty_LABORATORY": "Laboratory",
     "specialty_INTERNAL_MEDICINE": "Internal medicine",
     "specialty_FAMILY_MEDICINE": "Family medicine",
+    "specialty_UROLOGY": "Urology",
     "templatesTitle": "Clinical form templates",
     "templatesDesc": "Structured specialty fields layered on SOAP notes (dental, gynaecology, paediatrics, physio, …).",
     "templateBuilderLink": "Manage templates in clinic settings",

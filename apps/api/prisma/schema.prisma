@@ -130,6 +130,7 @@ enum ClinicalSpecialty {
   LABORATORY
   INTERNAL_MEDICINE
   FAMILY_MEDICINE
+  UROLOGY
   CUSTOM
 }
 
@@ -1629,6 +1630,8 @@ model ClinicalFormTemplate {
   sectionsJson           Json
   isPublished            Boolean           @default(false)
   isSystemDefault        Boolean           @default(false)
+  /// CL-04: content version of a built-in template; older system rows are upgraded in place (field ids stay stable).
+  systemTemplateVersion  Int?
   encounters             Encounter[]
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt

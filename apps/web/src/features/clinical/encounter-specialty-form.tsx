@@ -5,6 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { apiGet } from "@/lib/http";
+import { computeTemplateField } from "@/lib/obstetric-dates";
+import { groupTemplatesBySpecialty } from "@/lib/template-groups";
 
 type TemplateField = {
   id: string;
@@ -12,6 +14,8 @@ type TemplateField = {
   labelEn?: string;
   labelAr?: string;
   options?: string[];
+  computed?: string;
+  source?: string;
 };
 
 type TemplateSection = {
@@ -68,8 +72,26 @@ export function EncounterSpecialtyForm({
   const selected = (templatesQuery.data ?? []).find((tpl) => tpl.id === templateId);
   const sections = selected ? parseSections(selected.sectionsJson) : [];
 
+  const specialtyLabel = (tpl: ClinicalTemplate) =>
+    tpl.specialty === "CUSTOM"
+      ? (isAr ? tpl.customSpecialtyLabelAr : tpl.customSpecialtyLabelEn) ||
+        tpl.customSpecialtyLabelEn ||
+        t("clinical.specialtyCustom", "Custom")
+      : formatClinicalSpecialty(tpl.specialty, t);
+
+  const groups = groupTemplatesBySpecialty(templatesQuery.data ?? [], specialtyLabel);
+
+  /** Writes a field and refreshes computed fields (e.g. EDD / GA) that derive from it. */
   const setField = (key: string, value: unknown) => {
-    onResponsesChange({ ...responses, [key]: value });
+    const next: Record<string, unknown> = { ...responses, [key]: value };
+    for (const section of sections) {
+      for (const field of section.fields ?? []) {
+        if (field.type !== "computed" || !field.source) continue;
+        if (fieldKey(section.id, field.source) !== key) continue;
+        next[fieldKey(section.id, field.id)] = computeTemplateField(field.computed, value);
+      }
+    }
+    onResponsesChange(next);
   };
 
   return (
@@ -89,19 +111,15 @@ export function EncounterSpecialtyForm({
             }}
           >
             <option value="">{t("clinical.noSpecialtyTemplate", "None (SOAP only)")}</option>
-            {(templatesQuery.data ?? []).map((tpl) => {
-              const specLabel =
-                tpl.specialty === "CUSTOM"
-                  ? (i18n.language.startsWith("ar") ? tpl.customSpecialtyLabelAr : tpl.customSpecialtyLabelEn) ||
-                    tpl.customSpecialtyLabelEn ||
-                    t("clinical.specialtyCustom", "Custom")
-                  : formatClinicalSpecialty(tpl.specialty, t);
-              return (
-                <option key={tpl.id} value={tpl.id}>
-                  {tpl.name} — {specLabel}
-                </option>
-              );
-            })}
+            {groups.map((group) => (
+              <optgroup key={group.key} label={group.label}>
+                {group.templates.map((tpl) => (
+                  <option key={tpl.id} value={tpl.id}>
+                    {tpl.name}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
           </select>
         </div>
         <a href={`/clinics/${clinicId}?tab=settings`} className="text-xs text-primary hover:underline">
@@ -142,6 +160,31 @@ export function EncounterSpecialtyForm({
                         value={responses[key] != null ? String(responses[key]) : ""}
                         onChange={(e) => setField(key, e.target.value === "" ? null : Number(e.target.value))}
                       />
+                    </div>
+                  );
+                }
+                if (type === "date") {
+                  return (
+                    <div key={key} className="space-y-1">
+                      <Label optional>{label}</Label>
+                      <Input
+                        type="date"
+                        disabled={disabled}
+                        value={String(responses[key] ?? "")}
+                        onChange={(e) => setField(key, e.target.value || null)}
+                      />
+                    </div>
+                  );
+                }
+                if (type === "computed") {
+                  const sourceValue = field.source ? responses[fieldKey(section.id, field.source)] : undefined;
+                  const value = computeTemplateField(field.computed, sourceValue) ?? "—";
+                  return (
+                    <div key={key} className="space-y-1">
+                      <Label>{label}</Label>
+                      <p className="rounded-md border border-dashed border-input px-3 py-2 text-sm" data-testid={`computed-${field.id}`}>
+                        {value}
+                      </p>
                     </div>
                   );
                 }
