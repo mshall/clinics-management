@@ -19,6 +19,9 @@ import { operationStatusIsDischarged } from "@/lib/operation-status-policy";
 import { useAuthStore } from "@/stores/auth-store";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { Label } from "@/components/ui/label";
+import { OperationPostSurgeryDocumentsSection } from "@/features/operations/operation-post-surgery-documents";
+import { OperationPreSurgeryProfileDocs } from "@/features/patients/operation-pre-surgery-profile-docs";
+import { operationStatusIsEditable } from "@/lib/operation-status-policy";
 
 const PATIENT_OPS_PAGE_SIZE = 5;
 
@@ -33,9 +36,10 @@ function patientOperationsDateRange(): { from: string; to: string } {
 
 type Props = {
   patientId: string;
+  canUploadDocs?: boolean;
 };
 
-export function PatientOperationsSection({ patientId }: Props) {
+export function PatientOperationsSection({ patientId, canUploadDocs = false }: Props) {
   const { t, i18n } = useTranslation();
   const locale = localeForLanguage(i18n.language);
   const authUser = useAuthStore((s) => s.user);
@@ -167,7 +171,12 @@ export function PatientOperationsSection({ patientId }: Props) {
           {detailPending || !detail ? (
             <p className="text-muted-foreground">{t("common.loading")}</p>
           ) : (
-            <OperationDetailView detail={detail} locale={locale} onOpenDoc={openDoc} />
+            <OperationDetailView
+              detail={detail}
+              locale={locale}
+              onOpenDoc={openDoc}
+              canUploadDocs={canUploadDocs}
+            />
           )}
         </DialogContent>
       </Dialog>
@@ -265,10 +274,12 @@ function OperationDetailView({
   detail,
   locale,
   onOpenDoc,
+  canUploadDocs,
 }: {
   detail: NonNullable<ReturnType<typeof useOperationQuery>["data"]>;
   locale: string;
   onOpenDoc: (operationId: string, doc: OperationDocumentDto) => void;
+  canUploadDocs: boolean;
 }) {
   const { t, i18n } = useTranslation();
   const money = (n: number) => formatMoneyAmount(n, detail.feeCurrency, locale);
@@ -320,6 +331,10 @@ function OperationDetailView({
         <p className="text-muted-foreground">{t("encounters.noMedicationsRecorded", "No medications recorded")}</p>
       ) : null}
 
+      {operationStatusIsEditable(detail.status) && canUploadDocs ? (
+        <OperationPreSurgeryProfileDocs operationId={detail.id} canUpload />
+      ) : null}
+
       <OperationDocumentsBlock
         title={t("operations.preSurgeryDocuments", "Pre-surgery documents")}
         documents={detail.documents.filter((d) => d.kind !== "POST_SURGERY")}
@@ -328,13 +343,20 @@ function OperationDetailView({
         emptyLabel={t("patients.noDocuments", "No documents")}
       />
       {operationStatusIsDischarged(detail.status) ? (
-        <OperationDocumentsBlock
-          title={t("operations.postSurgeryTitle", "Post-surgery documents")}
-          documents={detail.documents.filter((d) => d.kind === "POST_SURGERY")}
-          operationId={detail.id}
-          onOpenDoc={onOpenDoc}
-          emptyLabel={t("operations.postSurgeryEmpty", "No post-surgery documents yet.")}
-        />
+        <>
+          <OperationDocumentsBlock
+            title={t("operations.postSurgeryTitle", "Post-surgery documents")}
+            documents={detail.documents.filter((d) => d.kind === "POST_SURGERY")}
+            operationId={detail.id}
+            onOpenDoc={onOpenDoc}
+            emptyLabel={t("operations.postSurgeryEmpty", "No post-surgery documents yet.")}
+          />
+          <OperationPostSurgeryDocumentsSection
+            operationId={detail.id}
+            documents={detail.documents}
+            canUpload={canUploadDocs}
+          />
+        </>
       ) : null}
 
       <Button asChild variant="secondary" className="w-full sm:w-auto">

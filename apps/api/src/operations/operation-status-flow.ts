@@ -21,7 +21,11 @@ export function isTerminalOperationStatus(status: OperationStatus): boolean {
   return n === OperationStatus.DISCHARGED || status === OperationStatus.CANCELLED;
 }
 
-export function assertOperationStatusTransition(from: OperationStatus, to: OperationStatus): void {
+export function assertOperationStatusTransition(
+  from: OperationStatus,
+  to: OperationStatus,
+  options?: { allowPipelineSkip?: boolean },
+): void {
   if (from === to) return;
   if (to === OperationStatus.CANCELLED) {
     if (isTerminalOperationStatus(from)) {
@@ -40,6 +44,9 @@ export function assertOperationStatusTransition(from: OperationStatus, to: Opera
     throw new BadRequestException("Invalid status transition");
   }
   if (toIdx !== fromIdx + 1) {
+    if (options?.allowPipelineSkip && toIdx > fromIdx) {
+      return;
+    }
     throw new BadRequestException("Advance one stage at a time (booked → pre-op → in progress → recovery → discharged)");
   }
 }

@@ -927,7 +927,8 @@ export class OperationsService {
     id: string,
     status: OperationStatus,
     viewer: JwtUser,
-    collectionAmount?: number
+    collectionAmount?: number,
+    options?: { allowPipelineSkip?: boolean },
   ): Promise<OperationDto> {
     assertCanCompleteOperation(viewer, status);
     const existing = await this.prisma.operation.findFirst({
@@ -942,7 +943,9 @@ export class OperationsService {
       return this.mapRow(existing, viewer, moneyVis);
     }
 
-    assertOperationStatusTransition(existing.status, status);
+    assertOperationStatusTransition(existing.status, status, {
+      allowPipelineSkip: options?.allowPipelineSkip,
+    });
     assertDownPaymentBeforeInProgress(existing, status);
 
     const completesRevenue =

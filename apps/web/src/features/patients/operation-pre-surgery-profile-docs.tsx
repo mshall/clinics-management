@@ -1,0 +1,87 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import {
+  PendingDocumentAttachments,
+  collectPendingDocumentFieldErrors,
+  pendingDocumentDescription,
+  type PendingDocumentRow,
+} from "@/components/pending-document-attachments";
+import { Button } from "@/components/ui/button";
+import { apiErrorMessage } from "@/lib/api-error-message";
+import { apiPostFormData } from "@/lib/http";
+
+type Props = {
+  operationId: string;
+  canUpload: boolean;
+};
+
+export function OperationPreSurgeryProfileDocs({ operationId, canUpload }: Props) {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const [rows, setRows] = useState<PendingDocumentRow[]>([]);
+  const [invalidRowIds, setInvalidRowIds] = useState<Set<string>>(new Set());
+
+  const uploadMut = useMutation({
+    mutationFn: async () => {
+      const fieldErrors = collectPendingDocumentFieldErrors(rows);
+      if (fieldErrors.code) {
+        setInvalidRowIds(fieldErrors.invalidRowIds);
+        throw new Error(fieldErrors.code);
+      }
+      const pending = rows.filter((r) => r.files.length > 0 && r.category);
+      if (pending.length === 0) throw new Error("nothing_to_upload");
+      for (const row of pending) {
+        const desc = pendingDocumentDescription(row, t);
+        for (const file of row.files) {
+          const fd = new FormData();
+          fd.append("file", file);
+          fd.append("kind", "ATTACHMENT");
+          fd.append("description", desc);
+          await apiPostFormData(`/api/v1/operations/${operationId}/documents`, fd);
+        }
+      }
+    },
+    onSuccess: async () => {
+      setRows([]);
+      setInvalidRowIds(new Set());
+      await qc.invalidateQueries({ queryKey: ["operation", operationId] });
+      await qc.invalidateQueries({ queryKey: ["operations"] });
+      toast.success(t("patients.operationDocsUploaded", "Pre-surgery documents uploaded."));
+    },
+    onError: (e: unknown) => {
+      if (e instanceof Error && e.message === "nothing_to_upload") {
+        toast.error(t("operations.postSurgeryNothingToUpload", "Add at least one document to upload."));
+        return;
+      }
+      toast.error(apiErrorMessage(e));
+    },
+  });
+
+  if (!canUpload) return null;
+
+  return (
+    <section className="space-y-3 rounded-lg border border-dashed border-amber-500/30 bg-amber-500/5 p-3">
+      <div>
+        <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
+          {t("patients.operationPreDocsTitle", "Add pre-surgery documents")}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {t("patients.operationPreDocsHint", "Consent forms, imaging, or plans while the operation is scheduled.")}
+        </p>
+      </div>
+      <PendingDocumentAttachments
+        rows={rows}
+        onChange={(next) => {
+          setRows(next);
+          if (invalidRowIds.size > 0) setInvalidRowIds(new Set());
+        }}
+        invalidRowIds={invalidRowIds.size > 0 ? invalidRowIds : undefined}
+      />
+      <Button type="button" size="sm" disabled={uploadMut.isPending} onClick={() => uploadMut.mutate()}>
+        {uploadMut.isPending ? t("common.saving", "Saving…") : t("common.upload", "Upload")}
+      </Button>
+    </section>
+  );
+}

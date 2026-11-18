@@ -14,14 +14,16 @@ import type { EncounterDetailDto, EncounterDocumentDto } from "@/lib/api-types";
 import { apiFetchBlob } from "@/lib/http";
 import { formatClinicNameFields, formatEncounterStatus, localeForLanguage } from "@/lib/locale-display";
 import { formatMoneyAmount } from "@/lib/money-display";
+import { EncounterProfileDocuments } from "@/features/patients/encounter-profile-documents";
 
 const DEFAULT_PAGE_SIZE = 10;
 
 type Props = {
   patientId: string;
+  canUploadDocs?: boolean;
 };
 
-export function PatientEncountersSection({ patientId }: Props) {
+export function PatientEncountersSection({ patientId, canUploadDocs = false }: Props) {
   const { t, i18n } = useTranslation();
   const locale = localeForLanguage(i18n.language);
   const [page, setPage] = useState(1);
@@ -117,7 +119,12 @@ export function PatientEncountersSection({ patientId }: Props) {
           {detailPending || !detail ? (
             <p className="text-muted-foreground">{t("common.loading")}</p>
           ) : (
-            <EncounterDetailView detail={detail} locale={locale} onOpenDoc={openDoc} />
+            <EncounterDetailView
+              detail={detail}
+              locale={locale}
+              onOpenDoc={openDoc}
+              canUploadDocs={canUploadDocs}
+            />
           )}
         </DialogContent>
       </Dialog>
@@ -161,10 +168,12 @@ function EncounterDetailView({
   detail,
   locale,
   onOpenDoc,
+  canUploadDocs,
 }: {
   detail: EncounterDetailDto;
   locale: string;
   onOpenDoc: (encounterId: string, doc: EncounterDocumentDto) => void;
+  canUploadDocs: boolean;
 }) {
   const { t, i18n } = useTranslation();
   const money = (n: number, currency: string) => formatMoneyAmount(n, currency, locale);
@@ -262,6 +271,12 @@ function EncounterDetailView({
       ) : detail.noMedications ? (
         <p className="text-muted-foreground">{t("encounters.noMedicationsRecorded", "No medications recorded")}</p>
       ) : null}
+
+      <EncounterProfileDocuments
+        encounterId={detail.id}
+        status={detail.status}
+        canUpload={canUploadDocs}
+      />
 
       <div>
         <p className="mb-2 text-xs font-medium text-muted-foreground">

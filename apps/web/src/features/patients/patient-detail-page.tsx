@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Camera, GitMerge, HeartPulse, Images, Users } from "lucide-react";
+import { Camera, GitMerge, HeartPulse, Images, LayoutGrid, Scissors, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -27,6 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { useClinicsQuery, useEncountersQuery, usePatientQuery } from "@/lib/api-hooks";
@@ -39,6 +40,8 @@ import { calculateAgeFromDob, formatPatientDob, localeForLanguage } from "@/lib/
 import { patientAcquisitionDisplay, type PatientAcquisitionChannel } from "@/lib/patient-acquisition";
 import { showNavItem } from "@/lib/nav-policy";
 import { canEditPatientDetails } from "@/lib/patient-edit-policy";
+import { canCreateOperation } from "@/lib/operation-money-policy";
+import { canMutateNavTab } from "@/lib/nav-tab-access-policy";
 import { useAuthStore } from "@/stores/auth-store";
 
 export function PatientDetailPage() {
@@ -53,6 +56,9 @@ export function PatientDetailPage() {
   const canViewEncounters = showNavItem(role, "encounters", navTabKeys, roleNavTabKeys);
   const canViewOperations = showNavItem(role, "operations", navTabKeys, roleNavTabKeys);
   const canEditPatient = canEditPatientDetails(role, navTabKeys, navTabAccessModes);
+  const canUploadEncounterDocs = canMutateNavTab("encounters", role, navTabKeys, navTabAccessModes);
+  const canUploadOperationDocs = canCreateOperation(role, navTabKeys, navTabAccessModes);
+  const [profileTab, setProfileTab] = useState<"overview" | "encounters" | "operations">("overview");
   const [editOpen, setEditOpen] = useState(false);
   const [familyOpen, setFamilyOpen] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
@@ -264,6 +270,27 @@ export function PatientDetailPage() {
         </CardContent>
       </Card>
 
+      <Tabs value={profileTab} onValueChange={(v) => setProfileTab(v as typeof profileTab)} className="space-y-4">
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="overview">
+            <LayoutGrid className="h-4 w-4 shrink-0" aria-hidden />
+            {t("patients.tabOverview", "Overview")}
+          </TabsTrigger>
+          {canViewEncounters ? (
+            <TabsTrigger value="encounters">
+              <HeartPulse className="h-4 w-4 shrink-0" aria-hidden />
+              {t("patients.encounters")}
+            </TabsTrigger>
+          ) : null}
+          {canViewOperations ? (
+            <TabsTrigger value="operations">
+              <Scissors className="h-4 w-4 shrink-0" aria-hidden />
+              {t("patients.tabOperations", "Operations")}
+            </TabsTrigger>
+          ) : null}
+        </TabsList>
+
+        <TabsContent value="overview" className="mt-0 space-y-6">
       <PreVisitSmartSummaryCard patientId={patient.id} />
       <Patient360Summary patientId={patient.id} />
 
@@ -421,10 +448,20 @@ export function PatientDetailPage() {
       <PatientMessagingConsentCard patientId={patient.id} />
       <OutboundMessageLog patientId={patient.id} />
       <PatientInvoicesSection patientId={patient.id} clinicId={patient.homeBranchId} />
+        </TabsContent>
 
-      {canViewEncounters && patient ? <PatientEncountersSection patientId={patient.id} /> : null}
+        {canViewEncounters && patient ? (
+          <TabsContent value="encounters" className="mt-0">
+            <PatientEncountersSection patientId={patient.id} canUploadDocs={canUploadEncounterDocs} />
+          </TabsContent>
+        ) : null}
 
-      {canViewOperations ? <PatientOperationsSection patientId={patient.id} /> : null}
+        {canViewOperations ? (
+          <TabsContent value="operations" className="mt-0">
+            <PatientOperationsSection patientId={patient.id} canUploadDocs={canUploadOperationDocs} />
+          </TabsContent>
+        ) : null}
+      </Tabs>
 
       {canEditPatient ? (
         <PatientEditDialog patient={patient} open={editOpen} onOpenChange={setEditOpen} />

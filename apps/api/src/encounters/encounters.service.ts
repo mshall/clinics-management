@@ -604,6 +604,20 @@ export class EncountersService {
     }
   }
 
+  private assertCanUploadEncounterDocument(kind: EncounterDocumentKind, status: EncounterStatus): void {
+    if (kind === EncounterDocumentKind.LAB || kind === EncounterDocumentKind.RADIOLOGY) {
+      if (
+        status === EncounterStatus.DRAFT ||
+        status === EncounterStatus.AMENDED ||
+        status === EncounterStatus.FINALIZED
+      ) {
+        return;
+      }
+      throw new BadRequestException("Lab and radiology uploads require a draft, amended, or finalized encounter");
+    }
+    this.ensureEditable(status);
+  }
+
   async amend(tenantId: string, viewer: JwtUser, encounterId: string, reason: string): Promise<EncounterDetailDto> {
     const enc = await this.prisma.encounter.findFirst({ where: { id: encounterId, tenantId } });
     if (!enc) throw new NotFoundException("Encounter not found");
@@ -983,7 +997,7 @@ export class EncountersService {
     const enc = await this.prisma.encounter.findFirst({ where: { id: encounterId, tenantId } });
     if (!enc) throw new NotFoundException("Encounter not found");
     assertPhysicianEncounterAccess(viewer, enc);
-    this.ensureEditable(enc.status);
+    this.assertCanUploadEncounterDocument(kind, enc.status);
 
     if (!file?.buffer?.length) throw new BadRequestException("Missing file");
     if (file.size > MAX_UPLOAD_BYTES) throw new BadRequestException("File too large (max 15MB)");

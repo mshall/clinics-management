@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Lock, FileText } from "lucide-react";
+import { AlertTriangle, FileText, Lock } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -56,6 +56,7 @@ import {
   canMarkOperationCompleted,
 } from "@/lib/operation-status-policy";
 import { OperationPostSurgeryDocumentsSection } from "@/features/operations/operation-post-surgery-documents";
+import { operationNeedsPipelineSkip, skippedPipelineStageKeys } from "@/lib/operation-pipeline";
 import { canGenerateInvoice } from "@/lib/invoice-generate-policy";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
 import { formatClinicianDisplayName } from "@/lib/employee-display";
@@ -653,14 +654,17 @@ export function OperationsPage() {
       id,
       status,
       collectionAmount,
+      allowPipelineSkip,
     }: {
       id: string;
       status: "COMPLETED" | "CANCELLED";
       collectionAmount?: number;
+      allowPipelineSkip?: boolean;
     }) =>
       apiPatch<OperationDto>(`/api/v1/operations/${id}/status`, {
         status,
         ...(collectionAmount !== undefined ? { collectionAmount } : {}),
+        ...(allowPipelineSkip ? { allowPipelineSkip: true } : {}),
       }),
     onSuccess: (_data, variables) => {
       setCompleteConfirmOp(null);
@@ -879,6 +883,21 @@ export function OperationsPage() {
     (o.feeCurrency?.trim() || resolveClinicCurrency(o.clinicId)) as string;
   const money = (n: number, currency?: string) => formatMoneyAmount(n, currency ?? orgBaseCurrency, loc);
 
+  const completePipelineSkip =
+    completeConfirmOp != null && operationNeedsPipelineSkip(completeConfirmOp.status ?? "BOOKED", "COMPLETED");
+  const skippedStageKeys = completeConfirmOp
+    ? skippedPipelineStageKeys(completeConfirmOp.status ?? "BOOKED", "COMPLETED")
+    : [];
+  const stageLabel = (key: string) => {
+    const map: Record<string, string> = {
+      PRE_OP: t("operations.statusPreOp", "Pre-op"),
+      IN_PROGRESS: t("operations.statusInProgress", "In progress"),
+      RECOVERY: t("operations.statusRecovery", "Recovery"),
+      BOOKED: t("operations.statusBooked", "Booked"),
+    };
+    return map[key] ?? key;
+  };
+
   return (
     <div className="space-y-6">
       <ValidationIssuesDialog {...createValidation.dialogProps} />
@@ -913,6 +932,27 @@ export function OperationsPage() {
                     "Clinic staff must record the full fee and payments before discharge.",
                   )}
             </p>
+            {completePipelineSkip ? (
+              <div className="rounded-lg border border-amber-500/35 bg-amber-500/10 p-3 text-sm text-amber-950 dark:text-amber-50">
+                <div className="flex gap-2">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+                  <div className="space-y-1">
+                    <p className="font-medium">{t("operations.pipelineSkipTitle", "Skip in-progress stages?")}</p>
+                    <p className="text-xs opacity-90">
+                      {t(
+                        "operations.pipelineSkipBody",
+                        "This operation has not moved through pre-op, surgery, or recovery. Marking complete now will skip:",
+                      )}
+                    </p>
+                    <ul className="list-inside list-disc text-xs">
+                      {skippedStageKeys.map((k) => (
+                        <li key={k}>{stageLabel(k)}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            ) : null}
             {completeConfirmOp ? (
               <div className="space-y-3 text-sm">
                 <p className="font-medium">
@@ -1003,6 +1043,7 @@ export function OperationsPage() {
                     id: completeConfirmOp.id,
                     status: "COMPLETED",
                     ...(completeBalance > 0.001 ? { collectionAmount: completeCollectionN } : {}),
+                    ...(completePipelineSkip ? { allowPipelineSkip: true } : {}),
                   });
                 }}
               >

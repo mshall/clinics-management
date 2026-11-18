@@ -27,7 +27,7 @@ import {
 } from "@nestjs/swagger";
 import { OperationDocumentKind, OperationStatus, UserRole } from "@prisma/client";
 import { Type } from "class-transformer";
-import { IsEnum, IsNumber, IsOptional, Min } from "class-validator";
+import { IsBoolean, IsEnum, IsNumber, IsOptional, Min } from "class-validator";
 import { memoryStorage } from "multer";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -91,6 +91,13 @@ class PatchOperationStatusDto {
   @IsNumber()
   @Min(0)
   collectionAmount?: number;
+
+  @ApiPropertyOptional({
+    description: "When true, allows advancing multiple pipeline stages in one update (client must confirm with the user)",
+  })
+  @IsOptional()
+  @IsBoolean()
+  allowPipelineSkip?: boolean;
 }
 
 @ApiTags("operations")
@@ -299,7 +306,9 @@ export class OperationsController {
   async patchStatus(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchOperationStatusDto) {
     await this.assertStatusAccess(user);
     assertCanCompleteOperation(user, body.status);
-    return this.operations.updateStatus(requireTenantId(user), id, body.status, user, body.collectionAmount);
+    return this.operations.updateStatus(requireTenantId(user), id, body.status, user, body.collectionAmount, {
+      allowPipelineSkip: body.allowPipelineSkip === true,
+    });
   }
 
   @Get(":id/pre-op-checklist")
