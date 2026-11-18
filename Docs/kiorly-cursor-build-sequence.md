@@ -283,7 +283,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 **Stage E · Launch completeness** — Everything for public launch
 
 - [x] Step 049 · PL-07 · Upgrade, downgrade, seat changes & proration
-- [ ] Step 050 · CR-07 · "Kiorly is free" progress meter & nudges
+- [x] Step 050 · CR-07 · "Kiorly is free" progress meter & nudges
 - [ ] Step 051 · PL-08 · Plan & billing page, paywall moments and upgrade prompts
 - [ ] Step 052 · CR-08 · Commission disputes & adjustments
 - [ ] Step 053 · CR-09 · Doctor-to-doctor referral credits

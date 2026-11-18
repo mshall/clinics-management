@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiGet, apiPost } from "@/lib/http";
+import { AdminKiorexFreeProgressCard } from "./admin-kiorex-free-progress-card";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import {
   Table,
@@ -79,6 +80,8 @@ export function AdminKiorexChargesPanel() {
   const rows = listQuery.data?.items ?? [];
 
   return (
+    <div className="space-y-4">
+      <AdminKiorexFreeProgressCard period={period} />
     <Card>
       <CardHeader>
         <CardTitle className="text-base">{t("admin.billing.kiorex.title", "Kiorex commission charges")}</CardTitle>
@@ -175,5 +178,6 @@ export function AdminKiorexChargesPanel() {
         )}
       </CardContent>
     </Card>
+    </div>
   );
 }

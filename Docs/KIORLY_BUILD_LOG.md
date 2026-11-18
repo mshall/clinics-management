@@ -34,3 +34,4 @@
 | 025 PL-09 | `12e3ea8` | `Cohort` model, `GET /public/cohorts/:key/remaining`, signup assign |
 | 004 SC-01 | `316c557` | `legalConfig` gates, sub-processor guard, platform legal UI; `Docs/SC-01_FRANKFURT_RESIDENCY.md` |
 | 049 PL-07 | `f9dd2d5` | Proration APIs, billing seats, compare-plan preview UI; migration `20261118200000_pl07_subscription_proration` |
+| 050 CR-07 | `8ea7373` | `GET /billing/kiorex-progress`, progress ring UI, threshold nudges + audit; migration `20261118210000_cr07_kiorex_progress_nudge` |

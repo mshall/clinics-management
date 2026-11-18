@@ -2103,7 +2103,17 @@
         "status_DISPUTED": "معترض عليه",
         "status_REVERSED": "معكوس",
         "status_BILLED": "مُفوتر",
-        "status_WAIVED": "معفى"
+        "status_WAIVED": "معفى",
+        "freeProgress": {
+          "title": "كيوركس — Kiorly مجاناً",
+          "hint": "عمولة كيوركس من مرضى جدد حضروا تُخصم من اشتراك Kiorly لهذا الشهر.",
+          "freeBadge": "مجاناً هذا الشهر",
+          "freeCopy": "Kiorly مجاناً هذا الشهر — عمولة كيوركس غطت اشتراكك.",
+          "ringCopy": "{{attended}} من {{target}} مريض كيوركس · {{still}} إضافيين وKiorly مجاناً هذا الشهر",
+          "noTarget": "{{attended}} مريض كيوركس حضروا · يُغطى الاشتراك بالعمولة عند اكتمال الرسوم.",
+          "period": "الفترة {{period}}",
+          "loadError": "تعذّر تحميل تقدم كيوركس."
+        }
       }
     },
     "toggle": "تبديل",

@@ -751,6 +751,18 @@ model UsageMeterDedup {
   @@unique([tenantId, metric, sourceId])
 }
 
+/// CR-07 — owner nudges at 50/80/100% Kiorex free progress (once per period).
+model KiorexProgressNudge {
+  id        String   @id @default(cuid())
+  tenantId  String
+  periodKey String
+  threshold Int
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, periodKey, threshold])
+  @@index([tenantId, periodKey])
+}
+
 model TenantEntitlementOverride {
   id        String   @id @default(cuid())
   tenantId  String

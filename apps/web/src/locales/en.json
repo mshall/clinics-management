@@ -2082,7 +2082,17 @@
         "status_DISPUTED": "Disputed",
         "status_REVERSED": "Reversed",
         "status_BILLED": "Billed",
-        "status_WAIVED": "Waived"
+        "status_WAIVED": "Waived",
+        "freeProgress": {
+          "title": "Kiorex — Kiorly is free",
+          "hint": "Kiorex commission from attended new patients offsets your Kiorly subscription this month.",
+          "freeBadge": "Free this month",
+          "freeCopy": "Kiorly is free this month — Kiorex covered your plan.",
+          "ringCopy": "{{attended}} of {{target}} Kiorex patients · {{still}} more and Kiorly is free this month",
+          "noTarget": "{{attended}} Kiorex patients attended · subscription covered by commission when fees add up.",
+          "period": "Period {{period}}",
+          "loadError": "Could not load Kiorex progress."
+        }
       }
     },
     "toggle": "Toggle",

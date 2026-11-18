@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiGet, apiPost } from "@/lib/http";
+import { AdminKiorexFreeProgressCard } from "./admin-kiorex-free-progress-card";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import {
   Table,
@@ -164,7 +165,8 @@ export function AdminOrgBillingPanel({ canManage }: { canManage: boolean }) {
   const wallet = walletQuery.data;
 
   return (
-    <div className="space-y-4">
+  <div className="space-y-4">
+    <AdminKiorexFreeProgressCard />
     <Card>
       <CardHeader>
         <CardTitle className="text-base">{t("admin.billing.title", "Plan & billing")}</CardTitle>
