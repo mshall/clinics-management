@@ -222,6 +222,8 @@ export interface AppointmentDto {
   isNewPatientAtBooking?: boolean | null;
   newPatientCheckedAt?: string | null;
   commissionChargeableAtBooking?: boolean;
+  cancelledBy?: string | null;
+  cancellationReason?: string | null;
 }
 
 export interface OperationDto {

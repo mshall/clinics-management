@@ -47,6 +47,7 @@ import { NewPatientService } from "../patients/new-patient.service";
 import { isCommissionChargeableBooking } from "./booking-attribution";
 import { CommissionChargeService, type BilledReversalCreditIntent } from "../kiorex/commission-charge.service";
 import { AppointmentOutboxService } from "../messaging/appointment-outbox.service";
+import { auditClinicCancellation, clinicCancellationEventMetadata, clinicCancellationPatch } from "./kiorex-clinic-cancel";
 
 const appointmentDtoInclude = {
   patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } },
@@ -201,6 +202,8 @@ export class AppointmentsService {
           : null,
       isNewPatientAtBooking: row.isNewPatientAtBooking,
       newPatientCheckedAt: row.newPatientCheckedAt?.toISOString() ?? null,
+      cancelledBy: row.cancelledBy ?? null,
+      cancellationReason: row.cancellationReason ?? null,
       commissionChargeableAtBooking: isCommissionChargeableBooking(
         row.bookingSource,
         row.isNewPatientAtBooking,
@@ -686,7 +689,8 @@ export class AppointmentsService {
     tenantId: string,
     id: string,
     status: AppointmentStatus,
-    viewer?: JwtUser
+    viewer?: JwtUser,
+    cancellationReason?: string | null,
   ): Promise<AppointmentDto> {
     const existing = await this.prisma.appointment.findFirst({
       where: { id, tenantId },
@@ -701,6 +705,7 @@ export class AppointmentsService {
       await assertNoOpenEncounterForAppointmentComplete(this.prisma, tenantId, id);
       await assertScheduledTransferFeeCollected(this.prisma, tenantId, id);
     }
+    const cancelPatch = clinicCancellationPatch(existing, status, cancellationReason);
     const creditIntents: BilledReversalCreditIntent[] = [];
     const row = await this.prisma.$transaction(async (tx) => {
       let patch: Prisma.AppointmentUpdateInput;
@@ -714,13 +719,24 @@ export class AppointmentsService {
           existingPreferred: existing.preferredRoomLabel ?? existing.roomLabel,
         });
       } else {
-        patch = { status };
+        patch = { status, ...cancelPatch };
       }
       const row = await tx.appointment.update({
         where: { id },
         data: patch,
         include: appointmentDtoInclude,
       });
+      if (cancelPatch) {
+        await auditClinicCancellation(tx, {
+          tenantId,
+          actorId: viewer?.userId ?? null,
+          clinicId: row.clinicId,
+          appointmentId: row.id,
+          patientId: row.patientId,
+          bookingSource: row.bookingSource,
+          reason: row.cancellationReason,
+        });
+      }
       if (!isRevertingAppointmentCheckIn(existing.status, status)) {
         await ensureDraftEncounterIfCheckedIn(tx, tenantId, id);
       }
@@ -745,6 +761,7 @@ export class AppointmentsService {
           nextStatus: row.status,
           bookingSource: row.bookingSource,
           cancelledByPatient: false,
+          metadata: cancelPatch ? clinicCancellationEventMetadata(row) : undefined,
         },
         tx,
       );
@@ -830,6 +847,7 @@ export class AppointmentsService {
       await assertNoOpenEncounterForAppointmentComplete(this.prisma, tenantId, id);
       await assertScheduledTransferFeeCollected(this.prisma, tenantId, id);
     }
+    const cancelPatch = clinicCancellationPatch(existing, nextStatus, dto.cancellationReason);
 
     const transferCtx = await resolveTenantTransferCollectionContext(this.prisma, this.featureFlags, tenantId);
     let scheduledPatch: {
@@ -893,9 +911,21 @@ export class AppointmentsService {
           ...(feeProvided ? { feeAmount: new Prisma.Decimal(String(Number(dto.feeAmount))) } : {}),
           ...scheduledPatch,
           ...statusFields,
+          ...cancelPatch,
         },
         include: appointmentDtoInclude,
       });
+      if (cancelPatch) {
+        await auditClinicCancellation(tx, {
+          tenantId,
+          actorId: viewer?.userId ?? null,
+          clinicId: updated.clinicId,
+          appointmentId: updated.id,
+          patientId: updated.patientId,
+          bookingSource: updated.bookingSource,
+          reason: updated.cancellationReason,
+        });
+      }
 
       if (!reverting) {
         await ensureDraftEncounterIfCheckedIn(tx, tenantId, id);
@@ -932,6 +962,7 @@ export class AppointmentsService {
             nextStatus: updated.status,
             bookingSource: updated.bookingSource,
             cancelledByPatient: false,
+            metadata: cancelPatch ? clinicCancellationEventMetadata(updated) : undefined,
           },
           tx,
         );

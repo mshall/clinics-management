@@ -48,6 +48,12 @@ function toDatetimeLocalValue(iso: string): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
+const KIOREX_PATIENT_SOURCES = new Set(["KIOREX_MARKETPLACE", "KIOREX_WHATSAPP", "CLINIC_LINK"]);
+
+function isKiorexPatientSource(source: string | null | undefined): boolean {
+  return Boolean(source && KIOREX_PATIENT_SOURCES.has(source));
+}
+
 function isReadOnlyStatus(status: string): boolean {
   return status === "COMPLETED";
 }
@@ -103,6 +109,9 @@ export function AppointmentDetailPage() {
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [completeBlockedOpen, setCompleteBlockedOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const needsCancelReason =
+    Boolean(apt) && status === "CANCELLED" && apt?.status !== "CANCELLED" && isKiorexPatientSource(apt?.bookingSource);
 
   useEffect(() => {
     if (!apt) return;
@@ -298,7 +307,14 @@ export function AppointmentDetailPage() {
       toast.error(planErr);
       return;
     }
+    if (needsCancelReason && cancelReason.trim().length < 3) {
+      const msg = t("appointments.cancelReasonRequired", "Enter a reason — the Kiorex patient will see it.");
+      setFormErr(msg);
+      toast.error(msg);
+      return;
+    }
   saveMut.mutate({
+      ...(needsCancelReason ? { cancellationReason: cancelReason.trim() } : {}),
       clinicId,
       patientId,
       clinicianId,
@@ -680,8 +696,36 @@ export function AppointmentDetailPage() {
                     <option value="COMPLETED">{t("appointments.statusCompleted", "Completed")}</option>
                   </select>
                 </div>
+                {needsCancelReason ? (
+                  <div className="space-y-1">
+                    <Label htmlFor={`appointment-cancel-reason-${id}`}>
+                      {t("appointments.cancelReason", "Reason for cancelling (shown to the patient)")}
+                    </Label>
+                    <Input
+                      id={`appointment-cancel-reason-${id}`}
+                      data-testid="appointment-cancel-reason"
+                      maxLength={500}
+                      value={cancelReason}
+                      onChange={(e) => setCancelReason(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {t(
+                        "appointments.cancelReasonHint",
+                        "This is a Kiorex booking: the patient is notified with this reason and any deposit is refunded.",
+                      )}
+                    </p>
+                  </div>
+                ) : null}
               </div>
             )}
+            {apt.status === "CANCELLED" && apt.cancellationReason ? (
+              <p className="text-xs text-muted-foreground" data-testid="appointment-cancelled-reason">
+                {t("appointments.cancelledReason", "Cancelled by {{by}}: {{reason}}", {
+                  by: t(`appointments.cancelledBy.${apt.cancelledBy ?? "CLINIC"}`, apt.cancelledBy ?? ""),
+                  reason: apt.cancellationReason,
+                })}
+              </p>
+            ) : null}
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label>{t("appointments.notes", "Notes")}</Label>

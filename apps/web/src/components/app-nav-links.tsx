@@ -11,6 +11,7 @@ import {
   Receipt,
   Scissors,
   Settings,
+  Sparkles,
   Stethoscope,
   BookOpen,
   Monitor,
@@ -181,6 +182,12 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
         <NavLink to="/clinics" className={navClass} onClick={() => onNavigate?.()}>
           <Building2 className="size-4 shrink-0" />
           {t("nav.clinics")}
+        </NavLink>
+      ) : null}
+      {showTab("clinics") ? (
+        <NavLink to="/kiorex" className={navClass} onClick={() => onNavigate?.()}>
+          <Sparkles className="size-4 shrink-0" />
+          {t("nav.kiorex", "Kiorex")}
         </NavLink>
       ) : null}
       {showTab("expenses") ? (

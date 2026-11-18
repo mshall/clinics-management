@@ -11,6 +11,7 @@
 | KX-03 Canonical slot engine | **Done** |
 | KX-04 Booking intake (holds, idempotency) | **Done** |
 | KX-05 Transactional outbox & status events | **Done** |
+| KX-06 Reschedule & cancellation policies (both directions) | **Done** |
 
 ## Platform client
 
@@ -77,6 +78,15 @@ Marketplace calls carry `clinicId`; tenant resolves from listing rows.
 - **Governance:** Admin → **Outbox** tab; `GET/POST /api/v1/admin/outbox-events` (+ `/summary`, `/:id/retry`).
 - OpenAPI webhook contract: `apps/api/openapi/marketplace.openapi.json` → `webhooks.kiorexOutboxEvent`.
 
+## KX-06 reschedule & cancellation policies
+
+- **Policy** (hours before start): `patientCancelMinHours`, `patientRescheduleMinHours`, `depositRefundMinHours`, `maxPatientReschedules`. Default from market pack `commercialConfig.kiorex.cancellationPolicy` (optional; code default 12 / 12 / 24 / 2), clinic partial override in `Clinic.kiorexCancellationPolicy`.
+- **Settings:** `GET /api/v1/kiorex/settings?clinicId=` and `PUT /api/v1/kiorex/settings` `{ clinicId, cancellationPolicy }` (`null` resets to market default) — clinic admins only, audited `kiorex.settings.cancellation_policy_updated`. UI: **Kiorex** tab → policy card.
+- **Patient side (Kiorex):** `POST /marketplace/v1/bookings/:ref/cancel` `{ reason? }` and `POST /marketplace/v1/bookings/:ref/reschedule` `{ startsAt, endsAt?, holdId? }`. Outside the window → **`422`** `CANCELLATION_WINDOW_CLOSED` / `RESCHEDULE_WINDOW_CLOSED` / `RESCHEDULE_LIMIT_REACHED` / `BOOKING_NOT_CHANGEABLE` (rejections audited). Cancel decides `depositRefundable` server-side (`≥ depositRefundMinHours`) and emits `CANCELLED_BY_PATIENT` with it; reschedule checks min notice, horizon, overlaps and holds, increments `rescheduleCount` and emits `RESCHEDULED`.
+- **Clinic side:** cancelling a `KIOREX_MARKETPLACE` / `KIOREX_WHATSAPP` / `CLINIC_LINK` booking (`PATCH /appointments/:id` or `/status`) requires `cancellationReason` (≥3 chars, else `400 CANCELLATION_REASON_REQUIRED`); deposit is always refundable; `CANCELLED_BY_CLINIC` carries the reason for the patient; audit `appointment.cancelled_by_clinic` with the reason.
+- Confirmation-timeout cancellations are stamped `cancelledBy = SYSTEM`, deposit refundable.
+- Appointment fields: `cancelledAt`, `cancelledBy`, `cancellationReason`, `depositRefundable`, `rescheduleCount`.
+
 ## Tests
 
 - `marketplace-listing-eligibility.node.test.ts`
@@ -91,6 +101,7 @@ Marketplace calls carry `clinicId`; tenant resolves from listing rows.
 - `outbox-lag.node.test.ts`
 - `outbox-delivery.node.test.ts`
 - `kx05-outbox.integration.test.ts`
+- `kx06-booking-policy.node.test.ts`, `kx06-cancellation-policy.integration.test.ts`
 
 ## Follow-ups
 

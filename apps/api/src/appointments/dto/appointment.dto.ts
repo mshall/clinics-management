@@ -121,4 +121,10 @@ export class AppointmentDto {
 
   @ApiPropertyOptional({ description: "Whether this booking may incur Kiorex commission (CR-02)" })
   commissionChargeableAtBooking?: boolean;
+
+  @ApiPropertyOptional({ nullable: true, description: "PATIENT | CLINIC | SYSTEM (KX-06)" })
+  cancelledBy?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  cancellationReason?: string | null;
 }

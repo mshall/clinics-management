@@ -47,6 +47,12 @@ export class UpdateAppointmentDto {
   @MaxLength(2000)
   notes?: string | null;
 
+  @ApiPropertyOptional({ description: "Required when cancelling a Kiorex booking (shown to the patient)" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  cancellationReason?: string | null;
+
   @ApiPropertyOptional({ description: "Scheduled fee payment plan (cash vs transfer channel)" })
   @IsOptional()
   @ValidateNested()
