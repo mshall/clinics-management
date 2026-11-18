@@ -27,4 +27,4 @@
 | Step | Merge on `kiorly/launch` | Notes |
 |------|--------------------------|-------|
 | 001 FD-00 | `955b94b` | Pre-shipped on main; verified tests + `Docs/FD-00_MARKET_TAX_DEFAULTS.md` |
-| 002 FD-01 | (pending merge) | Pre-shipped; `effective-roles.ts`, transfer-ownership, E2E `owner-physician-flow` |
+| 002 FD-01 | dd42945 | Pre-shipped; `effective-roles.ts`, transfer-ownership, E2E `owner-physician-flow` |
