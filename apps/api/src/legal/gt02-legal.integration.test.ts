@@ -12,6 +12,8 @@ import { LegalAcceptanceService } from "./legal-acceptance.service";
 import { legalAcceptancesPayload, requiredLegalForSignup } from "./legal-catalog";
 import { SubscriptionService } from "../subscriptions/subscription.service";
 import type { JwtUser } from "../auth/jwt-user";
+import { CohortService } from "../cohorts/cohort.service";
+import { BillingSeatService } from "../subscriptions/billing-seat.service";
 
 const prisma = new PrismaClient();
 
@@ -20,10 +22,8 @@ function services() {
   const audit = new AuditService(prismaSvc);
   const legal = new LegalAcceptanceService(prismaSvc, audit);
   const markets = new MarketsService(prismaSvc, {} as FeatureFlagsService, {} as MarketProvisionService);
-  const provision = new SignupProvisionService(prismaSvc, markets, legal);
-  const { BillingSeatService } = await import("../subscriptions/billing-seat.service");
-  const billingSeats = new BillingSeatService(prismaSvc);
-  const subs = new SubscriptionService(prismaSvc, legal, billingSeats);
+  const provision = new SignupProvisionService(prismaSvc, markets, legal, new CohortService());
+  const subs = new SubscriptionService(prismaSvc, legal, new BillingSeatService(prismaSvc));
   return { legal, provision, subs };
 }
 

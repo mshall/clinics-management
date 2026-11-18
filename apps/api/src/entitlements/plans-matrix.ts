@@ -54,6 +54,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "billing-platform/settlement.controller.ts": { kind: "open" },
   "clinic-ai/clinic-ai.controller.ts": { kind: "gated", entitlement: "ai_assistant" },
   "clinical/clinical.controller.ts": { kind: "gated", entitlement: "mod_clinical" },
+  "cohorts/public-cohorts.controller.ts": { kind: "open" },
   "clinician-verification/clinician-verification.controller.ts": { kind: "open" },
   "clinician-verification/platform-verifications.controller.ts": { kind: "platform" },
   "clinics/clinics.controller.ts": { kind: "open" },
@@ -97,6 +98,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "user-nav-tabs/tenant-role-nav-tabs.controller.ts": { kind: "open" },
   "user-nav-tabs/user-nav-tabs.controller.ts": { kind: "open" },
   "users/users.controller.ts": { kind: "open" },
+  "usage/usage.controller.ts": { kind: "open" },
 };
 
 export const FEATURE_FLAG_ENTITLEMENT: Record<FeatureFlagKey, string> = {

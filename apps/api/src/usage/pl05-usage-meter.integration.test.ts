@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { ForbiddenException } from "@nestjs/common";
 import { after, before, describe, it } from "node:test";
 import { PrismaClient, UsageMetric } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
@@ -53,7 +54,12 @@ describe("PL-05 usage metering", () => {
       },
       update: { quantity: limit },
     });
-    await assert.rejects(() => usage.assertWhatsAppQuota(tenant.id), /USAGE_QUOTA_EXCEEDED/);
+    await assert.rejects(
+      () => usage.assertWhatsAppQuota(tenant.id),
+      (e: unknown) =>
+        e instanceof ForbiddenException &&
+        (e.getResponse() as { code?: string }).code === "USAGE_QUOTA_EXCEEDED",
+    );
     await prisma.usageCounter.update({
       where: {
         tenantId_periodKey_metric: {

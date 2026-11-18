@@ -8,6 +8,7 @@ import { MESSAGING_CONSENT_MARKETING } from "../patients/messaging-consent.const
 import { PrismaService } from "../prisma/prisma.service";
 import { MessagingService } from "./messaging.service";
 import { ConsentPolicyService } from "../compliance/consent-policy.service";
+import { UsageMeterService } from "../usage/usage-meter.service";
 
 const prisma = new PrismaClient();
 
@@ -16,7 +17,8 @@ function messagingStack(): { messaging: MessagingService; consent: MessagingCons
   const audit = new AuditService(prismaSvc);
   const policy = new ConsentPolicyService(prismaSvc, audit);
   const consent = new MessagingConsentService(prismaSvc, audit, policy);
-  const messaging = new MessagingService(prismaSvc, consent);
+  const usage = { assertWhatsAppQuota: async () => undefined } as unknown as UsageMeterService;
+  const messaging = new MessagingService(prismaSvc, consent, usage);
   return { messaging, consent };
 }
 
