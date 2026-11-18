@@ -17,7 +17,8 @@ Commercial source of truth for SaaS plans, per-market versioned prices, and head
 |----------|------|--------|
 | `GET /api/v1/public/plans?market=EG` | None | Public catalog; `Cache-Control: public, max-age=300` |
 | `GET/POST/PATCH /api/v1/admin/platform/plans` | Platform super admin | Plan metadata |
-| `GET/POST /api/v1/admin/platform/plans/:id/prices` | Platform super admin | Price history + new version (closes prior active row) |
+| `GET/POST /api/v1/admin/platform/plans/:id/prices` | Platform super admin | Price history + new version (closes prior active row). `preview: true` → impact only (SB-06) |
+| `GET /api/v1/admin/platform/plans/price-migrations?status=` | Platform super admin | SB-06 who-moves-when report |
 
 ## Egypt seed (demo)
 
@@ -111,8 +112,29 @@ See **[PLANS_AND_ENTITLEMENTS.md](./PLANS_AND_ENTITLEMENTS.md)** for the module 
 
 Tests: `pl08-paywall.node.test.ts`, `pl08-paywall.integration.test.ts`.
 
+## SB-06 price indexation & grandfathering
+
+| Item | Status |
+|------|--------|
+| SB-06 Currency, price indexation & grandfathering | **Done** |
+
+Publishing a new `PlanPrice` version (same plan / market / interval / unit / cohort) creates one `PlanPriceMigration` per live subscription on an older version of that segment:
+
+- **When:** first renewal (`currentPeriodEnd` + whole billing periods) on or after `max(now + notice, priceLockUntil, validFrom)`. Notice = `kiorlyBilling.priceChangeNoticeDays` in the market pack (default **30**).
+- **Founding lock:** subscriptions with a future `priceLockUntil` are never scheduled — or applied — before the lock ends; the apply job re-checks the lock and reschedules if needed.
+- **Notice job** (`PriceIndexationScheduler`, hourly): at `noticeDueAt` (30 + 2 days before the move) enqueues `billing.price_change_notice` (INTERNAL outbox) with EN + AR copy and audits `subscription.price_change_notice`.
+- **Apply:** at `effectiveAt`, only after a full notice period, swaps `Subscription.planPriceId`, records `consentByContinuingAt`, writes `SubscriptionEvent price_migrated`, audit `subscription.price_migrated`, outbox `billing.price_change_applied`. Cancelled / cancelling / changed-plan subscriptions → migration `CANCELLED`. A newer version supersedes pending moves.
+- **Preview:** `POST …/prices` with `preview: true` returns tenants affected, locked tenants, MRR before/after/delta (annual ÷ 12, seats included) and per-tenant move dates — nothing is written.
+
+Web: Platform → Plans & pricing → **Preview impact** + **Scheduled price moves** report.
+
+Migration `20261118236000_sb06_price_indexation` (`PlanPriceMigration`, `PriceMigrationStatus`).
+
+Tests: `sb06-price-indexation.node.test.ts`, `sb06-price-indexation.integration.test.ts`, `apps/web/e2e/sb06-price-impact.spec.ts`.
+
 ## Follow-ups
 
+- Sender for INTERNAL `billing.price_change_notice` (WhatsApp/email) — pairs with MS-04 owner digests; needs approved templates (NH-004).
 - Wire `FeatureFlagsService` / `@RequiresEntitlement` to `PlanEntitlement` and tenant subscription.
 - Signup + Kiorly billing invoices (`KiorlyInvoice`) charging against subscribed `planPrice`.
 - Public marketing site consuming `GET /public/plans`.

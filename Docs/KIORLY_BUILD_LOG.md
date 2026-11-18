@@ -31,6 +31,7 @@
 |------|--------|
 | CR-07 | Threshold nudges today: `KiorexProgressNudge` + `AuditLog` only. **WhatsApp/in-app owner copy + monthly recap** → implement in **MS-04** (owner digests) on Step 077. |
 | CR-11 | Statement delivery rows (`billing.monthly_statement_ready`, INTERNAL) are enqueued on issue; the **email/WhatsApp sender** for INTERNAL `billing.*` topics is not built yet (pair with MS-04). Web lint has 3 pre-existing errors (`clinical-letter-dialog.tsx`, `invoice-document-preview.tsx`, `collect-visit-balance-card.tsx`). |
+| SB-05/06 | Local full `test:e2e`: 13 pre-existing UI spec failures unrelated to billing (encounter dialog strict-mode, HR clinic picker, theme ids, patient-manage, signup-ar, flows-integrity). Billing specs (`sb03`, `sb05`, `sb06`, `qa01`) green. CI `187a6f7` golden e2e hit `BILLING_SEAT_INACTIVE` on seeded physician (data-order flake; `pl01` integration test mutates first tenant's subscription) — watch next runs. |
 | SC-02 | NH-001 (PDPC licence filing) remains in `Docs/KIORLY_NEEDS_HUMAN.md`; product gates are in code/tests. |
 
 ## Steps
@@ -93,3 +94,4 @@
 | 053 CR-09 | `fcfbdad` | ReferralCode/Referral, `GET /growth/referral`, dual REFERRAL grants on first paid invoice |
 | 054 CR-11 | `3049900` | `GET /billing/statements[/:period]` JSON + bilingual PDF, Plan & billing statements panel, statement outbox on issue; invoice TAX-line subtotal fix; NH-003 |
 | 055 SB-05 | `1eb1a44` | Lite min invoice (pack, default 100) + idempotent carry (`kiorlySettlementCarryPeriodKey/In`), carried charges BILLED, `GET /billing/lite-fees` + Lite fees card, Lite unpaid D+30 → listing PAUSED/billing (Kiorly stays ACTIVE), holds/bookings need LIVE; web lint errors fixed; sb03 e2e uses bearer API |
+| 056 SB-06 | _pending_ | `PlanPriceMigration`: new version → move at first renewal after notice (pack `priceChangeNoticeDays`, default 30), never before `priceLockUntil`/`validFrom`; hourly notice (bilingual INTERNAL outbox) + apply (consent-by-continuing); `preview: true` impact (tenants, MRR delta); `GET …/plans/price-migrations` report + platform UI; NH-004 |
