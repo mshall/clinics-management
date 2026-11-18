@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Headers, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Headers, HttpCode, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiHeader, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { IntegrationBookAppointmentDto } from "../integrations/dto/integration-book-appointment.dto";
 import { MarketplaceApiService } from "./marketplace-api.service";
@@ -111,6 +111,28 @@ export class MarketplaceController {
   @ApiOperation({ summary: "Get booking by Kiorex idempotency / external reference" })
   getBooking(@MarketplaceClient() client: PlatformIntegrationPrincipal, @Param("externalRef") externalRef: string) {
     return this.bookings.getByExternalRef(client, externalRef);
+  }
+
+  @Post("bookings/:externalRef/cancel")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Patient cancels a Kiorex booking, enforced against the clinic policy (KX-06)" })
+  cancelBooking(
+    @MarketplaceClient() client: PlatformIntegrationPrincipal,
+    @Param("externalRef") externalRef: string,
+    @Body() body: { reason?: string },
+  ) {
+    return this.bookings.cancelByPatient(client, externalRef, body ?? {});
+  }
+
+  @Post("bookings/:externalRef/reschedule")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Patient reschedules a Kiorex booking, enforced against the clinic policy (KX-06)" })
+  rescheduleBooking(
+    @MarketplaceClient() client: PlatformIntegrationPrincipal,
+    @Param("externalRef") externalRef: string,
+    @Body() body: { startsAt: string; endsAt?: string; holdId?: string },
+  ) {
+    return this.bookings.rescheduleByPatient(client, externalRef, body);
   }
 
   @Post("appointments")

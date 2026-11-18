@@ -55,7 +55,8 @@
     "clinicRevenue": "Clinic revenue",
     "governance": "Governance & audit",
     "frontDeskBoard": "Front desk board",
-    "guideBook": "Guide book"
+    "guideBook": "Guide book",
+    "kiorex": "Kiorex"
   },
   "entitlements": {
     "upgradeTitle": "Upgrade required",
@@ -957,6 +958,15 @@
       "fri": "Fri",
       "sat": "Sat",
       "sun": "Sun"
+    },
+    "cancelReason": "Reason for cancelling (shown to the patient)",
+    "cancelReasonHint": "This is a Kiorex booking: the patient is notified with this reason and any deposit is refunded.",
+    "cancelReasonRequired": "Enter a reason — the Kiorex patient will see it.",
+    "cancelledReason": "Cancelled by {{by}}: {{reason}}",
+    "cancelledBy": {
+      "PATIENT": "patient",
+      "CLINIC": "clinic",
+      "SYSTEM": "system (not confirmed in time)"
     }
   },
   "scheduling": {
@@ -1465,7 +1475,6 @@
     "viewEmployeeProfile": "Employee profile",
     "openEmployeeDetails": "HR record",
     "linkedAccountRole": "Login role",
-    "linkedLoginAccount": "Linked login account",
     "noLinkedLoginAccount": "No login account is linked to this employee record yet.",
     "employeeDetails": "Employee details",
     "filterEmployee": "Filter employee",
@@ -3050,6 +3059,24 @@
           "body": "Create a demo patient to walk through a visit. It is excluded from reports and billing and can be removed from Help."
         }
       }
+    }
+  },
+  "kiorexTab": {
+    "title": "Kiorex",
+    "subtitle": "Control how patients find and book you on Kiorex, and see what it brings in.",
+    "clinic": "Branch",
+    "loadError": "Kiorex settings are available to clinic owners and managers.",
+    "policy": {
+      "title": "Reschedule & cancellation policy",
+      "hint": "Applies to Kiorex and booking-link patients. Cancellations by the clinic always refund the deposit and need a reason the patient will see.",
+      "patientCancelMinHours": "Patients can cancel up to (hours before)",
+      "patientRescheduleMinHours": "Patients can reschedule up to (hours before)",
+      "depositRefundMinHours": "Deposit refunded if cancelled at least (hours before)",
+      "maxPatientReschedules": "Maximum reschedules per booking",
+      "marketDefault": "Market default: {{value}}",
+      "reset": "Use market default",
+      "saved": "Cancellation policy saved",
+      "invalid": "Enter whole numbers of 0 or more."
     }
   }
 }

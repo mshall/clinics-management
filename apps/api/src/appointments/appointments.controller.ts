@@ -2,9 +2,17 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } f
 import { SubscriptionAccessGuard } from "../subscriptions/subscription-access.guard";
 import { RequiresSubscriptionAccess } from "../subscriptions/requires-subscription-access.decorator";
 import { SubscriptionAccessAction } from "../subscriptions/subscription-access-policy";
-import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from "@nestjs/swagger";
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiProperty,
+  ApiPropertyOptional,
+  ApiTags,
+} from "@nestjs/swagger";
 import { AppointmentStatus } from "@prisma/client";
-import { IsEnum } from "class-validator";
+import { IsEnum, IsOptional, IsString, MaxLength } from "class-validator";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
@@ -20,6 +28,12 @@ class PatchAppointmentStatusDto {
   @ApiProperty({ enum: AppointmentStatus })
   @IsEnum(AppointmentStatus)
   status!: AppointmentStatus;
+
+  @ApiPropertyOptional({ description: "Required when cancelling a Kiorex booking (shown to the patient)" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  cancellationReason?: string;
 }
 
 @ApiTags("appointments")
@@ -131,7 +145,7 @@ export class AppointmentsController {
   @ApiOkResponse({ type: AppointmentDto })
   async patchStatus(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatchAppointmentStatusDto) {
     await this.assertMutate(user);
-    return this.appointments.updateStatus(requireTenantId(user), id, body.status, user);
+    return this.appointments.updateStatus(requireTenantId(user), id, body.status, user, body.cancellationReason);
   }
 
   @Patch(":id")

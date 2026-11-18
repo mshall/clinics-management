@@ -95,6 +95,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "marketplace/marketplace.controller.ts": { kind: "webhook" },
   "marketplace/marketplace-org.controller.ts": { kind: "open" },
   "marketplace/marketplace-listings-profile.controller.ts": { kind: "open" },
+  "marketplace/kiorex-settings.controller.ts": { kind: "open" },
   "reports/reports.controller.ts": { kind: "gated", entitlement: "mod_reports" },
   "revenue/revenue.controller.ts": { kind: "gated", entitlement: "mod_revenue" },
   "scheduling/scheduling.controller.ts": { kind: "open" },

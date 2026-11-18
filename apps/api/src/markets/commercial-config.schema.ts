@@ -27,11 +27,29 @@ const trialSchema = z.object({
     .optional(),
 });
 
+/** KX-06 — patient-initiated change windows on Kiorex bookings (hours before start). */
+export const kiorexCancellationPolicySchema = z.object({
+  patientCancelMinHours: z.number().int().min(0).max(168),
+  patientRescheduleMinHours: z.number().int().min(0).max(168),
+  depositRefundMinHours: z.number().int().min(0).max(336),
+  maxPatientReschedules: z.number().int().min(0).max(10),
+});
+
+export type KiorexCancellationPolicy = z.infer<typeof kiorexCancellationPolicySchema>;
+
+export const KIOREX_CANCELLATION_POLICY_DEFAULTS: KiorexCancellationPolicy = {
+  patientCancelMinHours: 12,
+  patientRescheduleMinHours: 12,
+  depositRefundMinHours: 24,
+  maxPatientReschedules: 2,
+};
+
 const kiorexSchema = z.object({
   newPatientLookbackMonths: z.number().int().min(1).max(120),
   disputeWindowDays: z.number().int().min(1).max(90),
   benchmarkTargetRatio: z.number().min(0.05).max(1.5),
   autoConfirmHours: z.number().int().min(1).max(168),
+  cancellationPolicy: kiorexCancellationPolicySchema.optional(),
 });
 
 const liteSchema = z.object({

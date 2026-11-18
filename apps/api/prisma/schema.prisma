@@ -1509,6 +1509,8 @@ model Clinic {
   slotHolds             SlotHold[]
   /// When false, Kiorex bookings stay SCHEDULED until front desk confirms (KX-04).
   marketplaceBookingAutoConfirm Boolean @default(true)
+  /// KX-06: clinic override of the market pack Kiorex cancellation policy (partial JSON; null = market default).
+  kiorexCancellationPolicy Json?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
@@ -2147,6 +2149,12 @@ model Appointment {
   platformIntegrationClient   PlatformIntegrationClient? @relation(fields: [platformIntegrationClientId], references: [id], onDelete: SetNull)
   externalReference   String?
   marketplaceConfirmationDueAt DateTime?
+  /// KX-06: who cancelled (PATIENT | CLINIC | SYSTEM), the reason shown to the patient, and deposit refund decision.
+  cancelledAt        DateTime?
+  cancelledBy        String?
+  cancellationReason String?
+  depositRefundable  Boolean?
+  rescheduleCount    Int       @default(0)
   revenueEntries RevenueEntry[]
   encounters     Encounter[]
   rescheduleToken AppointmentRescheduleToken?

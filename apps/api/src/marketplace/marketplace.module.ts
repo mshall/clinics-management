@@ -19,6 +19,8 @@ import { SlotHoldService } from "./slot-hold.service";
 import { MarketplaceBookingService } from "./marketplace-booking.service";
 import { MarketplacePatientIntakeService } from "./marketplace-patient-intake.service";
 import { SlotHoldExpiryScheduler } from "./slot-hold-expiry.scheduler";
+import { KiorexSettingsController } from "./kiorex-settings.controller";
+import { KiorexSettingsService } from "./kiorex-settings.service";
 
 @Module({
   imports: [
@@ -30,8 +32,14 @@ import { SlotHoldExpiryScheduler } from "./slot-hold-expiry.scheduler";
     AppointmentsModule,
     ComplianceModule,
   ],
-  controllers: [MarketplaceController, MarketplaceOrgController, MarketplaceListingsProfileController],
+  controllers: [
+    MarketplaceController,
+    MarketplaceOrgController,
+    MarketplaceListingsProfileController,
+    KiorexSettingsController,
+  ],
   providers: [
+    KiorexSettingsService,
     PlatformIntegrationClientService,
     MarketplaceAuthGuard,
     MarketplaceAccessService,

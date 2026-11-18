@@ -99,6 +99,53 @@
         "responses": { "200": { "description": "OK" } }
       }
     },
+    "/bookings/{externalRef}/cancel": {
+      "post": {
+        "operationId": "marketplaceCancelBooking",
+        "summary": "Patient cancels a booking; clinic policy enforced, deposit refund decided server-side (KX-06)",
+        "parameters": [{ "name": "externalRef", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "type": "object", "properties": { "reason": { "type": "string", "maxLength": 500 } } }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Cancelled; body includes depositRefundable" },
+          "404": { "description": "Booking not found" },
+          "422": { "description": "CANCELLATION_WINDOW_CLOSED or BOOKING_NOT_CHANGEABLE" }
+        }
+      }
+    },
+    "/bookings/{externalRef}/reschedule": {
+      "post": {
+        "operationId": "marketplaceRescheduleBooking",
+        "summary": "Patient reschedules a booking; clinic policy enforced (KX-06)",
+        "parameters": [{ "name": "externalRef", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["startsAt"],
+                "properties": {
+                  "startsAt": { "type": "string", "format": "date-time" },
+                  "endsAt": { "type": "string", "format": "date-time" },
+                  "holdId": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Rescheduled booking" },
+          "409": { "description": "SLOT_TAKEN" },
+          "422": { "description": "RESCHEDULE_WINDOW_CLOSED, RESCHEDULE_LIMIT_REACHED or BOOKING_NOT_CHANGEABLE" }
+        }
+      }
+    },
     "/appointments": {
       "post": {
         "operationId": "marketplaceBookAppointment",
