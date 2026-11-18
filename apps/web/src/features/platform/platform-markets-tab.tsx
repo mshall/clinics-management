@@ -15,6 +15,7 @@ import { featureFlagLabel } from "@/lib/feature-flag-labels";
 import { AWS_DATA_REGIONS, BASE_CURRENCY_OPTIONS, MARKET_COUNTRY_OPTIONS } from "@/lib/market-pack-options";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { PlatformCommercialConfigDialog } from "./platform-commercial-config-dialog";
+import { PlatformLegalConfigDialog } from "./platform-legal-config-dialog";
 
 export type MarketRow = {
   id: string;
@@ -33,6 +34,11 @@ export type MarketRow = {
   pausedUntil?: string | null;
   lastProvisionNote?: string | null;
   acceptsNewOrganizations?: boolean;
+  crossBorderRequired?: boolean;
+  crossBorderApprovalRef?: string | null;
+  crossBorderExpiresAt?: string | null;
+  legalLaunchApproved?: boolean;
+  legalExpiresInDays?: number | null;
 };
 
 export function PlatformMarketsTab() {
@@ -49,6 +55,7 @@ export function PlatformMarketsTab() {
   const [err, setErr] = useState<string | null>(null);
   const [flagsMarketId, setFlagsMarketId] = useState<string | null>(null);
   const [commercialMarketId, setCommercialMarketId] = useState<string | null>(null);
+  const [legalMarketId, setLegalMarketId] = useState<string | null>(null);
 
   const marketsQuery = useQuery({
     queryKey: ["platform", "markets"],
@@ -105,6 +112,7 @@ export function PlatformMarketsTab() {
 
   const rows = marketsQuery.data ?? [];
   const commercialMarket = rows.find((m) => m.id === commercialMarketId);
+  const legalMarket = rows.find((m) => m.id === legalMarketId);
   const live = rows.filter((m) => m.status === "LIVE");
 
   const marketFlagsQuery = useQuery({
@@ -161,6 +169,7 @@ export function PlatformMarketsTab() {
                       <th className="px-3 py-2 text-start">{t("platform.hostCell", "Host cell")}</th>
                       <th className="px-3 py-2 text-start">{t("platform.dataRegion", "Data region")}</th>
                       <th className="px-3 py-2 text-start">{t("platform.status", "Status")}</th>
+                      <th className="px-3 py-2 text-start">{t("platform.legal.column", "Transfer approval")}</th>
                       <th className="px-3 py-2 text-end">{t("common.actions", "Actions")}</th>
                     </tr>
                   </thead>
@@ -193,6 +202,29 @@ export function PlatformMarketsTab() {
                             ) : null}
                           </div>
                         </td>
+                        <td className="px-3 py-2 text-xs">
+                          {m.crossBorderRequired ? (
+                            m.legalLaunchApproved ? (
+                              <span className="text-emerald-700 dark:text-emerald-400">
+                                {m.crossBorderApprovalRef ??
+                                  t("platform.legal.pilotOnly", "Pilot exception")}
+                                {m.legalExpiresInDays != null && m.legalExpiresInDays <= 60 ? (
+                                  <span className="block text-amber-700 dark:text-amber-400">
+                                    {t("platform.legal.expiresSoon", "{{days}}d to expiry", {
+                                      days: m.legalExpiresInDays,
+                                    })}
+                                  </span>
+                                ) : null}
+                              </span>
+                            ) : (
+                              <span className="text-amber-700 dark:text-amber-400">
+                                {t("platform.legal.missingShort", "Missing approval")}
+                              </span>
+                            )
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
                         <td className="px-3 py-2 text-end">
                           <div className="flex flex-wrap justify-end gap-2">
                             <Button type="button" size="sm" variant="ghost" onClick={() => setFlagsMarketId(m.id)}>
@@ -200,6 +232,9 @@ export function PlatformMarketsTab() {
                             </Button>
                             <Button type="button" size="sm" variant="ghost" onClick={() => setCommercialMarketId(m.id)}>
                               {t("platform.commercial.open", "Commercial")}
+                            </Button>
+                            <Button type="button" size="sm" variant="ghost" onClick={() => setLegalMarketId(m.id)}>
+                              {t("platform.legal.open", "Legal")}
                             </Button>
                             {m.status === "DRAFT" ? (
                               <>
@@ -408,6 +443,14 @@ export function PlatformMarketsTab() {
         open={Boolean(commercialMarketId)}
         onOpenChange={(next) => {
           if (!next) setCommercialMarketId(null);
+        }}
+      />
+      <PlatformLegalConfigDialog
+        marketId={legalMarketId}
+        marketLabel={legalMarket ? `${legalMarket.code} — ${legalMarket.nameEn}` : undefined}
+        open={Boolean(legalMarketId)}
+        onOpenChange={(next) => {
+          if (!next) setLegalMarketId(null);
         }}
       />
     </div>

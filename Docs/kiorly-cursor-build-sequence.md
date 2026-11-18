@@ -225,7 +225,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 001 · FD-00 · Remove UAE defaults; derive tax & fees from the market pack — verified pre-shipped on main; docs `Docs/FD-00_MARKET_TAX_DEFAULTS.md`
 - [x] Step 002 · FD-01 · Owner-physician: allow one user to hold several roles — see `Docs/RBAC_MULTI_ROLE.md`
 - [x] Step 003 · FD-02 · Take ETA receipts and e-invoicing out of Kiorly — `Docs/FD-02_ETA_RETIRED.md` (locales scrub + route removal in follow-up)
-- [ ] Step 004 · SC-01 · Frankfurt data residency: transfer approval & controls in the product
+- [x] Step 004 · SC-01 · Frankfurt data residency: transfer approval & controls in the product — `Docs/SC-01_FRANKFURT_RESIDENCY.md` (60-day alert + public sub-processor page in follow-up)
 - [ ] Step 005 · CL-01 · Egyptian drug database (brand → active ingredient)
 - [ ] Step 006 · FS-01 · Scheduling engine completeness (buffers, rooms, overrides, channels)
 - [ ] Step 007 · PL-01 · Plan catalog with per-market, versioned prices

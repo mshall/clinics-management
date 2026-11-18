@@ -1845,6 +1845,26 @@
       "liteCap": "Lite monthly cap (optional)",
       "saveSettings": "Save settings"
     },
+    "legal": {
+      "open": "Legal",
+      "column": "Transfer approval",
+      "title": "Cross-border legal config",
+      "saved": "Legal config saved",
+      "approved": "Recorded approval satisfies the launch gate.",
+      "missing": "Approval reference or active pilot exception required before live PHI.",
+      "missingShort": "Missing approval",
+      "notRequired": "This market has no cross-border launch gate.",
+      "expiresIn": "Expires in {{days}} days.",
+      "expiresSoon": "{{days}}d to expiry",
+      "approvalRef": "Approval reference",
+      "issuedAt": "Issued",
+      "expiresAt": "Expires",
+      "destination": "Destination",
+      "subProcessors": "Approved sub-processors",
+      "pilotActive": "Legal pilot exception (closed pilot only)",
+      "pilotRef": "Legal sign-off reference",
+      "pilotOnly": "Pilot exception"
+    },
     "commercial": {
       "open": "Commercial",
       "title": "Commercial config",

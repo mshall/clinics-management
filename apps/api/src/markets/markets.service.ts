@@ -6,7 +6,18 @@ import { defaultCurrencyForCountry } from "../common/country-default-currency";
 import { PrismaService } from "../prisma/prisma.service";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
 import { effectiveOperationalStatus, marketAcceptsNewTenants, marketOperabilityLabel } from "./market-operational";
-import { assertLiveMarketHasTaxPack } from "./market-pack-validation";
+import {
+  assertSubProcessorAllowedForFeatureFlag,
+  daysUntilCrossBorderExpiry,
+  hasCrossBorderLaunchApproval,
+  marketRequiresCrossBorderApproval,
+  readLegalConfig,
+} from "./market-legal-guards";
+import {
+  assertLiveMarketHasCrossBorderApproval,
+  assertLiveMarketHasTaxPack,
+  assertMarketReadyForCrossBorderLaunch,
+} from "./market-pack-validation";
 import { MarketProvisionService } from "./market-provision.service";
 import type { PatchMarketDto } from "./dto/patch-market.dto";
 
@@ -97,6 +108,7 @@ export class MarketsService {
       throw new BadRequestException(`Market is not accepting new organizations (${op})`);
     }
     assertLiveMarketHasTaxPack(row);
+    assertLiveMarketHasCrossBorderApproval(row);
     return row;
   }
 
@@ -183,6 +195,7 @@ export class MarketsService {
     this.assertPlatform(user);
     const row = await this.prisma.market.findFirst({ where: { id: marketId } });
     if (!row) throw new NotFoundException("Market not found");
+    assertSubProcessorAllowedForFeatureFlag(row, key, enabled);
     await this.featureFlags.setMarketFlag(marketId, key, enabled);
     return this.featureFlags.listForMarket(marketId);
   }
@@ -195,6 +208,7 @@ export class MarketsService {
       throw new BadRequestException("Market is already live");
     }
     assertLiveMarketHasTaxPack(existing);
+    assertMarketReadyForCrossBorderLaunch(existing);
     const provision = this.provision.resolveProvision(existing.dataRegion, existing.hostCell);
     let note = provision.message;
     const deployLog = await this.provision.tryTriggerDeploy(provision.dataRegion);
@@ -271,11 +285,14 @@ export class MarketsService {
     paymentMethods: unknown;
     taxConfig: unknown;
     providerConfig: unknown;
+    legalConfig: unknown;
     operationalStatus: MarketOperationalStatus;
     pausedUntil: Date | null;
     lastProvisionNote: string | null;
   }) {
     const op = effectiveOperationalStatus(m);
+    const legal = readLegalConfig(m);
+    const crossBorderRequired = marketRequiresCrossBorderApproval(m);
     return {
       id: m.id,
       code: m.code,
@@ -297,6 +314,11 @@ export class MarketsService {
       pausedUntil: m.pausedUntil?.toISOString() ?? null,
       lastProvisionNote: m.lastProvisionNote,
       acceptsNewOrganizations: m.status === MarketLaunchStatus.LIVE && op === MarketOperationalStatus.ACTIVE,
+      crossBorderRequired,
+      crossBorderApprovalRef: legal.crossBorderTransfer?.approvalRef ?? null,
+      crossBorderExpiresAt: legal.crossBorderTransfer?.expiresAt ?? legal.pilotException?.expiresAt ?? null,
+      legalLaunchApproved: crossBorderRequired ? hasCrossBorderLaunchApproval(legal) : true,
+      legalExpiresInDays: daysUntilCrossBorderExpiry(legal),
     };
   }
 }

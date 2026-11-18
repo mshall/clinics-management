@@ -1,6 +1,7 @@
 import { BadRequestException } from "@nestjs/common";
 import { MarketLaunchStatus, type Market } from "@prisma/client";
 import { assertMarketMatchesProductionBinding } from "./data-cells";
+import { hasCrossBorderLaunchApproval, marketRequiresCrossBorderApproval, readLegalConfig } from "./market-legal-guards";
 import { parseMarketTaxPack } from "./market-tax-pack";
 
 const REQUIRED_MARKET_STRINGS = [
@@ -34,5 +35,30 @@ export function assertLiveMarketHasTaxPack(market: Market): void {
     throw new BadRequestException(
       `Market pack ${market.code} must define taxConfig (invoiceVatPercent, saasVatPercent, defaultVisitFee) before going live`,
     );
+  }
+}
+
+/** Path A cross-border markets need PDPC approval ref or an active legal pilot exception (SC-01). */
+export function assertLiveMarketHasCrossBorderApproval(market: Market): void {
+  if (market.status !== MarketLaunchStatus.LIVE) return;
+  if (!marketRequiresCrossBorderApproval(market)) return;
+  const legal = readLegalConfig(market);
+  if (!hasCrossBorderLaunchApproval(legal)) {
+    throw new BadRequestException({
+      code: "CROSS_BORDER_APPROVAL_REQUIRED",
+      message: `Market ${market.code} must record crossBorderTransfer.approvalRef (or an active pilotException) in legalConfig before accepting live PHI`,
+    });
+  }
+}
+
+/** Same gate when transitioning DRAFT → LIVE. */
+export function assertMarketReadyForCrossBorderLaunch(market: Market): void {
+  if (!marketRequiresCrossBorderApproval(market)) return;
+  const legal = readLegalConfig(market);
+  if (!hasCrossBorderLaunchApproval(legal)) {
+    throw new BadRequestException({
+      code: "CROSS_BORDER_APPROVAL_REQUIRED",
+      message: `Market ${market.code} needs a recorded cross-border transfer approval before launch`,
+    });
   }
 }

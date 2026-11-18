@@ -30,3 +30,5 @@
 | 001 FD-00 | `955b94b` | Verified on main |
 | 002 FD-01 | `dd42945` | Verified on main |
 | 003 FD-02 | `4c6e4ba` | `postRevenue`, fiscal gate off, no clinic FiscalDevice; `Docs/FD-02_ETA_RETIRED.md` |
+| 003 FD-02 (E2E) | `e052213` | Golden flow: no new ETA queue rows after split pay |
+| 004 SC-01 | `316c557` | `legalConfig` gates, sub-processor guard, platform legal UI; `Docs/SC-01_FRANKFURT_RESIDENCY.md` |
