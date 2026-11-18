@@ -1084,6 +1084,11 @@ model Tenant {
   clinicianVerifications         ClinicianVerification[]
   marketplaceListings            MarketplaceListing[]
   kiorlySettlementCarry          Decimal?               @db.Decimal(14, 2)
+  /// SB-05: period whose settlement last wrote `kiorlySettlementCarry` (re-runs reuse `kiorlySettlementCarryIn`).
+  kiorlySettlementCarryPeriodKey String?
+  kiorlySettlementCarryIn        Decimal?               @db.Decimal(14, 2)
+  /// SB-05: Lite commission unpaid past the market pause window — Kiorex listings paused (Kiorly keeps working).
+  kiorexBillingPausedAt          DateTime?
   onboardingProgress             OnboardingProgress?
   outboxEvents                   OutboxEvent[]
   appointmentRescheduleTokens    AppointmentRescheduleToken[]

@@ -16,6 +16,7 @@ import {
   SubscriptionAccessAction,
 } from "./subscription-access-policy";
 import { SubscriptionService } from "./subscription.service";
+import { MarketplaceListingService } from "../marketplace/marketplace-listing.service";
 
 const UNPAID_INVOICE_STATUSES = [KiorlyInvoiceStatus.ISSUED, KiorlyInvoiceStatus.PARTIALLY_PAID] as const;
 
@@ -26,6 +27,7 @@ export class DunningService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly subscriptions: SubscriptionService,
+    private readonly listings: MarketplaceListingService,
   ) {}
 
   async getAccessState(tenantId: string, user?: { isTenantOwner?: boolean; role?: string } | null) {
@@ -135,23 +137,30 @@ export class DunningService {
         sub.status === SubscriptionStatus.SUSPENDED
       ) {
         await this.subscriptions.transitionStatus(tenantId, SubscriptionStatus.ACTIVE, null, "dunning_cleared");
-        await this.syncMarketplaceBookable(tenantId, false);
+        await this.listings.recomputeTenantListings(tenantId);
       }
+      await this.syncKiorexBillingPause(tenantId, false);
       return true;
     }
 
+    const isLite = sub.plan.key === PlanKey.LITE;
     const daysOverdue = daysAfterDue(anchor, now);
-    const target = subscriptionStatusForDaysOverdue(daysOverdue, pack);
+    // Lite pays commission only: unpaid fees pause the Kiorex listing, Kiorly itself keeps working.
+    const target = isLite ? null : subscriptionStatusForDaysOverdue(daysOverdue, pack);
     if (target && target !== sub.status) {
       await this.applyDunningStatusSteps(tenantId, sub.status, target);
+      await this.listings.recomputeTenantListings(tenantId);
     }
 
     await this.maybeSendReminders(tenantId, sub.id, anchor, pack, now);
 
-    const current = target && target !== sub.status ? target : sub.status;
-    const litePause = await this.liteCommissionMarketplacePause(sub.plan.key, tenantId, pack.liteCommissionMarketplacePauseDays);
-    const marketplacePaused = kiorexMarketplacePaused(current, litePause);
-    await this.syncMarketplaceBookable(tenantId, marketplacePaused);
+    const litePause = await this.liteCommissionMarketplacePause(
+      sub.plan.key,
+      tenantId,
+      pack.liteCommissionMarketplacePauseDays,
+      now,
+    );
+    await this.syncKiorexBillingPause(tenantId, litePause);
 
     return true;
   }
@@ -195,8 +204,9 @@ export class DunningService {
       sub.status === SubscriptionStatus.SUSPENDED
     ) {
       await this.subscriptions.transitionStatus(tenantId, SubscriptionStatus.ACTIVE, null, "payment_received");
+      await this.listings.recomputeTenantListings(tenantId);
     }
-    await this.syncMarketplaceBookable(tenantId, false);
+    await this.syncKiorexBillingPause(tenantId, false);
   }
 
   private readonly DUNNING_ESCALATION: SubscriptionStatus[] = [
@@ -261,6 +271,7 @@ export class DunningService {
     planKey: PlanKey,
     tenantId: string,
     pauseAfterDays: number,
+    now = new Date(),
   ): Promise<boolean> {
     if (planKey !== PlanKey.LITE) return false;
     const row = await this.prisma.kiorlyInvoice.findFirst({
@@ -274,7 +285,7 @@ export class DunningService {
       select: { dueAt: true, total: true, amountPaid: true },
     });
     if (!row?.dueAt || row.total.sub(row.amountPaid).lte(0)) return false;
-    return daysAfterDue(row.dueAt, new Date()) >= pauseAfterDays;
+    return daysAfterDue(row.dueAt, now) >= pauseAfterDays;
   }
 
   private async maybeSendReminders(
@@ -319,12 +330,31 @@ export class DunningService {
     }
   }
 
-  private async syncMarketplaceBookable(tenantId: string, pause: boolean): Promise<void> {
-    if (pause) {
-      await this.prisma.appointmentType.updateMany({
-        where: { tenantId, marketplaceBookable: true },
-        data: { marketplaceBookable: false },
-      });
-    }
+  /** SB-05: set/clear the tenant Kiorex billing pause and re-evaluate listings when it flips. */
+  private async syncKiorexBillingPause(tenantId: string, pause: boolean): Promise<void> {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { kiorexBillingPausedAt: true },
+    });
+    if (!tenant) return;
+    const isPaused = tenant.kiorexBillingPausedAt != null;
+    if (isPaused === pause) return;
+    await this.prisma.$transaction([
+      this.prisma.tenant.update({
+        where: { id: tenantId },
+        data: { kiorexBillingPausedAt: pause ? new Date() : null },
+      }),
+      this.prisma.auditLog.create({
+        data: {
+          tenantId,
+          actorId: null,
+          action: pause ? "kiorex.listing.billing_paused" : "kiorex.listing.billing_resumed",
+          resource: "Tenant",
+          resourceId: tenantId,
+          metadata: { reason: "lite_commission_unpaid" } as Prisma.InputJsonValue,
+        },
+      }),
+    ]);
+    await this.listings.recomputeTenantListings(tenantId);
   }
 }

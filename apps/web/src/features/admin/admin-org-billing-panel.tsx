@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiGet, apiPost } from "@/lib/http";
 import { AdminKiorexFreeProgressCard } from "./admin-kiorex-free-progress-card";
+import { AdminLiteKiorexFeesCard } from "./admin-lite-kiorex-fees-card";
 import { AdminReferralInviteCard } from "./admin-referral-invite-card";
 import { useUpgradePaywallStore } from "@/stores/upgrade-paywall-store";
 import { PLAN_UPGRADE_REQUIRED } from "@/lib/plan-upgrade-constants";
@@ -167,10 +168,11 @@ export function AdminOrgBillingPanel({ canManage }: { canManage: boolean }) {
     sub && i18n.language.startsWith("ar") ? sub.plan.nameAr || sub.plan.nameEn : sub?.plan.nameEn;
 
   const wallet = walletQuery.data;
+  const isLite = sub?.plan.key === "LITE";
 
   return (
   <div className="space-y-4">
-    <AdminKiorexFreeProgressCard />
+    {isLite ? <AdminLiteKiorexFeesCard /> : <AdminKiorexFreeProgressCard />}
     <AdminReferralInviteCard />
     <Card>
       <CardHeader>
@@ -198,7 +200,9 @@ export function AdminOrgBillingPanel({ canManage }: { canManage: boolean }) {
             <p className="text-sm text-muted-foreground">
               {t("admin.billing.periodEnd", "Current period ends")}: {new Date(sub.currentPeriodEnd).toLocaleString()}
             </p>
-            {sub.nextInvoicePreview ? (
+            {isLite ? (
+              <p className="text-sm">{t("admin.billing.kiorex.liteFees.noSubscription")}</p>
+            ) : sub.nextInvoicePreview ? (
               <p className="text-sm">
                 {t("admin.billing.nextInvoice", "Next invoice preview")}: {sub.nextInvoicePreview.subtotal}{" "}
                 {sub.nextInvoicePreview.currency} — {sub.nextInvoicePreview.description}

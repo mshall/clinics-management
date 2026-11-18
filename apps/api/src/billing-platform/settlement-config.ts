@@ -2,7 +2,8 @@ import { DEFAULT_KIOREX_DISPUTE_DEADLINE_DAYS } from "../kiorex/kiorex-commissio
 import { kiorexPackFromFeatureDefaults } from "../kiorex/kiorex-commission-config";
 import type { TrialCommissionPolicy } from "./settlement-calculator";
 
-export const DEFAULT_LITE_MIN_INVOICE = 50;
+/** Matches `commercialConfig.lite.minInvoice` default; markets override via `kiorlyBilling.liteMinInvoice`. */
+export const DEFAULT_LITE_MIN_INVOICE = 100;
 
 export type KiorlyBillingPack = {
   invoiceDueDays?: number;

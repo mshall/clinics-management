@@ -86,6 +86,7 @@ export class MarketplaceApiService {
 
   async book(client: PlatformIntegrationPrincipal, clinicId: string, body: IntegrationBookAppointmentDto) {
     const tenantId = await this.access.resolveTenantForMarketplaceClinic(clinicId, body.clinicianId);
+    if (body.clinicianId) await this.access.assertListingBookable(clinicId, body.clinicianId);
     const principal = this.principalFor(tenantId, clinicId, client);
     return this.integrations.book(principal, {
       ...body,

@@ -2170,6 +2170,20 @@
           "copied": "Link copied",
           "loadError": "Could not load referral hub."
         },
+        "liteFees": {
+          "title": "Kiorex fees this month",
+          "hint": "Lite has no subscription. You only pay commission on attended new Kiorex patients.",
+          "fees": "Kiorex fees this month",
+          "patients": "{{count}} attended new Kiorex patient(s)",
+          "carried": "Carried forward from earlier months",
+          "projected": "Total so far",
+          "minInvoice": "We only send an invoice once the total reaches {{amount}} {{currency}}.",
+          "willInvoice": "An invoice will be issued at month end.",
+          "willCarry": "Below the minimum — {{amount}} {{currency}} carries into next month.",
+          "paused": "Your Kiorex listing is paused because a Kiorex fees invoice is overdue. Kiorly keeps working — pay the invoice to go live again.",
+          "loadError": "Could not load Kiorex fees.",
+          "noSubscription": "No subscription fee on Lite — Kiorex fees only."
+        },
         "freeProgress": {
           "title": "Kiorex — Kiorly is free",
           "hint": "Kiorex commission from attended new patients offsets your Kiorly subscription this month.",

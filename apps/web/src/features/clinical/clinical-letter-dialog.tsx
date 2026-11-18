@@ -37,7 +37,7 @@ function printLetter(letter: ClinicalLetter, bilingual: boolean) {
 <style>@page{margin:14mm}body{font-family:system-ui;line-height:1.5;max-width:720px;margin:0 auto;padding:12px}
 h1{font-size:1.25rem;margin-bottom:0.5rem}.en{margin-bottom:1rem}</style></head>
 <body class="en"><h1>${title}</h1><p>${en}</p>${arBlock}
-<script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<\/script></body></html>`);
+<script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<${"/"}script></body></html>`);
   win.document.close();
 }
 

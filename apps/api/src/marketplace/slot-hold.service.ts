@@ -27,6 +27,7 @@ export class SlotHoldService {
 
   async createHold(client: PlatformIntegrationPrincipal, body: CreateSlotHoldInput) {
     const tenantId = await this.access.resolveTenantForMarketplaceClinic(body.clinicId, body.clinicianId);
+    await this.access.assertListingBookable(body.clinicId, body.clinicianId);
     const start = new Date(body.startsAt);
     const end = body.endsAt ? new Date(body.endsAt) : addMinutes(start, 30);
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {

@@ -31,7 +31,6 @@ type Props = {
 
 export function CollectVisitBalanceCard({
   encounterId,
-  clinicId: _clinicId,
   amount,
   currency,
   preferredTransferChannel,
