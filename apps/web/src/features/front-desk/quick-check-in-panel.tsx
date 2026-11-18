@@ -1,5 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { EtaIntegrationBanner } from "@/features/compliance/eta-integration-banner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { setPaymentFlowActive } from "@/lib/unsaved-work-registry";
 import { useTranslation } from "react-i18next";
@@ -12,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import type { AppointmentDto } from "@/lib/api-types";
-import { apiGet, apiPost, ApiError } from "@/lib/http";
+import { apiPost, ApiError } from "@/lib/http";
 import { apiErrorMessage } from "@/lib/api-error-message";
 import {
   emptyVisitCollection,
@@ -32,14 +31,6 @@ export function QuickCheckInPanel({ appointment, currency = "AED", examRoomOptio
 
   const paymentAmount = Number.parseFloat(payment.trim());
   const effectiveAmount = Number.isFinite(paymentAmount) && paymentAmount > 0 ? paymentAmount : 0;
-
-  const { data: fiscalSetup } = useQuery({
-    queryKey: ["fiscal-devices-setup", appointment.clinicId],
-    queryFn: () =>
-      apiGet<{ requiresDevice: boolean; ready: boolean }>(`/api/v1/clinics/${appointment.clinicId}/fiscal-devices/setup-status`),
-    enabled: Boolean(appointment.clinicId),
-    staleTime: 60_000,
-  });
 
   const checkIn = useMutation({
     mutationFn: () => {
@@ -117,14 +108,6 @@ export function QuickCheckInPanel({ appointment, currency = "AED", examRoomOptio
         <CardTitle className="text-base">{t("frontDesk.quickCheckIn", "Quick check-in")}</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-2">
-        <div className="sm:col-span-2">
-          <EtaIntegrationBanner />
-        </div>
-        {fiscalSetup?.requiresDevice && !fiscalSetup.ready ? (
-          <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100 sm:col-span-2">
-            {t("fiscalDevices.setupBanner", "Tax receipts are queued but not being sent — finish receipt device setup.")}
-          </p>
-        ) : null}
         <div className="space-y-1 sm:col-span-2">
           <Label optional>{t("frontDesk.collectPayment", "Payment today")}</Label>
           <Input type="number" className="max-w-xs ltr-nums" value={payment} onChange={(e) => setPayment(e.target.value)} />

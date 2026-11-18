@@ -13,13 +13,11 @@ import { ClinicDoctorsPanel } from "@/features/clinics/clinic-doctors-panel";
 import { ClinicianTypeOverridesPanel } from "@/features/clinics/clinician-type-overrides-panel";
 import { ClinicContactSettingsPanel } from "@/features/clinics/clinic-contact-settings-panel";
 import { ClinicRegulatorySettingsPanel } from "@/features/clinics/clinic-regulatory-settings-panel";
-import { ClinicFiscalDevicesPanel } from "@/features/clinics/clinic-fiscal-devices-panel";
 import { ClinicCurrencySettingsPanel } from "@/features/clinics/clinic-currency-settings-panel";
 import { ClinicHoursSettingsPanel } from "@/features/clinics/clinic-hours-settings-panel";
 import { ClinicRoomsSettingsPanel } from "@/features/clinics/clinic-rooms-settings-panel";
 import { ClinicAppointmentTypesPanel } from "@/features/clinics/clinic-appointment-types-panel";
 import { ClinicKiorexListingsPanel } from "@/features/clinics/clinic-kiorex-listings-panel";
-import { ClinicEtaSettingsPanel } from "@/features/compliance/clinic-eta-settings-panel";
 import { ClinicClinicalTemplatesPanel } from "@/features/clinics/clinic-clinical-templates-panel";
 import { ClinicReactivateDialog } from "@/features/clinics/clinic-reactivate-dialog";
 import { useClinicQuery } from "@/lib/api-hooks";
@@ -274,7 +272,6 @@ export function ClinicDetailPage() {
 
         <TabsContent value="settings" className="space-y-4">
           <ClinicRegulatorySettingsPanel clinicId={c.id} detail={c} canEdit={canManageClinic} />
-          {canManageClinic ? <ClinicFiscalDevicesPanel clinicId={c.id} /> : null}
           <ClinicContactSettingsPanel
             clinicId={c.id}
             phone={c.phone}
@@ -302,7 +299,6 @@ export function ClinicDetailPage() {
           <ClinicKiorexListingsPanel clinicId={c.id} />
           <ClinicAppointmentTypesPanel clinicId={c.id} canEdit={canManageClinic} />
           <ClinicClinicalTemplatesPanel clinicId={c.id} canEdit={canManageClinic} />
-          <ClinicEtaSettingsPanel clinicId={c.id} detail={c} disabled={!canManageClinic} />
         </TabsContent>
 
         <TabsContent value="history" className="space-y-4">

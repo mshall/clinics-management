@@ -19,8 +19,6 @@ import { IntegrationFailureExceptionFilter } from "./integration-failure.filter"
 import { IntegrationFailureLogService } from "./integration-failure-log.service";
 import { IntegrationFailureRetentionService } from "./integration-failure-retention.service";
 import { IntegrationFailureGovernanceService } from "./integration-failure-governance.service";
-import { FiscalEtaNotificationsController } from "./fiscal-eta-notifications.controller";
-
 @Module({
   imports: [
     AppointmentsModule,
@@ -36,7 +34,6 @@ import { FiscalEtaNotificationsController } from "./fiscal-eta-notifications.con
     IntegrationsOperationsController,
     IntegrationAdminController,
     IntegrationWebhooksAdminController,
-    FiscalEtaNotificationsController,
   ],
   providers: [
     IntegrationClientService,

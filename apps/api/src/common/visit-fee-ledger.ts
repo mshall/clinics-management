@@ -8,9 +8,8 @@ import {
 import { isBaseCurrency } from "./base-currencies";
 import { resolveClinicCurrency } from "./clinic-currency";
 import { collectionFieldsFromParsed, type ParsedVisitCollection } from "./visit-collection";
-import { postRevenueWithFiscal } from "../compliance/post-revenue-with-fiscal";
-import { queueFiscalDocument } from "../compliance/fiscal-queue";
-import { reducePostedRevenueNetWithFiscal, voidPostedRevenuesWithFiscalReturns } from "../compliance/void-revenue-fiscal-returns";
+import { postRevenue } from "../compliance/post-revenue";
+import { reducePostedRevenueNetWithFiscal, voidPostedRevenuesWithFiscalReturns } from "../compliance/void-revenue-adjustments";
 
 const VISIT_CHARGE_CATEGORIES = ["VISIT", "VISIT_FEE"] as const;
 
@@ -145,7 +144,7 @@ async function upsertBalanceDueRow(
     return;
   }
 
-  await postRevenueWithFiscal(tx, {
+  await postRevenue(tx, {
     tenantId: params.tenantId,
     clinicId: params.clinicId,
     encounterId: params.encounterId,
@@ -158,7 +157,6 @@ async function upsertBalanceDueRow(
     taxAmount: 0,
     currency: params.currency,
     status: RevenueStatus.RECEIVABLE,
-    skipFiscalQueue: true,
   });
 }
 
@@ -329,22 +327,6 @@ export async function collectEncounterVisitFeeBalance(
     select: { taxRegistrationNumber: true, invoiceVatPercent: true },
   });
 
-  await queueFiscalDocument(tx, {
-    tenantId: params.tenantId,
-    clinicId: encounter.clinicId,
-    patientId: encounter.patientId,
-    revenueEntryId: updated.id,
-    totalAmount: amount,
-    currency: updated.currency,
-    vatPercent: params.vatPercent ?? Number(clinic?.invoiceVatPercent ?? 0),
-    description: updated.description?.trim() || "Visit fee balance",
-    clinicTaxRin: params.clinicTaxRin ?? clinic?.taxRegistrationNumber,
-    buyerName,
-    collectionMode: params.collection.collectionMode,
-    transferChannel: params.collection.transferChannel,
-    transferReference: params.collection.transferReference,
-  });
-
   return { revenueEntryId: updated.id, amount };
 }
 
@@ -487,7 +469,7 @@ export async function upsertEncounterVisitFeeRevenue(
 
   const parsedCollection = params.collection?.collectionMode ? params.collection : undefined;
 
-  await postRevenueWithFiscal(tx, {
+  await postRevenue(tx, {
     tenantId,
     clinicId,
     encounterId,

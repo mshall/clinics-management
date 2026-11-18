@@ -2,7 +2,14 @@ import { BadRequestException } from "@nestjs/common";
 import { TransferVerificationStatus } from "@prisma/client";
 import type { MarketPaymentMethodDef } from "../markets/market-payment-methods";
 import { assertValidTransferReference, verifyTransferReferenceWithProvider } from "./transfer-reference";
-import { transferVerificationStatusForCollection } from "../compliance/eta-receipt-queue";
+function transferVerificationStatusForCollection(
+  _expectVerify: boolean,
+  verified: boolean,
+  skipped: boolean,
+): TransferVerificationStatus {
+  if (skipped) return TransferVerificationStatus.NOT_APPLICABLE;
+  return verified ? TransferVerificationStatus.VERIFIED : TransferVerificationStatus.REJECTED;
+}
 
 export async function resolveTransferVerification(
   channel: string,

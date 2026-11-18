@@ -24,10 +24,9 @@ import { pickSortField, parseSortOrder } from "../common/list-sort";
 import { paginate, parsePageParams } from "../common/pagination";
 import { resolveReportingRange } from "../common/reporting-range";
 import { PrismaService } from "../prisma/prisma.service";
-import { postRevenueWithFiscal } from "../compliance/post-revenue-with-fiscal";
-import { assertOperationRevenuesFiscalMutable } from "../compliance/revenue-fiscal-guard";
+import { postRevenue } from "../compliance/post-revenue";
 import { syncPostedOperationContractRevenue } from "../compliance/operation-revenue-ledger";
-import { voidPostedRevenuesWithFiscalReturns } from "../compliance/void-revenue-fiscal-returns";
+import { voidPostedRevenuesWithFiscalReturns } from "../compliance/void-revenue-adjustments";
 import {
   DEFAULT_MONEY_VISIBILITY_OVERRIDES,
   loadUserMoneyVisibilityOverrides,
@@ -624,7 +623,7 @@ export class OperationsService {
       if (downPayment > 0) {
         const patientName = `${patient.firstNameEn} ${patient.lastNameEn}`.trim();
         const clinicianName = clinician.displayName?.trim() || dto.clinicianId;
-        await postRevenueWithFiscal(tx, {
+        await postRevenue(tx, {
           tenantId,
           clinicId,
           patientId: dto.patientId,
@@ -635,7 +634,6 @@ export class OperationsService {
           taxAmount: 0,
           netAmount: downPayment,
           currency: feeCurrency,
-          buyerName: patientName,
         });
       }
       return op;
@@ -788,7 +786,7 @@ export class OperationsService {
           op.patientId,
           op.clinicianId,
         );
-        await postRevenueWithFiscal(tx, {
+        await postRevenue(tx, {
           tenantId,
           clinicId: op.clinicId,
           patientId: op.patientId,
@@ -799,7 +797,6 @@ export class OperationsService {
           taxAmount: 0,
           netAmount: paymentDelta,
           currency: feeCurrency,
-          buyerName: patientName,
         });
       }
       return op;
@@ -898,7 +895,6 @@ export class OperationsService {
     const description = this.operationRevenueDescription(patientName, clinicianName);
 
     const row = await this.prisma.$transaction(async (tx) => {
-      await assertOperationRevenuesFiscalMutable(tx, tenantId, id);
       await syncPostedOperationContractRevenue(tx, tenantId, id, {
         clinicId: fields.clinicId,
         description,
@@ -981,7 +977,7 @@ export class OperationsService {
 
       const row = await this.prisma.$transaction(async (tx) => {
         if (remaining > 0.001) {
-          await postRevenueWithFiscal(tx, {
+          await postRevenue(tx, {
             tenantId,
             clinicId: existing.clinicId,
             patientId: existing.patientId,
@@ -992,7 +988,6 @@ export class OperationsService {
             taxAmount: 0,
             netAmount: remaining,
             currency,
-            buyerName: patientName,
           });
         }
         await voidPostedRevenuesWithFiscalReturns(
@@ -1231,7 +1226,7 @@ export class OperationsService {
       });
       if (downPayment > 0 && patientRow) {
         const patientName = `${patientRow.firstNameEn} ${patientRow.lastNameEn}`.trim();
-        await postRevenueWithFiscal(tx, {
+        await postRevenue(tx, {
           tenantId,
           clinicId: dto.clinicId,
           patientId: dto.patientId,
@@ -1242,7 +1237,6 @@ export class OperationsService {
           taxAmount: 0,
           netAmount: downPayment,
           currency: feeCurrency,
-          buyerName: patientName,
         });
       }
       return op;

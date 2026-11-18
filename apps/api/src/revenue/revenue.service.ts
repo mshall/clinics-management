@@ -9,7 +9,7 @@ import { resolveClinicCurrency } from "../common/clinic-currency";
 import type { JwtUser } from "../auth/jwt-user";
 import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
-import { postRevenueWithFiscal } from "../compliance/post-revenue-with-fiscal";
+import { postRevenue } from "../compliance/post-revenue";
 import type { CreateRevenueDto } from "./dto/create-revenue.dto";
 import type { RevenueEntryDto } from "./dto/revenue.dto";
 import type { RevenueTotalsDto } from "./dto/revenue-totals.dto";
@@ -335,7 +335,7 @@ export class RevenueService {
     const currency = await this.resolveRevenueCurrency(tenantId, dto.clinicId, dto.currency);
     const status = dto.status ?? RevenueStatus.POSTED;
     const row = await this.prisma.$transaction(async (tx) => {
-      const { revenueEntryId } = await postRevenueWithFiscal(tx, {
+      const { revenueEntryId } = await postRevenue(tx, {
         tenantId,
         clinicId: dto.clinicId,
         category: dto.category,
@@ -346,8 +346,6 @@ export class RevenueService {
         currency,
         postedAt: new Date(dto.postedAt),
         status,
-        skipFiscalQueue: status !== RevenueStatus.POSTED || dto.netAmount <= 0 || skipEta,
-        skipEtaEReceipt: skipEta,
         counterpartyName: skipEta ? dto.counterpartyName?.trim() ?? null : null,
         counterpartyTaxNumber: skipEta ? dto.counterpartyTaxNumber?.trim() ?? null : null,
         clinicTaxRin: clinic?.taxRegistrationNumber,
@@ -457,7 +455,7 @@ export class RevenueService {
         where: { id: operationId },
         data: { paidAmount: { increment: netAmount } },
       });
-      const { revenueEntryId } = await postRevenueWithFiscal(tx, {
+      const { revenueEntryId } = await postRevenue(tx, {
         tenantId,
         clinicId: operation.clinicId,
         patientId: operation.patientId,
@@ -469,7 +467,6 @@ export class RevenueService {
         netAmount,
         currency: paymentCurrency,
         postedAt: new Date(dto.postedAt),
-        buyerName: patientName,
         clinicTaxRin: clinic?.taxRegistrationNumber,
         vatPercent: Number(clinic?.invoiceVatPercent ?? 0),
       });

@@ -6,16 +6,12 @@ import { test } from "node:test";
 const SRC = join(process.cwd(), "src");
 
 /** Files allowed to call `revenueEntry.create`. */
-const ALLOWED_REVENUE_CREATORS = new Set([
-  "compliance/post-revenue.ts",
-  "compliance/post-revenue-with-fiscal.ts",
-  "common/visit-fee-ledger.ts",
-]);
+const ALLOWED_REVENUE_CREATORS = new Set(["compliance/post-revenue.ts", "common/visit-fee-ledger.ts"]);
 
 /** Files allowed to delete / void-update posted revenue outside helpers (narrow exceptions). */
 const ALLOWED_REVENUE_MUTATORS = new Set([
   ...ALLOWED_REVENUE_CREATORS,
-  "compliance/void-revenue-fiscal-returns.ts",
+  "compliance/void-revenue-adjustments.ts",
   "compliance/operation-revenue-ledger.ts",
   "compliance/fiscal-queue.ts",
   "admin/data-explorer/admin-data-explorer.service.ts",

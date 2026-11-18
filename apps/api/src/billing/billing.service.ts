@@ -2,7 +2,6 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { PaymentMethod, Prisma, UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
-import { queueEtaReceipt } from "../compliance/eta-receipt-queue";
 import { resolveMarketForTenant } from "../markets/market-resolver";
 import { flattenBillingPaymentAllocations, sumExpectedCashAndCard } from "./billing-cash-close";
 
@@ -133,13 +132,6 @@ export class BillingService {
       where: { id: body.clinicId, tenantId },
       select: { taxRegistrationNumber: true, invoiceVatPercent: true },
     });
-    const patient = await this.prisma.patient.findFirst({
-      where: { id: body.patientId, tenantId },
-      select: { firstNameEn: true, lastNameEn: true },
-    });
-    const buyerName = patient
-      ? `${patient.firstNameEn} ${patient.lastNameEn}`.trim() || undefined
-      : undefined;
     const currency = await this.resolveTenantCurrency(tenantId, body.currency);
 
     return this.prisma.$transaction(async (tx) => {
@@ -161,21 +153,6 @@ export class BillingService {
         },
         include: { allocations: true },
       });
-      if (body.submitEta !== false) {
-        await queueEtaReceipt(tx, {
-          tenantId,
-          clinicId: body.clinicId,
-          patientId: body.patientId,
-          paymentId: payment.id,
-          totalAmount: total,
-          currency: payment.currency,
-          vatPercent: Number(clinic?.invoiceVatPercent ?? 0),
-          description: `Billing payment ${payment.id.slice(0, 8)}…`,
-          clinicTaxRin: clinic?.taxRegistrationNumber,
-          billingPaymentMethods: body.allocations.map((a) => a.method),
-          buyerName,
-        });
-      }
       return payment;
     });
   }

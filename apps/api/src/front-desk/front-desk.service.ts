@@ -9,7 +9,7 @@ import {
 } from "@prisma/client";
 import { parseVisitCollectionForAmount, type VisitCollectionInput } from "../common/visit-collection";
 import { resolveTransferVerification } from "../common/visit-collection-transfer";
-import { postRevenueWithFiscal } from "../compliance/post-revenue-with-fiscal";
+import { postRevenue } from "../compliance/post-revenue";
 import type { JwtUser } from "../auth/jwt-user";
 import { parseFrontDeskRoomLabels } from "../common/front-desk-room-labels";
 import { PrismaService } from "../prisma/prisma.service";
@@ -149,7 +149,7 @@ export class FrontDeskService {
       });
       if (pay != null && collection) {
         const buyerName = `${apt.patient.firstNameEn} ${apt.patient.lastNameEn}`.trim();
-        await postRevenueWithFiscal(tx, {
+        await postRevenue(tx, {
           tenantId,
           clinicId: apt.clinicId,
           patientId: apt.patientId,
@@ -162,7 +162,6 @@ export class FrontDeskService {
           currency,
           postedAt: now,
           status: RevenueStatus.POSTED,
-          buyerName,
           clinicTaxRin: apt.clinic.taxRegistrationNumber,
           vatPercent: Number(apt.clinic.invoiceVatPercent ?? 0),
           collectionMode: collection.collectionMode,

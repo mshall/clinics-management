@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { EtaIntegrationBanner } from "@/features/compliance/eta-integration-banner";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -32,7 +31,7 @@ type Props = {
 
 export function CollectVisitBalanceCard({
   encounterId,
-  clinicId,
+  clinicId: _clinicId,
   amount,
   currency,
   preferredTransferChannel,
@@ -129,7 +128,6 @@ export function CollectVisitBalanceCard({
               )
             : t("frontDesk.visitBalanceReceivableHint", "Receivable until collected — not counted as posted revenue.")}
         </p>
-        <EtaIntegrationBanner clinicId={clinicId} />
         <VisitCollectionFields amount={amount} value={collection} onChange={setCollection} />
         {needsReceipt ? (
           <div className="space-y-1">

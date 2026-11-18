@@ -11,7 +11,6 @@ export type ResolvedMarketContext = {
   taxConfig: Record<string, unknown>;
   providerConfig: Record<string, unknown>;
   paymentMethods: unknown[];
-  fiscalProviderKey: string;
 };
 
 function jsonRecord(v: unknown): Record<string, unknown> {
@@ -44,8 +43,6 @@ export async function resolveMarketForTenant(
   }
   const taxConfig = jsonRecord(market.taxConfig);
   const providerConfig = jsonRecord(market.providerConfig);
-  const fiscalProviderKey =
-    typeof taxConfig.fiscalProviderKey === "string" ? taxConfig.fiscalProviderKey : "eta-egypt";
   return {
     market,
     currency,
@@ -54,7 +51,6 @@ export async function resolveMarketForTenant(
     taxConfig,
     providerConfig,
     paymentMethods: jsonArray(market.paymentMethods),
-    fiscalProviderKey,
   };
 }
 

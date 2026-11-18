@@ -8,12 +8,6 @@ import {
   normalizeEmployeeSalaryCurrencyOverride,
 } from "../common/employee-salary-currency";
 import {
-  mapEtaTenantSettingsDto,
-  mergeProviderBlock,
-  patchEtaTenantProviderSettings,
-  resolveEtaTenantSettings,
-} from "../providers/provider-settings";
-import {
   deactivateUserAccount,
   reactivateUserAccount,
   restoreTenantUser,
@@ -153,7 +147,6 @@ export class AdminService {
             whatsAppRemindersEnabled: tenant.whatsAppRemindersEnabled,
             appointmentReminderHoursBefore: tenant.appointmentReminderHoursBefore,
             ...mapTenantTaxSettingsApi(tenant),
-            ...mapEtaTenantSettingsDto(tenant),
           }
         : null,
       registeredTenants: tenantCount,
@@ -706,7 +699,6 @@ export class AdminService {
     });
     if (!existing) throw new NotFoundException("Tenant not found");
     if (!existing.market) throw new BadRequestException("Organization has no country market assigned");
-    const priorOptOut = resolveEtaTenantSettings(existing).physicalReportingOptOut;
     const marketPack = requireMarketTaxPack(existing.market);
 
     const data: {
@@ -717,7 +709,6 @@ export class AdminService {
       defaultInvoiceVatPercent?: number | null;
       whatsAppRemindersEnabled?: boolean;
       appointmentReminderHoursBefore?: number;
-      providerSettings?: Prisma.InputJsonValue;
     } = {};
     if (dto.defaultVisitFeeUseMarketDefault) data.defaultVisitFee = null;
     else if (dto.defaultVisitFee !== undefined) data.defaultVisitFee = dto.defaultVisitFee;
@@ -754,44 +745,6 @@ export class AdminService {
     if (dto.appointmentReminderHoursBefore !== undefined) {
       data.appointmentReminderHoursBefore = dto.appointmentReminderHoursBefore;
     }
-    if (
-      dto.etaDefaultTaxpayerActivityCode !== undefined ||
-      dto.etaDefaultItemCode !== undefined ||
-      dto.etaEsignatureLabel !== undefined ||
-      dto.etaPhysicalReportingOptOut !== undefined ||
-      dto.etaPhysicalReportingConsentAt !== undefined
-    ) {
-      const platformEtaOn = resolveEtaTenantSettings(existing).platformEtaIntegrationEnabled;
-      if (!platformEtaOn) {
-        throw new ForbiddenException(
-          "ETA integration is not enabled for this organization. Contact Kiorly platform support to enable it.",
-        );
-      }
-      if (dto.etaPhysicalReportingOptOut === true && !dto.etaPhysicalReportingConsentAt?.trim()) {
-        throw new BadRequestException(
-          "Physical ETA reporting opt-out requires consent timestamp (etaPhysicalReportingConsentAt)",
-        );
-      }
-      if (dto.etaPhysicalReportingOptOut === false) {
-        assertTrnForMarket(trnAfterPatch, marketPack);
-      }
-      const etaPatch = patchEtaTenantProviderSettings({
-        defaultTaxpayerActivityCode: dto.etaDefaultTaxpayerActivityCode,
-        defaultItemCode: dto.etaDefaultItemCode,
-        esignatureLabel: dto.etaEsignatureLabel,
-        physicalReportingOptOut: dto.etaPhysicalReportingOptOut,
-        physicalReportingConsentAt:
-          dto.etaPhysicalReportingConsentAt !== undefined
-            ? dto.etaPhysicalReportingConsentAt
-            : dto.etaPhysicalReportingOptOut === true
-              ? new Date().toISOString()
-              : undefined,
-      });
-      if (dto.etaPhysicalReportingOptOut === false) {
-        etaPatch.physicalReportingConsentAt = null;
-      }
-      data.providerSettings = mergeProviderBlock(existing.providerSettings, "eta-egypt", etaPatch);
-    }
     if (!Object.keys(data).length) throw new BadRequestException("No supported fields to update");
 
     if (dto.whatsAppRemindersEnabled !== undefined) {
@@ -816,23 +769,6 @@ export class AdminService {
           effective.defaultInvoiceVatPercent,
         );
       }
-      if (dto.etaPhysicalReportingOptOut !== undefined) {
-        const nextOptOut = resolveEtaTenantSettings(updated).physicalReportingOptOut;
-        if (nextOptOut !== priorOptOut) {
-          await tx.auditLog.create({
-            data: {
-              tenantId,
-              actorId: user.userId,
-              action: nextOptOut ? "ETA_INTEGRATION_OPT_OUT_ENABLED" : "ETA_INTEGRATION_OPT_OUT_DISABLED",
-              resource: "tenant",
-              resourceId: tenantId,
-              metadata: {
-                physicalReportingConsentAt: resolveEtaTenantSettings(updated).physicalReportingConsentAt,
-              },
-            },
-          });
-        }
-      }
       return updated;
     });
 
@@ -849,7 +785,6 @@ export class AdminService {
       whatsAppRemindersEnabled: withMarket.whatsAppRemindersEnabled,
       appointmentReminderHoursBefore: withMarket.appointmentReminderHoursBefore,
       ...mapTenantTaxSettingsApi(withMarket),
-      ...mapEtaTenantSettingsDto(withMarket),
     };
   }
 

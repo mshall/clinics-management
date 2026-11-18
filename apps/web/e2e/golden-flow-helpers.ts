@@ -51,7 +51,6 @@ export type GoldenFlowResult = {
   clinicianId: string;
   appointmentId: string;
   encounterId: string;
-  etaQueueCount: number;
 };
 
 function isoSlotIn(minutesFromNow: number): string {
@@ -187,12 +186,6 @@ export async function runGoldenFlowViaApi(
   const finance = await apiLogin(request, financeEmail);
   const fh = authHeaders(finance.accessToken);
 
-  const etaBefore = await jsonOk<Array<{ id: string }>>(
-    await request.get(`${API_BASE}/compliance/egypt/eta-queue?clinicId=${encodeURIComponent(clinic!.id)}`, {
-      headers: fh,
-    }),
-  );
-
   await jsonOk(
     await request.post(`${API_BASE}/billing/payments`, {
       headers: fh,
@@ -207,22 +200,6 @@ export async function runGoldenFlowViaApi(
       },
     }),
   );
-
-  let etaAfter = etaBefore;
-  for (let i = 0; i < 15; i++) {
-    etaAfter = await jsonOk<Array<{ id: string }>>(
-      await request.get(`${API_BASE}/compliance/egypt/eta-queue?clinicId=${encodeURIComponent(clinic!.id)}`, {
-        headers: fh,
-      }),
-    );
-    if (etaAfter.length !== etaBefore.length) break;
-    await new Promise((r) => setTimeout(r, 200));
-  }
-  const etaNewCount = etaAfter.length - etaBefore.length;
-  expect(
-    etaNewCount,
-    "FD-02: fiscal submission off — split pay must not enqueue new ETA submissions",
-  ).toBe(0);
 
   const shiftDate = new Date().toISOString().slice(0, 10);
   await jsonOk(
@@ -253,7 +230,6 @@ export async function runGoldenFlowViaApi(
     clinicianId,
     appointmentId,
     encounterId,
-    etaQueueCount: etaNewCount,
   };
 }
 

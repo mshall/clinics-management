@@ -1,6 +1,5 @@
-import { Prisma, RevenueStatus, type TransferVerificationStatus } from "@prisma/client";
+import { Prisma, RevenueStatus, type TransferVerificationStatus, type VisitCollectionMode } from "@prisma/client";
 import { resolveClinicCurrency } from "../common/clinic-currency";
-import type { QueueFiscalParams } from "./fiscal-queue";
 
 export type PostRevenueParams = {
   tenantId: string;
@@ -17,19 +16,14 @@ export type PostRevenueParams = {
   operationId?: string | null;
   encounterId?: string | null;
   appointmentId?: string | null;
-  collectionMode?: QueueFiscalParams["collectionMode"];
+  collectionMode?: VisitCollectionMode | null;
   transferChannel?: string | null;
   transferReference?: string | null;
   transferVerificationStatus?: TransferVerificationStatus;
   counterpartyName?: string | null;
   counterpartyTaxNumber?: string | null;
-  /** @deprecated FD-02 — ignored (no ETA queue) */
-  buyerName?: string | null;
   clinicTaxRin?: string | null;
   vatPercent?: number;
-  skipFiscalQueue?: boolean;
-  skipEtaEReceipt?: boolean;
-  billingPaymentMethods?: QueueFiscalParams["billingPaymentMethods"];
 };
 
 /** Single money path (FD-02): post revenue only — no ETA / fiscal queue. */

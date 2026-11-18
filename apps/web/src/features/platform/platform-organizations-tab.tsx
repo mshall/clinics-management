@@ -13,7 +13,6 @@ import { ResponsiveTable } from "@/components/responsive-table";
 import { ClinicFormFields } from "@/features/clinics/clinic-form-fields";
 import { clinicFormToCreatePayload, emptyClinicForm, hasPartialClinicForm, isClinicFormComplete, type ClinicFormValues } from "@/features/clinics/clinic-form-utils";
 import { PlatformOrgSettingsPanel } from "@/features/platform/platform-org-settings-panel";
-import { PlatformOrgEtaIntegrationPanel } from "@/features/platform/platform-org-eta-integration-panel";
 import { PlatformOrgAuditPanel } from "@/features/platform/platform-org-audit-panel";
 import { apiErrorMessage, type TenantRow } from "@/features/platform/platform-shared";
 import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel";
@@ -394,7 +393,6 @@ export function PlatformOrganizationsTab() {
               {orgEditTab === "settings" ? (
                 <div className="space-y-4" key={editTenantId}>
                   <PlatformOrgSettingsPanel tenantId={editTenantId} onSaved={closeDialog} />
-                  <PlatformOrgEtaIntegrationPanel tenantId={editTenantId} />
                 </div>
               ) : (
                 <PlatformOrgAuditPanel key={`${editTenantId}-audit`} tenantId={editTenantId} />

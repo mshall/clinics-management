@@ -45,16 +45,10 @@ import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel"
 import { ClinicInvoiceSettingsPanel } from "@/features/invoices/clinic-invoice-settings-panel";
 import { ClinicPrescriptionSettingsPanel } from "@/features/prescriptions/clinic-prescription-settings-panel";
 import { TenantFeatureFlagsPanel } from "./tenant-feature-flags-panel";
-import { ProviderCredentialsPanel } from "./provider-credentials-panel";
-import { OrgEtaIntegrationCard } from "./org-eta-integration-card";
-import { EtaHealthCard } from "@/features/compliance/eta-health-card";
-import { useOrgEtaIntegration } from "@/lib/use-org-eta-integration";
-import { useTenantMarket } from "@/lib/use-tenant-market";
 import { OrgWhatsAppRemindersCard } from "./org-whatsapp-reminders-card";
 import { AdminOrgBillingPanel } from "./admin-org-billing-panel";
 import { AdminKiorlyInvoicesPanel } from "./admin-kiorly-invoices-panel";
 import { AdminKiorexChargesPanel } from "./admin-kiorex-charges-panel";
-import { EntitlementGate } from "@/components/entitlement-gate";
 import { LiteAdminSettings } from "./lite-admin-settings";
 
 export function AdminPage() {
@@ -82,13 +76,6 @@ export function AdminPage() {
   const isPlatformRole = authUser?.role === "platform_super_admin";
   const isLitePlan = authUser?.plan?.key?.toUpperCase() === "LITE";
   const overview = useAdminOverviewQuery();
-  const tenantMarket = useTenantMarket();
-  const isEgMarket = tenantMarket.data?.marketCode === "EG";
-  const { showEtaUi } = useOrgEtaIntegration(isEgMarket);
-  const showEtaHealth =
-    isEgMarket &&
-    showEtaUi &&
-    (isGroupAdmin || Boolean(authUser?.isTenantOwner) || authUser?.role === "finance_officer");
   const { data: clinics = [] } = useClinicsQuery();
   const [tPage, setTPage] = useState(1);
   const [tPs, setTPs] = useState(10);
@@ -555,7 +542,7 @@ export function AdminPage() {
                     <p className="text-xs leading-snug text-muted-foreground">
                       {t(
                         "admin.orgTrnHint",
-                        "Required for ETA e-receipts when enabled. Format is validated for your market.",
+                        "Format is validated for your market.",
                       )}
                     </p>
                   </div>
@@ -611,18 +598,6 @@ export function AdminPage() {
 
           {isGroupAdmin ? <TenantPaymentChannelsPanel /> : null}
 
-          {isGroupAdmin && showEtaUi ? (
-            <EntitlementGate entitlement="eta_receipts" requiredPlan="PRO">
-              <OrgEtaIntegrationCard />
-            </EntitlementGate>
-          ) : null}
-
-          {showEtaHealth ? (
-            <EntitlementGate entitlement="eta_receipts" requiredPlan="PRO">
-              <EtaHealthCard />
-            </EntitlementGate>
-          ) : null}
-
           {canManageOrgUserNavTabs ? <OrgRbacPanel /> : null}
 
           {isGroupAdmin || isClinicAdmin ? <AdminIntegrationClientsPanel /> : null}
@@ -632,8 +607,6 @@ export function AdminPage() {
           ) : (
             <TenantFeatureFlagsPanel flags={overview.data?.featureFlags ?? []} canEdit={false} />
           )}
-
-          {isGroupAdmin && showEtaUi ? <ProviderCredentialsPanel /> : null}
 
         </div>
       ) : null}

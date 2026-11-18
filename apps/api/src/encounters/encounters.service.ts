@@ -34,7 +34,7 @@ import {
 import {
   detachRevenueFromEncounter,
   voidPostedRevenuesWithFiscalReturns,
-} from "../compliance/void-revenue-fiscal-returns";
+} from "../compliance/void-revenue-adjustments";
 import { parseVisitCollectionForAmount } from "../common/visit-collection";
 import { resolveTransferVerification } from "../common/visit-collection-transfer";
 import {

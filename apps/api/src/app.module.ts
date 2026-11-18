@@ -35,7 +35,6 @@ import { ClinicAiModule } from "./clinic-ai/clinic-ai.module";
 import { MarketsModule } from "./markets/markets.module";
 import { FeatureFlagsModule } from "./feature-flags/feature-flags.module";
 import { ProvidersModule } from "./providers/providers.module";
-import { FiscalDevicesModule } from "./fiscal-devices/fiscal-devices.module";
 import { PlansModule } from "./plans/plans.module";
 import { EntitlementsModule } from "./entitlements/entitlements.module";
 import { PrivilegedMfaGuard } from "./auth/privileged-mfa.guard";
@@ -87,7 +86,6 @@ import { ObservabilityModule } from "./observability/observability.module";
     MarketsModule,
     FeatureFlagsModule,
     ProvidersModule,
-    FiscalDevicesModule,
     PlansModule,
     EntitlementsModule,
     SignupModule,

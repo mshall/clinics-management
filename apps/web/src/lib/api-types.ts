@@ -369,9 +369,6 @@ export interface AdminOverviewDto {
       saasVatPercent: number;
     } | null;
     integrationFailureRetentionDays: number;
-    etaPlatformIntegrationEnabled?: boolean;
-    etaPhysicalReportingOptOut?: boolean;
-    etaPhysicalReportingConsentAt?: string | null;
   } | null;
   registeredTenants: number;
   featureFlags: Array<{
@@ -452,11 +449,6 @@ export interface ClinicDetailDto {
   createdAt: string;
   operatingPeriods: ClinicOperatingPeriodDto[];
   frontDeskRoomLabels: string[];
-  etaBranchCode?: string | null;
-  etaTaxpayerActivityCode?: string | null;
-  etaDefaultItemCode?: string | null;
-  etaReceiptsEnabled?: boolean;
-  etaIncludeLogoOnReceipt?: boolean;
 }
 
 export interface ClinicOperatingPeriodDto {

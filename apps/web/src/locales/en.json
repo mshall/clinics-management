@@ -82,86 +82,6 @@
     "transactionIdRequired": "Enter the transfer transaction ID.",
     "invalidMode": "Choose how payment was collected."
   },
-  "compliance": {
-    "orgEtaTitle": "Egypt ETA (organization)",
-    "etaOrgIntegrationTitle": "ETA e-invoice integration",
-    "etaOrgIntegrationDesc": "When enabled, Kiorly queues electronic tax receipts for payments. Configure each clinic under Clinics → Settings.",
-    "etaOrgIntegrationEnable": "Enable Kiorly ETA e-receipt integration for this organization",
-    "etaOrgSelfReporting": "Integration is off. Your organization is responsible for submitting receipts and invoices to the Egyptian Tax Authority through your own ETA-registered process or approved exemption.",
-    "etaOrgIntegrationSaved": "ETA integration settings saved.",
-    "etaClinicOrgDisabled": "Enable organization ETA integration to configure this clinic.",
-    "etaClinicDescEnabled": "Branch code, activity, and item codes for this clinic. Organization defaults and API credentials are under Administration → Organization & settings.",
-    "orgEtaHint": "Production API keys live in AWS Secrets Manager (configure-apprunner-eta.sh). Per-clinic branch codes are under each clinic Settings.",
-    "etaActivity": "Default activity code",
-    "etaItemCode": "Default item code",
-    "etaSealLabel": "E-signature / seal reference",
-    "etaPhysicalOptOut": "Kiorly will not issue ETA e-receipts for this organization. We confirm we are not obliged to use this integration, or we issue receipts through another ETA-registered system.",
-    "etaPhysicalConsent": "I confirm this choice on behalf of the organization and accept responsibility for ETA compliance through another channel or exemption, as applicable.",
-    "etaPhysicalConsentRequired": "Confirm the declaration before disabling Kiorly ETA integration.",
-    "etaIntegrationDisabledBanner": "ETA e-receipts are not issued through Kiorly for this organization. Use your other ETA-registered system or exemption process as agreed with the tax authority.",
-    "etaClinicReceiptsDisabledBanner": "ETA e-receipt queuing is turned off for this clinic in settings. Payments will not receive a Kiorly fiscal receipt until it is re-enabled.",
-    "fiscalRejectedTitle": "Rejected ETA receipts",
-    "fiscalRejectedDesc": "Fix validation issues and resend as a new document (references the rejected UUID).",
-    "fiscalResubmitFix": "Fix & resend",
-    "fiscalResubmitBuyer": "Buyer name",
-    "fiscalResubmitItem": "Item code",
-    "fiscalResubmitRin": "Tax registration (RIN)",
-    "fiscalResubmitAction": "Queue corrected receipt",
-    "fiscalResubmitQueued": "Corrected receipt queued for submit.",
-    "etaClinicTitle": "Egypt ETA (e-receipt)",
-    "etaClinicDesc": "Branch and item defaults for this clinic. Org ETA API credentials are managed at organization level.",
-    "etaBranchCode": "Branch / POS code",
-    "etaQueueEnabled": "Queue ETA e-receipts for payments at this clinic",
-    "etaShowLogo": "Show invoice logo on patient receipt preview (when ETA permits issuer branding)",
-    "etaClinicSaved": "ETA clinic settings saved.",
-    "etaReceiptTitle": "Electronic tax receipt",
-    "etaPatient": "Patient",
-    "etaService": "Service",
-    "etaTrn": "TRN",
-    "etaHealth": {
-      "title": "ETA production health",
-      "subtitle": "Pilot week 1 target: ≥ 95% of automatic submissions reach VALID on ETA without manual resubmit.",
-      "successRate": "Success rate",
-      "submitted": "Submitted",
-      "valid": "VALID",
-      "manual": "Manual resubmits",
-      "topRejections": "Top rejection classes",
-      "alertBelowThreshold": "Yesterday’s ETA success rate fell below 95%. Review failing operations and the runbook below.",
-      "startPilotClock": "Start production pilot week 1",
-      "pilotStarted": "Pilot started {{at}}",
-      "env": {
-        "preprod": "Pre-production",
-        "production": "Production",
-        "unknown": "Unknown"
-      }
-    },
-    "etaRunbook": {
-      "credentials": {
-        "title": "Expired or invalid POS credentials"
-      },
-      "validation": {
-        "title": "ETA validation rejection (4xx)"
-      },
-      "duplicate": {
-        "title": "Duplicate UUID (already registered)"
-      },
-      "temporary": {
-        "title": "Temporary outage or timeout"
-      },
-      "buyer_name": {
-        "title": "Buyer name / high-value threshold"
-      },
-      "item_code": {
-        "title": "Item / GPC code mismatch"
-      },
-      "branch_trn": {
-        "title": "Branch, TRN, or activity code"
-      },
-      "unknown": {
-        "title": "Other — review error detail"
-      }
-    }
-  },
   "frontDesk": {
     "searchPatients": "Find patient",
     "globalSearchTitle": "Global patient search",
@@ -363,7 +283,6 @@
       "import_patients": "Import or add patients",
       "first_appointment": "Book your first appointment",
       "first_check_in": "Complete your first check-in",
-      "eta_setup": "Set up ETA e-receipts",
       "kiorex_profile": "Publish Kiorex marketplace profile",
       "doctor_verification": "Verify your doctor credentials for Kiorex"
     }
@@ -1061,45 +980,6 @@
     "overrideDuration": "Override duration",
     "overrideFee": "Override fee"
   },
-  "fiscalDevices": {
-    "title": "Receipt devices",
-    "subtitle": "Virtual or physical POS devices registered with your tax authority.",
-    "virtualLabel": "Kiorly virtual POS",
-    "setupBanner": "Tax receipts are queued but not being sent — finish receipt device setup.",
-    "etaEnvironment": "ETA API environment: {{env}}",
-    "productionCredsHint": "For production cutover, enter each clinic’s live client ID and secret here after the pre-production billing drill.",
-    "addVirtual": "Add virtual device",
-    "addPhysical": "Add physical device",
-    "colLabel": "Label",
-    "colSerial": "Serial",
-    "colKind": "Kind",
-    "colStatus": "Status",
-    "colActions": "Actions",
-    "credentials": "Credentials",
-    "credentialsTitle": "Device credentials",
-    "credentialsSaved": "Credentials saved",
-    "fieldClientId": "Client ID",
-    "fieldClientSecret": "Client secret",
-    "test": "Test",
-    "testOk": "Connection OK",
-    "testFail": "Connection failed",
-    "setDefault": "Set default",
-    "deactivate": "Deactivate",
-    "default": "Default",
-    "copied": "Copied",
-    "created": "Receipt device added",
-    "empty": "No receipt devices yet.",
-    "registrationGuide": "Register this serial on your tax authority portal and link it to this branch, then enter the client ID and secret here.",
-    "taxReceiptsStepTitle": "Tax receipts",
-    "taxReceiptsVirtual": "Use Kiorly as this clinic's POS (recommended)",
-    "taxReceiptsPhysical": "This clinic has its own POS device",
-    "taxReceiptsSkip": "Skip for now",
-    "generatedSerial": "Generated POS serial",
-    "physicalSerialRequired": "Enter the POS serial number",
-    "deviceModel": "Device model",
-    "credentialsOptionalNow": "You can enter credentials now or later in clinic settings.",
-    "finishInSettings": "Finish portal registration any time under Settings → Receipt devices."
-  },
   "clinics": {
     "title": "Clinics & branches",
     "subtitle": "Parent clinic, sister branches, onboarding fields per PRD.",
@@ -1734,7 +1614,7 @@
     "orgOverrideMarketDefault": "Override market default",
     "orgTrnPlaceholder": "Market default",
     "orgVisitFeeHint": "From your country market pack unless overridden. Used when a clinic does not set its own visit fee.",
-    "orgTrnHint": "Required for ETA e-receipts when enabled. Format is validated for your market.",
+    "orgTrnHint": "Format is validated for your market.",
     "orgVatHint": "Medical services VAT from your market pack unless overridden. Saving updates all clinics for tax invoices.",
     "paymentChannelsTitle": "Payment channels",
     "paymentChannelsHint": "Custom transfer options for front desk and billing. Market defaults (InstaPay, Fawry) still apply when enabled.",
@@ -1770,12 +1650,6 @@
     "selected": "Selected",
     "manage": "Manage",
     "orgSettings": "Organization settings",
-    "etaIntegrationTitle": "ETA e-invoice integration",
-    "etaIntegrationDesc": "Off by default for new organizations. When enabled, Kiorly ETA settings appear for the clinic group and integration is turned on until they opt out.",
-    "etaIntegrationEnable": "Enable Kiorly ETA for this organization",
-    "etaIntegrationSaved": "ETA integration setting saved.",
-    "etaIntegrationEgOnly": "Kiorly ETA integration is only available for Egypt market organizations.",
-    "etaTaxResponsibilityNote": "Clinics and physicians remain solely responsible for submitting taxes and receipts to the Egyptian Tax Authority, whether or not Kiorly integration is enabled.",
     "saveSettings": "Save settings",
     "orgUsers": "Users in organization",
     "noUsersYet": "No users yet — create a group admin when provisioning the org, or add users below.",
@@ -2092,7 +1966,6 @@
     "turnOffOrg": "Turn off for org",
     "featureFlag": {
       "ai_assistant": "Kiorly AI assistant (language model)",
-      "eta_receipts": "ETA / fiscal receipts",
       "whatsapp_reminders": "WhatsApp reminders",
       "instapay": "InstaPay payments",
       "fawry": "Fawry payments",

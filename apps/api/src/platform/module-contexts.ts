@@ -63,7 +63,6 @@ export const TOP_LEVEL_FOLDER_TO_CONTEXT: Record<string, BoundedContextId> = {
   "payroll-expenses": "front-office",
 
   compliance: "compliance-fiscal",
-  "fiscal-devices": "compliance-fiscal",
   providers: "compliance-fiscal",
   integrations: "compliance-fiscal",
 

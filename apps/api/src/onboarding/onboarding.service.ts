@@ -13,7 +13,6 @@ import {
   type OnboardingStepsJson,
 } from "./onboarding-steps";
 import { detectAutoCompletedSteps, mergeAutoSteps, type OnboardingSyncInput } from "./onboarding-sync";
-import { kiorlyEtaPlatformEnabled } from "../providers/provider-settings";
 
 export type OnboardingStepDto = {
   key: OnboardingStepKey;
@@ -44,7 +43,6 @@ const STEP_PATHS: Record<OnboardingStepKey, string> = {
   import_patients: "/patients",
   first_appointment: "/appointments",
   first_check_in: "/front-desk/board",
-  eta_setup: "/admin",
   kiorex_profile: "/clinics",
   doctor_verification: "/profile/verification",
 };
@@ -112,19 +110,7 @@ export class OnboardingService {
     }
 
     const primaryClinicId = syncInput?.clinics[0]?.id ?? null;
-    const tenantEta = await this.prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: { providerSettings: true },
-    });
-    const includeEtaSetup = tenantEta ? kiorlyEtaPlatformEnabled(tenantEta) : false;
-    return this.toDto(
-      steps,
-      row.completedAt,
-      row.activatedAt,
-      activationJustAchieved,
-      primaryClinicId,
-      includeEtaSetup,
-    );
+    return this.toDto(steps, row.completedAt, row.activatedAt, activationJustAchieved, primaryClinicId);
   }
 
   async patchStep(
@@ -284,10 +270,8 @@ export class OnboardingService {
     activatedAt: Date | null,
     activationJustAchieved: boolean,
     primaryClinicId: string | null,
-    includeEtaSetup = false,
   ): OnboardingProgressDto {
-    const stepKeys = ONBOARDING_STEP_KEYS.filter((key) => key !== "eta_setup" || includeEtaSetup);
-    const stepDtos: OnboardingStepDto[] = stepKeys.map((key) => {
+    const stepDtos: OnboardingStepDto[] = ONBOARDING_STEP_KEYS.map((key) => {
       const raw = steps[key];
       let status: OnboardingStepDto["status"] = "pending";
       if (raw === SKIPPED_STEP_VALUE) status = "skipped";

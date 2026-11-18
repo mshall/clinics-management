@@ -23,7 +23,6 @@ import { PLAN_NAV_TAB_PRESETS } from "../entitlements/plans-matrix";
 import { MarketsService } from "../markets/markets.service";
 import { clinicInvoiceDefaultsFromTenant, tenantCreateDefaultsFromMarket } from "../markets/market-tax-pack";
 import { assertTenantDeploymentCellMatchesMarket } from "../markets/data-cells";
-import { mergeProviderBlock } from "../providers/provider-settings";
 import { PrismaService } from "../prisma/prisma.service";
 import { addBillingPeriod } from "../subscriptions/subscription-period";
 import { TrialEngineService } from "../subscriptions/trial-engine.service";
@@ -140,14 +139,6 @@ export class SignupProvisionService {
       const clash = await tx.user.findFirst({ where: { email } });
       if (clash) throw new BadRequestException("Email already in use");
 
-      const etaOptOutDefault =
-        market.code === "EG"
-          ? (mergeProviderBlock(null, "eta-egypt", {
-              platformEtaIntegrationEnabled: false,
-              physicalReportingOptOut: true,
-            }) as object)
-          : undefined;
-
       const tenant = await tx.tenant.create({
         data: {
           name: tenantName,
@@ -159,7 +150,6 @@ export class SignupProvisionService {
           defaultVisitFee: packDefaults.defaultVisitFee,
           defaultInvoiceVatPercent: packDefaults.defaultInvoiceVatPercent,
           defaultTaxRegistrationNumber: packDefaults.defaultTaxRegistrationNumber,
-          ...(etaOptOutDefault ? { providerSettings: etaOptOutDefault } : {}),
           salesRepCode: input.salesRepCode?.trim() || null,
           referralCode: input.referralCode?.trim() || null,
         },

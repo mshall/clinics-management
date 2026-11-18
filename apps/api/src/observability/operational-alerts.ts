@@ -4,7 +4,6 @@
  */
 
 export const OPERATIONAL_ALERT_IDS = [
-  "ETA_SUCCESS_BELOW_THRESHOLD",
   "WHATSAPP_DELIVERY_FAILURE_SPIKE",
   "OUTBOX_PENDING_LAG",
   "SETTLEMENT_JOB_FAILED",
@@ -27,7 +26,6 @@ export type OperationalAlertDefinition = {
 };
 
 export const OPERATIONAL_DASHBOARD_IDS = [
-  "eta_success",
   "whatsapp_delivery",
   "outbox_lag",
   "settlement_job",
@@ -48,15 +46,6 @@ export type OperationalDashboardPanel = {
 };
 
 export const OPERATIONAL_ALERTS: OperationalAlertDefinition[] = [
-  {
-    id: "ETA_SUCCESS_BELOW_THRESHOLD",
-    auditAction: "ETA_SUCCESS_BELOW_THRESHOLD",
-    dashboardId: "eta_success",
-    runbookDoc: "ETA_SUCCESS_BELOW_THRESHOLD.md",
-    titleEn: "ETA receipt success rate below pilot threshold",
-    titleAr: "نسبة نجاح إيصالات ETA أقل من حد التجربة",
-    severity: "critical",
-  },
   {
     id: "WHATSAPP_DELIVERY_FAILURE_SPIKE",
     auditAction: "WHATSAPP_DELIVERY_FAILED",
@@ -114,14 +103,6 @@ export const OPERATIONAL_ALERTS: OperationalAlertDefinition[] = [
 ];
 
 export const OPERATIONAL_DASHBOARDS: OperationalDashboardPanel[] = [
-  {
-    id: "eta_success",
-    titleEn: "ETA receipt success",
-    titleAr: "نجاح إيصالات ETA",
-    alertIds: ["ETA_SUCCESS_BELOW_THRESHOLD"],
-    queryHint:
-      "Admin → Compliance ETA health; audit `ETA_SUCCESS_BELOW_THRESHOLD`; FiscalSubmission `providerValidationStatus=VALID` / day",
-  },
   {
     id: "whatsapp_delivery",
     titleEn: "WhatsApp delivery",

@@ -10,7 +10,6 @@ export const ONBOARDING_STEP_KEYS = [
   "import_patients",
   "first_appointment",
   "first_check_in",
-  "eta_setup",
   "kiorex_profile",
   "doctor_verification",
 ] as const;

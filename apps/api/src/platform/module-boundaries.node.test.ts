@@ -112,7 +112,7 @@ test("cross-context relative imports follow allowed dependency edges", () => {
 
 test("composition root only wires modules", () => {
   const appModule = readFileSync(join(SRC_ROOT, "app.module.ts"), "utf8");
-  assert.match(appModule, /FiscalDevicesModule/);
+  assert.doesNotMatch(appModule, /FiscalDevicesModule/);
   const allowedCompositionImport = /from\s+["']\.\//;
   const bad = [...appModule.matchAll(/from\s+["'](\.\.\/[^"']+)["']/g)];
   assert.equal(bad.length, 0, "app.module.ts should only import Nest modules from ./");
