@@ -2927,5 +2927,51 @@
       "INVITE_REVOKED": "ألغت العيادة هذه الدعوة.",
       "INVITE_ACCEPTED": "تم استخدام هذه الدعوة من قبل. سجّل الدخول."
     }
+  },
+  "rep": {
+    "title": "مبيعات كيورلي الميدانية",
+    "code": "كود المندوب",
+    "signOut": "تسجيل الخروج",
+    "totals": {
+      "signups": "تسجيلات",
+      "pendingOwner": "بانتظار المالك",
+      "activated": "مُفعّلة",
+      "paid": "مدفوعة"
+    },
+    "newClinic": "عيادة جديدة",
+    "clinicName": "اسم العيادة",
+    "ownerName": "اسم المالك بالكامل",
+    "ownerEmail": "بريد المالك الإلكتروني",
+    "ownerPhone": "موبايل المالك (يصله الكود)",
+    "plan": "الباقة",
+    "plans": {
+      "PRO": "برو (تجربة مجانية)",
+      "LITE": "لايت"
+    },
+    "createAndSendOtp": "إنشاء العيادة وإرسال الكود للمالك",
+    "portfolio": "عياداتي",
+    "empty": "لا توجد عيادات بعد — سجّل أول عيادة بالأعلى.",
+    "status": {
+      "pendingOwner": "بانتظار كود المالك",
+      "confirmed": "مؤكدة",
+      "activated": "مُفعّلة",
+      "paid": "مشتركة"
+    },
+    "confirmIntro": "سلّم الهاتف للمالك: يراجع الشروط ويقرأ الكود الذي وصله. تبقى العيادة غير مفعّلة حتى يؤكد.",
+    "ownerAgrees": "يوافق المالك على {{doc}}",
+    "otpLabel": "الكود من هاتف المالك",
+    "confirm": "تأكيد العيادة",
+    "resend": "إعادة إرسال الكود",
+    "resent": "تم إرسال الكود",
+    "importTitle": "استيراد بيانات العيادة",
+    "importEntity": "ما الذي تريد استيراده",
+    "importFile": "ملف الجدول",
+    "importUpload": "فحص الملف",
+    "importSummary": "{{ok}} صف جاهز، {{errors}} بها أخطاء — {{status}}",
+    "importCommit": "استيراد {{count}} صف",
+    "commission": "عمولتي",
+    "period": "الشهر",
+    "noCommission": "لا توجد فواتير مدفوعة من عياداتك هذا الشهر.",
+    "commissionLine": "{{commission}} {{currency}} ({{percent}}٪) على {{eligible}} من {{total}} فاتورة مدفوعة من عيادات مستمرة {{days}}+ يوماً"
   }
 }

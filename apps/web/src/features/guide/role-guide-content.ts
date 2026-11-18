@@ -675,6 +675,30 @@ const PLATFORM_SUPER_ADMIN: RoleGuide = {
   ],
 };
 
+const SALES_REP: RoleGuide = {
+  headlineEn: "Field sales console",
+  headlineAr: "لوحة مندوب المبيعات",
+  subtitleEn: "Sign clinics on the spot, get owner confirmation, and track activation.",
+  subtitleAr: "سجّل العيادات في الموقع، واحصل على تأكيد المالك، وتابع التفعيل.",
+  sections: [
+    s(
+      "Sign a clinic",
+      "تسجيل عيادة",
+      "Create the clinic with the owner beside you; they confirm with a code sent to their phone.",
+      "أنشئ العيادة والمالك بجانبك؛ يؤكد بكود يصله على هاتفه.",
+      [
+        {
+          titleEn: "New clinic",
+          titleAr: "عيادة جديدة",
+          bodyEn: "Fill the clinic and owner details, then ask the owner to read back the confirmation code.",
+          bodyAr: "املأ بيانات العيادة والمالك، ثم اطلب من المالك قراءة كود التأكيد.",
+          path: "/rep",
+        },
+      ],
+    ),
+  ],
+};
+
 export const ROLE_GUIDES: Record<DemoRole, RoleGuide> = {
   platform_super_admin: PLATFORM_SUPER_ADMIN,
   group_admin: GROUP_ADMIN,
@@ -688,6 +712,7 @@ export const ROLE_GUIDES: Record<DemoRole, RoleGuide> = {
   call_center: CALL_CENTER,
   clinic_admin: CLINIC_ADMIN,
   clinic_assistant: CLINIC_ASSISTANT,
+  sales_rep: SALES_REP,
 };
 
 export function guideForRole(role: DemoRole | undefined): RoleGuide {

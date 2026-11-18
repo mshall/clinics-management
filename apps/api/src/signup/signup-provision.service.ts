@@ -7,6 +7,7 @@ import {
   PlanKey,
   Prisma,
   SubscriptionStatus,
+  TenantStatus,
   UserRole,
 } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
@@ -85,6 +86,8 @@ export type SignupProvisionInput = {
   salesRepCode?: string;
   referralCode?: string;
   legalAcceptances?: { document: string; version: string }[];
+  /** ON-07 — field rep creating the tenant; tenant stays PENDING_OWNER and legal is accepted at owner confirmation. */
+  onBehalfOfSalesRepId?: string;
 };
 
 @Injectable()
@@ -113,7 +116,7 @@ export class SignupProvisionService {
     const planKey = planRaw === PlanKey.PRO || planRaw === PlanKey.LITE ? (planRaw as PlanKey) : null;
     if (!planKey) throw new BadRequestException("planKey must be LITE or PRO");
 
-    this.legal.assertSignupLegal(planKey, input.legalAcceptances);
+    if (!input.onBehalfOfSalesRepId) this.legal.assertSignupLegal(planKey, input.legalAcceptances);
 
     const market = await this.markets.assertMarketForNewTenant(input.marketId);
     const packDefaults = tenantCreateDefaultsFromMarket(market);
@@ -157,6 +160,9 @@ export class SignupProvisionService {
           defaultInvoiceVatPercent: packDefaults.defaultInvoiceVatPercent,
           defaultTaxRegistrationNumber: packDefaults.defaultTaxRegistrationNumber,
           salesRepCode: input.salesRepCode?.trim() || null,
+          ...(input.onBehalfOfSalesRepId
+            ? { status: TenantStatus.PENDING_OWNER, createdBySalesRepId: input.onBehalfOfSalesRepId }
+            : {}),
         },
       });
 
@@ -264,6 +270,7 @@ export class SignupProvisionService {
           status,
           interval,
           clinicianSeats: 1,
+          salesRepCode: tenant.salesRepCode,
           trialStartsAt,
           trialEndsAt,
           trialPlanId,
@@ -276,7 +283,7 @@ export class SignupProvisionService {
         data: {
           subscriptionId: sub.id,
           type: "created",
-          toJson: { status, planKey, interval, source: "public_signup" } as Prisma.InputJsonValue,
+          toJson: { status, planKey, interval, source: input.onBehalfOfSalesRepId ? "sales_rep" : "public_signup" } as Prisma.InputJsonValue,
         },
       });
 

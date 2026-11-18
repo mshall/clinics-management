@@ -11,6 +11,7 @@ import { ResetPasswordPage } from "@/features/auth/reset-password-page";
 import { ImportWizardPage } from "@/features/onboarding/import-wizard-page";
 import { TeamPage } from "@/features/admin/team-page";
 import { AcceptInvitationPage } from "@/features/auth/accept-invitation-page";
+import { RepConsolePage } from "@/features/rep/rep-console-page";
 import { OnboardingPage } from "@/features/onboarding/onboarding-page";
 import { AppointmentReschedulePage } from "@/features/appointments/appointment-reschedule-page";
 import { ClinicalTemplatesRedirect } from "@/features/clinical/clinical-templates-redirect";
@@ -72,6 +73,14 @@ export const router = createBrowserRouter([
   { path: "/invite/:token", element: <AcceptInvitationPage /> },
   { path: "/forgot-password", element: <ForgotPasswordPage /> },
   { path: "/reset-password", element: <ResetPasswordPage /> },
+  {
+    path: "/rep",
+    element: (
+      <ProtectedRoute>
+        <RepConsolePage />
+      </ProtectedRoute>
+    ),
+  },
   {
     path: "/",
     element: (

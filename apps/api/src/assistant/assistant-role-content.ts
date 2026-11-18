@@ -5,6 +5,10 @@ import { quickPromptsForNav } from "./assistant-playbook";
 type LocaleCopy = { title: string; greeting: string; prompts: string[] };
 
 const BY_ROLE: Record<UserRole, { en: LocaleCopy; ar: LocaleCopy }> = {
+  [UserRole.SALES_REP]: {
+    en: { title: "Kiorly sales assistant", greeting: "Hi — I help with onboarding clinics you sign.", prompts: ["Set up a clinic", "Import patients"] },
+    ar: { title: "مساعد المبيعات", greeting: "مرحباً — أساعدك في تجهيز العيادات التي تتعاقد معها.", prompts: ["تجهيز عيادة", "استيراد المرضى"] },
+  },
   [UserRole.PLATFORM_SUPER_ADMIN]: {
     en: {
       title: "Platform assistant",

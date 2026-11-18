@@ -124,6 +124,21 @@ async function ensureSuperAdmin(passwordHash: string) {
   });
 }
 
+/** ON-07 — demo field-sales rep (tenant-less SALES_REP login). */
+async function ensureDemoSalesRep(passwordHash: string) {
+  const user = await ensureUser(passwordHash, {
+    tenantId: null,
+    email: "rep@kiorly.com",
+    displayName: "Demo Sales Rep",
+    role: UserRole.SALES_REP,
+  });
+  await prisma.salesRep.upsert({
+    where: { userId: user.id },
+    create: { userId: user.id, code: "REP-DEMO", displayName: "Demo Sales Rep" },
+    update: {},
+  });
+}
+
 /** True when any tenant/user/clinic/patient row exists — used to skip destructive fresh seed on AWS re-deploy. */
 async function hasAnyDatabaseContent(): Promise<boolean> {
   const [tenants, users, clinics, patients] = await Promise.all([
@@ -586,6 +601,7 @@ async function seedDrAhmedGroup(passwordHash: string) {
 
 async function ensureIncrementalSeed(passwordHash: string) {
   await ensureSuperAdmin(passwordHash);
+  await ensureDemoSalesRep(passwordHash);
 
   const kiorlyTenant = await prisma.tenant.findFirst({ where: { name: KIORLY_TENANT_NAME } });
   if (kiorlyTenant) {
@@ -1249,6 +1265,7 @@ async function seedFreshDatabase(passwordHash: string) {
     await ensureAllPilotTenants(prisma, passwordHash);
   }
   await ensureSuperAdmin(passwordHash);
+  await ensureDemoSalesRep(passwordHash);
 }
 
 async function main() {

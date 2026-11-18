@@ -79,6 +79,7 @@ const ROLE_MAX: Record<UserRole, readonly string[]> = {
     "profile",
   ],
   [UserRole.CLINIC_ASSISTANT]: ["patients", "appointments", "encounters", "operations", "expenses", "revenue", "profile"],
+  [UserRole.SALES_REP]: [],
   [UserRole.PLATFORM_SUPER_ADMIN]: [
     "platform",
     "platform_insights",

@@ -1,6 +1,6 @@
 import { BadRequestException, Inject, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { PlanKey, SubscriptionStatus, UserRole } from "@prisma/client";
+import { PlanKey, SubscriptionStatus, TenantStatus, UserRole } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import * as path from "path";
@@ -175,6 +175,15 @@ export class AuthService {
     if (!user) throw new UnauthorizedException("Invalid credentials");
     if (user.deletedAt || user.deactivatedAt) {
       throw new UnauthorizedException("This account is deactivated or archived");
+    }
+    if (user.tenantId) {
+      const tenant = await this.prisma.tenant.findUnique({ where: { id: user.tenantId }, select: { status: true } });
+      if (tenant?.status === TenantStatus.PENDING_OWNER) {
+        throw new UnauthorizedException({
+          message: "This clinic is waiting for the owner to confirm by OTP",
+          errorCode: "TENANT_PENDING_OWNER",
+        });
+      }
     }
     if (user.tenantId && !user.isTenantOwner) {
       const sub = await this.prisma.subscription.findUnique({

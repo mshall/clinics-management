@@ -29,6 +29,7 @@ export const TOP_LEVEL_FOLDER_TO_CONTEXT: Record<string, BoundedContextId> = {
   observability: "kernel",
   signup: "kernel",
   onboarding: "kernel",
+  "sales-reps": "kernel",
   legal: "kernel",
 
   clinics: "organization",

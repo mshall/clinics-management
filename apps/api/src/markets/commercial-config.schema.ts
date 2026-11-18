@@ -51,6 +51,14 @@ const referralSchema = z.object({
   maxPerYear: z.number().int().min(0).max(100),
 });
 
+/** ON-07 — field-sales rep commission; optional so existing packs stay valid. */
+const salesRepSchema = z.object({
+  commissionPercent: z.number().min(0).max(100),
+  retentionDays: z.number().int().min(0).max(730),
+});
+
+export const SALES_REP_COMMISSION_DEFAULTS = { commissionPercent: 10, retentionDays: 90 } as const;
+
 export const commercialConfigSchema = z
   .object({
     trial: trialSchema,
@@ -58,6 +66,7 @@ export const commercialConfigSchema = z
     lite: liteSchema,
     dunning: dunningSchema,
     referral: referralSchema,
+    salesRep: salesRepSchema.optional(),
   })
   .superRefine((val, ctx) => {
     if (val.dunning.readOnlyAfterDays <= val.dunning.graceDays) {

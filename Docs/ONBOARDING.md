@@ -6,6 +6,7 @@
 | ON-03 Doctor verification step (`doctor_verification`) | **Done** — see [CLINICIAN_VERIFICATION.md](./CLINICIAN_VERIFICATION.md) |
 | ON-05 Data import from Excel / CSV (patients, appointments, price list, staff) | **Done** — see [Data import](#data-import-on-05) |
 | ON-06 Staff invitations by WhatsApp or email | **Done** — see [Staff invitations](#staff-invitations-on-06) (delivery template: NH-005) |
+| ON-07 Field-sales assisted onboarding & rep attribution | **Done** — see [Field-sales reps](#field-sales-reps-on-07) (OTP / welcome templates: NH-006) |
 
 ## Purpose
 
@@ -69,6 +70,20 @@ Team screen `/team` (also embedded in Admin → staff / organization users and t
 
 Tests: `users/invitations/on06-invitations.integration.test.ts` (402 beyond seat limit, WhatsApp outbox + accept, resend/revoke/expiry, pending invites consume seats, RBAC) and `e2e/on06-invitations.spec.ts`.
 
+## Field-sales reps (ON-07)
+
+Kiorly field reps sign clinics in person from a mobile console at `/rep` (login role `SALES_REP`, no tenant; `SalesRep` row holds the attribution `code`). Demo login: `rep@kiorly.com` / `demo` (code `REP-DEMO`). Platform super admins create reps with `POST /api/v1/platform/sales-reps` `{ email, displayName, code, phone?, password? }`.
+
+- `POST /api/v1/rep/tenants` `{ marketId, phone, specialty, planKey, clinic, owner: { displayName, email } }` provisions the same tenant as public signup with `Tenant.salesRepCode` **and** `Subscription.salesRepCode` = rep code, `Tenant.createdBySalesRepId`, a random owner password and **`Tenant.status = PENDING_OWNER`**. A 6-digit OTP (10 min, 5 attempts, purpose `REP_OWNER_CONFIRM:<tenantId>`) goes to the owner's phone (same channel as signup OTP; `SIGNUP_OTP_DEV_CODE` fixes it in dev/tests).
+- While `PENDING_OWNER`: owner login is refused (`401 TENANT_PENDING_OWNER`) and the rep cannot import data.
+- `POST /api/v1/rep/tenants/:id/confirm` `{ code, legalAcceptances }` — the owner reads the code and accepts the plan's legal pack on the rep's phone (recorded as the owner's acceptance). Tenant → `ACTIVE`, `ownerConfirmedAt` set, and an INTERNAL outbox event `rep.owner_welcome` carries a 7-day set-password link (`/reset-password?token=…`) to the owner — the link is never shown to the rep. `POST …/resend-otp` re-sends (5/hour).
+- Imports on behalf of the clinic: `POST /api/v1/rep/tenants/:id/imports` (multipart, same validator as ON-05) and `POST …/imports/:jobId/commit`; jobs record `actingRepUserId`.
+- `GET /api/v1/rep/portfolio` — clinics created by the rep or signed up with their code: totals for signups, awaiting owner, activated (`OnboardingProgress.activatedAt`), paid (any PAID `KiorlyInvoice`).
+- `GET /api/v1/rep/commission?period=YYYY-MM` — PAID Kiorly invoices in the month from the rep's clinics, grouped by currency; commission is paid only on **retained** clinics (subscription active/trialing/past-due and tenant older than the retention window). Rate and window come from the market pack `commercialConfig.salesRep { commissionPercent, retentionDays }` (optional; default 10 % / 90 days until a market sets them).
+- Audit: `REP_TENANT_CREATED`, `REP_TENANT_OWNER_CONFIRMED` (tenant audit log).
+
+Tests: `sales-reps/on07-sales-reps.integration.test.ts` (PENDING_OWNER until OTP, login blocked, wrong code/other rep rejected, legal recorded, welcome outbox, portfolio and retained commission), `on07-sales-reps.node.test.ts`, `e2e/on07-rep-console.spec.ts` (mobile viewport).
+
 ## Follow-ups
 
 - Dedicated scheduling UI deep link for clinician availability.
@@ -76,3 +91,4 @@ Tests: `users/invitations/on06-invitations.integration.test.ts` (402 beyond seat
 - Product analytics export for median time in production (pilot sessions).
 - ON-05: a durable job queue (the commit runs in-process; a restart mid-commit leaves the job `COMMITTING`); undo of `MERGE` field fills.
 - ON-06: INTERNAL outbox sender for `staff.invitation` (WhatsApp template + transactional email) — NH-005.
+- ON-07: INTERNAL sender for `rep.owner_welcome`; platform UI to manage reps (API only); payout workflow for rep commission (report only); platform-level audit for rep account creation (no tenant to attach it to).

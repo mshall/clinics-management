@@ -21,6 +21,14 @@ enum UserRole {
   FINANCE_OFFICER
   CLINIC_ADMIN
   CLINIC_ASSISTANT
+  /// ON-07 — Kiorly field-sales rep (platform user, no tenant).
+  SALES_REP
+}
+
+enum TenantStatus {
+  ACTIVE
+  /// ON-07 — created by a field rep; owner has not confirmed by OTP yet.
+  PENDING_OWNER
 }
 
 enum Gender {
@@ -1038,6 +1046,10 @@ model Tenant {
   marketId              String?
   market                Market?         @relation(fields: [marketId], references: [id], onDelete: SetNull)
   deploymentCell        String
+  status                TenantStatus    @default(ACTIVE)
+  /// ON-07 — SalesRep.id that created the tenant on the owner's behalf.
+  createdBySalesRepId   String?
+  ownerConfirmedAt      DateTime?
   baseCurrency          String          @default("EGP")
   defaultLocale         String          @default("en")
   defaultVisitFee                Decimal?        @db.Decimal(14, 2)
@@ -1204,6 +1216,19 @@ model ImportJob {
   finishedAt      DateTime?
 
   @@index([tenantId, createdAt])
+}
+
+/// ON-07 — field-sales rep account (login is a tenant-less User with role SALES_REP).
+model SalesRep {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  /// Attribution code stored on Tenant/Subscription.salesRepCode.
+  code        String   @unique
+  displayName String
+  phone       String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 /// ON-06 — staff invitation (WhatsApp or email link → set password).
