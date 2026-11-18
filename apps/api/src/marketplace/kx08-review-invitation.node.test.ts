@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { AppointmentStatus, BookingSource } from "@prisma/client";
 import { isReviewInvitationEligible } from "../messaging/review-invitation";
-import { weightedKiorexRating } from "../reports/reports-aggregation";
+import { weightedKiorexRating } from "./kiorex-rating";
 
 describe("KX-08 verified review invitations", () => {
   it("invites only after a completed Kiorex visit", () => {

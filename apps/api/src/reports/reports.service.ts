@@ -24,8 +24,8 @@ import {
   mergeCurrencyTotals,
   sumExpensesByCurrency,
   sumRevenueByCurrency,
-  weightedKiorexRating,
 } from "./reports-aggregation";
+import { weightedKiorexRating } from "../marketplace/kiorex-rating";
 
 export interface PatientAcquisitionPatientsQuery {
   channel: string;

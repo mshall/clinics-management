@@ -6,7 +6,7 @@ import { isReviewInvitationEligible } from "../messaging/review-invitation";
 import { OutboxEventService } from "../messaging/outbox-event.service";
 import { OUTBOX_EVENT } from "../messaging/outbox-event-types";
 import { PrismaService } from "../prisma/prisma.service";
-import { weightedKiorexRating } from "../reports/reports-aggregation";
+import { weightedKiorexRating } from "./kiorex-rating";
 import { MarketplaceAccessService } from "./marketplace-access.service";
 import { MarketplaceListingService } from "./marketplace-listing.service";
 import type { PlatformIntegrationPrincipal } from "./platform-integration-client.service";
