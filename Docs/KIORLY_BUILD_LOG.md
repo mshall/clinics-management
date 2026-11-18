@@ -92,4 +92,4 @@
 | 052 CR-08 | `0bf6d1b` | CommissionDispute model, auto-resolve, platform ops queue, owner outbox |
 | 053 CR-09 | `fcfbdad` | ReferralCode/Referral, `GET /growth/referral`, dual REFERRAL grants on first paid invoice |
 | 054 CR-11 | `3049900` | `GET /billing/statements[/:period]` JSON + bilingual PDF, Plan & billing statements panel, statement outbox on issue; invoice TAX-line subtotal fix; NH-003 |
-| 055 SB-05 | _pending_ | Lite min invoice (pack, default 100) + idempotent carry (`kiorlySettlementCarryPeriodKey/In`), carried charges BILLED, `GET /billing/lite-fees` + Lite fees card, Lite unpaid D+30 → listing PAUSED/billing (Kiorly stays ACTIVE), holds/bookings need LIVE; web lint errors fixed; sb03 e2e uses bearer API |
+| 055 SB-05 | `1eb1a44` | Lite min invoice (pack, default 100) + idempotent carry (`kiorlySettlementCarryPeriodKey/In`), carried charges BILLED, `GET /billing/lite-fees` + Lite fees card, Lite unpaid D+30 → listing PAUSED/billing (Kiorly stays ACTIVE), holds/bookings need LIVE; web lint errors fixed; sb03 e2e uses bearer API |
