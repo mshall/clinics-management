@@ -5,7 +5,7 @@ import { login } from "./helpers";
 test.describe.configure({ mode: "serial" });
 
 test.describe("QA-01 golden flow (EN)", () => {
-  test("book → InstaPay check-in → visit → Rx → split pay → ETA queue → cash close → doctor revenue", async ({
+  test("book → InstaPay check-in → visit → Rx → split pay → cash close → doctor revenue", async ({
     page,
     request,
   }) => {
@@ -15,7 +15,7 @@ test.describe("QA-01 golden flow (EN)", () => {
       adminEmail: "admin@drahmedshall.com",
       financeEmail: "finance@drahmedshall.com",
     });
-    expect(result.etaQueueCount).toBeGreaterThan(0);
+    expect(result.etaQueueCount).toBe(0);
 
     await login(page, "receptionist.hel@drahmedshall.com");
     await page.goto(`/appointments/${result.appointmentId}`);
@@ -59,7 +59,7 @@ test.describe("QA-01 golden flow — Kiorex booking with deposit", () => {
       scheduledDeposit: true,
     });
     expect(result.appointmentId).toBeTruthy();
-    expect(result.etaQueueCount).toBeGreaterThan(0);
+    expect(result.etaQueueCount).toBe(0);
   });
 });
 

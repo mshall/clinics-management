@@ -83,33 +83,6 @@ export async function runGoldenFlowViaApi(
   const clinic = clinicsRes.find((c) => /heliopolis/i.test(c.nameEn)) ?? clinicsRes[0];
   expect(clinic).toBeTruthy();
 
-  const fiscalProbe = await request.get(`${API_BASE}/clinics/${clinic!.id}/fiscal-devices`, { headers: h });
-  let etaCapable = fiscalProbe.ok();
-
-  if (etaCapable) {
-    const fiscalList = (await fiscalProbe.json()) as { devices: Array<{ id: string }> };
-    if (!fiscalList.devices.length) {
-      await jsonOk(
-        await request.post(`${API_BASE}/clinics/${clinic!.id}/fiscal-devices`, {
-          headers: h,
-          data: { kind: "VIRTUAL" },
-        }),
-      );
-    }
-
-    await jsonOk(
-      await request.patch(`${API_BASE}/compliance/clinics/${clinic!.id}/eta-settings`, {
-        headers: h,
-        data: {
-          etaBranchCode: "E2E01",
-          etaTaxpayerActivityCode: "8690",
-          etaDefaultItemCode: "EG-GPC-TEST",
-          etaReceiptsEnabled: true,
-        },
-      }),
-    );
-  }
-
   const patientsRes = await jsonOk<{ items: Array<{ id: string }> }>(
     await request.get(`${API_BASE}/patients?pageSize=5`, { headers: rh }),
   );
@@ -214,6 +187,12 @@ export async function runGoldenFlowViaApi(
   const finance = await apiLogin(request, financeEmail);
   const fh = authHeaders(finance.accessToken);
 
+  const etaBefore = await jsonOk<Array<{ id: string }>>(
+    await request.get(`${API_BASE}/compliance/egypt/eta-queue?clinicId=${encodeURIComponent(clinic!.id)}`, {
+      headers: fh,
+    }),
+  );
+
   await jsonOk(
     await request.post(`${API_BASE}/billing/payments`, {
       headers: fh,
@@ -225,25 +204,25 @@ export async function runGoldenFlowViaApi(
           { method: "CASH", amount: 120 },
           { method: "CARD", amount: 80 },
         ],
-        submitEta: etaCapable,
       },
     }),
   );
 
-  let eta: Array<{ id: string; status: string }> = [];
-  if (etaCapable) {
-    for (let i = 0; i < 15; i++) {
-      eta = await jsonOk<Array<{ id: string; status: string }>>(
-        await request.get(`${API_BASE}/compliance/egypt/eta-queue?clinicId=${encodeURIComponent(clinic!.id)}`, {
-          headers: fh,
-        }),
-      );
-      if (eta.length > 0) break;
-      await new Promise((r) => setTimeout(r, 200));
-    }
-    expect(eta.length, "ETA fiscal queue should have pending submissions after split pay").toBeGreaterThan(0);
-    expect(eta.some((r) => r.status === "PENDING" || r.status === "REJECTED")).toBe(true);
+  let etaAfter = etaBefore;
+  for (let i = 0; i < 15; i++) {
+    etaAfter = await jsonOk<Array<{ id: string }>>(
+      await request.get(`${API_BASE}/compliance/egypt/eta-queue?clinicId=${encodeURIComponent(clinic!.id)}`, {
+        headers: fh,
+      }),
+    );
+    if (etaAfter.length !== etaBefore.length) break;
+    await new Promise((r) => setTimeout(r, 200));
   }
+  const etaNewCount = etaAfter.length - etaBefore.length;
+  expect(
+    etaNewCount,
+    "FD-02: fiscal submission off — split pay must not enqueue new ETA submissions",
+  ).toBe(0);
 
   const shiftDate = new Date().toISOString().slice(0, 10);
   await jsonOk(
@@ -274,7 +253,7 @@ export async function runGoldenFlowViaApi(
     clinicianId,
     appointmentId,
     encounterId,
-    etaQueueCount: eta.length,
+    etaQueueCount: etaNewCount,
   };
 }
 
