@@ -48,6 +48,7 @@ import { TenantFeatureFlagsPanel } from "./tenant-feature-flags-panel";
 import { OrgWhatsAppRemindersCard } from "./org-whatsapp-reminders-card";
 import { AdminOrgBillingPanel } from "./admin-org-billing-panel";
 import { AdminKiorlyInvoicesPanel } from "./admin-kiorly-invoices-panel";
+import { AdminKiorlyStatementsPanel } from "./admin-kiorly-statements-panel";
 import { AdminKiorexChargesPanel } from "./admin-kiorex-charges-panel";
 import { LiteAdminSettings } from "./lite-admin-settings";
 
@@ -462,6 +463,7 @@ export function AdminPage() {
               <AdminOrgBillingPanel canManage={canManageOrgBilling} />
               <AdminKiorexChargesPanel />
               <AdminKiorlyInvoicesPanel canManagePay={canManageOrgBilling} />
+              <AdminKiorlyStatementsPanel />
             </>
           ) : null}
           {isGroupAdmin ? (

@@ -287,7 +287,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 051 · PL-08 · Plan & billing page, paywall moments and upgrade prompts
 - [x] Step 052 · CR-08 · Commission disputes & adjustments
 - [x] Step 053 · CR-09 · Doctor-to-doctor referral credits
-- [ ] Step 054 · CR-11 · Monthly statement for clinics (PDF + in-app)
+- [x] Step 054 · CR-11 · Monthly statement for clinics (PDF + in-app)
 - [ ] Step 055 · SB-05 · Lite commission invoicing & minimum invoice
 - [ ] Step 056 · SB-06 · Currency, price indexation & grandfathering
 - [ ] Step 057 · ON-05 · Data import from Excel / CSV (patients, appointments, price list, staff)
@@ -2771,7 +2771,7 @@ model Referral {
 - Statements list on Plan & billing.
 
 **Acceptance criteria** (write a test for each)
-- [ ] Statement totals equal the invoice totals for every test case in CR-06.
+- [x] Statement totals equal the invoice totals for every test case in CR-06.
 
 **Done when:** all acceptance tests pass, §0.2 checks are green, en + ar strings added, docs updated, and Step 054 is ticked in §5.
 

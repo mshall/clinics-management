@@ -30,6 +30,7 @@
 | Step | Notes |
 |------|--------|
 | CR-07 | Threshold nudges today: `KiorexProgressNudge` + `AuditLog` only. **WhatsApp/in-app owner copy + monthly recap** → implement in **MS-04** (owner digests) on Step 077. |
+| CR-11 | Statement delivery rows (`billing.monthly_statement_ready`, INTERNAL) are enqueued on issue; the **email/WhatsApp sender** for INTERNAL `billing.*` topics is not built yet (pair with MS-04). Web lint has 3 pre-existing errors (`clinical-letter-dialog.tsx`, `invoice-document-preview.tsx`, `collect-visit-balance-card.tsx`). |
 | SC-02 | NH-001 (PDPC licence filing) remains in `Docs/KIORLY_NEEDS_HUMAN.md`; product gates are in code/tests. |
 
 ## Steps
@@ -90,3 +91,4 @@
 | 051 PL-08 | `e7d9d33` | Global 402 paywall modal, paywall audit events, owner-only SaaS pay |
 | 052 CR-08 | `0bf6d1b` | CommissionDispute model, auto-resolve, platform ops queue, owner outbox |
 | 053 CR-09 | `fcfbdad` | ReferralCode/Referral, `GET /growth/referral`, dual REFERRAL grants on first paid invoice |
+| 054 CR-11 | _(pending push)_ | `GET /billing/statements[/:period]` JSON + bilingual PDF, Plan & billing statements panel, statement outbox on issue; invoice TAX-line subtotal fix; NH-003 |

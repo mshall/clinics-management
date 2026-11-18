@@ -6,3 +6,4 @@ Items the autonomous build cannot finish without you. **STOP** entries block FIN
 |----|------|------|----------|--------|
 | NH-001 | FD-00 | Confirm with an Egyptian tax adviser: VAT on medical services (often exempt, pack uses `invoiceVatPercent: 0`) vs Kiorly SaaS (`saasVatPercent: 14`). | needs human | open |
 | NH-002 | FD-02 | Confirm EN/AR wording on printed invoices/payment slips as clinic payment records (not tax e-receipts). | needs human | closed |
+| NH-003 | CR-11 | Approve a Meta WhatsApp template (EN + AR) for the monthly statement message (`billing.monthly_statement_ready`) before the outbox sender is switched on. | needs human | open |
