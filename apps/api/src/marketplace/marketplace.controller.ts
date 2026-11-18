@@ -9,6 +9,7 @@ import type { PlatformIntegrationPrincipal } from "./platform-integration-client
 import { SlotHoldService } from "./slot-hold.service";
 import { MarketplaceBookingService, type MarketplaceBookingBody } from "./marketplace-booking.service";
 import { KiorexReviewsService, type ReviewAggregateBody } from "./kiorex-reviews.service";
+import { KiorexOverviewService, type ProfileViewsBody } from "./kiorex-overview.service";
 
 @ApiTags("marketplace")
 @Controller("marketplace/v1")
@@ -25,6 +26,7 @@ export class MarketplaceController {
     private readonly holds: SlotHoldService,
     private readonly bookings: MarketplaceBookingService,
     private readonly reviews: KiorexReviewsService,
+    private readonly overview: KiorexOverviewService,
   ) {}
 
   @Get("auth/verify")
@@ -135,6 +137,13 @@ export class MarketplaceController {
     @Body() body: { startsAt: string; endsAt?: string; holdId?: string },
   ) {
     return this.bookings.rescheduleByPatient(client, externalRef, body);
+  }
+
+  @Post("analytics/profile-views")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Kiorex pushes daily profile views per doctor (KX-10); re-sending a day replaces it" })
+  syncProfileViews(@MarketplaceClient() client: PlatformIntegrationPrincipal, @Body() body: ProfileViewsBody) {
+    return this.overview.syncProfileViews(client, body);
   }
 
   @Post("reviews/aggregate")

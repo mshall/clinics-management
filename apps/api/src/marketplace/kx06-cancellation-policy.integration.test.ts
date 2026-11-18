@@ -59,7 +59,7 @@ const appointments = new AppointmentsService(
   slots,
   appointmentOutbox,
 );
-const settings = new KiorexSettingsService(prismaSvc, new MarketplaceListingService(prismaSvc, outbox), audit);
+const settings = new KiorexSettingsService(prismaSvc, new MarketplaceListingService(prismaSvc, outbox), audit, slots);
 
 const now = new Date("2027-03-01T08:00:00.000Z");
 const at = (hours: number) => new Date(now.getTime() + hours * 3_600_000);

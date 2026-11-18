@@ -3,6 +3,7 @@ import { AuditModule } from "../audit/audit.module";
 import { AppointmentsModule } from "../appointments/appointments.module";
 import { ComplianceModule } from "../compliance/compliance.module";
 import { PatientsModule } from "../patients/patients.module";
+import { BillingPlatformModule } from "../billing-platform/billing-platform.module";
 import { IntegrationsModule } from "../integrations/integrations.module";
 import { SchedulingModule } from "../scheduling/scheduling.module";
 import { MessagingModule } from "../messaging/messaging.module";
@@ -24,6 +25,7 @@ import { KiorexSettingsController } from "./kiorex-settings.controller";
 import { KiorexSettingsService } from "./kiorex-settings.service";
 import { KiorexReviewsService } from "./kiorex-reviews.service";
 import { ClinicBookingPageService } from "./clinic-booking-page.service";
+import { KiorexOverviewService } from "./kiorex-overview.service";
 import { PublicBookingPageController } from "./public-booking-page.controller";
 
 @Module({
@@ -36,6 +38,7 @@ import { PublicBookingPageController } from "./public-booking-page.controller";
     AppointmentsModule,
     ComplianceModule,
     PatientsModule,
+    BillingPlatformModule,
   ],
   controllers: [
     MarketplaceController,
@@ -48,6 +51,7 @@ import { PublicBookingPageController } from "./public-booking-page.controller";
     KiorexSettingsService,
     KiorexReviewsService,
     ClinicBookingPageService,
+    KiorexOverviewService,
     PlatformIntegrationClientService,
     MarketplaceAuthGuard,
     MarketplaceAccessService,

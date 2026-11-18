@@ -1139,6 +1139,7 @@ model Tenant {
   marketplaceListings            MarketplaceListing[]
   kiorexRatings                  KiorexRating[]
   kiorexReviews                  KiorexReview[]
+  kiorexProfileViews             KiorexProfileViewDaily[]
   kiorlySettlementCarry          Decimal?               @db.Decimal(14, 2)
   /// SB-05: period whose settlement last wrote `kiorlySettlementCarry` (re-runs reuse `kiorlySettlementCarryIn`).
   kiorlySettlementCarryPeriodKey String?
@@ -2420,6 +2421,22 @@ model MarketplaceListing {
 }
 
 /// KX-08 — aggregate Kiorex rating per doctor at a clinic, synced from Kiorex.
+/// KX-10: daily Kiorex profile views per doctor, pushed by Kiorex (idempotent per day).
+model KiorexProfileViewDaily {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId    String
+  clinicianId String
+  day         DateTime @db.Date
+  views       Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([clinicId, clinicianId, day])
+  @@index([tenantId, clinicId, day])
+}
+
 model KiorexRating {
   id            String   @id @default(cuid())
   tenantId      String

@@ -14,6 +14,7 @@
 | KX-06 Reschedule & cancellation policies (both directions) | **Done** |
 | KX-08 Verified reviews after completed visits | **Done** |
 | KX-09 Clinic-branded booking page & link (commission-free) | **Done** (Kiorex widget origin + `kiorly.link` domain: NH-008) |
+| KX-10 Kiorex tab inside Kiorly (settings + performance) | **Done** |
 
 ## Platform client
 
@@ -106,6 +107,13 @@ Marketplace calls carry `clinicId`; tenant resolves from listing rows.
 - **New-patient stamp:** marketplace/link bookings now stamp `isNewPatientAtBooking` at intake (previously missing, so Kiorex marketplace bookings were never commissionable at check-in).
 - **Config:** `BOOKING_LINK_BASE_URL` (default `${APP_WEB_URL}/b`, e.g. `https://kiorly.link`) and `KIOREX_BOOKING_WIDGET_URL` (until set, the page shows "Call to book").
 
+## KX-10 Kiorex tab (settings + performance)
+
+- **Settings:** `GET /api/v1/kiorex/settings?clinicId=` now also returns `autoConfirm`, `doctors[]` (listing status, owner pause, blockers, profile completeness, ON-03 verification status, daily cap) and `appointmentTypes[]` (bookable on Kiorex, min notice, horizon, deposit). `PUT /api/v1/kiorex/settings` accepts `autoConfirm`, `doctors[{ listingId, listed?, dailyCap? }]` and `appointmentTypes[{ id, marketplaceBookable?, minNoticeMinutes?, maxDaysAhead?, depositAmount? }]` alongside `cancellationPolicy`. Limits: cap 0–200 (needs an availability template), notice ≤ 14 days, horizon 1–365 days, deposit 0–visit fee. Each change is audited (`kiorex.settings.auto_confirm_updated`, `.listing_toggled`, `.daily_cap_updated`, `.appointment_type_updated`) and slot caches are invalidated (`SLOTS_CHANGED` to Kiorex). Reuses existing fields — no new settings columns.
+- **Performance:** `GET /api/v1/kiorex/overview?clinicId=&period=YYYY-MM` (clinic admins) → profile views, bookings (by channel: Kiorex / WhatsApp / clinic link), attended, no-shows, cancelled, new patients (attended + new at booking), commission (active charges, split confirmed vs pending), daily series, Kiorex rating, and tenant-wide CR-07 free progress + subscription offset from the settlement preview. Appointments bucket by visit start, charges by attendance, UTC calendar month (same as settlement).
+- **Profile views:** Kiorex pushes `POST /marketplace/v1/analytics/profile-views` `{ clinicId, items[{ clinicianId, date, views }] }` (≤400 items; re-sending a day replaces it) into `KiorexProfileViewDaily`.
+- **UI:** Kiorex tab → Performance (month picker, KPI tiles, free-progress bar, bookings/attended/views chart, RTL-aware), Booking on Kiorex (auto-confirm, per-doctor listed toggle + daily cap + profile editor link + verification, per-type rules), Your booking link, Ratings, Cancellation policy.
+
 ## Tests
 
 - `marketplace-listing-eligibility.node.test.ts`
@@ -123,6 +131,7 @@ Marketplace calls carry `clinicId`; tenant resolves from listing rows.
 - `kx06-booking-policy.node.test.ts`, `kx06-cancellation-policy.integration.test.ts`
 - `kx08-review-invitation.node.test.ts`, `kx08-verified-reviews.integration.test.ts`
 - `kx09-booking-slug.node.test.ts`, `kx09-clinic-booking-link.integration.test.ts`, e2e `kx09-booking-link.spec.ts`
+- `kx10-overview.node.test.ts`, `kx10-kiorex-tab.integration.test.ts` (numbers reconcile with appointments, charges and settlement), e2e `kx10-kiorex-tab.spec.ts`
 
 ## Follow-ups
 
