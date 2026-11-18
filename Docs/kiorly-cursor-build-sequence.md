@@ -302,7 +302,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 066 · CL-04 · Specialty template coverage for launch specialties — `1c36163` · `cl04-specialty-templates.node.test.ts` · `cl04-specialty-templates.integration.test.ts` · `e2e/cl04-specialty-templates.spec.ts` · `Docs/CLINICAL_WORKFLOW.md` · NH-010 (board sign-off)
 - [x] Step 067 · CL-05 · Doctor sign-off, amendments & auto-lock — `af7b7dd` · `cl05-encounter-lock.node.test.ts` · `cl05-encounter-lock.integration.test.ts` · `e2e/cl05-signoff-amendments.spec.ts` · `Docs/CLINICAL_WORKFLOW.md`
 - [x] Step 068 · FS-02 · Golden-flow front desk review on tablet & phone — `0e363a2` · `e2e/fs02-front-desk-check-in.spec.ts` · `apps/web/src/lib/fs02-check-in.node.test.ts` · `transfer-reference.node.test.ts` · `Docs/FRONT_DESK.md`
-- [ ] Step 069 · FS-03 · Waitlist auto-fill on cancellations
+- [x] Step 069 · FS-03 · Waitlist auto-fill on cancellations — `43703f5` · `fs03-waitlist-autofill.integration.test.ts` · `fs03-waitlist-autofill.node.test.ts` · `e2e/fs03-waitlist-autofill.spec.ts` · `Docs/FRONT_DESK.md`
 - [ ] Step 070 · FS-05 · Show no-show risk in the UI with an honest label
 - [ ] Step 071 · MN-01 · Refunds, credit notes, deposits & prepaid packages (APIs + UI)
 - [ ] Step 072 · KX-07 · Kiorex deposits & prepayments into clinic billing
@@ -3279,7 +3279,7 @@ model Invitation { id String @id @default(cuid())  tenantId String  phoneOrEmail
 - Waitlist shows offers sent and status.
 
 **Acceptance criteria** (write a test for each)
-- [ ] Never offers the same slot to two people at once.
+- [x] Never offers the same slot to two people at once.
 
 **Done when:** all acceptance tests pass, §0.2 checks are green, en + ar strings added, docs updated, and Step 069 is ticked in §5.
 
