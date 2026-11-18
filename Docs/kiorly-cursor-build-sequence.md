@@ -303,7 +303,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 067 · CL-05 · Doctor sign-off, amendments & auto-lock — `af7b7dd` · `cl05-encounter-lock.node.test.ts` · `cl05-encounter-lock.integration.test.ts` · `e2e/cl05-signoff-amendments.spec.ts` · `Docs/CLINICAL_WORKFLOW.md`
 - [x] Step 068 · FS-02 · Golden-flow front desk review on tablet & phone — `0e363a2` · `e2e/fs02-front-desk-check-in.spec.ts` · `apps/web/src/lib/fs02-check-in.node.test.ts` · `transfer-reference.node.test.ts` · `Docs/FRONT_DESK.md`
 - [x] Step 069 · FS-03 · Waitlist auto-fill on cancellations — `43703f5` · `fs03-waitlist-autofill.integration.test.ts` · `fs03-waitlist-autofill.node.test.ts` · `e2e/fs03-waitlist-autofill.spec.ts` · `Docs/FRONT_DESK.md`
-- [ ] Step 070 · FS-05 · Show no-show risk in the UI with an honest label
+- [x] Step 070 · FS-05 · Show no-show risk in the UI with an honest label — `00b3005` · `fs05-no-show-risk.integration.test.ts` · `common/fs05-no-show-risk.node.test.ts` · `web/src/lib/fs05-no-show-risk.node.test.ts` · `e2e/fs05-no-show-risk.spec.ts` · `Docs/AI_HONEST_LABELS.md`
 - [ ] Step 071 · MN-01 · Refunds, credit notes, deposits & prepaid packages (APIs + UI)
 - [ ] Step 072 · KX-07 · Kiorex deposits & prepayments into clinic billing
 - [ ] Step 073 · FS-04 · Deposits & payment links for high-risk bookings
@@ -3310,7 +3310,7 @@ model Invitation { id String @id @default(cuid())  tenantId String  phoneOrEmail
 - Risk chip.
 
 **Acceptance criteria** (write a test for each)
-- [ ] Label says rule-based until a trained model ships.
+- [x] Label says rule-based until a trained model ships.
 
 **Done when:** all acceptance tests pass, §0.2 checks are green, en + ar strings added, docs updated, and Step 070 is ticked in §5.
 
