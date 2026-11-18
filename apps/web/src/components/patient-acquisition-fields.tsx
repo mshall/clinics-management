@@ -23,7 +23,7 @@ export function patientAcquisitionFormValuesFromPatient(patient: {
   acquisitionOtherDetail?: string | null;
 }): PatientAcquisitionFormValues {
   const channel = (patient.acquisitionChannel ?? "") as PatientAcquisitionChannel | "";
-  const valid = PATIENT_ACQUISITION_CHANNELS.includes(channel as PatientAcquisitionChannel);
+  const valid = (PATIENT_ACQUISITION_CHANNELS as readonly string[]).includes(channel);
   return {
     channel: valid ? (channel as PatientAcquisitionChannel) : "",
     referralName: patient.acquisitionReferralName ?? "",

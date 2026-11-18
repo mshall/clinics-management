@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { AppointmentStatus, EncounterStatus, Prisma } from "@prisma/client";
+import { AppointmentStatus, EncounterStatus, PatientAcquisitionChannel, Prisma } from "@prisma/client";
 import { normalizePhoneToE164 } from "../common/phone-e164";
 import { PrismaService } from "../prisma/prisma.service";
 import { phonesMatch } from "./patient-phone";
@@ -50,6 +50,16 @@ export class NewPatientService {
       );
     }
     if (phoneRaw) {
+      const tail = phoneRaw.replace(/\D/g, "").slice(-9);
+      if (tail.length >= 7) {
+        rows.push(
+          ...(await this.prisma.patient.findMany({
+            where: { tenantId, deletedAt: null, phone: { contains: tail } },
+            select: { id: true, phone: true, nationalId: true },
+            take: 200,
+          })),
+        );
+      }
       const withPhone = await this.prisma.patient.findMany({
         where: { tenantId, deletedAt: null },
         select: { id: true, phone: true, nationalId: true },
@@ -84,6 +94,12 @@ export class NewPatientService {
     const patientIds = await this.matchingPatientIds(tenantId, phone, nationalId);
     if (!patientIds.length) return true;
 
+    const imported = await this.prisma.patient.findFirst({
+      where: { tenantId, id: { in: patientIds }, acquisitionChannel: PatientAcquisitionChannel.IMPORT },
+      select: { id: true },
+    });
+    if (imported) return false;
+
     const attended = await this.prisma.appointment.findFirst({
       where: {
         tenantId,
@@ -115,6 +131,11 @@ export class NewPatientService {
     const { phone, nationalId } = await this.identityForPatient(tenantId, patientId);
     const patientIds = await this.matchingPatientIds(tenantId, phone, nationalId);
     const ids = patientIds.length ? patientIds : [patientId];
+    const imported = await this.prisma.patient.findFirst({
+      where: { tenantId, id: { in: ids }, acquisitionChannel: PatientAcquisitionChannel.IMPORT, createdAt: { lt: before } },
+      select: { id: true },
+    });
+    if (imported) return true;
     const prior = await this.prisma.appointment.findFirst({
       where: {
         tenantId,

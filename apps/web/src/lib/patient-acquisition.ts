@@ -8,7 +8,8 @@ export const PATIENT_ACQUISITION_CHANNELS = [
   "OTHER",
 ] as const;
 
-export type PatientAcquisitionChannel = (typeof PATIENT_ACQUISITION_CHANNELS)[number];
+/** `IMPORT` is set by spreadsheet imports only (ON-05) — not offered in pickers. */
+export type PatientAcquisitionChannel = (typeof PATIENT_ACQUISITION_CHANNELS)[number] | "IMPORT";
 
 export function patientAcquisitionLabel(channel: PatientAcquisitionChannel, t: (key: string, fallback: string) => string): string {
   const keys: Record<PatientAcquisitionChannel, string> = {
@@ -19,6 +20,7 @@ export function patientAcquisitionLabel(channel: PatientAcquisitionChannel, t: (
     DOCTOR_REFERRAL: "patients.acquisitionDoctorReferral",
     KIOREX: "patients.acquisitionKiorex",
     OTHER: "patients.acquisitionOther",
+    IMPORT: "patients.acquisitionImport",
   };
   const fallbacks: Record<PatientAcquisitionChannel, string> = {
     SOCIAL_FACEBOOK: "Social Media — Facebook",
@@ -28,6 +30,7 @@ export function patientAcquisitionLabel(channel: PatientAcquisitionChannel, t: (
     DOCTOR_REFERRAL: "Doctor Referral",
     KIOREX: "Kiorex",
     OTHER: "Other",
+    IMPORT: "Imported",
   };
   return t(keys[channel], fallbacks[channel]);
 }

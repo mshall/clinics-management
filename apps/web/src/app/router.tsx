@@ -8,6 +8,7 @@ import { SignupPage } from "@/features/signup/signup-page";
 import { LegalDocumentPage } from "@/features/legal/legal-document-page";
 import { ForgotPasswordPage } from "@/features/auth/forgot-password-page";
 import { ResetPasswordPage } from "@/features/auth/reset-password-page";
+import { ImportWizardPage } from "@/features/onboarding/import-wizard-page";
 import { OnboardingPage } from "@/features/onboarding/onboarding-page";
 import { AppointmentReschedulePage } from "@/features/appointments/appointment-reschedule-page";
 import { ClinicalTemplatesRedirect } from "@/features/clinical/clinical-templates-redirect";
@@ -78,6 +79,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <NavGate tab="dashboard">{defer(DashboardPage)}</NavGate> },
       { path: "onboarding", element: <OnboardingPage /> },
+      { path: "onboarding/import", element: <ImportWizardPage /> },
       { path: "patients", element: <NavGate tab="patients">{defer(PatientsPage)}</NavGate> },
       { path: "patients/:id", element: <NavGate tab="patients">{defer(PatientDetailPage)}</NavGate> },
       { path: "encounters", element: <NavGate tab="encounters">{defer(EncountersListPage)}</NavGate> },

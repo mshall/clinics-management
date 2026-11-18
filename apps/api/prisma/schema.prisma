@@ -388,6 +388,7 @@ enum PatientAcquisitionChannel {
   DOCTOR_REFERRAL
   KIOREX
   OTHER
+  IMPORT
 }
 
 enum FeeType {
@@ -1132,6 +1133,7 @@ model Tenant {
   kiorexBillingPausedAt          DateTime?
   planPriceMigrations            PlanPriceMigration[]
   onboardingProgress             OnboardingProgress?
+  importJobs                     ImportJob[]
   outboxEvents                   OutboxEvent[]
   appointmentRescheduleTokens    AppointmentRescheduleToken[]
   whatsAppInboundEvents          WhatsAppInboundEvent[]
@@ -1148,6 +1150,59 @@ model OnboardingProgress {
   completedAt DateTime?
   activatedAt DateTime?
   updatedAt   DateTime  @updatedAt
+}
+
+enum ImportEntity {
+  PATIENTS
+  APPOINTMENTS
+  PRICE_LIST
+  STAFF
+}
+
+enum ImportJobStatus {
+  VALIDATING
+  READY
+  COMMITTING
+  DONE
+  FAILED
+  UNDONE
+}
+
+/// ON-05 — spreadsheet import (validate → preview → background commit → 24h undo).
+model ImportJob {
+  id              String          @id @default(cuid())
+  tenantId        String
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  entity          ImportEntity
+  fileKey         String
+  fileName        String          @default("")
+  status          ImportJobStatus @default(VALIDATING)
+  /// SKIP keeps existing patients untouched; MERGE fills their empty fields from the file.
+  dedupeMode      String          @default("SKIP")
+  totalRows       Int             @default(0)
+  okRows          Int             @default(0)
+  errorRows       Int             @default(0)
+  duplicateRows   Int             @default(0)
+  createdRows     Int             @default(0)
+  mergedRows      Int             @default(0)
+  /// Normalized valid rows awaiting commit (cleared after commit).
+  rowsJson        Json?
+  /// Row-level validation errors `{ row, field, code }[]`.
+  errorsJson      Json?
+  /// Ids created by commit, per model — drives undo.
+  createdIdsJson  Json?
+  reportKey       String?
+  failureMessage  String?
+  createdBy       String
+  /// ON-07 — field rep importing on behalf of the clinic.
+  actingRepUserId String?
+  committedAt     DateTime?
+  undoUntil       DateTime?
+  undoneAt        DateTime?
+  createdAt       DateTime        @default(now())
+  finishedAt      DateTime?
+
+  @@index([tenantId, createdAt])
 }
 
 model TenantPaymentChannel {

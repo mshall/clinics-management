@@ -660,6 +660,7 @@
     "acquisitionWebsiteGoogle": "Website — Google",
     "acquisitionDoctorReferral": "Doctor Referral",
     "acquisitionKiorex": "Kiorex marketplace",
+    "acquisitionImport": "Imported from spreadsheet",
     "acquisitionOther": "Other",
     "errorDocDescriptionRequired": "Each attached document needs a description.",
     "errorDocCategoryRequired": "Each attached document needs a type.",
@@ -2776,5 +2777,82 @@
     "saveError": "Could not save.",
     "missingTime": "Pick a new date and time",
     "privacyFooter": "By rescheduling you acknowledge our"
+  },
+  "imports": {
+    "title": "Import your data",
+    "subtitle": "Move patients, appointments, prices and staff from Excel or CSV. Check the preview, then import.",
+    "whatToImport": "What are you importing?",
+    "entity": {
+      "PATIENTS": "Patients",
+      "APPOINTMENTS": "Appointments",
+      "PRICE_LIST": "Price list",
+      "STAFF": "Staff"
+    },
+    "templateAr": "Arabic template",
+    "templateEn": "English template",
+    "formatHint": "Dates as dd/mm/yyyy, times as HH:mm. Arabic or English headers both work. Up to 20,000 rows per file.",
+    "dedupeTitle": "If a patient already exists (same mobile or national ID)",
+    "dedupe": {
+      "SKIP": "Keep the existing patient as is",
+      "MERGE": "Fill empty fields on the existing patient from the file (never overwrite)"
+    },
+    "dedupeNote": {
+      "SKIP": "{{count}} rows match existing patients and will be skipped.",
+      "MERGE": "{{count}} rows match existing patients; only their empty fields will be filled."
+    },
+    "validate": "Check file",
+    "validating": "Checking…",
+    "summary": "{{total}} rows · {{ok}} ready · {{errors}} with errors · {{duplicates}} existing",
+    "missingColumns": "Missing required columns: {{columns}}. Download a template to see the expected headers.",
+    "commit": "Import {{count}} rows",
+    "committing": "Importing in the background — you can keep working.",
+    "done": "Done: {{created}} created, {{merged}} merged.",
+    "errorReport": "Download error report",
+    "undo": "Undo import",
+    "undoHint": "You can undo within 24 hours. Rows edited or used since the import are kept.",
+    "undone": "Import undone: {{deleted}} removed, {{kept}} kept because they were used.",
+    "failed": "Import failed",
+    "history": "Recent imports",
+    "status": {
+      "VALIDATING": "Checking",
+      "READY": "Ready to import",
+      "COMMITTING": "Importing",
+      "DONE": "Imported",
+      "FAILED": "Failed",
+      "UNDONE": "Undone"
+    },
+    "col": {
+      "file": "File",
+      "type": "Type",
+      "status": "Status",
+      "rows": "Rows",
+      "row": "Row",
+      "field": "Column",
+      "error": "Problem"
+    },
+    "error": {
+      "NAME_REQUIRED": "Name is required",
+      "ARABIC_NAME_INVALID": "Arabic name has non-Arabic characters",
+      "ENGLISH_NAME_INVALID": "English name has invalid characters",
+      "PHONE_REQUIRED": "Mobile is required",
+      "PHONE_INVALID": "Mobile number is not valid",
+      "NATIONAL_ID_INVALID": "National ID format is not valid",
+      "DATE_INVALID": "Date must be dd/mm/yyyy",
+      "TIME_INVALID": "Time must be HH:mm",
+      "GENDER_INVALID": "Gender must be M or F",
+      "EMAIL_INVALID": "Email is not valid",
+      "EMAIL_EXISTS": "A user with this email already exists",
+      "DUPLICATE_IN_FILE": "Duplicate of an earlier row",
+      "PATIENT_REQUIRED": "Patient mobile or file number is required",
+      "PATIENT_NOT_FOUND": "Patient not found — import patients first",
+      "CLINICIAN_NOT_FOUND": "Doctor email not found",
+      "CLINIC_NOT_FOUND": "Branch not found",
+      "DURATION_INVALID": "Duration must be 1–480 minutes",
+      "STATUS_INVALID": "Unknown status",
+      "CODE_REQUIRED": "Service code is required",
+      "CODE_EXISTS": "Service code already exists",
+      "PRICE_INVALID": "Price must be a number",
+      "ROLE_INVALID": "Unknown role"
+    }
   }
 }
