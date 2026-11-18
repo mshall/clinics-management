@@ -4,6 +4,7 @@
 |------|--------|
 | CR-06 “Pay the higher of, never both” monthly settlement | **Done** |
 | QA-03 Settlement & credit engine test matrix | **Done** |
+| CR-11 Monthly statement (reads settled invoices) | **Done** |
 
 ## Purpose
 
@@ -61,9 +62,12 @@ Confirmed charges → `BILLED` with `kiorlyInvoiceId` on settlement.
 - `cr06-settlement.integration.test.ts` — idempotent single invoice per period
 - `qa03-settlement-matrix.node.test.ts` — table-driven §04 + edge cases; **fast-check** (10k runs) for `payable ≥ 0`, `payable ≤ max(S,C)+addons`, and credit-wallet **Σ ledger = balance** (`settlement-invariants.ts`, `settlement-test-matrix.ts`)
 
+## Statements
+
+Owner-facing monthly statement (JSON + bilingual PDF) built from the settled invoice — see **[MONTHLY_STATEMENT.md](./MONTHLY_STATEMENT.md)** (CR-11). Invoice `subtotal` excludes display-only `TAX` lines; VAT is computed once on `subtotal − creditsApplied`.
+
 ## Follow-ups
 
 - Prorated subscription for partial months / mid-period plan changes
 - ADDON / USAGE_OVERAGE from metered entitlements
 - Auto-issue drafts after settlement review window
-- ETA e-invoice for SaaS bills

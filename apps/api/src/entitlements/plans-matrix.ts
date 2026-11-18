@@ -54,6 +54,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "billing-platform/kiorly-payments-webhook.controller.ts": { kind: "webhook" },
   "billing-platform/settlement.controller.ts": { kind: "open" },
   "billing-platform/kiorex-progress.controller.ts": { kind: "open" },
+  "billing-platform/monthly-statement.controller.ts": { kind: "open" },
   "clinic-ai/clinic-ai.controller.ts": { kind: "gated", entitlement: "ai_assistant" },
   "clinical/clinical.controller.ts": { kind: "gated", entitlement: "mod_clinical" },
   "cohorts/public-cohorts.controller.ts": { kind: "open" },

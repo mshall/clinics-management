@@ -8,6 +8,7 @@ import {
   CreditReason,
   KiorlyInvoiceStatus,
   KiorlyLineType,
+  MessageChannel,
   Prisma,
   type KiorlyInvoice,
   type KiorlyInvoiceLine,
@@ -20,6 +21,7 @@ import { kiorlyInvoiceDueDaysFromMarket } from "./kiorly-invoice.config";
 import { buildKiorlyInvoicePdf } from "./kiorly-invoice-pdf";
 import { nextKiorlyInvoiceNumber } from "./kiorly-invoice-numbering";
 import { KiorlyPaymentService } from "./kiorly-payment.service";
+import { STATEMENT_READY_TOPIC } from "./monthly-statement";
 
 type Tx = Prisma.TransactionClient;
 
@@ -98,10 +100,13 @@ export class KiorlyInvoicesService {
     return tenant;
   }
 
+  /** TAX lines are display-only; VAT is recomputed from the taxable amount. */
   private computeTotals(lines: KiorlyInvoiceLineInput[], creditsApplied: Prisma.Decimal, taxRatePercent: number) {
-    const subtotal = lines.reduce((sum, line) => sum.add(this.d(line.amount)), new Prisma.Decimal(0));
+    const subtotal = lines
+      .filter((line) => line.type !== KiorlyLineType.TAX)
+      .reduce((sum, line) => sum.add(this.d(line.amount)), new Prisma.Decimal(0));
     const taxable = Prisma.Decimal.max(subtotal.sub(creditsApplied), new Prisma.Decimal(0));
-    const tax = taxable.mul(taxRatePercent).div(100);
+    const tax = taxable.mul(taxRatePercent).div(100).toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
     const total = subtotal.sub(creditsApplied).add(tax);
     return { subtotal, tax, total };
   }
@@ -173,15 +178,25 @@ export class KiorlyInvoicesService {
     return this.getOne(tenantId, row);
   }
 
-  async replaceDraftLines(tenantId: string, invoiceId: string, lines: KiorlyInvoiceLineInput[]): Promise<KiorlyInvoiceDto> {
+  async replaceDraftLines(
+    tenantId: string,
+    invoiceId: string,
+    lines: KiorlyInvoiceLineInput[],
+    opts: { creditsApplied?: number | string; taxRatePercent?: number } = {},
+  ): Promise<KiorlyInvoiceDto> {
     const invoice = await this.requireInvoice(tenantId, invoiceId);
     this.assertDraftForLineMutation(invoice);
     if (lines.length === 0) throw new BadRequestException("At least one line is required");
 
-    const creditsApplied = invoice.creditsApplied;
-    const taxRate = invoice.tax.gt(0) && invoice.subtotal.gt(0)
-      ? invoice.tax.div(Prisma.Decimal.max(invoice.subtotal.sub(creditsApplied), new Prisma.Decimal(0.01))).mul(100).toNumber()
-      : 0;
+    const creditsApplied = opts.creditsApplied != null ? this.d(opts.creditsApplied) : invoice.creditsApplied;
+    const taxRate =
+      opts.taxRatePercent ??
+      (invoice.tax.gt(0) && invoice.subtotal.gt(0)
+        ? invoice.tax
+            .div(Prisma.Decimal.max(invoice.subtotal.sub(invoice.creditsApplied), new Prisma.Decimal(0.01)))
+            .mul(100)
+            .toNumber()
+        : 0);
     const { subtotal, tax, total } = this.computeTotals(lines, creditsApplied, taxRate);
 
     await this.prisma.$transaction(async (tx) => {
@@ -200,7 +215,7 @@ export class KiorlyInvoicesService {
       });
       await tx.kiorlyInvoice.update({
         where: { id: invoiceId },
-        data: { subtotal, tax, total },
+        data: { subtotal, creditsApplied, tax, total },
       });
     });
 
@@ -226,29 +241,67 @@ export class KiorlyInvoicesService {
       });
     }
 
-    await this.prisma.kiorlyInvoice.update({
-      where: { id: invoiceId },
-      data: {
-        status: KiorlyInvoiceStatus.ISSUED,
-        issuedAt,
-        dueAt,
-      },
-    });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.kiorlyInvoice.update({
+        where: { id: invoiceId },
+        data: {
+          status: KiorlyInvoiceStatus.ISSUED,
+          issuedAt,
+          dueAt,
+        },
+      });
 
-    await this.prisma.auditLog.create({
-      data: {
-        tenantId,
-        actorId: actorUserId ?? null,
-        action: "kiorly_invoice.issued",
-        resource: "KiorlyInvoice",
-        resourceId: invoiceId,
-        metadata: { number: invoice.number, dueAt: dueAt.toISOString() } as Prisma.InputJsonValue,
-      },
+      await tx.auditLog.create({
+        data: {
+          tenantId,
+          actorId: actorUserId ?? null,
+          action: "kiorly_invoice.issued",
+          resource: "KiorlyInvoice",
+          resourceId: invoiceId,
+          metadata: { number: invoice.number, dueAt: dueAt.toISOString() } as Prisma.InputJsonValue,
+        },
+      });
+
+      await this.enqueueStatementDelivery(tx, tenantId, invoice);
     });
 
     await this.kiorlyPayments.scheduleAutoChargeOnIssue(invoiceId);
 
     return this.getOne(tenantId, invoiceId);
+  }
+
+  /** CR-11: statement PDF goes to the owner by email + WhatsApp via the outbox (no PHI in payload). */
+  private async enqueueStatementDelivery(tx: Tx, tenantId: string, invoice: KiorlyInvoice): Promise<void> {
+    const owner = await tx.user.findFirst({
+      where: { tenantId, isTenantOwner: true, deletedAt: null },
+      select: { email: true, employee: { select: { phone: true } } },
+    });
+    const base = {
+      tenantId,
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.number,
+      periodKey: invoice.periodKey,
+      total: invoice.total.toFixed(2),
+      currency: invoice.currency,
+      statementPath: `/api/v1/billing/statements/${invoice.periodKey}?format=pdf`,
+      locales: ["en", "ar"],
+    };
+    const deliveries: Record<string, unknown>[] = [{ channel: "email", to: owner?.email ?? null, ...base }];
+    const phone = owner?.employee?.phone?.trim();
+    if (phone) deliveries.push({ channel: MessageChannel.WHATSAPP, toPhone: phone, ...base });
+    for (const payload of deliveries) {
+      await tx.outboxEvent.create({
+        data: {
+          tenantId,
+          type: STATEMENT_READY_TOPIC,
+          aggregateType: "KiorlyInvoice",
+          aggregateId: invoice.id,
+          payload: payload as Prisma.InputJsonValue,
+          target: "INTERNAL",
+          status: "PENDING",
+        },
+      });
+    }
   }
 
   async voidViaCreditInvoice(tenantId: string, invoiceId: string, actorUserId?: string): Promise<KiorlyInvoiceDto> {

@@ -168,13 +168,13 @@ export class SettlementService {
         data: { settlementSummaryJson: summaryJson },
       });
     } else if (invoiceId) {
-      await this.kiorlyInvoices.replaceDraftLines(tenantId, invoiceId, lines);
+      await this.kiorlyInvoices.replaceDraftLines(tenantId, invoiceId, lines, {
+        creditsApplied: calculation.creditsApplied.toFixed(2),
+        taxRatePercent: input.taxRatePercent,
+      });
       await this.prisma.kiorlyInvoice.update({
         where: { id: invoiceId },
-        data: {
-          creditsApplied: new Prisma.Decimal(calculation.creditsApplied.toFixed(2)),
-          settlementSummaryJson: summaryJson,
-        },
+        data: { settlementSummaryJson: summaryJson },
       });
     }
 

@@ -12,6 +12,8 @@ import { KiorlyPaymentsWebhookController } from "./kiorly-payments-webhook.contr
 import { PaymentGatewayRegistry } from "./payment-gateways/payment-gateway.registry";
 import { KiorexProgressController } from "./kiorex-progress.controller";
 import { KiorexProgressService } from "./kiorex-progress.service";
+import { MonthlyStatementController } from "./monthly-statement.controller";
+import { MonthlyStatementService } from "./monthly-statement.service";
 import { SettlementController } from "./settlement.controller";
 import { SettlementScheduler } from "./settlement.scheduler";
 import { SettlementService } from "./settlement.service";
@@ -24,6 +26,7 @@ import { SettlementService } from "./settlement.service";
     KiorlyPaymentsWebhookController,
     SettlementController,
     KiorexProgressController,
+    MonthlyStatementController,
   ],
   providers: [
     PaymentGatewayRegistry,
@@ -34,6 +37,7 @@ import { SettlementService } from "./settlement.service";
     SettlementService,
     SettlementScheduler,
     KiorexProgressService,
+    MonthlyStatementService,
   ],
   exports: [KiorlyInvoicesService, KiorlyPaymentService, SettlementService, KiorexProgressService],
 })
