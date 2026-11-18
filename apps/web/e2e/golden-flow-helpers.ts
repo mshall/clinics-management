@@ -69,24 +69,6 @@ export async function runGoldenFlowViaApi(
   const tenantId = admin.user.tenantId;
   expect(tenantId, "tenant admin login must include tenantId").toBeTruthy();
 
-  const platform = await apiLogin(request, "superadmin@kiorly.com");
-  await jsonOk(
-    await request.patch(`${API_BASE}/admin/platform/tenants/${tenantId}/eta-integration`, {
-      headers: authHeaders(platform.accessToken),
-      data: { enabled: true },
-    }),
-  );
-
-  const etaFlagRes = await request.patch(`${API_BASE}/admin/tenant-feature-flags/eta_receipts`, {
-    headers: h,
-    data: { enabled: true },
-  });
-  if (!etaFlagRes.ok()) {
-    const etaFlagBody = await etaFlagRes.text();
-    if (!/PLAN_UPGRADE_REQUIRED|eta_receipts/i.test(etaFlagBody)) {
-      expect(etaFlagRes.ok(), etaFlagBody).toBeTruthy();
-    }
-  }
   await request.patch(`${API_BASE}/admin/tenant-feature-flags/instapay`, {
     headers: h,
     data: { enabled: true },

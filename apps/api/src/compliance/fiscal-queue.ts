@@ -69,7 +69,13 @@ export type QueueFiscalParams = {
 /** @deprecated use queueFiscalDocument */
 export const queueEtaReceipt = queueFiscalDocument;
 
+/** FD-02: off by default; Kiorly never submits clinic receipts to ETA. */
+export function isKiorlyFiscalSubmissionEnabled(): boolean {
+  return process.env.KIORLY_ETA_SUBMISSION_ENABLED === "true";
+}
+
 export async function queueFiscalDocument(tx: Prisma.TransactionClient, params: QueueFiscalParams): Promise<void> {
+  if (!isKiorlyFiscalSubmissionEnabled()) return;
   if (params.totalAmount <= 0) return;
 
   const prismaSvc = tx as unknown as PrismaService;

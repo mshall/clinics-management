@@ -37,7 +37,7 @@ test("submissionVoidFiscalAction maps ETA submission states", () => {
   assert.equal(submissionVoidFiscalAction(FiscalSubmissionStatus.CANCELLED), "return_already_rejected");
 });
 
-test("reducePostedRevenueNetWithFiscal re-queues a pending 400 sale at 300 without leaving revenue unreceipted", async () => {
+test("FD-02: reducePostedRevenueNetWithFiscal updates revenue without fiscal re-queue", async () => {
   let fiscalQueueCalls = 0;
   let docUnlinked = false;
   let updatedNet = 0;
@@ -169,11 +169,11 @@ test("reducePostedRevenueNetWithFiscal re-queues a pending 400 sale at 300 witho
   );
 
   assert.equal(updatedNet, 300);
-  assert.equal(docUnlinked, true);
-  assert.equal(fiscalQueueCalls, 1);
+  assert.equal(docUnlinked, false);
+  assert.equal(fiscalQueueCalls, 0);
 });
 
-test("reducePostedRevenueNetWithFiscal queues partial return when sale is SUBMITTING at lock time", async () => {
+test("FD-02: reducePostedRevenueNetWithFiscal skips partial return when submission disabled", async () => {
   let docUnlinked = false;
   let newSaleQueued = false;
   let returnQueued = false;
@@ -298,7 +298,7 @@ test("reducePostedRevenueNetWithFiscal queues partial return when sale is SUBMIT
     "Fee adjustment",
   );
 
-  assert.equal(returnQueued, true);
+  assert.equal(returnQueued, false);
   assert.equal(docUnlinked, false);
   assert.equal(newSaleQueued, false);
 });

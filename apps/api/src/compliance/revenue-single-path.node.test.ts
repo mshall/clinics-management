@@ -7,6 +7,7 @@ const SRC = join(process.cwd(), "src");
 
 /** Files allowed to call `revenueEntry.create`. */
 const ALLOWED_REVENUE_CREATORS = new Set([
+  "compliance/post-revenue.ts",
   "compliance/post-revenue-with-fiscal.ts",
   "common/visit-fee-ledger.ts",
 ]);
@@ -50,7 +51,7 @@ function fileTouchesRevenueMutation(text: string): boolean {
   return REVENUE_MUTATION_PATTERNS.some((p) => p.test(text));
 }
 
-test("posted revenue is created only through fiscal-aware helpers", () => {
+test("posted revenue is created only through postRevenue helpers", () => {
   const offenders: string[] = [];
   for (const rel of listTsFiles(SRC)) {
     const text = readFileSync(join(SRC, rel), "utf8");
@@ -61,7 +62,7 @@ test("posted revenue is created only through fiscal-aware helpers", () => {
   assert.deepEqual(
     offenders,
     [],
-    `These files create RevenueEntry without postRevenueWithFiscal/visit-fee-ledger: ${offenders.join(", ")}`,
+    `These files create RevenueEntry without postRevenue/visit-fee-ledger: ${offenders.join(", ")}`,
   );
 });
 

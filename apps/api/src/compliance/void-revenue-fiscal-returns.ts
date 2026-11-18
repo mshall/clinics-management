@@ -1,5 +1,5 @@
 import { FiscalSubmissionStatus, Prisma, RevenueStatus } from "@prisma/client";
-import { queueFiscalDocument } from "./fiscal-queue";
+import { isKiorlyFiscalSubmissionEnabled, queueFiscalDocument } from "./fiscal-queue";
 
 export type SubmissionVoidFiscalAction =
   | "none"
@@ -276,6 +276,8 @@ export async function reducePostedRevenueNetWithFiscal(
       netAmount: new Prisma.Decimal(String(newNetAmount)),
     },
   });
+
+  if (!isKiorlyFiscalSubmissionEnabled()) return;
 
   const doc = row.fiscalDocument;
   if (!doc) return;
