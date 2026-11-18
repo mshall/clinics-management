@@ -28,7 +28,7 @@ export class NewPatientService {
     return phonesMatch(stored, targetRaw);
   }
 
-  private async matchingPatientIds(
+  async matchingPatientIds(
     tenantId: string,
     phone: string | null,
     nationalId: string | null,
@@ -108,6 +108,23 @@ export class NewPatientService {
       select: { id: true },
     });
     return !signed;
+  }
+
+  /** Attended visit for same identity (phone / national ID) strictly before `before`. */
+  async hadPriorAttendedVisit(tenantId: string, patientId: string, before: Date): Promise<boolean> {
+    const { phone, nationalId } = await this.identityForPatient(tenantId, patientId);
+    const patientIds = await this.matchingPatientIds(tenantId, phone, nationalId);
+    const ids = patientIds.length ? patientIds : [patientId];
+    const prior = await this.prisma.appointment.findFirst({
+      where: {
+        tenantId,
+        patientId: { in: ids },
+        status: { in: [AppointmentStatus.CHECKED_IN, AppointmentStatus.COMPLETED] },
+        checkedInAt: { lt: before },
+      },
+      select: { id: true },
+    });
+    return !!prior;
   }
 
   async identityForPatient(tenantId: string, patientId: string): Promise<PatientIdentity> {

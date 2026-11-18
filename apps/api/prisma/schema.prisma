@@ -479,6 +479,20 @@ enum CommissionChargeStatus {
   BILLED
 }
 
+enum CommissionDisputeReason {
+  EXISTING_PATIENT
+  DID_NOT_ATTEND
+  DUPLICATE
+  OTHER
+}
+
+enum CommissionDisputeStatus {
+  OPEN
+  AUTO_APPROVED
+  APPROVED
+  REJECTED
+}
+
 model KiorexCommissionCharge {
   id              String                 @id @default(cuid())
   tenantId        String
@@ -504,9 +518,28 @@ model KiorexCommissionCharge {
   reversalReason  String?
   createdAt       DateTime               @default(now())
   updatedAt       DateTime               @updatedAt
+  commissionDispute CommissionDispute?
 
   @@index([tenantId, status, attendedAt])
   @@index([tenantId, attendedAt])
+}
+
+model CommissionDispute {
+  id         String                  @id @default(cuid())
+  chargeId   String                  @unique
+  charge     KiorexCommissionCharge  @relation(fields: [chargeId], references: [id], onDelete: Cascade)
+  tenantId   String
+  tenant     Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  reason     CommissionDisputeReason
+  note       String?
+  status     CommissionDisputeStatus @default(OPEN)
+  resolvedBy String?
+  resolution String?
+  createdAt  DateTime                @default(now())
+  resolvedAt DateTime?
+
+  @@index([status, createdAt])
+  @@index([tenantId])
 }
 
 enum PlanKey {
@@ -1013,6 +1046,7 @@ model Tenant {
   kiorlyPaymentMethods           KiorlyPaymentMethod[]
   kiorlyPayments                 KiorlyPayment[]
   kiorexCommissionCharges        KiorexCommissionCharge[]
+  commissionDisputes             CommissionDispute[]
   clinicianVerifications         ClinicianVerification[]
   marketplaceListings            MarketplaceListing[]
   kiorlySettlementCarry          Decimal?               @db.Decimal(14, 2)

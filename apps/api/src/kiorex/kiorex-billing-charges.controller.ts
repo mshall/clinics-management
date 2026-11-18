@@ -6,13 +6,18 @@ import { CurrentUser } from "../auth/current-user.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { CommissionChargeService } from "./commission-charge.service";
+import { CommissionDisputeService } from "./commission-dispute.service";
+import { OpenCommissionDisputeDto } from "./dto/open-commission-dispute.dto";
 
 @ApiTags("billing")
 @ApiBearerAuth("bearer")
 @UseGuards(JwtAuthGuard)
 @Controller("billing/kiorex")
 export class KiorexBillingChargesController {
-  constructor(private readonly charges: CommissionChargeService) {}
+  constructor(
+    private readonly charges: CommissionChargeService,
+    private readonly disputes: CommissionDisputeService,
+  ) {}
 
   @Get("charges")
   @ApiOperation({ summary: "List Kiorex commission charges for the organization" })
@@ -33,7 +38,7 @@ export class KiorexBillingChargesController {
 
   @Post("charges/:id/dispute")
   @ApiOperation({ summary: "Open a dispute on a Kiorex commission charge before the deadline" })
-  dispute(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: { note?: string }) {
-    return this.charges.openDispute(user, requireTenantId(user), id, body?.note);
+  dispute(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: OpenCommissionDisputeDto) {
+    return this.disputes.openDispute(user, requireTenantId(user), id, body.reason, body.note);
   }
 }

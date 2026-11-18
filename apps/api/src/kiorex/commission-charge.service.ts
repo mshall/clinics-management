@@ -47,6 +47,15 @@ export type KiorexCommissionChargeView = {
   patientInitials: string;
   reversalReason: string | null;
   canDispute: boolean;
+  dispute?: {
+    id: string;
+    reason: string;
+    status: string;
+    note: string | null;
+    resolution: string | null;
+    createdAt: string;
+    resolvedAt: string | null;
+  } | null;
 };
 
 @Injectable()
@@ -287,6 +296,7 @@ export class CommissionChargeService {
         include: {
           clinician: { select: { displayName: true } },
           patient: { select: { firstNameEn: true, lastNameEn: true } },
+          commissionDispute: true,
         },
       }),
     ]);
@@ -300,41 +310,23 @@ export class CommissionChargeService {
     };
   }
 
-  async openDispute(user: JwtUser, tenantId: string, chargeId: string, note?: string): Promise<KiorexCommissionChargeView> {
-    if (user.tenantId !== tenantId) throw new ForbiddenException();
-    const row = await this.prisma.kiorexCommissionCharge.findFirst({
-      where: { id: chargeId, tenantId },
-      include: {
-        clinician: { select: { displayName: true } },
-        patient: { select: { firstNameEn: true, lastNameEn: true } },
-      },
-    });
-    if (!row) throw new NotFoundException("Charge not found");
-    if (row.status !== CommissionChargeStatus.PENDING && row.status !== CommissionChargeStatus.CONFIRMED) {
-      throw new BadRequestException("Only pending or confirmed charges can be disputed");
-    }
-    if (new Date() > row.disputeDeadline) {
-      throw new BadRequestException("Dispute deadline has passed");
-    }
-    const updated = await this.prisma.kiorexCommissionCharge.update({
-      where: { id: row.id },
-      data: { status: CommissionChargeStatus.DISPUTED },
-      include: {
-        clinician: { select: { displayName: true } },
-        patient: { select: { firstNameEn: true, lastNameEn: true } },
-      },
-    });
-    await this.prisma.auditLog.create({
-      data: {
-        tenantId,
-        actorId: user.userId,
-        action: "kiorex.commission_charge.disputed",
-        resource: "KiorexCommissionCharge",
-        resourceId: row.id,
-        metadata: { note: note?.trim() || null } as Prisma.InputJsonValue,
-      },
-    });
-    return this.mapRow(updated, new Date());
+  mapRowPublic(
+    row: KiorexCommissionCharge & {
+      clinician: { displayName: string };
+      patient: { firstNameEn: string; lastNameEn: string };
+      commissionDispute?: {
+        id: string;
+        reason: string;
+        status: string;
+        note: string | null;
+        resolution: string | null;
+        createdAt: Date;
+        resolvedAt: Date | null;
+      } | null;
+    },
+    now: Date,
+  ): KiorexCommissionChargeView {
+    return this.mapRow(row, now);
   }
 
   private async reverseActiveCharge(
@@ -413,14 +405,25 @@ export class CommissionChargeService {
     row: KiorexCommissionCharge & {
       clinician: { displayName: string };
       patient: { firstNameEn: string; lastNameEn: string };
+      commissionDispute?: {
+        id: string;
+        reason: string;
+        status: string;
+        note: string | null;
+        resolution: string | null;
+        createdAt: Date;
+        resolvedAt: Date | null;
+      } | null;
     },
     now: Date,
   ): KiorexCommissionChargeView {
     const first = row.patient.firstNameEn?.trim()?.[0] ?? "";
     const last = row.patient.lastNameEn?.trim()?.[0] ?? "";
     const canDispute =
+      !row.commissionDispute &&
       (row.status === CommissionChargeStatus.PENDING || row.status === CommissionChargeStatus.CONFIRMED) &&
       now <= row.disputeDeadline;
+    const d = row.commissionDispute;
     return {
       id: row.id,
       appointmentId: row.appointmentId,
@@ -434,6 +437,17 @@ export class CommissionChargeService {
       patientInitials: `${first}${last}`.toUpperCase() || "—",
       reversalReason: row.reversalReason,
       canDispute,
+      dispute: d
+        ? {
+            id: d.id,
+            reason: d.reason,
+            status: d.status,
+            note: d.note,
+            resolution: d.resolution,
+            createdAt: d.createdAt.toISOString(),
+            resolvedAt: d.resolvedAt?.toISOString() ?? null,
+          }
+        : null,
     };
   }
 }

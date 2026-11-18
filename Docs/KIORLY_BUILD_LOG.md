@@ -88,3 +88,4 @@
 | 050 CR-07 | `be3589b` | Progress API + ring UI; nudge delivery deferred to MS-04 (see Follow-ups) |
 | 005–048 | — | 2026-11-18 backfill: §5 ticked **verified on main** (see `Docs/kiorly-cursor-build-sequence.md` §5) |
 | 051 PL-08 | `e7d9d33` | Global 402 paywall modal, paywall audit events, owner-only SaaS pay |
+| 052 CR-08 | (this commit) | CommissionDispute model, auto-resolve, platform ops queue, owner outbox |

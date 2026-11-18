@@ -97,6 +97,11 @@ export const PlatformVerificationsTab = lazyNamed(
   () => import("@/features/platform/platform-verifications-tab"),
   "PlatformVerificationsTab",
 );
+
+export const PlatformCommissionDisputesTab = lazyNamed(
+  () => import("@/features/platform/platform-commission-disputes-tab"),
+  "PlatformCommissionDisputesTab",
+);
 export const ClinicianVerificationPage = lazyNamed(
   () => import("@/features/clinicians/clinician-verification-page"),
   "ClinicianVerificationPage",

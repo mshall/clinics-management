@@ -285,7 +285,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 049 · PL-07 · Upgrade, downgrade, seat changes & proration
 - [x] Step 050 · CR-07 · "Kiorly is free" progress meter & nudges
 - [x] Step 051 · PL-08 · Plan & billing page, paywall moments and upgrade prompts
-- [ ] Step 052 · CR-08 · Commission disputes & adjustments
+- [x] Step 052 · CR-08 · Commission disputes & adjustments
 - [ ] Step 053 · CR-09 · Doctor-to-doctor referral credits
 - [ ] Step 054 · CR-11 · Monthly statement for clinics (PDF + in-app)
 - [ ] Step 055 · SB-05 · Lite commission invoicing & minimum invoice
