@@ -23,3 +23,7 @@
 | 2026-11-18 | Pipeline on `main` @ `4d62eb0` green (CI test, web-build, deploy). Created `kiorly/launch`, draft PR, this log + `KIORLY_NEEDS_HUMAN.md`. |
 
 ## Steps
+
+| Step | Merge on `kiorly/launch` | Notes |
+|------|--------------------------|-------|
+| 001 FD-00 | `955b94b` | Pre-shipped on main; verified tests + `Docs/FD-00_MARKET_TAX_DEFAULTS.md` |
