@@ -43,6 +43,8 @@ export const TOP_LEVEL_FOLDER_TO_CONTEXT: Record<string, BoundedContextId> = {
   "billing-platform": "organization",
   subscriptions: "organization",
   entitlements: "organization",
+  cohorts: "organization",
+  usage: "organization",
   "user-nav-tabs": "organization",
   "user-clinic-privilege-grants": "organization",
   "user-money-visibility": "organization",
