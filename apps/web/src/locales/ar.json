@@ -3266,5 +3266,30 @@
       "WITHDRAWN": "سُحب",
       "SKIPPED": "تم تخطيه (لا يمكن المراسلة)"
     }
+  },
+  "noShowRisk": {
+    "ruleBased": "تقدير بالقواعد",
+    "modelBased": "تقدير نموذج",
+    "band": {
+      "LOW": "احتمال تغيّب منخفض",
+      "MEDIUM": "احتمال تغيّب متوسط",
+      "HIGH": "احتمال تغيّب مرتفع"
+    },
+    "ruleBasedExplainer": "تقدير قائم على قواعد ومعادلة ثابتة — وليس نموذج تنبؤ مدرَّبًا.",
+    "modelExplainer": "تقدير من نموذج مدرَّب.",
+    "basedOn": "بناءً على:",
+    "noFactors": "لا توجد حالات تغيّب سابقة مسجّلة.",
+    "factor": {
+      "PRIOR_NO_SHOWS_zero": "لا توجد حالات تغيّب سابقة",
+      "PRIOR_NO_SHOWS_one": "حالة تغيّب سابقة واحدة",
+      "PRIOR_NO_SHOWS_two": "حالتا تغيّب سابقتان",
+      "PRIOR_NO_SHOWS_few": "{{count}} حالات تغيّب سابقة",
+      "PRIOR_NO_SHOWS_many": "{{count}} حالة تغيّب سابقة",
+      "PRIOR_NO_SHOWS_other": "{{count}} حالة تغيّب سابقة",
+      "DEPOSIT_FLAG": "مطلوب عربون لهذا المريض",
+      "SHORT_NOTICE": "يبدأ خلال 4 ساعات"
+    },
+    "suggestDeposit": "فكّر في طلب عربون لتثبيت هذا الموعد.",
+    "suggestReminder": "فكّر في مكالمة أو رسالة تذكير إضافية قبل الموعد بيوم."
   }
 }

@@ -3265,5 +3265,26 @@
       "WITHDRAWN": "Withdrawn",
       "SKIPPED": "Skipped (cannot message)"
     }
+  },
+  "noShowRisk": {
+    "ruleBased": "rule-based",
+    "modelBased": "model estimate",
+    "band": {
+      "LOW": "Low no-show risk",
+      "MEDIUM": "Medium no-show risk",
+      "HIGH": "High no-show risk"
+    },
+    "ruleBasedExplainer": "Rule-based estimate from a fixed formula — not a trained prediction model.",
+    "modelExplainer": "Estimate from a trained model.",
+    "basedOn": "Based on:",
+    "noFactors": "No previous no-shows on record.",
+    "factor": {
+      "PRIOR_NO_SHOWS_one": "{{count}} previous no-show",
+      "PRIOR_NO_SHOWS_other": "{{count}} previous no-shows",
+      "DEPOSIT_FLAG": "deposit required for this patient",
+      "SHORT_NOTICE": "starts within 4 hours"
+    },
+    "suggestDeposit": "Consider asking for a deposit to hold this slot.",
+    "suggestReminder": "Consider an extra reminder call or message the day before."
   }
 }

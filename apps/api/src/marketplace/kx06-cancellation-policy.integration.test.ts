@@ -58,6 +58,7 @@ const appointments = new AppointmentsService(
   { onCancelOrNoShow: async () => null, applyCreditIntents: async () => undefined } as never,
   slots,
   appointmentOutbox,
+  { isEntitled: async () => false } as never,
 );
 const settings = new KiorexSettingsService(prismaSvc, new MarketplaceListingService(prismaSvc, outbox), audit, slots);
 

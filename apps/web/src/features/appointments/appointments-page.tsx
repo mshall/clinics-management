@@ -14,6 +14,7 @@ import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/s
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { AppointmentStatusBadge, appointmentStatusLabel } from "@/components/appointment-status-badge";
+import { NoShowRiskChip } from "@/components/no-show-risk-chip";
 import { AppointmentSourceBadges } from "@/components/appointment-source-badges";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -888,6 +889,7 @@ export function AppointmentsPage() {
                       <td className="px-3 py-2">
                         <div className="flex flex-col gap-1">
                           <AppointmentStatusBadge status={a.status} />
+                          <NoShowRiskChip risk={a.noShowRisk} />
                           <AppointmentSourceBadges
                             bookingSource={a.bookingSource}
                             isNewPatientAtBooking={a.isNewPatientAtBooking}

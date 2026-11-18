@@ -92,7 +92,7 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 |---------|------------------|---------|--------|-----|
 | **Kiorly AI assistant** | AI badge | Language model (market `AiProvider`) | **Shipped** | `POST /assistant/chat` — flag `ai_assistant` |
 | **Smart summary (pre-visit)** | No AI badge | Rule template from chart rows | **Shipped** | `GET /clinic-ai/patients/:id/pre-visit-summary` |
-| **No-show risk estimate** | No AI badge | Formula (`noShowCount`, deposit, lead time) | **Foundation** | `POST /clinic-ai/appointments/refresh-no-show-risk` |
+| **No-show risk estimate** | No AI badge — chip says "rule-based" | Formula (`noShowCount`, deposit, lead time) | **Done** (FS-05: chip on appointments, nightly refresh, deposit / reminder suggestion) | `AppointmentDto.noShowRisk`; `POST /clinic-ai/appointments/refresh-no-show-risk` |
 | **Chart scribe (workflow)** | No AI badge | Clinician-approve draft; speech TBD | **Foundation** | `POST /clinic-ai/encounters/:id/scribe/start` |
 
 Copy registry: [AI_HONEST_LABELS.md](./AI_HONEST_LABELS.md). The role assistant is gated by layered flag `ai_assistant` — see [FEATURE_FLAGS.md](./FEATURE_FLAGS.md).

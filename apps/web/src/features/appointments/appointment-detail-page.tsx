@@ -5,6 +5,8 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { AppointmentStatusBadge, appointmentStatusClassName } from "@/components/appointment-status-badge";
+import { NoShowRiskChip } from "@/components/no-show-risk-chip";
+import { noShowRiskExplanation, noShowRiskSuggestionText } from "@/lib/no-show-risk";
 import { AppointmentSourceBadges } from "@/components/appointment-source-badges";
 import { Badge } from "@/components/ui/badge";
 import { AppointmentDeleteConfirmDialog } from "@/features/appointments/appointment-delete-confirm-dialog";
@@ -476,8 +478,17 @@ export function AppointmentDetailPage() {
               {t("appointments.whatsappConfirmedChip", "Confirmed by WhatsApp")}
             </Badge>
           ) : null}
+          <NoShowRiskChip risk={apt.noShowRisk} />
         </div>
       </div>
+      {apt.noShowRisk && apt.noShowRisk.band !== "LOW" ? (
+        <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm" data-testid="no-show-risk-detail">
+          <p className="text-muted-foreground">{noShowRiskExplanation(apt.noShowRisk, t)}</p>
+          {noShowRiskSuggestionText(apt.noShowRisk, t) ? (
+            <p className="mt-1 font-medium">{noShowRiskSuggestionText(apt.noShowRisk, t)}</p>
+          ) : null}
+        </div>
+      ) : null}
 
       {formErr ? <p className="text-sm text-destructive">{formErr}</p> : null}
 

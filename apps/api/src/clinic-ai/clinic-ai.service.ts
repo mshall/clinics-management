@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { AppointmentStatus, EncounterStatus } from "@prisma/client";
+import { computeNoShowRisk } from "../common/no-show-risk";
 import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
@@ -57,39 +58,45 @@ export class ClinicAiService {
   }
 
   computeNoShowRisk(patientNoShowCount: number, requiresDeposit: boolean, hoursUntilStart: number): number {
-    let score = Math.min(85, patientNoShowCount * 18);
-    if (requiresDeposit) score += 12;
-    if (hoursUntilStart < 4) score += 8;
-    return Math.min(99, Math.max(5, score));
+    return computeNoShowRisk({ noShowCount: patientNoShowCount, requiresDeposit, hoursUntilStart }).score;
   }
 
-  async refreshAppointmentNoShowRisks(tenantId: string, clinicId?: string) {
-    const now = new Date();
-    const appointments = await this.prisma.appointment.findMany({
-      where: {
-        tenantId,
-        ...(clinicId ? { clinicId } : {}),
-        status: { in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED] },
-        startsAt: { gte: now },
-      },
-      include: { patient: { select: { noShowCount: true, requiresAppointmentDeposit: true } } },
-      take: 200,
-    });
-  const updates = await Promise.all(
-      appointments.map((a) => {
-        const hours = (a.startsAt.getTime() - now.getTime()) / 3_600_000;
+  /** Persists the FS-05 rule-based score on upcoming SCHEDULED / CONFIRMED appointments (nightly job + manual refresh). */
+  async refreshAppointmentNoShowRisks(tenantId: string, clinicId?: string, now: Date = new Date()) {
+    let updated = 0;
+    let cursor: string | undefined;
+    for (;;) {
+      const appointments = await this.prisma.appointment.findMany({
+        where: {
+          tenantId,
+          ...(clinicId ? { clinicId } : {}),
+          status: { in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED] },
+          startsAt: { gte: now },
+        },
+        select: {
+          id: true,
+          startsAt: true,
+          noShowRiskScore: true,
+          patient: { select: { noShowCount: true, requiresAppointmentDeposit: true } },
+        },
+        orderBy: { id: "asc" },
+        take: 500,
+        ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+      });
+      if (appointments.length === 0) break;
+      for (const a of appointments) {
         const score = this.computeNoShowRisk(
           a.patient.noShowCount,
           a.patient.requiresAppointmentDeposit,
-          hours,
+          (a.startsAt.getTime() - now.getTime()) / 3_600_000,
         );
-        return this.prisma.appointment.update({
-          where: { id: a.id },
-          data: { noShowRiskScore: score },
-        });
-      }),
-    );
-    return { updated: updates.length };
+        if (a.noShowRiskScore != null && Number(a.noShowRiskScore) === score) continue;
+        await this.prisma.appointment.update({ where: { id: a.id }, data: { noShowRiskScore: score } });
+        updated += 1;
+      }
+      cursor = appointments[appointments.length - 1]!.id;
+    }
+    return { updated };
   }
 
   async startScribeSession(tenantId: string, encounterId: string) {
