@@ -81,11 +81,12 @@ export class CommissionChargeService {
         feeAmount: true,
         bookingSource: true,
         isNewPatientAtBooking: true,
+        patient: { select: { isSample: true } },
         clinic: { select: { defaultCurrency: true, tenant: { select: { marketId: true, market: { select: { id: true, featureDefaults: true } } } } } },
         clinician: { select: { employee: { select: { clinicalSpecialty: true } } } },
       },
     });
-    if (!apt) return;
+    if (!apt || apt.patient.isSample) return;
     if (!isCommissionChargeableBooking(apt.bookingSource, apt.isNewPatientAtBooking)) return;
 
     const marketId = apt.clinic.tenant.marketId;

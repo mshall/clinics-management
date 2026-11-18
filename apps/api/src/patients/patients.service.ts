@@ -122,6 +122,7 @@ export class PatientsService {
     homeBranchId: string | null;
     isVip: boolean;
     needsChaperone: boolean;
+    isSample?: boolean;
     homeBranch: { nameEn: string } | null;
     documents?: {
       id: string;
@@ -158,6 +159,7 @@ export class PatientsService {
     dto.homeBranchId = p.homeBranchId;
     dto.isVip = p.isVip;
     dto.needsChaperone = p.needsChaperone;
+    dto.isSample = p.isSample === true;
     if (opts?.includeDocuments && p.documents) {
       dto.documents = p.documents.map((d) => this.mapDoc(d));
     }

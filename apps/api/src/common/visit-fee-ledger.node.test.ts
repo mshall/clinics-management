@@ -28,7 +28,10 @@ function baseTx(overrides: {
         return overrides.create ? overrides.create(args) : { id: "rev-new" };
       },
     },
-    patient: { findFirst: async () => ({ firstNameEn: "Ada", lastNameEn: "Lovelace" }) },
+    patient: {
+      findFirst: async (args?: { where?: { isSample?: boolean } }) =>
+        args?.where?.isSample ? null : { firstNameEn: "Ada", lastNameEn: "Lovelace" },
+    },
     clinic: {
       findFirst: async () => ({
         defaultCurrency: "EGP",

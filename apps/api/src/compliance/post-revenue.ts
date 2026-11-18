@@ -1,3 +1,4 @@
+import { BadRequestException } from "@nestjs/common";
 import { Prisma, RevenueStatus, type TransferVerificationStatus, type VisitCollectionMode } from "@prisma/client";
 import { resolveClinicCurrency } from "../common/clinic-currency";
 
@@ -26,11 +27,32 @@ export type PostRevenueParams = {
   vatPercent?: number;
 };
 
+export const SAMPLE_PATIENT_NO_REVENUE = "SAMPLE_PATIENT_NO_REVENUE";
+
+/** ON-08 — sample ("try it") patients never produce revenue. */
+async function assertNotSamplePatient(tx: Prisma.TransactionClient, params: PostRevenueParams): Promise<void> {
+  const tenantId = params.tenantId;
+  const or: Prisma.PatientWhereInput[] = [];
+  if (params.patientId?.trim()) or.push({ id: params.patientId.trim() });
+  if (params.appointmentId?.trim()) or.push({ appointments: { some: { id: params.appointmentId.trim() } } });
+  if (params.encounterId?.trim()) or.push({ encounters: { some: { id: params.encounterId.trim() } } });
+  if (params.operationId?.trim()) or.push({ operations: { some: { id: params.operationId.trim() } } });
+  if (!or.length) return;
+  const sample = await tx.patient.findFirst({ where: { tenantId, isSample: true, OR: or }, select: { id: true } });
+  if (sample) {
+    throw new BadRequestException({
+      message: "Sample patient — payments are not recorded for demo data",
+      code: SAMPLE_PATIENT_NO_REVENUE,
+    });
+  }
+}
+
 /** Single money path (FD-02): post revenue only — no ETA / fiscal queue. */
 export async function postRevenue(
   tx: Prisma.TransactionClient,
   params: PostRevenueParams,
 ): Promise<{ revenueEntryId: string }> {
+  await assertNotSamplePatient(tx, params);
   const status = params.status ?? RevenueStatus.POSTED;
   const currency =
     params.currency?.trim() ||

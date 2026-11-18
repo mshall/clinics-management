@@ -672,6 +672,11 @@ export function PatientsPage() {
                           {p.firstNameEn} {p.lastNameEn}
                         </span>
                       )}
+                      {p.isSample ? (
+                        <span className="ms-2 rounded border border-amber-400 px-1.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                          {t("help.sample.badge")}
+                        </span>
+                      ) : null}
                     </td>
                     <td className="px-3 py-2 text-center">
                       <span className="text-xs font-medium text-muted-foreground">

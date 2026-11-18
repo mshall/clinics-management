@@ -46,6 +46,13 @@ export class OutboundMessageWorker implements OnModuleInit, OnModuleDestroy {
       take: BATCH,
     });
     for (const row of rows) {
+      if (row.patientId && (await this.consent.isSamplePatient(row.tenantId, row.patientId))) {
+        await this.prisma.outboundMessage.update({
+          where: { id: row.id },
+          data: { status: "FAILED", failureClass: "POLICY", error: "Sample patient — messages are never sent" },
+        });
+        continue;
+      }
       if (row.channel === MessageChannel.WHATSAPP) {
         await this.processWhatsApp(row);
       } else {

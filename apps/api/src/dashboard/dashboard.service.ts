@@ -81,19 +81,20 @@ export class DashboardService {
       headcount,
       employeeCount,
     ] = await Promise.all([
-      this.prisma.patient.count({ where: { tenantId, deletedAt: null } }),
+      this.prisma.patient.count({ where: { tenantId, deletedAt: null, isSample: false } }),
       this.prisma.encounter.count({
         where: {
           tenantId,
           status: EncounterStatus.FINALIZED,
           finalizedAt: { gte: start, lte: end },
+          patient: { isSample: false },
         },
       }),
       this.prisma.encounter.count({
-        where: { tenantId, createdAt: { gte: start, lte: end } },
+        where: { tenantId, createdAt: { gte: start, lte: end }, patient: { isSample: false } },
       }),
       this.prisma.appointment.count({
-        where: { tenantId, startsAt: { gte: start, lte: end } },
+        where: { tenantId, startsAt: { gte: start, lte: end }, patient: { isSample: false } },
       }),
       this.prisma.revenueEntry.groupBy({
         by: ["currency"],
@@ -146,6 +147,7 @@ export class DashboardService {
 
     const apptWhere: Prisma.AppointmentWhereInput = {
       tenantId,
+      patient: { isSample: false },
       startsAt: { gte: dayStart, lt: dayEnd },
       ...(clinicId ? { clinicId } : {}),
     };
@@ -176,6 +178,7 @@ export class DashboardService {
           ...(clinicId ? { clinicId } : {}),
           status: AppointmentStatus.CHECKED_IN,
           checkedInAt: { gte: dayStart },
+          patient: { isSample: false },
         },
       }),
     ]);
@@ -185,6 +188,7 @@ export class DashboardService {
         tenantId,
         status: EncounterStatus.FINALIZED,
         updatedAt: { gte: dayStart, lt: dayEnd },
+        patient: { isSample: false },
         ...(clinicId ? { clinicId } : {}),
       },
     });

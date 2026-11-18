@@ -351,6 +351,12 @@ export async function upsertEncounterVisitFeeRevenue(
 ): Promise<void> {
   const { tenantId, clinicId, encounterId, appointmentId, amount, currency: currencyOpt } = params;
 
+  const samplePatient = await tx.patient.findFirst({
+    where: { id: params.patientId, tenantId, isSample: true },
+    select: { id: true },
+  });
+  if (samplePatient) return;
+
   if (appointmentId && amount > 0) {
     const adopted = await adoptAppointmentCheckInPayment(tx, {
       tenantId,
