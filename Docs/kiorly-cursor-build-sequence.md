@@ -296,7 +296,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 060 · ON-08 · First-run tour, sample data & in-app help — `94111f6` · `on08-sample-data.integration.test.ts` · `e2e/on08-help-sample.spec.ts` · `Docs/ONBOARDING.md`
 - [x] Step 061 · KX-06 · Reschedule & cancellation policies (both directions)
 - [x] Step 062 · KX-08 · Verified reviews after completed visits
-- [ ] Step 063 · KX-09 · Clinic-branded booking page & link (commission-free)
+- [x] Step 063 · KX-09 · Clinic-branded booking page & link (commission-free)
 - [ ] Step 064 · KX-10 · Kiorex tab inside Kiorly (settings + performance)
 - [ ] Step 065 · CL-03 · Prescription print & WhatsApp share with verification QR
 - [ ] Step 066 · CL-04 · Specialty template coverage for launch specialties
