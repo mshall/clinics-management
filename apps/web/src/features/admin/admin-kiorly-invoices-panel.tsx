@@ -55,7 +55,7 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline" | "mute
   UNCOLLECTIBLE: "muted",
 };
 
-export function AdminKiorlyInvoicesPanel() {
+export function AdminKiorlyInvoicesPanel({ canManagePay = false }: { canManagePay?: boolean }) {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const [payTarget, setPayTarget] = useState<KiorlyInvoiceRow | null>(null);
@@ -153,7 +153,7 @@ export function AdminKiorlyInvoicesPanel() {
                         >
                           {t("admin.billing.invoices.pdf", "PDF")}
                         </Button>
-                        {canPay ? (
+                        {canPay && canManagePay ? (
                           <Button type="button" size="sm" onClick={() => setPayTarget(row)}>
                             {t("admin.billing.invoices.pay", "Pay")}
                           </Button>

@@ -64,6 +64,11 @@
     "modalTitle": "Upgrade your plan",
     "modalDescription": "This capability requires a higher plan. Organization owners can change plan under Admin → Plan & billing."
   },
+  "paywall": {
+    "goToBilling": "Plan & billing",
+    "askOwner": "Ask your clinic owner to upgrade under Admin → Plan & billing.",
+    "upgradeFromQuota": "Upgrade plan"
+  },
   "guide": {
     "roleOnly": "Tailored to your sign-in role",
     "quickLinks": "Quick links",

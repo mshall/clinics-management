@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiGet, apiPost } from "@/lib/http";
 import { AdminKiorexFreeProgressCard } from "./admin-kiorex-free-progress-card";
+import { useUpgradePaywallStore } from "@/stores/upgrade-paywall-store";
+import { PLAN_UPGRADE_REQUIRED } from "@/lib/plan-upgrade-constants";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import {
   Table,
@@ -77,6 +79,7 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline" | "mute
 
 export function AdminOrgBillingPanel({ canManage }: { canManage: boolean }) {
   const { t, i18n } = useTranslation();
+  const showPaywall = useUpgradePaywallStore((s) => s.show);
   const qc = useQueryClient();
   const [planKey, setPlanKey] = useState("PRO");
   const [interval, setInterval] = useState("MONTHLY");
@@ -280,7 +283,22 @@ export function AdminOrgBillingPanel({ canManage }: { canManage: boolean }) {
         ) : usageQuery.data ? (
           <>
             {usageQuery.data.whatsappPaused ? (
-              <p className="text-sm font-medium text-destructive">{t("admin.billing.usage.whatsappPaused")}</p>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-destructive">{t("admin.billing.usage.whatsappPaused")}</p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    showPaywall(
+                      { code: PLAN_UPGRADE_REQUIRED, entitlement: "whatsapp_reminders", requiredPlan: "PRO" },
+                      "usage-whatsapp-quota",
+                    )
+                  }
+                >
+                  {t("paywall.upgradeFromQuota", "Upgrade plan")}
+                </Button>
+              </div>
             ) : null}
             <ul className="space-y-2 text-sm">
               {usageQuery.data.metrics

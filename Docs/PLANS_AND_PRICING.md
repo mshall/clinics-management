@@ -100,6 +100,17 @@ See **[PLANS_AND_ENTITLEMENTS.md](./PLANS_AND_ENTITLEMENTS.md)** for the module 
 
 - See **[MONTHLY_SETTLEMENT.md](./MONTHLY_SETTLEMENT.md)** — higher-of engine, preview/run APIs, Cairo scheduler.
 
+## PL-08 plan & billing paywall
+
+| Item | Status |
+|------|--------|
+| Global 402 `PLAN_UPGRADE_REQUIRED` → upgrade modal | **Done** — `apps/web/src/lib/http.ts`, `UpgradePaywallModal` |
+| Admin Plan & billing hub (trial, Kiorex progress, usage, wallet, invoices) | **Done** — `AdminOrgBillingPanel` |
+| Paywall telemetry | **Done** — `POST /api/v1/billing/paywall-events` → `AuditLog` (`paywall.view` / `paywall.conversion_intent`) |
+| Non-owners | Pay controls hidden; modal copy directs to owner |
+
+Tests: `pl08-paywall.node.test.ts`, `pl08-paywall.integration.test.ts`.
+
 ## Follow-ups
 
 - Wire `FeatureFlagsService` / `@RequiresEntitlement` to `PlanEntitlement` and tenant subscription.

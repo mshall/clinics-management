@@ -226,65 +226,65 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 002 · FD-01 · Owner-physician: allow one user to hold several roles — see `Docs/RBAC_MULTI_ROLE.md`
 - [x] Step 003 · FD-02 · Take ETA receipts and e-invoicing out of Kiorly — `2f98396` · `Docs/FD-02_ETA_RETIRED.md` (full product removal)
 - [x] Step 004 · SC-01 · Frankfurt data residency: transfer approval & controls in the product — `Docs/SC-01_FRANKFURT_RESIDENCY.md` (60-day alert + public sub-processor page in follow-up)
-- [ ] Step 005 · CL-01 · Egyptian drug database (brand → active ingredient)
-- [ ] Step 006 · FS-01 · Scheduling engine completeness (buffers, rooms, overrides, channels)
-- [ ] Step 007 · PL-01 · Plan catalog with per-market, versioned prices
-- [ ] Step 008 · PL-02 · Subscription model & lifecycle state machine
-- [ ] Step 009 · PL-03 · Entitlement service, guards and plan layer in feature flags
-- [ ] Step 010 · PL-04 · Map every existing module to an entitlement
-- [ ] Step 011 · QA-06 · Staging with WhatsApp sandbox, payment sandboxes & seeded pilot tenants
+- [x] Step 005 · CL-01 · Egyptian drug database (brand → active ingredient) — verified on main · `Docs/EGYPT_DRUG_DATABASE.md` · `drug-catalog.*.test.ts`
+- [x] Step 006 · FS-01 · Scheduling engine completeness (buffers, rooms, overrides, channels) — verified on main · `fs01-scheduling.*.test.ts` · `Docs/PATIENT_360_AND_SCHEDULING.md`
+- [x] Step 007 · PL-01 · Plan catalog with per-market, versioned prices — verified on main · `pl01-plan-catalog.*.test.ts` · `Docs/PLANS_AND_PRICING.md`
+- [x] Step 008 · PL-02 · Subscription model & lifecycle state machine — verified on main · `pl02-subscription.*.test.ts`
+- [x] Step 009 · PL-03 · Entitlement service, guards and plan layer in feature flags — verified on main · `pl03-entitlements.*.test.ts` · `Docs/FEATURE_FLAGS.md`
+- [x] Step 010 · PL-04 · Map every existing module to an entitlement — verified on main · `pl04-*.test.ts` · `Docs/PLANS_AND_ENTITLEMENTS.md`
+- [x] Step 011 · QA-06 · Staging with WhatsApp sandbox, payment sandboxes & seeded pilot tenants — verified on main · `qa06-sales-demo.*.test.ts` · `Docs/QA_STAGING.md`
 
 **Stage B · Self-serve & Lite** — A doctor can sign up and work alone
 
-- [ ] Step 012 · CR-05 · Credit wallet & immutable ledger
-- [ ] Step 013 · ON-01 · Public self-serve signup (phone OTP) that provisions a ready clinic
-- [ ] Step 014 · ON-02 · Password reset, OTP login & session management
-- [ ] Step 015 · PL-06 · Lite simplified mode (nav presets per plan)
-- [ ] Step 016 · ON-04 · Onboarding wizard & activation checklist
+- [x] Step 012 · CR-05 · Credit wallet & immutable ledger — verified on main · `cr05-credit-wallet.*.test.ts` · `Docs/CREDIT_WALLET.md`
+- [x] Step 013 · ON-01 · Public self-serve signup (phone OTP) that provisions a ready clinic — verified on main · `on01-signup.*.test.ts` · `Docs/PUBLIC_SIGNUP.md`
+- [x] Step 014 · ON-02 · Password reset, OTP login & session management — verified on main · `on02-auth.*.test.ts` · `Docs/AUTH_SESSIONS.md`
+- [x] Step 015 · PL-06 · Lite simplified mode (nav presets per plan) — verified on main · `pl06-nav-preset.node.test.ts` · `apps/web/e2e/pl06-nav-sidebar.spec.ts`
+- [x] Step 016 · ON-04 · Onboarding wizard & activation checklist — verified on main · `on04-onboarding.*.test.ts`
 - [x] Step 017 · PL-05 · Usage metering & quotas (WhatsApp, AI minutes) — `12e3ea8` · `Docs/USAGE_METERING.md`
-- [ ] Step 018 · MS-01 · Real WhatsApp Business provider with approved templates
-- [ ] Step 019 · MS-02 · Inbound replies: confirm, cancel, reschedule
-- [ ] Step 020 · MS-03 · Messaging consent, opt-out & PDPL handling
-- [ ] Step 021 · CL-02 · Rx safety checks by ingredient (interactions, allergies, duplicates)
-- [ ] Step 022 · AI-03 · Honest AI labels across the product
-- [ ] Step 023 · SC-03 · Consent enforcement in code (AI, marketplace, messaging)
-- [ ] Step 024 · GT-02 · Legal pack: terms, subscription & fee terms, DPA, privacy notice
+- [x] Step 018 · MS-01 · Real WhatsApp Business provider with approved templates — verified on main · `ms01-whatsapp.*.test.ts` · `Docs/MESSAGING_WHATSAPP.md`
+- [x] Step 019 · MS-02 · Inbound replies: confirm, cancel, reschedule — verified on main · `ms02-whatsapp-replies.*.test.ts`
+- [x] Step 020 · MS-03 · Messaging consent, opt-out & PDPL handling — verified on main · `ms03-messaging-consent.*.test.ts` · `Docs/MESSAGING_CONSENT.md`
+- [x] Step 021 · CL-02 · Rx safety checks by ingredient (interactions, allergies, duplicates) — verified on main · `cl02-rx-safety.*.test.ts` · `Docs/CLINICAL_RX_SAFETY.md`
+- [x] Step 022 · AI-03 · Honest AI labels across the product — verified on main · `ai-feature-disclosure.node.test.ts` · `Docs/AI_HONEST_LABELS.md`
+- [x] Step 023 · SC-03 · Consent enforcement in code (AI, marketplace, messaging) — verified on main · `sc03-consent-policy.*.test.ts` · `Docs/PATIENT_CONSENT.md`
+- [x] Step 024 · GT-02 · Legal pack: terms, subscription & fee terms, DPA, privacy notice — verified on main · `gt02-legal.*.test.ts` · `Docs/LEGAL_PACK.md`
 
 **Stage C · Money engine** — Trial, credits, invoices, collections
 
 - [x] Step 025 · PL-09 · Founding cohort & 24-month price lock — `12e3ea8`
-- [ ] Step 026 · CR-01 · Trial engine (6-month founding trial, standard trial, activation rule)
-- [ ] Step 027 · CR-02 · Booking attribution & the "new patient" rule
-- [ ] Step 028 · CR-04 · Kiorex fee configuration with competitor benchmark guardrail
-- [ ] Step 029 · SB-01 · Kiorly invoices (separate from clinic patient invoices)
-- [ ] Step 030 · SB-02 · Payment collection: cards, Fawry, InstaPay, bank transfer
-- [ ] Step 031 · CR-03 · Kiorex commission charge capture & lifecycle
-- [ ] Step 032 · CR-06 · Monthly settlement engine ("pay the higher of, never both")
-- [ ] Step 033 · QA-03 · Settlement & credit engine test matrix
-- [ ] Step 034 · SB-03 · Dunning & access policy that never blocks clinical records
-- [ ] Step 035 · PA-02 · Commercial configuration UI (plans, trials, fees, dunning)
-- [ ] Step 036 · SC-07 · Audit coverage for billing, credits and plan changes
+- [x] Step 026 · CR-01 · Trial engine (6-month founding trial, standard trial, activation rule) — verified on main · `cr01-trial.*.test.ts` · `Docs/TRIAL_ENGINE.md`
+- [x] Step 027 · CR-02 · Booking attribution & the "new patient" rule — verified on main · `cr02-*.test.ts` · `Docs/BOOKING_ATTRIBUTION.md`
+- [x] Step 028 · CR-04 · Kiorex fee configuration with competitor benchmark guardrail — verified on main · `cr04-kiorex-commission.node.test.ts` · `Docs/KIOREX_FEES.md`
+- [x] Step 029 · SB-01 · Kiorly invoices (separate from clinic patient invoices) — verified on main · `sb01-kiorly-invoice.*.test.ts` · `Docs/KIORLY_INVOICES.md`
+- [x] Step 030 · SB-02 · Payment collection: cards, Fawry, InstaPay, bank transfer — verified on main · `sb02-kiorly-payments.*.test.ts` · `Docs/KIORLY_PAYMENTS.md`
+- [x] Step 031 · CR-03 · Kiorex commission charge capture & lifecycle — verified on main · `cr03-commission-charge.*.test.ts` · `Docs/KIOREX_COMMISSION_CHARGES.md`
+- [x] Step 032 · CR-06 · Monthly settlement engine ("pay the higher of, never both") — verified on main · `cr06-settlement.*.test.ts` · `Docs/MONTHLY_SETTLEMENT.md`
+- [x] Step 033 · QA-03 · Settlement & credit engine test matrix — verified on main · `qa03-settlement-matrix.node.test.ts`
+- [x] Step 034 · SB-03 · Dunning & access policy that never blocks clinical records — verified on main · `sb03-dunning.*.test.ts` · `apps/web/e2e/sb03-read-only.spec.ts` · `Docs/DUNNING.md`
+- [x] Step 035 · PA-02 · Commercial configuration UI (plans, trials, fees, dunning) — verified on main · `pa02-commercial-config.*.test.ts` · `Docs/COMMERCIAL_CONFIG.md`
+- [x] Step 036 · SC-07 · Audit coverage for billing, credits and plan changes — verified on main · `sc07-*.test.ts` · `Docs/AUDIT_BILLING.md`
 
 **Stage D · Kiorex connector** — Marketplace-ready supply
 
-- [ ] Step 037 · ON-03 · Doctor verification (Syndicate number, licence) for marketplace listing
-- [ ] Step 038 · PA-03 · Verification review queue
-- [ ] Step 039 · KX-01 · Platform-level Kiorex connector & per-doctor marketplace listing
-- [ ] Step 040 · KX-02 · Provider profile publishing
-- [ ] Step 041 · KX-03 · Canonical slot engine shared by Kiorly UI and Kiorex
-- [ ] Step 042 · KX-04 · Booking intake: slot holds, idempotency, patient matching
-- [ ] Step 043 · KX-05 · Transactional outbox & full status event set
-- [ ] Step 044 · QA-01 · Golden-flow end-to-end tests (Playwright)
-- [ ] Step 045 · QA-02 · Money-path API tests
-- [ ] Step 046 · QA-05 · Observability & alerting for money and booking paths
-- [ ] Step 047 · AI-01 · Compliant AI hosting & consent-checked AI gateway
-- [ ] Step 048 · SC-02 · PDPC licences, DPO, privacy notice (business tasks)
+- [x] Step 037 · ON-03 · Doctor verification (Syndicate number, licence) for marketplace listing — verified on main · `on03-verification.integration.test.ts` · `Docs/CLINICIAN_VERIFICATION.md`
+- [x] Step 038 · PA-03 · Verification review queue — verified on main · `pa03-verification-review.integration.test.ts`
+- [x] Step 039 · KX-01 · Platform-level Kiorex connector & per-doctor marketplace listing — verified on main · `kx01-*.test.ts` · `Docs/KIOREX_MARKETPLACE.md`
+- [x] Step 040 · KX-02 · Provider profile publishing — verified on main · `kx02-provider-profile.integration.test.ts`
+- [x] Step 041 · KX-03 · Canonical slot engine shared by Kiorly UI and Kiorex — verified on main · `kx03-slot-*.test.ts`
+- [x] Step 042 · KX-04 · Booking intake: slot holds, idempotency, patient matching — verified on main · `kx04-marketplace-booking.integration.test.ts`
+- [x] Step 043 · KX-05 · Transactional outbox & full status event set — verified on main · `kx05-outbox.integration.test.ts` · `outbox-*.node.test.ts`
+- [x] Step 044 · QA-01 · Golden-flow end-to-end tests (Playwright) — verified on main · `apps/web/e2e/qa01-golden-flow.spec.ts` · `Docs/QA_GOLDEN_FLOW.md`
+- [x] Step 045 · QA-02 · Money-path API tests — verified on main · `qa02-*.test.ts` · `Docs/QA_MONEY_PATH.md`
+- [x] Step 046 · QA-05 · Observability & alerting for money and booking paths — verified on main · `qa05-operational-alerts.node.test.ts` · `Docs/QA_OBSERVABILITY.md`
+- [x] Step 047 · AI-01 · Compliant AI hosting & consent-checked AI gateway — verified on main · `sc03-consent-policy.integration.test.ts` · `apps/api/src/providers/ai/ai-gateway.service.ts`
+- [x] Step 048 · SC-02 · PDPC licences, DPO, privacy notice (business tasks) — verified on main · `sc02-pdpc-egypt.*.test.ts` · `Docs/SC02_PDPC_EGYPT.md` (NH-001 filings remain human-owned)
 
 **Stage E · Launch completeness** — Everything for public launch
 
 - [x] Step 049 · PL-07 · Upgrade, downgrade, seat changes & proration
 - [x] Step 050 · CR-07 · "Kiorly is free" progress meter & nudges
-- [ ] Step 051 · PL-08 · Plan & billing page, paywall moments and upgrade prompts
+- [x] Step 051 · PL-08 · Plan & billing page, paywall moments and upgrade prompts
 - [ ] Step 052 · CR-08 · Commission disputes & adjustments
 - [ ] Step 053 · CR-09 · Doctor-to-doctor referral credits
 - [ ] Step 054 · CR-11 · Monthly statement for clinics (PDF + in-app)

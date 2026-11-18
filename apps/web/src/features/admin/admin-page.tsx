@@ -461,7 +461,7 @@ export function AdminPage() {
             <>
               <AdminOrgBillingPanel canManage={canManageOrgBilling} />
               <AdminKiorexChargesPanel />
-              <AdminKiorlyInvoicesPanel />
+              <AdminKiorlyInvoicesPanel canManagePay={canManageOrgBilling} />
             </>
           ) : null}
           {isGroupAdmin ? (

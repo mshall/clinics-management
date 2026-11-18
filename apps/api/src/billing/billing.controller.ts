@@ -10,6 +10,7 @@ import { DunningService } from "../subscriptions/dunning.service";
 import { SubscriptionService } from "../subscriptions/subscription.service";
 import { TrialEngineService } from "../subscriptions/trial-engine.service";
 import { CreditWalletService } from "../credits/credit-wallet.service";
+import { PrismaService } from "../prisma/prisma.service";
 import { BillingService } from "./billing.service";
 
 @ApiTags("billing")
@@ -23,7 +24,32 @@ export class BillingController {
     private readonly dunning: DunningService,
     private readonly trialEngine: TrialEngineService,
     private readonly creditWallet: CreditWalletService,
+    private readonly prisma: PrismaService,
   ) {}
+
+  /** PL-08 — paywall view/conversion telemetry (feeds PA-05 later). */
+  @Post("paywall-events")
+  async recordPaywallEvent(
+    @CurrentUser() user: JwtUser,
+    @Body() body: { type: string; entitlement: string; requiredPlan: string; source?: string | null },
+  ) {
+    const tenantId = requireTenantId(user);
+    await this.prisma.auditLog.create({
+      data: {
+        tenantId,
+        actorId: user.userId,
+        action: body.type === "conversion_intent" ? "paywall.conversion_intent" : "paywall.view",
+        resource: "Paywall",
+        resourceId: body.entitlement,
+        metadata: {
+          entitlement: body.entitlement,
+          requiredPlan: body.requiredPlan,
+          source: body.source ?? null,
+        },
+      },
+    });
+    return { ok: true };
+  }
 
   @Get("subscription")
   getSubscription(@CurrentUser() user: JwtUser) {

@@ -3,6 +3,8 @@ import { observeWebBuildIdHeader } from "@/lib/deploy-version-watch";
 import { localizeApiErrorMessage } from "@/lib/api-error-message";
 import { enhanceFormDataImages } from "@/lib/enhance-image";
 import i18n from "@/lib/i18n";
+import { parsePlanUpgradePayload } from "@/lib/plan-upgrade-payload";
+import { useUpgradePaywallStore } from "@/stores/upgrade-paywall-store";
 import { useAuthStore } from "@/stores/auth-store";
 
 export class ApiError extends Error {
@@ -51,6 +53,12 @@ async function parseJson(res: Response): Promise<unknown> {
   }
 }
 
+function maybeOpenUpgradePaywall(status: number, body: unknown, source?: string): void {
+  if (status !== 402) return;
+  const payload = parsePlanUpgradePayload(body);
+  if (payload) useUpgradePaywallStore.getState().show(payload, source);
+}
+
 function messageFromErrorBody(status: number, body: unknown, fallback: string): string {
   if (import.meta.env.DEV && (status === 500 || status === 502 || status === 503)) {
     const empty =
@@ -76,6 +84,7 @@ export async function apiDownload(path: string, filename: string): Promise<void>
   }
   if (!res.ok) {
     const body = await parseJson(res);
+    maybeOpenUpgradePaywall(res.status, body, path);
     throw new ApiError(messageFromErrorBody(res.status, body, res.statusText || "Download failed"), res.status, body);
   }
   const blob = await res.blob();
@@ -95,6 +104,7 @@ export async function apiGet<T>(path: string): Promise<T> {
   }
   if (!res.ok) {
     const body = await parseJson(res);
+    maybeOpenUpgradePaywall(res.status, body, path);
     const msg = messageFromErrorBody(res.status, body, res.statusText || "Request failed");
     throw new ApiError(msg, res.status, body);
   }
@@ -113,6 +123,7 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   }
   if (!res.ok) {
     const parsed = await parseJson(res);
+    maybeOpenUpgradePaywall(res.status, parsed, path);
     throw new ApiError(messageFromErrorBody(res.status, parsed, res.statusText || "Request failed"), res.status, parsed);
   }
   return (await res.json()) as T;
@@ -130,6 +141,7 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
   }
   if (!res.ok) {
     const parsed = await parseJson(res);
+    maybeOpenUpgradePaywall(res.status, parsed, path);
     throw new ApiError(messageFromErrorBody(res.status, parsed, res.statusText || "Request failed"), res.status, parsed);
   }
   const text = await res.text();
@@ -153,6 +165,7 @@ export async function apiPut<T>(path: string, body: unknown): Promise<T> {
   }
   if (!res.ok) {
     const parsed = await parseJson(res);
+    maybeOpenUpgradePaywall(res.status, parsed, path);
     throw new ApiError(messageFromErrorBody(res.status, parsed, res.statusText || "Request failed"), res.status, parsed);
   }
   return (await res.json()) as T;
@@ -182,6 +195,7 @@ export async function apiPostFormData<T>(
   }
   if (!res.ok) {
     const parsed = await parseJson(res);
+    maybeOpenUpgradePaywall(res.status, parsed, path);
     throw new ApiError(messageFromErrorBody(res.status, parsed, res.statusText || "Request failed"), res.status, parsed);
   }
   return (await res.json()) as T;
@@ -211,6 +225,7 @@ export async function apiPatchFormData<T>(
   }
   if (!res.ok) {
     const parsed = await parseJson(res);
+    maybeOpenUpgradePaywall(res.status, parsed, path);
     throw new ApiError(messageFromErrorBody(res.status, parsed, res.statusText || "Request failed"), res.status, parsed);
   }
   const text = await res.text();
@@ -227,6 +242,7 @@ export async function apiFetchBlob(path: string): Promise<{ blob: Blob; contentT
   }
   if (!res.ok) {
     const parsed = await parseJson(res);
+    maybeOpenUpgradePaywall(res.status, parsed, path);
     throw new ApiError(messageFromErrorBody(res.status, parsed, res.statusText || "Request failed"), res.status, parsed);
   }
   const contentType = res.headers.get("content-type") ?? "application/octet-stream";
@@ -245,6 +261,7 @@ export async function apiDelete<T = unknown>(path: string): Promise<T> {
   }
   if (!res.ok) {
     const parsed = await parseJson(res);
+    maybeOpenUpgradePaywall(res.status, parsed, path);
     throw new ApiError(messageFromErrorBody(res.status, parsed, res.statusText || "Request failed"), res.status, parsed);
   }
   const text = await res.text();

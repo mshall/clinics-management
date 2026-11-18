@@ -17,6 +17,7 @@ import { DeployVersionBanner } from "@/components/deploy-version-banner";
 import { LegalAcceptanceBanner } from "@/components/legal-acceptance-banner";
 import { TrialBanner } from "@/components/trial-banner";
 import { DunningBanner } from "@/components/dunning-banner";
+import { UpgradePaywallModal } from "@/components/upgrade-paywall-modal";
 
 export function AppShell() {
   const { t } = useTranslation();
@@ -106,6 +107,7 @@ export function AppShell() {
           <Outlet />
         </main>
         <RoleAssistantWidget />
+        <UpgradePaywallModal />
       </div>
     </div>
   );
