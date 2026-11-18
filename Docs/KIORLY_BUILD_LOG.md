@@ -2,8 +2,9 @@
 
 ## Autonomous agent rules (resume from here)
 
-**LOOP** (repeat until every step in §5 of `KIORLY_BUILD_SEQUENCE.md` is ticked)
+**LOOP** (repeat until every step in §5 of `Docs/kiorly-cursor-build-sequence.md` is ticked)
 
+0. **Before starting each step:** `git fetch origin` and merge the latest `origin/main` into `kiorly/launch`; resolve conflicts, run §0.2, push. If the step is already fully implemented on `main`, verify every acceptance criterion with tests, add any missing tests, tick it as **verified on main**, and continue.
 1. In §5, find the first unchecked step. Read only its section in §6. Read §2–§4 only when the step refers to them.
 2. Create branch `kiorly/<STEP-ID>-<slug>` from the latest `kiorly/launch`.
 3. Implement following §0.1 (schema → API → web en+ar → tests → docs). Run every command in §0.2; up to 3 fix rounds.
@@ -20,11 +21,11 @@
 
 | When (UTC) | Event |
 |------------|--------|
-| 2026-11-18 | Pipeline on `main` @ `4d62eb0` green (CI test, web-build, deploy). Created `kiorly/launch`, draft PR, this log + `KIORLY_NEEDS_HUMAN.md`. |
+| 2026-11-18 | Pipeline on `main` @ `4d62eb0` green. `kiorly/launch`, draft PR #75, tracker `kiorly-cursor-build-sequence.md` only. |
 
 ## Steps
 
 | Step | Merge on `kiorly/launch` | Notes |
 |------|--------------------------|-------|
-| 001 FD-00 | `955b94b` | Pre-shipped on main; verified tests + `Docs/FD-00_MARKET_TAX_DEFAULTS.md` |
-| 002 FD-01 | dd42945 | Pre-shipped; `effective-roles.ts`, transfer-ownership, E2E `owner-physician-flow` |
+| 001 FD-00 | `955b94b` | Verified on main |
+| 002 FD-01 | `dd42945` | Verified on main |
