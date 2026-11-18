@@ -673,6 +673,8 @@ export interface ReportsPerformanceDto {
   visits: number;
   newPatients: number;
   appointmentsCompleted: number;
+  /** KX-08 synced Kiorex doctor score (review-count weighted). */
+  kiorexRating?: { averageRating: number | null; reviewCount: number };
 }
 
 export interface ReportsClinicBreakdownItemDto {

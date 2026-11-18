@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { AppointmentStatus, BookingSource, Prisma } from "@prisma/client";
 import { OutboxEventService } from "./outbox-event.service";
 import { OUTBOX_EVENT } from "./outbox-event-types";
+import { isReviewInvitationEligible } from "./review-invitation";
 
 type Tx = Pick<Prisma.TransactionClient, "outboxEvent">;
 
@@ -41,6 +42,22 @@ export class AppointmentOutboxService {
       },
       tx,
     );
+    if (params.previousStatus !== params.nextStatus && isReviewInvitationEligible(params.nextStatus, params.bookingSource)) {
+      await this.outbox.enqueueEvent(
+        {
+          tenantId: params.tenantId,
+          type: OUTBOX_EVENT.REVIEW_INVITATION_ELIGIBLE,
+          aggregateType: "Appointment",
+          aggregateId: params.appointmentId,
+          payload: {
+            appointmentId: params.appointmentId,
+            clinicId: params.clinicId,
+            bookingSource: params.bookingSource,
+          },
+        },
+        tx,
+      );
+    }
   }
 
   private mapStatusToEvent(params: {

@@ -118,6 +118,47 @@
         }
       }
     },
+    "/reviews/aggregate": {
+      "post": {
+        "operationId": "marketplaceSyncReviews",
+        "summary": "Kiorex pushes a doctor's rating aggregate and recent verified reviews (KX-08)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["clinicId", "clinicianId", "averageRating", "reviewCount"],
+                "properties": {
+                  "clinicId": { "type": "string" },
+                  "clinicianId": { "type": "string" },
+                  "averageRating": { "type": "number", "minimum": 0, "maximum": 5 },
+                  "reviewCount": { "type": "integer", "minimum": 0 },
+                  "reviews": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["reviewId", "appointmentId", "rating", "createdAt"],
+                      "properties": {
+                        "reviewId": { "type": "string" },
+                        "appointmentId": { "type": "string" },
+                        "rating": { "type": "integer", "minimum": 1, "maximum": 5 },
+                        "comment": { "type": "string" },
+                        "createdAt": { "type": "string", "format": "date-time" },
+                        "moderationStatus": { "type": "string", "enum": ["VISIBLE", "HIDDEN"] }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "{ accepted, rejected[{ reviewId, reason: NOT_A_COMPLETED_VISIT | INVALID }] }" }
+        }
+      }
+    },
     "/bookings/{externalRef}/reschedule": {
       "post": {
         "operationId": "marketplaceRescheduleBooking",

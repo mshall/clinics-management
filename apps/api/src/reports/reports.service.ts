@@ -25,6 +25,7 @@ import {
   sumExpensesByCurrency,
   sumRevenueByCurrency,
 } from "./reports-aggregation";
+import { weightedKiorexRating } from "../marketplace/kiorex-rating";
 
 export interface PatientAcquisitionPatientsQuery {
   channel: string;
@@ -161,8 +162,17 @@ export class ReportsService {
       ]);
 
     const byCurrency = mergeCurrencyTotals(revenueByCurrency, expensesByCurrency);
+    const ratings = await this.prisma.kiorexRating.findMany({
+      where: {
+        tenantId,
+        ...(clinicId ? { clinicId } : scopeClinicIds?.length ? { clinicId: { in: scopeClinicIds } } : {}),
+        ...(viewer && hasRole(viewer, UserRole.PHYSICIAN) ? { clinicianId: viewer.userId } : {}),
+      },
+      select: { averageRating: true, reviewCount: true },
+    });
 
     return {
+      kiorexRating: weightedKiorexRating(ratings),
       period: {
         from: formatLocalYmd(start),
         to: formatLocalYmd(end),

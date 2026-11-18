@@ -254,6 +254,19 @@ export function ReportsPage() {
                   </p>
                   <p className="text-2xl font-semibold ltr-nums">{performanceByCurrency.length}</p>
                 </div>
+                {performance.data?.kiorexRating?.averageRating != null ? (
+                  <div className="rounded-lg border bg-muted/30 px-4 py-3" data-testid="reports-kiorex-rating">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                      {t("reports.kiorexRating", "Kiorex rating")}
+                    </p>
+                    <p className="text-2xl font-semibold ltr-nums">
+                      {performance.data.kiorexRating.averageRating.toFixed(2)}
+                      <span className="ms-2 text-sm font-normal text-muted-foreground">
+                        ({t("kiorexTab.ratings.count", "{{count}} reviews", { count: performance.data.kiorexRating.reviewCount })})
+                      </span>
+                    </p>
+                  </div>
+                ) : null}
               </div>
 
               {performanceByCurrency.length === 0 ? (

@@ -1596,7 +1596,8 @@
     "currencyColumn": "Currency",
     "chartRevenueByCurrency": "Revenue vs expenses ({{currency}})",
     "chartRevenueCurrency": "Posted revenue ({{currency}})",
-    "chartRevenueMulti": "Posted revenue by currency"
+    "chartRevenueMulti": "Posted revenue by currency",
+    "kiorexRating": "Kiorex rating"
   },
   "platform": {
     "title": "Platform administration",
@@ -3077,6 +3078,17 @@
       "reset": "Use market default",
       "saved": "Cancellation policy saved",
       "invalid": "Enter whole numbers of 0 or more."
+    },
+    "ratings": {
+      "title": "Ratings & reviews",
+      "hint": "Only patients who completed a visit can review. Kiorex sends the invitation and moderates reviews; you can reply here.",
+      "empty": "No Kiorex reviews yet.",
+      "reply": "Reply",
+      "editReply": "Edit reply",
+      "send": "Send reply",
+      "yourReply": "Your reply",
+      "replySent": "Reply sent to Kiorex",
+      "count": "{{count}} reviews"
     }
   }
 }
