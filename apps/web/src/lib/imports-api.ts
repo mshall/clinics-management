@@ -1,4 +1,4 @@
-import { apiFetchBlob, apiGet, apiPost, apiPostFormData } from "@/lib/http";
+import { apiDownload, apiGet, apiPost, apiPostFormData } from "@/lib/http";
 
 export type ImportEntity = "PATIENTS" | "APPOINTMENTS" | "PRICE_LIST" | "STAFF";
 export type ImportJobStatus = "VALIDATING" | "READY" | "COMMITTING" | "DONE" | "FAILED" | "UNDONE";
@@ -55,20 +55,10 @@ export function undoImport(id: string) {
   return apiPost<ImportJobDto>(`/api/v1/imports/${id}/undo`, {});
 }
 
-async function saveBlob(path: string, fileName: string) {
-  const { blob } = await apiFetchBlob(path);
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = fileName;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
 export function downloadImportTemplate(entity: ImportEntity, lang: "en" | "ar") {
-  return saveBlob(`/api/v1/imports/templates/${entity}?lang=${lang}`, `kiorly-${entity.toLowerCase()}-${lang}.csv`);
+  return apiDownload(`/api/v1/imports/templates/${entity}?lang=${lang}`, `kiorly-${entity.toLowerCase()}-${lang}.csv`);
 }
 
 export function downloadImportErrorReport(id: string, entity: ImportEntity) {
-  return saveBlob(`/api/v1/imports/${id}/error-report`, `${entity.toLowerCase()}-import-errors.csv`);
+  return apiDownload(`/api/v1/imports/${id}/error-report`, `${entity.toLowerCase()}-import-errors.csv`);
 }

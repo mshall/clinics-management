@@ -80,6 +80,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "messaging/messaging.controller.ts": { kind: "gated", entitlement: "mod_messaging" },
   "onboarding/onboarding.controller.ts": { kind: "open" },
   "onboarding/imports/imports.controller.ts": { kind: "open" },
+  "users/invitations/invitations.controller.ts": { kind: "open" },
   "messaging/whatsapp-webhook.controller.ts": { kind: "webhook" },
   "messaging/public-appointment-reschedule.controller.ts": { kind: "open" },
   "operations/operations.controller.ts": { kind: "gated", entitlement: "mod_operations" },

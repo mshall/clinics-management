@@ -1134,6 +1134,7 @@ model Tenant {
   planPriceMigrations            PlanPriceMigration[]
   onboardingProgress             OnboardingProgress?
   importJobs                     ImportJob[]
+  invitations                    Invitation[]
   outboxEvents                   OutboxEvent[]
   appointmentRescheduleTokens    AppointmentRescheduleToken[]
   whatsAppInboundEvents          WhatsAppInboundEvent[]
@@ -1201,6 +1202,30 @@ model ImportJob {
   undoneAt        DateTime?
   createdAt       DateTime        @default(now())
   finishedAt      DateTime?
+
+  @@index([tenantId, createdAt])
+}
+
+/// ON-06 — staff invitation (WhatsApp or email link → set password).
+model Invitation {
+  id             String     @id @default(cuid())
+  tenantId       String
+  tenant         Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  phoneOrEmail   String
+  /// WHATSAPP | EMAIL
+  channel        String
+  displayName    String     @default("")
+  roles          UserRole[]
+  clinicIds      String[]   @default([])
+  tokenHash      String     @unique
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  acceptedUserId String?
+  revokedAt      DateTime?
+  sendCount      Int        @default(1)
+  lastSentAt     DateTime   @default(now())
+  createdBy      String
+  createdAt      DateTime   @default(now())
 
   @@index([tenantId, createdAt])
 }

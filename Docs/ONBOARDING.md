@@ -5,6 +5,7 @@
 | ON-04 Checklist API + dashboard card | **Done** |
 | ON-03 Doctor verification step (`doctor_verification`) | **Done** — see [CLINICIAN_VERIFICATION.md](./CLINICIAN_VERIFICATION.md) |
 | ON-05 Data import from Excel / CSV (patients, appointments, price list, staff) | **Done** — see [Data import](#data-import-on-05) |
+| ON-06 Staff invitations by WhatsApp or email | **Done** — see [Staff invitations](#staff-invitations-on-06) (delivery template: NH-005) |
 
 ## Purpose
 
@@ -55,9 +56,23 @@ Tenant is **activated** when **first appointment** and **first check-in** steps 
 
 Tests: `onboarding/imports/on05-import.node.test.ts` (parsing, validation, templates) and `on05-import.integration.test.ts` (10k rows < 2 min non-blocking, IMPORT attribution never new for Kiorex, dedupe, error report, undo window).
 
+## Staff invitations (ON-06)
+
+Team screen `/team` (also embedded in Admin → staff / organization users and the Lite admin page); the `invite_receptionist` checklist step links here.
+
+- `POST /api/v1/invitations` `{ phoneOrEmail, roles[], displayName?, clinicIds? }` — owner / group admin / clinic admin / branch manager. A phone (normalized to E.164 with the market country) means **WhatsApp**, an email means **email**. Clinic-scoped roles need `clinicIds`.
+- **Seat check before sending:** physician invites count against `max_clinicians` (plan ∩ `Subscription.clinicianSeats`), other roles against `max_assistant_seats`; active users **plus pending invitations** in the same pool. Over the limit → `402 { code: "PLAN_UPGRADE_REQUIRED", entitlement, requiredPlan }` (global paywall modal).
+- Delivery goes through the transactional outbox: `OutboxEvent` type `staff.invitation`, target `INTERNAL`, bilingual `textEn`/`textAr` + `acceptUrl` (`APP_WEB_URL/invite/<token>`). The inviter also gets a copyable link. Token stored as SHA-256 hash; 7-day expiry.
+- `POST /api/v1/invitations/:id/resend` rotates the token (old link dies) and extends expiry; `DELETE /api/v1/invitations/:id` revokes.
+- Public: `GET /api/v1/public/invitations/:token`, `POST /api/v1/public/invitations/:token/accept` `{ password, email? (WhatsApp invites), displayName? }` → creates the user with primary + additional roles, clinic scopes and HR employee link; seat re-checked at accept. Expired / revoked / used links → `410` with `INVITE_*` code.
+- Audit: `STAFF_INVITATION_SENT|RESENT|REVOKED|ACCEPTED`.
+
+Tests: `users/invitations/on06-invitations.integration.test.ts` (402 beyond seat limit, WhatsApp outbox + accept, resend/revoke/expiry, pending invites consume seats, RBAC) and `e2e/on06-invitations.spec.ts`.
+
 ## Follow-ups
 
 - Dedicated scheduling UI deep link for clinician availability.
 - Public Kiorex doctor profile API (listing payload beyond `marketplaceBookable`).
 - Product analytics export for median time in production (pilot sessions).
 - ON-05: a durable job queue (the commit runs in-process; a restart mid-commit leaves the job `COMMITTING`); undo of `MERGE` field fills.
+- ON-06: INTERNAL outbox sender for `staff.invitation` (WhatsApp template + transactional email) — NH-005.

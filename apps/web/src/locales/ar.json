@@ -2875,5 +2875,57 @@
       "PRICE_INVALID": "السعر يجب أن يكون رقماً",
       "ROLE_INVALID": "دور غير معروف"
     }
+  },
+  "invitations": {
+    "pageTitle": "الفريق",
+    "title": "ادعُ فريقك",
+    "subtitle": "أرسل رابطاً عبر واتساب أو البريد. يختارون كلمة المرور وينضمون خلال دقيقة.",
+    "contact": "الموبايل (واتساب) أو البريد",
+    "contactPlaceholder": "01001234567 أو sara@clinic.com",
+    "name": "الاسم",
+    "roles": "الدور",
+    "send": "إرسال الدعوة",
+    "sentWhatsApp": "تمت جدولة الدعوة عبر واتساب",
+    "sentEmail": "تمت جدولة الدعوة عبر البريد",
+    "copyLink": "نسخ الرابط",
+    "copied": "تم نسخ الرابط",
+    "pending": "دعوات معلقة ({{count}})",
+    "none": "لا توجد دعوات معلقة.",
+    "expires": "تنتهي {{date}}",
+    "resend": "إعادة الإرسال",
+    "revoke": "إلغاء",
+    "failed": "تعذر إرسال الدعوة",
+    "status": {
+      "PENDING": "معلقة",
+      "ACCEPTED": "انضم",
+      "REVOKED": "ملغاة",
+      "EXPIRED": "منتهية"
+    },
+    "role": {
+      "RECEPTIONIST": "استقبال",
+      "PHYSICIAN": "طبيب",
+      "NURSE": "تمريض",
+      "CLINIC_ASSISTANT": "مساعد",
+      "FINANCE_OFFICER": "محاسب",
+      "CALL_CENTER": "كول سنتر",
+      "HR_OFFICER": "موارد بشرية",
+      "CLINIC_ADMIN": "مدير العيادة",
+      "BRANCH_MANAGER": "مدير الفرع",
+      "GROUP_ADMIN": "مدير المجموعة"
+    },
+    "acceptTitle": "انضم إلى عيادتك على كيورلي",
+    "acceptSubtitle": "دعتك {{clinic}} بدور {{roles}}.",
+    "email": "بريدك الإلكتروني (لتسجيل الدخول)",
+    "password": "اختر كلمة مرور",
+    "passwordHint": "8 أحرف على الأقل.",
+    "acceptCta": "قبول وتعيين كلمة المرور",
+    "acceptedBody": "تم الانضمام. سجّل الدخول بـ {{email}}.",
+    "goToLogin": "الذهاب لتسجيل الدخول",
+    "publicError": {
+      "INVITE_NOT_FOUND": "رابط الدعوة غير صالح. اطلب من العيادة إعادة الإرسال.",
+      "INVITE_EXPIRED": "انتهت صلاحية الدعوة. اطلب من العيادة إعادة الإرسال.",
+      "INVITE_REVOKED": "ألغت العيادة هذه الدعوة.",
+      "INVITE_ACCEPTED": "تم استخدام هذه الدعوة من قبل. سجّل الدخول."
+    }
   }
 }
