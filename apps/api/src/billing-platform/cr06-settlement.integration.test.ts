@@ -33,7 +33,9 @@ describe("CR-06 settlement persistence", () => {
     const paymentMethods = new KiorlyPaymentMethodsService(prismaSvc, gateways);
     const kiorlyPayments = new KiorlyPaymentService(prismaSvc, gateways, paymentMethods, {
       reconcileAfterPayment: async () => {},
-    } as unknown as import("../subscriptions/dunning.service").DunningService);
+    } as unknown as import("../subscriptions/dunning.service").DunningService, {
+      tryOnInvoiceFullyPaid: async () => {},
+    } as unknown as import("../growth/referral-reward.service").ReferralRewardService);
     settlement = new SettlementService(
       prismaSvc,
       new KiorlyInvoicesService(prismaSvc, creditWallet, kiorlyPayments),

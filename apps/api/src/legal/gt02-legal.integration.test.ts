@@ -14,6 +14,8 @@ import { SubscriptionService } from "../subscriptions/subscription.service";
 import type { JwtUser } from "../auth/jwt-user";
 import { CohortService } from "../cohorts/cohort.service";
 import { BillingSeatService } from "../subscriptions/billing-seat.service";
+import { ReferralAttributionService } from "../growth/referral-attribution.service";
+import { ReferralCodeService } from "../growth/referral-code.service";
 
 const prisma = new PrismaClient();
 
@@ -22,7 +24,15 @@ function services() {
   const audit = new AuditService(prismaSvc);
   const legal = new LegalAcceptanceService(prismaSvc, audit);
   const markets = new MarketsService(prismaSvc, {} as FeatureFlagsService, {} as MarketProvisionService);
-  const provision = new SignupProvisionService(prismaSvc, markets, legal, new CohortService());
+  const referralCodes = new ReferralCodeService(prismaSvc);
+  const provision = new SignupProvisionService(
+    prismaSvc,
+    markets,
+    legal,
+    new CohortService(),
+    referralCodes,
+    new ReferralAttributionService(referralCodes),
+  );
   const subs = new SubscriptionService(prismaSvc, legal, new BillingSeatService(prismaSvc));
   return { legal, provision, subs };
 }

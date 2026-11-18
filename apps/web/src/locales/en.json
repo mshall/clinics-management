@@ -2119,6 +2119,16 @@
         "status_REVERSED": "Reversed",
         "status_BILLED": "Billed",
         "status_WAIVED": "Waived",
+        "referral": {
+          "title": "Invite a colleague",
+          "hint": "Share your link — when they finish their first paid month, you both get one month of plan credit.",
+          "code": "Your code",
+          "stats": "{{rewarded}} rewarded · {{pending}} pending",
+          "shareWhatsApp": "Share on WhatsApp",
+          "whatsAppShare": "Join Kiorly with my referral link: {{link}}",
+          "copied": "Link copied",
+          "loadError": "Could not load referral hub."
+        },
         "freeProgress": {
           "title": "Kiorex — Kiorly is free",
           "hint": "Kiorex commission from attended new patients offsets your Kiorly subscription this month.",

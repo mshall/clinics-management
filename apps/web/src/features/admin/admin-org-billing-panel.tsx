@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiGet, apiPost } from "@/lib/http";
 import { AdminKiorexFreeProgressCard } from "./admin-kiorex-free-progress-card";
+import { AdminReferralInviteCard } from "./admin-referral-invite-card";
 import { useUpgradePaywallStore } from "@/stores/upgrade-paywall-store";
 import { PLAN_UPGRADE_REQUIRED } from "@/lib/plan-upgrade-constants";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
@@ -170,6 +171,7 @@ export function AdminOrgBillingPanel({ canManage }: { canManage: boolean }) {
   return (
   <div className="space-y-4">
     <AdminKiorexFreeProgressCard />
+    <AdminReferralInviteCard />
     <Card>
       <CardHeader>
         <CardTitle className="text-base">{t("admin.billing.title", "Plan & billing")}</CardTitle>

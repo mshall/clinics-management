@@ -32,6 +32,8 @@ import { isDisposableEmail } from "./signup-disposable-email";
 import { ensureOnboardingProgress } from "../onboarding/onboarding-progress.provision";
 import { LegalAcceptanceService } from "../legal/legal-acceptance.service";
 import { CohortService } from "../cohorts/cohort.service";
+import { ReferralAttributionService } from "../growth/referral-attribution.service";
+import { ReferralCodeService } from "../growth/referral-code.service";
 
 const MESSAGE_TEMPLATE_SEEDS: { key: string; channel: MessageChannel; bodyEn: string; bodyAr: string }[] = [
   {
@@ -92,6 +94,8 @@ export class SignupProvisionService {
     private readonly markets: MarketsService,
     private readonly legal: LegalAcceptanceService,
     private readonly cohorts: CohortService,
+    private readonly referralCodes: ReferralCodeService,
+    private readonly referralAttribution: ReferralAttributionService,
   ) {}
 
   async provision(input: SignupProvisionInput): Promise<SignupProvisionResult> {
@@ -153,7 +157,6 @@ export class SignupProvisionService {
           defaultInvoiceVatPercent: packDefaults.defaultInvoiceVatPercent,
           defaultTaxRegistrationNumber: packDefaults.defaultTaxRegistrationNumber,
           salesRepCode: input.salesRepCode?.trim() || null,
-          referralCode: input.referralCode?.trim() || null,
         },
       });
 
@@ -276,6 +279,9 @@ export class SignupProvisionService {
           toJson: { status, planKey, interval, source: "public_signup" } as Prisma.InputJsonValue,
         },
       });
+
+      await this.referralCodes.ensureForTenant(tenant.id, tx);
+      await this.referralAttribution.attachAtSignup(tx, tenant.id, sub.id, input.referralCode);
 
       if (paidTrial) {
         await this.cohorts.tryAssignFounding(tx, {

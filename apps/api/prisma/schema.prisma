@@ -796,6 +796,37 @@ model KiorexProgressNudge {
   @@index([tenantId, periodKey])
 }
 
+enum ReferralStatus {
+  PENDING
+  REWARDED
+  REJECTED
+}
+
+/// CR-09 — shareable doctor-to-doctor referral code per organization.
+model ReferralCode {
+  code      String   @id
+  tenantId  String   @unique
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+/// CR-09 — pending/rewarded referral attribution.
+model Referral {
+  id               String         @id @default(cuid())
+  code             String
+  referrerTenantId String
+  referrerTenant   Tenant         @relation("ReferrerTenant", fields: [referrerTenantId], references: [id], onDelete: Cascade)
+  referredTenantId String         @unique
+  referredTenant   Tenant         @relation("ReferredTenant", fields: [referredTenantId], references: [id], onDelete: Cascade)
+  status           ReferralStatus @default(PENDING)
+  rewardedAt       DateTime?
+  rejectReason     String?
+  createdAt        DateTime       @default(now())
+
+  @@index([referrerTenantId, status])
+  @@index([code])
+}
+
 model TenantEntitlementOverride {
   id        String   @id @default(cuid())
   tenantId  String
@@ -1042,6 +1073,9 @@ model Tenant {
   salesRepCode                   String?
   referralCode                   String?
   creditWallet                   CreditWallet?
+  referralCodeRow                ReferralCode?
+  referralsGiven                 Referral[]             @relation("ReferrerTenant")
+  referralReceived               Referral?              @relation("ReferredTenant")
   kiorlyInvoices                 KiorlyInvoice[]
   kiorlyPaymentMethods           KiorlyPaymentMethod[]
   kiorlyPayments                 KiorlyPayment[]

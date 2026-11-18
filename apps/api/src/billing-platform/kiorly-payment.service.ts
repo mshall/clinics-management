@@ -21,6 +21,7 @@ import { PaymentGatewayRegistry } from "./payment-gateways/payment-gateway.regis
 import { KiorlyPaymentMethodsService } from "./kiorly-payment-methods.service";
 import { assertNoPanOrCvvInBody } from "./kiorly-payment-no-pan";
 import { DunningService } from "../subscriptions/dunning.service";
+import { ReferralRewardService } from "../growth/referral-reward.service";
 
 export type PayInvoiceMethod = "card" | "saved_card" | "fawry" | "instapay" | "bank";
 
@@ -33,6 +34,7 @@ export class KiorlyPaymentService {
     private readonly gateways: PaymentGatewayRegistry,
     private readonly paymentMethods: KiorlyPaymentMethodsService,
     private readonly dunning: DunningService,
+    private readonly referralRewards: ReferralRewardService,
   ) {}
 
   async payInvoice(
@@ -169,6 +171,7 @@ export class KiorlyPaymentService {
 
     if (status === KiorlyPaymentStatus.SUCCEEDED) {
       await this.dunning.reconcileAfterPayment(tenantId);
+      await this.maybeRewardReferral(tenantId, invoiceId);
     }
 
     return { status, provider: "paymob", providerRef: charge.providerRef };
@@ -300,6 +303,13 @@ export class KiorlyPaymentService {
     }).then(async (result) => {
       if (!result.duplicate && result.reactivate && result.tenantId) {
         await this.dunning.reconcileAfterPayment(result.tenantId);
+        const payment = await this.prisma.kiorlyPayment.findUnique({
+          where: { id: result.paymentId },
+          select: { invoiceId: true },
+        });
+        if (payment?.invoiceId) {
+          await this.maybeRewardReferral(result.tenantId, payment.invoiceId);
+        }
       }
       if (event.status === "failed") {
         notifyOnCall("KIORLY_PAYMENT_WEBHOOK_FAILED", {
@@ -379,18 +389,34 @@ export class KiorlyPaymentService {
 
     if (approved) {
       await this.dunning.reconcileAfterPayment(payment.tenantId);
+      if (payment.invoiceId) {
+        await this.maybeRewardReferral(payment.tenantId, payment.invoiceId);
+      }
     }
 
     return { paymentId, approved };
   }
 
-  private async applyPaymentToInvoiceTx(tx: Prisma.TransactionClient, invoiceId: string, amountStr: string) {
+  private async maybeRewardReferral(tenantId: string, invoiceId: string): Promise<void> {
+    try {
+      await this.referralRewards.tryOnInvoiceFullyPaid(tenantId, invoiceId);
+    } catch (e) {
+      this.log.warn(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  private async applyPaymentToInvoiceTx(
+    tx: Prisma.TransactionClient,
+    invoiceId: string,
+    amountStr: string,
+  ): Promise<{ becameFullyPaid: boolean; tenantId: string }> {
     const invoice = await tx.kiorlyInvoice.findUniqueOrThrow({ where: { id: invoiceId } });
     const pay = new Prisma.Decimal(amountStr);
     const newPaid = invoice.amountPaid.add(pay);
     const due = invoice.total.sub(newPaid);
     let status = invoice.status;
     let paidAt = invoice.paidAt;
+    const wasPaid = invoice.status === KiorlyInvoiceStatus.PAID;
     if (due.lte(0)) {
       status = KiorlyInvoiceStatus.PAID;
       paidAt = new Date();
@@ -406,6 +432,10 @@ export class KiorlyPaymentService {
         paymentUnderReview: false,
       },
     });
+    return {
+      becameFullyPaid: !wasPaid && status === KiorlyInvoiceStatus.PAID,
+      tenantId: invoice.tenantId,
+    };
   }
 
   async scheduleAutoChargeOnIssue(invoiceId: string) {

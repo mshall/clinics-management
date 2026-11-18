@@ -49,6 +49,7 @@ import { BillingPlatformModule } from "./billing-platform/billing-platform.modul
 import { ObservabilityModule } from "./observability/observability.module";
 import { UsageModule } from "./usage/usage.module";
 import { CohortsModule } from "./cohorts/cohorts.module";
+import { GrowthModule } from "./growth/growth.module";
 
 @Module({
   imports: [
@@ -100,6 +101,7 @@ import { CohortsModule } from "./cohorts/cohorts.module";
     BillingPlatformModule,
     UsageModule,
     CohortsModule,
+    GrowthModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: PrivilegedMfaGuard }],
 })

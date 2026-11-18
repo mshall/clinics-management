@@ -25,7 +25,9 @@ const prismaSvc = prisma as unknown as PrismaService;
 const gateways = new PaymentGatewayRegistry();
 const paymentMethods = new KiorlyPaymentMethodsService(prismaSvc, gateways);
 const dunningStub = { reconcileAfterPayment: async () => {} } as unknown as DunningService;
-const payments = new KiorlyPaymentService(prismaSvc, gateways, paymentMethods, dunningStub);
+const payments = new KiorlyPaymentService(prismaSvc, gateways, paymentMethods, dunningStub, {
+  tryOnInvoiceFullyPaid: async () => {},
+} as unknown as import("../growth/referral-reward.service").ReferralRewardService);
 const creditWallet = new CreditWalletService(prismaSvc);
 const invoices = new KiorlyInvoicesService(prismaSvc, creditWallet, payments);
 

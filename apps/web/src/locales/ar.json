@@ -2140,6 +2140,16 @@
         "status_REVERSED": "معكوس",
         "status_BILLED": "مُفوتر",
         "status_WAIVED": "معفى",
+        "referral": {
+          "title": "ادعُ زميلاً",
+          "hint": "شارك رابطك — عند أول شهر مدفوع لهم تحصلان على رصيد يعادل شهراً من الخطة.",
+          "code": "رمزك",
+          "stats": "{{rewarded}} مكافأة · {{pending}} قيد الانتظار",
+          "shareWhatsApp": "مشاركة على واتساب",
+          "whatsAppShare": "انضم إلى Kiorly عبر رابط الإحالة: {{link}}",
+          "copied": "تم نسخ الرابط",
+          "loadError": "تعذّر تحميل الإحالات."
+        },
         "freeProgress": {
           "title": "كيوركس — Kiorly مجاناً",
           "hint": "عمولة كيوركس من مرضى جدد حضروا تُخصم من اشتراك Kiorly لهذا الشهر.",

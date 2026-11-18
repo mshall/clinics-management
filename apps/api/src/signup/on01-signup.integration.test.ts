@@ -13,12 +13,22 @@ import { AuditService } from "../audit/audit.service";
 import { LegalAcceptanceService } from "../legal/legal-acceptance.service";
 import { legalAcceptancesPayload, requiredLegalForSignup } from "../legal/legal-catalog";
 import { CohortService } from "../cohorts/cohort.service";
+import { ReferralAttributionService } from "../growth/referral-attribution.service";
+import { ReferralCodeService } from "../growth/referral-code.service";
 
 const prisma = new PrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 const markets = new MarketsService(prismaSvc, {} as FeatureFlagsService, {} as MarketProvisionService);
 const legal = new LegalAcceptanceService(prismaSvc, new AuditService(prismaSvc));
-const provision = new SignupProvisionService(prismaSvc, markets, legal, new CohortService());
+const referralCodes = new ReferralCodeService(prismaSvc);
+const provision = new SignupProvisionService(
+  prismaSvc,
+  markets,
+  legal,
+  new CohortService(),
+  referralCodes,
+  new ReferralAttributionService(referralCodes),
+);
 
 describe("ON-01 public signup provision", () => {
   before(async () => {

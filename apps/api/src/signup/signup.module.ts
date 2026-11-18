@@ -12,6 +12,7 @@ import { SignupProvisionService } from "./signup-provision.service";
 import { SignupService } from "./signup.service";
 import { resolveJwtSigningSecret } from "../auth/jwt-secret.util";
 import { CohortsModule } from "../cohorts/cohorts.module";
+import { GrowthModule } from "../growth/growth.module";
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { CohortsModule } from "../cohorts/cohorts.module";
     MarketsModule,
     LegalModule,
     CohortsModule,
+    GrowthModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

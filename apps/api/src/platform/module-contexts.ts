@@ -45,6 +45,7 @@ export const TOP_LEVEL_FOLDER_TO_CONTEXT: Record<string, BoundedContextId> = {
   entitlements: "organization",
   cohorts: "organization",
   usage: "organization",
+  growth: "organization",
   "user-nav-tabs": "organization",
   "user-clinic-privilege-grants": "organization",
   "user-money-visibility": "organization",

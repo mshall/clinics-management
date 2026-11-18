@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { CreditsModule } from "../credits/credits.module";
+import { GrowthModule } from "../growth/growth.module";
 import { SubscriptionsModule } from "../subscriptions/subscriptions.module";
 import { KiorlyBillingPaymentsController } from "./kiorly-billing-payments.controller";
 import { KiorlyInvoicesController } from "./kiorly-invoices.controller";
@@ -16,7 +17,7 @@ import { SettlementScheduler } from "./settlement.scheduler";
 import { SettlementService } from "./settlement.service";
 
 @Module({
-  imports: [CreditsModule, SubscriptionsModule],
+  imports: [CreditsModule, SubscriptionsModule, GrowthModule],
   controllers: [
     KiorlyInvoicesController,
     KiorlyBillingPaymentsController,
