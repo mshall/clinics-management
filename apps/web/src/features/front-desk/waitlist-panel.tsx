@@ -38,7 +38,7 @@ export type WaitlistSlotRow = {
   }[];
 };
 
-export function waitlistPatientName(p: NameFields, language: string): string {
+function waitlistPatientName(p: NameFields, language: string): string {
   const ar = [p.firstNameAr, p.lastNameAr].filter(Boolean).join(" ").trim();
   if (language.startsWith("ar") && ar) return ar;
   return `${p.firstNameEn} ${p.lastNameEn}`.trim();

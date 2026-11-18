@@ -6,6 +6,7 @@ import {
   AppointmentStatusBadge,
   appointmentCalendarEventChipClassName,
 } from "@/components/appointment-status-badge";
+import { NoShowRiskChip } from "@/components/no-show-risk-chip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -454,7 +455,10 @@ export function AppointmentsCalendarPanel() {
                                 </p>
                               ) : null}
                             </div>
-                            <AppointmentStatusBadge status={a.status} className="hidden shrink-0 sm:inline-flex" />
+                            <div className="flex shrink-0 flex-col items-end gap-1">
+                              <AppointmentStatusBadge status={a.status} className="hidden sm:inline-flex" />
+                              <NoShowRiskChip risk={a.noShowRisk} interactive={false} />
+                            </div>
                           </button>
                         </li>
                       );

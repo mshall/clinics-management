@@ -37,6 +37,8 @@ import {
 import { ensureDraftEncounterIfCheckedIn } from "../front-desk/ensure-draft-encounter-on-check-in";
 import { FrontDeskFlowService } from "../front-desk/front-desk-flow.service";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
+import { EntitlementsService } from "../entitlements/entitlements.service";
+import { noShowRiskForAppointment } from "../common/no-show-risk";
 import { SchedulingService } from "../scheduling/scheduling.service";
 import { SlotService } from "../scheduling/slot.service";
 import type { CreateAppointmentDto } from "./dto/create-appointment.dto";
@@ -50,7 +52,7 @@ import { AppointmentOutboxService } from "../messaging/appointment-outbox.servic
 import { auditClinicCancellation, clinicCancellationEventMetadata, clinicCancellationPatch } from "./kiorex-clinic-cancel";
 
 const appointmentDtoInclude = {
-  patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } },
+  patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true, noShowCount: true, requiresAppointmentDeposit: true } },
   clinic: { select: { nameEn: true, nameAr: true } },
   clinician: {
     select: {
@@ -61,6 +63,7 @@ const appointmentDtoInclude = {
 } as const;
 
 type AppointmentRow = Prisma.AppointmentGetPayload<{ include: typeof appointmentDtoInclude }>;
+type NoShowRiskContext = { enabled: boolean; depositsAvailable: boolean; now: Date };
 
 function isPhysicianRole(role: UserRole | undefined): boolean {
   return role === UserRole.PHYSICIAN || String(role) === "PHYSICIAN";
@@ -77,7 +80,17 @@ export class AppointmentsService {
     private readonly commissionCharges: CommissionChargeService,
     private readonly slots: SlotService,
     private readonly appointmentOutbox: AppointmentOutboxService,
+    private readonly entitlements: EntitlementsService,
   ) {}
+
+  /** FS-05: the risk chip is a Pro+ front-desk feature; deposits are suggested only when the plan has them. */
+  private async noShowRiskContext(tenantId: string): Promise<NoShowRiskContext> {
+    const [enabled, depositsAvailable] = await Promise.all([
+      this.entitlements.isEntitled(tenantId, "mod_front_desk"),
+      this.entitlements.isEntitled(tenantId, "deposits"),
+    ]);
+    return { enabled, depositsAvailable, now: new Date() };
+  }
 
   private async invalidateSlotsForAppointment(
     tenantId: string,
@@ -161,6 +174,7 @@ export class AppointmentsService {
     row: AppointmentRow,
     viewer?: JwtUser,
     overrides: UserMoneyVisibilityOverrides = DEFAULT_MONEY_VISIBILITY_OVERRIDES,
+    risk?: NoShowRiskContext,
   ): AppointmentDto {
     const financialsVisible = viewer
       ? appointmentFinancialsVisible(viewer, row.clinicianId, overrides)
@@ -214,13 +228,17 @@ export class AppointmentsService {
             patientName: `${patient.firstNameEn} ${patient.lastNameEn}`.trim(),
           }
         : {}),
+      noShowRisk:
+        risk?.enabled && patient
+          ? noShowRiskForAppointment(row, patient, { now: risk.now, depositsAvailable: risk.depositsAvailable })
+          : null,
     };
     return dto;
   }
 
   private async finishAppointmentDto(tenantId: string, row: AppointmentRow, viewer?: JwtUser): Promise<AppointmentDto> {
-    const moneyVis = await this.moneyOverrides(tenantId, viewer);
-    const dto = this.mapRow(row, viewer, moneyVis);
+    const [moneyVis, risk] = await Promise.all([this.moneyOverrides(tenantId, viewer), this.noShowRiskContext(tenantId)]);
+    const dto = this.mapRow(row, viewer, moneyVis, risk);
     if (row.status !== AppointmentStatus.CHECKED_IN) return dto;
 
     let openEncounterId =
@@ -393,9 +411,9 @@ export class AppointmentsService {
         include: appointmentDtoInclude,
       }),
     ]);
-    const moneyVis = await this.moneyOverrides(tenantId, viewer);
+    const [moneyVis, risk] = await Promise.all([this.moneyOverrides(tenantId, viewer), this.noShowRiskContext(tenantId)]);
     return paginate(
-      rows.map((r: AppointmentRow) => this.mapRow(r, viewer, moneyVis)),
+      rows.map((r: AppointmentRow) => this.mapRow(r, viewer, moneyVis, risk)),
       total,
       page,
       pageSize

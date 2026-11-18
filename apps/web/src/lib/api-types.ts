@@ -1,4 +1,5 @@
 /** API shapes not yet in OpenAPI codegen — keep aligned with Nest DTOs. */
+import type { NoShowRiskView } from "./no-show-risk";
 
 export type GenderCode = "M" | "F" | "OTHER" | "UNKNOWN";
 
@@ -237,6 +238,8 @@ export interface AppointmentDto {
   commissionChargeableAtBooking?: boolean;
   cancelledBy?: string | null;
   cancellationReason?: string | null;
+  /** FS-05 rule-based no-show risk (Pro+, upcoming bookings only) */
+  noShowRisk?: NoShowRiskView | null;
 }
 
 export interface OperationDto {
