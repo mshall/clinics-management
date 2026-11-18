@@ -291,7 +291,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 055 · SB-05 · Lite commission invoicing & minimum invoice — `1eb1a44` · `sb05-lite-invoicing.*.test.ts` · `Docs/MONTHLY_SETTLEMENT.md`
 - [x] Step 056 · SB-06 · Currency, price indexation & grandfathering — `2c9dabb` · `sb06-price-indexation.*.test.ts` · `Docs/PLANS_AND_PRICING.md`
 - [x] Step 057 · ON-05 · Data import from Excel / CSV (patients, appointments, price list, staff) — `8d23928` · `on05-import.*.test.ts` · `e2e/on05-import.spec.ts` · `Docs/ONBOARDING.md`
-- [x] Step 058 · ON-06 · Staff invitations by WhatsApp or email — `on06-invitations.integration.test.ts` · `e2e/on06-invitations.spec.ts` · `Docs/ONBOARDING.md`
+- [x] Step 058 · ON-06 · Staff invitations by WhatsApp or email — `209a27b` · `on06-invitations.integration.test.ts` · `e2e/on06-invitations.spec.ts` · `Docs/ONBOARDING.md`
 - [ ] Step 059 · ON-07 · Field-sales assisted onboarding & rep attribution
 - [ ] Step 060 · ON-08 · First-run tour, sample data & in-app help
 - [ ] Step 061 · KX-06 · Reschedule & cancellation policies (both directions)
