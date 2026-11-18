@@ -29,3 +29,4 @@
 |------|--------------------------|-------|
 | 001 FD-00 | `955b94b` | Verified on main |
 | 002 FD-01 | `dd42945` | Verified on main |
+| 003 FD-02 | `4c6e4ba` | `postRevenue`, fiscal gate off, no clinic FiscalDevice; `Docs/FD-02_ETA_RETIRED.md` |
