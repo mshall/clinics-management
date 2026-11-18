@@ -87,7 +87,8 @@
     "transactionIdPlaceholder": "Reference from the transfer receipt",
     "channelRequired": "Select InstaPay or Fawry.",
     "transactionIdRequired": "Enter the transfer transaction ID.",
-    "invalidMode": "Choose how payment was collected."
+    "invalidMode": "Choose how payment was collected.",
+    "cash": "Cash"
   },
   "frontDesk": {
     "searchPatients": "Find patient",
@@ -129,7 +130,9 @@
     "preferredRoom": "Preferred",
     "inExamHint": "Finalize the encounter to complete the visit and free the exam room.",
     "vipPatient": "VIP patient",
-    "needsChaperone": "Needs a chaperone"
+    "needsChaperone": "Needs a chaperone",
+    "checkInShortcutHint": "Ctrl+Enter to check in · Alt+1… to pick the payment method",
+    "boardShortcuts": "Shortcuts: N call next · S start next visit · Ctrl+K find patient"
   },
   "auth": {
     "signIn": "Sign in",
@@ -2726,7 +2729,12 @@
       "imagesOnly": "Only image documents can be cropped.",
       "failed": "Upload failed. Please try again."
     },
-    "encounterLocked": "This note is locked. Use Amend to reopen it with a documented reason."
+    "encounterLocked": "This note is locked. Use Amend to reopen it with a documented reason.",
+    "transfer": {
+      "referenceFormat": "This doesn't look like a {{channel}} reference. Check the receipt and try again.",
+      "referenceRequired": "Enter the {{channel}} transaction ID from the receipt.",
+      "notVerified": "{{channel}} could not confirm this transaction. Check the ID or take another payment method."
+    }
   },
   "common": {
     "actions": "Actions",

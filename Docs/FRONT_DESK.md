@@ -56,6 +56,19 @@ When the **encounter fee** is raised above what was collected at check-in, the A
 
 A **lower** fee after payment uses **`reducePostedRevenueNetWithFiscal`**: partial return when the sale was already submitted; if the sale is still **PENDING**, the pending document is cancelled and a new sale is queued at the reduced amount on the same revenue row.
 
+## Tablet & phone review (FS-02)
+
+| Item | Status |
+|---|---|
+| FS-02 InstaPay check-in ≤ 4 taps and < 30 s on a 10" tablet and a phone (timed E2E) | **Done** |
+| FS-02 Clear transaction-ID errors (inline, before submit; API errors pinned to the field) | **Done** |
+| FS-02 Desktop keyboard shortcuts | **Done** |
+
+- **Payment method chips** replace the two dropdowns (method + channel): one tap on **Cash**, **InstaPay**, **Fawry** or an organization channel (all from the market pack / org channels — nothing hard-coded). Choosing a transfer focuses the **Transaction ID** field, so InstaPay check-in is: open appointment → InstaPay → type ID → **Check in** (3 taps). Chips, amount, reference and the check-in button are ≥ 44 px tap targets; amount uses the decimal keypad.
+- **Transaction ID errors:** the web runs the same check as the API (min length + the channel's `referencePattern` from `GET /markets/current`) and shows the message under the field (`aria-invalid`, focus kept) instead of a toast; nothing is sent until it passes. API errors carry `errorCode` (`TRANSFER_REFERENCE_REQUIRED` / `TRANSFER_REFERENCE_FORMAT` / `TRANSFER_REFERENCE_NOT_VERIFIED`), `field: "transferReference"`, `messageKey` `errors.transfer.*` and `messageParams.channel`, so the form pins them to the same field in EN/AR.
+- **Keyboard (desktop):** quick check-in — **Ctrl/⌘+Enter** check in, **Alt+1…** pick payment method, **Enter** in the Transaction ID submits. Front desk board — **N** call next waiting ticket, **S** start the next visit (called patient first). **Ctrl/⌘+K** global patient search. Hints show on large screens only.
+- Tests: `e2e/fs02-front-desk-check-in.spec.ts` (timed tablet + phone, inline error, keyboard-only), `apps/web/src/lib/fs02-check-in.node.test.ts`, `apps/api/src/common/transfer-reference.node.test.ts`.
+
 ## Live clinic board & waiting-room screen
 
 ### Automated visit flow

@@ -1,7 +1,7 @@
 import { BadRequestException } from "@nestjs/common";
 import { VisitCollectionMode } from "@prisma/client";
 import type { MarketPaymentMethodDef } from "../markets/market-payment-methods";
-import { assertValidTransferReference } from "./transfer-reference";
+import { assertValidTransferReference, transferReferenceError } from "./transfer-reference";
 
 export type ParsedVisitCollection = {
   collectionMode: VisitCollectionMode | null;
@@ -45,7 +45,7 @@ export function parseVisitCollectionForAmount(
   }
   const ref = input.transferReference?.trim() ?? "";
   if (ref.length < 3) {
-    throw new BadRequestException("Transaction ID is required for money transfer");
+    throw transferReferenceError("TRANSFER_REFERENCE_REQUIRED", channel, "Transaction ID is required for money transfer");
   }
   assertValidTransferReference(channel, ref, opts?.paymentMethods ?? []);
   return {
