@@ -34,7 +34,7 @@ Runs on **every pull request to `main`** in the reusable **CI test** job (after 
 
 - Seeds with `SEED_PILOT_TENANTS=true` for Lite pilot users  
 - `npx playwright install chromium` then `npm run test:e2e:golden -w web` (CI runs **qa01** only; full `test:e2e` is local/optional)  
-- Job pre-builds API; Playwright starts **`scripts/playwright-ci-webserver.sh`** (`npm run start` + Vite; DB already migrated/seeded) with an **8 min** webServer timeout on CI.  
+- Job pre-builds API; Playwright starts **`scripts/playwright-ci-webserver.sh`** (`npm run start` + Vite, warms `/login`; DB already migrated/seeded) with an **8 min** webServer timeout on CI.  
 - Failures block merge (required check: **CI test**)
 
 Local:

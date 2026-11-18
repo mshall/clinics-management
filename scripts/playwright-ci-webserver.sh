@@ -27,4 +27,15 @@ echo "[playwright-ci] starting Vite…"
 npm run dev -w web &
 WEB_PID=$!
 
+VITE_WAIT_SEC="${PLAYWRIGHT_VITE_WAIT_SEC:-180}"
+echo "[playwright-ci] warming Vite (first /login compile on CI can exceed Playwright's HTTP poll)…"
+for _ in $(seq 1 "$VITE_WAIT_SEC"); do
+  body="$(curl -sf --max-time 3 "http://127.0.0.1:5173/login" 2>/dev/null || true)"
+  if echo "$body" | grep -q 'id="email"'; then
+    echo "[playwright-ci] Vite login shell ready"
+    break
+  fi
+  sleep 1
+done
+
 wait "$API_PID" "$WEB_PID"

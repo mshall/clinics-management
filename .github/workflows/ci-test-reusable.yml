@@ -25,6 +25,7 @@ jobs:
           --health-retries 5
     env:
       DATABASE_URL: postgresql://cms:cms@localhost:5432/cms?schema=public
+      JWT_SECRET: "ci-only-not-production-min-32-characters"
       CI: "true"
       NODE_ENV: test
       PDPC_EGYPT_LAUNCH_GATE_BYPASS: "1"
@@ -80,3 +81,4 @@ jobs:
         run: npm run test:e2e:golden -w web
         env:
           SEED_PILOT_TENANTS: "true"
+          SWAGGER_ENABLED: "false"
