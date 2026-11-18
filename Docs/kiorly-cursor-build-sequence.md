@@ -223,7 +223,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 **Stage A · Foundations** — Before anything commercial
 
 - [x] Step 001 · FD-00 · Remove UAE defaults; derive tax & fees from the market pack — verified pre-shipped on main; docs `Docs/FD-00_MARKET_TAX_DEFAULTS.md`
-- [ ] Step 002 · FD-01 · Owner-physician: allow one user to hold several roles
+- [x] Step 002 · FD-01 · Owner-physician: allow one user to hold several roles — see `Docs/RBAC_MULTI_ROLE.md`
 - [ ] Step 003 · FD-02 · Take ETA receipts and e-invoicing out of Kiorly
 - [ ] Step 004 · SC-01 · Frankfurt data residency: transfer approval & controls in the product
 - [ ] Step 005 · CL-01 · Egyptian drug database (brand → active ingredient)
