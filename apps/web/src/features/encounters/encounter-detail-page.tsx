@@ -60,6 +60,7 @@ import {
 } from "@/lib/visit-collection";
 import { generatePrescriptionPng } from "@/lib/prescription-image";
 import { EncounterClinicalTools } from "@/features/clinical/encounter-clinical-tools";
+import { EncounterSignoffTrail } from "@/features/encounters/encounter-signoff-trail";
 import { DrugSearchAutocomplete, type DrugSearchHit } from "@/features/clinical/drug-search-autocomplete";
 import { PatientChartAlerts } from "@/components/patient-chart-alerts";
 import { EncounterSpecialtyForm } from "@/features/clinical/encounter-specialty-form";
@@ -230,7 +231,12 @@ export function EncounterDetailPage() {
     enc?.status === "DRAFT" ||
     enc?.status === "AMENDED" ||
     (enc?.status === "FINALIZED" && !enc?.noteLockedAt);
-  const canFinalize = Boolean(enc && user && enc.clinicianId === user.id && draft);
+  const signable = enc?.status === "DRAFT" || enc?.status === "AMENDED";
+  const canFinalize = Boolean(enc && user && enc.clinicianId === user.id && signable);
+  const userRoles = user?.roles?.length ? user.roles : user ? [user.role] : [];
+  const canAmend = Boolean(
+    enc && user && (enc.clinicianId === user.id || userRoles.some((r) => r === "group_supervisor" || r === "group_admin")),
+  );
 
   const invalidate = () => {
     void qc.invalidateQueries({ queryKey: ["encounter", id] });
@@ -932,6 +938,7 @@ export function EncounterDetailPage() {
               onTemplateIdChange={setClinicalTemplateId}
               onResponsesChange={setSpecialtyFormResponses}
             />
+            {enc ? <EncounterSignoffTrail encounter={enc} canAmend={canAmend} /> : null}
             {enc ? (
               <EncounterClinicalTools
                 encounter={enc}
@@ -992,12 +999,20 @@ export function EncounterDetailPage() {
                 <Button type="button" variant="secondary" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
                   {t("common.save")}
                 </Button>
-                <Button type="button" onClick={() => setFinalizeDialogOpen(true)} disabled={finalizeMutation.isPending || !canFinalize}>
-                  {t("encounters.finalize")}
-                </Button>
+                {signable ? (
+                  <Button
+                    type="button"
+                    className="min-h-10"
+                    onClick={() => setFinalizeDialogOpen(true)}
+                    disabled={finalizeMutation.isPending || !canFinalize}
+                    data-testid="encounter-sign-button"
+                  >
+                    {enc?.status === "AMENDED" ? t("signoff.resignAction", "Sign amended note") : t("encounters.finalize")}
+                  </Button>
+                ) : null}
               </div>
             ) : null}
-            {!canFinalize && draft ? (
+            {!canFinalize && signable ? (
               <p className="text-xs text-muted-foreground">{t("encounters.finalizeHint")}</p>
             ) : null}
           </CardContent>
