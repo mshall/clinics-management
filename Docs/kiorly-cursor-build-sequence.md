@@ -304,7 +304,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 068 · FS-02 · Golden-flow front desk review on tablet & phone — `0e363a2` · `e2e/fs02-front-desk-check-in.spec.ts` · `apps/web/src/lib/fs02-check-in.node.test.ts` · `transfer-reference.node.test.ts` · `Docs/FRONT_DESK.md`
 - [x] Step 069 · FS-03 · Waitlist auto-fill on cancellations — `43703f5` · `fs03-waitlist-autofill.integration.test.ts` · `fs03-waitlist-autofill.node.test.ts` · `e2e/fs03-waitlist-autofill.spec.ts` · `Docs/FRONT_DESK.md`
 - [x] Step 070 · FS-05 · Show no-show risk in the UI with an honest label — `00b3005` · `fs05-no-show-risk.integration.test.ts` · `common/fs05-no-show-risk.node.test.ts` · `web/src/lib/fs05-no-show-risk.node.test.ts` · `e2e/fs05-no-show-risk.spec.ts` · `Docs/AI_HONEST_LABELS.md`
-- [ ] Step 071 · MN-01 · Refunds, credit notes, deposits & prepaid packages (APIs + UI)
+- [x] Step 071 · MN-01 · Refunds, credit notes, deposits & prepaid packages (APIs + UI) — `67832a2` · `billing/mn01-patient-money.integration.test.ts` · `billing/mn01-patient-money.node.test.ts` · `e2e/mn01-patient-money.spec.ts` · `Docs/CLINIC_BILLING.md`
 - [ ] Step 072 · KX-07 · Kiorex deposits & prepayments into clinic billing
 - [ ] Step 073 · FS-04 · Deposits & payment links for high-risk bookings
 - [ ] Step 074 · MN-02 · Doctor revenue-share engine & statements
