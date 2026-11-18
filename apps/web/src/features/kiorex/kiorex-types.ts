@@ -31,3 +31,45 @@ export type KiorexSettingsDto = {
     override: Partial<KiorexCancellationPolicy> | null;
   };
 };
+
+export type KiorexBookingLinkDto = {
+  clinicId: string;
+  clinicNameEn: string;
+  clinicNameAr: string;
+  slug: string;
+  url: string;
+  channel: "CLINIC_LINK";
+  commissionFree: true;
+  doctors: { listingId: string; clinicianId: string; nameEn: string; nameAr: string; slug: string; url: string }[];
+};
+
+export type PublicBookingPageDto = {
+  slug: string;
+  channel: "CLINIC_LINK";
+  commissionFree: true;
+  clinic: {
+    id: string;
+    nameEn: string;
+    nameAr: string;
+    logoUrl: string | null;
+    brandColor: string;
+    city: string;
+    addressEn: string;
+    addressAr: string;
+    locationUrl: string;
+    phone: string;
+    currency: string;
+  };
+  doctors: {
+    clinicianId: string;
+    slug: string | null;
+    nameEn: string;
+    nameAr: string;
+    titleEn: string | null;
+    titleAr: string | null;
+    specialty: string | null;
+    widgetUrl: string | null;
+  }[];
+  appointmentTypes: { id: string; nameEn: string; nameAr: string; durationMinutes: number; feeAmount: string | null }[];
+  widgetUrl: string | null;
+};

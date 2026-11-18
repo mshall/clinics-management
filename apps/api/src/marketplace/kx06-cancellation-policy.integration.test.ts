@@ -23,6 +23,7 @@ import { ConsentPolicyService } from "../compliance/consent-policy.service";
 import { SlotService } from "../scheduling/slot.service";
 import type { JwtUser } from "../auth/jwt-user";
 import { MarketplaceBookingService } from "./marketplace-booking.service";
+import { NewPatientService } from "../patients/new-patient.service";
 import { MarketplacePatientIntakeService } from "./marketplace-patient-intake.service";
 import { MarketplaceAccessService } from "./marketplace-access.service";
 import { MarketplaceListingService } from "./marketplace-listing.service";
@@ -46,6 +47,7 @@ const bookings = new MarketplaceBookingService(
   outbox,
   appointmentOutbox,
   slots,
+  new NewPatientService(prismaSvc),
 );
 const appointments = new AppointmentsService(
   prismaSvc,
