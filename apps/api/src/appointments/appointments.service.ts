@@ -540,6 +540,7 @@ export class AppointmentsService {
       );
       return row;
     });
+    await this.scheduling.recordFreedSlot(tenantId, updated.id);
     return this.mapRow(updated);
   }
 
@@ -769,12 +770,7 @@ export class AppointmentsService {
     });
     await this.commissionCharges.applyCreditIntents(creditIntents);
     if (status === AppointmentStatus.CANCELLED) {
-      await this.scheduling.offerWaitlistForCancelledSlot(
-        tenantId,
-        row.clinicId,
-        row.startsAt,
-        row.clinicianId,
-      );
+      await this.scheduling.recordFreedSlot(tenantId, row.id);
     }
     await this.invalidateSlotsForAppointment(tenantId, row.clinicId, row.clinicianId, "appointment_status_changed");
     return this.finishAppointmentDto(tenantId, row, viewer);

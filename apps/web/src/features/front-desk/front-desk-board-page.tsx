@@ -10,6 +10,7 @@ import { useClinicsQuery } from "@/lib/api-hooks";
 import { apiGet, apiPost } from "@/lib/http";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { KiorexConfirmQueuePanel } from "@/features/front-desk/kiorex-confirm-queue-panel";
+import { WaitlistPanel } from "@/features/front-desk/waitlist-panel";
 import { useKeyboardShortcuts } from "@/lib/keyboard-shortcuts";
 
 type QueueRow = {
@@ -213,6 +214,7 @@ export function FrontDeskBoardPage() {
         </Card>
       </div>
       <KiorexConfirmQueuePanel clinicId={activeClinic || undefined} />
+      <WaitlistPanel clinicId={activeClinic || undefined} />
     </div>
   );
 }

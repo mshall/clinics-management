@@ -1155,6 +1155,8 @@ model Tenant {
   appointmentRescheduleTokens    AppointmentRescheduleToken[]
   prescriptionVerificationTokens PrescriptionVerificationToken[]
   encounterAmendments            EncounterAmendment[]
+  waitlistOpenSlots              WaitlistOpenSlot[]
+  waitlistSlotOffers             WaitlistSlotOffer[]
   whatsAppInboundEvents          WhatsAppInboundEvent[]
   messagingConsents              MessagingConsent[]
   legalAcceptances               LegalAcceptance[]
@@ -2750,9 +2752,74 @@ model AppointmentWaitlistEntry {
   notes             String?
   createdAt         DateTime                @default(now())
   updatedAt         DateTime                @updatedAt
+  slotOffers        WaitlistSlotOffer[]
 
   @@index([tenantId, clinicId, status])
   @@index([patientId])
+}
+
+enum WaitlistOpenSlotStatus {
+  OPEN
+  FILLED
+  FILLED_ELSEWHERE
+  EXHAUSTED
+  CLOSED
+}
+
+enum WaitlistOfferStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  WITHDRAWN
+  SKIPPED
+}
+
+/// FS-03 a cancelled appointment's time, offered to the waitlist in order. openKey is set only while OPEN (one open row per clinician+time).
+model WaitlistOpenSlot {
+  id                  String                 @id @default(cuid())
+  tenantId            String
+  tenant              Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId            String
+  clinicianId         String
+  startsAt            DateTime
+  endsAt              DateTime?
+  appointmentTypeId   String?
+  feeAmount           Decimal                @default(0) @db.Decimal(14, 2)
+  sourceAppointmentId String?
+  status              WaitlistOpenSlotStatus @default(OPEN)
+  openKey             String?                @unique
+  filledAppointmentId String?
+  closedAt            DateTime?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  offers              WaitlistSlotOffer[]
+
+  @@index([tenantId, status])
+}
+
+/// FS-03 one WhatsApp offer of a slot to one waitlisted patient. activeSlotId = slotId while PENDING, so a slot can never be on offer to two people at once.
+model WaitlistSlotOffer {
+  id                  String              @id @default(cuid())
+  tenantId            String
+  tenant              Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  slotId              String
+  slot                WaitlistOpenSlot    @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  waitlistEntryId     String
+  waitlistEntry       AppointmentWaitlistEntry @relation(fields: [waitlistEntryId], references: [id], onDelete: Cascade)
+  patientId           String
+  status              WaitlistOfferStatus @default(PENDING)
+  activeSlotId        String?             @unique
+  offeredAt           DateTime            @default(now())
+  expiresAt           DateTime
+  respondedAt         DateTime?
+  outboundMessageId   String?
+  bookedAppointmentId String?
+  skipReason          String?
+
+  @@unique([slotId, waitlistEntryId])
+  @@index([tenantId, status, expiresAt])
+  @@index([waitlistEntryId])
 }
 
 model IntegrationWebhook {

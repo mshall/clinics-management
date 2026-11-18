@@ -51,7 +51,7 @@ const bookings = new MarketplaceBookingService(
 );
 const appointments = new AppointmentsService(
   prismaSvc,
-  { offerWaitlistForCancelledSlot: async () => undefined } as never,
+  { recordFreedSlot: async () => null } as never,
   {} as never,
   { isEnabled: async () => false } as never,
   {} as never,

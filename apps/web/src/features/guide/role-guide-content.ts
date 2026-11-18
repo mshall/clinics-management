@@ -273,8 +273,9 @@ const CALL_CENTER: RoleGuide = {
         {
           titleEn: "Waitlist",
           titleAr: "قائمة الانتظار",
-          bodyEn: "When a slot cancels, offer waitlist patients a slot from scheduling (if enabled for your branch).",
-          bodyAr: "عند إلغاء موعد، اعرض خانة على قائمة الانتظار.",
+          bodyEn: "Add patients to the waitlist on the front desk board. When a slot cancels, Kiorly offers it on WhatsApp to one waiting patient at a time; the first to accept is booked (Pro).",
+          bodyAr: "أضف المرضى إلى قائمة الانتظار من لوحة الاستقبال. عند إلغاء موعد، يعرضه Kiorly عبر واتساب على مريض واحد في كل مرة، وأول من يقبل يُحجز له (Pro).",
+          path: "/front-desk/board",
         },
       ],
     ),

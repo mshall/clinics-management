@@ -42,6 +42,7 @@ function webhookService(): WhatsAppWebhookService {
     scheduling,
     tokens,
     consent,
+    { handleReply: async () => ({ handled: false }) } as never,
   );
   return new WhatsAppWebhookService(prismaSvc, audit, inbound, consent);
 }
@@ -129,6 +130,7 @@ describe("MS-02 WhatsApp inbound replies", () => {
   });
 
   after(async () => {
+    if (ids.appointmentId) await prisma.waitlistOpenSlot.deleteMany({ where: { sourceAppointmentId: ids.appointmentId } }).catch(() => undefined);
     if (ids.waitlistId) await prisma.appointmentWaitlistEntry.delete({ where: { id: ids.waitlistId } }).catch(() => undefined);
     if (ids.outboundId) await prisma.outboundMessage.delete({ where: { id: ids.outboundId } }).catch(() => undefined);
     if (ids.appointmentId) {
@@ -171,10 +173,9 @@ describe("MS-02 WhatsApp inbound replies", () => {
     assert.equal(result.replies, 1);
     const apt = await prisma.appointment.findUniqueOrThrow({ where: { id: ids.appointmentId! } });
     assert.equal(apt.status, AppointmentStatus.CANCELLED);
-    const wl = await prisma.appointmentWaitlistEntry.findUniqueOrThrow({ where: { id: ids.waitlistId! } });
-    assert.equal(wl.status, AppointmentWaitlistStatus.OFFERED);
-    assert.ok(wl.offeredSlotAt);
-    assert.equal(wl.offeredSlotAt!.toISOString(), aptBefore.startsAt.toISOString());
+    const slot = await prisma.waitlistOpenSlot.findFirstOrThrow({ where: { sourceAppointmentId: ids.appointmentId! } });
+    assert.equal(slot.status, "OPEN", "cancelled time is queued for waitlist auto-fill (FS-03)");
+    assert.equal(slot.startsAt.toISOString(), aptBefore.startsAt.toISOString());
     const outbox = await prisma.outboxEvent.findFirst({
       where: { tenantId: ids.tenantId!, type: "front_desk.appointment_whatsapp_reply" },
       orderBy: { createdAt: "desc" },

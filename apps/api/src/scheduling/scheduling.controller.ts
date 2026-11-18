@@ -103,6 +103,16 @@ export class SchedulingController {
     return this.scheduling.listWaitlist(requireTenantId(user), clinicId);
   }
 
+  @Get("waitlist/offers")
+  waitlistOffers(@CurrentUser() user: JwtUser, @Query("clinicId") clinicId?: string) {
+    return this.scheduling.listWaitlistOffers(requireTenantId(user), clinicId);
+  }
+
+  @Post("waitlist/:id/cancel")
+  cancelWaitlist(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.scheduling.cancelWaitlistEntry(requireTenantId(user), id);
+  }
+
   @Post("waitlist")
   addWaitlist(@CurrentUser() user: JwtUser, @Body() body: Record<string, unknown>) {
     return this.scheduling.createWaitlist(requireTenantId(user), body as never);

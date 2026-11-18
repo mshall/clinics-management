@@ -3,7 +3,7 @@ import { MessageChannel, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { nextRetryAt, workerStatusForFailure } from "./whatsapp-failure-policy";
 import { resolveMarketTemplate, whatsAppConfigFromMarket } from "./whatsapp-market-config";
-import { DEFAULT_REMINDER_QUICK_REPLIES } from "./whatsapp-reply-payloads";
+import { DEFAULT_REMINDER_QUICK_REPLIES, WAITLIST_OFFER_QUICK_REPLIES, WAITLIST_OFFER_TEMPLATE_KEY } from "./whatsapp-reply-payloads";
 import { resolveMarketForTenant } from "../markets/market-resolver";
 import { WhatsAppSendService } from "./whatsapp-send.service";
 import { MessagingConsentService } from "../patients/messaging-consent.service";
@@ -115,7 +115,9 @@ export class OutboundMessageWorker implements OnModuleInit, OnModuleDestroy {
     const quickReplies =
       row.templateKey === "appointment_reminder_whatsapp"
         ? marketTpl?.quickReplyButtons ?? [...DEFAULT_REMINDER_QUICK_REPLIES]
-        : marketTpl?.quickReplyButtons;
+        : row.templateKey === WAITLIST_OFFER_TEMPLATE_KEY
+          ? marketTpl?.quickReplyButtons ?? [...WAITLIST_OFFER_QUICK_REPLIES]
+          : marketTpl?.quickReplyButtons;
     const meta =
       row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
         ? (row.metadata as Record<string, unknown>)
