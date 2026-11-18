@@ -289,7 +289,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 053 · CR-09 · Doctor-to-doctor referral credits
 - [x] Step 054 · CR-11 · Monthly statement for clinics (PDF + in-app)
 - [x] Step 055 · SB-05 · Lite commission invoicing & minimum invoice — `1eb1a44` · `sb05-lite-invoicing.*.test.ts` · `Docs/MONTHLY_SETTLEMENT.md`
-- [ ] Step 056 · SB-06 · Currency, price indexation & grandfathering
+- [x] Step 056 · SB-06 · Currency, price indexation & grandfathering — `sb06-price-indexation.*.test.ts` · `Docs/PLANS_AND_PRICING.md`
 - [ ] Step 057 · ON-05 · Data import from Excel / CSV (patients, appointments, price list, staff)
 - [ ] Step 058 · ON-06 · Staff invitations by WhatsApp or email
 - [ ] Step 059 · ON-07 · Field-sales assisted onboarding & rep attribution

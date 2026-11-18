@@ -12,6 +12,7 @@ import { isPlatformSuperAdmin } from "../common/platform-super-admin";
 import { ForbiddenException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { ACTIVE_PRICE_WHERE, isPlanPriceActive } from "./plans-active-prices";
+import { PriceIndexationService, type PriceImpactPreview } from "./price-indexation.service";
 
 export type PublicPlanDto = {
   key: PlanKey;
@@ -34,7 +35,10 @@ export type PublicPlanDto = {
 
 @Injectable()
 export class PlansService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly indexation: PriceIndexationService,
+  ) {}
 
   private assertPlatform(user: JwtUser): void {
     if (!isPlatformSuperAdmin(user)) {
@@ -203,6 +207,8 @@ export class PlansService {
       cohortKey?: string | null;
       validFrom?: string;
       newVersion?: boolean;
+      /** SB-06: return the impact on existing subscriptions without publishing. */
+      preview?: boolean;
     },
   ) {
     this.assertPlatform(user);
@@ -235,8 +241,33 @@ export class PlansService {
       }))._max.priceVersion ?? 0;
 
     const priceVersion = body.newVersion !== false && activeRows.length > 0 ? nextVersion + 1 : nextVersion || 1;
+    const supersedes = body.newVersion !== false && activeRows.length > 0;
 
-    return this.prisma.$transaction(async (tx) => {
+    const amount = new Prisma.Decimal(String(body.amount));
+    if (amount.isNaN() || amount.lt(0)) throw new BadRequestException("amount invalid");
+    const includedClinicians = Number(body.includedClinicians ?? 1);
+    const extraClinicianAmount =
+      body.extraClinicianAmount != null && body.extraClinicianAmount !== ""
+        ? new Prisma.Decimal(String(body.extraClinicianAmount))
+        : null;
+
+    if (body.preview) {
+      const impact = await this.indexation.previewImpact(
+        segmentWhere,
+        {
+          interval: body.interval,
+          unit: body.unit,
+          amount: Number(amount),
+          includedClinicians,
+          extraClinicianAmount: extraClinicianAmount != null ? Number(extraClinicianAmount) : null,
+          currency: body.currency.trim(),
+        },
+        { notBefore: validFrom },
+      );
+      return { preview: true as const, priceVersion, supersedes, impact };
+    }
+
+    const result = await this.prisma.$transaction(async (tx) => {
       if (body.newVersion !== false && activeRows.length > 0) {
         for (const row of activeRows) {
           if (!row.validTo || row.validTo > validFrom) {
@@ -255,17 +286,18 @@ export class PlansService {
           currency: body.currency.trim(),
           interval: body.interval,
           unit: body.unit,
-          amount: new Prisma.Decimal(String(body.amount)),
-          includedClinicians: Number(body.includedClinicians ?? 1),
-          extraClinicianAmount:
-            body.extraClinicianAmount != null && body.extraClinicianAmount !== ""
-              ? new Prisma.Decimal(String(body.extraClinicianAmount))
-              : null,
+          amount,
+          includedClinicians,
+          extraClinicianAmount,
           cohortKey,
           priceVersion,
           validFrom,
         },
       });
+
+      const impact: PriceImpactPreview | null = supersedes
+        ? await this.indexation.scheduleForNewPrice(tx, segmentWhere, created)
+        : null;
 
       const auditTenant = await tx.tenant.findFirst({
         where: { marketId: body.marketId },
@@ -286,16 +318,22 @@ export class PlansService {
               amount: created.amount.toFixed(2),
               currency: created.currency,
               priceVersion,
+              tenantsAffected: impact?.tenantsAffected ?? 0,
+              mrrDelta: impact?.mrrDelta ?? "0.00",
             } as Prisma.InputJsonValue,
           },
         });
       }
 
-      return this.mapPrice(created);
+      return { ...this.mapPrice(created), impact };
     });
+    if (result.impact && result.impact.tenantsAffected > 0) {
+      await this.indexation.sendDueNotices();
+    }
+    return result;
   }
 
-  /** Grandfathering: subscriptions keep their planPrice row; new catalog prices only affect new signups. */
+  /** Subscriptions keep their planPrice row until an SB-06 PlanPriceMigration applies at renewal. */
   async subscriptionPriceAmount(tenantId: string): Promise<string | null> {
     const sub = await this.prisma.subscription.findUnique({
       where: { tenantId },

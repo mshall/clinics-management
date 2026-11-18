@@ -9,10 +9,18 @@ import {
 } from "@prisma/client";
 import { ensurePlanCatalog } from "../../prisma/plan-catalog-seed";
 import { PlansService } from "./plans.service";
+import { PriceIndexationService } from "./price-indexation.service";
+import { OutboxEventService } from "../messaging/outbox-event.service";
 import { PrismaService } from "../prisma/prisma.service";
 
 const prisma = new PrismaClient();
-const plansService = new PlansService(prisma as unknown as PrismaService);
+const plansService = new PlansService(
+  prisma as unknown as PrismaService,
+  new PriceIndexationService(
+    prisma as unknown as PrismaService,
+    new OutboxEventService(prisma as unknown as PrismaService),
+  ),
+);
 
 describe("PL-01 plan catalog", () => {
   before(async () => {

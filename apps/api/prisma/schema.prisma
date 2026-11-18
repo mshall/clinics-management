@@ -655,6 +655,8 @@ model PlanPrice {
   validTo              DateTime?
   subscriptions        Subscription[]
   scheduledSubscriptions Subscription[] @relation("SubscriptionScheduledPlanPrice")
+  priceMigrationsFrom  PlanPriceMigration[] @relation("PriceMigrationFrom")
+  priceMigrationsTo    PlanPriceMigration[] @relation("PriceMigrationTo")
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
 
@@ -713,6 +715,7 @@ model Subscription {
   scheduledClinicianSeats Int?
   scheduledEffectiveAt   DateTime?
   events                 SubscriptionEvent[]
+  priceMigrations        PlanPriceMigration[]
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
 
@@ -734,6 +737,44 @@ model SubscriptionEvent {
   createdAt      DateTime     @default(now())
 
   @@index([subscriptionId, createdAt])
+}
+
+enum PriceMigrationStatus {
+  SCHEDULED
+  NOTICE_SENT
+  APPLIED
+  CANCELLED
+}
+
+/// SB-06 — existing subscription moves to a new PlanPrice version at a renewal after notice (never before priceLockUntil).
+model PlanPriceMigration {
+  id                    String               @id @default(cuid())
+  tenantId              String
+  tenant                Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subscriptionId        String
+  subscription          Subscription         @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  fromPlanPriceId       String
+  fromPlanPrice         PlanPrice            @relation("PriceMigrationFrom", fields: [fromPlanPriceId], references: [id], onDelete: Cascade)
+  toPlanPriceId         String
+  toPlanPrice           PlanPrice            @relation("PriceMigrationTo", fields: [toPlanPriceId], references: [id], onDelete: Cascade)
+  status                PriceMigrationStatus @default(SCHEDULED)
+  noticeDueAt           DateTime
+  effectiveAt           DateTime
+  noticeSentAt          DateTime?
+  priceLockUntil        DateTime?
+  fromMonthlyAmount     Decimal              @db.Decimal(14, 2)
+  toMonthlyAmount       Decimal              @db.Decimal(14, 2)
+  currency              String
+  consentByContinuingAt DateTime?
+  appliedAt             DateTime?
+  cancelledReason       String?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  @@unique([subscriptionId, toPlanPriceId])
+  @@index([status, noticeDueAt])
+  @@index([status, effectiveAt])
+  @@index([tenantId])
 }
 
 /// PL-09 — founding cohort seat counter (per market).
@@ -1089,6 +1130,7 @@ model Tenant {
   kiorlySettlementCarryIn        Decimal?               @db.Decimal(14, 2)
   /// SB-05: Lite commission unpaid past the market pause window — Kiorex listings paused (Kiorly keeps working).
   kiorexBillingPausedAt          DateTime?
+  planPriceMigrations            PlanPriceMigration[]
   onboardingProgress             OnboardingProgress?
   outboxEvents                   OutboxEvent[]
   appointmentRescheduleTokens    AppointmentRescheduleToken[]

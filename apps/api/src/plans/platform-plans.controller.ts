@@ -5,18 +5,32 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { PlansService } from "./plans.service";
+import { PriceIndexationService } from "./price-indexation.service";
 
 @ApiTags("admin-platform")
 @ApiBearerAuth("bearer")
 @Controller("admin/platform/plans")
 @UseGuards(JwtAuthGuard)
 export class PlatformPlansController {
-  constructor(private readonly plans: PlansService) {}
+  constructor(
+    private readonly plans: PlansService,
+    private readonly indexation: PriceIndexationService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: "List all plans, entitlements, and price history (platform super admin)" })
   list(@CurrentUser() user: JwtUser) {
     return this.plans.listAllPlans(user);
+  }
+
+  @Get("price-migrations")
+  @ApiOperation({ summary: "SB-06 report: which subscriptions move to which price version, and when" })
+  priceMigrations(
+    @CurrentUser() user: JwtUser,
+    @Query("status") status?: string,
+    @Query("planId") planId?: string,
+  ) {
+    return this.indexation.report(user, { status, planId });
   }
 
   @Post()
@@ -56,7 +70,10 @@ export class PlatformPlansController {
   }
 
   @Post(":planId/prices")
-  @ApiOperation({ summary: "Create a price row or new price version (platform super admin)" })
+  @ApiOperation({
+    summary:
+      "Create a price row or new price version (platform super admin). `preview: true` returns impact (tenants affected, MRR delta) without publishing.",
+  })
   createPrice(
     @CurrentUser() user: JwtUser,
     @Param("planId") planId: string,
@@ -72,6 +89,7 @@ export class PlatformPlansController {
       cohortKey?: string | null;
       validFrom?: string;
       newVersion?: boolean;
+      preview?: boolean;
     },
   ) {
     return this.plans.createPlanPrice(user, planId, body);
