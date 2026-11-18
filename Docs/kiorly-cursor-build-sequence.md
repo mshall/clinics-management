@@ -224,7 +224,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 
 - [x] Step 001 · FD-00 · Remove UAE defaults; derive tax & fees from the market pack — verified pre-shipped on main; docs `Docs/FD-00_MARKET_TAX_DEFAULTS.md`
 - [x] Step 002 · FD-01 · Owner-physician: allow one user to hold several roles — see `Docs/RBAC_MULTI_ROLE.md`
-- [x] Step 003 · FD-02 · Take ETA receipts and e-invoicing out of Kiorly — `Docs/FD-02_ETA_RETIRED.md` (locales scrub + route removal in follow-up)
+- [x] Step 003 · FD-02 · Take ETA receipts and e-invoicing out of Kiorly — `2f98396` · `Docs/FD-02_ETA_RETIRED.md` (full product removal)
 - [x] Step 004 · SC-01 · Frankfurt data residency: transfer approval & controls in the product — `Docs/SC-01_FRANKFURT_RESIDENCY.md` (60-day alert + public sub-processor page in follow-up)
 - [ ] Step 005 · CL-01 · Egyptian drug database (brand → active ingredient)
 - [ ] Step 006 · FS-01 · Scheduling engine completeness (buffers, rooms, overrides, channels)
@@ -241,7 +241,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [ ] Step 014 · ON-02 · Password reset, OTP login & session management
 - [ ] Step 015 · PL-06 · Lite simplified mode (nav presets per plan)
 - [ ] Step 016 · ON-04 · Onboarding wizard & activation checklist
-- [ ] Step 017 · PL-05 · Usage metering & quotas (WhatsApp, AI minutes)
+- [x] Step 017 · PL-05 · Usage metering & quotas (WhatsApp, AI minutes) — `12e3ea8` · `Docs/USAGE_METERING.md`
 - [ ] Step 018 · MS-01 · Real WhatsApp Business provider with approved templates
 - [ ] Step 019 · MS-02 · Inbound replies: confirm, cancel, reschedule
 - [ ] Step 020 · MS-03 · Messaging consent, opt-out & PDPL handling
@@ -252,7 +252,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 
 **Stage C · Money engine** — Trial, credits, invoices, collections
 
-- [ ] Step 025 · PL-09 · Founding cohort & 24-month price lock
+- [x] Step 025 · PL-09 · Founding cohort & 24-month price lock — `12e3ea8`
 - [ ] Step 026 · CR-01 · Trial engine (6-month founding trial, standard trial, activation rule)
 - [ ] Step 027 · CR-02 · Booking attribution & the "new patient" rule
 - [ ] Step 028 · CR-04 · Kiorex fee configuration with competitor benchmark guardrail

@@ -29,7 +29,8 @@
 |------|--------------------------|-------|
 | 001 FD-00 | `955b94b` | Verified on main |
 | 002 FD-01 | `dd42945` | Verified on main |
-| 003 FD-02 | `4c6e4ba` | `postRevenue`, fiscal gate off, no clinic FiscalDevice; `Docs/FD-02_ETA_RETIRED.md` |
-| 003 FD-02 (E2E) | `e052213` | Golden flow: no new ETA queue rows after split pay |
+| 003 FD-02 | `2f98396` | Full ETA/fiscal removal; `postRevenue` only; NH-002 closed; `Docs/FD-02_ETA_RETIRED.md` |
+| 017 PL-05 | `12e3ea8` | Usage meters + WhatsApp quota; `Docs/USAGE_METERING.md` |
+| 025 PL-09 | `12e3ea8` | `Cohort` model, `GET /public/cohorts/:key/remaining`, signup assign |
 | 004 SC-01 | `316c557` | `legalConfig` gates, sub-processor guard, platform legal UI; `Docs/SC-01_FRANKFURT_RESIDENCY.md` |
 | 049 PL-07 | `f9dd2d5` | Proration APIs, billing seats, compare-plan preview UI; migration `20261118200000_pl07_subscription_proration` |
