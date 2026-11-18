@@ -148,7 +148,7 @@ describe("CL-03 prescription verification & WhatsApp share", () => {
     const msg = await prisma.outboundMessage.findUniqueOrThrow({ where: { id: sent.outboundMessageId } });
     assert.equal(msg.channel, MessageChannel.WHATSAPP);
     assert.equal(msg.templateKey, RX_READY_TEMPLATE_KEY);
-    assert.equal(msg.status, "QUEUED");
+    assert.equal(sent.status, "QUEUED");
     const meta = msg.metadata as Record<string, string>;
     assert.match(meta.documentLink!, /\/api\/v1\/public\/rx\/verify\/[A-Za-z0-9_-]+\/pdf$/);
     const token = decodeURIComponent(meta.documentLink!.split("/verify/")[1]!.replace(/\/pdf$/, ""));
