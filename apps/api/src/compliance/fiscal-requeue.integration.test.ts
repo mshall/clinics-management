@@ -12,7 +12,7 @@ import {
   VisitCollectionMode,
 } from "@prisma/client";
 import { mergeProviderBlock, patchEtaTenantProviderSettings } from "../providers/provider-settings";
-import { queueFiscalDocument } from "./fiscal-queue";
+import { isKiorlyFiscalSubmissionEnabled, queueFiscalDocument } from "./fiscal-queue";
 import { reducePostedRevenueNetWithFiscal } from "./void-revenue-fiscal-returns";
 
 config({ path: resolve(process.cwd(), ".env") });
@@ -59,6 +59,10 @@ async function ensureTenantEtaPlatformEnabled(prisma: PrismaClient, tenantId: st
 }
 
 test("pending sale 400→300 re-queues; submitted 300→200 queues two distinct returns", async (t) => {
+  if (!isKiorlyFiscalSubmissionEnabled()) {
+    t.skip("FD-02: Kiorly fiscal submission disabled (set KIORLY_ETA_SUBMISSION_ENABLED=true to run)");
+    return;
+  }
   if (!process.env.DATABASE_URL?.trim()) {
     if (isCi) failInCi("DATABASE_URL is not set");
     t.skip("DATABASE_URL not set");

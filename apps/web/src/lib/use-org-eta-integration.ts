@@ -16,15 +16,13 @@ export function useOrgEtaIntegration(enabled = true) {
     staleTime: 60_000,
   });
   const tenant = q.data?.currentTenant as EtaTenantFields | null | undefined;
-  const platformEnabled = tenant?.etaPlatformIntegrationEnabled === true;
   const optOut = tenant?.etaPhysicalReportingOptOut === true;
   return {
-    platformEnabled,
+    platformEnabled: false,
     optOut,
-    /** Show ETA settings, devices, credentials, and health UI. */
-    showEtaUi: platformEnabled,
-    /** Kiorly queues/submits e-receipts. */
-    issuingActive: platformEnabled && !optOut,
+    /** FD-02: clinics issue their own ETA documents; hide product ETA UI. */
+    showEtaUi: false,
+    issuingActive: false,
     isLoading: q.isLoading,
   };
 }

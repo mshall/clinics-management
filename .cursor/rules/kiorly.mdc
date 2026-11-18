@@ -14,7 +14,7 @@ Conventions:
 1. Schema changes: edit apps/api/prisma/schema.prisma and create a named Prisma migration. Never rely on column defaults for market-specific business values; read them from the Market pack (Market.taxConfig, providerConfig, clinicalConfig, commercialConfig).
 2. Multi-market: never hard-code Egypt. Use market-resolver and market packs. Currency and VAT come from the market.
 3. Feature gating: FeatureFlagsService resolves platform → market → plan → org. Paid features use @RequiresEntitlement and return HTTP 402 { code: "PLAN_UPGRADE_REQUIRED", entitlement, requiredPlan }.
-4. Money: every receiptable patient payment goes through postRevenueWithFiscal (compliance module). Never create/patch RevenueEntry elsewhere (fiscal-revenue-coverage.node.test.ts enforces this). Kiorly's own SaaS billing uses KiorlyInvoice models, never the patient Invoice models.
+4. Money: every receiptable patient payment goes through postRevenue (compliance module). Never create/patch RevenueEntry elsewhere (revenue-single-path.node.test.ts enforces this). Kiorly does NOT integrate with ETA. Kiorly's own SaaS billing uses KiorlyInvoice models, never the patient Invoice models.
 5. RBAC: use the effectiveRoles/hasRole helper (users can hold several roles). Respect nav tab grants and money visibility overrides.
 6. Audit: every state change affecting money, access, plans or credits writes an AuditLog entry.
 7. Events to external systems go through the OutboxEvent table (transactional outbox), never direct HTTP inside a request.
