@@ -24,6 +24,7 @@ import { resolveLedgerListingRange } from "../common/reporting-range";
 import { paginate, parsePageParams } from "../common/pagination";
 import type { JwtUser } from "../auth/jwt-user";
 import { assertActiveSchedulingPhysician } from "../common/active-scheduling-physician";
+import { assertClinicianBillingSeatActive } from "../subscriptions/billing-seat-access";
 import { CLINIC_SCOPE_ROLES, fetchPhysicianNetworkClinicIds } from "../common/clinic-scope";
 import { isBaseCurrency } from "../common/base-currencies";
 import { resolveClinicCurrency } from "../common/clinic-currency";
@@ -1075,6 +1076,9 @@ export class EncountersService {
     if (!enc) throw new NotFoundException("Encounter not found");
     if (enc.status === EncounterStatus.FINALIZED) {
       throw new BadRequestException("Already finalized");
+    }
+    if (enc.clinicianId) {
+      await assertClinicianBillingSeatActive(this.prisma, tenantId, enc.clinicianId);
     }
     const canFinalizeAny =
       hasAnyRole(viewer, [UserRole.GROUP_SUPERVISOR, UserRole.GROUP_ADMIN]);

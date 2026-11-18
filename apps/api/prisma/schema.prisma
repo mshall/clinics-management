@@ -441,6 +441,7 @@ model Market {
   drugDatasetVersions DrugDatasetVersion[]
   drugProducts       DrugProduct[]
   planPrices         PlanPrice[]
+  cohorts            Cohort[]
   kiorexCommissionRates KiorexCommissionRate[]
   kiorlyInvoiceNumberSequences KiorlyInvoiceNumberSequence[]
 }
@@ -598,6 +599,7 @@ model Plan {
   entitlements  PlanEntitlement[]
   subscriptions Subscription[]
   trialSubscriptions Subscription[] @relation("SubscriptionTrialPlan")
+  scheduledSubscriptions Subscription[] @relation("SubscriptionScheduledPlan")
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 }
@@ -619,6 +621,7 @@ model PlanPrice {
   validFrom            DateTime        @default(now())
   validTo              DateTime?
   subscriptions        Subscription[]
+  scheduledSubscriptions Subscription[] @relation("SubscriptionScheduledPlanPrice")
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
 
@@ -669,11 +672,19 @@ model Subscription {
   postTrialGraceUntil    DateTime?
   salesRepCode           String?
   referralCodeUsed       String?
+  scheduledPlanId        String?
+  scheduledPlan          Plan?              @relation("SubscriptionScheduledPlan", fields: [scheduledPlanId], references: [id], onDelete: SetNull)
+  scheduledPlanPriceId   String?
+  scheduledPlanPrice     PlanPrice?         @relation("SubscriptionScheduledPlanPrice", fields: [scheduledPlanPriceId], references: [id], onDelete: SetNull)
+  scheduledInterval      BillingInterval?
+  scheduledClinicianSeats Int?
+  scheduledEffectiveAt   DateTime?
   events                 SubscriptionEvent[]
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
 
   @@index([planPriceId])
+  @@index([scheduledPlanId])
   @@index([planId])
   @@index([status, currentPeriodEnd])
   @@index([status, trialEndsAt])
@@ -690,6 +701,54 @@ model SubscriptionEvent {
   createdAt      DateTime     @default(now())
 
   @@index([subscriptionId, createdAt])
+}
+
+/// PL-09 — founding cohort seat counter (per market).
+model Cohort {
+  key             String    @id
+  marketId        String
+  market          Market    @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  cap             Int
+  assignedCount   Int       @default(0)
+  opensAt         DateTime
+  closesAt        DateTime?
+  trialDays       Int?
+  priceLockMonths Int       @default(24)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([marketId, opensAt])
+}
+
+enum UsageMetric {
+  WHATSAPP_MESSAGES
+  SMS_MESSAGES
+  AI_SCRIBE_MINUTES
+  AI_ASSISTANT_REQUESTS
+  ACTIVE_CLINICIANS
+}
+
+/// PL-05 — monthly usage meters per tenant.
+model UsageCounter {
+  id        String      @id @default(cuid())
+  tenantId  String
+  periodKey String
+  metric    UsageMetric
+  quantity  Decimal     @default(0) @db.Decimal(14, 2)
+  updatedAt DateTime    @updatedAt
+
+  @@unique([tenantId, periodKey, metric])
+  @@index([tenantId, periodKey])
+}
+
+model UsageMeterDedup {
+  id        String      @id @default(cuid())
+  tenantId  String
+  metric    UsageMetric
+  sourceId  String
+  createdAt DateTime    @default(now())
+
+  @@unique([tenantId, metric, sourceId])
 }
 
 model TenantEntitlementOverride {
@@ -991,6 +1050,8 @@ model User {
   role             UserRole
   additionalRoles  UserRole[]     @default([])
   isTenantOwner    Boolean        @default(false)
+  /// PL-07 — when false, physician cannot book or sign (billing seat over limit).
+  billingSeatActive Boolean       @default(true)
   mfaEnabled   Boolean        @default(false)
   mfaTotpSecret String?
   mfaRecoveryHashes Json?

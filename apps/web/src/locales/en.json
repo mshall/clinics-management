@@ -1986,10 +1986,27 @@
       "confirmChange": "Confirm change",
       "planChanged": "Plan updated",
       "previewReady": "Preview ready — confirm to apply",
+      "comparePlans": "Compare & preview",
+      "prorationDue": "Due today (prorated)",
+      "effectiveAt": "Takes effect",
+      "periodEndChange": "At period end",
+      "prorationCredit": "Credit for unused time",
+      "prorationCharge": "Charge for new plan",
       "cancel": "Cancel at period end",
       "cancelScheduled": "Cancellation scheduled for period end",
       "cancelsAtPeriodEnd": "Cancels at period end",
       "none": "No subscription on file.",
+      "usage": {
+        "title": "Monthly usage",
+        "hint": "WhatsApp messages and AI assistant requests vs your plan limits. At 100%, WhatsApp reminders pause until you upgrade or buy a pack.",
+        "whatsappPaused": "WhatsApp quota reached — reminders are paused. Upgrade your plan or buy a message pack.",
+        "period": "Period {{period}}",
+        "loadError": "Could not load usage meters.",
+        "metric": {
+          "WHATSAPP_MESSAGES": "WhatsApp messages",
+          "AI_ASSISTANT_REQUESTS": "AI assistant requests"
+        }
+      },
       "wallet": {
         "title": "Credit wallet",
         "hint": "Kiorly SaaS billing credits (promos, referrals, goodwill). Consumed against subscription invoices.",

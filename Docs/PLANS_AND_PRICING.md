@@ -52,6 +52,14 @@ See **[PLANS_AND_ENTITLEMENTS.md](./PLANS_AND_ENTITLEMENTS.md)** for the module 
 - `GET /auth/me` includes `plan` and `entitlements`; `PUT /admin/platform/tenants/:id/entitlement-overrides/:key`.
 - Web: `useEntitlement`, `<Gate>` / `EntitlementGate`, `UpgradeHint` modal.
 
+## PL-07 plan changes & proration
+
+- Daily-prorated preview for upgrades, seat adds, and annual mid-cycle changes.
+- Upgrades apply immediately; downgrades and seat removals default to period end.
+- `User.billingSeatActive` — physicians over the seat cap become read-only (cannot book or sign); clinical data retained.
+- APIs: `POST /billing/subscription/preview-change`, `change-plan`, `preview-seats`, `seats`.
+- Migration `20261118200000_pl07_subscription_proration`.
+
 ## PL-02 subscriptions
 
 - One `Subscription` per tenant (`SubscriptionStatus` lifecycle, `SubscriptionEvent` audit trail).

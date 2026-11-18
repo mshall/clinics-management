@@ -94,10 +94,12 @@ describe("MS-01 worker template policy", () => {
     const prismaSvc = prisma as unknown as PrismaService;
     const audit = new AuditService(prismaSvc);
     const consent = new MessagingConsentService(prismaSvc, audit, new ConsentPolicyService(prismaSvc, audit));
+    const usage = { incrementOnce: async () => true } as unknown as import("../usage/usage-meter.service").UsageMeterService;
     const worker = new OutboundMessageWorker(
       prismaSvc,
       new WhatsAppSendService(prismaSvc),
       consent,
+      usage,
     );
     const tenant = await prisma.tenant.findFirstOrThrow({ select: { id: true } });
     const row = await prisma.outboundMessage.create({

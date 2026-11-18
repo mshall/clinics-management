@@ -4,6 +4,7 @@ import { MessagingConsentService } from "../patients/messaging-consent.service";
 import { resolveMarketTemplate, whatsAppConfigFromMarket } from "./whatsapp-market-config";
 import { resolveMarketForTenant } from "../markets/market-resolver";
 import { PrismaService } from "../prisma/prisma.service";
+import { UsageMeterService } from "../usage/usage-meter.service";
 
 const DEFAULT_TEMPLATES: { key: string; channel: MessageChannel; bodyEn: string; bodyAr: string }[] = [
   {
@@ -43,6 +44,7 @@ export class MessagingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly consent: MessagingConsentService,
+    private readonly usage: UsageMeterService,
   ) {}
 
   async ensureDefaultTemplates(tenantId: string) {
@@ -74,6 +76,9 @@ export class MessagingService {
   ) {
     if (body.channel === MessageChannel.WHATSAPP && !body.templateKey?.trim()) {
       throw new BadRequestException("WhatsApp messages require an approved templateKey");
+    }
+    if (body.channel === MessageChannel.WHATSAPP) {
+      await this.usage.assertWhatsAppQuota(tenantId);
     }
     await this.consent.assertCanSend(tenantId, body.patientId, body.channel, body.templateKey);
     const ctx = await resolveMarketForTenant(this.prisma, tenantId);

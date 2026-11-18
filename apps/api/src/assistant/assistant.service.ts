@@ -20,6 +20,9 @@ import type { AssistantChatResponseDto, AssistantContextDto } from "./dto/assist
 import { sanitizeAssistantMessageForLlm } from "./assistant-message-sanitize";
 import { resolveMarketForTenant } from "../markets/market-resolver";
 import { redactionForMarket } from "../providers/ai/market-ai-redaction";
+import { UsageMeterService } from "../usage/usage-meter.service";
+import { UsageMetric } from "@prisma/client";
+import { randomUUID } from "node:crypto";
 
 function pickLocale(locale: string | undefined, message: string): "en" | "ar" {
   if (locale === "ar" || locale === "en") return locale;
@@ -34,6 +37,7 @@ export class AssistantService {
     private readonly liveData: AssistantLiveDataService,
     private readonly ai: AiGatewayService,
     private readonly featureFlags: FeatureFlagsService,
+    private readonly usage: UsageMeterService,
   ) {}
 
   private async assistantEnabledForUser(user: JwtUser): Promise<boolean> {
@@ -236,6 +240,9 @@ export class AssistantService {
     const liveJson = this.liveData.snapshotForPrompt(snapshot);
     const system = buildMatureSystemPrompt(persona, navKeys, locale, liveJson, promptVersion);
     const llm = await this.llmReply(tenantId, system, message, locale);
+    if (llm?.trim() && tenantId) {
+      await this.usage.incrementOnce(tenantId, UsageMetric.AI_ASSISTANT_REQUESTS, `assistant:${randomUUID()}`);
+    }
     let reply = llm ?? this.ruleBasedReply(message, locale, navKeys);
     let actions: AssistantChatActionDto[] | undefined;
     if (!llm?.trim() && snapshot.financialSummary && /revenue|expense|إيراد|مصروف/i.test(message)) {

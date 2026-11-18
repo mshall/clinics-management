@@ -16,6 +16,7 @@ import {
 import * as bcrypt from "bcryptjs";
 import { assertDemoPasswordAllowedInProduction, isDemoSeedBlockedInProduction } from "../src/common/seed-demo-guard";
 import { ensureEgyptDrugCatalog } from "./egypt-drug-catalog-seed";
+import { ensureFoundingCohort } from "./founding-cohort-seed";
 import { ensurePlanCatalog } from "./plan-catalog-seed";
 import { ensureAllTenantSubscriptions } from "../src/subscriptions/subscription-provision";
 import { ensureAllPilotTenants, pilotSeedEnabled } from "./pilot-tenants.seed";
@@ -594,6 +595,7 @@ async function ensureIncrementalSeed(passwordHash: string) {
   const { tenant, clinics } = await seedDrAhmedGroup(passwordHash);
   await ensureEgyptDrugCatalog(prisma);
   await ensurePlanCatalog(prisma);
+  await ensureFoundingCohort(prisma);
   await ensureAllTenantSubscriptions(prisma);
   if (pilotSeedEnabled()) {
     await ensureAllPilotTenants(prisma, passwordHash);
@@ -1241,6 +1243,7 @@ async function seedFreshDatabase(passwordHash: string) {
 
   await ensureEgyptDrugCatalog(prisma);
   await ensurePlanCatalog(prisma);
+  await ensureFoundingCohort(prisma);
   await ensureAllTenantSubscriptions(prisma);
   if (pilotSeedEnabled()) {
     await ensureAllPilotTenants(prisma, passwordHash);

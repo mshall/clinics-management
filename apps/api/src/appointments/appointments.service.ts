@@ -17,6 +17,7 @@ import {
   syncOpenEncounterVisitFeeFromAppointment,
 } from "../common/visit-fee-ledger";
 import { PrismaService } from "../prisma/prisma.service";
+import { assertClinicianBillingSeatActive } from "../subscriptions/billing-seat-access";
 import { parseScheduledFeeCollection } from "../common/visit-collection";
 import {
   appointmentFinancialsVisible,
@@ -563,6 +564,7 @@ export class AppointmentsService {
       findActiveSchedulingPhysician(this.prisma, tenantId, dto.clinicianId),
     ]);
     if (!clinic || !patient || !clinician) throw new BadRequestException("Invalid clinic, patient, or clinician");
+    await assertClinicianBillingSeatActive(this.prisma, tenantId, dto.clinicianId);
     const start = new Date(dto.startsAt);
     if (Number.isNaN(start.getTime())) throw new BadRequestException("Invalid startsAt");
     const apptType = dto.appointmentTypeId

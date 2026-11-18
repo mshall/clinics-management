@@ -3,6 +3,7 @@ import { after, before, describe, it } from "node:test";
 import { BillingInterval, PlanKey, PrismaClient, SubscriptionStatus } from "@prisma/client";
 import { ensureAllTenantSubscriptions } from "./subscription-provision";
 import { SubscriptionLifecycleService } from "./subscription-lifecycle.service";
+import { BillingSeatService } from "./billing-seat.service";
 import { SubscriptionService } from "./subscription.service";
 import { TrialEngineService } from "./trial-engine.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -12,7 +13,8 @@ import { LegalAcceptanceService } from "../legal/legal-acceptance.service";
 const prisma = new PrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 const legal = new LegalAcceptanceService(prismaSvc, new AuditService(prismaSvc));
-const subs = new SubscriptionService(prismaSvc, legal);
+const billingSeats = new BillingSeatService(prismaSvc);
+const subs = new SubscriptionService(prismaSvc, legal, billingSeats);
 const trialEngine = new TrialEngineService(prismaSvc, subs);
 const lifecycle = new SubscriptionLifecycleService(prisma as unknown as PrismaService, subs, trialEngine);
 

@@ -21,7 +21,9 @@ function services() {
   const legal = new LegalAcceptanceService(prismaSvc, audit);
   const markets = new MarketsService(prismaSvc, {} as FeatureFlagsService, {} as MarketProvisionService);
   const provision = new SignupProvisionService(prismaSvc, markets, legal);
-  const subs = new SubscriptionService(prismaSvc, legal);
+  const { BillingSeatService } = await import("../subscriptions/billing-seat.service");
+  const billingSeats = new BillingSeatService(prismaSvc);
+  const subs = new SubscriptionService(prismaSvc, legal, billingSeats);
   return { legal, provision, subs };
 }
 

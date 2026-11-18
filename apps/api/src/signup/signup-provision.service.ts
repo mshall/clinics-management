@@ -31,6 +31,7 @@ import { availabilityWeekFromClinicHours } from "./signup-availability";
 import { isDisposableEmail } from "./signup-disposable-email";
 import { ensureOnboardingProgress } from "../onboarding/onboarding-progress.provision";
 import { LegalAcceptanceService } from "../legal/legal-acceptance.service";
+import { CohortService } from "../cohorts/cohort.service";
 
 const MESSAGE_TEMPLATE_SEEDS: { key: string; channel: MessageChannel; bodyEn: string; bodyAr: string }[] = [
   {
@@ -90,6 +91,7 @@ export class SignupProvisionService {
     private readonly prisma: PrismaService,
     private readonly markets: MarketsService,
     private readonly legal: LegalAcceptanceService,
+    private readonly cohorts: CohortService,
   ) {}
 
   async provision(input: SignupProvisionInput): Promise<SignupProvisionResult> {
@@ -274,6 +276,14 @@ export class SignupProvisionService {
           toJson: { status, planKey, interval, source: "public_signup" } as Prisma.InputJsonValue,
         },
       });
+
+      if (paidTrial) {
+        await this.cohorts.tryAssignFounding(tx, {
+          marketId: market.id,
+          subscriptionId: sub.id,
+          at: now,
+        });
+      }
 
       const visitFee = Number(tenant.defaultVisitFee);
       const typeSeeds = defaultAppointmentTypesForSpecialty(specialty);

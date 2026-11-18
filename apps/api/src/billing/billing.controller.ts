@@ -54,13 +54,48 @@ export class BillingController {
     );
   }
 
+  @Post("subscription/preview-change")
+  previewChange(
+    @CurrentUser() user: JwtUser,
+    @Body()
+    body: {
+      planKey: PlanKey;
+      interval: BillingInterval;
+      seats: number;
+      timing?: "IMMEDIATE" | "PERIOD_END";
+    },
+  ) {
+    return this.subscriptions.previewPlanChange(user, requireTenantId(user), body);
+  }
+
   @Post("subscription/change-plan")
   changePlan(
     @CurrentUser() user: JwtUser,
     @Body()
-    body: { planKey: PlanKey; interval: BillingInterval; seats: number; confirm?: boolean },
+    body: {
+      planKey: PlanKey;
+      interval: BillingInterval;
+      seats: number;
+      confirm?: boolean;
+      timing?: "IMMEDIATE" | "PERIOD_END";
+      activeClinicianUserIds?: string[];
+    },
   ) {
     return this.subscriptions.changePlan(user, requireTenantId(user), body);
+  }
+
+  @Post("subscription/seats")
+  changeSeats(
+    @CurrentUser() user: JwtUser,
+    @Body()
+    body: { seats: number; confirm?: boolean; activeClinicianUserIds?: string[] },
+  ) {
+    return this.subscriptions.changeSeats(user, requireTenantId(user), body);
+  }
+
+  @Post("subscription/preview-seats")
+  previewSeats(@CurrentUser() user: JwtUser, @Body() body: { seats: number }) {
+    return this.subscriptions.previewSeatsChange(user, requireTenantId(user), body.seats);
   }
 
   @Post("subscription/cancel")

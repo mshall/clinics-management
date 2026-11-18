@@ -47,6 +47,8 @@ import { ClinicianVerificationModule } from "./clinician-verification/clinician-
 import { CreditsModule } from "./credits/credits.module";
 import { BillingPlatformModule } from "./billing-platform/billing-platform.module";
 import { ObservabilityModule } from "./observability/observability.module";
+import { UsageModule } from "./usage/usage.module";
+import { CohortsModule } from "./cohorts/cohorts.module";
 
 @Module({
   imports: [
@@ -96,6 +98,8 @@ import { ObservabilityModule } from "./observability/observability.module";
     ClinicianVerificationModule,
     CreditsModule,
     BillingPlatformModule,
+    UsageModule,
+    CohortsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: PrivilegedMfaGuard }],
 })

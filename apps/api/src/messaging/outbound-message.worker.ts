@@ -7,6 +7,8 @@ import { DEFAULT_REMINDER_QUICK_REPLIES } from "./whatsapp-reply-payloads";
 import { resolveMarketForTenant } from "../markets/market-resolver";
 import { WhatsAppSendService } from "./whatsapp-send.service";
 import { MessagingConsentService } from "../patients/messaging-consent.service";
+import { UsageMeterService } from "../usage/usage-meter.service";
+import { UsageMetric } from "@prisma/client";
 
 const POLL_MS = 15_000;
 const BATCH = 25;
@@ -20,6 +22,7 @@ export class OutboundMessageWorker implements OnModuleInit, OnModuleDestroy {
     private readonly prisma: PrismaService,
     private readonly whatsapp: WhatsAppSendService,
     private readonly consent: MessagingConsentService,
+    private readonly usage: UsageMeterService,
   ) {}
 
   onModuleInit() {
@@ -123,6 +126,7 @@ export class OutboundMessageWorker implements OnModuleInit, OnModuleDestroy {
           nextRetryAt: null,
         },
       });
+      await this.usage.incrementOnce(row.tenantId, UsageMetric.WHATSAPP_MESSAGES, `outbound:${row.id}`);
       return;
     }
     const status = workerStatusForFailure(result.retryable, attempt);
