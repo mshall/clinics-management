@@ -301,7 +301,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 065 · CL-03 · Prescription print & WhatsApp share with verification QR — `f53e999` · `cl03-rx-share.integration.test.ts` · `cl03-rx-print.node.test.ts` · `e2e/cl03-rx-verify.spec.ts` · `Docs/CLINICAL_WORKFLOW.md`
 - [x] Step 066 · CL-04 · Specialty template coverage for launch specialties — `1c36163` · `cl04-specialty-templates.node.test.ts` · `cl04-specialty-templates.integration.test.ts` · `e2e/cl04-specialty-templates.spec.ts` · `Docs/CLINICAL_WORKFLOW.md` · NH-010 (board sign-off)
 - [x] Step 067 · CL-05 · Doctor sign-off, amendments & auto-lock — `af7b7dd` · `cl05-encounter-lock.node.test.ts` · `cl05-encounter-lock.integration.test.ts` · `e2e/cl05-signoff-amendments.spec.ts` · `Docs/CLINICAL_WORKFLOW.md`
-- [ ] Step 068 · FS-02 · Golden-flow front desk review on tablet & phone
+- [x] Step 068 · FS-02 · Golden-flow front desk review on tablet & phone — `0e363a2` · `e2e/fs02-front-desk-check-in.spec.ts` · `apps/web/src/lib/fs02-check-in.node.test.ts` · `transfer-reference.node.test.ts` · `Docs/FRONT_DESK.md`
 - [ ] Step 069 · FS-03 · Waitlist auto-fill on cancellations
 - [ ] Step 070 · FS-05 · Show no-show risk in the UI with an honest label
 - [ ] Step 071 · MN-01 · Refunds, credit notes, deposits & prepaid packages (APIs + UI)
@@ -3249,7 +3249,7 @@ model Invitation { id String @id @default(cuid())  tenantId String  phoneOrEmail
 - UX fixes.
 
 **Acceptance criteria** (write a test for each)
-- [ ] Timed test: check-in with InstaPay in < 30 s by a trained receptionist.
+- [x] Timed test: check-in with InstaPay in < 30 s by a trained receptionist.
 
 **Done when:** all acceptance tests pass, §0.2 checks are green, en + ar strings added, docs updated, and Step 068 is ticked in §5.
 
