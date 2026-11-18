@@ -34,6 +34,7 @@ Runs on **every pull request to `main`** in the reusable **CI test** job (after 
 
 - Seeds with `SEED_PILOT_TENANTS=true` for Lite pilot users  
 - `npx playwright install chromium` then `npm run test:e2e -w web`  
+- Playwright starts **`scripts/playwright-ci-webserver.sh`** (API + web only; DB already migrated/seeded in the job) with a **6 min** webServer timeout on cold Nest compile.  
 - Failures block merge (required check: **CI test**)
 
 Local:

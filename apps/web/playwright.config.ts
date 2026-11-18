@@ -48,10 +48,12 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_NO_SERVER
     ? undefined
     : {
-        command: "npm run dev",
+        command: process.env.CI
+          ? "bash scripts/playwright-ci-webserver.sh"
+          : "npm run dev",
         cwd: "../..",
         url: devReadyURL,
         reuseExistingServer: !process.env.CI,
-        timeout: 180_000,
+        timeout: process.env.CI ? 360_000 : 180_000,
       },
 });
