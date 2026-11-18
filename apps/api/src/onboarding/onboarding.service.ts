@@ -40,7 +40,7 @@ const STEP_PATHS: Record<OnboardingStepKey, string> = {
   doctor_availability: "/profile",
   invite_receptionist: "/admin",
   whatsapp_reminders: "/admin",
-  import_patients: "/patients",
+  import_patients: "/onboarding/import",
   first_appointment: "/appointments",
   first_check_in: "/front-desk/board",
   kiorex_profile: "/clinics",
