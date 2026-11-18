@@ -3291,5 +3291,64 @@
     },
     "suggestDeposit": "فكّر في طلب عربون لتثبيت هذا الموعد.",
     "suggestReminder": "فكّر في مكالمة أو رسالة تذكير إضافية قبل الموعد بيوم."
+  },
+  "patientMoney": {
+    "tab": "الباقات والمرتجعات",
+    "depositsHeld": "العرابين المحجوزة",
+    "packagesUnused": "رصيد الباقات غير المستخدم",
+    "packages": "الباقات المدفوعة مسبقًا",
+    "noPackages": "لا توجد باقات بعد.",
+    "sellPackage": "بيع باقة",
+    "packageNameEn": "الاسم (إنجليزي)",
+    "packageNameAr": "الاسم (عربي)",
+    "sessions": "عدد الجلسات",
+    "price": "المبلغ المدفوع",
+    "expiresOn": "تاريخ الانتهاء (اختياري)",
+    "packageExplainer": "يُحفظ مبلغ الباقة باسم المريض ويتحول إلى إيراد جلسةً بجلسة.",
+    "sessionsLeft": "متبقٍ {{left}} من {{total}} جلسات",
+    "expires": "تنتهي في {{date}}",
+    "expired": "منتهية",
+    "useSession": "استخدام جلسة",
+    "packageStatus": {
+      "ACTIVE": "نشطة",
+      "EXHAUSTED": "مستهلكة بالكامل",
+      "CANCELLED": "ملغاة"
+    },
+    "deposits": "العرابين",
+    "noDeposits": "لا توجد عرابين.",
+    "applyDeposit": "خصم من الزيارة",
+    "depositStatus": {
+      "PENDING": "في انتظار الدفع",
+      "HELD": "محجوز",
+      "APPLIED": "تم الخصم",
+      "RELEASED": "تم الرد",
+      "FORFEITED": "محتفظ به (عدم حضور)"
+    },
+    "refunds": "المرتجعات",
+    "nothingRefundable": "لا يوجد ما يمكن رده.",
+    "refund": "رد مبلغ",
+    "refundHistory": "سجل المرتجعات",
+    "refundStatus": {
+      "PENDING_APPROVAL": "في انتظار الموافقة",
+      "COMPLETED": "تم الرد",
+      "REJECTED": "مرفوض"
+    },
+    "approve": "موافقة",
+    "reject": "رفض",
+    "refundTitle": "رد مبلغ للمريض",
+    "refundableLeft": "يمكن رد {{amount}}",
+    "amount": "المبلغ",
+    "refundMethod": "طريقة الرد",
+    "reason": "السبب",
+    "refundExplainer": "يعكس الرد الإيراد ويسجّل خروج المبلغ من الخزنة، ويصدر إشعار دائن تلقائيًا.",
+    "refundPendingApproval": "هذا المبلغ أعلى من حد الموافقة. يجب أن يوافق المالك أو المدير أو المسؤول المالي قبل خروج المبلغ من الخزنة.",
+    "confirmRefund": "تأكيد الرد",
+    "method": {
+      "CASH": "نقدي",
+      "CARD": "بطاقة",
+      "TRANSFER": "تحويل",
+      "WALLET": "محفظة",
+      "OTHER": "أخرى"
+    }
   }
 }

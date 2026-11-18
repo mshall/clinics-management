@@ -12,7 +12,10 @@ import {
   Scissors,
   Sparkles,
   Users,
+  Wallet,
 } from "lucide-react";
+import { PatientMoneySection } from "@/features/patients/patient-money-section";
+import { canUsePatientMoney } from "@/lib/patient-money-policy";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -63,6 +66,7 @@ export function PatientDetailPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const role = useAuthStore((s) => s.user?.role);
+  const authUser = useAuthStore((s) => s.user);
   const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
   const navTabAccessModes = useAuthStore((s) => s.user?.navTabAccessModes);
   const roleNavTabKeys = useAuthStore((s) => s.user?.roleNavTabKeys);
@@ -80,7 +84,9 @@ export function PatientDetailPage() {
     | "operations"
     | "medicalDocuments"
     | "invoices"
+    | "money"
     | "notifications";
+  const canViewMoney = canUsePatientMoney(authUser);
   const [profileTab, setProfileTab] = useState<ProfileTab>("overview");
   const [editOpen, setEditOpen] = useState(false);
   const [familyOpen, setFamilyOpen] = useState(false);
@@ -325,6 +331,12 @@ export function PatientDetailPage() {
             <Receipt className="h-4 w-4 shrink-0" aria-hidden />
             {t("patients.tabInvoices", "Invoices")}
           </TabsTrigger>
+          {canViewMoney ? (
+            <TabsTrigger value="money" className="gap-1.5" data-testid="patient-tab-money">
+              <Wallet className="h-4 w-4 shrink-0" aria-hidden />
+              {t("patientMoney.tab")}
+            </TabsTrigger>
+          ) : null}
           <TabsTrigger value="notifications" className="gap-1.5">
             <Bell className="h-4 w-4 shrink-0" aria-hidden />
             {t("patients.tabNotificationSettings", "Notification settings")}
@@ -508,6 +520,12 @@ export function PatientDetailPage() {
         <TabsContent value="invoices" className="mt-0">
           <PatientInvoicesSection patientId={patient.id} clinicId={patient.homeBranchId} />
         </TabsContent>
+
+        {canViewMoney ? (
+          <TabsContent value="money" className="mt-0">
+            <PatientMoneySection patientId={patient.id} clinicId={patient.homeBranchId} />
+          </TabsContent>
+        ) : null}
 
         <TabsContent value="notifications" className="mt-0 space-y-6">
           <PatientMessagingConsentCard patientId={patient.id} />

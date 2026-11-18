@@ -4,6 +4,7 @@ import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
 import { resolveMarketForTenant } from "../markets/market-resolver";
 import { flattenBillingPaymentAllocations, sumExpectedCashAndCard } from "./billing-cash-close";
+import { signedMovement } from "./patient-money";
 
 const DISCOUNT_APPROVAL_THRESHOLD = 15;
 
@@ -182,7 +183,14 @@ export class BillingService {
         allocations: p.allocations.map((a) => ({ method: a.method, amount: Number(a.amount) })),
       })),
     );
-    const { expectedCash, expectedCard } = sumExpectedCashAndCard(flat);
+    const movements = await this.prisma.cashMovement.findMany({
+      where: { tenantId, clinicId: body.clinicId, createdAt: { gte: day, lt: dayEnd }, sourceType: { not: "PAYMENT" } },
+      select: { direction: true, method: true, amount: true },
+    });
+    const { expectedCash, expectedCard } = sumExpectedCashAndCard([
+      ...flat,
+      ...movements.map((m) => ({ method: m.method, amount: signedMovement(m.direction, Number(m.amount)) })),
+    ]);
 
     return this.prisma.cashierShiftClose.create({
       data: {
