@@ -11,9 +11,7 @@ export function assertValidTransferReference(
   const normalized = channel.trim().toUpperCase();
   const def = paymentMethodForTransferChannel(methods, normalized);
   if (!def?.referencePattern) {
-    if (ref.length < 3) {
-      throw new BadRequestException("Transaction reference is too short");
-    }
+    if (ref.length < 3) throw transferReferenceError("TRANSFER_REFERENCE_REQUIRED", normalized, "Transaction reference is too short");
     return;
   }
   let pattern: RegExp;
@@ -23,11 +21,33 @@ export function assertValidTransferReference(
     throw new BadRequestException("Invalid transfer reference pattern in market configuration");
   }
   if (!pattern.test(ref)) {
-    throw new BadRequestException({
-      message: `Invalid ${normalized} reference format`,
-      messageKey: `errors.transfer.invalid${normalized.charAt(0)}${normalized.slice(1).toLowerCase()}`,
-    });
+    throw transferReferenceError("TRANSFER_REFERENCE_FORMAT", normalized, `Invalid ${normalized} reference format`);
   }
+}
+
+export type TransferReferenceErrorCode =
+  | "TRANSFER_REFERENCE_REQUIRED"
+  | "TRANSFER_REFERENCE_FORMAT"
+  | "TRANSFER_REFERENCE_NOT_VERIFIED";
+
+/** 400 body the front desk can pin to the transaction-ID field (`field`) and localize (`messageKey` + `channel`). */
+export function transferReferenceError(
+  errorCode: TransferReferenceErrorCode,
+  channel: string,
+  message: string,
+): BadRequestException {
+  const keys: Record<TransferReferenceErrorCode, string> = {
+    TRANSFER_REFERENCE_REQUIRED: "errors.transfer.referenceRequired",
+    TRANSFER_REFERENCE_FORMAT: "errors.transfer.referenceFormat",
+    TRANSFER_REFERENCE_NOT_VERIFIED: "errors.transfer.notVerified",
+  };
+  return new BadRequestException({
+    message,
+    errorCode,
+    field: "transferReference",
+    messageKey: keys[errorCode],
+    messageParams: { channel },
+  });
 }
 
 /**

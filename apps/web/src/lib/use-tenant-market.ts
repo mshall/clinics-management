@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/http";
+import type { TransferReferenceRule } from "@/lib/visit-collection";
 
 export type FiscalDeviceRegistration = {
   required: boolean;
@@ -25,7 +26,7 @@ export type TenantMarketContext = {
   weekendDays: number[];
   fiscalProviderKey: string;
   fiscalDeviceRegistration: FiscalDeviceRegistration | null;
-  paymentMethods: Array<{ key: string; labelKey?: string; transferChannel?: string }>;
+  paymentMethods: Array<{ key: string; labelKey?: string; transferChannel?: string; referencePattern?: string }>;
   organizationPaymentChannels: OrganizationPaymentChannel[];
   transferChannels: string[];
 };
@@ -36,4 +37,12 @@ export function useTenantMarket() {
     queryFn: () => apiGet<TenantMarketContext>("/api/v1/markets/current"),
     staleTime: 60_000,
   });
+}
+/** Reference regexes for every transfer channel the desk can pick (market methods + org channels). */
+export function transferRulesFromMarket(ctx: TenantMarketContext | undefined): TransferReferenceRule[] {
+  if (!ctx) return [];
+  return [
+    ...ctx.paymentMethods.map((m) => ({ transferChannel: m.transferChannel, referencePattern: m.referencePattern })),
+    ...ctx.organizationPaymentChannels.map((c) => ({ channelKey: c.channelKey, referencePattern: c.referencePattern })),
+  ];
 }

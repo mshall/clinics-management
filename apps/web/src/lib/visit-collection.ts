@@ -53,10 +53,46 @@ export function scheduledFeeCollectionToApi(
   };
 }
 
+/** Market / org payment method with an optional reference regex (same source the API validates against). */
+export type TransferReferenceRule = { transferChannel?: string; channelKey?: string; referencePattern?: string | null };
+
+export type TransferReferenceIssue = "required" | "format" | null;
+
+/** Mirrors the API's `assertValidTransferReference` so the desk sees the problem before submitting. */
+export function transferReferenceIssue(
+  channel: string,
+  reference: string,
+  rules: TransferReferenceRule[] = [],
+): TransferReferenceIssue {
+  const ref = reference.trim();
+  if (ref.length < 3) return "required";
+  const ch = channel.trim().toUpperCase();
+  const rule = rules.find((r) => (r.transferChannel ?? r.channelKey ?? "").toUpperCase() === ch);
+  if (!rule?.referencePattern) return null;
+  try {
+    return new RegExp(rule.referencePattern).test(ref) ? null : "format";
+  } catch {
+    return null;
+  }
+}
+
+export function transferReferenceMessage(
+  issue: Exclude<TransferReferenceIssue, null>,
+  channelLabel: string,
+  t: (key: string, fallback: string, params?: Record<string, unknown>) => string,
+): string {
+  return issue === "required"
+    ? t("visitCollection.transactionIdRequired", "Enter the transfer transaction ID.")
+    : t("errors.transfer.referenceFormat", "This doesn't look like a {{channel}} reference. Check the receipt and try again.", {
+        channel: channelLabel,
+      });
+}
+
 export function validateVisitCollection(
   amount: number,
   collection: VisitCollectionValue,
-  t: (key: string, fallback: string) => string,
+  t: (key: string, fallback: string, params?: Record<string, unknown>) => string,
+  rules: TransferReferenceRule[] = [],
 ): string | null {
   if (amount <= 0) return null;
   if (collection.mode === "CASH_ON_VISIT") return null;
@@ -67,11 +103,13 @@ export function validateVisitCollection(
   if (!channel) {
     return t("visitCollection.channelRequired", "Select a transfer channel.");
   }
-  const ref = collection.transferReference?.trim() ?? "";
-  if (ref.length < 3) {
-    return t("visitCollection.transactionIdRequired", "Enter the transfer transaction ID.");
-  }
-  return null;
+  const issue = transferReferenceIssue(channel, collection.transferReference ?? "", rules);
+  return issue ? transferReferenceMessage(issue, channel, t) : null;
+}
+
+/** True when an API error belongs on the transaction-ID field rather than in a toast. */
+export function isTransferReferenceApiError(body: unknown): boolean {
+  return Boolean(body && typeof body === "object" && (body as { field?: unknown }).field === "transferReference");
 }
 
 export function visitCollectionToApi(

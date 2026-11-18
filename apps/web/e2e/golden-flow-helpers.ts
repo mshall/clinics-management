@@ -58,10 +58,19 @@ function isoSlotIn(minutesFromNow: number): string {
   return new Date(Date.now() + (minutesFromNow + jitter) * 60_000).toISOString();
 }
 
-export async function runGoldenFlowViaApi(
+export type BookedAppointment = {
+  clinicId: string;
+  patientId: string;
+  clinicianId: string;
+  appointmentId: string;
+  fee: number;
+};
+
+/** Seeds a confirmed front-desk appointment (InstaPay enabled for the tenant) — check-in is left to the caller. */
+export async function bookAppointmentViaApi(
   request: APIRequestContext,
   opts: GoldenFlowOptions,
-): Promise<GoldenFlowResult> {
+): Promise<BookedAppointment> {
   const adminEmail = opts.adminEmail ?? "admin@drahmedshall.com";
   const admin = await apiLogin(request, adminEmail);
   const h = authHeaders(admin.accessToken);
@@ -123,7 +132,20 @@ export async function runGoldenFlowViaApi(
     }
   }
   expect(appt, "could not book a free slot for clinician after retries").toBeTruthy();
-  const appointmentId = appt!.id;
+  return { clinicId: clinic!.id, patientId, clinicianId, appointmentId: appt!.id, fee };
+}
+
+export async function runGoldenFlowViaApi(
+  request: APIRequestContext,
+  opts: GoldenFlowOptions,
+): Promise<GoldenFlowResult> {
+  const booked = await bookAppointmentViaApi(request, opts);
+  const { patientId, clinicianId, fee } = booked;
+  const clinic = { id: booked.clinicId };
+  const rh = authHeaders((await apiLogin(request, opts.receptionistEmail)).accessToken);
+  const physicianSession = await apiLogin(request, opts.physicianEmail);
+  const adminEmail = opts.adminEmail ?? "admin@drahmedshall.com";
+  const appointmentId = booked.appointmentId;
 
   const checkInBody: Record<string, unknown> = {
     paymentAmount: fee,

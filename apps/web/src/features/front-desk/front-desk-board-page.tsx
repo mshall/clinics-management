@@ -10,6 +10,7 @@ import { useClinicsQuery } from "@/lib/api-hooks";
 import { apiGet, apiPost } from "@/lib/http";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { KiorexConfirmQueuePanel } from "@/features/front-desk/kiorex-confirm-queue-panel";
+import { useKeyboardShortcuts } from "@/lib/keyboard-shortcuts";
 
 type QueueRow = {
   appointmentId: string;
@@ -72,6 +73,24 @@ export function FrontDeskBoardPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const waiting = boardQ.data?.waiting ?? [];
+  const nextToCall = waiting.find((w) => w.queueStage !== "CALLED" && w.ticketNumber != null);
+  const nextToStart = waiting.find((w) => w.queueStage === "CALLED") ?? waiting[0];
+  useKeyboardShortcuts([
+    {
+      key: "n",
+      handler: () => {
+        if (nextToCall?.ticketNumber != null && !callMut.isPending) callMut.mutate(nextToCall.ticketNumber);
+      },
+    },
+    {
+      key: "s",
+      handler: () => {
+        if (nextToStart && !startVisitMut.isPending) startVisitMut.mutate(nextToStart.appointmentId);
+      },
+    },
+  ]);
+
   const renderRow = (w: QueueRow, actions: "waiting" | "exam") => (
     <div key={w.appointmentId} className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2">
       <div className="min-w-0 flex-1">
@@ -98,6 +117,7 @@ export function FrontDeskBoardPage() {
               type="button"
               size="sm"
               variant="secondary"
+              className="min-h-10 min-w-16"
               disabled={!w.ticketNumber}
               onClick={() => w.ticketNumber && callMut.mutate(w.ticketNumber)}
             >
@@ -106,6 +126,7 @@ export function FrontDeskBoardPage() {
             <Button
               type="button"
               size="sm"
+              className="min-h-10"
               disabled={startVisitMut.isPending}
               onClick={() => startVisitMut.mutate(w.appointmentId)}
             >
@@ -117,7 +138,7 @@ export function FrontDeskBoardPage() {
             <Link to={`/encounters/${w.openEncounterId}`}>{t("frontDesk.openEncounter", "Open encounter")}</Link>
           </Button>
         ) : null}
-        <Button asChild size="sm" variant="outline">
+        <Button asChild size="sm" variant="outline" className="min-h-10">
           <Link to={`/appointments/${w.appointmentId}`}>{t("common.open", "Open")}</Link>
         </Button>
       </div>
@@ -130,6 +151,9 @@ export function FrontDeskBoardPage() {
         <div>
           <h1 className="text-xl font-semibold">{t("frontDesk.liveBoard", "Live clinic board")}</h1>
           <p className="text-sm text-muted-foreground">{t("frontDesk.flowHint", "Check-in → waiting → call → start visit (auto room) → finalize encounter frees the room.")}</p>
+          <p className="hidden text-xs text-muted-foreground lg:block" data-testid="front-desk-shortcuts">
+            {t("frontDesk.boardShortcuts", "Shortcuts: N call next · S start next visit · Ctrl+K find patient")}
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <select className={nativeSelectClassName} value={activeClinic} onChange={(e) => setClinicId(e.target.value)}>

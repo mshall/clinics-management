@@ -87,7 +87,8 @@
     "transactionIdPlaceholder": "المرجع من إيصال التحويل",
     "channelRequired": "اختر إنستاباي أو فوري.",
     "transactionIdRequired": "أدخل رقم معاملة التحويل.",
-    "invalidMode": "اختر طريقة تحصيل الدفع."
+    "invalidMode": "اختر طريقة تحصيل الدفع.",
+    "cash": "نقدًا"
   },
   "frontDesk": {
     "searchPatients": "البحث عن مريض",
@@ -129,7 +130,9 @@
     "preferredRoom": "مفضّلة",
     "inExamHint": "اعتمد إنهاء الزيارة لإتمام الموعد وتحرير الغرفة.",
     "vipPatient": "مريض VIP",
-    "needsChaperone": "يحتاج مرافقاً"
+    "needsChaperone": "يحتاج مرافقاً",
+    "checkInShortcutHint": "Ctrl+Enter لتسجيل الوصول · Alt+1… لاختيار طريقة الدفع",
+    "boardShortcuts": "اختصارات: N استدعاء التالي · S بدء الزيارة التالية · Ctrl+K البحث عن مريض"
   },
   "auth": {
     "signIn": "تسجيل الدخول",
@@ -2727,7 +2730,12 @@
       "imagesOnly": "يمكن قص مستندات الصور فقط.",
       "failed": "فشل الرفع. حاول مرة أخرى."
     },
-    "encounterLocked": "هذه الملاحظة مقفلة. استخدم \"تعديل\" لإعادة فتحها مع ذكر السبب."
+    "encounterLocked": "هذه الملاحظة مقفلة. استخدم \"تعديل\" لإعادة فتحها مع ذكر السبب.",
+    "transfer": {
+      "referenceFormat": "هذا لا يبدو مرجع {{channel}} صحيحًا. راجع الإيصال وحاول مرة أخرى.",
+      "referenceRequired": "أدخل رقم معاملة {{channel}} من الإيصال.",
+      "notVerified": "تعذّر على {{channel}} تأكيد هذه المعاملة. راجع الرقم أو استخدم طريقة دفع أخرى."
+    }
   },
   "common": {
     "actions": "إجراءات",
