@@ -75,11 +75,24 @@ export interface EncounterDetailDto {
   signedAt?: string | null;
   amendReason?: string | null;
   amendedAt?: string | null;
+  signedByName?: string | null;
+  noteLocksAt?: string | null;
+  amendments?: EncounterAmendmentDto[];
   diagnoses: DiagnosisDto[];
   medications: EncounterMedicationDto[];
   documents: EncounterDocumentDto[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface EncounterAmendmentDto {
+  id: string;
+  reason: string;
+  amendedByName: string;
+  amendedAt: string;
+  wasLocked: boolean;
+  resignedByName: string | null;
+  resignedAt: string | null;
 }
 
 export interface ExpenseDto {

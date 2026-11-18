@@ -68,6 +68,7 @@ import type {
 import type { UpdateEncounterDto } from "./dto/update-encounter.dto";
 import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 import { AuditService } from "../audit/audit.service";
+import { assertEncounterWritable, autoLockHours, encounterLockAt, syncEncounterLock } from "../common/encounter-lock";
 import { DrugCatalogService } from "../clinical/drug-catalog.service";
 import { RxSafetyCheckService } from "../clinical/rx-safety-check.service";
 
@@ -88,6 +89,9 @@ const encounterIncludeDef: Prisma.EncounterInclude = {
   documents: { orderBy: { createdAt: "asc" } },
   clinic: { select: { nameEn: true, nameAr: true } },
   patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } },
+  amendments: { orderBy: { amendedAt: "asc" } },
+  signedBy: { select: { displayName: true } },
+  tenant: { select: { encounterAutoLockHours: true } },
 };
 
 type EncounterRow = Prisma.EncounterGetPayload<{ include: typeof encounterIncludeDef }>;
@@ -260,6 +264,17 @@ export class EncountersService {
       signedAt: e.signedAt ? e.signedAt.toISOString() : null,
       amendReason: e.amendReason ?? null,
       amendedAt: e.amendedAt ? e.amendedAt.toISOString() : null,
+      signedByName: e.signedBy?.displayName ?? null,
+      noteLocksAt: encounterLockAt(e, autoLockHours(e.tenant.encounterAutoLockHours))?.toISOString() ?? null,
+      amendments: e.amendments.map((a) => ({
+        id: a.id,
+        reason: a.reason,
+        amendedByName: a.amendedByName,
+        amendedAt: a.amendedAt.toISOString(),
+        wasLocked: a.wasLocked,
+        resignedByName: a.resignedByName ?? null,
+        resignedAt: a.resignedAt ? a.resignedAt.toISOString() : null,
+      })),
       followUpDueAt: e.followUpDueAt ? e.followUpDueAt.toISOString() : null,
       followUpWeeks: e.followUpWeeks ?? null,
       followUpNote: e.followUpNote ?? null,
@@ -366,20 +381,7 @@ export class EncountersService {
   }
 
   private async applyAutoNoteLockIfDue(tenantId: string, encounterId: string): Promise<void> {
-    const enc = await this.prisma.encounter.findFirst({
-      where: { id: encounterId, tenantId },
-      select: { status: true, finalizedAt: true, noteLockedAt: true },
-    });
-    if (!enc || enc.status !== EncounterStatus.FINALIZED || enc.noteLockedAt || !enc.finalizedAt) return;
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: { encounterAutoLockHours: true },
-    });
-    const hours = tenant?.encounterAutoLockHours ?? 72;
-    const lockAt = new Date(enc.finalizedAt.getTime() + hours * 3600_000);
-    if (Date.now() >= lockAt.getTime()) {
-      await this.prisma.encounter.update({ where: { id: encounterId }, data: { noteLockedAt: lockAt } });
-    }
+    await syncEncounterLock(this.prisma, tenantId, encounterId);
   }
 
   async create(tenantId: string, actor: JwtUser, dto: CreateEncounterDto): Promise<EncounterDetailDto> {
@@ -591,12 +593,8 @@ export class EncountersService {
     );
   }
 
-  private async ensureEditableEncounter(enc: { id: string; tenantId: string; status: EncounterStatus; noteLockedAt: Date | null }) {
-    if (enc.status === EncounterStatus.DRAFT || enc.status === EncounterStatus.AMENDED) return;
-    if (enc.status === EncounterStatus.FINALIZED && !enc.noteLockedAt) return;
-    if (enc.status === EncounterStatus.FINALIZED && enc.noteLockedAt) {
-      throw new BadRequestException("Encounter note is locked — use Amend to reopen with a documented reason");
-    }
+  private async ensureEditableEncounter(enc: { id: string; tenantId: string }) {
+    await assertEncounterWritable(this.prisma, enc.tenantId, enc.id);
   }
 
   private ensureEditable(status: EncounterStatus) {
@@ -626,18 +624,49 @@ export class EncountersService {
     if (enc.status !== EncounterStatus.FINALIZED) {
       throw new BadRequestException("Only finalized encounters can be amended");
     }
+    if (!hasAnyRole(viewer, [UserRole.GROUP_SUPERVISOR, UserRole.GROUP_ADMIN]) && enc.clinicianId !== viewer.userId) {
+      throw new ForbiddenException("Only the assigned clinician or a supervisor can amend a signed note");
+    }
     const trimmed = reason.trim();
     if (trimmed.length < 3) throw new BadRequestException("Amend reason is required");
-    const row = await this.prisma.encounter.update({
-      where: { id: encounterId },
-      data: {
-        status: EncounterStatus.AMENDED,
-        amendReason: trimmed,
-        amendedByUserId: viewer.userId,
-        amendedAt: new Date(),
-        noteLockedAt: null,
-      },
-      include: encounterIncludeDef,
+    const wasLocked = Boolean(await syncEncounterLock(this.prisma, tenantId, encounterId));
+    const author = await this.prisma.user.findFirst({
+      where: { id: viewer.userId, tenantId },
+      select: { displayName: true },
+    });
+    const amendedAt = new Date();
+    const row = await this.prisma.$transaction(async (tx) => {
+      await tx.encounterAmendment.create({
+        data: {
+          tenantId,
+          encounterId,
+          reason: trimmed,
+          amendedByUserId: viewer.userId,
+          amendedByName: author?.displayName ?? "",
+          amendedAt,
+          wasLocked,
+        },
+      });
+      return tx.encounter.update({
+        where: { id: encounterId },
+        data: {
+          status: EncounterStatus.AMENDED,
+          amendReason: trimmed,
+          amendedByUserId: viewer.userId,
+          amendedAt,
+          noteLockedAt: null,
+        },
+        include: encounterIncludeDef,
+      });
+    });
+    await this.audit.recordEvent({
+      tenantId,
+      actorId: viewer.userId,
+      clinicId: enc.clinicId,
+      action: "ENCOUNTER_AMENDED",
+      resource: "Encounter",
+      resourceId: encounterId,
+      metadata: { reason: trimmed, wasLocked, previousSignedAt: enc.signedAt?.toISOString() ?? null },
     });
     const moneyVis = await this.moneyOverrides(tenantId, viewer);
     return this.mapEncounter(row, { viewer, overrides: moneyVis });
@@ -999,6 +1028,7 @@ export class EncountersService {
     if (!enc) throw new NotFoundException("Encounter not found");
     assertPhysicianEncounterAccess(viewer, enc);
     this.assertCanUploadEncounterDocument(kind, enc.status);
+    await this.ensureEditableEncounter(enc);
 
     if (!file?.buffer?.length) throw new BadRequestException("Missing file");
     if (file.size > MAX_UPLOAD_BYTES) throw new BadRequestException("File too large (max 15MB)");
@@ -1118,7 +1148,17 @@ export class EncountersService {
           ? { followUpStatus: EncounterFollowUpStatus.PENDING_BOOKING }
           : {};
 
+    const signer =
+      enc.status === EncounterStatus.AMENDED
+        ? await this.prisma.user.findFirst({ where: { id: viewer.userId, tenantId }, select: { displayName: true } })
+        : null;
     const row = await this.prisma.$transaction(async (tx) => {
+      if (enc.status === EncounterStatus.AMENDED) {
+        await tx.encounterAmendment.updateMany({
+          where: { tenantId, encounterId, resignedAt: null },
+          data: { resignedAt: finalizedAt, resignedByUserId: viewer.userId, resignedByName: signer?.displayName ?? "" },
+        });
+      }
       const updated = await tx.encounter.update({
         where: { id: encounterId },
         data: {
@@ -1159,6 +1199,7 @@ export class EncountersService {
       include: { documents: true },
     });
     if (!enc) throw new NotFoundException("Encounter not found");
+    await this.ensureEditableEncounter(enc);
 
     const documentPaths = enc.documents.map((d) => d.relativePath);
     const appointmentId = enc.appointmentId;

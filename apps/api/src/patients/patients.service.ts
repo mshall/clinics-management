@@ -50,6 +50,7 @@ import type { PatientPhoneConflictDto, PatientPhoneConflictPatientDto } from "./
 import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 import { NavTabAccessService } from "../user-nav-tabs/nav-tab-access.service";
 import { PATIENT_MUTATE_ROLES } from "../user-nav-tabs/nav-tab-module-roles";
+import { assertEncounterWritable } from "../common/encounter-lock";
 
 const MAX_PATIENT_DOC_BYTES = 15 * 1024 * 1024;
 const ALLOWED_PATIENT_DOC_MIME = new Set(["application/pdf", "image/jpeg", "image/png", "image/gif", "image/webp"]);
@@ -778,6 +779,7 @@ export class PatientsService {
       where: { id: encounterId, tenantId, patientId },
     });
     if (!enc) throw new NotFoundException("Encounter not found");
+    await assertEncounterWritable(this.prisma, tenantId, encounterId);
     const doc = await this.prisma.encounterDocument.findFirst({
       where: { id: documentId, encounterId, tenantId },
     });
@@ -839,6 +841,7 @@ export class PatientsService {
       where: { id: encounterId, tenantId, patientId },
     });
     if (!enc) throw new NotFoundException("Encounter not found");
+    await assertEncounterWritable(this.prisma, tenantId, encounterId);
     const doc = await this.prisma.encounterDocument.findFirst({
       where: { id: documentId, encounterId, tenantId },
     });

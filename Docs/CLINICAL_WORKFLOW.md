@@ -68,12 +68,21 @@ Encounter **medications** use brand autocomplete (`GET /clinical/drugs/search`) 
 - **API:** `POST /api/v1/clinical/letters` — types: `SICK_LEAVE`, `MEDICAL_REPORT`, `REFERRAL`, `FITNESS_CERTIFICATE`.
 - Bilingual **title/body** stored in `ClinicalLetter`; **Generate letter** on the encounter clinical tools panel opens a dialog with bilingual print.
 
-## Signing, locking, and amendments
+## Signing, locking, and amendments (CL-05)
 
-- **Finalize** sets `signedAt` / `signedByUserId`.
-- **`Tenant.encounterAutoLockHours`** (default **72**) — after finalize, when the window elapses, `noteLockedAt` is set and the chart is read-only.
-- **Grace period:** finalized encounters remain editable until auto-lock.
-- **`POST /api/v1/encounters/:id/amend`** with `{ reason }` sets status **AMENDED**, stores reason, author, timestamp; clears lock for correction, then re-finalize.
+| Item | Status |
+|---|---|
+| CL-05 Lock enforced on every write path (API test + source guard) | **Done** |
+| CL-05 Append-only amendment trail with re-signature | **Done** |
+| CL-05 Sign-off / amend / re-sign usable on a phone (E2E) | **Done** |
+| CL-05 Per-tenant lock window setting in the UI | Not built (column only, default 72h) |
+
+- **Finalize** (assigned clinician, or group supervisor/admin) sets `signedAt` / `signedByUserId`. The DTO returns `signedByName` and `noteLocksAt` (when the note locks).
+- **`Tenant.encounterAutoLockHours`** (default **72**): once the window passes, the note is locked. The lock is computed on **every write**, not only when someone opens the note (`common/encounter-lock.ts` → `assertEncounterWritable`), and `noteLockedAt` is persisted at that moment.
+- **Grace period:** a signed note stays editable (SOAP, vitals, medications) until it locks. Diagnosis/medication removal and document deletion already require a draft or amended note.
+- **Locked = read-only everywhere:** encounter PATCH, medications, diagnoses, documents (incl. lab/radiology uploads), encounter delete, the patient-chart document delete/crop, and data-explorer edits of encounters/diagnoses/medications all return **409 `ENCOUNTER_LOCKED`** (`messageKey: errors.encounterLocked`). `cl05-encounter-lock.node.test.ts` fails if new code writes encounter clinical rows without the lock check (exemptions listed with reasons: draft-only check-in paths, visit-fee ledger, scribe on non-finalized notes, patient merge, staging reset).
+- **Amend:** `POST /api/v1/encounters/:id/amend` `{ reason }` (≥3 chars; signing clinician or group supervisor/admin only) → status **AMENDED**, lock cleared, and a new **`EncounterAmendment`** row (reason, author name snapshot, time, `wasLocked`). Audited `ENCOUNTER_AMENDED`. Re-signing (`finalize`) stamps `resignedAt`/`resignedByName` on open amendments and starts a fresh lock window. Earlier amendments are never overwritten (legacy `amendReason` columns are kept as "latest" and were backfilled into the table).
+- **Web:** the encounter page shows "Signed by … · time", "Editable until … / Locked …", the numbered **amendment history**, an **Amend locked note** dialog (reason required), and **Sign amended note**. Buttons are ≥40px tap targets for phones.
 
 ## Safety checks (allergies & interactions)
 

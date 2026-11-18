@@ -1154,6 +1154,7 @@ model Tenant {
   outboxEvents                   OutboxEvent[]
   appointmentRescheduleTokens    AppointmentRescheduleToken[]
   prescriptionVerificationTokens PrescriptionVerificationToken[]
+  encounterAmendments            EncounterAmendment[]
   whatsAppInboundEvents          WhatsAppInboundEvent[]
   messagingConsents              MessagingConsent[]
   legalAcceptances               LegalAcceptance[]
@@ -1883,6 +1884,7 @@ model Encounter {
   activeProblemsEncounter PatientActiveProblem[]
   invoices       Invoice[]
   prescriptionVerificationTokens PrescriptionVerificationToken[]
+  amendments     EncounterAmendment[]
   followUpDueAt  DateTime?
   followUpWeeks  Int?
   followUpNote   String?
@@ -3139,6 +3141,26 @@ model PrescriptionVerificationToken {
 
   @@index([tenantId])
   @@index([encounterId])
+}
+
+/// CL-05 append-only amendment trail. One row per Amend; resignedAt is set when the amended note is signed again.
+model EncounterAmendment {
+  id               String    @id @default(cuid())
+  tenantId         String
+  tenant           Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  encounterId      String
+  encounter        Encounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  reason           String
+  amendedByUserId  String?
+  amendedByName    String
+  amendedAt        DateTime  @default(now())
+  wasLocked        Boolean   @default(false)
+  resignedByUserId String?
+  resignedByName   String?
+  resignedAt       DateTime?
+
+  @@index([tenantId])
+  @@index([encounterId, amendedAt])
 }
 
 model WhatsAppInboundEvent {

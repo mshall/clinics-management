@@ -713,7 +713,7 @@
     "statusAmended": "Amended",
     "statusFinalized": "Finalized",
     "confirmFinalizeTitle": "Finalize this encounter?",
-    "confirmFinalizeBody": "Once finalized, SOAP notes, vitals, medications, and documents can no longer be edited. This action cannot be undone.",
+    "confirmFinalizeBody": "You will be recorded as the signing doctor. The note stays editable for a short window, then locks automatically; later changes need a documented amendment.",
     "confirmFinalizeAction": "Yes, finalize",
     "diagnosisAdded": "Diagnosis added.",
     "invalidVitalsJson": "Vitals must be valid JSON.",
@@ -2725,7 +2725,8 @@
       "descriptionRequired": "Please add a description for this document.",
       "imagesOnly": "Only image documents can be cropped.",
       "failed": "Upload failed. Please try again."
-    }
+    },
+    "encounterLocked": "This note is locked. Use Amend to reopen it with a documented reason."
   },
   "common": {
     "actions": "Actions",
@@ -3210,5 +3211,20 @@
     "date": "Date",
     "items": "Prescribed items",
     "expiresAt": "Verification link valid until {{date}}."
+  },
+  "signoff": {
+    "signedBy": "Signed by {{name}} · {{at}}",
+    "signedAt": "Signed · {{at}}",
+    "lockedAt": "Locked {{at}} — changes need a documented amendment.",
+    "locksAt": "Editable until {{at}}, then the note locks.",
+    "trailTitle": "Amendment history",
+    "amendmentN": "Amendment {{n}}",
+    "unknownUser": "Unknown user",
+    "resigned": "Re-signed by {{name}} · {{at}}",
+    "awaitingResign": "Open — not yet re-signed",
+    "amendTitle": "Amend a signed note",
+    "amendBody": "The original signature and your reason are kept in the amendment history. Sign the note again when you are done.",
+    "amendConfirm": "Reopen for amendment",
+    "resignAction": "Sign amended note"
   }
 }
