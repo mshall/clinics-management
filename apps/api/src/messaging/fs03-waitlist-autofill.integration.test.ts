@@ -69,9 +69,19 @@ describe("FS-03 waitlist auto-fill on cancellations", () => {
 
   before(async () => {
     await prisma.$connect();
-    const base = await prisma.clinic.findFirstOrThrow({ orderBy: { createdAt: "asc" } });
-    tenantId = base.tenantId;
-    // own branch so waitlist entries from parallel test files never compete for these slots
+    const base = await prisma.clinic.findFirstOrThrow({ orderBy: { createdAt: "asc" }, include: { tenant: true } });
+    // scratch tenant with WhatsApp reminders off: a live dev-server auto-fill loop on the same DB leaves it alone,
+    // while the service under test gets an always-on flag stub
+    const tenant = await prisma.tenant.create({
+      data: {
+        name: `FS03 ${stamp}`,
+        deploymentCell: base.tenant.deploymentCell,
+        marketId: base.tenant.marketId,
+        whatsAppRemindersEnabled: false,
+        tenantFeatureFlags: { create: { key: "whatsapp_reminders", enabled: false } },
+      },
+    });
+    tenantId = tenant.id;
     const clinic = await prisma.clinic.create({
       data: {
         tenantId,
@@ -90,7 +100,15 @@ describe("FS-03 waitlist auto-fill on cancellations", () => {
       },
     });
     clinicId = clinic.id;
-    const doc = await prisma.user.findFirstOrThrow({ where: { tenantId, deletedAt: null, role: UserRole.PHYSICIAN } });
+    const doc = await prisma.user.create({
+      data: {
+        tenantId,
+        email: `fs03.dr.${stamp}@example.com`,
+        passwordHash: "x",
+        displayName: "Dr FS03",
+        role: UserRole.PHYSICIAN,
+      },
+    });
     clinicianId = doc.id;
     // a quiet hour 9 days out so no seeded booking clashes
     slotStartsAt = new Date(Date.now() + 9 * 86_400_000);
@@ -133,13 +151,16 @@ describe("FS-03 waitlist auto-fill on cancellations", () => {
   });
 
   after(async () => {
-    await prisma.appointment.deleteMany({ where: { patientId: { in: patientIds } } }).catch(() => undefined);
-    await prisma.waitlistOpenSlot.deleteMany({ where: { sourceAppointmentId: sourceAptId } }).catch(() => undefined);
-    await prisma.outboundMessage.deleteMany({ where: { patientId: { in: patientIds } } }).catch(() => undefined);
-    await prisma.appointmentWaitlistEntry.deleteMany({ where: { id: { in: entryIds } } }).catch(() => undefined);
-    await prisma.patient.deleteMany({ where: { id: { in: patientIds } } }).catch(() => undefined);
-    await prisma.waitlistOpenSlot.deleteMany({ where: { clinicId } }).catch(() => undefined);
-    await prisma.clinic.delete({ where: { id: clinicId } }).catch(() => undefined);
+    await prisma.waitlistOpenSlot.deleteMany({ where: { tenantId } }).catch(() => undefined);
+    await prisma.appointmentWaitlistEntry.deleteMany({ where: { tenantId } }).catch(() => undefined);
+    await prisma.outboxEvent.deleteMany({ where: { tenantId } }).catch(() => undefined);
+    await prisma.auditLog.deleteMany({ where: { tenantId } }).catch(() => undefined);
+    await prisma.outboundMessage.deleteMany({ where: { tenantId } }).catch(() => undefined);
+    await prisma.appointment.deleteMany({ where: { tenantId } }).catch(() => undefined);
+    await prisma.patient.deleteMany({ where: { tenantId } }).catch(() => undefined);
+    await prisma.user.deleteMany({ where: { tenantId } }).catch(() => undefined);
+    await prisma.clinic.deleteMany({ where: { tenantId } }).catch(() => undefined);
+    await prisma.tenant.deleteMany({ where: { id: tenantId } }).catch(() => undefined);
     await prisma.$disconnect();
   });
 
