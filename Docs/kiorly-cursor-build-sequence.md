@@ -298,7 +298,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 062 · KX-08 · Verified reviews after completed visits
 - [x] Step 063 · KX-09 · Clinic-branded booking page & link (commission-free)
 - [x] Step 064 · KX-10 · Kiorex tab inside Kiorly (settings + performance)
-- [ ] Step 065 · CL-03 · Prescription print & WhatsApp share with verification QR
+- [x] Step 065 · CL-03 · Prescription print & WhatsApp share with verification QR — `f53e999` · `cl03-rx-share.integration.test.ts` · `cl03-rx-print.node.test.ts` · `e2e/cl03-rx-verify.spec.ts` · `Docs/CLINICAL_WORKFLOW.md`
 - [ ] Step 066 · CL-04 · Specialty template coverage for launch specialties
 - [ ] Step 067 · CL-05 · Doctor sign-off, amendments & auto-lock
 - [ ] Step 068 · FS-02 · Golden-flow front desk review on tablet & phone
