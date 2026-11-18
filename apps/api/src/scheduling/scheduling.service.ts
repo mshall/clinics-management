@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { ClinicianVerificationService } from "../clinician-verification/clinician-verification.service";
 import {
   AppointmentStatus,
@@ -21,6 +21,8 @@ import { SlotService } from "./slot.service";
 
 @Injectable()
 export class SchedulingService {
+  private readonly log = new Logger(SchedulingService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly clinicianVerification: ClinicianVerificationService,
@@ -257,11 +259,27 @@ export class SchedulingService {
         ...(clinicId ? { clinicId } : {}),
       },
       orderBy: { createdAt: "asc" },
-      include: { patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } } },
+      include: {
+        patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true, firstNameAr: true, lastNameAr: true, phone: true } },
+        clinician: { select: { displayName: true } },
+      },
     });
   }
 
-  createWaitlist(
+  async cancelWaitlistEntry(tenantId: string, id: string) {
+    const res = await this.prisma.appointmentWaitlistEntry.updateMany({
+      where: { id, tenantId, status: { in: [AppointmentWaitlistStatus.WAITING, AppointmentWaitlistStatus.OFFERED] } },
+      data: { status: AppointmentWaitlistStatus.CANCELLED },
+    });
+    if (res.count === 0) throw new NotFoundException("Waitlist entry not found");
+    await this.prisma.waitlistSlotOffer.updateMany({
+      where: { tenantId, waitlistEntryId: id, status: "PENDING" },
+      data: { status: "WITHDRAWN", activeSlotId: null, respondedAt: new Date() },
+    });
+    return { ok: true };
+  }
+
+  async createWaitlist(
     tenantId: string,
     body: {
       clinicId: string;
@@ -273,6 +291,14 @@ export class SchedulingService {
       notes?: string;
     },
   ) {
+    const [clinic, patient, clinician] = await Promise.all([
+      this.prisma.clinic.findFirst({ where: { id: body.clinicId ?? "", tenantId }, select: { id: true } }),
+      this.prisma.patient.findFirst({ where: { id: body.patientId ?? "", tenantId, deletedAt: null }, select: { id: true } }),
+      body.clinicianId
+        ? this.prisma.user.findFirst({ where: { id: body.clinicianId, tenantId, deletedAt: null }, select: { id: true } })
+        : Promise.resolve({ id: null }),
+    ]);
+    if (!clinic || !patient || !clinician) throw new BadRequestException("Unknown clinic, patient or clinician");
     return this.prisma.appointmentWaitlistEntry.create({
       data: {
         tenantId,
@@ -377,21 +403,92 @@ export class SchedulingService {
     return { ok: true };
   }
 
-  async offerWaitlistForCancelledSlot(tenantId: string, clinicId: string, slotAt: Date, clinicianId?: string) {
-    const entry = await this.prisma.appointmentWaitlistEntry.findFirst({
+  /** FS-03 staff view: open / recent freed slots with each WhatsApp offer and its status. */
+  listWaitlistOffers(tenantId: string, clinicId?: string) {
+    return this.prisma.waitlistOpenSlot.findMany({
       where: {
         tenantId,
-        clinicId,
-        status: AppointmentWaitlistStatus.WAITING,
-        ...(clinicianId ? { OR: [{ clinicianId }, { clinicianId: null }] } : {}),
+        ...(clinicId ? { clinicId } : {}),
+        OR: [{ status: "OPEN" }, { updatedAt: { gte: new Date(Date.now() - 7 * 86_400_000) } }],
       },
-      orderBy: { createdAt: "asc" },
+      orderBy: { startsAt: "asc" },
+      take: 50,
+      include: {
+        offers: {
+          orderBy: { offeredAt: "asc" },
+          select: {
+            id: true,
+            status: true,
+            offeredAt: true,
+            expiresAt: true,
+            respondedAt: true,
+            skipReason: true,
+            bookedAppointmentId: true,
+            waitlistEntry: {
+              select: { patient: { select: { firstNameEn: true, lastNameEn: true, firstNameAr: true, lastNameAr: true, mrn: true } } },
+            },
+          },
+        },
+      },
     });
-    if (!entry) return null;
-    return this.prisma.appointmentWaitlistEntry.update({
-      where: { id: entry.id },
-      data: { status: AppointmentWaitlistStatus.OFFERED, offeredSlotAt: slotAt },
+  }
+
+  /**
+   * FS-03: records a cancelled appointment's time as an open waitlist slot (one OPEN row per clinician + time).
+   * The waitlist auto-fill job (messaging) offers it over WhatsApp. No-op when nobody waits at that clinic or the slot is past.
+   */
+  async recordFreedSlot(tenantId: string, appointmentId: string): Promise<{ slotId: string } | null> {
+    try {
+      return await this.openFreedSlot(tenantId, appointmentId);
+    } catch (e) {
+      // the cancellation itself already committed; a missed waitlist slot must not fail it
+      this.log.warn(`waitlist slot not recorded for appointment ${appointmentId}: ${(e as Error).message}`);
+      return null;
+    }
+  }
+
+  private async openFreedSlot(tenantId: string, appointmentId: string): Promise<{ slotId: string } | null> {
+    const apt = await this.prisma.appointment.findFirst({
+      where: { id: appointmentId, tenantId },
+      select: {
+        clinicId: true,
+        clinicianId: true,
+        startsAt: true,
+        endsAt: true,
+        appointmentTypeId: true,
+        feeAmount: true,
+      },
     });
+    if (!apt || apt.startsAt.getTime() <= Date.now()) return null;
+    const waiting = await this.prisma.appointmentWaitlistEntry.count({
+      where: {
+        tenantId,
+        clinicId: apt.clinicId,
+        status: AppointmentWaitlistStatus.WAITING,
+        OR: [{ clinicianId: apt.clinicianId }, { clinicianId: null }],
+      },
+    });
+    if (waiting === 0) return null;
+    const openKey = waitlistOpenSlotKey(apt.clinicianId, apt.startsAt);
+    try {
+      const slot = await this.prisma.waitlistOpenSlot.create({
+        data: {
+          tenantId,
+          clinicId: apt.clinicId,
+          clinicianId: apt.clinicianId,
+          startsAt: apt.startsAt,
+          endsAt: apt.endsAt,
+          appointmentTypeId: apt.appointmentTypeId,
+          feeAmount: apt.feeAmount,
+          sourceAppointmentId: appointmentId,
+          openKey,
+        },
+      });
+      return { slotId: slot.id };
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return null;
+      throw e;
+    }
   }
 
   resolveDurationFromType(
@@ -412,4 +509,8 @@ export class SchedulingService {
     if (!type) return { blockStart: start, blockEnd: end };
     return schedulingBlockWithBuffers(start, end, type.bufferBeforeMin, type.bufferAfterMin);
   }
+}
+
+export function waitlistOpenSlotKey(clinicianId: string, startsAt: Date): string {
+  return `${clinicianId}|${startsAt.toISOString()}`;
 }

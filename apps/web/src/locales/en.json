@@ -3234,5 +3234,36 @@
     "amendBody": "The original signature and your reason are kept in the amendment history. Sign the note again when you are done.",
     "amendConfirm": "Reopen for amendment",
     "resignAction": "Sign amended note"
+  },
+  "waitlist": {
+    "title": "Waitlist",
+    "hint": "When an appointment is cancelled, the freed time is offered on WhatsApp to waiting patients one at a time, in order. Each offer is held for a few minutes; the first to accept is booked.",
+    "pickPatient": "Patient to add",
+    "anyDoctor": "Any doctor",
+    "add": "Add to waitlist",
+    "added": "Added to the waitlist",
+    "waiting": "Waiting patients",
+    "empty": "Nobody is on the waitlist.",
+    "offerOut": "Offer sent",
+    "remove": "Remove",
+    "offersTitle": "Freed slots & offers sent",
+    "noOffers": "No cancelled slots to fill in the last 7 days.",
+    "noOfferYet": "No offer sent yet.",
+    "holdUntil": "held until {{time}}",
+    "slotStatus": {
+      "OPEN": "Offering",
+      "FILLED": "Filled from waitlist",
+      "FILLED_ELSEWHERE": "Booked by front desk",
+      "EXHAUSTED": "Nobody accepted",
+      "CLOSED": "Closed"
+    },
+    "offerStatus": {
+      "PENDING": "Waiting for reply",
+      "ACCEPTED": "Accepted — booked",
+      "DECLINED": "Declined",
+      "EXPIRED": "No reply in time",
+      "WITHDRAWN": "Withdrawn",
+      "SKIPPED": "Skipped (cannot message)"
+    }
   }
 }

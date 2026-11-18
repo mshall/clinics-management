@@ -38,6 +38,7 @@ function webhookService(): WhatsAppWebhookService {
     scheduling,
     tokens,
     consent,
+    { handleReply: async () => ({ handled: false }) } as never,
   );
   return new WhatsAppWebhookService(prismaSvc, audit, inbound, consent);
 }
