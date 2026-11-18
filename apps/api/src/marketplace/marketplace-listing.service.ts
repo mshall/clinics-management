@@ -143,7 +143,7 @@ export class MarketplaceListingService {
       }),
       this.prisma.subscription.findUnique({
         where: { tenantId: row.tenantId },
-        select: { status: true },
+        select: { status: true, tenant: { select: { kiorexBillingPausedAt: true } } },
       }),
       this.prisma.appointmentType.count({
         where: {
@@ -184,6 +184,7 @@ export class MarketplaceListingService {
       hasAvailability: availability ? weekHasBookableSlots(availability.weekJson) : false,
       profileCompletenessPercent: completenessPercent,
       ownerPaused,
+      kiorexBillingPaused: subscription?.tenant.kiorexBillingPausedAt != null,
     });
 
     const data: Prisma.MarketplaceListingUpdateInput = {
@@ -218,6 +219,15 @@ export class MarketplaceListingService {
       });
     }
     return this.mapListing(updated, eligibility.blockers, completenessPercent);
+  }
+
+  /** Re-evaluate every listing for a tenant (billing / subscription state changed). */
+  async recomputeTenantListings(tenantId: string): Promise<number> {
+    const rows = await this.prisma.marketplaceListing.findMany({ where: { tenantId }, select: { id: true } });
+    for (const row of rows) {
+      await this.recomputeListing(row.id);
+    }
+    return rows.length;
   }
 
   async listMarketplaceClinics(): Promise<{ items: { id: string; nameEn: string; nameAr: string; tenantId: string }[] }> {

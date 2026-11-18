@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
 import { LegalModule } from "../legal/legal.module";
+import { MarketplaceListingService } from "../marketplace/marketplace-listing.service";
+import { OutboxEventService } from "../messaging/outbox-event.service";
 import { DunningScheduler } from "./dunning.scheduler";
 import { DunningService } from "./dunning.service";
 import { SubscriptionAccessGuard } from "./subscription-access.guard";
@@ -20,6 +22,8 @@ import { TrialEngineService } from "./trial-engine.service";
     DunningService,
     DunningScheduler,
     SubscriptionAccessGuard,
+    OutboxEventService,
+    MarketplaceListingService,
   ],
   exports: [
     BillingSeatService,

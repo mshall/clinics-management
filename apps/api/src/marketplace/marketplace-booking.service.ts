@@ -88,6 +88,7 @@ export class MarketplaceBookingService {
     }
 
     const tenantId = await this.access.resolveTenantForMarketplaceClinic(body.clinicId, body.clinicianId);
+    await this.access.assertListingBookable(body.clinicId, body.clinicianId);
     const start = new Date(body.startsAt);
     if (Number.isNaN(start.getTime())) throw new BadRequestException("Invalid startsAt");
     const typeRow = await this.prisma.appointmentType.findFirst({
