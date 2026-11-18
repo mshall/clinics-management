@@ -1513,6 +1513,8 @@ model Clinic {
   marketplaceBookingAutoConfirm Boolean @default(true)
   /// KX-06: clinic override of the market pack Kiorex cancellation policy (partial JSON; null = market default).
   kiorexCancellationPolicy Json?
+  /// KX-09: public clinic booking page slug (commission-free CLINIC_LINK bookings). Shares a namespace with listing slugs.
+  bookingSlug      String?         @unique
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
@@ -2406,6 +2408,8 @@ model MarketplaceListing {
   pausedReason  String?
   profileJson   Json           @default("{}")
   listedAt      DateTime?
+  /// KX-09: per-doctor booking page slug (shares a namespace with clinic slugs).
+  bookingSlug   String?        @unique
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 

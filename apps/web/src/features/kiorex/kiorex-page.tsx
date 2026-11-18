@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Label } from "@/components/ui/label";
 import { useClinicsQuery } from "@/lib/api-hooks";
 import { apiGet } from "@/lib/http";
+import { KiorexBookingLinkCard } from "./kiorex-booking-link-card";
 import { KiorexPolicyCard } from "./kiorex-policy-card";
 import { KiorexRatingsCard } from "./kiorex-ratings-card";
 import type { KiorexSettingsDto } from "./kiorex-types";
@@ -57,6 +58,7 @@ export function KiorexPage() {
       ) : null}
       {settings.data ? (
         <>
+          <KiorexBookingLinkCard clinicId={clinicId} />
           <KiorexRatingsCard clinicId={clinicId} />
           <KiorexPolicyCard clinicId={clinicId} settings={settings.data} />
         </>

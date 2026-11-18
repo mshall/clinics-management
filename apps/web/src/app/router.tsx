@@ -14,6 +14,7 @@ import { AcceptInvitationPage } from "@/features/auth/accept-invitation-page";
 import { RepConsolePage } from "@/features/rep/rep-console-page";
 import { OnboardingPage } from "@/features/onboarding/onboarding-page";
 import { AppointmentReschedulePage } from "@/features/appointments/appointment-reschedule-page";
+import { PublicBookingPage } from "@/features/kiorex/public-booking-page";
 import { ClinicalTemplatesRedirect } from "@/features/clinical/clinical-templates-redirect";
 import { EncounterDetailNavGate } from "@/components/encounter-detail-nav-gate";
 import { NavGate } from "@/components/nav-gate";
@@ -71,6 +72,7 @@ export const router = createBrowserRouter([
   { path: "/signup", element: <SignupPage /> },
   { path: "/legal/:docId", element: <LegalDocumentPage /> },
   { path: "/r/:token", element: <AppointmentReschedulePage /> },
+  { path: "/b/:slug", element: <PublicBookingPage /> },
   { path: "/invite/:token", element: <AcceptInvitationPage /> },
   { path: "/forgot-password", element: <ForgotPasswordPage /> },
   { path: "/reset-password", element: <ResetPasswordPage /> },

@@ -2757,7 +2757,8 @@
     "nextImage": "Next image",
     "slideNOfM": "{{current}} / {{total}}",
     "gallerySwipeHint": "Swipe left or right, or use the arrows, to browse images. Pinch to zoom.",
-    "pinchZoomHint": "Pinch to zoom. Drag when zoomed in. Use flip left/right to rotate. Click zoom % to reset."
+    "pinchZoomHint": "Pinch to zoom. Drag when zoomed in. Use flip left/right to rotate. Click zoom % to reset.",
+    "copyFailed": "Could not copy"
   },
   "patientConsent": {
     "header": "Consent status",
@@ -3089,6 +3090,42 @@
       "yourReply": "Your reply",
       "replySent": "Reply sent to Kiorex",
       "count": "{{count}} reviews"
+    },
+    "bookingLink": {
+      "title": "Your booking link",
+      "hint": "Share it on WhatsApp, Instagram and Google Maps. Bookings from your own link are always commission-free.",
+      "loadError": "Could not load your booking link.",
+      "copied": "Link copied",
+      "saved": "Booking link updated",
+      "shareText": "Book your visit with us online: {{link}}",
+      "whatsApp": "Share on WhatsApp",
+      "share": "Share",
+      "commissionFree": "No Kiorex commission on bookings made through this link.",
+      "slug": "Link name",
+      "slugHint": "3–40 lowercase letters, digits or hyphens.",
+      "doctorLinks": "Doctor links",
+      "posterSize": "Poster size",
+      "posterLanguage": "Poster language",
+      "printPoster": "Print QR poster",
+      "posterCta": "Scan to book your visit online",
+      "posterNote": "Free to book · Powered by Kiorex",
+      "popupBlocked": "Allow pop-ups to print the poster",
+      "googleTitle": "Add a “Book” button on Google",
+      "googleStep1": "Open your Google Business Profile (search your clinic name on Google while signed in).",
+      "googleStep2": "Choose “Edit profile” → “Business information” → “Bookings” (or “Appointment links”).",
+      "googleStep3": "Paste your booking link above and save.",
+      "googleStep4": "Google may take a few days to show the button. Bookings from it stay commission-free."
     }
+  },
+  "bookingPage": {
+    "notFound": "This booking page does not exist.",
+    "directions": "Directions",
+    "doctors": "Book with",
+    "noDoctors": "Online booking is not open yet. Please call the clinic.",
+    "book": "Book a visit",
+    "call": "Call to book",
+    "services": "Visit types",
+    "minutes": "{{count}} min",
+    "poweredBy": "Free to book · Powered by Kiorex"
   }
 }

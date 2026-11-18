@@ -13,6 +13,7 @@
 | KX-05 Transactional outbox & status events | **Done** |
 | KX-06 Reschedule & cancellation policies (both directions) | **Done** |
 | KX-08 Verified reviews after completed visits | **Done** |
+| KX-09 Clinic-branded booking page & link (commission-free) | **Done** (Kiorex widget origin + `kiorly.link` domain: NH-008) |
 
 ## Platform client
 
@@ -96,6 +97,15 @@ Marketplace calls carry `clinicId`; tenant resolves from listing rows.
 - **Reports:** `GET /reports/performance` returns `kiorexRating { averageRating, reviewCount }` (review-weighted; physicians see their own) shown as a KPI tile.
 - `SatisfactionSurveyResponse` is **retired** (no writers; table kept, no data dropped).
 
+## KX-09 clinic booking page & link
+
+- **Slugs:** `Clinic.bookingSlug` and `MarketplaceListing.bookingSlug` (per doctor), unique and sharing one namespace. Assigned on first view of the Kiorex tab from the English name (fallback `clinic` / `doctor` + suffix); owners can change them (`3–40` lowercase letters/digits/hyphens, reserved words blocked). Audited `kiorex.booking_link.slug_updated`.
+- **Clinic:** `GET /api/v1/kiorex/booking-link?clinicId=` and `PUT /api/v1/kiorex/booking-link` `{ clinicId, slug, listingId? }` (`409 BOOKING_SLUG_TAKEN`, `400 INVALID_BOOKING_SLUG`). UI: **Kiorex** tab → "Your booking link" (copy, QR, WhatsApp/native share, per-doctor links, A4/A5 AR/EN QR poster, "Book on Google" guide).
+- **Public:** `GET /api/v1/public/booking-pages/:slug` (no auth, no patient data) → clinic branding (logo, invoice colour, address, phone), LIVE doctors, marketplace-bookable visit types and the Kiorex widget URL with `channel=CLINIC_LINK`. Web page `/b/:slug`.
+- **Booking:** Kiorex posts `POST /marketplace/v1/bookings` with `channel: "CLINIC_LINK"` (+ optional `bookingPageSlug`, must belong to that clinic/doctor → else `400 BOOKING_PAGE_MISMATCH`). The appointment gets `bookingSource = CLINIC_LINK`, which `isCommissionChargeableBooking` never charges. Slots, holds, policies, confirmation timeouts and outbox events are shared with marketplace bookings.
+- **New-patient stamp:** marketplace/link bookings now stamp `isNewPatientAtBooking` at intake (previously missing, so Kiorex marketplace bookings were never commissionable at check-in).
+- **Config:** `BOOKING_LINK_BASE_URL` (default `${APP_WEB_URL}/b`, e.g. `https://kiorly.link`) and `KIOREX_BOOKING_WIDGET_URL` (until set, the page shows "Call to book").
+
 ## Tests
 
 - `marketplace-listing-eligibility.node.test.ts`
@@ -112,6 +122,7 @@ Marketplace calls carry `clinicId`; tenant resolves from listing rows.
 - `kx05-outbox.integration.test.ts`
 - `kx06-booking-policy.node.test.ts`, `kx06-cancellation-policy.integration.test.ts`
 - `kx08-review-invitation.node.test.ts`, `kx08-verified-reviews.integration.test.ts`
+- `kx09-booking-slug.node.test.ts`, `kx09-clinic-booking-link.integration.test.ts`, e2e `kx09-booking-link.spec.ts`
 
 ## Follow-ups
 

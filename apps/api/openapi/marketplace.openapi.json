@@ -88,7 +88,27 @@
       "post": {
         "operationId": "marketplaceCreateBooking",
         "summary": "Idempotent Kiorex booking",
-        "responses": { "201": { "description": "Created" } }
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "channel": {
+                    "type": "string",
+                    "enum": ["MARKETPLACE", "CLINIC_LINK"],
+                    "description": "CLINIC_LINK when booked from the clinic's own booking page (KX-09); never commissioned"
+                  },
+                  "bookingPageSlug": { "type": "string", "description": "Slug of the clinic/doctor booking page (KX-09)" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Created" },
+          "400": { "description": "BOOKING_PAGE_MISMATCH when the slug belongs to another clinic or doctor" }
+        }
       }
     },
     "/bookings/{externalRef}": {

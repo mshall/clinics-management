@@ -29,6 +29,8 @@ import { DEFAULT_SLOT_HOLD_MINUTES, MARKETPLACE_BOOKING_CONFIRM_TIMEOUT_TOPIC, S
 import { MarketplaceAccessService } from "./marketplace-access.service";
 import { MarketplacePatientIntakeService, type MarketplacePatientInput } from "./marketplace-patient-intake.service";
 import type { PlatformIntegrationPrincipal } from "./platform-integration-client.service";
+import { NewPatientService } from "../patients/new-patient.service";
+import { assertBookingSlugMatchesClinic, CLINIC_LINK_CHANNEL } from "./clinic-booking-page.service";
 import { CANCELLATION_REASON_MAX } from "../appointments/kiorex-clinic-cancel";
 import {
   CANCELLED_BY,
@@ -51,6 +53,9 @@ export type MarketplaceBookingBody = {
   marketplaceConsentGranted?: boolean;
   remindersConsentGranted?: boolean;
   attribution?: Record<string, unknown>;
+  /** KX-09: bookings made from the clinic's own booking page are CLINIC_LINK (never commissioned). */
+  channel?: typeof CLINIC_LINK_CHANNEL | "MARKETPLACE";
+  bookingPageSlug?: string;
 };
 
 @Injectable()
@@ -65,6 +70,7 @@ export class MarketplaceBookingService {
     private readonly outbox: OutboxEventService,
     private readonly appointmentOutbox: AppointmentOutboxService,
     private readonly slots: SlotService,
+    private readonly newPatients: NewPatientService,
   ) {}
 
   async getByExternalRef(client: PlatformIntegrationPrincipal, externalRef: string) {
@@ -98,6 +104,18 @@ export class MarketplaceBookingService {
 
     const tenantId = await this.access.resolveTenantForMarketplaceClinic(body.clinicId, body.clinicianId);
     await this.access.assertListingBookable(body.clinicId, body.clinicianId);
+    if (body.channel !== undefined && body.channel !== CLINIC_LINK_CHANNEL && body.channel !== "MARKETPLACE") {
+      throw new BadRequestException("Invalid channel");
+    }
+    const viaClinicLink = body.channel === CLINIC_LINK_CHANNEL;
+    if (viaClinicLink) {
+      await assertBookingSlugMatchesClinic(this.prisma, body.bookingPageSlug, body.clinicId, body.clinicianId);
+    }
+    const bookingSource = viaClinicLink ? BookingSource.CLINIC_LINK : BookingSource.KIOREX_MARKETPLACE;
+    const attribution =
+      viaClinicLink && body.bookingPageSlug
+        ? { ...(body.attribution ?? {}), bookingPageSlug: body.bookingPageSlug.trim().toLowerCase() }
+        : body.attribution;
     const start = new Date(body.startsAt);
     if (Number.isNaN(start.getTime())) throw new BadRequestException("Invalid startsAt");
     const typeRow = await this.prisma.appointmentType.findFirst({
@@ -118,6 +136,7 @@ export class MarketplaceBookingService {
     if (!clinic) throw new NotFoundException("Clinic not found");
 
     const patientId = await this.patients.resolveOrCreate(tenantId, body.clinicId, body.patient);
+    const newPatientStamp = await this.newPatients.stampNewPatientAtBooking(tenantId, patientId, start);
 
     if (body.marketplaceConsentGranted !== false) {
       await this.consent.capture(tenantId, patientId, CONSENT_PURPOSE_MARKETPLACE, {
@@ -224,8 +243,10 @@ export class MarketplaceBookingService {
             endsAt: end,
             feeAmount: typeRow.feeAmount,
             status,
-            bookingSource: BookingSource.KIOREX_MARKETPLACE,
-            attributionJson: (body.attribution ?? undefined) as Prisma.InputJsonValue | undefined,
+            bookingSource,
+            attributionJson: (attribution ?? undefined) as Prisma.InputJsonValue | undefined,
+            isNewPatientAtBooking: newPatientStamp.isNewPatientAtBooking,
+            newPatientCheckedAt: newPatientStamp.newPatientCheckedAt,
             platformIntegrationClientId: client.id,
             externalReference: key,
             marketplaceConfirmationDueAt: confirmationDueAt,
@@ -262,7 +283,7 @@ export class MarketplaceBookingService {
         action: "marketplace.booking.created",
         resource: "Appointment",
         resourceId: created.id,
-        metadata: { externalReference: key, platformClientId: client.id },
+        metadata: { externalReference: key, platformClientId: client.id, bookingSource },
       });
 
       return this.serializeBooking(created);
@@ -488,7 +509,7 @@ export class MarketplaceBookingService {
     const now = new Date();
     const rows = await this.prisma.appointment.findMany({
       where: {
-        bookingSource: BookingSource.KIOREX_MARKETPLACE,
+        bookingSource: { in: [BookingSource.KIOREX_MARKETPLACE, BookingSource.CLINIC_LINK] },
         status: AppointmentStatus.SCHEDULED,
         marketplaceConfirmationDueAt: { lte: now },
       },
