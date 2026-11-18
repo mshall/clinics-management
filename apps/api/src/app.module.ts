@@ -40,6 +40,7 @@ import { EntitlementsModule } from "./entitlements/entitlements.module";
 import { PrivilegedMfaGuard } from "./auth/privileged-mfa.guard";
 import { SignupModule } from "./signup/signup.module";
 import { OnboardingModule } from "./onboarding/onboarding.module";
+import { SalesRepsModule } from "./sales-reps/sales-reps.module";
 import { LegalModule } from "./legal/legal.module";
 import { KiorexModule } from "./kiorex/kiorex.module";
 import { MarketplaceModule } from "./marketplace/marketplace.module";
@@ -93,6 +94,7 @@ import { GrowthModule } from "./growth/growth.module";
     EntitlementsModule,
     SignupModule,
     OnboardingModule,
+    SalesRepsModule,
     LegalModule,
     KiorexModule,
     MarketplaceModule,

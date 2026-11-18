@@ -33,6 +33,7 @@ const SLUG_BY_ROLE: Record<UserRole, AssistantRoleSlug> = {
   [UserRole.NURSE]: "nurse",
   [UserRole.RECEPTIONIST]: "receptionist",
   [UserRole.CALL_CENTER]: "call_center",
+  [UserRole.SALES_REP]: "receptionist",
 };
 
 export function assistantRoleSlugForRole(role: UserRole): AssistantRoleSlug {

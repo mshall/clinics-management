@@ -2906,5 +2906,51 @@
       "INVITE_REVOKED": "This invitation was cancelled by the clinic.",
       "INVITE_ACCEPTED": "This invitation was already used. Sign in instead."
     }
+  },
+  "rep": {
+    "title": "Kiorly field sales",
+    "code": "Rep code",
+    "signOut": "Sign out",
+    "totals": {
+      "signups": "Signups",
+      "pendingOwner": "Awaiting owner",
+      "activated": "Activated",
+      "paid": "Paid"
+    },
+    "newClinic": "New clinic",
+    "clinicName": "Clinic name",
+    "ownerName": "Owner full name",
+    "ownerEmail": "Owner email",
+    "ownerPhone": "Owner mobile (receives the code)",
+    "plan": "Plan",
+    "plans": {
+      "PRO": "Pro (free trial)",
+      "LITE": "Lite"
+    },
+    "createAndSendOtp": "Create clinic & send code to owner",
+    "portfolio": "My clinics",
+    "empty": "No clinics yet — sign your first one above.",
+    "status": {
+      "pendingOwner": "Awaiting owner code",
+      "confirmed": "Confirmed",
+      "activated": "Activated",
+      "paid": "Paying"
+    },
+    "confirmIntro": "Hand the phone to the owner: they review the terms and read the code they received. The clinic stays inactive until they confirm.",
+    "ownerAgrees": "The owner agrees to {{doc}}",
+    "otpLabel": "Code from the owner's phone",
+    "confirm": "Confirm clinic",
+    "resend": "Resend code",
+    "resent": "Code sent",
+    "importTitle": "Import the clinic's data",
+    "importEntity": "What to import",
+    "importFile": "Spreadsheet file",
+    "importUpload": "Check file",
+    "importSummary": "{{ok}} rows ready, {{errors}} with errors — {{status}}",
+    "importCommit": "Import {{count}} rows",
+    "commission": "My commission",
+    "period": "Month",
+    "noCommission": "No paid invoices from your clinics this month.",
+    "commissionLine": "{{commission}} {{currency}} ({{percent}}%) on {{eligible}} of {{total}} paid invoices from clinics retained {{days}}+ days"
   }
 }
