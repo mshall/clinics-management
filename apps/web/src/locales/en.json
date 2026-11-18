@@ -3286,5 +3286,64 @@
     },
     "suggestDeposit": "Consider asking for a deposit to hold this slot.",
     "suggestReminder": "Consider an extra reminder call or message the day before."
+  },
+  "patientMoney": {
+    "tab": "Packages & refunds",
+    "depositsHeld": "Deposits held",
+    "packagesUnused": "Unused package value",
+    "packages": "Prepaid packages",
+    "noPackages": "No packages yet.",
+    "sellPackage": "Sell package",
+    "packageNameEn": "Name (English)",
+    "packageNameAr": "Name (Arabic)",
+    "sessions": "Sessions",
+    "price": "Price paid",
+    "expiresOn": "Expires on (optional)",
+    "packageExplainer": "Package money is held for the patient and becomes revenue one session at a time.",
+    "sessionsLeft": "{{left}} of {{total}} sessions left",
+    "expires": "expires {{date}}",
+    "expired": "Expired",
+    "useSession": "Use 1 session",
+    "packageStatus": {
+      "ACTIVE": "Active",
+      "EXHAUSTED": "All used",
+      "CANCELLED": "Cancelled"
+    },
+    "deposits": "Deposits",
+    "noDeposits": "No deposits.",
+    "applyDeposit": "Apply to visit",
+    "depositStatus": {
+      "PENDING": "Awaiting payment",
+      "HELD": "Held",
+      "APPLIED": "Applied",
+      "RELEASED": "Returned",
+      "FORFEITED": "Kept (no-show)"
+    },
+    "refunds": "Refunds",
+    "nothingRefundable": "Nothing to refund.",
+    "refund": "Refund",
+    "refundHistory": "Refund history",
+    "refundStatus": {
+      "PENDING_APPROVAL": "Waiting for approval",
+      "COMPLETED": "Refunded",
+      "REJECTED": "Rejected"
+    },
+    "approve": "Approve",
+    "reject": "Reject",
+    "refundTitle": "Refund patient",
+    "refundableLeft": "{{amount}} can still be refunded",
+    "amount": "Amount",
+    "refundMethod": "Refund paid by",
+    "reason": "Reason",
+    "refundExplainer": "The refund reverses the revenue and records the money leaving the drawer. A credit note is issued automatically.",
+    "refundPendingApproval": "This refund is above the approval limit. An owner, admin or finance officer must approve it before money leaves the drawer.",
+    "confirmRefund": "Confirm refund",
+    "method": {
+      "CASH": "Cash",
+      "CARD": "Card",
+      "TRANSFER": "Transfer",
+      "WALLET": "Wallet",
+      "OTHER": "Other"
+    }
   }
 }

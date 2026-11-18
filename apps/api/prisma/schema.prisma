@@ -3015,10 +3015,110 @@ model PatientServicePackage {
   paidAmount        Decimal  @default(0) @db.Decimal(14, 2)
   currency          String   @default("EGP")
   expiresOn         DateTime? @db.Date
+  /// MN-01 — clinic that sold the package (cash movement + per-session revenue land here).
+  clinicId          String?
+  /// MN-01 — ACTIVE | EXHAUSTED | CANCELLED. Expiry is derived from `expiresOn`.
+  status            String   @default("ACTIVE")
+  paymentMethod     PaymentMethod?
+  soldByUserId      String?
+  consumptions      PatientPackageConsumption[]
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
   @@index([tenantId, patientId])
+}
+
+/// MN-01 — one session used from a prepaid package; revenue for the session is recognised here via postRevenue.
+model PatientPackageConsumption {
+  id               String                @id @default(cuid())
+  tenantId         String
+  packageId        String
+  package          PatientServicePackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  appointmentId    String?
+  amount           Decimal               @db.Decimal(14, 2)
+  revenueEntryId   String?               @unique
+  consumedByUserId String?
+  createdAt        DateTime              @default(now())
+
+  @@index([tenantId, packageId])
+  @@index([appointmentId])
+}
+
+/// MN-01 — every movement of money into or out of the drawer that is not a visit-fee check-in.
+model CashMovement {
+  id            String        @id @default(cuid())
+  tenantId      String
+  clinicId      String
+  patientId     String?
+  /// IN | OUT
+  direction     String
+  method        PaymentMethod
+  amount        Decimal       @db.Decimal(14, 2)
+  currency      String
+  /// PAYMENT | DEPOSIT | PACKAGE_SALE | REFUND | DEPOSIT_RELEASE | PACKAGE_CANCEL
+  sourceType    String
+  sourceId      String
+  cashierUserId String?
+  createdAt     DateTime      @default(now())
+
+  @@index([tenantId, clinicId, createdAt])
+  @@index([sourceType, sourceId])
+}
+
+/// MN-01 — refund of recognised revenue. Completed refunds own exactly one revenue reversal and one cash movement.
+model BillingRefund {
+  id                     String        @id @default(cuid())
+  tenantId               String
+  clinicId               String
+  patientId              String
+  paymentId              String?
+  revenueEntryId         String?
+  amount                 Decimal       @db.Decimal(14, 2)
+  currency               String
+  method                 PaymentMethod
+  reason                 String
+  /// PENDING_APPROVAL | COMPLETED | REJECTED
+  status                 String        @default("COMPLETED")
+  requestedByUserId      String
+  approvedByUserId       String?
+  decidedAt              DateTime?
+  reversalRevenueEntryId String?       @unique
+  cashMovementId         String?       @unique
+  creditNoteId           String?       @unique
+  createdAt              DateTime      @default(now())
+
+  @@index([tenantId, clinicId, createdAt])
+  @@index([tenantId, status])
+  @@index([patientId])
+  @@index([paymentId])
+  @@index([revenueEntryId])
+}
+
+/// MN-01 — money taken before the service: a liability until applied (revenue) or released (cash back).
+model PatientDeposit {
+  id              String        @id @default(cuid())
+  tenantId        String
+  clinicId        String
+  patientId       String
+  appointmentId   String?
+  amount          Decimal       @db.Decimal(14, 2)
+  currency        String
+  method          PaymentMethod
+  /// CLINIC | KIOREX_PAY | PAYMENT_LINK
+  source          String        @default("CLINIC")
+  /// PENDING | HELD | APPLIED | RELEASED | FORFEITED
+  status          String        @default("HELD")
+  revenueEntryId  String?       @unique
+  paymentId       String?       @unique
+  createdByUserId String?
+  appliedAt       DateTime?
+  releasedAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([tenantId, patientId])
+  @@index([tenantId, clinicId, status])
+  @@index([appointmentId])
 }
 
 model CashierShiftClose {
