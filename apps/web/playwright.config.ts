@@ -54,6 +54,6 @@ export default defineConfig({
         cwd: "../..",
         url: devReadyURL,
         reuseExistingServer: !process.env.CI,
-        timeout: process.env.CI ? 360_000 : 180_000,
+        timeout: process.env.CI ? 480_000 : 180_000,
       },
 });
