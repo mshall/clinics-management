@@ -38,7 +38,7 @@ const STEP_PATHS: Record<OnboardingStepKey, string> = {
   working_hours: "/admin",
   appointment_types: "/clinics",
   doctor_availability: "/profile",
-  invite_receptionist: "/admin",
+  invite_receptionist: "/team",
   whatsapp_reminders: "/admin",
   import_patients: "/onboarding/import",
   first_appointment: "/appointments",

@@ -2854,5 +2854,57 @@
       "PRICE_INVALID": "Price must be a number",
       "ROLE_INVALID": "Unknown role"
     }
+  },
+  "invitations": {
+    "pageTitle": "Team",
+    "title": "Invite your team",
+    "subtitle": "Send a WhatsApp or email link. They set their own password and join in a minute.",
+    "contact": "Mobile (WhatsApp) or email",
+    "contactPlaceholder": "01001234567 or sara@clinic.com",
+    "name": "Name",
+    "roles": "Role(s)",
+    "send": "Send invitation",
+    "sentWhatsApp": "Invitation queued for WhatsApp",
+    "sentEmail": "Invitation queued for email",
+    "copyLink": "Copy link",
+    "copied": "Link copied",
+    "pending": "Pending invitations ({{count}})",
+    "none": "No pending invitations.",
+    "expires": "expires {{date}}",
+    "resend": "Resend",
+    "revoke": "Revoke",
+    "failed": "Could not send the invitation",
+    "status": {
+      "PENDING": "Pending",
+      "ACCEPTED": "Joined",
+      "REVOKED": "Revoked",
+      "EXPIRED": "Expired"
+    },
+    "role": {
+      "RECEPTIONIST": "Receptionist",
+      "PHYSICIAN": "Doctor",
+      "NURSE": "Nurse",
+      "CLINIC_ASSISTANT": "Assistant",
+      "FINANCE_OFFICER": "Accountant",
+      "CALL_CENTER": "Call center",
+      "HR_OFFICER": "HR",
+      "CLINIC_ADMIN": "Clinic admin",
+      "BRANCH_MANAGER": "Branch manager",
+      "GROUP_ADMIN": "Group admin"
+    },
+    "acceptTitle": "Join your clinic on Kiorly",
+    "acceptSubtitle": "{{clinic}} invited you as {{roles}}.",
+    "email": "Your email (used to sign in)",
+    "password": "Choose a password",
+    "passwordHint": "At least 8 characters.",
+    "acceptCta": "Accept and set password",
+    "acceptedBody": "You're in. Sign in with {{email}}.",
+    "goToLogin": "Go to sign in",
+    "publicError": {
+      "INVITE_NOT_FOUND": "This invitation link is not valid. Ask your clinic to resend it.",
+      "INVITE_EXPIRED": "This invitation has expired. Ask your clinic to resend it.",
+      "INVITE_REVOKED": "This invitation was cancelled by the clinic.",
+      "INVITE_ACCEPTED": "This invitation was already used. Sign in instead."
+    }
   }
 }

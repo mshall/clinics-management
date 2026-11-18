@@ -40,6 +40,7 @@ import { AdminInsightsPanel } from "./admin-insights-panel";
 import { AdminIntegrationClientsPanel } from "./admin-integration-clients-panel";
 import { AdminOrgPatientsPanel } from "./admin-org-patients-panel";
 import { AdminOrgUsersPanel } from "./admin-org-users-panel";
+import { StaffInvitationsPanel } from "./staff-invitations-panel";
 import { OrgRbacPanel } from "./org-rbac-panel";
 import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel";
 import { ClinicInvoiceSettingsPanel } from "@/features/invoices/clinic-invoice-settings-panel";
@@ -362,7 +363,12 @@ export function AdminPage() {
             </Button>
           ) : null}
         </div>
-        {clinicAdminSection === "staff" ? <AdminCreateEmployeePanel /> : null}
+        {clinicAdminSection === "staff" ? (
+          <div className="space-y-6">
+            <StaffInvitationsPanel />
+            <AdminCreateEmployeePanel />
+          </div>
+        ) : null}
         {clinicAdminSection === "organization" && isClinicAdmin ? (
           <div className="space-y-6">
             <OrgRbacPanel />
@@ -382,6 +388,7 @@ export function AdminPage() {
           <h1 className="text-2xl font-bold tracking-tight">{t("liteAdmin.pageTitle")}</h1>
           <p className="text-muted-foreground">{t("liteAdmin.subtitle")}</p>
         </div>
+        <StaffInvitationsPanel />
         <LiteAdminSettings />
       </div>
     );
@@ -449,7 +456,10 @@ export function AdminPage() {
       ) : adminSection === "insights" && canViewInsights ? (
         <AdminInsightsPanel />
       ) : adminSection === "users" && isGroupAdmin ? (
-        <AdminOrgUsersPanel />
+        <div className="space-y-6">
+          <StaffInvitationsPanel />
+          <AdminOrgUsersPanel />
+        </div>
       ) : adminSection === "patients" && isGroupAdmin ? (
         <AdminOrgPatientsPanel />
       ) : adminSection === "data" ? (

@@ -9,6 +9,8 @@ import { LegalDocumentPage } from "@/features/legal/legal-document-page";
 import { ForgotPasswordPage } from "@/features/auth/forgot-password-page";
 import { ResetPasswordPage } from "@/features/auth/reset-password-page";
 import { ImportWizardPage } from "@/features/onboarding/import-wizard-page";
+import { TeamPage } from "@/features/admin/team-page";
+import { AcceptInvitationPage } from "@/features/auth/accept-invitation-page";
 import { OnboardingPage } from "@/features/onboarding/onboarding-page";
 import { AppointmentReschedulePage } from "@/features/appointments/appointment-reschedule-page";
 import { ClinicalTemplatesRedirect } from "@/features/clinical/clinical-templates-redirect";
@@ -67,6 +69,7 @@ export const router = createBrowserRouter([
   { path: "/signup", element: <SignupPage /> },
   { path: "/legal/:docId", element: <LegalDocumentPage /> },
   { path: "/r/:token", element: <AppointmentReschedulePage /> },
+  { path: "/invite/:token", element: <AcceptInvitationPage /> },
   { path: "/forgot-password", element: <ForgotPasswordPage /> },
   { path: "/reset-password", element: <ResetPasswordPage /> },
   {
@@ -80,6 +83,7 @@ export const router = createBrowserRouter([
       { index: true, element: <NavGate tab="dashboard">{defer(DashboardPage)}</NavGate> },
       { path: "onboarding", element: <OnboardingPage /> },
       { path: "onboarding/import", element: <ImportWizardPage /> },
+      { path: "team", element: <TeamPage /> },
       { path: "patients", element: <NavGate tab="patients">{defer(PatientsPage)}</NavGate> },
       { path: "patients/:id", element: <NavGate tab="patients">{defer(PatientDetailPage)}</NavGate> },
       { path: "encounters", element: <NavGate tab="encounters">{defer(EncountersListPage)}</NavGate> },
