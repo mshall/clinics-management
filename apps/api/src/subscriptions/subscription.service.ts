@@ -17,6 +17,7 @@ import { assertSubscriptionBillingAccess } from "./subscription-access";
 import { addBillingPeriod } from "./subscription-period";
 import { assertSubscriptionStatusTransition } from "./subscription-state";
 import { ACTIVE_PRICE_WHERE } from "../plans/plans-active-prices";
+import { assertEgyptPdpcPaidLaunchAllowed } from "../compliance/pdpc-egypt-launch-gate";
 import { LegalAcceptanceService } from "../legal/legal-acceptance.service";
 import { isPaidPlanKey } from "../legal/legal-catalog";
 
@@ -297,6 +298,7 @@ export class SubscriptionService {
       if (owner) {
         await this.legal.assertPaidPlanForUser(owner.id, tenantId, subCheck.plan.key);
       }
+      await assertEgyptPdpcPaidLaunchAllowed(this.prisma, tenantId);
     }
     return this.prisma.$transaction(async (tx) => {
       const sub = await tx.subscription.findUnique({ where: { tenantId } });
@@ -375,6 +377,7 @@ export class SubscriptionService {
 
     if (isPaidPlanKey(body.planKey)) {
       await this.legal.assertPaidPlanForUser(user.userId, tenantId, body.planKey);
+      await assertEgyptPdpcPaidLaunchAllowed(this.prisma, tenantId);
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {

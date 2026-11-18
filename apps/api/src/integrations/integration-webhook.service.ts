@@ -7,6 +7,8 @@ import { IntegrationFailureCategory } from "@prisma/client";
 import { generateWebhookSigningSecret } from "./integration-token";
 import { IntegrationFailureLogService } from "./integration-failure-log.service";
 import { buildFailureReasonDetail, summarizeFailureReason } from "./integration-failure-labels";
+import { OutboxEventService } from "../messaging/outbox-event.service";
+import { outboxTargetTenantWebhook } from "../messaging/outbox-event-types";
 
 export type IntegrationWebhookPayload = {
   event: IntegrationWebhookEvent;
@@ -23,6 +25,7 @@ export class IntegrationWebhookService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly failureLogs: IntegrationFailureLogService,
+    private readonly outbox: OutboxEventService,
   ) {}
 
   listWebhooks(tenantId: string, integrationClientId: string) {
@@ -88,12 +91,12 @@ export class IntegrationWebhookService {
   }
 
   emit(integrationClientId: string, event: IntegrationWebhookEvent, data: Record<string, unknown>): void {
-    void this.deliver(integrationClientId, event, data).catch((err) => {
-      this.log.warn(`Webhook delivery setup failed: ${err instanceof Error ? err.message : String(err)}`);
+    void this.enqueueDeliveries(integrationClientId, event, data).catch((err) => {
+      this.log.warn(`Webhook outbox enqueue failed: ${err instanceof Error ? err.message : String(err)}`);
     });
   }
 
-  private async deliver(
+  private async enqueueDeliveries(
     integrationClientId: string,
     event: IntegrationWebhookEvent,
     data: Record<string, unknown>,
@@ -113,17 +116,31 @@ export class IntegrationWebhookService {
     });
     if (!client) return;
 
-    const payload: IntegrationWebhookPayload = {
-      event,
-      tenantId: client.tenantId,
-      integrationClientId,
-      occurredAt: new Date().toISOString(),
-      data,
-    };
-    const body = JSON.stringify(payload);
+    const occurredAt = new Date().toISOString();
+    const aggregateId = String(
+      data.appointmentId ?? data.operationId ?? data.patientId ?? integrationClientId,
+    );
+    const aggregateType = data.appointmentId
+      ? "Appointment"
+      : data.operationId
+        ? "Operation"
+        : "IntegrationClient";
 
     for (const hook of hooks) {
-      void this.postHook(hook.id, hook.url, hook.signingSecret, event, body);
+      await this.outbox.enqueueEvent({
+        tenantId: client.tenantId,
+        type: event,
+        aggregateType,
+        aggregateId,
+        target: outboxTargetTenantWebhook(hook.id),
+        payload: {
+          event,
+          tenantId: client.tenantId,
+          integrationClientId,
+          occurredAt,
+          data,
+        },
+      });
     }
   }
 

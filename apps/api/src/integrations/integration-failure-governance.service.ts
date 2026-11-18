@@ -1,4 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { notifyOnCall } from "../observability/notify-on-call";
 import { PrismaService } from "../prisma/prisma.service";
 
 const SPIKE_WINDOW_MS = 60 * 60 * 1000;
@@ -50,6 +51,7 @@ export class IntegrationFailureGovernanceService {
         }),
       ]);
       this.log.warn(`Integration failure spike for tenant ${tenantId}: ${recentCount} in last hour`);
+      notifyOnCall("INTEGRATION_FAILURE_SPIKE", { tenantId, failuresLastHour: recentCount, threshold: SPIKE_THRESHOLD });
     } catch (err) {
       this.log.warn(`Spike check failed: ${err instanceof Error ? err.message : String(err)}`);
     }

@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { ClinicianVerificationService } from "../clinician-verification/clinician-verification.service";
 import {
   AppointmentStatus,
   AppointmentWaitlistStatus,
@@ -16,10 +17,15 @@ import {
 } from "./appointment-type-rules";
 import { normalizeWeekJson, parseAndValidateWeekJson, parseBlockedJson } from "./availability-week-schema";
 import { resolveClinicTimezone } from "./clinic-scheduling-timezone";
+import { SlotService } from "./slot.service";
 
 @Injectable()
 export class SchedulingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly clinicianVerification: ClinicianVerificationService,
+    private readonly slots: SlotService,
+  ) {}
 
   listAppointmentTypes(tenantId: string, clinicId?: string) {
     return this.prisma.appointmentType.findMany({
@@ -31,6 +37,10 @@ export class SchedulingService {
   async upsertAppointmentType(tenantId: string, body: Record<string, unknown>) {
     const nameEn = String(body.nameEn ?? "").trim();
     if (!nameEn) throw new BadRequestException("nameEn required");
+    const marketplaceBookable = Boolean(body.marketplaceBookable);
+    if (marketplaceBookable) {
+      await this.clinicianVerification.assertTenantCanEnableKiorexMarketplace(tenantId);
+    }
     const data = {
       nameEn,
       nameAr: String(body.nameAr ?? "").trim(),
@@ -42,7 +52,7 @@ export class SchedulingService {
       bufferBeforeMin: Number(body.bufferBeforeMin ?? 0),
       bufferAfterMin: Number(body.bufferAfterMin ?? 0),
       requiresRoom: Boolean(body.requiresRoom),
-      marketplaceBookable: Boolean(body.marketplaceBookable),
+      marketplaceBookable,
       minNoticeMinutes: Number(body.minNoticeMinutes ?? 120),
       maxDaysAhead: Number(body.maxDaysAhead ?? 30),
       newPatientOnly: Boolean(body.newPatientOnly),
@@ -64,6 +74,9 @@ export class SchedulingService {
   async patchAppointmentType(tenantId: string, typeId: string, body: Record<string, unknown>) {
     const existing = await this.prisma.appointmentType.findFirst({ where: { id: typeId, tenantId } });
     if (!existing) throw new NotFoundException("Appointment type not found");
+    if (body.marketplaceBookable === true && !existing.marketplaceBookable) {
+      await this.clinicianVerification.assertTenantCanEnableKiorexMarketplace(tenantId);
+    }
     const data = patchAppointmentTypeData(body);
     if (Object.keys(data).length === 0) throw new BadRequestException("No fields to update");
     return this.prisma.appointmentType.update({ where: { id: typeId }, data });
@@ -197,7 +210,7 @@ export class SchedulingService {
     const weekJson = parseAndValidateWeekJson(body.weekJson, tz);
     weekJson.timezone = tz;
     const blockedJson = parseBlockedJson(body.blockedJson);
-    return this.prisma.clinicianAvailabilityTemplate.upsert({
+    const row = await this.prisma.clinicianAvailabilityTemplate.upsert({
       where: { tenantId_clinicId_clinicianId: { tenantId, clinicId: body.clinicId, clinicianId: body.clinicianId } },
       create: {
         tenantId,
@@ -211,6 +224,8 @@ export class SchedulingService {
         blockedJson: blockedJson as Prisma.InputJsonValue,
       },
     });
+    await this.slots.invalidateAndNotify(tenantId, body.clinicId, body.clinicianId, "availability_template_updated");
+    return row;
   }
 
   async clinicianLeaveBlocks(tenantId: string, clinicianId: string, from: Date, to: Date) {

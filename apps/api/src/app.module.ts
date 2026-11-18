@@ -43,12 +43,16 @@ import { SignupModule } from "./signup/signup.module";
 import { OnboardingModule } from "./onboarding/onboarding.module";
 import { LegalModule } from "./legal/legal.module";
 import { KiorexModule } from "./kiorex/kiorex.module";
+import { MarketplaceModule } from "./marketplace/marketplace.module";
+import { ClinicianVerificationModule } from "./clinician-verification/clinician-verification.module";
 import { CreditsModule } from "./credits/credits.module";
 import { BillingPlatformModule } from "./billing-platform/billing-platform.module";
+import { ObservabilityModule } from "./observability/observability.module";
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ObservabilityModule,
     AuditModule,
     StorageModule,
     PrismaModule,
@@ -90,6 +94,8 @@ import { BillingPlatformModule } from "./billing-platform/billing-platform.modul
     OnboardingModule,
     LegalModule,
     KiorexModule,
+    MarketplaceModule,
+    ClinicianVerificationModule,
     CreditsModule,
     BillingPlatformModule,
   ],

@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useClinicsQuery } from "@/lib/api-hooks";
 import { apiGet, apiPost } from "@/lib/http";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
+import { KiorexConfirmQueuePanel } from "@/features/front-desk/kiorex-confirm-queue-panel";
 
 type QueueRow = {
   appointmentId: string;
@@ -187,6 +188,7 @@ export function FrontDeskBoardPage() {
           </CardContent>
         </Card>
       </div>
+      <KiorexConfirmQueuePanel clinicId={activeClinic || undefined} />
     </div>
   );
 }

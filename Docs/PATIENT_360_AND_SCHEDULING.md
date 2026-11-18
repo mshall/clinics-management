@@ -19,6 +19,7 @@
 | Appointment types (duration, fee, colour, buffers, marketplace rules) | `GET/POST/PATCH /api/v1/scheduling/appointment-types` | `ClinicAppointmentTypesPanel` on clinic settings |
 | Per-clinician duration/fee overrides | `GET/PUT /api/v1/scheduling/clinicians/:id/type-overrides` | `ClinicianTypeOverridesPanel` on clinic doctors tab |
 | Doctor availability template | `GET/PUT /api/v1/scheduling/availability` | Admin JSON (weekly `weekJson` v1 + `blockedJson`, clinic timezone) |
+| Bookable slots (KX-03) | `GET /api/v1/scheduling/slots?clinicId&clinicianId&typeId&from&to&channel` | Appointment book panel uses server slot engine |
 | HR leave blocks | `GET /api/v1/scheduling/clinicians/:id/leave-blocks` | From approved `LeaveRequest` |
 | Recurring / physio series | `POST /api/v1/scheduling/series` | API creates N linked appointments |
 | Waitlist | `GET/POST /api/v1/scheduling/waitlist` | First waitlist entry marked `OFFERED` on cancel |

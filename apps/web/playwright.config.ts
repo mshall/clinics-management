@@ -14,9 +14,9 @@ export default defineConfig({
   timeout: 120_000,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 1 : 0,
   /** Default CPU-parallel logins overwhelm a cold API + bcrypt; keep modest parallelism. */
-  workers: process.env.CI ? 2 : 2,
+  workers: process.env.CI ? 1 : 2,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
     baseURL,

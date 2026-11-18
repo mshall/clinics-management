@@ -16,6 +16,7 @@ import {
   pilotWeekOneWindow,
   type EtaSubmissionMetricRow,
 } from "./eta-pilot-success";
+import { notifyOnCall } from "../observability/notify-on-call";
 import { kiorlyEtaPlatformEnabled } from "../providers/provider-settings";
 
 const ALERT_COOLDOWN_MS = 20 * 60 * 60 * 1000;
@@ -312,6 +313,13 @@ export class EtaHealthService {
     this.log.warn(
       `ETA success below threshold for tenant ${tenantId}: ${((summary.successRate ?? 0) * 100).toFixed(1)}%`,
     );
+    notifyOnCall("ETA_SUCCESS_BELOW_THRESHOLD", {
+      tenantId,
+      successRate: summary.successRate,
+      submittedCount: summary.submittedCount,
+      validCount: summary.validCount,
+      threshold: ETA_PILOT_SUCCESS_THRESHOLD,
+    });
   }
 
   async markPilotProductionStart(tenantId: string, actorUserId: string | null): Promise<{ startedAt: string }> {

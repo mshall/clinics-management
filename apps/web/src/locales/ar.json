@@ -47,6 +47,7 @@
     "platformDrugDatasets": "الدليل الدوائي",
     "platformPlans": "الخطط والأسعار",
     "platformKiorex": "رسوم كيوركس",
+    "platformVerifications": "التحقق من الأطباء",
     "platformOrganizations": "المنظمات",
     "platformUsers": "المستخدمون",
     "platformClinics": "العيادات",
@@ -264,6 +265,7 @@
     "legalIntro": "الاتفاقيات القانونية (مطلوبة)",
     "legalAgree": "أوافق على {{doc}}",
     "legalView": "اقرأ",
+    "patientPrivacyFooter": "للمرضى: اطّلع على",
     "errors": {
       "markets": "تعذر تحميل الدول. حاول مرة أخرى.",
       "generic": "حدث خطأ. حاول مرة أخرى."
@@ -362,7 +364,113 @@
       "first_appointment": "حجز أول موعد",
       "first_check_in": "إتمام أول تسجيل وصول",
       "eta_setup": "إعداد إيصالات الضريبة ETA",
-      "kiorex_profile": "نشر ملف العيادة على Kiorex"
+      "kiorex_profile": "نشر ملف العيادة على Kiorex",
+      "doctor_verification": "تحقق من بيانات الطبيب لـ Kiorex"
+    }
+  },
+  "kiorex": {
+    "confirmQueue": {
+      "title": "كيوركس — تأكيد الحجوزات",
+      "hint": "الفروع التي تتطلب تأكيدًا يدويًا: وافق على حجوزات السوق قبل إرسال التذكيرات.",
+      "empty": "لا توجد حجوزات كيوركس قيد الانتظار",
+      "confirm": "تأكيد",
+      "confirmed": "تم تأكيد الموعد"
+    },
+    "listings": {
+      "title": "قوائم الأطباء على كيوركس",
+      "hint": "يجب توثيق كل طبيب، وسداد الاشتراك، وتفعيل أنواع السوق مع توفر المواعيد قبل النشر LIVE.",
+      "empty": "لا يوجد أطباء معينون لهذا الفرع بعد.",
+      "status": {
+        "DRAFT": "مسودة",
+        "PENDING_VERIFICATION": "بانتظار التحقق",
+        "LIVE": "منشور على كيوركس",
+        "PAUSED": "موقوف"
+      },
+      "blocker": {
+        "verification": "الطبيب غير موثّق",
+        "billing": "الاشتراك يقيّد السوق",
+        "appointment_types": "لا توجد أنواع مواعيد للسوق",
+        "availability": "التوفر غير مضبوط",
+        "owner": "موقوف من إدارة العيادة",
+        "profile": "ملف كيوركس أقل من ٨٠٪",
+        "quality": "مراجعة جودة مطلوبة"
+      },
+      "completeness": "الملف"
+    },
+    "profile": {
+      "title": "ملف الطبيب على كيوركس",
+      "subtitle": "يجب أن يكتمل الملف بنسبة ٨٠٪ على الأقل للنشر LIVE.",
+      "completeness": "الاكتمال",
+      "editor": "المحرر",
+      "preview": "معاينة مباشرة",
+      "displayNameEn": "الاسم المعروض (EN)",
+      "displayNameAr": "الاسم المعروض (AR)",
+      "specialty": "التخصص",
+      "bioEn": "نبذة (EN)",
+      "bioAr": "نبذة (AR)",
+      "yearsExperience": "سنوات الخبرة",
+      "languages": "اللغات (مفصولة بفاصلة)",
+      "saved": "تم حفظ الملف",
+      "edit": "تحرير الملف"
+    }
+  },
+  "verification": {
+    "title": "التحقق من الطبيب",
+    "subtitle": "بيانات النقابة والمستندات لـ Kiorex. الملفات خاصة وتُعرض عبر Kiorly فقط.",
+    "details": "البيانات المهنية",
+    "detailsHint": "رقم النقابة والتخصص والمسميات المعروضة على Kiorex.",
+    "syndicateNumber": "رقم النقابة",
+    "specialty": "التخصص",
+    "titleEn": "المسمى (EN)",
+    "titleAr": "المسمى (AR)",
+    "nationalId": "الرقم القومي",
+    "documents": "المستندات",
+    "upload": "رفع",
+    "saveDraft": "حفظ مسودة",
+    "submit": "إرسال للمراجعة",
+    "submitted": "تم الإرسال للمراجعة",
+    "docUploaded": "تم رفع المستند",
+    "kiorexTab": "أنواع مواعيد Kiorex",
+    "platformQueue": "طابور التحقق من الأطباء",
+    "clinician": "الطبيب",
+    "organization": "المنظمة",
+    "approve": "اعتماد",
+    "reject": "رفض",
+    "rejectPrompt": "سبب الرفض",
+    "reviewSaved": "تم حفظ القرار",
+    "queueEmpty": "لا توجد طلبات معلقة.",
+    "queueHint": "افتح صفًا لعرض المستندات وإكمال قائمة المراجعة ثم الاعتماد أو الرفض.",
+    "review": "مراجعة",
+    "reviewTitle": "مراجعة التحقق",
+    "checklist": "قائمة المراجعة",
+    "revealNationalId": "إظهار الرقم القومي",
+    "rejectWithTemplate": "رفض بقالب جاهز",
+    "rejectNote": "ملاحظة اختيارية للطبيب",
+    "slaWaiting": "مدة الانتظار",
+    "slaTarget": "اتفاقية الخدمة {{hours}} ساعة",
+    "slaBreached": "تجاوز اتفاقية الخدمة",
+    "slaHelp": "الأقدم في الطابور أولًا؛ الصفوف المتجاوزة مميزة.",
+    "medianReviewTime": "متوسط زمن المراجعة (٩٠ يومًا)",
+    "medianUnknown": "—",
+    "metricsPending": "معلّق في الطابور",
+    "checklistItem": {
+      "syndicate_card": "كارت النقابة يطابق رقم النقابة",
+      "specialty_match": "شهادة التخصص تطابق التخصص المعلن",
+      "national_id_present": "الرقم القومي مسجّل ومتسق",
+      "documents_readable": "جميع المستندات واضحة وصحيحة"
+    },
+    "status": {
+      "UNVERIFIED": "غير موثّق",
+      "PENDING": "قيد المراجعة",
+      "VERIFIED": "موثّق",
+      "REJECTED": "مرفوض",
+      "EXPIRED": "منتهي"
+    },
+    "docKind": {
+      "SYNDICATE_CARD": "كارت النقابة",
+      "SPECIALTY_CERTIFICATE": "شهادة التخصص",
+      "CLINIC_LICENCE": "ترخيص العيادة",
+      "PROFILE_PHOTO": "صورة شخصية"
     }
   },
   "theme": {
@@ -929,6 +1037,7 @@
   "scheduling": {
     "appointmentTypesTitle": "أنواع المواعيد",
     "appointmentTypesHint": "المدة، والفواصل الزمنية، وقواعد السوق، ومتطلبات الغرفة لهذا الفرع.",
+    "slotsEngineHint": "أوقات الحجز المتاحة تستخدم محرك المواعيد الموحد (القوالب، الإجازات، الفواصل، والمواعيد الحالية).",
     "typeSaved": "تم حفظ نوع الموعد",
     "typeNameEn": "الاسم (EN)",
     "typeNameAr": "الاسم (AR)",
@@ -2194,6 +2303,23 @@
     "auditDetailTitle": "سجل التدقيق",
     "governanceTabAudit": "سجل التدقيق",
     "governanceTabFailures": "عمليات فاشلة",
+    "governanceTabOutbox": "صندوق الصادر",
+    "governanceOutboxSubtitle": "أحداث كيوريكس وويب هوكس العميل تُكتب مع تغييرات النطاق. أعد المحاولة للصفوف الفاشلة أو الميتة.",
+    "governanceOutboxPending": "قيد الانتظار",
+    "governanceOutboxFailed": "فاشل",
+    "governanceOutboxDead": "ميت",
+    "governanceOutboxLagAlert": "تأخر > دقيقتين",
+    "governanceOutboxStatusFilter": "الحالة",
+    "governanceOutboxTypeFilter": "نوع الحدث",
+    "governanceOutboxTypePh": "مثال APPOINTMENT_CONFIRMED",
+    "governanceOutboxColWhen": "وقت الإنشاء",
+    "governanceOutboxColType": "النوع",
+    "governanceOutboxColTarget": "الهدف",
+    "governanceOutboxColStatus": "الحالة",
+    "governanceOutboxColAttempts": "محاولات",
+    "governanceOutboxRetry": "إعادة المحاولة",
+    "governanceOutboxRetryOk": "تمت إعادة جدولة التسليم",
+    "governanceOutboxEmpty": "لا توجد أحداث مطابقة للمرشحات.",
     "governanceFailuresTitle": "عمليات التكامل الفاشلة",
     "governanceFailuresHint": "كل صف يتضمن معرف الفشل، نوع العملية، الاسم، السبب المختصر، والتفاصيل الكاملة للتصحيح.",
     "governanceFailuresSearch": "بحث",
@@ -2605,6 +2731,7 @@
     "invalidLink": "رابط إعادة الجدولة غير صالح.",
     "loadError": "تعذّر تحميل الموعد.",
     "saveError": "تعذّر الحفظ.",
-    "missingTime": "اختر تاريخًا ووقتًا جديدين"
+    "missingTime": "اختر تاريخًا ووقتًا جديدين",
+    "privacyFooter": "بإعادة الجدولة فإنك تقر باطلاعك على"
   }
 }

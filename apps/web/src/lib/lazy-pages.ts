@@ -7,6 +7,10 @@ function lazyNamed<P extends Record<string, ComponentType>, K extends keyof P>(
   return lazy(() => factory().then((mod) => ({ default: mod[exportName] })));
 }
 
+export const MarketplaceListingProfilePage = lazyNamed(
+  () => import("@/features/clinics/marketplace-listing-profile-page"),
+  "MarketplaceListingProfilePage",
+);
 export const DashboardPage = lazyNamed(() => import("@/features/dashboard/dashboard-page"), "DashboardPage");
 export const PatientsPage = lazyNamed(() => import("@/features/patients/patients-page"), "PatientsPage");
 export const PatientDetailPage = lazyNamed(
@@ -88,6 +92,14 @@ export const PlatformDrugDatasetsTab = lazyNamed(
 export const PlatformPlansTab = lazyNamed(
   () => import("@/features/platform/platform-plans-tab"),
   "PlatformPlansTab",
+);
+export const PlatformVerificationsTab = lazyNamed(
+  () => import("@/features/platform/platform-verifications-tab"),
+  "PlatformVerificationsTab",
+);
+export const ClinicianVerificationPage = lazyNamed(
+  () => import("@/features/clinicians/clinician-verification-page"),
+  "ClinicianVerificationPage",
 );
 export const PlatformKiorexRatesTab = lazyNamed(
   () => import("@/features/platform/platform-kiorex-rates-tab"),

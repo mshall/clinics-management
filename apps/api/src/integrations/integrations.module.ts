@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
 import { AppointmentsModule } from "../appointments/appointments.module";
+import { SchedulingModule } from "../scheduling/scheduling.module";
+import { MessagingModule } from "../messaging/messaging.module";
 import { AuditModule } from "../audit/audit.module";
 import { ComplianceModule } from "../compliance/compliance.module";
 import { OperationsModule } from "../operations/operations.module";
@@ -20,7 +22,15 @@ import { IntegrationFailureGovernanceService } from "./integration-failure-gover
 import { FiscalEtaNotificationsController } from "./fiscal-eta-notifications.controller";
 
 @Module({
-  imports: [AppointmentsModule, OperationsModule, AuditModule, ComplianceModule, SubscriptionsModule],
+  imports: [
+    AppointmentsModule,
+    OperationsModule,
+    AuditModule,
+    ComplianceModule,
+    SubscriptionsModule,
+    SchedulingModule,
+    MessagingModule,
+  ],
   controllers: [
     IntegrationsAppointmentsController,
     IntegrationsOperationsController,
@@ -43,6 +53,7 @@ import { FiscalEtaNotificationsController } from "./fiscal-eta-notifications.con
     IntegrationFailureLogService,
     IntegrationWebhookService,
     IntegrationFailureRetentionService,
+    IntegrationsAppointmentsService,
   ],
 })
 export class IntegrationsModule {}

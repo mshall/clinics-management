@@ -5,7 +5,8 @@ import { PrismaService } from "../prisma/prisma.service";
 import { SchedulingService } from "../scheduling/scheduling.service";
 import { AppointmentRescheduleTokenService } from "./appointment-reschedule-token.service";
 import { MessagingConsentService } from "../patients/messaging-consent.service";
-import { OutboxEventService } from "./outbox-event.service";
+import { OutboxEventService, OUTBOX_TARGET_INTERNAL } from "./outbox-event.service";
+import { AppointmentOutboxService } from "./appointment-outbox.service";
 import {
   OUTBOX_TOPIC_FRONT_DESK_WHATSAPP,
   type WhatsAppReplyAction,
@@ -26,6 +27,7 @@ export class WhatsAppInboundRepliesService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly outbox: OutboxEventService,
+    private readonly appointmentOutbox: AppointmentOutboxService,
     private readonly scheduling: SchedulingService,
     private readonly rescheduleTokens: AppointmentRescheduleTokenService,
     private readonly consent: MessagingConsentService,
@@ -93,11 +95,23 @@ export class WhatsAppInboundRepliesService {
           whatsappConfirmedAt: apt.whatsappConfirmedAt ?? now,
         },
       });
+      await this.appointmentOutbox.emitStatusChange(
+        {
+          tenantId,
+          appointmentId,
+          clinicId,
+          previousStatus: apt.status,
+          nextStatus: AppointmentStatus.CONFIRMED,
+          bookingSource: apt.bookingSource,
+        },
+        tx,
+      );
       await this.outbox.enqueue(
         tenantId,
         OUTBOX_TOPIC_FRONT_DESK_WHATSAPP,
         { appointmentId, clinicId, action: "confirm", channel: "whatsapp" },
         tx,
+        OUTBOX_TARGET_INTERNAL,
       );
     });
     await this.audit.recordEvent({
@@ -127,11 +141,24 @@ export class WhatsAppInboundRepliesService {
         where: { id: appointmentId },
         data: { status: AppointmentStatus.CANCELLED },
       });
+      await this.appointmentOutbox.emitStatusChange(
+        {
+          tenantId,
+          appointmentId,
+          clinicId,
+          previousStatus: apt.status,
+          nextStatus: AppointmentStatus.CANCELLED,
+          bookingSource: apt.bookingSource,
+          cancelledByPatient: true,
+        },
+        tx,
+      );
       await this.outbox.enqueue(
         tenantId,
         OUTBOX_TOPIC_FRONT_DESK_WHATSAPP,
         { appointmentId, clinicId, action: "cancel", channel: "whatsapp" },
         tx,
+        OUTBOX_TARGET_INTERNAL,
       );
       return row;
     });
@@ -179,10 +206,16 @@ export class WhatsAppInboundRepliesService {
         status: "QUEUED",
       },
     });
-    await this.outbox.enqueue(tenantId, OUTBOX_TOPIC_FRONT_DESK_WHATSAPP, {
-      appointmentId,
-      action: "reschedule_link_queued",
-      channel: "whatsapp",
-    });
+    await this.outbox.enqueue(
+      tenantId,
+      OUTBOX_TOPIC_FRONT_DESK_WHATSAPP,
+      {
+        appointmentId,
+        action: "reschedule_link_queued",
+        channel: "whatsapp",
+      },
+      undefined,
+      OUTBOX_TARGET_INTERNAL,
+    );
   }
 }

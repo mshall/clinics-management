@@ -47,6 +47,7 @@
     "platformDrugDatasets": "Drug datasets",
     "platformPlans": "Plans & pricing",
     "platformKiorex": "Kiorex fees",
+    "platformVerifications": "Doctor verification",
     "platformOrganizations": "Organizations",
     "platformUsers": "Users",
     "platformClinics": "Clinics",
@@ -264,6 +265,7 @@
     "legalIntro": "Legal agreements (required)",
     "legalAgree": "I agree to the {{doc}}",
     "legalView": "Read",
+    "patientPrivacyFooter": "Patients: read our",
     "errors": {
       "markets": "Could not load countries. Try again shortly.",
       "generic": "Something went wrong. Please try again."
@@ -362,7 +364,113 @@
       "first_appointment": "Book your first appointment",
       "first_check_in": "Complete your first check-in",
       "eta_setup": "Set up ETA e-receipts",
-      "kiorex_profile": "Publish Kiorex marketplace profile"
+      "kiorex_profile": "Publish Kiorex marketplace profile",
+      "doctor_verification": "Verify your doctor credentials for Kiorex"
+    }
+  },
+  "kiorex": {
+    "confirmQueue": {
+      "title": "Kiorex — confirm bookings",
+      "hint": "Manual-confirm clinics: approve marketplace bookings before reminders go out.",
+      "empty": "No pending Kiorex bookings",
+      "confirm": "Confirm",
+      "confirmed": "Appointment confirmed"
+    },
+    "listings": {
+      "title": "Kiorex doctor listings",
+      "hint": "Each doctor must be verified, billable, and have marketplace types plus availability before going LIVE.",
+      "empty": "No physicians assigned to this branch yet.",
+      "status": {
+        "DRAFT": "Draft",
+        "PENDING_VERIFICATION": "Pending verification",
+        "LIVE": "Live on Kiorex",
+        "PAUSED": "Paused"
+      },
+      "blocker": {
+        "verification": "Doctor not verified",
+        "billing": "Subscription limits marketplace",
+        "appointment_types": "No marketplace bookable types",
+        "availability": "Availability not configured",
+        "owner": "Paused by clinic owner",
+        "profile": "Kiorex profile below 80% complete",
+        "quality": "Quality review required"
+      },
+      "completeness": "Profile"
+    },
+    "profile": {
+      "title": "Kiorex provider profile",
+      "subtitle": "Completeness must be at least 80% to go LIVE on Kiorex.",
+      "completeness": "Completeness",
+      "editor": "Editor",
+      "preview": "Live preview",
+      "displayNameEn": "Display name (EN)",
+      "displayNameAr": "Display name (AR)",
+      "specialty": "Specialty",
+      "bioEn": "Bio (EN)",
+      "bioAr": "Bio (AR)",
+      "yearsExperience": "Years of experience",
+      "languages": "Languages (comma-separated)",
+      "saved": "Profile saved",
+      "edit": "Edit profile"
+    }
+  },
+  "verification": {
+    "title": "Doctor verification",
+    "subtitle": "Syndicate credentials and documents for Kiorex. Files are private and served only through Kiorly.",
+    "details": "Professional details",
+    "detailsHint": "Syndicate number, specialty, and titles shown on Kiorex.",
+    "syndicateNumber": "Syndicate number",
+    "specialty": "Specialty",
+    "titleEn": "Title (EN)",
+    "titleAr": "Title (AR)",
+    "nationalId": "National ID",
+    "documents": "Documents",
+    "upload": "Upload",
+    "saveDraft": "Save draft",
+    "submit": "Submit for review",
+    "submitted": "Submitted for review",
+    "docUploaded": "Document uploaded",
+    "kiorexTab": "Kiorex appointment types",
+    "platformQueue": "Doctor verification queue",
+    "clinician": "Clinician",
+    "organization": "Organization",
+    "approve": "Approve",
+    "reject": "Reject",
+    "rejectPrompt": "Rejection reason",
+    "reviewSaved": "Decision saved",
+    "queueEmpty": "No pending verifications.",
+    "queueHint": "Open a row to view documents, complete the checklist, and approve or reject.",
+    "review": "Review",
+    "reviewTitle": "Review verification",
+    "checklist": "Review checklist",
+    "revealNationalId": "Reveal national ID",
+    "rejectWithTemplate": "Reject with template",
+    "rejectNote": "Optional note for the clinician",
+    "slaWaiting": "Waiting",
+    "slaTarget": "SLA {{hours}}h",
+    "slaBreached": "SLA breached",
+    "slaHelp": "Oldest pending listed first; breached rows highlighted.",
+    "medianReviewTime": "Median review time (90d)",
+    "medianUnknown": "—",
+    "metricsPending": "Pending in queue",
+    "checklistItem": {
+      "syndicate_card": "Syndicate card matches syndicate number",
+      "specialty_match": "Specialty certificate matches declared specialty",
+      "national_id_present": "National ID captured and consistent",
+      "documents_readable": "All documents are readable and authentic"
+    },
+    "status": {
+      "UNVERIFIED": "Unverified",
+      "PENDING": "Pending review",
+      "VERIFIED": "Verified",
+      "REJECTED": "Rejected",
+      "EXPIRED": "Expired"
+    },
+    "docKind": {
+      "SYNDICATE_CARD": "Syndicate card",
+      "SPECIALTY_CERTIFICATE": "Specialty certificate",
+      "CLINIC_LICENCE": "Clinic licence",
+      "PROFILE_PHOTO": "Profile photo"
     }
   },
   "theme": {
@@ -928,6 +1036,7 @@
   "scheduling": {
     "appointmentTypesTitle": "Appointment types",
     "appointmentTypesHint": "Duration, buffers, marketplace rules, and room requirements for this branch.",
+    "slotsEngineHint": "Bookable times use the shared slot engine (templates, leave, buffers, and existing appointments).",
     "typeSaved": "Appointment type saved",
     "typeNameEn": "Name (EN)",
     "typeNameAr": "Name (AR)",
@@ -2193,6 +2302,23 @@
     "auditDetailTitle": "Audit entry",
     "governanceTabAudit": "Audit trail",
     "governanceTabFailures": "Failing operations",
+    "governanceTabOutbox": "Outbox",
+    "governanceOutboxSubtitle": "Kiorex and tenant webhook events written with domain changes. Retry failed or dead-letter rows.",
+    "governanceOutboxPending": "Pending",
+    "governanceOutboxFailed": "Failed",
+    "governanceOutboxDead": "Dead",
+    "governanceOutboxLagAlert": "Lag > 2 min",
+    "governanceOutboxStatusFilter": "Status",
+    "governanceOutboxTypeFilter": "Event type",
+    "governanceOutboxTypePh": "e.g. APPOINTMENT_CONFIRMED",
+    "governanceOutboxColWhen": "Created",
+    "governanceOutboxColType": "Type",
+    "governanceOutboxColTarget": "Target",
+    "governanceOutboxColStatus": "Status",
+    "governanceOutboxColAttempts": "Attempts",
+    "governanceOutboxRetry": "Retry",
+    "governanceOutboxRetryOk": "Outbox delivery re-queued",
+    "governanceOutboxEmpty": "No outbox events match your filters.",
     "governanceFailuresTitle": "Failing integration operations",
     "governanceFailuresHint": "Each row includes failure id, operation type, human-readable name, summary reason, and full detail for debugging.",
     "governanceFailuresSearch": "Search",
@@ -2604,6 +2730,7 @@
     "invalidLink": "Invalid reschedule link.",
     "loadError": "Could not load appointment.",
     "saveError": "Could not save.",
-    "missingTime": "Pick a new date and time"
+    "missingTime": "Pick a new date and time",
+    "privacyFooter": "By rescheduling you acknowledge our"
   }
 }

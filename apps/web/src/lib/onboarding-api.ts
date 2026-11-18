@@ -12,7 +12,8 @@ export type OnboardingStepKey =
   | "first_appointment"
   | "first_check_in"
   | "eta_setup"
-  | "kiorex_profile";
+  | "kiorex_profile"
+  | "doctor_verification";
 
 export type OnboardingStepDto = {
   key: OnboardingStepKey;

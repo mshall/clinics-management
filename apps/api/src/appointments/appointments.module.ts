@@ -6,6 +6,7 @@ import { FrontDeskFlowModule } from "../front-desk/front-desk-flow.module";
 import { PatientsModule } from "../patients/patients.module";
 import { KiorexModule } from "../kiorex/kiorex.module";
 import { SchedulingModule } from "../scheduling/scheduling.module";
+import { MessagingModule } from "../messaging/messaging.module";
 import { AppointmentsController } from "./appointments.controller";
 import { AppointmentsService } from "./appointments.service";
 
@@ -18,6 +19,7 @@ import { AppointmentsService } from "./appointments.service";
     PatientsModule,
     KiorexModule,
     SubscriptionsModule,
+    MessagingModule,
   ],
   controllers: [AppointmentsController],
   providers: [AppointmentsService],

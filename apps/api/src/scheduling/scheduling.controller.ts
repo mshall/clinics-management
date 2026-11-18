@@ -5,13 +5,18 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { SchedulingService } from "./scheduling.service";
+import { SlotService } from "./slot.service";
+import { SLOT_CHANNEL } from "./slot-channel";
 
 @ApiTags("scheduling")
 @ApiBearerAuth("bearer")
 @Controller("scheduling")
 @UseGuards(JwtAuthGuard)
 export class SchedulingController {
-  constructor(private readonly scheduling: SchedulingService) {}
+  constructor(
+    private readonly scheduling: SchedulingService,
+    private readonly slots: SlotService,
+  ) {}
 
   @Get("appointment-types")
   listTypes(@CurrentUser() user: JwtUser, @Query("clinicId") clinicId?: string) {
@@ -40,6 +45,28 @@ export class SchedulingController {
     @Body() body: { overrides: Array<{ appointmentTypeId: string; durationMinutes?: number | null; feeAmount?: number | null }> },
   ) {
     return this.scheduling.putClinicianTypeOverrides(requireTenantId(user), clinicianId, body.overrides ?? []);
+  }
+
+  @Get("slots")
+  listSlots(
+    @CurrentUser() user: JwtUser,
+    @Query("clinicId") clinicId: string,
+    @Query("clinicianId") clinicianId: string,
+    @Query("typeId") typeId: string,
+    @Query("from") from: string,
+    @Query("to") to: string,
+    @Query("channel") channel?: string,
+  ) {
+    const ch = channel === SLOT_CHANNEL.MARKETPLACE ? SLOT_CHANNEL.MARKETPLACE : SLOT_CHANNEL.INTERNAL;
+    return this.slots.getSlots({
+      tenantId: requireTenantId(user),
+      clinicId,
+      clinicianId,
+      typeId,
+      from: new Date(from),
+      to: new Date(to),
+      channel: ch,
+    });
   }
 
   @Get("availability")

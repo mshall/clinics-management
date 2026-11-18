@@ -39,6 +39,7 @@ import { TenantPaymentChannelsService } from "./tenant-payment-channels.service"
 import { CreateTenantPaymentChannelDto } from "./dto/create-tenant-payment-channel.dto";
 import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 import { EtaHealthService } from "../compliance/eta-health.service";
+import { AdminOutboxService } from "./admin-outbox.service";
 
 @ApiTags("admin")
 @ApiBearerAuth("bearer")
@@ -51,6 +52,7 @@ export class AdminController {
     private readonly integrationFailureAdmin: IntegrationFailureAdminService,
     private readonly paymentChannels: TenantPaymentChannelsService,
     private readonly etaHealthService: EtaHealthService,
+    private readonly outboxAdmin: AdminOutboxService,
   ) {}
 
   @Get("eta-health")
@@ -222,6 +224,34 @@ export class AdminController {
   @ApiOkResponse()
   retryIntegrationFailureWebhook(@CurrentUser() user: JwtUser, @Param("id") id: string) {
     return this.integrationFailureAdmin.retryWebhook(requireTenantId(user), id, user);
+  }
+
+  @Get("outbox-events")
+  @ApiOperation({ summary: "Transactional outbox events (governance)" })
+  @ApiOkResponse()
+  outboxEvents(
+    @CurrentUser() user: JwtUser,
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string,
+    @Query("status") status?: string,
+    @Query("type") type?: string,
+  ) {
+    return this.outboxAdmin.list(requireTenantId(user), user, page, pageSize, status, type);
+  }
+
+  @Get("outbox-events/summary")
+  @ApiOperation({ summary: "Outbox lag and counts" })
+  @ApiOkResponse()
+  outboxEventsSummary(@CurrentUser() user: JwtUser) {
+    return this.outboxAdmin.summary(requireTenantId(user), user);
+  }
+
+  @Post("outbox-events/:id/retry")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Re-dispatch one outbox event" })
+  @ApiOkResponse()
+  retryOutboxEvent(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.outboxAdmin.retry(requireTenantId(user), user, id);
   }
 
   @Post("integration-failures/purge-retention")

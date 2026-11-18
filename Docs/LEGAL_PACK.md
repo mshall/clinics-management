@@ -4,7 +4,9 @@
 |------|--------|
 | GT-02 Terms, subscription, Kiorex fees, DPA, privacy, AUP, refund + acceptance | **Done** |
 
-Counsel must still review text before production charging or marketplace listing. Pack version: bump `LEGAL_PACK_VERSION` in `legal-catalog.ts` when counsel publishes updates.
+Counsel must still review text before production charging or marketplace listing. Pack version: bump `LEGAL_PACK_VERSION` in `legal-catalog.ts` when counsel publishes updates (current **2026-11-18** — SC-02 Arabic PDPL privacy notice).
+
+Egypt **paid launch** also requires PDPC filings in hand — see [SC02_PDPC_EGYPT.md](./SC02_PDPC_EGYPT.md).
 
 ## Documents
 

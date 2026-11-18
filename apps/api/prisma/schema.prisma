@@ -95,6 +95,14 @@ enum EmploymentType {
   LOCUM
 }
 
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
 enum ClinicalSpecialty {
   POLYCLINIC
   GENERAL_MEDICINE
@@ -326,6 +334,13 @@ enum IntegrationScope {
   APPOINTMENTS_WRITE
   OPERATIONS_READ
   OPERATIONS_WRITE
+}
+
+enum ListingStatus {
+  DRAFT
+  PENDING_VERIFICATION
+  LIVE
+  PAUSED
 }
 
 enum IntegrationWebhookEvent {
@@ -899,6 +914,7 @@ model Tenant {
   clinicianAvailabilityTemplates ClinicianAvailabilityTemplate[]
   appointmentSeries              AppointmentSeries[]
   appointmentWaitlist            AppointmentWaitlistEntry[]
+  slotHolds                      SlotHold[]
   patientActiveProblems          PatientActiveProblem[]
   patientFamilyLinks             PatientFamilyLink[]
   patientClinicalPhotos          PatientClinicalPhoto[]
@@ -926,6 +942,8 @@ model Tenant {
   kiorlyPaymentMethods           KiorlyPaymentMethod[]
   kiorlyPayments                 KiorlyPayment[]
   kiorexCommissionCharges        KiorexCommissionCharge[]
+  clinicianVerifications         ClinicianVerification[]
+  marketplaceListings            MarketplaceListing[]
   kiorlySettlementCarry          Decimal?               @db.Decimal(14, 2)
   onboardingProgress             OnboardingProgress?
   outboxEvents                   OutboxEvent[]
@@ -1011,6 +1029,10 @@ model User {
   passwordResetTokens            PasswordResetToken[]
   authSessions                   UserSession[]
   legalAcceptances               LegalAcceptance[]
+  clinicianVerification          ClinicianVerification?
+  clinicianVerificationsReviewed ClinicianVerification[] @relation("ClinicianVerificationReviewer")
+  marketplaceListings            MarketplaceListing[]
+  slotHoldsAsClinician           SlotHold[] @relation("SlotHoldClinician")
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   deactivatedAt DateTime?
@@ -1019,6 +1041,36 @@ model User {
   @@unique([tenantId, email])
   @@index([tenantId])
   @@index([tenantId, deletedAt])
+}
+
+model ClinicianVerification {
+  id              String              @id @default(cuid())
+  userId          String              @unique
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId        String
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  syndicateNumber String?
+  specialty       ClinicalSpecialty?
+  titleEn         String?
+  titleAr         String?
+  nationalIdEnc   String?
+  documentKeys    Json                @default("[]")
+  status          VerificationStatus  @default(UNVERIFIED)
+  rejectReason      String?
+  rejectReasonCode  String?
+  reviewedBy        String?
+  reviewer          User?               @relation("ClinicianVerificationReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  reviewedAt        DateTime?
+  pendingAt         DateTime?
+  reviewDurationMs  Int?
+  lastReviewChecklist Json              @default("[]")
+  verifiedSpecialty ClinicalSpecialty?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([tenantId, status])
+  @@index([status])
+  @@index([pendingAt])
 }
 
 model UserNavTabGrant {
@@ -1104,6 +1156,8 @@ model Clinic {
   addressEn        String
   addressAr        String
   locationUrl      String
+  latitude         Decimal?        @db.Decimal(10, 7)
+  longitude        Decimal?        @db.Decimal(10, 7)
   phone            String
   email            String
   licenseNumber    String
@@ -1158,6 +1212,10 @@ model Clinic {
   appointmentSeries      AppointmentSeries[]
   appointmentWaitlist    AppointmentWaitlistEntry[]
   kiorexCommissionCharges KiorexCommissionCharge[]
+  marketplaceListings   MarketplaceListing[]
+  slotHolds             SlotHold[]
+  /// When false, Kiorex bookings stay SCHEDULED until front desk confirms (KX-04).
+  marketplaceBookingAutoConfirm Boolean @default(true)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
@@ -1790,7 +1848,10 @@ model Appointment {
   satisfactionSurveys SatisfactionSurveyResponse[]
   integrationClientId String?
   integrationClient   IntegrationClient? @relation(fields: [integrationClientId], references: [id], onDelete: SetNull)
+  platformIntegrationClientId String?
+  platformIntegrationClient   PlatformIntegrationClient? @relation(fields: [platformIntegrationClientId], references: [id], onDelete: SetNull)
   externalReference   String?
+  marketplaceConfirmationDueAt DateTime?
   revenueEntries RevenueEntry[]
   encounters     Encounter[]
   rescheduleToken AppointmentRescheduleToken?
@@ -1799,6 +1860,7 @@ model Appointment {
   updatedAt      DateTime          @updatedAt
 
   @@unique([integrationClientId, externalReference])
+  @@unique([platformIntegrationClientId, externalReference])
   @@index([tenantId, clinicId, startsAt])
   @@index([patientId])
   @@index([tenantId, externalReference])
@@ -2027,6 +2089,65 @@ model SupportTicketEvent {
   @@index([ticketId, createdAt])
 }
 
+model MarketplaceListing {
+  id            String         @id @default(cuid())
+  tenantId      String
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId      String
+  clinic        Clinic         @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinicianId   String
+  clinician     User           @relation(fields: [clinicianId], references: [id], onDelete: Cascade)
+  status        ListingStatus  @default(DRAFT)
+  pausedReason  String?
+  profileJson   Json           @default("{}")
+  listedAt      DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([clinicId, clinicianId])
+  @@index([tenantId, clinicId])
+  @@index([tenantId, status])
+  @@index([clinicId, status])
+}
+
+model PlatformIntegrationClient {
+  id            String    @id @default(cuid())
+  name          String
+  clientKey     String    @unique
+  secretHash    String
+  scopes        String[]  @default(["MARKETPLACE"])
+  ipAllowlist   String[]  @default([])
+  lastUsedAt    DateTime?
+  deactivatedAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  slotHolds     SlotHold[]
+  appointments  Appointment[]
+}
+
+model SlotHold {
+  id                          String   @id @default(cuid())
+  tenantId                    String
+  tenant                      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId                    String
+  clinic                      Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinicianId                 String
+  clinician                   User     @relation("SlotHoldClinician", fields: [clinicianId], references: [id], onDelete: Restrict)
+  appointmentTypeId           String
+  appointmentType             AppointmentType @relation(fields: [appointmentTypeId], references: [id], onDelete: Restrict)
+  startsAt                    DateTime
+  endsAt                      DateTime
+  externalRef                 String   @unique
+  platformIntegrationClientId String
+  platformIntegrationClient   PlatformIntegrationClient @relation(fields: [platformIntegrationClientId], references: [id], onDelete: Cascade)
+  expiresAt                   DateTime
+  createdAt                   DateTime @default(now())
+
+  @@index([clinicianId, startsAt])
+  @@index([expiresAt])
+  @@index([tenantId, clinicId])
+}
+
 model IntegrationClient {
   id                String             @id @default(cuid())
   tenantId          String
@@ -2171,6 +2292,7 @@ model AppointmentType {
   appointments         Appointment[]
   series               AppointmentSeries[]
   waitlist             AppointmentWaitlistEntry[]
+  slotHolds            SlotHold[]
   clinicianOverrides   ClinicianAppointmentTypeOverride[]
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
@@ -2201,9 +2323,11 @@ model ClinicianAvailabilityTemplate {
   clinic       Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   clinicianId  String
   clinician    User     @relation("ClinicianAvailability", fields: [clinicianId], references: [id], onDelete: Cascade)
-  weekJson     Json
-  blockedJson  Json     @default("[]")
-  updatedAt    DateTime @updatedAt
+  weekJson             Json
+  blockedJson          Json     @default("[]")
+  /// Max marketplace bookings per local clinic day (KX-03).
+  marketplaceDailyCap  Int      @default(20)
+  updatedAt            DateTime @updatedAt
   createdAt    DateTime @default(now())
 
   @@unique([tenantId, clinicId, clinicianId])
@@ -2594,16 +2718,23 @@ model MessageTemplate {
 }
 
 model OutboxEvent {
-  id          String    @id @default(cuid())
-  tenantId    String
-  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  topic       String
-  payloadJson Json
-  status      String    @default("PENDING")
-  createdAt   DateTime  @default(now())
-  publishedAt DateTime?
+  id            String    @id @default(cuid())
+  tenantId      String
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  aggregateType String
+  aggregateId   String
+  type          String
+  payload       Json
+  target        String    @default("KIOREX")
+  status        String    @default("PENDING")
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  sentAt        DateTime?
 
   @@index([tenantId, status, createdAt])
+  @@index([status, nextAttemptAt])
+  @@index([aggregateType, aggregateId, createdAt])
 }
 
 model AppointmentRescheduleToken {

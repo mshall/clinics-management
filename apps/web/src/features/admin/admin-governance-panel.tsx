@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { AdminGovernanceIntegrationFailures } from "./admin-governance-integration-failures";
+import { AdminGovernanceOutbox } from "./admin-governance-outbox";
 import { AdminGovernanceWhatsappFailures } from "./admin-governance-whatsapp-failures";
 import { useTranslation } from "react-i18next";
 import { ResponsiveTable } from "@/components/responsive-table";
@@ -12,7 +13,7 @@ import { useAdminAuditLogsQuery } from "@/lib/api-hooks";
 import type { AdminAuditLogItemDto } from "@/lib/api-types";
 import { localeForLanguage, formatUserRole } from "@/lib/locale-display";
 
-type GovernanceTab = "audit" | "integration-failures" | "whatsapp-failures";
+type GovernanceTab = "audit" | "integration-failures" | "whatsapp-failures" | "outbox";
 
 export function AdminGovernancePanel() {
   const { t, i18n } = useTranslation();
@@ -60,10 +61,19 @@ export function AdminGovernancePanel() {
         >
           {t("messaging.governanceTab", "WhatsApp delivery")}
         </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={tab === "outbox" ? "default" : "outline"}
+          onClick={() => setTab("outbox")}
+        >
+          {t("admin.governanceTabOutbox", "Outbox")}
+        </Button>
       </div>
 
       {tab === "integration-failures" ? <AdminGovernanceIntegrationFailures /> : null}
       {tab === "whatsapp-failures" ? <AdminGovernanceWhatsappFailures /> : null}
+      {tab === "outbox" ? <AdminGovernanceOutbox /> : null}
 
       {tab === "audit" ? <Card>
         <CardHeader>

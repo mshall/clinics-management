@@ -203,10 +203,10 @@ describe("CR-03 Kiorex commission charges", () => {
     assert.equal(row.rateId, rateIdLow);
 
     const createdEvents = await prisma.outboxEvent.count({
-      where: { tenantId, topic: COMMISSION_CHARGE_CREATED },
+      where: { tenantId, type: COMMISSION_CHARGE_CREATED },
     });
     const reversedEvents = await prisma.outboxEvent.count({
-      where: { tenantId, topic: COMMISSION_CHARGE_REVERSED },
+      where: { tenantId, type: COMMISSION_CHARGE_REVERSED },
     });
     assert.ok(createdEvents >= 2);
     assert.ok(reversedEvents >= 1);

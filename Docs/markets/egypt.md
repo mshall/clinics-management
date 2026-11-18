@@ -46,15 +46,18 @@ Every **payment** path uses `postRevenueWithFiscal`: check-in, visit fee, billin
 
 **Pre-production billing drill:** [ETA_RECEIPT_V12.md](../ETA_RECEIPT_V12.md) § Billing go-live checklist (sale → return → resend, credentials expiry, status poll).
 
-## 2. Data protection (Egypt PDPL)
+## 2. Data protection (Egypt PDPL) — SC-02
 
 | Topic | Requirement |
 |-------|-------------|
-| PDPC licences | **Controller** and **processor** licences from PDPC before processing Egyptian personal data |
+| SC-02 tracker | [SC02_PDPC_EGYPT.md](../SC02_PDPC_EGYPT.md) — filings registry, paid launch gate |
+| PDPC licences | **Controller** and **processor** licences from PDPC before processing Egyptian personal data (`platform/pdpc-egypt-filings.json`) |
 | Clinic TRN & licence | `licenseNumber` + `taxRegistrationNumber` per branch (MoH / ETA) — [CLINIC_TAX_AND_LICENSING.md](../CLINIC_TAX_AND_LICENSING.md) |
 | Data protection officer | **Formally appointed** DPO (contract + register with PDPC); HR org chart name alone is insufficient |
+| Records of processing | [RECORDS_OF_PROCESSING_EG.md](../RECORDS_OF_PROCESSING_EG.md) |
+| Breach notification | **72 hours** to PDPC; **3 days** to affected data subjects — [runbooks/PDPC_DATA_BREACH.md](../runbooks/PDPC_DATA_BREACH.md) |
+| Patient privacy notice | GT-02 `patient_privacy_notice` (AR) + links on signup / public reschedule |
 | Consent | `POST /compliance/patients/:id/data-protection-consent` |
-| Breach notification | **72 hours** to PDPC; **3 days** to affected data subjects (see [COMPLIANCE_CONTROLS.md](../COMPLIANCE_CONTROLS.md)) |
 | Sub-processors | [SUB_PROCESSORS_BY_MARKET.md](../SUB_PROCESSORS_BY_MARKET.md) — AWS Frankfurt, optional OpenAI EU endpoint, ETA, WhatsApp BSP |
 | Data flows | RDS + S3 **Frankfurt**; assistant gated by `ai_assistant` flags — [FEATURE_FLAGS.md](../FEATURE_FLAGS.md) |
 

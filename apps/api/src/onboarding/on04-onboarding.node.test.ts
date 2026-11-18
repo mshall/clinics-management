@@ -30,6 +30,7 @@ const emptySync: OnboardingSyncInput = {
   checkedInAppointmentCount: 0,
   fiscalDeviceReady: false,
   kiorexProfileReady: false,
+  doctorVerificationReady: false,
 };
 
 describe("ON-04 onboarding", () => {

@@ -24,6 +24,7 @@ export type OnboardingSyncInput = {
   checkedInAppointmentCount: number;
   fiscalDeviceReady: boolean;
   kiorexProfileReady: boolean;
+  doctorVerificationReady: boolean;
 };
 
 function isoNow(): string {
@@ -87,6 +88,10 @@ export function detectAutoCompletedSteps(input: OnboardingSyncInput): Partial<Re
 
   if (input.kiorexProfileReady) {
     out.kiorex_profile = now;
+  }
+
+  if (input.doctorVerificationReady) {
+    out.doctor_verification = now;
   }
 
   return out;

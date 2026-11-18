@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
+import { notifyOnCall } from "../observability/notify-on-call";
 import { SettlementService } from "./settlement.service";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -23,7 +24,9 @@ export class SettlementScheduler implements OnModuleInit, OnModuleDestroy {
     try {
       await this.settlement.maybeRunCairoMonthlyBatch();
     } catch (e) {
-      this.log.warn(`Settlement scheduler (${label}): ${e instanceof Error ? e.message : String(e)}`);
+      const message = e instanceof Error ? e.message : String(e);
+      this.log.warn(`Settlement scheduler (${label}): ${message}`);
+      notifyOnCall("SETTLEMENT_JOB_FAILED", { label, message });
     }
   }
 }

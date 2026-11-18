@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { forwardRef, Module } from "@nestjs/common";
 import { AuditModule } from "../audit/audit.module";
 import { PatientsModule } from "../patients/patients.module";
 import { SchedulingModule } from "../scheduling/scheduling.module";
@@ -11,11 +11,15 @@ import { WhatsAppWebhookController } from "./whatsapp-webhook.controller";
 import { WhatsAppWebhookService } from "./whatsapp-webhook.service";
 import { WhatsAppInboundRepliesService } from "./whatsapp-inbound-replies.service";
 import { OutboxEventService } from "./outbox-event.service";
+import { OutboxDeliveryService } from "./outbox-delivery.service";
+import { OutboxDispatcherService } from "./outbox-dispatcher.service";
+import { OutboxDispatcherScheduler } from "./outbox-dispatcher.scheduler";
+import { AppointmentOutboxService } from "./appointment-outbox.service";
 import { AppointmentRescheduleTokenService } from "./appointment-reschedule-token.service";
 import { PublicAppointmentRescheduleController } from "./public-appointment-reschedule.controller";
 
 @Module({
-  imports: [AuditModule, SchedulingModule, PatientsModule],
+  imports: [AuditModule, forwardRef(() => SchedulingModule), PatientsModule],
   controllers: [MessagingController, WhatsAppWebhookController, PublicAppointmentRescheduleController],
   providers: [
     MessagingService,
@@ -23,10 +27,21 @@ import { PublicAppointmentRescheduleController } from "./public-appointment-resc
     WhatsAppWebhookService,
     WhatsAppInboundRepliesService,
     OutboxEventService,
+    OutboxDeliveryService,
+    OutboxDispatcherService,
+    OutboxDispatcherScheduler,
+    AppointmentOutboxService,
     AppointmentRescheduleTokenService,
     OutboundMessageWorker,
     AppointmentReminderScheduler,
   ],
-  exports: [MessagingService, AppointmentReminderScheduler, WhatsAppSendService, OutboxEventService],
+  exports: [
+    MessagingService,
+    AppointmentReminderScheduler,
+    WhatsAppSendService,
+    OutboxEventService,
+    OutboxDispatcherService,
+    AppointmentOutboxService,
+  ],
 })
 export class MessagingModule {}

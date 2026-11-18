@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { AppointmentStatus, ClinicRecordStatus, IntegrationScope, IntegrationWebhookEvent, Prisma } from "@prisma/client";
+import { ClinicRecordStatus, IntegrationScope, IntegrationWebhookEvent, Prisma } from "@prisma/client";
 import { activeSchedulingPhysicianWhere } from "../common/active-scheduling-physician";
 import { AuditService } from "../audit/audit.service";
 import { AppointmentsService } from "../appointments/appointments.service";
@@ -11,12 +11,15 @@ import { IntegrationWebhookService } from "./integration-webhook.service";
 import { ConsentPolicyService } from "../compliance/consent-policy.service";
 import { CONSENT_PURPOSE_MARKETPLACE } from "../compliance/consent-policy.constants";
 import { defaultBookingSourceForIntegration } from "../appointments/booking-attribution";
+import { SlotService } from "../scheduling/slot.service";
+import { SLOT_CHANNEL } from "../scheduling/slot-channel";
 
 @Injectable()
 export class IntegrationsAppointmentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly appointments: AppointmentsService,
+    private readonly slots: SlotService,
     private readonly clientService: IntegrationClientService,
     private readonly audit: AuditService,
     private readonly webhooks: IntegrationWebhookService,
@@ -80,8 +83,10 @@ export class IntegrationsAppointmentsService {
     principal: IntegrationPrincipal,
     clinicId: string,
     clinicianId: string,
+    typeId: string,
     from: string,
     to: string,
+    channel: "INTERNAL" | "MARKETPLACE" = "INTERNAL",
   ) {
     if (!principal.scopes.includes(IntegrationScope.APPOINTMENTS_READ)) {
       throw new ForbiddenException("APPOINTMENTS_READ scope required");
@@ -89,44 +94,16 @@ export class IntegrationsAppointmentsService {
     if (!this.clientService.clinicAllowed(principal, clinicId)) {
       throw new ForbiddenException("Clinic not permitted for this integration client");
     }
-    const start = new Date(from);
-    const end = new Date(to);
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
-      throw new BadRequestException("Invalid from/to range");
-    }
-    const maxSpan = 31 * 24 * 60 * 60 * 1000;
-    if (end.getTime() - start.getTime() > maxSpan) {
-      throw new BadRequestException("Availability range cannot exceed 31 days");
-    }
-
-    const rows = await this.prisma.appointment.findMany({
-      where: {
-        tenantId: principal.tenantId,
-        clinicId,
-        clinicianId,
-        startsAt: { gte: start, lte: end },
-        status: { notIn: [AppointmentStatus.CANCELLED] },
-      },
-      orderBy: { startsAt: "asc" },
-      select: {
-        id: true,
-        startsAt: true,
-        endsAt: true,
-        status: true,
-      },
-    });
-    return {
+    if (!typeId?.trim()) throw new BadRequestException("typeId is required");
+    return this.slots.getSlots({
+      tenantId: principal.tenantId,
       clinicId,
       clinicianId,
-      from: start.toISOString(),
-      to: end.toISOString(),
-      busy: rows.map((r) => ({
-        appointmentId: r.id,
-        startsAt: r.startsAt.toISOString(),
-        endsAt: r.endsAt?.toISOString() ?? null,
-        status: r.status,
-      })),
-    };
+      typeId: typeId.trim(),
+      from: new Date(from),
+      to: new Date(to),
+      channel: channel === "MARKETPLACE" ? SLOT_CHANNEL.MARKETPLACE : SLOT_CHANNEL.INTERNAL,
+    });
   }
 
   private async resolvePatientId(tenantId: string, dto: IntegrationBookAppointmentDto): Promise<string> {
@@ -164,6 +141,7 @@ export class IntegrationsAppointmentsService {
       marketplaceConsentGranted: dto.marketplaceConsentGranted,
       kiorexChannel: dto.kiorexChannel,
     });
+    const marketplacePlatform = principal.clientKey.startsWith("ic_plt_");
     const created = await this.appointments.createForIntegration(principal.tenantId, {
       clinicId: dto.clinicId,
       patientId,
@@ -172,7 +150,7 @@ export class IntegrationsAppointmentsService {
       endsAt: dto.endsAt,
       confirmOverlap: dto.confirmOverlap,
       notes: dto.notes,
-      integrationClientId: principal.id,
+      integrationClientId: marketplacePlatform ? null : principal.id,
       externalReference: dto.externalReference?.trim() || undefined,
       bookingSource,
       attributionJson: dto.attribution ?? undefined,
@@ -207,7 +185,12 @@ export class IntegrationsAppointmentsService {
   }
 
   async getOne(principal: IntegrationPrincipal, appointmentId: string) {
-    const row = await this.appointments.getByIdForIntegration(principal.tenantId, appointmentId, principal.id);
+    const marketplacePlatform = principal.clientKey.startsWith("ic_plt_");
+    const row = await this.appointments.getByIdForIntegration(
+      principal.tenantId,
+      appointmentId,
+      marketplacePlatform ? null : principal.id,
+    );
     if (!this.clientService.clinicAllowed(principal, row.clinicId)) {
       throw new ForbiddenException("Clinic not permitted for this integration client");
     }
@@ -215,7 +198,12 @@ export class IntegrationsAppointmentsService {
   }
 
   async cancel(principal: IntegrationPrincipal, appointmentId: string) {
-    const updated = await this.appointments.cancelForIntegration(principal.tenantId, appointmentId, principal.id);
+    const marketplacePlatform = principal.clientKey.startsWith("ic_plt_");
+    const updated = await this.appointments.cancelForIntegration(
+      principal.tenantId,
+      appointmentId,
+      marketplacePlatform ? null : principal.id,
+    );
     await this.audit.recordIntegration({
       tenantId: principal.tenantId,
       clinicId: updated.clinicId,

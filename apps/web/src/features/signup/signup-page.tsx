@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { PatientPrivacyNoticeLink } from "@/components/patient-privacy-notice-link";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
@@ -291,6 +292,10 @@ export function SignupPage() {
             {error && <p className="text-sm text-destructive">{error}</p>}
           </CardContent>
         </Card>
+        <p className="text-center text-xs text-muted-foreground">
+          {t("signup.patientPrivacyFooter")}{" "}
+          <PatientPrivacyNoticeLink className="text-xs" />
+        </p>
       </div>
     </div>
   );

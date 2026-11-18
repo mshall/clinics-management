@@ -26,11 +26,17 @@ function services() {
 }
 
 describe("GT-02 legal acceptance", () => {
+  let prevPdpcBypass: string | undefined;
+
   before(async () => {
+    prevPdpcBypass = process.env.PDPC_EGYPT_LAUNCH_GATE_BYPASS;
+    process.env.PDPC_EGYPT_LAUNCH_GATE_BYPASS = "1";
     await prisma.$connect();
   });
   after(async () => {
     await prisma.$disconnect();
+    if (prevPdpcBypass !== undefined) process.env.PDPC_EGYPT_LAUNCH_GATE_BYPASS = prevPdpcBypass;
+    else delete process.env.PDPC_EGYPT_LAUNCH_GATE_BYPASS;
   });
 
   it("blocks PRO signup without legal acceptances", async () => {

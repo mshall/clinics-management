@@ -1,7 +1,7 @@
 import { BadRequestException } from "@nestjs/common";
 import type { Market, Tenant } from "@prisma/client";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 export type DataResidencyPath = "A" | "B";
 
@@ -38,7 +38,14 @@ export type DataCellsRegistry = {
 };
 
 function repoRootFromApiSrc(): string {
-  return join(__dirname, "..", "..", "..", "..");
+  let dir = __dirname;
+  for (let i = 0; i < 8; i++) {
+    if (existsSync(join(dir, "platform", "data-cells.json"))) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return join(__dirname, "..", "..", "..", "..", "..");
 }
 
 let cached: DataCellsRegistry | null = null;

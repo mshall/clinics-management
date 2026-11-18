@@ -12,6 +12,7 @@ export const ONBOARDING_STEP_KEYS = [
   "first_check_in",
   "eta_setup",
   "kiorex_profile",
+  "doctor_verification",
 ] as const;
 
 export type OnboardingStepKey = (typeof ONBOARDING_STEP_KEYS)[number];

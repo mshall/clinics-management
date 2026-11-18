@@ -18,6 +18,7 @@ import { ClinicCurrencySettingsPanel } from "@/features/clinics/clinic-currency-
 import { ClinicHoursSettingsPanel } from "@/features/clinics/clinic-hours-settings-panel";
 import { ClinicRoomsSettingsPanel } from "@/features/clinics/clinic-rooms-settings-panel";
 import { ClinicAppointmentTypesPanel } from "@/features/clinics/clinic-appointment-types-panel";
+import { ClinicKiorexListingsPanel } from "@/features/clinics/clinic-kiorex-listings-panel";
 import { ClinicEtaSettingsPanel } from "@/features/compliance/clinic-eta-settings-panel";
 import { ClinicClinicalTemplatesPanel } from "@/features/clinics/clinic-clinical-templates-panel";
 import { ClinicReactivateDialog } from "@/features/clinics/clinic-reactivate-dialog";
@@ -298,6 +299,7 @@ export function ClinicDetailPage() {
             roomLabels={c.frontDeskRoomLabels?.length ? c.frontDeskRoomLabels : ["Room 1", "Room 2", "Room 3"]}
             canEdit={canManageClinic}
           />
+          <ClinicKiorexListingsPanel clinicId={c.id} />
           <ClinicAppointmentTypesPanel clinicId={c.id} canEdit={canManageClinic} />
           <ClinicClinicalTemplatesPanel clinicId={c.id} canEdit={canManageClinic} />
           <ClinicEtaSettingsPanel clinicId={c.id} detail={c} disabled={!canManageClinic} />

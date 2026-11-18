@@ -12,17 +12,20 @@ import { seedPilotDemoPatients } from "../src/staging/pilot-demo-patients";
 async function assignPilotPlan(prisma: PrismaClient, tenantId: string, planKey: PlanKey, clinicianSeats: number) {
   const plan = await prisma.plan.findUniqueOrThrow({ where: { key: planKey } });
   const existing = await prisma.subscription.findUnique({ where: { tenantId } });
+  const proPlan = planKey === PlanKey.LITE ? await prisma.plan.findUnique({ where: { key: PlanKey.PRO } }) : null;
   if (!existing) {
     await prisma.subscription.create({
       data: {
         tenantId,
         planId: plan.id,
-        status: SubscriptionStatus.ACTIVE,
+        status: proPlan ? SubscriptionStatus.TRIALING : SubscriptionStatus.ACTIVE,
         interval: BillingInterval.MONTHLY,
         clinicianSeats,
         activatedAt: new Date(),
         currentPeriodStart: new Date(),
         currentPeriodEnd: new Date(Date.now() + 30 * 86_400_000),
+        trialPlanId: proPlan?.id ?? null,
+        trialEndsAt: proPlan ? new Date(Date.now() + 30 * 86_400_000) : null,
       },
     });
     return;
@@ -31,9 +34,9 @@ async function assignPilotPlan(prisma: PrismaClient, tenantId: string, planKey: 
     where: { tenantId },
     data: {
       planId: plan.id,
-      status: SubscriptionStatus.ACTIVE,
-      trialPlanId: null,
-      trialEndsAt: null,
+      status: proPlan ? SubscriptionStatus.TRIALING : SubscriptionStatus.ACTIVE,
+      trialPlanId: proPlan?.id ?? null,
+      trialEndsAt: proPlan ? new Date(Date.now() + 30 * 86_400_000) : null,
       clinicianSeats,
     },
   });
@@ -138,6 +141,20 @@ export async function ensurePilotTenant(
   void admin;
 
   await assignPilotPlan(prisma, tenant.id, spec.planKey, spec.clinicianSeats);
+
+  if (spec.planKey === PlanKey.LITE) {
+    const proPlan = await prisma.plan.findUnique({ where: { key: PlanKey.PRO } });
+    if (proPlan) {
+      await prisma.subscription.update({
+        where: { tenantId: tenant.id },
+        data: {
+          status: SubscriptionStatus.TRIALING,
+          trialPlanId: proPlan.id,
+          trialEndsAt: new Date(Date.now() + 30 * 86_400_000),
+        },
+      });
+    }
+  }
 
   if (spec.whatsAppReminders) {
     await prisma.tenantFeatureFlag.upsert({

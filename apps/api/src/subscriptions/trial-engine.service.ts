@@ -379,8 +379,11 @@ export class TrialEngineService {
     await this.prisma.outboxEvent.create({
       data: {
         tenantId: sub.tenantId,
-        topic: "billing.trial_notification",
-        payloadJson: { channel: "email", to: owner?.email, ...base } as Prisma.InputJsonValue,
+        type: "billing.trial_notification",
+        payload: { channel: "email", to: owner?.email, ...base } as Prisma.InputJsonValue,
+        aggregateType: "Tenant",
+        aggregateId: sub.tenantId,
+        target: "INTERNAL",
         status: "PENDING",
       },
     });
@@ -388,12 +391,15 @@ export class TrialEngineService {
       await this.prisma.outboxEvent.create({
         data: {
           tenantId: sub.tenantId,
-          topic: "billing.trial_notification",
-          payloadJson: {
+          type: "billing.trial_notification",
+          payload: {
             channel: MessageChannel.WHATSAPP,
             toPhone: ownerPhone,
             ...base,
           } as Prisma.InputJsonValue,
+          aggregateType: "Tenant",
+          aggregateId: sub.tenantId,
+          target: "INTERNAL",
           status: "PENDING",
         },
       });

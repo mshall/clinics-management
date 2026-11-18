@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiGet, apiPatch, apiPost } from "@/lib/http";
+import { ClinicianVerificationStatusChip } from "@/features/clinicians/clinician-verification-status-chip";
 
 type AppointmentTypeRow = {
   id: string;
@@ -107,8 +108,9 @@ export function ClinicAppointmentTypesPanel({ clinicId, canEdit }: Props) {
     <Card>
       <CardHeader>
         <CardTitle className="text-base">{t("scheduling.appointmentTypesTitle", "Appointment types")}</CardTitle>
-        <CardDescription>
-          {t("scheduling.appointmentTypesHint", "Duration, buffers, marketplace rules, and room requirements for this branch.")}
+        <CardDescription className="flex flex-wrap items-center gap-2">
+          <span>{t("scheduling.appointmentTypesHint", "Duration, buffers, marketplace rules, and room requirements for this branch.")}</span>
+          <ClinicianVerificationStatusChip />
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

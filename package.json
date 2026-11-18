@@ -45,6 +45,7 @@
     "hooks:install": "bash scripts/install-git-hooks.sh",
     "pretest:integration": "bash scripts/ensure-local-dev-db.sh",
     "test:integration": "npm run test:integration -w api",
+    "test:money-coverage": "npm run test:money-coverage -w api",
     "pretest:integration-smoke": "bash scripts/ensure-local-dev-db.sh",
     "test:integration-smoke": "bash scripts/integration-api-smoke.sh",
     "check:no-openai-secrets-in-git": "bash scripts/check-no-openai-secrets-in-git.sh",

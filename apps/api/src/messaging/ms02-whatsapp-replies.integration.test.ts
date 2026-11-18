@@ -11,6 +11,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { SchedulingService } from "../scheduling/scheduling.service";
 import { AppointmentRescheduleTokenService } from "./appointment-reschedule-token.service";
 import { OutboxEventService } from "./outbox-event.service";
+import { AppointmentOutboxService } from "./appointment-outbox.service";
 import { WhatsAppInboundRepliesService } from "./whatsapp-inbound-replies.service";
 import { MessagingConsentService } from "../patients/messaging-consent.service";
 import { ConsentPolicyService } from "../compliance/consent-policy.service";
@@ -23,10 +24,25 @@ function webhookService(): WhatsAppWebhookService {
   const prismaSvc = prisma as unknown as PrismaService;
   const audit = new AuditService(prismaSvc);
   const outbox = new OutboxEventService(prismaSvc);
-  const scheduling = new SchedulingService(prismaSvc);
+  const appointmentOutbox = new AppointmentOutboxService(outbox);
+  const scheduling = new SchedulingService(
+    prismaSvc,
+    {
+      assertTenantCanEnableKiorexMarketplace: async () => undefined,
+    } as never,
+    { invalidateAndNotify: async () => undefined } as never,
+  );
   const tokens = new AppointmentRescheduleTokenService(prismaSvc);
   const consent = new MessagingConsentService(prismaSvc, audit, new ConsentPolicyService(prismaSvc, audit));
-  const inbound = new WhatsAppInboundRepliesService(prismaSvc, audit, outbox, scheduling, tokens, consent);
+  const inbound = new WhatsAppInboundRepliesService(
+    prismaSvc,
+    audit,
+    outbox,
+    appointmentOutbox,
+    scheduling,
+    tokens,
+    consent,
+  );
   return new WhatsAppWebhookService(prismaSvc, audit, inbound, consent);
 }
 
@@ -117,7 +133,7 @@ describe("MS-02 WhatsApp inbound replies", () => {
     if (ids.outboundId) await prisma.outboundMessage.delete({ where: { id: ids.outboundId } }).catch(() => undefined);
     if (ids.appointmentId) {
       await prisma.whatsAppInboundEvent.deleteMany({ where: { appointmentId: ids.appointmentId } }).catch(() => undefined);
-      await prisma.outboxEvent.deleteMany({ where: { tenantId: ids.tenantId, topic: "front_desk.appointment_whatsapp_reply" } }).catch(() => undefined);
+      await prisma.outboxEvent.deleteMany({ where: { tenantId: ids.tenantId, type: "front_desk.appointment_whatsapp_reply" } }).catch(() => undefined);
       await prisma.appointmentRescheduleToken.deleteMany({ where: { appointmentId: ids.appointmentId } }).catch(() => undefined);
       await prisma.appointment.delete({ where: { id: ids.appointmentId } }).catch(() => undefined);
     }
@@ -160,7 +176,7 @@ describe("MS-02 WhatsApp inbound replies", () => {
     assert.ok(wl.offeredSlotAt);
     assert.equal(wl.offeredSlotAt!.toISOString(), aptBefore.startsAt.toISOString());
     const outbox = await prisma.outboxEvent.findFirst({
-      where: { tenantId: ids.tenantId!, topic: "front_desk.appointment_whatsapp_reply" },
+      where: { tenantId: ids.tenantId!, type: "front_desk.appointment_whatsapp_reply" },
       orderBy: { createdAt: "desc" },
     });
     assert.ok(outbox);

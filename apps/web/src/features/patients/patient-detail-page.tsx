@@ -33,6 +33,7 @@ import { PatientFamilyPanel } from "@/components/patient-family-panel";
 import { PatientMergeWizard } from "@/components/patient-merge-wizard";
 import { PatientClinicalPhotoGallery } from "@/components/patient-clinical-photo-gallery";
 import { PatientChartAlerts } from "@/components/patient-chart-alerts";
+import { PatientPrivacyNoticeLink } from "@/components/patient-privacy-notice-link";
 import { PatientConsentChips } from "@/features/patients/patient-consent-chips";
 import { PatientVitalsCharts } from "@/components/patient-vitals-charts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -225,14 +226,7 @@ export function PatientDetailPage() {
                   <h1 className="text-2xl font-bold tracking-tight">{name}</h1>
                   <PatientChartAlerts patientId={patient.id} />
                   <PatientConsentChips patientId={patient.id} />
-                  <Link
-                    to="/legal/patient_privacy_notice"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs text-muted-foreground underline"
-                  >
-                    {t("legal.patientPrivacyNotice")}
-                  </Link>
+                  <PatientPrivacyNoticeLink />
                   <Badge variant="secondary" className="font-mono text-xs ltr-nums">
                     {patient.mrn}
                   </Badge>

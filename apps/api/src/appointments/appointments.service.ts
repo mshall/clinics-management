@@ -37,6 +37,7 @@ import { ensureDraftEncounterIfCheckedIn } from "../front-desk/ensure-draft-enco
 import { FrontDeskFlowService } from "../front-desk/front-desk-flow.service";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
 import { SchedulingService } from "../scheduling/scheduling.service";
+import { SlotService } from "../scheduling/slot.service";
 import type { CreateAppointmentDto } from "./dto/create-appointment.dto";
 import type { AppointmentDto } from "./dto/appointment.dto";
 import type { UpdateAppointmentDto } from "./dto/update-appointment.dto";
@@ -44,6 +45,7 @@ import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles"
 import { NewPatientService } from "../patients/new-patient.service";
 import { isCommissionChargeableBooking } from "./booking-attribution";
 import { CommissionChargeService, type BilledReversalCreditIntent } from "../kiorex/commission-charge.service";
+import { AppointmentOutboxService } from "../messaging/appointment-outbox.service";
 
 const appointmentDtoInclude = {
   patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } },
@@ -71,7 +73,18 @@ export class AppointmentsService {
     private readonly featureFlags: FeatureFlagsService,
     private readonly newPatients: NewPatientService,
     private readonly commissionCharges: CommissionChargeService,
+    private readonly slots: SlotService,
+    private readonly appointmentOutbox: AppointmentOutboxService,
   ) {}
+
+  private async invalidateSlotsForAppointment(
+    tenantId: string,
+    clinicId: string,
+    clinicianId: string,
+    reason: string,
+  ): Promise<void> {
+    await this.slots.invalidateAndNotify(tenantId, clinicId, clinicianId, reason);
+  }
 
   private async assertAppointmentAccess(
     viewer: JwtUser | undefined,
@@ -439,13 +452,13 @@ export class AppointmentsService {
   async createForIntegration(
     tenantId: string,
     dto: CreateAppointmentDto & {
-      integrationClientId: string;
+      integrationClientId?: string | null;
       externalReference?: string;
       bookingSource?: BookingSource;
       attributionJson?: Record<string, unknown>;
     },
   ): Promise<AppointmentDto> {
-    if (dto.externalReference) {
+    if (dto.externalReference && dto.integrationClientId) {
       const existing = await this.prisma.appointment.findFirst({
         where: {
           tenantId,
@@ -457,35 +470,71 @@ export class AppointmentsService {
       if (existing) return this.mapRow(existing);
     }
     return this.createInternal(tenantId, dto, {
-      integrationClientId: dto.integrationClientId,
+      integrationClientId: dto.integrationClientId ?? undefined,
       externalReference: dto.externalReference ?? null,
       bookingSource: dto.bookingSource,
       attributionJson: dto.attributionJson ?? null,
     });
   }
 
-  async getByIdForIntegration(tenantId: string, id: string, integrationClientId: string): Promise<AppointmentDto> {
+  async getByIdForIntegration(
+    tenantId: string,
+    id: string,
+    integrationClientId?: string | null,
+    clinicId?: string,
+  ): Promise<AppointmentDto> {
     const row = await this.prisma.appointment.findFirst({
-      where: { id, tenantId, integrationClientId },
+      where: {
+        id,
+        tenantId,
+        ...(integrationClientId ? { integrationClientId } : {}),
+        ...(clinicId ? { clinicId } : {}),
+      },
       include: appointmentDtoInclude,
     });
     if (!row) throw new NotFoundException("Appointment not found");
     return this.mapRow(row);
   }
 
-  async cancelForIntegration(tenantId: string, id: string, integrationClientId: string): Promise<AppointmentDto> {
+  async cancelForIntegration(
+    tenantId: string,
+    id: string,
+    integrationClientId?: string | null,
+    clinicId?: string,
+  ): Promise<AppointmentDto> {
     const row = await this.prisma.appointment.findFirst({
-      where: { id, tenantId, integrationClientId },
+      where: {
+        id,
+        tenantId,
+        ...(integrationClientId ? { integrationClientId } : {}),
+        ...(clinicId ? { clinicId } : {}),
+      },
       include: appointmentDtoInclude,
     });
     if (!row) throw new NotFoundException("Appointment not found");
     if (row.status === AppointmentStatus.COMPLETED) {
       throw new BadRequestException("Cannot cancel a completed appointment");
     }
-    const updated = await this.prisma.appointment.update({
-      where: { id },
-      data: { status: AppointmentStatus.CANCELLED },
-      include: appointmentDtoInclude,
+    const previousStatus = row.status;
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.appointment.update({
+        where: { id },
+        data: { status: AppointmentStatus.CANCELLED },
+        include: appointmentDtoInclude,
+      });
+      await this.appointmentOutbox.emitStatusChange(
+        {
+          tenantId,
+          appointmentId: row.id,
+          clinicId: row.clinicId,
+          previousStatus,
+          nextStatus: AppointmentStatus.CANCELLED,
+          bookingSource: row.bookingSource,
+          cancelledByPatient: integrationClientId == null,
+        },
+        tx,
+      );
+      return row;
     });
     return this.mapRow(updated);
   }
@@ -617,6 +666,17 @@ export class AppointmentsService {
       },
       include: appointmentDtoInclude,
     });
+    if (row.status === AppointmentStatus.CONFIRMED) {
+      await this.appointmentOutbox.emitStatusChange({
+        tenantId,
+        appointmentId: row.id,
+        clinicId: row.clinicId,
+        previousStatus: AppointmentStatus.SCHEDULED,
+        nextStatus: row.status,
+        bookingSource: row.bookingSource,
+      });
+    }
+    await this.invalidateSlotsForAppointment(tenantId, row.clinicId, row.clinicianId, "appointment_created");
     return this.finishAppointmentDto(tenantId, row, actor);
   }
 
@@ -674,6 +734,18 @@ export class AppointmentsService {
         await this.commissionCharges.onComplete(tx, tenantId, id);
       }
       if (credit) creditIntents.push(credit);
+      await this.appointmentOutbox.emitStatusChange(
+        {
+          tenantId,
+          appointmentId: row.id,
+          clinicId: row.clinicId,
+          previousStatus: existing.status,
+          nextStatus: row.status,
+          bookingSource: row.bookingSource,
+          cancelledByPatient: false,
+        },
+        tx,
+      );
       return row;
     });
     await this.commissionCharges.applyCreditIntents(creditIntents);
@@ -685,6 +757,7 @@ export class AppointmentsService {
         row.clinicianId,
       );
     }
+    await this.invalidateSlotsForAppointment(tenantId, row.clinicId, row.clinicianId, "appointment_status_changed");
     return this.finishAppointmentDto(tenantId, row, viewer);
   }
 
@@ -838,9 +911,37 @@ export class AppointmentsService {
         await syncOpenEncounterVisitFeeFromAppointment(tx, tenantId, id, Number(dto.feeAmount));
       }
 
+      if (updated.startsAt.getTime() !== existing.startsAt.getTime()) {
+        await this.appointmentOutbox.emitRescheduled(
+          tenantId,
+          updated.id,
+          updated.clinicId,
+          updated.startsAt.toISOString(),
+          tx,
+        );
+      }
+      if (nextStatus !== undefined && nextStatus !== existing.status) {
+        await this.appointmentOutbox.emitStatusChange(
+          {
+            tenantId,
+            appointmentId: updated.id,
+            clinicId: updated.clinicId,
+            previousStatus: existing.status,
+            nextStatus: updated.status,
+            bookingSource: updated.bookingSource,
+            cancelledByPatient: false,
+          },
+          tx,
+        );
+      }
+
       return updated;
     });
     await this.commissionCharges.applyCreditIntents(creditIntents);
+    await this.invalidateSlotsForAppointment(tenantId, row.clinicId, row.clinicianId, "appointment_updated");
+    if (existing.clinicianId !== row.clinicianId) {
+      await this.invalidateSlotsForAppointment(tenantId, row.clinicId, existing.clinicianId, "appointment_updated");
+    }
     return this.finishAppointmentDto(tenantId, row, viewer);
   }
 
@@ -854,6 +955,12 @@ export class AppointmentsService {
     if (!existing) throw new NotFoundException("Appointment not found");
     await this.commissionCharges.beforeAppointmentDelete(tenantId, id);
     await this.prisma.appointment.delete({ where: { id } });
+    await this.invalidateSlotsForAppointment(
+      tenantId,
+      existing.clinicId,
+      existing.clinicianId,
+      "appointment_deleted",
+    );
     return { ok: true, id };
   }
 }

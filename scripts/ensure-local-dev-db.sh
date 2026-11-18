@@ -9,6 +9,16 @@ bash "$ROOT/scripts/start-local-postgres.sh"
 
 export PATH="/Users/postgres/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 
+# Prisma CLI uses DATABASE_URL from the environment; CI shells often set kiorly_ci_*.
+# Always migrate the same database the Nest app reads (apps/api/.env).
+API_ENV="$ROOT/apps/api/.env"
+if [[ -f "$API_ENV" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$API_ENV"
+  set +a
+fi
+
 npm run prisma:generate -w api >/dev/null
 
 npm run db:deploy -w api

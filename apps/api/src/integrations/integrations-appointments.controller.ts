@@ -51,15 +51,18 @@ export class IntegrationsAppointmentsController {
 
   @Get("appointments/availability")
   @RequireIntegrationScopes(IntegrationScope.APPOINTMENTS_READ)
-  @ApiOperation({ summary: "Busy intervals for a clinician (plan external slot picker)" })
+  @ApiOperation({ summary: "Bookable slots for a clinician and appointment type (KX-03)" })
   availability(
     @IntegrationClient() client: IntegrationPrincipal,
     @Query("clinicId") clinicId: string,
     @Query("clinicianId") clinicianId: string,
+    @Query("typeId") typeId: string,
     @Query("from") from: string,
     @Query("to") to: string,
+    @Query("channel") channel?: string,
   ) {
-    return this.integrationAppointments.listAvailability(client, clinicId, clinicianId, from, to);
+    const ch = channel === "MARKETPLACE" ? "MARKETPLACE" : "INTERNAL";
+    return this.integrationAppointments.listAvailability(client, clinicId, clinicianId, typeId, from, to, ch);
   }
 
   @Post("appointments")

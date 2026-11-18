@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatetimeLocalField } from "@/components/datetime-local-field";
 import { Label } from "@/components/ui/label";
+import { PatientPrivacyNoticeLink } from "@/components/patient-privacy-notice-link";
 import { apiUrl } from "@/lib/api-url";
 import { formatClinicName, localeForLanguage } from "@/lib/locale-display";
 
@@ -124,6 +125,9 @@ export function AppointmentReschedulePage() {
           )}
         </CardContent>
       </Card>
+      <p className="mt-4 text-center text-xs text-muted-foreground">
+        {t("reschedule.privacyFooter")} <PatientPrivacyNoticeLink className="text-xs" />
+      </p>
     </div>
   );
 }

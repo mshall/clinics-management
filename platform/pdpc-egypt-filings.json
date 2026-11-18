@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "decisionId": "SC-02-2026-11",
+  "marketCode": "EG",
+  "dpo": {
+    "nameEn": "To be appointed",
+    "nameAr": "يُعيَّن لاحقاً",
+    "contactEmail": "privacy@kiorly.com",
+    "appointedAt": null,
+    "registeredWithPdpcAt": null,
+    "pdpcRegistrationRef": null
+  },
+  "filings": [
+    {
+      "id": "controller_licence",
+      "titleEn": "PDPC controller licence",
+      "titleAr": "ترخيص المتحكم من PDPC",
+      "status": "pending",
+      "filedAt": null,
+      "reference": null
+    },
+    {
+      "id": "processor_licence",
+      "titleEn": "PDPC processor licence",
+      "titleAr": "ترخيص المعالج من PDPC",
+      "status": "pending",
+      "filedAt": null,
+      "reference": null
+    },
+    {
+      "id": "cross_border_transfer",
+      "titleEn": "Cross-border transfer approval (Frankfurt cell)",
+      "titleAr": "موافقة النقل عبر الحدود (خلية فرانكفورت)",
+      "status": "pending",
+      "filedAt": null,
+      "reference": null
+    }
+  ],
+  "recordsOfProcessing": {
+    "document": "Docs/RECORDS_OF_PROCESSING_EG.md",
+    "publishedAt": "2026-11-18"
+  },
+  "breachProcedure": {
+    "document": "Docs/runbooks/PDPC_DATA_BREACH.md",
+    "adoptedAt": "2026-11-18",
+    "pdpcNotifyHours": 72,
+    "subjectNotifyDays": 3
+  }
+}

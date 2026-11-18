@@ -8,4 +8,6 @@ export type UploadKind =
   | "users"
   | "clinics"
   | "revenue"
-  | "kiorly-payments";
+  | "kiorly-payments"
+  | "clinicians"
+  | "marketplace-profiles";

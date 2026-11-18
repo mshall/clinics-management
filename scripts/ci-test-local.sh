@@ -6,6 +6,7 @@ cd "$ROOT"
 
 export CI=true
 export NODE_ENV=test
+export PDPC_EGYPT_LAUNCH_GATE_BYPASS="${PDPC_EGYPT_LAUNCH_GATE_BYPASS:-1}"
 export ALLOW_DEMO_SEED="${ALLOW_DEMO_SEED:-true}"
 
 bash scripts/ensure-local-dev-db.sh
@@ -16,5 +17,6 @@ npm run typecheck
 npm run test:unit -w web
 npm run test:unit -w api
 npm run test:integration -w api
+npm run test:money-coverage -w api
 
 echo "ci-test-local: all steps passed (same gate as GitHub CI test job)."

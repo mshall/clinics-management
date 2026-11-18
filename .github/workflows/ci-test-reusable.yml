@@ -8,7 +8,7 @@ jobs:
   ci_test:
     name: CI test
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     services:
       postgres:
         image: postgres:16-alpine
@@ -27,7 +27,9 @@ jobs:
       DATABASE_URL: postgresql://cms:cms@localhost:5432/cms?schema=public
       CI: "true"
       NODE_ENV: test
+      PDPC_EGYPT_LAUNCH_GATE_BYPASS: "1"
       ALLOW_DEMO_SEED: "true"
+      SEED_PILOT_TENANTS: "true"
     steps:
       - uses: actions/checkout@v6
 
@@ -63,3 +65,15 @@ jobs:
 
       - name: Integration tests (api)
         run: npm run test:integration -w api
+
+      - name: Money-path coverage gate (QA-02)
+        run: npm run test:money-coverage -w api
+
+      - name: Install Playwright (Chromium)
+        run: npx playwright install chromium --with-deps
+        working-directory: apps/web
+
+      - name: E2E golden flow (Playwright)
+        run: npm run test:e2e -w web
+        env:
+          SEED_PILOT_TENANTS: "true"

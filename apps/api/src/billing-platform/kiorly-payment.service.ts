@@ -13,6 +13,7 @@ import {
   Prisma,
 } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { notifyOnCall } from "../observability/notify-on-call";
 import { isPlatformSuperAdmin } from "../common/platform-super-admin";
 import type { JwtUser } from "../auth/jwt-user";
 import { KIORLY_AUTO_CHARGE_RETRY_DAYS } from "./kiorly-dunning";
@@ -299,6 +300,14 @@ export class KiorlyPaymentService {
     }).then(async (result) => {
       if (!result.duplicate && result.reactivate && result.tenantId) {
         await this.dunning.reconcileAfterPayment(result.tenantId);
+      }
+      if (event.status === "failed") {
+        notifyOnCall("KIORLY_PAYMENT_WEBHOOK_FAILED", {
+          provider,
+          tenantId: event.tenantId,
+          invoiceId: event.invoiceId,
+          providerRef: event.providerRef,
+        });
       }
       const { reactivate: _r, tenantId: _t, ...rest } = result;
       return rest;

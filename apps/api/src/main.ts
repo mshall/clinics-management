@@ -1,6 +1,7 @@
 import "reflect-metadata";
+import { bootstrapTelemetry } from "./observability/telemetry.bootstrap";
 import { applyStagingEnvDefaults } from "./staging/staging-profile";
-import { ValidationPipe } from "@nestjs/common";
+import { RequestMethod, ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
@@ -21,6 +22,7 @@ const compressionMiddleware =
     : (compressionImport as { default: typeof compressionImport }).default;
 
 async function bootstrap() {
+  bootstrapTelemetry();
   applyStagingEnvDefaults();
   const app = await NestFactory.create(AppModule, { rawBody: true });
   app.enableShutdownHooks();
@@ -44,7 +46,9 @@ async function bootstrap() {
     exposedHeaders: ["X-Kiorly-Web-Build-Id", "X-Kiorly-Web-Build-Built-At", "X-Kiorly-Web-Min-Built-At"],
   });
   app.use(webBuildIdMiddleware);
-  app.setGlobalPrefix("api/v1");
+  app.setGlobalPrefix("api/v1", {
+    exclude: [{ path: "marketplace/v1/(.*)", method: RequestMethod.ALL }],
+  });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

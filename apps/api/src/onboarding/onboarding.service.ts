@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { AppointmentStatus, FiscalDeviceStatus, Prisma, UserRole } from "@prisma/client";
+import { AppointmentStatus, FiscalDeviceStatus, Prisma, UserRole, VerificationStatus } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
 import {
@@ -46,6 +46,7 @@ const STEP_PATHS: Record<OnboardingStepKey, string> = {
   first_check_in: "/front-desk/board",
   eta_setup: "/admin",
   kiorex_profile: "/clinics",
+  doctor_verification: "/profile/verification",
 };
 
 function parseStepsJson(raw: unknown): OnboardingStepsJson {
@@ -196,6 +197,7 @@ export class OnboardingService {
       checkedInAppointmentCount,
       fiscalReady,
       kiorexCount,
+      verifiedPhysicianCount,
     ] = await Promise.all([
       this.prisma.appointmentType.count({ where: { tenantId } }),
       this.prisma.appointmentType.findFirst({
@@ -238,6 +240,15 @@ export class OnboardingService {
       this.prisma.appointmentType.count({
         where: { tenantId, marketplaceBookable: true },
       }),
+      this.prisma.clinicianVerification.count({
+        where: {
+          tenantId,
+          status: VerificationStatus.VERIFIED,
+          user: {
+            OR: [{ role: UserRole.PHYSICIAN }, { additionalRoles: { has: UserRole.PHYSICIAN } }],
+          },
+        },
+      }),
     ]);
 
     const appointmentTypeCustomized =
@@ -262,7 +273,8 @@ export class OnboardingService {
       appointmentCount,
       checkedInAppointmentCount,
       fiscalDeviceReady: fiscalReady,
-      kiorexProfileReady: kiorexCount > 0,
+      kiorexProfileReady: kiorexCount > 0 && verifiedPhysicianCount > 0,
+      doctorVerificationReady: verifiedPhysicianCount > 0,
     };
   }
 

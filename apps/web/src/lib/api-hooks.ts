@@ -5,6 +5,8 @@ import type {
   AdminIntegrationFailureGroupDto,
   AdminIntegrationFailureItemDto,
   AdminIntegrationFailureSummaryDto,
+  AdminOutboxEventItemDto,
+  AdminOutboxSummaryDto,
   AdminOverviewDto,
   AppointmentDto,
   ClinicDetailDto,
@@ -687,6 +689,33 @@ export function useAdminIntegrationFailuresSummaryQuery(enabled = true) {
   });
 }
 
+export function useAdminOutboxEventsQuery(params: {
+  page: number;
+  pageSize: number;
+  status?: string;
+  type?: string;
+  enabled?: boolean;
+}) {
+  const q = new URLSearchParams();
+  q.set("page", String(params.page));
+  q.set("pageSize", String(params.pageSize));
+  if (params.status) q.set("status", params.status);
+  if (params.type) q.set("type", params.type);
+  return useQuery({
+    queryKey: ["admin", "outbox-events", q.toString()],
+    queryFn: () => apiGet<Paginated<AdminOutboxEventItemDto>>(`/api/v1/admin/outbox-events?${q.toString()}`),
+    enabled: params.enabled ?? true,
+  });
+}
+
+export function useAdminOutboxSummaryQuery(enabled = true) {
+  return useQuery({
+    queryKey: ["admin", "outbox-events", "summary"],
+    queryFn: () => apiGet<AdminOutboxSummaryDto>("/api/v1/admin/outbox-events/summary"),
+    enabled,
+  });
+}
+
 export function useAdminIntegrationFailureGroupsQuery(params: {
   page: number;
   pageSize: number;
@@ -831,6 +860,7 @@ export interface AppointmentsListParams extends PagedRangeParams {
   status?: string;
   clinicId?: string;
   bookableOnly?: boolean;
+  bookingSource?: string;
   enabled?: boolean;
 }
 
@@ -852,6 +882,7 @@ export function useAppointmentsQuery(params: AppointmentsListParams = {}) {
   if (rest.sortBy) q.set("sortBy", rest.sortBy);
   if (rest.sortOrder) q.set("sortOrder", rest.sortOrder);
   if (bookableOnly) q.set("bookableOnly", "true");
+  if (rest.bookingSource?.trim()) q.set("bookingSource", rest.bookingSource.trim());
   return useQuery({
     queryKey: ["appointments", viewerId, viewerRole, Object.fromEntries(q.entries())],
     queryFn: () => apiGet<Paginated<AppointmentDto>>(`/api/v1/appointments?${q.toString()}`),

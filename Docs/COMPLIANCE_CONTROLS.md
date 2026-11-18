@@ -6,7 +6,7 @@ Kiorly is a multi-market clinic platform. Controls below apply globally; **marke
 
 | Market | Data protection | Fiscal / e-invoice | Health data / exchange | Payments & messaging | Notes |
 |--------|-----------------|--------------------|-------------------------|----------------------|--------|
-| **Egypt (EG)** | PDPL — consent API, PDPC breach deadlines | **ETA** via `eta-egypt` fiscal provider | MoH licensing on clinic | InstaPay / Fawry in market JSON | SC-01 Path A: **Frankfurt** cell + **PDPC cross-border licence** ([DATA_RESIDENCY_DECISION.md](./DATA_RESIDENCY_DECISION.md)) |
+| **Egypt (EG)** | PDPL — consent API (SC-03), PDPC breach deadlines, ROPA template, paid launch gate (SC-02) — [SC02_PDPC_EGYPT.md](./SC02_PDPC_EGYPT.md) | **ETA** via `eta-egypt` fiscal provider | MoH licensing on clinic | InstaPay / Fawry in market JSON | SC-01 Path A: **Frankfurt** cell + **PDPC cross-border licence** ([DATA_RESIDENCY_DECISION.md](./DATA_RESIDENCY_DECISION.md)) |
 | **KSA** | PDPL | **ZATCA** (connector TBD) | **NPHIES** (TBD) | Mada / local rails (TBD) | Planned GCC cell |
 | **UAE** | ICT health law, DHA/DOH | **FTA** (TBD) | **NABIDH** / **Malaffi** (TBD) | Card + local (TBD) | Planned ME cell |
 | **EU / EMEA** | **GDPR** | Country fiscal providers | National HIE where required | SEPA / local | Frankfurt cell default |
@@ -49,7 +49,7 @@ This document maps platform controls to common frameworks — **not** a certific
 
 ## Incident response
 
-1. **Detect:** Integration failures, audit `INTEGRATION_FAILURE_SPIKE`, AWS alarms.
+1. **Detect:** Integration failures, audit `INTEGRATION_FAILURE_SPIKE`, operational alerts (see [QA_OBSERVABILITY.md](./QA_OBSERVABILITY.md)), AWS alarms.
 2. **Triage:** Group admin + platform super admin; correlation id from API errors.
 3. **Contain:** Disable clinic, rotate JWT/MFA, block integration token.
 4. **Notify (Egypt):** PDPC within **72 hours** of becoming aware of a personal-data breach; data subjects within **3 days** where required by PDPL.

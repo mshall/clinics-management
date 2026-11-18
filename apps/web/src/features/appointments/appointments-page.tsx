@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -40,6 +40,7 @@ import {
   formatDatetimeLocal,
   suggestNextAppointmentStart,
 } from "@/lib/appointment-scheduling";
+import { useSchedulingSlotsQuery } from "@/lib/scheduling-slots";
 import {
   formatClinicHoursRange,
   formatClinicTimeLabel,
@@ -267,6 +268,25 @@ export function AppointmentsPage() {
   }, [showBookPanel, adminOv.data?.currentTenant?.defaultVisitFee]);
 
   const bookDateIso = start.trim() ? start.split("T")[0]! : new Date().toISOString().slice(0, 10);
+  const { data: bookTypes } = useQuery({
+    queryKey: ["scheduling", "appointment-types", schedulingClinicId],
+    queryFn: () =>
+      apiGet<Array<{ id: string; isActive: boolean; durationMinutes: number }>>(
+        `/api/v1/scheduling/appointment-types?clinicId=${encodeURIComponent(schedulingClinicId)}`,
+      ),
+    enabled: showBookPanel && Boolean(schedulingClinicId.trim()),
+  });
+  const bookTypeId = bookTypes?.find((t) => t.isActive)?.id ?? "";
+  const slotWindowFrom = `${bookDateIso}T00:00:00.000Z`;
+  const slotWindowTo = new Date(new Date(slotWindowFrom).getTime() + 86_400_000).toISOString();
+  const { data: engineSlots } = useSchedulingSlotsQuery({
+    clinicId: schedulingClinicId,
+    clinicianId,
+    typeId: bookTypeId,
+    from: slotWindowFrom,
+    to: slotWindowTo,
+    enabled: showBookPanel && Boolean(schedulingClinicId && clinicianId && bookTypeId),
+  });
   const { data: bookDayData } = useAppointmentsQuery({
     page: 1,
     pageSize: 200,
@@ -279,19 +299,23 @@ export function AppointmentsPage() {
 
   useEffect(() => {
     if (!showBookPanel || !clinicianId.trim()) return;
-    const suggested = suggestNextAppointmentStart(
-      bookDayData?.items ?? [],
-      bookDateIso,
-      clinicianId,
-      clinicOpeningTime,
-    );
+    const engineFirst = engineSlots?.slots[0]?.startsAt;
+    const suggested =
+      engineFirst != null
+        ? formatDatetimeLocal(new Date(engineFirst))
+        : suggestNextAppointmentStart(
+            bookDayData?.items ?? [],
+            bookDateIso,
+            clinicianId,
+            clinicOpeningTime,
+          );
     setStart((prev) => {
       if (!prev.trim()) return suggested;
       const prevDate = prev.split("T")[0];
       if (prevDate !== bookDateIso) return suggested;
       return prev;
     });
-  }, [showBookPanel, clinicianId, bookDateIso, bookDayData?.items, clinicOpeningTime]);
+  }, [showBookPanel, clinicianId, bookDateIso, bookDayData?.items, clinicOpeningTime, engineSlots?.slots]);
 
   useEffect(() => {
     if (showBookPanel && !start.trim()) {

@@ -1,0 +1,194 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Kiorex Marketplace API",
+    "version": "1.0.0",
+    "description": "Platform connector for Kiorex (KX-01). Authenticate with HMAC headers."
+  },
+  "servers": [{ "url": "/marketplace/v1" }],
+  "paths": {
+    "/auth/verify": {
+      "get": {
+        "operationId": "marketplaceAuthVerify",
+        "summary": "Verify marketplace client",
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/clinics": {
+      "get": {
+        "operationId": "marketplaceListClinics",
+        "summary": "List clinics with marketplace listings",
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/providers": {
+      "get": {
+        "operationId": "marketplaceListProviders",
+        "summary": "Paged provider profiles for Kiorex resync",
+        "parameters": [
+          { "name": "updatedSince", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "pageSize", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/physicians": {
+      "get": {
+        "operationId": "marketplaceListPhysicians",
+        "summary": "List physicians at clinic",
+        "parameters": [{ "name": "clinicId", "in": "query", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/clinics/{clinicId}/slots": {
+      "get": {
+        "operationId": "marketplaceListSlots",
+        "summary": "Bookable slots (KX-03)",
+        "parameters": [
+          { "name": "clinicId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "clinicianId", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "typeId", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "from", "in": "query", "required": true, "schema": { "type": "string", "format": "date-time" } },
+          { "name": "to", "in": "query", "required": true, "schema": { "type": "string", "format": "date-time" } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/appointments/availability": {
+      "get": {
+        "operationId": "marketplaceAvailability",
+        "summary": "Bookable slots (alias)",
+        "parameters": [
+          { "name": "clinicId", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "clinicianId", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "typeId", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "from", "in": "query", "required": true, "schema": { "type": "string", "format": "date-time" } },
+          { "name": "to", "in": "query", "required": true, "schema": { "type": "string", "format": "date-time" } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/holds": {
+      "post": {
+        "operationId": "marketplaceCreateHold",
+        "summary": "Create slot hold (KX-04)",
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/holds/{id}": {
+      "delete": {
+        "operationId": "marketplaceReleaseHold",
+        "summary": "Release slot hold",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/bookings": {
+      "post": {
+        "operationId": "marketplaceCreateBooking",
+        "summary": "Idempotent Kiorex booking",
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/bookings/{externalRef}": {
+      "get": {
+        "operationId": "marketplaceGetBooking",
+        "summary": "Get booking by external ref",
+        "parameters": [{ "name": "externalRef", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/appointments": {
+      "post": {
+        "operationId": "marketplaceBookAppointment",
+        "summary": "Book appointment",
+        "parameters": [{ "name": "clinicId", "in": "query", "required": true, "schema": { "type": "string" } }],
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/appointments/{id}": {
+      "get": {
+        "operationId": "marketplaceGetAppointment",
+        "summary": "Get appointment",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "clinicId", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/appointments/{id}/cancel": {
+      "post": {
+        "operationId": "marketplaceCancelAppointment",
+        "summary": "Cancel appointment",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "clinicId", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    }
+  },
+  "webhooks": {
+    "kiorexOutboxEvent": {
+      "post": {
+        "operationId": "kiorexReceiveOutboxEvent",
+        "summary": "Kiorex signed status / marketplace outbox receiver (KX-05)",
+        "description": "Kiorly POSTs JSON envelopes when `KIOREX_OUTBOX_WEBHOOK_URL` is configured. Dedupe on `eventId` (same id = at-most-once processing on Kiorex side).",
+        "parameters": [
+          {
+            "name": "X-Kiorly-Event",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Event type (e.g. APPOINTMENT_CONFIRMED, SLOTS_CHANGED)"
+          },
+          {
+            "name": "X-Kiorly-Event-Id",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "X-Kiorly-Timestamp",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "X-Kiorly-Signature",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "HMAC sha256 of `${timestamp}.${body}` with shared secret"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["eventId", "type", "aggregateType", "aggregateId", "occurredAt", "data"],
+                "properties": {
+                  "eventId": { "type": "string" },
+                  "type": { "type": "string" },
+                  "aggregateType": { "type": "string" },
+                  "aggregateId": { "type": "string" },
+                  "target": { "type": "string" },
+                  "occurredAt": { "type": "string", "format": "date-time" },
+                  "data": { "type": "object", "additionalProperties": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Accepted (idempotent on eventId)" },
+          "409": { "description": "Duplicate eventId already processed" }
+        }
+      }
+    }
+  }
+}

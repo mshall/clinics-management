@@ -21,7 +21,7 @@ export type LegalDocumentMeta = {
 };
 
 /** GT-02 pack version bump when counsel updates text */
-export const LEGAL_PACK_VERSION = "2026-03-28";
+export const LEGAL_PACK_VERSION = "2026-11-18";
 
 export const LEGAL_CATALOG: Record<LegalDocumentId, LegalDocumentMeta> = {
   terms_of_service: {

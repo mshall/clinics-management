@@ -30,9 +30,9 @@ const BODIES: Record<LegalDocumentId, LegalBody> = {
   },
   patient_privacy_notice: {
     bodyEn:
-      "Template notice for patients: what data you collect, why, retention, rights to access/correct, and how to contact your clinic DPO. Display in Arabic (and English where appropriate) at registration.",
+      "We process your personal and health data to provide care, scheduling, billing, and legally required fiscal receipts. Categories include identity, contact, clinical records, and payment details. For receipts above EGP 150,000 your name may be sent to the Egyptian Tax Authority as buyer details. Data may be processed on secure servers outside Egypt (Frankfurt) under PDPC cross-border rules. Retention follows clinic policy and law. You may request access, correction, or restriction via the clinic data protection officer (DPO). Breaches are reported to PDPC within 72 hours and to affected persons within 3 days where required.",
     bodyAr:
-      "نموذج إشعار للمرضى: البيانات التي تجمعونها، الغرض، المدة، حقوق الوصول والتصحيح، وكيفية التواصل مع مسؤول حماية البيانات في العيادة. اعرضه بالعربية (والإنجليزية عند الحاجة) عند التسجيل.",
+      "نعالج بياناتك الشخصية والصحية لتقديم الرعاية والمواعيد والفوترة والإيصالات الضريبية المطلوبة قانوناً. تشمل البيانات الهوية وبيانات الاتصال والسجل السريري والمدفوعات. للمدفوعات فوق 150,000 جنيه قد يُرسل اسمك إلى مصلحة الضرائب كبيانات مشتري. قد تُعالج البيانات على خوادم آمنة خارج مصر (فرانكفورت) وفق قواعد النقل عبر الحدود لـ PDPC. تُحفظ البيانات حسب سياسة العيادة والقانون. يمكنك طلب الاطلاع أو التصحيح أو تقييد المعالجة عبر مسؤول حماية البيانات (DPO) في العيادة. في حال الخرقات نُبلّغ PDPC خلال 72 ساعة والمتضررين خلال 3 أيام حيث يقتضي القانون.",
   },
   acceptable_use: {
     bodyEn:

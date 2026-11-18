@@ -596,6 +596,28 @@ export interface AdminIntegrationFailureGroupDto {
   latest: AdminIntegrationFailureItemDto;
 }
 
+export interface AdminOutboxEventItemDto {
+  id: string;
+  type: string;
+  aggregateType: string;
+  aggregateId: string;
+  target: string;
+  status: string;
+  attempts: number;
+  nextAttemptAt: string;
+  createdAt: string;
+  sentAt: string | null;
+}
+
+export interface AdminOutboxSummaryDto {
+  pending: number;
+  failed: number;
+  dead: number;
+  oldestPendingCreatedAt: string | null;
+  lagAlert: boolean;
+  lagMs: number | null;
+}
+
 export interface ClinicRevenueBreakdownDto {
   items: Array<{
     clinicId: string;

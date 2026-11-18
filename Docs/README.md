@@ -26,6 +26,10 @@ See **[Documentation_Portal.md](./Documentation_Portal.md)** for module layout, 
 | [**Documentation_Portal.md**](./Documentation_Portal.md) | Docs workspace (`apps/docs`), PiggyMetrics sync, how to view locally |
 | [**Test_Data_Users.md**](./Test_Data_Users.md) | Demo logins, passwords, roles, QA scenarios, org user counts |
 | [**QA_STAGING.md**](./QA_STAGING.md) | Staging ETA pre-prod, WhatsApp sandbox, pilot tenants, `demo:reset` |
+| [**QA_GOLDEN_FLOW.md**](./QA_GOLDEN_FLOW.md) | QA-01 launch golden-flow Playwright E2E (EN/AR, Lite, Kiorex) |
+| [**QA_MONEY_PATH.md**](./QA_MONEY_PATH.md) | QA-02 money-path API tests + ≥85% coverage gate (billing, billing-platform, credits) |
+| [**QA_OBSERVABILITY.md**](./QA_OBSERVABILITY.md) | QA-05 operational alerts, runbooks, on-call webhooks, tracing hooks |
+| [**SC02_PDPC_EGYPT.md**](./SC02_PDPC_EGYPT.md) | SC-02 PDPC licences, DPO, privacy notice, ROPA, breach procedure, paid launch gate |
 | [**Clinic_Management_System_PRD.md**](./Clinic_Management_System_PRD.md) | Product requirements, shipped scope, and **production feature backlog** (§12.3) |
 | [**Clinic_Management_System_RFC.md**](./Clinic_Management_System_RFC.md) | Technical RFC — API behaviour, RBAC, data model notes |
 | [**MODULAR_MONOLITH.md**](./MODULAR_MONOLITH.md) | Bounded contexts, Nest module map, import rules, microservice extraction |

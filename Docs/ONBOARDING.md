@@ -3,6 +3,7 @@
 | Item | Status |
 |------|--------|
 | ON-04 Checklist API + dashboard card | **Done** |
+| ON-03 Doctor verification step (`doctor_verification`) | **Done** — see [CLINICIAN_VERIFICATION.md](./CLINICIAN_VERIFICATION.md) |
 
 ## Purpose
 
@@ -40,5 +41,5 @@ Tenant is **activated** when **first appointment** and **first check-in** steps 
 ## Follow-ups
 
 - Dedicated scheduling UI deep link for clinician availability.
-- Kiorex verification workflow when marketplace API ships.
+- Public Kiorex doctor profile API (listing payload beyond `marketplaceBookable`).
 - Product analytics export for median time in production (pilot sessions).

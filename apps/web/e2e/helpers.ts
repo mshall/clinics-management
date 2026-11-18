@@ -2,16 +2,19 @@ import type { Page } from "@playwright/test";
 
 /** Wait until post-login shell (not on /login). */
 export async function login(page: Page, email: string, password = "demo"): Promise<void> {
-  if (!page.url().includes("/login")) {
-    await page.goto("/login");
-  }
-  await page.getByLabel(/^email/i).fill(email);
+  await page.goto("/login");
+  await page.evaluate(() => {
+    localStorage.removeItem("cms-auth");
+    sessionStorage.clear();
+  });
+  await page.reload();
+  await page.getByLabel(/^email|البريد/i).fill(email);
   await page.locator("#password").fill(password);
   const loginPost = page.waitForResponse(
     (r) => r.url().includes("/api/v1/auth/login") && r.request().method() === "POST",
     { timeout: 120_000 },
   );
-  await page.getByRole("button", { name: /sign in/i }).click();
+  await page.getByRole("button", { name: /sign in|تسجيل الدخول/i }).click();
   const res = await loginPost;
   if (!res.ok()) {
     const body = await res.text().catch(() => "");

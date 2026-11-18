@@ -19,6 +19,8 @@ import { SubscriptionsModule } from "../subscriptions/subscriptions.module";
 import { CreditsModule } from "../credits/credits.module";
 import { BillingPlatformModule } from "../billing-platform/billing-platform.module";
 import { ComplianceModule } from "../compliance/compliance.module";
+import { MessagingModule } from "../messaging/messaging.module";
+import { AdminOutboxService } from "./admin-outbox.service";
 
 @Module({
   imports: [
@@ -32,6 +34,7 @@ import { ComplianceModule } from "../compliance/compliance.module";
     CreditsModule,
     BillingPlatformModule,
     ComplianceModule,
+    MessagingModule,
   ],
   controllers: [AdminController, AdminDataExplorerController, PlatformAdminController],
   providers: [
@@ -42,6 +45,7 @@ import { ComplianceModule } from "../compliance/compliance.module";
     PlatformInsightsService,
     IntegrationFailureAdminService,
     TenantPaymentChannelsService,
+    AdminOutboxService,
   ],
 })
 export class AdminModule {}
