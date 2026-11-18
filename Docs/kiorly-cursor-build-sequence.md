@@ -300,7 +300,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 064 · KX-10 · Kiorex tab inside Kiorly (settings + performance)
 - [x] Step 065 · CL-03 · Prescription print & WhatsApp share with verification QR — `f53e999` · `cl03-rx-share.integration.test.ts` · `cl03-rx-print.node.test.ts` · `e2e/cl03-rx-verify.spec.ts` · `Docs/CLINICAL_WORKFLOW.md`
 - [x] Step 066 · CL-04 · Specialty template coverage for launch specialties — `1c36163` · `cl04-specialty-templates.node.test.ts` · `cl04-specialty-templates.integration.test.ts` · `e2e/cl04-specialty-templates.spec.ts` · `Docs/CLINICAL_WORKFLOW.md` · NH-010 (board sign-off)
-- [ ] Step 067 · CL-05 · Doctor sign-off, amendments & auto-lock
+- [x] Step 067 · CL-05 · Doctor sign-off, amendments & auto-lock — `af7b7dd` · `cl05-encounter-lock.node.test.ts` · `cl05-encounter-lock.integration.test.ts` · `e2e/cl05-signoff-amendments.spec.ts` · `Docs/CLINICAL_WORKFLOW.md`
 - [ ] Step 068 · FS-02 · Golden-flow front desk review on tablet & phone
 - [ ] Step 069 · FS-03 · Waitlist auto-fill on cancellations
 - [ ] Step 070 · FS-05 · Show no-show risk in the UI with an honest label
@@ -3217,7 +3217,7 @@ model Invitation { id String @id @default(cuid())  tenantId String  phoneOrEmail
 - Existing.
 
 **Acceptance criteria** (write a test for each)
-- [ ] A locked encounter cannot be edited via any endpoint (test).
+- [x] A locked encounter cannot be edited via any endpoint (test).
 
 **Done when:** all acceptance tests pass, §0.2 checks are green, en + ar strings added, docs updated, and Step 067 is ticked in §5.
 
