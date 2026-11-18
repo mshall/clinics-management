@@ -138,6 +138,39 @@
         }
       }
     },
+    "/analytics/profile-views": {
+      "post": {
+        "operationId": "marketplaceSyncProfileViews",
+        "summary": "Kiorex pushes daily profile views per doctor; re-sending a day replaces it (KX-10)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["clinicId", "items"],
+                "properties": {
+                  "clinicId": { "type": "string" },
+                  "items": {
+                    "type": "array",
+                    "maxItems": 400,
+                    "items": {
+                      "type": "object",
+                      "required": ["clinicianId", "date", "views"],
+                      "properties": {
+                        "clinicianId": { "type": "string" },
+                        "date": { "type": "string", "format": "date" },
+                        "views": { "type": "integer", "minimum": 0 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "accepted count and rejected items" } }
+      }
+    },
     "/reviews/aggregate": {
       "post": {
         "operationId": "marketplaceSyncReviews",

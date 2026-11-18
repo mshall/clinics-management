@@ -23,8 +23,61 @@ export type KiorexRatingsDto = {
   reviews: KiorexReviewDto[];
 };
 
+export type KiorexDoctorSettings = {
+  listingId: string;
+  clinicianId: string;
+  clinicianName: string;
+  status: "DRAFT" | "PENDING_VERIFICATION" | "LIVE" | "PAUSED";
+  pausedReason: string | null;
+  blockers: string[];
+  completenessPercent: number;
+  verificationStatus: string | null;
+  dailyCap: number | null;
+};
+
+export type KiorexTypeSettings = {
+  id: string;
+  nameEn: string;
+  nameAr: string;
+  sharedAcrossBranches: boolean;
+  feeAmount: number;
+  marketplaceBookable: boolean;
+  minNoticeMinutes: number;
+  maxDaysAhead: number;
+  depositAmount: number | null;
+};
+
+export type KiorexOverviewDto = {
+  clinicId: string;
+  periodKey: string;
+  currency: string;
+  profileViews: number;
+  bookings: number;
+  bookingsByChannel: { marketplace: number; whatsapp: number; clinicLink: number };
+  attended: number;
+  noShows: number;
+  cancelled: number;
+  newPatients: number;
+  commission: { amount: number; chargedVisits: number; confirmed: number; pending: number };
+  daily: { date: string; views: number; bookings: number; attended: number }[];
+  rating: { averageRating: number | null; reviewCount: number };
+  creditOffset: number | null;
+  freeProgress: {
+    progressPercent: number;
+    patientsAttended: number;
+    patientsTarget: number;
+    patientsStillNeeded: number;
+    isFreeThisMonth: boolean;
+    subscriptionAmount: number;
+    currency: string;
+  } | null;
+};
+
 export type KiorexSettingsDto = {
   clinicId: string;
+  autoConfirm: boolean;
+  doctors: KiorexDoctorSettings[];
+  appointmentTypes: KiorexTypeSettings[];
   cancellationPolicy: {
     effective: KiorexCancellationPolicy;
     marketDefault: KiorexCancellationPolicy;

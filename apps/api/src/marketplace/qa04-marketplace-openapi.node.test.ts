@@ -18,6 +18,7 @@ const IMPLEMENTED_OPERATIONS = [
   "marketplaceCancelBooking",
   "marketplaceRescheduleBooking",
   "marketplaceSyncReviews",
+  "marketplaceSyncProfileViews",
 ] as const;
 
 describe("QA-04 marketplace OpenAPI contract", () => {
