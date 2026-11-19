@@ -1,11 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { describe, it } from "node:test";
 
-const HERE = dirname(fileURLToPath(import.meta.url));
-const DOCS = join(HERE, "../../../../Docs");
+const DOCS = join(__dirname, "../../../../Docs");
 
 describe("GT-06 docs cleanup & capability map", () => {
   it("ships hub docs PLANS_AND_ENTITLEMENTS, BILLING_AND_CREDITS, KIOREX_CONNECTOR", () => {
