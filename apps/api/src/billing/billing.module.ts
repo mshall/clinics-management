@@ -6,6 +6,8 @@ import { BillingController } from "./billing.controller";
 import { BillingService } from "./billing.service";
 import { CashierShiftService } from "./cashier-shift.service";
 import { CashierShiftsController } from "./cashier-shifts.controller";
+import { ClaimsController } from "./claims.controller";
+import { ClaimsService } from "./claims.service";
 import { SplitPaymentService } from "./split-payment.service";
 import { SplitPaymentsController } from "./split-payments.controller";
 import { DepositSettlementService } from "./deposit-settlement.service";
@@ -17,7 +19,13 @@ import { PatientMoneyService } from "./patient-money.service";
 
 @Module({
   imports: [SubscriptionsModule, CreditsModule, ClinicalModule],
-  controllers: [BillingController, PatientMoneyController, CashierShiftsController, SplitPaymentsController],
+  controllers: [
+    BillingController,
+    PatientMoneyController,
+    CashierShiftsController,
+    SplitPaymentsController,
+    ClaimsController,
+  ],
   providers: [
     BillingService,
     CashierShiftService,
@@ -27,6 +35,7 @@ import { PatientMoneyService } from "./patient-money.service";
     KiorexDepositsService,
     NoShowGuaranteeService,
     NoShowGuaranteeScheduler,
+    ClaimsService,
   ],
   exports: [
     BillingService,
@@ -36,6 +45,7 @@ import { PatientMoneyService } from "./patient-money.service";
     DepositSettlementService,
     KiorexDepositsService,
     NoShowGuaranteeService,
+    ClaimsService,
   ],
 })
 export class BillingModule {}

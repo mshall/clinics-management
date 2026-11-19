@@ -10,6 +10,7 @@ Patient-side money for clinics (not Kiorly's own SaaS billing — that is `Kiorl
 | MN-03 | Cash drawer shifts: open with a float, blind count at close, variance note, review flag above the market threshold, owner WhatsApp summary, bilingual Z-report (A4 + 80 mm thermal), shift screen — see [Cash drawer shifts](#cash-drawer-shifts-mn-03) | **Done** |
 | MN-02 | Doctor revenue-share rules (percent / fixed per visit / room rental, by doctor · visit type · category · payer · branch), monthly statements with adjustments, approve-to-lock, payout, bilingual PDF, reconciliation — see [Doctor revenue share](#doctor-revenue-share-mn-02) | **Done** |
 | MN-06 | Split payments (cash + card + transfer/wallet in one receipt) and operation installment schedules with WhatsApp reminders — see [Split payments & installments](#split-payments--installments-mn-06) | **Done** |
+| MN-05 | Company contracts & TPA claims: claim batches per payer/period from payer-tagged invoices, reject/resubmit, remittance auto-match (≥90%), B2B e-invoice outbox to the payer (not ETA) — see [Company contracts & TPA claims](#company-contracts--tpa-claims-mn-05) | **Done** |
 
 ## Money model
 
@@ -89,6 +90,16 @@ Mixed cash + card + InstaPay is recorded as **one** `BillingPayment` with severa
 - **UI** — Split dialog from visit balance collection and the Installments screen (`/front-desk/installments`, linked from the live board). EN + AR strings under `splitPayment` / `installments`.
 - Audit: `SPLIT_PAYMENT_RECORDED`, `INSTALLMENT_SCHEDULE_SET`.
 
+## Company contracts & TPA claims (MN-05)
+
+Corporate and insured visits are batched per payer and period. Kiorly never submits to ETA; the payer B2B e-invoice is an INTERNAL outbox payload for the clinic's TPA channel.
+
+- **Models** — `PayerCompany`, `ContractServicePrice` (co-pay %), `PayerPreAuthorization`; `Invoice.payerCompanyId`; `ClaimBatch` / `ClaimLine` / `ClaimRemittance` / `ClaimRemittanceLine`.
+- **API** (`/claims/*`, Clinic+ `mod_invoices`, desk/finance) — payers CRUD; create draft batch from payer-tagged invoices in a period; submit (marks lines `SUBMITTED`, writes `billing.payer_b2b_invoice` outbox); reject line with reason; resubmit rejected line; import remittance JSON and auto-match by `externalRef` (invoice number) then unique amount.
+- **UI** — Front desk → **Claims** (`/front-desk/claims`).
+- Audit: `CLAIM_BATCH_CREATED`, `CLAIM_BATCH_SUBMITTED`, `CLAIM_LINE_REJECTED`, `CLAIM_LINE_RESUBMITTED`, `CLAIM_REMITTANCE_IMPORTED`.
+- Acceptance: remittance import matches **≥ 90%** of lines in the fixture suite (`mn05-claims.*.test.ts`).
+
 ## Doctor revenue share (MN-02)
 
 Monthly statement per doctor, computed from **collected** revenue only — `POSTED` `RevenueEntry` rows with `postedAt` inside the month in the market timezone, excluding rejected bank transfers. Receivables (billed, not paid) never count. Refund rows are negative, so they reduce the doctor's share automatically.
@@ -120,6 +131,8 @@ Monthly statement per doctor, computed from **collected** revenue only — `POST
 - `apps/api/src/billing/mn06-split-payments.node.test.ts` — normalize allocations, settle oldest-first, status / reminder window.
 - `apps/api/src/messaging/mn06-installment-reminders.integration.test.ts` — due-soon WhatsApp once; off when flag disabled; desk resend.
 - `apps/web/e2e/mn06-split-payments.spec.ts` — schedule + split via API, installments screen lists rows.
+- `apps/api/src/billing/mn05-claims.node.test.ts` — remittance auto-match ≥ 90% + amount fallback.
+- `apps/api/src/billing/mn05-claims.integration.test.ts` — batch from invoices, B2B outbox on submit, remittance ≥ 90%, reject/resubmit.
 
 ## Follow-ups
 
