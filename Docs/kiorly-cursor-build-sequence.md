@@ -328,7 +328,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 092 · UX-03 · Arabic RTL & Egyptian copy QA
 - [x] Step 093 · PA-01 · Tenant lifecycle console `39905c2`
 - [x] Step 094 · PA-04 · Support access with consent & audit `7e1284a`
-- [ ] Step 095 · PA-05 · Growth analytics: activation funnel & cohorts
+- [x] Step 095 · PA-05 · Growth analytics: activation funnel & cohorts `5e22724`
 - [ ] Step 096 · GT-01 · Marketing website & pricing page with "Kiorly free" calculator
 - [ ] Step 097 · GT-03 · Help centre & Arabic video tutorials
 - [ ] Step 098 · GT-04 · Support operations & WhatsApp support line
@@ -4099,7 +4099,7 @@ model DoctorStatement {
 - Growth dashboard.
 
 **Acceptance criteria** (write a test for each)
-- [ ] Numbers reproducible from event tables.
+- [x] Numbers reproducible from event tables.
 
 **Done when:** all acceptance tests pass, §0.2 checks are green, en + ar strings added, docs updated, and Step 095 is ticked in §5.
 
