@@ -313,7 +313,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 077 · MS-04 · Doctor and owner digests — `457cb44` · `messaging/ms04-digest-policy.node.test.ts` · `messaging/ms04-digests.integration.test.ts` · `e2e/ms04-digests.spec.ts` · `Docs/MESSAGING_WHATSAPP.md` · NH-015 · CR-07 follow-up closed
 - [x] Step 078 · MS-05 · Transactional email (trial, invoices, security) — `f3b409c` · `messaging/ms05-transactional-email.*.test.ts` · `Docs/MESSAGING_EMAIL.md` · NH-016
 - [x] Step 079 · AI-02 · AI scribe with Egyptian Arabic speech-to-text — `219131e` · `clinic-ai/ai02-scribe-stt.*.test.ts` · `Docs/AI_SCRIBE.md`
-- [ ] Step 080 · AI-04 · Gate the role assistant and clinic AI by plan
+- [x] Step 080 · AI-04 · Gate the role assistant and clinic AI by plan — `f1ef8c5` · `entitlements/ai04-ai-plan-gates.node.test.ts` · `Docs/AI_PLAN_GATES.md`
 - [ ] Step 081 · RP-01 · Operational KPIs: no-show rate, utilisation, revenue per doctor-hour, sources
 - [ ] Step 082 · RP-02 · Excel/PDF exports & scheduled reports
 - [ ] Step 083 · RP-03 · Kiorex impact report
