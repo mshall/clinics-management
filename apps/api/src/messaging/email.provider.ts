@@ -1,4 +1,5 @@
 import { assertEmailDomainAuthReady, loadEmailDomainAuth, type EmailDomainAuth } from "./email-domain-auth";
+import { getEmailAdapter } from "../platform/adapters";
 import type { RenderedEmail } from "./email-templates";
 
 export type EmailSendInput = {
@@ -41,7 +42,7 @@ export class DevEmailProvider implements EmailProvider {
 }
 
 /**
- * AWS SES (eu-central-1). Requires @aws-sdk/client-ses and verified domain auth in production.
+ * AWS SES (eu-central-1). Delivered through the platform email adapter; requires verified domain auth in production.
  * Falls back to DevEmailProvider when SES is not configured (EMAIL_SES_ENABLED≠1).
  */
 export class SesEmailProvider implements EmailProvider {
@@ -62,26 +63,15 @@ export class SesEmailProvider implements EmailProvider {
       };
     }
     try {
-      // Dynamic import keeps unit tests free of AWS credentials.
-      const ses = await import("@aws-sdk/client-ses");
-      const client = new ses.SESClient({ region: auth.region });
-      const res = await client.send(
-        new ses.SendEmailCommand({
-          Source: auth.fromAddress,
-          Destination: { ToAddresses: [input.to] },
-          Message: {
-            Subject: { Data: input.rendered.subject, Charset: "UTF-8" },
-            Body: {
-              Text: { Data: input.rendered.text, Charset: "UTF-8" },
-              Html: { Data: input.rendered.html, Charset: "UTF-8" },
-            },
-          },
-          Tags: input.tags
-            ? Object.entries(input.tags).map(([Name, Value]) => ({ Name, Value: String(Value).slice(0, 256) }))
-            : undefined,
-        }),
-      );
-      const id = res.MessageId ?? `ses-${Date.now()}`;
+      const { messageId: id } = await getEmailAdapter().send({
+        fromAddress: auth.fromAddress,
+        region: auth.region,
+        to: input.to,
+        subject: input.rendered.subject,
+        text: input.rendered.text,
+        html: input.rendered.html,
+        tags: input.tags,
+      });
       return { ok: true, providerMessageId: id, provider: "ses" };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

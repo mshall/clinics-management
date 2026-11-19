@@ -91,6 +91,8 @@ test("cross-context relative imports follow allowed dependency edges", () => {
       if (!targetFile) continue;
       const targetFolder = topLevelFolder(targetFile);
       if (!targetFolder || targetFolder === sourceFolder) continue;
+      // KX-21 §01: application adapters are a shared seam importable from any context.
+      if (targetFile.replace(/\\/g, "/").includes("/src/platform/adapters/")) continue;
       const targetCtx = contextForTopLevelFolder(targetFolder);
       if (!targetCtx) continue;
       if (!isCrossContextImportAllowed(sourceCtx, targetCtx)) {

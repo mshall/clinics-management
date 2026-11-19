@@ -2,7 +2,7 @@ import { Global, Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import * as path from "node:path";
 import { LocalUploadBlobStorage } from "./local-upload-blob.storage";
-import { S3UploadBlobStorage } from "./s3-upload-blob.storage";
+import { S3UploadBlobStorage } from "../platform/adapters";
 import { UPLOAD_BLOB_STORAGE } from "./upload-blob.storage";
 
 @Global()

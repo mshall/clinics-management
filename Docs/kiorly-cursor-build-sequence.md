@@ -345,6 +345,11 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 107 · RP-04 · AR aging, payouts and branch P&L — `8b65315` · `reports/rp04-ar-aging.integration.test.ts` · `reports/rp04-ar-aging.node.test.ts` · `e2e/rp04-ar-aging.spec.ts` · `Docs/RP04_AR_AGING_BRANCH_PL.md`
 - [x] Step 108 · UX-04 · Thermal printing & accessibility — `bda08d7` · `billing-platform/ux04-thermal-print.node.test.ts` · `e2e/ux04-thermal-print.spec.ts` · `Docs/UX04_THERMAL_PRINTING.md`
 
+
+**Stage G · Kiorex v2 (Wave A, app side)** — branch `kiorex` only; specs in `_docs/KX-05` §07–08, `KX-08` §08–09, `KX-21` §01
+
+- [x] KX21-A · Application adapters: no `@aws-sdk/*` outside `src/platform/adapters/*` (secrets, email, object storage) — `platform/adapters/kx21-aws-sdk-boundary.node.test.ts` · `apps/api/src/platform/README.md`
+
 ---
 
 ## 6. Build sequence

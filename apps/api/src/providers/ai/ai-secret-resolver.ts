@@ -1,4 +1,4 @@
-import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
+import { getSecretsAdapter } from "../../platform/adapters";
 import type { ConfigService } from "@nestjs/config";
 
 const smCache = new Map<string, { value: string; at: number }>();
@@ -27,9 +27,7 @@ export async function resolveAiApiKey(secretRef: string | null | undefined, conf
   if (cached && Date.now() - cached.at < SM_CACHE_MS) return cached.value;
 
   try {
-    const client = new SecretsManagerClient({});
-    const out = await client.send(new GetSecretValueCommand({ SecretId: ref }));
-    const raw = out.SecretString?.trim();
+    const raw = await getSecretsAdapter().getSecret(ref);
     if (!raw) return null;
     let key: string | null = raw;
     try {

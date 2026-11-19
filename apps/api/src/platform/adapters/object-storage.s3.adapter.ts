@@ -7,8 +7,8 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
-import type { UploadBlobStorage } from "./upload-blob.storage";
-import type { UploadKind } from "./upload-kind";
+import type { UploadBlobStorage } from "../../storage/upload-blob.storage";
+import type { UploadKind } from "../../storage/upload-kind";
 
 export class S3UploadBlobStorage implements UploadBlobStorage {
   private readonly client: S3Client;
