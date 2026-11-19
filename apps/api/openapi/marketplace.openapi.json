@@ -7,6 +7,119 @@
   },
   "servers": [{ "url": "/marketplace/v1" }],
   "paths": {
+    "/bookings/{externalRef}/deposit-paid": {
+      "post": {
+        "operationId": "marketplaceDepositPaid",
+        "summary": "Kiorex Pay collected a deposit for this booking; recorded as a held deposit, applied at check-in via postRevenue (KX-07)",
+        "parameters": [
+          {
+            "name": "externalRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "amount",
+                  "paymentRef"
+                ],
+                "properties": {
+                  "amount": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "currency": {
+                    "type": "string",
+                    "description": "Must match the clinic market currency"
+                  },
+                  "paymentRef": {
+                    "type": "string",
+                    "maxLength": 120,
+                    "description": "Kiorex payment id — idempotency key"
+                  },
+                  "paidAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Deposit (idempotent replay returns the same deposit)"
+          },
+          "400": {
+            "description": "DEPOSIT_EXCEEDS_FEE or DEPOSIT_CURRENCY_MISMATCH"
+          },
+          "404": {
+            "description": "Booking not found"
+          }
+        }
+      }
+    },
+    "/payouts": {
+      "post": {
+        "operationId": "marketplaceRecordPayout",
+        "summary": "Kiorex paid out collected deposits to the clinic (KX-07 reconciliation)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "payoutRef",
+                  "amount"
+                ],
+                "properties": {
+                  "payoutRef": {
+                    "type": "string",
+                    "maxLength": 120,
+                    "description": "Idempotency key"
+                  },
+                  "clinicId": {
+                    "type": "string"
+                  },
+                  "amount": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "paidAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "depositPaymentRefs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "paymentRefs of the deposits this payout covers"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payout recorded (idempotent)"
+          }
+        }
+      }
+    },
     "/auth/verify": {
       "get": {
         "operationId": "marketplaceAuthVerify",

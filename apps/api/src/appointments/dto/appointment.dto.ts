@@ -130,9 +130,23 @@ export class AppointmentDto {
   })
   noShowRisk?: NoShowRiskView | null;
 
+  @ApiPropertyOptional({
+    nullable: true,
+    description:
+      "KX-07 / FS-04 deposit on this booking: status PENDING | HELD | APPLIED | RELEASED | FORFEITED, source CLINIC | KIOREX_PAY | PAYMENT_LINK. Amount is 0 when money is hidden from the viewer.",
+  })
+  deposit?: AppointmentDepositView | null;
+
   @ApiPropertyOptional({ nullable: true, description: "PATIENT | CLINIC | SYSTEM (KX-06)" })
   cancelledBy?: string | null;
 
   @ApiPropertyOptional({ nullable: true })
   cancellationReason?: string | null;
 }
+
+export type AppointmentDepositView = {
+  status: string;
+  source: string;
+  amount: number;
+  currency: string;
+};

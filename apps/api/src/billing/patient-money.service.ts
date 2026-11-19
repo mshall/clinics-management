@@ -15,6 +15,7 @@ import {
   canApproveRefunds,
   canHandlePatientMoney,
   isPackageExpired,
+  lockKey,
   packageSessionValue,
   refundApprovalThreshold,
   refundNeedsApproval,
@@ -49,7 +50,6 @@ export type TakeDepositBody = {
   appointmentId?: string | null;
   amount: number;
   method: PaymentMethod;
-  source?: "CLINIC" | "KIOREX_PAY" | "PAYMENT_LINK";
 };
 
 const PAYMENT_METHODS = new Set<string>(Object.values(PaymentMethod));
@@ -69,10 +69,6 @@ function assertMethod(m: unknown): PaymentMethod {
   return m as PaymentMethod;
 }
 
-/** Serialises concurrent money writes on one source row (refunds against a payment, package consumption…). */
-async function lockKey(tx: Tx, key: string): Promise<void> {
-  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${key}))`;
-}
 
 @Injectable()
 export class PatientMoneyService {
@@ -109,7 +105,7 @@ export class PatientMoneyService {
       const source = await this.loadRefundSource(tx, tenantId, body);
       await lockKey(tx, `refund:${source.key}`);
       const prior = await tx.billingRefund.findMany({
-        where: { tenantId, ...(body.paymentId ? { paymentId: body.paymentId } : { revenueEntryId: body.revenueEntryId }) },
+        where: { tenantId, ...(source.paymentId ? { paymentId: source.paymentId } : { revenueEntryId: source.revenue!.id }) },
         select: { amount: true, status: true },
       });
       const remaining = refundableRemaining(
@@ -130,8 +126,8 @@ export class PatientMoneyService {
           tenantId,
           clinicId: source.clinicId,
           patientId: source.patientId,
-          paymentId: body.paymentId ?? null,
-          revenueEntryId: body.revenueEntryId ?? null,
+          paymentId: source.paymentId,
+          revenueEntryId: source.revenue?.id ?? null,
           amount: money(amount),
           currency: source.currency,
           method,
@@ -156,21 +152,37 @@ export class PatientMoneyService {
     });
   }
 
+  /**
+   * Resolves what is being refunded. A revenue row that belongs to a payment allocation is refunded against
+   * that payment, so the payment and its revenue rows share one refundable balance.
+   */
   private async loadRefundSource(tx: Tx, tenantId: string, body: CreateRefundBody) {
-    if (body.paymentId) {
+    let paymentId = body.paymentId ?? null;
+    if (!paymentId && body.revenueEntryId) {
+      const alloc = await tx.billingPaymentAllocation.findFirst({
+        where: { revenueEntryId: body.revenueEntryId, payment: { tenantId } },
+        select: { paymentId: true },
+      });
+      paymentId = alloc?.paymentId ?? null;
+    }
+    if (paymentId) {
       const p = await tx.billingPayment.findFirst({
-        where: { id: body.paymentId, tenantId },
-        include: { allocations: { orderBy: { amount: "desc" }, take: 1 } },
+        where: { id: paymentId, tenantId },
+        include: { allocations: { orderBy: { amount: "desc" } } },
       });
       if (!p) throw new NotFoundException("Payment not found");
+      const revenueId = body.revenueEntryId ?? p.allocations.find((a) => a.revenueEntryId)?.revenueEntryId ?? null;
+      const revenue = revenueId ? await this.revenueLink(tx, tenantId, revenueId) : null;
+      const alloc = body.revenueEntryId ? p.allocations.find((a) => a.revenueEntryId === body.revenueEntryId) : p.allocations[0];
       return {
         key: `payment:${p.id}`,
+        paymentId: p.id as string | null,
         clinicId: p.clinicId,
         patientId: p.patientId,
         amount: Number(p.totalAmount),
         currency: p.currency,
-        method: p.allocations[0]?.method ?? PaymentMethod.CASH,
-        revenue: null as null | { id: string; gross: number; tax: number; appointmentId: string | null; encounterId: string | null; operationId: string | null },
+        method: alloc?.method ?? PaymentMethod.CASH,
+        revenue,
         invoiceId: p.invoiceId,
       };
     }
@@ -190,6 +202,7 @@ export class PatientMoneyService {
     const method = r.collectionMode === "MONEY_TRANSFER" ? PaymentMethod.TRANSFER : PaymentMethod.CASH;
     return {
       key: `revenue:${r.id}`,
+      paymentId: null as string | null,
       clinicId: r.clinicId,
       patientId,
       amount: Number(r.grossAmount),
@@ -204,6 +217,19 @@ export class PatientMoneyService {
         operationId: r.operationId,
       },
       invoiceId: null as string | null,
+    };
+  }
+
+  private async revenueLink(tx: Tx, tenantId: string, revenueEntryId: string) {
+    const r = await tx.revenueEntry.findFirst({ where: { id: revenueEntryId, tenantId } });
+    if (!r) return null;
+    return {
+      id: r.id,
+      gross: Number(r.grossAmount),
+      tax: Number(r.taxAmount),
+      appointmentId: r.appointmentId,
+      encounterId: r.encounterId,
+      operationId: r.operationId,
     };
   }
 
@@ -511,7 +537,7 @@ export class PatientMoneyService {
         amount,
         currency,
         method,
-        source: body.source ?? "CLINIC",
+        source: "CLINIC",
         actorId: user.userId,
       });
     });
@@ -530,6 +556,7 @@ export class PatientMoneyService {
       method: PaymentMethod;
       source: string;
       actorId: string | null;
+      externalRef?: string | null;
     },
   ) {
     const deposit = await tx.patientDeposit.create({
@@ -543,6 +570,7 @@ export class PatientMoneyService {
         method: p.method,
         source: p.source,
         status: DEPOSIT_STATUS.HELD,
+        externalRef: p.externalRef ?? null,
         createdByUserId: p.actorId,
       },
     });
@@ -728,6 +756,7 @@ export class PatientMoneyService {
         take: 20,
       }),
     ]);
+    const paymentRevenueIds = new Set(payments.flatMap((p) => p.allocations.map((a) => a.revenueEntryId).filter(Boolean)));
     const refundRows = refunds.map((r) => ({ amount: Number(r.amount), status: r.status, paymentId: r.paymentId, revenueEntryId: r.revenueEntryId }));
     const now = new Date();
     const held = deposits.filter((d) => d.status === DEPOSIT_STATUS.HELD);
@@ -759,7 +788,7 @@ export class PatientMoneyService {
         at: p.createdAt,
         remaining: refundableRemaining(Number(p.totalAmount), refundRows.filter((r) => r.paymentId === p.id)),
       })),
-      ...revenues.map((r) => ({
+      ...revenues.filter((r) => !paymentRevenueIds.has(r.id)).map((r) => ({
         kind: "REVENUE" as const,
         id: r.id,
         clinicId: r.clinicId,

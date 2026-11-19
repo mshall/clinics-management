@@ -240,6 +240,18 @@ export interface AppointmentDto {
   cancellationReason?: string | null;
   /** FS-05 rule-based no-show risk (Pro+, upcoming bookings only) */
   noShowRisk?: NoShowRiskView | null;
+  /** KX-07 / FS-04 deposit on this booking */
+  deposit?: AppointmentDepositView | null;
+}
+
+export interface AppointmentDepositView {
+  status: "PENDING" | "HELD" | "APPLIED" | "RELEASED" | "FORFEITED" | string;
+  source: "CLINIC" | "KIOREX_PAY" | "PAYMENT_LINK" | string;
+  amount: number;
+  currency: string;
+  /** FS-04: payment link sent to the patient while PENDING */
+  paymentLinkUrl?: string | null;
+  expiresAt?: string | null;
 }
 
 export interface OperationDto {

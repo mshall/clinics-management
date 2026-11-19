@@ -1,4 +1,4 @@
-import { UserRole } from "@prisma/client";
+import { type Prisma, UserRole } from "@prisma/client";
 import { hasAnyRole, isTenantOwnerPrincipal, type RolePrincipal } from "../common/effective-roles";
 
 export const REFUND_STATUS = {
@@ -92,4 +92,9 @@ export function isPackageExpired(expiresOn: Date | null, now: Date = new Date())
 /** Signed drawer effect of a cash movement (IN adds, OUT subtracts). */
 export function signedMovement(direction: string, amount: number): number {
   return direction === "OUT" ? -amount : amount;
+}
+
+/** Serialises concurrent money writes on one key (refunds against a payment, package use, deposit settlement). */
+export async function lockKey(tx: Prisma.TransactionClient, key: string): Promise<void> {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${key}))`;
 }

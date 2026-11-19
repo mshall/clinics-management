@@ -15,6 +15,7 @@ import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { AppointmentStatusBadge, appointmentStatusLabel } from "@/components/appointment-status-badge";
 import { NoShowRiskChip } from "@/components/no-show-risk-chip";
+import { DepositBadge } from "@/components/deposit-badge";
 import { AppointmentSourceBadges } from "@/components/appointment-source-badges";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -890,6 +891,7 @@ export function AppointmentsPage() {
                         <div className="flex flex-col gap-1">
                           <AppointmentStatusBadge status={a.status} />
                           <NoShowRiskChip risk={a.noShowRisk} />
+                          <DepositBadge deposit={a.deposit} />
                           <AppointmentSourceBadges
                             bookingSource={a.bookingSource}
                             isNewPatientAtBooking={a.isNewPatientAtBooking}

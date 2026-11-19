@@ -3343,7 +3343,42 @@
       "CARD": "Card",
       "TRANSFER": "Transfer",
       "WALLET": "Wallet",
-      "OTHER": "Other"
+      "OTHER": "Other",
+      "KIOREX_PAY": "Kiorex Pay"
     }
+  },
+  "payment": {
+    "kiorexPay": "Kiorex Pay"
+  },
+  "depositBadge": {
+    "label": "Deposit",
+    "status": {
+      "PENDING": "awaiting payment",
+      "HELD": "paid",
+      "APPLIED": "applied",
+      "RELEASED": "refunded",
+      "FORFEITED": "forfeited"
+    },
+    "source": {
+      "CLINIC": "at clinic",
+      "KIOREX_PAY": "Kiorex Pay",
+      "PAYMENT_LINK": "payment link"
+    }
+  },
+  "kiorexPayouts": {
+    "title": "Kiorex Pay deposits & payouts",
+    "subtitle": "Deposits patients paid through Kiorex for your bookings, and what Kiorex has paid out to you (last 30 days).",
+    "collected": "Deposits collected",
+    "refunded": "Refunded to patients",
+    "netDue": "Due to clinic",
+    "payoutsReceived": "Payouts received",
+    "outstanding": "Outstanding",
+    "empty": "No Kiorex Pay deposits in this period.",
+    "colDate": "Date",
+    "colBooking": "Booking",
+    "colStatus": "Status",
+    "colPayout": "Payout",
+    "colAmount": "Amount",
+    "unpaid": "Not paid out yet"
   }
 }

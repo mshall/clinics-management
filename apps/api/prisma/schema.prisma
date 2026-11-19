@@ -235,6 +235,8 @@ enum PaymentMethod {
   TRANSFER
   WALLET
   OTHER
+  /// KX-07 — collected by Kiorex on the clinic's behalf, paid out to the clinic later.
+  KIOREX_PAY
 }
 
 enum VisitCollectionMode {
@@ -2982,6 +2984,8 @@ model BillingPaymentAllocation {
   payment   BillingPayment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
   method    PaymentMethod
   amount    Decimal       @db.Decimal(14, 2)
+  /// Revenue row posted (via postRevenue) for this allocation.
+  revenueEntryId String?  @unique
 
   @@index([paymentId])
 }
@@ -3110,15 +3114,36 @@ model PatientDeposit {
   status          String        @default("HELD")
   revenueEntryId  String?       @unique
   paymentId       String?       @unique
+  /// KX-07 — payment reference from the collector (Kiorex Pay payment id, gateway ref).
+  externalRef     String?
+  /// KX-07 — Kiorex payout that settled this deposit to the clinic.
+  payoutRef       String?
   createdByUserId String?
   appliedAt       DateTime?
   releasedAt      DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
+  @@unique([tenantId, source, externalRef])
   @@index([tenantId, patientId])
   @@index([tenantId, clinicId, status])
   @@index([appointmentId])
+}
+
+/// KX-07 — money Kiorex paid out to the clinic for deposits it collected.
+model KiorexPayout {
+  id          String   @id @default(cuid())
+  tenantId    String
+  clinicId    String?
+  payoutRef   String
+  amount      Decimal  @db.Decimal(14, 2)
+  currency    String
+  paidAt      DateTime
+  depositRefs Json     @default("[]")
+  createdAt   DateTime @default(now())
+
+  @@unique([tenantId, payoutRef])
+  @@index([tenantId, paidAt])
 }
 
 model CashierShiftClose {

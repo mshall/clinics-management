@@ -7,6 +7,7 @@ import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { EntitlementGuard } from "../entitlements/entitlement.guard";
 import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
+import { KiorexDepositsService } from "./kiorex-deposits.service";
 import {
   PatientMoneyService,
   type CreateRefundBody,
@@ -21,7 +22,10 @@ import {
 @RequiresEntitlement("mod_invoices")
 @Controller()
 export class PatientMoneyController {
-  constructor(private readonly money: PatientMoneyService) {}
+  constructor(
+    private readonly money: PatientMoneyService,
+    private readonly kiorex: KiorexDepositsService,
+  ) {}
 
   @Post("billing/refunds")
   @ApiOperation({ summary: "Refund collected revenue or a payment (approval above the market threshold)" })
@@ -82,6 +86,17 @@ export class PatientMoneyController {
     @Body() body: { reason: string; outcome?: "RELEASED" | "FORFEITED" },
   ) {
     return this.money.releaseDeposit(requireTenantId(user), user, id, body);
+  }
+
+  @Get("billing/kiorex-payouts")
+  @ApiOperation({ summary: "Deposits collected by Kiorex vs payouts received by the clinic (KX-07)" })
+  kiorexPayouts(
+    @CurrentUser() user: JwtUser,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("clinicId") clinicId?: string,
+  ) {
+    return this.kiorex.payoutReport(requireTenantId(user), user, { from, to, clinicId });
   }
 
   @Get("patients/:id/balances")
