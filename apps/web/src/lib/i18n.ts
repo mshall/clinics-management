@@ -3,6 +3,7 @@ import { initReactI18next } from "react-i18next";
 import ar from "@/locales/ar.json";
 import en from "@/locales/en.json";
 import { persistLocale, readStoredLocale } from "@/lib/locale-cookie";
+import { applyNumeralPreferenceToDocument } from "@/lib/arabic-numerals";
 
 export const supportedLngs = ["en", "ar"] as const;
 export type AppLocale = (typeof supportedLngs)[number];
@@ -10,7 +11,8 @@ export type AppLocale = (typeof supportedLngs)[number];
 function applyDocumentDirection(lng: string) {
   const rtl = lng === "ar";
   document.documentElement.dir = rtl ? "rtl" : "ltr";
-  document.documentElement.lang = lng;
+  document.documentElement.lang = lng === "ar" ? "ar-EG" : "en";
+  applyNumeralPreferenceToDocument();
 }
 
 const initialLocale = readStoredLocale();

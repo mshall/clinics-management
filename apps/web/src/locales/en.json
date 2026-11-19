@@ -687,7 +687,8 @@
     "errorPhoneInUse": "Another patient already uses this phone number: {{name}} ({{mrn}}).",
     "viewExistingPatient": "View patient",
     "checkingPhone": "Checking phone number…",
-    "photoOptional": "Profile photo is optional."
+    "photoOptional": "Profile photo is optional.",
+    "uploadPhoto": "Upload photo"
   },
   "encounters": {
     "title": "Encounter",
@@ -1566,7 +1567,7 @@
     "expenses": "Expenses",
     "netProfit": "Net profit",
     "chartNewPatients": "New patient intake",
-    "chartRevenue": "Posted revenue (AED)",
+    "chartRevenue": "Posted revenue ({{currency}})",
     "chartVisits": "Visit volume",
     "growthExplorer": "Growth explorer",
     "growthExplorerHintLive": "Monthly series from finalized encounters, posted revenue, and patient registrations in your organization.",
@@ -2807,7 +2808,9 @@
     "slideNOfM": "{{current}} / {{total}}",
     "gallerySwipeHint": "Swipe left or right, or use the arrows, to browse images. Pinch to zoom.",
     "pinchZoomHint": "Pinch to zoom. Drag when zoomed in. Use flip left/right to rotate. Click zoom % to reset.",
-    "copyFailed": "Could not copy"
+    "copyFailed": "Could not copy",
+    "numeralsWestern": "Western digits (1 2 3)",
+    "numeralsArabic": "Arabic-Indic digits (١ ٢ ٣)"
   },
   "patientConsent": {
     "header": "Consent status",
