@@ -90,6 +90,16 @@ export const SAFETY_CONTROLS: readonly SafetyControl[] = [
     forbiddenKeyTokens: ["profession_verif", "registration_verif", "prver"],
   },
   {
+    id: "home_visit_safety",
+    label: "Home-visit safety timer, SOS, unsafe-abort with no penalty, and address masking",
+    paths: [
+      "field-visit/field-visit.port.ts",
+      "field-visit/field-visit.service.ts",
+      "field-visit/mock-safety-alert.dispatcher.ts",
+    ],
+    forbiddenKeyTokens: ["safety_timer", "sos", "unsafe_abort", "address_mask", "safety_alert"],
+  },
+  {
     id: "breach_response_tooling",
     label: "Breach-response tooling",
     paths: ["observability/notify-on-call.ts"],

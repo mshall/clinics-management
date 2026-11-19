@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "typecheck": "prisma generate && tsc --noEmit -p tsconfig.json",
-    "build": "prisma generate && nest build",
+    "typecheck": "npm run build -w @kiorly/field-visit --silent && prisma generate && tsc --noEmit -p tsconfig.json",
+    "build": "npm run build -w @kiorly/field-visit --silent && prisma generate && nest build",
+    "predev": "npm run build -w @kiorly/field-visit --silent",
     "dev": "nest start --watch",
     "start": "node dist/src/main.js",
     "prisma:generate": "prisma generate",
@@ -17,11 +18,14 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "openapi:export": "tsx scripts/openapi-export.ts",
+    "pretest:unit": "npm run build -w @kiorly/field-visit --silent",
+    "pretest:integration": "npm run build -w @kiorly/field-visit --silent",
     "test:integration": "node --import tsx --test --test-concurrency=1 \"src/**/*.integration.test.ts\"",
     "test:unit": "node --import tsx --test \"src/**/*.node.test.ts\"",
     "test:money-coverage": "node scripts/money-path-coverage.mjs"
   },
   "dependencies": {
+    "@kiorly/field-visit": "0.1.0",
     "@aws-sdk/client-s3": "^3.1045.0",
     "@aws-sdk/client-secrets-manager": "^3.1045.0",
     "@aws-sdk/client-ses": "^3.1172.0",

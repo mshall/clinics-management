@@ -58,6 +58,7 @@ export const TOP_LEVEL_FOLDER_TO_CONTEXT: Record<string, BoundedContextId> = {
   clinical: "clinical",
   scheduling: "clinical",
   operations: "clinical",
+  "field-visit": "clinical",
 
   "front-desk": "front-office",
   billing: "front-office",

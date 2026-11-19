@@ -1,0 +1,22 @@
+{
+  "name": "@kiorly/field-visit",
+  "version": "0.1.0",
+  "description": "Kiorly field-visit primitives (KCV206, ADR-030): coverage zones, travel buffers, visit lifecycle, address privacy, safety timer / SOS. Pure library, no I/O, no feature flags.",
+  "private": true,
+  "license": "UNLICENSED",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --import tsx --test \"src/**/*.test.ts\"",
+    "test:drill": "node --import tsx --test src/safety-drill.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

@@ -8,7 +8,7 @@ Kiorly ships as a **single deployable API** (`apps/api`) with **bounded contexts
 |-----------------|--------------------------------|---------------------------|
 | **Kernel** | `common`, `prisma`, `auth`, `audit`, `storage`, `health`, `feature-flags`, `scope-of-practice` | Shared platform (auth, tenancy) |
 | **Organization** | `clinics`, `users`, `admin`, `markets`, `user-nav-tabs`, `user-clinic-privilege-grants`, `user-money-visibility` | Tenant / org service |
-| **Clinical** | `patients`, `appointments`, `encounters`, `clinical`, `scheduling`, `operations` | Clinical core |
+| **Clinical** | `patients`, `appointments`, `encounters`, `clinical`, `scheduling`, `operations`, `field-visit` | Clinical core |
 | **Front office** | `front-desk`, `billing`, `revenue`, `invoices`, `expenses`, `payroll`, `payroll-expenses` | Billing & cashier |
 | **Compliance & fiscal** | `compliance`, `fiscal-devices`, `providers`, `integrations` | Fiscal / ETA gateway |
 | **Insights** | `reports`, `dashboard` | Analytics read models |
@@ -18,6 +18,17 @@ Kiorly ships as a **single deployable API** (`apps/api`) with **bounded contexts
 Definition of contexts and **allowed cross-context import edges** live in:
 
 - `apps/api/src/platform/module-contexts.ts`
+
+## Shared packages (`packages/`)
+
+Workspace libraries with their own semver and tests, consumed by the API (and later by Pharmacy / Lab / Kiorex products):
+
+| Package | Purpose | Doc |
+|---|---|---|
+| `@kiorly/field-visit` (KCV206) | zones, travel buffers, visit lifecycle, address privacy, safety timer / SOS; includes a safety-drill suite | [FIELD_VISIT.md](./FIELD_VISIT.md) |
+| `@kiorly/commerce-kernel` (KCV202) | *planned* — plans, entitlements, wallet, settlement, market packs; will live in `packages/commerce-kernel` | |
+
+The API reaches a package through an interface in a bounded-context folder (e.g. `field-visit/field-visit.port.ts`), never by sprinkling imports. Root scripts and the API `pre*` scripts build packages before typecheck/test/build.
 
 ## Rules (enforced in CI via unit test)
 

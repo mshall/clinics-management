@@ -4,7 +4,8 @@
   "workspaces": [
     "apps/web",
     "apps/api",
-    "apps/docs"
+    "apps/docs",
+    "packages/*"
   ],
   "scripts": {
     "db:up": "bash scripts/start-local-postgres.sh",
@@ -28,8 +29,8 @@
     "dev:web": "npm run dev -w web",
     "dev:api": "npm run dev -w api",
     "codegen": "npm run codegen -w web",
-    "typecheck": "npm run typecheck -w api && npm run typecheck -w web",
-    "build": "npm run build -w api && npm run build -w web",
+    "typecheck": "npm run build -w @kiorly/field-visit && npm run typecheck -w api && npm run typecheck -w web",
+    "build": "npm run build -w @kiorly/field-visit && npm run build -w api && npm run build -w web",
     "lint": "npm run lint -w web",
     "preview": "npm run preview -w web",
     "docs:sync": "bash scripts/sync-piggymetrics-docs.sh",
@@ -39,12 +40,12 @@
     "docs:preview": "npm run preview -w docs",
     "design:clinical-os": "open Design/clinical-os/screen-explorer.html",
     "test:e2e": "npm run test:e2e -w web",
-    "test:unit": "npm run test:unit -w web && npm run test:unit -w api && npm run test:unit --prefix infra",
+    "test:unit": "npm run test:unit -w web && npm run build -w @kiorly/field-visit && npm run test:unit -w api && npm run test -w @kiorly/field-visit && npm run test:unit --prefix infra",
     "ci:test": "bash scripts/ci-test-local.sh",
     "demo:reset": "npm run demo:reset -w api --",
     "hooks:install": "bash scripts/install-git-hooks.sh",
     "pretest:integration": "bash scripts/ensure-local-dev-db.sh",
-    "test:integration": "npm run test:integration -w api",
+    "test:integration": "npm run build -w @kiorly/field-visit && npm run test:integration -w api",
     "test:money-coverage": "npm run test:money-coverage -w api",
     "pretest:integration-smoke": "bash scripts/ensure-local-dev-db.sh",
     "test:integration-smoke": "bash scripts/integration-api-smoke.sh",
