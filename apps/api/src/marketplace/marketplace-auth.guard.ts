@@ -9,6 +9,7 @@ import type { Request } from "express";
 import {
   MARKETPLACE_HMAC_MAX_SKEW_MS,
   marketplaceCanonicalString,
+  marketplaceSignedBody,
   sha256BodyHex,
   verifyMarketplaceSignature,
 } from "./marketplace-hmac";
@@ -49,7 +50,7 @@ export class MarketplaceAuthGuard implements CanActivate {
     this.clients.assertNonce(principal.id, nonce);
     this.clients.assertIpAllowed(principal, req.ip);
 
-    const body = req.rawBody ?? (req.body ? Buffer.from(JSON.stringify(req.body)) : undefined);
+    const body = marketplaceSignedBody(req.rawBody, req.body);
     const canonical = marketplaceCanonicalString({
       timestamp,
       nonce,

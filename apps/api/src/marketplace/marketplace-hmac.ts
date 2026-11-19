@@ -29,3 +29,15 @@ export function sha256BodyHex(body: Buffer | undefined): string {
   if (body?.length) h.update(body);
   return h.digest("hex");
 }
+
+/**
+ * Bytes the client signed. Express/Nest parse bodyless requests (GET/DELETE) to `req.body = {}`, which must NOT be hashed as the
+ * two bytes "{}": the published contract (kiorex-contracts hmac-vectors) signs the empty body as sha256("").
+ */
+export function marketplaceSignedBody(rawBody: Buffer | undefined, parsedBody: unknown): Buffer | undefined {
+  if (rawBody?.length) return rawBody;
+  if (parsedBody && typeof parsedBody === "object" && Object.keys(parsedBody as object).length > 0) {
+    return Buffer.from(JSON.stringify(parsedBody));
+  }
+  return undefined;
+}
