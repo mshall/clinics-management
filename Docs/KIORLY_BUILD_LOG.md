@@ -141,3 +141,4 @@
 | 100 GT-06 | `f10445b` | Hubs BILLING_AND_CREDITS + KIOREX_CONNECTOR; capability map + roadmap aligned |
 | 101 CR-10 | `2135ff2` | Market `noShowGuarantee` off by default; baseline/eval windows from activation; `GET /billing/guarantee` + tracker card; grant `NO_SHOW_GUARANTEE` when reduction ≥ target with reminders+deposits |
 | 102 KX-11 | `8a5085a` | PatientRecordShareConsent scopes; POST marketplace consents; share after sign-off only with active consent; VISIT_SUMMARY_SHARED outbox; patient profile toggles EN/AR |
+| 103 CL-06 | `2210147` | ClinicalOrder LAB/IMAGING; CRUD /clinical/orders; RESULTS_READY → WhatsApp results_ready; encounter orders panel EN/AR |
