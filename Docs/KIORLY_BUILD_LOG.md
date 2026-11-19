@@ -130,3 +130,4 @@
 | 089 QA-07 | `ec7b7ee` | k6/node 50 rps p95&lt;150ms + Lighthouse TTI≤4s; NH-020 staging |
 | 090 UX-01 | `9bab12c` | PWA + offline today + POST /push/subscriptions; NH-021 VAPID |
 | 091 UX-02 | `d7b58af` | Bottom nav + sticky patient header + 360px e2e |
+| 092 UX-03 | `fefeb5e` | Locale parity CI + ar-EG + Arabic numerals; NH-022 |

@@ -325,7 +325,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 089 · QA-07 · Load & device performance tests
 - [x] Step 090 · UX-01 · Installable PWA with push and offline "today" view
 - [x] Step 091 · UX-02 · Mobile-first doctor views
-- [ ] Step 092 · UX-03 · Arabic RTL & Egyptian copy QA
+- [x] Step 092 · UX-03 · Arabic RTL & Egyptian copy QA
 - [ ] Step 093 · PA-01 · Tenant lifecycle console
 - [ ] Step 094 · PA-04 · Support access with consent & audit
 - [ ] Step 095 · PA-05 · Growth analytics: activation funnel & cohorts
