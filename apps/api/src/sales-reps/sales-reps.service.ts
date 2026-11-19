@@ -104,7 +104,51 @@ export class SalesRepsService {
 
   async me(user: JwtUser) {
     const rep = await this.requireRep(user);
-    return { id: rep.id, code: rep.code, displayName: rep.displayName };
+    const base =
+      this.config.get<string>("APP_WEB_URL")?.trim() ||
+      this.config.get<string>("WEB_APP_URL")?.trim() ||
+      "http://127.0.0.1:5173";
+    const signupUrl = `${base.replace(/\/$/, "")}/signup?rep=${encodeURIComponent(rep.code)}`;
+    let qrDataUrl: string | null = null;
+    try {
+      const QRCode = await import("qrcode");
+      qrDataUrl = await QRCode.toDataURL(signupUrl, { margin: 1, width: 256 });
+    } catch {
+      qrDataUrl = null;
+    }
+    return {
+      id: rep.id,
+      code: rep.code,
+      displayName: rep.displayName,
+      salesRepCode: rep.code,
+      signupUrl,
+      qrDataUrl,
+    };
+  }
+
+  async roi(
+    user: JwtUser,
+    body: {
+      noShowsPreventedPerMonth?: number;
+      feePerVisit?: number;
+      adminHoursSavedPerWeek?: number;
+      adminHourlyCost?: number;
+      kiorexPatientsPerMonth?: number;
+      contributionPerKiorexPatient?: number;
+      planMonthlyAmount?: number;
+    },
+  ) {
+    await this.requireRep(user);
+    const { computeSalesRoi } = await import("../staging/sales-roi");
+    return computeSalesRoi({
+      noShowsPreventedPerMonth: Number(body.noShowsPreventedPerMonth ?? 0),
+      feePerVisit: Number(body.feePerVisit ?? 0),
+      adminHoursSavedPerWeek: Number(body.adminHoursSavedPerWeek ?? 0),
+      adminHourlyCost: Number(body.adminHourlyCost ?? 0),
+      kiorexPatientsPerMonth: Number(body.kiorexPatientsPerMonth ?? 0),
+      contributionPerKiorexPatient: Number(body.contributionPerKiorexPatient ?? 0),
+      planMonthlyAmount: Number(body.planMonthlyAmount ?? 0),
+    });
   }
 
   // --- platform: rep accounts -------------------------------------------------

@@ -22,6 +22,7 @@ import { BillingPlatformModule } from "../billing-platform/billing-platform.modu
 import { ComplianceModule } from "../compliance/compliance.module";
 import { MessagingModule } from "../messaging/messaging.module";
 import { AdminOutboxService } from "./admin-outbox.service";
+import { SalesKitService } from "../staging/sales-kit.service";
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { AdminOutboxService } from "./admin-outbox.service";
     IntegrationFailureAdminService,
     TenantPaymentChannelsService,
     AdminOutboxService,
+    SalesKitService,
   ],
 })
 export class AdminModule {}

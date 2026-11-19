@@ -69,11 +69,16 @@ Purges appointments, encounters, revenue, fiscal queue, support tickets, etc., t
 - `qa06-sales-demo.node.test.ts` — catalog + CLI registration
 - `qa06-sales-demo.integration.test.ts` — reset clears appointments, keeps 3 patients
 
+## Platform demo reset API (GT-05)
+
+`POST /api/v1/admin/platform/demo/reset` with `{ "tier": "lite" | "pro" | "clinic" | "all" }` (platform super admin). Same purge/restore as the CLI; integration test requires completion in under 60 seconds. See [`SALES_KIT.md`](./SALES_KIT.md).
+
 ## Status
 
 | Task | Status |
 |------|--------|
 | QA-06 Staging + pilots | Shipped |
+| GT-05 Sales kit (reset API, ROI, rep QR) | Shipped |
 
 ## Follow-ups
 
