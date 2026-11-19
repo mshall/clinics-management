@@ -25,6 +25,13 @@
 |------------|--------|
 | 2026-11-18 | Pipeline on `main` @ `4d62eb0` green. `kiorly/launch`, draft PR #75, tracker [`Docs/kiorly-cursor-build-sequence.md`](./kiorly-cursor-build-sequence.md) only. |
 
+
+## FINAL PHASE
+
+| When (UTC) | Event |
+|------------|--------|
+| 2026-11-19 | All §5 ticked. PR #75 merged → `main` @ `b4a880e`. `deploy-aws.yml` run [44463716339](https://github.com/mshall/clinics-management/actions/runs/44463716339) **success**. Tag `kiorly-launch-v1` on `b4a880e`. |
+
 ## Follow-ups (deferred steps)
 
 | Step | Notes |
