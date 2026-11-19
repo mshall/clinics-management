@@ -29,7 +29,7 @@
 
 | Step | Notes |
 |------|--------|
-| CR-07 | Threshold nudges today: `KiorexProgressNudge` + `AuditLog` only. **WhatsApp/in-app owner copy + monthly recap** → implement in **MS-04** (owner digests) on Step 077. |
+| CR-07 | **Closed in MS-04 (Step 077):** WhatsApp `kiorex_progress_nudge` + in-app `StaffInAppNotice` on 50/80/100; monthly recap `kiorex_monthly_recap` on the 1st. Quiet hours / opt-out via `StaffDigestPreference`. |
 | CR-11 | Statement delivery rows (`billing.monthly_statement_ready`, INTERNAL) are enqueued on issue; the **email/WhatsApp sender** for INTERNAL `billing.*` topics is not built yet (pair with MS-04). Web lint has 3 pre-existing errors (`clinical-letter-dialog.tsx`, `invoice-document-preview.tsx`, `collect-visit-balance-card.tsx`). |
 | SB-05/06 | Local full `test:e2e`: 13 pre-existing UI spec failures unrelated to billing (encounter dialog strict-mode, HR clinic picker, theme ids, patient-manage, signup-ar, flows-integrity). Billing specs (`sb03`, `sb05`, `sb06`, `qa01`) green. CI `187a6f7` golden e2e hit `BILLING_SEAT_INACTIVE` on seeded physician (data-order flake; `pl01` integration test mutates first tenant's subscription) — watch next runs. |
 | SC-02 | NH-001 (PDPC licence filing) remains in `Docs/KIORLY_NEEDS_HUMAN.md`; product gates are in code/tests. |

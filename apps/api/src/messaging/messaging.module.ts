@@ -22,14 +22,23 @@ import { OutboxDispatcherScheduler } from "./outbox-dispatcher.scheduler";
 import { AppointmentOutboxService } from "./appointment-outbox.service";
 import { AppointmentRescheduleTokenService } from "./appointment-reschedule-token.service";
 import { PublicAppointmentRescheduleController } from "./public-appointment-reschedule.controller";
+import { DigestsController } from "./digests.controller";
+import { DigestsService } from "./digests.service";
 
 @Module({
   imports: [AuditModule, forwardRef(() => SchedulingModule), PatientsModule],
-  controllers: [MessagingController, WhatsAppWebhookController, PublicAppointmentRescheduleController, InstallmentRemindersController],
+  controllers: [
+    MessagingController,
+    WhatsAppWebhookController,
+    PublicAppointmentRescheduleController,
+    InstallmentRemindersController,
+    DigestsController,
+  ],
   providers: [
     WaitlistAutofillService,
     MessagingService,
     OwnerNotificationsService,
+    DigestsService,
     InternalOutboxConsumerService,
     InstallmentRemindersService,
     WhatsAppSendService,
@@ -48,6 +57,7 @@ import { PublicAppointmentRescheduleController } from "./public-appointment-resc
     WaitlistAutofillService,
     MessagingService,
     OwnerNotificationsService,
+    DigestsService,
     InternalOutboxConsumerService,
     AppointmentReminderScheduler,
     WhatsAppSendService,

@@ -3567,5 +3567,21 @@
     "opBalance": "Operation balance",
     "addRow": "Add installment",
     "saveSchedule": "Save schedule"
+  },
+  "digests": {
+    "title": "WhatsApp digests",
+    "subtitle": "Tomorrow's list for doctors, owner weekly insights, shift summaries, and Kiorly-free progress. Quiet hours pause delivery.",
+    "loading": "Loading digest preferences…",
+    "saved": "Digest preferences saved",
+    "optOutAll": "Opt out of all digests and progress nudges",
+    "doctorTomorrow": "Doctor: tomorrow's appointments at 20:00",
+    "ownerWeekly": "Owner: weekly insights (Pro+)",
+    "ownerShift": "Owner: cash summary after shift close",
+    "kiorexNudges": "Owner: Kiorly-free progress nudges & monthly recap",
+    "quietStart": "Quiet from (hour)",
+    "quietEnd": "Quiet until (hour)",
+    "save": "Save preferences",
+    "notices": "Unread notices",
+    "markRead": "Mark read"
   }
 }

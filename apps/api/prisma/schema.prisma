@@ -849,6 +849,59 @@ model KiorexProgressNudge {
   @@index([tenantId, periodKey])
 }
 
+/// MS-04 — staff WhatsApp digest / CR-07 nudge preferences (quiet hours + opt-out).
+model StaffDigestPreference {
+  userId                 String   @id
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId               String
+  doctorTomorrowList     Boolean  @default(true)
+  ownerWeeklyInsights    Boolean  @default(true)
+  ownerShiftSummaries    Boolean  @default(true)
+  kiorexProgressNudges   Boolean  @default(true)
+  optOutAll              Boolean  @default(false)
+  /// Local hour 0–23 when quiet hours start (inclusive). Default 21.
+  quietHoursStart        Int      @default(21)
+  /// Local hour 0–23 when quiet hours end (exclusive). Default 8 (wraps midnight).
+  quietHoursEnd          Int      @default(8)
+  updatedAt              DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+/// MS-04 — in-app owner/doctor notices (CR-07 progress, monthly recap, weekly insights).
+model StaffInAppNotice {
+  id        String    @id @default(cuid())
+  tenantId  String
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String
+  titleEn   String
+  titleAr   String    @default("")
+  bodyEn    String
+  bodyAr    String    @default("")
+  metadata  Json?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt, createdAt])
+  @@index([tenantId, createdAt])
+}
+
+/// MS-04 — idempotent digest sends (one per user/kind/period).
+model DigestSendLog {
+  id        String   @id @default(cuid())
+  tenantId  String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String
+  periodKey String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, kind, periodKey])
+  @@index([tenantId, kind, periodKey])
+}
+
+
 enum ReferralStatus {
   PENDING
   REWARDED
@@ -1333,6 +1386,9 @@ model User {
   passwordResetTokens            PasswordResetToken[]
   authSessions                   UserSession[]
   legalAcceptances               LegalAcceptance[]
+  digestPreference               StaffDigestPreference?
+  inAppNotices                   StaffInAppNotice[]
+  digestSendLogs                 DigestSendLog[]
   clinicianVerification          ClinicianVerification?
   clinicianVerificationsReviewed ClinicianVerification[] @relation("ClinicianVerificationReviewer")
   marketplaceListings            MarketplaceListing[]
