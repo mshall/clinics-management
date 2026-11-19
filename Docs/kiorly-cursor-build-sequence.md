@@ -333,7 +333,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 097 · GT-03 · Help centre & Arabic video tutorials `5baf521`
 - [x] Step 098 · GT-04 · Support operations & WhatsApp support line `959e1e6`
 - [x] Step 099 · GT-05 · Sales kit: demo tenants, ROI calculator, referral & rep codes `b95219e`
-- [ ] Step 100 · GT-06 · Docs cleanup & capability map update
+- [x] Step 100 · GT-06 · Docs cleanup & capability map update `f10445b`
 
 **Stage F · Phase 1b** — After public launch
 

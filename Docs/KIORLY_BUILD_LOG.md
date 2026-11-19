@@ -138,3 +138,4 @@
 | 097 GT-03 | `5baf521` | /help 20 bilingual articles + search + tier filters; drawer link; NH-007 videos |
 | 098 GT-04 | `959e1e6` | WhatsApp→ticket, macros, eng escalate; first-response SLA Sun–Thu 09–18 P1 4h; NH-023 |
 | 099 GT-05 | `b95219e` | POST demo/reset <60s; ROI calc; rep signup QR; Docs/SALES_KIT.md |
+| 100 GT-06 | `f10445b` | Hubs BILLING_AND_CREDITS + KIOREX_CONNECTOR; capability map + roadmap aligned |
