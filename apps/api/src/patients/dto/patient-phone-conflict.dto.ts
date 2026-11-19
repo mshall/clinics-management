@@ -8,6 +8,9 @@ export class PatientPhoneConflictPatientDto {
   mrn!: string;
 
   @ApiProperty()
+  phone!: string;
+
+  @ApiProperty()
   firstNameEn!: string;
 
   @ApiProperty()
@@ -18,6 +21,18 @@ export class PatientPhoneConflictPatientDto {
 
   @ApiPropertyOptional()
   lastNameAr!: string | null;
+
+  @ApiPropertyOptional()
+  dob!: string | null;
+
+  @ApiProperty()
+  gender!: string;
+
+  @ApiProperty()
+  profileComplete!: boolean;
+
+  @ApiPropertyOptional()
+  createdAt!: string | null;
 }
 
 export class PatientPhoneConflictDto {

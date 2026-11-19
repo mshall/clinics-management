@@ -3,10 +3,15 @@ import { ApiError } from "@/lib/http";
 export type PatientPhoneConflictPatient = {
   id: string;
   mrn: string;
+  phone?: string;
   firstNameEn: string;
   lastNameEn: string;
   firstNameAr: string | null;
   lastNameAr: string | null;
+  dob?: string | null;
+  gender?: string;
+  profileComplete?: boolean;
+  createdAt?: string | null;
 };
 
 export type PatientPhoneConflictResponse = {

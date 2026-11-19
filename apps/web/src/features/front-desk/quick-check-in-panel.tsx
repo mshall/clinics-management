@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import type { AppointmentDto } from "@/lib/api-types";
-import { apiPost, ApiError } from "@/lib/http";
+import { apiPatch, apiPost, ApiError } from "@/lib/http";
 import { apiErrorMessage } from "@/lib/api-error-message";
 import {
   emptyVisitCollection,
@@ -90,6 +90,26 @@ export function QuickCheckInPanel({ appointment, currency = "AED", examRoomOptio
     },
   });
 
+  const undoCheckIn = useMutation({
+    mutationFn: () =>
+      apiPatch<AppointmentDto>(`/api/v1/appointments/${appointment.id}`, { status: "CONFIRMED" }),
+    onSuccess: () => {
+      toast.success(
+        t(
+          "frontDesk.undoCheckInDone",
+          "Check-in undone. Queue ticket and draft visit were cleared — you can check in again when ready.",
+        ),
+      );
+      void qc.invalidateQueries({ queryKey: ["appointment", appointment.id] });
+      void qc.invalidateQueries({ queryKey: ["appointments"] });
+      void qc.invalidateQueries({ queryKey: ["front-desk"] });
+      void qc.invalidateQueries({ queryKey: ["encounters"] });
+    },
+    onError: (e: unknown) => {
+      toast.error(e instanceof ApiError || e instanceof Error ? apiErrorMessage(e) : String(e));
+    },
+  });
+
   const submit = () => {
     if (checkIn.isPending) return;
     const collectErr = validateVisitCollection(effectiveAmount, collection, t, rules);
@@ -122,23 +142,51 @@ export function QuickCheckInPanel({ appointment, currency = "AED", examRoomOptio
     return () => setPaymentFlowActive(false);
   }, [checkIn.isPending]);
 
-  if (appointment.status === "CHECKED_IN" && appointment.queueTicketNumber) {
+  if (appointment.status === "CHECKED_IN") {
     return (
       <Card>
         <CardContent className="pt-6 space-y-3 text-sm">
-          <p data-testid="checked-in-ticket">
-            {t("frontDesk.checkedInTicket", "Ticket")} <strong className="ltr-nums">#{appointment.queueTicketNumber}</strong>
-            {appointment.checkedInAt ? (
-              <span className="text-muted-foreground"> · {new Date(appointment.checkedInAt).toLocaleTimeString()}</span>
+          {appointment.queueTicketNumber ? (
+            <p data-testid="checked-in-ticket">
+              {t("frontDesk.checkedInTicket", "Ticket")}{" "}
+              <strong className="ltr-nums">#{appointment.queueTicketNumber}</strong>
+              {appointment.checkedInAt ? (
+                <span className="text-muted-foreground">
+                  {" "}
+                  · {new Date(appointment.checkedInAt).toLocaleTimeString()}
+                </span>
+              ) : null}
+            </p>
+          ) : (
+            <p className="text-muted-foreground">
+              {t("frontDesk.checkedInNoTicket", "Patient is checked in.")}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {appointment.openEncounterId ? (
+              <Button type="button" variant="outline" size="sm" asChild>
+                <Link to={`/encounters/${appointment.openEncounterId}`}>
+                  {t("frontDesk.openEncounter", "Open encounter")}
+                </Link>
+              </Button>
             ) : null}
-          </p>
-          {appointment.openEncounterId ? (
-            <Button type="button" variant="outline" size="sm" asChild>
-              <Link to={`/encounters/${appointment.openEncounterId}`}>
-                {t("frontDesk.openEncounter", "Open encounter")}
-              </Link>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={undoCheckIn.isPending}
+              data-testid="undo-check-in"
+              onClick={() => undoCheckIn.mutate()}
+            >
+              {t("frontDesk.undoCheckIn", "Undo check-in")}
             </Button>
-          ) : null}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {t(
+              "frontDesk.undoCheckInHint",
+              "Returns the appointment to Confirmed and clears the queue ticket and draft encounter so you can restart the visit flow.",
+            )}
+          </p>
         </CardContent>
       </Card>
     );

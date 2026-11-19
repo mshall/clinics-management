@@ -194,10 +194,27 @@ describe("MN-01 refunds, credit notes, deposits & prepaid packages", () => {
   });
 
   it("cash close subtracts refunds and adds deposits/package sales for the day", async () => {
-    const shiftDate = new Date().toISOString().slice(0, 10);
+    // Match BillingService.closeCashierShift: local calendar day (setHours), not UTC ISO date.
+    const now = new Date();
+    const p = (n: number) => String(n).padStart(2, "0");
+    const shiftDate = `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`;
+    const day = new Date(shiftDate);
+    day.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(day);
+    dayEnd.setDate(dayEnd.getDate() + 1);
     const close = await billing.closeCashierShift(tenantId, finance, { clinicId, shiftDate, countedCash: 0, countedCard: 0 });
-    const moves = await prisma.cashMovement.findMany({ where: { tenantId, clinicId } });
-    const cash = moves.filter((m) => m.method === "CASH").reduce((s, m) => s + (m.direction === "OUT" ? -1 : 1) * Number(m.amount), 0);
+    const moves = await prisma.cashMovement.findMany({
+      where: {
+        tenantId,
+        clinicId,
+        createdAt: { gte: day, lt: dayEnd },
+        sourceType: { not: "PAYMENT" },
+      },
+    });
+    const cash = moves
+      .filter((m) => m.method === "CASH")
+      .reduce((s, m) => s + (m.direction === "OUT" ? -1 : 1) * Number(m.amount), 0);
     assert.equal(Number(close.expectedCash), cash);
   });
 });
+
