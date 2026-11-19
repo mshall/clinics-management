@@ -17,7 +17,16 @@ CREATE TABLE IF NOT EXISTS "TenantExportJob" (
 CREATE UNIQUE INDEX IF NOT EXISTS "TenantExportJob_downloadTokenHash_key" ON "TenantExportJob"("downloadTokenHash");
 CREATE INDEX IF NOT EXISTS "TenantExportJob_tenantId_createdAt_idx" ON "TenantExportJob"("tenantId", "createdAt");
 CREATE INDEX IF NOT EXISTS "TenantExportJob_status_createdAt_idx" ON "TenantExportJob"("status", "createdAt");
-ALTER TABLE "TenantExportJob" ADD CONSTRAINT "TenantExportJob_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'TenantExportJob_tenantId_fkey'
+  ) THEN
+    ALTER TABLE "TenantExportJob"
+      ADD CONSTRAINT "TenantExportJob_tenantId_fkey"
+      FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS "TenantOffboarding" (
     "tenantId" TEXT NOT NULL,
