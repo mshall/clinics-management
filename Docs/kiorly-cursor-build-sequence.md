@@ -308,7 +308,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 072 · KX-07 · Kiorex deposits & prepayments into clinic billing — `0dc47e1` · `billing/kx07-kiorex-deposits.integration.test.ts` · `billing/kx07-kiorex-deposits.node.test.ts` · `e2e/kx07-deposits.spec.ts` · `Docs/CLINIC_BILLING.md`, `Docs/KIOREX_MARKETPLACE.md`
 - [x] Step 073 · FS-04 · Deposits & payment links for high-risk bookings — `250a0e4` · `appointments/fs04-deposit-links.integration.test.ts` · `billing/fs04-deposit-policy.node.test.ts` · `e2e/fs04-deposit-links.spec.ts` · `Docs/FRONT_DESK.md`, `Docs/CLINIC_BILLING.md` · NH-012
 - [x] Step 074 · MN-02 · Doctor revenue-share engine & statements — `5a23222` · `revenue-share/mn02-revenue-share.integration.test.ts` · `revenue-share/mn02-revenue-share-engine.node.test.ts` · `e2e/mn02-doctor-statements.spec.ts` · `Docs/CLINIC_BILLING.md`, `Docs/QA_MONEY_PATH.md`
-- [ ] Step 075 · MN-03 · Cash drawer & shift close UI hardening
+- [x] Step 075 · MN-03 · Cash drawer & shift close UI hardening — `2f9ca1e` · `billing/mn03-cashier-shift.integration.test.ts` · `billing/mn03-cashier-shift.node.test.ts` · `messaging/mn03-owner-shift-summary.integration.test.ts` · `e2e/mn03-cash-drawer.spec.ts` · `Docs/CLINIC_BILLING.md`, `Docs/QA_MONEY_PATH.md` · NH-013
 - [ ] Step 076 · MN-06 · Split payments & installments UX
 - [ ] Step 077 · MS-04 · Doctor and owner digests
 - [ ] Step 078 · MS-05 · Transactional email (trial, invoices, security)
