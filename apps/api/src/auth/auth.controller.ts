@@ -30,11 +30,13 @@ import { AuthPasswordResetService } from "./auth-password-reset.service";
 import { AuthOtpLoginService } from "./auth-otp-login.service";
 import { AuthSessionService } from "./auth-session.service";
 import { loginMetaFromRequest, clientIpFromRequest } from "./request-client-meta";
+import { PublicAuthRateLimitGuard } from "../common/rate-limit.guard";
 
 const AVATAR_UPLOAD_LIMIT = 5 * 1024 * 1024;
 
 @ApiTags("auth")
 @Controller("auth")
+@UseGuards(PublicAuthRateLimitGuard)
 export class AuthController {
   constructor(
     private readonly auth: AuthService,

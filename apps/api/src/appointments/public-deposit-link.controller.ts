@@ -1,9 +1,11 @@
-import { Controller, Get, Param } from "@nestjs/common";
+import { Controller, Get, Param, UseGuards } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
+import { PublicAuthRateLimitGuard } from "../common/rate-limit.guard";
 import { DepositLinkService } from "./deposit-link.service";
 
 @ApiTags("public")
 @Controller("public/deposit-links")
+@UseGuards(PublicAuthRateLimitGuard)
 export class PublicDepositLinkController {
   constructor(private readonly links: DepositLinkService) {}
 
