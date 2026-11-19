@@ -62,6 +62,7 @@ import { generatePrescriptionPng } from "@/lib/prescription-image";
 import { EncounterClinicalTools } from "@/features/clinical/encounter-clinical-tools";
 import { EncounterScribePanel } from "@/features/clinical/encounter-scribe-panel";
 import { EncounterSignoffTrail } from "@/features/encounters/encounter-signoff-trail";
+import { EntitlementGate } from "@/components/entitlement-gate";
 import { DrugSearchAutocomplete, type DrugSearchHit } from "@/features/clinical/drug-search-autocomplete";
 import { PatientChartAlerts } from "@/components/patient-chart-alerts";
 import { EncounterSpecialtyForm } from "@/features/clinical/encounter-specialty-form";
@@ -955,15 +956,17 @@ export function EncounterDetailPage() {
               />
             ) : null}
             {enc && draft ? (
-              <EncounterScribePanel
-                encounterId={enc.id}
-                onApplySoap={(partial) => {
-                  if (partial.subjective !== undefined) setSubjective(partial.subjective ?? "");
-                  if (partial.objective !== undefined) setObjective(partial.objective ?? "");
-                  if (partial.assessment !== undefined) setAssessment(partial.assessment ?? "");
-                  if (partial.plan !== undefined) setPlan(partial.plan ?? "");
-                }}
-              />
+              <EntitlementGate entitlement="ai_scribe" requiredPlan="PRO">
+                <EncounterScribePanel
+                  encounterId={enc.id}
+                  onApplySoap={(partial) => {
+                    if (partial.subjective !== undefined) setSubjective(partial.subjective ?? "");
+                    if (partial.objective !== undefined) setObjective(partial.objective ?? "");
+                    if (partial.assessment !== undefined) setAssessment(partial.assessment ?? "");
+                    if (partial.plan !== undefined) setPlan(partial.plan ?? "");
+                  }}
+                />
+              </EntitlementGate>
             ) : null}
             <div className="space-y-2">
               <Label htmlFor="s" className="flex items-center gap-2">

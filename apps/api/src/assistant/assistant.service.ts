@@ -235,6 +235,9 @@ export class AssistantService {
       return this.replyResponse(user, persona, locale, navKeys, qaEarly);
     }
 
+    if (tenantId) {
+      await this.usage.assertAiAssistantQuota(tenantId);
+    }
     const runtime = await this.ai.runtimeForTenant(tenantId);
     const promptVersion = runtime?.promptVersion ?? "v1";
     const liveJson = this.liveData.snapshotForPrompt(snapshot);

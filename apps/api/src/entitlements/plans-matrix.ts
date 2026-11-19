@@ -16,6 +16,7 @@ export const MODULE_ENTITLEMENT_KEYS = [
   "mod_integrations",
   "mod_data_explorer",
   "ai_assistant",
+  "ai_scribe",
   "deposits",
   "multi_branch",
   "whatsapp_reminders",
@@ -61,7 +62,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "billing-platform/settlement.controller.ts": { kind: "open" },
   "billing-platform/kiorex-progress.controller.ts": { kind: "open" },
   "billing-platform/monthly-statement.controller.ts": { kind: "open" },
-  "clinic-ai/clinic-ai.controller.ts": { kind: "gated", entitlement: "ai_assistant" },
+  "clinic-ai/clinic-ai.controller.ts": { kind: "mixed", entitlement: "ai_scribe", minDecorators: 4 },
   "clinical/clinical.controller.ts": { kind: "gated", entitlement: "mod_clinical" },
   "clinical/rx-share.controller.ts": { kind: "open" },
   "cohorts/public-cohorts.controller.ts": { kind: "open" },
@@ -142,6 +143,7 @@ export const ENTITLEMENT_MIN_PLAN: Record<string, PlanKey> = {
   mod_integrations: PlanKey.CLINIC,
   mod_data_explorer: PlanKey.CLINIC,
   ai_assistant: PlanKey.PRO,
+  ai_scribe: PlanKey.PRO,
   deposits: PlanKey.PRO,
   multi_branch: PlanKey.CLINIC,
   whatsapp_reminders: PlanKey.PRO,
@@ -222,7 +224,7 @@ export const PLAN_NAV_TAB_PRESETS: Record<PlanKey, readonly string[]> = {
   ],
 };
 
-const PLAN_MATRIX: Record<PlanKey, Record<string, EntitlementSeedValue>> = {
+export const PLAN_MATRIX: Record<PlanKey, Record<string, EntitlementSeedValue>> = {
   [PlanKey.LITE]: {
     max_clinicians: 2,
     max_branches: 1,
@@ -240,6 +242,7 @@ const PLAN_MATRIX: Record<PlanKey, Record<string, EntitlementSeedValue>> = {
     mod_integrations: false,
     mod_data_explorer: false,
     ai_assistant: false,
+    ai_scribe: false,
     deposits: false,
     multi_branch: false,
     whatsapp_reminders: false,
@@ -265,6 +268,8 @@ const PLAN_MATRIX: Record<PlanKey, Record<string, EntitlementSeedValue>> = {
     mod_integrations: false,
     mod_data_explorer: false,
     ai_assistant: true,
+    /** Ambient scribe is a paid add-on — enable via tenant override / catalog add-on. */
+    ai_scribe: false,
     deposits: true,
     multi_branch: false,
     whatsapp_reminders: true,
@@ -290,6 +295,7 @@ const PLAN_MATRIX: Record<PlanKey, Record<string, EntitlementSeedValue>> = {
     mod_integrations: true,
     mod_data_explorer: true,
     ai_assistant: true,
+    ai_scribe: true,
     deposits: true,
     multi_branch: true,
     whatsapp_reminders: true,
@@ -315,6 +321,7 @@ const PLAN_MATRIX: Record<PlanKey, Record<string, EntitlementSeedValue>> = {
     mod_integrations: true,
     mod_data_explorer: true,
     ai_assistant: true,
+    ai_scribe: true,
     deposits: true,
     multi_branch: true,
     whatsapp_reminders: true,
