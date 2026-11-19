@@ -41,7 +41,6 @@ import { Patient360Service } from "./patient-360.service";
 import { MessagingConsentService } from "./messaging-consent.service";
 import { MessagingConsentItemDto, PutMessagingConsentDto } from "./dto/messaging-consent.dto";
 import { ConsentPolicyService } from "../compliance/consent-policy.service";
-import { RecordShareService } from "../marketplace/record-share.service";
 
 const PATIENT_DOC_UPLOAD_LIMIT = 15 * 1024 * 1024;
 
@@ -55,7 +54,6 @@ export class PatientsController {
     private readonly patient360: Patient360Service,
     private readonly messagingConsent: MessagingConsentService,
     private readonly consentPolicy: ConsentPolicyService,
-    private readonly recordShare: RecordShareService,
   ) {}
 
   @Get(":id/consents")
@@ -436,23 +434,6 @@ export class PatientsController {
     @Body() body: PutMessagingConsentDto,
   ) {
     return this.messagingConsent.putForPatient(requireTenantId(user), id, user.userId, body);
-  }
-
-  /** KX-11 — clinic UI toggles for Kiorex patient-app record sharing. */
-  @Get(":id/record-share-consent")
-  @ApiOperation({ summary: "KX-11 — record-share consent scopes for the patient app" })
-  getRecordShareConsent(@CurrentUser() user: JwtUser, @Param("id") id: string) {
-    return this.recordShare.listForPatient(requireTenantId(user), id);
-  }
-
-  @Put(":id/record-share-consent")
-  @ApiOperation({ summary: "KX-11 — update record-share consent scopes" })
-  putRecordShareConsent(
-    @CurrentUser() user: JwtUser,
-    @Param("id") id: string,
-    @Body() body: { consents: { scope: string; granted: boolean }[] },
-  ) {
-    return this.recordShare.upsertConsents(requireTenantId(user), id, body?.consents ?? [], "CLINIC");
   }
 
   @Get(":id")

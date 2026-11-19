@@ -1,9 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { createHmac } from "node:crypto";
-import { RecordShareScope } from "@prisma/client";
+import { Prisma, RecordShareScope } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
-import { OutboxEventService } from "../messaging/outbox-event.service";
-import { OUTBOX_EVENT, OUTBOX_TARGET_KIOREX } from "../messaging/outbox-event-types";
+import { OUTBOX_EVENT, OUTBOX_STATUS, OUTBOX_TARGET_KIOREX } from "../messaging/outbox-event-types";
 import {
   isActiveShareGrant,
   isRecordShareScope,
@@ -17,10 +16,7 @@ export type RecordShareConsentInput = {
 
 @Injectable()
 export class RecordShareService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly outbox: OutboxEventService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async upsertFromMarketplace(patientId: string, consents: RecordShareConsentInput[]) {
     const patient = await this.prisma.patient.findFirst({
@@ -111,17 +107,10 @@ export class RecordShareService {
           },
         });
         if (wasActive) {
-          await this.outbox.enqueueEvent({
-            tenantId,
-            type: OUTBOX_EVENT.RECORD_SHARE_REVOKED,
-            aggregateType: "Patient",
-            aggregateId: patientId,
-            target: OUTBOX_TARGET_KIOREX,
-            payload: {
-              patientId,
-              scope,
-              action: "DELETE_REQUESTED",
-            },
+          await this.enqueueKiorex(tenantId, OUTBOX_EVENT.RECORD_SHARE_REVOKED, "Patient", patientId, {
+            patientId,
+            scope,
+            action: "DELETE_REQUESTED",
           });
         }
       }
@@ -192,41 +181,53 @@ export class RecordShareService {
         },
       };
       const signature = signPayload(summary);
-      await this.outbox.enqueueEvent({
-        tenantId,
-        type: OUTBOX_EVENT.VISIT_SUMMARY_SHARED,
-        aggregateType: "Encounter",
-        aggregateId: enc.id,
-        target: OUTBOX_TARGET_KIOREX,
-        payload: {
-          patientId: enc.patientId,
-          scope: RecordShareScope.VISIT_SUMMARY,
-          summary,
-          signature,
-        },
+      await this.enqueueKiorex(tenantId, OUTBOX_EVENT.VISIT_SUMMARY_SHARED, "Encounter", enc.id, {
+        patientId: enc.patientId,
+        scope: RecordShareScope.VISIT_SUMMARY,
+        summary,
+        signature,
       });
       shared.push(RecordShareScope.VISIT_SUMMARY);
     }
 
     if (rxOk && enc.medications.length > 0) {
-      await this.outbox.enqueueEvent({
-        tenantId,
-        type: OUTBOX_EVENT.PRESCRIPTION_SHARED,
-        aggregateType: "Encounter",
-        aggregateId: enc.id,
-        target: OUTBOX_TARGET_KIOREX,
-        payload: {
-          patientId: enc.patientId,
-          scope: RecordShareScope.PRESCRIPTIONS,
-          encounterId: enc.id,
-          clinicId: enc.clinicId,
-          signedAt: enc.signedAt.toISOString(),
-        },
+      await this.enqueueKiorex(tenantId, OUTBOX_EVENT.PRESCRIPTION_SHARED, "Encounter", enc.id, {
+        patientId: enc.patientId,
+        scope: RecordShareScope.PRESCRIPTIONS,
+        encounterId: enc.id,
+        clinicId: enc.clinicId,
+        signedAt: enc.signedAt.toISOString(),
       });
       shared.push(RecordShareScope.PRESCRIPTIONS);
     }
 
     return { shared };
+  }
+
+  private async enqueueKiorex(
+    tenantId: string,
+    type: string,
+    aggregateType: string,
+    aggregateId: string,
+    payload: Record<string, unknown>,
+  ) {
+    await this.prisma.outboxEvent.create({
+      data: {
+        tenantId,
+        type,
+        aggregateType,
+        aggregateId,
+        payload: {
+          ...payload,
+          aggregateType,
+          aggregateId,
+        } as Prisma.InputJsonValue,
+        target: OUTBOX_TARGET_KIOREX,
+        status: OUTBOX_STATUS.PENDING,
+        attempts: 0,
+        nextAttemptAt: new Date(),
+      },
+    });
   }
 
   private async assertPatient(tenantId: string, patientId: string) {

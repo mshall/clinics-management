@@ -7,7 +7,6 @@ import {
   RecordShareScope,
   UserRole,
 } from "@prisma/client";
-import { OutboxEventService } from "../messaging/outbox-event.service";
 import { OUTBOX_EVENT } from "../messaging/outbox-event-types";
 import { PrismaService } from "../prisma/prisma.service";
 import { RecordShareService } from "./record-share.service";
@@ -96,8 +95,7 @@ describe("KX-11 record share consent", () => {
         },
       })
     ).id;
-    const prismaSvc = prisma as unknown as PrismaService;
-    svc = new RecordShareService(prismaSvc, new OutboxEventService(prismaSvc));
+    svc = new RecordShareService(prisma as unknown as PrismaService);
   });
 
   after(async () => {
