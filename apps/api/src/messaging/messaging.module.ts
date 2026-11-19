@@ -7,6 +7,8 @@ import { MessagingController } from "./messaging.controller";
 import { MessagingService } from "./messaging.service";
 import { InternalOutboxConsumerService } from "./internal-outbox-consumer.service";
 import { OwnerNotificationsService } from "./owner-notifications.service";
+import { InstallmentRemindersController } from "./installment-reminders.controller";
+import { InstallmentRemindersService } from "./installment-reminders.service";
 import { WaitlistAutofillService } from "./waitlist-autofill.service";
 import { OutboundMessageWorker } from "./outbound-message.worker";
 import { WhatsAppSendService } from "./whatsapp-send.service";
@@ -23,12 +25,13 @@ import { PublicAppointmentRescheduleController } from "./public-appointment-resc
 
 @Module({
   imports: [AuditModule, forwardRef(() => SchedulingModule), PatientsModule],
-  controllers: [MessagingController, WhatsAppWebhookController, PublicAppointmentRescheduleController],
+  controllers: [MessagingController, WhatsAppWebhookController, PublicAppointmentRescheduleController, InstallmentRemindersController],
   providers: [
     WaitlistAutofillService,
     MessagingService,
     OwnerNotificationsService,
     InternalOutboxConsumerService,
+    InstallmentRemindersService,
     WhatsAppSendService,
     WhatsAppWebhookService,
     WhatsAppInboundRepliesService,

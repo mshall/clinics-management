@@ -18,10 +18,12 @@ import {
   type VisitCollectionValue,
 } from "@/lib/visit-collection";
 import { setPaymentFlowActive } from "@/lib/unsaved-work-registry";
+import { SplitPaymentDialog } from "./split-payment-dialog";
 
 type Props = {
   encounterId: string;
   clinicId: string;
+  patientId: string;
   amount: number;
   currency: string;
   preferredTransferChannel?: string | null;
@@ -31,6 +33,8 @@ type Props = {
 
 export function CollectVisitBalanceCard({
   encounterId,
+  clinicId,
+  patientId,
   amount,
   currency,
   preferredTransferChannel,
@@ -39,6 +43,7 @@ export function CollectVisitBalanceCard({
 }: Props) {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
+  const [splitOpen, setSplitOpen] = useState(false);
   const [collection, setCollection] = useState<VisitCollectionValue>(() => ({
     ...emptyVisitCollection(),
     mode: requiresTransferReceipt ? "MONEY_TRANSFER" : "CASH_ON_VISIT",
@@ -141,9 +146,28 @@ export function CollectVisitBalanceCard({
             </p>
           </div>
         ) : null}
-        <Button type="button" disabled={collect.isPending} onClick={() => collect.mutate()}>
-          {t("frontDesk.collectBalance", "Collect balance")}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" disabled={collect.isPending} onClick={() => collect.mutate()}>
+            {t("frontDesk.collectBalance", "Collect balance")}
+          </Button>
+          {patientId && clinicId ? (
+            <Button type="button" variant="outline" onClick={() => setSplitOpen(true)} data-testid="open-split-payment">
+              {t("splitPayment.open", "Split payment")}
+            </Button>
+          ) : null}
+        </div>
+        {patientId && clinicId ? (
+          <SplitPaymentDialog
+            open={splitOpen}
+            onOpenChange={setSplitOpen}
+            clinicId={clinicId}
+            patientId={patientId}
+            balance={amount}
+            currency={currency}
+            target={{ kind: "VISIT", encounterId }}
+            invalidateKeys={[["encounter", encounterId], ...invalidateKeys]}
+          />
+        ) : null}
       </CardContent>
     </Card>
   );

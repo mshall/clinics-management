@@ -742,6 +742,7 @@ export function EncounterDetailPage() {
         <CollectVisitBalanceCard
           encounterId={enc.id}
           clinicId={enc.clinicId}
+          patientId={enc.patientId}
           amount={enc.visitBalanceDueAmount}
           currency={enc.visitBalanceDueCurrency ?? visitFeeCurrency}
           invalidateKeys={[["appointment", enc.appointmentId], ["front-desk"]]}

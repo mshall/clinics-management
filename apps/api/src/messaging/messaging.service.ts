@@ -44,6 +44,12 @@ const DEFAULT_TEMPLATES: { key: string; channel: MessageChannel; bodyEn: string;
     bodyAr: "تم إغلاق وردية {{clinic}} رقم Z#{{z}}: النقدية المتوقعة {{expected}}، المعدودة {{counted}}، الفرق {{variance}}؛ البطاقات {{card}}. الحالة: {{status}}.",
   },
   {
+    key: "installment_due_reminder",
+    channel: MessageChannel.WHATSAPP,
+    bodyEn: "Hello {{name}}, a reminder from {{clinic}}: your installment of {{amount}} is due on {{date}}.",
+    bodyAr: "مرحباً {{name}}، تذكير من {{clinic}}: قسطك بقيمة {{amount}} مستحق في {{date}}.",
+  },
+  {
     key: "results_ready",
     channel: MessageChannel.WHATSAPP,
     bodyEn: "Your lab results are ready. Please contact {{clinic}}.",

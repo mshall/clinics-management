@@ -2887,6 +2887,10 @@ model OperationInstallment {
   dueOn       DateTime  @db.Date
   amount      Decimal   @db.Decimal(14, 2)
   paidAt      DateTime?
+  /// MN-06 — split payment that completed this installment.
+  paymentId   String?
+  /// MN-06 — last WhatsApp due reminder sent to the patient.
+  reminderSentAt DateTime?
   createdAt   DateTime  @default(now())
 
   @@index([operationId])

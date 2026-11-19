@@ -9,6 +9,7 @@ Patient-side money for clinics (not Kiorly's own SaaS billing — that is `Kiorl
 | KX-07 | Kiorex Pay deposits → held deposit on the booking → `BillingPayment` at check-in via `postRevenue`; refund/forfeit per policy; payouts reconciliation; deposit badge | **Done** |
 | MN-03 | Cash drawer shifts: open with a float, blind count at close, variance note, review flag above the market threshold, owner WhatsApp summary, bilingual Z-report (A4 + 80 mm thermal), shift screen — see [Cash drawer shifts](#cash-drawer-shifts-mn-03) | **Done** |
 | MN-02 | Doctor revenue-share rules (percent / fixed per visit / room rental, by doctor · visit type · category · payer · branch), monthly statements with adjustments, approve-to-lock, payout, bilingual PDF, reconciliation — see [Doctor revenue share](#doctor-revenue-share-mn-02) | **Done** |
+| MN-06 | Split payments (cash + card + transfer/wallet in one receipt) and operation installment schedules with WhatsApp reminders — see [Split payments & installments](#split-payments--installments-mn-06) | **Done** |
 
 ## Money model
 
@@ -79,6 +80,15 @@ One open shift per clinic drawer (`CashierShift`, advisory lock per clinic). Fro
 - Audit: `CASHIER_SHIFT_OPENED`, `CASHIER_SHIFT_CLOSED` (expected, counted, variance, review flag), `CASHIER_SHIFT_REVIEWED`. Gated by `mod_invoices`; desk/finance roles or the owner.
 - The legacy day-level `POST /billing/cash-close` remains for API clients.
 
+## Split payments & installments (MN-06)
+
+Mixed cash + card + InstaPay is recorded as **one** `BillingPayment` with several allocations. **Each allocation posts its own revenue row through `postRevenue`** and stores `BillingPaymentAllocation.revenueEntryId` — never a bare payment without revenue.
+
+- **API** — `POST /billing/split-payments` (Pro+ `mod_invoices`, desk/finance roles or owner). Targets: `VISIT` (shrinks the encounter receivable via `applyVisitBalancePayment`), `OPERATION` (increments `Operation.paidAmount`, settles unpaid installments oldest-first when fully covered), `SERVICE` (requires a description). Desk methods only (`CASH` / `CARD` / `TRANSFER` / `WALLET` / `OTHER`); Kiorex Pay is never a desk method. Transfers/wallets use `MONEY_TRANSFER` collection with channel + reference.
+- **Installments** — `PUT /billing/operations/:id/installments` replaces unpaid rows (paid ones stay); `GET /billing/installments?clinicId=&status=OPEN|OVERDUE|DUE_SOON`. Reminder window from market pack `providerConfig.billing.installmentReminderDaysBefore` (default **2**). Hourly job + desk `POST /installment-reminders/:id` queue WhatsApp `installment_due_reminder` (once automatically; desk can resend). `OperationInstallment.paymentId` / `reminderSentAt` track settlement and nudges.
+- **UI** — Split dialog from visit balance collection and the Installments screen (`/front-desk/installments`, linked from the live board). EN + AR strings under `splitPayment` / `installments`.
+- Audit: `SPLIT_PAYMENT_RECORDED`, `INSTALLMENT_SCHEDULE_SET`.
+
 ## Doctor revenue share (MN-02)
 
 Monthly statement per doctor, computed from **collected** revenue only — `POSTED` `RevenueEntry` rows with `postedAt` inside the month in the market timezone, excluding rejected bank transfers. Receivables (billed, not paid) never count. Refund rows are negative, so they reduce the doctor's share automatically.
@@ -106,6 +116,10 @@ Monthly statement per doctor, computed from **collected** revenue only — `POST
 - `apps/api/src/revenue-share/mn02-revenue-share.integration.test.ts` — totals reconcile with revenue for the period, rule precedence, room rental, fixed per visit, doctor scope, adjust → approve lock → mark paid, PDF.
 - `apps/api/src/revenue-share/mn02-revenue-share-engine.node.test.ts` — precedence, refunds, rental, unmatched, payable, timezone periods.
 - `apps/web/e2e/mn02-doctor-statements.spec.ts` — owner sees statements + balanced reconciliation; a doctor sees only their own, no approve.
+- `apps/api/src/billing/mn06-split-payments.integration.test.ts` — each allocation posts revenue; visit balance clears / partial; fee reduction across split rows; operation installment settle + schedule guards; service + Kiorex Pay refused at desk.
+- `apps/api/src/billing/mn06-split-payments.node.test.ts` — normalize allocations, settle oldest-first, status / reminder window.
+- `apps/api/src/messaging/mn06-installment-reminders.integration.test.ts` — due-soon WhatsApp once; off when flag disabled; desk resend.
+- `apps/web/e2e/mn06-split-payments.spec.ts` — schedule + split via API, installments screen lists rows.
 
 ## Follow-ups
 

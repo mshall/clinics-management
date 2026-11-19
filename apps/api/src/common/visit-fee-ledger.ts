@@ -195,14 +195,14 @@ async function amendCollectedVisitFee(
     appointmentId: string | null;
     patientId: string;
     currency: string;
-    collectedRow: LedgerRow;
+    collectedRows: LedgerRow[];
     paidAmount: number;
     targetAmount: number;
     clinicTaxRin?: string | null;
     vatPercent?: number;
   },
 ): Promise<void> {
-  const { paidAmount, targetAmount, collectedRow } = params;
+  const { paidAmount, targetAmount, collectedRows } = params;
 
   if (targetAmount > paidAmount + 0.001) {
     const balance = targetAmount - paidAmount;
@@ -219,25 +219,15 @@ async function amendCollectedVisitFee(
   }
 
   if (targetAmount < paidAmount - 0.001) {
-    await reducePostedRevenueNetWithFiscal(
-      tx,
-      params.tenantId,
-      collectedRow.id,
-      targetAmount,
-      {
-        tenantId: params.tenantId,
-        clinicId: params.clinicId,
-        patientId: params.patientId,
-        description: collectedRow.description ?? `Visit fee · encounter ${params.encounterId.slice(0, 8)}…`,
-        currency: params.currency,
-        vatPercent: params.vatPercent,
-        clinicTaxRin: params.clinicTaxRin,
-        collectionMode: collectedRow.collectionMode,
-        transferChannel: collectedRow.transferChannel,
-        transferReference: collectedRow.transferReference,
-      },
-      "Partial return",
-    );
+    // newest collection absorbs the reduction first (a split payment has one row per method)
+    let excess = paidAmount - targetAmount;
+    for (const row of [...collectedRows].reverse()) {
+      if (excess <= 0.001) break;
+      const gross = Number(row.grossAmount);
+      const cut = Math.min(gross, excess);
+      await reducePostedRevenueNetWithFiscal(tx, params.tenantId, row.id, Math.round((gross - cut) * 100) / 100);
+      excess -= cut;
+    }
     await upsertBalanceDueRow(tx, {
       tenantId: params.tenantId,
       clinicId: params.clinicId,
@@ -275,6 +265,43 @@ export async function getEncounterVisitFeeReceivableSummary(
     amount: Number(row.netAmount),
     currency: row.currency,
     revenueEntryId: row.id,
+  };
+}
+
+/**
+ * MN-06 — part (or all) of the visit balance paid by a split payment. Shrinks the receivable row; the caller posts
+ * one collected `VISIT_FEE` row per payment allocation through `postRevenue`.
+ */
+export async function applyVisitBalancePayment(
+  tx: Prisma.TransactionClient,
+  params: { tenantId: string; encounterId: string; amount: number },
+): Promise<{ clinicId: string; appointmentId: string | null; patientId: string; currency: string; remaining: number }> {
+  const encounter = await tx.encounter.findFirst({
+    where: { id: params.encounterId, tenantId: params.tenantId },
+    select: { clinicId: true, patientId: true, appointmentId: true },
+  });
+  if (!encounter) throw new Error("ENCOUNTER_NOT_FOUND");
+  const rows = await listEncounterVisitFeeLedgerRows(tx, params.tenantId, params.encounterId);
+  const balanceRow = rows.find(isReceivableVisitBalance);
+  const balance = balanceRow ? Number(balanceRow.netAmount) : 0;
+  if (!balanceRow || balance <= 0.001) throw new Error("NO_VISIT_BALANCE");
+  if (params.amount > balance + 0.001) throw new Error("VISIT_BALANCE_EXCEEDED");
+  const remaining = Math.round((balance - params.amount) * 100) / 100;
+  await upsertBalanceDueRow(tx, {
+    tenantId: params.tenantId,
+    clinicId: encounter.clinicId,
+    encounterId: params.encounterId,
+    appointmentId: balanceRow.appointmentId ?? encounter.appointmentId,
+    patientId: encounter.patientId,
+    currency: balanceRow.currency,
+    balanceAmount: remaining,
+  });
+  return {
+    clinicId: encounter.clinicId,
+    appointmentId: balanceRow.appointmentId ?? encounter.appointmentId,
+    patientId: encounter.patientId,
+    currency: balanceRow.currency,
+    remaining,
   };
 }
 
@@ -423,7 +450,8 @@ export async function upsertEncounterVisitFeeRevenue(
     }
   }
 
-  const collectedRow = encounterRows.find(isCollectedVisitFee);
+  const collectedRows = encounterRows.filter(isCollectedVisitFee);
+  const collectedRow = collectedRows[0];
 
   if (amount <= 0) {
     await voidPostedRevenuesWithFiscalReturns(
@@ -435,8 +463,8 @@ export async function upsertEncounterVisitFeeRevenue(
     return;
   }
 
-  if (collectedRow && isCollectedVisitFee(collectedRow)) {
-    const paid = Number(collectedRow.grossAmount);
+  if (collectedRow) {
+    const paid = Math.round(collectedRows.reduce((sum, r) => sum + Number(r.grossAmount), 0) * 100) / 100;
     if (Math.abs(paid - amount) <= 0.001) {
       await upsertBalanceDueRow(tx, {
         tenantId,
@@ -456,7 +484,7 @@ export async function upsertEncounterVisitFeeRevenue(
       appointmentId,
       patientId: params.patientId,
       currency,
-      collectedRow,
+      collectedRows,
       paidAmount: paid,
       targetAmount: amount,
       clinicTaxRin: params.clinicTaxRin,
