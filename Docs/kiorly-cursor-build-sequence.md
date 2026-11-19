@@ -329,7 +329,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 093 · PA-01 · Tenant lifecycle console `39905c2`
 - [x] Step 094 · PA-04 · Support access with consent & audit `7e1284a`
 - [x] Step 095 · PA-05 · Growth analytics: activation funnel & cohorts `5e22724`
-- [ ] Step 096 · GT-01 · Marketing website & pricing page with "Kiorly free" calculator
+- [x] Step 096 · GT-01 · Marketing website & pricing page with "Kiorly free" calculator `1786c45`
 - [ ] Step 097 · GT-03 · Help centre & Arabic video tutorials
 - [ ] Step 098 · GT-04 · Support operations & WhatsApp support line
 - [ ] Step 099 · GT-05 · Sales kit: demo tenants, ROI calculator, referral & rep codes
@@ -4129,7 +4129,7 @@ model DoctorStatement {
 - Site.
 
 **Acceptance criteria** (write a test for each)
-- [ ] Pricing on the site always equals the API values.
+- [x] Pricing on the site always equals the API values.
 
 **Done when:** all acceptance tests pass, §0.2 checks are green, en + ar strings added, docs updated, and Step 096 is ticked in §5.
 
