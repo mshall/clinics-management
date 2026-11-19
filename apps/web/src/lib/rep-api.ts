@@ -44,6 +44,34 @@ export type RepCreateTenantBody = {
   owner: { displayName: string; email: string };
 };
 
+export type RepMeDto = {
+  id: string;
+  code: string;
+  displayName: string;
+  salesRepCode: string;
+  signupUrl: string;
+  qrDataUrl: string | null;
+};
+
+export type RepRoiDto = {
+  noShowSavings: number;
+  adminSavings: number;
+  kiorexContribution: number;
+  grossMonthlyBenefit: number;
+  planMonthlyAmount: number;
+  netMonthlyBenefit: number;
+  paybackMonths: number | null;
+  patientsToOffsetPlan: number | null;
+};
+
+export function fetchRepMe() {
+  return apiGet<RepMeDto>("/api/v1/rep/me");
+}
+
+export function fetchRepRoi(body: Record<string, number>) {
+  return apiPost<RepRoiDto>("/api/v1/rep/roi", body);
+}
+
 export function fetchRepPortfolio() {
   return apiGet<RepPortfolioDto>("/api/v1/rep/portfolio");
 }

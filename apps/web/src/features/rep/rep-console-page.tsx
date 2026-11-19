@@ -12,7 +12,9 @@ import { IMPORT_ENTITIES, type ImportEntity, type ImportJobDto } from "@/lib/imp
 import { fetchLegalCatalog, requiredLegalIdsForPlan, type LegalCatalogItem } from "@/lib/legal-api";
 import {
   fetchRepCommission,
+  fetchRepMe,
   fetchRepPortfolio,
+  fetchRepRoi,
   repCommitImport,
   repConfirmOwner,
   repCreateTenant,
@@ -236,12 +238,23 @@ export function RepConsolePage() {
   const signOut = useAuthStore((s) => s.signOut);
   const qc = useQueryClient();
   const [period, setPeriod] = useState(currentPeriod());
+  const me = useQuery({ queryKey: ["rep", "me"], queryFn: fetchRepMe, enabled: user?.role === "sales_rep" });
   const portfolio = useQuery({ queryKey: ["rep", "portfolio"], queryFn: fetchRepPortfolio, enabled: user?.role === "sales_rep" });
   const commission = useQuery({
     queryKey: ["rep", "commission", period],
     queryFn: () => fetchRepCommission(period),
     enabled: user?.role === "sales_rep",
   });
+  const [roiInputs, setRoiInputs] = useState({
+    noShowsPreventedPerMonth: 8,
+    feePerVisit: 300,
+    adminHoursSavedPerWeek: 4,
+    adminHourlyCost: 50,
+    kiorexPatientsPerMonth: 6,
+    contributionPerKiorexPatient: 200,
+    planMonthlyAmount: 999,
+  });
+  const roi = useMutation({ mutationFn: () => fetchRepRoi(roiInputs) });
   if (user && user.role !== "sales_rep") return <Navigate to="/" replace />;
   const refresh = () => void qc.invalidateQueries({ queryKey: ["rep"] });
   const ar = i18n.language.startsWith("ar");
@@ -265,6 +278,70 @@ export function RepConsolePage() {
           </Button>
         </div>
       </header>
+
+      {me.data ? (
+        <Card data-testid="rep-qr-card">
+          <CardHeader>
+            <CardTitle className="text-base">{t("rep.qrTitle")}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <p className="break-all text-muted-foreground" data-testid="rep-signup-url">
+              {me.data.signupUrl}
+            </p>
+            {me.data.qrDataUrl ? (
+              <img src={me.data.qrDataUrl} alt={t("rep.qrAlt")} className="mx-auto size-40" data-testid="rep-qr" />
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => void navigator.clipboard.writeText(me.data!.signupUrl)}
+            >
+              {t("rep.copySignupLink")}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <Card data-testid="rep-roi-card">
+        <CardHeader>
+          <CardTitle className="text-base">{t("rep.roiTitle")}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {(
+            [
+              ["noShowsPreventedPerMonth", "rep.roiNoShows"],
+              ["feePerVisit", "rep.roiFee"],
+              ["adminHoursSavedPerWeek", "rep.roiAdminHours"],
+              ["adminHourlyCost", "rep.roiAdminCost"],
+              ["kiorexPatientsPerMonth", "rep.roiKiorexPatients"],
+              ["contributionPerKiorexPatient", "rep.roiKiorexContribution"],
+              ["planMonthlyAmount", "rep.roiPlan"],
+            ] as const
+          ).map(([key, label]) => (
+            <div key={key} className="grid grid-cols-2 items-center gap-2">
+              <Label htmlFor={`roi-${key}`}>{t(label)}</Label>
+              <Input
+                id={`roi-${key}`}
+                type="number"
+                value={roiInputs[key]}
+                onChange={(e) => setRoiInputs((p) => ({ ...p, [key]: Number(e.target.value) }))}
+              />
+            </div>
+          ))}
+          <Button type="button" className="w-full" disabled={roi.isPending} onClick={() => roi.mutate()} data-testid="rep-roi-run">
+            {t("rep.roiCalculate")}
+          </Button>
+          {roi.data ? (
+            <p className="text-sm" data-testid="rep-roi-result">
+              {t("rep.roiResult", {
+                net: roi.data.netMonthlyBenefit.toLocaleString(i18n.language),
+                gross: roi.data.grossMonthlyBenefit.toLocaleString(i18n.language),
+              })}
+            </p>
+          ) : null}
+        </CardContent>
+      </Card>
 
       {totals ? (
         <div className="grid grid-cols-4 gap-2 text-center" data-testid="rep-totals">

@@ -20,6 +20,8 @@ import { PlatformGrowthService } from "./platform-growth.service";
 import { DrugDatasetImportService, type DrugDatasetImportPayload } from "../clinical/drug-dataset-import.service";
 import { SettlementService } from "../billing-platform/settlement.service";
 import { PlatformMoneyAuditService } from "../audit/platform-money-audit.service";
+import { SalesKitService } from "../staging/sales-kit.service";
+import type { SalesRoiInput } from "../staging/sales-roi";
 
 @ApiTags("admin-platform")
 @ApiBearerAuth("bearer")
@@ -33,6 +35,7 @@ export class PlatformAdminController {
     private readonly drugDatasets: DrugDatasetImportService,
     private readonly settlement: SettlementService,
     private readonly platformAudit: PlatformMoneyAuditService,
+    private readonly salesKit: SalesKitService,
   ) {}
 
   @Get("audit")
@@ -356,5 +359,19 @@ export class PlatformAdminController {
   @ApiOperation({ summary: "Import a versioned market drug dataset (platform super admin)" })
   importDrugDataset(@CurrentUser() user: JwtUser, @Body() body: DrugDatasetImportPayload) {
     return this.drugDatasets.importDataset(user, body);
+  }
+
+  @Post("demo/reset")
+  @ApiOperation({ summary: "GT-05 — reset sales demo pilot tenants (Lite/Pro/Clinic) in under 60s" })
+  @ApiOkResponse()
+  resetSalesDemo(@CurrentUser() user: JwtUser, @Body() body: { tier?: string }) {
+    return this.salesKit.resetDemo(user, body);
+  }
+
+  @Post("sales/roi")
+  @ApiOperation({ summary: "GT-05 — sales ROI calculator (no-shows, admin time, Kiorex patients)" })
+  @ApiOkResponse()
+  salesRoi(@CurrentUser() user: JwtUser, @Body() body: SalesRoiInput) {
+    return this.salesKit.roi(body);
   }
 }

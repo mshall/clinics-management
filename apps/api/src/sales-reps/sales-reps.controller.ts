@@ -36,6 +36,25 @@ export class SalesRepsController {
     return this.reps.me(user);
   }
 
+  @Post("roi")
+  @HttpCode(200)
+  @ApiOperation({ summary: "GT-05 — sales ROI calculator for field reps" })
+  roi(
+    @CurrentUser() user: JwtUser,
+    @Body()
+    body: {
+      noShowsPreventedPerMonth?: number;
+      feePerVisit?: number;
+      adminHoursSavedPerWeek?: number;
+      adminHourlyCost?: number;
+      kiorexPatientsPerMonth?: number;
+      contributionPerKiorexPatient?: number;
+      planMonthlyAmount?: number;
+    },
+  ) {
+    return this.reps.roi(user, body);
+  }
+
   @Post("tenants")
   @ApiOperation({ summary: "Create a clinic on behalf of its owner; stays PENDING_OWNER until owner OTP (ON-07)" })
   createTenant(@CurrentUser() user: JwtUser, @Body() body: RepCreateTenantInput) {
