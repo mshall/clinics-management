@@ -11,6 +11,7 @@ import {
 } from "@prisma/client";
 import { CreditWalletService } from "../credits/credit-wallet.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { GrowthReferralService } from "./growth-referral.service";
 import { ReferralCodeService } from "./referral-code.service";
 import { ReferralRewardService } from "./referral-reward.service";
 
@@ -120,6 +121,32 @@ describe("CR-09 referral reward on first paid period", () => {
       await prisma.tenant.deleteMany({ where: { id: { in: [referrerId, referredId].filter(Boolean) } } });
     }
     await prisma.$disconnect();
+  });
+
+  it("clinic.referral_rewards OFF: no new reward is granted (referral stays PENDING) and no new code is minted", async () => {
+    const prismaSvc = prisma as unknown as PrismaService;
+    const off = { evaluate: async () => ({ effective: false }) } as never;
+    const gated = new ReferralRewardService(prismaSvc, new CreditWalletService(prismaSvc), off);
+    await gated.tryOnInvoiceFullyPaid(referredId, invoiceId);
+    assert.equal((await prisma.referral.findUniqueOrThrow({ where: { id: referralId } })).status, ReferralStatus.PENDING);
+    assert.equal(await prisma.creditLedgerEntry.count({ where: { reason: CreditReason.REFERRAL, sourceRef: { contains: referralId } } }), 0);
+
+    // Hub: a tenant with no code gets none while OFF (nothing is created); its existing code stays readable.
+    const hub = new GrowthReferralService(prismaSvc, new ReferralCodeService(prismaSvc), off);
+    const fresh = await prisma.tenant.create({
+      data: { name: `NoCode ${suffix}`, marketId: (await prisma.market.findFirstOrThrow({ where: { code: "EG" } })).id, deploymentCell: "frankfurt", baseCurrency: "EGP" },
+    });
+    try {
+      const res = await hub.getReferralHub({ userId: "u", tenantId: fresh.id } as never);
+      assert.equal(res.enabled, false);
+      assert.equal(res.code, null);
+      assert.equal(res.link, null);
+      assert.equal(await prisma.referralCode.count({ where: { tenantId: fresh.id } }), 0);
+      const existing = await hub.getReferralHub({ userId: "u", tenantId: referrerId } as never);
+      assert.equal(existing.code, code);
+    } finally {
+      await prisma.tenant.delete({ where: { id: fresh.id } }).catch(() => undefined);
+    }
   });
 
   it("grants REFERRAL credits to both tenants once", async () => {

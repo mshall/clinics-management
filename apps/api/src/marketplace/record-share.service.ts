@@ -1,6 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException, Optional } from "@nestjs/common";
 import { createHmac } from "node:crypto";
 import { Prisma, RecordShareScope } from "@prisma/client";
+import { FeatureFlagsService, requireFeature } from "../feature-flags/feature-flags-public";
+import { mintRxVerificationToken, rxPdfUrl } from "../clinical/rx-verification-token";
 import { PrismaService } from "../prisma/prisma.service";
 import { OUTBOX_EVENT, OUTBOX_STATUS, OUTBOX_TARGET_KIOREX } from "../messaging/outbox-event-types";
 import {
@@ -16,7 +18,10 @@ export type RecordShareConsentInput = {
 
 @Injectable()
 export class RecordShareService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly flags?: FeatureFlagsService,
+  ) {}
 
   async upsertFromMarketplace(patientId: string, consents: RecordShareConsentInput[]) {
     const patient = await this.prisma.patient.findFirst({
@@ -24,6 +29,11 @@ export class RecordShareService {
       select: { id: true, tenantId: true },
     });
     if (!patient) throw new NotFoundException("Patient not found");
+    // clinic.record_share_patient_app OFF: no NEW grants from the Kiorex patient app (403 FEATURE_DISABLED).
+    // Revocations always pass: consent withdrawal is a safety control, never a flag (ADR-025).
+    if (this.flags && consents.some((c) => c.granted)) {
+      await requireFeature(this.flags, patient.tenantId, "clinic.record_share_patient_app");
+    }
     return this.upsertConsents(patient.tenantId, patient.id, consents, "KIOREX");
   }
 
@@ -137,6 +147,23 @@ export class RecordShareService {
   }
 
   /**
+   * Opaque consent token for a v2 hand-off (PrescriptionIssued / LabOrderPlaced): derived from the active grant row,
+   * so it changes when the patient re-consents and cannot be minted without an active, non-revoked grant. Returns
+   * null when the patient has not consented for the scope.
+   */
+  async consentTokenFor(tenantId: string, patientId: string, scope: RecordShareScope): Promise<string | null> {
+    const row = await this.prisma.patientRecordShareConsent.findUnique({
+      where: { patientId_scope: { patientId, scope } },
+    });
+    if (!row || row.tenantId !== tenantId || !isActiveShareGrant(row)) return null;
+    const mac = createHmac("sha256", process.env.KIOREX_RECORD_SHARE_HMAC_SECRET?.trim() || "dev-record-share-secret")
+      .update(`${row.id}:${row.scope}:${row.capturedAt.getTime()}`, "utf8")
+      .digest("base64url")
+      .slice(0, 32);
+    return `rsc_${mac}`;
+  }
+
+  /**
    * After visit sign-off: push visit summary (+ Rx when consented) to Kiorex via outbox.
    * Returns null when nothing was shared (no consent).
    */
@@ -191,12 +218,16 @@ export class RecordShareService {
     }
 
     if (rxOk && enc.medications.length > 0) {
+      // Rx PDF: a signed, expiring public link to the same PDF the clinic prints/WhatsApps (CL-03). Kiorex fetches it
+      // into the patient's vault; the link carries no more PHI than the printed Rx and is never logged.
+      const { raw, expiresAt } = await mintRxVerificationToken(this.prisma, tenantId, enc.id, null);
       await this.enqueueKiorex(tenantId, OUTBOX_EVENT.PRESCRIPTION_SHARED, "Encounter", enc.id, {
         patientId: enc.patientId,
         scope: RecordShareScope.PRESCRIPTIONS,
         encounterId: enc.id,
         clinicId: enc.clinicId,
         signedAt: enc.signedAt.toISOString(),
+        pdf: { url: rxPdfUrl(raw), expiresAt: expiresAt.toISOString() },
       });
       shared.push(RecordShareScope.PRESCRIPTIONS);
     }

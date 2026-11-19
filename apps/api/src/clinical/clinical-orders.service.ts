@@ -1,21 +1,53 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, Optional } from "@nestjs/common";
 import {
   ClinicalOrderKind,
   ClinicalOrderStatus,
   MessageChannel,
   Prisma,
+  RecordShareScope,
 } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
+import { RecordShareService } from "../marketplace/record-share.service";
 import { MessagingService } from "../messaging/messaging.service";
+import { OutboxEventService } from "../messaging/outbox-event.service";
+import { OUTBOX_EVENT } from "../messaging/outbox-event-types";
 
 export const RESULTS_READY_TEMPLATE = "results_ready";
+const RESULTS_PDF_MAX_BYTES = 15 * 1024 * 1024;
 
 @Injectable()
 export class ClinicalOrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly messaging: MessagingService,
+    @Optional() private readonly recordShare?: RecordShareService,
+    @Optional() private readonly outbox?: OutboxEventService,
+    @Optional() @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads?: UploadBlobStorage,
   ) {}
+
+  /** CL-06 results as PDF: stored privately under the tenant; the order keeps only the relative key. */
+  async attachResultsPdf(tenantId: string, orderId: string, file: { buffer: Buffer; size: number; mimetype: string; originalname?: string } | undefined) {
+    if (!this.uploads) throw new ConflictException("File storage is not available");
+    if (!file?.buffer?.length) throw new BadRequestException("A PDF file is required");
+    if (file.size > RESULTS_PDF_MAX_BYTES) throw new BadRequestException("PDF is larger than 15 MB");
+    if (file.buffer.subarray(0, 5).toString("latin1") !== "%PDF-") throw new BadRequestException("Only PDF results can be attached");
+    const order = await this.prisma.clinicalOrder.findFirst({ where: { id: orderId, tenantId }, select: { id: true, resultsPdfRelativePath: true } });
+    if (!order) throw new NotFoundException("Order not found");
+    const key = `${tenantId}/clinical-orders/${order.id}/results-${Date.now()}.pdf`;
+    await this.uploads.put("encounters", key, file.buffer, "application/pdf");
+    if (order.resultsPdfRelativePath) await this.uploads.deleteObject("encounters", order.resultsPdfRelativePath).catch(() => undefined);
+    await this.prisma.clinicalOrder.update({ where: { id: order.id }, data: { resultsPdfRelativePath: key } });
+    return { orderId: order.id, hasResultsPdf: true as const };
+  }
+
+  async openResultsPdf(tenantId: string, orderId: string) {
+    if (!this.uploads) throw new ConflictException("File storage is not available");
+    const order = await this.prisma.clinicalOrder.findFirst({ where: { id: orderId, tenantId }, select: { resultsPdfRelativePath: true } });
+    if (!order?.resultsPdfRelativePath) throw new NotFoundException("No results PDF attached to this order");
+    await this.uploads.assertExists("encounters", order.resultsPdfRelativePath);
+    return { stream: await this.uploads.getReadStream("encounters", order.resultsPdfRelativePath), filename: `results-${orderId}.pdf` };
+  }
 
   list(tenantId: string, opts: { encounterId?: string; patientId?: string }) {
     return this.prisma.clinicalOrder.findMany({
@@ -123,6 +155,75 @@ export class ClinicalOrdersService {
     }
 
     return updated;
+  }
+
+  /**
+   * KCV204 — hand a LAB order to Kiorly Lab via Kiorex: emits `LabOrderPlaced` on the outbox. Requires the patient's
+   * active LAB_RESULTS record-share consent (its token rides in the event). Idempotent per order. Mock-safe: Kiorex
+   * accepts the event until Kiorly Lab GA.
+   */
+  async handoffToLab(tenantId: string, orderId: string, userId: string | undefined) {
+    if (!this.recordShare || !this.outbox) throw new ConflictException("Lab hand-off is not available");
+    const order = await this.prisma.clinicalOrder.findFirst({
+      where: { id: orderId, tenantId },
+      include: { items: { orderBy: { sortOrder: "asc" } }, patient: { select: { isSample: true } } },
+    });
+    if (!order) throw new NotFoundException("Order not found");
+    if (order.kind !== ClinicalOrderKind.LAB) {
+      throw new ConflictException({ message: "Only lab orders can be handed off to a lab", errorCode: "LAB_HANDOFF_NOT_LAB" });
+    }
+    if (order.patient.isSample) {
+      throw new ConflictException({ message: "Sample patients cannot be handed off", errorCode: "LAB_HANDOFF_SAMPLE" });
+    }
+    if (order.status === ClinicalOrderStatus.DRAFT || order.status === ClinicalOrderStatus.CANCELLED) {
+      throw new ConflictException({ message: "Place the order before handing it off", errorCode: "LAB_HANDOFF_NOT_PLACED" });
+    }
+    const existing = await this.prisma.outboxEvent.findFirst({
+      where: { tenantId, type: OUTBOX_EVENT.LAB_ORDER_PLACED, aggregateType: "LabOrder", aggregateId: order.id },
+      select: { id: true, status: true },
+    });
+    if (existing) return { handedOff: true, alreadyHandedOff: true, eventId: existing.id, status: existing.status };
+    const consentToken = await this.recordShare.consentTokenFor(tenantId, order.patientId, RecordShareScope.LAB_RESULTS);
+    if (!consentToken) {
+      throw new ConflictException({
+        message: "The patient has not consented to share lab orders and results with a lab",
+        errorCode: "LAB_HANDOFF_NO_CONSENT",
+      });
+    }
+    const eventId = await this.outbox.enqueueEvent({
+      tenantId,
+      type: OUTBOX_EVENT.LAB_ORDER_PLACED,
+      aggregateType: "LabOrder",
+      aggregateId: order.id,
+      payload: {
+        orderId: order.id,
+        clinicId: order.clinicId,
+        patientRef: order.patientId,
+        consentToken,
+        orderedAt: (order.orderedAt ?? order.createdAt).toISOString(),
+        ...(order.encounterId ? { encounterId: order.encounterId } : {}),
+        ...(order.createdByUserId ? { orderingClinicianId: order.createdByUserId } : {}),
+        items: order.items.map((it) => ({
+          ...(it.code ? { code: it.code } : {}),
+          nameEn: it.nameEn,
+          ...(it.nameAr ? { nameAr: it.nameAr } : {}),
+        })),
+        ...(order.notes ? { notes: order.notes } : {}),
+      },
+    });
+    await this.prisma.auditLog.create({
+      data: {
+        tenantId,
+        actorId: userId ?? null,
+        clinicId: order.clinicId,
+        patientId: order.patientId,
+        action: "LAB_ORDER_HANDOFF",
+        resource: "ClinicalOrder",
+        resourceId: order.id,
+        metadata: { patientId: order.patientId, outboxEventId: eventId, items: order.items.length },
+      },
+    });
+    return { handedOff: true, alreadyHandedOff: false, eventId, status: "PENDING" };
   }
 
   /** Acceptance: Results ready → WhatsApp template "results_ready". */

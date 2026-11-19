@@ -1065,8 +1065,8 @@
     "contactSettingsHint": "Phone, email, and default language shown on invoices and patient-facing flows.",
     "contactSettingsSaved": "Contact details updated.",
     "regulatorySettingsTitle": "License & tax authority",
-    "regulatorySettingsHint": "Used on tax invoices, fiscal receipts, and compliance exports for this branch.",
-    "regulatorySettingsHintWithAuthority": "Numbers from {{authority}} used on tax invoices, fiscal receipts, and compliance exports.",
+    "regulatorySettingsHint": "Printed on invoices, payment records, and accountant exports for this branch.",
+    "regulatorySettingsHintWithAuthority": "Numbers from {{authority}} printed on invoices, payment records, and accountant exports.",
     "regulatorySettingsSaved": "License and tax registration saved.",
     "regulatoryOrgDefaultHint": "Group admins can push organization defaults under Administration → Organization & settings.",
     "trnPlaceholder": "Organization or market default",
@@ -2319,6 +2319,7 @@
           "code": "Your code",
           "stats": "{{rewarded}} rewarded · {{pending}} pending",
           "shareWhatsApp": "Share on WhatsApp",
+          "off": "Referral codes are currently switched off for your organization.",
           "whatsAppShare": "Join Kiorly with my referral link: {{link}}",
           "copied": "Link copied",
           "loadError": "Could not load referral hub."

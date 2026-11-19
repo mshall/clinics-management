@@ -3,6 +3,7 @@ import { MessageCircle, Printer, ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Feature } from "@/features/flags/feature";
 import { ApiError, apiPost } from "@/lib/http";
 import { generatePrescriptionPng } from "@/lib/prescription-image";
 import { loadPrescriptionBranding } from "@/lib/prescription-branding";
@@ -89,6 +90,18 @@ export function SignedPrescriptionActions({ encounterId, clinicId }: Props) {
     onError: (e) => toast.error(describe(e)),
   });
 
+  const handoffMutation = useMutation({
+    mutationFn: () => apiPost<{ alreadyHandedOff: boolean }>(`/api/v1/encounters/${encounterId}/prescription/handoff`, {}),
+    onSuccess: (r) =>
+      toast.success(r.alreadyHandedOff ? t("rxShare.alreadyHandedOff", "Already sent to a pharmacy") : t("rxShare.handedOff", "Prescription sent to the pharmacy")),
+    onError: (e) =>
+      toast.error(
+        errorCode(e) === "RX_HANDOFF_NO_CONSENT"
+          ? t("rxShare.handoffNoConsent", "The patient has not consented to share prescriptions with a pharmacy.")
+          : describe(e),
+      ),
+  });
+
   return (
     <div
       className="rounded-xl border border-emerald-300/80 bg-emerald-50/40 p-3 dark:border-emerald-800 dark:bg-emerald-950/20"
@@ -121,6 +134,11 @@ export function SignedPrescriptionActions({ encounterId, clinicId }: Props) {
           <MessageCircle className="h-3.5 w-3.5" aria-hidden />
           {t("rxShare.sendToPatient")}
         </Button>
+        <Feature flag="clinic.eprescription_handoff">
+          <Button type="button" size="sm" variant="outline" disabled={handoffMutation.isPending} onClick={() => handoffMutation.mutate()}>
+            {t("rxShare.sendToPharmacy", "Send to pharmacy")}
+          </Button>
+        </Feature>
       </div>
     </div>
   );

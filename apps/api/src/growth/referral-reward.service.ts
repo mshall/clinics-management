@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, Optional } from "@nestjs/common";
 import {
   BillingInterval,
   CreditReason,
@@ -6,6 +6,7 @@ import {
   Prisma,
   ReferralStatus,
 } from "@prisma/client";
+import { FeatureFlagsService, flagOn } from "../feature-flags/feature-flags-public";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreditWalletService } from "../credits/credit-wallet.service";
 import { referralConfigFromMarket } from "../markets/commercial-config.bridge";
@@ -18,6 +19,7 @@ export class ReferralRewardService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly wallet: CreditWalletService,
+    @Optional() private readonly flags?: FeatureFlagsService,
   ) {}
 
   /** Call after a Kiorly invoice becomes fully PAID. */
@@ -53,6 +55,12 @@ export class ReferralRewardService {
       },
     });
     if (!referral || referral.status !== ReferralStatus.PENDING) return;
+    // clinic.referral_rewards OFF (at the referrer's scope): no NEW rewards are granted; credits already in the
+    // wallet are honoured elsewhere and the referral stays PENDING.
+    if (!(await flagOn(this.flags, referral.referrerTenantId, "clinic.referral_rewards"))) {
+      this.log.log(`referral ${referral.id}: reward skipped, clinic.referral_rewards is OFF`);
+      return;
+    }
 
     const cfg = referralConfigFromMarket(referral.referredTenant.market?.featureDefaults);
     const yearStart = new Date();

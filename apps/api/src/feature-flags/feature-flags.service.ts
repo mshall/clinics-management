@@ -97,6 +97,21 @@ export class FeatureFlagsService {
     return { key, ...this.evalKey(ctx, key, []) };
   }
 
+  /**
+   * Launch-locked specialty templates: hidden ONLY when a Kiorex snapshot exists AND (it marks the specialty flag
+   * gate-unsatisfied, or the flag is switched OFF for this scope). No snapshot (local dev, fresh deploy) or a
+   * snapshot that does not carry the flag at all => visible (dev defaults show them).
+   */
+  async isSpecialtyTemplateVisible(tenantId: string, specialtyFlagKey: string): Promise<boolean> {
+    if (!this.snapshots?.getSnapshot()) return true;
+    const snap = this.snapshots.getFlag(specialtyFlagKey);
+    if (!snap) return true;
+    if (snap.launchLocked && snap.gateSatisfied !== true) return false;
+    const ctx = await this.loadContext(tenantId, [specialtyFlagKey]);
+    const { g, m, o } = this.layerValues(ctx, specialtyFlagKey);
+    return g !== "OFF" && m !== "OFF" && o !== "OFF";
+  }
+
   async listForTenant(tenantId: string): Promise<FeatureFlagLayerView[]> {
     const keys = this.listedKeys();
     const ctx = await this.loadContext(tenantId, keys);
@@ -146,6 +161,10 @@ export class FeatureFlagsService {
         data: { whatsAppRemindersEnabled: enabled },
       });
     }
+    // Local org switch: let flag-derived state (listing status) recompute immediately.
+    await this.snapshots?.notifyChanged([
+      { key, scope: "org", scopeId: tenantId, from: enabled ? "OFF" : "INHERIT", to: enabled ? "INHERIT" : "OFF" },
+    ]);
     return row;
   }
 

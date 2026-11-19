@@ -4,6 +4,7 @@ import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
+import { FeatureGuard, RequiresFeature } from "../feature-flags/feature-flags-public";
 import { NavTabAccessService } from "../user-nav-tabs/nav-tab-access.service";
 import { ENCOUNTERS_MUTATE_ROLES, ENCOUNTERS_VIEW_ROLES } from "../user-nav-tabs/nav-tab-module-roles";
 import { RxShareService } from "./rx-share.service";
@@ -11,7 +12,7 @@ import { RxShareService } from "./rx-share.service";
 @ApiTags("encounters")
 @ApiBearerAuth("bearer")
 @Controller("encounters")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, FeatureGuard)
 export class RxShareController {
   constructor(
     private readonly rx: RxShareService,
@@ -37,6 +38,22 @@ export class RxShareController {
       "You do not have permission to change encounters",
     );
     return this.rx.sendToPatient(requireTenantId(user), id, user);
+  }
+
+  @RequiresFeature("clinic.eprescription_handoff")
+  @Post(":id/prescription/handoff")
+  @ApiOperation({
+    summary: "KCV203: hand the signed e-prescription to Kiorly Pharmacy via Kiorex (PrescriptionIssued; patient consent token required)",
+  })
+  @ApiOkResponse()
+  async handoff(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    await this.navTabAccess.assertMutateTab(
+      user,
+      "encounters",
+      ENCOUNTERS_MUTATE_ROLES,
+      "You do not have permission to change encounters",
+    );
+    return this.rx.handoffToPharmacy(requireTenantId(user), id, user);
   }
 }
 

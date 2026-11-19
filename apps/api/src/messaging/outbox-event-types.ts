@@ -19,6 +19,12 @@ export const OUTBOX_EVENT = {
   VISIT_SUMMARY_SHARED: "VISIT_SUMMARY_SHARED",
   PRESCRIPTION_SHARED: "PRESCRIPTION_SHARED",
   RECORD_SHARE_REVOKED: "RECORD_SHARE_REVOKED",
+  /** KCV203 — e-prescription handed off to Kiorly Pharmacy via Kiorex (patient consent token required, KX-09 §04). */
+  PRESCRIPTION_ISSUED: "PrescriptionIssued",
+  /** KCV204 — lab order handed off to Kiorly Lab via Kiorex (patient consent token required). */
+  LAB_ORDER_PLACED: "LabOrderPlaced",
+  /** KX waitlist — a slot opened for a Kiorex-sourced waitlist entry; Kiorex offers it to the patient. */
+  WAITLIST_OFFER: "WAITLIST_OFFER",
 } as const;
 
 export type OutboxEventType = (typeof OUTBOX_EVENT)[keyof typeof OUTBOX_EVENT];

@@ -5,7 +5,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { apiGet, apiPatch, apiPost } from "@/lib/http";
+import { Feature } from "@/features/flags/feature";
+import { apiFetchBlob, apiGet, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 
 type OrderItem = { id: string; nameEn: string; nameAr: string; resultValue: string | null };
@@ -13,6 +14,7 @@ type Order = {
   id: string;
   kind: "LAB" | "IMAGING";
   status: string;
+  resultsPdfRelativePath?: string | null;
   items: OrderItem[];
 };
 
@@ -58,6 +60,30 @@ export function EncounterOrdersPanel({ encounterId, clinicId, patientId }: Props
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const attachPdf = useMutation({
+    mutationFn: ({ id, file }: { id: string; file: File }) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      return apiPostFormData(`/api/v1/clinical/orders/${id}/results-pdf`, fd, { enhance: false });
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["clinical", "orders", encounterId] });
+      toast.success(t("clinicalOrders.pdfAttached", "Results PDF attached"));
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const handoff = useMutation({
+    mutationFn: (id: string) => apiPost<{ alreadyHandedOff: boolean }>(`/api/v1/clinical/orders/${id}/handoff`, {}),
+    onSuccess: (r) => toast.success(r.alreadyHandedOff ? t("clinicalOrders.alreadyHandedOff", "Already sent to the lab") : t("clinicalOrders.handedOff", "Sent to the lab")),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  async function openPdf(id: string) {
+    const { blob } = await apiFetchBlob(`/api/v1/clinical/orders/${id}/results-pdf`);
+    window.open(URL.createObjectURL(blob), "_blank", "noopener");
+  }
 
   return (
     <Card data-testid="encounter-orders-panel">
@@ -106,6 +132,32 @@ export function EncounterOrdersPanel({ encounterId, clinicId, patientId }: Props
                     {o.items.map((it) => it.nameEn).join(", ")}
                   </div>
                 </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="cursor-pointer text-xs underline">
+                    {t("clinicalOrders.attachPdf", "Attach results PDF")}
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      className="sr-only"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) attachPdf.mutate({ id: o.id, file: f });
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                  {o.resultsPdfRelativePath ? (
+                    <Button type="button" size="sm" variant="ghost" onClick={() => void openPdf(o.id).catch((e: Error) => toast.error(e.message))}>
+                      {t("clinicalOrders.viewPdf", "View PDF")}
+                    </Button>
+                  ) : null}
+                  {o.kind === "LAB" && o.status !== "CANCELLED" && o.status !== "DRAFT" ? (
+                    <Feature flag="clinic.lab_order_handoff">
+                      <Button type="button" size="sm" variant="outline" disabled={handoff.isPending} onClick={() => handoff.mutate(o.id)}>
+                        {t("clinicalOrders.handoff", "Send to lab")}
+                      </Button>
+                    </Feature>
+                  ) : null}
                 {o.status !== "RESULTS_READY" && o.status !== "CANCELLED" ? (
                   <Button
                     type="button"
@@ -117,6 +169,7 @@ export function EncounterOrdersPanel({ encounterId, clinicId, patientId }: Props
                     {t("clinicalOrders.markReady")}
                   </Button>
                 ) : null}
+                </div>
               </li>
             ))}
           </ul>

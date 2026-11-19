@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { RecordShareModule } from "../marketplace/record-share.module";
 import { MessagingModule } from "../messaging/messaging.module";
 import { ClinicalController } from "./clinical.controller";
 import { ClinicalService } from "./clinical.service";
@@ -10,7 +11,7 @@ import { DrugCatalogService } from "./drug-catalog.service";
 import { DrugDatasetImportService } from "./drug-dataset-import.service";
 
 @Module({
-  imports: [MessagingModule],
+  imports: [MessagingModule, RecordShareModule],
   controllers: [ClinicalController],
   providers: [
     ClinicalService,

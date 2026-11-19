@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { apiGet } from "@/lib/http";
 
 type ReferralHub = {
-  code: string;
-  link: string;
+  enabled?: boolean;
+  code: string | null;
+  link: string | null;
   stats: { invited: number; rewarded: number; pending: number };
 };
 
@@ -36,7 +37,7 @@ export function AdminReferralInviteCard() {
       if (!data) return;
       const text = t("admin.billing.referral.whatsAppShare", {
         defaultValue: "Join Kiorly with my referral link: {{link}}",
-        link: data.link,
+        link: data.link ?? "",
       });
       const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
       window.open(url, "_blank", "noopener,noreferrer");
@@ -64,6 +65,10 @@ export function AdminReferralInviteCard() {
       <CardContent className="space-y-4">
         {hubQuery.isPending ? (
           <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+        ) : data && !data.code ? (
+          <p className="text-sm text-muted-foreground">
+            {t("admin.billing.referral.off", "Referral codes are currently switched off for your organization.")}
+          </p>
         ) : data ? (
           <>
             <div className="flex flex-wrap items-start gap-6">
@@ -73,7 +78,7 @@ export function AdminReferralInviteCard() {
                   {t("admin.billing.referral.code", "Your code")}: <span className="font-mono font-semibold">{data.code}</span>
                 </p>
                 <div className="flex gap-2">
-                  <Input readOnly value={data.link} className="font-mono text-xs" />
+                  <Input readOnly value={data.link ?? ""} className="font-mono text-xs" />
                   <Button type="button" size="sm" variant="outline" onClick={() => void copyLink()}>
                     {copied ? t("common.copied", "Copied") : t("common.copy", "Copy")}
                   </Button>

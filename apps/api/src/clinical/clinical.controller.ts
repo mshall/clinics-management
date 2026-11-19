@@ -1,6 +1,8 @@
-import { FeatureFlagsService, specialtyTemplateFlagKey } from "../feature-flags/feature-flags-public";
+import { FeatureGuard, FeatureFlagsService, RequiresFeature, specialtyTemplateFlagKey } from "../feature-flags/feature-flags-public";
 import { LAUNCH_SPECIALTIES } from "./launch-specialty-templates";
-import { Body, Controller, Delete, Get, Optional, Param, Patch, Post, Put, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Optional, Param, Patch, Post, Put, Query, StreamableFile, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { memoryStorage } from "multer";
 import {
   ClinicalLetterType,
   ClinicalOrderKind,
@@ -25,7 +27,7 @@ import { SpecialtyPacksService } from "./specialty-packs.service";
 @ApiTags("clinical")
 @ApiBearerAuth("bearer")
 @Controller("clinical")
-@UseGuards(JwtAuthGuard, EntitlementGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard, FeatureGuard)
 @RequiresEntitlement("mod_clinical")
 export class ClinicalController {
   constructor(
@@ -46,14 +48,14 @@ export class ClinicalController {
   ) {
     const tenantId = requireTenantId(user);
     const rows = await this.clinical.listTemplates(tenantId, user, specialty, clinicId);
-    // clinic.specialty_templates.<code> (launch-locked): built-in templates stay hidden from new encounters until the
-    // gate is recorded in the Kiorex super admin. Only enforced once Kiorex is the authority for flags; custom and
-    // already-used templates are never hidden.
-    if (!this.flags || !this.flags.isManaged()) return rows;
+    // clinic.specialty_templates.<code> (launch-locked): built-in launch-specialty templates are hidden from new
+    // encounters ONLY when a Kiorex snapshot exists AND marks them gate-unsatisfied (or switched OFF). No snapshot
+    // (dev / fresh deploy) => they show. Custom and already-used templates are never hidden.
+    if (!this.flags) return rows;
     const visible: typeof rows = [];
     for (const r of rows) {
       const gated = r.isSystemDefault && (LAUNCH_SPECIALTIES as readonly string[]).includes(r.specialty);
-      if (!gated || (await this.flags.isEnabled(tenantId, specialtyTemplateFlagKey(r.specialty)))) visible.push(r);
+      if (!gated || (await this.flags.isSpecialtyTemplateVisible(tenantId, specialtyTemplateFlagKey(r.specialty)))) visible.push(r);
     }
     return visible;
   }
@@ -193,6 +195,26 @@ export class ClinicalController {
     },
   ) {
     return this.orders.patch(requireTenantId(user), id, body);
+  }
+
+  /** CL-06 — results as a PDF (structured results stay on the items / resultsJson). */
+  @Post("orders/:id/results-pdf")
+  @UseInterceptors(FileInterceptor("file", { storage: memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } }))
+  attachOrderResultsPdf(@CurrentUser() user: JwtUser, @Param("id") id: string, @UploadedFile() file?: Express.Multer.File) {
+    return this.orders.attachResultsPdf(requireTenantId(user), id, file);
+  }
+
+  @Get("orders/:id/results-pdf")
+  async downloadOrderResultsPdf(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    const { stream, filename } = await this.orders.openResultsPdf(requireTenantId(user), id);
+    return new StreamableFile(stream, { type: "application/pdf", disposition: `inline; filename="${filename}"` });
+  }
+
+  /** KCV204 — lab order handoff to Kiorly Lab via Kiorex (LabOrderPlaced; patient consent token required). */
+  @RequiresFeature("clinic.lab_order_handoff")
+  @Post("orders/:id/handoff")
+  handoffOrder(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.orders.handoffToLab(requireTenantId(user), id, user.userId);
   }
 
   /** CL-07 specialty packs */

@@ -1,37 +1,23 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { MessageChannel, UserRole } from "@prisma/client";
-import { createHash, randomBytes } from "node:crypto";
+import { MessageChannel, RecordShareScope, UserRole } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { JwtUser } from "../auth/jwt-user";
 import { effectiveRoles, isTenantOwnerPrincipal } from "../common/effective-roles";
 import { buildBilingualPdf } from "../billing-platform/bilingual-pdf";
+import { RecordShareService } from "../marketplace/record-share.service";
+import { OutboxEventService } from "../messaging/outbox-event.service";
+import { OUTBOX_EVENT } from "../messaging/outbox-event-types";
 import { MessagingService } from "../messaging/messaging.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { hashRxToken as hashToken, mintRxVerificationToken, rxPdfUrl, rxTokenTtlDays, rxWebBase } from "./rx-verification-token";
 import { prescriptionPdfSections, printedRxItem, toVerificationView, type PrintedRx, type RxVerificationView } from "./rx-print";
 
 export const RX_READY_TEMPLATE_KEY = "prescription_ready";
-const DEFAULT_TOKEN_TTL_DAYS = 14;
 
 /** Physicians without another role only reach their own visits (same rule as the encounter screens). */
 function isPhysicianOnly(viewer: JwtUser): boolean {
   if (isTenantOwnerPrincipal(viewer)) return false;
   return effectiveRoles(viewer).every((r) => r === UserRole.PHYSICIAN);
-}
-
-function hashToken(raw: string): string {
-  return createHash("sha256").update(raw, "utf8").digest("hex");
-}
-
-function webBase(): string {
-  return (process.env.APP_WEB_URL?.trim() || "http://localhost:5173").replace(/\/$/, "");
-}
-
-/** Pack `clinicalConfig.rxVerification.tokenTtlDays`; code default 14 days. */
-export function rxTokenTtlDays(clinicalConfig: unknown): number {
-  const cfg = clinicalConfig && typeof clinicalConfig === "object" ? (clinicalConfig as Record<string, unknown>) : {};
-  const rx = cfg.rxVerification && typeof cfg.rxVerification === "object" ? (cfg.rxVerification as Record<string, unknown>) : {};
-  const days = Number(rx.tokenTtlDays);
-  return Number.isFinite(days) && days >= 1 && days <= 90 ? Math.floor(days) : DEFAULT_TOKEN_TTL_DAYS;
 }
 
 const medicationInclude = {
@@ -51,6 +37,8 @@ export class RxShareService {
     private readonly prisma: PrismaService,
     private readonly messaging: MessagingService,
     private readonly audit: AuditService,
+    private readonly recordShare: RecordShareService,
+    private readonly outbox: OutboxEventService,
   ) {}
 
   private async loadSignedEncounter(tenantId: string, encounterId: string, viewer?: JwtUser) {
@@ -95,26 +83,16 @@ export class RxShareService {
     };
   }
 
-  private async mintToken(tenantId: string, encounterId: string, userId: string | null) {
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: { market: { select: { clinicalConfig: true } } },
-    });
-    const ttlDays = rxTokenTtlDays(tenant?.market?.clinicalConfig);
-    const raw = randomBytes(24).toString("base64url");
-    const expiresAt = new Date(Date.now() + ttlDays * 86_400_000);
-    await this.prisma.prescriptionVerificationToken.create({
-      data: { tenantId, encounterId, tokenHash: hashToken(raw), expiresAt, createdByUserId: userId },
-    });
-    return { raw, expiresAt };
+  private mintToken(tenantId: string, encounterId: string, userId: string | null) {
+    return mintRxVerificationToken(this.prisma, tenantId, encounterId, userId);
   }
 
   verifyUrl(raw: string): string {
-    return `${webBase()}/rx/${encodeURIComponent(raw)}`;
+    return `${rxWebBase()}/rx/${encodeURIComponent(raw)}`;
   }
 
   pdfUrl(raw: string): string {
-    return `${webBase()}/api/v1/public/rx/verify/${encodeURIComponent(raw)}/pdf`;
+    return rxPdfUrl(raw);
   }
 
   /** Print model for a signed visit with a fresh verification token (QR target). */
@@ -169,6 +147,66 @@ export class RxShareService {
     return { outboundMessageId: msg.id, status: msg.status, verifyUrl, expiresAt: expiresAt.toISOString() };
   }
 
+  /**
+   * KCV203 — hand the signed e-prescription to Kiorly Pharmacy via Kiorex: emits `PrescriptionIssued` (KX-09 §04)
+   * on the outbox. Requires the patient's active PRESCRIPTIONS record-share consent (its token rides in the event).
+   * Idempotent per encounter. Real Pharmacy GA is not live: Kiorex receives the event and routes it later (mock-safe).
+   */
+  async handoffToPharmacy(tenantId: string, encounterId: string, viewer: JwtUser) {
+    const enc = await this.loadSignedEncounter(tenantId, encounterId, viewer);
+    if (enc.patient.isSample) {
+      throw new ConflictException({ message: "Sample patients cannot be handed off", errorCode: "RX_HANDOFF_SAMPLE" });
+    }
+    const existing = await this.prisma.outboxEvent.findFirst({
+      where: { tenantId, type: OUTBOX_EVENT.PRESCRIPTION_ISSUED, aggregateType: "Prescription", aggregateId: enc.id },
+      select: { id: true, status: true, createdAt: true },
+    });
+    if (existing) {
+      return { handedOff: true, alreadyHandedOff: true, eventId: existing.id, status: existing.status };
+    }
+    const consentToken = await this.recordShare.consentTokenFor(tenantId, enc.patientId, RecordShareScope.PRESCRIPTIONS);
+    if (!consentToken) {
+      throw new ConflictException({
+        message: "The patient has not consented to share prescriptions with a pharmacy",
+        errorCode: "RX_HANDOFF_NO_CONSENT",
+      });
+    }
+    const issuedAt = enc.signedAt!;
+    const eventId = await this.outbox.enqueueEvent({
+      tenantId,
+      type: OUTBOX_EVENT.PRESCRIPTION_ISSUED,
+      aggregateType: "Prescription",
+      aggregateId: enc.id,
+      payload: {
+        prescriptionId: enc.id,
+        encounterId: enc.id,
+        clinicId: enc.clinicId,
+        patientRef: enc.patientId,
+        prescriberId: enc.clinicianId,
+        consentToken,
+        issuedAt: issuedAt.toISOString(),
+        items: enc.medications.map((m) => ({
+          activeIngredient: m.drugProduct?.ingredients[0]?.ingredient.nameEn ?? m.drugName,
+          drugName: m.drugProduct?.brandNameEn ?? m.drugName,
+          ...(m.drugProduct?.strength ? { strength: m.drugProduct.strength } : {}),
+          ...(m.dosage ? { dose: m.dosage } : {}),
+          // The clinic Rx has no pack count; Pharmacy confirms quantity at dispensing (KPRX).
+          quantity: 1,
+        })),
+      },
+    });
+    await this.audit.recordEvent({
+      tenantId,
+      actorId: viewer.userId,
+      clinicId: enc.clinicId,
+      action: "RX_HANDOFF_PHARMACY",
+      resource: "Encounter",
+      resourceId: enc.id,
+      metadata: { patientId: enc.patientId, outboxEventId: eventId, items: enc.medications.length },
+    });
+    return { handedOff: true, alreadyHandedOff: false, eventId, status: "PENDING" };
+  }
+
   private async resolveToken(raw: string) {
     const row = await this.prisma.prescriptionVerificationToken.findUnique({
       where: { tokenHash: hashToken(raw.trim()) },
@@ -203,3 +241,5 @@ export class RxShareService {
     };
   }
 }
+
+export { rxTokenTtlDays };

@@ -25,11 +25,17 @@ export const FLAG_ENFORCEMENT: Record<string, FlagEnforcement> = {
   "clinic.whatsapp_ai_receptionist": { kind: "service", files: ["messaging/whatsapp-ai-receptionist.service.ts"] },
   "clinic.no_show_risk": { kind: "controller", files: ["clinic-ai/clinic-ai.controller.ts"] },
   "clinic.waitlist_autofill": { kind: "service", files: ["messaging/waitlist-autofill.service.ts"] },
-  "clinic.record_share_patient_app": { kind: "controller", files: ["marketplace/record-share-clinic.controller.ts"] },
-  "clinic.eprescription_handoff": { kind: "pending", note: "KCV203 — handoff to Kiorly Pharmacy not built yet" },
-  "clinic.lab_order_handoff": { kind: "pending", note: "KCV204 — handoff to Kiorly Lab not built yet" },
+  "clinic.record_share_patient_app": {
+    kind: "controller",
+    files: ["marketplace/record-share-clinic.controller.ts", "marketplace/record-share.service.ts"],
+  },
+  "clinic.eprescription_handoff": { kind: "controller", files: ["clinical/rx-share.controller.ts"] },
+  "clinic.lab_order_handoff": { kind: "controller", files: ["clinical/clinical.controller.ts"] },
   "clinic.payers_tpa": { kind: "controller", files: ["billing/claims.controller.ts"] },
   "clinic.specialty_templates.<code>": { kind: "controller", files: ["clinical/clinical.controller.ts"] },
-  "clinic.referral_rewards": { kind: "service", files: ["growth/referral-attribution.service.ts"] },
+  "clinic.referral_rewards": {
+    kind: "service",
+    files: ["growth/referral-attribution.service.ts", "growth/growth-referral.service.ts", "growth/referral-reward.service.ts"],
+  },
   "clinic.field_rep_onboarding": { kind: "controller", files: ["signup/public-signup.controller.ts"] },
 };

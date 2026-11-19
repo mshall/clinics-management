@@ -50,6 +50,7 @@ export class KiorexFlagSnapshotService implements OnModuleInit, OnModuleDestroy 
   private lastAlertAt = 0;
   private timer: ReturnType<typeof setInterval> | null = null;
   private refreshing: Promise<boolean> | null = null;
+  private readonly changeListeners: Array<(changes: SnapshotChange[]) => void | Promise<void>> = [];
 
   constructor(
     private readonly prisma: PrismaService,
@@ -121,6 +122,24 @@ export class KiorexFlagSnapshotService implements OnModuleInit, OnModuleDestroy 
       this.lastError = row.lastError;
     } catch (e) {
       this.log.warn(`Could not load persisted snapshot: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
+  /**
+   * Subscribe to flag value changes (a new snapshot version, or a local org switch). Listeners re-derive state that
+   * depends on flags (e.g. marketplace listing PAUSED/LIVE) without waiting for the next read. Errors are logged.
+   */
+  onChange(listener: (changes: SnapshotChange[]) => void | Promise<void>): void {
+    this.changeListeners.push(listener);
+  }
+
+  async notifyChanged(changes: SnapshotChange[]): Promise<void> {
+    for (const l of this.changeListeners) {
+      try {
+        await l(changes);
+      } catch (e) {
+        this.log.warn(`flag change listener failed: ${e instanceof Error ? e.message : String(e)}`);
+      }
     }
   }
 
@@ -217,7 +236,10 @@ export class KiorexFlagSnapshotService implements OnModuleInit, OnModuleDestroy 
       this.setCurrent(snap, etag, new Date());
       this.lastError = null;
       await this.persist(snap, etag, attemptAt);
-      if (!prev || prev.version !== snap.version) await this.auditChange(prev, snap, source);
+      if (!prev || prev.version !== snap.version) {
+        await this.auditChange(prev, snap, source);
+        await this.notifyChanged(diffSnapshots(prev, snap));
+      }
       return true;
     } catch (e) {
       this.lastError = e instanceof Error ? e.message : String(e);

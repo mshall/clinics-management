@@ -11,7 +11,7 @@ dependencies live in code). Scopes: G global · M market · O organization.
 
 | Key | Class | Scopes | Depends on / gate | Enforced in |
 |-----|-------|--------|-------------------|-------------|
-| `clinic.kiorex_listing` | Module | G M O | kiorex.marketplace | profile controller + listing recompute (PAUSED) |
+| `clinic.kiorex_listing` | Module | G M O | kiorex.marketplace | profile controller + listing recompute (PAUSED); **re-derived immediately on every snapshot version change or org switch** (OFF pauses, ON restores) |
 | `clinic.commission_settlement` | Commercial | G M | clinic.kiorex_listing | commission charge capture (new charges stop) |
 | `clinic.kiorly_pay_deposits` | Commercial | G M O | — | deposit-link / deposit-policy controller |
 | `whatsapp_reminders` | Integration | G M O | — | reminder schedulers (existing) |
@@ -24,12 +24,12 @@ dependencies live in code). Scopes: G global · M market · O organization.
 | `clinic.whatsapp_ai_receptionist` | Launch-locked | G M O | clinic.whatsapp_inbound · gate: Meta approval + consent copy | receptionist service |
 | `clinic.no_show_risk` | AI | G M O | — | no-show-risk refresh |
 | `clinic.waitlist_autofill` | Module | G M O | whatsapp_reminders | waitlist autofill offers |
-| `clinic.record_share_patient_app` | Module | G M O | kiorex.record_vault | record-share consent writes |
-| `clinic.eprescription_handoff` | Module | G M O | pharmacy.module | pending (KCV203) |
-| `clinic.lab_order_handoff` | Module | G M O | lab.module | pending (KCV204) |
+| `clinic.record_share_patient_app` | Module | G M O | kiorex.record_vault | clinic consent writes (403) and Kiorex `POST /marketplace/v1/patients/:id/consents` **grants** (revocations always pass: consent withdrawal is a safety control, ADR-025) |
+| `clinic.eprescription_handoff` | Module | G M O | pharmacy.module | `POST /encounters/:id/prescription/handoff` emits `PrescriptionIssued` (patient PRESCRIPTIONS consent token required, once per encounter) |
+| `clinic.lab_order_handoff` | Module | G M O | lab.module | `POST /clinical/orders/:id/handoff` emits `LabOrderPlaced` (patient LAB_RESULTS consent token required, once per order) |
 | `clinic.payers_tpa` | Module | G M O | — | claims: new payers / batches |
-| `clinic.specialty_templates.<code>` | Launch-locked | G M | gate: specialty board sign-off (NH010) | form-template list (managed mode only) |
-| `clinic.referral_rewards` | Commercial | G M | — | referral attribution at signup |
+| `clinic.specialty_templates.<code>` | Launch-locked | G M | gate: specialty board sign-off (NH010) | form-template list: hidden **only when a Kiorex snapshot exists AND marks the specialty gate-unsatisfied** (or OFF); no snapshot or a snapshot without the key ⇒ dev defaults show them |
+| `clinic.referral_rewards` | Commercial | G M | — | referral attribution at signup, **new code minting** (`GET /growth/referral`) and **new reward grants** (referral stays PENDING while OFF; credits already earned are honoured) |
 | `clinic.field_rep_onboarding` | Commercial | G M | — | rep code at public signup |
 
 The five pre-v2 keys (`ai_assistant`, `whatsapp_reminders`, `instapay`, `fawry`, `card_payments`) are unchanged
@@ -56,6 +56,16 @@ The five pre-v2 keys (`ai_assistant`, `whatsapp_reminders`, `instapay`, `fawry`,
   ("Managed in Kiorex super admin" banner, AR/EN); `PATCH` on global/market returns `409 FLAG_MANAGED_BY_KIOREX`. Org admins may still
   switch **org-scope** flags for their own org but can never re-enable a platform/market OFF. The org page shows the effective value and its source.
 - **API**: `GET /feature-flags/effective` (current org), `GET /admin/platform/feature-flags-status` (managed + snapshot age).
+
+### Beyond the guard: derived state and event hand-offs
+
+- **Listing status** follows `clinic.kiorex_listing` without waiting for a read: `KiorexFlagSnapshotService.onChange` fires on every new
+  snapshot version (and on an org-scope switch) and `MarketplaceListingService` recomputes LIVE/PAUSED, emitting `LISTING_STATUS_CHANGED`.
+- **Hand-offs** (`clinic.eprescription_handoff`, `clinic.lab_order_handoff`) are guarded controller actions that write one outbox event
+  to Kiorex each; the patient's active record-share grant supplies an opaque `consentToken` (`rsc_…`) and there is no hand-off without it.
+  Contracts: `@kiorex/contracts` 1.1.0 (`PrescriptionIssued`, `LabOrderPlaced`).
+- **Specialty templates** (launch-locked): Kiorly never hides built-in templates on its own. They are hidden only when the Kiorex snapshot
+  carries the specialty flag with `gateSatisfied: false` or OFF. Local dev and a fresh deploy (no snapshot) show them.
 
 ## OFF contract (FF04)
 

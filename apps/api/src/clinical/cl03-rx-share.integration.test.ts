@@ -5,7 +5,9 @@ import { MessageChannel, PrismaClient } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { JwtUser } from "../auth/jwt-user";
 import { ConsentPolicyService } from "../compliance/consent-policy.service";
+import { RecordShareService } from "../marketplace/record-share.service";
 import { MessagingService } from "../messaging/messaging.service";
+import { OutboxEventService } from "../messaging/outbox-event.service";
 import { MessagingConsentService } from "../patients/messaging-consent.service";
 import { MESSAGING_CONSENT_TRANSACTIONAL } from "../patients/messaging-consent.constants";
 import { PrismaService } from "../prisma/prisma.service";
@@ -19,7 +21,13 @@ function service(): RxShareService {
   const audit = new AuditService(prismaSvc);
   const consent = new MessagingConsentService(prismaSvc, audit, new ConsentPolicyService(prismaSvc, audit));
   const usage = { assertWhatsAppQuota: async () => undefined } as unknown as UsageMeterService;
-  return new RxShareService(prismaSvc, new MessagingService(prismaSvc, consent, usage), audit);
+  return new RxShareService(
+    prismaSvc,
+    new MessagingService(prismaSvc, consent, usage),
+    audit,
+    new RecordShareService(prismaSvc),
+    new OutboxEventService(prismaSvc),
+  );
 }
 
 describe("CL-03 prescription verification & WhatsApp share", () => {
@@ -172,5 +180,46 @@ describe("CL-03 prescription verification & WhatsApp share", () => {
       () => service().sendToPatient(tenantId, signedId, viewer),
       (e: unknown) => e instanceof ForbiddenException,
     );
+  });
+
+  it("KCV203 hand-off emits PrescriptionIssued only with the patient's PRESCRIPTIONS consent, once", async () => {
+    await assert.rejects(
+      () => service().handoffToPharmacy(tenantId, signedId, viewer),
+      (e: unknown) => e instanceof ConflictException && JSON.stringify((e as ConflictException).getResponse()).includes("RX_HANDOFF_NO_CONSENT"),
+    );
+    await prisma.patientRecordShareConsent.upsert({
+      where: { patientId_scope: { patientId, scope: "PRESCRIPTIONS" } },
+      create: { tenantId, patientId, scope: "PRESCRIPTIONS", granted: true, source: "test" },
+      update: { granted: true, revokedAt: null },
+    });
+    const first = await service().handoffToPharmacy(tenantId, signedId, viewer);
+    assert.equal(first.alreadyHandedOff, false);
+    const row = await prisma.outboxEvent.findUniqueOrThrow({ where: { id: first.eventId } });
+    assert.equal(row.type, "PrescriptionIssued");
+    assert.equal(row.target, "KIOREX");
+    const data = row.payload as Record<string, unknown>;
+    assert.match(String(data.consentToken), /^rsc_/);
+    assert.equal(data.patientRef, patientId);
+    assert.ok(Array.isArray(data.items) && (data.items as unknown[]).length >= 1);
+    assert.ok(!JSON.stringify(data).includes("29001011234567"), "never a national id");
+    const again = await service().handoffToPharmacy(tenantId, signedId, viewer);
+    assert.equal(again.alreadyHandedOff, true);
+    assert.equal(again.eventId, first.eventId);
+  });
+
+  it("KX-11: the consented PRESCRIPTION_SHARED push carries a signed expiring link to the Rx PDF", async () => {
+    // PRESCRIPTIONS consent was granted by the hand-off test above.
+    const out = await new RecordShareService(prisma as unknown as PrismaService).shareAfterSignOff(tenantId, signedId);
+    assert.ok(out?.shared.includes("PRESCRIPTIONS"));
+    const ev = await prisma.outboxEvent.findFirstOrThrow({
+      where: { tenantId, type: "PRESCRIPTION_SHARED", aggregateId: signedId },
+      orderBy: { createdAt: "desc" },
+    });
+    const pdf = (ev.payload as { pdf?: { url: string; expiresAt: string } }).pdf!;
+    assert.match(pdf.url, /\/api\/v1\/public\/rx\/verify\/[A-Za-z0-9_-]+\/pdf$/);
+    assert.ok(new Date(pdf.expiresAt).getTime() > Date.now());
+    const token = decodeURIComponent(pdf.url.split("/verify/")[1]!.replace(/\/pdf$/, ""));
+    const { pdf: bytes } = await service().pdf(token);
+    assert.equal(bytes.subarray(0, 5).toString("latin1"), "%PDF-");
   });
 });

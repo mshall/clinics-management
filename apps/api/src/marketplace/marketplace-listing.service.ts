@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, Optional } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException, OnModuleInit, Optional } from "@nestjs/common";
 import {
   ClinicRecordStatus,
   ListingStatus,
@@ -10,6 +10,7 @@ import type { JwtUser } from "../auth/jwt-user";
 import { activeSchedulingPhysicianWhere } from "../common/active-scheduling-physician";
 import { hasAnyRoleInSet } from "../common/effective-roles";
 import { FeatureFlagsService, flagOn } from "../feature-flags/feature-flags-public";
+import { KiorexFlagSnapshotService } from "../feature-flags/kiorex-flag-snapshot.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { normalizeWeekJson } from "../scheduling/availability-week-schema";
 import {
@@ -41,12 +42,38 @@ function weekHasBookableSlots(weekJson: unknown): boolean {
 }
 
 @Injectable()
-export class MarketplaceListingService {
+export class MarketplaceListingService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxEventService,
     @Optional() private readonly flags?: FeatureFlagsService,
+    @Optional() private readonly snapshots?: KiorexFlagSnapshotService,
   ) {}
+
+  /** clinic.kiorex_listing (or its parent) changed in a snapshot / org switch: re-derive LIVE/PAUSED right away. */
+  onModuleInit(): void {
+    this.snapshots?.onChange(async (changes) => {
+      const relevant = changes.filter((c) => c.key === "clinic.kiorex_listing" || c.key === "kiorex.marketplace");
+      if (!relevant.length) return;
+      const orgIds = relevant.filter((c) => c.scope === "org" && c.scopeId).map((c) => c.scopeId as string);
+      const broad = relevant.some((c) => c.scope !== "org");
+      await this.recomputeAllLiveOrPaused(broad ? undefined : orgIds);
+    });
+  }
+
+  /** Recompute every LIVE/PAUSED listing (optionally only the given tenants). Returns the number of tenants touched. */
+  async recomputeAllLiveOrPaused(tenantIds?: string[]): Promise<number> {
+    const rows = await this.prisma.marketplaceListing.findMany({
+      where: {
+        status: { in: [ListingStatus.LIVE, ListingStatus.PAUSED] },
+        ...(tenantIds ? { tenantId: { in: tenantIds } } : {}),
+      },
+      select: { tenantId: true },
+      distinct: ["tenantId"],
+    });
+    for (const r of rows) await this.recomputeTenantListings(r.tenantId);
+    return rows.length;
+  }
 
   assertClinicManage(user: JwtUser, tenantId: string) {
     if (!user.tenantId || user.tenantId !== tenantId || !hasAnyRoleInSet(user, CLINIC_ADMIN_ROLES)) {
