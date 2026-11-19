@@ -342,7 +342,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 104 · CL-07 · Specialty packs: dental chart, aesthetics before/after, physio plans `1ec707f`
 - [x] Step 105 · MN-05 · Company contracts & TPA claims — `29e1419` · `billing/mn05-claims.integration.test.ts` · `billing/mn05-claims.node.test.ts` · `e2e/mn05-claims.spec.ts` · `Docs/MN05_CLAIMS.md`, `Docs/CLINIC_BILLING.md`
 - [x] Step 106 · MS-06 · WhatsApp AI receptionist (Egyptian Arabic) — `55cea4c` · `messaging/ms06-ai-receptionist.integration.test.ts` · `messaging/ms06-ai-receptionist.node.test.ts` · `e2e/ms06-ai-receptionist.spec.ts` · `Docs/MS06_AI_RECEPTIONIST.md`
-- [ ] Step 107 · RP-04 · AR aging, payouts and branch P&L
+- [x] Step 107 · RP-04 · AR aging, payouts and branch P&L — `8b65315` · `reports/rp04-ar-aging.integration.test.ts` · `reports/rp04-ar-aging.node.test.ts` · `e2e/rp04-ar-aging.spec.ts` · `Docs/RP04_AR_AGING_BRANCH_PL.md`
 - [ ] Step 108 · UX-04 · Thermal printing & accessibility
 
 ---
@@ -4469,7 +4469,7 @@ model DoctorStatement {
 - Pages.
 
 **Acceptance criteria** (write a test for each)
-- [ ] Totals reconcile with billing tables.
+- [x] Totals reconcile with billing tables.
 
 **Done when:** all acceptance tests pass, §0.2 checks are green, en + ar strings added, docs updated, and Step 107 is ticked in §5.
 
