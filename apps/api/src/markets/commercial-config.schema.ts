@@ -94,6 +94,27 @@ export const DEPOSIT_POLICY_DEFAULTS: DepositPolicy = {
   autoCancelUnpaid: false,
 };
 
+/** CR-10 — optional "cut no-shows or get N months free"; off by default. */
+export const noShowGuaranteeSchema = z.object({
+  enabled: z.boolean(),
+  targetReductionPercent: z.number().min(1).max(100),
+  creditMonths: z.number().int().min(1).max(12),
+  baselineDays: z.number().int().min(7).max(90),
+  evaluationDay: z.number().int().min(30).max(365),
+  minBaselineAppointments: z.number().int().min(1).max(10_000),
+});
+
+export type NoShowGuaranteeConfig = z.infer<typeof noShowGuaranteeSchema>;
+
+export const NO_SHOW_GUARANTEE_DEFAULTS: NoShowGuaranteeConfig = {
+  enabled: false,
+  targetReductionPercent: 30,
+  creditMonths: 3,
+  baselineDays: 30,
+  evaluationDay: 120,
+  minBaselineAppointments: 100,
+};
+
 export const SALES_REP_COMMISSION_DEFAULTS = { commissionPercent: 10, retentionDays: 90 } as const;
 
 export const commercialConfigSchema = z
@@ -105,8 +126,16 @@ export const commercialConfigSchema = z
     referral: referralSchema,
     salesRep: salesRepSchema.optional(),
     deposits: depositPolicySchema.optional(),
+    noShowGuarantee: noShowGuaranteeSchema.optional(),
   })
   .superRefine((val, ctx) => {
+    if (val.noShowGuarantee && val.noShowGuarantee.evaluationDay <= val.noShowGuarantee.baselineDays) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "evaluationDay must be greater than baselineDays",
+        path: ["noShowGuarantee", "evaluationDay"],
+      });
+    }
     if (val.dunning.readOnlyAfterDays <= val.dunning.graceDays) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -160,7 +189,22 @@ export const DEFAULT_COMMERCIAL_CONFIG: CommercialConfig = {
     expiryMonths: 12,
     maxPerYear: 12,
   },
+  noShowGuarantee: { ...NO_SHOW_GUARANTEE_DEFAULTS },
 };
+
+export function resolveNoShowGuaranteeConfig(commercialConfig: unknown): NoShowGuaranteeConfig {
+  const parsed = safeParseCommercialConfig(commercialConfig);
+  if (parsed.success) {
+    return { ...NO_SHOW_GUARANTEE_DEFAULTS, ...(parsed.data.noShowGuarantee ?? {}) };
+  }
+  // Loose read when pack is partial (tests / legacy rows) — still defaults to off.
+  const raw =
+    commercialConfig && typeof commercialConfig === "object"
+      ? (commercialConfig as { noShowGuarantee?: Partial<NoShowGuaranteeConfig> }).noShowGuarantee
+      : undefined;
+  const loose = noShowGuaranteeSchema.safeParse({ ...NO_SHOW_GUARANTEE_DEFAULTS, ...(raw ?? {}) });
+  return loose.success ? loose.data : { ...NO_SHOW_GUARANTEE_DEFAULTS };
+}
 
 export function parseCommercialConfig(input: unknown): CommercialConfig {
   return commercialConfigSchema.parse(input);

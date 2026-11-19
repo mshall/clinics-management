@@ -18,7 +18,7 @@
 
 | Epic | Step | Notes |
 |------|------|-------|
-| No-show guarantee credits | CR-10 | Optional, off by default |
+| No-show guarantee credits | CR-10 | **Shipped** (optional, off by default) |
 | Consent-based record sharing (patient app) | KX-11 | |
 | Lab & radiology orders as records | CL-06 | |
 | Specialty packs (dental / aesthetics / physio) | CL-07 | |

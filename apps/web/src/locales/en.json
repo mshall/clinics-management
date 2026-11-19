@@ -2159,6 +2159,19 @@
         "empty": "No credit activity yet.",
         "loadError": "Could not load credit wallet."
       },
+      "guarantee": {
+        "title": "No-show guarantee",
+        "hint": "Cut no-shows by the target rate after activation, or earn free subscription months. Off unless your market enables it.",
+        "tracking": "Tracking",
+        "ineligible": "Not eligible",
+        "met": "Target met",
+        "granted": "Credit granted",
+        "dayIndex": "Day {{day}} since activation",
+        "baseline": "Baseline no-show rate {{rate}}% ({{noShows}} / {{appointments}} visits)",
+        "evaluation": "Later period {{rate}}% — reduction {{reduction}}% (target {{target}}%)",
+        "waitingEval": "Evaluation window still open — keep reminders and deposits on.",
+        "reward": "Reward if met: {{months}} month(s) of plan credit."
+      },
       "invoices": {
         "title": "Kiorly invoices",
         "hint": "SaaS subscription and platform charges from Kiorly — not patient clinic invoices.",

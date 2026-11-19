@@ -47,6 +47,7 @@ describe("PL-08 paywall events", () => {
       {} as never,
       {} as never,
       {} as never,
+      {} as never,
       prisma as unknown as PrismaService,
     );
     await ctrl.recordPaywallEvent(
