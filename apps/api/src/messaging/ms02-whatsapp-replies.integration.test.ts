@@ -44,7 +44,9 @@ function webhookService(): WhatsAppWebhookService {
     consent,
     { handleReply: async () => ({ handled: false }) } as never,
   );
-  return new WhatsAppWebhookService(prismaSvc, audit, inbound, consent);
+  return new WhatsAppWebhookService(prismaSvc, audit, inbound, consent, {
+    createFromWhatsAppInbound: async () => ({ created: false }),
+  } as never);
 }
 
 describe("MS-02 WhatsApp inbound replies", () => {

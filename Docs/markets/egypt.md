@@ -73,8 +73,8 @@ Platform pack shipped (GT-02): terms, subscription, Kiorex fees, DPA, patient pr
 
 | Item | Default |
 |------|---------|
-| Support hours | Sun–Thu 09:00–18:00 Africa/Cairo |
-| P1 response | 4 hours |
+| Support hours | Sun–Thu 09:00–18:00 Africa/Cairo — enforced in code (GT-04, [`SUPPORT_OPS.md`](../SUPPORT_OPS.md)) |
+| P1 response | 4 business hours (`URGENT`) — first-response SLA measured on tickets |
 | Pilot length | 30 days first branch |
 | Pilot success | ETA/fiscal submit ≥ 95%; zero unresolved P1; MFA on group admin — see [MN04_ETA_PRODUCTION.md](../MN04_ETA_PRODUCTION.md) |
 

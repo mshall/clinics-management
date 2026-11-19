@@ -2525,6 +2525,13 @@ model SupportTicket {
   module           SupportProductModule
   priority         SupportTicketPriority @default(MEDIUM)
   status           SupportTicketStatus   @default(OPEN)
+  /// GT-04: IN_APP | WHATSAPP
+  channel          String               @default("IN_APP")
+  sourcePhone      String?
+  firstRespondedAt DateTime?
+  firstResponseDueAt DateTime?
+  escalatedToEngineeringAt DateTime?
+  engineeringEscalationNote String?
   reporterUserId   String?
   reporter         User?                @relation("SupportTicketReporter", fields: [reporterUserId], references: [id], onDelete: SetNull)
   assigneeUserId   String?
@@ -2544,6 +2551,7 @@ model SupportTicket {
   @@index([tenantId, status, createdAt])
   @@index([tenantId, module])
   @@index([tenantId, assigneeUserId])
+  @@index([tenantId, channel, createdAt])
 }
 
 model SupportTicketEvent {

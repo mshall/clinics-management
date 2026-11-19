@@ -30,6 +30,13 @@ export type SupportTicketEventDto = {
   createdAt: string;
 };
 
+export type SupportTicketSlaDto = {
+  targetHours: number;
+  breached: boolean;
+  responseMinutes: number | null;
+  dueAt: string;
+};
+
 export type SupportTicketDto = {
   id: string;
   ticketNo: string;
@@ -38,6 +45,8 @@ export type SupportTicketDto = {
   module: SupportProductModule;
   priority: string;
   status: SupportTicketStatus;
+  channel?: string;
+  sourcePhone?: string | null;
   clinicId: string | null;
   patientId: string | null;
   resourceType: string | null;
@@ -55,7 +64,20 @@ export type SupportTicketDto = {
   createdAt: string;
   updatedAt: string;
   resolvedAt: string | null;
+  firstRespondedAt?: string | null;
+  firstResponseDueAt?: string | null;
+  escalatedToEngineeringAt?: string | null;
+  engineeringEscalationNote?: string | null;
+  sla?: SupportTicketSlaDto;
   events?: SupportTicketEventDto[];
+};
+
+export type SupportMacroDto = {
+  id: string;
+  titleEn: string;
+  titleAr: string;
+  bodyEn: string;
+  bodyAr: string;
 };
 
 export type SupportTrackingLogDto = {

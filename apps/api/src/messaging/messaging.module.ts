@@ -2,6 +2,7 @@ import { forwardRef, Module } from "@nestjs/common";
 import { AuditModule } from "../audit/audit.module";
 import { PatientsModule } from "../patients/patients.module";
 import { SchedulingModule } from "../scheduling/scheduling.module";
+import { SupportModule } from "../support/support.module";
 import { AppointmentReminderScheduler } from "./appointment-reminder.scheduler";
 import { MessagingController } from "./messaging.controller";
 import { MessagingService } from "./messaging.service";
@@ -30,7 +31,7 @@ import { EmailBounceController } from "./email-bounce.controller";
 import { ScheduledReportsService } from "./scheduled-reports.service";
 
 @Module({
-  imports: [AuditModule, forwardRef(() => SchedulingModule), PatientsModule],
+  imports: [AuditModule, forwardRef(() => SchedulingModule), PatientsModule, SupportModule],
   controllers: [
     MessagingController,
     WhatsAppWebhookController,

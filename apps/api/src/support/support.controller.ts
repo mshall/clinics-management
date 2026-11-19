@@ -71,6 +71,34 @@ export class SupportController {
     return this.support.addEvent(requireTenantId(user), user, id, body);
   }
 
+  @Get("macros")
+  @ApiOperation({ summary: "GT-04 — canned support reply macros" })
+  @ApiOkResponse()
+  async listMacros(@CurrentUser() user: JwtUser) {
+    await assertSupportAccess(user, this.navTabAccess);
+    return this.support.listMacros();
+  }
+
+  @Post("tickets/:id/macros/:macroId")
+  @ApiOperation({ summary: "GT-04 — apply a reply macro (counts as first response)" })
+  @ApiOkResponse()
+  async applyMacro(@CurrentUser() user: JwtUser, @Param("id") id: string, @Param("macroId") macroId: string) {
+    await assertSupportMutate(user, this.navTabAccess);
+    return this.support.applyMacro(requireTenantId(user), user, id, macroId);
+  }
+
+  @Post("tickets/:id/escalate-engineering")
+  @ApiOperation({ summary: "GT-04 — escalate ticket to engineering" })
+  @ApiOkResponse()
+  async escalateEngineering(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Body() body: { note?: string },
+  ) {
+    await assertSupportMutate(user, this.navTabAccess);
+    return this.support.escalateToEngineering(requireTenantId(user), user, id, body?.note);
+  }
+
   @Get("tracking/logs")
   @ApiOperation({ summary: "Detailed audit trail with resolution hints" })
   @ApiOkResponse()
