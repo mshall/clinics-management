@@ -320,7 +320,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 084 · SC-04 · MFA policy for owners, admins and finance in every environment
 - [x] Step 085 · SC-05 · Tenant data export \& offboarding
 - [x] Step 086 · SC-06 · Rate limiting, WAF, secrets hygiene & penetration test — `8821d9e` · `common/rate-limit.node.test.ts` · `platform/secrets-hygiene.node.test.ts` · `Docs/SC06_RATE_LIMIT_WAF_SECRETS.md` · NH-017
-- [ ] Step 087 · SC-08 · Backup restore drill
+- [x] Step 087 · SC-08 · Backup restore drill
 - [ ] Step 088 · QA-04 · Kiorex contract tests
 - [ ] Step 089 · QA-07 · Load & device performance tests
 - [ ] Step 090 · UX-01 · Installable PWA with push and offline "today" view

@@ -125,3 +125,4 @@
 | 084 SC-04 | `4a23905` | Production-like MFA enforce + 7-day grace; billing blocked after; WhatsApp OTP MFA for physicians; onboarding MFA prompt EN/AR |
 | 085 SC-05 | `448bd9f` | POST /exports/tenant|patient; works in SUSPENDED; offboarding+legal hold; /privacy UI EN/AR |
 | 086 SC-06 | `8821d9e` | Auth/signup/public rate limits (429 RATE_LIMITED); secrets-hygiene unit test; platform/waf-rules.json; npm run audit:prod; NH-017 pen-test |
+| 087 SC-08 | `3ded813` | Runbook + dry-run/aws script + report template; NH-018 live Frankfurt drill |
