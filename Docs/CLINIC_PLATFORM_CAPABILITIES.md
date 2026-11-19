@@ -42,7 +42,7 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 | Refunds, credit notes, deposits, packages | **Shipped** | MN-01 — refunds via `postRevenue`; packages/deposits as liabilities |
 | Daily cash close per cashier/branch | **Shipped** | MN-03 — `CashierShift` open/close/Z-report + owner WhatsApp |
 | Doctor commission rules & statements | **Shipped** | MN-02 — revenue-share engine + statements |
-| Insurer billing, co-pay, pre-auth | **Foundation** | `PayerPreAuthorization`, copay % on contract prices |
+| Insurer billing, co-pay, pre-auth, TPA claims | **Shipped** | MN-05 — `ClaimBatch` / remittance match / B2B payer outbox; co-pay on `ContractServicePrice`; pre-auth foundation |
 | **Egypt: ETA e-receipts** | **Out of scope** | FD-02 — Kiorly never submits to ETA; clinics issue their own receipts |
 | **Receipt devices (multi-market)** | **Retired for ETA** | Fiscal device UI retained only where a market pack still uses non-ETA providers; EG uses clinic-issued receipts |
 | **Egypt: data protection consent** | **Shipped (SC-03)** | `ConsentPolicy.require`; `GET /patients/:id/consents`; check-in + Kiorex capture — [PATIENT_CONSENT.md](./PATIENT_CONSENT.md) |

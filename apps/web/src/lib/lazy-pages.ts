@@ -40,6 +40,10 @@ export const FrontDeskBoardPage = lazyNamed(
 );
 export const CashDrawerPage = lazyNamed(() => import("@/features/front-desk/cash-drawer-page"), "CashDrawerPage");
 export const InstallmentsPage = lazyNamed(() => import("@/features/front-desk/installments-page"), "InstallmentsPage");
+export const ClaimsWorkspacePage = lazyNamed(
+  () => import("@/features/front-desk/claims-workspace-page"),
+  "ClaimsWorkspacePage",
+);
 export const WaitingRoomPage = lazyNamed(
   () => import("@/features/front-desk/waiting-room-page"),
   "WaitingRoomPage",

@@ -57,6 +57,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "billing/patient-money.controller.ts": { kind: "gated", entitlement: "mod_invoices" },
   "billing/cashier-shifts.controller.ts": { kind: "gated", entitlement: "mod_invoices" },
   "billing/split-payments.controller.ts": { kind: "gated", entitlement: "mod_invoices" },
+  "billing/claims.controller.ts": { kind: "gated", entitlement: "mod_invoices" },
   "revenue-share/revenue-share.controller.ts": { kind: "gated", entitlement: "mod_revenue" },
   "growth/growth-referral.controller.ts": { kind: "open" },
   "billing-platform/kiorly-invoices.controller.ts": { kind: "open" },

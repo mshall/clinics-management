@@ -1231,6 +1231,8 @@ model Tenant {
   patientClinicalPhotos          PatientClinicalPhoto[]
   serviceCatalogItems            ServiceCatalogItem[]
   payerCompanies                 PayerCompany[]
+  claimBatches                   ClaimBatch[]
+  claimRemittances               ClaimRemittance[]
   messageTemplates               MessageTemplate[]
   recallCampaigns                RecallCampaign[]
   commissionRules                CommissionRule[]
@@ -2493,6 +2495,9 @@ model Invoice {
   encounter          Encounter?    @relation(fields: [encounterId], references: [id], onDelete: SetNull)
   operationId        String?
   operation          Operation?    @relation(fields: [operationId], references: [id], onDelete: SetNull)
+  /// MN-05 — optional corporate / TPA payer for claim batching.
+  payerCompanyId     String?
+  payerCompany       PayerCompany? @relation(fields: [payerCompanyId], references: [id], onDelete: SetNull)
   invoiceNumber      String
   issueDate          DateTime      @default(now())
   currency           String
@@ -2514,6 +2519,7 @@ model Invoice {
   lines              InvoiceLine[]
   billingPayments    BillingPayment[]
   fiscalDocument     FiscalDocument?
+  claimLines         ClaimLine[]
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
@@ -2521,6 +2527,7 @@ model Invoice {
   @@index([tenantId])
   @@index([clinicId])
   @@index([patientId])
+  @@index([payerCompanyId, issueDate])
   @@index([encounterId])
   @@index([operationId])
 }
@@ -3220,10 +3227,127 @@ model PayerCompany {
   active      Boolean  @default(true)
   contractPrices ContractServicePrice[]
   preAuths    PayerPreAuthorization[]
+  invoices    Invoice[]
+  claimBatches ClaimBatch[]
+  remittances ClaimRemittance[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([tenantId, active])
+}
+
+/// MN-05 — TPA / company claim batch for a payer + period.
+enum ClaimBatchStatus {
+  DRAFT
+  SUBMITTED
+  PARTIALLY_PAID
+  PAID
+  REJECTED
+  CLOSED
+}
+
+enum ClaimLineStatus {
+  PENDING
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+  PAID
+  RESUBMITTED
+}
+
+enum RemittanceLineMatchStatus {
+  MATCHED
+  UNMATCHED
+}
+
+model ClaimBatch {
+  id               String           @id @default(cuid())
+  tenantId         String
+  tenant           Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  payerCompanyId   String
+  payerCompany     PayerCompany     @relation(fields: [payerCompanyId], references: [id], onDelete: Cascade)
+  periodFrom       DateTime         @db.Date
+  periodTo         DateTime         @db.Date
+  status           ClaimBatchStatus @default(DRAFT)
+  currency         String           @default("EGP")
+  submittedAt      DateTime?
+  b2bInvoiceNumber String?
+  b2bInvoicePayload Json?
+  lines            ClaimLine[]
+  remittances      ClaimRemittance[]
+  createdByUserId  String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([tenantId, payerCompanyId, periodFrom])
+  @@index([tenantId, status])
+}
+
+model ClaimLine {
+  id               String          @id @default(cuid())
+  tenantId         String
+  batchId          String
+  batch            ClaimBatch      @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  invoiceId        String
+  invoice          Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  invoiceLineId    String?
+  patientId        String
+  preAuthId        String?
+  /// Stable ref for remittance matching (defaults to invoice number).
+  externalRef      String
+  amountClaimed    Decimal         @db.Decimal(14, 2)
+  amountCopay      Decimal         @default(0) @db.Decimal(14, 2)
+  amountApproved   Decimal?        @db.Decimal(14, 2)
+  amountPaid       Decimal?        @db.Decimal(14, 2)
+  status           ClaimLineStatus @default(PENDING)
+  rejectionReason  String?
+  resubmissionOfId String?
+  resubmissionOf   ClaimLine?      @relation("ClaimLineResubmit", fields: [resubmissionOfId], references: [id], onDelete: SetNull)
+  resubmissions    ClaimLine[]     @relation("ClaimLineResubmit")
+  remittanceLines  ClaimRemittanceLine[]
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@unique([batchId, invoiceId, invoiceLineId])
+  @@index([tenantId, status])
+  @@index([externalRef])
+  @@index([invoiceId])
+}
+
+model ClaimRemittance {
+  id             String                @id @default(cuid())
+  tenantId       String
+  tenant         Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  payerCompanyId String
+  payerCompany   PayerCompany          @relation(fields: [payerCompanyId], references: [id], onDelete: Cascade)
+  batchId        String?
+  batch          ClaimBatch?           @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  reference      String
+  receivedAt     DateTime              @default(now())
+  totalAmount    Decimal               @db.Decimal(14, 2)
+  currency       String                @default("EGP")
+  matchedCount   Int                   @default(0)
+  unmatchedCount Int                   @default(0)
+  lines          ClaimRemittanceLine[]
+  createdAt      DateTime              @default(now())
+
+  @@index([tenantId, payerCompanyId])
+  @@index([batchId])
+}
+
+model ClaimRemittanceLine {
+  id          String                    @id @default(cuid())
+  remittanceId String
+  remittance  ClaimRemittance           @relation(fields: [remittanceId], references: [id], onDelete: Cascade)
+  claimLineId String?
+  claimLine   ClaimLine?                @relation(fields: [claimLineId], references: [id], onDelete: SetNull)
+  externalRef String
+  amount      Decimal                   @db.Decimal(14, 2)
+  status      RemittanceLineMatchStatus @default(UNMATCHED)
+  createdAt   DateTime                  @default(now())
+
+  @@index([remittanceId])
+  @@index([claimLineId])
 }
 
 model ContractServicePrice {
