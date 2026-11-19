@@ -24,6 +24,9 @@ export const MODULE_ENTITLEMENT_KEYS = [
   "instapay",
   "fawry",
   "dedicated_support",
+  "pack_dental",
+  "pack_aesthetics",
+  "pack_physio",
   "max_clinicians",
   "max_branches",
   "max_assistant_seats",
@@ -154,6 +157,9 @@ export const ENTITLEMENT_MIN_PLAN: Record<string, PlanKey> = {
   instapay: PlanKey.PRO,
   fawry: PlanKey.PRO,
   dedicated_support: PlanKey.ENTERPRISE,
+  pack_dental: PlanKey.PRO,
+  pack_aesthetics: PlanKey.PRO,
+  pack_physio: PlanKey.PRO,
   max_clinicians: PlanKey.PRO,
   max_branches: PlanKey.CLINIC,
   max_assistant_seats: PlanKey.PRO,
@@ -253,6 +259,9 @@ export const PLAN_MATRIX: Record<PlanKey, Record<string, EntitlementSeedValue>> 
     instapay: false,
     fawry: false,
     dedicated_support: false,
+    pack_dental: false,
+    pack_aesthetics: false,
+    pack_physio: false,
   },
   [PlanKey.PRO]: {
     max_clinicians: 10,
@@ -280,6 +289,9 @@ export const PLAN_MATRIX: Record<PlanKey, Record<string, EntitlementSeedValue>> 
     instapay: true,
     fawry: true,
     dedicated_support: false,
+    pack_dental: false,
+    pack_aesthetics: false,
+    pack_physio: false,
   },
   [PlanKey.CLINIC]: {
     max_clinicians: 50,
@@ -306,6 +318,9 @@ export const PLAN_MATRIX: Record<PlanKey, Record<string, EntitlementSeedValue>> 
     instapay: true,
     fawry: true,
     dedicated_support: false,
+    pack_dental: false,
+    pack_aesthetics: false,
+    pack_physio: false,
   },
   [PlanKey.ENTERPRISE]: {
     max_clinicians: -1,
@@ -332,8 +347,18 @@ export const PLAN_MATRIX: Record<PlanKey, Record<string, EntitlementSeedValue>> 
     instapay: true,
     fawry: true,
     dedicated_support: true,
+    pack_dental: false,
+    pack_aesthetics: false,
+    pack_physio: false,
   },
 };
+
+/** CL-07 — specialty packs sold as billed add-ons (enable via tenant override after purchase). */
+export const SPECIALTY_PACK_ADDONS = [
+  { key: "pack_dental", nameEn: "Dental chart pack", nameAr: "باقة مخطط الأسنان", monthlyAmount: 299 },
+  { key: "pack_aesthetics", nameEn: "Aesthetics before/after pack", nameAr: "باقة التجميل قبل/بعد", monthlyAmount: 249 },
+  { key: "pack_physio", nameEn: "Physio treatment plans", nameAr: "خطط العلاج الطبيعي", monthlyAmount: 199 },
+] as const;
 
 export function planEntitlementRowsForSeed(): Record<PlanKey, Array<{ key: string; value: EntitlementSeedValue }>> {
   const out = {} as Record<PlanKey, Array<{ key: string; value: EntitlementSeedValue }>>;

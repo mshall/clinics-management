@@ -1191,6 +1191,7 @@ model Tenant {
   patients       Patient[]
   encounters     Encounter[]
   clinicalOrders ClinicalOrder[]
+  dentalChartTeeth DentalChartTooth[]
   revenueEntries RevenueEntry[]
   expenses       Expense[]
   employees      Employee[]
@@ -1760,6 +1761,7 @@ model Patient {
   messagingConsents      MessagingConsent[]
   recordShareConsents  PatientRecordShareConsent[]
   clinicalOrders       ClinicalOrder[]
+  dentalChartTeeth     DentalChartTooth[]
   servicePackages      PatientServicePackage[]
   billingPayments      BillingPayment[]
   fiscalDocuments      FiscalDocument[]
@@ -2906,6 +2908,25 @@ model PatientClinicalPhoto {
 
   @@index([tenantId, patientId])
   @@index([tenantId, pairGroupId])
+}
+
+/// CL-07 — per-tooth odontogram (FDI notation) for dental pack.
+model DentalChartTooth {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  /// FDI tooth number (11–48, 51–85).
+  toothFdi  Int
+  status    String   @default("HEALTHY")
+  planNote  String?
+  feeAmount Decimal? @db.Decimal(14, 2)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@unique([patientId, toothFdi])
+  @@index([tenantId, patientId])
 }
 
 model AppointmentType {
