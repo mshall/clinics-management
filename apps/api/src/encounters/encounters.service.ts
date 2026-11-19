@@ -71,6 +71,7 @@ import { AuditService } from "../audit/audit.service";
 import { assertEncounterWritable, autoLockHours, encounterLockAt, syncEncounterLock } from "../common/encounter-lock";
 import { DrugCatalogService } from "../clinical/drug-catalog.service";
 import { RxSafetyCheckService } from "../clinical/rx-safety-check.service";
+import { RecordShareService } from "../marketplace/record-share.service";
 
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 const ALLOWED_MIME = new Set([
@@ -118,6 +119,7 @@ export class EncountersService {
     private readonly audit: AuditService,
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
     private readonly commissionCharges: CommissionChargeService,
+    private readonly recordShare: RecordShareService,
   ) {}
 
   private mapDiag(d: {
@@ -1180,6 +1182,8 @@ export class EncountersService {
       }
       return updated;
     });
+    // KX-11 — share signed visit / Rx with Kiorex only when patient consented to those scopes.
+    void this.recordShare.shareAfterSignOff(tenantId, encounterId).catch(() => undefined);
     const moneyVis = await this.moneyOverrides(tenantId, viewer);
     return this.enrichVisitBalanceDue(
       tenantId,

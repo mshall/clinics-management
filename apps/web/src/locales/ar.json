@@ -2895,6 +2895,14 @@
     "purposeTransactional": "معاملاتية (تذكيرات)",
     "purposeMarketing": "تسويق واستدعاء"
   },
+  "recordShareConsent": {
+    "title": "مشاركة تطبيق المريض في كيوركس",
+    "hint": "لا تُشارك إلا النطاقات التي يفعّلها المريض بعد توقيع الزيارة. الإلغاء يوقف المشاركة المستقبلية ويطلب من كيوركس حذف النسخ السابقة.",
+    "scopeVisitSummary": "ملخص الزيارة",
+    "scopePrescriptions": "الوصفات",
+    "scopeLabResults": "نتائج التحاليل",
+    "scopeOtherClinics": "المشاركة مع عيادات أخرى"
+  },
   "reschedule": {
     "title": "إعادة جدولة موعدك",
     "clinicPatient": "{{clinic}} · {{patient}}",

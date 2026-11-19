@@ -29,6 +29,7 @@ import { KiorexReviewsService } from "./kiorex-reviews.service";
 import { ClinicBookingPageService } from "./clinic-booking-page.service";
 import { KiorexOverviewService } from "./kiorex-overview.service";
 import { PublicBookingPageController } from "./public-booking-page.controller";
+import { RecordShareModule } from "./record-share.module";
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { PublicBookingPageController } from "./public-booking-page.controller";
     PatientsModule,
     BillingPlatformModule,
     BillingModule,
+    RecordShareModule,
   ],
   controllers: [
     MarketplaceController,

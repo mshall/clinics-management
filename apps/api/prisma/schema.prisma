@@ -1756,6 +1756,7 @@ model Patient {
   dataProtectionConsents PatientDataProtectionConsent[]
   consents             PatientConsent[]
   messagingConsents      MessagingConsent[]
+  recordShareConsents  PatientRecordShareConsent[]
   servicePackages      PatientServicePackage[]
   billingPayments      BillingPayment[]
   fiscalDocuments      FiscalDocument[]
@@ -3492,6 +3493,31 @@ model PatientDataProtectionConsent {
   ipAddress       String?
   createdAt       DateTime @default(now())
 
+  @@index([tenantId, patientId])
+}
+
+/// KX-11 — consent scopes for sharing clinical records with the Kiorex patient app.
+enum RecordShareScope {
+  VISIT_SUMMARY
+  PRESCRIPTIONS
+  LAB_RESULTS
+  SHARE_WITH_OTHER_CLINICS
+}
+
+model PatientRecordShareConsent {
+  id         String           @id @default(cuid())
+  tenantId   String
+  patientId  String
+  patient    Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  scope      RecordShareScope
+  granted    Boolean          @default(false)
+  source     String           @default("CLINIC")
+  capturedAt DateTime         @default(now())
+  revokedAt  DateTime?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@unique([patientId, scope])
   @@index([tenantId, patientId])
 }
 

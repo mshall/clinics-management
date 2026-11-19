@@ -2895,6 +2895,14 @@
     "purposeTransactional": "Transactional (reminders)",
     "purposeMarketing": "Marketing & recalls"
   },
+  "recordShareConsent": {
+    "title": "Kiorex patient app sharing",
+    "hint": "Only scopes the patient turns on are shared after a signed visit. Revoking stops future sharing and asks Kiorex to delete prior copies.",
+    "scopeVisitSummary": "Visit summary",
+    "scopePrescriptions": "Prescriptions",
+    "scopeLabResults": "Lab results",
+    "scopeOtherClinics": "Share with other clinics"
+  },
   "reschedule": {
     "title": "Reschedule your visit",
     "clinicPatient": "{{clinic}} · {{patient}}",
