@@ -121,3 +121,4 @@
 | 080 AI-04 | `f1ef8c5` | `ai_scribe` add-on (Clinic+); Lite UpgradeHint for assistant; monthly AI_ASSISTANT_REQUESTS quota; scribe endpoints gated separately from `ai_assistant` |
 | 081 RP-01 | `5c7ba01` | `GET /reports/operations` no-show/utilisation/revenue-per-hour/new-vs-returning/source mix; Reports UI card EN/AR |
 | 082 RP-02 | `3ca234b` | `GET /reports/:key/export` xlsx/PDF (payments + reports); money visibility gate; weekly schedule email/WhatsApp; Reports export UI EN/AR |
+| 083 RP-03 | `ab5fc61` | `GET /reports/kiorex?period=` bookings/new patients/visit revenue/commission/offset/net cost; matches CR-11 statement; Reports UI EN/AR |
