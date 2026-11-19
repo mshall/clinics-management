@@ -315,7 +315,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 079 · AI-02 · AI scribe with Egyptian Arabic speech-to-text — `219131e` · `clinic-ai/ai02-scribe-stt.*.test.ts` · `Docs/AI_SCRIBE.md`
 - [x] Step 080 · AI-04 · Gate the role assistant and clinic AI by plan — `f1ef8c5` · `entitlements/ai04-ai-plan-gates.node.test.ts` · `Docs/AI_PLAN_GATES.md`
 - [x] Step 081 · RP-01 · Operational KPIs: no-show rate, utilisation, revenue per doctor-hour, sources — `5c7ba01` · `reports/rp01-operations-kpis.*.test.ts` · `Docs/REPORTS_OPERATIONS.md`
-- [ ] Step 082 · RP-02 · Excel/PDF exports & scheduled reports
+- [x] Step 082 · RP-02 · Excel/PDF exports & scheduled reports
 - [ ] Step 083 · RP-03 · Kiorex impact report
 - [ ] Step 084 · SC-04 · MFA policy for owners, admins and finance in every environment
 - [ ] Step 085 · SC-05 · Tenant data export & offboarding
