@@ -50,6 +50,32 @@ const DEFAULT_TEMPLATES: { key: string; channel: MessageChannel; bodyEn: string;
     bodyAr: "مرحباً {{name}}، تذكير من {{clinic}}: قسطك بقيمة {{amount}} مستحق في {{date}}.",
   },
   {
+    key: "doctor_tomorrow_digest",
+    channel: MessageChannel.WHATSAPP,
+    bodyEn: "Dr {{name}}, tomorrow at {{clinic}}: {{count}} appointment(s). {{list}}",
+    bodyAr: "د. {{name}}، غداً في {{clinic}}: {{count}} موعد/مواعيد. {{list}}",
+  },
+  {
+    key: "owner_weekly_insights",
+    channel: MessageChannel.WHATSAPP,
+    bodyEn:
+      "{{name}}, this week: {{visits}} visits, {{revenue}} collected, {{noshows}} no-shows, {{kiorex}} Kiorex patients, Kiorly free {{progress}}%.",
+    bodyAr:
+      "{{name}}، هذا الأسبوع: {{visits}} زيارة، تحصيل {{revenue}}، {{noshows}} غياب، {{kiorex}} مريض كيوركس، كيورلي مجاني {{progress}}٪.",
+  },
+  {
+    key: "kiorex_progress_nudge",
+    channel: MessageChannel.WHATSAPP,
+    bodyEn: "{{name}}: Kiorex progress reached {{threshold}}% toward free Kiorly for {{period}}.",
+    bodyAr: "{{name}}: تقدم كيوركس وصل إلى {{threshold}}٪ نحو كيورلي مجاني لـ {{period}}.",
+  },
+  {
+    key: "kiorex_monthly_recap",
+    channel: MessageChannel.WHATSAPP,
+    bodyEn: "{{name}}: last month ({{period}}) Kiorex offset {{amount}} toward your Kiorly subscription.",
+    bodyAr: "{{name}}: الشهر الماضي ({{period}}) خصم كيوركس {{amount}} من اشتراك كيورلي.",
+  },
+  {
     key: "results_ready",
     channel: MessageChannel.WHATSAPP,
     bodyEn: "Your lab results are ready. Please contact {{clinic}}.",

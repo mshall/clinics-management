@@ -4,7 +4,8 @@
 |------|--------|
 | MS-01 Meta Cloud templates + webhooks | **Done** |
 | MS-02 Confirm / cancel / reschedule replies | **Done** |
-| MS-03 Consent & opt-out | **Done** ([MESSAGING_CONSENT.md](./MESSAGING_CONSENT.md)) |
+| MS-03 Consent & opt-out | **Done**
+| MS-04 Doctor & owner digests | **Done** — see [Doctor & owner digests](#doctor--owner-digests-ms-04) | ([MESSAGING_CONSENT.md](./MESSAGING_CONSENT.md)) |
 
 ## Provider
 
@@ -52,3 +53,17 @@ Patient and appointment detail: message log with delivery ticks. Appointment det
 - Clinic-owned WhatsApp numbers (per-tenant credential).
 - Signup/login OTP via `auth_otp` template without legacy free-form.
 - PDF header media for lab results template.
+
+## Doctor & owner digests (MS-04)
+
+Scheduler jobs (market timezone) deliver WhatsApp templates and in-app notices. Preferences live on **Profile** (`GET/PUT /digests/preferences`); unread notices at `GET /digests/notices`.
+
+| Digest | Who | When | Template |
+|--------|-----|------|----------|
+| Tomorrow's list | Physicians | 20:00 local | `doctor_tomorrow_digest` |
+| Shift cash summary | Owners | After shift close (MN-03) | `owner_shift_summary` |
+| Weekly insights | Owners (Pro+ `mod_messaging`) | Sunday 18:00 local | `owner_weekly_insights` |
+| Kiorly-free progress | Owners | When CR-07 thresholds 50/80/100 are first crossed | `kiorex_progress_nudge` |
+| Monthly recap | Owners | 1st of month 10:00 local | `kiorex_monthly_recap` |
+
+**Quiet hours** (default 21:00–08:00 local) and **opt-out** skip delivery. `DigestSendLog` keeps each send idempotent per user/kind/period. CR-07 follow-up: threshold rows still write `KiorexProgressNudge` + `AuditLog`; MS-04 also queues WhatsApp and `StaffInAppNotice` copy (not AuditLog-only).
