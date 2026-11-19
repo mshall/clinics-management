@@ -326,7 +326,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 090 · UX-01 · Installable PWA with push and offline "today" view
 - [x] Step 091 · UX-02 · Mobile-first doctor views
 - [x] Step 092 · UX-03 · Arabic RTL & Egyptian copy QA
-- [ ] Step 093 · PA-01 · Tenant lifecycle console
+- [x] Step 093 · PA-01 · Tenant lifecycle console `39905c2`
 - [ ] Step 094 · PA-04 · Support access with consent & audit
 - [ ] Step 095 · PA-05 · Growth analytics: activation funnel & cohorts
 - [ ] Step 096 · GT-01 · Marketing website & pricing page with "Kiorly free" calculator
@@ -4039,7 +4039,7 @@ model DoctorStatement {
 - Tabbed tenant console.
 
 **Acceptance criteria** (write a test for each)
-- [ ] Every action is audited and permission-checked (platform roles).
+- [x] Every action is audited and permission-checked (platform roles).
 
 **Done when:** all acceptance tests pass, §0.2 checks are green, en + ar strings added, docs updated, and Step 093 is ticked in §5.
 

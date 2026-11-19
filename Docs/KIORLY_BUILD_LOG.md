@@ -131,3 +131,4 @@
 | 090 UX-01 | `9bab12c` | PWA + offline today + POST /push/subscriptions; NH-021 VAPID |
 | 091 UX-02 | `d7b58af` | Bottom nav + sticky patient header + 360px e2e |
 | 092 UX-03 | `fefeb5e` | Locale parity CI + ar-EG + Arabic numerals; NH-022 |
+| 093 PA-01 | `39905c2` | Tabbed `/platform/organizations/:id` console; GET tenant lifecycle payload; extend-trial/credits/overrides audited; integration AC
