@@ -7,6 +7,7 @@ Patient-side money for clinics (not Kiorly's own SaaS billing — that is `Kiorl
 | MN-01 | Refunds + credit notes, prepaid packages, deposits, patient balances, refund dialog + patient "Packages & refunds" tab | **Done** |
 | FS-04 | Payment-link deposits (`PENDING` → `HELD` on payment, `EXPIRED` / `CANCELLED` when unpaid), desk mark-paid, Kiorex Pay link callback; late patient cancellation forfeits per clinic policy — see [FRONT_DESK.md](./FRONT_DESK.md#deposits--payment-links-for-high-risk-bookings-fs-04) | **Done** |
 | KX-07 | Kiorex Pay deposits → held deposit on the booking → `BillingPayment` at check-in via `postRevenue`; refund/forfeit per policy; payouts reconciliation; deposit badge | **Done** |
+| MN-02 | Doctor revenue-share rules (percent / fixed per visit / room rental, by doctor · visit type · category · payer · branch), monthly statements with adjustments, approve-to-lock, payout, bilingual PDF, reconciliation — see [Doctor revenue share](#doctor-revenue-share-mn-02) | **Done** |
 
 ## Money model
 
@@ -65,6 +66,18 @@ Cash close (`POST /billing/cash-close`) adds every non-`PAYMENT` cash movement o
 - Cash close ignores payments converted from deposits (cash was counted when the deposit was taken, or never touched the drawer for Kiorex Pay).
 - Payout report: `collected − (released + Kiorex-Pay refunds) = net due`; `net due − payouts = outstanding`. Audit: `KIOREX_DEPOSIT_PAID`, `KIOREX_PAYOUT_RECEIVED`.
 
+## Doctor revenue share (MN-02)
+
+Monthly statement per doctor, computed from **collected** revenue only — `POSTED` `RevenueEntry` rows with `postedAt` inside the month in the market timezone, excluding rejected bank transfers. Receivables (billed, not paid) never count. Refund rows are negative, so they reduce the doctor's share automatically.
+
+- **Doctor attribution:** revenue row → encounter → appointment → operation `clinicianId`. Rows with no doctor (e.g. pharmacy counter sales) are reported as *not linked to a doctor* and stay with the clinic.
+- **Rules (`CommissionRule`):** `PERCENT` (of net collected), `FIXED_PER_VISIT` (per visit that still has positive net after refunds) and `ROOM_RENTAL` (doctor keeps unmatched collections and pays a fixed monthly rental; can go negative). The most specific matching rule wins: doctor 8, visit type 4, revenue category 2, payer 2, branch 1; then `priority`; then newest. No rule → clinic keeps it (`unmatchedNet`).
+- **Payer:** `KIOREX_PAY` when the row came from a Kiorex Pay allocation, otherwise `PATIENT`.
+- **Lifecycle (`DoctorStatement`):** `DRAFT` (recomputed on every read; owner/finance may add adjustments) → `APPROVED` (recomputed once, then frozen — later revenue does not move it) → `PAID` (payout recorded with method/reference). Each step writes an `AuditLog` row (`DOCTOR_STATEMENT_ADJUSTED` / `_APPROVED` / `_PAID`, `REVENUE_SHARE_RULE_CREATED` / `_DEACTIVATED`).
+- **Reconciliation:** `GET /revenue-share/reconciliation?period=YYYY-MM` — total collected = Σ doctor statements + not-linked rows (`balanced`).
+- **Access:** gated by `mod_revenue`. Doctors see only their own statement (Doctor revenue page); owners / finance / branch managers see all, approve, pay and manage rules (Revenue page). PDF: `GET /revenue-share/statements/:id/pdf` (EN + AR).
+- Statements never create or change revenue; paying a doctor is not a patient payment and is not posted through `postRevenue`.
+
 ## Tests
 
 - `apps/api/src/billing/mn01-patient-money.integration.test.ts` — one reversal + one cash movement per refund, approval flow, packages, expiry, deposits, cash close.
@@ -73,8 +86,14 @@ Cash close (`POST /billing/cash-close`) adds every non-`PAYMENT` cash movement o
 - `apps/api/src/billing/kx07-kiorex-deposits.integration.test.ts` — deposit-paid idempotency, check-in conversion through `postRevenue`, refund reverses revenue without a drawer movement, cancellation release/forfeit, payouts reconciliation.
 - `apps/api/src/billing/kx07-kiorex-deposits.node.test.ts` — settlement outcomes, payout maths.
 - `apps/web/e2e/kx07-deposits.spec.ts` — deposit badge on the appointment, payouts card on the Kiorex tab.
+- `apps/api/src/revenue-share/mn02-revenue-share.integration.test.ts` — totals reconcile with revenue for the period, rule precedence, room rental, fixed per visit, doctor scope, adjust → approve lock → mark paid, PDF.
+- `apps/api/src/revenue-share/mn02-revenue-share-engine.node.test.ts` — precedence, refunds, rental, unmatched, payable, timezone periods.
+- `apps/web/e2e/mn02-doctor-statements.spec.ts` — owner sees statements + balanced reconciliation; a doctor sees only their own, no approve.
 
 ## Follow-ups
+
+- MN-02: payer dimension is `PATIENT` / `KIOREX_PAY` only (revenue rows carry no insurer link yet); rules by service catalog item are not applied (revenue rows have no catalog link).
+- MN-02: doctor payouts are recorded, not posted to expenses/payroll automatically.
 
 - Store credit (credit note without cash out) and applying credit to a later visit.
 - Revenue recognition of unused value when a package expires (breakage) — today it stays a liability.

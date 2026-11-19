@@ -16,6 +16,7 @@ Integration and unit coverage for **patient billing**, **Kiorly SaaS billing**, 
 | Refunds, packages, deposits (MN-01) | `mn01-patient-money.integration.test.ts`, `mn01-patient-money.node.test.ts` — see [CLINIC_BILLING.md](./CLINIC_BILLING.md) |
 | Kiorex Pay deposits → check-in payment, refund reversal, payouts (KX-07) | `kx07-kiorex-deposits.integration.test.ts`, `kx07-kiorex-deposits.node.test.ts` |
 | Payment-link deposits: pending → held → applied, late-cancel forfeit, early-cancel refund, expiry auto-cancel (FS-04) | `fs04-deposit-links.integration.test.ts`, `fs04-deposit-policy.node.test.ts` |
+| Doctor revenue share: statements reconcile with collected revenue, approve lock, payout (MN-02) | `mn02-revenue-share.integration.test.ts`, `mn02-revenue-share-engine.node.test.ts` |
 | Payment gateways (Paymob, Fawry, InstaPay, bank) | `qa02-payment-gateways.node.test.ts` |
 | Kiorly invoices, saved card pay, credits on issue, void/PDF | `qa02-kiorly-money-path.integration.test.ts`, `sb01-kiorly-invoice.*`, `sb02-kiorly-payments.*` |
 | Settlement + subscription invoice math | `cr06-settlement.*`, `qa03-settlement-matrix.node.test.ts` |

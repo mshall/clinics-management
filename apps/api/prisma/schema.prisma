@@ -3173,21 +3173,54 @@ model CashierShiftClose {
   @@index([tenantId, clinicId, shiftDate])
 }
 
+/// MN-02 — doctor revenue-share rule. The most specific active match wins (clinician > service > payer > clinic, then priority).
 model CommissionRule {
   id              String   @id @default(cuid())
   tenantId        String
   tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   clinicianId     String?
+  clinicId        String?
   serviceCatalogItemId String?
+  /// MN-02 — service match on the visit's appointment type.
+  appointmentTypeId String?
+  /// MN-02 — service match on the revenue category (VISIT_FEE, OPERATION_PAYMENT, PACKAGE_SESSION…).
+  revenueCategory String?
+  /// MN-02 — payer match: PATIENT, KIOREX_PAY (deposit collected by Kiorex)…
+  payerKey        String?
+  /// PERCENT | FIXED_PER_VISIT | ROOM_RENTAL
   ruleType        String   @default("PERCENT")
   percent         Decimal? @db.Decimal(5, 2)
   fixedAmount     Decimal? @db.Decimal(14, 2)
   roomRental      Boolean  @default(false)
+  priority        Int      @default(0)
+  label           String?
   active          Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   @@index([tenantId, active])
+}
+
+/// MN-02 — a doctor's revenue-share statement for one period (YYYY-MM). DRAFT is recomputed; APPROVED/PAID are locked.
+model DoctorStatement {
+  id              String    @id @default(cuid())
+  tenantId        String
+  clinicianId     String
+  periodKey       String
+  currency        String
+  totalsJson      Json
+  adjustmentsJson Json      @default("[]")
+  payoutsJson     Json      @default("[]")
+  /// DRAFT | APPROVED | PAID
+  status          String    @default("DRAFT")
+  approvedBy      String?
+  approvedAt      DateTime?
+  paidAt          DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([tenantId, clinicianId, periodKey])
+  @@index([tenantId, periodKey])
 }
 
 model PayerPreAuthorization {
