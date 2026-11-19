@@ -57,15 +57,33 @@ Source: `infra/src/kiorly-clinics-management-stack.ts`.
 - One-time: `npx cdk bootstrap aws://ACCOUNT_ID/eu-central-1` from `infra/`.
 - GitHub secret **`AWS_DEPLOY_ROLE_ARN`** with permission to deploy the stack and invoke DbSeedFn.
 
+### Second pipeline (Kiorex account / `kiorex` branch)
+
+| Surface | AWS target |
+|---------|------------|
+| Branch **`main`** | Existing **Kiorly** account (OIDC `AWS_DEPLOY_ROLE_ARN`, local default credentials) |
+| Branch **`kiorex`** | Separate **Kiorex** AWS account via local profile **`aws-kiorex-profile`**, or GitHub secrets **`AWS_KIOREX_ACCESS_KEY_ID`** / **`AWS_KIOREX_SECRET_ACCESS_KEY`** |
+
+- Local: `scripts/resolve-aws-profile.sh` selects `aws-kiorex-profile` when the current branch is `kiorex`; `scripts/deploy-aws.sh` and `scripts/cicd-deploy.sh` honor it. Override with `AWS_PROFILE_OVERRIDE=…`.
+- CI: **`.github/workflows/deploy-aws-kiorex.yml`** on push to `kiorex` (refuses account `990597228737` so production cannot be overwritten by mistake).
+- Do **not** commit access-key CSV files; keep them outside the repo.
+
 ---
 
 ## 4. Deploy via GitHub Actions (recommended)
 
-Workflow: **`.github/workflows/deploy-aws.yml`**
+Workflow: **`.github/workflows/deploy-aws.yml`** (Kiorly / `main`)
 
 | Trigger | Action |
 |---------|--------|
 | Push to **`main`** | Build API + web → `cdk deploy` → post-deploy seed |
+| **workflow_dispatch** | Same, manual |
+
+Workflow: **`.github/workflows/deploy-aws-kiorex.yml`** (Kiorex / `kiorex`)
+
+| Trigger | Action |
+|---------|--------|
+| Push to **`kiorex`** | Same deploy path into the Kiorex AWS account |
 | **workflow_dispatch** | Same, manual |
 
 Steps (summary):
