@@ -306,7 +306,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 070 · FS-05 · Show no-show risk in the UI with an honest label — `00b3005` · `fs05-no-show-risk.integration.test.ts` · `common/fs05-no-show-risk.node.test.ts` · `web/src/lib/fs05-no-show-risk.node.test.ts` · `e2e/fs05-no-show-risk.spec.ts` · `Docs/AI_HONEST_LABELS.md`
 - [x] Step 071 · MN-01 · Refunds, credit notes, deposits & prepaid packages (APIs + UI) — `67832a2` · `billing/mn01-patient-money.integration.test.ts` · `billing/mn01-patient-money.node.test.ts` · `e2e/mn01-patient-money.spec.ts` · `Docs/CLINIC_BILLING.md`
 - [x] Step 072 · KX-07 · Kiorex deposits & prepayments into clinic billing — `0dc47e1` · `billing/kx07-kiorex-deposits.integration.test.ts` · `billing/kx07-kiorex-deposits.node.test.ts` · `e2e/kx07-deposits.spec.ts` · `Docs/CLINIC_BILLING.md`, `Docs/KIOREX_MARKETPLACE.md`
-- [ ] Step 073 · FS-04 · Deposits & payment links for high-risk bookings
+- [x] Step 073 · FS-04 · Deposits & payment links for high-risk bookings — `250a0e4` · `appointments/fs04-deposit-links.integration.test.ts` · `billing/fs04-deposit-policy.node.test.ts` · `e2e/fs04-deposit-links.spec.ts` · `Docs/FRONT_DESK.md`, `Docs/CLINIC_BILLING.md` · NH-012
 - [ ] Step 074 · MN-02 · Doctor revenue-share engine & statements
 - [ ] Step 075 · MN-03 · Cash drawer & shift close UI hardening
 - [ ] Step 076 · MN-06 · Split payments & installments UX
