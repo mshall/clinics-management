@@ -1208,6 +1208,7 @@ model Tenant {
   importJobs                     ImportJob[]
   invitations                    Invitation[]
   outboxEvents                   OutboxEvent[]
+  emailMessages                  EmailMessage[]
   appointmentRescheduleTokens    AppointmentRescheduleToken[]
   prescriptionVerificationTokens PrescriptionVerificationToken[]
   encounterAmendments            EncounterAmendment[]
@@ -3772,6 +3773,30 @@ model PasswordResetToken {
   createdAt  DateTime  @default(now())
 
   @@index([userId, createdAt])
+}
+
+/// MS-05 — transactional email (trial, Kiorly invoices, password reset, security) via SES.
+model EmailMessage {
+  id                String    @id @default(cuid())
+  tenantId          String?
+  tenant            Tenant?   @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  toEmail           String
+  templateKey       String
+  subject           String
+  status            String    @default("QUEUED")
+  provider          String?
+  providerMessageId String?   @unique
+  failureClass      String?
+  bounceType        String?
+  error             String?
+  metadata          Json?
+  sentAt            DateTime?
+  bouncedAt         DateTime?
+  createdAt         DateTime  @default(now())
+
+  @@index([tenantId, status])
+  @@index([toEmail, createdAt])
+  @@index([status, createdAt])
 }
 
 model UserSession {

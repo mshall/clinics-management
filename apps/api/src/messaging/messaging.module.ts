@@ -24,6 +24,9 @@ import { AppointmentRescheduleTokenService } from "./appointment-reschedule-toke
 import { PublicAppointmentRescheduleController } from "./public-appointment-reschedule.controller";
 import { DigestsController } from "./digests.controller";
 import { DigestsService } from "./digests.service";
+import { EmailService } from "./email.service";
+import { EmailOutboxService } from "./email-outbox.service";
+import { EmailBounceController } from "./email-bounce.controller";
 
 @Module({
   imports: [AuditModule, forwardRef(() => SchedulingModule), PatientsModule],
@@ -33,12 +36,15 @@ import { DigestsService } from "./digests.service";
     PublicAppointmentRescheduleController,
     InstallmentRemindersController,
     DigestsController,
+    EmailBounceController,
   ],
   providers: [
     WaitlistAutofillService,
     MessagingService,
     OwnerNotificationsService,
     DigestsService,
+    EmailService,
+    EmailOutboxService,
     InternalOutboxConsumerService,
     InstallmentRemindersService,
     WhatsAppSendService,
@@ -58,6 +64,8 @@ import { DigestsService } from "./digests.service";
     MessagingService,
     OwnerNotificationsService,
     DigestsService,
+    EmailService,
+    EmailOutboxService,
     InternalOutboxConsumerService,
     AppointmentReminderScheduler,
     WhatsAppSendService,

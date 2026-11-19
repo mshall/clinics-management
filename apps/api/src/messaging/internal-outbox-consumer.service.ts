@@ -1,5 +1,6 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit, Optional } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { EmailOutboxService } from "./email-outbox.service";
 import { OUTBOX_DISPATCH_MAX_ATTEMPTS, OUTBOX_STATUS, OUTBOX_TARGET_INTERNAL } from "./outbox-event-types";
 import { OwnerNotificationsService, type ShiftClosedPayload } from "./owner-notifications.service";
 
@@ -8,7 +9,7 @@ const LEASE_MS = 5 * 60_000;
 
 type Handler = (tenantId: string, payload: unknown) => Promise<unknown>;
 
-/** Delivers INTERNAL outbox topics that engagement owns (e.g. owner shift summary). Unknown topics are left untouched. */
+/** Delivers INTERNAL outbox topics that engagement owns (e.g. owner shift summary, MS-05 email). Unknown topics are left untouched. */
 @Injectable()
 export class InternalOutboxConsumerService implements OnModuleInit, OnModuleDestroy {
   private readonly log = new Logger(InternalOutboxConsumerService.name);
@@ -18,10 +19,17 @@ export class InternalOutboxConsumerService implements OnModuleInit, OnModuleDest
   constructor(
     private readonly prisma: PrismaService,
     owners: OwnerNotificationsService,
+    @Optional() emailOutbox?: EmailOutboxService,
   ) {
     this.handlers = {
       "billing.shift_closed": (tenantId, payload) => owners.shiftClosed(tenantId, payload as ShiftClosedPayload),
     };
+    if (emailOutbox) {
+      this.handlers["billing.trial_notification"] = (tenantId, payload) =>
+        emailOutbox.deliverTrialNotification(tenantId, payload);
+      this.handlers["billing.monthly_statement_ready"] = (tenantId, payload) =>
+        emailOutbox.deliverStatementReady(tenantId, payload);
+    }
   }
 
   onModuleInit() {

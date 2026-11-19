@@ -92,6 +92,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "users/invitations/invitations.controller.ts": { kind: "open" },
   "sales-reps/sales-reps.controller.ts": { kind: "open" },
   "messaging/whatsapp-webhook.controller.ts": { kind: "webhook" },
+  "messaging/email-bounce.controller.ts": { kind: "webhook" },
   "messaging/public-appointment-reschedule.controller.ts": { kind: "open" },
   "operations/operations.controller.ts": { kind: "gated", entitlement: "mod_operations" },
   "patients/patients.controller.ts": { kind: "open" },
