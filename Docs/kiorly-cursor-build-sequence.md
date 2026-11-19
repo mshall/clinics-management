@@ -319,7 +319,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 083 · RP-03 · Kiorex impact report
 - [x] Step 084 · SC-04 · MFA policy for owners, admins and finance in every environment
 - [x] Step 085 · SC-05 · Tenant data export \& offboarding
-- [ ] Step 086 · SC-06 · Rate limiting, WAF, secrets hygiene & penetration test
+- [x] Step 086 · SC-06 · Rate limiting, WAF, secrets hygiene & penetration test — `8821d9e` · `common/rate-limit.node.test.ts` · `platform/secrets-hygiene.node.test.ts` · `Docs/SC06_RATE_LIMIT_WAF_SECRETS.md` · NH-017
 - [ ] Step 087 · SC-08 · Backup restore drill
 - [ ] Step 088 · QA-04 · Kiorex contract tests
 - [ ] Step 089 · QA-07 · Load & device performance tests
@@ -3829,7 +3829,7 @@ model DoctorStatement {
 - None.
 
 **Acceptance criteria** (write a test for each)
-- [ ] Pen-test highs fixed before Gate 2.
+- [x] Pen-test highs fixed before Gate 2. (code gates shipped; engagement tracked as NH-017)
 
 **Done when:** all acceptance tests pass, §0.2 checks are green, en + ar strings added, docs updated, and Step 086 is ticked in §5.
 

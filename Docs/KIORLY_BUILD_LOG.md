@@ -124,3 +124,4 @@
 | 083 RP-03 | `ab5fc61` | `GET /reports/kiorex?period=` bookings/new patients/visit revenue/commission/offset/net cost; matches CR-11 statement; Reports UI EN/AR |
 | 084 SC-04 | `4a23905` | Production-like MFA enforce + 7-day grace; billing blocked after; WhatsApp OTP MFA for physicians; onboarding MFA prompt EN/AR |
 | 085 SC-05 | `448bd9f` | POST /exports/tenant|patient; works in SUSPENDED; offboarding+legal hold; /privacy UI EN/AR |
+| 086 SC-06 | `8821d9e` | Auth/signup/public rate limits (429 RATE_LIMITED); secrets-hygiene unit test; platform/waf-rules.json; npm run audit:prod; NH-017 pen-test |
