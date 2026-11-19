@@ -255,7 +255,7 @@ export async function createTenantDocumentsArchive(
   uploads: UploadBlobStorage,
   tenantId: string,
   requestedTables: string[] | undefined,
-  opts: { allowFeatureFlags: boolean },
+  opts: { allowFeatureFlags: boolean; finalize?: boolean },
 ): Promise<ZipArchive> {
   const { entries, selectedEntities } = await collectTenantDocumentEntries(prisma, tenantId, requestedTables, opts);
   const manifest: TenantDocumentManifest = {
@@ -266,7 +266,7 @@ export async function createTenantDocumentsArchive(
     skipped: [],
   };
 
-  const archive = new ZipArchive({ zlib: { level: 9 } });
+  const archive = new ZipArchive({ zlib: { level: 6 } });
 
   for (const entry of entries) {
     try {
@@ -295,6 +295,8 @@ export async function createTenantDocumentsArchive(
   }
 
   archive.append(JSON.stringify(manifest, null, 2), { name: "manifest.json" });
-  void archive.finalize();
+  if (opts.finalize !== false) {
+    void archive.finalize();
+  }
   return archive;
 }

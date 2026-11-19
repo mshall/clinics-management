@@ -1,8 +1,8 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { ZipArchive } from "archiver";
 import { createHash, randomBytes } from "crypto";
-import { createWriteStream } from "fs";
-import { mkdir, readFile, writeFile } from "fs/promises";
+import { createReadStream, createWriteStream } from "fs";
+import { mkdir, readFile, stat, unlink, writeFile } from "fs/promises";
 import { join } from "path";
 import { unzipSync } from "fflate";
 import { Prisma } from "@prisma/client";
@@ -17,10 +17,10 @@ import {
 } from "./data-explorer-access";
 import {
   collectTenantDocumentEntries,
+  createTenantDocumentsArchive,
   type TenantDocumentManifest,
 } from "./tenant-documents-export";
 import { generateTenantSqlExport } from "./tenant-sql-export";
-import { createTenantDocumentsArchive } from "./tenant-documents-export";
 
 export type OrgBackupFormat = "SQL" | "DOCUMENTS" | "FULL";
 
@@ -65,25 +65,40 @@ function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   });
 }
 
+export type OrgBackupArtifact = {
+  artifactPath: string;
+  fileName: string;
+  contentType: string;
+  size: number;
+};
+
 @Injectable()
 export class OrgBackupService {
+  /** Plain download tokens kept in-process so async jobs can expose a native browser download URL. */
+  private readonly downloadTokens = new Map<string, string>();
+
   constructor(
     private readonly prisma: PrismaService,
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
   ) {}
 
-  private publicJob(job: {
-    id: string;
-    scope: string;
-    status: string;
-    progress: number;
-    fileName: string | null;
-    contentType: string | null;
-    expiresAt: Date | null;
-    completedAt: Date | null;
-    rowCounts: unknown;
-    error: string | null;
-  }) {
+  private publicJob(
+    job: {
+      id: string;
+      scope: string;
+      status: string;
+      progress: number;
+      fileName: string | null;
+      contentType: string | null;
+      expiresAt: Date | null;
+      completedAt: Date | null;
+      rowCounts: unknown;
+      error: string | null;
+    },
+    opts?: { downloadToken?: string | null },
+  ) {
+    const token = opts?.downloadToken ?? this.downloadTokens.get(job.id) ?? null;
+    const ready = job.status === "READY";
     return {
       id: job.id,
       scope: job.scope,
@@ -95,7 +110,13 @@ export class OrgBackupService {
       completedAt: job.completedAt?.toISOString() ?? null,
       rowCounts: job.rowCounts,
       error: job.error,
-      downloadPath: job.status === "READY" ? `/api/v1/admin/data-explorer/export/jobs/${job.id}/download` : null,
+      downloadPath: ready ? `/api/v1/admin/data-explorer/export/jobs/${job.id}/download` : null,
+      downloadToken: ready ? token : null,
+      /** Token URL for native browser download (no Authorization header / no in-memory blob). */
+      downloadUrl:
+        ready && token
+          ? `/api/v1/admin/org-backup/download?token=${encodeURIComponent(token)}`
+          : null,
     };
   }
 
@@ -104,6 +125,26 @@ export class OrgBackupService {
       where: { id: jobId },
       data: { progress: Math.max(0, Math.min(100, Math.round(progress))), ...patch },
     });
+  }
+
+  private mintDownloadToken(jobId: string): { token: string; hash: string } {
+    const token = randomBytes(24).toString("hex");
+    const hash = createHash("sha256").update(token).digest("hex");
+    this.downloadTokens.set(jobId, token);
+    return { token, hash };
+  }
+
+  /** Remint token after process restart so READY jobs remain downloadable via token URL. */
+  private async ensureDownloadToken(job: { id: string; status: string; downloadTokenHash: string | null }) {
+    if (job.status !== "READY") return null;
+    const existing = this.downloadTokens.get(job.id);
+    if (existing) return existing;
+    const { token, hash } = this.mintDownloadToken(job.id);
+    await this.prisma.tenantExportJob.update({
+      where: { id: job.id },
+      data: { downloadTokenHash: hash },
+    });
+    return token;
   }
 
   async startExport(user: JwtUser, format: OrgBackupFormat, tables?: string[]) {
@@ -123,12 +164,17 @@ export class OrgBackupService {
         requestedBy: user.userId,
       },
     });
-    // Fire-and-forget; client polls progress.
+    // Fire-and-forget; client polls progress (or dismisses UI and relies on toast + job list).
     void this.runExport(job.id, format, user).catch(async (e) => {
       const msg = e instanceof Error ? e.message : String(e);
       await this.prisma.tenantExportJob.update({
         where: { id: job.id },
-        data: { status: "FAILED", error: msg.slice(0, 500), completedAt: new Date(), progress: 100 },
+        data: {
+          status: "FAILED",
+          error: msg.slice(0, 500),
+          completedAt: new Date(),
+          // Keep last progress — do not jump to 100% on failure (confuses the UI).
+        },
       });
     });
     return this.publicJob(job);
@@ -139,10 +185,31 @@ export class OrgBackupService {
     const tenantId = assertExplorerTenant(user);
     const job = await this.prisma.tenantExportJob.findFirst({ where: { id, tenantId } });
     if (!job) throw new NotFoundException("Export job not found");
-    return this.publicJob(job);
+    const downloadToken = await this.ensureDownloadToken(job);
+    return this.publicJob(job, { downloadToken });
   }
 
-  async downloadJob(user: JwtUser, id: string) {
+  async listRecentJobs(user: JwtUser, limit = 12) {
+    assertDataExplorerAccess(user);
+    const tenantId = assertExplorerTenant(user);
+    const take = Math.min(Math.max(limit, 1), 40);
+    const jobs = await this.prisma.tenantExportJob.findMany({
+      where: {
+        tenantId,
+        scope: { in: ["ORG_SQL", "ORG_DOCUMENTS", "ORG_FULL", "ORG_IMPORT"] },
+      },
+      orderBy: { createdAt: "desc" },
+      take,
+    });
+    const out = [];
+    for (const job of jobs) {
+      const downloadToken = await this.ensureDownloadToken(job);
+      out.push(this.publicJob(job, { downloadToken }));
+    }
+    return { items: out };
+  }
+
+  async downloadJob(user: JwtUser, id: string): Promise<OrgBackupArtifact> {
     assertDataExplorerAccess(user);
     const tenantId = assertExplorerTenant(user);
     const job = await this.prisma.tenantExportJob.findFirst({ where: { id, tenantId } });
@@ -152,11 +219,34 @@ export class OrgBackupService {
     if (job.expiresAt && job.expiresAt.getTime() < Date.now()) {
       throw new NotFoundException({ message: "Export expired", code: "EXPORT_EXPIRED" });
     }
-    const body = await readFile(job.artifactPath);
+    const size = (await stat(job.artifactPath)).size;
     return {
-      body,
+      artifactPath: job.artifactPath,
       fileName: job.fileName ?? `kiorly-org-${tenantId}-export.bin`,
       contentType: job.contentType ?? "application/octet-stream",
+      size,
+    };
+  }
+
+  async downloadByToken(token: string): Promise<OrgBackupArtifact> {
+    const trimmed = token?.trim() ?? "";
+    if (!trimmed) throw new NotFoundException("Export link invalid or expired");
+    const hash = createHash("sha256").update(trimmed).digest("hex");
+    const job = await this.prisma.tenantExportJob.findFirst({ where: { downloadTokenHash: hash } });
+    if (!job || job.status !== "READY" || !job.artifactPath) {
+      throw new NotFoundException("Export link invalid or expired");
+    }
+    if (job.expiresAt && job.expiresAt.getTime() < Date.now()) {
+      throw new NotFoundException({ message: "Export link expired", code: "EXPORT_EXPIRED" });
+    }
+    // Refresh in-memory map so subsequent polls keep the same token URL.
+    this.downloadTokens.set(job.id, trimmed);
+    const size = (await stat(job.artifactPath)).size;
+    return {
+      artifactPath: job.artifactPath,
+      fileName: job.fileName ?? `kiorly-org-${job.tenantId}-export.bin`,
+      contentType: job.contentType ?? "application/octet-stream",
+      size,
     };
   }
 
@@ -176,8 +266,7 @@ export class OrgBackupService {
       await this.setProgress(jobId, 85);
       const path = join(dir, `${jobId}.sql`);
       await writeFile(path, sql, "utf8");
-      const token = randomBytes(24).toString("hex");
-      const hash = createHash("sha256").update(token).digest("hex");
+      const { token, hash } = this.mintDownloadToken(jobId);
       const updated = await this.setProgress(jobId, 100, {
         status: "READY",
         artifactPath: path,
@@ -189,20 +278,19 @@ export class OrgBackupService {
         rowCounts: { bytes: Buffer.byteLength(sql, "utf8") },
       });
       await this.audit(tenantId, user.userId, jobId, "org.export.sql.ready");
-      return updated;
+      return this.publicJob(updated, { downloadToken: token });
     }
 
     if (format === "DOCUMENTS") {
       await this.setProgress(jobId, 20);
       const archive = await createTenantDocumentsArchive(this.prisma, this.uploads, tenantId, tables, {
         allowFeatureFlags,
+        finalize: false,
       });
       await this.setProgress(jobId, 70);
       const path = join(dir, `${jobId}-documents.zip`);
-      // createTenantDocumentsArchive already finalizes the archive.
-      await this.writeArchiveToFile(archive, path, false, (p) => this.setProgress(jobId, 70 + Math.round(p * 0.25)));
-      const token = randomBytes(24).toString("hex");
-      const hash = createHash("sha256").update(token).digest("hex");
+      await this.writeArchiveToFile(archive, path, true, (p) => this.setProgress(jobId, 70 + Math.round(p * 25)));
+      const { token, hash } = this.mintDownloadToken(jobId);
       const updated = await this.setProgress(jobId, 100, {
         status: "READY",
         artifactPath: path,
@@ -213,7 +301,7 @@ export class OrgBackupService {
         completedAt: new Date(),
       });
       await this.audit(tenantId, user.userId, jobId, "org.export.documents.ready");
-      return updated;
+      return this.publicJob(updated, { downloadToken: token });
     }
 
     // FULL = SQL + documents in one ZIP (round-trip package)
@@ -225,7 +313,11 @@ export class OrgBackupService {
     });
     await this.setProgress(jobId, 55);
 
-    const archive = new ZipArchive({ zlib: { level: 9 } });
+    const path = join(dir, `${jobId}-full.zip`);
+    const archive = new ZipArchive({ zlib: { level: 6 } });
+    // Pipe early so entries stream to disk instead of buffering the whole ZIP in memory.
+    const writePromise = this.writeArchiveToFile(archive, path, false);
+
     archive.append(sql, { name: "organization-export.sql" });
     const manifest: TenantDocumentManifest = {
       tenantId,
@@ -272,10 +364,10 @@ export class OrgBackupService {
     );
 
     await this.setProgress(jobId, 90);
-    const path = join(dir, `${jobId}-full.zip`);
-    await this.writeArchiveToFile(archive, path, true);
-    const token = randomBytes(24).toString("hex");
-    const hash = createHash("sha256").update(token).digest("hex");
+    await archive.finalize();
+    await writePromise;
+
+    const { token, hash } = this.mintDownloadToken(jobId);
     const updated = await this.setProgress(jobId, 100, {
       status: "READY",
       artifactPath: path,
@@ -287,7 +379,7 @@ export class OrgBackupService {
       rowCounts: { sqlBytes: Buffer.byteLength(sql, "utf8"), files: manifest.files.length },
     });
     await this.audit(tenantId, user.userId, jobId, "org.export.full.ready");
-    return updated;
+    return this.publicJob(updated, { downloadToken: token });
   }
 
   private async writeArchiveToFile(
@@ -298,9 +390,10 @@ export class OrgBackupService {
   ): Promise<void> {
     await new Promise<void>((resolve, reject) => {
       const out = createWriteStream(path);
-      archive.on("error", reject);
-      out.on("error", reject);
-      out.on("finish", () => resolve());
+      const fail = (err: Error) => reject(err);
+      archive.once("error", fail);
+      out.once("error", fail);
+      out.once("finish", () => resolve());
       if (onProgress) {
         archive.on("progress", (p) => {
           const entries = p.entries;
@@ -330,13 +423,24 @@ export class OrgBackupService {
     });
   }
 
-  async startImport(user: JwtUser, file: Express.Multer.File) {
+  async startImport(
+    user: JwtUser,
+    file: Express.Multer.File & { path?: string },
+  ) {
     assertDataExplorerAccess(user);
     const tenantId = assertExplorerTenant(user);
-    if (!file?.buffer?.length) throw new BadRequestException("Upload a .sql or .zip backup file");
+    const hasBuffer = Boolean(file?.buffer?.length);
+    const hasPath = Boolean(file?.path);
+    if (!hasBuffer && !hasPath) throw new BadRequestException("Upload a .sql or .zip backup file");
     const name = (file.originalname || "").toLowerCase();
-    const isZip = name.endsWith(".zip") || file.mimetype === "application/zip" || file.mimetype === "application/x-zip-compressed";
-    const isSql = name.endsWith(".sql") || file.mimetype.includes("sql") || file.mimetype === "application/octet-stream";
+    const isZip =
+      name.endsWith(".zip") ||
+      file.mimetype === "application/zip" ||
+      file.mimetype === "application/x-zip-compressed";
+    const isSql =
+      name.endsWith(".sql") ||
+      (file.mimetype ?? "").includes("sql") ||
+      file.mimetype === "application/octet-stream";
     if (!isZip && !isSql) throw new BadRequestException("Only .sql or .zip backups are supported");
 
     const job = await this.prisma.tenantExportJob.create({
@@ -351,69 +455,110 @@ export class OrgBackupService {
       },
     });
 
-    void this.runImport(job.id, tenantId, user.userId, file.buffer, isZip).catch(async (e) => {
+    void this.runImport(job.id, tenantId, user.userId, file, isZip).catch(async (e) => {
       const msg = e instanceof Error ? e.message : String(e);
       await this.prisma.tenantExportJob.update({
         where: { id: job.id },
-        data: { status: "FAILED", error: msg.slice(0, 500), completedAt: new Date(), progress: 100 },
+        data: { status: "FAILED", error: msg.slice(0, 500), completedAt: new Date() },
       });
+      if (file.path) {
+        await unlink(file.path).catch(() => undefined);
+      }
     });
 
     return this.publicJob(job);
   }
 
-  private async runImport(jobId: string, tenantId: string, actorId: string, buffer: Buffer, isZip: boolean) {
+  private async loadImportBuffer(file: Express.Multer.File & { path?: string }): Promise<Buffer> {
+    if (file.buffer?.length) return file.buffer;
+    if (file.path) return readFile(file.path);
+    throw new BadRequestException("Upload a .sql or .zip backup file");
+  }
+
+  private async runImport(
+    jobId: string,
+    tenantId: string,
+    actorId: string,
+    file: Express.Multer.File & { path?: string },
+    isZip: boolean,
+  ) {
     await this.setProgress(jobId, 10, { status: "RUNNING" });
     let sqlText: string | null = null;
     let filesRestored = 0;
-    let sqlStatements = 0;
+    let sqlApplied = 0;
+    let sqlAttempted = 0;
 
-    if (isZip) {
-      const unzipped = unzipSync(new Uint8Array(buffer));
-      await this.setProgress(jobId, 25);
-      const sqlEntry =
-        unzipped["organization-export.sql"] ??
-        unzipped["organization_export.sql"] ??
-        Object.entries(unzipped).find(([k]) => k.toLowerCase().endsWith(".sql"))?.[1];
-      if (sqlEntry) sqlText = Buffer.from(sqlEntry).toString("utf8");
+    try {
+      const buffer = await this.loadImportBuffer(file);
+      await this.setProgress(jobId, 18);
 
-      const manifestRaw = unzipped["manifest.json"];
-      if (manifestRaw) {
-        const manifest = JSON.parse(Buffer.from(manifestRaw).toString("utf8")) as TenantDocumentManifest;
-        if (manifest.tenantId && manifest.tenantId !== tenantId) {
-          throw new BadRequestException("Backup tenantId does not match the current organization");
-        }
-        const total = Math.max(manifest.files?.length ?? 0, 1);
-        let done = 0;
-        for (const f of manifest.files ?? []) {
-          const zipPath = f.zipPath.replace(/^\.\//, "");
-          const data = unzipped[zipPath] ?? unzipped[zipPath.replace(/^files\//, "")] ?? unzipped[`files/${zipPath}`];
-          if (!data) {
-            done += 1;
-            continue;
+      if (isZip) {
+        const unzipped = unzipSync(new Uint8Array(buffer));
+        await this.setProgress(jobId, 25);
+        const sqlEntry =
+          unzipped["organization-export.sql"] ??
+          unzipped["organization_export.sql"] ??
+          Object.entries(unzipped).find(([k]) => k.toLowerCase().endsWith(".sql"))?.[1];
+        if (sqlEntry) sqlText = Buffer.from(sqlEntry).toString("utf8");
+
+        const manifestRaw = unzipped["manifest.json"];
+        if (manifestRaw) {
+          const manifest = JSON.parse(Buffer.from(manifestRaw).toString("utf8")) as TenantDocumentManifest;
+          if (manifest.tenantId && manifest.tenantId !== tenantId) {
+            throw new BadRequestException("Backup tenantId does not match the current organization");
           }
-          await this.uploads.put(f.storageKind as UploadKind, f.relativePath, Buffer.from(data), f.mimeType);
-          filesRestored += 1;
-          done += 1;
-          if (done % 3 === 0) await this.setProgress(jobId, 25 + Math.round((done / total) * 45));
+          const total = Math.max(manifest.files?.length ?? 0, 1);
+          let done = 0;
+          for (const f of manifest.files ?? []) {
+            const zipPath = f.zipPath.replace(/^\.\//, "");
+            const data =
+              unzipped[zipPath] ??
+              unzipped[zipPath.replace(/^files\//, "")] ??
+              unzipped[`files/${zipPath}`];
+            if (!data) {
+              done += 1;
+              continue;
+            }
+            await this.uploads.put(f.storageKind as UploadKind, f.relativePath, Buffer.from(data), f.mimeType);
+            filesRestored += 1;
+            done += 1;
+            if (done % 3 === 0) await this.setProgress(jobId, 25 + Math.round((done / total) * 45));
+          }
+        } else if (!sqlText) {
+          throw new BadRequestException(
+            "ZIP must contain organization-export.sql and/or manifest.json (same layout as full backup export)",
+          );
         }
+        await this.setProgress(jobId, 75);
+      } else {
+        sqlText = buffer.toString("utf8");
+        await this.setProgress(jobId, 40);
       }
-      await this.setProgress(jobId, 75);
-    } else {
-      sqlText = buffer.toString("utf8");
-      await this.setProgress(jobId, 40);
-    }
 
-    if (sqlText) {
-      sqlStatements = await this.applyAllowlistedSql(tenantId, sqlText, (p) => this.setProgress(jobId, 75 + Math.round(p * 20)));
-    }
+      if (sqlText) {
+        const result = await this.applyAllowlistedSql(tenantId, sqlText, (p) =>
+          this.setProgress(jobId, 75 + Math.round(p * 20)),
+        );
+        sqlApplied = result.applied;
+        sqlAttempted = result.attempted;
+      }
 
-    await this.setProgress(jobId, 100, {
-      status: "READY",
-      completedAt: new Date(),
-      rowCounts: { filesRestored, sqlStatements, mode: isZip ? "zip" : "sql" },
-    });
-    await this.audit(tenantId, actorId, jobId, "org.import.ready");
+      await this.setProgress(jobId, 100, {
+        status: "READY",
+        completedAt: new Date(),
+        rowCounts: {
+          filesRestored,
+          sqlStatements: sqlApplied,
+          sqlAttempted,
+          mode: isZip ? "zip" : "sql",
+        },
+      });
+      await this.audit(tenantId, actorId, jobId, "org.import.ready");
+    } finally {
+      if (file.path) {
+        await unlink(file.path).catch(() => undefined);
+      }
+    }
   }
 
   /** Apply INSERT statements for allowlisted tables; skip statements that don't target this tenant when tenantId column exists. */
@@ -421,7 +566,7 @@ export class OrgBackupService {
     tenantId: string,
     sql: string,
     onProgress?: (ratio: number) => Promise<unknown>,
-  ): Promise<number> {
+  ): Promise<{ applied: number; attempted: number }> {
     const statements = sql
       .split(/\n/)
       .filter((line) => !line.trim().startsWith("--"))
@@ -431,6 +576,7 @@ export class OrgBackupService {
       .filter((s) => /^INSERT\s+INTO/i.test(s));
 
     let applied = 0;
+    let attempted = 0;
     const total = Math.max(statements.length, 1);
     for (let i = 0; i < statements.length; i++) {
       const stmt = statements[i]!;
@@ -440,6 +586,7 @@ export class OrgBackupService {
       if (!ALLOWED_SQL_TABLES.has(table)) continue;
       // Soft-guard: if statement mentions a different tenant id literal for Tenant table, skip.
       if (table === "Tenant" && !stmt.includes(tenantId)) continue;
+      attempted += 1;
       try {
         await this.prisma.$executeRawUnsafe(stmt.endsWith(";") ? stmt : `${stmt};`);
         applied += 1;
@@ -449,6 +596,11 @@ export class OrgBackupService {
       if (onProgress && i % 10 === 0) await onProgress(i / total);
     }
     if (onProgress) await onProgress(1);
-    return applied;
+    return { applied, attempted };
+  }
+
+  /** Expose stream helper for controllers. */
+  openArtifactStream(artifactPath: string) {
+    return createReadStream(artifactPath);
   }
 }

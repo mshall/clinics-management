@@ -36,4 +36,17 @@ describe("org backup package layout", () => {
     assert.equal(parsed.tenantId, "t1");
     assert.equal(parsed.files[0].storageKind, "patients");
   });
+
+  it("import resolver accepts export layout paths for files", () => {
+    const zipPath = "files/patients/p1/national-id/id.pdf";
+    const unzipped: Record<string, Uint8Array> = {
+      [zipPath]: new Uint8Array([1, 2, 3]),
+    };
+    const data =
+      unzipped[zipPath] ??
+      unzipped[zipPath.replace(/^files\//, "")] ??
+      unzipped[`files/${zipPath}`];
+    assert.ok(data);
+    assert.equal(data!.length, 3);
+  });
 });
