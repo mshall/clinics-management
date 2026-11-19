@@ -4,6 +4,22 @@ import { normalizePhoneToE164 } from "../common/phone-e164";
 import { PrismaService } from "../prisma/prisma.service";
 import { MIN_PHONE_DIGITS, normalizePhoneDigits } from "../patients/patient-phone";
 
+/** Never let an unrecognised gender string reach Prisma (it threw a 500, which Kiorex reads as "clinic busy"). */
+export function normalizeMarketplaceGender(raw: unknown): Gender {
+  switch (String(raw ?? "").trim().toUpperCase()) {
+    case "M":
+    case "MALE":
+      return Gender.M;
+    case "F":
+    case "FEMALE":
+      return Gender.F;
+    case "OTHER":
+      return Gender.OTHER;
+    default:
+      return Gender.UNKNOWN;
+  }
+}
+
 export type MarketplacePatientInput = {
   phone: string;
   nationalId?: string;
@@ -11,7 +27,8 @@ export type MarketplacePatientInput = {
   lastNameEn: string;
   firstNameAr?: string;
   lastNameAr?: string;
-  gender?: Gender;
+  /** Kiorex sends MALE | FEMALE | UNSPECIFIED; Kiorly's own enum is M | F | OTHER | UNKNOWN. Both are accepted. */
+  gender?: Gender | string;
   email?: string;
 };
 
@@ -89,7 +106,7 @@ export class MarketplacePatientIntakeService {
         lastNameEn: input.lastNameEn.trim(),
         firstNameAr: (input.firstNameAr ?? input.firstNameEn).trim(),
         lastNameAr: (input.lastNameAr ?? input.lastNameEn).trim(),
-        gender: input.gender ?? Gender.UNKNOWN,
+        gender: normalizeMarketplaceGender(input.gender),
         phone: e164,
         email: input.email?.trim() || null,
         nationalId,
