@@ -49,6 +49,7 @@ Tabbed view of subscription, trial (extend), wallet (grant credits), SaaS invoic
 |-----|-----|
 | Organizations 360° | `GET /admin/platform/insights/organizations` |
 | Platform performance | `GET /admin/platform/insights/platform` |
+| Growth (PA-05) | `GET /admin/platform/growth` — funnel, cohorts, MRR/ARR, Kiorex attach, by rep; counts match Tenant / OnboardingProgress / Subscription / MarketplaceListing / AuditLog |
 
 ## MFA setup (profile)
 

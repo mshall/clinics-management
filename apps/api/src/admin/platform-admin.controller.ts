@@ -16,6 +16,7 @@ import { PlatformPatchTenantDto } from "./dto/platform-patch-tenant.dto";
 import { PlatformPatchTenantUserDto } from "./dto/platform-patch-tenant-user.dto";
 import { PlatformAdminService } from "./platform-admin.service";
 import { PlatformInsightsService } from "./platform-insights.service";
+import { PlatformGrowthService } from "./platform-growth.service";
 import { DrugDatasetImportService, type DrugDatasetImportPayload } from "../clinical/drug-dataset-import.service";
 import { SettlementService } from "../billing-platform/settlement.service";
 import { PlatformMoneyAuditService } from "../audit/platform-money-audit.service";
@@ -28,6 +29,7 @@ export class PlatformAdminController {
   constructor(
     private readonly platform: PlatformAdminService,
     private readonly platformInsights: PlatformInsightsService,
+    private readonly platformGrowth: PlatformGrowthService,
     private readonly drugDatasets: DrugDatasetImportService,
     private readonly settlement: SettlementService,
     private readonly platformAudit: PlatformMoneyAuditService,
@@ -73,6 +75,13 @@ export class PlatformAdminController {
     @Query("to") to?: string,
   ) {
     return this.platformInsights.platformOverview(user, from, to);
+  }
+
+  @Get("growth")
+  @ApiOperation({ summary: "PA-05 — activation funnel, cohorts, MRR/ARR, Kiorex attach (platform super admin)" })
+  @ApiOkResponse()
+  growth(@CurrentUser() user: JwtUser) {
+    return this.platformGrowth.getGrowth(user);
   }
 
   @Get("hierarchy")

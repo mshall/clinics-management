@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { apiGet } from "@/lib/http";
 import { Badge } from "@/components/ui/badge";
+import { PlatformGrowthTab } from "@/features/platform/platform-growth-tab";
 
 type OrgInsights = {
   period: { from: string; to: string };
@@ -60,6 +61,7 @@ export function PlatformInsightsTab() {
       <TabsList>
         <TabsTrigger value="organizations">{t("platform.insightsOrgs", "Organizations 360°")}</TabsTrigger>
         <TabsTrigger value="platform">{t("platform.insightsPlatform", "Platform performance")}</TabsTrigger>
+        <TabsTrigger value="growth">{t("platform.insightsGrowth", "Growth")}</TabsTrigger>
       </TabsList>
 
       <TabsContent value="organizations">
@@ -154,6 +156,10 @@ export function PlatformInsightsTab() {
             )}
           </CardContent>
         </Card>
+      </TabsContent>
+
+      <TabsContent value="growth">
+        <PlatformGrowthTab />
       </TabsContent>
     </Tabs>
   );

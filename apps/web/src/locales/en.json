@@ -1956,6 +1956,22 @@
         "settlement": "Monthly settlement",
         "payment": "Kiorly payments"
       }
+    },
+    "insightsGrowth": "Growth",
+    "growth": {
+      "title": "Activation funnel",
+      "hint": "Signup → onboarding → activated → trial end → paid. Counts come from tenant and subscription tables.",
+      "signup": "Signups",
+      "onboarding": "Onboarding started",
+      "activated": "Activated",
+      "trialEnd": "Past trial",
+      "paid": "Paid",
+      "kiorexAttach": "Kiorex attach",
+      "retention": "Cohort retention",
+      "month": "Month",
+      "byRep": "By sales rep",
+      "cohorts": "Cohorts",
+      "paywall": "Paywall events"
     }
   },
   "clinical": {
