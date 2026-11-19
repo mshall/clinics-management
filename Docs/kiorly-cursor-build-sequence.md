@@ -327,7 +327,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 091 · UX-02 · Mobile-first doctor views
 - [x] Step 092 · UX-03 · Arabic RTL & Egyptian copy QA
 - [x] Step 093 · PA-01 · Tenant lifecycle console `39905c2`
-- [ ] Step 094 · PA-04 · Support access with consent & audit
+- [x] Step 094 · PA-04 · Support access with consent & audit `7e1284a`
 - [ ] Step 095 · PA-05 · Growth analytics: activation funnel & cohorts
 - [ ] Step 096 · GT-01 · Marketing website & pricing page with "Kiorly free" calculator
 - [ ] Step 097 · GT-03 · Help centre & Arabic video tutorials
@@ -4069,7 +4069,7 @@ model DoctorStatement {
 - Owner approval prompt.
 
 **Acceptance criteria** (write a test for each)
-- [ ] Support cannot open a patient chart without an active approved session.
+- [x] Support cannot open a patient chart without an active approved session.
 
 **Done when:** all acceptance tests pass, §0.2 checks are green, en + ar strings added, docs updated, and Step 094 is ticked in §5.
 

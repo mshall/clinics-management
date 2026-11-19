@@ -132,3 +132,4 @@
 | 091 UX-02 | `d7b58af` | Bottom nav + sticky patient header + 360px e2e |
 | 092 UX-03 | `fefeb5e` | Locale parity CI + ar-EG + Arabic numerals; NH-022 |
 | 093 PA-01 | `39905c2` | Tabbed `/platform/organizations/:id` console; GET tenant lifecycle payload; extend-trial/credits/overrides audited; integration AC
+| 094 PA-04 | `7e1284a` | SupportAccessSession + owner approve UI; masked patient chart gate; read/audit logs
