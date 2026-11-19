@@ -317,7 +317,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 081 · RP-01 · Operational KPIs: no-show rate, utilisation, revenue per doctor-hour, sources — `5c7ba01` · `reports/rp01-operations-kpis.*.test.ts` · `Docs/REPORTS_OPERATIONS.md`
 - [x] Step 082 · RP-02 · Excel/PDF exports & scheduled reports
 - [x] Step 083 · RP-03 · Kiorex impact report
-- [ ] Step 084 · SC-04 · MFA policy for owners, admins and finance in every environment
+- [x] Step 084 · SC-04 · MFA policy for owners, admins and finance in every environment
 - [ ] Step 085 · SC-05 · Tenant data export & offboarding
 - [ ] Step 086 · SC-06 · Rate limiting, WAF, secrets hygiene & penetration test
 - [ ] Step 087 · SC-08 · Backup restore drill
