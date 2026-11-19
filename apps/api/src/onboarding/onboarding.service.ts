@@ -13,7 +13,6 @@ import {
   type OnboardingStepsJson,
 } from "./onboarding-steps";
 import { detectAutoCompletedSteps, mergeAutoSteps, type OnboardingSyncInput } from "./onboarding-sync";
-import { kiorlyEtaPlatformEnabled } from "../providers/provider-settings";
 
 export type OnboardingStepDto = {
   key: OnboardingStepKey;
@@ -39,12 +38,11 @@ const STEP_PATHS: Record<OnboardingStepKey, string> = {
   working_hours: "/admin",
   appointment_types: "/clinics",
   doctor_availability: "/profile",
-  invite_receptionist: "/admin",
+  invite_receptionist: "/team",
   whatsapp_reminders: "/admin",
-  import_patients: "/patients",
+  import_patients: "/onboarding/import",
   first_appointment: "/appointments",
   first_check_in: "/front-desk/board",
-  eta_setup: "/admin",
   kiorex_profile: "/clinics",
   doctor_verification: "/profile/verification",
 };
@@ -112,19 +110,7 @@ export class OnboardingService {
     }
 
     const primaryClinicId = syncInput?.clinics[0]?.id ?? null;
-    const tenantEta = await this.prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: { providerSettings: true },
-    });
-    const includeEtaSetup = tenantEta ? kiorlyEtaPlatformEnabled(tenantEta) : false;
-    return this.toDto(
-      steps,
-      row.completedAt,
-      row.activatedAt,
-      activationJustAchieved,
-      primaryClinicId,
-      includeEtaSetup,
-    );
+    return this.toDto(steps, row.completedAt, row.activatedAt, activationJustAchieved, primaryClinicId);
   }
 
   async patchStep(
@@ -224,10 +210,10 @@ export class OnboardingService {
           },
         })
         .then((n) => n > 0),
-      this.prisma.patient.count({ where: { tenantId } }),
-      this.prisma.appointment.count({ where: { tenantId } }),
+      this.prisma.patient.count({ where: { tenantId, isSample: false } }),
+      this.prisma.appointment.count({ where: { tenantId, patient: { isSample: false } } }),
       this.prisma.appointment.count({
-        where: { tenantId, status: AppointmentStatus.CHECKED_IN },
+        where: { tenantId, status: AppointmentStatus.CHECKED_IN, patient: { isSample: false } },
       }),
       this.prisma.fiscalDevice
         .count({
@@ -284,10 +270,8 @@ export class OnboardingService {
     activatedAt: Date | null,
     activationJustAchieved: boolean,
     primaryClinicId: string | null,
-    includeEtaSetup = false,
   ): OnboardingProgressDto {
-    const stepKeys = ONBOARDING_STEP_KEYS.filter((key) => key !== "eta_setup" || includeEtaSetup);
-    const stepDtos: OnboardingStepDto[] = stepKeys.map((key) => {
+    const stepDtos: OnboardingStepDto[] = ONBOARDING_STEP_KEYS.map((key) => {
       const raw = steps[key];
       let status: OnboardingStepDto["status"] = "pending";
       if (raw === SKIPPED_STEP_VALUE) status = "skipped";

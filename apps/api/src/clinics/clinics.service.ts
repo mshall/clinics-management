@@ -15,8 +15,6 @@ import { defaultCurrencyForCountry } from "../common/country-default-currency";
 import type { ClinicPhysicianDto } from "./dto/clinic-physician.dto";
 import type { ClinicKind } from "./clinic-kind";
 import { resolveClinicKind } from "./clinic-kind";
-import { FiscalDeviceProvisioningService } from "../fiscal-devices/fiscal-device-provisioning.service";
-import { mapEtaClinicSettingsDto } from "../providers/provider-settings";
 import { clinicInvoiceSettingsFromRow } from "../common/invoice-config";
 import { clinicPrescriptionSettingsFromRow } from "../common/prescription-config";
 import {
@@ -44,14 +42,6 @@ function bustClinicListCache(tenantId: string): void {
   clinicListCache.deletePrefix(`clinics:${tenantId}:`);
 }
 
-export interface ClinicCreateFiscalDeviceSummary {
-  id: string;
-  serialNumber: string;
-  kind: string;
-  status: string;
-  isDefault: boolean;
-}
-
 export interface ClinicDto {
   id: string;
   parentClinicId: string | null;
@@ -68,14 +58,12 @@ export interface ClinicDto {
   recordStatus: ClinicRecordStatus;
   disabledAt: string | null;
   createdAt: string;
-  fiscalDevice?: ClinicCreateFiscalDeviceSummary;
 }
 
 @Injectable()
 export class ClinicsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly fiscalDeviceProvisioning: FiscalDeviceProvisioningService,
     private readonly entitlements: EntitlementsService,
   ) {}
 
@@ -633,7 +621,6 @@ export class ClinicsService {
       ),
       marketTaxLabels,
       ...clinicPrescriptionSettingsFromRow(row),
-      ...mapEtaClinicSettingsDto(row),
     };
   }
 
@@ -745,7 +732,7 @@ export class ClinicsService {
     const openedAt = new Date();
     openedAt.setHours(0, 0, 0, 0);
 
-    const { clinic: row, fiscalDevice } = await this.prisma.$transaction(async (tx) => {
+    const { clinic: row } = await this.prisma.$transaction(async (tx) => {
       const clinic = await tx.clinic.create({
         data: {
           tenantId,
@@ -777,24 +764,12 @@ export class ClinicsService {
         },
         include: { parent: { select: { nameEn: true } }, _count: { select: { branches: true } } },
       });
-      const fiscalDevice = await this.fiscalDeviceProvisioning.provisionDefaultVirtual(tx, tenantId, clinic.id);
-      return { clinic, fiscalDevice };
+      return { clinic };
     });
 
     bustClinicListCache(tenantId);
     const mapped = this.mapClinicRow(row);
-    return fiscalDevice
-      ? {
-          ...mapped,
-          fiscalDevice: {
-            id: fiscalDevice.id,
-            serialNumber: fiscalDevice.serialNumber,
-            kind: fiscalDevice.kind,
-            status: fiscalDevice.status,
-            isDefault: fiscalDevice.isDefault,
-          },
-        }
-      : mapped;
+    return mapped;
   }
 
   async update(tenantId: string, id: string, dto: PatchClinicDto, user?: JwtUser) {

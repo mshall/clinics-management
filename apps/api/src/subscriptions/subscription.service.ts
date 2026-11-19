@@ -20,8 +20,25 @@ import { ACTIVE_PRICE_WHERE } from "../plans/plans-active-prices";
 import { assertEgyptPdpcPaidLaunchAllowed } from "../compliance/pdpc-egypt-launch-gate";
 import { LegalAcceptanceService } from "../legal/legal-acceptance.service";
 import { isPaidPlanKey } from "../legal/legal-catalog";
+import { BillingSeatService } from "./billing-seat.service";
+import {
+  computePlanChangeProration,
+  computeSeatChangeProration,
+  isPlanUpgrade,
+  periodAmountForSubscription,
+  type PlanChangeProration,
+  type PlanPriceShape,
+} from "./subscription-proration";
 
 type Tx = Prisma.TransactionClient;
+
+export type PreviewChangeBody = {
+  planKey: PlanKey;
+  interval: BillingInterval;
+  seats: number;
+  timing?: "IMMEDIATE" | "PERIOD_END";
+  activeClinicianUserIds?: string[];
+};
 
 export type SubscriptionView = {
   id: string;
@@ -58,6 +75,7 @@ export class SubscriptionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly legal: LegalAcceptanceService,
+    private readonly billingSeats: BillingSeatService,
   ) {}
 
   private async loadSubscription(tenantId: string) {
@@ -327,52 +345,85 @@ export class SubscriptionService {
     });
   }
 
-  async changePlan(
-    user: JwtUser,
-    tenantId: string,
-    body: {
-      planKey: PlanKey;
-      interval: BillingInterval;
-      seats: number;
-      confirm?: boolean;
-    },
-  ) {
-    if (user.tenantId !== tenantId) throw new ForbiddenException();
-    assertSubscriptionBillingAccess(user);
+  private toPriceShape(price: {
+    amount: Prisma.Decimal;
+    unit: PlanPriceShape["unit"];
+    includedClinicians: number;
+    extraClinicianAmount: Prisma.Decimal | null;
+    interval: BillingInterval;
+    currency: string;
+  }): PlanPriceShape & { currency: string } {
+    return {
+      currency: price.currency,
+      amount: Number(price.amount),
+      unit: price.unit,
+      includedClinicians: price.includedClinicians,
+      extraClinicianAmount: price.extraClinicianAmount != null ? Number(price.extraClinicianAmount) : null,
+      interval: price.interval,
+    };
+  }
 
-    const plan = await this.prisma.plan.findUnique({ where: { key: body.planKey } });
+  private async resolveActivePlanPrice(tenantId: string, planKey: PlanKey, interval: BillingInterval) {
+    const plan = await this.prisma.plan.findUnique({ where: { key: planKey } });
     if (!plan) throw new BadRequestException("Unknown plan");
-
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
       select: { marketId: true },
     });
     if (!tenant?.marketId) throw new BadRequestException("Organization has no market");
-
     const price = await this.prisma.planPrice.findFirst({
-      where: {
-        planId: plan.id,
-        marketId: tenant.marketId,
-        interval: body.interval,
-        ...ACTIVE_PRICE_WHERE(),
-      },
+      where: { planId: plan.id, marketId: tenant.marketId, interval, ...ACTIVE_PRICE_WHERE() },
       orderBy: { priceVersion: "desc" },
     });
     if (!price) throw new BadRequestException("No active price for plan in your market");
+    return { plan, price };
+  }
 
+  async previewPlanChange(user: JwtUser, tenantId: string, body: PreviewChangeBody) {
+    if (user.tenantId !== tenantId) throw new ForbiddenException();
+    assertSubscriptionBillingAccess(user);
     const sub = await this.loadSubscription(tenantId);
-    const preview = {
+    if (!sub.planPrice) throw new BadRequestException("Subscription has no plan price");
+    const { plan, price } = await this.resolveActivePlanPrice(tenantId, body.planKey, body.interval);
+    const seats = Math.max(1, body.seats);
+    const now = new Date();
+    const currentShape = this.toPriceShape(sub.planPrice);
+    const nextShape = this.toPriceShape(price);
+    const currentFull = periodAmountForSubscription({ price: currentShape, clinicianSeats: sub.clinicianSeats });
+    const nextFull = periodAmountForSubscription({ price: nextShape, clinicianSeats: seats });
+    const upgrade = isPlanUpgrade(sub.plan.key, body.planKey, currentFull, nextFull);
+    const timing =
+      body.timing ?? (upgrade ? "IMMEDIATE" : "PERIOD_END");
+    const proration: PlanChangeProration = computePlanChangeProration({
+      currency: price.currency,
+      periodStart: sub.currentPeriodStart,
+      periodEnd: sub.currentPeriodEnd,
+      now,
+      currentPlanKey: sub.plan.key,
+      currentPrice: currentShape,
+      currentSeats: sub.clinicianSeats,
+      nextPlanKey: body.planKey,
+      nextPrice: nextShape,
+      nextSeats: seats,
+      timing,
+    });
+    return {
       planKey: body.planKey,
       interval: body.interval,
-      seats: body.seats,
+      seats,
       priceId: price.id,
-      amount: price.amount.toString(),
-      currency: price.currency,
-      effectiveAt: sub.currentPeriodEnd.toISOString(),
+      planId: plan.id,
+      proration,
+      requiresClinicianSelection:
+        seats < sub.clinicianSeats &&
+        (await this.billingSeats.listPhysicians(tenantId)).length > seats,
     };
+  }
 
+  async changePlan(user: JwtUser, tenantId: string, body: PreviewChangeBody & { confirm?: boolean }) {
+    const previewPayload = await this.previewPlanChange(user, tenantId, body);
     if (!body.confirm) {
-      return { preview, applied: false };
+      return { preview: previewPayload, applied: false };
     }
 
     if (isPaidPlanKey(body.planKey)) {
@@ -380,6 +431,48 @@ export class SubscriptionService {
       await assertEgyptPdpcPaidLaunchAllowed(this.prisma, tenantId);
     }
 
+    const sub = await this.loadSubscription(tenantId);
+    const timing = previewPayload.proration.timing;
+    const seats = Math.max(1, body.seats);
+
+    if (timing === "PERIOD_END") {
+      const updated = await this.prisma.$transaction(async (tx) => {
+        const row = await tx.subscription.update({
+          where: { tenantId },
+          data: {
+            scheduledPlanId: previewPayload.planId,
+            scheduledPlanPriceId: previewPayload.priceId,
+            scheduledInterval: body.interval,
+            scheduledClinicianSeats: seats,
+            scheduledEffectiveAt: sub.currentPeriodEnd,
+          },
+        });
+        await this.appendEvent(
+          tx,
+          row.id,
+          "plan_change_scheduled",
+          { planId: sub.planId, seats: sub.clinicianSeats },
+          {
+            scheduledPlanId: previewPayload.planId,
+            scheduledSeats: seats,
+            effectiveAt: sub.currentPeriodEnd.toISOString(),
+          },
+          user.userId,
+          tenantId,
+          "subscription.plan_change_scheduled",
+        );
+        return row;
+      });
+      const full = await this.loadSubscription(tenantId);
+      return {
+        preview: previewPayload,
+        applied: true,
+        scheduled: true,
+        subscription: this.mapView({ ...updated, plan: full.plan, trialPlan: full.trialPlan, planPrice: full.planPrice }),
+      };
+    }
+
+    const { plan, price } = await this.resolveActivePlanPrice(tenantId, body.planKey, body.interval);
     const updated = await this.prisma.$transaction(async (tx) => {
       const row = await tx.subscription.update({
         where: { tenantId },
@@ -387,15 +480,31 @@ export class SubscriptionService {
           planId: plan.id,
           planPriceId: price.id,
           interval: body.interval,
-          clinicianSeats: Math.max(1, body.seats),
+          clinicianSeats: seats,
+          scheduledPlanId: null,
+          scheduledPlanPriceId: null,
+          scheduledInterval: null,
+          scheduledClinicianSeats: null,
+          scheduledEffectiveAt: null,
         },
       });
       await this.appendEvent(
         tx,
         row.id,
         "plan_changed",
-        { planId: sub.planId, planPriceId: sub.planPriceId, interval: sub.interval },
-        { planId: plan.id, planPriceId: price.id, interval: body.interval },
+        {
+          planId: sub.planId,
+          planPriceId: sub.planPriceId,
+          interval: sub.interval,
+          clinicianSeats: sub.clinicianSeats,
+        },
+        {
+          planId: plan.id,
+          planPriceId: price.id,
+          interval: body.interval,
+          clinicianSeats: seats,
+          proration: previewPayload.proration,
+        },
         user.userId,
         tenantId,
         "subscription.plan_changed",
@@ -403,34 +512,133 @@ export class SubscriptionService {
       return row;
     });
 
-    return { preview, applied: true, subscription: this.mapView({ ...updated, plan, trialPlan: sub.trialPlan, planPrice: price }) };
+    await this.billingSeats.reconcileToSeatCap(tenantId, seats, body.activeClinicianUserIds);
+
+    return {
+      preview: previewPayload,
+      applied: true,
+      scheduled: false,
+      subscription: this.mapView({ ...updated, plan, trialPlan: sub.trialPlan, planPrice: price }),
+    };
   }
 
-  async changeSeats(
-    tenantId: string,
-    seats: number,
-    actorUserId: string | null,
-  ): Promise<Subscription> {
+  async previewSeatsChange(user: JwtUser, tenantId: string, seats: number) {
+    if (user.tenantId !== tenantId) throw new ForbiddenException();
+    assertSubscriptionBillingAccess(user);
     if (seats < 1) throw new BadRequestException("seats must be at least 1");
-    return this.prisma.$transaction(async (tx) => {
-      const sub = await tx.subscription.findUnique({ where: { tenantId } });
-      if (!sub) throw new NotFoundException("Subscription not found");
-      const updated = await tx.subscription.update({
-        where: { id: sub.id },
-        data: { clinicianSeats: seats },
+    const sub = await this.loadSubscription(tenantId);
+    if (!sub.planPrice) throw new BadRequestException("Subscription has no plan price");
+    const shape = this.toPriceShape(sub.planPrice);
+    const now = new Date();
+    const timing = seats > sub.clinicianSeats ? "IMMEDIATE" : "PERIOD_END";
+    const proration = computeSeatChangeProration({
+      currency: sub.planPrice.currency,
+      periodStart: sub.currentPeriodStart,
+      periodEnd: sub.currentPeriodEnd,
+      now,
+      price: shape,
+      currentSeats: sub.clinicianSeats,
+      nextSeats: seats,
+      timing,
+    });
+    return { seats, proration, requiresClinicianSelection: seats < sub.clinicianSeats };
+  }
+
+  async changeSeats(user: JwtUser, tenantId: string, body: { seats: number; confirm?: boolean; activeClinicianUserIds?: string[] }) {
+    if (user.tenantId !== tenantId) throw new ForbiddenException();
+    assertSubscriptionBillingAccess(user);
+    const preview = await this.previewSeatsChange(user, tenantId, body.seats);
+    if (!body.confirm) return { preview, applied: false };
+
+    const sub = await this.loadSubscription(tenantId);
+    if (preview.proration.timing === "PERIOD_END") {
+      const updated = await this.prisma.$transaction(async (tx) => {
+        const row = await tx.subscription.update({
+          where: { tenantId },
+          data: {
+            scheduledClinicianSeats: body.seats,
+            scheduledEffectiveAt: sub.currentPeriodEnd,
+          },
+        });
+        await this.appendEvent(
+          tx,
+          row.id,
+          "seats_change_scheduled",
+          { clinicianSeats: sub.clinicianSeats },
+          { scheduledSeats: body.seats, effectiveAt: sub.currentPeriodEnd.toISOString() },
+          user.userId,
+          tenantId,
+          "subscription.seats_change_scheduled",
+        );
+        return row;
+      });
+      const full = await this.loadSubscription(tenantId);
+      return { preview, applied: true, scheduled: true, subscription: this.mapView({ ...updated, ...full }) };
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.subscription.update({
+        where: { tenantId },
+        data: { clinicianSeats: body.seats },
+      });
+      await this.appendEvent(
+        tx,
+        row.id,
+        "seats_changed",
+        { clinicianSeats: sub.clinicianSeats },
+        { clinicianSeats: body.seats, proration: preview.proration },
+        user.userId,
+        tenantId,
+        "subscription.seats_changed",
+      );
+      return row;
+    });
+    await this.billingSeats.reconcileToSeatCap(tenantId, body.seats, body.activeClinicianUserIds);
+    const full = await this.loadSubscription(tenantId);
+    return { preview, applied: true, scheduled: false, subscription: this.mapView({ ...updated, ...full }) };
+  }
+
+  async applyScheduledSubscriptionChanges(tenantId: string, actorUserId: string | null): Promise<boolean> {
+    const sub = await this.prisma.subscription.findUnique({
+      where: { tenantId },
+      include: { plan: true, planPrice: true },
+    });
+    if (!sub?.scheduledEffectiveAt || sub.scheduledEffectiveAt > new Date()) return false;
+    if (!sub.scheduledPlanId && sub.scheduledClinicianSeats == null) return false;
+
+    const planId = sub.scheduledPlanId ?? sub.planId;
+    const priceId = sub.scheduledPlanPriceId ?? sub.planPriceId;
+    const interval = sub.scheduledInterval ?? sub.interval;
+    const seats = sub.scheduledClinicianSeats ?? sub.clinicianSeats;
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.subscription.update({
+        where: { tenantId },
+        data: {
+          planId,
+          planPriceId: priceId,
+          interval,
+          clinicianSeats: seats,
+          scheduledPlanId: null,
+          scheduledPlanPriceId: null,
+          scheduledInterval: null,
+          scheduledClinicianSeats: null,
+          scheduledEffectiveAt: null,
+        },
       });
       await this.appendEvent(
         tx,
         sub.id,
-        "seats_changed",
-        { clinicianSeats: sub.clinicianSeats },
-        { clinicianSeats: seats },
+        "scheduled_change_applied",
+        { planId: sub.planId, clinicianSeats: sub.clinicianSeats },
+        { planId, clinicianSeats: seats },
         actorUserId,
         tenantId,
-        "subscription.seats_changed",
+        "subscription.scheduled_change_applied",
       );
-      return updated;
     });
+    await this.billingSeats.reconcileToSeatCap(tenantId, seats);
+    return true;
   }
 
   async requestCancelAtPeriodEnd(
@@ -490,6 +698,8 @@ export class SubscriptionService {
 
     const nextStart = sub.currentPeriodEnd;
     const nextEnd = addBillingPeriod(nextStart, sub.interval);
+
+    await this.applyScheduledSubscriptionChanges(tenantId, actorUserId);
 
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.subscription.update({

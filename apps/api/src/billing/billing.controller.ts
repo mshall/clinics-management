@@ -10,7 +10,10 @@ import { DunningService } from "../subscriptions/dunning.service";
 import { SubscriptionService } from "../subscriptions/subscription.service";
 import { TrialEngineService } from "../subscriptions/trial-engine.service";
 import { CreditWalletService } from "../credits/credit-wallet.service";
+import { PrismaService } from "../prisma/prisma.service";
 import { BillingService } from "./billing.service";
+import { NoShowGuaranteeService } from "./no-show-guarantee.service";
+import { SpecialtyPacksService } from "../clinical/specialty-packs.service";
 
 @ApiTags("billing")
 @ApiBearerAuth("bearer")
@@ -23,7 +26,34 @@ export class BillingController {
     private readonly dunning: DunningService,
     private readonly trialEngine: TrialEngineService,
     private readonly creditWallet: CreditWalletService,
+    private readonly noShowGuarantee: NoShowGuaranteeService,
+    private readonly specialtyPacks: SpecialtyPacksService,
+    private readonly prisma: PrismaService,
   ) {}
+
+  /** PL-08 — paywall view/conversion telemetry (feeds PA-05 later). */
+  @Post("paywall-events")
+  async recordPaywallEvent(
+    @CurrentUser() user: JwtUser,
+    @Body() body: { type: string; entitlement: string; requiredPlan: string; source?: string | null },
+  ) {
+    const tenantId = requireTenantId(user);
+    await this.prisma.auditLog.create({
+      data: {
+        tenantId,
+        actorId: user.userId,
+        action: body.type === "conversion_intent" ? "paywall.conversion_intent" : "paywall.view",
+        resource: "Paywall",
+        resourceId: body.entitlement,
+        metadata: {
+          entitlement: body.entitlement,
+          requiredPlan: body.requiredPlan,
+          source: body.source ?? null,
+        },
+      },
+    });
+    return { ok: true };
+  }
 
   @Get("subscription")
   getSubscription(@CurrentUser() user: JwtUser) {
@@ -54,13 +84,68 @@ export class BillingController {
     );
   }
 
+  /** CR-10 — no-show guarantee tracker (off by default via market commercialConfig). */
+  @Get("guarantee")
+  getNoShowGuarantee(@CurrentUser() user: JwtUser) {
+    return this.noShowGuarantee.getForTenant(user, requireTenantId(user));
+  }
+
+  /** CL-07 — specialty pack add-ons (dental / aesthetics / physio). */
+  @Get("addons")
+  listSpecialtyAddons() {
+    return this.specialtyPacks.listAddons();
+  }
+
+  @Post("addons/purchase")
+  purchaseSpecialtyAddon(
+    @CurrentUser() user: JwtUser,
+    @Body() body: { entitlementKey: string },
+  ) {
+    return this.specialtyPacks.purchaseAddon(requireTenantId(user), user.userId, body.entitlementKey);
+  }
+
+  @Post("subscription/preview-change")
+  previewChange(
+    @CurrentUser() user: JwtUser,
+    @Body()
+    body: {
+      planKey: PlanKey;
+      interval: BillingInterval;
+      seats: number;
+      timing?: "IMMEDIATE" | "PERIOD_END";
+    },
+  ) {
+    return this.subscriptions.previewPlanChange(user, requireTenantId(user), body);
+  }
+
   @Post("subscription/change-plan")
   changePlan(
     @CurrentUser() user: JwtUser,
     @Body()
-    body: { planKey: PlanKey; interval: BillingInterval; seats: number; confirm?: boolean },
+    body: {
+      planKey: PlanKey;
+      interval: BillingInterval;
+      seats: number;
+      confirm?: boolean;
+      timing?: "IMMEDIATE" | "PERIOD_END";
+      activeClinicianUserIds?: string[];
+    },
   ) {
     return this.subscriptions.changePlan(user, requireTenantId(user), body);
+  }
+
+  @Post("subscription/seats")
+  changeSeats(
+    @CurrentUser() user: JwtUser,
+    @Body()
+    body: { seats: number; confirm?: boolean; activeClinicianUserIds?: string[] },
+  ) {
+    return this.subscriptions.changeSeats(user, requireTenantId(user), body);
+  }
+
+  @Post("subscription/preview-seats")
+  previewSeats(@CurrentUser() user: JwtUser, @Body() body: { seats: number }) {
+    return this.subscriptions.previewSeatsChange(user, requireTenantId(user), body.seats);
   }
 
   @Post("subscription/cancel")

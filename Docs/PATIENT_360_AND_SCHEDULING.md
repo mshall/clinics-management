@@ -22,7 +22,7 @@
 | Bookable slots (KX-03) | `GET /api/v1/scheduling/slots?clinicId&clinicianId&typeId&from&to&channel` | Appointment book panel uses server slot engine |
 | HR leave blocks | `GET /api/v1/scheduling/clinicians/:id/leave-blocks` | From approved `LeaveRequest` |
 | Recurring / physio series | `POST /api/v1/scheduling/series` | API creates N linked appointments |
-| Waitlist | `GET/POST /api/v1/scheduling/waitlist` | First waitlist entry marked `OFFERED` on cancel |
+| Waitlist | `GET/POST /api/v1/scheduling/waitlist`, `GET /scheduling/waitlist/offers` | FS-03: cancelled time auto-offered on WhatsApp, one patient at a time, 15-min hold — see [FRONT_DESK.md](./FRONT_DESK.md#waitlist-auto-fill-on-cancellations-fs-03) |
 | No-show + deposit flag | `POST /api/v1/scheduling/appointments/:id/no-show` | After 3 no-shows → `requiresAppointmentDeposit` |
 | Double booking | `allowDoubleBook` on create | Existing overlap dialog + flag |
 | Follow-up from visit | `followUpWeeks` on encounter save/finalize | Encounter SOAP → pending booking |

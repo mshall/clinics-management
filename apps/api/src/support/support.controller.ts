@@ -10,6 +10,7 @@ import { CreateSupportTicketDto } from "./dto/create-support-ticket.dto";
 import { CreateSupportTicketEventDto } from "./dto/create-support-ticket-event.dto";
 import { PatchSupportTicketDto } from "./dto/patch-support-ticket.dto";
 import { SupportService } from "./support.service";
+import { SupportAccessSessionService } from "./support-access-session.service";
 
 @ApiTags("support")
 @ApiBearerAuth("bearer")
@@ -19,6 +20,7 @@ export class SupportController {
   constructor(
     private readonly support: SupportService,
     private readonly navTabAccess: NavTabAccessService,
+    private readonly accessSessions: SupportAccessSessionService,
   ) {}
 
   @Get("tickets")
@@ -69,6 +71,34 @@ export class SupportController {
     return this.support.addEvent(requireTenantId(user), user, id, body);
   }
 
+  @Get("macros")
+  @ApiOperation({ summary: "GT-04 — canned support reply macros" })
+  @ApiOkResponse()
+  async listMacros(@CurrentUser() user: JwtUser) {
+    await assertSupportAccess(user, this.navTabAccess);
+    return this.support.listMacros();
+  }
+
+  @Post("tickets/:id/macros/:macroId")
+  @ApiOperation({ summary: "GT-04 — apply a reply macro (counts as first response)" })
+  @ApiOkResponse()
+  async applyMacro(@CurrentUser() user: JwtUser, @Param("id") id: string, @Param("macroId") macroId: string) {
+    await assertSupportMutate(user, this.navTabAccess);
+    return this.support.applyMacro(requireTenantId(user), user, id, macroId);
+  }
+
+  @Post("tickets/:id/escalate-engineering")
+  @ApiOperation({ summary: "GT-04 — escalate ticket to engineering" })
+  @ApiOkResponse()
+  async escalateEngineering(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Body() body: { note?: string },
+  ) {
+    await assertSupportMutate(user, this.navTabAccess);
+    return this.support.escalateToEngineering(requireTenantId(user), user, id, body?.note);
+  }
+
   @Get("tracking/logs")
   @ApiOperation({ summary: "Detailed audit trail with resolution hints" })
   @ApiOkResponse()
@@ -104,5 +134,66 @@ export class SupportController {
   async ticketFromAudit(@CurrentUser() user: JwtUser, @Param("auditLogId") auditLogId: string) {
     await assertSupportMutate(user, this.navTabAccess);
     return this.support.createTicketFromAuditLog(requireTenantId(user), user, auditLogId);
+  }
+
+  @Post("access-requests")
+  @ApiOperation({ summary: "PA-04 — platform support requests time-boxed tenant access" })
+  @ApiOkResponse()
+  requestAccess(
+    @CurrentUser() user: JwtUser,
+    @Body()
+    body: {
+      tenantId: string;
+      reason: string;
+      durationMinutes?: number;
+      requestedUnmaskPhi?: boolean;
+    },
+  ) {
+    return this.accessSessions.requestAccess(user, body);
+  }
+
+  @Get("access-requests/mine")
+  @ApiOperation({ summary: "PA-04 — list my platform support access requests" })
+  @ApiOkResponse()
+  listMyAccessRequests(@CurrentUser() user: JwtUser) {
+    return this.accessSessions.listMine(user);
+  }
+
+  @Get("access-requests")
+  @ApiOperation({ summary: "PA-04 — owner lists pending/prior support access requests" })
+  @ApiOkResponse()
+  listTenantAccessRequests(@CurrentUser() user: JwtUser) {
+    return this.accessSessions.listForTenant(user, requireTenantId(user));
+  }
+
+  @Post("access-requests/:id/decide")
+  @ApiOperation({ summary: "PA-04 — owner approves or denies support access" })
+  @ApiOkResponse()
+  decideAccess(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Body() body: { approved: boolean; allowUnmaskPhi?: boolean },
+  ) {
+    return this.accessSessions.decide(user, id, body);
+  }
+
+  @Post("access-requests/:id/revoke")
+  @ApiOperation({ summary: "PA-04 — revoke a support access session" })
+  @ApiOkResponse()
+  revokeAccess(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.accessSessions.revoke(user, id);
+  }
+
+  @Get("access-sessions/patients/:patientId")
+  @ApiOperation({
+    summary: "PA-04 — open patient chart under an active approved support session (PHI masked by default)",
+  })
+  @ApiOkResponse()
+  openPatientChart(
+    @CurrentUser() user: JwtUser,
+    @Param("patientId") patientId: string,
+    @Query("tenantId") tenantId: string,
+  ) {
+    return this.accessSessions.openPatientChart(user, tenantId, patientId);
   }
 }

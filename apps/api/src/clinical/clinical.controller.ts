@@ -1,5 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
-import { ClinicalLetterType, ClinicalShortcutType, ClinicalSpecialty } from "@prisma/client";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UseGuards } from "@nestjs/common";
+import {
+  ClinicalLetterType,
+  ClinicalOrderKind,
+  ClinicalOrderStatus,
+  ClinicalShortcutType,
+  ClinicalSpecialty,
+} from "@prisma/client";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -11,6 +17,8 @@ import { ClinicalService } from "./clinical.service";
 import { ClinicalSafetyService } from "./clinical-safety.service";
 import { RxSafetyCheckService } from "./rx-safety-check.service";
 import { DrugCatalogService } from "./drug-catalog.service";
+import { ClinicalOrdersService } from "./clinical-orders.service";
+import { SpecialtyPacksService } from "./specialty-packs.service";
 
 @ApiTags("clinical")
 @ApiBearerAuth("bearer")
@@ -23,6 +31,8 @@ export class ClinicalController {
     private readonly safety: ClinicalSafetyService,
     private readonly rxSafety: RxSafetyCheckService,
     private readonly drugCatalog: DrugCatalogService,
+    private readonly orders: ClinicalOrdersService,
+    private readonly packs: SpecialtyPacksService,
   ) {}
 
   @Get("form-templates")
@@ -128,5 +138,91 @@ export class ClinicalController {
       body.existingDrugNames ?? [],
       { drugProductId: body.drugProductId },
     );
+  }
+
+  /** CL-06 — lab & imaging orders. */
+  @Get("orders")
+  listOrders(
+    @CurrentUser() user: JwtUser,
+    @Query("encounterId") encounterId?: string,
+    @Query("patientId") patientId?: string,
+  ) {
+    return this.orders.list(requireTenantId(user), { encounterId, patientId });
+  }
+
+  @Post("orders")
+  createOrder(
+    @CurrentUser() user: JwtUser,
+    @Body()
+    body: {
+      clinicId: string;
+      patientId: string;
+      encounterId?: string;
+      kind: ClinicalOrderKind;
+      notes?: string;
+      items: { code?: string; nameEn: string; nameAr?: string }[];
+    },
+  ) {
+    return this.orders.create(requireTenantId(user), user.userId, body);
+  }
+
+  @Patch("orders/:id")
+  patchOrder(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Body()
+    body: {
+      status?: ClinicalOrderStatus;
+      resultsJson?: unknown;
+      notes?: string;
+      items?: { id?: string; resultValue?: string; resultUnit?: string; resultFlag?: string }[];
+    },
+  ) {
+    return this.orders.patch(requireTenantId(user), id, body);
+  }
+
+  /** CL-07 specialty packs */
+  @Get("specialty-packs/addons")
+  listSpecialtyAddons() {
+    return this.packs.listAddons();
+  }
+
+  @Get("patients/:patientId/dental-chart")
+  @RequiresEntitlement("pack_dental")
+  dentalChart(@CurrentUser() user: JwtUser, @Param("patientId") patientId: string) {
+    return this.packs.getDentalChart(requireTenantId(user), patientId);
+  }
+
+  @Put("patients/:patientId/dental-chart")
+  @RequiresEntitlement("pack_dental")
+  upsertDentalTooth(
+    @CurrentUser() user: JwtUser,
+    @Param("patientId") patientId: string,
+    @Body() body: { toothFdi: number; status?: string; planNote?: string; feeAmount?: number },
+  ) {
+    return this.packs.upsertDentalTooth(requireTenantId(user), patientId, body);
+  }
+
+  @Get("patients/:patientId/before-after")
+  @RequiresEntitlement("pack_aesthetics")
+  beforeAfter(@CurrentUser() user: JwtUser, @Param("patientId") patientId: string) {
+    return this.packs.listBeforeAfterPairs(requireTenantId(user), patientId);
+  }
+
+  @Post("physio-plans")
+  @RequiresEntitlement("pack_physio")
+  physioPlan(
+    @CurrentUser() user: JwtUser,
+    @Body()
+    body: {
+      clinicId: string;
+      patientId: string;
+      clinicianId: string;
+      label: string;
+      sessionCount: number;
+      notes?: string;
+    },
+  ) {
+    return this.packs.createPhysioPlan(requireTenantId(user), body);
   }
 }

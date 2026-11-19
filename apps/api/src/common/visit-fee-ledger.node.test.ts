@@ -28,7 +28,10 @@ function baseTx(overrides: {
         return overrides.create ? overrides.create(args) : { id: "rev-new" };
       },
     },
-    patient: { findFirst: async () => ({ firstNameEn: "Ada", lastNameEn: "Lovelace" }) },
+    patient: {
+      findFirst: async (args?: { where?: { isSample?: boolean } }) =>
+        args?.where?.isSample ? null : { firstNameEn: "Ada", lastNameEn: "Lovelace" },
+    },
     clinic: {
       findFirst: async () => ({
         defaultCurrency: "EGP",
@@ -38,6 +41,8 @@ function baseTx(overrides: {
       }),
     },
     tenant: { findUnique: async () => ({ baseCurrency: "EGP", providerSettings: null }) },
+    patientDeposit: { findMany: async () => [] },
+    billingRefund: { aggregate: async () => ({ _sum: { amount: null } }) },
     fiscalDocument: {
       findFirst: async () => null,
       delete: async () => undefined,
@@ -200,4 +205,37 @@ test("fee increase after check-in posts balance due without a second collected s
   assert.equal(created.collectionMode, undefined);
   assert.equal((created as { status?: string }).status, RevenueStatus.RECEIVABLE);
   assert.match(created.description ?? "", /balance due/i);
+});
+test("KX-07: an applied deposit counts toward the visit fee (only the remainder is charged)", async () => {
+  const { tx, revenueCreates } = baseTx({});
+  (tx as { patientDeposit: unknown }).patientDeposit = {
+    findMany: async () => [{ amount: 100, revenueEntryId: "rev-dep", paymentId: "pay-dep" }],
+  };
+  await upsertEncounterVisitFeeRevenue(tx as never, {
+    tenantId: "t1",
+    clinicId: "c1",
+    encounterId: "enc-2",
+    appointmentId: "apt-2",
+    amount: 300,
+    patientId: "p1",
+    vatPercent: 0,
+  });
+  assert.equal(revenueCreates.length, 1);
+  const created = revenueCreates[0] as { grossAmount?: { toString: () => string } };
+  assert.equal(String(created.grossAmount), "200");
+
+  const fully = baseTx({});
+  (fully.tx as { patientDeposit: unknown }).patientDeposit = {
+    findMany: async () => [{ amount: 300, revenueEntryId: "rev-dep", paymentId: null }],
+  };
+  await upsertEncounterVisitFeeRevenue(fully.tx as never, {
+    tenantId: "t1",
+    clinicId: "c1",
+    encounterId: "enc-3",
+    appointmentId: "apt-3",
+    amount: 300,
+    patientId: "p1",
+    vatPercent: 0,
+  });
+  assert.equal(fully.revenueCreates.length, 0, "a deposit covering the whole fee leaves nothing to charge");
 });

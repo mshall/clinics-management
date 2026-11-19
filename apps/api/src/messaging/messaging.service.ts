@@ -4,6 +4,7 @@ import { MessagingConsentService } from "../patients/messaging-consent.service";
 import { resolveMarketTemplate, whatsAppConfigFromMarket } from "./whatsapp-market-config";
 import { resolveMarketForTenant } from "../markets/market-resolver";
 import { PrismaService } from "../prisma/prisma.service";
+import { UsageMeterService } from "../usage/usage-meter.service";
 
 const DEFAULT_TEMPLATES: { key: string; channel: MessageChannel; bodyEn: string; bodyAr: string }[] = [
   {
@@ -31,6 +32,56 @@ const DEFAULT_TEMPLATES: { key: string; channel: MessageChannel; bodyEn: string;
     bodyAr: "موعدكم بعد ساعتين في {{clinic}}.",
   },
   {
+    key: "deposit_payment_link",
+    channel: MessageChannel.WHATSAPP,
+    bodyEn: "Hello {{name}}, please pay a deposit of {{amount}} to keep your appointment at {{clinic}}: {{link}} (within {{hours}} hours).",
+    bodyAr: "مرحباً {{name}}، يرجى دفع عربون {{amount}} لتأكيد موعدك في {{clinic}}: {{link}} (خلال {{hours}} ساعة).",
+  },
+  {
+    key: "owner_shift_summary",
+    channel: MessageChannel.WHATSAPP,
+    bodyEn: "{{clinic}} shift Z#{{z}} closed: expected cash {{expected}}, counted {{counted}}, variance {{variance}}; card {{card}}. Status: {{status}}.",
+    bodyAr: "تم إغلاق وردية {{clinic}} رقم Z#{{z}}: النقدية المتوقعة {{expected}}، المعدودة {{counted}}، الفرق {{variance}}؛ البطاقات {{card}}. الحالة: {{status}}.",
+  },
+  {
+    key: "installment_due_reminder",
+    channel: MessageChannel.WHATSAPP,
+    bodyEn: "Hello {{name}}, a reminder from {{clinic}}: your installment of {{amount}} is due on {{date}}.",
+    bodyAr: "مرحباً {{name}}، تذكير من {{clinic}}: قسطك بقيمة {{amount}} مستحق في {{date}}.",
+  },
+  {
+    key: "doctor_tomorrow_digest",
+    channel: MessageChannel.WHATSAPP,
+    bodyEn: "Dr {{name}}, tomorrow at {{clinic}}: {{count}} appointment(s). {{list}}",
+    bodyAr: "د. {{name}}، غداً في {{clinic}}: {{count}} موعد/مواعيد. {{list}}",
+  },
+  {
+    key: "owner_weekly_insights",
+    channel: MessageChannel.WHATSAPP,
+    bodyEn:
+      "{{name}}, this week: {{visits}} visits, {{revenue}} collected, {{noshows}} no-shows, {{kiorex}} Kiorex patients, Kiorly free {{progress}}%.",
+    bodyAr:
+      "{{name}}، هذا الأسبوع: {{visits}} زيارة، تحصيل {{revenue}}، {{noshows}} غياب، {{kiorex}} مريض كيوركس، كيورلي مجاني {{progress}}٪.",
+  },
+  {
+    key: "owner_scheduled_report",
+    channel: MessageChannel.WHATSAPP,
+    bodyEn: "{{name}}, your weekly clinic reports ({{keys}}, {{format}}) are ready in Kiorly Reports.",
+    bodyAr: "{{name}}، تقاريرك الأسبوعية ({{keys}}، {{format}}) جاهزة في تقارير كيورلي.",
+  },
+  {
+    key: "kiorex_progress_nudge",
+    channel: MessageChannel.WHATSAPP,
+    bodyEn: "{{name}}: Kiorex progress reached {{threshold}}% toward free Kiorly for {{period}}.",
+    bodyAr: "{{name}}: تقدم كيوركس وصل إلى {{threshold}}٪ نحو كيورلي مجاني لـ {{period}}.",
+  },
+  {
+    key: "kiorex_monthly_recap",
+    channel: MessageChannel.WHATSAPP,
+    bodyEn: "{{name}}: last month ({{period}}) Kiorex offset {{amount}} toward your Kiorly subscription.",
+    bodyAr: "{{name}}: الشهر الماضي ({{period}}) خصم كيوركس {{amount}} من اشتراك كيورلي.",
+  },
+  {
     key: "results_ready",
     channel: MessageChannel.WHATSAPP,
     bodyEn: "Your lab results are ready. Please contact {{clinic}}.",
@@ -43,6 +94,7 @@ export class MessagingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly consent: MessagingConsentService,
+    private readonly usage: UsageMeterService,
   ) {}
 
   async ensureDefaultTemplates(tenantId: string) {
@@ -70,10 +122,14 @@ export class MessagingService {
       templateKey?: string;
       body: string;
       variables?: Record<string, string>;
+      metadata?: Record<string, unknown>;
     },
   ) {
     if (body.channel === MessageChannel.WHATSAPP && !body.templateKey?.trim()) {
       throw new BadRequestException("WhatsApp messages require an approved templateKey");
+    }
+    if (body.channel === MessageChannel.WHATSAPP) {
+      await this.usage.assertWhatsAppQuota(tenantId);
     }
     await this.consent.assertCanSend(tenantId, body.patientId, body.channel, body.templateKey);
     const ctx = await resolveMarketForTenant(this.prisma, tenantId);
@@ -90,6 +146,7 @@ export class MessagingService {
         variablesJson: body.variables ? (body.variables as Prisma.InputJsonValue) : undefined,
         toPhone: body.toPhone.trim(),
         body: body.body,
+        metadata: body.metadata ? (body.metadata as Prisma.InputJsonValue) : undefined,
         status: "QUEUED",
       },
     });

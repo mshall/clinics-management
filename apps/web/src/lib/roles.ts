@@ -10,7 +10,8 @@ export type DemoRole =
   | "hr_officer"
   | "finance_officer"
   | "clinic_admin"
-  | "clinic_assistant";
+  | "clinic_assistant"
+  | "sales_rep";
 
 export function mapApiRole(role: string): DemoRole {
   const trimmed = role.trim();
@@ -28,6 +29,7 @@ export function mapApiRole(role: string): DemoRole {
     FINANCE_OFFICER: "finance_officer",
     CLINIC_ADMIN: "clinic_admin",
     CLINIC_ASSISTANT: "clinic_assistant",
+    SALES_REP: "sales_rep",
   };
   if (m[key]) return m[key];
   const slugs = new Set(Object.values(m));

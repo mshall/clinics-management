@@ -11,15 +11,23 @@ import {
 import { PrismaService } from "../prisma/prisma.service";
 import { LegalAcceptanceService } from "../legal/legal-acceptance.service";
 import { AuditService } from "../audit/audit.service";
+import { BillingSeatService } from "./billing-seat.service";
 import { SubscriptionService } from "./subscription.service";
 import { DunningService } from "./dunning.service";
+import { MarketplaceListingService } from "../marketplace/marketplace-listing.service";
+import { OutboxEventService } from "../messaging/outbox-event.service";
 import { subscriptionAllowsAction, SubscriptionAccessAction } from "./subscription-access-policy";
 
 const prisma = new PrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 const legal = new LegalAcceptanceService(prismaSvc, new AuditService(prismaSvc));
-const subs = new SubscriptionService(prismaSvc, legal);
-const dunning = new DunningService(prismaSvc, subs);
+const billingSeats = new BillingSeatService(prismaSvc);
+const subs = new SubscriptionService(prismaSvc, legal, billingSeats);
+const dunning = new DunningService(
+  prismaSvc,
+  subs,
+  new MarketplaceListingService(prismaSvc, new OutboxEventService(prismaSvc)),
+);
 
 describe("SB-03 dunning integration", () => {
   const suffix = `sb03-${Date.now()}`;

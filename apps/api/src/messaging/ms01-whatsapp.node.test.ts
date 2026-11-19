@@ -32,7 +32,7 @@ describe("MS-01 WhatsApp provider", () => {
   });
 
   it("webhook signature validation accepts valid HMAC", () => {
-    const svc = new WhatsAppWebhookService({} as never, {} as never, {} as never, {} as never);
+    const svc = new WhatsAppWebhookService({} as never, {} as never, {} as never, {} as never, {} as never, {} as never);
     process.env.WHATSAPP_APP_SECRET = "test-secret";
     const body = '{"entry":[]}';
     const sig = createHmac("sha256", "test-secret").update(body, "utf8").digest("hex");

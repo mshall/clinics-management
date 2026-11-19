@@ -2,9 +2,13 @@ import { Module } from "@nestjs/common";
 import { AuditModule } from "../audit/audit.module";
 import { AppointmentsModule } from "../appointments/appointments.module";
 import { ComplianceModule } from "../compliance/compliance.module";
+import { PatientsModule } from "../patients/patients.module";
+import { BillingPlatformModule } from "../billing-platform/billing-platform.module";
+import { BillingModule } from "../billing/billing.module";
 import { IntegrationsModule } from "../integrations/integrations.module";
 import { SchedulingModule } from "../scheduling/scheduling.module";
 import { MessagingModule } from "../messaging/messaging.module";
+import { PushModule } from "../push/push.module";
 import { StorageModule } from "../storage/storage.module";
 import { MarketplaceAccessService } from "./marketplace-access.service";
 import { MarketplaceApiService } from "./marketplace-api.service";
@@ -19,19 +23,41 @@ import { SlotHoldService } from "./slot-hold.service";
 import { MarketplaceBookingService } from "./marketplace-booking.service";
 import { MarketplacePatientIntakeService } from "./marketplace-patient-intake.service";
 import { SlotHoldExpiryScheduler } from "./slot-hold-expiry.scheduler";
+import { KiorexSettingsController } from "./kiorex-settings.controller";
+import { KiorexSettingsService } from "./kiorex-settings.service";
+import { KiorexReviewsService } from "./kiorex-reviews.service";
+import { ClinicBookingPageService } from "./clinic-booking-page.service";
+import { KiorexOverviewService } from "./kiorex-overview.service";
+import { PublicBookingPageController } from "./public-booking-page.controller";
+import { RecordShareModule } from "./record-share.module";
 
 @Module({
   imports: [
     IntegrationsModule,
     SchedulingModule,
     MessagingModule,
+    PushModule,
     AuditModule,
     StorageModule,
     AppointmentsModule,
     ComplianceModule,
+    PatientsModule,
+    BillingPlatformModule,
+    BillingModule,
+    RecordShareModule,
   ],
-  controllers: [MarketplaceController, MarketplaceOrgController, MarketplaceListingsProfileController],
+  controllers: [
+    MarketplaceController,
+    MarketplaceOrgController,
+    MarketplaceListingsProfileController,
+    KiorexSettingsController,
+    PublicBookingPageController,
+  ],
   providers: [
+    KiorexSettingsService,
+    KiorexReviewsService,
+    ClinicBookingPageService,
+    KiorexOverviewService,
     PlatformIntegrationClientService,
     MarketplaceAuthGuard,
     MarketplaceAccessService,

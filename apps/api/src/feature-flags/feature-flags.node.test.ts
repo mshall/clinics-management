@@ -5,7 +5,6 @@ import { FEATURE_FLAG_KEYS } from "./feature-flag-keys";
 test("product feature flag keys are stable", () => {
   assert.deepEqual(FEATURE_FLAG_KEYS, [
     "ai_assistant",
-    "eta_receipts",
     "whatsapp_reminders",
     "instapay",
     "fawry",

@@ -7,6 +7,7 @@ import {
   PlanKey,
   Prisma,
   SubscriptionStatus,
+  TenantStatus,
   UserRole,
 } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
@@ -23,15 +24,17 @@ import { PLAN_NAV_TAB_PRESETS } from "../entitlements/plans-matrix";
 import { MarketsService } from "../markets/markets.service";
 import { clinicInvoiceDefaultsFromTenant, tenantCreateDefaultsFromMarket } from "../markets/market-tax-pack";
 import { assertTenantDeploymentCellMatchesMarket } from "../markets/data-cells";
-import { mergeProviderBlock } from "../providers/provider-settings";
 import { PrismaService } from "../prisma/prisma.service";
 import { addBillingPeriod } from "../subscriptions/subscription-period";
 import { TrialEngineService } from "../subscriptions/trial-engine.service";
-import { defaultAppointmentTypesForSpecialty } from "./signup-appointment-types";
+import { defaultAppointmentTypesForSpecialty, seedFeeAmount } from "./signup-appointment-types";
 import { availabilityWeekFromClinicHours } from "./signup-availability";
 import { isDisposableEmail } from "./signup-disposable-email";
 import { ensureOnboardingProgress } from "../onboarding/onboarding-progress.provision";
 import { LegalAcceptanceService } from "../legal/legal-acceptance.service";
+import { CohortService } from "../cohorts/cohort.service";
+import { ReferralAttributionService } from "../growth/referral-attribution.service";
+import { ReferralCodeService } from "../growth/referral-code.service";
 
 const MESSAGE_TEMPLATE_SEEDS: { key: string; channel: MessageChannel; bodyEn: string; bodyAr: string }[] = [
   {
@@ -83,6 +86,8 @@ export type SignupProvisionInput = {
   salesRepCode?: string;
   referralCode?: string;
   legalAcceptances?: { document: string; version: string }[];
+  /** ON-07 — field rep creating the tenant; tenant stays PENDING_OWNER and legal is accepted at owner confirmation. */
+  onBehalfOfSalesRepId?: string;
 };
 
 @Injectable()
@@ -91,6 +96,9 @@ export class SignupProvisionService {
     private readonly prisma: PrismaService,
     private readonly markets: MarketsService,
     private readonly legal: LegalAcceptanceService,
+    private readonly cohorts: CohortService,
+    private readonly referralCodes: ReferralCodeService,
+    private readonly referralAttribution: ReferralAttributionService,
   ) {}
 
   async provision(input: SignupProvisionInput): Promise<SignupProvisionResult> {
@@ -108,7 +116,7 @@ export class SignupProvisionService {
     const planKey = planRaw === PlanKey.PRO || planRaw === PlanKey.LITE ? (planRaw as PlanKey) : null;
     if (!planKey) throw new BadRequestException("planKey must be LITE or PRO");
 
-    this.legal.assertSignupLegal(planKey, input.legalAcceptances);
+    if (!input.onBehalfOfSalesRepId) this.legal.assertSignupLegal(planKey, input.legalAcceptances);
 
     const market = await this.markets.assertMarketForNewTenant(input.marketId);
     const packDefaults = tenantCreateDefaultsFromMarket(market);
@@ -140,14 +148,6 @@ export class SignupProvisionService {
       const clash = await tx.user.findFirst({ where: { email } });
       if (clash) throw new BadRequestException("Email already in use");
 
-      const etaOptOutDefault =
-        market.code === "EG"
-          ? (mergeProviderBlock(null, "eta-egypt", {
-              platformEtaIntegrationEnabled: false,
-              physicalReportingOptOut: true,
-            }) as object)
-          : undefined;
-
       const tenant = await tx.tenant.create({
         data: {
           name: tenantName,
@@ -159,9 +159,10 @@ export class SignupProvisionService {
           defaultVisitFee: packDefaults.defaultVisitFee,
           defaultInvoiceVatPercent: packDefaults.defaultInvoiceVatPercent,
           defaultTaxRegistrationNumber: packDefaults.defaultTaxRegistrationNumber,
-          ...(etaOptOutDefault ? { providerSettings: etaOptOutDefault } : {}),
           salesRepCode: input.salesRepCode?.trim() || null,
-          referralCode: input.referralCode?.trim() || null,
+          ...(input.onBehalfOfSalesRepId
+            ? { status: TenantStatus.PENDING_OWNER, createdBySalesRepId: input.onBehalfOfSalesRepId }
+            : {}),
         },
       });
 
@@ -269,6 +270,7 @@ export class SignupProvisionService {
           status,
           interval,
           clinicianSeats: 1,
+          salesRepCode: tenant.salesRepCode,
           trialStartsAt,
           trialEndsAt,
           trialPlanId,
@@ -281,9 +283,20 @@ export class SignupProvisionService {
         data: {
           subscriptionId: sub.id,
           type: "created",
-          toJson: { status, planKey, interval, source: "public_signup" } as Prisma.InputJsonValue,
+          toJson: { status, planKey, interval, source: input.onBehalfOfSalesRepId ? "sales_rep" : "public_signup" } as Prisma.InputJsonValue,
         },
       });
+
+      await this.referralCodes.ensureForTenant(tenant.id, tx);
+      await this.referralAttribution.attachAtSignup(tx, tenant.id, sub.id, input.referralCode);
+
+      if (paidTrial) {
+        await this.cohorts.tryAssignFounding(tx, {
+          marketId: market.id,
+          subscriptionId: sub.id,
+          at: now,
+        });
+      }
 
       const visitFee = Number(tenant.defaultVisitFee);
       const typeSeeds = defaultAppointmentTypesForSpecialty(specialty);
@@ -295,7 +308,7 @@ export class SignupProvisionService {
             nameEn: seed.nameEn,
             nameAr: seed.nameAr,
             durationMinutes: seed.durationMinutes,
-            feeAmount: seed.feeUsesTenantDefault ? visitFee : 0,
+            feeAmount: seedFeeAmount(seed, visitFee),
           },
         });
       }

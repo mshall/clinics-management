@@ -7,8 +7,6 @@ import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { resolveMarketForTenant } from "./market-resolver";
 import { resolveTenantTransferCollectionContext } from "./market-transfer-context";
-import { getFiscalProvider } from "../providers/fiscal/fiscal-provider.registry";
-
 @ApiTags("markets")
 @ApiBearerAuth("bearer")
 @UseGuards(JwtAuthGuard)
@@ -26,15 +24,12 @@ export class TenantMarketController {
     if (!user.tenantId) throw new ForbiddenException("Organization context required");
     const ctx = await resolveMarketForTenant(this.prisma, user.tenantId);
     const transfer = await resolveTenantTransferCollectionContext(this.prisma, this.featureFlags, user.tenantId);
-    const fiscalProvider = getFiscalProvider(ctx.fiscalProviderKey);
     return {
       marketId: ctx.market.id,
       marketCode: ctx.market.code,
       currency: ctx.currency,
       timezone: ctx.timezone,
       weekendDays: ctx.weekendDays,
-      fiscalProviderKey: ctx.fiscalProviderKey,
-      fiscalDeviceRegistration: fiscalProvider?.deviceRegistration ?? null,
       paymentMethods: transfer.paymentMethods,
       organizationPaymentChannels: transfer.organizationPaymentChannels,
       transferChannels: [...transfer.allowedTransferChannels],

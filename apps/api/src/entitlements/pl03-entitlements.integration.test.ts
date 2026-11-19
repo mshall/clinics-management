@@ -42,9 +42,9 @@ describe("PL-03 entitlements resolution", () => {
     await prisma.$disconnect();
   });
 
-  it("Lite tenant is not entitled to eta_receipts (402 payload)", async () => {
+  it("Lite tenant is not entitled to ai_assistant (402 payload)", async () => {
     await assert.rejects(
-      () => entitlements.requireEntitlement(tenantId, "eta_receipts"),
+      () => entitlements.requireEntitlement(tenantId, "ai_assistant"),
       (err: unknown) => {
         assert.ok(err instanceof PlanUpgradeRequiredException);
         const body = err.getResponse() as { code: string; requiredPlan: string };
@@ -57,16 +57,16 @@ describe("PL-03 entitlements resolution", () => {
 
   it("feature flag layer respects plan before org toggle", async () => {
     await prisma.featureFlag.upsert({
-      where: { key: "eta_receipts" },
-      create: { key: "eta_receipts", enabled: true },
+      where: { key: "ai_assistant" },
+      create: { key: "ai_assistant", enabled: true },
       update: { enabled: true },
     });
     await prisma.tenantFeatureFlag.upsert({
-      where: { tenantId_key: { tenantId, key: "eta_receipts" } },
-      create: { tenantId, key: "eta_receipts", enabled: true },
+      where: { tenantId_key: { tenantId, key: "ai_assistant" } },
+      create: { tenantId, key: "ai_assistant", enabled: true },
       update: { enabled: true },
     });
-    const enabled = await featureFlags.isEnabled(tenantId, "eta_receipts");
+    const enabled = await featureFlags.isEnabled(tenantId, "ai_assistant");
     assert.equal(enabled, false);
   });
 
@@ -84,7 +84,7 @@ describe("PL-03 entitlements resolution", () => {
     });
     const resolved = await entitlements.resolve(tenantId);
     assert.equal(resolved.plan.key, PlanKey.PRO);
-    assert.ok(entitlementTruthy(resolved.entitlements.eta_receipts));
+    assert.ok(entitlementTruthy(resolved.entitlements.ai_assistant));
   });
 
   it("expired override is ignored", async () => {
@@ -101,15 +101,15 @@ describe("PL-03 entitlements resolution", () => {
     });
     await entitlements.setTenantOverride(
       tenantId,
-      "eta_receipts",
+      "ai_assistant",
       true,
       "ops promo",
       "platform",
       new Date(Date.now() - 60_000),
     );
-    await assert.rejects(() => entitlements.requireEntitlement(tenantId, "eta_receipts"));
-    await entitlements.setTenantOverride(tenantId, "eta_receipts", true, "ops promo", "platform", null);
-    await entitlements.requireEntitlement(tenantId, "eta_receipts");
+    await assert.rejects(() => entitlements.requireEntitlement(tenantId, "ai_assistant"));
+    await entitlements.setTenantOverride(tenantId, "ai_assistant", true, "ops promo", "platform", null);
+    await entitlements.requireEntitlement(tenantId, "ai_assistant");
   });
 
   it("blocks 2nd clinician on Lite", async () => {

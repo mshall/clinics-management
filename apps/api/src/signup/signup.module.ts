@@ -11,6 +11,8 @@ import { SignupOtpService } from "./signup-otp.service";
 import { SignupProvisionService } from "./signup-provision.service";
 import { SignupService } from "./signup.service";
 import { resolveJwtSigningSecret } from "../auth/jwt-secret.util";
+import { CohortsModule } from "../cohorts/cohorts.module";
+import { GrowthModule } from "../growth/growth.module";
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import { resolveJwtSigningSecret } from "../auth/jwt-secret.util";
     AuthModule,
     MarketsModule,
     LegalModule,
+    CohortsModule,
+    GrowthModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -30,5 +34,6 @@ import { resolveJwtSigningSecret } from "../auth/jwt-secret.util";
   ],
   controllers: [PublicSignupController],
   providers: [SignupService, SignupOtpService, SignupProvisionService],
+  exports: [SignupProvisionService],
 })
 export class SignupModule {}

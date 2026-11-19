@@ -19,6 +19,26 @@ import {
 } from "./settlement-calculator";
 import { roundMoney } from "./settlement-rounding";
 
+/**
+ * SB-05: carry entering `periodKey`. Re-settling the period that last wrote the carry reuses the
+ * carry that went into it, so a re-run never counts the same commission twice.
+ */
+export function resolveCarryForwardIn(
+  tenant: {
+    kiorlySettlementCarry: Prisma.Decimal | null;
+    kiorlySettlementCarryPeriodKey: string | null;
+    kiorlySettlementCarryIn: Prisma.Decimal | null;
+  },
+  periodKey: string,
+): number {
+  const lastKey = tenant.kiorlySettlementCarryPeriodKey;
+  if (lastKey === periodKey) {
+    return tenant.kiorlySettlementCarryIn ? Number(tenant.kiorlySettlementCarryIn) : 0;
+  }
+  if (lastKey && periodKey < lastKey) return 0;
+  return tenant.kiorlySettlementCarry ? Number(tenant.kiorlySettlementCarry) : 0;
+}
+
 export type SettlementPreviewDto = {
   periodKey: string;
   dryRun: boolean;
@@ -125,7 +145,11 @@ export class SettlementService {
     if (calculation.summary.skippedBelowMinimum) {
       await this.prisma.tenant.update({
         where: { id: tenantId },
-        data: { kiorlySettlementCarry: new Prisma.Decimal(calculation.summary.carryForwardOut) },
+        data: {
+          kiorlySettlementCarry: new Prisma.Decimal(calculation.summary.carryForwardOut),
+          kiorlySettlementCarryPeriodKey: periodKey,
+          kiorlySettlementCarryIn: new Prisma.Decimal(input.carryForwardIn.toFixed(2)),
+        },
       });
       await this.prisma.auditLog.create({
         data: {
@@ -168,13 +192,13 @@ export class SettlementService {
         data: { settlementSummaryJson: summaryJson },
       });
     } else if (invoiceId) {
-      await this.kiorlyInvoices.replaceDraftLines(tenantId, invoiceId, lines);
+      await this.kiorlyInvoices.replaceDraftLines(tenantId, invoiceId, lines, {
+        creditsApplied: calculation.creditsApplied.toFixed(2),
+        taxRatePercent: input.taxRatePercent,
+      });
       await this.prisma.kiorlyInvoice.update({
         where: { id: invoiceId },
-        data: {
-          creditsApplied: new Prisma.Decimal(calculation.creditsApplied.toFixed(2)),
-          settlementSummaryJson: summaryJson,
-        },
+        data: { settlementSummaryJson: summaryJson },
       });
     }
 
@@ -201,11 +225,28 @@ export class SettlementService {
         });
       }
 
+      if (invoiceId && input.planKey === PlanKey.LITE && input.carryForwardIn > 0) {
+        await tx.kiorexCommissionCharge.updateMany({
+          where: {
+            tenantId,
+            status: CommissionChargeStatus.CONFIRMED,
+            kiorlyInvoiceId: null,
+            attendedAt: { lt: periodStart },
+          },
+          data: {
+            status: CommissionChargeStatus.BILLED,
+            kiorlyInvoiceId: invoiceId,
+          },
+        });
+      }
+
       const carryOut = Number(calculation.summary.carryForwardOut);
       await tx.tenant.update({
         where: { id: tenantId },
         data: {
           kiorlySettlementCarry: carryOut > 0 ? new Prisma.Decimal(carryOut.toFixed(2)) : null,
+          kiorlySettlementCarryPeriodKey: periodKey,
+          kiorlySettlementCarryIn: new Prisma.Decimal(input.carryForwardIn.toFixed(2)),
         },
       });
 
@@ -327,7 +368,7 @@ export class SettlementService {
     const commissionGrossBeforeCap = roundMoney(commissionItems.reduce((s, i) => s + i.amount, 0));
 
     const walletBalance = tenant.creditWallet ? Number(tenant.creditWallet.balance) : 0;
-    const carryIn = tenant.kiorlySettlementCarry ? Number(tenant.kiorlySettlementCarry) : 0;
+    const carryIn = resolveCarryForwardIn(tenant, periodKey);
 
     return {
       periodKey,

@@ -948,6 +948,49 @@ export function useReportsPerformanceQuery(from: string, to: string, clinicId?: 
   });
 }
 
+export type ReportsOperationsDto = {
+  noShow: { total: number; noShows: number; rate: number };
+  utilisation: { bookedMinutes: number; availableMinutes: number; percent: number };
+  revenuePerDoctorHour: number;
+  newVsReturning: { newPatients: number; returning: number };
+  bookingSources: Array<{ source: string; count: number; sharePercent: number }>;
+};
+
+export function useReportsKiorexImpactQuery(period: string, enabled = true) {
+  return useQuery({
+    queryKey: ["reports", "kiorex", period],
+    queryFn: () => apiGet<ReportsKiorexImpactDto>(`/api/v1/reports/kiorex?period=${encodeURIComponent(period)}`),
+    enabled: enabled && Boolean(period),
+  });
+}
+
+export type ReportsKiorexImpactDto = {
+  periodKey: string;
+  bookings: number;
+  attended: number;
+  newPatients: number;
+  visitRevenue: number;
+  commission: number;
+  offset: number;
+  netCommissionCost: number;
+  netCostPerNewPatient: number | null;
+  revenuePerNewPatient: number | null;
+  matchesStatement: boolean;
+  currency: string;
+};
+
+export function useReportsOperationsQuery(from: string, to: string, clinicId?: string) {
+  const viewerId = useAuthStore((s) => s.user?.id ?? "");
+  const viewerRole = useAuthStore((s) => s.user?.role ?? "");
+  const range = sanitizeReportingRange(from, to);
+  const q = new URLSearchParams({ from: range.from, to: range.to });
+  if (clinicId?.trim()) q.set("clinicId", clinicId.trim());
+  return useQuery({
+    queryKey: ["reports", "operations", range.from, range.to, clinicId ?? "", viewerId, viewerRole],
+    queryFn: () => apiGet<ReportsOperationsDto>(`/api/v1/reports/operations?${q.toString()}`),
+  });
+}
+
 export function useReportsClinicBreakdownQuery(from: string, to: string, enabled = true) {
   const viewerId = useAuthStore((s) => s.user?.id ?? "");
   const viewerRole = useAuthStore((s) => s.user?.role ?? "");

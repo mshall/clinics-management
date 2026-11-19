@@ -62,7 +62,9 @@ export type SettlementSummary = {
   kiorexPatientCount: number;
   explanationEn: string;
   explanationAr: string;
+  carryForwardIn: string;
   carryForwardOut: string;
+  liteMinInvoice: string;
   skippedBelowMinimum: boolean;
 };
 
@@ -329,7 +331,9 @@ export function settlePeriod(input: SettlementCalculatorInput): SettlementCalcul
       kiorexPatientCount,
       explanationEn: explanation.en,
       explanationAr: explanation.ar,
+      carryForwardIn: roundMoney(isLite ? input.carryForwardIn : 0).toFixed(2),
       carryForwardOut: carryForwardOut.toFixed(2),
+      liteMinInvoice: roundMoney(input.liteMinInvoice).toFixed(2),
       skippedBelowMinimum,
     },
   };

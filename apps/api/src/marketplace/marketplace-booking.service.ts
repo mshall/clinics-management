@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from "@nestjs/common";
 import {
   AppointmentStatus,
@@ -28,6 +29,17 @@ import { DEFAULT_SLOT_HOLD_MINUTES, MARKETPLACE_BOOKING_CONFIRM_TIMEOUT_TOPIC, S
 import { MarketplaceAccessService } from "./marketplace-access.service";
 import { MarketplacePatientIntakeService, type MarketplacePatientInput } from "./marketplace-patient-intake.service";
 import type { PlatformIntegrationPrincipal } from "./platform-integration-client.service";
+import { NewPatientService } from "../patients/new-patient.service";
+import { assertBookingSlugMatchesClinic, CLINIC_LINK_CHANNEL } from "./clinic-booking-page.service";
+import { CANCELLATION_REASON_MAX } from "../appointments/kiorex-clinic-cancel";
+import {
+  CANCELLED_BY,
+  evaluatePatientCancel,
+  evaluatePatientReschedule,
+  hoursUntil,
+  resolveKiorexCancellationPolicy,
+} from "./kiorex-booking-policy";
+import { PushService } from "../push/push.service";
 
 export type MarketplaceBookingBody = {
   clinicId: string;
@@ -42,6 +54,9 @@ export type MarketplaceBookingBody = {
   marketplaceConsentGranted?: boolean;
   remindersConsentGranted?: boolean;
   attribution?: Record<string, unknown>;
+  /** KX-09: bookings made from the clinic's own booking page are CLINIC_LINK (never commissioned). */
+  channel?: typeof CLINIC_LINK_CHANNEL | "MARKETPLACE";
+  bookingPageSlug?: string;
 };
 
 @Injectable()
@@ -56,6 +71,8 @@ export class MarketplaceBookingService {
     private readonly outbox: OutboxEventService,
     private readonly appointmentOutbox: AppointmentOutboxService,
     private readonly slots: SlotService,
+    private readonly newPatients: NewPatientService,
+    private readonly push: PushService,
   ) {}
 
   async getByExternalRef(client: PlatformIntegrationPrincipal, externalRef: string) {
@@ -88,6 +105,19 @@ export class MarketplaceBookingService {
     }
 
     const tenantId = await this.access.resolveTenantForMarketplaceClinic(body.clinicId, body.clinicianId);
+    await this.access.assertListingBookable(body.clinicId, body.clinicianId);
+    if (body.channel !== undefined && body.channel !== CLINIC_LINK_CHANNEL && body.channel !== "MARKETPLACE") {
+      throw new BadRequestException("Invalid channel");
+    }
+    const viaClinicLink = body.channel === CLINIC_LINK_CHANNEL;
+    if (viaClinicLink) {
+      await assertBookingSlugMatchesClinic(this.prisma, body.bookingPageSlug, body.clinicId, body.clinicianId);
+    }
+    const bookingSource = viaClinicLink ? BookingSource.CLINIC_LINK : BookingSource.KIOREX_MARKETPLACE;
+    const attribution =
+      viaClinicLink && body.bookingPageSlug
+        ? { ...(body.attribution ?? {}), bookingPageSlug: body.bookingPageSlug.trim().toLowerCase() }
+        : body.attribution;
     const start = new Date(body.startsAt);
     if (Number.isNaN(start.getTime())) throw new BadRequestException("Invalid startsAt");
     const typeRow = await this.prisma.appointmentType.findFirst({
@@ -108,6 +138,7 @@ export class MarketplaceBookingService {
     if (!clinic) throw new NotFoundException("Clinic not found");
 
     const patientId = await this.patients.resolveOrCreate(tenantId, body.clinicId, body.patient);
+    const newPatientStamp = await this.newPatients.stampNewPatientAtBooking(tenantId, patientId, start);
 
     if (body.marketplaceConsentGranted !== false) {
       await this.consent.capture(tenantId, patientId, CONSENT_PURPOSE_MARKETPLACE, {
@@ -214,8 +245,10 @@ export class MarketplaceBookingService {
             endsAt: end,
             feeAmount: typeRow.feeAmount,
             status,
-            bookingSource: BookingSource.KIOREX_MARKETPLACE,
-            attributionJson: (body.attribution ?? undefined) as Prisma.InputJsonValue | undefined,
+            bookingSource,
+            attributionJson: (attribution ?? undefined) as Prisma.InputJsonValue | undefined,
+            isNewPatientAtBooking: newPatientStamp.isNewPatientAtBooking,
+            newPatientCheckedAt: newPatientStamp.newPatientCheckedAt,
             platformIntegrationClientId: client.id,
             externalReference: key,
             marketplaceConfirmationDueAt: confirmationDueAt,
@@ -252,8 +285,20 @@ export class MarketplaceBookingService {
         action: "marketplace.booking.created",
         resource: "Appointment",
         resourceId: created.id,
-        metadata: { externalReference: key, platformClientId: client.id },
+        metadata: { externalReference: key, platformClientId: client.id, bookingSource },
       });
+
+      // UX-01: web push to the clinician (best-effort; never fails the booking).
+      void this.push
+        .notifyKiorexBooking({
+          tenantId,
+          clinicianUserId: body.clinicianId,
+          appointmentId: created.id,
+          externalRef: key,
+          startsAt: created.startsAt,
+          clinicId: body.clinicId,
+        })
+        .catch(() => undefined);
 
       return this.serializeBooking(created);
     } catch (e) {
@@ -275,11 +320,210 @@ export class MarketplaceBookingService {
     }
   }
 
+  async loadCancellationPolicy(tenantId: string, clinicId: string) {
+    const clinic = await this.prisma.clinic.findFirst({
+      where: { id: clinicId, tenantId },
+      select: { kiorexCancellationPolicy: true, tenant: { select: { market: { select: { commercialConfig: true } } } } },
+    });
+    if (!clinic) throw new NotFoundException("Clinic not found");
+    return resolveKiorexCancellationPolicy(clinic.tenant.market?.commercialConfig, clinic.kiorexCancellationPolicy);
+  }
+
+  private async findOwnBooking(client: PlatformIntegrationPrincipal, externalRef: string) {
+    const row = await this.prisma.appointment.findFirst({
+      where: { platformIntegrationClientId: client.id, externalReference: externalRef.trim() },
+    });
+    if (!row) throw new NotFoundException("Booking not found");
+    return row;
+  }
+
+  /** KX-06: patient cancels via Kiorex — enforced against the clinic policy; deposit refund decided server-side. */
+  async cancelByPatient(
+    client: PlatformIntegrationPrincipal,
+    externalRef: string,
+    body: { reason?: string } = {},
+    now = new Date(),
+  ) {
+    const appt = await this.findOwnBooking(client, externalRef);
+    if (appt.status === AppointmentStatus.CANCELLED && appt.cancelledBy === CANCELLED_BY.PATIENT) {
+      return this.serializeBooking(appt);
+    }
+    const policy = await this.loadCancellationPolicy(appt.tenantId, appt.clinicId);
+    const decision = evaluatePatientCancel(policy, appt, now);
+    if (!decision.allowed) {
+      await this.auditPolicyRejection(appt, "marketplace.booking.cancel_rejected", decision.code);
+      throw new UnprocessableEntityException({ code: decision.code, message: "Cancellation not allowed by clinic policy", policy });
+    }
+    const reason = body.reason?.trim().slice(0, CANCELLATION_REASON_MAX) || null;
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.appointment.update({
+        where: { id: appt.id },
+        data: {
+          status: AppointmentStatus.CANCELLED,
+          cancelledAt: now,
+          cancelledBy: CANCELLED_BY.PATIENT,
+          cancellationReason: reason,
+          depositRefundable: decision.depositRefundable,
+          marketplaceConfirmationDueAt: null,
+        },
+      });
+      await this.appointmentOutbox.emitStatusChange(
+        {
+          tenantId: row.tenantId,
+          appointmentId: row.id,
+          clinicId: row.clinicId,
+          previousStatus: appt.status,
+          nextStatus: AppointmentStatus.CANCELLED,
+          bookingSource: row.bookingSource,
+          cancelledByPatient: true,
+          metadata: {
+            externalReference: row.externalReference,
+            cancelledBy: CANCELLED_BY.PATIENT,
+            cancellationReason: reason,
+            depositRefundable: decision.depositRefundable,
+          },
+        },
+        tx,
+      );
+      return row;
+    });
+    await this.slots.invalidateAndNotify(updated.tenantId, updated.clinicId, updated.clinicianId, "marketplace_cancel");
+    await this.audit.recordEvent({
+      tenantId: updated.tenantId,
+      actorId: null,
+      clinicId: updated.clinicId,
+      action: "marketplace.booking.cancelled_by_patient",
+      resource: "Appointment",
+      resourceId: updated.id,
+      metadata: {
+        externalReference: updated.externalReference,
+        reason,
+        depositRefundable: decision.depositRefundable,
+        hoursBeforeStart: Math.round(hoursUntil(appt.startsAt, now) * 10) / 10,
+      },
+    });
+    return this.serializeBooking(updated);
+  }
+
+  /** KX-06: patient moves a Kiorex booking to another free slot, within the clinic's reschedule window. */
+  async rescheduleByPatient(
+    client: PlatformIntegrationPrincipal,
+    externalRef: string,
+    body: { startsAt: string; endsAt?: string; holdId?: string },
+    now = new Date(),
+  ) {
+    const appt = await this.findOwnBooking(client, externalRef);
+    const policy = await this.loadCancellationPolicy(appt.tenantId, appt.clinicId);
+    const decision = evaluatePatientReschedule(policy, appt, now);
+    if (!decision.allowed) {
+      await this.auditPolicyRejection(appt, "marketplace.booking.reschedule_rejected", decision.code);
+      throw new UnprocessableEntityException({ code: decision.code, message: "Reschedule not allowed by clinic policy", policy });
+    }
+    const start = new Date(body.startsAt);
+    if (Number.isNaN(start.getTime())) throw new BadRequestException("Invalid startsAt");
+    if (start.getTime() === appt.startsAt.getTime()) return this.serializeBooking(appt);
+    await this.access.assertListingBookable(appt.clinicId, appt.clinicianId);
+    const typeRow = appt.appointmentTypeId
+      ? await this.prisma.appointmentType.findFirst({ where: { id: appt.appointmentTypeId, tenantId: appt.tenantId } })
+      : null;
+    const durationMin = appt.endsAt
+      ? Math.round((appt.endsAt.getTime() - appt.startsAt.getTime()) / 60_000)
+      : (typeRow?.durationMinutes ?? 15);
+    const end = body.endsAt ? new Date(body.endsAt) : addMinutes(start, durationMin);
+    if (Number.isNaN(end.getTime()) || end <= start) throw new BadRequestException("Invalid endsAt");
+    if (typeRow) {
+      if (start.getTime() < now.getTime() + typeRow.minNoticeMinutes * 60_000) {
+        throw new BadRequestException({ code: "MIN_NOTICE", message: "New slot is inside the minimum notice window" });
+      }
+      if (start.getTime() > now.getTime() + typeRow.maxDaysAhead * 86_400_000) {
+        throw new BadRequestException({ code: "BEYOND_HORIZON", message: "New slot is beyond the booking horizon" });
+      }
+    }
+
+    const updated = await this.prisma.$transaction(
+      async (tx) => {
+        const lockKey = BigInt(Math.abs(appt.clinicianId.split("").reduce((s, c) => s + c.charCodeAt(0), 0) + start.getTime()));
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey})`;
+        const hold = body.holdId
+          ? await tx.slotHold.findFirst({
+              where: { id: body.holdId, platformIntegrationClientId: client.id, expiresAt: { gt: now } },
+            })
+          : null;
+        if (hold && (hold.startsAt.getTime() !== start.getTime() || hold.clinicianId !== appt.clinicianId)) {
+          throw new BadRequestException("Hold does not match booking slot");
+        }
+        const nearby = await tx.appointment.findMany({
+          where: {
+            tenantId: appt.tenantId,
+            clinicianId: appt.clinicianId,
+            id: { not: appt.id },
+            status: { notIn: [AppointmentStatus.CANCELLED] },
+            startsAt: { gte: addMinutes(start, -24 * 60), lte: addMinutes(end, 24 * 60) },
+          },
+        });
+        const conflicting = nearby.some((a) =>
+          appointmentIntervalsOverlap(start, end, a.startsAt, effectiveAppointmentEnd(a.startsAt, a.endsAt)),
+        );
+        const conflictingHold = await tx.slotHold.findFirst({
+          where: {
+            clinicianId: appt.clinicianId,
+            startsAt: start,
+            expiresAt: { gt: now },
+            ...(hold ? { NOT: { id: hold.id } } : {}),
+          },
+        });
+        if (conflicting || conflictingHold) {
+          throw new ConflictException({ code: SLOT_TAKEN_CODE, message: "Slot already taken" });
+        }
+        const row = await tx.appointment.update({
+          where: { id: appt.id },
+          data: { startsAt: start, endsAt: end, rescheduleCount: { increment: 1 } },
+        });
+        if (hold) await tx.slotHold.delete({ where: { id: hold.id } });
+        await this.appointmentOutbox.emitRescheduled(row.tenantId, row.id, row.clinicId, start.toISOString(), tx);
+        return row;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+    await this.slots.invalidateAndNotify(updated.tenantId, updated.clinicId, updated.clinicianId, "marketplace_reschedule");
+    await this.audit.recordEvent({
+      tenantId: updated.tenantId,
+      actorId: null,
+      clinicId: updated.clinicId,
+      action: "marketplace.booking.rescheduled_by_patient",
+      resource: "Appointment",
+      resourceId: updated.id,
+      metadata: {
+        externalReference: updated.externalReference,
+        fromStartsAt: appt.startsAt.toISOString(),
+        toStartsAt: start.toISOString(),
+        rescheduleCount: updated.rescheduleCount,
+      },
+    });
+    return this.serializeBooking(updated);
+  }
+
+  private async auditPolicyRejection(
+    appt: { id: string; tenantId: string; clinicId: string; externalReference: string | null },
+    action: string,
+    code: string,
+  ) {
+    await this.audit.recordEvent({
+      tenantId: appt.tenantId,
+      actorId: null,
+      clinicId: appt.clinicId,
+      action,
+      resource: "Appointment",
+      resourceId: appt.id,
+      metadata: { externalReference: appt.externalReference, code },
+    });
+  }
+
   async processConfirmationTimeouts(batch = 50): Promise<number> {
     const now = new Date();
     const rows = await this.prisma.appointment.findMany({
       where: {
-        bookingSource: BookingSource.KIOREX_MARKETPLACE,
+        bookingSource: { in: [BookingSource.KIOREX_MARKETPLACE, BookingSource.CLINIC_LINK] },
         status: AppointmentStatus.SCHEDULED,
         marketplaceConfirmationDueAt: { lte: now },
       },
@@ -295,7 +539,13 @@ export class MarketplaceBookingService {
     for (const row of rows) {
       await this.prisma.appointment.update({
         where: { id: row.id },
-        data: { status: AppointmentStatus.CANCELLED, marketplaceConfirmationDueAt: null },
+        data: {
+          status: AppointmentStatus.CANCELLED,
+          marketplaceConfirmationDueAt: null,
+          cancelledAt: now,
+          cancelledBy: CANCELLED_BY.SYSTEM,
+          depositRefundable: true,
+        },
       });
       await this.outbox.enqueue(row.tenantId, MARKETPLACE_BOOKING_CONFIRM_TIMEOUT_TOPIC, {
         appointmentId: row.id,
@@ -337,6 +587,10 @@ export class MarketplaceBookingService {
     externalReference: string | null;
     bookingSource: BookingSource;
     marketplaceConfirmationDueAt: Date | null;
+    cancelledBy?: string | null;
+    cancellationReason?: string | null;
+    depositRefundable?: boolean | null;
+    rescheduleCount?: number;
   }) {
     return {
       appointmentId: row.id,
@@ -350,6 +604,10 @@ export class MarketplaceBookingService {
       externalReference: row.externalReference,
       bookingSource: row.bookingSource,
       marketplaceConfirmationDueAt: row.marketplaceConfirmationDueAt?.toISOString() ?? null,
+      cancelledBy: row.cancelledBy ?? null,
+      cancellationReason: row.cancellationReason ?? null,
+      depositRefundable: row.depositRefundable ?? null,
+      rescheduleCount: row.rescheduleCount ?? 0,
     };
   }
 }

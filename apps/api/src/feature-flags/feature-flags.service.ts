@@ -159,7 +159,6 @@ export class FeatureFlagsService {
     if (!featureDefaults || typeof featureDefaults !== "object" || Array.isArray(featureDefaults)) return null;
     const m = featureDefaults as Record<string, unknown>;
     const legacy: Record<FeatureFlagKey, string> = {
-      eta_receipts: "etaReceipts",
       whatsapp_reminders: "whatsAppReminders",
       instapay: "instapay",
       fawry: "fawry",

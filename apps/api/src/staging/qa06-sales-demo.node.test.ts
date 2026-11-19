@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { parsePilotTierArg, PILOT_TENANT_SPECS, PILOT_TIERS } from "./pilot-tenant-catalog";
-import { ETA_PREPROD_BASE_URL, isStagingProfile } from "./staging-profile";
+import { isStagingProfile } from "./staging-profile";
 
 describe("QA-06 sales demo", () => {
   it("defines Lite, Pro, and Clinic pilot tenants", () => {
@@ -18,11 +18,10 @@ describe("QA-06 sales demo", () => {
     assert.equal(parsePilotTierArg("enterprise"), null);
   });
 
-  it("uses ETA pre-production host in staging profile", () => {
+  it("detects staging profile from KIORLY_ENV", () => {
     const prev = process.env.KIORLY_ENV;
     process.env.KIORLY_ENV = "staging";
     assert.equal(isStagingProfile(), true);
-    assert.ok(ETA_PREPROD_BASE_URL.includes("preprod"));
     process.env.KIORLY_ENV = prev;
   });
 

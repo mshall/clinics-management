@@ -5,6 +5,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { CommercialConfigService } from "./commercial-config.service";
+import { LegalConfigService } from "./legal-config.service";
 import { MarketsService, type CreateMarketDto } from "./markets.service";
 import { PatchMarketDto, PauseMarketDto } from "./dto/patch-market.dto";
 
@@ -16,6 +17,7 @@ export class MarketsController {
   constructor(
     private readonly markets: MarketsService,
     private readonly commercialConfig: CommercialConfigService,
+    private readonly legalConfig: LegalConfigService,
   ) {}
 
   @Get()
@@ -41,6 +43,16 @@ export class MarketsController {
   @Post(":id/commercial-config/preview")
   previewCommercialConfig(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: unknown) {
     return this.commercialConfig.preview(user, id, body);
+  }
+
+  @Get(":id/legal-config")
+  getLegalConfig(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.legalConfig.get(user, id);
+  }
+
+  @Put(":id/legal-config")
+  putLegalConfig(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: unknown) {
+    return this.legalConfig.update(user, id, body);
   }
 
   @Get(":id")

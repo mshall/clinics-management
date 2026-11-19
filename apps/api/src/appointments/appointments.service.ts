@@ -17,6 +17,7 @@ import {
   syncOpenEncounterVisitFeeFromAppointment,
 } from "../common/visit-fee-ledger";
 import { PrismaService } from "../prisma/prisma.service";
+import { assertClinicianBillingSeatActive } from "../subscriptions/billing-seat-access";
 import { parseScheduledFeeCollection } from "../common/visit-collection";
 import {
   appointmentFinancialsVisible,
@@ -36,6 +37,8 @@ import {
 import { ensureDraftEncounterIfCheckedIn } from "../front-desk/ensure-draft-encounter-on-check-in";
 import { FrontDeskFlowService } from "../front-desk/front-desk-flow.service";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
+import { EntitlementsService } from "../entitlements/entitlements.service";
+import { noShowRiskForAppointment } from "../common/no-show-risk";
 import { SchedulingService } from "../scheduling/scheduling.service";
 import { SlotService } from "../scheduling/slot.service";
 import type { CreateAppointmentDto } from "./dto/create-appointment.dto";
@@ -46,9 +49,11 @@ import { NewPatientService } from "../patients/new-patient.service";
 import { isCommissionChargeableBooking } from "./booking-attribution";
 import { CommissionChargeService, type BilledReversalCreditIntent } from "../kiorex/commission-charge.service";
 import { AppointmentOutboxService } from "../messaging/appointment-outbox.service";
+import { DepositSettlementService } from "../billing/deposit-settlement.service";
+import { auditClinicCancellation, clinicCancellationEventMetadata, clinicCancellationPatch } from "./kiorex-clinic-cancel";
 
 const appointmentDtoInclude = {
-  patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } },
+  patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true, noShowCount: true, requiresAppointmentDeposit: true } },
   clinic: { select: { nameEn: true, nameAr: true } },
   clinician: {
     select: {
@@ -59,6 +64,7 @@ const appointmentDtoInclude = {
 } as const;
 
 type AppointmentRow = Prisma.AppointmentGetPayload<{ include: typeof appointmentDtoInclude }>;
+type NoShowRiskContext = { enabled: boolean; depositsAvailable: boolean; now: Date };
 
 function isPhysicianRole(role: UserRole | undefined): boolean {
   return role === UserRole.PHYSICIAN || String(role) === "PHYSICIAN";
@@ -75,7 +81,18 @@ export class AppointmentsService {
     private readonly commissionCharges: CommissionChargeService,
     private readonly slots: SlotService,
     private readonly appointmentOutbox: AppointmentOutboxService,
+    private readonly entitlements: EntitlementsService,
+    private readonly depositSettlement: DepositSettlementService,
   ) {}
+
+  /** FS-05: the risk chip is a Pro+ front-desk feature; deposits are suggested only when the plan has them. */
+  private async noShowRiskContext(tenantId: string): Promise<NoShowRiskContext> {
+    const [enabled, depositsAvailable] = await Promise.all([
+      this.entitlements.isEntitled(tenantId, "mod_front_desk"),
+      this.entitlements.isEntitled(tenantId, "deposits"),
+    ]);
+    return { enabled, depositsAvailable, now: new Date() };
+  }
 
   private async invalidateSlotsForAppointment(
     tenantId: string,
@@ -159,6 +176,7 @@ export class AppointmentsService {
     row: AppointmentRow,
     viewer?: JwtUser,
     overrides: UserMoneyVisibilityOverrides = DEFAULT_MONEY_VISIBILITY_OVERRIDES,
+    risk?: NoShowRiskContext,
   ): AppointmentDto {
     const financialsVisible = viewer
       ? appointmentFinancialsVisible(viewer, row.clinicianId, overrides)
@@ -200,6 +218,8 @@ export class AppointmentsService {
           : null,
       isNewPatientAtBooking: row.isNewPatientAtBooking,
       newPatientCheckedAt: row.newPatientCheckedAt?.toISOString() ?? null,
+      cancelledBy: row.cancelledBy ?? null,
+      cancellationReason: row.cancellationReason ?? null,
       commissionChargeableAtBooking: isCommissionChargeableBooking(
         row.bookingSource,
         row.isNewPatientAtBooking,
@@ -210,14 +230,44 @@ export class AppointmentsService {
             patientName: `${patient.firstNameEn} ${patient.lastNameEn}`.trim(),
           }
         : {}),
+      noShowRisk:
+        risk?.enabled && patient
+          ? noShowRiskForAppointment(row, patient, { now: risk.now, depositsAvailable: risk.depositsAvailable })
+          : null,
     };
     return dto;
   }
 
+  /** KX-07 / FS-04 — latest deposit per appointment for the badge (pending/held/applied…). */
+  private async attachDeposits(tenantId: string, dtos: AppointmentDto[]): Promise<AppointmentDto[]> {
+    if (!dtos.length) return dtos;
+    const rows = await this.prisma.patientDeposit.findMany({
+      where: { tenantId, appointmentId: { in: dtos.map((d) => d.id) } },
+      orderBy: { createdAt: "desc" },
+      select: { appointmentId: true, status: true, source: true, amount: true, currency: true, linkExpiresAt: true },
+    });
+    const latest = new Map<string, (typeof rows)[number]>();
+    for (const r of rows) if (r.appointmentId && !latest.has(r.appointmentId)) latest.set(r.appointmentId, r);
+    return dtos.map((d) => {
+      const dep = latest.get(d.id);
+      if (!dep) return { ...d, deposit: null };
+      return {
+        ...d,
+        deposit: {
+          status: dep.status,
+          source: dep.source,
+          amount: d.financialsVisible === false ? 0 : Number(dep.amount),
+          currency: dep.currency,
+          linkExpiresAt: dep.linkExpiresAt?.toISOString() ?? null,
+        },
+      };
+    });
+  }
+
   private async finishAppointmentDto(tenantId: string, row: AppointmentRow, viewer?: JwtUser): Promise<AppointmentDto> {
-    const moneyVis = await this.moneyOverrides(tenantId, viewer);
-    const dto = this.mapRow(row, viewer, moneyVis);
-    if (row.status !== AppointmentStatus.CHECKED_IN) return dto;
+    const [moneyVis, risk] = await Promise.all([this.moneyOverrides(tenantId, viewer), this.noShowRiskContext(tenantId)]);
+    const [dto] = await this.attachDeposits(tenantId, [this.mapRow(row, viewer, moneyVis, risk)]);
+    if (row.status !== AppointmentStatus.CHECKED_IN) return dto!;
 
     let openEncounterId =
       (
@@ -389,9 +439,12 @@ export class AppointmentsService {
         include: appointmentDtoInclude,
       }),
     ]);
-    const moneyVis = await this.moneyOverrides(tenantId, viewer);
+    const [moneyVis, risk] = await Promise.all([this.moneyOverrides(tenantId, viewer), this.noShowRiskContext(tenantId)]);
     return paginate(
-      rows.map((r: AppointmentRow) => this.mapRow(r, viewer, moneyVis)),
+      await this.attachDeposits(
+        tenantId,
+        rows.map((r: AppointmentRow) => this.mapRow(r, viewer, moneyVis, risk)),
+      ),
       total,
       page,
       pageSize
@@ -536,7 +589,60 @@ export class AppointmentsService {
       );
       return row;
     });
+    await this.scheduling.recordFreedSlot(tenantId, updated.id);
     return this.mapRow(updated);
+  }
+
+  /** FS-04 — the deposit link ran out unpaid and the clinic policy auto-cancels; the slot is freed. */
+  async cancelForUnpaidDeposit(tenantId: string, id: string): Promise<boolean> {
+    const creditIntents: BilledReversalCreditIntent[] = [];
+    const row = await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.appointment.findFirst({ where: { id, tenantId } });
+      if (!existing || (existing.status !== AppointmentStatus.SCHEDULED && existing.status !== AppointmentStatus.CONFIRMED)) {
+        return null;
+      }
+      const row = await tx.appointment.update({
+        where: { id },
+        data: {
+          status: AppointmentStatus.CANCELLED,
+          cancelledAt: new Date(),
+          cancelledBy: "SYSTEM",
+          cancellationReason: "Deposit not paid in time",
+          depositRefundable: true,
+        },
+      });
+      const credit = await this.commissionCharges.onCancelOrNoShow(tx, tenantId, id);
+      if (credit) creditIntents.push(credit);
+      await tx.auditLog.create({
+        data: {
+          tenantId,
+          clinicId: row.clinicId,
+          action: "APPOINTMENT_AUTO_CANCELLED_UNPAID_DEPOSIT",
+          resource: "Appointment",
+          resourceId: id,
+          metadata: { previousStatus: existing.status },
+        },
+      });
+      await this.appointmentOutbox.emitStatusChange(
+        {
+          tenantId,
+          appointmentId: row.id,
+          clinicId: row.clinicId,
+          previousStatus: existing.status,
+          nextStatus: AppointmentStatus.CANCELLED,
+          bookingSource: row.bookingSource,
+          cancelledByPatient: false,
+          metadata: { cancelledBy: "SYSTEM", cancellationReason: row.cancellationReason, depositRefundable: true },
+        },
+        tx,
+      );
+      return row;
+    });
+    if (!row) return false;
+    await this.commissionCharges.applyCreditIntents(creditIntents);
+    await this.scheduling.recordFreedSlot(tenantId, row.id);
+    await this.invalidateSlotsForAppointment(tenantId, row.clinicId, row.clinicianId, "deposit_unpaid_cancel");
+    return true;
   }
 
   async create(tenantId: string, actor: JwtUser, dto: CreateAppointmentDto): Promise<AppointmentDto> {
@@ -563,6 +669,7 @@ export class AppointmentsService {
       findActiveSchedulingPhysician(this.prisma, tenantId, dto.clinicianId),
     ]);
     if (!clinic || !patient || !clinician) throw new BadRequestException("Invalid clinic, patient, or clinician");
+    await assertClinicianBillingSeatActive(this.prisma, tenantId, dto.clinicianId);
     const start = new Date(dto.startsAt);
     if (Number.isNaN(start.getTime())) throw new BadRequestException("Invalid startsAt");
     const apptType = dto.appointmentTypeId
@@ -684,7 +791,8 @@ export class AppointmentsService {
     tenantId: string,
     id: string,
     status: AppointmentStatus,
-    viewer?: JwtUser
+    viewer?: JwtUser,
+    cancellationReason?: string | null,
   ): Promise<AppointmentDto> {
     const existing = await this.prisma.appointment.findFirst({
       where: { id, tenantId },
@@ -699,6 +807,7 @@ export class AppointmentsService {
       await assertNoOpenEncounterForAppointmentComplete(this.prisma, tenantId, id);
       await assertScheduledTransferFeeCollected(this.prisma, tenantId, id);
     }
+    const cancelPatch = clinicCancellationPatch(existing, status, cancellationReason);
     const creditIntents: BilledReversalCreditIntent[] = [];
     const row = await this.prisma.$transaction(async (tx) => {
       let patch: Prisma.AppointmentUpdateInput;
@@ -712,13 +821,24 @@ export class AppointmentsService {
           existingPreferred: existing.preferredRoomLabel ?? existing.roomLabel,
         });
       } else {
-        patch = { status };
+        patch = { status, ...cancelPatch };
       }
       const row = await tx.appointment.update({
         where: { id },
         data: patch,
         include: appointmentDtoInclude,
       });
+      if (cancelPatch) {
+        await auditClinicCancellation(tx, {
+          tenantId,
+          actorId: viewer?.userId ?? null,
+          clinicId: row.clinicId,
+          appointmentId: row.id,
+          patientId: row.patientId,
+          bookingSource: row.bookingSource,
+          reason: row.cancellationReason,
+        });
+      }
       if (!isRevertingAppointmentCheckIn(existing.status, status)) {
         await ensureDraftEncounterIfCheckedIn(tx, tenantId, id);
       }
@@ -734,6 +854,7 @@ export class AppointmentsService {
         await this.commissionCharges.onComplete(tx, tenantId, id);
       }
       if (credit) creditIntents.push(credit);
+      await this.depositSettlement.settleAppointmentDepositsTx(tx, tenantId, row.id, viewer?.userId ?? null);
       await this.appointmentOutbox.emitStatusChange(
         {
           tenantId,
@@ -743,6 +864,7 @@ export class AppointmentsService {
           nextStatus: row.status,
           bookingSource: row.bookingSource,
           cancelledByPatient: false,
+          metadata: cancelPatch ? clinicCancellationEventMetadata(row) : undefined,
         },
         tx,
       );
@@ -750,12 +872,7 @@ export class AppointmentsService {
     });
     await this.commissionCharges.applyCreditIntents(creditIntents);
     if (status === AppointmentStatus.CANCELLED) {
-      await this.scheduling.offerWaitlistForCancelledSlot(
-        tenantId,
-        row.clinicId,
-        row.startsAt,
-        row.clinicianId,
-      );
+      await this.scheduling.recordFreedSlot(tenantId, row.id);
     }
     await this.invalidateSlotsForAppointment(tenantId, row.clinicId, row.clinicianId, "appointment_status_changed");
     return this.finishAppointmentDto(tenantId, row, viewer);
@@ -828,6 +945,7 @@ export class AppointmentsService {
       await assertNoOpenEncounterForAppointmentComplete(this.prisma, tenantId, id);
       await assertScheduledTransferFeeCollected(this.prisma, tenantId, id);
     }
+    const cancelPatch = clinicCancellationPatch(existing, nextStatus, dto.cancellationReason);
 
     const transferCtx = await resolveTenantTransferCollectionContext(this.prisma, this.featureFlags, tenantId);
     let scheduledPatch: {
@@ -891,9 +1009,21 @@ export class AppointmentsService {
           ...(feeProvided ? { feeAmount: new Prisma.Decimal(String(Number(dto.feeAmount))) } : {}),
           ...scheduledPatch,
           ...statusFields,
+          ...cancelPatch,
         },
         include: appointmentDtoInclude,
       });
+      if (cancelPatch) {
+        await auditClinicCancellation(tx, {
+          tenantId,
+          actorId: viewer?.userId ?? null,
+          clinicId: updated.clinicId,
+          appointmentId: updated.id,
+          patientId: updated.patientId,
+          bookingSource: updated.bookingSource,
+          reason: updated.cancellationReason,
+        });
+      }
 
       if (!reverting) {
         await ensureDraftEncounterIfCheckedIn(tx, tenantId, id);
@@ -930,6 +1060,7 @@ export class AppointmentsService {
             nextStatus: updated.status,
             bookingSource: updated.bookingSource,
             cancelledByPatient: false,
+            metadata: cancelPatch ? clinicCancellationEventMetadata(updated) : undefined,
           },
           tx,
         );

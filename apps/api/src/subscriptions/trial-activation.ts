@@ -13,6 +13,7 @@ export async function countQualifyingTrialVisits(
       tenantId,
       status: { in: [AppointmentStatus.CHECKED_IN, AppointmentStatus.COMPLETED] },
       checkedInAt: { gte: trialStartsAt, lte: windowEnd },
+      patient: { isSample: false },
     },
   });
 }

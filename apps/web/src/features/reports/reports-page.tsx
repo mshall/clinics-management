@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   Area,
@@ -20,15 +21,19 @@ import {
 import { AcquisitionChannelPatientsDialog } from "@/components/acquisition-channel-patients-dialog";
 import { ResponsiveTable, ResponsiveTableElement } from "@/components/responsive-table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
   useClinicsQuery,
   useReportsClinicBreakdownQuery,
+  useReportsKiorexImpactQuery,
   useReportsMonthlySeriesQuery,
+  useReportsOperationsQuery,
   useReportsPatientAcquisitionQuery,
   useReportsPerformanceQuery,
 } from "@/lib/api-hooks";
+import { apiDownload } from "@/lib/http";
 import type { ReportsClinicBreakdownItemDto, ReportsCurrencyTotalsDto, ReportsMonthlySeriesItemDto } from "@/lib/api-types";
 import { formatClinicName, formatRevenueCategory, localeForLanguage } from "@/lib/locale-display";
 import { formatMoneyAmount } from "@/lib/money-display";
@@ -129,6 +134,9 @@ export function ReportsPage() {
 
   const series = useReportsMonthlySeriesQuery(from, to, clinicScopeId);
   const performance = useReportsPerformanceQuery(from, to, clinicScopeId);
+  const operations = useReportsOperationsQuery(from, to, clinicScopeId);
+  const kiorexPeriod = from.slice(0, 7);
+  const kiorexImpact = useReportsKiorexImpactQuery(kiorexPeriod);
   const clinicBreakdown = useReportsClinicBreakdownQuery(from, to, !isPhysician && !clinicScopeId);
   const acquisition = useReportsPatientAcquisitionQuery(from, to);
 
@@ -165,6 +173,17 @@ export function ReportsPage() {
   const breakdownItems = clinicBreakdown.data?.items ?? [];
   const clinicBreakdownRows = useMemo(() => buildClinicBreakdownRows(breakdownItems), [breakdownItems]);
 
+  const exportQuery = useMemo(() => {
+    const q = new URLSearchParams({ from, to });
+    if (clinicScopeId) q.set("clinicId", clinicScopeId);
+    return q.toString();
+  }, [from, to, clinicScopeId]);
+
+  const downloadReport = async (key: string, format: "xlsx" | "pdf") => {
+    const ext = format === "pdf" ? "pdf" : "xls";
+    await apiDownload(`/api/v1/reports/${key}/export?format=${format}&${exportQuery}`, `kiorly-${key}.${ext}`);
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <div>
@@ -173,7 +192,40 @@ export function ReportsPage() {
         <p className="mt-1 text-xs text-muted-foreground ltr-nums">
           {t("reports.usingRange")}: {from} → {to}
         </p>
+        <p className="mt-2">
+          <Button asChild variant="outline" size="sm">
+            <Link to="/reports/ar-aging" data-testid="rp04-link">
+              {t("rp04.linkFromReports")}
+            </Link>
+          </Button>
+        </p>
       </div>
+
+      <Card data-testid="reports-exports">
+        <CardHeader>
+          <CardTitle className="text-base">{t("reports.exportPayments", "Payments export")}</CardTitle>
+          <CardDescription>
+            {t(
+              "reports.exportPaymentsHint",
+              "Date, patient, service, amount, method, reference — for your accountant.",
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={() => void downloadReport("payments", "xlsx")}>
+            {t("reports.exportExcel", "Export Excel")}
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => void downloadReport("payments", "pdf")}>
+            {t("reports.exportPdf", "Export PDF")}
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => void downloadReport("operations", "xlsx")}>
+            {t("reports.operationsTitle", "Operations KPIs")} · {t("reports.exportExcel", "Export Excel")}
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => void downloadReport("performance", "xlsx")}>
+            {t("reports.performanceTitle", "Performance summary")} · {t("reports.exportExcel", "Export Excel")}
+          </Button>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -212,6 +264,117 @@ export function ReportsPage() {
               </span>
             ) : null}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card data-testid="reports-kiorex-impact">
+        <CardHeader>
+          <CardTitle className="text-base">{t("reports.kiorexImpactTitle", "Kiorex impact")}</CardTitle>
+          <CardDescription>
+            {t(
+              "reports.kiorexImpactHint",
+              "Bookings, new patients, visit revenue, commission, offset, and net cost per new patient (reconciled with the monthly statement).",
+            )}{" "}
+            <span className="ltr-nums">({kiorexPeriod})</span>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {kiorexImpact.isPending ? (
+            <p className="text-sm text-muted-foreground">{t("common.loading", "Loading…")}</p>
+          ) : kiorexImpact.isError ? (
+            <p className="text-sm text-destructive">
+              {kiorexImpact.error instanceof Error ? kiorexImpact.error.message : t("common.error")}
+            </p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.kiorexBookings", "Bookings")}</p>
+                <p className="text-2xl font-semibold ltr-nums">{kiorexImpact.data?.bookings ?? 0}</p>
+              </div>
+              <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.kiorexNewPatients", "New patients")}</p>
+                <p className="text-2xl font-semibold ltr-nums">{kiorexImpact.data?.newPatients ?? 0}</p>
+              </div>
+              <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.kiorexCommission", "Commission")}</p>
+                <p className="text-2xl font-semibold ltr-nums">{kiorexImpact.data?.commission ?? 0}</p>
+              </div>
+              <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.kiorexOffset", "Offset")}</p>
+                <p className="text-2xl font-semibold ltr-nums">{kiorexImpact.data?.offset ?? 0}</p>
+              </div>
+              <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {t("reports.kiorexNetCostPerPatient", "Net cost / new patient")}
+                </p>
+                <p className="text-2xl font-semibold ltr-nums">{kiorexImpact.data?.netCostPerNewPatient ?? "—"}</p>
+              </div>
+              <div className="rounded-lg border bg-muted/30 px-4 py-3 sm:col-span-2">
+                <p className="text-xs text-muted-foreground">
+                  {kiorexImpact.data?.matchesStatement
+                    ? t("reports.kiorexMatchesStatement", "Matches monthly statement (CR-11)")
+                    : t("reports.kiorexStatementPending", "Statement reconcile pending (no confirmed commission yet)")}
+                </p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card data-testid="reports-operations-kpis">
+        <CardHeader>
+          <CardTitle className="text-base">{t("reports.operationsTitle", "Operations KPIs")}</CardTitle>
+          <CardDescription>
+            {t(
+              "reports.operationsHint",
+              "No-show rate, utilisation, revenue per doctor-hour, new vs returning, and booking sources (incl. Kiorex).",
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {operations.isPending ? (
+            <p className="text-sm text-muted-foreground">{t("common.loading", "Loading…")}</p>
+          ) : operations.isError ? (
+            <p className="text-sm text-destructive">
+              {operations.error instanceof Error ? operations.error.message : t("common.error")}
+            </p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.noShowRate", "No-show rate")}</p>
+                <p className="text-2xl font-semibold ltr-nums">{operations.data?.noShow.rate ?? 0}%</p>
+                <p className="text-xs text-muted-foreground ltr-nums">
+                  {operations.data?.noShow.noShows ?? 0}/{operations.data?.noShow.total ?? 0}
+                </p>
+              </div>
+              <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.utilisation", "Utilisation")}</p>
+                <p className="text-2xl font-semibold ltr-nums">{operations.data?.utilisation.percent ?? 0}%</p>
+              </div>
+              <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {t("reports.revenuePerDoctorHour", "Revenue / doctor-hour")}
+                </p>
+                <p className="text-2xl font-semibold ltr-nums">{operations.data?.revenuePerDoctorHour ?? 0}</p>
+              </div>
+              <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.newVsReturning", "New / returning")}</p>
+                <p className="text-2xl font-semibold ltr-nums">
+                  {operations.data?.newVsReturning.newPatients ?? 0}
+                  <span className="text-muted-foreground"> / </span>
+                  {operations.data?.newVsReturning.returning ?? 0}
+                </p>
+              </div>
+              {(operations.data?.bookingSources ?? []).slice(0, 4).map((s) => (
+                <div key={s.source} className="rounded-lg border bg-muted/30 px-4 py-3">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{s.source}</p>
+                  <p className="text-2xl font-semibold ltr-nums">
+                    {s.count} <span className="text-sm font-normal text-muted-foreground">({s.sharePercent}%)</span>
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -254,6 +417,19 @@ export function ReportsPage() {
                   </p>
                   <p className="text-2xl font-semibold ltr-nums">{performanceByCurrency.length}</p>
                 </div>
+                {performance.data?.kiorexRating?.averageRating != null ? (
+                  <div className="rounded-lg border bg-muted/30 px-4 py-3" data-testid="reports-kiorex-rating">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                      {t("reports.kiorexRating", "Kiorex rating")}
+                    </p>
+                    <p className="text-2xl font-semibold ltr-nums">
+                      {performance.data.kiorexRating.averageRating.toFixed(2)}
+                      <span className="ms-2 text-sm font-normal text-muted-foreground">
+                        ({t("kiorexTab.ratings.count", "{{count}} reviews", { count: performance.data.kiorexRating.reviewCount })})
+                      </span>
+                    </p>
+                  </div>
+                ) : null}
               </div>
 
               {performanceByCurrency.length === 0 ? (

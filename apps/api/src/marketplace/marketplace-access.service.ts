@@ -24,4 +24,18 @@ export class MarketplaceAccessService {
     }
     return row.tenantId;
   }
+
+  /** New holds/bookings need a LIVE listing — PAUSED (owner or billing) stays readable but not bookable. */
+  async assertListingBookable(clinicId: string, clinicianId: string): Promise<void> {
+    const row = await this.prisma.marketplaceListing.findFirst({
+      where: { clinicId, clinicianId, status: ListingStatus.LIVE },
+      select: { id: true },
+    });
+    if (!row) {
+      throw new ForbiddenException({
+        code: "MARKETPLACE_LISTING_PAUSED",
+        message: "This clinician is not accepting Kiorex bookings right now",
+      });
+    }
+  }
 }

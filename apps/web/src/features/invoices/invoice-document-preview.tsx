@@ -170,7 +170,7 @@ export function printInvoiceElement(elementId: string, title: string): boolean {
 <style>@page{margin:10mm}body{margin:0;font-family:system-ui,sans-serif}
 .invoice-root{max-width:210mm;margin:0 auto}</style></head>
 <body><div class="invoice-root">${el.innerHTML}</div>
-<script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<\/script></body></html>`);
+<script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<${"/"}script></body></html>`);
   win.document.close();
   return true;
 }

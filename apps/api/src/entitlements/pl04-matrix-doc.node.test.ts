@@ -42,7 +42,7 @@ describe("PL-04 plans matrix", () => {
   });
 
   it("feature flags map to plan entitlements", () => {
-    assert.equal(FEATURE_FLAG_ENTITLEMENT.eta_receipts, "eta_receipts");
+    assert.equal(FEATURE_FLAG_ENTITLEMENT.ai_assistant, "ai_assistant");
     assert.equal(FEATURE_FLAG_ENTITLEMENT.whatsapp_reminders, "whatsapp_reminders");
     assert.equal(FEATURE_FLAG_ENTITLEMENT.card_payments, "card_payments");
   });

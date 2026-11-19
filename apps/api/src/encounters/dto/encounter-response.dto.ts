@@ -69,6 +69,29 @@ export class EncounterDocumentDto {
   createdAt!: string;
 }
 
+export class EncounterAmendmentDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  reason!: string;
+
+  @ApiProperty()
+  amendedByName!: string;
+
+  @ApiProperty()
+  amendedAt!: string;
+
+  @ApiProperty()
+  wasLocked!: boolean;
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  resignedByName!: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  resignedAt!: string | null;
+}
+
 export class EncounterDetailDto {
   @ApiProperty()
   id!: string;
@@ -186,6 +209,15 @@ export class EncounterDetailDto {
 
   @ApiPropertyOptional({ nullable: true, type: String })
   amendedAt!: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  signedByName!: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: String, description: "When the signed note locks (or locked)" })
+  noteLocksAt!: string | null;
+
+  @ApiProperty({ type: [EncounterAmendmentDto] })
+  amendments!: EncounterAmendmentDto[];
 
   @ApiPropertyOptional({ nullable: true })
   followUpDueAt!: string | null;

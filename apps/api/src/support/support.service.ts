@@ -8,9 +8,21 @@ import { mapResourceToSupportModule, resolveHints } from "./support-resolution-h
 import type { CreateSupportTicketDto } from "./dto/create-support-ticket.dto";
 import type { PatchSupportTicketDto } from "./dto/patch-support-ticket.dto";
 import type { CreateSupportTicketEventDto } from "./dto/create-support-ticket-event.dto";
+import {
+  computeFirstResponseDueAt,
+  DEFAULT_SUPPORT_SLA,
+  measureFirstResponseSla,
+  SUPPORT_MACROS,
+  supportMacroById,
+} from "./support-sla";
 
 function serializeTicket(row: Awaited<ReturnType<SupportService["findTicket"]>>) {
   if (!row) return null;
+  const sla = measureFirstResponseSla({
+    createdAt: row.createdAt,
+    priority: row.priority,
+    firstRespondedAt: row.firstRespondedAt,
+  });
   return {
     id: row.id,
     ticketNo: row.ticketNo,
@@ -19,6 +31,8 @@ function serializeTicket(row: Awaited<ReturnType<SupportService["findTicket"]>>)
     module: row.module,
     priority: row.priority,
     status: row.status,
+    channel: row.channel,
+    sourcePhone: row.sourcePhone,
     clinicId: row.clinicId,
     patientId: row.patientId,
     resourceType: row.resourceType,
@@ -36,6 +50,16 @@ function serializeTicket(row: Awaited<ReturnType<SupportService["findTicket"]>>)
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     resolvedAt: row.resolvedAt?.toISOString() ?? null,
+    firstRespondedAt: row.firstRespondedAt?.toISOString() ?? null,
+    firstResponseDueAt: (row.firstResponseDueAt ?? sla.dueAt).toISOString(),
+    escalatedToEngineeringAt: row.escalatedToEngineeringAt?.toISOString() ?? null,
+    engineeringEscalationNote: row.engineeringEscalationNote,
+    sla: {
+      targetHours: sla.targetHours,
+      breached: sla.breached,
+      responseMinutes: sla.responseMinutes,
+      dueAt: sla.dueAt.toISOString(),
+    },
     events: row.events?.map((e) => ({
       id: e.id,
       eventType: e.eventType,
@@ -127,7 +151,14 @@ export class SupportService {
     return serializeTicket(row);
   }
 
+  listMacros() {
+    return SUPPORT_MACROS.map((m) => ({ ...m }));
+  }
+
   async createTicket(tenantId: string, actor: JwtUser, dto: CreateSupportTicketDto) {
+    const priority = dto.priority ?? "MEDIUM";
+    const now = new Date();
+    const dueAt = computeFirstResponseDueAt(now, priority, DEFAULT_SUPPORT_SLA);
     const created = await this.prisma.$transaction(async (tx) => {
       const ticketNo = await this.nextTicketNo(tx, tenantId);
       const ticket = await tx.supportTicket.create({
@@ -137,7 +168,8 @@ export class SupportService {
           title: dto.title.trim(),
           description: dto.description.trim(),
           module: dto.module,
-          priority: dto.priority ?? "MEDIUM",
+          priority,
+          channel: "IN_APP",
           clinicId: dto.clinicId ?? null,
           patientId: dto.patientId ?? null,
           assigneeUserId: dto.assigneeUserId ?? actor.userId,
@@ -145,6 +177,7 @@ export class SupportService {
           resourceType: dto.resourceType ?? null,
           resourceId: dto.resourceId ?? null,
           linkedAuditLogId: dto.linkedAuditLogId ?? null,
+          firstResponseDueAt: dueAt,
         },
       });
       await tx.supportTicketEvent.create({
@@ -158,6 +191,90 @@ export class SupportService {
       return ticket;
     });
     return this.getTicket(tenantId, created.id);
+  }
+
+  /**
+   * GT-04 — inbound WhatsApp to the Kiorly support line opens a ticket on the matched tenant.
+   * Phone is matched to an employee/user; otherwise SUPPORT_FALLBACK_TENANT_ID is used.
+   */
+  async createFromWhatsAppInbound(input: {
+    providerMessageId: string;
+    fromPhone: string;
+    text: string;
+  }): Promise<{ created: boolean; ticketId?: string; tenantId?: string }> {
+    const seen = await this.prisma.whatsAppInboundEvent.findUnique({
+      where: { providerMessageId: input.providerMessageId },
+    });
+    if (seen) {
+      const meta = seen.payloadJson as { ticketId?: string } | null;
+      return { created: false, ticketId: meta?.ticketId, tenantId: seen.tenantId };
+    }
+
+    const digits = input.fromPhone.replace(/\D/g, "");
+    const tail = digits.slice(-10);
+    let tenantId =
+      process.env.SUPPORT_FALLBACK_TENANT_ID?.trim() ||
+      (await this.prisma.tenant.findFirst({ orderBy: { createdAt: "asc" }, select: { id: true } }))?.id;
+    let reporterUserId: string | null = null;
+    if (tail) {
+      const employee = await this.prisma.employee.findFirst({
+        where: { phone: { endsWith: tail }, userId: { not: null } },
+        select: { userId: true, tenantId: true },
+      });
+      if (employee?.tenantId) {
+        tenantId = employee.tenantId;
+        reporterUserId = employee.userId;
+      }
+    }
+    if (!tenantId) return { created: false };
+
+    const priority = "URGENT";
+    const now = new Date();
+    const dueAt = computeFirstResponseDueAt(now, priority, DEFAULT_SUPPORT_SLA);
+    const title = `WhatsApp: ${input.text.trim().slice(0, 80) || "Support request"}`;
+    const created = await this.prisma.$transaction(async (tx) => {
+      const ticketNo = await this.nextTicketNo(tx, tenantId!);
+      const ticket = await tx.supportTicket.create({
+        data: {
+          tenantId: tenantId!,
+          ticketNo,
+          title,
+          description: input.text.trim().slice(0, 8000) || "(empty WhatsApp message)",
+          module: "OTHER",
+          priority,
+          channel: "WHATSAPP",
+          sourcePhone: input.fromPhone,
+          reporterUserId,
+          firstResponseDueAt: dueAt,
+        },
+      });
+      await tx.supportTicketEvent.create({
+        data: {
+          ticketId: ticket.id,
+          actorUserId: reporterUserId,
+          eventType: "WHATSAPP_INBOUND",
+          message: "Opened from WhatsApp support line",
+          metadata: {
+            providerMessageId: input.providerMessageId,
+            fromPhone: input.fromPhone,
+          } as Prisma.InputJsonValue,
+        },
+      });
+      await tx.whatsAppInboundEvent.create({
+        data: {
+          tenantId: tenantId!,
+          providerMessageId: input.providerMessageId,
+          action: "support_ticket",
+          payloadJson: {
+            ticketId: ticket.id,
+            fromPhone: input.fromPhone,
+            text: input.text.slice(0, 500),
+          } as Prisma.InputJsonValue,
+        },
+      });
+      return ticket;
+    });
+    return { created: true, ticketId: created.id, tenantId };
   }
 
   async patchTicket(tenantId: string, actor: JwtUser, id: string, dto: PatchSupportTicketDto) {
@@ -203,13 +320,86 @@ export class SupportService {
   async addEvent(tenantId: string, actor: JwtUser, ticketId: string, dto: CreateSupportTicketEventDto) {
     const exists = await this.prisma.supportTicket.findFirst({ where: { id: ticketId, tenantId } });
     if (!exists) throw new NotFoundException("Support ticket not found");
-    await this.prisma.supportTicketEvent.create({
-      data: {
-        ticketId,
-        actorUserId: actor.userId,
-        eventType: dto.eventType,
-        message: dto.message?.trim() || null,
-      },
+    const eventType = dto.eventType.trim();
+    const marksFirstResponse =
+      !exists.firstRespondedAt &&
+      ["COMMENT", "FIRST_RESPONSE", "MACRO", "STATUS_CHANGE"].includes(eventType) &&
+      actor.userId !== exists.reporterUserId;
+    await this.prisma.$transaction(async (tx) => {
+      await tx.supportTicketEvent.create({
+        data: {
+          ticketId,
+          actorUserId: actor.userId,
+          eventType,
+          message: dto.message?.trim() || null,
+        },
+      });
+      if (marksFirstResponse) {
+        await tx.supportTicket.update({
+          where: { id: ticketId },
+          data: {
+            firstRespondedAt: new Date(),
+            status: exists.status === "OPEN" ? "IN_PROGRESS" : exists.status,
+          },
+        });
+        await tx.supportTicketEvent.create({
+          data: {
+            ticketId,
+            actorUserId: actor.userId,
+            eventType: "FIRST_RESPONSE",
+            message: "First response recorded (SLA clock stopped)",
+          },
+        });
+      }
+    });
+    return this.getTicket(tenantId, ticketId);
+  }
+
+  async applyMacro(tenantId: string, actor: JwtUser, ticketId: string, macroId: string) {
+    const macro = supportMacroById(macroId);
+    if (!macro) throw new BadRequestException("Unknown support macro");
+    return this.addEvent(tenantId, actor, ticketId, {
+      eventType: "MACRO",
+      message: `[${macro.titleEn}] ${macro.bodyEn}`,
+    });
+  }
+
+  async escalateToEngineering(tenantId: string, actor: JwtUser, ticketId: string, note?: string) {
+    const exists = await this.prisma.supportTicket.findFirst({ where: { id: ticketId, tenantId } });
+    if (!exists) throw new NotFoundException("Support ticket not found");
+    if (exists.escalatedToEngineeringAt) {
+      return this.getTicket(tenantId, ticketId);
+    }
+    const trimmed = note?.trim() || "Escalated to engineering";
+    await this.prisma.$transaction(async (tx) => {
+      await tx.supportTicket.update({
+        where: { id: ticketId },
+        data: {
+          escalatedToEngineeringAt: new Date(),
+          engineeringEscalationNote: trimmed.slice(0, 2000),
+          priority: exists.priority === "LOW" || exists.priority === "MEDIUM" ? "HIGH" : exists.priority,
+          status: exists.status === "OPEN" ? "IN_PROGRESS" : exists.status,
+          firstRespondedAt: exists.firstRespondedAt ?? new Date(),
+        },
+      });
+      await tx.supportTicketEvent.create({
+        data: {
+          ticketId,
+          actorUserId: actor.userId,
+          eventType: "ESCALATED_ENGINEERING",
+          message: trimmed.slice(0, 2000),
+        },
+      });
+      if (!exists.firstRespondedAt) {
+        await tx.supportTicketEvent.create({
+          data: {
+            ticketId,
+            actorUserId: actor.userId,
+            eventType: "FIRST_RESPONSE",
+            message: "First response recorded via engineering escalation",
+          },
+        });
+      }
     });
     return this.getTicket(tenantId, ticketId);
   }

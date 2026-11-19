@@ -60,10 +60,15 @@ import {
 } from "@/lib/visit-collection";
 import { generatePrescriptionPng } from "@/lib/prescription-image";
 import { EncounterClinicalTools } from "@/features/clinical/encounter-clinical-tools";
+import { EncounterScribePanel } from "@/features/clinical/encounter-scribe-panel";
+import { EncounterOrdersPanel } from "@/features/clinical/encounter-orders-panel";
+import { EncounterSignoffTrail } from "@/features/encounters/encounter-signoff-trail";
+import { EntitlementGate } from "@/components/entitlement-gate";
 import { DrugSearchAutocomplete, type DrugSearchHit } from "@/features/clinical/drug-search-autocomplete";
 import { PatientChartAlerts } from "@/components/patient-chart-alerts";
 import { EncounterSpecialtyForm } from "@/features/clinical/encounter-specialty-form";
 import { loadPrescriptionBranding } from "@/lib/prescription-branding";
+import { SignedPrescriptionActions } from "@/features/prescriptions/signed-prescription-actions";
 import { encountersBackPath } from "@/lib/nav-policy";
 import { cn } from "@/lib/utils";
 import { registerUnsavedWork } from "@/lib/unsaved-work-registry";
@@ -229,7 +234,12 @@ export function EncounterDetailPage() {
     enc?.status === "DRAFT" ||
     enc?.status === "AMENDED" ||
     (enc?.status === "FINALIZED" && !enc?.noteLockedAt);
-  const canFinalize = Boolean(enc && user && enc.clinicianId === user.id && draft);
+  const signable = enc?.status === "DRAFT" || enc?.status === "AMENDED";
+  const canFinalize = Boolean(enc && user && enc.clinicianId === user.id && signable);
+  const userRoles = user?.roles?.length ? user.roles : user ? [user.role] : [];
+  const canAmend = Boolean(
+    enc && user && (enc.clinicianId === user.id || userRoles.some((r) => r === "group_supervisor" || r === "group_admin")),
+  );
 
   const invalidate = () => {
     void qc.invalidateQueries({ queryKey: ["encounter", id] });
@@ -547,7 +557,7 @@ export function EncounterDetailPage() {
   const activeMedTab = medTab;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 doctor-mobile-view md:space-y-6">
       <EncounterDeleteConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
@@ -735,6 +745,7 @@ export function EncounterDetailPage() {
         <CollectVisitBalanceCard
           encounterId={enc.id}
           clinicId={enc.clinicId}
+          patientId={enc.patientId}
           amount={enc.visitBalanceDueAmount}
           currency={enc.visitBalanceDueCurrency ?? visitFeeCurrency}
           invalidateKeys={[["appointment", enc.appointmentId], ["front-desk"]]}
@@ -931,6 +942,7 @@ export function EncounterDetailPage() {
               onTemplateIdChange={setClinicalTemplateId}
               onResponsesChange={setSpecialtyFormResponses}
             />
+            {enc ? <EncounterSignoffTrail encounter={enc} canAmend={canAmend} /> : null}
             {enc ? (
               <EncounterClinicalTools
                 encounter={enc}
@@ -943,6 +955,22 @@ export function EncounterDetailPage() {
                   if (partial.plan !== undefined) setPlan(partial.plan ?? "");
                 }}
               />
+            ) : null}
+            {enc && draft ? (
+              <EntitlementGate entitlement="ai_scribe" requiredPlan="PRO">
+                <EncounterScribePanel
+                  encounterId={enc.id}
+                  onApplySoap={(partial) => {
+                    if (partial.subjective !== undefined) setSubjective(partial.subjective ?? "");
+                    if (partial.objective !== undefined) setObjective(partial.objective ?? "");
+                    if (partial.assessment !== undefined) setAssessment(partial.assessment ?? "");
+                    if (partial.plan !== undefined) setPlan(partial.plan ?? "");
+                  }}
+                />
+              </EntitlementGate>
+            ) : null}
+            {enc ? (
+              <EncounterOrdersPanel encounterId={enc.id} clinicId={enc.clinicId} patientId={enc.patientId} />
             ) : null}
             <div className="space-y-2">
               <Label htmlFor="s" className="flex items-center gap-2">
@@ -991,12 +1019,20 @@ export function EncounterDetailPage() {
                 <Button type="button" variant="secondary" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
                   {t("common.save")}
                 </Button>
-                <Button type="button" onClick={() => setFinalizeDialogOpen(true)} disabled={finalizeMutation.isPending || !canFinalize}>
-                  {t("encounters.finalize")}
-                </Button>
+                {signable ? (
+                  <Button
+                    type="button"
+                    className="min-h-10"
+                    onClick={() => setFinalizeDialogOpen(true)}
+                    disabled={finalizeMutation.isPending || !canFinalize}
+                    data-testid="encounter-sign-button"
+                  >
+                    {enc?.status === "AMENDED" ? t("signoff.resignAction", "Sign amended note") : t("encounters.finalize")}
+                  </Button>
+                ) : null}
               </div>
             ) : null}
-            {!canFinalize && draft ? (
+            {!canFinalize && signable ? (
               <p className="text-xs text-muted-foreground">{t("encounters.finalizeHint")}</p>
             ) : null}
           </CardContent>
@@ -1218,6 +1254,7 @@ export function EncounterDetailPage() {
                   </ul>
                   {meds.length > 0 ? (
                     <div className="mt-4 space-y-3">
+                      {enc.signedAt ? <SignedPrescriptionActions encounterId={enc.id} clinicId={enc.clinicId} /> : null}
                       {draft && medsPanelActive ? (
                         <div className="flex flex-wrap items-center gap-2">
                           <Button

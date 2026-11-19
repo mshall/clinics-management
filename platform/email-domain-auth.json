@@ -1,0 +1,9 @@
+{
+  "sendingDomain": "mail.kiorly.com",
+  "fromAddress": "noreply@mail.kiorly.com",
+  "region": "eu-central-1",
+  "dkimVerified": false,
+  "spfVerified": false,
+  "dmarcVerified": false,
+  "notes": "Flip dkim/spf/dmarc to true only after DNS records are live and SES domain identity shows Verified. See Docs/MESSAGING_EMAIL.md and NH-016."
+}

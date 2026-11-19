@@ -1,5 +1,14 @@
-import { Controller, Get, Query, UseGuards } from "@nestjs/common";
-import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Put,
+  Query,
+  StreamableFile,
+  UseGuards,
+} from "@nestjs/common";
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiProduces, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { EntitlementGuard } from "../entitlements/entitlement.guard";
@@ -8,6 +17,8 @@ import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { NavTabAccessService } from "../user-nav-tabs/nav-tab-access.service";
 import { REPORTS_VIEW_ROLES } from "../user-nav-tabs/nav-tab-module-roles";
+import { KiorexImpactService } from "./kiorex-impact.service";
+import { ReportsExportService } from "./reports-export.service";
 import { ReportsService } from "./reports.service";
 
 @ApiTags("reports")
@@ -18,6 +29,8 @@ import { ReportsService } from "./reports.service";
 export class ReportsController {
   constructor(
     private readonly reports: ReportsService,
+    private readonly exports: ReportsExportService,
+    private readonly kiorexImpact: KiorexImpactService,
     private readonly navTabAccess: NavTabAccessService,
   ) {}
 
@@ -115,5 +128,116 @@ export class ReportsController {
   async patientAcquisition(@CurrentUser() user: JwtUser, @Query("from") from?: string, @Query("to") to?: string) {
     await this.assertView(user);
     return this.reports.patientAcquisitionBreakdown(requireTenantId(user), from, to);
+  }
+
+  @Get("kiorex")
+  @RequiresEntitlement("mod_revenue")
+  @ApiOperation({ summary: "RP-03 Kiorex impact report for a billing period (all tiers with revenue)" })
+  @ApiOkResponse()
+  async kiorex(@CurrentUser() user: JwtUser, @Query("period") period?: string) {
+    // Available on Lite+ (mod_revenue); still requires reports nav for Pro+ UI, owners always see Kiorex tab.
+    return this.kiorexImpact.report(requireTenantId(user), period, user);
+  }
+
+  @Get("operations")
+  @ApiOperation({ summary: "RP-01 operational KPIs: no-show, utilisation, revenue/hour, sources" })
+  @ApiOkResponse()
+  async operations(
+    @CurrentUser() user: JwtUser,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("period") period?: string,
+    @Query("clinicId") clinicId?: string,
+  ) {
+    await this.assertView(user);
+    let fromEff = from;
+    let toEff = to;
+    if (!fromEff && !toEff && period?.match(/^\d{4}-\d{2}$/)) {
+      const [y, m] = period.split("-").map(Number);
+      fromEff = `${period}-01`;
+      const last = new Date(Date.UTC(y!, m!, 0)).getUTCDate();
+      toEff = `${period}-${String(last).padStart(2, "0")}`;
+    }
+    return this.reports.operationsReport(requireTenantId(user), fromEff, toEff, clinicId, user);
+  }
+
+  @Get("ar-aging")
+  @ApiOperation({ summary: "RP-04 AR aging buckets per payer (open claim lines)" })
+  @ApiOkResponse()
+  async arAging(@CurrentUser() user: JwtUser, @Query("asOf") asOf?: string) {
+    await this.assertView(user);
+    return this.reports.arAging(requireTenantId(user), asOf, user);
+  }
+
+  @Get("payouts")
+  @ApiOperation({ summary: "RP-04 Kiorex + doctor payout tracking" })
+  @ApiOkResponse()
+  async payouts(
+    @CurrentUser() user: JwtUser,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+  ) {
+    await this.assertView(user);
+    return this.reports.payouts(requireTenantId(user), from, to, user);
+  }
+
+  @Get("branch-pl")
+  @ApiOperation({ summary: "RP-04 branch P&L reconciled to revenue and expense tables" })
+  @ApiOkResponse()
+  async branchPl(
+    @CurrentUser() user: JwtUser,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+  ) {
+    await this.assertView(user);
+    return this.reports.branchPl(requireTenantId(user), from, to, user);
+  }
+
+  @Get("schedule")
+  @ApiOperation({ summary: "RP-02 weekly report schedule for the tenant" })
+  @ApiOkResponse()
+  async getSchedule(@CurrentUser() user: JwtUser) {
+    await this.assertView(user);
+    return this.exports.getSchedule(requireTenantId(user));
+  }
+
+  @Put("schedule")
+  @ApiOperation({ summary: "Update weekly report schedule (owners / finance)" })
+  @ApiOkResponse()
+  async putSchedule(
+    @CurrentUser() user: JwtUser,
+    @Body()
+    body: {
+      enabled?: boolean;
+      format?: string;
+      reportKeys?: string[];
+      channelEmail?: boolean;
+      channelWhatsApp?: boolean;
+      dayOfWeek?: number;
+      hourLocal?: number;
+    },
+  ) {
+    await this.assertView(user);
+    return this.exports.putSchedule(requireTenantId(user), body ?? {});
+  }
+
+  @Get(":key/export")
+  @ApiOperation({ summary: "RP-02 export a report as xlsx or PDF" })
+  @ApiProduces("application/vnd.ms-excel", "application/pdf")
+  @ApiOkResponse()
+  async exportReport(
+    @CurrentUser() user: JwtUser,
+    @Param("key") key: string,
+    @Query("format") format?: string,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("clinicId") clinicId?: string,
+  ) {
+    await this.assertView(user);
+    const result = await this.exports.export(requireTenantId(user), key, format, from, to, clinicId, user);
+    return new StreamableFile(result.body, {
+      type: result.contentType,
+      disposition: `attachment; filename="${result.filename}"`,
+    });
   }
 }

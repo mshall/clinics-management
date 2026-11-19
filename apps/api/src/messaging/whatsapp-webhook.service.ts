@@ -2,10 +2,17 @@ import { Injectable, Logger } from "@nestjs/common";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { SupportService } from "../support/support.service";
 import { WhatsAppInboundRepliesService } from "./whatsapp-inbound-replies.service";
+import { WhatsAppAiReceptionistService } from "./whatsapp-ai-receptionist.service";
 import { replyActionFromPayload } from "./whatsapp-reply-payloads";
 import { isMessagingOptOutKeyword } from "../patients/messaging-consent.constants";
 import { MessagingConsentService } from "../patients/messaging-consent.service";
+
+/** Normalize digits for comparing Meta display phone numbers to KIORLY_SUPPORT_WHATSAPP_NUMBER. */
+function phoneDigits(value: string | undefined | null): string {
+  return (value ?? "").replace(/\D/g, "");
+}
 
 @Injectable()
 export class WhatsAppWebhookService {
@@ -16,6 +23,8 @@ export class WhatsAppWebhookService {
     private readonly audit: AuditService,
     private readonly inboundReplies: WhatsAppInboundRepliesService,
     private readonly messagingConsent: MessagingConsentService,
+    private readonly support: SupportService,
+    private readonly aiReceptionist: WhatsAppAiReceptionistService,
   ) {}
 
   verifySubscribe(mode: string | undefined, token: string | undefined, challenge: string | undefined): string | null {
@@ -38,11 +47,16 @@ export class WhatsAppWebhookService {
     }
   }
 
-  async handlePayload(body: unknown): Promise<{ processed: number; replies: number; optOuts: number }> {
+  async handlePayload(
+    body: unknown,
+  ): Promise<{ processed: number; replies: number; optOuts: number; supportTickets: number; aiReceptionist: number }> {
     const entries = Array.isArray((body as { entry?: unknown }).entry) ? (body as { entry: unknown[] }).entry : [];
     let processed = 0;
     let replies = 0;
     let optOuts = 0;
+    let supportTickets = 0;
+    let aiReceptionist = 0;
+    const supportLine = phoneDigits(process.env.KIORLY_SUPPORT_WHATSAPP_NUMBER);
     for (const entry of entries) {
       const changes = Array.isArray((entry as { changes?: unknown }).changes)
         ? (entry as { changes: unknown[] }).changes
@@ -51,8 +65,10 @@ export class WhatsAppWebhookService {
         const value = (change as { value?: unknown }).value as {
           statuses?: unknown[];
           messages?: unknown[];
+          metadata?: { display_phone_number?: string; phone_number_id?: string };
         } | undefined;
         const messages = Array.isArray(value?.messages) ? value!.messages! : [];
+        const displayPhone = phoneDigits(value?.metadata?.display_phone_number);
         for (const message of messages) {
           const m = message as {
             id?: string;
@@ -66,6 +82,34 @@ export class WhatsAppWebhookService {
             const n = await this.messagingConsent.revokeAllWhatsAppForPhone(m.from ?? "", "whatsapp_stop_keyword");
             if (n > 0) optOuts += n;
             continue;
+          }
+          // GT-04: free-text to the Kiorly support WhatsApp number → support ticket
+          const toSupportLine =
+            !!supportLine &&
+            (displayPhone === supportLine ||
+              displayPhone.endsWith(supportLine) ||
+              supportLine.endsWith(displayPhone));
+          if (toSupportLine && m.type === "text" && m.id && m.text?.body) {
+            const res = await this.support.createFromWhatsAppInbound({
+              providerMessageId: m.id,
+              fromPhone: m.from ?? "",
+              text: m.text.body,
+            });
+            if (res.created) supportTickets += 1;
+            continue;
+          }
+          // MS-06: free-text to clinic WhatsApp → AI receptionist (Egyptian Arabic)
+          if (!toSupportLine && m.type === "text" && m.id && m.text?.body) {
+            const ai = await this.aiReceptionist.handleInboundText({
+              fromPhone: m.from ?? "",
+              text: m.text.body,
+              providerMessageId: m.id,
+            });
+            if (ai?.handled) {
+              aiReceptionist += 1;
+              processed += 1;
+              continue;
+            }
           }
           if (m.type !== "button" || !m.button?.payload) continue;
           const action = replyActionFromPayload(m.button.payload);
@@ -133,6 +177,6 @@ export class WhatsAppWebhookService {
         }
       }
     }
-    return { processed, replies, optOuts };
+    return { processed, replies, optOuts, supportTickets, aiReceptionist };
   }
 }

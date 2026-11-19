@@ -82,10 +82,6 @@ export function detectAutoCompletedSteps(input: OnboardingSyncInput): Partial<Re
     out.first_check_in = now;
   }
 
-  if (input.fiscalDeviceReady) {
-    out.eta_setup = now;
-  }
-
   if (input.kiorexProfileReady) {
     out.kiorex_profile = now;
   }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,6 @@ type Props = {
 
 export function EncounterClinicalTools({ encounter, onApplySoap, pendingDrugName, pendingDrugProductId }: Props) {
   const { t, i18n } = useTranslation();
-  const qc = useQueryClient();
   const [icdQ, setIcdQ] = useState("");
   const isAr = i18n.language.startsWith("ar");
 
@@ -81,15 +80,6 @@ export function EncounterClinicalTools({ encounter, onApplySoap, pendingDrugName
     },
   });
 
-  const amendMut = useMutation({
-    mutationFn: (reason: string) => apiPost<EncounterDetailDto>(`/api/v1/encounters/${encounter.id}/amend`, { reason }),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["encounter", encounter.id] });
-      toast.success(t("encounters.amendedOpen", "Encounter reopened for amendment."));
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
   const alerts = safetyQuery.data ?? [];
 
   return (
@@ -105,19 +95,6 @@ export function EncounterClinicalTools({ encounter, onApplySoap, pendingDrugName
         <Link to={`/clinics/${encounter.clinicId}?tab=settings`} className="text-xs text-primary hover:underline">
           {t("clinical.templateBuilderLink", "Manage templates in clinic settings")}
         </Link>
-        {encounter.noteLockedAt ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={() => {
-              const reason = window.prompt(t("encounters.amendReasonPrompt", "Reason for amendment"));
-              if (reason?.trim()) amendMut.mutate(reason.trim());
-            }}
-          >
-            {t("encounters.amendNote", "Amend locked note")}
-          </Button>
-        ) : null}
         {shortcutsQuery.data?.map((s) => (
           <Button
             key={s.id}
@@ -135,12 +112,6 @@ export function EncounterClinicalTools({ encounter, onApplySoap, pendingDrugName
           </Button>
         ))}
       </div>
-      {encounter.amendReason ? (
-        <p className="text-xs text-muted-foreground">
-          {t("encounters.amendReasonLabel", "Amend reason")}: {encounter.amendReason}
-          {encounter.amendedAt ? ` · ${new Date(encounter.amendedAt).toLocaleString()}` : ""}
-        </p>
-      ) : null}
       <div className="space-y-2">
         <Label optional>{t("encounters.icdSearch", "Diagnosis search (EN/AR)")}</Label>
         <Input value={icdQ} onChange={(e) => setIcdQ(e.target.value)} placeholder={t("encounters.icdSearchPh", "Code or description")} />

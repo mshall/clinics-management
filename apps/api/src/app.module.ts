@@ -17,6 +17,7 @@ import { PatientsModule } from "./patients/patients.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { ReportsModule } from "./reports/reports.module";
 import { RevenueModule } from "./revenue/revenue.module";
+import { RevenueShareModule } from "./revenue-share/revenue-share.module";
 import { StorageModule } from "./storage/storage.module";
 import { UserNavTabsModule } from "./user-nav-tabs/user-nav-tabs.module";
 import { UserMoneyVisibilityModule } from "./user-money-visibility/user-money-visibility.module";
@@ -26,21 +27,23 @@ import { IntegrationsModule } from "./integrations/integrations.module";
 import { UsersModule } from "./users/users.module";
 import { AssistantModule } from "./assistant/assistant.module";
 import { ClinicalModule } from "./clinical/clinical.module";
+import { RxShareModule } from "./clinical/rx-share.module";
 import { SchedulingModule } from "./scheduling/scheduling.module";
 import { FrontDeskModule } from "./front-desk/front-desk.module";
 import { BillingModule } from "./billing/billing.module";
 import { ComplianceModule } from "./compliance/compliance.module";
+import { ExportsModule } from "./exports/exports.module";
 import { MessagingModule } from "./messaging/messaging.module";
 import { ClinicAiModule } from "./clinic-ai/clinic-ai.module";
 import { MarketsModule } from "./markets/markets.module";
 import { FeatureFlagsModule } from "./feature-flags/feature-flags.module";
 import { ProvidersModule } from "./providers/providers.module";
-import { FiscalDevicesModule } from "./fiscal-devices/fiscal-devices.module";
 import { PlansModule } from "./plans/plans.module";
 import { EntitlementsModule } from "./entitlements/entitlements.module";
 import { PrivilegedMfaGuard } from "./auth/privileged-mfa.guard";
 import { SignupModule } from "./signup/signup.module";
 import { OnboardingModule } from "./onboarding/onboarding.module";
+import { SalesRepsModule } from "./sales-reps/sales-reps.module";
 import { LegalModule } from "./legal/legal.module";
 import { KiorexModule } from "./kiorex/kiorex.module";
 import { MarketplaceModule } from "./marketplace/marketplace.module";
@@ -48,6 +51,10 @@ import { ClinicianVerificationModule } from "./clinician-verification/clinician-
 import { CreditsModule } from "./credits/credits.module";
 import { BillingPlatformModule } from "./billing-platform/billing-platform.module";
 import { ObservabilityModule } from "./observability/observability.module";
+import { UsageModule } from "./usage/usage.module";
+import { CohortsModule } from "./cohorts/cohorts.module";
+import { GrowthModule } from "./growth/growth.module";
+import { PushModule } from "./push/push.module";
 
 @Module({
   imports: [
@@ -64,6 +71,7 @@ import { ObservabilityModule } from "./observability/observability.module";
     EncountersModule,
     ExpensesModule,
     RevenueModule,
+    RevenueShareModule,
     HrModule,
     AppointmentsModule,
     OperationsModule,
@@ -78,26 +86,32 @@ import { ObservabilityModule } from "./observability/observability.module";
     IntegrationsModule,
     AssistantModule,
     ClinicalModule,
+    RxShareModule,
     SchedulingModule,
     FrontDeskModule,
     BillingModule,
     ComplianceModule,
+    ExportsModule,
     MessagingModule,
     ClinicAiModule,
     MarketsModule,
     FeatureFlagsModule,
     ProvidersModule,
-    FiscalDevicesModule,
     PlansModule,
     EntitlementsModule,
     SignupModule,
     OnboardingModule,
+    SalesRepsModule,
     LegalModule,
     KiorexModule,
     MarketplaceModule,
     ClinicianVerificationModule,
     CreditsModule,
     BillingPlatformModule,
+    UsageModule,
+    CohortsModule,
+    GrowthModule,
+    PushModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: PrivilegedMfaGuard }],
 })

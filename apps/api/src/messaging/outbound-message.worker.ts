@@ -3,10 +3,12 @@ import { MessageChannel, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { nextRetryAt, workerStatusForFailure } from "./whatsapp-failure-policy";
 import { resolveMarketTemplate, whatsAppConfigFromMarket } from "./whatsapp-market-config";
-import { DEFAULT_REMINDER_QUICK_REPLIES } from "./whatsapp-reply-payloads";
+import { DEFAULT_REMINDER_QUICK_REPLIES, WAITLIST_OFFER_QUICK_REPLIES, WAITLIST_OFFER_TEMPLATE_KEY } from "./whatsapp-reply-payloads";
 import { resolveMarketForTenant } from "../markets/market-resolver";
 import { WhatsAppSendService } from "./whatsapp-send.service";
 import { MessagingConsentService } from "../patients/messaging-consent.service";
+import { UsageMeterService } from "../usage/usage-meter.service";
+import { UsageMetric } from "@prisma/client";
 
 const POLL_MS = 15_000;
 const BATCH = 25;
@@ -20,6 +22,7 @@ export class OutboundMessageWorker implements OnModuleInit, OnModuleDestroy {
     private readonly prisma: PrismaService,
     private readonly whatsapp: WhatsAppSendService,
     private readonly consent: MessagingConsentService,
+    private readonly usage: UsageMeterService,
   ) {}
 
   onModuleInit() {
@@ -43,6 +46,13 @@ export class OutboundMessageWorker implements OnModuleInit, OnModuleDestroy {
       take: BATCH,
     });
     for (const row of rows) {
+      if (row.patientId && (await this.consent.isSamplePatient(row.tenantId, row.patientId))) {
+        await this.prisma.outboundMessage.update({
+          where: { id: row.id },
+          data: { status: "FAILED", failureClass: "POLICY", error: "Sample patient — messages are never sent" },
+        });
+        continue;
+      }
       if (row.channel === MessageChannel.WHATSAPP) {
         await this.processWhatsApp(row);
       } else {
@@ -69,6 +79,7 @@ export class OutboundMessageWorker implements OnModuleInit, OnModuleDestroy {
     toPhone: string;
     body: string;
     attemptCount: number;
+    metadata: unknown;
   }): Promise<void> {
     if (row.patientId) {
       try {
@@ -104,9 +115,17 @@ export class OutboundMessageWorker implements OnModuleInit, OnModuleDestroy {
     const quickReplies =
       row.templateKey === "appointment_reminder_whatsapp"
         ? marketTpl?.quickReplyButtons ?? [...DEFAULT_REMINDER_QUICK_REPLIES]
-        : marketTpl?.quickReplyButtons;
+        : row.templateKey === WAITLIST_OFFER_TEMPLATE_KEY
+          ? marketTpl?.quickReplyButtons ?? [...WAITLIST_OFFER_QUICK_REPLIES]
+          : marketTpl?.quickReplyButtons;
+    const meta =
+      row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+        ? (row.metadata as Record<string, unknown>)
+        : {};
     const result = await this.whatsapp.sendTemplateForTenant(row.tenantId, row.templateKey, row.toPhone, variables, {
       quickReplies,
+      documentLink: typeof meta.documentLink === "string" ? meta.documentLink : undefined,
+      documentFilename: typeof meta.documentFilename === "string" ? meta.documentFilename : undefined,
     });
     if (result.ok) {
       await this.prisma.outboundMessage.update({
@@ -123,6 +142,7 @@ export class OutboundMessageWorker implements OnModuleInit, OnModuleDestroy {
           nextRetryAt: null,
         },
       });
+      await this.usage.incrementOnce(row.tenantId, UsageMetric.WHATSAPP_MESSAGES, `outbound:${row.id}`);
       return;
     }
     const status = workerStatusForFailure(result.retryable, attempt);

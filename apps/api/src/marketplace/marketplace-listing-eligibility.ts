@@ -20,6 +20,8 @@ export type MarketplaceListingEligibilityInput = {
   hasAvailability: boolean;
   profileCompletenessPercent: number;
   ownerPaused?: boolean;
+  /** SB-05: Lite commission invoice unpaid past the market pause window. */
+  kiorexBillingPaused?: boolean;
 };
 
 export type MarketplaceListingEligibility = {
@@ -41,7 +43,10 @@ export function evaluateMarketplaceListingEligibility(
   if (input.ownerPaused) {
     blockers.push(MARKETPLACE_BLOCKER.OWNER);
   }
-  if (input.subscriptionStatus && BILLING_BLOCK_STATUSES.has(input.subscriptionStatus)) {
+  if (
+    input.kiorexBillingPaused ||
+    (input.subscriptionStatus && BILLING_BLOCK_STATUSES.has(input.subscriptionStatus))
+  ) {
     blockers.push(MARKETPLACE_BLOCKER.BILLING);
   }
   if (input.verificationStatus !== VerificationStatus.VERIFIED) {

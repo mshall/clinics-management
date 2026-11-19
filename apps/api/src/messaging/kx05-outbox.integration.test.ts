@@ -41,10 +41,12 @@ describe("KX-05 transactional outbox dispatcher", () => {
     });
 
     const dispatcher = new OutboxDispatcherService(prismaSvc, new OutboxDeliveryService(prismaSvc));
-    const batch = await dispatcher.processBatch(5);
-    assert.ok(batch.processed >= 1);
-
-    const row = await prisma.outboxEvent.findUniqueOrThrow({ where: { id: eventId } });
+  let row = await prisma.outboxEvent.findUniqueOrThrow({ where: { id: eventId } });
+  for (let i = 0; i < 30 && row.status === OUTBOX_STATUS.PENDING; i++) {
+    await dispatcher.processBatch(25);
+    row = await prisma.outboxEvent.findUniqueOrThrow({ where: { id: eventId } });
+  }
+  assert.ok(row.attempts >= 1, "dispatcher should have attempted delivery");
     assert.notEqual(row.status, OUTBOX_STATUS.SENT);
     assert.ok(row.attempts >= 1);
     assert.equal(row.status, OUTBOX_STATUS.FAILED);

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiGet, apiPatch, apiPost } from "@/lib/http";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
+import { PlatformPriceMigrationsCard, PriceImpactPanel, type PriceImpactPreview } from "./platform-price-impact";
 
 type PlanRow = {
   id: string;
@@ -48,6 +49,7 @@ export function PlatformPlansTab() {
     extraClinicianAmount: "",
     newVersion: true,
   });
+  const [impact, setImpact] = useState<PriceImpactPreview | null>(null);
 
   const plansQuery = useQuery({
     queryKey: ["platform", "plans"],
@@ -82,32 +84,52 @@ export function PlatformPlansTab() {
       apiPost(`/api/v1/admin/platform/plans/${encodeURIComponent(payload.planId)}/prices`, payload.body),
     onSuccess: () => {
       toast.success(t("platform.plans.priceSaved", "Price version saved"));
+      void qc.invalidateQueries({ queryKey: ["platform", "plans", "price-migrations"] });
       setPriceDraft((d) => ({ ...d, amount: "", extraClinicianAmount: "" }));
+      setImpact(null);
       void qc.invalidateQueries({ queryKey: ["platform", "plans"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const previewMut = useMutation({
+    mutationFn: (payload: { planId: string; body: Record<string, unknown> }) =>
+      apiPost<{ impact: PriceImpactPreview }>(
+        `/api/v1/admin/platform/plans/${encodeURIComponent(payload.planId)}/prices`,
+        { ...payload.body, preview: true },
+      ),
+    onSuccess: (data) => setImpact(data.impact),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const plans = plansQuery.data ?? [];
 
-  const submitPrice = () => {
-    if (!selectedPlanId || !priceDraft.marketId || !priceDraft.amount.trim()) return;
+  const draftBody = (): Record<string, unknown> | null => {
+    if (!selectedPlanId || !priceDraft.marketId || !priceDraft.amount.trim()) return null;
     const market = marketsById.get(priceDraft.marketId);
-    priceMut.mutate({
-      planId: selectedPlanId,
-      body: {
-        marketId: priceDraft.marketId,
-        currency: market?.defaultCurrency ?? "EGP",
-        interval: priceDraft.interval,
-        unit: priceDraft.unit,
-        amount: Number(priceDraft.amount),
-        includedClinicians: Number(priceDraft.includedClinicians || 1),
-        extraClinicianAmount: priceDraft.extraClinicianAmount.trim()
-          ? Number(priceDraft.extraClinicianAmount)
-          : null,
-        newVersion: priceDraft.newVersion,
-      },
-    });
+    if (!market) return null;
+    return {
+      marketId: priceDraft.marketId,
+      currency: market.defaultCurrency,
+      interval: priceDraft.interval,
+      unit: priceDraft.unit,
+      amount: Number(priceDraft.amount),
+      includedClinicians: Number(priceDraft.includedClinicians || 1),
+      extraClinicianAmount: priceDraft.extraClinicianAmount.trim() ? Number(priceDraft.extraClinicianAmount) : null,
+      newVersion: priceDraft.newVersion,
+    };
+  };
+
+  const submitPrice = () => {
+    const body = draftBody();
+    if (!selectedPlanId || !body) return;
+    priceMut.mutate({ planId: selectedPlanId, body });
+  };
+
+  const previewPrice = () => {
+    const body = draftBody();
+    if (!selectedPlanId || !body) return;
+    previewMut.mutate({ planId: selectedPlanId, body });
   };
 
   return (
@@ -153,7 +175,10 @@ export function PlatformPlansTab() {
                         type="button"
                         size="sm"
                         variant={selectedPlanId === plan.id ? "default" : "outline"}
-                        onClick={() => setSelectedPlanId(plan.id)}
+                        onClick={() => {
+                          setSelectedPlanId(plan.id);
+                          setImpact(null);
+                        }}
                       >
                         {t("platform.plans.addPrice", "Add price")}
                       </Button>
@@ -254,14 +279,24 @@ export function PlatformPlansTab() {
                 onChange={(e) => setPriceDraft((d) => ({ ...d, extraClinicianAmount: e.target.value }))}
               />
             </div>
-            <div className="sm:col-span-2">
+            <div className="flex flex-wrap gap-2 sm:col-span-2">
+              <Button type="button" variant="outline" disabled={previewMut.isPending} onClick={previewPrice}>
+                {t("platform.plans.previewImpact")}
+              </Button>
               <Button type="button" disabled={priceMut.isPending} onClick={submitPrice}>
                 {t("platform.plans.publishPrice", "Publish price version")}
               </Button>
             </div>
+            {impact ? (
+              <div className="sm:col-span-2">
+                <PriceImpactPanel impact={impact} />
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       ) : null}
+
+      <PlatformPriceMigrationsCard />
     </div>
   );
 }

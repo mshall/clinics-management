@@ -8,6 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiGet, apiPost } from "@/lib/http";
+import { AdminKiorexFreeProgressCard } from "./admin-kiorex-free-progress-card";
+import { AdminLiteKiorexFeesCard } from "./admin-lite-kiorex-fees-card";
+import { AdminNoShowGuaranteeCard } from "./admin-no-show-guarantee-card";
+import { AdminReferralInviteCard } from "./admin-referral-invite-card";
+import { AdminSpecialtyPacksCard } from "./admin-specialty-packs-card";
+import { PrintSettingsCard } from "./print-settings-card";
+import { useUpgradePaywallStore } from "@/stores/upgrade-paywall-store";
+import { PLAN_UPGRADE_REQUIRED } from "@/lib/plan-upgrade-constants";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import {
   Table,
@@ -49,6 +57,21 @@ type SubscriptionDto = {
   nextInvoicePreview: { currency: string; subtotal: string; description: string } | null;
 };
 
+type UsageMetricSnapshot = {
+  metric: string;
+  quantity: number;
+  limit: number;
+  percent: number;
+  atLimit: boolean;
+  nearLimit: boolean;
+};
+
+type UsageSummaryDto = {
+  periodKey: string;
+  whatsappPaused: boolean;
+  metrics: UsageMetricSnapshot[];
+};
+
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline" | "muted"> = {
   TRIALING: "secondary",
   ACTIVE: "default",
@@ -61,10 +84,22 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline" | "mute
 
 export function AdminOrgBillingPanel({ canManage }: { canManage: boolean }) {
   const { t, i18n } = useTranslation();
+  const showPaywall = useUpgradePaywallStore((s) => s.show);
   const qc = useQueryClient();
   const [planKey, setPlanKey] = useState("PRO");
   const [interval, setInterval] = useState("MONTHLY");
   const [seats, setSeats] = useState("1");
+  const [planPreview, setPlanPreview] = useState<{
+    proration?: {
+      netDue: string;
+      credit: string;
+      charge: string;
+      effectiveAt: string;
+      timing: string;
+      currency: string;
+    };
+    requiresClinicianSelection?: boolean;
+  } | null>(null);
 
   const subQuery = useQuery({
     queryKey: ["billing", "subscription"],
@@ -76,6 +111,11 @@ export function AdminOrgBillingPanel({ canManage }: { canManage: boolean }) {
     queryFn: () => apiGet<CreditWalletDto>("/api/v1/billing/wallet?page=1&pageSize=25"),
   });
 
+  const usageQuery = useQuery({
+    queryKey: ["billing", "usage"],
+    queryFn: () => apiGet<UsageSummaryDto>("/api/v1/billing/usage"),
+  });
+
   const trialCountdown = useMemo(() => {
     const end = subQuery.data?.trialEndsAt;
     if (!end) return null;
@@ -84,6 +124,20 @@ export function AdminOrgBillingPanel({ canManage }: { canManage: boolean }) {
     const days = Math.ceil(ms / 86_400_000);
     return t("admin.billing.trialDaysLeft", "{{count}} day(s) left in trial", { count: days });
   }, [subQuery.data?.trialEndsAt, t]);
+
+  const previewMut = useMutation({
+    mutationFn: () =>
+      apiPost<typeof planPreview>("/api/v1/billing/subscription/preview-change", {
+        planKey,
+        interval,
+        seats: Number(seats),
+      }),
+    onSuccess: (data) => {
+      setPlanPreview(data);
+      toast.message(t("admin.billing.previewReady"));
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const changeMut = useMutation({
     mutationFn: (confirm: boolean) =>
@@ -95,10 +149,9 @@ export function AdminOrgBillingPanel({ canManage }: { canManage: boolean }) {
       }),
     onSuccess: (data) => {
       if (data?.applied) {
+        setPlanPreview(null);
         toast.success(t("admin.billing.planChanged", "Plan updated"));
         void qc.invalidateQueries({ queryKey: ["billing", "subscription"] });
-      } else {
-        toast.message(t("admin.billing.previewReady", "Preview ready — confirm to apply"));
       }
     },
     onError: (e: Error) => toast.error(e.message),
@@ -118,9 +171,15 @@ export function AdminOrgBillingPanel({ canManage }: { canManage: boolean }) {
     sub && i18n.language.startsWith("ar") ? sub.plan.nameAr || sub.plan.nameEn : sub?.plan.nameEn;
 
   const wallet = walletQuery.data;
+  const isLite = sub?.plan.key === "LITE";
 
   return (
-    <div className="space-y-4">
+  <div className="space-y-4">
+    {isLite ? <AdminLiteKiorexFeesCard /> : <AdminKiorexFreeProgressCard />}
+    <AdminReferralInviteCard />
+    <AdminNoShowGuaranteeCard />
+    <AdminSpecialtyPacksCard />
+    <PrintSettingsCard />
     <Card>
       <CardHeader>
         <CardTitle className="text-base">{t("admin.billing.title", "Plan & billing")}</CardTitle>
@@ -147,7 +206,9 @@ export function AdminOrgBillingPanel({ canManage }: { canManage: boolean }) {
             <p className="text-sm text-muted-foreground">
               {t("admin.billing.periodEnd", "Current period ends")}: {new Date(sub.currentPeriodEnd).toLocaleString()}
             </p>
-            {sub.nextInvoicePreview ? (
+            {isLite ? (
+              <p className="text-sm">{t("admin.billing.kiorex.liteFees.noSubscription")}</p>
+            ) : sub.nextInvoicePreview ? (
               <p className="text-sm">
                 {t("admin.billing.nextInvoice", "Next invoice preview")}: {sub.nextInvoicePreview.subtotal}{" "}
                 {sub.nextInvoicePreview.currency} — {sub.nextInvoicePreview.description}
@@ -155,7 +216,7 @@ export function AdminOrgBillingPanel({ canManage }: { canManage: boolean }) {
             ) : null}
             {canManage ? (
               <div className="space-y-3 rounded border border-border p-3">
-                <p className="text-sm font-medium">{t("admin.billing.changePlan", "Change plan")}</p>
+                <p className="text-sm font-medium">{t("admin.billing.comparePlans")}</p>
                 <div className="grid gap-2 sm:grid-cols-3">
                   <PlanKeySelect planKey={planKey} setPlanKey={setPlanKey} />
                   <div className="space-y-1">
@@ -170,11 +231,42 @@ export function AdminOrgBillingPanel({ canManage }: { canManage: boolean }) {
                     <Input type="number" min={1} value={seats} onChange={(e) => setSeats(e.target.value)} />
                   </div>
                 </div>
+                {planPreview?.proration ? (
+                  <div className="space-y-1 rounded-md bg-muted/50 p-2 text-sm">
+                    <p>
+                      {t("admin.billing.effectiveAt")}:{" "}
+                      {planPreview.proration.timing === "PERIOD_END"
+                        ? t("admin.billing.periodEndChange")
+                        : new Date(planPreview.proration.effectiveAt).toLocaleString()}
+                    </p>
+                    {planPreview.proration.timing === "IMMEDIATE" ? (
+                      <>
+                        <p>
+                          {t("admin.billing.prorationCredit")}: {planPreview.proration.credit}{" "}
+                          {planPreview.proration.currency}
+                        </p>
+                        <p>
+                          {t("admin.billing.prorationCharge")}: {planPreview.proration.charge}{" "}
+                          {planPreview.proration.currency}
+                        </p>
+                        <p className="font-medium">
+                          {t("admin.billing.prorationDue")}: {planPreview.proration.netDue}{" "}
+                          {planPreview.proration.currency}
+                        </p>
+                      </>
+                    ) : null}
+                  </div>
+                ) : null}
                 <div className="flex flex-wrap gap-2">
-                  <Button type="button" size="sm" variant="outline" disabled={changeMut.isPending} onClick={() => changeMut.mutate(false)}>
+                  <Button type="button" size="sm" variant="outline" disabled={previewMut.isPending} onClick={() => previewMut.mutate()}>
                     {t("admin.billing.preview", "Preview")}
                   </Button>
-                  <Button type="button" size="sm" disabled={changeMut.isPending} onClick={() => changeMut.mutate(true)}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={changeMut.isPending || !planPreview}
+                    onClick={() => changeMut.mutate(true)}
+                  >
                     {t("admin.billing.confirmChange", "Confirm change")}
                   </Button>
                   {!sub.cancelAtPeriodEnd && sub.status !== "CANCELLED" ? (
@@ -188,6 +280,64 @@ export function AdminOrgBillingPanel({ canManage }: { canManage: boolean }) {
           </>
         ) : (
           <p className="text-sm text-muted-foreground">{t("admin.billing.none", "No subscription on file.")}</p>
+        )}
+      </CardContent>
+    </Card>
+
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{t("admin.billing.usage.title", "Monthly usage")}</CardTitle>
+        <CardDescription>{t("admin.billing.usage.hint")}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {usageQuery.isPending ? (
+          <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+        ) : usageQuery.data ? (
+          <>
+            {usageQuery.data.whatsappPaused ? (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-destructive">{t("admin.billing.usage.whatsappPaused")}</p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    showPaywall(
+                      { code: PLAN_UPGRADE_REQUIRED, entitlement: "whatsapp_reminders", requiredPlan: "PRO" },
+                      "usage-whatsapp-quota",
+                    )
+                  }
+                >
+                  {t("paywall.upgradeFromQuota", "Upgrade plan")}
+                </Button>
+              </div>
+            ) : null}
+            <ul className="space-y-2 text-sm">
+              {usageQuery.data.metrics
+                .filter((m) => ["WHATSAPP_MESSAGES", "AI_ASSISTANT_REQUESTS"].includes(m.metric))
+                .map((m) => (
+                  <li key={m.metric} className="space-y-1">
+                    <div className="flex justify-between gap-2">
+                      <span>{t(`admin.billing.usage.metric.${m.metric}`, m.metric)}</span>
+                      <span className={m.atLimit ? "text-destructive font-medium" : m.nearLimit ? "text-amber-700" : ""}>
+                        {m.quantity} / {m.limit}
+                      </span>
+                    </div>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className={`h-full ${m.atLimit ? "bg-destructive" : m.nearLimit ? "bg-amber-500" : "bg-primary"}`}
+                        style={{ width: `${Math.min(100, m.percent)}%` }}
+                      />
+                    </div>
+                  </li>
+                ))}
+            </ul>
+            <p className="text-xs text-muted-foreground">
+              {t("admin.billing.usage.period", { period: usageQuery.data.periodKey })}
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">{t("admin.billing.usage.loadError")}</p>
         )}
       </CardContent>
     </Card>

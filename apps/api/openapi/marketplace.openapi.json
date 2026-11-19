@@ -7,6 +7,179 @@
   },
   "servers": [{ "url": "/marketplace/v1" }],
   "paths": {
+    "/deposit-links/{token}/paid": {
+      "post": {
+        "operationId": "marketplaceDepositLinkPaid",
+        "summary": "Patient paid a clinic deposit link through Kiorex Pay (FS-04); held until check-in, applied via postRevenue",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "amount",
+                  "paymentRef"
+                ],
+                "properties": {
+                  "amount": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Must equal the requested deposit"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "paymentRef": {
+                    "type": "string",
+                    "maxLength": 120,
+                    "description": "Kiorex payment id — idempotency key"
+                  },
+                  "paidAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Deposit now HELD (replay returns the same deposit)"
+          },
+          "400": {
+            "description": "DEPOSIT_AMOUNT_MISMATCH, DEPOSIT_CURRENCY_MISMATCH or DEPOSIT_LINK_EXPIRED"
+          },
+          "404": {
+            "description": "Payment link not found"
+          }
+        }
+      }
+    },
+    "/bookings/{externalRef}/deposit-paid": {
+      "post": {
+        "operationId": "marketplaceDepositPaid",
+        "summary": "Kiorex Pay collected a deposit for this booking; recorded as a held deposit, applied at check-in via postRevenue (KX-07)",
+        "parameters": [
+          {
+            "name": "externalRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "amount",
+                  "paymentRef"
+                ],
+                "properties": {
+                  "amount": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "currency": {
+                    "type": "string",
+                    "description": "Must match the clinic market currency"
+                  },
+                  "paymentRef": {
+                    "type": "string",
+                    "maxLength": 120,
+                    "description": "Kiorex payment id — idempotency key"
+                  },
+                  "paidAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Deposit (idempotent replay returns the same deposit)"
+          },
+          "400": {
+            "description": "DEPOSIT_EXCEEDS_FEE or DEPOSIT_CURRENCY_MISMATCH"
+          },
+          "404": {
+            "description": "Booking not found"
+          }
+        }
+      }
+    },
+    "/payouts": {
+      "post": {
+        "operationId": "marketplaceRecordPayout",
+        "summary": "Kiorex paid out collected deposits to the clinic (KX-07 reconciliation)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "payoutRef",
+                  "amount"
+                ],
+                "properties": {
+                  "payoutRef": {
+                    "type": "string",
+                    "maxLength": 120,
+                    "description": "Idempotency key"
+                  },
+                  "clinicId": {
+                    "type": "string"
+                  },
+                  "amount": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "paidAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "depositPaymentRefs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "paymentRefs of the deposits this payout covers"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payout recorded (idempotent)"
+          }
+        }
+      }
+    },
     "/auth/verify": {
       "get": {
         "operationId": "marketplaceAuthVerify",
@@ -88,7 +261,27 @@
       "post": {
         "operationId": "marketplaceCreateBooking",
         "summary": "Idempotent Kiorex booking",
-        "responses": { "201": { "description": "Created" } }
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "channel": {
+                    "type": "string",
+                    "enum": ["MARKETPLACE", "CLINIC_LINK"],
+                    "description": "CLINIC_LINK when booked from the clinic's own booking page (KX-09); never commissioned"
+                  },
+                  "bookingPageSlug": { "type": "string", "description": "Slug of the clinic/doctor booking page (KX-09)" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Created" },
+          "400": { "description": "BOOKING_PAGE_MISMATCH when the slug belongs to another clinic or doctor" }
+        }
       }
     },
     "/bookings/{externalRef}": {
@@ -97,6 +290,127 @@
         "summary": "Get booking by external ref",
         "parameters": [{ "name": "externalRef", "in": "path", "required": true, "schema": { "type": "string" } }],
         "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/bookings/{externalRef}/cancel": {
+      "post": {
+        "operationId": "marketplaceCancelBooking",
+        "summary": "Patient cancels a booking; clinic policy enforced, deposit refund decided server-side (KX-06)",
+        "parameters": [{ "name": "externalRef", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "type": "object", "properties": { "reason": { "type": "string", "maxLength": 500 } } }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Cancelled; body includes depositRefundable" },
+          "404": { "description": "Booking not found" },
+          "422": { "description": "CANCELLATION_WINDOW_CLOSED or BOOKING_NOT_CHANGEABLE" }
+        }
+      }
+    },
+    "/analytics/profile-views": {
+      "post": {
+        "operationId": "marketplaceSyncProfileViews",
+        "summary": "Kiorex pushes daily profile views per doctor; re-sending a day replaces it (KX-10)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["clinicId", "items"],
+                "properties": {
+                  "clinicId": { "type": "string" },
+                  "items": {
+                    "type": "array",
+                    "maxItems": 400,
+                    "items": {
+                      "type": "object",
+                      "required": ["clinicianId", "date", "views"],
+                      "properties": {
+                        "clinicianId": { "type": "string" },
+                        "date": { "type": "string", "format": "date" },
+                        "views": { "type": "integer", "minimum": 0 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "accepted count and rejected items" } }
+      }
+    },
+    "/reviews/aggregate": {
+      "post": {
+        "operationId": "marketplaceSyncReviews",
+        "summary": "Kiorex pushes a doctor's rating aggregate and recent verified reviews (KX-08)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["clinicId", "clinicianId", "averageRating", "reviewCount"],
+                "properties": {
+                  "clinicId": { "type": "string" },
+                  "clinicianId": { "type": "string" },
+                  "averageRating": { "type": "number", "minimum": 0, "maximum": 5 },
+                  "reviewCount": { "type": "integer", "minimum": 0 },
+                  "reviews": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["reviewId", "appointmentId", "rating", "createdAt"],
+                      "properties": {
+                        "reviewId": { "type": "string" },
+                        "appointmentId": { "type": "string" },
+                        "rating": { "type": "integer", "minimum": 1, "maximum": 5 },
+                        "comment": { "type": "string" },
+                        "createdAt": { "type": "string", "format": "date-time" },
+                        "moderationStatus": { "type": "string", "enum": ["VISIBLE", "HIDDEN"] }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "{ accepted, rejected[{ reviewId, reason: NOT_A_COMPLETED_VISIT | INVALID }] }" }
+        }
+      }
+    },
+    "/bookings/{externalRef}/reschedule": {
+      "post": {
+        "operationId": "marketplaceRescheduleBooking",
+        "summary": "Patient reschedules a booking; clinic policy enforced (KX-06)",
+        "parameters": [{ "name": "externalRef", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["startsAt"],
+                "properties": {
+                  "startsAt": { "type": "string", "format": "date-time" },
+                  "endsAt": { "type": "string", "format": "date-time" },
+                  "holdId": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Rescheduled booking" },
+          "409": { "description": "SLOT_TAKEN" },
+          "422": { "description": "RESCHEDULE_WINDOW_CLOSED, RESCHEDULE_LIMIT_REACHED or BOOKING_NOT_CHANGEABLE" }
+        }
       }
     },
     "/appointments": {
@@ -127,6 +441,51 @@
           { "name": "clinicId", "in": "query", "required": true, "schema": { "type": "string" } }
         ],
         "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/patients/{id}/consents": {
+      "post": {
+        "operationId": "marketplaceUpsertPatientRecordShareConsents",
+        "summary": "KX-11 — upsert record-share consent scopes from the Kiorex patient app",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["consents"],
+                "properties": {
+                  "consents": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["scope", "granted"],
+                      "properties": {
+                        "scope": {
+                          "type": "string",
+                          "enum": ["VISIT_SUMMARY", "PRESCRIPTIONS", "LAB_RESULTS", "SHARE_WITH_OTHER_CLINICS"]
+                        },
+                        "granted": { "type": "boolean" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Updated consent scopes" },
+          "404": { "description": "Patient not found" }
+        }
       }
     }
   },

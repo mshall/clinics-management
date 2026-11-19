@@ -2,6 +2,7 @@ import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { VitePWA } from "vite-plugin-pwa";
 
 function loadBuildId(): string {
   const idFile = path.resolve(__dirname, ".build-id");
@@ -53,7 +54,49 @@ export default defineConfig({
     "import.meta.env.VITE_BUILD_ID": JSON.stringify(loadBuildId()),
     "import.meta.env.VITE_BUILD_BUILT_AT": JSON.stringify(loadBuildBuiltAt()),
   },
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: "autoUpdate",
+      includeAssets: ["logo.svg", "logo.png"],
+      manifest: {
+        name: "Kiorly",
+        short_name: "Kiorly",
+        description: "Kiorly clinic management — اليوم / Today",
+        lang: "en",
+        theme_color: "#0f766e",
+        background_color: "#0f766e",
+        display: "standalone",
+        orientation: "portrait-primary",
+        start_url: "/",
+        scope: "/",
+        icons: [
+          { src: "/logo.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: "/logo.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+          { src: "/logo.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+        ],
+      },
+      workbox: {
+        navigateFallback: "/index.html",
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) =>
+              url.pathname.startsWith("/api/v1/dashboards/today") ||
+              url.pathname.startsWith("/api/v1/appointments") ||
+              url.pathname.startsWith("/api/v1/patients"),
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "kiorly-today-offline",
+              networkTimeoutSeconds: 4,
+              expiration: { maxEntries: 64, maxAgeSeconds: 60 * 60 * 12 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
+      },
+      devOptions: { enabled: false },
+    }),
+  ],
   build: {
     rollupOptions: {
       output: {

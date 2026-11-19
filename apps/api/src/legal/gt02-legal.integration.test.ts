@@ -12,6 +12,10 @@ import { LegalAcceptanceService } from "./legal-acceptance.service";
 import { legalAcceptancesPayload, requiredLegalForSignup } from "./legal-catalog";
 import { SubscriptionService } from "../subscriptions/subscription.service";
 import type { JwtUser } from "../auth/jwt-user";
+import { CohortService } from "../cohorts/cohort.service";
+import { BillingSeatService } from "../subscriptions/billing-seat.service";
+import { ReferralAttributionService } from "../growth/referral-attribution.service";
+import { ReferralCodeService } from "../growth/referral-code.service";
 
 const prisma = new PrismaClient();
 
@@ -20,8 +24,16 @@ function services() {
   const audit = new AuditService(prismaSvc);
   const legal = new LegalAcceptanceService(prismaSvc, audit);
   const markets = new MarketsService(prismaSvc, {} as FeatureFlagsService, {} as MarketProvisionService);
-  const provision = new SignupProvisionService(prismaSvc, markets, legal);
-  const subs = new SubscriptionService(prismaSvc, legal);
+  const referralCodes = new ReferralCodeService(prismaSvc);
+  const provision = new SignupProvisionService(
+    prismaSvc,
+    markets,
+    legal,
+    new CohortService(),
+    referralCodes,
+    new ReferralAttributionService(referralCodes),
+  );
+  const subs = new SubscriptionService(prismaSvc, legal, new BillingSeatService(prismaSvc));
   return { legal, provision, subs };
 }
 
@@ -80,11 +92,20 @@ describe("GT-02 legal acceptance", () => {
   });
 
   it("blocks paid plan change without current legal acceptances", async () => {
-    const { subs, legal } = services();
-    const owner = await prisma.user.findFirstOrThrow({
-      where: { isTenantOwner: true, tenantId: { not: null } },
+    const { subs, legal, provision } = services();
+    const market = await prisma.market.findFirstOrThrow({ where: { code: "EG", status: "LIVE" } });
+    const suffix = `${Date.now()}`;
+    const created = await provision.provision({
+      phone: `2014${String(suffix).slice(-8)}`,
+      marketId: market.id,
+      profile: { displayName: "GT02 Change", email: `gt02.change.${suffix}@example.com`, password: "demopass8" },
+      specialty: "GENERAL_MEDICINE",
+      clinic: { nameEn: `GT02 Change ${suffix}`, city: "Cairo" },
+      planKey: PlanKey.LITE,
+      legalAcceptances: legalAcceptancesPayload(requiredLegalForSignup(PlanKey.LITE)),
     });
-    const tenantId = owner.tenantId!;
+    const tenantId = created.tenantId;
+    const owner = await prisma.user.findUniqueOrThrow({ where: { id: created.userId } });
     await prisma.legalAcceptance.deleteMany({ where: { userId: owner.id, tenantId } });
     const jwt: JwtUser = {
       userId: owner.id,
@@ -111,5 +132,6 @@ describe("GT-02 legal acceptance", () => {
       confirm: true,
     });
     assert.equal((preview as { applied?: boolean }).applied, true);
+    await prisma.tenant.delete({ where: { id: tenantId } });
   });
 });

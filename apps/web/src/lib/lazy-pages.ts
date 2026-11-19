@@ -11,6 +11,7 @@ export const MarketplaceListingProfilePage = lazyNamed(
   () => import("@/features/clinics/marketplace-listing-profile-page"),
   "MarketplaceListingProfilePage",
 );
+export const KiorexPage = lazyNamed(() => import("@/features/kiorex/kiorex-page"), "KiorexPage");
 export const DashboardPage = lazyNamed(() => import("@/features/dashboard/dashboard-page"), "DashboardPage");
 export const PatientsPage = lazyNamed(() => import("@/features/patients/patients-page"), "PatientsPage");
 export const PatientDetailPage = lazyNamed(
@@ -37,6 +38,20 @@ export const FrontDeskBoardPage = lazyNamed(
   () => import("@/features/front-desk/front-desk-board-page"),
   "FrontDeskBoardPage",
 );
+export const CashDrawerPage = lazyNamed(() => import("@/features/front-desk/cash-drawer-page"), "CashDrawerPage");
+export const InstallmentsPage = lazyNamed(() => import("@/features/front-desk/installments-page"), "InstallmentsPage");
+export const ClaimsWorkspacePage = lazyNamed(
+  () => import("@/features/front-desk/claims-workspace-page"),
+  "ClaimsWorkspacePage",
+);
+export const AiReceptionistInboxPage = lazyNamed(
+  () => import("@/features/messaging/ai-receptionist-inbox-page"),
+  "AiReceptionistInboxPage",
+);
+export const Rp04FinanceReportsPage = lazyNamed(
+  () => import("@/features/reports/rp04-finance-reports-page"),
+  "Rp04FinanceReportsPage",
+);
 export const WaitingRoomPage = lazyNamed(
   () => import("@/features/front-desk/waiting-room-page"),
   "WaitingRoomPage",
@@ -55,12 +70,17 @@ export const EmployeeProfilePage = lazyNamed(
   "EmployeeProfilePage",
 );
 export const ReportsPage = lazyNamed(() => import("@/features/reports/reports-page"), "ReportsPage");
+export const DataPrivacyPage = lazyNamed(
+  () => import("@/features/privacy/data-privacy-page"),
+  "DataPrivacyPage",
+);
 export const CustomerSupportPage = lazyNamed(
   () => import("@/features/support/customer-support-page"),
   "CustomerSupportPage",
 );
 export const AdminPage = lazyNamed(() => import("@/features/admin/admin-page"), "AdminPage");
 export const GuideBookPage = lazyNamed(() => import("@/features/guide/guide-book-page"), "GuideBookPage");
+export const HelpCentrePage = lazyNamed(() => import("@/features/help/help-centre-page"), "HelpCentrePage");
 export const PlatformOverviewPage = lazyNamed(
   () => import("@/features/platform/platform-overview-page"),
   "PlatformOverviewPage",
@@ -72,6 +92,10 @@ export const PlatformMarketsTab = lazyNamed(
 export const PlatformOrganizationsTab = lazyNamed(
   () => import("@/features/platform/platform-organizations-tab"),
   "PlatformOrganizationsTab",
+);
+export const PlatformTenantConsolePage = lazyNamed(
+  () => import("@/features/platform/platform-tenant-console-page"),
+  "PlatformTenantConsolePage",
 );
 export const PlatformUsersTab = lazyNamed(
   () => import("@/features/platform/platform-users-tab"),
@@ -96,6 +120,11 @@ export const PlatformPlansTab = lazyNamed(
 export const PlatformVerificationsTab = lazyNamed(
   () => import("@/features/platform/platform-verifications-tab"),
   "PlatformVerificationsTab",
+);
+
+export const PlatformCommissionDisputesTab = lazyNamed(
+  () => import("@/features/platform/platform-commission-disputes-tab"),
+  "PlatformCommissionDisputesTab",
 );
 export const ClinicianVerificationPage = lazyNamed(
   () => import("@/features/clinicians/clinician-verification-page"),

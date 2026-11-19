@@ -89,6 +89,7 @@ const ROLE_KEYS: Record<DemoRole, NavItemKey[]> = {
     "profile",
   ],
   clinic_assistant: ["patients", "appointments", "encounters", "operations", "expenses", "revenue", "profile"],
+  sales_rep: ["profile"],
 };
 
 /** Tenant organization roles used when unioning all assignable sidebar permissions. */
@@ -332,6 +333,7 @@ export function defaultHomeForRole(
   employeePrivilegeGrants?: EmployeePrivilegeGrantSummary[] | null,
 ): string {
   if (!role) return "/";
+  if (role === "sales_rep") return "/rep";
   const keys = effectiveNavKeys(role, navTabKeys, roleNavTabKeys, employeePrivilegeGrants);
   for (const k of HOME_PRIORITY) {
     if (keys.has(k)) return NAV_ITEM_PATH[k];

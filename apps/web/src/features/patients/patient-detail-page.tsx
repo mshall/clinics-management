@@ -12,7 +12,10 @@ import {
   Scissors,
   Sparkles,
   Users,
+  Wallet,
 } from "lucide-react";
+import { PatientMoneySection } from "@/features/patients/patient-money-section";
+import { canUsePatientMoney } from "@/lib/patient-money-policy";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -24,6 +27,7 @@ import { PatientClinicalDocuments } from "@/components/patient-clinical-document
 import { PatientInvoicesSection } from "@/features/invoices/patient-invoices-section";
 import { OutboundMessageLog } from "@/features/messaging/outbound-message-log";
 import { PatientMessagingConsentCard } from "@/features/patients/patient-messaging-consent-card";
+import { PatientRecordShareConsentCard } from "@/features/patients/patient-record-share-consent-card";
 import { PatientEncountersSection } from "@/features/patients/patient-encounters-section";
 import { PatientOperationsSection } from "@/features/patients/patient-operations-section";
 import { PatientAllergiesSection } from "@/components/patient-allergies-section";
@@ -63,6 +67,7 @@ export function PatientDetailPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const role = useAuthStore((s) => s.user?.role);
+  const authUser = useAuthStore((s) => s.user);
   const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
   const navTabAccessModes = useAuthStore((s) => s.user?.navTabAccessModes);
   const roleNavTabKeys = useAuthStore((s) => s.user?.roleNavTabKeys);
@@ -80,7 +85,9 @@ export function PatientDetailPage() {
     | "operations"
     | "medicalDocuments"
     | "invoices"
+    | "money"
     | "notifications";
+  const canViewMoney = canUsePatientMoney(authUser);
   const [profileTab, setProfileTab] = useState<ProfileTab>("overview");
   const [editOpen, setEditOpen] = useState(false);
   const [familyOpen, setFamilyOpen] = useState(false);
@@ -198,14 +205,14 @@ export function PatientDetailPage() {
   const patientAge = patient.dob ? calculateAgeFromDob(patient.dob) : null;
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-            <div className="flex items-start gap-4">
+    <div className="space-y-6 doctor-mobile-view">
+      <Card className="sticky top-14 z-[5] border-b md:static md:z-auto">
+        <CardContent className="pt-4 md:pt-6">
+          <div className="flex flex-col gap-4 md:gap-6 md:flex-row md:items-start md:justify-between">
+            <div className="flex items-start gap-3 md:gap-4">
               <div className="relative">
                 {avatarDataUrl ? (
-                  <img src={avatarDataUrl} alt={name} className="h-24 w-24 rounded-full border object-cover" />
+                  <img src={avatarDataUrl} alt={name} className="h-16 w-16 rounded-full border object-cover md:h-24 md:w-24" />
                 ) : (
                   <div className="flex h-24 w-24 items-center justify-center rounded-full border bg-muted text-xl font-semibold">
                     {name.slice(0, 1).toUpperCase()}
@@ -230,6 +237,11 @@ export function PatientDetailPage() {
                   <Badge variant="secondary" className="font-mono text-xs ltr-nums">
                     {patient.mrn}
                   </Badge>
+                  {patient.isSample ? (
+                    <Badge variant="outline" className="border-amber-400 text-amber-700 dark:text-amber-300" data-testid="sample-patient-badge">
+                      {t("help.sample.badge")}
+                    </Badge>
+                  ) : null}
                 </div>
                 <p className="text-muted-foreground">{patient.homeBranch ?? "—"}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
@@ -320,6 +332,12 @@ export function PatientDetailPage() {
             <Receipt className="h-4 w-4 shrink-0" aria-hidden />
             {t("patients.tabInvoices", "Invoices")}
           </TabsTrigger>
+          {canViewMoney ? (
+            <TabsTrigger value="money" className="gap-1.5" data-testid="patient-tab-money">
+              <Wallet className="h-4 w-4 shrink-0" aria-hidden />
+              {t("patientMoney.tab")}
+            </TabsTrigger>
+          ) : null}
           <TabsTrigger value="notifications" className="gap-1.5">
             <Bell className="h-4 w-4 shrink-0" aria-hidden />
             {t("patients.tabNotificationSettings", "Notification settings")}
@@ -504,8 +522,15 @@ export function PatientDetailPage() {
           <PatientInvoicesSection patientId={patient.id} clinicId={patient.homeBranchId} />
         </TabsContent>
 
+        {canViewMoney ? (
+          <TabsContent value="money" className="mt-0">
+            <PatientMoneySection patientId={patient.id} clinicId={patient.homeBranchId} />
+          </TabsContent>
+        ) : null}
+
         <TabsContent value="notifications" className="mt-0 space-y-6">
           <PatientMessagingConsentCard patientId={patient.id} />
+          <PatientRecordShareConsentCard patientId={patient.id} />
           <OutboundMessageLog patientId={patient.id} />
         </TabsContent>
       </Tabs>

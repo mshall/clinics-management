@@ -2,9 +2,9 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { PaymentMethod, Prisma, UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
-import { queueEtaReceipt } from "../compliance/eta-receipt-queue";
 import { resolveMarketForTenant } from "../markets/market-resolver";
 import { flattenBillingPaymentAllocations, sumExpectedCashAndCard } from "./billing-cash-close";
+import { signedMovement } from "./patient-money";
 
 const DISCOUNT_APPROVAL_THRESHOLD = 15;
 
@@ -133,13 +133,6 @@ export class BillingService {
       where: { id: body.clinicId, tenantId },
       select: { taxRegistrationNumber: true, invoiceVatPercent: true },
     });
-    const patient = await this.prisma.patient.findFirst({
-      where: { id: body.patientId, tenantId },
-      select: { firstNameEn: true, lastNameEn: true },
-    });
-    const buyerName = patient
-      ? `${patient.firstNameEn} ${patient.lastNameEn}`.trim() || undefined
-      : undefined;
     const currency = await this.resolveTenantCurrency(tenantId, body.currency);
 
     return this.prisma.$transaction(async (tx) => {
@@ -161,21 +154,6 @@ export class BillingService {
         },
         include: { allocations: true },
       });
-      if (body.submitEta !== false) {
-        await queueEtaReceipt(tx, {
-          tenantId,
-          clinicId: body.clinicId,
-          patientId: body.patientId,
-          paymentId: payment.id,
-          totalAmount: total,
-          currency: payment.currency,
-          vatPercent: Number(clinic?.invoiceVatPercent ?? 0),
-          description: `Billing payment ${payment.id.slice(0, 8)}…`,
-          clinicTaxRin: clinic?.taxRegistrationNumber,
-          billingPaymentMethods: body.allocations.map((a) => a.method),
-          buyerName,
-        });
-      }
       return payment;
     });
   }
@@ -196,16 +174,33 @@ export class BillingService {
     const dayEnd = new Date(day);
     dayEnd.setDate(dayEnd.getDate() + 1);
 
-    const payments = await this.prisma.billingPayment.findMany({
+    const dayPayments = await this.prisma.billingPayment.findMany({
       where: { tenantId, clinicId: body.clinicId, createdAt: { gte: day, lt: dayEnd } },
       include: { allocations: true },
     });
+    // a deposit turned into a payment at check-in already entered the drawer when it was taken
+    const fromDeposits = new Set(
+      (
+        await this.prisma.patientDeposit.findMany({
+          where: { tenantId, paymentId: { in: dayPayments.map((p) => p.id) } },
+          select: { paymentId: true },
+        })
+      ).map((d) => d.paymentId),
+    );
+    const payments = dayPayments.filter((p) => !fromDeposits.has(p.id));
     const flat = flattenBillingPaymentAllocations(
       payments.map((p) => ({
         allocations: p.allocations.map((a) => ({ method: a.method, amount: Number(a.amount) })),
       })),
     );
-    const { expectedCash, expectedCard } = sumExpectedCashAndCard(flat);
+    const movements = await this.prisma.cashMovement.findMany({
+      where: { tenantId, clinicId: body.clinicId, createdAt: { gte: day, lt: dayEnd }, sourceType: { not: "PAYMENT" } },
+      select: { direction: true, method: true, amount: true },
+    });
+    const { expectedCash, expectedCard } = sumExpectedCashAndCard([
+      ...flat,
+      ...movements.map((m) => ({ method: m.method, amount: signedMovement(m.direction, Number(m.amount)) })),
+    ]);
 
     return this.prisma.cashierShiftClose.create({
       data: {

@@ -22,7 +22,9 @@ const gateways = new PaymentGatewayRegistry();
 const paymentMethods = new KiorlyPaymentMethodsService(prismaSvc, gateways);
 const kiorlyPayments = new KiorlyPaymentService(prismaSvc, gateways, paymentMethods, {
   reconcileAfterPayment: async () => {},
-} as unknown as import("../subscriptions/dunning.service").DunningService);
+} as unknown as import("../subscriptions/dunning.service").DunningService, {
+  tryOnInvoiceFullyPaid: async () => {},
+} as unknown as import("../growth/referral-reward.service").ReferralRewardService);
 const invoices = new KiorlyInvoicesService(prismaSvc, creditWallet, kiorlyPayments);
 
 describe("SB-01 Kiorly invoices", () => {

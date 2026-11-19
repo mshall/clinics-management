@@ -34,7 +34,9 @@ describe("QA-02 Kiorly SaaS money path", () => {
   const gateways = new PaymentGatewayRegistry();
   const paymentMethods = new KiorlyPaymentMethodsService(prismaSvc, gateways);
   const dunningStub = { reconcileAfterPayment: async () => {} } as unknown as import("../subscriptions/dunning.service").DunningService;
-  const payments = new KiorlyPaymentService(prismaSvc, gateways, paymentMethods, dunningStub);
+  const payments = new KiorlyPaymentService(prismaSvc, gateways, paymentMethods, dunningStub, {
+    tryOnInvoiceFullyPaid: async () => {},
+  } as unknown as import("../growth/referral-reward.service").ReferralRewardService);
   const invoices = new KiorlyInvoicesService(prismaSvc, creditWallet, payments);
 
   before(async () => {

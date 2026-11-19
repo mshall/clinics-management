@@ -10,6 +10,7 @@ import {
 import { PrismaService } from "../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { LegalAcceptanceService } from "../legal/legal-acceptance.service";
+import { BillingSeatService } from "./billing-seat.service";
 import { SubscriptionService } from "./subscription.service";
 import { TrialEngineService } from "./trial-engine.service";
 import { foundingTrialEndsAt, resolveTrialConfig, standardTrialEndsAt } from "./trial-config";
@@ -17,7 +18,8 @@ import { foundingTrialEndsAt, resolveTrialConfig, standardTrialEndsAt } from "./
 const prisma = new PrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 const legal = new LegalAcceptanceService(prismaSvc, new AuditService(prismaSvc));
-const subs = new SubscriptionService(prismaSvc, legal);
+const billingSeats = new BillingSeatService(prismaSvc);
+const subs = new SubscriptionService(prismaSvc, legal, billingSeats);
 const trialEngine = new TrialEngineService(prismaSvc, subs);
 
 describe("CR-01 trial engine", () => {

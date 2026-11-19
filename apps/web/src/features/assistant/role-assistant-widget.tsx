@@ -5,9 +5,11 @@ import { Link } from "react-router-dom";
 import type { AssistantChatAction } from "@/lib/assistant-hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { UpgradeHint } from "@/components/upgrade-hint";
 import { ApiError } from "@/lib/http";
 import { cn } from "@/lib/utils";
 import { useAssistantChatMutation, useAssistantContextQuery } from "@/lib/assistant-hooks";
+import { useEntitlement } from "@/hooks/use-entitlement";
 import { useAuthStore } from "@/stores/auth-store";
 import { isAssistantEnabledForRole } from "@/lib/assistant-policy";
 import { AssistantMessageBody } from "@/features/assistant/assistant-message-body";
@@ -20,6 +22,7 @@ export function RoleAssistantWidget() {
   const user = useAuthStore((s) => s.user);
   const accessToken = useAuthStore((s) => s.accessToken);
   const roleOk = Boolean(accessToken && user && isAssistantEnabledForRole(user.role));
+  const entitled = useEntitlement("ai_assistant");
   const locale = i18n.language === "ar" ? "ar" : "en";
   const rtl = locale === "ar";
 
@@ -28,7 +31,7 @@ export function RoleAssistantWidget() {
   const [lines, setLines] = useState<ChatLine[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const contextQ = useAssistantContextQuery(roleOk, locale);
+  const contextQ = useAssistantContextQuery(roleOk && entitled, locale);
   const chatMut = useAssistantChatMutation();
 
   useEffect(() => {
@@ -73,7 +76,29 @@ export function RoleAssistantWidget() {
     );
   };
 
-  if (!roleOk || contextQ.isPending) return null;
+  if (!roleOk) return null;
+
+  /** AI-04 — Lite (and any plan without ai_assistant) sees a clear upgrade path, not a missing FAB. */
+  if (!entitled) {
+    return (
+      <div
+        className={cn(
+          "fixed bottom-5 z-50 w-[min(100vw-2rem,22rem)] rounded-xl border border-border bg-card p-3 shadow-lg",
+          rtl ? "left-4" : "right-4",
+        )}
+        dir={rtl ? "rtl" : "ltr"}
+        data-testid="assistant-upgrade-hint"
+      >
+        <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+          <Bot className="size-4 text-muted-foreground" aria-hidden />
+          {t("assistant.title", "Kiorly AI assistant")}
+        </div>
+        <UpgradeHint entitlement="ai_assistant" requiredPlan="PRO" />
+      </div>
+    );
+  }
+
+  if (contextQ.isPending) return null;
   if (contextQ.data?.assistantEnabled === false) return null;
 
   return (

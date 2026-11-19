@@ -28,6 +28,7 @@ import {
 } from "./data-explorer-access";
 import { createTenantDocumentsArchive } from "./tenant-documents-export";
 import { generateTenantSqlExport, SQL_EXPORT_ENTITY_KEYS } from "./tenant-sql-export";
+import { assertEncounterWritable } from "../../common/encounter-lock";
 
 /** URL-safe table keys (allowlisted). */
 export const DATA_EXPLORER_TABLES = [
@@ -551,6 +552,7 @@ export class AdminDataExplorerService {
         const encounterId = String(body.encounterId ?? "");
         const enc = await this.prisma.encounter.findFirst({ where: { id: encounterId, tenantId } });
         if (!enc) throw new BadRequestException("Invalid encounterId");
+        await assertEncounterWritable(this.prisma, tenantId, encounterId);
         const icd10Code = String(body.icd10Code ?? "").trim();
         const descriptionEn = String(body.descriptionEn ?? "").trim();
         if (!icd10Code || !descriptionEn) throw new BadRequestException("diagnoses require icd10Code, descriptionEn");
@@ -570,6 +572,7 @@ export class AdminDataExplorerService {
         const encounterId = String(body.encounterId ?? "");
         const enc = await this.prisma.encounter.findFirst({ where: { id: encounterId, tenantId } });
         if (!enc) throw new BadRequestException("Invalid encounterId");
+        await assertEncounterWritable(this.prisma, tenantId, encounterId);
         const drugName = String(body.drugName ?? "").trim();
         if (!drugName) throw new BadRequestException("drugName is required");
         const row = await this.prisma.encounterMedication.create({
@@ -636,11 +639,24 @@ export class AdminDataExplorerService {
     }
   }
 
+  private async assertEncounterRowWritable(tenantId: string, table: string, id: string): Promise<void> {
+    let encounterId: string | null = null;
+    if (table === "encounters") encounterId = id;
+    else if (table === "diagnoses") {
+      encounterId = (await this.prisma.diagnosis.findFirst({ where: { id, tenantId }, select: { encounterId: true } }))?.encounterId ?? null;
+    } else if (table === "encounter_medications") {
+      encounterId =
+        (await this.prisma.encounterMedication.findFirst({ where: { id, tenantId }, select: { encounterId: true } }))?.encounterId ?? null;
+    }
+    if (encounterId) await assertEncounterWritable(this.prisma, tenantId, encounterId);
+  }
+
   async patch(user: JwtUser, table: string, id: string, body: Record<string, unknown>) {
     assertDataExplorerAccess(user);
     if (!isTableKey(table)) throw new BadRequestException("Unknown table");
     const tenantId = assertExplorerTenant(user);
     await this.getOne(user, table, id);
+    await this.assertEncounterRowWritable(tenantId, table, id);
 
     switch (table) {
       case "feature_flags": {
@@ -931,6 +947,7 @@ export class AdminDataExplorerService {
     if (!isTableKey(table)) throw new BadRequestException("Unknown table");
     const tenantId = assertExplorerTenant(user);
     await this.getOne(user, table, id);
+    await this.assertEncounterRowWritable(tenantId, table, id);
 
     switch (table) {
       case "expenses":

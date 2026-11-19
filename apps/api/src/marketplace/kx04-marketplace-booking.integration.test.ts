@@ -20,6 +20,7 @@ import { AppointmentsService } from "../appointments/appointments.service";
 import { ConsentPolicyService } from "../compliance/consent-policy.service";
 import { SlotService } from "../scheduling/slot.service";
 import { MarketplaceBookingService } from "./marketplace-booking.service";
+import { NewPatientService } from "../patients/new-patient.service";
 import { MarketplacePatientIntakeService } from "./marketplace-patient-intake.service";
 import { SlotHoldService } from "./slot-hold.service";
 import { MarketplaceAccessService } from "./marketplace-access.service";
@@ -48,6 +49,8 @@ function bookingStack() {
     outbox,
     appointmentOutbox,
     slots,
+    new NewPatientService(prismaSvc),
+    { notifyKiorexBooking: async () => ({ queued: 0 }) } as never,
   );
   return { bookings, holds, slots };
 }

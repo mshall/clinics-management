@@ -1,4 +1,5 @@
 /** API shapes not yet in OpenAPI codegen — keep aligned with Nest DTOs. */
+import type { NoShowRiskView } from "./no-show-risk";
 
 export type GenderCode = "M" | "F" | "OTHER" | "UNKNOWN";
 
@@ -75,11 +76,24 @@ export interface EncounterDetailDto {
   signedAt?: string | null;
   amendReason?: string | null;
   amendedAt?: string | null;
+  signedByName?: string | null;
+  noteLocksAt?: string | null;
+  amendments?: EncounterAmendmentDto[];
   diagnoses: DiagnosisDto[];
   medications: EncounterMedicationDto[];
   documents: EncounterDocumentDto[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface EncounterAmendmentDto {
+  id: string;
+  reason: string;
+  amendedByName: string;
+  amendedAt: string;
+  wasLocked: boolean;
+  resignedByName: string | null;
+  resignedAt: string | null;
 }
 
 export interface ExpenseDto {
@@ -222,6 +236,21 @@ export interface AppointmentDto {
   isNewPatientAtBooking?: boolean | null;
   newPatientCheckedAt?: string | null;
   commissionChargeableAtBooking?: boolean;
+  cancelledBy?: string | null;
+  cancellationReason?: string | null;
+  /** FS-05 rule-based no-show risk (Pro+, upcoming bookings only) */
+  noShowRisk?: NoShowRiskView | null;
+  /** KX-07 / FS-04 deposit on this booking */
+  deposit?: AppointmentDepositView | null;
+}
+
+export interface AppointmentDepositView {
+  status: "PENDING" | "HELD" | "APPLIED" | "RELEASED" | "FORFEITED" | string;
+  source: "CLINIC" | "KIOREX_PAY" | "PAYMENT_LINK" | string;
+  amount: number;
+  currency: string;
+  /** FS-04: when an unpaid payment link runs out */
+  linkExpiresAt?: string | null;
 }
 
 export interface OperationDto {
@@ -369,9 +398,6 @@ export interface AdminOverviewDto {
       saasVatPercent: number;
     } | null;
     integrationFailureRetentionDays: number;
-    etaPlatformIntegrationEnabled?: boolean;
-    etaPhysicalReportingOptOut?: boolean;
-    etaPhysicalReportingConsentAt?: string | null;
   } | null;
   registeredTenants: number;
   featureFlags: Array<{
@@ -452,11 +478,6 @@ export interface ClinicDetailDto {
   createdAt: string;
   operatingPeriods: ClinicOperatingPeriodDto[];
   frontDeskRoomLabels: string[];
-  etaBranchCode?: string | null;
-  etaTaxpayerActivityCode?: string | null;
-  etaDefaultItemCode?: string | null;
-  etaReceiptsEnabled?: boolean;
-  etaIncludeLogoOnReceipt?: boolean;
 }
 
 export interface ClinicOperatingPeriodDto {
@@ -679,6 +700,8 @@ export interface ReportsPerformanceDto {
   visits: number;
   newPatients: number;
   appointmentsCompleted: number;
+  /** KX-08 synced Kiorex doctor score (review-count weighted). */
+  kiorexRating?: { averageRating: number | null; reviewCount: number };
 }
 
 export interface ReportsClinicBreakdownItemDto {

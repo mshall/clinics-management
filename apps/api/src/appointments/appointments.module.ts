@@ -7,8 +7,12 @@ import { PatientsModule } from "../patients/patients.module";
 import { KiorexModule } from "../kiorex/kiorex.module";
 import { SchedulingModule } from "../scheduling/scheduling.module";
 import { MessagingModule } from "../messaging/messaging.module";
+import { BillingModule } from "../billing/billing.module";
 import { AppointmentsController } from "./appointments.controller";
 import { AppointmentsService } from "./appointments.service";
+import { DepositLinkService } from "./deposit-link.service";
+import { DepositLinksController } from "./deposit-links.controller";
+import { PublicDepositLinkController } from "./public-deposit-link.controller";
 
 @Module({
   imports: [
@@ -20,9 +24,10 @@ import { AppointmentsService } from "./appointments.service";
     KiorexModule,
     SubscriptionsModule,
     MessagingModule,
+    BillingModule,
   ],
-  controllers: [AppointmentsController],
-  providers: [AppointmentsService],
-  exports: [AppointmentsService],
+  controllers: [AppointmentsController, DepositLinksController, PublicDepositLinkController],
+  providers: [AppointmentsService, DepositLinkService],
+  exports: [AppointmentsService, DepositLinkService],
 })
 export class AppointmentsModule {}

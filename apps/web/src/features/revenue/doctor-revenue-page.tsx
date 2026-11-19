@@ -8,6 +8,7 @@ import type { RevenueEntryDto } from "@/lib/api-types";
 import { formatMoneyAmount, formatMultiCurrencyAmounts } from "@/lib/money-display";
 import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
 import { useDateRangeStore } from "@/stores/date-range-store";
+import { DoctorStatementsCard } from "./doctor-statements-card";
 import {
   formatClinicNameFields,
   formatRevenueCategory,
@@ -133,6 +134,7 @@ export function DoctorRevenuePage() {
           ) : null}
         </CardContent>
       </Card>
+      <DoctorStatementsCard manage={false} />
     </div>
   );
 }

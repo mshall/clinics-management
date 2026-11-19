@@ -5,10 +5,13 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { apiGet, apiPost } from "@/lib/http";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
+import { AdminKiorexFreeProgressCard } from "./admin-kiorex-free-progress-card";
 import {
   Table,
   TableBody,
@@ -17,6 +20,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
+const DISPUTE_REASONS = ["EXISTING_PATIENT", "DID_NOT_ATTEND", "DUPLICATE", "OTHER"] as const;
 
 type ChargeRow = {
   id: string;
@@ -27,6 +32,12 @@ type ChargeRow = {
   currency: string;
   status: string;
   canDispute: boolean;
+  dispute?: {
+    id: string;
+    reason: string;
+    status: string;
+    resolution: string | null;
+  } | null;
 };
 
 type ChargeList = {
@@ -55,6 +66,9 @@ export function AdminKiorexChargesPanel() {
   const qc = useQueryClient();
   const [period, setPeriod] = useState(defaultPeriod);
   const [status, setStatus] = useState("");
+  const [disputeRow, setDisputeRow] = useState<ChargeRow | null>(null);
+  const [disputeReason, setDisputeReason] = useState<(typeof DISPUTE_REASONS)[number]>("EXISTING_PATIENT");
+  const [disputeNote, setDisputeNote] = useState("");
 
   const queryKey = useMemo(() => ["billing", "kiorex-charges", period, status], [period, status]);
 
@@ -68,9 +82,15 @@ export function AdminKiorexChargesPanel() {
   });
 
   const disputeMut = useMutation({
-    mutationFn: (id: string) => apiPost(`/api/v1/billing/kiorex/charges/${id}/dispute`, {}),
+    mutationFn: (payload: { id: string; reason: string; note?: string }) =>
+      apiPost(`/api/v1/billing/kiorex/charges/${payload.id}/dispute`, {
+        reason: payload.reason,
+        note: payload.note,
+      }),
     onSuccess: () => {
       toast.success(t("admin.billing.kiorex.disputeOpened", "Dispute submitted"));
+      setDisputeRow(null);
+      setDisputeNote("");
       void qc.invalidateQueries({ queryKey: ["billing", "kiorex-charges"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -79,6 +99,8 @@ export function AdminKiorexChargesPanel() {
   const rows = listQuery.data?.items ?? [];
 
   return (
+    <div className="space-y-4">
+      <AdminKiorexFreeProgressCard period={period} />
     <Card>
       <CardHeader>
         <CardTitle className="text-base">{t("admin.billing.kiorex.title", "Kiorex commission charges")}</CardTitle>
@@ -153,6 +175,12 @@ export function AdminKiorexChargesPanel() {
                       <Badge variant={STATUS_VARIANT[r.status] ?? "outline"}>
                         {t(`admin.billing.kiorex.status_${r.status}`, r.status)}
                       </Badge>
+                      {r.dispute ? (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {t(`admin.billing.kiorex.disputeStatus_${r.dispute.status}`, r.dispute.status)}
+                          {r.dispute.resolution ? ` · ${r.dispute.resolution}` : ""}
+                        </p>
+                      ) : null}
                     </TableCell>
                     <TableCell>
                       {r.canDispute ? (
@@ -161,7 +189,11 @@ export function AdminKiorexChargesPanel() {
                           size="sm"
                           variant="outline"
                           disabled={disputeMut.isPending}
-                          onClick={() => disputeMut.mutate(r.id)}
+                          onClick={() => {
+                            setDisputeRow(r);
+                            setDisputeReason("EXISTING_PATIENT");
+                            setDisputeNote("");
+                          }}
                         >
                           {t("admin.billing.kiorex.dispute", "Dispute")}
                         </Button>
@@ -175,5 +207,52 @@ export function AdminKiorexChargesPanel() {
         )}
       </CardContent>
     </Card>
+
+      <Dialog open={!!disputeRow} onOpenChange={(open) => !open && setDisputeRow(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("admin.billing.kiorex.disputeDialogTitle", "Dispute this charge")}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <div className="grid gap-1">
+              <Label>{t("admin.billing.kiorex.disputeReason", "Reason")}</Label>
+              <select
+                className={nativeSelectClassName}
+                value={disputeReason}
+                onChange={(e) => setDisputeReason(e.target.value as (typeof DISPUTE_REASONS)[number])}
+              >
+                {DISPUTE_REASONS.map((reason) => (
+                  <option key={reason} value={reason}>
+                    {t(`admin.billing.kiorex.disputeReason_${reason}`, reason)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid gap-1">
+              <Label>{t("admin.billing.kiorex.disputeNote", "Note (optional)")}</Label>
+              <Textarea value={disputeNote} onChange={(e) => setDisputeNote(e.target.value)} rows={3} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              disabled={
+                disputeMut.isPending || (disputeReason === "OTHER" && !disputeNote.trim())
+              }
+              onClick={() =>
+                disputeRow &&
+                disputeMut.mutate({
+                  id: disputeRow.id,
+                  reason: disputeReason,
+                  note: disputeNote.trim() || undefined,
+                })
+              }
+            >
+              {t("admin.billing.kiorex.disputeSubmit", "Submit dispute")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

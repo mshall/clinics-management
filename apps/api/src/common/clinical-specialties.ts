@@ -20,6 +20,7 @@ export const CLINICAL_SPECIALTY_VALUES: ClinicalSpecialty[] = [
   ClinicalSpecialty.LABORATORY,
   ClinicalSpecialty.INTERNAL_MEDICINE,
   ClinicalSpecialty.FAMILY_MEDICINE,
+  ClinicalSpecialty.UROLOGY,
 ];
 
 const SPECIALTY_SET = new Set<string>(CLINICAL_SPECIALTY_VALUES);

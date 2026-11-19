@@ -81,40 +81,4 @@ export class PatchTenantSettingsDto {
   @Min(1)
   @Max(168)
   appointmentReminderHoursBefore?: number;
-
-  @ApiPropertyOptional({ description: "Default ETA taxpayer activity code for all clinics" })
-  @IsOptional()
-  @IsString()
-  @MaxLength(16)
-  etaDefaultTaxpayerActivityCode?: string;
-
-  @ApiPropertyOptional({ description: "Default ETA GPC item code for visit services" })
-  @IsOptional()
-  @IsString()
-  @MaxLength(32)
-  etaDefaultItemCode?: string | null;
-
-  @ApiPropertyOptional({
-    description: "Label for e-signature token/seal stored in AWS Secrets Manager (per organization)",
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(120)
-  etaEsignatureLabel?: string | null;
-
-  @ApiPropertyOptional({
-    description:
-      "Disable Kiorly-issued ETA e-receipts (org not obliged or uses another ETA-registered system)",
-  })
-  @IsOptional()
-  @IsBoolean()
-  etaPhysicalReportingOptOut?: boolean;
-
-  @ApiPropertyOptional({
-    description: "ISO timestamp when the organization admin acknowledged physical reporting responsibility",
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(64)
-  etaPhysicalReportingConsentAt?: string | null;
 }

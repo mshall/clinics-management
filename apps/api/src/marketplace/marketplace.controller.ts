@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Headers, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Headers, HttpCode, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiHeader, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { IntegrationBookAppointmentDto } from "../integrations/dto/integration-book-appointment.dto";
 import { MarketplaceApiService } from "./marketplace-api.service";
@@ -8,6 +8,10 @@ import { MarketplaceClient } from "./marketplace-client.decorator";
 import type { PlatformIntegrationPrincipal } from "./platform-integration-client.service";
 import { SlotHoldService } from "./slot-hold.service";
 import { MarketplaceBookingService, type MarketplaceBookingBody } from "./marketplace-booking.service";
+import { KiorexReviewsService, type ReviewAggregateBody } from "./kiorex-reviews.service";
+import { KiorexOverviewService, type ProfileViewsBody } from "./kiorex-overview.service";
+import { KiorexDepositsService, type DepositPaidBody, type PayoutBody } from "../billing/kiorex-deposits.service";
+import { RecordShareService } from "./record-share.service";
 
 @ApiTags("marketplace")
 @Controller("marketplace/v1")
@@ -23,6 +27,10 @@ export class MarketplaceController {
     private readonly profiles: MarketplaceProviderProfileService,
     private readonly holds: SlotHoldService,
     private readonly bookings: MarketplaceBookingService,
+    private readonly reviews: KiorexReviewsService,
+    private readonly overview: KiorexOverviewService,
+    private readonly kiorexDeposits: KiorexDepositsService,
+    private readonly recordShare: RecordShareService,
   ) {}
 
   @Get("auth/verify")
@@ -113,6 +121,67 @@ export class MarketplaceController {
     return this.bookings.getByExternalRef(client, externalRef);
   }
 
+  @Post("bookings/:externalRef/cancel")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Patient cancels a Kiorex booking, enforced against the clinic policy (KX-06)" })
+  cancelBooking(
+    @MarketplaceClient() client: PlatformIntegrationPrincipal,
+    @Param("externalRef") externalRef: string,
+    @Body() body: { reason?: string },
+  ) {
+    return this.bookings.cancelByPatient(client, externalRef, body ?? {});
+  }
+
+  @Post("bookings/:externalRef/reschedule")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Patient reschedules a Kiorex booking, enforced against the clinic policy (KX-06)" })
+  rescheduleBooking(
+    @MarketplaceClient() client: PlatformIntegrationPrincipal,
+    @Param("externalRef") externalRef: string,
+    @Body() body: { startsAt: string; endsAt?: string; holdId?: string },
+  ) {
+    return this.bookings.rescheduleByPatient(client, externalRef, body);
+  }
+
+  @Post("bookings/:externalRef/deposit-paid")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Patient paid a deposit on Kiorex Pay; held for the clinic until check-in (KX-07)" })
+  depositPaid(
+    @MarketplaceClient() client: PlatformIntegrationPrincipal,
+    @Param("externalRef") externalRef: string,
+    @Body() body: DepositPaidBody,
+  ) {
+    return this.kiorexDeposits.depositPaid(client.id, externalRef, body);
+  }
+
+  @Post("deposit-links/:token/paid")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Patient paid a clinic deposit link through Kiorex Pay (FS-04); idempotent on paymentRef" })
+  depositLinkPaid(@Param("token") token: string, @Body() body: DepositPaidBody) {
+    return this.kiorexDeposits.depositLinkPaid(token, body);
+  }
+
+  @Post("payouts")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Kiorex paid the clinic out for collected deposits (KX-07); idempotent on payoutRef" })
+  recordPayout(@Body() body: PayoutBody) {
+    return this.kiorexDeposits.recordPayout(body);
+  }
+
+  @Post("analytics/profile-views")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Kiorex pushes daily profile views per doctor (KX-10); re-sending a day replaces it" })
+  syncProfileViews(@MarketplaceClient() client: PlatformIntegrationPrincipal, @Body() body: ProfileViewsBody) {
+    return this.overview.syncProfileViews(client, body);
+  }
+
+  @Post("reviews/aggregate")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Kiorex pushes a doctor's rating aggregate and verified reviews (KX-08)" })
+  syncReviews(@MarketplaceClient() client: PlatformIntegrationPrincipal, @Body() body: ReviewAggregateBody) {
+    return this.reviews.syncAggregate(client, body);
+  }
+
   @Post("appointments")
   @ApiOperation({ summary: "Book appointment via Kiorex marketplace" })
   book(
@@ -141,5 +210,15 @@ export class MarketplaceController {
     @Param("id") id: string,
   ) {
     return this.api.cancelAppointment(client, clinicId, id);
+  }
+
+  /** KX-11 — Kiorex patient-app consent scopes for record sharing. */
+  @Post("patients/:id/consents")
+  @ApiOperation({ summary: "Upsert record-share consents from the Kiorex patient app" })
+  async upsertRecordShareConsents(
+    @Param("id") patientId: string,
+    @Body() body: { consents: { scope: string; granted: boolean }[] },
+  ) {
+    return this.recordShare.upsertFromMarketplace(patientId, body?.consents ?? []);
   }
 }

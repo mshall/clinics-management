@@ -4,6 +4,8 @@
 |------|--------|
 | CR-04 Kiorex fee config, benchmark guardrail, public fees API | **Done** |
 | CR-03 Kiorex commission charge capture & lifecycle | **Done** — see [KIOREX_COMMISSION_CHARGES.md](./KIOREX_COMMISSION_CHARGES.md) |
+| CR-08 Commission disputes & adjustments | **Done** — see [KIOREX_COMMISSION_CHARGES.md](./KIOREX_COMMISSION_CHARGES.md) |
+| CR-07 “Kiorly is free” progress meter & owner nudges | **Done** — `GET /billing/kiorex-progress`, Admin billing + Kiorex charges ring |
 
 ## Purpose
 

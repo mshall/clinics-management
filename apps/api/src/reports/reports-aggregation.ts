@@ -116,6 +116,7 @@ export function buildReportsEncounterWhere(
     tenantId,
     status: { in: [EncounterStatus.FINALIZED, EncounterStatus.AMENDED] },
     finalizedAt: { gte: start, lte: end },
+    patient: { isSample: false },
   };
 
   if (clinicId?.trim()) {

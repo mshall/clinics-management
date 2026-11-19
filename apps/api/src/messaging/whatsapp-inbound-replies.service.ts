@@ -1,12 +1,14 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { AppointmentStatus, MessageChannel, Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
+import { hoursUntil, resolveKiorexCancellationPolicy } from "../marketplace/kiorex-booking-policy";
 import { PrismaService } from "../prisma/prisma.service";
 import { SchedulingService } from "../scheduling/scheduling.service";
 import { AppointmentRescheduleTokenService } from "./appointment-reschedule-token.service";
 import { MessagingConsentService } from "../patients/messaging-consent.service";
 import { OutboxEventService, OUTBOX_TARGET_INTERNAL } from "./outbox-event.service";
 import { AppointmentOutboxService } from "./appointment-outbox.service";
+import { WaitlistAutofillService } from "./waitlist-autofill.service";
 import {
   OUTBOX_TOPIC_FRONT_DESK_WHATSAPP,
   type WhatsAppReplyAction,
@@ -31,6 +33,7 @@ export class WhatsAppInboundRepliesService {
     private readonly scheduling: SchedulingService,
     private readonly rescheduleTokens: AppointmentRescheduleTokenService,
     private readonly consent: MessagingConsentService,
+    private readonly waitlist: WaitlistAutofillService,
   ) {}
 
   async handleButtonReply(msg: InboundWhatsAppButton, action: WhatsAppReplyAction): Promise<boolean> {
@@ -41,6 +44,24 @@ export class WhatsAppInboundRepliesService {
 
     const contextId = msg.contextProviderMessageId?.trim();
     if (!contextId) return false;
+
+    if (action === "waitlist_accept" || action === "waitlist_decline") {
+      const outbound = await this.prisma.outboundMessage.findFirst({
+        where: { providerMessageId: contextId },
+        select: { tenantId: true },
+      });
+      if (!outbound) return false;
+      await this.prisma.whatsAppInboundEvent.create({
+        data: {
+          tenantId: outbound.tenantId,
+          providerMessageId: msg.providerMessageId,
+          action,
+          payloadJson: msg as unknown as Prisma.InputJsonValue,
+        },
+      });
+      const res = await this.waitlist.handleReply(contextId, action);
+      return res.handled;
+    }
 
     const outbound = await this.prisma.outboundMessage.findFirst({
       where: { providerMessageId: contextId },
@@ -75,7 +96,7 @@ export class WhatsAppInboundRepliesService {
     if (action === "confirm") {
       await this.confirmAppointment(outbound.tenantId, apt.id, apt.clinicId);
     } else if (action === "cancel") {
-      await this.cancelAppointment(outbound.tenantId, apt.id, apt.clinicId, apt.startsAt, apt.clinicianId);
+      await this.cancelAppointment(outbound.tenantId, apt.id, apt.clinicId);
     } else if (action === "reschedule") {
       await this.sendRescheduleLink(outbound.tenantId, apt.id, apt.patient.phone ?? msg.fromPhone);
     }
@@ -125,21 +146,37 @@ export class WhatsAppInboundRepliesService {
     });
   }
 
-  private async cancelAppointment(
+  /** FS-04 — a late patient cancellation keeps the deposit, per the clinic policy (`depositRefundMinHours`). */
+  private async patientDepositRefundable(
+    tx: Prisma.TransactionClient,
     tenantId: string,
-    appointmentId: string,
     clinicId: string,
     startsAt: Date,
-    clinicianId: string,
-  ): Promise<void> {
+    now: Date,
+  ): Promise<boolean> {
+    const clinic = await tx.clinic.findFirst({
+      where: { id: clinicId, tenantId },
+      select: { kiorexCancellationPolicy: true, tenant: { select: { market: { select: { commercialConfig: true } } } } },
+    });
+    const policy = resolveKiorexCancellationPolicy(clinic?.tenant.market?.commercialConfig, clinic?.kiorexCancellationPolicy);
+    return hoursUntil(startsAt, now) >= policy.depositRefundMinHours;
+  }
+
+  private async cancelAppointment(tenantId: string, appointmentId: string, clinicId: string): Promise<void> {
     const updated = await this.prisma.$transaction(async (tx) => {
       const apt = await tx.appointment.findFirst({ where: { id: appointmentId, tenantId } });
       if (!apt || apt.status === AppointmentStatus.CANCELLED || apt.status === AppointmentStatus.COMPLETED) {
         return null;
       }
+      const now = new Date();
       const row = await tx.appointment.update({
         where: { id: appointmentId },
-        data: { status: AppointmentStatus.CANCELLED },
+        data: {
+          status: AppointmentStatus.CANCELLED,
+          cancelledAt: now,
+          cancelledBy: "PATIENT",
+          depositRefundable: await this.patientDepositRefundable(tx, tenantId, clinicId, apt.startsAt, now),
+        },
       });
       await this.appointmentOutbox.emitStatusChange(
         {
@@ -164,7 +201,7 @@ export class WhatsAppInboundRepliesService {
     });
     if (!updated) return;
 
-    await this.scheduling.offerWaitlistForCancelledSlot(tenantId, clinicId, startsAt, clinicianId);
+    const freed = await this.scheduling.recordFreedSlot(tenantId, appointmentId);
 
     await this.audit.recordEvent({
       tenantId,
@@ -173,7 +210,7 @@ export class WhatsAppInboundRepliesService {
       action: "WHATSAPP_APPOINTMENT_CANCELLED",
       resource: "Appointment",
       resourceId: appointmentId,
-      metadata: { source: "whatsapp_inbound", waitlistOffered: true },
+      metadata: { source: "whatsapp_inbound", waitlistSlotId: freed?.slotId ?? null },
     });
   }
 

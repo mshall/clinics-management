@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { DoctorStatementsCard } from "./doctor-statements-card";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CreateActionButton } from "@/components/create-action-button";
@@ -45,7 +46,6 @@ import { resolvePatientListLabel } from "@/lib/patient-display";
 import { formatMoneyAmount, formatMultiCurrencyAmounts } from "@/lib/money-display";
 import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
 import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
-import { EtaIntegrationBanner } from "@/features/compliance/eta-integration-banner";
 import { canMutateRevenue } from "@/lib/nav-tab-access-policy";
 
 function clinicDisplayName(r: RevenueEntryDto, lng: string): string {
@@ -244,8 +244,6 @@ export function RevenuePage() {
         <h1 className="text-2xl font-bold tracking-tight">{t("revenue.title")}</h1>
         <p className="text-muted-foreground">{t("revenue.subtitle")}</p>
       </div>
-      <EtaIntegrationBanner />
-
       {isError ? <p className="text-sm text-destructive">{error instanceof Error ? error.message : t("common.error")}</p> : null}
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_10rem_10rem] lg:items-stretch">
@@ -688,6 +686,8 @@ export function RevenuePage() {
           />
         </CardContent>
       </Card>
+
+      <DoctorStatementsCard manage />
 
       <Dialog open={Boolean(detail)} onOpenChange={(o) => !o && setDetail(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md" aria-describedby={undefined}>

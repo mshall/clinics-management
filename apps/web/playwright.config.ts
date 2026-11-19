@@ -26,12 +26,12 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
-      testIgnore: /responsive\.spec\.ts/,
+      testIgnore: /responsive\.spec\.ts|ux02-mobile-doctor\.spec\.ts/,
     },
     {
       name: "mobile-chrome",
       use: { ...devices["Pixel 5"] },
-      testMatch: /responsive\.spec\.ts/,
+      testMatch: /responsive\.spec\.ts|ux02-mobile-doctor\.spec\.ts/,
     },
     {
       name: "tablet",

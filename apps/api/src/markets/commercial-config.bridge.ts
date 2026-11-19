@@ -171,3 +171,7 @@ export function commercialConfigPreviewDiff(before: CommercialConfig, after: Com
   walk("referral", before.referral, after.referral);
   return keys;
 }
+
+export function referralConfigFromMarket(featureDefaults: unknown): CommercialConfig["referral"] {
+  return commercialConfigFromFeatureDefaults(featureDefaults).referral;
+}

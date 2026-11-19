@@ -16,6 +16,7 @@ import {
 import * as bcrypt from "bcryptjs";
 import { assertDemoPasswordAllowedInProduction, isDemoSeedBlockedInProduction } from "../src/common/seed-demo-guard";
 import { ensureEgyptDrugCatalog } from "./egypt-drug-catalog-seed";
+import { ensureFoundingCohort } from "./founding-cohort-seed";
 import { ensurePlanCatalog } from "./plan-catalog-seed";
 import { ensureAllTenantSubscriptions } from "../src/subscriptions/subscription-provision";
 import { ensureAllPilotTenants, pilotSeedEnabled } from "./pilot-tenants.seed";
@@ -120,6 +121,21 @@ async function ensureSuperAdmin(passwordHash: string) {
     email: "superadmin@kiorly.com",
     displayName: "Platform Super Administrator",
     role: UserRole.PLATFORM_SUPER_ADMIN,
+  });
+}
+
+/** ON-07 — demo field-sales rep (tenant-less SALES_REP login). */
+async function ensureDemoSalesRep(passwordHash: string) {
+  const user = await ensureUser(passwordHash, {
+    tenantId: null,
+    email: "rep@kiorly.com",
+    displayName: "Demo Sales Rep",
+    role: UserRole.SALES_REP,
+  });
+  await prisma.salesRep.upsert({
+    where: { userId: user.id },
+    create: { userId: user.id, code: "REP-DEMO", displayName: "Demo Sales Rep" },
+    update: {},
   });
 }
 
@@ -585,6 +601,7 @@ async function seedDrAhmedGroup(passwordHash: string) {
 
 async function ensureIncrementalSeed(passwordHash: string) {
   await ensureSuperAdmin(passwordHash);
+  await ensureDemoSalesRep(passwordHash);
 
   const kiorlyTenant = await prisma.tenant.findFirst({ where: { name: KIORLY_TENANT_NAME } });
   if (kiorlyTenant) {
@@ -594,6 +611,7 @@ async function ensureIncrementalSeed(passwordHash: string) {
   const { tenant, clinics } = await seedDrAhmedGroup(passwordHash);
   await ensureEgyptDrugCatalog(prisma);
   await ensurePlanCatalog(prisma);
+  await ensureFoundingCohort(prisma);
   await ensureAllTenantSubscriptions(prisma);
   if (pilotSeedEnabled()) {
     await ensureAllPilotTenants(prisma, passwordHash);
@@ -1241,11 +1259,13 @@ async function seedFreshDatabase(passwordHash: string) {
 
   await ensureEgyptDrugCatalog(prisma);
   await ensurePlanCatalog(prisma);
+  await ensureFoundingCohort(prisma);
   await ensureAllTenantSubscriptions(prisma);
   if (pilotSeedEnabled()) {
     await ensureAllPilotTenants(prisma, passwordHash);
   }
   await ensureSuperAdmin(passwordHash);
+  await ensureDemoSalesRep(passwordHash);
 }
 
 async function main() {

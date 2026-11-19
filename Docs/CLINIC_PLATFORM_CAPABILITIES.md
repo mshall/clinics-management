@@ -2,6 +2,8 @@
 
 Master checklist for **procedures, billing, messaging, reports, setup, and clinic AI**. Each row shows **status**, **data/API**, and **what’s next** for production hardening.
 
+**GT-06 (Nov 2026):** statuses aligned with launch build (§5 of `kiorly-cursor-build-sequence.md`). Hubs: [PLANS_AND_ENTITLEMENTS.md](./PLANS_AND_ENTITLEMENTS.md) · [BILLING_AND_CREDITS.md](./BILLING_AND_CREDITS.md) · [KIOREX_CONNECTOR.md](./KIOREX_CONNECTOR.md).
+
 **Migration:** `20261114160000_clinic_platform_wave`
 
 | Legend | Meaning |
@@ -34,15 +36,15 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 | Service & price list (codes, effective dates) | **Foundation** | `ServiceCatalogItem` + `ServicePrice`; `GET/POST /billing/catalog` |
 | Contract prices per payer company | **Foundation** | `PayerCompany`, `ContractServicePrice`; resolver in `BillingService.resolvePrice` |
 | Invoice lines: qty, price, discount, tax | **Foundation** | `InvoiceLine` columns; manager flag when discount &gt; 15% |
-| Check-in collection (cash / InstaPay / Fawry) | **Shipped** | Front desk check-in; validates transfer refs; **queues ETA e-receipt** with revenue |
+| Check-in collection (cash / InstaPay / Fawry) | **Shipped** | Front desk check-in; validates transfer refs; revenue via **`postRevenue` only** (no ETA) |
 | Draft encounter on check-in | **Shipped** | Quick check-in, status **Checked in**, and `GET /appointments/:id` ensure a **DRAFT** encounter linked to the appointment (`openEncounterId`) |
-| Split payment cash + card | **Foundation** | `POST /billing/payments` with `allocations[]` |
-| Refunds, credit notes, deposits, packages | **Foundation** | `CreditNote`, `PatientServicePackage` tables; APIs next slice |
-| Daily cash close per cashier/branch | **Foundation** | `POST /billing/cash-close` compares expected vs counted by method |
-| Doctor commission rules & statements | **Foundation** | `CommissionRule` table; statements = reports slice |
-| Insurer billing, co-pay, pre-auth | **Foundation** | `PayerPreAuthorization`, copay % on contract prices |
-| **Egypt: ETA e-receipts** | **Shipped (core)** | Platform super admin enables per org (default off; UI hidden until on); three-step submit, worker, **C/V/O**, per-device chain; clinics/doctors remain solely responsible for tax filing; org opt-out after enable |
-| **Receipt devices (multi-market)** | **Shipped** | `GET/POST /clinics/:id/fiscal-devices`, credentials, test connection; auto-provision virtual device on clinic create when provider `deviceRegistration.required`; clinic settings **Receipt devices** panel + add-clinic tax step |
+| Split payment cash + card | **Shipped** | MN-06 — `POST /billing/split-payments` + installments |
+| Refunds, credit notes, deposits, packages | **Shipped** | MN-01 — refunds via `postRevenue`; packages/deposits as liabilities |
+| Daily cash close per cashier/branch | **Shipped** | MN-03 — `CashierShift` open/close/Z-report + owner WhatsApp |
+| Doctor commission rules & statements | **Shipped** | MN-02 — revenue-share engine + statements |
+| Insurer billing, co-pay, pre-auth, TPA claims | **Shipped** | MN-05 — `ClaimBatch` / remittance match / B2B payer outbox; co-pay on `ContractServicePrice`; pre-auth foundation |
+| **Egypt: ETA e-receipts** | **Out of scope** | FD-02 — Kiorly never submits to ETA; clinics issue their own receipts |
+| **Receipt devices (multi-market)** | **Retired for ETA** | Fiscal device UI retained only where a market pack still uses non-ETA providers; EG uses clinic-issued receipts |
 | **Egypt: data protection consent** | **Shipped (SC-03)** | `ConsentPolicy.require`; `GET /patients/:id/consents`; check-in + Kiorex capture — [PATIENT_CONSENT.md](./PATIENT_CONSENT.md) |
 
 ---
@@ -55,6 +57,7 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 | Automated reminder queue | **Shipped** | Meta Cloud templates + webhooks ([MESSAGING_WHATSAPP.md](./MESSAGING_WHATSAPP.md)); delivery in patient/appointment UI |
 | Confirm/cancel replies | **Shipped** | MS-02 quick replies + waitlist on cancel ([MESSAGING_WHATSAPP.md](./MESSAGING_WHATSAPP.md)) |
 | Messaging consent / STOP | **Shipped** | MS-03 transactional vs marketing + PDPL opt-out ([MESSAGING_CONSENT.md](./MESSAGING_CONSENT.md)) |
+| Transactional email (trial, invoices, security) | **Shipped** | SES + bilingual templates; DKIM/SPF/DMARC gate ([MESSAGING_EMAIL.md](./MESSAGING_EMAIL.md)); NH-016 for DNS |
 | Recall / campaigns (check-up, lapsed, birthday) | **Foundation** | `GET /messaging/recall-campaigns`; tie to `Patient.acquisitionChannel` in next slice |
 | Booking attribution & new-patient rule (CR-02) | **Done** | See [BOOKING_ATTRIBUTION.md](./BOOKING_ATTRIBUTION.md) |
 | Post-visit satisfaction → doctor score | **Foundation** | `SatisfactionSurveyResponse` table; trigger on encounter finalize (next) |
@@ -67,9 +70,9 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 |-------------|--------|--------|
 | **Today** on dashboard (live) | **Shipped** | `GET /dashboards/today?clinicId=` |
 | Period KPIs, P&L, clinic breakdown | **Shipped** | Existing dashboard + reports |
-| No-show rate, utilization, revenue/doctor-hour | **Planned** | Extend `reports.service` |
-| AR aging, payouts, branch P&L | **Planned** | Use `BillingPayment` + existing revenue/expenses |
-| Excel/PDF export & scheduled email | **Planned** | PRD N.1 |
+| No-show rate, utilization, revenue/doctor-hour | **Shipped** | RP-01 — `GET /reports/operations` |
+| AR aging, payouts, branch P&L | **Phase 1b** | RP-04 (post-launch) |
+| Excel/PDF export & scheduled email | **Done** | RP-02 — `GET /reports/:key/export`, weekly schedule |
 
 ---
 
@@ -77,11 +80,11 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 
 | Requirement | Status | Notes |
 |-------------|--------|--------|
-| Onboarding wizard & Excel import | **Planned** | |
-| MFA (TOTP) | **Foundation** | `POST /auth/mfa/setup`, `/mfa/confirm`, `/mfa/disable`; login accepts `mfaCode` when enabled |
+| Onboarding wizard & Excel import | **Shipped** | ON-04/ON-05 — checklist + Excel import |
+| MFA (TOTP) | **Shipped** | SC-04 — TOTP + WhatsApp OTP for physicians; grace then enforce |
 | Permissions screen per role | **Shipped** | Admin → org/clinic nav tabs (`org-rbac-panel`, `clinic-nav-tabs-panel`) |
-| Thermal/A4 bilingual print | **Partial** | Tax invoices + prescriptions; thermal next |
-| Tablet layout / offline schedule | **Planned** | |
+| Thermal/A4 bilingual print | **Shipped** | UX-04 — 80 mm tickets/receipts + Z-report; Epson/Star profiles; WCAG focus/contrast |
+| Tablet layout / offline schedule | **Shipped** | UX-01 PWA + offline today; UX-02 mobile bottom nav |
 | Incident reporting / GAHAR | **Foundation** | `ClinicalIncident` table |
 
 ---
@@ -92,8 +95,8 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 |---------|------------------|---------|--------|-----|
 | **Kiorly AI assistant** | AI badge | Language model (market `AiProvider`) | **Shipped** | `POST /assistant/chat` — flag `ai_assistant` |
 | **Smart summary (pre-visit)** | No AI badge | Rule template from chart rows | **Shipped** | `GET /clinic-ai/patients/:id/pre-visit-summary` |
-| **No-show risk estimate** | No AI badge | Formula (`noShowCount`, deposit, lead time) | **Foundation** | `POST /clinic-ai/appointments/refresh-no-show-risk` |
-| **Chart scribe (workflow)** | No AI badge | Clinician-approve draft; speech TBD | **Foundation** | `POST /clinic-ai/encounters/:id/scribe/start` |
+| **No-show risk estimate** | No AI badge — chip says "rule-based" | Formula (`noShowCount`, deposit, lead time) | **Done** (FS-05: chip on appointments, nightly refresh, deposit / reminder suggestion) | `AppointmentDto.noShowRisk`; `POST /clinic-ai/appointments/refresh-no-show-risk` |
+| **Chart scribe (workflow)** | AI scribe add-on | Clinician-approve draft; audio STT stub | **Shipped** (AI-02/AI-04) | `POST /clinic-ai/encounters/:id/scribe/*`; meter `AI_SCRIBE_MINUTES` |
 
 Copy registry: [AI_HONEST_LABELS.md](./AI_HONEST_LABELS.md). The role assistant is gated by layered flag `ai_assistant` — see [FEATURE_FLAGS.md](./FEATURE_FLAGS.md).
 
@@ -115,8 +118,8 @@ npm run dev
 ```
 
 1. Create operation → advance status through pre-op → discharged (collect balance on discharge).
-2. Check in with cash or InstaPay/Fawry (valid reference format) → `GET /api/v1/compliance/egypt/eta-queue` shows pending rows; submit with `POST .../submit` (no manual UUID).
-3. `POST /api/v1/billing/catalog` then `POST /api/v1/billing/payments` → another ETA queue row.
-3. Record data-protection consent for a patient.
-4. `GET /api/v1/dashboards/today`
-5. `GET /api/v1/clinic-ai/patients/:id/pre-visit-summary`
+2. Check in with cash or InstaPay/Fawry (valid reference format) → revenue posts via `postRevenue` (no ETA queue).
+3. `POST /api/v1/billing/catalog` then collect a visit payment from the front desk.
+4. Record data-protection consent for a patient.
+5. `GET /api/v1/dashboards/today`
+6. `GET /api/v1/clinic-ai/patients/:id/pre-visit-summary`

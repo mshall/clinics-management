@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { AppointmentQueueStage, AppointmentStatus, BookingSource, VisitCollectionMode } from "@prisma/client";
+import type { NoShowRiskView } from "../../common/no-show-risk";
 
 export class AppointmentDto {
   @ApiProperty()
@@ -121,4 +122,32 @@ export class AppointmentDto {
 
   @ApiPropertyOptional({ description: "Whether this booking may incur Kiorex commission (CR-02)" })
   commissionChargeableAtBooking?: boolean;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description:
+      "FS-05 no-show risk (Pro+, upcoming SCHEDULED/CONFIRMED only): rule-based score, band, factors and a suggestion. method stays RULE_BASED until a trained model ships.",
+  })
+  noShowRisk?: NoShowRiskView | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description:
+      "KX-07 / FS-04 deposit on this booking: status PENDING | HELD | APPLIED | RELEASED | FORFEITED, source CLINIC | KIOREX_PAY | PAYMENT_LINK. Amount is 0 when money is hidden from the viewer.",
+  })
+  deposit?: AppointmentDepositView | null;
+
+  @ApiPropertyOptional({ nullable: true, description: "PATIENT | CLINIC | SYSTEM (KX-06)" })
+  cancelledBy?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  cancellationReason?: string | null;
 }
+
+export type AppointmentDepositView = {
+  status: string;
+  source: string;
+  amount: number;
+  currency: string;
+  linkExpiresAt: string | null;
+};
