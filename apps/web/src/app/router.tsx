@@ -60,6 +60,7 @@ import {
   PlatformOverviewPage,
   PlatformUsersTab,
   ReportsPage,
+  DataPrivacyPage,
   WaitingRoomPage,
 } from "@/lib/lazy-pages";
 
@@ -141,6 +142,7 @@ export const router = createBrowserRouter([
       { path: "clinic-revenue", element: <Navigate to="/revenue" replace /> },
       { path: "doctor-revenue", element: <DoctorRevenueGate /> },
       { path: "profile", element: <ProfileGate /> },
+      { path: "privacy", element: defer(DataPrivacyPage) },
       { path: "profile/verification", element: <NavGate tab="profile">{defer(ClinicianVerificationPage)}</NavGate> },
       { path: "hr", element: <NavGate tab="hr">{defer(HrPage)}</NavGate> },
       { path: "hr/employees/:id", element: <NavGate tab="hr">{defer(EmployeeDetailPage)}</NavGate> },

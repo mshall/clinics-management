@@ -70,6 +70,7 @@ export const TOP_LEVEL_FOLDER_TO_CONTEXT: Record<string, BoundedContextId> = {
   compliance: "compliance-fiscal",
   providers: "compliance-fiscal",
   integrations: "compliance-fiscal",
+  exports: "compliance-fiscal",
 
   reports: "insights",
   dashboard: "insights",

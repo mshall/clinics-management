@@ -70,6 +70,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "clinician-verification/platform-verifications.controller.ts": { kind: "platform" },
   "clinics/clinics.controller.ts": { kind: "open" },
   "compliance/compliance.controller.ts": { kind: "open" },
+  "exports/exports.controller.ts": { kind: "open" },
   "dashboard/dashboard.controller.ts": { kind: "open" },
   "encounters/encounters.controller.ts": { kind: "open" },
   "expenses/expenses.controller.ts": { kind: "gated", entitlement: "mod_expenses" },

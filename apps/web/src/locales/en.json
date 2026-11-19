@@ -3619,5 +3619,13 @@
     "save": "Save preferences",
     "notices": "Unread notices",
     "markRead": "Mark read"
+  },
+  "privacy": {
+    "title": "Data & privacy",
+    "exportTitle": "Export clinic data",
+    "exportHint": "Download patients, encounters and invoices as CSV (available while suspended).",
+    "exportCta": "Request export",
+    "offboardingTitle": "Offboarding",
+    "offboardingHint": "Cancel → 30-day retention → deletion. Legal hold pauses deletion."
   }
 }

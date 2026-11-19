@@ -58,6 +58,10 @@ export const EmployeeProfilePage = lazyNamed(
   "EmployeeProfilePage",
 );
 export const ReportsPage = lazyNamed(() => import("@/features/reports/reports-page"), "ReportsPage");
+export const DataPrivacyPage = lazyNamed(
+  () => import("@/features/privacy/data-privacy-page"),
+  "DataPrivacyPage",
+);
 export const CustomerSupportPage = lazyNamed(
   () => import("@/features/support/customer-support-page"),
   "CustomerSupportPage",

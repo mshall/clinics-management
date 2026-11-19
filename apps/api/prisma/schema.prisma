@@ -919,6 +919,42 @@ model DigestSendLog {
 }
 
 
+
+/// SC-05 — owner / data-subject export jobs with expiring download links.
+model TenantExportJob {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /// TENANT | PATIENT
+  scope        String
+  patientId    String?
+  status       String   @default("PENDING")
+  requestedBy  String
+  downloadTokenHash String? @unique
+  expiresAt    DateTime?
+  artifactPath String?
+  error        String?
+  rowCounts    Json?
+  createdAt    DateTime @default(now())
+  completedAt  DateTime?
+
+  @@index([tenantId, createdAt])
+  @@index([status, createdAt])
+}
+
+/// SC-05 — cancellation → retention → deletion; legal hold blocks deletion.
+model TenantOffboarding {
+  tenantId          String   @id
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cancelledAt       DateTime?
+  retentionEndsAt   DateTime?
+  deletionScheduledAt DateTime?
+  deletedAt         DateTime?
+  legalHold         Boolean  @default(false)
+  noticeSentAt      DateTime?
+  updatedAt         DateTime @updatedAt
+}
+
 enum ReferralStatus {
   PENDING
   REWARDED
@@ -1199,6 +1235,8 @@ model Tenant {
   paymentChannels                TenantPaymentChannel[]
   userMoneyVisibilityOverrides   UserMoneyVisibilityOverride[]
   reportSchedule                 TenantReportSchedule?
+  exportJobs                     TenantExportJob[]
+  offboarding                    TenantOffboarding?
   salesRepCode                   String?
   referralCode                   String?
   creditWallet                   CreditWallet?
