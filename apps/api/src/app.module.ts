@@ -28,6 +28,7 @@ import { UsersModule } from "./users/users.module";
 import { AssistantModule } from "./assistant/assistant.module";
 import { ClinicalModule } from "./clinical/clinical.module";
 import { RxShareModule } from "./clinical/rx-share.module";
+import { DevInboxModule } from "./dev-inbox/dev-inbox.module";
 import { SchedulingModule } from "./scheduling/scheduling.module";
 import { FrontDeskModule } from "./front-desk/front-desk.module";
 import { BillingModule } from "./billing/billing.module";
@@ -87,6 +88,7 @@ import { PushModule } from "./push/push.module";
     AssistantModule,
     ClinicalModule,
     RxShareModule,
+    DevInboxModule,
     SchedulingModule,
     FrontDeskModule,
     BillingModule,

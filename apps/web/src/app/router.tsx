@@ -20,6 +20,7 @@ import { AppointmentReschedulePage } from "@/features/appointments/appointment-r
 import { DepositPayPage } from "@/features/appointments/deposit-pay-page";
 import { PublicBookingPage } from "@/features/kiorex/public-booking-page";
 import { PublicRxVerifyPage } from "@/features/prescriptions/public-rx-verify-page";
+import { DevInboxPage } from "@/features/dev/dev-inbox-page";
 import { ClinicalTemplatesRedirect } from "@/features/clinical/clinical-templates-redirect";
 import { EncounterDetailNavGate } from "@/components/encounter-detail-nav-gate";
 import { NavGate } from "@/components/nav-gate";
@@ -91,6 +92,8 @@ export const router = createBrowserRouter([
   { path: "/pay/:token", element: <DepositPayPage /> },
   { path: "/b/:slug", element: <PublicBookingPage /> },
   { path: "/rx/:token", element: <PublicRxVerifyPage /> },
+  // Mock-provider dev inbox (development tool; the API answers 404 in production unless DEV_INBOX_ENABLED=1).
+  { path: "/dev/inbox", element: <DevInboxPage /> },
   { path: "/invite/:token", element: <AcceptInvitationPage /> },
   { path: "/forgot-password", element: <ForgotPasswordPage /> },
   { path: "/reset-password", element: <ResetPasswordPage /> },

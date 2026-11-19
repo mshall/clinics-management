@@ -82,4 +82,6 @@ export interface PaymentGateway {
   verifyWebhookSignature(rawBody: string, signatureHeader: string | undefined): boolean;
   parseWebhook(payload: unknown): ParsedWebhookEvent;
   refund(req: RefundRequest): Promise<RefundResult>;
+  /** Mock mode only (dev inbox "simulate PSP callback"): signs a body exactly as the provider would. */
+  signMockWebhook?(rawBody: string): string;
 }

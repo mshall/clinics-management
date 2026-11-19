@@ -12,6 +12,7 @@ import type {
   RefundResult,
   TokenizeResult,
 } from "./payment-gateway.interface";
+import { isMock } from "../../common/provider-mode";
 
 function webhookSecret(): string {
   return process.env.KIORLY_FAWRY_WEBHOOK_SECRET ?? "dev-fawry-secret";
@@ -40,6 +41,11 @@ export class FawryGateway implements PaymentGateway {
 
   async chargeToken(_req: ChargeTokenRequest): Promise<ChargeTokenResult> {
     throw new Error("Fawry uses reference codes, not card tokens");
+  }
+
+  signMockWebhook(rawBody: string): string {
+    if (!isMock("psp")) throw new Error("signMockWebhook is only available in PSP mock mode");
+    return createHmac("sha256", webhookSecret()).update(rawBody, "utf8").digest("hex");
   }
 
   verifyWebhookSignature(rawBody: string, signatureHeader: string | undefined): boolean {

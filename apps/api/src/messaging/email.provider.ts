@@ -1,5 +1,6 @@
 import { assertEmailDomainAuthReady, loadEmailDomainAuth, type EmailDomainAuth } from "./email-domain-auth";
 import { getEmailAdapter } from "../platform/adapters";
+import { isMock } from "../common/provider-mode";
 import type { RenderedEmail } from "./email-templates";
 
 export type EmailSendInput = {
@@ -17,10 +18,10 @@ export type EmailProvider = {
   send(input: EmailSendInput, auth?: EmailDomainAuth): Promise<EmailSendResult>;
 };
 
-/** Local / test: never calls AWS; still enforces domain auth when NODE_ENV=production. */
+/** Mock mode (default) and local / test: never calls AWS. EmailService mirrors the rendered message into the dev inbox. */
 export class DevEmailProvider implements EmailProvider {
   async send(input: EmailSendInput, auth = loadEmailDomainAuth()): Promise<EmailSendResult> {
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.NODE_ENV === "production" && !isMock("email")) {
       try {
         assertEmailDomainAuthReady(auth);
       } catch (e) {
@@ -43,13 +44,13 @@ export class DevEmailProvider implements EmailProvider {
 
 /**
  * AWS SES (eu-central-1). Delivered through the platform email adapter; requires verified domain auth in production.
- * Falls back to DevEmailProvider when SES is not configured (EMAIL_SES_ENABLED≠1).
+ * Falls back to DevEmailProvider (mock) unless the email provider mode is `real` (KIORLY_PROVIDER_MODE[_EMAIL]=real).
  */
 export class SesEmailProvider implements EmailProvider {
   constructor(private readonly fallback: EmailProvider = new DevEmailProvider()) {}
 
   async send(input: EmailSendInput, auth = loadEmailDomainAuth()): Promise<EmailSendResult> {
-    if (process.env.EMAIL_SES_ENABLED !== "1") {
+    if (isMock("email")) {
       return this.fallback.send(input, auth);
     }
     try {

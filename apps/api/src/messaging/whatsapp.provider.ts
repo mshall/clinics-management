@@ -1,3 +1,5 @@
+import { isMock } from "../common/provider-mode";
+import { DevInboxRecorder } from "./dev-inbox.recorder";
 import type { WhatsAppSendResult } from "./whatsapp-provider.types";
 
 export type WhatsAppSendResultLegacy = { ok: true } | { ok: false; error: string };
@@ -15,7 +17,7 @@ function whatsAppSandboxAllowed(toPhone: string): boolean {
 
 /** @deprecated MS-01 — use {@link WhatsAppSendService.sendTemplateForTenant} in production. */
 export async function sendWhatsAppMessage(toPhone: string, body: string): Promise<WhatsAppSendResultLegacy> {
-  if (process.env.NODE_ENV === "production") {
+  if (process.env.NODE_ENV === "production" && !isMock("whatsapp")) {
     return {
       ok: false,
       error: "Free-form WhatsApp is disabled outside the 24h session window. Use an approved template.",
@@ -25,6 +27,12 @@ export async function sendWhatsAppMessage(toPhone: string, body: string): Promis
 }
 
 export async function sendWhatsAppMessageLegacy(toPhone: string, body: string): Promise<WhatsAppSendResult> {
+  if (isMock("whatsapp")) {
+    // Mock mode (default): render into the dev inbox, never call a provider.
+    const providerMessageId = `dev-legacy-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    await DevInboxRecorder.record({ channel: "WHATSAPP", toAddress: toPhone, bodyText: body, providerMessageId });
+    return { ok: true, providerMessageId };
+  }
   const url = process.env.WHATSAPP_API_URL?.trim();
   const token = process.env.WHATSAPP_API_TOKEN?.trim();
   if (process.env.WHATSAPP_SANDBOX_NUMBERS?.trim() && !whatsAppSandboxAllowed(toPhone)) {

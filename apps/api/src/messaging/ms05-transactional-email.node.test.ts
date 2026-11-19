@@ -74,6 +74,8 @@ describe("MS-05 transactional email", () => {
     assert.throws(() => assertEmailDomainAuthReady(auth), /DMARC|EMAIL_DOMAIN_AUTH_INCOMPLETE/);
 
     process.env.NODE_ENV = "production";
+    const priorMode = process.env.KIORLY_PROVIDER_MODE_EMAIL;
+    process.env.KIORLY_PROVIDER_MODE_EMAIL = "real"; // the domain gate applies to real sends; mock (default) skips it
     const provider = new SesEmailProvider(new DevEmailProvider());
     const rendered = renderEmailTemplate("password_reset", "en", { resetLink: "https://x" });
     const blocked = await provider.send({ to: "owner@example.com", rendered }, auth);
@@ -97,11 +99,14 @@ describe("MS-05 transactional email", () => {
     const ready = loadEmailDomainAuth(path);
     assert.equal(isEmailDomainAuthReady(ready), true);
     assert.doesNotThrow(() => assertEmailDomainAuthReady(ready));
-    // Without EMAIL_SES_ENABLED, SesEmailProvider falls through to Dev after domain gate passes.
+    // In mock mode SesEmailProvider falls through to the dev provider (no AWS call).
+    process.env.KIORLY_PROVIDER_MODE_EMAIL = "mock";
     const ok = await provider.send({ to: "owner@example.com", rendered }, ready);
     assert.equal(ok.ok, true);
 
     process.env.NODE_ENV = priorEnv;
+    if (priorMode === undefined) delete process.env.KIORLY_PROVIDER_MODE_EMAIL;
+    else process.env.KIORLY_PROVIDER_MODE_EMAIL = priorMode;
     if (priorPath === undefined) delete process.env.EMAIL_DOMAIN_AUTH_PATH;
     else process.env.EMAIL_DOMAIN_AUTH_PATH = priorPath;
     if (priorDkim === undefined) delete process.env.EMAIL_DKIM_VERIFIED;

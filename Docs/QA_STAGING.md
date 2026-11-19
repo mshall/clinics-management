@@ -15,14 +15,13 @@ Set on the **API** process:
 
 Template: [`apps/api/.env.staging.example`](../apps/api/.env.staging.example)
 
-### ETA (pre-production)
+### Tax authority
 
-When `KIORLY_ENV=staging` and `ETA_API_BASE_URL` is unset, the API sets:
+None. Kiorly never reports to a tax authority ([NO_TAX_AUTHORITY_REPORTING.md](./NO_TAX_AUTHORITY_REPORTING.md)); there are no ETA variables.
 
-- `ETA_API_BASE_URL` → `https://api.preprod.invoicing.eta.gov.eg`
-- `ETA_TOKEN_URL` → `…/connect/token`
+### Mock providers
 
-Load clinic credentials from Secrets Manager or env (`scripts/configure-apprunner-eta.sh`). Run billing drill per [ETA_RECEIPT_V12.md](./ETA_RECEIPT_V12.md).
+Staging runs every messaging / email / PSP integration in mock mode until the pre-launch pass ([MOCK_PROVIDERS.md](./MOCK_PROVIDERS.md)).
 
 ### WhatsApp sandbox
 

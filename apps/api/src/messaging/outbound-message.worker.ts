@@ -1,6 +1,8 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { MessageChannel, Prisma } from "@prisma/client";
+import { isMock } from "../common/provider-mode";
 import { PrismaService } from "../prisma/prisma.service";
+import { DevInboxRecorder } from "./dev-inbox.recorder";
 import { nextRetryAt, workerStatusForFailure } from "./whatsapp-failure-policy";
 import { resolveMarketTemplate, whatsAppConfigFromMarket } from "./whatsapp-market-config";
 import { DEFAULT_REMINDER_QUICK_REPLIES, WAITLIST_OFFER_QUICK_REPLIES, WAITLIST_OFFER_TEMPLATE_KEY } from "./whatsapp-reply-payloads";
@@ -55,15 +57,27 @@ export class OutboundMessageWorker implements OnModuleInit, OnModuleDestroy {
       }
       if (row.channel === MessageChannel.WHATSAPP) {
         await this.processWhatsApp(row);
+      } else if (isMock(row.channel === MessageChannel.EMAIL ? "email" : "sms")) {
+        // Mock mode (default): "send" into the dev inbox with a deterministic provider id.
+        const providerMessageId = `dev-sms-${row.id}`;
+        await DevInboxRecorder.record({
+          channel: row.channel === MessageChannel.EMAIL ? "EMAIL" : "SMS",
+          tenantId: row.tenantId,
+          toAddress: row.toPhone,
+          templateKey: row.templateKey,
+          bodyText: row.body,
+          variables: (row.variablesJson as Record<string, unknown> | null) ?? null,
+          providerMessageId,
+          relatedId: row.id,
+        });
+        await this.prisma.outboundMessage.update({
+          where: { id: row.id },
+          data: { status: "SENT", sentAt: new Date(), providerMessageId, error: null, failureClass: null },
+        });
       } else {
         await this.prisma.outboundMessage.update({
           where: { id: row.id },
-          data: {
-            status: process.env.NODE_ENV === "production" ? "FAILED" : "SENT",
-            sentAt: new Date(),
-            error: process.env.NODE_ENV === "production" ? "SMS provider not configured" : null,
-            failureClass: process.env.NODE_ENV === "production" ? "POLICY" : null,
-          },
+          data: { status: "FAILED", sentAt: new Date(), error: "Provider not configured", failureClass: "POLICY" },
         });
       }
     }
@@ -126,6 +140,8 @@ export class OutboundMessageWorker implements OnModuleInit, OnModuleDestroy {
       quickReplies,
       documentLink: typeof meta.documentLink === "string" ? meta.documentLink : undefined,
       documentFilename: typeof meta.documentFilename === "string" ? meta.documentFilename : undefined,
+      renderedBody: row.body,
+      relatedId: row.id,
     });
     if (result.ok) {
       await this.prisma.outboundMessage.update({

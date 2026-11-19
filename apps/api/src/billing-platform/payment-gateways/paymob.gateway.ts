@@ -12,6 +12,7 @@ import type {
   RefundResult,
   TokenizeResult,
 } from "./payment-gateway.interface";
+import { isMock } from "../../common/provider-mode";
 
 function webhookSecret(): string {
   return process.env.KIORLY_PAYMOB_WEBHOOK_SECRET ?? process.env.PAYMOB_HMAC_SECRET ?? "dev-paymob-secret";
@@ -60,6 +61,11 @@ export class PaymobGateway implements PaymentGateway {
       providerRef,
       status: fail ? "failed" : "succeeded",
     };
+  }
+
+  signMockWebhook(rawBody: string): string {
+    if (!isMock("psp")) throw new Error("signMockWebhook is only available in PSP mock mode");
+    return createHmac("sha256", webhookSecret()).update(rawBody, "utf8").digest("hex");
   }
 
   verifyWebhookSignature(rawBody: string, signatureHeader: string | undefined): boolean {

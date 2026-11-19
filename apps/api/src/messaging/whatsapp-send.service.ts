@@ -1,5 +1,7 @@
 import { BadRequestException, Injectable, Logger } from "@nestjs/common";
+import { isMock } from "../common/provider-mode";
 import { PrismaService } from "../prisma/prisma.service";
+import { DevInboxRecorder } from "./dev-inbox.recorder";
 import { resolveMarketForTenant } from "../markets/market-resolver";
 import { metaCloudProviderFromEnv } from "./whatsapp-meta-cloud.provider";
 import {
@@ -49,13 +51,39 @@ export class WhatsAppSendService {
     templateKey: string,
     toPhone: string,
     variables: Record<string, string>,
-    options?: { quickReplies?: string[]; documentLink?: string; documentFilename?: string },
+    options?: {
+      quickReplies?: string[];
+      documentLink?: string;
+      documentFilename?: string;
+      /** Mock mode: text shown in the dev inbox (the queued message body). */
+      renderedBody?: string;
+      /** Mock mode: OutboundMessage.id the dev-inbox row mirrors. */
+      relatedId?: string;
+    },
   ): Promise<WhatsAppSendResult> {
     if (!templateKey?.trim()) {
       throw new BadRequestException("WhatsApp requires an approved template key");
     }
     const waConfig = await this.loadMarketWaConfig(tenantId);
     const marketTpl = resolveMarketTemplate(waConfig, templateKey);
+    if (isMock("whatsapp")) {
+      // Mock mode (default): same template/variable resolution as real, rendered into the dev inbox instead of Meta.
+      const providerMessageId = `dev-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const preview = options?.renderedBody?.trim() || Object.values(variables).join(" · ") || templateKey;
+      await DevInboxRecorder.record({
+        channel: "WHATSAPP",
+        tenantId,
+        toAddress: toPhone,
+        templateKey,
+        bodyText: preview,
+        variables,
+        quickReplies: options?.quickReplies ?? marketTpl?.quickReplyButtons ?? null,
+        documentLink: options?.documentLink ?? null,
+        providerMessageId,
+        relatedId: options?.relatedId ?? null,
+      });
+      return { ok: true, providerMessageId };
+    }
     if (!marketTpl) {
       if (process.env.NODE_ENV !== "production") {
         const preview = Object.values(variables).join(" · ") || templateKey;

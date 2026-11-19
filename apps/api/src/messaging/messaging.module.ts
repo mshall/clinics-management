@@ -80,6 +80,7 @@ import { WhatsAppAiReceptionistService } from "./whatsapp-ai-receptionist.servic
     OutboxEventService,
     OutboxDispatcherService,
     AppointmentOutboxService,
+    WhatsAppWebhookService,
   ],
 })
 export class MessagingModule {}

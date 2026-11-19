@@ -24,9 +24,13 @@ describe("MS-01 WhatsApp provider", () => {
 
   it("blocks free-form WhatsApp in production", async () => {
     const prior = process.env.NODE_ENV;
+    const priorMode = process.env.KIORLY_PROVIDER_MODE_WHATSAPP;
     process.env.NODE_ENV = "production";
+    process.env.KIORLY_PROVIDER_MODE_WHATSAPP = "real"; // mock mode (the default) renders into the dev inbox instead
     const res = await sendWhatsAppMessage("+201000000001", "hello outside window");
     process.env.NODE_ENV = prior;
+    if (priorMode === undefined) delete process.env.KIORLY_PROVIDER_MODE_WHATSAPP;
+    else process.env.KIORLY_PROVIDER_MODE_WHATSAPP = priorMode;
     assert.equal(res.ok, false);
     assert.match((res as { error: string }).error, /template|free-form|24h/i);
   });

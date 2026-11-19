@@ -1,3 +1,5 @@
+import { DevInboxRecorder } from "../messaging/dev-inbox.recorder";
+import { isMock } from "../common/provider-mode";
 import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -96,7 +98,19 @@ export class PushService {
 
     const publicKey = process.env.WEB_PUSH_VAPID_PUBLIC?.trim();
     const privateKey = process.env.WEB_PUSH_VAPID_PRIVATE?.trim();
-    if (!publicKey || !privateKey) {
+    if (isMock("push") || !publicKey || !privateKey) {
+      if (isMock("push")) {
+        // Mock mode (default): the notification a clinician would get is rendered into the dev inbox.
+        await DevInboxRecorder.record({
+          channel: "PUSH",
+          tenantId: params.tenantId,
+          toAddress: params.clinicianUserId,
+          templateKey: "kiorex_booking",
+          subject: "New Kiorex booking",
+          bodyText: `New Kiorex booking (${params.externalRef}) starts ${params.startsAt.toISOString()}`,
+          relatedId: params.appointmentId,
+        });
+      }
       this.log.debug("WEB_PUSH_VAPID_* unset — recording intent only");
       await this.audit.recordEvent({
         tenantId: params.tenantId,

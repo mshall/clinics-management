@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { DevInboxRecorder } from "./dev-inbox.recorder";
 import { loadEmailDomainAuth } from "./email-domain-auth";
 import { createEmailProvider, type EmailProvider } from "./email.provider";
 import {
@@ -90,6 +91,21 @@ export class EmailService {
         sentAt: new Date(),
       },
     });
+    if (result.provider === "dev") {
+      await DevInboxRecorder.record({
+        channel: "EMAIL",
+        tenantId: input.tenantId ?? null,
+        toAddress: to,
+        fromAddress: loadEmailDomainAuth().fromAddress,
+        templateKey: input.templateKey,
+        subject: rendered.subject,
+        bodyText: rendered.text,
+        bodyHtml: rendered.html,
+        variables: input.variables,
+        providerMessageId: result.providerMessageId,
+        relatedId: row.id,
+      });
+    }
     return { ok: true as const, emailMessageId: row.id, providerMessageId: result.providerMessageId };
   }
 

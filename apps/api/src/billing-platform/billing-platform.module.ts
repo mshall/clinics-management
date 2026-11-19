@@ -41,6 +41,6 @@ import { SettlementService } from "./settlement.service";
     LiteFeesService,
     MonthlyStatementService,
   ],
-  exports: [KiorlyInvoicesService, KiorlyPaymentService, SettlementService, KiorexProgressService],
+  exports: [KiorlyInvoicesService, KiorlyPaymentService, PaymentGatewayRegistry, SettlementService, KiorexProgressService],
 })
 export class BillingPlatformModule {}
