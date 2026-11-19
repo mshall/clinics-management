@@ -3420,5 +3420,58 @@
     "afterPaying": "After paying, send the transaction reference to the clinic so they can confirm your booking.",
     "expired": "This payment link has expired. Please contact the clinic.",
     "paid": "This deposit has been received. Thank you!"
+  },
+  "doctorStatements": {
+    "title": "Doctor statements",
+    "subtitleManage": "Revenue share per doctor from collected payments. Approve to lock a month, then record the payout.",
+    "subtitleOwn": "Your share of the payments collected for your visits this month.",
+    "period": "Month",
+    "rules": "Share rules",
+    "reconciliation": "Collected this month {{total}} = doctors {{attributed}} + not linked to a doctor {{unattributed}}",
+    "doctor": "Doctor",
+    "visits": "Visits",
+    "collected": "Collected",
+    "doctorShare": "Doctor share",
+    "clinicShare": "Clinic share",
+    "netPayable": "Net payable",
+    "statusLabel": "Status",
+    "status": {
+      "DRAFT": "Draft",
+      "APPROVED": "Approved",
+      "PAID": "Paid"
+    },
+    "roomRental": "Room rental {{amount}}",
+    "pdf": "Download PDF",
+    "adjust": "Adjust",
+    "approve": "Approve",
+    "approved": "Statement approved and locked",
+    "markPaid": "Mark paid",
+    "paid": "Payout recorded",
+    "empty": "No collected revenue for this month.",
+    "adjustTitle": "Adjust statement — {{name}}",
+    "adjustAmount": "Amount (negative to deduct)",
+    "adjustNote": "Reason",
+    "adjustSave": "Add adjustment",
+    "markPaidTitle": "Record payout — {{name}}",
+    "payMethod": "Method",
+    "payReference": "Reference (optional)",
+    "methods": {
+      "TRANSFER": "Bank transfer",
+      "CASH": "Cash",
+      "WALLET": "Wallet",
+      "CHEQUE": "Cheque"
+    },
+    "allDoctors": "All doctors",
+    "rulesHint": "The most specific rule wins (doctor, then visit type, category, payer, branch). Changes apply to draft statements only.",
+    "removeRule": "Remove",
+    "ruleType": "Type",
+    "ruleTypes": {
+      "PERCENT": "Percent of collections",
+      "FIXED_PER_VISIT": "Fixed per visit",
+      "ROOM_RENTAL": "Room rental"
+    },
+    "percent": "Percent",
+    "amount": "Amount",
+    "addRule": "Add rule"
   }
 }

@@ -61,6 +61,7 @@ export const TOP_LEVEL_FOLDER_TO_CONTEXT: Record<string, BoundedContextId> = {
   "front-desk": "front-office",
   billing: "front-office",
   revenue: "front-office",
+  "revenue-share": "front-office",
   invoices: "front-office",
   expenses: "front-office",
   payroll: "front-office",

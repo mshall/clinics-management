@@ -17,6 +17,7 @@ import { PatientsModule } from "./patients/patients.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { ReportsModule } from "./reports/reports.module";
 import { RevenueModule } from "./revenue/revenue.module";
+import { RevenueShareModule } from "./revenue-share/revenue-share.module";
 import { StorageModule } from "./storage/storage.module";
 import { UserNavTabsModule } from "./user-nav-tabs/user-nav-tabs.module";
 import { UserMoneyVisibilityModule } from "./user-money-visibility/user-money-visibility.module";
@@ -68,6 +69,7 @@ import { GrowthModule } from "./growth/growth.module";
     EncountersModule,
     ExpensesModule,
     RevenueModule,
+    RevenueShareModule,
     HrModule,
     AppointmentsModule,
     OperationsModule,
