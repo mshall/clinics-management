@@ -1,13 +1,15 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, ForbiddenException, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
-import type { PaymentMethod } from "@prisma/client";
+import { PaymentMethod } from "@prisma/client";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { EntitlementGuard } from "../entitlements/entitlement.guard";
 import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
+import { DepositSettlementService } from "./deposit-settlement.service";
 import { KiorexDepositsService } from "./kiorex-deposits.service";
+import { canHandlePatientMoney } from "./patient-money";
 import {
   PatientMoneyService,
   type CreateRefundBody,
@@ -25,6 +27,7 @@ export class PatientMoneyController {
   constructor(
     private readonly money: PatientMoneyService,
     private readonly kiorex: KiorexDepositsService,
+    private readonly settlement: DepositSettlementService,
   ) {}
 
   @Post("billing/refunds")
@@ -86,6 +89,25 @@ export class PatientMoneyController {
     @Body() body: { reason: string; outcome?: "RELEASED" | "FORFEITED" },
   ) {
     return this.money.releaseDeposit(requireTenantId(user), user, id, body);
+  }
+
+  @Post("billing/deposits/:id/mark-paid")
+  @ApiOperation({ summary: "Desk confirms a payment-link deposit was paid (transfer reference required unless cash) (FS-04)" })
+  markDepositPaid(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Body() body: { method: PaymentMethod; reference?: string },
+  ) {
+    if (!canHandlePatientMoney(user)) throw new ForbiddenException("Front desk or finance role required");
+    const method = this.money.parseDeskMethod(body?.method);
+    const reference = body?.reference?.trim() || null;
+    if (method !== PaymentMethod.CASH && !reference) {
+      throw new BadRequestException({ message: "A payment reference is required", code: "DEPOSIT_REFERENCE_REQUIRED" });
+    }
+    return this.settlement.markLinkPaid(requireTenantId(user), user.userId, id, {
+      method,
+      externalRef: reference ? reference.slice(0, 120) : null,
+    });
   }
 
   @Get("billing/kiorex-payouts")

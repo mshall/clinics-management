@@ -249,9 +249,8 @@ export interface AppointmentDepositView {
   source: "CLINIC" | "KIOREX_PAY" | "PAYMENT_LINK" | string;
   amount: number;
   currency: string;
-  /** FS-04: payment link sent to the patient while PENDING */
-  paymentLinkUrl?: string | null;
-  expiresAt?: string | null;
+  /** FS-04: when an unpaid payment link runs out */
+  linkExpiresAt?: string | null;
 }
 
 export interface OperationDto {

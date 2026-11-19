@@ -52,7 +52,8 @@ export type TakeDepositBody = {
   method: PaymentMethod;
 };
 
-const PAYMENT_METHODS = new Set<string>(Object.values(PaymentMethod));
+/** Methods staff can pick; KIOREX_PAY only ever arrives from Kiorex itself. */
+const PAYMENT_METHODS = new Set<string>(Object.values(PaymentMethod).filter((m) => m !== PaymentMethod.KIOREX_PAY));
 
 function money(n: number): Prisma.Decimal {
   return new Prisma.Decimal(String(roundMoney(n)));
@@ -572,20 +573,83 @@ export class PatientMoneyService {
         status: DEPOSIT_STATUS.HELD,
         externalRef: p.externalRef ?? null,
         createdByUserId: p.actorId,
+        paidAt: new Date(),
       },
     });
+    await this.recordDepositInflowTx(tx, deposit, p.actorId);
+    return deposit;
+  }
+
+  private async recordDepositInflowTx(
+    tx: Tx,
+    deposit: { id: string; tenantId: string; clinicId: string; patientId: string; appointmentId: string | null; amount: Prisma.Decimal; currency: string; method: PaymentMethod; source: string },
+    actorId: string | null,
+  ) {
     await tx.cashMovement.create({
+      data: {
+        tenantId: deposit.tenantId,
+        clinicId: deposit.clinicId,
+        patientId: deposit.patientId,
+        direction: "IN",
+        method: deposit.method,
+        amount: deposit.amount,
+        currency: deposit.currency,
+        sourceType: "DEPOSIT",
+        sourceId: deposit.id,
+        cashierUserId: actorId,
+      },
+    });
+    await tx.auditLog.create({
+      data: {
+        tenantId: deposit.tenantId,
+        actorId,
+        clinicId: deposit.clinicId,
+        action: "DEPOSIT_TAKEN",
+        resource: "PatientDeposit",
+        resourceId: deposit.id,
+        metadata: {
+          amount: Number(deposit.amount),
+          method: deposit.method,
+          source: deposit.source,
+          appointmentId: deposit.appointmentId,
+        },
+      },
+    });
+  }
+
+  /** FS-04 — a deposit asked for through a payment link: no money yet, so no movement and no revenue. */
+  async createPendingDepositTx(
+    tx: Tx,
+    p: {
+      tenantId: string;
+      clinicId: string;
+      patientId: string;
+      appointmentId: string;
+      amount: number;
+      currency: string;
+      method: PaymentMethod;
+      source: string;
+      actorId: string | null;
+      linkTokenHash: string;
+      linkExpiresAt: Date;
+      reasons: string[];
+    },
+  ) {
+    const deposit = await tx.patientDeposit.create({
       data: {
         tenantId: p.tenantId,
         clinicId: p.clinicId,
         patientId: p.patientId,
-        direction: "IN",
-        method: p.method,
+        appointmentId: p.appointmentId,
         amount: money(p.amount),
         currency: p.currency,
-        sourceType: "DEPOSIT",
-        sourceId: deposit.id,
-        cashierUserId: p.actorId,
+        method: p.method,
+        source: p.source,
+        status: DEPOSIT_STATUS.PENDING,
+        linkTokenHash: p.linkTokenHash,
+        linkExpiresAt: p.linkExpiresAt,
+        requirementReasons: p.reasons as Prisma.InputJsonValue,
+        createdByUserId: p.actorId,
       },
     });
     await tx.auditLog.create({
@@ -593,13 +657,74 @@ export class PatientMoneyService {
         tenantId: p.tenantId,
         actorId: p.actorId,
         clinicId: p.clinicId,
-        action: "DEPOSIT_TAKEN",
+        action: "DEPOSIT_LINK_CREATED",
         resource: "PatientDeposit",
         resourceId: deposit.id,
-        metadata: { amount: p.amount, method: p.method, source: p.source, appointmentId: p.appointmentId },
+        metadata: { amount: p.amount, source: p.source, appointmentId: p.appointmentId, reasons: p.reasons, expiresAt: p.linkExpiresAt.toISOString() },
       },
     });
     return deposit;
+  }
+
+  /**
+   * FS-04 — the patient paid the link (desk confirmed a transfer, or Kiorex Pay called back): PENDING → HELD
+   * with its cash-in movement. Replaying the same external reference is a no-op.
+   */
+  async markDepositPaidTx(
+    tx: Tx,
+    tenantId: string,
+    actorId: string | null,
+    depositId: string,
+    p: { method: PaymentMethod; externalRef: string | null; paidAt?: Date },
+  ) {
+    await lockKey(tx, `deposit:${depositId}`);
+    const deposit = await tx.patientDeposit.findFirst({ where: { id: depositId, tenantId } });
+    if (!deposit) throw new NotFoundException("Deposit not found");
+    if (deposit.status !== DEPOSIT_STATUS.PENDING) {
+      if (p.externalRef && deposit.externalRef === p.externalRef) return deposit;
+      throw new BadRequestException({
+        message: "Only a deposit awaiting payment can be marked paid",
+        code: deposit.status === DEPOSIT_STATUS.EXPIRED ? "DEPOSIT_LINK_EXPIRED" : "DEPOSIT_NOT_PENDING",
+      });
+    }
+    const updated = await tx.patientDeposit.update({
+      where: { id: deposit.id },
+      data: {
+        status: DEPOSIT_STATUS.HELD,
+        method: p.method,
+        externalRef: p.externalRef,
+        paidAt: p.paidAt ?? new Date(),
+        linkTokenHash: null,
+      },
+    });
+    await this.recordDepositInflowTx(tx, updated, actorId);
+    return updated;
+  }
+
+  /** FS-04 — unpaid link ends: EXPIRED (ran out) or CANCELLED (appointment over / replaced). Nothing to reverse. */
+  async voidPendingDepositTx(tx: Tx, tenantId: string, actorId: string | null, depositId: string, status: "EXPIRED" | "CANCELLED", reason: string) {
+    const r = await tx.patientDeposit.updateMany({
+      where: { id: depositId, tenantId, status: DEPOSIT_STATUS.PENDING },
+      data: { status, releasedAt: new Date(), linkTokenHash: null },
+    });
+    if (r.count === 0) return false;
+    const d = await tx.patientDeposit.findUniqueOrThrow({ where: { id: depositId }, select: { clinicId: true, amount: true, appointmentId: true } });
+    await tx.auditLog.create({
+      data: {
+        tenantId,
+        actorId,
+        clinicId: d.clinicId,
+        action: status === "EXPIRED" ? "DEPOSIT_LINK_EXPIRED" : "DEPOSIT_LINK_CANCELLED",
+        resource: "PatientDeposit",
+        resourceId: depositId,
+        metadata: { amount: Number(d.amount), appointmentId: d.appointmentId, reason },
+      },
+    });
+    return true;
+  }
+
+  parseDeskMethod(m: unknown): PaymentMethod {
+    return assertMethod(m);
   }
 
   async applyDeposit(tenantId: string, user: JwtUser, depositId: string, body: { appointmentId?: string | null }) {
@@ -806,7 +931,7 @@ export class PatientMoneyService {
       patientId,
       depositsHeld: roundMoney(held.reduce((s, d) => s + Number(d.amount), 0)),
       packagesUnusedValue: roundMoney(pkgRows.filter((p) => !p.expired).reduce((s, p) => s + p.unusedValue, 0)),
-      deposits: deposits.map((d) => ({ ...d, amount: Number(d.amount) })),
+      deposits: deposits.map(({ linkTokenHash: _hash, ...d }) => ({ ...d, amount: Number(d.amount) })),
       packages: pkgRows,
       refunds: refunds.map((r) => ({ ...r, amount: Number(r.amount) })),
       creditNotes: creditNotes.map((c) => ({ ...c, amount: Number(c.amount) })),

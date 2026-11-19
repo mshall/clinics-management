@@ -152,6 +152,13 @@ export class MarketplaceController {
     return this.kiorexDeposits.depositPaid(client.id, externalRef, body);
   }
 
+  @Post("deposit-links/:token/paid")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Patient paid a clinic deposit link through Kiorex Pay (FS-04); idempotent on paymentRef" })
+  depositLinkPaid(@Param("token") token: string, @Body() body: DepositPaidBody) {
+    return this.kiorexDeposits.depositLinkPaid(token, body);
+  }
+
   @Post("payouts")
   @HttpCode(200)
   @ApiOperation({ summary: "Kiorex paid the clinic out for collected deposits (KX-07); idempotent on payoutRef" })

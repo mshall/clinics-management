@@ -49,6 +49,7 @@ import { NewPatientService } from "../patients/new-patient.service";
 import { isCommissionChargeableBooking } from "./booking-attribution";
 import { CommissionChargeService, type BilledReversalCreditIntent } from "../kiorex/commission-charge.service";
 import { AppointmentOutboxService } from "../messaging/appointment-outbox.service";
+import { DepositSettlementService } from "../billing/deposit-settlement.service";
 import { auditClinicCancellation, clinicCancellationEventMetadata, clinicCancellationPatch } from "./kiorex-clinic-cancel";
 
 const appointmentDtoInclude = {
@@ -81,6 +82,7 @@ export class AppointmentsService {
     private readonly slots: SlotService,
     private readonly appointmentOutbox: AppointmentOutboxService,
     private readonly entitlements: EntitlementsService,
+    private readonly depositSettlement: DepositSettlementService,
   ) {}
 
   /** FS-05: the risk chip is a Pro+ front-desk feature; deposits are suggested only when the plan has them. */
@@ -242,7 +244,7 @@ export class AppointmentsService {
     const rows = await this.prisma.patientDeposit.findMany({
       where: { tenantId, appointmentId: { in: dtos.map((d) => d.id) } },
       orderBy: { createdAt: "desc" },
-      select: { appointmentId: true, status: true, source: true, amount: true, currency: true },
+      select: { appointmentId: true, status: true, source: true, amount: true, currency: true, linkExpiresAt: true },
     });
     const latest = new Map<string, (typeof rows)[number]>();
     for (const r of rows) if (r.appointmentId && !latest.has(r.appointmentId)) latest.set(r.appointmentId, r);
@@ -256,6 +258,7 @@ export class AppointmentsService {
           source: dep.source,
           amount: d.financialsVisible === false ? 0 : Number(dep.amount),
           currency: dep.currency,
+          linkExpiresAt: dep.linkExpiresAt?.toISOString() ?? null,
         },
       };
     });
@@ -590,6 +593,58 @@ export class AppointmentsService {
     return this.mapRow(updated);
   }
 
+  /** FS-04 — the deposit link ran out unpaid and the clinic policy auto-cancels; the slot is freed. */
+  async cancelForUnpaidDeposit(tenantId: string, id: string): Promise<boolean> {
+    const creditIntents: BilledReversalCreditIntent[] = [];
+    const row = await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.appointment.findFirst({ where: { id, tenantId } });
+      if (!existing || (existing.status !== AppointmentStatus.SCHEDULED && existing.status !== AppointmentStatus.CONFIRMED)) {
+        return null;
+      }
+      const row = await tx.appointment.update({
+        where: { id },
+        data: {
+          status: AppointmentStatus.CANCELLED,
+          cancelledAt: new Date(),
+          cancelledBy: "SYSTEM",
+          cancellationReason: "Deposit not paid in time",
+          depositRefundable: true,
+        },
+      });
+      const credit = await this.commissionCharges.onCancelOrNoShow(tx, tenantId, id);
+      if (credit) creditIntents.push(credit);
+      await tx.auditLog.create({
+        data: {
+          tenantId,
+          clinicId: row.clinicId,
+          action: "APPOINTMENT_AUTO_CANCELLED_UNPAID_DEPOSIT",
+          resource: "Appointment",
+          resourceId: id,
+          metadata: { previousStatus: existing.status },
+        },
+      });
+      await this.appointmentOutbox.emitStatusChange(
+        {
+          tenantId,
+          appointmentId: row.id,
+          clinicId: row.clinicId,
+          previousStatus: existing.status,
+          nextStatus: AppointmentStatus.CANCELLED,
+          bookingSource: row.bookingSource,
+          cancelledByPatient: false,
+          metadata: { cancelledBy: "SYSTEM", cancellationReason: row.cancellationReason, depositRefundable: true },
+        },
+        tx,
+      );
+      return row;
+    });
+    if (!row) return false;
+    await this.commissionCharges.applyCreditIntents(creditIntents);
+    await this.scheduling.recordFreedSlot(tenantId, row.id);
+    await this.invalidateSlotsForAppointment(tenantId, row.clinicId, row.clinicianId, "deposit_unpaid_cancel");
+    return true;
+  }
+
   async create(tenantId: string, actor: JwtUser, dto: CreateAppointmentDto): Promise<AppointmentDto> {
     if (isPhysicianRole(actor.role) && dto.clinicianId.trim() !== actor.userId) {
       throw new BadRequestException("Physicians may only book appointments as themselves");
@@ -799,6 +854,7 @@ export class AppointmentsService {
         await this.commissionCharges.onComplete(tx, tenantId, id);
       }
       if (credit) creditIntents.push(credit);
+      await this.depositSettlement.settleAppointmentDepositsTx(tx, tenantId, row.id, viewer?.userId ?? null);
       await this.appointmentOutbox.emitStatusChange(
         {
           tenantId,

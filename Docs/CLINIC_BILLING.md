@@ -5,6 +5,7 @@ Patient-side money for clinics (not Kiorly's own SaaS billing — that is `Kiorl
 | Step | Item | Status |
 |------|------|--------|
 | MN-01 | Refunds + credit notes, prepaid packages, deposits, patient balances, refund dialog + patient "Packages & refunds" tab | **Done** |
+| FS-04 | Payment-link deposits (`PENDING` → `HELD` on payment, `EXPIRED` / `CANCELLED` when unpaid), desk mark-paid, Kiorex Pay link callback; late patient cancellation forfeits per clinic policy — see [FRONT_DESK.md](./FRONT_DESK.md#deposits--payment-links-for-high-risk-bookings-fs-04) | **Done** |
 | KX-07 | Kiorex Pay deposits → held deposit on the booking → `BillingPayment` at check-in via `postRevenue`; refund/forfeit per policy; payouts reconciliation; deposit badge | **Done** |
 
 ## Money model
@@ -15,7 +16,9 @@ Patient-side money for clinics (not Kiorly's own SaaS billing — that is `Kiorl
 | Package sale (`PatientServicePackage`) | none — liability | `IN` (`PACKAGE_SALE`) |
 | Package session (`PatientPackageConsumption`) | `PACKAGE_SESSION` = price ÷ sessions (last session takes the rounding remainder) | none |
 | Package cancel | none (unused value was never revenue) | `OUT` for the unused value (`PACKAGE_CANCEL`) |
-| Deposit taken (`PatientDeposit` HELD) | none — liability | `IN` (`DEPOSIT`) |
+| Deposit link sent (`PatientDeposit` PENDING) | none | none |
+| Deposit taken / link paid (`PatientDeposit` HELD) | none — liability | `IN` (`DEPOSIT`) |
+| Link expired / voided (EXPIRED / CANCELLED) | none | none |
 | Deposit applied | `DEPOSIT_APPLIED` via `postRevenue` (once — status guard + advisory lock) | none |
 | Deposit released / forfeited | released: none · forfeited: `DEPOSIT_FORFEIT` revenue | released: `OUT` (`DEPOSIT_RELEASE`) · forfeited: none |
 
@@ -44,6 +47,7 @@ Cash close (`POST /billing/cash-close`) adds every non-`PAYMENT` cash movement o
 | POST | `/billing/deposits/:id/apply` | 400 `DEPOSIT_NOT_HELD` |
 | POST | `/billing/deposits/:id/release` | `{ reason, outcome?: RELEASED | FORFEITED }` |
 | GET | `/patients/:id/balances` | deposits held, package balances (+ expired flag), refunds, credit notes, refundable items |
+| POST | `/billing/deposits/:id/mark-paid` | FS-04 — `{ method, reference }`; 400 `DEPOSIT_NOT_PENDING` / `DEPOSIT_LINK_EXPIRED` / `DEPOSIT_REFERENCE_REQUIRED` |
 | GET | `/billing/kiorex-payouts?from&to&clinicId` | approvers only — collected, refunded, net due, payouts received, outstanding + deposit rows |
 | POST | `/marketplace/v1/bookings/:ref/deposit-paid` | Kiorex (platform client) — `{ amount, currency?, paymentRef, paidAt? }`; idempotent per `paymentRef`; 400 `DEPOSIT_EXCEEDS_FEE` / `DEPOSIT_CURRENCY_MISMATCH` |
 | POST | `/marketplace/v1/payouts` | Kiorex — `{ payoutRef, clinicId?, amount, currency?, paidAt?, depositPaymentRefs? }`; idempotent per `payoutRef` |

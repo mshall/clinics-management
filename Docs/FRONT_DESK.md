@@ -86,6 +86,23 @@ A **lower** fee after payment uses **`reducePostedRevenueNetWithFiscal`**: parti
 - **API:** `GET/POST /api/v1/scheduling/waitlist`, `POST /api/v1/scheduling/waitlist/:id/cancel` (withdraws a live offer), `GET /api/v1/scheduling/waitlist/offers`. Waitlist create checks clinic, patient and doctor belong to the tenant.
 - Tests: `apps/api/src/messaging/fs03-waitlist-autofill.integration.test.ts` (concurrent offers + DB constraint, decline → next, expiry → next, late accept, concurrent accepts, filled elsewhere, remove withdraws), `fs03-waitlist-autofill.node.test.ts`, `ms02-whatsapp-replies.integration.test.ts`, `e2e/fs03-waitlist-autofill.spec.ts`.
 
+## Deposits & payment links for high-risk bookings (FS-04)
+
+| Item | Status |
+|---|---|
+| FS-04 Deposit rules: patient flag, no-shows ≥ N, risk score ≥ X, appointment-type deposit | **Done** (Pro+, `deposits` entitlement) |
+| FS-04 Payment link sent on WhatsApp (clinic pay page or Kiorex Pay); unpaid → expires, optional auto-cancel | **Done** |
+| FS-04 Deposit applied at check-in through `postRevenue`; forfeit / refund follow the clinic policy | **Done** |
+| FS-04 Deposit status chip + panel on the appointment | **Done** |
+| FS-04 Meta template `deposit_payment_link`; Kiorex Pay checkout URL; clinic gateway auto-confirmation | Needs human (NH-012) |
+
+- **Rules** (`billing/deposit-policy.ts`): market pack `commercialConfig.deposits` `{ noShowThreshold, riskScoreThreshold, defaultPercentOfFee, linkExpiryHours, autoCancelUnpaid }` (code fallback 2 / 60 / 30 % / 24 h / off), clinic partial override `Clinic.depositPolicy` via `GET/PUT /api/v1/clinics/:clinicId/deposit-policy` (owners / admins / finance; audited `DEPOSIT_POLICY_UPDATED`). Amount = the appointment type's `depositAmount`, else the percent of the fee, never above the fee.
+- **Link:** `POST /api/v1/appointments/:id/deposit-link` `{ amount?, provider?: CLINIC | KIOREX_PAY, send? }` (desk / finance roles, upcoming SCHEDULED/CONFIRMED only) creates a `PENDING` `PatientDeposit` (no money, no revenue) with a hashed one-time token and queues `deposit_payment_link` on WhatsApp (consent + quota checks). A new link cancels the previous unpaid one. Link expiry = policy hours, never past the start time. `GET /api/v1/appointments/:id/deposit-requirement` returns the rule result.
+- **Pay:** `CLINIC` links open `/pay/:token` (clinic name, time, amount, the clinic's transfer channels — no patient name); the desk then confirms with `POST /api/v1/billing/deposits/:id/mark-paid` `{ method, reference }` (reference required unless cash). `KIOREX_PAY` links go to `${KIOREX_PAY_LINK_BASE_URL}/deposit/:token` and Kiorex confirms with `POST /marketplace/v1/deposit-links/:token/paid` (idempotent on `paymentRef`, amount must match). Either way the deposit becomes `HELD` with its cash-in movement.
+- **Expiry** (`DepositLinkService`, every 5 min): unpaid past expiry → `EXPIRED`; with `autoCancelUnpaid` the booking is cancelled (`cancelledBy = SYSTEM`, audit `APPOINTMENT_AUTO_CANCELLED_UNPAID_DEPOSIT`, outbox event, slot freed for the waitlist). An unpaid link is voided (`CANCELLED`) when the visit happens or is cancelled.
+- **Settlement:** front-desk check-in, `PATCH /appointments/:id/status` and the 60 s reconciler apply / release / forfeit held deposits (see [CLINIC_BILLING.md](./CLINIC_BILLING.md)). A patient's WhatsApp **Cancel** now records `cancelledBy = PATIENT` and decides `depositRefundable` from the clinic's `depositRefundMinHours` (KX-06 policy) — late cancellations forfeit (`DEPOSIT_FORFEIT` revenue), early ones are refunded.
+- Tests: `apps/api/src/appointments/fs04-deposit-links.integration.test.ts`, `apps/api/src/billing/fs04-deposit-policy.node.test.ts`, `e2e/fs04-deposit-links.spec.ts`.
+
 ## Live clinic board & waiting-room screen
 
 ### Automated visit flow

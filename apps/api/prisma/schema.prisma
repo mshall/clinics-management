@@ -1521,6 +1521,8 @@ model Clinic {
   marketplaceBookingAutoConfirm Boolean @default(true)
   /// KX-06: clinic override of the market pack Kiorex cancellation policy (partial JSON; null = market default).
   kiorexCancellationPolicy Json?
+  /// FS-04 — partial override of market pack `commercialConfig.deposits` (rules, link expiry, auto-cancel).
+  depositPolicy            Json?
   /// KX-09: public clinic booking page slug (commission-free CLINIC_LINK bookings). Shares a namespace with listing slugs.
   bookingSlug      String?         @unique
   createdAt        DateTime        @default(now())
@@ -3110,7 +3112,7 @@ model PatientDeposit {
   method          PaymentMethod
   /// CLINIC | KIOREX_PAY | PAYMENT_LINK
   source          String        @default("CLINIC")
-  /// PENDING | HELD | APPLIED | RELEASED | FORFEITED
+  /// PENDING | HELD | APPLIED | RELEASED | FORFEITED | EXPIRED | CANCELLED (EXPIRED/CANCELLED: unpaid link voided)
   status          String        @default("HELD")
   revenueEntryId  String?       @unique
   paymentId       String?       @unique
@@ -3118,6 +3120,13 @@ model PatientDeposit {
   externalRef     String?
   /// KX-07 — Kiorex payout that settled this deposit to the clinic.
   payoutRef       String?
+  /// FS-04 — sha256 of the payment-link token (raw token only ever goes to the patient).
+  linkTokenHash   String?       @unique
+  linkExpiresAt   DateTime?
+  linkSentAt      DateTime?
+  /// FS-04 — why the deposit was asked for: PATIENT_FLAG | NO_SHOWS | RISK_SCORE | APPOINTMENT_TYPE | MANUAL
+  requirementReasons Json?
+  paidAt          DateTime?
   createdByUserId String?
   appliedAt       DateTime?
   releasedAt      DateTime?
