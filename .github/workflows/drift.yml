@@ -1,0 +1,45 @@
+name: Drift (OpenTofu)
+
+# Nightly `tofu plan -detailed-exitcode` with the read-only role (tofu-plan). Exit code 2 = drift -> job fails -> on-call alert.
+# # enable push/tag triggers after founder approves first deploy (a plan against a stack that does not exist yet would only fail).
+
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: "17 2 * * *"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  drift:
+    name: drift ${{ matrix.env }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        env: ${{ fromJSON(vars.TOFU_PLAN_ENVS || '["staging"]') }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version_file: infra/tofu/.opentofu-version
+          tofu_wrapper: false
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_TOFU_PLAN_ROLE_ARN }}
+          aws-region: eu-central-1
+
+      - name: tofu plan -detailed-exitcode
+        working-directory: infra/tofu/live/${{ matrix.env }}/frankfurt/kiorly-clinic
+        run: |
+          tofu init -input=false
+          set +e
+          tofu plan -input=false -lock-timeout=5m -detailed-exitcode -var "git_sha=drift-check"
+          code=$?
+          if [ "$code" -eq 2 ]; then echo "::error::Infrastructure drift detected in ${{ matrix.env }}"; fi
+          exit "$code"

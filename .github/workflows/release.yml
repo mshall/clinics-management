@@ -1,0 +1,104 @@
+name: Release (OpenTofu - production)
+
+# kiorly-clinic -> production (KX-21 §01). Role: tofu-apply-prod via GitHub Environment `production` (required reviewers).
+# Repository variable required: AWS_TOFU_APPLY_PROD_ROLE_ARN. Same steps as deploy.yml against the prod stack;
+# migrations run on boot (expand-contract only).
+# # enable push/tag triggers after founder approves first deploy
+# Target: tag `v*` (release tags vYYYY.MM.DD-N) + environment approval.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to deploy (e.g. v2026.11.19-1)"
+        required: true
+  # push:
+  #   tags: ["v*"]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: release-prod
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: eu-central-1
+  STACK_DIR: infra/tofu/live/prod/frankfurt/kiorly-clinic
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag }}
+
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version_file: infra/tofu/.opentofu-version
+          tofu_wrapper: false
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_TOFU_APPLY_PROD_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Is this stack enabled?
+        id: gate
+        run: |
+          if grep -Eq '^enabled_never_matches[[:space:]]*=[[:space:]]*false' "$STACK_DIR/terraform.tfvars"; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"; echo "Stack disabled in tfvars - nothing to release."
+          else echo "enabled=true" >> "$GITHUB_OUTPUT"; fi
+
+      - name: tofu init
+        if: steps.gate.outputs.enabled == 'true'
+        run: tofu init -input=false
+        working-directory: ${{ env.STACK_DIR }}
+
+      - name: Phase 1 - ensure ECR repositories exist (first release only)
+        if: steps.gate.outputs.enabled == 'true'
+        working-directory: ${{ env.STACK_DIR }}
+        run: |
+          tofu apply -input=false -auto-approve -var "git_sha=${{ github.sha }}" \
+            -target='module.kiorly_clinic.module.container_service.aws_ecr_repository.this'
+
+      - name: Build and push API image (linux/amd64, tag = git sha)
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          set -euo pipefail
+          REPO_URL="$(cd "$STACK_DIR" && tofu output -raw ecr_repository_url)"
+          aws ecr get-login-password | docker login --username AWS --password-stdin "${REPO_URL%%/*}"
+          docker buildx build --platform linux/amd64 -f apps/api/Dockerfile -t "$REPO_URL:${{ github.sha }}" --push .
+
+      - name: Phase 2 - plan then apply (same plan file)
+        if: steps.gate.outputs.enabled == 'true'
+        working-directory: ${{ env.STACK_DIR }}
+        run: |
+          tofu plan -input=false -lock-timeout=10m -var "git_sha=${{ github.sha }}" -out release.tfplan
+          tofu apply -input=false -auto-approve release.tfplan
+
+      - name: Web build and sync
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          set -euo pipefail
+          WEB_BUCKET="$(cd "$STACK_DIR" && tofu output -raw web_bucket 2>/dev/null || true)"
+          DIST_ID="$(cd "$STACK_DIR" && tofu output -raw distribution_id 2>/dev/null || true)"
+          if [ -z "$WEB_BUCKET" ] || [ "$WEB_BUCKET" = "null" ]; then echo "No web bucket in this stack"; exit 0; fi
+          npm ci --no-audit --no-fund
+          npm run build -w web
+          aws s3 sync apps/web/dist "s3://$WEB_BUCKET" --delete
+          aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths '/*'
+
+      - name: Smoke (health/ready)
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          URL="$(cd "$STACK_DIR" && tofu output -raw app_url)"
+          for i in $(seq 1 30); do
+            if curl -fsS "$URL/api/v1/health/ready" | grep -q '"database"[[:space:]]*:[[:space:]]*"ok"'; then echo "ready"; exit 0; fi
+            sleep 10
+          done
+          echo "::error::health/ready did not report database ok"; exit 1

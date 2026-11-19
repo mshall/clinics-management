@@ -1,0 +1,107 @@
+name: Infra plan (OpenTofu)
+
+# PR validation for infrastructure (KX-21 §01): fmt, validate, tflint, trivy, then `tofu plan` with the READ-ONLY
+# OIDC role (tofu-plan). Plans are encrypted client-side (state/plan encryption) and summarised on the PR.
+# Repository variables required: AWS_TOFU_PLAN_ROLE_ARN. Optional: TOFU_PLAN_ENVS (JSON list, default ["staging"]).
+
+on:
+  pull_request:
+    paths:
+      - "infra/tofu/**"
+      - "platform/**"
+      - ".github/workflows/infra-plan.yml"
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+concurrency:
+  group: infra-plan-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    name: fmt / validate / tflint / trivy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version_file: infra/tofu/.opentofu-version
+
+      - name: tofu fmt
+        run: tofu fmt -check -recursive
+        working-directory: infra/tofu
+
+      - name: tofu init + validate (every live stack, no backend)
+        working-directory: infra/tofu
+        run: |
+          set -euo pipefail
+          for d in $(find live bootstrap -name main.tf -exec dirname {} \;); do
+            echo "::group::validate $d"
+            (cd "$d" && tofu init -backend=false -input=false >/dev/null && tofu validate)
+            echo "::endgroup::"
+          done
+
+      - uses: terraform-linters/setup-tflint@v4
+
+      - name: tflint
+        working-directory: infra/tofu
+        run: |
+          tflint --init
+          tflint --recursive --config "$(pwd)/.tflint.hcl"
+
+      - name: trivy config scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          scan-ref: infra/tofu
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+
+  plan:
+    name: plan ${{ matrix.env }}
+    needs: static
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        env: ${{ fromJSON(vars.TOFU_PLAN_ENVS || '["staging"]') }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version_file: infra/tofu/.opentofu-version
+          tofu_wrapper: false
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_TOFU_PLAN_ROLE_ARN }}
+          aws-region: eu-central-1
+
+      - name: tofu plan
+        id: plan
+        working-directory: infra/tofu/live/${{ matrix.env }}/frankfurt/kiorly-clinic
+        run: |
+          set -o pipefail
+          tofu init -input=false
+          tofu plan -input=false -lock-timeout=5m -var "git_sha=${{ github.sha }}" -out plan.tfplan | tee plan.txt
+          tofu show -no-color plan.tfplan | tail -n 60 > summary.txt
+
+      - name: Comment plan summary
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const p = 'infra/tofu/live/${{ matrix.env }}/frankfurt/kiorly-clinic/summary.txt';
+            const body = fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : 'plan did not produce output';
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number,
+              body: '### tofu plan: ${{ matrix.env }}\n```\n' + body.slice(-60000) + '\n```',
+            });

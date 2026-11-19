@@ -1,5 +1,7 @@
 # Deploys the CDK stack to the **Kiorex** AWS account (second pipeline).
-# Trigger: push to `kiorex` (does not touch the production Kiorly account on `main`).
+# Trigger: MANUAL ONLY (workflow_dispatch). The push-to-`kiorex` trigger was removed because the OpenTofu migration
+# (ADR-028, infra/tofu) replaces this CDK pipeline and a push must not deploy to AWS before the founder approves
+# the first deploy. Re-enable only if the CDK pipeline is deliberately resumed. Does not touch main / deploy-aws.yml.
 #
 # Local laptop: AWS CLI profile `aws-kiorex-profile` (see Docs/AWS_Cloud_Deployment_Guide.md).
 # GitHub Actions: repository secrets (IAM user access keys for the Kiorex account):
@@ -11,9 +13,9 @@
 name: Deploy to AWS (Kiorex)
 
 on:
-  push:
-    branches:
-      - kiorex
+  # push:
+  #   branches:
+  #     - kiorex   # disabled: see header - manual only until the founder approves
   workflow_dispatch:
 
 permissions:
