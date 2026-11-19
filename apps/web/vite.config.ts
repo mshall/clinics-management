@@ -33,7 +33,7 @@ function apiProxyConfigure(proxy: {
         JSON.stringify({
           statusCode: 503,
           message:
-            "Local API is not reachable. From the repo root run npm run dev and wait for API listening on port 3000.",
+            "Local API is not reachable. From the repo root run npm run dev and wait for API listening on port 3010.",
           error: "ApiUnavailable",
         }),
       );
@@ -43,7 +43,7 @@ function apiProxyConfigure(proxy: {
 
 const apiDevProxy = {
   "/api": {
-    target: "http://127.0.0.1:3000",
+    target: "http://127.0.0.1:3010",
     changeOrigin: true,
     configure: apiProxyConfigure,
   },
@@ -121,14 +121,14 @@ export default defineConfig({
   },
   server: {
     host: "127.0.0.1",
-    port: 5173,
+    port: 5174,
     strictPort: true,
     open: "/login",
     proxy: apiDevProxy,
   },
   preview: {
     host: "127.0.0.1",
-    port: 5173,
+    port: 5174,
     strictPort: true,
     proxy: apiDevProxy,
   },

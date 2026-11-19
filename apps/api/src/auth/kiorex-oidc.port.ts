@@ -37,7 +37,7 @@ export function readKiorexOidcConfig(env: NodeJS.ProcessEnv = process.env): Kior
   const prod = env.NODE_ENV === "production";
   const clientSecret = env.KIOREX_OIDC_CLIENT_SECRET?.trim() || (prod ? "" : "dev-kiorly-clinic-secret");
   if (!clientSecret) return null;
-  const web = (env.APP_WEB_URL?.trim() || "http://localhost:5173").replace(/\/+$/, "");
+  const web = (env.APP_WEB_URL?.trim() || "http://localhost:5174").replace(/\/+$/, "");
   return {
     issuer,
     clientId: env.KIOREX_OIDC_CLIENT_ID?.trim() || "kiorly-clinic",
