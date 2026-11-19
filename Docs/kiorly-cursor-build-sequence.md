@@ -355,6 +355,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step FF04 · `@RequiresFeature` / `FeatureGuard` → 403 FEATURE_DISABLED on module entry points; per-flag OFF contract tests; ADR-025 safety-never-flags test — `feature-flags/ff04-feature-guard.node.test.ts` · `feature-flags/ff-safety-never-flags.node.test.ts`
 - [x] Step FF05 · Platform flag pages read-only mirror + org page effective value/source (web) — `apps/web/e2e/ff05-flags.spec.ts` (Playwright not run locally)
 - [x] Step FF06 · Audit events on snapshot change + `FLAG_SNAPSHOT_STALE` on-call alert (>10 min) — `Docs/runbooks/FLAG_SNAPSHOT_STALE.md`
+- [x] Step KCV201 · Sign in with Kiorex Passport (OIDC auth code + PKCE, verified account link, back-channel logout) — `auth/kcv201-kiorex-oidc.integration.test.ts` · `Docs/AUTH_SESSIONS.md` · migration `20261119290000_kcv201_kiorex_oidc`
 
 ---
 

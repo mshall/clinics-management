@@ -4,6 +4,7 @@ import { AppShell } from "@/app/layouts/app-shell";
 import { ProtectedRoute } from "@/app/layouts/protected-route";
 import { RouteLoadingFallback } from "@/components/route-loading-fallback";
 import { LoginPage } from "@/features/auth/login-page";
+import { KiorexCallbackPage } from "@/features/auth/kiorex-passport";
 import { SignupPage } from "@/features/signup/signup-page";
 import { MarketingHomePage } from "@/features/marketing/marketing-home-page";
 import { LegalDocumentPage } from "@/features/legal/legal-document-page";
@@ -81,6 +82,7 @@ function defer(Page: LazyExoticComponent<ComponentType>) {
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
+  { path: "/auth/kiorex/callback", element: <KiorexCallbackPage /> },
   { path: "/signup", element: <SignupPage /> },
   { path: "/marketing", element: <MarketingHomePage /> },
   { path: "/pricing", element: <MarketingHomePage /> },

@@ -1485,6 +1485,7 @@ model User {
   @@unique([tenantId, email])
   @@index([tenantId])
   @@index([tenantId, deletedAt])
+  kiorexIdentityLink KiorexIdentityLink?
 }
 
 /// UX-01 — Web Push subscription for Kiorex booking alerts (and future digests).
@@ -4248,9 +4249,12 @@ model UserSession {
   ipHash           String?
   createdAt        DateTime  @default(now())
   lastSeenAt       DateTime  @default(now())
+  /// KCV-201 — Kiorex Passport `sid` this session is bound to (back-channel logout revokes by sid).
+  kiorexSid        String?
 
   @@index([userId, revokedAt])
   @@index([userId, expiresAt])
+  @@index([kiorexSid])
 }
 
 /// FF03 — last-known Kiorex control-plane flag snapshot per product (fail-static persistence).
@@ -4278,4 +4282,34 @@ model KiorexFlagAuditEvent {
   createdAt   DateTime @default(now())
 
   @@index([product, createdAt])
+}
+
+/// KCV-201 — explicit, verified link between a Kiorly user and a Kiorex Passport subject (never auto-merged).
+model KiorexIdentityLink {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  issuer        String
+  subject       String
+  /// How the link was verified, e.g. PASSWORD_REAUTH.
+  linkedVia     String
+  phoneVerified Boolean  @default(false)
+  linkedAt      DateTime @default(now())
+
+  @@unique([issuer, subject])
+}
+
+/// KCV-201 — short-lived authorization-code + PKCE transaction (state is the primary key) and post-callback MFA ticket.
+model KiorexOidcTransaction {
+  state        String   @id
+  nonce        String
+  codeVerifier String
+  /// LOGIN | LINK | MFA_TICKET
+  mode         String
+  userId       String?
+  sid          String?
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+
+  @@index([expiresAt])
 }

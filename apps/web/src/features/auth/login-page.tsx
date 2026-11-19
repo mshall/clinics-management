@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { KiorexPassportButton } from "@/features/auth/kiorex-passport";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
@@ -147,6 +148,9 @@ export function LoginPage() {
               <Button type="button" variant={loginMode === "phone" ? "default" : "outline"} onClick={() => setLoginMode("phone")}>
                 {t("auth.phoneLogin")}
               </Button>
+            </div>
+            <div className="mb-4">
+              <KiorexPassportButton />
             </div>
             {loginMode === "email" ? (
             <form className="space-y-4" onSubmit={(e) => void handleSubmit(e)}>

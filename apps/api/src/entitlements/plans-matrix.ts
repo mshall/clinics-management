@@ -53,6 +53,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "appointments/public-deposit-link.controller.ts": { kind: "open" },
   "assistant/assistant.controller.ts": { kind: "gated", entitlement: "ai_assistant" },
   "auth/auth.controller.ts": { kind: "open" },
+  "auth/kiorex-oidc.controller.ts": { kind: "open" },
   "billing/billing.controller.ts": { kind: "open" },
   "billing/patient-money.controller.ts": { kind: "gated", entitlement: "mod_invoices" },
   "billing/cashier-shifts.controller.ts": { kind: "gated", entitlement: "mod_invoices" },

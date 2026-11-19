@@ -174,6 +174,17 @@ export class AuthService {
     });
     const user = candidates.find((u) => passwordMatches(password, u.passwordHash));
     if (!user) throw new UnauthorizedException("Invalid credentials");
+    await this.assertLoginAllowed(user);
+    return this.issueLoginSession(user.id, mfaCode, meta, user);
+  }
+
+  /** Account/tenant/subscription gates shared by password login and Kiorex Passport sign-in. */
+  async assertLoginAllowed(user: {
+    tenantId: string | null;
+    isTenantOwner?: boolean;
+    deletedAt?: Date | null;
+    deactivatedAt?: Date | null;
+  }): Promise<void> {
     if (user.deletedAt || user.deactivatedAt) {
       throw new UnauthorizedException("This account is deactivated or archived");
     }
@@ -198,7 +209,17 @@ export class AuthService {
         });
       }
     }
-    return this.issueLoginSession(user.id, mfaCode, meta, user);
+  }
+
+  /** KCV-201: session for a user already authenticated by Kiorex Passport (MFA step-up still applies). */
+  async issueSsoSession(userId: string, mfaCode: string | undefined, meta: LoginSessionMeta = {}) {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId },
+      select: { tenantId: true, isTenantOwner: true, deletedAt: true, deactivatedAt: true },
+    });
+    if (!user) throw new UnauthorizedException("User not found");
+    await this.assertLoginAllowed(user);
+    return this.issueLoginSession(userId, mfaCode, meta);
   }
 
   async createSessionForUserId(userId: string, meta: LoginSessionMeta = {}) {

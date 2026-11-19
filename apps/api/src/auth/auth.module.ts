@@ -16,6 +16,8 @@ import { AuthOtpChallengeService } from "./auth-otp-challenge.service";
 import { AuthSessionService } from "./auth-session.service";
 import { AuthPasswordResetService } from "./auth-password-reset.service";
 import { AuthOtpLoginService } from "./auth-otp-login.service";
+import { KiorexOidcController } from "./kiorex-oidc.controller";
+import { KiorexOidcService } from "./kiorex-oidc.service";
 
 @Module({
   imports: [
@@ -32,7 +34,7 @@ import { AuthOtpLoginService } from "./auth-otp-login.service";
       }),
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, KiorexOidcController],
   providers: [
     AuthService,
     MfaService,
@@ -43,6 +45,7 @@ import { AuthOtpLoginService } from "./auth-otp-login.service";
     AuthSessionService,
     AuthPasswordResetService,
     AuthOtpLoginService,
+    KiorexOidcService,
   ],
   exports: [AuthService, MfaService, PrivilegedMfaGuard, AuthSessionService],
 })

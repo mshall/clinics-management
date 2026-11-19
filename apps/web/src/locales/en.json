@@ -347,6 +347,20 @@
       "languages": "Languages (comma-separated)",
       "saved": "Profile saved",
       "edit": "Edit profile"
+    },
+    "passport": {
+      "signIn": "Sign in with Kiorex Passport",
+      "title": "Kiorex Passport",
+      "failed": "Kiorex Passport sign-in failed.",
+      "backToLogin": "Back to sign in",
+      "backToProfile": "Back to profile",
+      "linkRequired": "This Kiorex Passport is not linked to a Kiorly account yet. Sign in with your Kiorly email and password, then link it from Profile → Kiorex Passport.",
+      "linked": "Your Kiorex Passport is now linked to this Kiorly account.",
+      "isLinked": "This account is linked to a Kiorex Passport.",
+      "linkHint": "Link your Kiorex Passport to sign in with it. Roles, permissions and MFA stay managed in Kiorly.",
+      "confirmPassword": "Confirm your Kiorly password",
+      "link": "Link Kiorex Passport",
+      "unlink": "Unlink"
     }
   },
   "verification": {

@@ -17,6 +17,7 @@ import { avatarGradient, profileInitials } from "@/lib/profile-avatar";
 import { useAuthenticatedImage } from "@/lib/use-authenticated-image";
 import { useAuthStore } from "@/stores/auth-store";
 import { DigestPreferencesCard } from "@/features/profile/digest-preferences-card";
+import { KiorexLinkPanel } from "@/features/auth/kiorex-passport";
 import { ProfileMfaPanel } from "@/features/profile/profile-mfa-panel";
 import { ProfileSessionsPanel } from "@/features/profile/profile-sessions-panel";
 
@@ -268,6 +269,7 @@ export function ProfilePage() {
         </Card>
 
         <ProfileMfaPanel />
+        <KiorexLinkPanel />
 
         <ProfileSessionsPanel />
 
