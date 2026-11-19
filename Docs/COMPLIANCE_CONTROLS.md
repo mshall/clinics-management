@@ -44,8 +44,8 @@ This document maps platform controls to common frameworks — **not** a certific
 
 1. **RDS:** Automated backups ( **35 days**, AWS maximum) and PITR in `eu-central-1` (CDK `DatabaseInstance`, Multi-AZ, deletion protection). **Medical-record retention** beyond 35 days uses quarterly snapshot export to S3 with lifecycle (see Egypt go-live backup section).
 2. **S3 uploads:** Versioning recommended on upload bucket (ops).
-3. **Restore drill (quarterly):** Restore RDS snapshot to staging; run `prisma migrate deploy` + smoke `health/ready`.
-4. **RTO/RPO targets:** Define per contract (pilot default RPO 24h, RTO 8h).
+3. **Restore drill (quarterly):** Follow [runbooks/BACKUP_RESTORE_DRILL.md](./runbooks/BACKUP_RESTORE_DRILL.md); use `scripts/backup-restore-drill.sh`; file evidence in [SC08_BACKUP_RESTORE_DRILL_REPORT.md](./SC08_BACKUP_RESTORE_DRILL_REPORT.md). Live Frankfurt drill tracked as **NH-018**.
+4. **RTO/RPO targets:** Pilot default RPO ≤ 24h, RTO ≤ 8h (see SC-08 report).
 
 ## Incident response
 
