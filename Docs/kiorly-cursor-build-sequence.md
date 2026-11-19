@@ -339,7 +339,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 
 - [x] Step 101 · CR-10 · No-show guarantee credits (optional, off by default) `2135ff2`
 - [x] Step 102 · KX-11 · Consent-based record sharing with the patient app `8a5085a`- [x] Step 103 · CL-06 · Lab & radiology orders as records `2210147`
-- [ ] Step 104 · CL-07 · Specialty packs: dental chart, aesthetics before/after, physio plans
+- [x] Step 104 · CL-07 · Specialty packs: dental chart, aesthetics before/after, physio plans `1ec707f`
 - [ ] Step 105 · MN-05 · Company contracts & TPA claims
 - [ ] Step 106 · MS-06 · WhatsApp AI receptionist (Egyptian Arabic)
 - [ ] Step 107 · RP-04 · AR aging, payouts and branch P&L
