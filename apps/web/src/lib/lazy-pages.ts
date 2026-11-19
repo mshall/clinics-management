@@ -80,6 +80,10 @@ export const PlatformOrganizationsTab = lazyNamed(
   () => import("@/features/platform/platform-organizations-tab"),
   "PlatformOrganizationsTab",
 );
+export const PlatformTenantConsolePage = lazyNamed(
+  () => import("@/features/platform/platform-tenant-console-page"),
+  "PlatformTenantConsolePage",
+);
 export const PlatformUsersTab = lazyNamed(
   () => import("@/features/platform/platform-users-tab"),
   "PlatformUsersTab",

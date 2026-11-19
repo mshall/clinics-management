@@ -191,26 +191,141 @@ export class PlatformAdminService {
         id: true,
         name: true,
         nameAr: true,
+        status: true,
         baseCurrency: true,
         defaultLocale: true,
         defaultVisitFee: true,
         createdAt: true,
+        salesRepCode: true,
+        createdBySalesRepId: true,
         providerSettings: true,
-        market: { select: { code: true } },
+        market: { select: { code: true, nameEn: true } },
+        subscription: {
+          select: {
+            id: true,
+            status: true,
+            plan: { select: { key: true, nameEn: true, nameAr: true } },
+            currentPeriodStart: true,
+            currentPeriodEnd: true,
+            trialEndsAt: true,
+            clinicianSeats: true,
+            priceLockUntil: true,
+          },
+        },
+        onboardingProgress: { select: { activatedAt: true, completedAt: true, stepsJson: true } },
+        creditWallet: { select: { balance: true, currency: true } },
+        entitlementOverrides: { select: { key: true, valueJson: true, reason: true, createdAt: true } },
+        marketplaceListings: {
+          select: { id: true, status: true, clinicianId: true, clinicId: true },
+          take: 50,
+        },
+        clinicianVerifications: {
+          select: { id: true, status: true, userId: true, specialty: true },
+          take: 50,
+        },
+        kiorlyInvoices: {
+          select: { id: true, status: true, total: true, currency: true, periodKey: true, issuedAt: true },
+          orderBy: { issuedAt: "desc" },
+          take: 12,
+        },
         _count: { select: { users: true, clinics: true, patients: true } },
       },
     });
     if (!row) throw new NotFoundException("Organization not found");
+
+    const auditEvents = await this.prisma.auditLog.findMany({
+      where: {
+        tenantId: id,
+        action: {
+          in: [
+            "subscription.trial_extended",
+            "credit.grant",
+            "entitlement.override_set",
+            "kiorly_invoice.issued",
+            "kiorly_payment.verified",
+            "marketplace.booking.created",
+          ],
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 40,
+      select: { id: true, action: true, resource: true, resourceId: true, createdAt: true, actorId: true },
+    });
+
+    const steps = (row.onboardingProgress?.stepsJson ?? {}) as Record<string, unknown>;
+    const stepValues = Object.values(steps);
+    const doneSteps = stepValues.filter((s) => {
+      if (s && typeof s === "object" && "status" in s) return (s as { status?: string }).status === "done";
+      return false;
+    }).length;
+    const activationScore =
+      row.onboardingProgress?.activatedAt != null
+        ? 100
+        : stepValues.length === 0
+          ? 0
+          : Math.round((doneSteps / Math.max(stepValues.length, 1)) * 100);
+
     return {
       id: row.id,
       name: row.name,
       nameAr: row.nameAr,
+      status: row.status,
       baseCurrency: row.baseCurrency,
       defaultLocale: row.defaultLocale,
       defaultVisitFee: Number(row.defaultVisitFee),
       createdAt: row.createdAt.toISOString(),
       marketCode: row.market?.code ?? null,
+      marketNameEn: row.market?.nameEn ?? null,
+      salesRepCode: row.salesRepCode,
+      createdBySalesRepId: row.createdBySalesRepId,
       counts: row._count,
+      subscription: row.subscription
+        ? {
+            id: row.subscription.id,
+            status: row.subscription.status,
+            planKey: row.subscription.plan.key,
+            planNameEn: row.subscription.plan.nameEn,
+            planNameAr: row.subscription.plan.nameAr,
+            currentPeriodStart: row.subscription.currentPeriodStart?.toISOString() ?? null,
+            currentPeriodEnd: row.subscription.currentPeriodEnd?.toISOString() ?? null,
+            trialEndsAt: row.subscription.trialEndsAt?.toISOString() ?? null,
+            clinicianSeats: row.subscription.clinicianSeats,
+            priceLockUntil: row.subscription.priceLockUntil?.toISOString() ?? null,
+          }
+        : null,
+      trial: {
+        endsAt: row.subscription?.trialEndsAt?.toISOString() ?? null,
+        activatedAt: row.onboardingProgress?.activatedAt?.toISOString() ?? null,
+        onboardingCompletedAt: row.onboardingProgress?.completedAt?.toISOString() ?? null,
+      },
+      wallet: row.creditWallet
+        ? { balance: Number(row.creditWallet.balance), currency: row.creditWallet.currency }
+        : { balance: 0, currency: row.baseCurrency },
+      entitlementOverrides: row.entitlementOverrides.map((o) => ({
+        key: o.key,
+        valueJson: o.valueJson,
+        reason: o.reason,
+        createdAt: o.createdAt.toISOString(),
+      })),
+      kiorexListings: row.marketplaceListings,
+      verifications: row.clinicianVerifications,
+      invoices: row.kiorlyInvoices.map((inv) => ({
+        id: inv.id,
+        status: inv.status,
+        total: Number(inv.total),
+        currency: inv.currency,
+        periodKey: inv.periodKey,
+        issuedAt: inv.issuedAt?.toISOString() ?? null,
+      })),
+      activationScore,
+      events: auditEvents.map((e) => ({
+        id: e.id,
+        action: e.action,
+        resource: e.resource,
+        resourceId: e.resourceId,
+        actorId: e.actorId,
+        createdAt: e.createdAt.toISOString(),
+      })),
     };
   }
 

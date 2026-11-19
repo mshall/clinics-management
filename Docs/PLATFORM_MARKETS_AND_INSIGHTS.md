@@ -20,6 +20,14 @@
 - Optional **tax registration** and **facility license** seed tenant defaults for compliance.
 - Demo **Dr Ahmed El Shall** group is bound to **EG** market after migrate/seed.
 
+## Tenant lifecycle console (PA-01)
+
+**UI:** Platform → Organizations → **Open lifecycle console** (`/platform/organizations/:tenantId`).
+
+Tabbed view of subscription, trial (extend), wallet (grant credits), SaaS invoices, entitlement overrides, Kiorex listings, clinician verification, activation score, and recent audited events.
+
+**API:** `GET /admin/platform/tenants/:tenantId` returns the lifecycle payload. Mutations: `POST …/extend-trial`, `POST …/credits`, `PUT …/entitlement-overrides/:key`. All require platform super admin and write `AuditLog` rows.
+
 ## Platform insights
 
 **Platform → Insights**

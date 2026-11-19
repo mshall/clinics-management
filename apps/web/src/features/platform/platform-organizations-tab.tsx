@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { PasswordInput } from "@/components/password-input";
@@ -357,17 +358,24 @@ export function PlatformOrganizationsTab() {
             <DialogTitle>{editRow?.name ?? t("platform.orgDetails")}</DialogTitle>
           </DialogHeader>
           {editRow ? (
-            <div className="mb-4 grid grid-cols-3 gap-3 text-sm">
-              {[
-                { label: t("admin.clinics"), value: editRow.counts.clinics },
-                { label: t("admin.users"), value: editRow.counts.users },
-                { label: t("platform.patients"), value: editRow.counts.patients },
-              ].map((k) => (
-                <div key={k.label} className="rounded-md border border-border px-3 py-2">
-                  <p className="text-xs text-muted-foreground">{k.label}</p>
-                  <p className="font-semibold ltr-nums">{k.value}</p>
-                </div>
-              ))}
+            <div className="mb-4 space-y-3">
+              <div className="grid grid-cols-3 gap-3 text-sm">
+                {[
+                  { label: t("admin.clinics"), value: editRow.counts.clinics },
+                  { label: t("admin.users"), value: editRow.counts.users },
+                  { label: t("platform.patients"), value: editRow.counts.patients },
+                ].map((k) => (
+                  <div key={k.label} className="rounded-md border border-border px-3 py-2">
+                    <p className="text-xs text-muted-foreground">{k.label}</p>
+                    <p className="font-semibold ltr-nums">{k.value}</p>
+                  </div>
+                ))}
+              </div>
+              <Button type="button" variant="outline" size="sm" asChild>
+                <Link to={`/platform/organizations/${editRow.id}`}>
+                  {t("platform.openLifecycleConsole", "Open lifecycle console")}
+                </Link>
+              </Button>
             </div>
           ) : null}
           {editTenantId ? (
