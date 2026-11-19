@@ -135,3 +135,4 @@
 | 094 PA-04 | `7e1284a` | SupportAccessSession + owner approve UI; masked patient chart gate; read/audit logs
 | 095 PA-05 | `5e22724` | GET /admin/platform/growth funnel/cohorts/MRR/Kiorex attach; Insights Growth tab; AC vs tables
 | 096 GT-01 | `1786c45` | /marketing+/pricing; public plans/fees/cohort; Kiorex-free calculator; pricing parity test
+| 097 GT-03 | `5baf521` | /help 20 bilingual articles + search + tier filters; drawer link; NH-007 videos |
