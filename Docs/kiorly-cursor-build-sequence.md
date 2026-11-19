@@ -323,7 +323,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 087 · SC-08 · Backup restore drill
 - [x] Step 088 · QA-04 · Kiorex contract tests
 - [x] Step 089 · QA-07 · Load & device performance tests
-- [ ] Step 090 · UX-01 · Installable PWA with push and offline "today" view
+- [x] Step 090 · UX-01 · Installable PWA with push and offline "today" view
 - [ ] Step 091 · UX-02 · Mobile-first doctor views
 - [ ] Step 092 · UX-03 · Arabic RTL & Egyptian copy QA
 - [ ] Step 093 · PA-01 · Tenant lifecycle console

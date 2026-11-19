@@ -128,3 +128,4 @@
 | 087 SC-08 | `3ded813` | Runbook + dry-run/aws script + report template; NH-018 live Frankfurt drill |
 | 088 QA-04 | `ea639b0` | OpenAPI + kiorex-consumer-contract.json CI gates; NH-019 Kiorex CI |
 | 089 QA-07 | `ec7b7ee` | k6/node 50 rps p95&lt;150ms + Lighthouse TTI≤4s; NH-020 staging |
+| 090 UX-01 | `9bab12c` | PWA + offline today + POST /push/subscriptions; NH-021 VAPID |
