@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
 # Deploy kiorly-clinics-management CDK stack from CI (GitHub Actions). Expects AWS credentials in env (OIDC or keys).
+# Local / branch: kiorex uses profile aws-kiorex-profile via scripts/resolve-aws-profile.sh
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+RESOLVED_PROFILE="$(bash "$ROOT/scripts/resolve-aws-profile.sh")"
+if [[ -n "$RESOLVED_PROFILE" ]]; then
+  export AWS_PROFILE="$RESOLVED_PROFILE"
+fi
 export AWS_REGION="${AWS_REGION:-eu-central-1}"
 export CDK_DEFAULT_REGION="${CDK_DEFAULT_REGION:-eu-central-1}"
 export CDK_DEFAULT_ACCOUNT
 CDK_DEFAULT_ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
 
-echo "CDK deploy: account=${CDK_DEFAULT_ACCOUNT} region=${AWS_REGION}"
+echo "CDK deploy: AWS_PROFILE=${AWS_PROFILE:-(default)} account=${CDK_DEFAULT_ACCOUNT} region=${AWS_REGION}"
 docker version
 
 cd "$ROOT"
