@@ -76,6 +76,7 @@ export const TOP_LEVEL_FOLDER_TO_CONTEXT: Record<string, BoundedContextId> = {
   dashboard: "insights",
 
   messaging: "engagement",
+  push: "engagement",
   assistant: "engagement",
   "clinic-ai": "engagement",
   support: "engagement",

@@ -13,6 +13,7 @@ import { TeamPage } from "@/features/admin/team-page";
 import { AcceptInvitationPage } from "@/features/auth/accept-invitation-page";
 import { RepConsolePage } from "@/features/rep/rep-console-page";
 import { OnboardingPage } from "@/features/onboarding/onboarding-page";
+import { OfflineTodayPage } from "@/features/pwa/offline-today-page";
 import { AppointmentReschedulePage } from "@/features/appointments/appointment-reschedule-page";
 import { DepositPayPage } from "@/features/appointments/deposit-pay-page";
 import { PublicBookingPage } from "@/features/kiorex/public-booking-page";
@@ -102,6 +103,7 @@ export const router = createBrowserRouter([
       { index: true, element: <NavGate tab="dashboard">{defer(DashboardPage)}</NavGate> },
       { path: "onboarding", element: <OnboardingPage /> },
       { path: "onboarding/import", element: <ImportWizardPage /> },
+      { path: "offline/today", element: <OfflineTodayPage /> },
       { path: "team", element: <TeamPage /> },
       { path: "patients", element: <NavGate tab="patients">{defer(PatientsPage)}</NavGate> },
       { path: "patients/:id", element: <NavGate tab="patients">{defer(PatientDetailPage)}</NavGate> },

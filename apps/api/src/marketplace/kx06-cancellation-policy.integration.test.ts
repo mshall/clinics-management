@@ -48,6 +48,7 @@ const bookings = new MarketplaceBookingService(
   appointmentOutbox,
   slots,
   new NewPatientService(prismaSvc),
+  { notifyKiorexBooking: async () => ({ queued: 0 }) } as never,
 );
 const appointments = new AppointmentsService(
   prismaSvc,

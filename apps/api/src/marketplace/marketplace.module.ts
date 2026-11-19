@@ -8,6 +8,7 @@ import { BillingModule } from "../billing/billing.module";
 import { IntegrationsModule } from "../integrations/integrations.module";
 import { SchedulingModule } from "../scheduling/scheduling.module";
 import { MessagingModule } from "../messaging/messaging.module";
+import { PushModule } from "../push/push.module";
 import { StorageModule } from "../storage/storage.module";
 import { MarketplaceAccessService } from "./marketplace-access.service";
 import { MarketplaceApiService } from "./marketplace-api.service";
@@ -34,6 +35,7 @@ import { PublicBookingPageController } from "./public-booking-page.controller";
     IntegrationsModule,
     SchedulingModule,
     MessagingModule,
+    PushModule,
     AuditModule,
     StorageModule,
     AppointmentsModule,
