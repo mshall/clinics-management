@@ -23,3 +23,12 @@ export function canUsePatientMoney(user: MoneyUser): boolean {
   if (user.isTenantOwner) return true;
   return [user.role, ...(user.additionalRoles ?? [])].some((r) => DESK_ROLES.has(r));
 }
+
+const APPROVER_ROLES = new Set<DemoRole>(["group_admin", "clinic_admin", "finance_officer", "branch_manager"]);
+
+/** Mirrors API `canApproveRefunds`: owner or finance / admin / branch manager. */
+export function canApprovePatientMoney(user: MoneyUser): boolean {
+  if (!user) return false;
+  if (user.isTenantOwner) return true;
+  return [user.role, ...(user.additionalRoles ?? [])].some((r) => APPROVER_ROLES.has(r));
+}

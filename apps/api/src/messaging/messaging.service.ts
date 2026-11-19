@@ -38,6 +38,12 @@ const DEFAULT_TEMPLATES: { key: string; channel: MessageChannel; bodyEn: string;
     bodyAr: "مرحباً {{name}}، يرجى دفع عربون {{amount}} لتأكيد موعدك في {{clinic}}: {{link}} (خلال {{hours}} ساعة).",
   },
   {
+    key: "owner_shift_summary",
+    channel: MessageChannel.WHATSAPP,
+    bodyEn: "{{clinic}} shift Z#{{z}} closed: expected cash {{expected}}, counted {{counted}}, variance {{variance}}; card {{card}}. Status: {{status}}.",
+    bodyAr: "تم إغلاق وردية {{clinic}} رقم Z#{{z}}: النقدية المتوقعة {{expected}}، المعدودة {{counted}}، الفرق {{variance}}؛ البطاقات {{card}}. الحالة: {{status}}.",
+  },
+  {
     key: "results_ready",
     channel: MessageChannel.WHATSAPP,
     bodyEn: "Your lab results are ready. Please contact {{clinic}}.",

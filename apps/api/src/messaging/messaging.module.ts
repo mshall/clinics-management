@@ -5,6 +5,8 @@ import { SchedulingModule } from "../scheduling/scheduling.module";
 import { AppointmentReminderScheduler } from "./appointment-reminder.scheduler";
 import { MessagingController } from "./messaging.controller";
 import { MessagingService } from "./messaging.service";
+import { InternalOutboxConsumerService } from "./internal-outbox-consumer.service";
+import { OwnerNotificationsService } from "./owner-notifications.service";
 import { WaitlistAutofillService } from "./waitlist-autofill.service";
 import { OutboundMessageWorker } from "./outbound-message.worker";
 import { WhatsAppSendService } from "./whatsapp-send.service";
@@ -25,6 +27,8 @@ import { PublicAppointmentRescheduleController } from "./public-appointment-resc
   providers: [
     WaitlistAutofillService,
     MessagingService,
+    OwnerNotificationsService,
+    InternalOutboxConsumerService,
     WhatsAppSendService,
     WhatsAppWebhookService,
     WhatsAppInboundRepliesService,
@@ -40,6 +44,8 @@ import { PublicAppointmentRescheduleController } from "./public-appointment-resc
   exports: [
     WaitlistAutofillService,
     MessagingService,
+    OwnerNotificationsService,
+    InternalOutboxConsumerService,
     AppointmentReminderScheduler,
     WhatsAppSendService,
     OutboxEventService,

@@ -165,6 +165,11 @@ export function FrontDeskBoardPage() {
             ))}
           </select>
           <Button asChild variant="outline" size="sm">
+            <Link to="/front-desk/cash-drawer" data-testid="cash-drawer-link">
+              {t("cashDrawer.title", "Cash drawer")}
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
             <Link to={`/front-desk/waiting-room?clinicId=${activeClinic}`} target="_blank">
               {t("frontDesk.waitingScreen", "Waiting-room screen")}
             </Link>
