@@ -295,7 +295,10 @@
       "first_check_in": "Complete your first check-in",
       "kiorex_profile": "Publish Kiorex marketplace profile",
       "doctor_verification": "Verify your doctor credentials for Kiorex"
-    }
+    },
+    "mfaSetupTitle": "Protect money with MFA",
+    "mfaSetupHint": "Owners, admins and finance must enable authenticator MFA within 7 days. Billing locks after that until MFA is on.",
+    "mfaSetupCta": "Set up MFA in Profile"
   },
   "kiorex": {
     "confirmQueue": {

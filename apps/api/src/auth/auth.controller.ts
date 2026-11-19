@@ -150,6 +150,21 @@ export class AuthController {
     return this.mfa.disable(user.userId, user.tenantId, body.password, body.code);
   }
 
+  @Post("mfa/whatsapp/enable")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth("bearer")
+  @ApiOperation({ summary: "SC-04 — enable WhatsApp OTP as MFA for physicians" })
+  enableWhatsAppMfa(@CurrentUser() user: JwtUser, @Body() body: { password: string }) {
+    return this.mfa.enableWhatsAppMfa(user.userId, user.tenantId, body.password);
+  }
+
+  @Post("mfa/whatsapp/challenge")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "SC-04 — send WhatsApp MFA OTP (login second factor)" })
+  whatsappMfaChallenge(@Body() body: { userId: string }, @Req() req: Request) {
+    return this.mfa.requestWhatsAppMfaChallenge(body.userId, clientIpFromRequest(req));
+  }
+
   @Post("mfa/recovery/regenerate")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth("bearer")

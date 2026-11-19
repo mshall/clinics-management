@@ -1,7 +1,11 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
+import { UserRole } from "@prisma/client";
 import { createHmac, randomBytes } from "crypto";
 import * as bcrypt from "bcryptjs";
+import { effectiveRoles } from "../common/effective-roles";
 import { PrismaService } from "../prisma/prisma.service";
+import { AuthOtpChallengeService } from "./auth-otp-challenge.service";
+import { OTP_PURPOSE_MFA } from "./otp-purposes";
 
 const BASE32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
@@ -72,7 +76,10 @@ export function verifyTotpCode(secretBase32: string | null | undefined, token: s
 
 @Injectable()
 export class MfaService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly otp: AuthOtpChallengeService,
+  ) {}
 
   beginSetup(userId: string, tenantId: string | null, email: string) {
     const secret = base32Encode(randomBytes(20));
@@ -154,19 +161,99 @@ export class MfaService {
   async disable(userId: string, tenantId: string | null, password: string, code: string) {
     const user = await this.prisma.user.findFirst({
       where: tenantId != null ? { id: userId, tenantId } : { id: userId, tenantId: null },
-      select: { passwordHash: true, mfaTotpSecret: true, mfaEnabled: true },
+      select: { passwordHash: true, mfaTotpSecret: true, mfaEnabled: true, mfaWhatsAppEnabled: true },
     });
     if (!user?.mfaEnabled) throw new BadRequestException("MFA is not enabled");
     if (!bcrypt.compareSync(password, user.passwordHash)) {
       throw new BadRequestException("Password is incorrect");
     }
-    if (!verifyTotpCode(user.mfaTotpSecret, code)) {
+    const totpOk = user.mfaTotpSecret ? verifyTotpCode(user.mfaTotpSecret, code) : false;
+    if (!totpOk && !user.mfaWhatsAppEnabled) {
       throw new BadRequestException("Invalid authenticator code");
     }
     await this.prisma.user.update({
       where: { id: userId },
-      data: { mfaEnabled: false, mfaTotpSecret: null, mfaRecoveryHashes: [] },
+      data: { mfaEnabled: false, mfaTotpSecret: null, mfaWhatsAppEnabled: false, mfaRecoveryHashes: [] },
     });
     return { ok: true as const };
+  }
+
+  /** SC-04 — physicians enable WhatsApp OTP as second factor. */
+  async enableWhatsAppMfa(userId: string, tenantId: string | null, password: string) {
+    const user = await this.prisma.user.findFirst({
+      where: tenantId != null ? { id: userId, tenantId } : { id: userId, tenantId: null },
+      select: {
+        passwordHash: true,
+        role: true,
+        additionalRoles: true,
+        employee: { select: { phone: true } },
+      },
+    });
+    if (!user) throw new BadRequestException("User not found");
+    if (!bcrypt.compareSync(password, user.passwordHash)) throw new BadRequestException("Password is incorrect");
+    if (!effectiveRoles(user).includes(UserRole.PHYSICIAN)) {
+      throw new ForbiddenException("WhatsApp MFA is available for physicians");
+    }
+    if (!user.employee?.phone?.trim()) {
+      throw new BadRequestException("Add a phone number on your employee profile first");
+    }
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { mfaEnabled: true, mfaWhatsAppEnabled: true },
+    });
+    return { ok: true as const, method: "whatsapp" as const };
+  }
+
+  async requestWhatsAppMfaChallenge(userId: string, clientIp?: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      select: {
+        mfaEnabled: true,
+        mfaWhatsAppEnabled: true,
+        employee: { select: { phone: true } },
+        email: true,
+      },
+    });
+    if (!user?.mfaEnabled || !user.mfaWhatsAppEnabled) {
+      throw new BadRequestException("WhatsApp MFA is not enabled");
+    }
+    let phone = user.employee?.phone?.trim() || null;
+    if (!phone) {
+      const byEmail = await this.prisma.employee.findFirst({
+        where: { email: user.email, deletedAt: null },
+        select: { phone: true },
+      });
+      phone = byEmail?.phone?.trim() || null;
+    }
+    if (!phone) throw new BadRequestException("No phone on file");
+    await this.otp.sendOtp(phone, OTP_PURPOSE_MFA, clientIp);
+    return { ok: true as const };
+  }
+
+  async verifyWhatsAppMfaCode(userId: string, code: string): Promise<boolean> {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      select: {
+        mfaWhatsAppEnabled: true,
+        employee: { select: { phone: true } },
+        email: true,
+      },
+    });
+    if (!user?.mfaWhatsAppEnabled) return false;
+    let phone = user.employee?.phone?.trim() || null;
+    if (!phone) {
+      const byEmail = await this.prisma.employee.findFirst({
+        where: { email: user.email, deletedAt: null },
+        select: { phone: true },
+      });
+      phone = byEmail?.phone?.trim() || null;
+    }
+    if (!phone) return false;
+    try {
+      await this.otp.verifyOtp(phone, code.trim(), OTP_PURPOSE_MFA);
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
