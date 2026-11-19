@@ -204,14 +204,14 @@ export function PatientDetailPage() {
   const patientAge = patient.dob ? calculateAgeFromDob(patient.dob) : null;
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-            <div className="flex items-start gap-4">
+    <div className="space-y-6 doctor-mobile-view">
+      <Card className="sticky top-14 z-[5] border-b md:static md:z-auto">
+        <CardContent className="pt-4 md:pt-6">
+          <div className="flex flex-col gap-4 md:gap-6 md:flex-row md:items-start md:justify-between">
+            <div className="flex items-start gap-3 md:gap-4">
               <div className="relative">
                 {avatarDataUrl ? (
-                  <img src={avatarDataUrl} alt={name} className="h-24 w-24 rounded-full border object-cover" />
+                  <img src={avatarDataUrl} alt={name} className="h-16 w-16 rounded-full border object-cover md:h-24 md:w-24" />
                 ) : (
                   <div className="flex h-24 w-24 items-center justify-center rounded-full border bg-muted text-xl font-semibold">
                     {name.slice(0, 1).toUpperCase()}

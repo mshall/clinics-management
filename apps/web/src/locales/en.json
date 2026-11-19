@@ -56,7 +56,10 @@
     "governance": "Governance & audit",
     "frontDeskBoard": "Front desk board",
     "guideBook": "Guide book",
-    "kiorex": "Kiorex"
+    "kiorex": "Kiorex",
+    "mobileToday": "Today",
+    "mobileMore": "More",
+    "mobileBottom": "Primary navigation"
   },
   "entitlements": {
     "upgradeTitle": "Upgrade required",
