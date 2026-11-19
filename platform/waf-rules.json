@@ -1,0 +1,30 @@
+{
+  "description": "SC-06 — CloudFront / WAFv2 rule intent for public launch (implemented in infra CDK; this file is the product checklist).",
+  "region": "eu-central-1",
+  "rules": [
+    {
+      "id": "rate-public-auth",
+      "scope": "CloudFront",
+      "action": "BLOCK",
+      "statement": "Rate-based: 100 requests / 5 min per IP on /api/v1/auth/* and /api/v1/signup/*"
+    },
+    {
+      "id": "aws-managed-common",
+      "scope": "CloudFront",
+      "action": "BLOCK",
+      "statement": "AWSManagedRulesCommonRuleSet"
+    },
+    {
+      "id": "aws-managed-known-bad-inputs",
+      "scope": "CloudFront",
+      "action": "BLOCK",
+      "statement": "AWSManagedRulesKnownBadInputsRuleSet"
+    },
+    {
+      "id": "geo-optional",
+      "scope": "CloudFront",
+      "action": "COUNT",
+      "statement": "Optional geo match for abuse investigation (not a residency control)"
+    }
+  ]
+}

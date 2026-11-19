@@ -5,6 +5,7 @@ import { CurrentUser } from "../../auth/current-user.decorator";
 import { JwtAuthGuard } from "../../auth/jwt-auth.guard";
 import type { JwtUser } from "../../auth/jwt-user";
 import { requireTenantId } from "../../auth/require-tenant";
+import { PublicAuthRateLimitGuard } from "../../common/rate-limit.guard";
 import { assertCanInvite, InvitationsService } from "./invitations.service";
 
 @ApiTags("invitations")
@@ -45,6 +46,7 @@ export class InvitationsController {
 
 @ApiTags("public")
 @Controller("public/invitations")
+@UseGuards(PublicAuthRateLimitGuard)
 export class PublicInvitationsController {
   constructor(private readonly invitations: InvitationsService) {}
 

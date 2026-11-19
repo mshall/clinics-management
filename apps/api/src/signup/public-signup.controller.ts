@@ -1,10 +1,12 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, UseGuards } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Request } from "express";
+import { PublicAuthRateLimitGuard } from "../common/rate-limit.guard";
 import { SignupService } from "./signup.service";
 
 @ApiTags("public")
 @Controller("public/signup")
+@UseGuards(PublicAuthRateLimitGuard)
 export class PublicSignupController {
   constructor(private readonly signup: SignupService) {}
 
