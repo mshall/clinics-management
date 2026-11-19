@@ -13,6 +13,7 @@ import { AdminLiteKiorexFeesCard } from "./admin-lite-kiorex-fees-card";
 import { AdminNoShowGuaranteeCard } from "./admin-no-show-guarantee-card";
 import { AdminReferralInviteCard } from "./admin-referral-invite-card";
 import { AdminSpecialtyPacksCard } from "./admin-specialty-packs-card";
+import { PrintSettingsCard } from "./print-settings-card";
 import { useUpgradePaywallStore } from "@/stores/upgrade-paywall-store";
 import { PLAN_UPGRADE_REQUIRED } from "@/lib/plan-upgrade-constants";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
@@ -178,6 +179,7 @@ export function AdminOrgBillingPanel({ canManage }: { canManage: boolean }) {
     <AdminReferralInviteCard />
     <AdminNoShowGuaranteeCard />
     <AdminSpecialtyPacksCard />
+    <PrintSettingsCard />
     <Card>
       <CardHeader>
         <CardTitle className="text-base">{t("admin.billing.title", "Plan & billing")}</CardTitle>

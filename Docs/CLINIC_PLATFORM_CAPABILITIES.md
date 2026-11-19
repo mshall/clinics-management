@@ -83,7 +83,7 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 | Onboarding wizard & Excel import | **Shipped** | ON-04/ON-05 — checklist + Excel import |
 | MFA (TOTP) | **Shipped** | SC-04 — TOTP + WhatsApp OTP for physicians; grace then enforce |
 | Permissions screen per role | **Shipped** | Admin → org/clinic nav tabs (`org-rbac-panel`, `clinic-nav-tabs-panel`) |
-| Thermal/A4 bilingual print | **Partial** | A4 bilingual shipped; thermal polish in UX-04 (Phase 1b) |
+| Thermal/A4 bilingual print | **Shipped** | UX-04 — 80 mm tickets/receipts + Z-report; Epson/Star profiles; WCAG focus/contrast |
 | Tablet layout / offline schedule | **Shipped** | UX-01 PWA + offline today; UX-02 mobile bottom nav |
 | Incident reporting / GAHAR | **Foundation** | `ClinicalIncident` table |
 

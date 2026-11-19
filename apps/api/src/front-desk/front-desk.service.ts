@@ -480,4 +480,92 @@ export class FrontDeskService {
     if (patient.requiresAppointmentDeposit) out.push("DEPOSIT");
     return out;
   }
+
+  /** UX-04 — 80 mm queue ticket PDF for thermal printers. */
+  async thermalQueueTicket(
+    tenantId: string,
+    body: { clinicId: string; ticketNumber: number; patientName?: string; locale?: "en" | "ar" },
+  ) {
+    const { buildThermalQueueTicketPdf, resolveThermalProfile } = await import("../billing-platform/thermal-templates");
+    const clinic = await this.prisma.clinic.findFirst({ where: { id: body.clinicId, tenantId } });
+    if (!clinic) throw new NotFoundException("Clinic not found");
+    const settings = (clinic.providerSettings ?? {}) as { thermalPrinterProfileId?: string };
+    const profile = resolveThermalProfile(settings.thermalPrinterProfileId);
+    const pdf = buildThermalQueueTicketPdf({
+      clinicNameEn: clinic.nameEn,
+      clinicNameAr: clinic.nameAr,
+      ticketNumber: body.ticketNumber,
+      patientName: body.patientName,
+      locale: body.locale,
+    });
+    return {
+      pdf,
+      filename: `queue-ticket-${body.ticketNumber}-thermal.pdf`,
+      profileId: profile.id,
+      contentType: "application/pdf" as const,
+    };
+  }
+
+  /** UX-04 — sample / payment 80 mm receipt for thermal printers. */
+  async thermalPaymentReceipt(
+    tenantId: string,
+    body: {
+      clinicId: string;
+      patientName: string;
+      receiptNumber?: string;
+      lines?: { label: string; amount: string }[];
+      total: string;
+      currency?: string;
+      method?: string;
+      locale?: "en" | "ar";
+    },
+  ) {
+    const { buildThermalPaymentReceiptPdf, resolveThermalProfile } = await import("../billing-platform/thermal-templates");
+    const clinic = await this.prisma.clinic.findFirst({ where: { id: body.clinicId, tenantId } });
+    if (!clinic) throw new NotFoundException("Clinic not found");
+    const settings = (clinic.providerSettings ?? {}) as { thermalPrinterProfileId?: string };
+    const profile = resolveThermalProfile(settings.thermalPrinterProfileId);
+    const pdf = buildThermalPaymentReceiptPdf({
+      clinicNameEn: clinic.nameEn,
+      clinicNameAr: clinic.nameAr,
+      receiptNumber: body.receiptNumber ?? `R-${Date.now()}`,
+      patientName: body.patientName,
+      lines: body.lines?.length ? body.lines : [{ label: body.locale === "en" ? "Visit" : "كشف", amount: body.total }],
+      total: body.total,
+      currency: body.currency ?? clinic.defaultCurrency,
+      method: body.method,
+      locale: body.locale,
+    });
+    return {
+      pdf,
+      filename: `receipt-thermal.pdf`,
+      profileId: profile.id,
+      contentType: "application/pdf" as const,
+    };
+  }
+
+  async getPrintSettings(tenantId: string, clinicId: string) {
+    const { listThermalPrinterProfiles, resolveThermalProfile } = await import("../billing-platform/thermal-templates");
+    const clinic = await this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId } });
+    if (!clinic) throw new NotFoundException("Clinic not found");
+    const settings = (clinic.providerSettings ?? {}) as { thermalPrinterProfileId?: string };
+    return {
+      clinicId,
+      thermalPrinterProfileId: resolveThermalProfile(settings.thermalPrinterProfileId).id,
+      profiles: listThermalPrinterProfiles(),
+    };
+  }
+
+  async putPrintSettings(tenantId: string, clinicId: string, thermalPrinterProfileId: string) {
+    const { resolveThermalProfile } = await import("../billing-platform/thermal-templates");
+    const profile = resolveThermalProfile(thermalPrinterProfileId);
+    const clinic = await this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId } });
+    if (!clinic) throw new NotFoundException("Clinic not found");
+    const prev = (clinic.providerSettings ?? {}) as Record<string, unknown>;
+    await this.prisma.clinic.update({
+      where: { id: clinicId },
+      data: { providerSettings: { ...prev, thermalPrinterProfileId: profile.id } },
+    });
+    return { clinicId, thermalPrinterProfileId: profile.id };
+  }
 }
