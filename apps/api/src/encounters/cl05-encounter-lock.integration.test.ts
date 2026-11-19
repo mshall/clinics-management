@@ -29,6 +29,7 @@ function encountersService(): EncountersService {
     uploads,
     {} as never,
     { shareAfterSignOff: async () => null } as never,
+    { emitStatusChange: async () => undefined } as never,
   );
 }
 

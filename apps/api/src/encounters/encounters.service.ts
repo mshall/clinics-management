@@ -72,6 +72,7 @@ import { AuditService } from "../audit/audit.service";
 import { assertEncounterWritable, autoLockHours, encounterLockAt, syncEncounterLock } from "../common/encounter-lock";
 import { DrugCatalogService } from "../clinical/drug-catalog.service";
 import { RxSafetyCheckService } from "../clinical/rx-safety-check.service";
+import { AppointmentOutboxService } from "../messaging/appointment-outbox.service";
 import { RecordShareService } from "../marketplace/record-share.service";
 
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
@@ -121,6 +122,7 @@ export class EncountersService {
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
     private readonly commissionCharges: CommissionChargeService,
     private readonly recordShare: RecordShareService,
+    private readonly appointmentOutbox: AppointmentOutboxService,
   ) {}
 
   private mapDiag(d: {
@@ -1176,11 +1178,29 @@ export class EncountersService {
       });
       if (aptId) {
         await this.frontDeskFlow.onEncounterEnded(tx, aptId);
+        const before = await tx.appointment.findFirst({
+          where: { id: aptId, tenantId },
+          select: { status: true, clinicId: true, bookingSource: true },
+        });
         await tx.appointment.update({
           where: { id: aptId },
           data: { status: AppointmentStatus.COMPLETED, endsAt: finalizedAt },
         });
         await this.commissionCharges.onComplete(tx, tenantId, aptId);
+        // KX-09 §04: finalizing the note completes the visit, so the COMPLETED (+ review-eligible) events must reach Kiorex too.
+        if (before && before.status !== AppointmentStatus.COMPLETED) {
+          await this.appointmentOutbox.emitStatusChange(
+            {
+              tenantId,
+              appointmentId: aptId,
+              clinicId: before.clinicId,
+              previousStatus: before.status,
+              nextStatus: AppointmentStatus.COMPLETED,
+              bookingSource: before.bookingSource,
+            },
+            tx,
+          );
+        }
       }
       return updated;
     });
