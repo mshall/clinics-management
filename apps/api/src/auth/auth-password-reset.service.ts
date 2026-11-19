@@ -1,8 +1,9 @@
-import { BadRequestException, Injectable, Logger } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, Optional } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import * as bcrypt from "bcryptjs";
 import { createHash, randomBytes } from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
+import { EmailService } from "../messaging/email.service";
 import { AuthOtpChallengeService } from "./auth-otp-challenge.service";
 import { OTP_PURPOSE_PASSWORD_RESET } from "./otp-purposes";
 import { normalizeLoginEmail, loginEmailLookupVariants } from "./auth-email.util";
@@ -19,6 +20,7 @@ export class AuthPasswordResetService {
     private readonly otp: AuthOtpChallengeService,
     private readonly sessions: AuthSessionService,
     private readonly config: ConfigService,
+    @Optional() private readonly email?: EmailService,
   ) {}
 
   private hashToken(raw: string): string {
@@ -58,7 +60,21 @@ export class AuthPasswordResetService {
         data: { userId: user.id, tokenHash, expiresAt },
       });
       const link = `${this.webBaseUrl()}/reset-password?token=${encodeURIComponent(rawToken)}`;
-      this.logger.log(`Password reset link for ${user.email}: ${link}`);
+      if (this.email) {
+        const sent = await this.email.send({
+          tenantId: null,
+          to: user.email,
+          templateKey: "password_reset",
+          locale: "both",
+          variables: { resetLink: link },
+          tags: { topic: "auth.password_reset" },
+        });
+        if (!sent.ok) {
+          this.logger.warn(`Password reset email failed for ${user.email}: ${sent.error}`);
+        }
+      } else {
+        this.logger.log(`Password reset link for ${user.email}: ${link}`);
+      }
       if (this.config.get<string>("AUTH_RESET_DEV_EXPOSE") === "1") {
         return { ok: true as const, channel: "email" as const, devResetLink: link };
       }
@@ -121,6 +137,22 @@ export class AuthPasswordResetService {
       where: { userId: user.id, consumedAt: null },
       data: { consumedAt: new Date() },
     });
+
+    if (this.email && user.email) {
+      await this.email
+        .send({
+          tenantId: user.tenantId,
+          to: user.email,
+          templateKey: "security_alert",
+          locale: "both",
+          variables: {
+            event: "password_changed",
+            detail: "All sessions were revoked. If you did not do this, contact support.",
+          },
+          tags: { topic: "auth.security_alert" },
+        })
+        .catch((e) => this.logger.warn(`security email failed: ${e instanceof Error ? e.message : String(e)}`));
+    }
 
     return { ok: true as const };
   }

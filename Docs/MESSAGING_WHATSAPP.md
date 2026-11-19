@@ -6,6 +6,7 @@
 | MS-02 Confirm / cancel / reschedule replies | **Done** |
 | MS-03 Consent & opt-out | **Done**
 | MS-04 Doctor & owner digests | **Done** — see [Doctor & owner digests](#doctor--owner-digests-ms-04) | ([MESSAGING_CONSENT.md](./MESSAGING_CONSENT.md)) |
+| MS-05 Transactional email | **Done** | ([MESSAGING_EMAIL.md](./MESSAGING_EMAIL.md)) |
 
 ## Provider
 

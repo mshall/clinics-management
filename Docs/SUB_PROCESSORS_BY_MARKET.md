@@ -10,7 +10,7 @@ Kiorly engages the following categories of **sub-processors** when hosting clini
 
 | Sub-processor | Role | Data processed | Region / notes |
 |---------------|------|----------------|----------------|
-| **Amazon Web Services** | IaaS — RDS PostgreSQL, S3 (uploads + web), App Runner, CloudFront, Secrets Manager, CloudWatch | All tenant PHI/PII in the platform DB and object storage; logs (no PHI by policy) | **`eu-central-1` (Frankfurt)** for primary DB, uploads, automated RDS backups |
+| **Amazon Web Services** | IaaS — RDS PostgreSQL, S3 (uploads + web), App Runner, CloudFront, Secrets Manager, CloudWatch, **SES** (transactional email: trial, invoices, password reset) | All tenant PHI/PII in the platform DB and object storage; logs (no PHI by policy); owner/staff email addresses for transactional mail | **`eu-central-1` (Frankfurt)** for primary DB, uploads, automated RDS backups, SES |
 | **OpenAI** (optional) | AI assistant LLM | Redacted prompts only; gated by `ai_assistant` + consent | **EU API endpoint** per market `providerConfig` ([ASSISTANT_OPENAI_SETUP.md](./ASSISTANT_OPENAI_SETUP.md)) |
 | **Egyptian Tax Authority (ETA)** | Fiscal e-receipt API | Receipt payloads (may include buyer name above threshold) | Egypt government endpoints (outbound from Frankfurt API) |
 | **WhatsApp BSP** (optional) | Appointment reminders | Phone numbers, message templates | Provider-selected region; off by default for EG |

@@ -55,6 +55,7 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 | Automated reminder queue | **Shipped** | Meta Cloud templates + webhooks ([MESSAGING_WHATSAPP.md](./MESSAGING_WHATSAPP.md)); delivery in patient/appointment UI |
 | Confirm/cancel replies | **Shipped** | MS-02 quick replies + waitlist on cancel ([MESSAGING_WHATSAPP.md](./MESSAGING_WHATSAPP.md)) |
 | Messaging consent / STOP | **Shipped** | MS-03 transactional vs marketing + PDPL opt-out ([MESSAGING_CONSENT.md](./MESSAGING_CONSENT.md)) |
+| Transactional email (trial, invoices, security) | **Shipped** | SES + bilingual templates; DKIM/SPF/DMARC gate ([MESSAGING_EMAIL.md](./MESSAGING_EMAIL.md)); NH-016 for DNS |
 | Recall / campaigns (check-up, lapsed, birthday) | **Foundation** | `GET /messaging/recall-campaigns`; tie to `Patient.acquisitionChannel` in next slice |
 | Booking attribution & new-patient rule (CR-02) | **Done** | See [BOOKING_ATTRIBUTION.md](./BOOKING_ATTRIBUTION.md) |
 | Post-visit satisfaction → doctor score | **Foundation** | `SatisfactionSurveyResponse` table; trigger on encounter finalize (next) |
