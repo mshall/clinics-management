@@ -442,6 +442,51 @@
         ],
         "responses": { "200": { "description": "OK" } }
       }
+    },
+    "/patients/{id}/consents": {
+      "post": {
+        "operationId": "marketplaceUpsertPatientRecordShareConsents",
+        "summary": "KX-11 — upsert record-share consent scopes from the Kiorex patient app",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["consents"],
+                "properties": {
+                  "consents": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["scope", "granted"],
+                      "properties": {
+                        "scope": {
+                          "type": "string",
+                          "enum": ["VISIT_SUMMARY", "PRESCRIPTIONS", "LAB_RESULTS", "SHARE_WITH_OTHER_CLINICS"]
+                        },
+                        "granted": { "type": "boolean" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Updated consent scopes" },
+          "404": { "description": "Patient not found" }
+        }
+      }
     }
   },
   "webhooks": {
