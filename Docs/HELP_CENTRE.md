@@ -15,6 +15,12 @@
 - **Golden-flow Arabic videos** (same five clips as ON-08): listed on `/help` and linked from matching articles; playable when `VITE_HELP_VIDEO_BASE_URL` is set (`<id>-ar.mp4`), otherwise “coming soon”.
 - Help drawer links into `/help` (ON-08).
 
+## Taxes are yours to file
+
+The reports/export article ("How do I download operations or Kiorex reports?", EN + AR) states that Kiorly prints your
+payment records and invoices with your configured VAT line, exports CSV/PDF for your accountant, and **never reports to a
+tax authority**: you and your accountant file your own taxes. Full policy: [NO_TAX_AUTHORITY_REPORTING.md](./NO_TAX_AUTHORITY_REPORTING.md).
+
 ## Needs human
 
 - Record/host the five 60-second Arabic videos and set `VITE_HELP_VIDEO_BASE_URL` — see NH-007 in `Docs/KIORLY_NEEDS_HUMAN.md`.

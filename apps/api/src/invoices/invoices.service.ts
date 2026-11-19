@@ -351,7 +351,7 @@ export class InvoicesService {
         },
         include: invoiceInclude,
       });
-      // Tax invoices are printouts; ETA receipts are queued when payment is collected (check-in, billing, visit fee).
+      // Invoices are printouts from the clinic's own config; nothing is filed on anyone's behalf (ADR-011).
       return created;
     });
 

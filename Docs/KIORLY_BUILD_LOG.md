@@ -154,3 +154,12 @@
 | 106 MS-06 | `55cea4c` | Egyptian Arabic WhatsApp AI receptionist; clinical→handover; inbox; SlotService booking hints. |
 | 107 RP-04 | `8b65315` | AR aging per payer + payouts + branch P&L; totals reconcile to claim/revenue tables. |
 | 108 UX-04 | `bda08d7` | 80 mm ticket/receipt PDFs for Epson+Star; print settings; WCAG focus/contrast. |
+
+## Kiorex v2 follow-up (20 Nov 2026)
+
+Phase 1b walk (steps 101–108): every step is ticked and shipped. Requirements found still missing and now built: **CL-06 results as PDF**
+(`POST/GET /clinical/orders/:id/results-pdf`, UI attach/view) and **KX-11 "Rx PDF" push** (`PRESCRIPTION_SHARED.pdf` signed link). Blocked on a
+human or on other products: thermal printer hardware check (NH-025), Kiorex consumer of the KX-11 events (NH-027), Pharmacy/Lab consumers of the
+hand-offs (NH-026). Not part of 101–108 and not built: KCV202 `@kiorly/commerce-kernel` extraction (before Pharmacy M9), KCV205 market-2 pack.
+Also shipped: flag gaps (referral rewards, Kiorex consent guard, e-Rx and lab hand-offs, listing recompute on snapshot change, specialty-template
+rule), liquidity count API, Kiorex waitlist, mock-provider mode + dev inbox, and the no-tax-authority test and doc.

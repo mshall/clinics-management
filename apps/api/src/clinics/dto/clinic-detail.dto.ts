@@ -78,7 +78,7 @@ export class ClinicDetailDto {
 
   @ApiPropertyOptional({
     nullable: true,
-    description: "Tax authority registration number for this branch (invoices, fiscal receipts)",
+    description: "Tax authority registration number for this branch (printed on invoices and payment records)",
   })
   taxRegistrationNumber!: string | null;
 

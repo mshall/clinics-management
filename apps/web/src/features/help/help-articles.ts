@@ -276,11 +276,11 @@ export const HELP_ARTICLES: HelpArticle[] = [
     titleEn: "How do I download operations or Kiorex reports?",
     titleAr: "كيف أحمّل تقارير التشغيل أو كيوركس؟",
     bodyEn:
-      "Reports → pick Operations or Kiorex period → Export xlsx/PDF. Money columns respect role visibility. Optional weekly schedule digests go to email/WhatsApp for owners who opted in.",
+      "Reports → pick Operations or Kiorex period → Export xlsx/PDF. Money columns respect role visibility. Optional weekly schedule digests go to email/WhatsApp for owners who opted in. Hand the export to your accountant: Kiorly never reports to a tax authority, you and your accountant file your own taxes (Docs: NO_TAX_AUTHORITY_REPORTING.md).",
     bodyAr:
-      "التقارير ← اختر التشغيل أو فترة كيوركس ← صدّر xlsx/PDF. أعمدة المال تحترم صلاحية الدور. ملخص الجدول الأسبوعي اختياري للبريد/واتساب للملاك المشتركين.",
-    tagsEn: ["reports", "export", "kiorex"],
-    tagsAr: ["تقارير", "تصدير", "كيوركس"],
+      "التقارير ← اختر التشغيل أو فترة كيوركس ← صدّر xlsx/PDF. أعمدة المال تحترم صلاحية الدور. ملخص الجدول الأسبوعي اختياري للبريد/واتساب للملاك المشتركين. سلّم الملف لمحاسبك: لا تُبلّغ Kiorly أي جهة ضريبية، وأنت ومحاسبك تقدّمان إقراراتكما بأنفسكما (الوثيقة: NO_TAX_AUTHORITY_REPORTING.md).",
+    tagsEn: ["reports", "export", "kiorex", "tax", "accountant"],
+    tagsAr: ["تقارير", "تصدير", "كيوركس", "ضريبة", "محاسب"],
   },
   {
     id: "ai-scribe",

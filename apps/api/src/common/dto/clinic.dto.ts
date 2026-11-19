@@ -45,15 +45,4 @@ export class ClinicDto {
 
   @ApiProperty({ description: "When the clinic record was created (ISO timestamp)" })
   createdAt!: string;
-
-  @ApiPropertyOptional({
-    description: "Default fiscal receipt device when created for a market that requires POS registration",
-  })
-  fiscalDevice?: {
-    id: string;
-    serialNumber: string;
-    kind: string;
-    status: string;
-    isDefault: boolean;
-  };
 }

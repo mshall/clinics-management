@@ -57,7 +57,7 @@ export class CreateRevenueDto {
   operationId?: string;
 
   @ApiPropertyOptional({
-    description: "Skip ETA e-receipt queue for non-patient B2B revenue (e-invoice later); requires reason",
+    description: "Legacy flag kept for API compatibility (no tax-authority queue exists); requires reason",
   })
   @IsOptional()
   skipEtaEReceipt?: boolean;

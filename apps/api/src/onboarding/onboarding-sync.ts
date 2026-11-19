@@ -22,7 +22,6 @@ export type OnboardingSyncInput = {
   patientCount: number;
   appointmentCount: number;
   checkedInAppointmentCount: number;
-  fiscalDeviceReady: boolean;
   kiorexProfileReady: boolean;
   doctorVerificationReady: boolean;
 };

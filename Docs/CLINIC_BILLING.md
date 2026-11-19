@@ -10,7 +10,7 @@ Patient-side money for clinics (not Kiorly's own SaaS billing — that is `Kiorl
 | MN-03 | Cash drawer shifts: open with a float, blind count at close, variance note, review flag above the market threshold, owner WhatsApp summary, bilingual Z-report (A4 + 80 mm thermal), shift screen — see [Cash drawer shifts](#cash-drawer-shifts-mn-03) | **Done** |
 | MN-02 | Doctor revenue-share rules (percent / fixed per visit / room rental, by doctor · visit type · category · payer · branch), monthly statements with adjustments, approve-to-lock, payout, bilingual PDF, reconciliation — see [Doctor revenue share](#doctor-revenue-share-mn-02) | **Done** |
 | MN-06 | Split payments (cash + card + transfer/wallet in one receipt) and operation installment schedules with WhatsApp reminders — see [Split payments & installments](#split-payments--installments-mn-06) | **Done** |
-| MN-05 | Company contracts & TPA claims: claim batches per payer/period from payer-tagged invoices, reject/resubmit, remittance auto-match (≥90%), B2B e-invoice outbox to the payer (not ETA) — see [Company contracts & TPA claims](#company-contracts--tpa-claims-mn-05) | **Done** |
+| MN-05 | Company contracts & TPA claims: claim batches per payer/period from payer-tagged invoices, reject/resubmit, remittance auto-match (≥90%), payer claim invoice outbox (`payer_claim_invoice`; no tax-authority reporting) — see [Company contracts & TPA claims](#company-contracts--tpa-claims-mn-05) | **Done** |
 
 ## Money model
 
@@ -92,7 +92,7 @@ Mixed cash + card + InstaPay is recorded as **one** `BillingPayment` with severa
 
 ## Company contracts & TPA claims (MN-05)
 
-Corporate and insured visits are batched per payer and period. Kiorly never submits to ETA; the payer B2B e-invoice is an INTERNAL outbox payload for the clinic's TPA channel.
+Corporate and insured visits are batched per payer and period. Kiorly never reports to a tax authority; the payer claim invoice is an INTERNAL outbox payload for the clinic's TPA channel.
 
 - **Models** — `PayerCompany`, `ContractServicePrice` (co-pay %), `PayerPreAuthorization`; `Invoice.payerCompanyId`; `ClaimBatch` / `ClaimLine` / `ClaimRemittance` / `ClaimRemittanceLine`.
 - **API** (`/claims/*`, Clinic+ `mod_invoices`, desk/finance) — payers CRUD; create draft batch from payer-tagged invoices in a period; submit (marks lines `SUBMITTED`, writes `billing.payer_b2b_invoice` outbox); reject line with reason; resubmit rejected line; import remittance JSON and auto-match by `externalRef` (invoice number) then unique amount.

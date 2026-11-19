@@ -30,7 +30,7 @@ export class CreateTenantPaymentChannelDto {
   referencePattern!: string;
 
   @ApiProperty({
-    description: "ETA fiscal payment method code on receipts (C cash, V card, O other/transfer)",
+    description: "Payment method code printed on payment records (C cash, V card, O other/transfer)",
     enum: ["C", "V", "O"],
     default: "O",
   })

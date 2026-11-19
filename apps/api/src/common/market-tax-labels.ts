@@ -20,7 +20,7 @@ const FALLBACK: MarketTaxLabels = {
 
 const BY_COUNTRY: Record<string, Partial<MarketTaxLabels>> = {
   EG: {
-    taxAuthorityNameEn: "Egyptian Tax Authority (ETA)",
+    taxAuthorityNameEn: "Egyptian Tax Authority",
     taxAuthorityNameAr: "مصلحة الضرائب المصرية",
     taxRegistrationLabelEn: "Tax registration number (RIN / TRN)",
     taxRegistrationLabelAr: "الرقم الضريبي (RIN / TRN)",

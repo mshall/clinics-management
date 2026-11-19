@@ -47,7 +47,7 @@ async function assertNotSamplePatient(tx: Prisma.TransactionClient, params: Post
   }
 }
 
-/** Single money path (FD-02): post revenue only — no ETA / fiscal queue. */
+/** Single money path (FD-02): post revenue only — no tax-authority reporting (ADR-011). */
 export async function postRevenue(
   tx: Prisma.TransactionClient,
   params: PostRevenueParams,

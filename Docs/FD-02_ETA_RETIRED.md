@@ -14,3 +14,4 @@
 ## Human
 
 - NH-002 closed: payment slip wording confirmed as clinic payment records outside tax authority integration.
+Policy page: [NO_TAX_AUTHORITY_REPORTING.md](./NO_TAX_AUTHORITY_REPORTING.md) (enforced by `no-tax-authority.node.test.ts`).

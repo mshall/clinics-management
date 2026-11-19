@@ -7,7 +7,7 @@ export type MarketPaymentMethodDef = {
   referencePattern?: string;
   /** Env var name for optional online verification URL (e.g. INSTAPAY_VERIFY_URL) */
   verifyUrlEnv?: string;
-  /** ETA fiscal payment code: C cash, V card, O other/transfer */
+  /** Payment method code on payment records: C cash, V card, O other/transfer */
   fiscalPaymentCode?: string;
 };
 

@@ -97,12 +97,12 @@ export function ClinicRegulatorySettingsPanel({ clinicId, detail, canEdit }: Pro
           {authorityName
             ? t(
                 "clinics.regulatorySettingsHintWithAuthority",
-                "Numbers from {{authority}} used on tax invoices, fiscal receipts, and compliance exports.",
+                "Numbers from {{authority}} printed on invoices, payment records, and accountant exports.",
                 { authority: authorityName },
               )
             : t(
                 "clinics.regulatorySettingsHint",
-                "Used on tax invoices, fiscal receipts, and compliance exports for this branch.",
+                "Printed on invoices, payment records, and accountant exports for this branch.",
               )}
         </CardDescription>
       </CardHeader>

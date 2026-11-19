@@ -416,8 +416,8 @@ const GROUP_ADMIN: RoleGuide = {
         {
           titleEn: "Service catalog",
           titleAr: "قائمة الخدمات",
-          bodyEn: "Billing API: service codes, effective-dated prices, contract prices, split payments, cash close, Egypt ETA queue.",
-          bodyAr: "واجهة الفواتير: رموز الخدمات، الأسعار، عقود الشركات، إغلاق الصندوق، ETA.",
+          bodyEn: "Billing API: service codes, effective-dated prices, contract prices, split payments, cash close.",
+          bodyAr: "واجهة الفواتير: رموز الخدمات، الأسعار، عقود الشركات، إغلاق الصندوق.",
         },
         {
           titleEn: "Documentation",
@@ -528,8 +528,8 @@ const FINANCE_OFFICER: RoleGuide = {
         {
           titleEn: "Split payments",
           titleAr: "تقسيم الدفع",
-          bodyEn: "Record cash + card allocations on one payment; triggers ETA receipt queue stub.",
-          bodyAr: "سجّل نقد + بطاقة في دفعة واحدة؛ يضاف إلى طابور ETA.",
+          bodyEn: "Record cash + card allocations on one payment; posts revenue (no tax-authority reporting).",
+          bodyAr: "سجّل نقد + بطاقة في دفعة واحدة؛ يُسجَّل في الإيرادات (دون إبلاغ ضريبي).",
         },
         {
           titleEn: "Cash close",

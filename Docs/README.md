@@ -25,7 +25,9 @@ See **[Documentation_Portal.md](./Documentation_Portal.md)** for module layout, 
 |----------|---------|
 | [**Documentation_Portal.md**](./Documentation_Portal.md) | Docs workspace (`apps/docs`), PiggyMetrics sync, how to view locally |
 | [**Test_Data_Users.md**](./Test_Data_Users.md) | Demo logins, passwords, roles, QA scenarios, org user counts |
-| [**QA_STAGING.md**](./QA_STAGING.md) | Staging ETA pre-prod, WhatsApp sandbox, pilot tenants, `demo:reset` |
+| [**QA_STAGING.md**](./QA_STAGING.md) | Staging, WhatsApp sandbox, pilot tenants, `demo:reset` |
+| [**NO_TAX_AUTHORITY_REPORTING.md**](./NO_TAX_AUTHORITY_REPORTING.md) | **ADR-011:** no tax-authority reporting anywhere; clinics and doctors file their own taxes; VAT lines + CSV/PDF exports only |
+| [**MOCK_PROVIDERS.md**](./MOCK_PROVIDERS.md) | Mock providers by default (`KIORLY_PROVIDER_MODE`), the dev inbox (`/dev/inbox`), simulated delivery, replies and PSP callbacks |
 | [**QA_GOLDEN_FLOW.md**](./QA_GOLDEN_FLOW.md) | QA-01 launch golden-flow Playwright E2E (EN/AR, Lite, Kiorex) |
 | [**QA_MONEY_PATH.md**](./QA_MONEY_PATH.md) | QA-02 money-path API tests + ≥85% coverage gate (billing, billing-platform, credits) |
 | [**QA_OBSERVABILITY.md**](./QA_OBSERVABILITY.md) | QA-05 operational alerts, runbooks, on-call webhooks, tracing hooks |
@@ -38,8 +40,8 @@ See **[Documentation_Portal.md](./Documentation_Portal.md)** for module layout, 
 | [**AI_HONEST_LABELS.md**](./AI_HONEST_LABELS.md) | AI-03: which features are model-backed vs rule-based (product copy) |
 | [**PATIENT_CONSENT.md**](./PATIENT_CONSENT.md) | SC-03: consent purposes, enforcement, capture |
 | [**LEGAL_PACK.md**](./LEGAL_PACK.md) | GT-02: legal documents, versioned acceptance, billing gate |
-| [**FEATURE_FLAGS.md**](./FEATURE_FLAGS.md) | Layered flags (platform · market · org): AI assistant, ETA, payments, WhatsApp |
-| [**MULTI_MARKET.md**](./MULTI_MARKET.md) | `providerSettings` JSON, market payment channels, required market pack fields, ETA wire parity, privileged MFA on AWS production |
+| [**FEATURE_FLAGS.md**](./FEATURE_FLAGS.md) | Layered flags (platform · market · org): AI assistant, payments, WhatsApp, Kiorex modules |
+| [**MULTI_MARKET.md**](./MULTI_MARKET.md) | `providerSettings` JSON, market payment channels, required market pack fields, privileged MFA on AWS production |
 | [**CLINIC_TAX_AND_LICENSING.md**](./CLINIC_TAX_AND_LICENSING.md) | Per-branch license and tax authority numbers (market labels, invoicing, fiscal) |
 | [**PLATFORM_MARKETS_AND_INSIGHTS.md**](./PLATFORM_MARKETS_AND_INSIGHTS.md) | Market pause/disable, org country picker, AWS launch, platform insights, MFA QR |
 | [**ASSISTANT_OPENAI_SETUP.md**](./ASSISTANT_OPENAI_SETUP.md) | OpenAI API key and AWS Secrets Manager for the assistant |
@@ -51,8 +53,7 @@ See **[Documentation_Portal.md](./Documentation_Portal.md)** for module layout, 
 | [**BILLING_AND_CREDITS.md**](./BILLING_AND_CREDITS.md) | GT-06 hub — SaaS + clinic money docs |
 | [**KIOREX_CONNECTOR.md**](./KIOREX_CONNECTOR.md) | GT-06 hub — marketplace / commission docs |
 | [**PRODUCT_EPIC_ROADMAP.md**](./PRODUCT_EPIC_ROADMAP.md) | Launch vs Phase 1b epic list |
-| [**EGYPT_GO_LIVE.md**](./EGYPT_GO_LIVE.md) | Egypt launch: ETA, data protection, backup, legal pack, pilot |
-| [**ETA_RECEIPT_V12.md**](./ETA_RECEIPT_V12.md) | Egypt Receipt **v1.2** builder, SHA-256 UUIDs, per-POS `FiscalPosChain`, queue/submit flow |
+| [**EGYPT_GO_LIVE.md**](./EGYPT_GO_LIVE.md) | Egypt launch: data protection, backup, legal pack, pilot (no tax-authority reporting) |
 | [**COMPLIANCE_CONTROLS.md**](./COMPLIANCE_CONTROLS.md) | ISO 27001 / HIPAA / SOC / FISMA control mapping (non-certification) |
 | [**GUIDE_BOOK.md**](./GUIDE_BOOK.md) | In-app Guide book (`/guide`) — role-based EN/AR instructions |
 | [**RBAC_MULTI_ROLE.md**](./RBAC_MULTI_ROLE.md) | FD-01 — multiple roles per user, tenant owner flag, nav tab union |
@@ -229,7 +230,6 @@ Scheduled operations open an **edit dialog** that mirrors the **create** form: f
 | HR deactivate / archive / restore | `apps/api/src/hr/hr.service.ts`, `apps/web/src/lib/employee-manage-policy.ts` |
 | Customer support API + hints | `apps/api/src/support/`, `apps/web/src/features/support/` |
 | Admin insights (360° + staff) | `apps/api/src/admin/admin-insights.service.ts`, `apps/web/src/features/admin/admin-insights-panel.tsx` |
-| ETA Receipt v1.2 + device chain | `apps/api/src/compliance/eta-egypt-wire.ts`, `fiscal-submit.service.ts`, `eta-egypt-serialize.ts` — [ETA_RECEIPT_V12.md](./ETA_RECEIPT_V12.md) |
 | Audit query bounds / perf tests | `apps/api/src/common/audit-log-query-bounds.ts`, `scripts/load-test-slo.mjs` |
 | Operations UI | `apps/web/src/features/operations/operations-page.tsx` |
 | Invoices & clinic invoice settings | `apps/api/src/invoices/`, `apps/web/src/features/invoices/` |

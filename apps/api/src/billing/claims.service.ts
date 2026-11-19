@@ -218,7 +218,7 @@ export class ClaimsService {
     const total = batch.lines.reduce((s, l) => s + num(l.amountClaimed), 0);
     const b2bInvoiceNumber = `B2B-${batch.payerCompany.contractRef ?? batch.payerCompanyId.slice(-6)}-${Date.now()}`;
     const b2bInvoicePayload = {
-      kind: "payer_b2b_einvoice",
+      kind: "payer_claim_invoice",
       batchId: batch.id,
       payerCompanyId: batch.payerCompanyId,
       payerNameEn: batch.payerCompany.nameEn,

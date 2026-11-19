@@ -28,7 +28,6 @@ const emptySync: OnboardingSyncInput = {
   patientCount: 0,
   appointmentCount: 0,
   checkedInAppointmentCount: 0,
-  fiscalDeviceReady: false,
   kiorexProfileReady: false,
   doctorVerificationReady: false,
 };

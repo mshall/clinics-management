@@ -17,7 +17,7 @@ import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles"
 import { NavTabAccessService } from "../user-nav-tabs/nav-tab-access.service";
 import { REVENUE_MUTATE_ROLES, REVENUE_VIEW_ROLES } from "../user-nav-tabs/nav-tab-module-roles";
 
-const SKIP_ETA_ERECEIPT_ROLES: ReadonlySet<UserRole> = new Set([
+const B2B_COUNTERPARTY_ROLES: ReadonlySet<UserRole> = new Set([
   UserRole.GROUP_ADMIN,
   UserRole.GROUP_SUPERVISOR,
   UserRole.FINANCE_OFFICER,
@@ -322,7 +322,7 @@ export class RevenueService {
     }
     const skipEta = dto.skipEtaEReceipt === true;
     if (skipEta) {
-      if (!hasAnyRoleInSet(user, SKIP_ETA_ERECEIPT_ROLES)) {
+      if (!hasAnyRoleInSet(user, B2B_COUNTERPARTY_ROLES)) {
         throw new ForbiddenException("Only finance or organization admins may post non-receipt B2B revenue");
       }
       if (!dto.skipEtaEReceiptReason?.trim()) {
@@ -361,7 +361,7 @@ export class RevenueService {
         tenantId,
         actorId: user.userId,
         clinicId: dto.clinicId,
-        action: "REVENUE_SKIP_ETA_ERECEIPT",
+        action: "REVENUE_B2B_COUNTERPARTY",
         resource: "revenue_entry",
         resourceId: row.id,
         metadata: {

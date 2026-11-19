@@ -2,12 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/http";
 import type { TransferReferenceRule } from "@/lib/visit-collection";
 
-export type FiscalDeviceRegistration = {
-  required: boolean;
-  credentialFields: Array<{ key: string; type: string; labelKey: string }>;
-  registrationGuideKey: string;
-};
-
 export type OrganizationPaymentChannel = {
   id: string;
   name: string;
@@ -24,8 +18,6 @@ export type TenantMarketContext = {
   currency: string;
   timezone: string;
   weekendDays: number[];
-  fiscalProviderKey: string;
-  fiscalDeviceRegistration: FiscalDeviceRegistration | null;
   paymentMethods: Array<{ key: string; labelKey?: string; transferChannel?: string; referencePattern?: string }>;
   organizationPaymentChannels: OrganizationPaymentChannel[];
   transferChannels: string[];

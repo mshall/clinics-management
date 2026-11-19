@@ -69,7 +69,7 @@ export class ClaimsController {
   }
 
   @Post("batches/:id/submit")
-  @ApiOperation({ summary: "Submit batch + queue B2B e-invoice outbox to the payer" })
+  @ApiOperation({ summary: "Submit batch + queue the payer claim invoice outbox (no tax-authority reporting)" })
   submitBatch(@CurrentUser() user: JwtUser, @Param("id") id: string) {
     return this.claims.submitBatch(requireTenantId(user), user, id);
   }

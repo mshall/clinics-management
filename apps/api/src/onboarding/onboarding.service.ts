@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { AppointmentStatus, FiscalDeviceStatus, Prisma, UserRole, VerificationStatus } from "@prisma/client";
+import { AppointmentStatus, Prisma, UserRole, VerificationStatus } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
 import {
@@ -181,7 +181,6 @@ export class OnboardingService {
       patientCount,
       appointmentCount,
       checkedInAppointmentCount,
-      fiscalReady,
       kiorexCount,
       verifiedPhysicianCount,
     ] = await Promise.all([
@@ -215,14 +214,6 @@ export class OnboardingService {
       this.prisma.appointment.count({
         where: { tenantId, status: AppointmentStatus.CHECKED_IN, patient: { isSample: false } },
       }),
-      this.prisma.fiscalDevice
-        .count({
-          where: {
-            tenantId,
-            status: FiscalDeviceStatus.ACTIVE,
-          },
-        })
-        .then((n) => n > 0),
       this.prisma.appointmentType.count({
         where: { tenantId, marketplaceBookable: true },
       }),
@@ -258,7 +249,6 @@ export class OnboardingService {
       patientCount,
       appointmentCount,
       checkedInAppointmentCount,
-      fiscalDeviceReady: fiscalReady,
       kiorexProfileReady: kiorexCount > 0 && verifiedPhysicianCount > 0,
       doctorVerificationReady: verifiedPhysicianCount > 0,
     };

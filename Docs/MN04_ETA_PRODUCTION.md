@@ -1,3 +1,5 @@
+> **RETIRED.** Kiorly does not report to any tax authority (ADR-011, [FD-02](./FD-02_ETA_RETIRED.md), [NO_TAX_AUTHORITY_REPORTING.md](./NO_TAX_AUTHORITY_REPORTING.md)). This page is kept only as history and must not be followed.
+
 # MN-04 ETA production cutover (pilot clinics)
 
 | Task | Status |
