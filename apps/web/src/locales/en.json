@@ -406,7 +406,10 @@
       "syndicate_card": "Syndicate card matches syndicate number",
       "specialty_match": "Specialty certificate matches declared specialty",
       "national_id_present": "National ID captured and consistent",
-      "documents_readable": "All documents are readable and authentic"
+      "documents_readable": "All documents are readable and authentic",
+      "moh_licence": "Ministry of Health licence is valid for this profession",
+      "id_selfie_match": "ID selfie matches the national ID photo (solo practitioner)",
+      "criminal_record_certificate": "Criminal-record certificate provided (solo practitioner)"
     },
     "status": {
       "UNVERIFIED": "Unverified",
@@ -419,7 +422,32 @@
       "SYNDICATE_CARD": "Syndicate card",
       "SPECIALTY_CERTIFICATE": "Specialty certificate",
       "CLINIC_LICENCE": "Clinic licence",
-      "PROFILE_PHOTO": "Profile photo"
+      "PROFILE_PHOTO": "Profile photo",
+      "MOH_LICENCE": "Ministry of Health licence",
+      "ID_SELFIE": "Selfie holding national ID",
+      "CRIMINAL_RECORD_CERT": "Criminal-record certificate"
+    },
+    "professionLabel": "Profession",
+    "filterProfession": "Filter by profession",
+    "allProfessions": "All professions",
+    "soloTag": "solo practitioner",
+    "nextReverify": "Next re-verification",
+    "licenceExpiry": "Licence expiry date",
+    "reverifyBecause": "Re-verification because",
+    "solo": "I practise on my own (solo nurse): ID selfie and criminal-record certificate are required",
+    "profession": {
+      "PHYSICIAN": "Physician",
+      "DENTIST": "Dentist",
+      "PHYSIOTHERAPIST": "Physiotherapist",
+      "NURSE": "Nurse",
+      "ASSISTANT": "Assistant (supervised)"
+    },
+    "reverify": {
+      "NAME_CHANGED": "Your name changed, so your credentials must be re-verified.",
+      "PROFESSION_CHANGED": "Your profession changed, so you must submit the documents for the new profession.",
+      "SPECIALTY_CHANGED": "Your specialty changed, so your credentials must be re-verified.",
+      "LICENCE_EXPIRED": "A licence expired. Upload the renewed licence and re-submit.",
+      "INTERVAL_ELAPSED": "Periodic re-verification is due. Re-submit your documents."
     }
   },
   "theme": {

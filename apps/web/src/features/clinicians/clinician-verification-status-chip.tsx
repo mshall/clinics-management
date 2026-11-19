@@ -5,7 +5,7 @@ import { apiGet } from "@/lib/http";
 import { mapApiRole } from "@/lib/roles";
 import { useAuthStore } from "@/stores/auth-store";
 
-type VerificationDto = { status: string };
+type VerificationDto = { status: string; badge?: { verified: boolean; labelEn: string; labelAr: string } };
 
 const tone: Record<string, string> = {
   UNVERIFIED: "bg-muted text-muted-foreground",
@@ -16,7 +16,7 @@ const tone: Record<string, string> = {
 };
 
 export function ClinicianVerificationStatusChip() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const role = useAuthStore((s) => s.user?.role);
   const additional = useAuthStore((s) => s.user?.additionalRoles ?? []);
   const isPhysician =
@@ -30,7 +30,11 @@ export function ClinicianVerificationStatusChip() {
   const status = q.data.status;
   return (
     <Badge variant="secondary" className={tone[status] ?? ""}>
-      {t(`verification.status.${status}`, status)}
+      {status === "VERIFIED" && q.data.badge?.verified
+        ? i18n.language.startsWith("ar")
+          ? q.data.badge.labelAr
+          : q.data.badge.labelEn
+        : t(`verification.status.${status}`, status)}
     </Badge>
   );
 }

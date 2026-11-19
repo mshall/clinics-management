@@ -406,7 +406,10 @@
       "syndicate_card": "كارت النقابة يطابق رقم النقابة",
       "specialty_match": "شهادة التخصص تطابق التخصص المعلن",
       "national_id_present": "الرقم القومي مسجّل ومتسق",
-      "documents_readable": "جميع المستندات واضحة وصحيحة"
+      "documents_readable": "جميع المستندات واضحة وصحيحة",
+      "moh_licence": "ترخيص وزارة الصحة ساري لهذه المهنة",
+      "id_selfie_match": "صورة السيلفي تطابق صورة الهوية (ممارس منفرد)",
+      "criminal_record_certificate": "تم تقديم صحيفة الحالة الجنائية (ممارس منفرد)"
     },
     "status": {
       "UNVERIFIED": "غير موثّق",
@@ -419,7 +422,32 @@
       "SYNDICATE_CARD": "كارت النقابة",
       "SPECIALTY_CERTIFICATE": "شهادة التخصص",
       "CLINIC_LICENCE": "ترخيص العيادة",
-      "PROFILE_PHOTO": "صورة شخصية"
+      "PROFILE_PHOTO": "صورة شخصية",
+      "MOH_LICENCE": "ترخيص وزارة الصحة",
+      "ID_SELFIE": "سيلفي مع بطاقة الهوية",
+      "CRIMINAL_RECORD_CERT": "صحيفة الحالة الجنائية"
+    },
+    "professionLabel": "المهنة",
+    "filterProfession": "تصفية حسب المهنة",
+    "allProfessions": "كل المهن",
+    "soloTag": "ممارس منفرد",
+    "nextReverify": "موعد إعادة التوثيق القادم",
+    "licenceExpiry": "تاريخ انتهاء الترخيص",
+    "reverifyBecause": "سبب إعادة التوثيق",
+    "solo": "أمارس المهنة بمفردي (ممرض منفرد): يلزم سيلفي مع الهوية وصحيفة الحالة الجنائية",
+    "profession": {
+      "PHYSICIAN": "طبيب",
+      "DENTIST": "طبيب أسنان",
+      "PHYSIOTHERAPIST": "أخصائي علاج طبيعي",
+      "NURSE": "ممرض",
+      "ASSISTANT": "مساعد (تحت الإشراف)"
+    },
+    "reverify": {
+      "NAME_CHANGED": "تغيّر اسمك، لذا يجب إعادة توثيق بياناتك.",
+      "PROFESSION_CHANGED": "تغيّرت مهنتك، لذا قدّم مستندات المهنة الجديدة.",
+      "SPECIALTY_CHANGED": "تغيّر تخصصك، لذا يجب إعادة توثيق بياناتك.",
+      "LICENCE_EXPIRED": "انتهى ترخيص. ارفع الترخيص المجدَّد وأعد التقديم.",
+      "INTERVAL_ELAPSED": "حان موعد إعادة التوثيق الدوري. أعد تقديم مستنداتك."
     }
   },
   "theme": {
