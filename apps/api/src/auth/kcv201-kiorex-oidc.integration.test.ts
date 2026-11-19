@@ -85,6 +85,7 @@ describe("KCV-201 Sign in with Kiorex Passport", () => {
   beforeEach(async () => {
     await prisma.kiorexIdentityLink.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
     await prisma.kiorexOidcTransaction.deleteMany({});
+    await prisma.userSession.deleteMany({ where: { kiorexSid: { not: null } } });
     mfaFor = new Set();
   });
   after(async () => {

@@ -19,6 +19,7 @@ import { ensureEgyptDrugCatalog } from "./egypt-drug-catalog-seed";
 import { ensureFoundingCohort } from "./founding-cohort-seed";
 import { ensurePlanCatalog } from "./plan-catalog-seed";
 import { ensureAllTenantSubscriptions } from "../src/subscriptions/subscription-provision";
+import { ensureKiorexDevIntegration } from "./kiorex-dev.seed";
 import { ensureAllPilotTenants, pilotSeedEnabled } from "./pilot-tenants.seed";
 import { shellTenantSeedRow } from "./seed-tenant-fields";
 
@@ -616,6 +617,7 @@ async function ensureIncrementalSeed(passwordHash: string) {
   if (pilotSeedEnabled()) {
     await ensureAllPilotTenants(prisma, passwordHash);
   }
+  await ensureKiorexDevIntegration(prisma);
   console.log(
     "Seed OK (incremental — existing rows preserved, only missing demo records added) — Dr Ahmed Shall Group:",
     tenant.id,
@@ -1266,6 +1268,7 @@ async function seedFreshDatabase(passwordHash: string) {
   }
   await ensureSuperAdmin(passwordHash);
   await ensureDemoSalesRep(passwordHash);
+  await ensureKiorexDevIntegration(prisma);
 }
 
 async function main() {

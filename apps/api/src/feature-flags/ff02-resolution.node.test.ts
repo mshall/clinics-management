@@ -5,6 +5,10 @@ import { FeatureFlagsService } from "./feature-flags.service";
 import type { FlagSnapshot, SnapshotFlag } from "./kiorex-flag-snapshot";
 import { KiorexFlagSnapshotService } from "./kiorex-flag-snapshot.service";
 
+// A developer .env may configure the control plane; these tests model an unmanaged deployment.
+delete process.env.KIOREX_CONTROL_PLANE_URL;
+delete process.env.KIOREX_FLAGS_URL;
+
 const base: FlagResolutionInput = {
   globalValue: null,
   marketValue: null,

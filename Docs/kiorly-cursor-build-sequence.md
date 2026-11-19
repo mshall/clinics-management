@@ -356,6 +356,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step FF05 · Platform flag pages read-only mirror + org page effective value/source (web) — `apps/web/e2e/ff05-flags.spec.ts` (Playwright not run locally)
 - [x] Step FF06 · Audit events on snapshot change + `FLAG_SNAPSHOT_STALE` on-call alert (>10 min) — `Docs/runbooks/FLAG_SNAPSHOT_STALE.md`
 - [x] Step KCV201 · Sign in with Kiorex Passport (OIDC auth code + PKCE, verified account link, back-channel logout) — `auth/kcv201-kiorex-oidc.integration.test.ts` · `Docs/AUTH_SESSIONS.md` · migration `20261119290000_kcv201_kiorex_oidc`
+- [x] Step KX-DEV · Local Kiorex integration seed: marketplace client `kx_dev_client`, 3 LIVE verified doctors in 2 clinics (Cairo/Giza), 14-day slots, idempotent — `marketplace/kx-dev-seed.integration.test.ts` · `Docs/KIOREX_CONNECTOR.md`
 
 ---
 
