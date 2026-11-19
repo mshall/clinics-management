@@ -11,6 +11,9 @@ import { OutboxEventService } from "../../messaging/outbox-event.service";
 import type { PrismaService } from "../../prisma/prisma.service";
 import { InvitationsService } from "./invitations.service";
 
+// Nest's ConfigService prefers process.env over the injected map: isolate from a developer's local APP_WEB_URL.
+delete process.env.APP_WEB_URL;
+
 const prisma = new PrismaClient();
 const ps = prisma as unknown as PrismaService;
 const invitations = new InvitationsService(

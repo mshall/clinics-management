@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { DateTime } from "luxon";
 import { PaymentMethod, Prisma, UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
@@ -169,10 +170,14 @@ export class BillingService {
       notes?: string;
     },
   ) {
-    const day = new Date(body.shiftDate);
-    day.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(day);
-    dayEnd.setDate(dayEnd.getDate() + 1);
+    // The shift day is a calendar date in the CLINIC's timezone (not the server's: a +04 host or a UTC container both
+    // used to shift the window and miss movements near local midnight).
+    const clinic = await this.prisma.clinic.findFirst({ where: { id: body.clinicId, tenantId }, select: { timezone: true } });
+    const zone = clinic?.timezone?.trim() || "Africa/Cairo";
+    const dayStart = DateTime.fromISO(body.shiftDate.slice(0, 10), { zone }).startOf("day");
+    if (!dayStart.isValid) throw new BadRequestException("Invalid shiftDate");
+    const day = dayStart.toJSDate();
+    const dayEnd = dayStart.plus({ days: 1 }).toJSDate();
 
     const dayPayments = await this.prisma.billingPayment.findMany({
       where: { tenantId, clinicId: body.clinicId, createdAt: { gte: day, lt: dayEnd } },

@@ -1,3 +1,4 @@
+import { DateTime } from "luxon";
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { PaymentMethod, Prisma, PrismaClient, RevenueStatus, UserRole } from "@prisma/client";
@@ -194,7 +195,9 @@ describe("MN-01 refunds, credit notes, deposits & prepaid packages", () => {
   });
 
   it("cash close subtracts refunds and adds deposits/package sales for the day", async () => {
-    const shiftDate = new Date().toISOString().slice(0, 10);
+    // the shift day is a calendar date in the clinic's timezone (CR: was the UTC date, flaky near local midnight)
+    const tz = (await prisma.clinic.findUniqueOrThrow({ where: { id: clinicId } })).timezone ?? "Africa/Cairo";
+    const shiftDate = DateTime.now().setZone(tz).toISODate()!;
     const close = await billing.closeCashierShift(tenantId, finance, { clinicId, shiftDate, countedCash: 0, countedCard: 0 });
     const moves = await prisma.cashMovement.findMany({ where: { tenantId, clinicId } });
     const cash = moves.filter((m) => m.method === "CASH").reduce((s, m) => s + (m.direction === "OUT" ? -1 : 1) * Number(m.amount), 0);
