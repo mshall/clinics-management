@@ -1619,7 +1619,13 @@
     "chartRevenueByCurrency": "الإيرادات مقابل المصروفات ({{currency}})",
     "chartRevenueCurrency": "إيرادات مُرحّلة ({{currency}})",
     "chartRevenueMulti": "إيرادات مُرحّلة حسب العملة",
-    "kiorexRating": "تقييم كيوركس"
+    "kiorexRating": "تقييم كيوركس",
+    "exportExcel": "تصدير Excel",
+    "exportPdf": "تصدير PDF",
+    "exportPayments": "تصدير المدفوعات",
+    "exportPaymentsHint": "التاريخ، المريض، الخدمة، المبلغ، الطريقة، المرجع — للمحاسب.",
+    "scheduledReports": "التقارير الأسبوعية المجدولة",
+    "scheduledReportsHint": "إرسال بريد وواتساب للمالك كل أسبوع بروابط التصدير."
   },
   "platform": {
     "title": "إدارة المنصة",

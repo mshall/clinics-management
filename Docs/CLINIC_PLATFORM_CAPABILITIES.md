@@ -70,7 +70,7 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 | Period KPIs, P&L, clinic breakdown | **Shipped** | Existing dashboard + reports |
 | No-show rate, utilization, revenue/doctor-hour | **Planned** | Extend `reports.service` |
 | AR aging, payouts, branch P&L | **Planned** | Use `BillingPayment` + existing revenue/expenses |
-| Excel/PDF export & scheduled email | **Planned** | PRD N.1 |
+| Excel/PDF export & scheduled email | **Done** | RP-02 — `GET /reports/:key/export`, weekly schedule |
 
 ---
 

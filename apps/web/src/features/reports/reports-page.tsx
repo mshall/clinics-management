@@ -20,6 +20,7 @@ import {
 import { AcquisitionChannelPatientsDialog } from "@/components/acquisition-channel-patients-dialog";
 import { ResponsiveTable, ResponsiveTableElement } from "@/components/responsive-table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
@@ -30,6 +31,7 @@ import {
   useReportsPatientAcquisitionQuery,
   useReportsPerformanceQuery,
 } from "@/lib/api-hooks";
+import { apiDownload } from "@/lib/http";
 import type { ReportsClinicBreakdownItemDto, ReportsCurrencyTotalsDto, ReportsMonthlySeriesItemDto } from "@/lib/api-types";
 import { formatClinicName, formatRevenueCategory, localeForLanguage } from "@/lib/locale-display";
 import { formatMoneyAmount } from "@/lib/money-display";
@@ -167,6 +169,17 @@ export function ReportsPage() {
   const breakdownItems = clinicBreakdown.data?.items ?? [];
   const clinicBreakdownRows = useMemo(() => buildClinicBreakdownRows(breakdownItems), [breakdownItems]);
 
+  const exportQuery = useMemo(() => {
+    const q = new URLSearchParams({ from, to });
+    if (clinicScopeId) q.set("clinicId", clinicScopeId);
+    return q.toString();
+  }, [from, to, clinicScopeId]);
+
+  const downloadReport = async (key: string, format: "xlsx" | "pdf") => {
+    const ext = format === "pdf" ? "pdf" : "xls";
+    await apiDownload(`/api/v1/reports/${key}/export?format=${format}&${exportQuery}`, `kiorly-${key}.${ext}`);
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <div>
@@ -176,6 +189,32 @@ export function ReportsPage() {
           {t("reports.usingRange")}: {from} → {to}
         </p>
       </div>
+
+      <Card data-testid="reports-exports">
+        <CardHeader>
+          <CardTitle className="text-base">{t("reports.exportPayments", "Payments export")}</CardTitle>
+          <CardDescription>
+            {t(
+              "reports.exportPaymentsHint",
+              "Date, patient, service, amount, method, reference — for your accountant.",
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={() => void downloadReport("payments", "xlsx")}>
+            {t("reports.exportExcel", "Export Excel")}
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => void downloadReport("payments", "pdf")}>
+            {t("reports.exportPdf", "Export PDF")}
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => void downloadReport("operations", "xlsx")}>
+            {t("reports.operationsTitle", "Operations KPIs")} · {t("reports.exportExcel", "Export Excel")}
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => void downloadReport("performance", "xlsx")}>
+            {t("reports.performanceTitle", "Performance summary")} · {t("reports.exportExcel", "Export Excel")}
+          </Button>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

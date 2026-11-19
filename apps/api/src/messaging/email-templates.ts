@@ -6,7 +6,8 @@ export type EmailTemplateKey =
   | "trial_notification"
   | "kiorly_invoice_statement"
   | "password_reset"
-  | "security_alert";
+  | "security_alert"
+  | "weekly_report";
 
 export type RenderedEmail = {
   subject: string;
@@ -46,6 +47,8 @@ export function renderEmailTemplate(
       return renderPasswordReset(locale, vars);
     case "security_alert":
       return renderSecurity(locale, vars);
+    case "weekly_report":
+      return renderWeeklyReport(locale, vars);
     default: {
       const _exhaustive: never = key;
       throw new Error(`Unknown email template: ${_exhaustive}`);
@@ -125,9 +128,33 @@ function renderSecurity(locale: EmailLocale, vars: Vars): RenderedEmail {
   return { subject, text, html: wrapHtml(locale, subject, `<p>${escapeHtml(text)}</p>`), locale };
 }
 
+function renderWeeklyReport(locale: EmailLocale, vars: Vars): RenderedEmail {
+  const keys = v(vars, "reportKeys", "payments");
+  const link = v(vars, "exportPath", "/reports");
+  if (locale === "ar") {
+    const subject = "تقرير العيادة الأسبوعي";
+    const text = `تقاريرك المجدولة جاهزة (${keys}). افتح التطبيق وصدّر من صفحة التقارير: ${link}`;
+    return {
+      subject,
+      text,
+      html: wrapHtml(locale, subject, `<p>${escapeHtml(text)}</p>`),
+      locale,
+    };
+  }
+  const subject = "Your weekly clinic report";
+  const text = `Your scheduled reports are ready (${keys}). Open Reports in Kiorly to download: ${link}`;
+  return {
+    subject,
+    text,
+    html: wrapHtml(locale, subject, `<p>${escapeHtml(text)}</p>`),
+    locale,
+  };
+}
+
 export const EMAIL_TEMPLATE_KEYS: EmailTemplateKey[] = [
   "trial_notification",
   "kiorly_invoice_statement",
   "password_reset",
   "security_alert",
+  "weekly_report",
 ];

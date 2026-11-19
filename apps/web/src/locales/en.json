@@ -1618,7 +1618,13 @@
     "chartRevenueByCurrency": "Revenue vs expenses ({{currency}})",
     "chartRevenueCurrency": "Posted revenue ({{currency}})",
     "chartRevenueMulti": "Posted revenue by currency",
-    "kiorexRating": "Kiorex rating"
+    "kiorexRating": "Kiorex rating",
+    "exportExcel": "Export Excel",
+    "exportPdf": "Export PDF",
+    "exportPayments": "Payments export",
+    "exportPaymentsHint": "Date, patient, service, amount, method, reference — for your accountant.",
+    "scheduledReports": "Weekly scheduled reports",
+    "scheduledReportsHint": "Email and WhatsApp the owner every week with export links."
   },
   "platform": {
     "title": "Platform administration",

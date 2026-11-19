@@ -27,6 +27,7 @@ import { DigestsService } from "./digests.service";
 import { EmailService } from "./email.service";
 import { EmailOutboxService } from "./email-outbox.service";
 import { EmailBounceController } from "./email-bounce.controller";
+import { ScheduledReportsService } from "./scheduled-reports.service";
 
 @Module({
   imports: [AuditModule, forwardRef(() => SchedulingModule), PatientsModule],
@@ -43,6 +44,7 @@ import { EmailBounceController } from "./email-bounce.controller";
     MessagingService,
     OwnerNotificationsService,
     DigestsService,
+    ScheduledReportsService,
     EmailService,
     EmailOutboxService,
     InternalOutboxConsumerService,
@@ -64,6 +66,7 @@ import { EmailBounceController } from "./email-bounce.controller";
     MessagingService,
     OwnerNotificationsService,
     DigestsService,
+    ScheduledReportsService,
     EmailService,
     EmailOutboxService,
     InternalOutboxConsumerService,
