@@ -3052,6 +3052,11 @@ model AppointmentWaitlistEntry {
   status            AppointmentWaitlistStatus @default(WAITING)
   offeredSlotAt     DateTime?
   notes             String?
+  /// CLINIC (front desk) | KIOREX (joined from the Kiorex patient app via marketplace/v1/waitlist).
+  source            String                  @default("CLINIC")
+  /// Kiorex waitlist reference for source=KIOREX (idempotency key for join / leave / offers).
+  externalRef       String?                 @unique
+  platformIntegrationClientId String?
   createdAt         DateTime                @default(now())
   updatedAt         DateTime                @updatedAt
   slotOffers        WaitlistSlotOffer[]
@@ -4312,4 +4317,37 @@ model KiorexOidcTransaction {
   expiresAt    DateTime
 
   @@index([expiresAt])
+}
+
+
+/// Mock-mode dev inbox (CLAUDE.md: messaging and provider integrations are MOCKED by default). One row per rendered
+/// outbound message (email / WhatsApp / SMS / push) and per simulated inbound reply. Written ONLY by mock adapters
+/// (KIORLY_PROVIDER_MODE != real), never in real mode, so it never holds real-provider traffic.
+model DevInboxMessage {
+  id                String   @id @default(cuid())
+  createdAt         DateTime @default(now())
+  /// EMAIL | WHATSAPP | SMS | PUSH
+  channel           String
+  /// OUT (rendered by Kiorly) | IN (simulated inbound reply)
+  direction         String   @default("OUT")
+  tenantId          String?
+  toAddress         String
+  fromAddress       String?
+  templateKey       String?
+  subject           String?
+  bodyText          String
+  bodyHtml          String?
+  variablesJson     Json?
+  quickReplies      Json?
+  documentLink      String?
+  providerMessageId String?  @unique
+  /// OutboundMessage.id / EmailMessage.id the row mirrors.
+  relatedId         String?
+  /// SENT | DELIVERED | READ | FAILED | BOUNCED | RECEIVED
+  status            String   @default("SENT")
+  statusHistory     Json     @default("[]")
+
+  @@index([channel, createdAt])
+  @@index([toAddress, createdAt])
+  @@index([tenantId, createdAt])
 }
