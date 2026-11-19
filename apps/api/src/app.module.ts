@@ -32,6 +32,7 @@ import { SchedulingModule } from "./scheduling/scheduling.module";
 import { FrontDeskModule } from "./front-desk/front-desk.module";
 import { BillingModule } from "./billing/billing.module";
 import { ComplianceModule } from "./compliance/compliance.module";
+import { ExportsModule } from "./exports/exports.module";
 import { MessagingModule } from "./messaging/messaging.module";
 import { ClinicAiModule } from "./clinic-ai/clinic-ai.module";
 import { MarketsModule } from "./markets/markets.module";
@@ -89,6 +90,7 @@ import { GrowthModule } from "./growth/growth.module";
     FrontDeskModule,
     BillingModule,
     ComplianceModule,
+    ExportsModule,
     MessagingModule,
     ClinicAiModule,
     MarketsModule,
