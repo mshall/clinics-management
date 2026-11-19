@@ -57,7 +57,7 @@ export class SlotHoldService {
       throw new ConflictException({
         code: SLOT_TAKEN_CODE,
         message: "Slot is not available",
-        alternatives: available.slots.slice(0, 3),
+        alternatives: await this.nearestAlternatives(tenantId, body, start),
       });
     }
 
@@ -97,19 +97,10 @@ export class SlotHoldService {
       });
       if (!hold) {
         await this.slots.invalidateAndNotify(tenantId, body.clinicId, body.clinicianId, "slot_hold_conflict");
-        const fresh = await this.slots.getSlots({
-          tenantId,
-          clinicId: body.clinicId,
-          clinicianId: body.clinicianId,
-          typeId: body.typeId,
-          from: start,
-          to: addMinutes(start, 7 * 24 * 60),
-          channel: SLOT_CHANNEL.MARKETPLACE,
-        });
         throw new ConflictException({
           code: SLOT_TAKEN_CODE,
           message: "Slot is not available",
-          alternatives: fresh.slots.filter((x) => new Date(x.startsAt).getTime() !== start.getTime()).slice(0, 3),
+          alternatives: await this.nearestAlternatives(tenantId, body, start),
         });
       }
       await this.slots.invalidateAndNotify(tenantId, body.clinicId, body.clinicianId, "slot_hold_created");
@@ -120,6 +111,24 @@ export class SlotHoldService {
       }
       throw e;
     }
+  }
+
+  /** BK-04: the 3 free slots nearest the requested one (the plain availability window around it is empty by definition). */
+  private async nearestAlternatives(tenantId: string, body: CreateSlotHoldInput, start: Date) {
+    const target = start.getTime();
+    const { slots } = await this.slots.getSlots({
+      tenantId,
+      clinicId: body.clinicId,
+      clinicianId: body.clinicianId,
+      typeId: body.typeId,
+      from: addMinutes(start, -12 * 60),
+      to: addMinutes(start, 14 * 24 * 60),
+      channel: SLOT_CHANNEL.MARKETPLACE,
+    });
+    return [...slots]
+      .filter((x) => new Date(x.startsAt).getTime() !== target)
+      .sort((a, b) => Math.abs(new Date(a.startsAt).getTime() - target) - Math.abs(new Date(b.startsAt).getTime() - target))
+      .slice(0, 3);
   }
 
   async releaseHold(client: PlatformIntegrationPrincipal, holdId: string) {

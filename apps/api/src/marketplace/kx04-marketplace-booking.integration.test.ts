@@ -202,6 +202,9 @@ describe("KX-04 marketplace booking", () => {
     const rejected = results.find((r) => r.status === "rejected") as PromiseRejectedResult;
     assert.match(JSON.stringify((rejected.reason as { getResponse?: () => unknown }).getResponse?.()), /SLOT_TAKEN/);
     assert.equal(await prisma.slotHold.count({ where: { tenantId, startsAt: new Date(start) } }), 1);
+    // a later hold on the now-held slot: SLOT_TAKEN must carry the nearest free slots, not an empty list
+    const again = await holds.createHold(client, mk("c")).then(() => null, (e: { getResponse?: () => { alternatives?: unknown[] } }) => e.getResponse?.());
+    assert.ok((again?.alternatives?.length ?? 0) >= 1 && (again?.alternatives?.length ?? 0) <= 3, "alternatives expected");
   });
 
   it("two parallel bookings for one slot: exactly one succeeds", async () => {
