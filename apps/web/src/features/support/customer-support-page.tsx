@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Headphones, Plus, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { apiErrorMessage } from "@/features/platform/platform-shared";
-import { apiPatch, apiPost } from "@/lib/http";
+import { apiGet, apiPatch, apiPost } from "@/lib/http";
 import {
   useSupportTicketQuery,
   useSupportTicketsQuery,
@@ -54,7 +54,37 @@ export function CustomerSupportPage() {
     authUser?.navTabKeys,
     authUser?.navTabAccessModes,
   );
-  const [tab, setTab] = useState<"tickets" | "tracking">("tickets");
+  const [tab, setTab] = useState<"tickets" | "tracking" | "access">("tickets");
+
+  type AccessRequestRow = {
+    id: string;
+    reason: string;
+    status: string;
+    durationMinutes: number;
+    requestedUnmaskPhi: boolean;
+    phiUnmasked: boolean;
+    expiresAt: string | null;
+    createdAt: string;
+  };
+
+  const accessRequests = useQuery({
+    queryKey: ["support", "access-requests"],
+    queryFn: () => apiGet<AccessRequestRow[]>("/api/v1/support/access-requests"),
+    enabled: tab === "access",
+  });
+
+  const decideAccess = useMutation({
+    mutationFn: (payload: { id: string; approved: boolean; allowUnmaskPhi?: boolean }) =>
+      apiPost(`/api/v1/support/access-requests/${payload.id}/decide`, {
+        approved: payload.approved,
+        allowUnmaskPhi: payload.allowUnmaskPhi,
+      }),
+    onSuccess: () => {
+      toast.success(t("support.accessDecided", "Support access updated"));
+      void qc.invalidateQueries({ queryKey: ["support", "access-requests"] });
+    },
+    onError: (e: unknown) => toast.error(apiErrorMessage(e)),
+  });
   const [ticketPage, setTicketPage] = useState(1);
   const [ticketQ, setTicketQ] = useState("");
   const [ticketQApplied, setTicketQApplied] = useState("");
@@ -148,10 +178,11 @@ export function CustomerSupportPage() {
         ) : null}
       </div>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as "tickets" | "tracking")}>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "tickets" | "tracking" | "access")}>
         <TabsList>
           <TabsTrigger value="tickets">{t("support.tabTickets", "Tickets")}</TabsTrigger>
           <TabsTrigger value="tracking">{t("support.tabTracking", "Log tracking")}</TabsTrigger>
+          <TabsTrigger value="access">{t("support.tabAccess", "Kiorly access")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="tickets" className="space-y-4">
@@ -313,6 +344,75 @@ export function CustomerSupportPage() {
                   onPageSizeChange={() => {}}
                 />
               ) : null}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="access" className="space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">{t("support.accessTitle", "Kiorly support access")}</CardTitle>
+              <CardDescription>
+                {t(
+                  "support.accessHint",
+                  "Approve time-boxed access when Kiorly support needs help. Patient data stays masked unless you allow unmasking.",
+                )}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {accessRequests.isPending ? (
+                <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+              ) : (
+                <ul className="divide-y text-sm">
+                  {(accessRequests.data ?? []).map((row) => (
+                    <li key={row.id} className="flex flex-wrap items-start justify-between gap-3 py-3">
+                      <div className="space-y-1">
+                        <div className="font-medium">{row.reason}</div>
+                        <div className="text-xs text-muted-foreground ltr-nums">
+                          {row.status} · {row.durationMinutes} min
+                          {row.requestedUnmaskPhi ? ` · ${t("support.unmaskRequested", "unmask requested")}` : ""}
+                          {row.expiresAt ? ` · ends ${new Date(row.expiresAt).toLocaleString()}` : ""}
+                        </div>
+                      </div>
+                      {row.status === "PENDING" ? (
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={decideAccess.isPending}
+                            onClick={() => decideAccess.mutate({ id: row.id, approved: true, allowUnmaskPhi: false })}
+                          >
+                            {t("support.approveMasked", "Approve (masked)")}
+                          </Button>
+                          {row.requestedUnmaskPhi ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              disabled={decideAccess.isPending}
+                              onClick={() => decideAccess.mutate({ id: row.id, approved: true, allowUnmaskPhi: true })}
+                            >
+                              {t("support.approveUnmasked", "Approve + unmask")}
+                            </Button>
+                          ) : null}
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={decideAccess.isPending}
+                            onClick={() => decideAccess.mutate({ id: row.id, approved: false })}
+                          >
+                            {t("support.denyAccess", "Deny")}
+                          </Button>
+                        </div>
+                      ) : null}
+                    </li>
+                  ))}
+                  {(accessRequests.data ?? []).length === 0 ? (
+                    <li className="py-4 text-muted-foreground">{t("support.noAccessRequests", "No support access requests")}</li>
+                  ) : null}
+                </ul>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

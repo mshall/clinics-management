@@ -340,6 +340,15 @@ enum SupportTicketPriority {
   URGENT
 }
 
+/// PA-04 — time-boxed, owner-approved platform support access to a tenant.
+enum SupportAccessStatus {
+  PENDING
+  APPROVED
+  DENIED
+  REVOKED
+  EXPIRED
+}
+
 enum IntegrationScope {
   APPOINTMENTS_READ
   APPOINTMENTS_WRITE
@@ -1199,6 +1208,7 @@ model Tenant {
   tenantRoleNavTabGrants TenantRoleNavTabGrant[]
   userClinicEmployeePrivilegeGrants UserClinicEmployeePrivilegeGrant[]
   supportTickets                 SupportTicket[]
+  supportAccessSessions          SupportAccessSession[]
   integrationClients             IntegrationClient[]
   integrationWebhooks            IntegrationWebhook[]
   integrationFailureLogs         IntegrationFailureLog[]
@@ -1432,6 +1442,8 @@ model User {
   supportTicketsReported         SupportTicket[] @relation("SupportTicketReporter")
   supportTicketsAssigned         SupportTicket[] @relation("SupportTicketAssignee")
   supportTicketEvents            SupportTicketEvent[] @relation("SupportTicketEventActor")
+  supportAccessRequested         SupportAccessSession[] @relation("SupportAccessRequester")
+  supportAccessApproved          SupportAccessSession[] @relation("SupportAccessApprover")
   integrationClientsCreated      IntegrationClient[] @relation("IntegrationClientCreatedBy")
   integrationFailuresResolved    IntegrationFailureLog[] @relation("IntegrationFailureResolvedBy")
   clinicianAvailabilityTemplates ClinicianAvailabilityTemplate[] @relation("ClinicianAvailability")
@@ -2546,6 +2558,46 @@ model SupportTicketEvent {
   createdAt   DateTime      @default(now())
 
   @@index([ticketId, createdAt])
+}
+
+/// PA-04 — owner-approved, time-boxed platform support session (PHI masked by default).
+model SupportAccessSession {
+  id                 String              @id @default(cuid())
+  tenantId           String
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requesterUserId    String
+  requester          User                @relation("SupportAccessRequester", fields: [requesterUserId], references: [id], onDelete: Cascade)
+  reason             String
+  status             SupportAccessStatus @default(PENDING)
+  durationMinutes    Int                 @default(60)
+  requestedUnmaskPhi Boolean             @default(false)
+  phiUnmasked        Boolean             @default(false)
+  approverUserId     String?
+  approver           User?               @relation("SupportAccessApprover", fields: [approverUserId], references: [id], onDelete: SetNull)
+  decidedAt          DateTime?
+  expiresAt          DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  readLogs           SupportAccessReadLog[]
+
+  @@index([tenantId, status, createdAt])
+  @@index([requesterUserId, status])
+  @@index([expiresAt])
+}
+
+model SupportAccessReadLog {
+  id         String               @id @default(cuid())
+  sessionId  String
+  session    SupportAccessSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  patientId  String?
+  resource   String
+  resourceId String
+  action     String
+  masked     Boolean              @default(true)
+  createdAt  DateTime             @default(now())
+
+  @@index([sessionId, createdAt])
+  @@index([patientId, createdAt])
 }
 
 model MarketplaceListing {

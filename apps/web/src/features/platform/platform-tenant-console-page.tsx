@@ -43,6 +43,7 @@ export function PlatformTenantConsolePage() {
   const [trialReason, setTrialReason] = useState("Ops extend");
   const [creditAmount, setCreditAmount] = useState("100");
   const [creditReason, setCreditReason] = useState("Ops grant");
+  const [accessReason, setAccessReason] = useState("Help with support ticket");
 
   const q = useQuery({
     queryKey: ["platform", "tenant", tenantId],
@@ -65,6 +66,17 @@ export function PlatformTenantConsolePage() {
         amount: Number(creditAmount),
         reason: "GOODWILL",
         note: creditReason.trim() || "Ops grant",
+      }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["platform", "tenant", tenantId] }),
+  });
+
+  const requestSupportAccess = useMutation({
+    mutationFn: () =>
+      apiPost(`/api/v1/support/access-requests`, {
+        tenantId,
+        reason: accessReason.trim() || "Ops support",
+        durationMinutes: 60,
+        requestedUnmaskPhi: false,
       }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["platform", "tenant", tenantId] }),
   });
@@ -102,6 +114,7 @@ export function PlatformTenantConsolePage() {
           <TabsTrigger value="kiorex">{t("platform.tenantTab.kiorex", "Kiorex")}</TabsTrigger>
           <TabsTrigger value="verification">{t("platform.tenantTab.verification", "Verification")}</TabsTrigger>
           <TabsTrigger value="events">{t("platform.tenantTab.events", "Events")}</TabsTrigger>
+          <TabsTrigger value="supportAccess">{t("platform.tenantTab.supportAccess", "Support access")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="subscription">
@@ -258,6 +271,33 @@ export function PlatformTenantConsolePage() {
                   <li className="py-2 text-muted-foreground">{t("platform.lifecycleEmpty", "None")}</li>
                 ) : null}
               </ul>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="supportAccess">
+          <Card>
+            <CardContent className="space-y-3 pt-4 text-sm">
+              <p className="text-muted-foreground">
+                {t(
+                  "platform.supportAccessHint",
+                  "Request a time-boxed session. The clinic owner must approve before any patient chart can be opened (PHI masked by default).",
+                )}
+              </p>
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="min-w-[16rem] flex-1">
+                  <label className="text-xs text-muted-foreground">{t("platform.supportAccessReason", "Reason")}</label>
+                  <Input value={accessReason} onChange={(e) => setAccessReason(e.target.value)} />
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={requestSupportAccess.isPending}
+                  onClick={() => requestSupportAccess.mutate()}
+                >
+                  {t("platform.requestSupportAccess", "Request support access")}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

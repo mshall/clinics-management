@@ -20,6 +20,19 @@
 - Optional **tax registration** and **facility license** seed tenant defaults for compliance.
 - Demo **Dr Ahmed El Shall** group is bound to **EG** market after migrate/seed.
 
+## Support access with consent (PA-04)
+
+Platform support cannot open a patient chart without an **owner-approved**, time-boxed `SupportAccessSession`. PHI is masked by default (phone/national ID truncated; DOB/email hidden). Every chart read writes `SupportAccessReadLog` + `AuditLog` (`support.patient_chart_read`).
+
+| API | Who |
+|-----|-----|
+| `POST /support/access-requests` | Platform super admin |
+| `GET /support/access-requests` | Tenant owner / group admin (approval queue) |
+| `POST /support/access-requests/:id/decide` | Owner approve/deny (+ optional unmask) |
+| `GET /support/access-sessions/patients/:patientId?tenantId=` | Platform agent with active session |
+
+**UI:** Customer support → **Kiorly access** (owner prompt); Platform tenant console → **Support access** (request).
+
 ## Tenant lifecycle console (PA-01)
 
 **UI:** Platform → Organizations → **Open lifecycle console** (`/platform/organizations/:tenantId`).
