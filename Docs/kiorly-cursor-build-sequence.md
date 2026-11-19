@@ -310,7 +310,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 074 · MN-02 · Doctor revenue-share engine & statements — `5a23222` · `revenue-share/mn02-revenue-share.integration.test.ts` · `revenue-share/mn02-revenue-share-engine.node.test.ts` · `e2e/mn02-doctor-statements.spec.ts` · `Docs/CLINIC_BILLING.md`, `Docs/QA_MONEY_PATH.md`
 - [x] Step 075 · MN-03 · Cash drawer & shift close UI hardening — `2f9ca1e` · `billing/mn03-cashier-shift.integration.test.ts` · `billing/mn03-cashier-shift.node.test.ts` · `messaging/mn03-owner-shift-summary.integration.test.ts` · `e2e/mn03-cash-drawer.spec.ts` · `Docs/CLINIC_BILLING.md`, `Docs/QA_MONEY_PATH.md` · NH-013
 - [x] Step 076 · MN-06 · Split payments & installments UX — `22c1488` · `billing/mn06-split-payments.integration.test.ts` · `billing/mn06-split-payments.node.test.ts` · `messaging/mn06-installment-reminders.integration.test.ts` · `e2e/mn06-split-payments.spec.ts` · `Docs/CLINIC_BILLING.md`, `Docs/QA_MONEY_PATH.md` · NH-014
-- [ ] Step 077 · MS-04 · Doctor and owner digests
+- [x] Step 077 · MS-04 · Doctor and owner digests —  ·  ·  ·  ·  · NH-015 · CR-07 follow-up closed
 - [ ] Step 078 · MS-05 · Transactional email (trial, invoices, security)
 - [ ] Step 079 · AI-02 · AI scribe with Egyptian Arabic speech-to-text
 - [ ] Step 080 · AI-04 · Gate the role assistant and clinic AI by plan
@@ -3551,7 +3551,7 @@ model DoctorStatement {
 - Digest preferences in profile.
 
 **Acceptance criteria** (write a test for each)
-- [ ] Digests respect quiet hours and opt-out.
+- [x] Digests respect quiet hours and opt-out.
 
 **Done when:** all acceptance tests pass, §0.2 checks are green, en + ar strings added, docs updated, and Step 077 is ticked in §5.
 
