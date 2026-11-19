@@ -20,7 +20,12 @@ import {
   useSupportTicketsQuery,
   useSupportTrackingLogsQuery,
 } from "@/lib/support-hooks";
-import type { SupportProductModule, SupportTicketDto, SupportTrackingLogDto } from "@/lib/support-types";
+import type {
+  SupportMacroDto,
+  SupportProductModule,
+  SupportTicketDto,
+  SupportTrackingLogDto,
+} from "@/lib/support-types";
 import { canMutateSupportNav } from "@/lib/nav-tab-access-policy";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -145,9 +150,53 @@ export function CustomerSupportPage() {
     onError: (e: unknown) => toast.error(apiErrorMessage(e)),
   });
 
+  const macrosQuery = useQuery({
+    queryKey: ["support", "macros"],
+    queryFn: () => apiGet<SupportMacroDto[]>("/api/v1/support/macros"),
+    enabled: Boolean(selectedTicketId),
+  });
+
+  const applyMacroMutation = useMutation({
+    mutationFn: (payload: { id: string; macroId: string }) =>
+      apiPost<SupportTicketDto>(`/api/v1/support/tickets/${payload.id}/macros/${payload.macroId}`, {}),
+    onSuccess: () => {
+      toast.success(t("support.macroApplied", "Macro applied"));
+      void qc.invalidateQueries({ queryKey: ["support"] });
+    },
+    onError: (e: unknown) => toast.error(apiErrorMessage(e)),
+  });
+
+  const escalateMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiPost<SupportTicketDto>(`/api/v1/support/tickets/${id}/escalate-engineering`, {
+        note: t("support.escalateDefaultNote", "Needs engineering"),
+      }),
+    onSuccess: () => {
+      toast.success(t("support.escalated", "Escalated to engineering"));
+      void qc.invalidateQueries({ queryKey: ["support"] });
+    },
+    onError: (e: unknown) => toast.error(apiErrorMessage(e)),
+  });
+
   const statusBadge = (status: string) => {
     const variant = status === "OPEN" || status === "IN_PROGRESS" ? "default" : "secondary";
     return <Badge variant={variant}>{status.replace(/_/g, " ")}</Badge>;
+  };
+
+  const slaBadge = (row: SupportTicketDto) => {
+    if (!row.sla) return null;
+    const ok = !row.sla.breached;
+    return (
+      <Badge
+        variant={ok ? "secondary" : "outline"}
+        className={ok ? undefined : "border-destructive text-destructive"}
+        data-testid="support-sla-badge"
+      >
+        {ok
+          ? t("support.slaOk", "SLA OK · {{hours}}h", { hours: row.sla.targetHours })
+          : t("support.slaBreached", "SLA breached · {{hours}}h", { hours: row.sla.targetHours })}
+      </Badge>
+    );
   };
 
   const ticketRows = tickets.data?.items ?? [];
@@ -166,7 +215,7 @@ export function CustomerSupportPage() {
           <p className="text-sm text-muted-foreground">
             {t(
               "support.subtitle",
-              "Track issues across all modules, link audit logs, and resolve without engineering.",
+              "WhatsApp support line, macros, first-response SLA (Sun–Thu 09–18, P1 4h), and engineering escalation.",
             )}
           </p>
         </div>
@@ -231,6 +280,7 @@ export function CustomerSupportPage() {
                       <th className="px-3 py-2 text-start font-medium">{t("support.colModule", "Module")}</th>
                       <th className="px-3 py-2 text-start font-medium">{t("support.colStatus", "Status")}</th>
                       <th className="px-3 py-2 text-start font-medium">{t("support.colPriority", "Priority")}</th>
+                      <th className="px-3 py-2 text-start font-medium">{t("support.colSla", "First response SLA")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -240,16 +290,22 @@ export function CustomerSupportPage() {
                         className="cursor-pointer border-t border-border hover:bg-muted/50"
                         onClick={() => setSelectedTicketId(row.id)}
                       >
-                        <td className="px-3 py-2 font-mono text-xs">{row.ticketNo}</td>
+                        <td className="px-3 py-2 font-mono text-xs">
+                          {row.ticketNo}
+                          {row.channel === "WHATSAPP" ? (
+                            <span className="ms-1 text-[10px] text-muted-foreground">WA</span>
+                          ) : null}
+                        </td>
                         <td className="px-3 py-2 font-medium">{row.title}</td>
                         <td className="px-3 py-2 text-muted-foreground">{row.module}</td>
                         <td className="px-3 py-2">{statusBadge(row.status)}</td>
                         <td className="px-3 py-2">{row.priority}</td>
+                        <td className="px-3 py-2">{slaBadge(row)}</td>
                       </tr>
                     ))}
                     {!tickets.isPending && !ticketRows.length ? (
                       <tr>
-                        <td colSpan={5} className="px-3 py-6 text-center text-muted-foreground">
+                        <td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">
                           {t("support.noTickets", "No tickets yet")}
                         </td>
                       </tr>
@@ -475,10 +531,14 @@ export function CustomerSupportPage() {
               <div className="space-y-2 text-sm">
                 <div className="flex flex-wrap items-center gap-2">
                   {statusBadge(ticketDetail.data.status)}
+                  {slaBadge(ticketDetail.data)}
+                  {ticketDetail.data.escalatedToEngineeringAt ? (
+                    <Badge variant="outline">{t("support.escalatedBadge", "Engineering")}</Badge>
+                  ) : null}
                   <select
                     className="h-9 rounded-md border border-input bg-background px-2 text-sm"
                     value={ticketDetail.data.status}
-                    disabled={patchTicketMutation.isPending}
+                    disabled={patchTicketMutation.isPending || !canMutateSupport}
                     onChange={(e) =>
                       patchTicketMutation.mutate({
                         id: ticketDetail.data!.id,
@@ -494,6 +554,41 @@ export function CustomerSupportPage() {
                   </select>
                 </div>
                 <p className="text-muted-foreground whitespace-pre-wrap">{ticketDetail.data.description}</p>
+                {canMutateSupport ? (
+                  <div className="flex flex-wrap gap-2 pt-1" data-testid="support-ops-actions">
+                    <select
+                      className="h-9 max-w-[14rem] rounded-md border border-input bg-background px-2 text-sm"
+                      defaultValue=""
+                      disabled={applyMacroMutation.isPending}
+                      onChange={(e) => {
+                        const macroId = e.target.value;
+                        e.target.value = "";
+                        if (!macroId) return;
+                        applyMacroMutation.mutate({ id: ticketDetail.data!.id, macroId });
+                      }}
+                      data-testid="support-macro-select"
+                    >
+                      <option value="">{t("support.applyMacro", "Apply macro…")}</option>
+                      {(macrosQuery.data ?? []).map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.titleEn}
+                        </option>
+                      ))}
+                    </select>
+                    {!ticketDetail.data.escalatedToEngineeringAt ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={escalateMutation.isPending}
+                        onClick={() => escalateMutation.mutate(ticketDetail.data!.id)}
+                        data-testid="support-escalate"
+                      >
+                        {t("support.escalateEngineering", "Escalate to engineering")}
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
                 <h3 className="font-medium pt-2">{t("support.timeline", "Timeline")}</h3>
                 <ul className="space-y-2">
                   {detailEvents.map((ev) => (
