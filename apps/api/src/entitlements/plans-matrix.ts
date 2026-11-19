@@ -88,6 +88,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "markets/tenant-market.controller.ts": { kind: "open" },
   "messaging/installment-reminders.controller.ts": { kind: "gated", entitlement: "mod_invoices" },
   "messaging/digests.controller.ts": { kind: "open" },
+  "push/push.controller.ts": { kind: "open" },
   "messaging/messaging.controller.ts": { kind: "gated", entitlement: "mod_messaging" },
   "onboarding/onboarding.controller.ts": { kind: "open" },
   "onboarding/imports/imports.controller.ts": { kind: "open" },
