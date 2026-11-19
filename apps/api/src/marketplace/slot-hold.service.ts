@@ -6,7 +6,7 @@ import { SLOT_CHANNEL } from "../scheduling/slot-channel";
 import type { PlatformIntegrationPrincipal } from "./platform-integration-client.service";
 import { DEFAULT_SLOT_HOLD_MINUTES, SLOT_TAKEN_CODE } from "./marketplace-booking.constants";
 import { MarketplaceAccessService } from "./marketplace-access.service";
-import { addMinutes } from "../common/appointment-scheduling";
+import { ACTIVE_APPOINTMENT_STATUSES, addMinutes } from "../common/appointment-scheduling";
 
 export type CreateSlotHoldInput = {
   clinicId: string;
@@ -62,19 +62,56 @@ export class SlotHoldService {
     }
 
     try {
-      const hold = await this.prisma.slotHold.create({
-        data: {
+      // BK-04: serialise per clinician so two parallel holds for one slot cannot both pass the availability check
+      // above (check-then-insert race). The overlap re-check runs under the lock against committed rows, not the cache.
+      const hold = await this.prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`slot-hold:${body.clinicianId}`}))`;
+        const clashingHold = await tx.slotHold.findFirst({
+          where: { clinicianId: body.clinicianId, startsAt: { lt: end }, endsAt: { gt: start }, expiresAt: { gt: new Date() } },
+          select: { id: true },
+        });
+        if (clashingHold) return null;
+        const clashingAppointment = await tx.appointment.findFirst({
+          where: {
+            clinicianId: body.clinicianId,
+            startsAt: { lt: end },
+            endsAt: { gt: start },
+            status: { in: [...ACTIVE_APPOINTMENT_STATUSES] },
+          },
+          select: { id: true },
+        });
+        if (clashingAppointment) return null;
+        return tx.slotHold.create({
+          data: {
+            tenantId,
+            clinicId: body.clinicId,
+            clinicianId: body.clinicianId,
+            appointmentTypeId: body.typeId,
+            startsAt: start,
+            endsAt: end,
+            externalRef: ref,
+            platformIntegrationClientId: client.id,
+            expiresAt: addMinutes(new Date(), DEFAULT_SLOT_HOLD_MINUTES),
+          },
+        });
+      });
+      if (!hold) {
+        await this.slots.invalidateAndNotify(tenantId, body.clinicId, body.clinicianId, "slot_hold_conflict");
+        const fresh = await this.slots.getSlots({
           tenantId,
           clinicId: body.clinicId,
           clinicianId: body.clinicianId,
-          appointmentTypeId: body.typeId,
-          startsAt: start,
-          endsAt: end,
-          externalRef: ref,
-          platformIntegrationClientId: client.id,
-          expiresAt: addMinutes(new Date(), DEFAULT_SLOT_HOLD_MINUTES),
-        },
-      });
+          typeId: body.typeId,
+          from: start,
+          to: addMinutes(start, 7 * 24 * 60),
+          channel: SLOT_CHANNEL.MARKETPLACE,
+        });
+        throw new ConflictException({
+          code: SLOT_TAKEN_CODE,
+          message: "Slot is not available",
+          alternatives: fresh.slots.filter((x) => new Date(x.startsAt).getTime() !== start.getTime()).slice(0, 3),
+        });
+      }
       await this.slots.invalidateAndNotify(tenantId, body.clinicId, body.clinicianId, "slot_hold_created");
       return this.serializeHold(hold);
     } catch (e) {

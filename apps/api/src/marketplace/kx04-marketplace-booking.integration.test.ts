@@ -188,6 +188,22 @@ describe("KX-04 marketplace booking", () => {
     remindersConsentGranted: true,
   });
 
+  it("two parallel holds for one slot: exactly one succeeds, the other is SLOT_TAKEN with alternatives (BK-04)", async () => {
+    const { holds } = bookingStack();
+    // the template opens Mondays 09:00-17:00 Cairo: take a Monday at least 10 days out
+    const monday = new Date(Date.now() + 10 * 86_400_000);
+    while (monday.getUTCDay() !== 1) monday.setUTCDate(monday.getUTCDate() + 1);
+    monday.setUTCHours(8, 0, 0, 0);
+    const start = monday.toISOString();
+    const end = new Date(monday.getTime() + 30 * 60_000).toISOString();
+    const mk = (n: string) => ({ clinicId, clinicianId: physicianId, typeId, startsAt: start, endsAt: end, externalRef: `HOLD-${suffix}-${n}` });
+    const results = await Promise.allSettled([holds.createHold(client, mk("a")), holds.createHold(client, mk("b"))]);
+    assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+    const rejected = results.find((r) => r.status === "rejected") as PromiseRejectedResult;
+    assert.match(JSON.stringify((rejected.reason as { getResponse?: () => unknown }).getResponse?.()), /SLOT_TAKEN/);
+    assert.equal(await prisma.slotHold.count({ where: { tenantId, startsAt: new Date(start) } }), 1);
+  });
+
   it("two parallel bookings for one slot: exactly one succeeds", async () => {
     const { bookings } = bookingStack();
     const parallelStart = "2026-08-10T06:00:00.000Z";
