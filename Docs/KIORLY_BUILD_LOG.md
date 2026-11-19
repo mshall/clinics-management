@@ -119,3 +119,4 @@
 | 078 MS-05 | `f3b409c` | SES EmailService + bilingual templates (trial, invoice statement, password reset, security); `EmailMessage` + bounce webhook; production gated on DKIM/SPF/DMARC (`platform/email-domain-auth.json`); NH-016 |
 | 079 AI-02 | `219131e` | Chunked MediaRecorder upload, EG-AR/EN STT stub + draft SOAP/Rx, consent + purge audio on approve (opt-in retain), meter AI_SCRIBE_MINUTES, encounter scribe panel EN/AR; pilot <60s for 10 min |
 | 080 AI-04 | `f1ef8c5` | `ai_scribe` add-on (Clinic+); Lite UpgradeHint for assistant; monthly AI_ASSISTANT_REQUESTS quota; scribe endpoints gated separately from `ai_assistant` |
+| 081 RP-01 | `5c7ba01` | `GET /reports/operations` no-show/utilisation/revenue-per-hour/new-vs-returning/source mix; Reports UI card EN/AR |
