@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   Area,
@@ -190,6 +191,13 @@ export function ReportsPage() {
         <p className="text-muted-foreground">{t("reports.subtitle")}</p>
         <p className="mt-1 text-xs text-muted-foreground ltr-nums">
           {t("reports.usingRange")}: {from} → {to}
+        </p>
+        <p className="mt-2">
+          <Button asChild variant="outline" size="sm">
+            <Link to="/reports/ar-aging" data-testid="rp04-link">
+              {t("rp04.linkFromReports")}
+            </Link>
+          </Button>
         </p>
       </div>
 

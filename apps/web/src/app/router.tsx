@@ -66,6 +66,7 @@ import {
   PlatformOverviewPage,
   PlatformUsersTab,
   ReportsPage,
+  Rp04FinanceReportsPage,
   DataPrivacyPage,
   WaitingRoomPage,
 } from "@/lib/lazy-pages";
@@ -162,6 +163,14 @@ export const router = createBrowserRouter([
       { path: "hr/employees/:id", element: <NavGate tab="hr">{defer(EmployeeDetailPage)}</NavGate> },
       { path: "hr/employees/:id/profile", element: <NavGate tab="hr">{defer(EmployeeProfilePage)}</NavGate> },
       { path: "reports", element: <NavGate tab="reports">{defer(ReportsPage)}</NavGate> },
+      {
+        path: "reports/ar-aging",
+        element: <NavGate tab="reports">{defer(Rp04FinanceReportsPage)}</NavGate>,
+      },
+      {
+        path: "reports/branch-pl",
+        element: <NavGate tab="reports">{defer(Rp04FinanceReportsPage)}</NavGate>,
+      },
       {
         path: "customer-support",
         element: (

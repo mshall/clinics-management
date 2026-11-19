@@ -3843,5 +3843,27 @@
     "reply": "Reply",
     "handedOver": "Handover",
     "empty": "No conversations yet."
+  },
+  "rp04": {
+    "title": "AR aging & branch P&L",
+    "subtitle": "Payer receivables aging, payout tracking, and per-branch profit & loss.",
+    "denied": "Reports are not enabled for your plan.",
+    "arAging": "AR aging by payer",
+    "arAgingHint": "Open claim lines in aging buckets.",
+    "branchPl": "Branch P&L",
+    "branchPlHint": "Revenue and expenses per clinic for the selected range.",
+    "payouts": "Payouts",
+    "payoutsHint": "Kiorex deposit payouts and doctor statement payouts.",
+    "payoutsTotal": "Combined",
+    "payer": "Payer",
+    "branch": "Branch",
+    "revenue": "Revenue",
+    "expenses": "Expenses",
+    "net": "Net",
+    "total": "Total",
+    "doctor": "Doctor",
+    "reconciled": "Reconciled",
+    "mismatch": "Mismatch",
+    "linkFromReports": "AR aging & branch P&L"
   }
 }
