@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Kiorex consumer contract for Kiorly marketplace/v1",
+  "description": "Consumer-driven expectations Kiorex pins against. Breaking changes to required paths, methods, operationIds, or auth headers fail CI in this repo (QA-04).",
+  "provider": "kiorly",
+  "consumer": "kiorex",
+  "basePath": "/marketplace/v1",
+  "authHeaders": [
+    "X-Kiorly-Client-Key",
+    "X-Kiorly-Client-Secret",
+    "X-Kiorly-Timestamp",
+    "X-Kiorly-Nonce",
+    "X-Kiorly-Signature"
+  ],
+  "requiredOperations": [
+    { "method": "get", "path": "/auth/verify", "operationId": "marketplaceAuthVerify" },
+    { "method": "get", "path": "/clinics", "operationId": "marketplaceListClinics" },
+    { "method": "get", "path": "/providers", "operationId": "marketplaceListProviders" },
+    { "method": "get", "path": "/physicians", "operationId": "marketplaceListPhysicians" },
+    { "method": "get", "path": "/clinics/{clinicId}/slots", "operationId": "marketplaceListSlots" },
+    { "method": "get", "path": "/appointments/availability", "operationId": "marketplaceAvailability" },
+    { "method": "post", "path": "/holds", "operationId": "marketplaceCreateHold" },
+    { "method": "delete", "path": "/holds/{id}", "operationId": "marketplaceReleaseHold" },
+    { "method": "post", "path": "/bookings", "operationId": "marketplaceCreateBooking" },
+    { "method": "get", "path": "/bookings/{externalRef}", "operationId": "marketplaceGetBooking" },
+    { "method": "post", "path": "/bookings/{externalRef}/cancel", "operationId": "marketplaceCancelBooking" },
+    { "method": "post", "path": "/bookings/{externalRef}/reschedule", "operationId": "marketplaceRescheduleBooking" },
+    { "method": "post", "path": "/bookings/{externalRef}/deposit-paid", "operationId": "marketplaceDepositPaid" },
+    { "method": "post", "path": "/deposit-links/{token}/paid", "operationId": "marketplaceDepositLinkPaid" },
+    { "method": "post", "path": "/payouts", "operationId": "marketplaceRecordPayout" },
+    { "method": "post", "path": "/analytics/profile-views", "operationId": "marketplaceSyncProfileViews" },
+    { "method": "post", "path": "/reviews/aggregate", "operationId": "marketplaceSyncReviews" },
+    { "method": "post", "path": "/appointments", "operationId": "marketplaceBookAppointment" },
+    { "method": "get", "path": "/appointments/{id}", "operationId": "marketplaceGetAppointment" },
+    { "method": "post", "path": "/appointments/{id}/cancel", "operationId": "marketplaceCancelAppointment" }
+  ],
+  "slotQueryRequired": ["clinicianId", "typeId", "from", "to"],
+  "bookingChannelEnum": ["MARKETPLACE", "CLINIC_LINK"]
+}

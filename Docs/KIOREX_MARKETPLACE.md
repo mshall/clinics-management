@@ -6,6 +6,7 @@
 | Per-doctor `MarketplaceListing` | **Done** |
 | `/marketplace/v1` API namespace | **Done** |
 | OpenAPI `apps/api/openapi/marketplace.openapi.json` | **Done** |
+| QA-04 contract tests + consumer pin | **Done** (Kiorex CI wire-up: NH-019) — see [QA_KIOREX_CONTRACT.md](./QA_KIOREX_CONTRACT.md) |
 | Clinic UI listing status | **Done** |
 | KX-02 Provider profile publishing | **Done** |
 | KX-03 Canonical slot engine | **Done** |
