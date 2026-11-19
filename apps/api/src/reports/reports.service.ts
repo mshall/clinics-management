@@ -38,6 +38,7 @@ import {
   utilisationPercent,
   type OpsAppointmentRow,
 } from "./operations-kpis";
+import { bucketAgingLines } from "./ar-aging";
 
 export interface PatientAcquisitionPatientsQuery {
   channel: string;
@@ -798,6 +799,198 @@ export class ReportsService {
       bookingSources: bookingSourceMix(rows),
       appointmentCount: rows.length,
       availableMinutesSource: "clinician_day_fallback",
+    };
+  }
+
+  /** RP-04 — AR aging buckets per payer from open claim lines (reconciles to ClaimLine amounts). */
+  async arAging(tenantId: string, asOfStr?: string, viewer?: JwtUser) {
+    if (viewer && hasRole(viewer, UserRole.PHYSICIAN) && !hasRole(viewer, UserRole.GROUP_ADMIN)) {
+      throw new ForbiddenException("Physicians cannot view AR aging");
+    }
+    const asOf = asOfStr ? new Date(asOfStr) : new Date();
+    if (Number.isNaN(asOf.getTime())) throw new BadRequestException("Invalid asOf date");
+
+    const openLines = await this.prisma.claimLine.findMany({
+      where: {
+        tenantId,
+        status: { in: ["SUBMITTED", "ACCEPTED", "PENDING", "RESUBMITTED"] },
+      },
+      include: {
+        batch: { select: { payerCompanyId: true, currency: true } },
+        invoice: { select: { issueDate: true, invoiceNumber: true } },
+      },
+    });
+
+    const byPayer = new Map<
+      string,
+      { payerCompanyId: string; currency: string; lines: { amountOpen: number; issuedAt: Date }[] }
+    >();
+    for (const line of openLines) {
+      const payerCompanyId = line.batch.payerCompanyId;
+      const currency = line.batch.currency;
+      const key = `${payerCompanyId}:${currency}`;
+      const row = byPayer.get(key) ?? { payerCompanyId, currency, lines: [] };
+      const open = Number(line.amountClaimed) - Number(line.amountPaid ?? 0);
+      if (open <= 0) continue;
+      row.lines.push({ amountOpen: open, issuedAt: line.invoice.issueDate });
+      byPayer.set(key, row);
+    }
+
+    const payers = await this.prisma.payerCompany.findMany({
+      where: { tenantId, id: { in: [...new Set([...byPayer.values()].map((p) => p.payerCompanyId))] } },
+      select: { id: true, nameEn: true, nameAr: true },
+    });
+    const nameById = new Map(payers.map((p) => [p.id, p]));
+
+    const rows = [...byPayer.values()].map((p) => {
+      const { buckets, total } = bucketAgingLines(
+        p.lines.map((l) => ({ amountOpen: l.amountOpen, asOf, issuedAt: l.issuedAt })),
+        asOf,
+      );
+      const names = nameById.get(p.payerCompanyId);
+      return {
+        payerCompanyId: p.payerCompanyId,
+        payerNameEn: names?.nameEn ?? p.payerCompanyId,
+        payerNameAr: names?.nameAr ?? "",
+        currency: p.currency,
+        buckets,
+        total,
+        lineCount: p.lines.length,
+      };
+    });
+
+    const grandTotal = rows.reduce((s, r) => s + r.total, 0);
+    const openClaimSum = openLines.reduce((s, l) => {
+      const open = Number(l.amountClaimed) - Number(l.amountPaid ?? 0);
+      return s + (open > 0 ? open : 0);
+    }, 0);
+
+    return {
+      asOf: asOf.toISOString(),
+      rows,
+      grandTotal,
+      reconcilesWithClaimLines: Math.abs(grandTotal - openClaimSum) < 0.005,
+      openClaimLineTotal: openClaimSum,
+    };
+  }
+
+  /** RP-04 — payout tracking (Kiorex payouts + doctor statement payouts). */
+  async payouts(tenantId: string, fromStr?: string, toStr?: string, viewer?: JwtUser) {
+    if (viewer && hasRole(viewer, UserRole.PHYSICIAN) && !hasRole(viewer, UserRole.GROUP_ADMIN)) {
+      throw new ForbiddenException("Physicians cannot view payouts report");
+    }
+    const { start, end } = resolveReportingRange(fromStr, toStr);
+    const kiorex = await this.prisma.kiorexPayout.findMany({
+      where: { tenantId, paidAt: { gte: start, lte: end } },
+      orderBy: { paidAt: "desc" },
+      take: 200,
+    });
+    const statements = await this.prisma.doctorStatement.findMany({
+      where: { tenantId, status: "PAID", paidAt: { gte: start, lte: end } },
+      select: {
+        id: true,
+        clinicianId: true,
+        periodKey: true,
+        currency: true,
+        totalsJson: true,
+        paidAt: true,
+        payoutsJson: true,
+      },
+      orderBy: { paidAt: "desc" },
+      take: 200,
+    });
+    const doctorShareOf = (totalsJson: unknown) => {
+      const t = totalsJson as { doctorShare?: number; netPayable?: number } | null;
+      return Number(t?.netPayable ?? t?.doctorShare ?? 0);
+    };
+    const kiorexTotal = kiorex.reduce((s, p) => s + Number(p.amount), 0);
+    const doctorTotal = statements.reduce((s, st) => s + doctorShareOf(st.totalsJson), 0);
+    return {
+      period: { from: formatLocalYmd(start), to: formatLocalYmd(end) },
+      kiorexPayouts: kiorex.map((p) => ({
+        id: p.id,
+        payoutRef: p.payoutRef,
+        amount: Number(p.amount),
+        currency: p.currency,
+        paidAt: p.paidAt?.toISOString() ?? null,
+        clinicId: p.clinicId,
+      })),
+      doctorPayouts: statements.map((st) => ({
+        id: st.id,
+        clinicianId: st.clinicianId,
+        periodKey: st.periodKey,
+        amount: doctorShareOf(st.totalsJson),
+        currency: st.currency,
+        paidAt: st.paidAt?.toISOString() ?? null,
+        payoutsJson: st.payoutsJson,
+      })),
+      totals: { kiorex: kiorexTotal, doctor: doctorTotal, combined: kiorexTotal + doctorTotal },
+    };
+  }
+
+  /** RP-04 — branch P&L: per-clinic profit/loss that reconciles to revenue + expense tables. */
+  async branchPl(tenantId: string, fromStr?: string, toStr?: string, viewer?: JwtUser) {
+    if (viewer && hasRole(viewer, UserRole.PHYSICIAN) && !hasRole(viewer, UserRole.GROUP_ADMIN)) {
+      throw new ForbiddenException("Physicians cannot view branch P&L");
+    }
+    const { start, end } = resolveReportingRange(fromStr, toStr);
+    const scopeClinicIds = await this.resolveScopeClinicIds(tenantId, viewer);
+    await this.ensurePayrollForRange(tenantId, start, end, viewer);
+
+    const clinics = await this.prisma.clinic.findMany({
+      where: {
+        tenantId,
+        ...(scopeClinicIds?.length ? { id: { in: scopeClinicIds } } : {}),
+      },
+      select: { id: true, nameEn: true, nameAr: true, defaultCurrency: true },
+      orderBy: { nameEn: "asc" },
+    });
+
+    const branches = [];
+    let revenueSum = 0;
+    let expenseSum = 0;
+    for (const clinic of clinics) {
+      const revenueWhere = buildReportsRevenueWhere(tenantId, start, end, viewer, clinic.id, scopeClinicIds);
+      const expenseWhere = buildReportsExpenseWhere(tenantId, start, end, clinic.id, scopeClinicIds);
+      const [revMap, expMap] = await Promise.all([
+        sumRevenueByCurrency(this.prisma, revenueWhere),
+        sumExpensesByCurrency(this.prisma, expenseWhere),
+      ]);
+      let revenue = 0;
+      let expenses = 0;
+      for (const v of revMap.values()) revenue += v;
+      for (const v of expMap.values()) expenses += v;
+      revenueSum += revenue;
+      expenseSum += expenses;
+      branches.push({
+        clinicId: clinic.id,
+        nameEn: clinic.nameEn,
+        nameAr: clinic.nameAr,
+        currency: clinic.defaultCurrency,
+        revenue,
+        expenses,
+        netProfit: revenue - expenses,
+      });
+    }
+
+    const orgRevenueWhere = buildReportsRevenueWhere(tenantId, start, end, viewer, null, scopeClinicIds);
+    const orgExpenseWhere = buildReportsExpenseWhere(tenantId, start, end, null, scopeClinicIds);
+    const [orgRev, orgExp] = await Promise.all([
+      sumRevenueByCurrency(this.prisma, orgRevenueWhere),
+      sumExpensesByCurrency(this.prisma, orgExpenseWhere),
+    ]);
+    let orgRevenue = 0;
+    let orgExpenses = 0;
+    for (const v of orgRev.values()) orgRevenue += v;
+    for (const v of orgExp.values()) orgExpenses += v;
+
+    return {
+      period: { from: formatLocalYmd(start), to: formatLocalYmd(end) },
+      branches,
+      totals: { revenue: revenueSum, expenses: expenseSum, netProfit: revenueSum - expenseSum },
+      reconcilesWithBilling:
+        Math.abs(revenueSum - orgRevenue) < 0.005 && Math.abs(expenseSum - orgExpenses) < 0.005,
+      billingTotals: { revenue: orgRevenue, expenses: orgExpenses },
     };
   }
 }

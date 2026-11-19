@@ -48,6 +48,10 @@ export const AiReceptionistInboxPage = lazyNamed(
   () => import("@/features/messaging/ai-receptionist-inbox-page"),
   "AiReceptionistInboxPage",
 );
+export const Rp04FinanceReportsPage = lazyNamed(
+  () => import("@/features/reports/rp04-finance-reports-page"),
+  "Rp04FinanceReportsPage",
+);
 export const WaitingRoomPage = lazyNamed(
   () => import("@/features/front-desk/waiting-room-page"),
   "WaitingRoomPage",

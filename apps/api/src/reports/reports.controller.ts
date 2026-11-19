@@ -161,6 +161,38 @@ export class ReportsController {
     return this.reports.operationsReport(requireTenantId(user), fromEff, toEff, clinicId, user);
   }
 
+  @Get("ar-aging")
+  @ApiOperation({ summary: "RP-04 AR aging buckets per payer (open claim lines)" })
+  @ApiOkResponse()
+  async arAging(@CurrentUser() user: JwtUser, @Query("asOf") asOf?: string) {
+    await this.assertView(user);
+    return this.reports.arAging(requireTenantId(user), asOf, user);
+  }
+
+  @Get("payouts")
+  @ApiOperation({ summary: "RP-04 Kiorex + doctor payout tracking" })
+  @ApiOkResponse()
+  async payouts(
+    @CurrentUser() user: JwtUser,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+  ) {
+    await this.assertView(user);
+    return this.reports.payouts(requireTenantId(user), from, to, user);
+  }
+
+  @Get("branch-pl")
+  @ApiOperation({ summary: "RP-04 branch P&L reconciled to revenue and expense tables" })
+  @ApiOkResponse()
+  async branchPl(
+    @CurrentUser() user: JwtUser,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+  ) {
+    await this.assertView(user);
+    return this.reports.branchPl(requireTenantId(user), from, to, user);
+  }
+
   @Get("schedule")
   @ApiOperation({ summary: "RP-02 weekly report schedule for the tenant" })
   @ApiOkResponse()
