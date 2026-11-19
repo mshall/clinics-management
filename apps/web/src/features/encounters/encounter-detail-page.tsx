@@ -60,6 +60,7 @@ import {
 } from "@/lib/visit-collection";
 import { generatePrescriptionPng } from "@/lib/prescription-image";
 import { EncounterClinicalTools } from "@/features/clinical/encounter-clinical-tools";
+import { EncounterScribePanel } from "@/features/clinical/encounter-scribe-panel";
 import { EncounterSignoffTrail } from "@/features/encounters/encounter-signoff-trail";
 import { DrugSearchAutocomplete, type DrugSearchHit } from "@/features/clinical/drug-search-autocomplete";
 import { PatientChartAlerts } from "@/components/patient-chart-alerts";
@@ -945,6 +946,17 @@ export function EncounterDetailPage() {
                 encounter={enc}
                 pendingDrugName={drugName}
                 pendingDrugProductId={drugProductId}
+                onApplySoap={(partial) => {
+                  if (partial.subjective !== undefined) setSubjective(partial.subjective ?? "");
+                  if (partial.objective !== undefined) setObjective(partial.objective ?? "");
+                  if (partial.assessment !== undefined) setAssessment(partial.assessment ?? "");
+                  if (partial.plan !== undefined) setPlan(partial.plan ?? "");
+                }}
+              />
+            ) : null}
+            {enc && draft ? (
+              <EncounterScribePanel
+                encounterId={enc.id}
                 onApplySoap={(partial) => {
                   if (partial.subjective !== undefined) setSubjective(partial.subjective ?? "");
                   if (partial.objective !== undefined) setObjective(partial.objective ?? "");

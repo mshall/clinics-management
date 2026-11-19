@@ -27,12 +27,46 @@ export class ClinicAiController {
   }
 
   @Post("encounters/:encounterId/scribe/start")
-  startScribe(@CurrentUser() user: JwtUser, @Param("encounterId") encounterId: string) {
-    return this.clinicAi.startScribeSession(requireTenantId(user), encounterId);
+  startScribe(
+    @CurrentUser() user: JwtUser,
+    @Param("encounterId") encounterId: string,
+    @Body() body: { patientConsent?: boolean; retainAudioAfterSignOff?: boolean },
+  ) {
+    return this.clinicAi.startScribeSession(requireTenantId(user), encounterId, {
+      patientConsent: Boolean(body?.patientConsent),
+      retainAudioAfterSignOff: Boolean(body?.retainAudioAfterSignOff),
+    });
+  }
+
+  @Get("scribe/:sessionId")
+  getScribe(@CurrentUser() user: JwtUser, @Param("sessionId") sessionId: string) {
+    return this.clinicAi.getScribeSession(requireTenantId(user), sessionId);
+  }
+
+  @Post("scribe/:sessionId/audio")
+  uploadAudio(
+    @CurrentUser() user: JwtUser,
+    @Param("sessionId") sessionId: string,
+    @Body() body: { seq: number; mimeType?: string; payloadB64: string },
+  ) {
+    return this.clinicAi.uploadAudioChunk(requireTenantId(user), sessionId, body);
+  }
+
+  @Post("scribe/:sessionId/stop")
+  stopScribe(
+    @CurrentUser() user: JwtUser,
+    @Param("sessionId") sessionId: string,
+    @Body() body?: { audioSeconds?: number },
+  ) {
+    return this.clinicAi.stopScribeSession(requireTenantId(user), sessionId, body);
   }
 
   @Post("scribe/:sessionId/approve")
-  approveScribe(@CurrentUser() user: JwtUser, @Param("sessionId") sessionId: string, @Body() body: Record<string, string>) {
+  approveScribe(
+    @CurrentUser() user: JwtUser,
+    @Param("sessionId") sessionId: string,
+    @Body() body: Record<string, string>,
+  ) {
     return this.clinicAi.approveScribeDraft(requireTenantId(user), sessionId, body);
   }
 }
