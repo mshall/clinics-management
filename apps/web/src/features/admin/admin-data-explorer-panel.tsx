@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ExportProgressDialog, type ExportProgressState } from "@/components/export-progress-dialog";
 import { ResponsiveTable } from "@/components/responsive-table";
@@ -10,17 +11,32 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ApiError, apiDelete, apiFetchBlob, apiGet, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
+import { apiUrl } from "@/lib/api-url";
+import { ApiError, apiDelete, apiGet, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 
 type OrgBackupJob = {
   id: string;
+  scope?: string;
   status: string;
   progress: number;
   fileName?: string | null;
   downloadPath?: string | null;
+  downloadUrl?: string | null;
+  downloadToken?: string | null;
   error?: string | null;
   rowCounts?: unknown;
+  completedAt?: string | null;
 };
+
+function triggerNativeDownload(downloadUrl: string) {
+  const a = document.createElement("a");
+  a.href = apiUrl(downloadUrl);
+  a.rel = "noopener";
+  a.download = "";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
 
 type ExplorerOps = { list: boolean; get: boolean; create: boolean; patch: boolean; delete: boolean };
 
@@ -73,11 +89,22 @@ export function AdminDataExplorerPanel() {
     status: "running",
   });
   const importInputRef = useRef<HTMLInputElement>(null);
+  /** Only set when the user cancels the in-flight job entirely (not when closing the dialog). */
   const pollAbortRef = useRef(false);
+  const backgroundPollIds = useRef(new Set<string>());
 
   const catalogQ = useQuery({
     queryKey: ["admin", "data-explorer", "catalog"],
     queryFn: () => apiGet<CatalogResponse>("/api/v1/admin/data-explorer/tables"),
+  });
+
+  const jobsQ = useQuery({
+    queryKey: ["admin", "data-explorer", "export-jobs"],
+    queryFn: () => apiGet<{ items: OrgBackupJob[] }>("/api/v1/admin/data-explorer/export/jobs?limit=12"),
+    refetchInterval: (q) => {
+      const items = q.state.data?.items ?? [];
+      return items.some((j) => j.status === "RUNNING" || j.status === "PENDING") ? 2000 : false;
+    },
   });
 
   const meta = catalogQ.data?.tables.find((x) => x.key === table);
@@ -185,42 +212,75 @@ export function AdminDataExplorerPanel() {
     }
   }
 
-  async function pollJobUntilReady(jobId: string, title: string, fallbackName: string) {
+  async function pollJobUntilReady(jobId: string, title: string, mode: "export" | "import") {
     pollAbortRef.current = false;
+    backgroundPollIds.current.add(jobId);
     setProgress({ open: true, title, percent: 2, status: "running" });
-    for (;;) {
-      if (pollAbortRef.current) return;
-      const job = await apiGet<OrgBackupJob>(`/api/v1/admin/data-explorer/export/jobs/${jobId}`);
-      setProgress((prev) => ({
-        ...prev,
-        open: true,
-        title,
-        percent: job.progress ?? prev.percent,
-        status: job.status === "FAILED" ? "failed" : job.status === "READY" ? "ready" : "running",
-        error: job.error,
-        detail:
-          job.status === "READY"
-            ? t("admin.exportProgressReady", "File is ready. Download will start automatically.")
-            : t("admin.exportProgressWorking", "Preparing your file…"),
-      }));
-      if (job.status === "FAILED") {
-        throw new Error(job.error || t("common.error"));
+    try {
+      for (;;) {
+        if (pollAbortRef.current) return;
+        const job = await apiGet<OrgBackupJob>(`/api/v1/admin/data-explorer/export/jobs/${jobId}`);
+        setProgress((prev) => ({
+          ...prev,
+          // Keep dialog open only if still showing; background toast covers dismiss case.
+          open: prev.open,
+          title,
+          percent: job.progress ?? prev.percent,
+          status: job.status === "FAILED" ? "failed" : job.status === "READY" ? "ready" : "running",
+          error: job.error,
+          detail:
+            job.status === "READY"
+              ? mode === "import"
+                ? t("admin.importProgressReady", "Import finished.")
+                : t("admin.exportProgressReady", "File is ready. Your download should start shortly.")
+              : mode === "import"
+                ? t("admin.importProgressWorking", "Restoring SQL and files in the background…")
+                : t(
+                    "admin.exportProgressWorking",
+                    "Preparing your file in the background. You can close this dialog — we will notify you when it is ready.",
+                  ),
+        }));
+        if (job.status === "FAILED") {
+          const msg = job.error || t("common.error");
+          toast.error(msg);
+          setProgress((prev) => ({
+            ...prev,
+            open: true,
+            status: "failed",
+            error: msg,
+            percent: job.progress ?? prev.percent,
+          }));
+          throw new Error(msg);
+        }
+        if (job.status === "READY") {
+          await qc.invalidateQueries({ queryKey: ["admin", "data-explorer", "export-jobs"] });
+          if (mode === "export") {
+            if (job.downloadUrl) {
+              triggerNativeDownload(job.downloadUrl);
+              toast.success(
+                t("admin.exportReadyToast", "Backup ready — download started ({{name}}).", {
+                  name: job.fileName || "backup",
+                }),
+              );
+            } else {
+              toast.success(
+                t(
+                  "admin.exportReadyToastNoUrl",
+                  "Backup ready. Use Download in the recent jobs list below.",
+                ),
+              );
+            }
+          } else {
+            toast.success(t("admin.importProgressReady", "Import finished."));
+          }
+          setProgress((prev) => ({ ...prev, percent: 100, status: "ready", open: prev.open }));
+          window.setTimeout(() => setProgress((p) => ({ ...p, open: false })), 1200);
+          return;
+        }
+        await new Promise((r) => window.setTimeout(r, 800));
       }
-      if (job.status === "READY") {
-        const { blob } = await apiFetchBlob(
-          job.downloadPath ?? `/api/v1/admin/data-explorer/export/jobs/${jobId}/download`,
-        );
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = job.fileName || fallbackName;
-        a.click();
-        URL.revokeObjectURL(url);
-        setProgress((prev) => ({ ...prev, percent: 100, status: "ready" }));
-        window.setTimeout(() => setProgress((p) => ({ ...p, open: false })), 900);
-        return;
-      }
-      await new Promise((r) => window.setTimeout(r, 450));
+    } finally {
+      backgroundPollIds.current.delete(jobId);
     }
   }
 
@@ -235,11 +295,6 @@ export function AdminDataExplorerPanel() {
       DOCUMENTS: t("admin.exportProgressZipTitle", "Exporting documents ZIP"),
       FULL: t("admin.exportProgressFullTitle", "Exporting full organization backup"),
     } as const;
-    const names = {
-      SQL: "organization-export.sql",
-      DOCUMENTS: "organization-documents.zip",
-      FULL: "organization-full-backup.zip",
-    } as const;
     if (format === "SQL") setExporting(true);
     if (format === "DOCUMENTS") setExportingDocuments(true);
     if (format === "FULL") setExportingFull(true);
@@ -248,12 +303,26 @@ export function AdminDataExplorerPanel() {
         format,
         tables: [...exportKeys],
       });
-      await pollJobUntilReady(job.id, titles[format], names[format]);
+      toast.message(
+        t("admin.exportStartedToast", "Backup job started — you can keep working while it runs."),
+      );
+      await qc.invalidateQueries({ queryKey: ["admin", "data-explorer", "export-jobs"] });
+      // Buttons unlock immediately; polling continues in the background.
+      setExporting(false);
+      setExportingDocuments(false);
+      setExportingFull(false);
+      await pollJobUntilReady(job.id, titles[format], "export");
     } catch (e: unknown) {
       const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e);
       setFormError(msg);
-      setProgress((prev) => ({ ...prev, open: true, status: "failed", error: msg, percent: 100 }));
-    } finally {
+      setProgress((prev) => ({
+        ...prev,
+        open: true,
+        status: "failed",
+        error: msg,
+        // Do not force 100% on failure.
+        percent: prev.status === "failed" ? prev.percent : Math.min(prev.percent, 99),
+      }));
       setExporting(false);
       setExportingDocuments(false);
       setExportingFull(false);
@@ -267,39 +336,22 @@ export function AdminDataExplorerPanel() {
       const fd = new FormData();
       fd.append("file", file);
       const job = await apiPostFormData<OrgBackupJob>("/api/v1/admin/data-explorer/import", fd, { enhance: false });
-      pollAbortRef.current = false;
-      setProgress({
-        open: true,
-        title: t("admin.importProgressTitle", "Importing organization backup"),
-        percent: job.progress ?? 5,
-        status: "running",
-      });
-      for (;;) {
-        if (pollAbortRef.current) break;
-        const latest = await apiGet<OrgBackupJob>(`/api/v1/admin/data-explorer/export/jobs/${job.id}`);
-        setProgress({
-          open: true,
-          title: t("admin.importProgressTitle", "Importing organization backup"),
-          percent: latest.progress ?? 0,
-          status: latest.status === "FAILED" ? "failed" : latest.status === "READY" ? "ready" : "running",
-          error: latest.error,
-          detail:
-            latest.status === "READY"
-              ? t("admin.importProgressReady", "Import finished.")
-              : t("admin.importProgressWorking", "Restoring SQL and files…"),
-        });
-        if (latest.status === "FAILED") throw new Error(latest.error || t("common.error"));
-        if (latest.status === "READY") {
-          window.setTimeout(() => setProgress((p) => ({ ...p, open: false })), 1200);
-          break;
-        }
-        await new Promise((r) => window.setTimeout(r, 450));
-      }
+      toast.message(t("admin.importStartedToast", "Import job started — restoring in the background."));
+      await qc.invalidateQueries({ queryKey: ["admin", "data-explorer", "export-jobs"] });
+      setImporting(false);
+      if (importInputRef.current) importInputRef.current.value = "";
+      await pollJobUntilReady(job.id, t("admin.importProgressTitle", "Importing organization backup"), "import");
+      await qc.invalidateQueries({ queryKey: ["admin", "data-explorer", "list"] });
     } catch (e: unknown) {
       const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e);
       setFormError(msg);
-      setProgress((prev) => ({ ...prev, open: true, status: "failed", error: msg, percent: 100 }));
-    } finally {
+      setProgress((prev) => ({
+        ...prev,
+        open: true,
+        status: "failed",
+        error: msg,
+        percent: Math.min(prev.percent, 99),
+      }));
       setImporting(false);
       if (importInputRef.current) importInputRef.current.value = "";
     }
@@ -395,40 +447,79 @@ export function AdminDataExplorerPanel() {
                 : t("admin.dataExplorerExportFull", "Full backup ZIP (SQL + files)")}
             </Button>
           </div>
-          <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
-            <input
-              ref={importInputRef}
-              type="file"
-              accept=".sql,.zip,application/sql,application/zip"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void runOrgImport(f);
-              }}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              disabled={importing || exporting || exportingDocuments || exportingFull}
-              onClick={() => importInputRef.current?.click()}
-            >
-              {importing
-                ? t("common.loading")
-                : t("admin.dataExplorerImport", "Import SQL or ZIP backup")}
-            </Button>
+          <div className="space-y-2 border-t border-border pt-3">
+            <p className="text-sm font-medium">{t("admin.dataExplorerImportTitle", "Import backup")}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                ref={importInputRef}
+                type="file"
+                accept=".sql,.zip,application/sql,application/zip"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void runOrgImport(f);
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={importing || exporting || exportingDocuments || exportingFull}
+                onClick={() => importInputRef.current?.click()}
+              >
+                {importing
+                  ? t("common.loading")
+                  : t("admin.dataExplorerImport", "Import SQL or ZIP backup")}
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground">
               {t(
                 "admin.dataExplorerImportHint",
-                "Accepts organization-export.sql or a ZIP with organization-export.sql + files/ + manifest.json (patient/operation images restored to storage).",
+                "Import the same files export produces: organization-export.sql, or a full/documents ZIP with organization-export.sql + files/ + manifest.json. Runs as a background job so large restores do not time out.",
               )}
             </p>
           </div>
           <p className="text-xs text-muted-foreground">
             {t(
               "admin.dataExplorerExportDocumentsHint",
-              "Documents ZIP includes patient, encounter, employee, expense, and operation files from local disk or S3, plus manifest.json. Full backup also embeds the SQL dump for one-step restore.",
+              "Documents ZIP includes patient, encounter, employee, expense, and operation files from local disk or S3, plus manifest.json. Full backup also embeds the SQL dump for one-step restore. Jobs run in the background — close the progress dialog anytime; we notify you when the file is ready.",
             )}
           </p>
+
+          {(jobsQ.data?.items?.length ?? 0) > 0 ? (
+            <div className="space-y-2 border-t border-border pt-3">
+              <p className="text-sm font-medium">
+                {t("admin.dataExplorerRecentJobs", "Recent backup jobs")}
+              </p>
+              <ul className="divide-y divide-border rounded-md border border-border text-sm">
+                {(jobsQ.data?.items ?? []).map((job) => (
+                  <li key={job.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">
+                        {job.fileName || job.scope || job.id}
+                      </p>
+                      <p className="text-xs text-muted-foreground ltr-nums">
+                        {job.scope ?? "—"} · {job.status}
+                        {job.status === "RUNNING" ? ` · ${job.progress ?? 0}%` : ""}
+                        {job.completedAt
+                          ? ` · ${new Date(job.completedAt).toLocaleString()}`
+                          : ""}
+                      </p>
+                    </div>
+                    {job.status === "READY" && job.scope !== "ORG_IMPORT" && job.downloadUrl ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => triggerNativeDownload(job.downloadUrl!)}
+                      >
+                        {t("admin.dataExplorerDownloadJob", "Download")}
+                      </Button>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -631,10 +722,8 @@ export function AdminDataExplorerPanel() {
       <ExportProgressDialog
         state={progress}
         onOpenChange={(open) => {
-          if (!open) {
-            pollAbortRef.current = true;
-            setProgress((p) => ({ ...p, open: false }));
-          }
+          // Closing the dialog does NOT cancel the background job — polling continues and toasts on completion.
+          setProgress((p) => ({ ...p, open }));
         }}
       />
     </div>

@@ -18,6 +18,7 @@ apps/web/public/build-id.json
 apps/docs/dist
 apps/docs/tsconfig.app.tsbuildinfo
 apps/api/uploads
+apps/api/.data
 apps/web/playwright-report
 apps/web/test-results
 infra/cdk.out

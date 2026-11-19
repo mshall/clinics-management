@@ -30,8 +30,11 @@ export function ExportProgressDialog({
               ? state.error || t("common.error")
               : state.detail ||
                 (state.status === "ready"
-                  ? t("admin.exportProgressReady", "File is ready. Download will start automatically.")
-                  : t("admin.exportProgressWorking", "Preparing your file…"))}
+                  ? t("admin.exportProgressReady", "File is ready. Your download should start shortly.")
+                  : t(
+                      "admin.exportProgressWorking",
+                      "Preparing your file in the background. You can close this dialog — we will notify you when it is ready.",
+                    ))}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-2">
@@ -60,6 +63,14 @@ export function ExportProgressDialog({
               style={{ width: `${pct}%` }}
             />
           </div>
+          {state.status === "running" ? (
+            <p className="text-xs text-muted-foreground">
+              {t(
+                "admin.exportProgressBackgroundHint",
+                "This runs as a background job so large backups do not time out in the browser.",
+              )}
+            </p>
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>
