@@ -26,6 +26,18 @@ import {
   sumRevenueByCurrency,
 } from "./reports-aggregation";
 import { weightedKiorexRating } from "../marketplace/kiorex-rating";
+import {
+  bookedMinutes,
+  bookingSourceMix,
+  newVsReturning,
+  noShowRate,
+  noShowRateByDay,
+  noShowRateByDoctor,
+  noShowRateByType,
+  revenuePerDoctorHour,
+  utilisationPercent,
+  type OpsAppointmentRow,
+} from "./operations-kpis";
 
 export interface PatientAcquisitionPatientsQuery {
   channel: string;
@@ -708,5 +720,84 @@ export class ReportsService {
       }
       throw err;
     }
+  }
+
+  /** RP-01 — operational KPIs for owners (no-show, utilisation, revenue/hour, sources). */
+  async operationsReport(
+    tenantId: string,
+    fromStr?: string,
+    toStr?: string,
+    clinicId?: string,
+    viewer?: JwtUser,
+  ) {
+    const { start, end } = resolveReportingRange(fromStr, toStr);
+    const scopeClinicIds = await this.resolveScopeClinicIds(tenantId, viewer);
+    const clinicFilter =
+      clinicId ? { clinicId } : scopeClinicIds?.length ? { clinicId: { in: scopeClinicIds } } : {};
+
+    const appointments = await this.prisma.appointment.findMany({
+      where: {
+        tenantId,
+        ...clinicFilter,
+        startsAt: { gte: start, lte: end },
+        patient: { isSample: false },
+        ...(viewer && hasRole(viewer, UserRole.PHYSICIAN) ? { clinicianId: viewer.userId } : {}),
+      },
+      select: {
+        id: true,
+        status: true,
+        clinicianId: true,
+        appointmentTypeId: true,
+        startsAt: true,
+        endsAt: true,
+        bookingSource: true,
+        isNewPatientAtBooking: true,
+        appointmentType: { select: { durationMinutes: true } },
+      },
+    });
+
+    const rows: OpsAppointmentRow[] = appointments.map((a) => ({
+      id: a.id,
+      status: a.status,
+      clinicianId: a.clinicianId,
+      appointmentTypeId: a.appointmentTypeId,
+      startsAt: a.startsAt,
+      endsAt: a.endsAt,
+      bookingSource: a.bookingSource,
+      isNewPatientAtBooking: a.isNewPatientAtBooking,
+      durationMinutes: a.appointmentType?.durationMinutes ?? null,
+    }));
+
+    const dayMs = 86_400_000;
+    const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / dayMs));
+    const clinicians = new Set(rows.map((r) => r.clinicianId).filter(Boolean));
+    // Available minutes: 8h × distinct clinicians × days in range (template weekJson varies by clinic; owners refine later).
+    const available = Math.max(1, clinicians.size) * days * 8 * 60;
+
+    const booked = bookedMinutes(rows);
+    const revenueWhere = buildReportsRevenueWhere(tenantId, start, end, viewer, clinicId, scopeClinicIds);
+    const revenueByCurrency = await sumRevenueByCurrency(this.prisma, revenueWhere);
+    let revenueTotal = 0;
+    for (const v of revenueByCurrency.values()) revenueTotal += v;
+
+    return {
+      period: { from: formatLocalYmd(start), to: formatLocalYmd(end), start: start.toISOString(), end: end.toISOString() },
+      clinicId: clinicId ?? null,
+      noShow: noShowRate(rows),
+      noShowByDoctor: noShowRateByDoctor(rows),
+      noShowByType: noShowRateByType(rows),
+      noShowByDay: noShowRateByDay(rows),
+      utilisation: {
+        bookedMinutes: booked,
+        availableMinutes: available,
+        percent: utilisationPercent(booked, available),
+      },
+      revenuePerDoctorHour: revenuePerDoctorHour(revenueTotal, booked),
+      revenueTotal,
+      newVsReturning: newVsReturning(rows),
+      bookingSources: bookingSourceMix(rows),
+      appointmentCount: rows.length,
+      availableMinutesSource: "clinician_day_fallback",
+    };
   }
 }

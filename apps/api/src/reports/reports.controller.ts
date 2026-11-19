@@ -116,4 +116,27 @@ export class ReportsController {
     await this.assertView(user);
     return this.reports.patientAcquisitionBreakdown(requireTenantId(user), from, to);
   }
+
+  @Get("operations")
+  @ApiOperation({ summary: "RP-01 operational KPIs: no-show, utilisation, revenue/hour, sources" })
+  @ApiOkResponse()
+  async operations(
+    @CurrentUser() user: JwtUser,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("period") period?: string,
+    @Query("clinicId") clinicId?: string,
+  ) {
+    await this.assertView(user);
+    // `period=YYYY-MM` maps to that calendar month when from/to omitted.
+    let fromEff = from;
+    let toEff = to;
+    if (!fromEff && !toEff && period?.match(/^\d{4}-\d{2}$/)) {
+      const [y, m] = period.split("-").map(Number);
+      fromEff = `${period}-01`;
+      const last = new Date(Date.UTC(y!, m!, 0)).getUTCDate();
+      toEff = `${period}-${String(last).padStart(2, "0")}`;
+    }
+    return this.reports.operationsReport(requireTenantId(user), fromEff, toEff, clinicId, user);
+  }
 }

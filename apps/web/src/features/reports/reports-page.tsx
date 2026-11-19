@@ -26,6 +26,7 @@ import {
   useClinicsQuery,
   useReportsClinicBreakdownQuery,
   useReportsMonthlySeriesQuery,
+  useReportsOperationsQuery,
   useReportsPatientAcquisitionQuery,
   useReportsPerformanceQuery,
 } from "@/lib/api-hooks";
@@ -129,6 +130,7 @@ export function ReportsPage() {
 
   const series = useReportsMonthlySeriesQuery(from, to, clinicScopeId);
   const performance = useReportsPerformanceQuery(from, to, clinicScopeId);
+  const operations = useReportsOperationsQuery(from, to, clinicScopeId);
   const clinicBreakdown = useReportsClinicBreakdownQuery(from, to, !isPhysician && !clinicScopeId);
   const acquisition = useReportsPatientAcquisitionQuery(from, to);
 
@@ -212,6 +214,63 @@ export function ReportsPage() {
               </span>
             ) : null}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card data-testid="reports-operations-kpis">
+        <CardHeader>
+          <CardTitle className="text-base">{t("reports.operationsTitle", "Operations KPIs")}</CardTitle>
+          <CardDescription>
+            {t(
+              "reports.operationsHint",
+              "No-show rate, utilisation, revenue per doctor-hour, new vs returning, and booking sources (incl. Kiorex).",
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {operations.isPending ? (
+            <p className="text-sm text-muted-foreground">{t("common.loading", "Loading…")}</p>
+          ) : operations.isError ? (
+            <p className="text-sm text-destructive">
+              {operations.error instanceof Error ? operations.error.message : t("common.error")}
+            </p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.noShowRate", "No-show rate")}</p>
+                <p className="text-2xl font-semibold ltr-nums">{operations.data?.noShow.rate ?? 0}%</p>
+                <p className="text-xs text-muted-foreground ltr-nums">
+                  {operations.data?.noShow.noShows ?? 0}/{operations.data?.noShow.total ?? 0}
+                </p>
+              </div>
+              <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.utilisation", "Utilisation")}</p>
+                <p className="text-2xl font-semibold ltr-nums">{operations.data?.utilisation.percent ?? 0}%</p>
+              </div>
+              <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {t("reports.revenuePerDoctorHour", "Revenue / doctor-hour")}
+                </p>
+                <p className="text-2xl font-semibold ltr-nums">{operations.data?.revenuePerDoctorHour ?? 0}</p>
+              </div>
+              <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.newVsReturning", "New / returning")}</p>
+                <p className="text-2xl font-semibold ltr-nums">
+                  {operations.data?.newVsReturning.newPatients ?? 0}
+                  <span className="text-muted-foreground"> / </span>
+                  {operations.data?.newVsReturning.returning ?? 0}
+                </p>
+              </div>
+              {(operations.data?.bookingSources ?? []).slice(0, 4).map((s) => (
+                <div key={s.source} className="rounded-lg border bg-muted/30 px-4 py-3">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{s.source}</p>
+                  <p className="text-2xl font-semibold ltr-nums">
+                    {s.count} <span className="text-sm font-normal text-muted-foreground">({s.sharePercent}%)</span>
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
