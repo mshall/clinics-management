@@ -2887,6 +2887,17 @@
     "granted": "Granted",
     "missing": "Missing"
   },
+  "clinicalOrders": {
+    "title": "Lab & imaging orders",
+    "kindLab": "Lab",
+    "kindImaging": "Imaging",
+    "itemPlaceholder": "Test or study name",
+    "add": "Add order",
+    "empty": "No orders on this visit yet.",
+    "created": "Order created",
+    "markReady": "Mark results ready",
+    "resultsReady": "Results marked ready — patient notified when possible"
+  },
   "messagingConsent": {
     "title": "Messaging consent",
     "hint": "Transactional messages include appointment reminders. Marketing covers recall campaigns. Patients can reply STOP or إلغاء on WhatsApp to opt out.",

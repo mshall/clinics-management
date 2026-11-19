@@ -61,6 +61,7 @@ import {
 import { generatePrescriptionPng } from "@/lib/prescription-image";
 import { EncounterClinicalTools } from "@/features/clinical/encounter-clinical-tools";
 import { EncounterScribePanel } from "@/features/clinical/encounter-scribe-panel";
+import { EncounterOrdersPanel } from "@/features/clinical/encounter-orders-panel";
 import { EncounterSignoffTrail } from "@/features/encounters/encounter-signoff-trail";
 import { EntitlementGate } from "@/components/entitlement-gate";
 import { DrugSearchAutocomplete, type DrugSearchHit } from "@/features/clinical/drug-search-autocomplete";
@@ -967,6 +968,9 @@ export function EncounterDetailPage() {
                   }}
                 />
               </EntitlementGate>
+            ) : null}
+            {enc ? (
+              <EncounterOrdersPanel encounterId={enc.id} clinicId={enc.clinicId} patientId={enc.patientId} />
             ) : null}
             <div className="space-y-2">
               <Label htmlFor="s" className="flex items-center gap-2">
