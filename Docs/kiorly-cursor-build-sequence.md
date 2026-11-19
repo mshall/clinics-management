@@ -340,7 +340,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 101 · CR-10 · No-show guarantee credits (optional, off by default) `2135ff2`
 - [x] Step 102 · KX-11 · Consent-based record sharing with the patient app `8a5085a`- [x] Step 103 · CL-06 · Lab & radiology orders as records `2210147`
 - [x] Step 104 · CL-07 · Specialty packs: dental chart, aesthetics before/after, physio plans `1ec707f`
-- [ ] Step 105 · MN-05 · Company contracts & TPA claims
+- [x] Step 105 · MN-05 · Company contracts & TPA claims — `29e1419` · `billing/mn05-claims.integration.test.ts` · `billing/mn05-claims.node.test.ts` · `e2e/mn05-claims.spec.ts` · `Docs/MN05_CLAIMS.md`, `Docs/CLINIC_BILLING.md`
 - [ ] Step 106 · MS-06 · WhatsApp AI receptionist (Egyptian Arabic)
 - [ ] Step 107 · RP-04 · AR aging, payouts and branch P&L
 - [ ] Step 108 · UX-04 · Thermal printing & accessibility
@@ -4409,7 +4409,7 @@ model DoctorStatement {
 - Claims workspace.
 
 **Acceptance criteria** (write a test for each)
-- [ ] Remittance import matches ≥ 90% of lines automatically in test data.
+- [x] Remittance import matches ≥ 90% of lines automatically in test data.
 
 **Done when:** all acceptance tests pass, §0.2 checks are green, en + ar strings added, docs updated, and Step 105 is ticked in §5.
 
