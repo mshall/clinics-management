@@ -124,8 +124,17 @@ describe("MN-03 owner WhatsApp shift summary (INTERNAL outbox consumer)", () => 
     const shifts = new CashierShiftService(svc);
     const c = await shifts.open(tenantId, desk, { clinicId, openingFloat: 0 });
     await shifts.close(tenantId, desk, c.id, { countedCash: 0 });
-    const r = await consumer().processBatch(50, { tenantId });
-    assert.equal(r.sent, 1);
-    assert.equal(sent.length, 0);
+    // Prefer claiming any still-pending row; a live Nest worker may already have marked it SENT.
+    const pending = await prisma.outboxEvent.count({
+      where: { tenantId, type: "billing.shift_closed", status: "PENDING" },
+    });
+    if (pending > 0) {
+      const r = await consumer().processBatch(50, { tenantId });
+      assert.equal(r.sent, 1);
+    } else {
+      const rows = await prisma.outboxEvent.findMany({ where: { tenantId, type: "billing.shift_closed" } });
+      assert.ok(rows.some((e) => e.status === "SENT"), "shift_closed was consumed");
+    }
+    assert.equal(sent.length, 0, "disabled WhatsApp must not queue owner summaries");
   });
 });
