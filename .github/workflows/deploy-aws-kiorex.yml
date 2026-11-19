@@ -1,0 +1,130 @@
+# Deploys the CDK stack to the **Kiorex** AWS account (second pipeline).
+# Trigger: push to `kiorex` (does not touch the production Kiorly account on `main`).
+#
+# Local laptop: AWS CLI profile `aws-kiorex-profile` (see Docs/AWS_Cloud_Deployment_Guide.md).
+# GitHub Actions: repository secrets (IAM user access keys for the Kiorex account):
+#   AWS_KIOREX_ACCESS_KEY_ID
+#   AWS_KIOREX_SECRET_ACCESS_KEY
+#
+# Prefer migrating to OIDC later (same pattern as deploy-aws.yml / AWS_DEPLOY_ROLE_ARN).
+
+name: Deploy to AWS (Kiorex)
+
+on:
+  push:
+    branches:
+      - kiorex
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-aws-kiorex-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: eu-central-1
+
+jobs:
+  ci_test:
+    name: CI test
+    uses: ./.github/workflows/ci-test-reusable.yml
+
+  web-build:
+    needs: ci_test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install and build web
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build -w web
+
+  deploy:
+    needs: [ci_test, web-build]
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Block tracked OpenAI API keys in repo
+        run: bash scripts/check-no-openai-secrets-in-git.sh
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            infra/package-lock.json
+
+      - name: Check Kiorex AWS secrets
+        run: |
+          if [ -z "${{ secrets.AWS_KIOREX_ACCESS_KEY_ID }}" ] || [ -z "${{ secrets.AWS_KIOREX_SECRET_ACCESS_KEY }}" ]; then
+            echo "::error::Add repository secrets AWS_KIOREX_ACCESS_KEY_ID and AWS_KIOREX_SECRET_ACCESS_KEY for the Kiorex AWS account."
+            exit 1
+          fi
+
+      - name: Configure AWS credentials (Kiorex IAM user)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-access-key-id: ${{ secrets.AWS_KIOREX_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_KIOREX_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify Kiorex AWS account
+        run: |
+          ACC="$(aws sts get-caller-identity --query Account --output text)"
+          echo "Deploying as account=${ACC}"
+          if [ "$ACC" = "990597228737" ]; then
+            echo "::error::Refusing to deploy kiorex branch into the production Kiorly account."
+            exit 1
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - id: deploy
+        name: Deploy CDK stack (Kiorex)
+        env:
+          CI: true
+        run: |
+          set -o pipefail
+          bash -x scripts/cicd-deploy.sh 2>&1 | tee deploy-full.log
+          exit "${PIPESTATUS[0]}"
+
+      - name: Upload full deploy step log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: aws-deploy-kiorex-full-log
+          path: deploy-full.log
+          if-no-files-found: warn
+
+      - name: Post-deploy seed (demo users)
+        if: always() && steps.deploy.outcome != 'skipped'
+        env:
+          CI: true
+        run: |
+          if grep -q 'OK  post-deploy idempotent seed' deploy-full.log 2>/dev/null; then
+            echo "Seed already completed inside Deploy CDK stack step"
+            exit 0
+          fi
+          bash scripts/cicd-post-deploy-seed.sh
+
+      - name: Post-deploy smoke (health + login)
+        env:
+          CI: true
+        run: bash scripts/cicd-post-deploy-smoke.sh
