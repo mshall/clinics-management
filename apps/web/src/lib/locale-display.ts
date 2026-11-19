@@ -114,7 +114,8 @@ export function formatLeaveType(type: string, t: TFunction): string {
 }
 
 export function localeForLanguage(language: string): string {
-  return language === "ar" ? "ar-AE" : "en-AE";
+  // UX-03: Egyptian market first — use EG locales (not Gulf AE defaults).
+  return language === "ar" ? "ar-EG" : "en-GB";
 }
 
 /** Whole years from an ISO date (YYYY-MM-DD) to today; null if invalid or in the future. */

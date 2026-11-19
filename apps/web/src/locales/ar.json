@@ -1567,7 +1567,7 @@
     "expenses": "المصروفات",
     "netProfit": "صافي الربح",
     "chartNewPatients": "تسجيل مرضى جدد",
-    "chartRevenue": "الإيرادات المُرحّلة (درهم)",
+    "chartRevenue": "الإيرادات المُرحّلة ({{currency}})",
     "chartVisits": "حجم الزيارات",
     "growthExplorer": "مستكشف النمو",
     "growthExplorerHintLive": "سلسلة شهرية من الزيارات المُنهية والإيرادات المُرحّلة وتسجيل المرضى في منظمتك.",
@@ -2808,7 +2808,9 @@
     "slideNOfM": "{{current}} / {{total}}",
     "gallerySwipeHint": "اسحب يميناً أو يساراً أو استخدم الأسهم للتنقل. قرّب أو بعّد للتكبير.",
     "pinchZoomHint": "قرّب أو بعّد للتكبير. اسحب عند التكبير. استخدم قلب يسار/يمين للتدوير. انقر على نسبة التكبير لإعادة الضبط.",
-    "copyFailed": "تعذّر النسخ"
+    "copyFailed": "تعذّر النسخ",
+    "numeralsWestern": "أرقام إنجليزية (1 2 3)",
+    "numeralsArabic": "أرقام عربية (١ ٢ ٣)"
   },
   "patientConsent": {
     "header": "حالة الموافقة",
