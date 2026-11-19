@@ -6,6 +6,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { AppointmentStatusBadge, appointmentStatusClassName } from "@/components/appointment-status-badge";
 import { NoShowRiskChip } from "@/components/no-show-risk-chip";
+import { DepositBadge } from "@/components/deposit-badge";
 import { noShowRiskExplanation, noShowRiskSuggestionText } from "@/lib/no-show-risk";
 import { AppointmentSourceBadges } from "@/components/appointment-source-badges";
 import { Badge } from "@/components/ui/badge";
@@ -479,6 +480,7 @@ export function AppointmentDetailPage() {
             </Badge>
           ) : null}
           <NoShowRiskChip risk={apt.noShowRisk} />
+          <DepositBadge deposit={apt.deposit} />
         </div>
       </div>
       {apt.noShowRisk && apt.noShowRisk.band !== "LOW" ? (

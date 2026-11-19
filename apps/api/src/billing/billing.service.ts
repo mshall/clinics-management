@@ -174,10 +174,20 @@ export class BillingService {
     const dayEnd = new Date(day);
     dayEnd.setDate(dayEnd.getDate() + 1);
 
-    const payments = await this.prisma.billingPayment.findMany({
+    const dayPayments = await this.prisma.billingPayment.findMany({
       where: { tenantId, clinicId: body.clinicId, createdAt: { gte: day, lt: dayEnd } },
       include: { allocations: true },
     });
+    // a deposit turned into a payment at check-in already entered the drawer when it was taken
+    const fromDeposits = new Set(
+      (
+        await this.prisma.patientDeposit.findMany({
+          where: { tenantId, paymentId: { in: dayPayments.map((p) => p.id) } },
+          select: { paymentId: true },
+        })
+      ).map((d) => d.paymentId),
+    );
+    const payments = dayPayments.filter((p) => !fromDeposits.has(p.id));
     const flat = flattenBillingPaymentAllocations(
       payments.map((p) => ({
         allocations: p.allocations.map((a) => ({ method: a.method, amount: Number(a.amount) })),

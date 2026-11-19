@@ -10,6 +10,7 @@ import { SlotHoldService } from "./slot-hold.service";
 import { MarketplaceBookingService, type MarketplaceBookingBody } from "./marketplace-booking.service";
 import { KiorexReviewsService, type ReviewAggregateBody } from "./kiorex-reviews.service";
 import { KiorexOverviewService, type ProfileViewsBody } from "./kiorex-overview.service";
+import { KiorexDepositsService, type DepositPaidBody, type PayoutBody } from "../billing/kiorex-deposits.service";
 
 @ApiTags("marketplace")
 @Controller("marketplace/v1")
@@ -27,6 +28,7 @@ export class MarketplaceController {
     private readonly bookings: MarketplaceBookingService,
     private readonly reviews: KiorexReviewsService,
     private readonly overview: KiorexOverviewService,
+    private readonly kiorexDeposits: KiorexDepositsService,
   ) {}
 
   @Get("auth/verify")
@@ -137,6 +139,24 @@ export class MarketplaceController {
     @Body() body: { startsAt: string; endsAt?: string; holdId?: string },
   ) {
     return this.bookings.rescheduleByPatient(client, externalRef, body);
+  }
+
+  @Post("bookings/:externalRef/deposit-paid")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Patient paid a deposit on Kiorex Pay; held for the clinic until check-in (KX-07)" })
+  depositPaid(
+    @MarketplaceClient() client: PlatformIntegrationPrincipal,
+    @Param("externalRef") externalRef: string,
+    @Body() body: DepositPaidBody,
+  ) {
+    return this.kiorexDeposits.depositPaid(client.id, externalRef, body);
+  }
+
+  @Post("payouts")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Kiorex paid the clinic out for collected deposits (KX-07); idempotent on payoutRef" })
+  recordPayout(@Body() body: PayoutBody) {
+    return this.kiorexDeposits.recordPayout(body);
   }
 
   @Post("analytics/profile-views")

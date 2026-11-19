@@ -12,6 +12,7 @@
 | KX-04 Booking intake (holds, idempotency) | **Done** |
 | KX-05 Transactional outbox & status events | **Done** |
 | KX-06 Reschedule & cancellation policies (both directions) | **Done** |
+| KX-07 Kiorex Pay deposits & prepayments into clinic billing | **Done** |
 | KX-08 Verified reviews after completed visits | **Done** |
 | KX-09 Clinic-branded booking page & link (commission-free) | **Done** (Kiorex widget origin + `kiorly.link` domain: NH-008) |
 | KX-10 Kiorex tab inside Kiorly (settings + performance) | **Done** |
@@ -89,6 +90,13 @@ Marketplace calls carry `clinicId`; tenant resolves from listing rows.
 - **Clinic side:** cancelling a `KIOREX_MARKETPLACE` / `KIOREX_WHATSAPP` / `CLINIC_LINK` booking (`PATCH /appointments/:id` or `/status`) requires `cancellationReason` (≥3 chars, else `400 CANCELLATION_REASON_REQUIRED`); deposit is always refundable; `CANCELLED_BY_CLINIC` carries the reason for the patient; audit `appointment.cancelled_by_clinic` with the reason.
 - Confirmation-timeout cancellations are stamped `cancelledBy = SYSTEM`, deposit refundable.
 - Appointment fields: `cancelledAt`, `cancelledBy`, `cancellationReason`, `depositRefundable`, `rescheduleCount`.
+
+## KX-07 Kiorex Pay deposits
+
+- `POST /marketplace/v1/bookings/:ref/deposit-paid` `{ amount, currency?, paymentRef, paidAt? }` — Kiorex collected a deposit; Kiorly records a held `PatientDeposit` (`source=KIOREX_PAY`) on the appointment. Idempotent on `paymentRef`.
+- `POST /marketplace/v1/payouts` `{ payoutRef, clinicId?, amount, depositPaymentRefs? }` — Kiorex paid the clinic; idempotent on `payoutRef`.
+- At check-in the deposit becomes a `BillingPayment` via `postRevenue`; cancellations release or forfeit it per the KX-06 `depositRefundable` decision; no-shows forfeit. Details and money rules: [CLINIC_BILLING.md](./CLINIC_BILLING.md#kiorex-pay-deposits-kx-07).
+- Clinic UI: deposit badge on appointments; **Kiorex** tab → "Kiorex Pay deposits & payouts" card (`GET /api/v1/billing/kiorex-payouts`).
 
 ## KX-08 verified reviews
 

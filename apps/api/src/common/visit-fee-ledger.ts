@@ -32,6 +32,32 @@ function isReceivableVisitBalance(row: LedgerRow) {
   return row.status === RevenueStatus.RECEIVABLE;
 }
 
+/** KX-07 — deposits already applied to this visit (net of refunds) are part of the fee, not a new balance. */
+async function appliedDepositsForAppointment(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  appointmentId: string,
+): Promise<number> {
+  const applied = await tx.patientDeposit.findMany({
+    where: { tenantId, appointmentId, status: "APPLIED", revenueEntryId: { not: null } },
+    select: { amount: true, revenueEntryId: true, paymentId: true },
+  });
+  if (!applied.length) return 0;
+  const refunded = await tx.billingRefund.aggregate({
+    where: {
+      tenantId,
+      status: "COMPLETED",
+      OR: [
+        { revenueEntryId: { in: applied.map((d) => d.revenueEntryId!) } },
+        { paymentId: { in: applied.map((d) => d.paymentId).filter((p): p is string => Boolean(p)) } },
+      ],
+    },
+    _sum: { amount: true },
+  });
+  const total = applied.reduce((s, d) => s + Number(d.amount), 0) - Number(refunded._sum.amount ?? 0);
+  return Math.max(0, total);
+}
+
 export async function findPostedAppointmentVisitCharge(
   tx: Prisma.TransactionClient,
   tenantId: string,
@@ -349,13 +375,17 @@ export async function upsertEncounterVisitFeeRevenue(
     scheduledTransferChannel?: string | null;
   },
 ): Promise<void> {
-  const { tenantId, clinicId, encounterId, appointmentId, amount, currency: currencyOpt } = params;
+  const { tenantId, clinicId, encounterId, appointmentId, currency: currencyOpt } = params;
 
   const samplePatient = await tx.patient.findFirst({
     where: { id: params.patientId, tenantId, isSample: true },
     select: { id: true },
   });
   if (samplePatient) return;
+
+  const prepaid = appointmentId ? await appliedDepositsForAppointment(tx, tenantId, appointmentId) : 0;
+  const amount = params.amount > 0 ? Math.max(0, Math.round((params.amount - prepaid) * 100) / 100) : params.amount;
+  if (params.amount > 0 && amount <= 0.001) return;
 
   if (appointmentId && amount > 0) {
     const adopted = await adoptAppointmentCheckInPayment(tx, {

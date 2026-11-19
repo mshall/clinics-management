@@ -14,6 +14,7 @@ Integration and unit coverage for **patient billing**, **Kiorly SaaS billing**, 
 | Split payments + allocations | `qa02-billing-money-path.integration.test.ts`, `qa02-billing.node.test.ts` |
 | Cash close | `qa02-billing-money-path.integration.test.ts`, `billing-cash-close.node.test.ts` |
 | Refunds, packages, deposits (MN-01) | `mn01-patient-money.integration.test.ts`, `mn01-patient-money.node.test.ts` — see [CLINIC_BILLING.md](./CLINIC_BILLING.md) |
+| Kiorex Pay deposits → check-in payment, refund reversal, payouts (KX-07) | `kx07-kiorex-deposits.integration.test.ts`, `kx07-kiorex-deposits.node.test.ts` |
 | Payment gateways (Paymob, Fawry, InstaPay, bank) | `qa02-payment-gateways.node.test.ts` |
 | Kiorly invoices, saved card pay, credits on issue, void/PDF | `qa02-kiorly-money-path.integration.test.ts`, `sb01-kiorly-invoice.*`, `sb02-kiorly-payments.*` |
 | Settlement + subscription invoice math | `cr06-settlement.*`, `qa03-settlement-matrix.node.test.ts` |

@@ -6,6 +6,7 @@ import { useClinicsQuery } from "@/lib/api-hooks";
 import { apiGet } from "@/lib/http";
 import { KiorexBookingLinkCard } from "./kiorex-booking-link-card";
 import { KiorexBookingSettingsCard } from "./kiorex-booking-settings-card";
+import { KiorexPayoutsCard } from "./kiorex-payouts-card";
 import { KiorexPerformanceCard } from "./kiorex-performance-card";
 import { KiorexPolicyCard } from "./kiorex-policy-card";
 import { KiorexRatingsCard } from "./kiorex-ratings-card";
@@ -61,6 +62,7 @@ export function KiorexPage() {
       {settings.data ? (
         <>
           <KiorexPerformanceCard clinicId={clinicId} />
+          <KiorexPayoutsCard clinicId={clinicId} />
           <KiorexBookingSettingsCard clinicId={clinicId} settings={settings.data} />
           <KiorexBookingLinkCard clinicId={clinicId} />
           <KiorexRatingsCard clinicId={clinicId} />

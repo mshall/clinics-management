@@ -236,10 +236,35 @@ export class AppointmentsService {
     return dto;
   }
 
+  /** KX-07 / FS-04 — latest deposit per appointment for the badge (pending/held/applied…). */
+  private async attachDeposits(tenantId: string, dtos: AppointmentDto[]): Promise<AppointmentDto[]> {
+    if (!dtos.length) return dtos;
+    const rows = await this.prisma.patientDeposit.findMany({
+      where: { tenantId, appointmentId: { in: dtos.map((d) => d.id) } },
+      orderBy: { createdAt: "desc" },
+      select: { appointmentId: true, status: true, source: true, amount: true, currency: true },
+    });
+    const latest = new Map<string, (typeof rows)[number]>();
+    for (const r of rows) if (r.appointmentId && !latest.has(r.appointmentId)) latest.set(r.appointmentId, r);
+    return dtos.map((d) => {
+      const dep = latest.get(d.id);
+      if (!dep) return { ...d, deposit: null };
+      return {
+        ...d,
+        deposit: {
+          status: dep.status,
+          source: dep.source,
+          amount: d.financialsVisible === false ? 0 : Number(dep.amount),
+          currency: dep.currency,
+        },
+      };
+    });
+  }
+
   private async finishAppointmentDto(tenantId: string, row: AppointmentRow, viewer?: JwtUser): Promise<AppointmentDto> {
     const [moneyVis, risk] = await Promise.all([this.moneyOverrides(tenantId, viewer), this.noShowRiskContext(tenantId)]);
-    const dto = this.mapRow(row, viewer, moneyVis, risk);
-    if (row.status !== AppointmentStatus.CHECKED_IN) return dto;
+    const [dto] = await this.attachDeposits(tenantId, [this.mapRow(row, viewer, moneyVis, risk)]);
+    if (row.status !== AppointmentStatus.CHECKED_IN) return dto!;
 
     let openEncounterId =
       (
@@ -413,7 +438,10 @@ export class AppointmentsService {
     ]);
     const [moneyVis, risk] = await Promise.all([this.moneyOverrides(tenantId, viewer), this.noShowRiskContext(tenantId)]);
     return paginate(
-      rows.map((r: AppointmentRow) => this.mapRow(r, viewer, moneyVis, risk)),
+      await this.attachDeposits(
+        tenantId,
+        rows.map((r: AppointmentRow) => this.mapRow(r, viewer, moneyVis, risk)),
+      ),
       total,
       page,
       pageSize

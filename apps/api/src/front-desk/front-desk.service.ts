@@ -28,6 +28,7 @@ import { basename } from "node:path";
 import { randomUUID } from "node:crypto";
 import { TrialEngineService } from "../subscriptions/trial-engine.service";
 import { CommissionChargeService } from "../kiorex/commission-charge.service";
+import { DepositSettlementService } from "../billing/deposit-settlement.service";
 
 const RECEIPT_MIME = new Set([
   "image/jpeg",
@@ -47,6 +48,7 @@ export class FrontDeskService {
     private readonly consent: ConsentPolicyService,
     private readonly trialEngine: TrialEngineService,
     private readonly commissionCharges: CommissionChargeService,
+    private readonly deposits: DepositSettlementService,
   ) {}
 
   quickSearch(tenantId: string, user: JwtUser, q: string) {
@@ -171,6 +173,7 @@ export class FrontDeskService {
         });
       }
       await this.commissionCharges.onCheckIn(tx, tenantId, appointmentId, now);
+      await this.deposits.settleAppointmentDepositsTx(tx, tenantId, appointmentId, user.userId);
       const openEncounterId =
         (await ensureDraftEncounterOnCheckIn(tx, tenantId, appointmentId)) ?? null;
       return {

@@ -3348,7 +3348,42 @@
       "CARD": "بطاقة",
       "TRANSFER": "تحويل",
       "WALLET": "محفظة",
-      "OTHER": "أخرى"
+      "OTHER": "أخرى",
+      "KIOREX_PAY": "كيوريكس باي"
     }
+  },
+  "payment": {
+    "kiorexPay": "كيوريكس باي"
+  },
+  "depositBadge": {
+    "label": "عربون",
+    "status": {
+      "PENDING": "بانتظار الدفع",
+      "HELD": "مدفوع",
+      "APPLIED": "مخصوم من الزيارة",
+      "RELEASED": "مُسترد",
+      "FORFEITED": "مُصادَر"
+    },
+    "source": {
+      "CLINIC": "في العيادة",
+      "KIOREX_PAY": "كيوريكس باي",
+      "PAYMENT_LINK": "رابط دفع"
+    }
+  },
+  "kiorexPayouts": {
+    "title": "عرابين كيوريكس باي والتحويلات",
+    "subtitle": "العرابين التي دفعها المرضى عبر كيوريكس لحجوزاتك، وما حوّلته كيوريكس لك (آخر 30 يومًا).",
+    "collected": "العرابين المحصّلة",
+    "refunded": "المُسترد للمرضى",
+    "netDue": "المستحق للعيادة",
+    "payoutsReceived": "التحويلات المستلمة",
+    "outstanding": "المتبقي",
+    "empty": "لا توجد عرابين كيوريكس باي في هذه الفترة.",
+    "colDate": "التاريخ",
+    "colBooking": "الحجز",
+    "colStatus": "الحالة",
+    "colPayout": "التحويل",
+    "colAmount": "المبلغ",
+    "unpaid": "لم يُحوَّل بعد"
   }
 }
