@@ -144,3 +144,4 @@
 | 103 CL-06 | `2210147` | ClinicalOrder LAB/IMAGING; CRUD /clinical/orders; RESULTS_READY → WhatsApp results_ready; encounter orders panel EN/AR |
 | 104 CL-07 | `1ec707f` | pack_dental/aesthetics/physio add-ons; DentalChartTooth; before/after pairs; physio AppointmentSeries; billing purchase API |
 | 105 MN-05 | `29e1419` | Claim batches + remittance ≥90% match + B2B payer outbox; claims workspace; no ETA. |
+| 106 MS-06 | `55cea4c` | Egyptian Arabic WhatsApp AI receptionist; clinical→handover; inbox; SlotService booking hints. |

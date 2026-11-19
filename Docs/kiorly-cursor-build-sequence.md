@@ -341,7 +341,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 102 · KX-11 · Consent-based record sharing with the patient app `8a5085a`- [x] Step 103 · CL-06 · Lab & radiology orders as records `2210147`
 - [x] Step 104 · CL-07 · Specialty packs: dental chart, aesthetics before/after, physio plans `1ec707f`
 - [x] Step 105 · MN-05 · Company contracts & TPA claims — `29e1419` · `billing/mn05-claims.integration.test.ts` · `billing/mn05-claims.node.test.ts` · `e2e/mn05-claims.spec.ts` · `Docs/MN05_CLAIMS.md`, `Docs/CLINIC_BILLING.md`
-- [ ] Step 106 · MS-06 · WhatsApp AI receptionist (Egyptian Arabic)
+- [x] Step 106 · MS-06 · WhatsApp AI receptionist (Egyptian Arabic) — `55cea4c` · `messaging/ms06-ai-receptionist.integration.test.ts` · `messaging/ms06-ai-receptionist.node.test.ts` · `e2e/ms06-ai-receptionist.spec.ts` · `Docs/MS06_AI_RECEPTIONIST.md`
 - [ ] Step 107 · RP-04 · AR aging, payouts and branch P&L
 - [ ] Step 108 · UX-04 · Thermal printing & accessibility
 
@@ -4439,7 +4439,7 @@ model DoctorStatement {
 - Conversation inbox.
 
 **Acceptance criteria** (write a test for each)
-- [ ] Never gives medical advice; hands over on clinical questions.
+- [x] Never gives medical advice; hands over on clinical questions.
 
 **Done when:** all acceptance tests pass, §0.2 checks are green, en + ar strings added, docs updated, and Step 106 is ticked in §5.
 
