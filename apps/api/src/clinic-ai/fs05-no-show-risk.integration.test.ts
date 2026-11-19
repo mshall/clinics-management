@@ -112,7 +112,7 @@ describe("FS-05 no-show risk on appointments", () => {
   });
 
   it("nightly job stores scores for entitled tenants only", async () => {
-    const clinicAi = new ClinicAiService(prismaSvc);
+    const clinicAi = new ClinicAiService(prismaSvc, {} as never, {} as never);
     const off = new NoShowRiskScheduler(prismaSvc, { isEntitled: async () => false } as never, clinicAi);
     await off.runNightly();
     assert.equal((await prisma.appointment.findUniqueOrThrow({ where: { id: riskyAptId } })).noShowRiskScore, null);

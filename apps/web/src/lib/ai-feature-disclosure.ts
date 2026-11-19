@@ -43,10 +43,10 @@ export const AI_FEATURES: Record<AiFeatureId, AiFeatureDefinition> = {
   },
   chart_scribe: {
     id: "chart_scribe",
-    backing: "workflow",
+    backing: "model",
     titleKey: "aiFeatures.chartScribe.title",
     disclosureKey: "aiFeatures.chartScribe.disclosure",
-    showsAiBadge: false,
+    showsAiBadge: true,
   },
 };
 
@@ -55,9 +55,9 @@ export const GUIDE_HONEST_AI_EN = {
   preVisitTitle: "Smart summary (pre-visit)",
   preVisitBody:
     "Open the smart summary on the patient chart or use Patient 360: last visits, meds, allergies, and alerts — assembled from your records, not a language model.",
-  scribeTitle: "Chart scribe (workflow)",
+  scribeTitle: "Chart scribe (speech)",
   scribeBody:
-    "Start a scribe session on an encounter, review the draft note and Rx, then approve into the chart. Speech-to-text and generative drafting require a production provider.",
+    "Record with patient consent, upload audio chunks, review the Egyptian Arabic / English draft note and Rx, then approve into the chart. Audio is deleted on sign-off unless the clinic opts in.",
   noShowRiskBody:
     "Create and reschedule appointments; use the no-show risk estimate (formula from history and booking lead time) to decide on reminders or deposit policy.",
 } as const;

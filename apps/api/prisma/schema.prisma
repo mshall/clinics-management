@@ -3586,18 +3586,45 @@ model ClinicalIncident {
 }
 
 model AiScribeSession {
-  id            String   @id @default(cuid())
-  tenantId      String
-  encounterId   String
-  status        String   @default("DRAFT")
-  transcript    String?
-  draftNote     Json?
-  draftRx       Json?
-  approvedAt    DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                      String    @id @default(cuid())
+  tenantId                String
+  encounterId             String
+  status                  String    @default("DRAFT")
+  transcript              String?
+  draftNote               Json?
+  draftRx                 Json?
+  /// Patient AI_PROCESSING consent captured before recording (MS AI-02).
+  consentGrantedAt        DateTime?
+  recordingStartedAt      DateTime?
+  recordingStoppedAt      DateTime?
+  /// Billed / metered audio length in whole seconds.
+  audioSeconds            Int       @default(0)
+  /// Clinic opt-in to keep audio after sign-off (default delete).
+  retainAudioAfterSignOff Boolean   @default(false)
+  sttProvider             String?
+  draftLatencyMs          Int?
+  approvedAt              DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  audioChunks             AiScribeAudioChunk[]
 
   @@index([tenantId, encounterId])
+}
+
+/// Transient audio chunks for AI-02; deleted on approve unless retainAudioAfterSignOff.
+model AiScribeAudioChunk {
+  id        String         @id @default(cuid())
+  sessionId String
+  session   AiScribeSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  seq       Int
+  mimeType  String         @default("audio/webm")
+  /// Base64 payload (dev/local). Production may swap to object storage keys.
+  payloadB64 String
+  byteLength Int
+  createdAt DateTime       @default(now())
+
+  @@unique([sessionId, seq])
+  @@index([sessionId])
 }
 
 model OtpChallenge {

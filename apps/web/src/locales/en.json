@@ -189,7 +189,7 @@
       "preVisitSummary": "Smart pre-visit summary — chart template, not a language model",
       "noShowRisk": "No-show risk estimate — formula from visit history and booking timing",
       "roleAssistant": "Kiorly AI assistant — role-aware chat via your market’s language model",
-      "chartScribe": "Chart scribe workflow — review before approve; speech AI ships separately"
+      "chartScribe": "Chart scribe — Egyptian Arabic / English speech drafts for clinician review"
     },
     "finish": "Create clinic & sign in",
     "legalIntro": "Legal agreements (required)",
@@ -704,6 +704,18 @@
     "objective": "Objective",
     "assessment": "Assessment",
     "planField": "Plan",
+    "scribe": {
+      "consent": "Patient consents to ambient AI recording for this visit (Egyptian Arabic / English).",
+      "retainAudio": "Keep audio after sign-off (clinic opt-in; default deletes).",
+      "record": "Record",
+      "stop": "Stop & draft",
+      "apply": "Review & apply to chart",
+      "listening": "Listening (AR/EN)…",
+      "transcript": "Transcript",
+      "draftReady": "Draft ready in {{ms}} ms — review each field",
+      "approvedPurged": "Applied to chart; audio deleted",
+      "approvedKept": "Applied to chart; audio retained per clinic setting"
+    },
     "primary": "Primary",
     "descEn": "Description (EN)",
     "descAr": "Description (AR)",
@@ -2691,8 +2703,8 @@
       "disclosure": "Score from patient no-show count, deposit flag, and hours until appointment — a scheduling formula, not machine learning."
     },
     "chartScribe": {
-      "title": "Chart scribe (workflow)",
-      "disclosure": "Draft note and Rx workflow for clinician review. Ambient speech and generative drafts need a production speech provider."
+      "title": "Chart scribe (speech)",
+      "disclosure": "Ambient recording with Egyptian Arabic / English speech-to-text drafts SOAP and Rx suggestions. Clinician reviews field by field; audio is deleted on sign-off unless the clinic opts in."
     }
   },
   "assistant": {
