@@ -123,3 +123,4 @@
 | 082 RP-02 | `3ca234b` | `GET /reports/:key/export` xlsx/PDF (payments + reports); money visibility gate; weekly schedule email/WhatsApp; Reports export UI EN/AR |
 | 083 RP-03 | `ab5fc61` | `GET /reports/kiorex?period=` bookings/new patients/visit revenue/commission/offset/net cost; matches CR-11 statement; Reports UI EN/AR |
 | 084 SC-04 | `4a23905` | Production-like MFA enforce + 7-day grace; billing blocked after; WhatsApp OTP MFA for physicians; onboarding MFA prompt EN/AR |
+| 085 SC-05 | `448bd9f` | POST /exports/tenant|patient; works in SUSPENDED; offboarding+legal hold; /privacy UI EN/AR |

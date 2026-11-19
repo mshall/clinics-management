@@ -318,7 +318,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 082 · RP-02 · Excel/PDF exports & scheduled reports
 - [x] Step 083 · RP-03 · Kiorex impact report
 - [x] Step 084 · SC-04 · MFA policy for owners, admins and finance in every environment
-- [ ] Step 085 · SC-05 · Tenant data export & offboarding
+- [x] Step 085 · SC-05 · Tenant data export \& offboarding
 - [ ] Step 086 · SC-06 · Rate limiting, WAF, secrets hygiene & penetration test
 - [ ] Step 087 · SC-08 · Backup restore drill
 - [ ] Step 088 · QA-04 · Kiorex contract tests
