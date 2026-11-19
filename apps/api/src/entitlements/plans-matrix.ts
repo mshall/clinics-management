@@ -94,6 +94,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "messaging/digests.controller.ts": { kind: "open" },
   "push/push.controller.ts": { kind: "open" },
   "messaging/messaging.controller.ts": { kind: "gated", entitlement: "mod_messaging" },
+  "messaging/whatsapp-ai-receptionist.controller.ts": { kind: "gated", entitlement: "mod_messaging" },
   "onboarding/onboarding.controller.ts": { kind: "open" },
   "onboarding/imports/imports.controller.ts": { kind: "open" },
   "users/invitations/invitations.controller.ts": { kind: "open" },
