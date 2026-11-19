@@ -78,6 +78,22 @@ export class UsageMeterService {
     }
   }
 
+  /** AI-04 — monthly LLM request quota for the role assistant (Pro+). */
+  async assertAiAssistantQuota(tenantId: string): Promise<void> {
+    const summary = await this.summaryForTenant(tenantId);
+    const row = summary.metrics.find((m) => m.metric === UsageMetric.AI_ASSISTANT_REQUESTS);
+    if (row?.atLimit) {
+      throw new ForbiddenException({
+        code: "USAGE_QUOTA_EXCEEDED",
+        metric: UsageMetric.AI_ASSISTANT_REQUESTS,
+        periodKey: summary.periodKey,
+        limit: row.limit,
+        quantity: row.quantity,
+        message: "AI assistant monthly request quota reached. Upgrade your plan or wait until next month.",
+      });
+    }
+  }
+
   async summaryForTenant(tenantId: string, periodKey = UsageMeterService.periodKey()): Promise<TenantUsageSummary> {
     const planKey = await this.resolvePlanKey(tenantId);
     const limits = usageLimitsForPlan(planKey);

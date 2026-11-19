@@ -18,7 +18,7 @@ Commercial gating source of truth: module entitlements, plan seed, API `@Require
 | People | `hr` | gated | `mod_hr` |
 | Analytics | `reports` | gated | `mod_reports` |
 | Engagement | `messaging` | gated | `mod_messaging` |
-| AI | `assistant`, `clinic-ai` | gated | `ai_assistant` |
+| AI | `assistant`, `clinic-ai` | gated / mixed | `ai_assistant`, `ai_scribe` (add-on) |
 | Fiscal | `compliance` (submit/resubmit), `fiscal-devices`, `provider-credentials` | mixed / gated | `eta_receipts` |
 | Integrations | `integration-*`, `integrations/*` | gated | `mod_integrations` |
 | Admin tools | `admin/data-explorer` | gated | `mod_data_explorer` |
@@ -48,6 +48,7 @@ Boolean module keys by plan (`Yes` = entitled). Limits use numeric cells.
 | `mod_data_explorer` | No | No | Yes | Yes |
 | `eta_receipts` | No | Yes | Yes | Yes |
 | `ai_assistant` | No | Yes | Yes | Yes |
+| `ai_scribe` | No | No | Yes | Yes |
 | `deposits` | No | Yes | Yes | Yes |
 | `multi_branch` | No | No | Yes | Yes |
 | `whatsapp_reminders` | No | Yes | Yes | Yes |
