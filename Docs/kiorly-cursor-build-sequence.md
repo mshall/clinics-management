@@ -309,7 +309,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step 073 · FS-04 · Deposits & payment links for high-risk bookings — `250a0e4` · `appointments/fs04-deposit-links.integration.test.ts` · `billing/fs04-deposit-policy.node.test.ts` · `e2e/fs04-deposit-links.spec.ts` · `Docs/FRONT_DESK.md`, `Docs/CLINIC_BILLING.md` · NH-012
 - [x] Step 074 · MN-02 · Doctor revenue-share engine & statements — `5a23222` · `revenue-share/mn02-revenue-share.integration.test.ts` · `revenue-share/mn02-revenue-share-engine.node.test.ts` · `e2e/mn02-doctor-statements.spec.ts` · `Docs/CLINIC_BILLING.md`, `Docs/QA_MONEY_PATH.md`
 - [x] Step 075 · MN-03 · Cash drawer & shift close UI hardening — `2f9ca1e` · `billing/mn03-cashier-shift.integration.test.ts` · `billing/mn03-cashier-shift.node.test.ts` · `messaging/mn03-owner-shift-summary.integration.test.ts` · `e2e/mn03-cash-drawer.spec.ts` · `Docs/CLINIC_BILLING.md`, `Docs/QA_MONEY_PATH.md` · NH-013
-- [x] Step 076 · MN-06 · Split payments & installments UX —  ·  ·  ·  ·  · ,  · NH-014
+- [x] Step 076 · MN-06 · Split payments & installments UX — `22c1488` · `billing/mn06-split-payments.integration.test.ts` · `billing/mn06-split-payments.node.test.ts` · `messaging/mn06-installment-reminders.integration.test.ts` · `e2e/mn06-split-payments.spec.ts` · `Docs/CLINIC_BILLING.md`, `Docs/QA_MONEY_PATH.md` · NH-014
 - [ ] Step 077 · MS-04 · Doctor and owner digests
 - [ ] Step 078 · MS-05 · Transactional email (trial, invoices, security)
 - [ ] Step 079 · AI-02 · AI scribe with Egyptian Arabic speech-to-text
