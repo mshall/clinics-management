@@ -92,7 +92,7 @@ describe("CL-02 Rx safety on save", () => {
       audit,
       {} as never,
       {} as never,
-      {} as never,
+      { shareAfterSignOff: async () => null } as never,
     );
     const priorAudit = await prisma.auditLog.count({
       where: { tenantId, action: "RX_SAFETY_OVERRIDE", resourceId: encounterId },

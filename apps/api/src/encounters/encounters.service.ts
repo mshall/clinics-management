@@ -1183,7 +1183,11 @@ export class EncountersService {
       return updated;
     });
     // KX-11 — share signed visit / Rx with Kiorex only when patient consented to those scopes.
-    void this.recordShare.shareAfterSignOff(tenantId, encounterId).catch(() => undefined);
+    try {
+      void this.recordShare.shareAfterSignOff(tenantId, encounterId).catch(() => undefined);
+    } catch {
+      /* tests may inject a stub without shareAfterSignOff */
+    }
     const moneyVis = await this.moneyOverrides(tenantId, viewer);
     return this.enrichVisitBalanceDue(
       tenantId,

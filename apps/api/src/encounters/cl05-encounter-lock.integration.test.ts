@@ -28,7 +28,7 @@ function encountersService(): EncountersService {
     audit,
     uploads,
     {} as never,
-    {} as never,
+    { shareAfterSignOff: async () => null } as never,
   );
 }
 
