@@ -46,7 +46,11 @@ See **[Documentation_Portal.md](./Documentation_Portal.md)** for module layout, 
 | [**CLINICAL_WORKFLOW.md**](./CLINICAL_WORKFLOW.md) | Clinic Settings templates (EN/AR defaults + custom), shortcuts, safety, vitals, letters, note lock |
 | [**PATIENT_360_AND_SCHEDULING.md**](./PATIENT_360_AND_SCHEDULING.md) | Patient summary, timeline, family merge, appointment types, series, waitlist, follow-up |
 | [**FRONT_DESK.md**](./FRONT_DESK.md) | Global search (⌘K), check-in → waiting → call → start visit (auto exam room) → finalize; board, TV screen, InstaPay/Fawry at check-in |
-| [**CLINIC_PLATFORM_CAPABILITIES.md**](./CLINIC_PLATFORM_CAPABILITIES.md) | Operations pipeline, billing/compliance, messaging, reports, clinic AI — status matrix |
+| [**CLINIC_PLATFORM_CAPABILITIES.md**](./CLINIC_PLATFORM_CAPABILITIES.md) | Operations pipeline, billing/compliance, messaging, reports, clinic AI — status matrix (GT-06) |
+| [**PLANS_AND_ENTITLEMENTS.md**](./PLANS_AND_ENTITLEMENTS.md) | PL-04 entitlement matrix hub |
+| [**BILLING_AND_CREDITS.md**](./BILLING_AND_CREDITS.md) | GT-06 hub — SaaS + clinic money docs |
+| [**KIOREX_CONNECTOR.md**](./KIOREX_CONNECTOR.md) | GT-06 hub — marketplace / commission docs |
+| [**PRODUCT_EPIC_ROADMAP.md**](./PRODUCT_EPIC_ROADMAP.md) | Launch vs Phase 1b epic list |
 | [**EGYPT_GO_LIVE.md**](./EGYPT_GO_LIVE.md) | Egypt launch: ETA, data protection, backup, legal pack, pilot |
 | [**ETA_RECEIPT_V12.md**](./ETA_RECEIPT_V12.md) | Egypt Receipt **v1.2** builder, SHA-256 UUIDs, per-POS `FiscalPosChain`, queue/submit flow |
 | [**COMPLIANCE_CONTROLS.md**](./COMPLIANCE_CONTROLS.md) | ISO 27001 / HIPAA / SOC / FISMA control mapping (non-certification) |
