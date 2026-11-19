@@ -73,6 +73,7 @@ export function AppointmentVisitFlowCard({ appointment }: Props) {
           <CollectVisitBalanceCard
             encounterId={appointment.openEncounterId}
             clinicId={appointment.clinicId}
+            patientId={appointment.patientId}
             amount={appointment.visitBalanceDueAmount}
             currency={appointment.visitBalanceDueCurrency ?? "EGP"}
             preferredTransferChannel={appointment.scheduledTransferChannel}
