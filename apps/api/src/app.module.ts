@@ -54,6 +54,7 @@ import { ObservabilityModule } from "./observability/observability.module";
 import { UsageModule } from "./usage/usage.module";
 import { CohortsModule } from "./cohorts/cohorts.module";
 import { GrowthModule } from "./growth/growth.module";
+import { PushModule } from "./push/push.module";
 
 @Module({
   imports: [
@@ -110,6 +111,7 @@ import { GrowthModule } from "./growth/growth.module";
     UsageModule,
     CohortsModule,
     GrowthModule,
+    PushModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: PrivilegedMfaGuard }],
 })

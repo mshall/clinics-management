@@ -1273,6 +1273,7 @@ model Tenant {
   whatsAppInboundEvents          WhatsAppInboundEvent[]
   messagingConsents              MessagingConsent[]
   legalAcceptances               LegalAcceptance[]
+  pushSubscriptions              PushSubscription[]
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
 }
@@ -1452,6 +1453,7 @@ model User {
   clinicianVerificationsReviewed ClinicianVerification[] @relation("ClinicianVerificationReviewer")
   marketplaceListings            MarketplaceListing[]
   slotHoldsAsClinician           SlotHold[] @relation("SlotHoldClinician")
+  pushSubscriptions              PushSubscription[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   deactivatedAt DateTime?
@@ -1460,6 +1462,25 @@ model User {
   @@unique([tenantId, email])
   @@index([tenantId])
   @@index([tenantId, deletedAt])
+}
+
+/// UX-01 — Web Push subscription for Kiorex booking alerts (and future digests).
+model PushSubscription {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, endpoint])
+  @@index([tenantId, userId])
+  @@index([tenantId])
 }
 
 model ClinicianVerification {

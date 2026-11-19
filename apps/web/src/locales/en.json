@@ -3627,5 +3627,21 @@
     "exportCta": "Request export",
     "offboardingTitle": "Offboarding",
     "offboardingHint": "Cancel → 30-day retention → deletion. Legal hold pauses deletion."
+  },
+  "pwa": {
+    "installTitle": "Install Kiorly on your phone",
+    "installBody": "Add Kiorly to your home screen for faster access and an offline today view.",
+    "installCta": "Install",
+    "installDismiss": "Not now",
+    "pushTitle": "Get booking alerts",
+    "pushBody": "Allow notifications for new Kiorex bookings on this device.",
+    "pushCta": "Enable alerts",
+    "offlineTodayTitle": "Today (offline)",
+    "offlineBanner": "You are offline — showing the last cached schedule (read-only).",
+    "offlineLoading": "Loading cached today…",
+    "offlineNoCache": "No cached schedule yet. Open Today while online once.",
+    "offlineSchedule": "Cached schedule",
+    "offlineReadOnly": "Read-only while offline. Changes sync when you reconnect.",
+    "backHome": "Back to home"
   }
 }

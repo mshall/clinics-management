@@ -39,6 +39,7 @@ import {
   hoursUntil,
   resolveKiorexCancellationPolicy,
 } from "./kiorex-booking-policy";
+import { PushService } from "../push/push.service";
 
 export type MarketplaceBookingBody = {
   clinicId: string;
@@ -71,6 +72,7 @@ export class MarketplaceBookingService {
     private readonly appointmentOutbox: AppointmentOutboxService,
     private readonly slots: SlotService,
     private readonly newPatients: NewPatientService,
+    private readonly push: PushService,
   ) {}
 
   async getByExternalRef(client: PlatformIntegrationPrincipal, externalRef: string) {
@@ -285,6 +287,18 @@ export class MarketplaceBookingService {
         resourceId: created.id,
         metadata: { externalReference: key, platformClientId: client.id, bookingSource },
       });
+
+      // UX-01: web push to the clinician (best-effort; never fails the booking).
+      void this.push
+        .notifyKiorexBooking({
+          tenantId,
+          clinicianUserId: body.clinicianId,
+          appointmentId: created.id,
+          externalRef: key,
+          startsAt: created.startsAt,
+          clinicId: body.clinicId,
+        })
+        .catch(() => undefined);
 
       return this.serializeBooking(created);
     } catch (e) {

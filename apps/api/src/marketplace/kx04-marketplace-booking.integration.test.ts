@@ -50,6 +50,7 @@ function bookingStack() {
     appointmentOutbox,
     slots,
     new NewPatientService(prismaSvc),
+    { notifyKiorexBooking: async () => ({ queued: 0 }) } as never,
   );
   return { bookings, holds, slots };
 }

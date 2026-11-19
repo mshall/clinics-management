@@ -21,6 +21,7 @@ import { UpgradePaywallModal } from "@/components/upgrade-paywall-modal";
 import { FirstRunTour } from "@/features/help/first-run-tour";
 import { HelpDrawer } from "@/features/help/help-drawer";
 import { useHelpStore } from "@/stores/help-store";
+import { PwaInstallPrompt } from "@/features/pwa/pwa-install-prompt";
 
 export function AppShell() {
   const { t } = useTranslation();
@@ -118,6 +119,7 @@ export function AppShell() {
         <UpgradePaywallModal />
         <HelpDrawer />
         <FirstRunTour />
+        <PwaInstallPrompt />
       </div>
     </div>
   );
