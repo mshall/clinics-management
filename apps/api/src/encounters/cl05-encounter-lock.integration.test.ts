@@ -28,6 +28,7 @@ function encountersService(): EncountersService {
     audit,
     uploads,
     {} as never,
+    {} as never,
   );
 }
 

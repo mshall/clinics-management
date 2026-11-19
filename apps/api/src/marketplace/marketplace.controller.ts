@@ -11,6 +11,7 @@ import { MarketplaceBookingService, type MarketplaceBookingBody } from "./market
 import { KiorexReviewsService, type ReviewAggregateBody } from "./kiorex-reviews.service";
 import { KiorexOverviewService, type ProfileViewsBody } from "./kiorex-overview.service";
 import { KiorexDepositsService, type DepositPaidBody, type PayoutBody } from "../billing/kiorex-deposits.service";
+import { RecordShareService } from "./record-share.service";
 
 @ApiTags("marketplace")
 @Controller("marketplace/v1")
@@ -29,6 +30,7 @@ export class MarketplaceController {
     private readonly reviews: KiorexReviewsService,
     private readonly overview: KiorexOverviewService,
     private readonly kiorexDeposits: KiorexDepositsService,
+    private readonly recordShare: RecordShareService,
   ) {}
 
   @Get("auth/verify")
@@ -208,5 +210,15 @@ export class MarketplaceController {
     @Param("id") id: string,
   ) {
     return this.api.cancelAppointment(client, clinicId, id);
+  }
+
+  /** KX-11 — Kiorex patient-app consent scopes for record sharing. */
+  @Post("patients/:id/consents")
+  @ApiOperation({ summary: "Upsert record-share consents from the Kiorex patient app" })
+  async upsertRecordShareConsents(
+    @Param("id") patientId: string,
+    @Body() body: { consents: { scope: string; granted: boolean }[] },
+  ) {
+    return this.recordShare.upsertFromMarketplace(patientId, body?.consents ?? []);
   }
 }

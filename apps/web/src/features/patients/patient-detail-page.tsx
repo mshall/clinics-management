@@ -27,6 +27,7 @@ import { PatientClinicalDocuments } from "@/components/patient-clinical-document
 import { PatientInvoicesSection } from "@/features/invoices/patient-invoices-section";
 import { OutboundMessageLog } from "@/features/messaging/outbound-message-log";
 import { PatientMessagingConsentCard } from "@/features/patients/patient-messaging-consent-card";
+import { PatientRecordShareConsentCard } from "@/features/patients/patient-record-share-consent-card";
 import { PatientEncountersSection } from "@/features/patients/patient-encounters-section";
 import { PatientOperationsSection } from "@/features/patients/patient-operations-section";
 import { PatientAllergiesSection } from "@/components/patient-allergies-section";
@@ -529,6 +530,7 @@ export function PatientDetailPage() {
 
         <TabsContent value="notifications" className="mt-0 space-y-6">
           <PatientMessagingConsentCard patientId={patient.id} />
+          <PatientRecordShareConsentCard patientId={patient.id} />
           <OutboundMessageLog patientId={patient.id} />
         </TabsContent>
       </Tabs>
