@@ -2721,7 +2721,21 @@
     "navTabsTitle": "تبويبات الشريط لكل مستخدم",
     "navTabsUser": "المستخدم",
     "role": "الدور",
-    "tabDataExplorer": "مستكشف البيانات"
+    "tabDataExplorer": "مستكشف البيانات",
+    "exportProgressSqlTitle": "جاري تصدير SQL للمنظمة",
+    "exportProgressZipTitle": "جاري تصدير ملفات ZIP",
+    "exportProgressFullTitle": "جاري تصدير النسخة الكاملة للمنظمة",
+    "exportProgressWorking": "جاري تجهيز الملف…",
+    "exportProgressReady": "الملف جاهز. سيبدأ التحميل تلقائياً.",
+    "exportProgressDone": "اكتمل",
+    "exportProgressFailed": "فشل",
+    "exportProgressPercent": "اكتمل {{percent}}٪",
+    "importProgressTitle": "جاري استيراد نسخة المنظمة",
+    "importProgressWorking": "جاري استعادة SQL والملفات…",
+    "importProgressReady": "اكتمل الاستيراد.",
+    "dataExplorerExportFull": "نسخة كاملة ZIP (SQL + ملفات)",
+    "dataExplorerImport": "استيراد SQL أو ZIP",
+    "dataExplorerImportHint": "يقبل organization-export.sql أو ZIP يحتوي SQL وملفات الصور المرتبطة بالمرضى والعمليات."
   },
   "pagination": {
     "showing": "{{from}}–{{to}} من {{total}}",

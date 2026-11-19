@@ -934,10 +934,16 @@ model TenantExportJob {
   id           String   @id @default(cuid())
   tenantId     String
   tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  /// TENANT | PATIENT
+  /// TENANT | PATIENT | ORG_SQL | ORG_DOCUMENTS | ORG_FULL | ORG_IMPORT
   scope        String
   patientId    String?
   status       String   @default("PENDING")
+  /// 0–100 while RUNNING / READY
+  progress     Int      @default(0)
+  /// Selected explorer table keys for ORG_* exports
+  tablesJson   Json?
+  fileName     String?
+  contentType  String?
   requestedBy  String
   downloadTokenHash String? @unique
   expiresAt    DateTime?

@@ -1,12 +1,29 @@
-import { Body, Controller, Delete, Get, HttpException, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
-import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpException,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Res,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
+import { memoryStorage } from "multer";
 import { CurrentUser } from "../../auth/current-user.decorator";
 import { JwtAuthGuard } from "../../auth/jwt-auth.guard";
 import { EntitlementGuard } from "../../entitlements/entitlement.guard";
 import { RequiresEntitlement } from "../../entitlements/requires-entitlement.decorator";
 import type { JwtUser } from "../../auth/jwt-user";
 import { AdminDataExplorerService } from "./admin-data-explorer.service";
+import { OrgBackupService, type OrgBackupFormat } from "./org-backup.service";
 import { SubscriptionAccessGuard } from "../../subscriptions/subscription-access.guard";
 import { RequiresSubscriptionAccess } from "../../subscriptions/requires-subscription-access.decorator";
 import { SubscriptionAccessAction } from "../../subscriptions/subscription-access-policy";
@@ -17,7 +34,10 @@ import { SubscriptionAccessAction } from "../../subscriptions/subscription-acces
 @UseGuards(JwtAuthGuard, EntitlementGuard, SubscriptionAccessGuard)
 @RequiresEntitlement("mod_data_explorer")
 export class AdminDataExplorerController {
-  constructor(private readonly explorer: AdminDataExplorerService) {}
+  constructor(
+    private readonly explorer: AdminDataExplorerService,
+    private readonly orgBackup: OrgBackupService,
+  ) {}
 
   @Get("tables")
   @ApiOperation({ summary: "List allowlisted tables and supported operations (group admin or platform super admin)" })
@@ -26,9 +46,57 @@ export class AdminDataExplorerController {
     return this.explorer.catalog(user);
   }
 
+  @Post("export/jobs")
+  @RequiresSubscriptionAccess(SubscriptionAccessAction.EXPORT)
+  @ApiOperation({ summary: "Start async organization export (SQL, documents ZIP, or full backup ZIP)" })
+  startExportJob(
+    @CurrentUser() user: JwtUser,
+    @Body() body: { format: OrgBackupFormat; tables?: string[] },
+  ) {
+    return this.orgBackup.startExport(user, body.format, body.tables);
+  }
+
+  @Get("export/jobs/:id")
+  @RequiresSubscriptionAccess(SubscriptionAccessAction.EXPORT)
+  @ApiOperation({ summary: "Poll organization export/import job progress" })
+  getExportJob(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.orgBackup.getJob(user, id);
+  }
+
+  @Get("export/jobs/:id/download")
+  @RequiresSubscriptionAccess(SubscriptionAccessAction.EXPORT)
+  @ApiOperation({ summary: "Download a READY organization export artifact" })
+  async downloadExportJob(@CurrentUser() user: JwtUser, @Param("id") id: string, @Res() res: Response) {
+    const file = await this.orgBackup.downloadJob(user, id);
+    res.setHeader("Content-Type", file.contentType);
+    res.setHeader("Content-Disposition", `attachment; filename="${file.fileName}"`);
+    res.send(file.body);
+  }
+
+  @Post("import")
+  @RequiresSubscriptionAccess(SubscriptionAccessAction.EXPORT)
+  @ApiOperation({ summary: "Import organization backup (.sql or full/documents .zip with files)" })
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: { file: { type: "string", format: "binary" } },
+      required: ["file"],
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor("file", {
+      storage: memoryStorage(),
+      limits: { fileSize: 512 * 1024 * 1024 },
+    }),
+  )
+  importBackup(@CurrentUser() user: JwtUser, @UploadedFile() file: Express.Multer.File) {
+    return this.orgBackup.startImport(user, file);
+  }
+
   @Get("export/sql")
   @RequiresSubscriptionAccess(SubscriptionAccessAction.EXPORT)
-  @ApiOperation({ summary: "Download selected organization entities as a single SQL file" })
+  @ApiOperation({ summary: "Download selected organization entities as a single SQL file (sync)" })
   @ApiOkResponse({ description: "SQL script with INSERT statements for selected entities" })
   async exportSql(@CurrentUser() user: JwtUser, @Res() res: Response, @Query("tables") tables?: string) {
     const tableList = tables?.split(",").map((t) => t.trim()).filter(Boolean);
@@ -41,7 +109,7 @@ export class AdminDataExplorerController {
 
   @Get("export/documents")
   @RequiresSubscriptionAccess(SubscriptionAccessAction.EXPORT)
-  @ApiOperation({ summary: "Download uploaded files linked to selected organization entities as a ZIP archive" })
+  @ApiOperation({ summary: "Download uploaded files linked to selected organization entities as a ZIP archive (sync)" })
   @ApiOkResponse({ description: "ZIP archive of documents from object storage with manifest.json" })
   async exportDocuments(@CurrentUser() user: JwtUser, @Res() res: Response, @Query("tables") tables?: string) {
     const tableList = tables?.split(",").map((t) => t.trim()).filter(Boolean);

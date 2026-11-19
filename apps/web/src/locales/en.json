@@ -2721,7 +2721,21 @@
     "navTabsTitle": "Sidebar tabs per user",
     "navTabsUser": "User",
     "role": "Role",
-    "tabDataExplorer": "Data explorer"
+    "tabDataExplorer": "Data explorer",
+    "exportProgressSqlTitle": "Exporting organization SQL",
+    "exportProgressZipTitle": "Exporting documents ZIP",
+    "exportProgressFullTitle": "Exporting full organization backup",
+    "exportProgressWorking": "Preparing your file…",
+    "exportProgressReady": "File is ready. Download will start automatically.",
+    "exportProgressDone": "Complete",
+    "exportProgressFailed": "Failed",
+    "exportProgressPercent": "{{percent}}% complete",
+    "importProgressTitle": "Importing organization backup",
+    "importProgressWorking": "Restoring SQL and files…",
+    "importProgressReady": "Import finished.",
+    "dataExplorerExportFull": "Full backup ZIP (SQL + files)",
+    "dataExplorerImport": "Import SQL or ZIP backup",
+    "dataExplorerImportHint": "Accepts organization-export.sql or a ZIP with organization-export.sql + files/ + manifest.json (patient/operation images restored to storage)."
   },
   "pagination": {
     "showing": "{{from}}–{{to}} of {{total}}",

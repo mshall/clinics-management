@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { ExportProgressDialog, type ExportProgressState } from "@/components/export-progress-dialog";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ApiError, apiDelete, apiFetchBlob, apiGet, apiPatch, apiPost } from "@/lib/http";
+import { ApiError, apiDelete, apiFetchBlob, apiGet, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
+
+type OrgBackupJob = {
+  id: string;
+  status: string;
+  progress: number;
+  fileName?: string | null;
+  downloadPath?: string | null;
+  error?: string | null;
+  rowCounts?: unknown;
+};
 
 type ExplorerOps = { list: boolean; get: boolean; create: boolean; patch: boolean; delete: boolean };
 
@@ -51,8 +62,18 @@ export function AdminDataExplorerPanel() {
   const [formError, setFormError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportingDocuments, setExportingDocuments] = useState(false);
+  const [exportingFull, setExportingFull] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [exportKeys, setExportKeys] = useState<Set<string>>(() => new Set());
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [progress, setProgress] = useState<ExportProgressState>({
+    open: false,
+    title: "",
+    percent: 0,
+    status: "running",
+  });
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const pollAbortRef = useRef(false);
 
   const catalogQ = useQuery({
     queryKey: ["admin", "data-explorer", "catalog"],
@@ -164,49 +185,123 @@ export function AdminDataExplorerPanel() {
     }
   }
 
-  async function downloadSqlExport() {
-    if (exportKeys.size === 0) {
-      setFormError(t("admin.dataExplorerExportNone", "Select at least one entity to export."));
-      return;
-    }
-    setExporting(true);
-    setFormError(null);
-    try {
-      const qs = encodeURIComponent([...exportKeys].join(","));
-      const { blob } = await apiFetchBlob(`/api/v1/admin/data-explorer/export/sql?tables=${qs}`);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "organization-export.sql";
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (e: unknown) {
-      setFormError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e));
-    } finally {
-      setExporting(false);
+  async function pollJobUntilReady(jobId: string, title: string, fallbackName: string) {
+    pollAbortRef.current = false;
+    setProgress({ open: true, title, percent: 2, status: "running" });
+    for (;;) {
+      if (pollAbortRef.current) return;
+      const job = await apiGet<OrgBackupJob>(`/api/v1/admin/data-explorer/export/jobs/${jobId}`);
+      setProgress((prev) => ({
+        ...prev,
+        open: true,
+        title,
+        percent: job.progress ?? prev.percent,
+        status: job.status === "FAILED" ? "failed" : job.status === "READY" ? "ready" : "running",
+        error: job.error,
+        detail:
+          job.status === "READY"
+            ? t("admin.exportProgressReady", "File is ready. Download will start automatically.")
+            : t("admin.exportProgressWorking", "Preparing your file…"),
+      }));
+      if (job.status === "FAILED") {
+        throw new Error(job.error || t("common.error"));
+      }
+      if (job.status === "READY") {
+        const { blob } = await apiFetchBlob(
+          job.downloadPath ?? `/api/v1/admin/data-explorer/export/jobs/${jobId}/download`,
+        );
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = job.fileName || fallbackName;
+        a.click();
+        URL.revokeObjectURL(url);
+        setProgress((prev) => ({ ...prev, percent: 100, status: "ready" }));
+        window.setTimeout(() => setProgress((p) => ({ ...p, open: false })), 900);
+        return;
+      }
+      await new Promise((r) => window.setTimeout(r, 450));
     }
   }
 
-  async function downloadDocumentsExport() {
+  async function runOrgExport(format: "SQL" | "DOCUMENTS" | "FULL") {
     if (exportKeys.size === 0) {
       setFormError(t("admin.dataExplorerExportNone", "Select at least one entity to export."));
       return;
     }
-    setExportingDocuments(true);
     setFormError(null);
+    const titles = {
+      SQL: t("admin.exportProgressSqlTitle", "Exporting organization SQL"),
+      DOCUMENTS: t("admin.exportProgressZipTitle", "Exporting documents ZIP"),
+      FULL: t("admin.exportProgressFullTitle", "Exporting full organization backup"),
+    } as const;
+    const names = {
+      SQL: "organization-export.sql",
+      DOCUMENTS: "organization-documents.zip",
+      FULL: "organization-full-backup.zip",
+    } as const;
+    if (format === "SQL") setExporting(true);
+    if (format === "DOCUMENTS") setExportingDocuments(true);
+    if (format === "FULL") setExportingFull(true);
     try {
-      const qs = encodeURIComponent([...exportKeys].join(","));
-      const { blob } = await apiFetchBlob(`/api/v1/admin/data-explorer/export/documents?tables=${qs}`);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "organization-documents.zip";
-      a.click();
-      URL.revokeObjectURL(url);
+      const job = await apiPost<OrgBackupJob>("/api/v1/admin/data-explorer/export/jobs", {
+        format,
+        tables: [...exportKeys],
+      });
+      await pollJobUntilReady(job.id, titles[format], names[format]);
     } catch (e: unknown) {
-      setFormError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e));
+      const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e);
+      setFormError(msg);
+      setProgress((prev) => ({ ...prev, open: true, status: "failed", error: msg, percent: 100 }));
     } finally {
+      setExporting(false);
       setExportingDocuments(false);
+      setExportingFull(false);
+    }
+  }
+
+  async function runOrgImport(file: File) {
+    setFormError(null);
+    setImporting(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const job = await apiPostFormData<OrgBackupJob>("/api/v1/admin/data-explorer/import", fd, { enhance: false });
+      pollAbortRef.current = false;
+      setProgress({
+        open: true,
+        title: t("admin.importProgressTitle", "Importing organization backup"),
+        percent: job.progress ?? 5,
+        status: "running",
+      });
+      for (;;) {
+        if (pollAbortRef.current) break;
+        const latest = await apiGet<OrgBackupJob>(`/api/v1/admin/data-explorer/export/jobs/${job.id}`);
+        setProgress({
+          open: true,
+          title: t("admin.importProgressTitle", "Importing organization backup"),
+          percent: latest.progress ?? 0,
+          status: latest.status === "FAILED" ? "failed" : latest.status === "READY" ? "ready" : "running",
+          error: latest.error,
+          detail:
+            latest.status === "READY"
+              ? t("admin.importProgressReady", "Import finished.")
+              : t("admin.importProgressWorking", "Restoring SQL and files…"),
+        });
+        if (latest.status === "FAILED") throw new Error(latest.error || t("common.error"));
+        if (latest.status === "READY") {
+          window.setTimeout(() => setProgress((p) => ({ ...p, open: false })), 1200);
+          break;
+        }
+        await new Promise((r) => window.setTimeout(r, 450));
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e);
+      setFormError(msg);
+      setProgress((prev) => ({ ...prev, open: true, status: "failed", error: msg, percent: 100 }));
+    } finally {
+      setImporting(false);
+      if (importInputRef.current) importInputRef.current.value = "";
     }
   }
 
@@ -232,7 +327,7 @@ export function AdminDataExplorerPanel() {
           <CardDescription>
             {t(
               "admin.dataExplorerExportHint",
-              "Choose which entities to include. Download SQL for database import, or a ZIP of all uploaded documents (S3/local files) linked to those entities. Run Prisma migrations on the target PostgreSQL database before importing SQL with psql.",
+              "Choose which entities to include. Export SQL, a documents ZIP (images/files mapped to patients, encounters, operations, …), or a full backup ZIP (SQL + files) for round-trip import. A progress dialog shows percentage until the file is ready.",
             )}
           </CardDescription>
         </CardHeader>
@@ -270,7 +365,11 @@ export function AdminDataExplorerPanel() {
             ))}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button type="button" disabled={exporting || exportKeys.size === 0} onClick={() => void downloadSqlExport()}>
+            <Button
+              type="button"
+              disabled={exporting || exportingDocuments || exportingFull || exportKeys.size === 0}
+              onClick={() => void runOrgExport("SQL")}
+            >
               {exporting
                 ? t("common.loading")
                 : t("admin.dataExplorerExportSql", "Export selected as SQL ({{count}})", { count: exportKeys.size })}
@@ -278,18 +377,56 @@ export function AdminDataExplorerPanel() {
             <Button
               type="button"
               variant="secondary"
-              disabled={exportingDocuments || exportKeys.size === 0}
-              onClick={() => void downloadDocumentsExport()}
+              disabled={exporting || exportingDocuments || exportingFull || exportKeys.size === 0}
+              onClick={() => void runOrgExport("DOCUMENTS")}
             >
               {exportingDocuments
                 ? t("common.loading")
                 : t("admin.dataExplorerExportDocuments", "Download documents ZIP ({{count}})", { count: exportKeys.size })}
             </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={exporting || exportingDocuments || exportingFull || exportKeys.size === 0}
+              onClick={() => void runOrgExport("FULL")}
+            >
+              {exportingFull
+                ? t("common.loading")
+                : t("admin.dataExplorerExportFull", "Full backup ZIP (SQL + files)")}
+            </Button>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".sql,.zip,application/sql,application/zip"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void runOrgImport(f);
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              disabled={importing || exporting || exportingDocuments || exportingFull}
+              onClick={() => importInputRef.current?.click()}
+            >
+              {importing
+                ? t("common.loading")
+                : t("admin.dataExplorerImport", "Import SQL or ZIP backup")}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              {t(
+                "admin.dataExplorerImportHint",
+                "Accepts organization-export.sql or a ZIP with organization-export.sql + files/ + manifest.json (patient/operation images restored to storage).",
+              )}
+            </p>
           </div>
           <p className="text-xs text-muted-foreground">
             {t(
               "admin.dataExplorerExportDocumentsHint",
-              "The ZIP includes patient, encounter, employee, expense, and operation files from local disk (localhost) or S3 (production), plus manifest.json mapping each file to its database record.",
+              "Documents ZIP includes patient, encounter, employee, expense, and operation files from local disk or S3, plus manifest.json. Full backup also embeds the SQL dump for one-step restore.",
             )}
           </p>
         </CardContent>
@@ -488,6 +625,16 @@ export function AdminDataExplorerPanel() {
         pending={deleteMut.isPending}
         onConfirm={() => {
           if (deleteTargetId) deleteMut.mutate(deleteTargetId);
+        }}
+      />
+
+      <ExportProgressDialog
+        state={progress}
+        onOpenChange={(open) => {
+          if (!open) {
+            pollAbortRef.current = true;
+            setProgress((p) => ({ ...p, open: false }));
+          }
         }}
       />
     </div>

@@ -10,6 +10,7 @@ import { AdminInsightsService } from "./admin-insights.service";
 import { AdminService } from "./admin.service";
 import { AdminDataExplorerController } from "./data-explorer/admin-data-explorer.controller";
 import { AdminDataExplorerService } from "./data-explorer/admin-data-explorer.service";
+import { OrgBackupService } from "./data-explorer/org-backup.service";
 import { PlatformAdminController } from "./platform-admin.controller";
 import { PlatformAdminService } from "./platform-admin.service";
 import { PlatformInsightsService } from "./platform-insights.service";
@@ -43,6 +44,7 @@ import { SalesKitService } from "../staging/sales-kit.service";
     AdminService,
     AdminInsightsService,
     AdminDataExplorerService,
+    OrgBackupService,
     PlatformAdminService,
     PlatformInsightsService,
     PlatformGrowthService,

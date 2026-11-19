@@ -73,11 +73,17 @@ function usePortalPanelStyle(open: boolean, anchorRef: React.RefObject<HTMLEleme
       return;
     }
     update();
+    const onScroll = (e: Event) => {
+      // Scrolling inside the portal list must not reposition the panel (breaks mobile swipe).
+      const t = e.target;
+      if (t instanceof Element && t.closest(PICK_LIST_PANEL_SELECTOR)) return;
+      update();
+    };
     window.addEventListener("resize", update);
-    window.addEventListener("scroll", update, true);
+    window.addEventListener("scroll", onScroll, true);
     return () => {
       window.removeEventListener("resize", update);
-      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("scroll", onScroll, true);
     };
   }, [open, update]);
 
@@ -302,8 +308,8 @@ export function SearchablePickList({
   }, [open, closeWithoutPick]);
 
   const selectOption = useCallback(
-    (item: PickListItem) => (e: React.SyntheticEvent) => {
-      e.preventDefault();
+    (item: PickListItem) => (e: React.MouseEvent) => {
+      // Click-only selection: preventDefault on pointerdown would block mobile list swipe.
       e.stopPropagation();
       handlePick(item.value, item);
     },
@@ -319,7 +325,7 @@ export function SearchablePickList({
       role="listbox"
       data-pick-list-panel
       className={cn(
-        "overflow-auto overscroll-contain rounded-md border border-border bg-background shadow-lg [-webkit-overflow-scrolling:touch] [touch-action:manipulation]",
+        "overflow-y-auto overscroll-contain rounded-md border border-border bg-background shadow-lg [-webkit-overflow-scrolling:touch] [touch-action:pan-y]",
         useFixedPortal ? "fixed z-[9999]" : "absolute inset-x-0 top-full z-[100] mt-1 max-h-56",
       )}
       style={
@@ -328,10 +334,12 @@ export function SearchablePickList({
               top: panelStyle.top,
               left: panelStyle.left,
               width: panelStyle.width,
-              maxHeight: panelStyle.maxHeight,
+              maxHeight: Math.max(panelStyle.maxHeight, 220),
             }
           : undefined
       }
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
     >
       {showingPreview && minSearchLength > 0 && !meetsMinSearch ? (
         <p className="border-b border-border px-3 py-1.5 text-xs text-muted-foreground">{idleMessage}</p>
@@ -347,10 +355,9 @@ export function SearchablePickList({
             aria-selected={value === i.value}
             disabled={disabled}
             className={cn(
-              "flex w-full min-h-11 cursor-pointer flex-col gap-0.5 border-b border-border px-3 py-2.5 text-start text-sm last:border-b-0 hover:bg-muted/60 active:bg-muted/80 disabled:opacity-50 touch-manipulation select-none [-webkit-tap-highlight-color:transparent]",
+              "flex w-full min-h-11 cursor-pointer flex-col gap-0.5 border-b border-border px-3 py-2.5 text-start text-sm last:border-b-0 hover:bg-muted/60 active:bg-muted/80 disabled:opacity-50 select-none [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]",
               value === i.value && "bg-muted/80",
             )}
-            onPointerDown={selectOption(i)}
             onClick={selectOption(i)}
           >
             <span className="font-medium">{i.label}</span>
