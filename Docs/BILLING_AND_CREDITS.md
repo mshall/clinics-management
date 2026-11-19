@@ -7,6 +7,7 @@ Index for Kiorly **SaaS billing** (clinic → Kiorly) and **patient-side money**
 | Plan catalog & public prices | [PLANS_AND_PRICING.md](./PLANS_AND_PRICING.md) | **Shipped** (PL-01) |
 | Entitlement matrix | [PLANS_AND_ENTITLEMENTS.md](./PLANS_AND_ENTITLEMENTS.md) | **Shipped** (PL-04) |
 | Credit wallet | [CREDIT_WALLET.md](./CREDIT_WALLET.md) | **Shipped** (CR-05) |
+| No-show guarantee credits | [CREDIT_WALLET.md](./CREDIT_WALLET.md#cr-10-no-show-guarantee-credits) | **Shipped** (CR-10; off by default) |
 | Kiorly invoices (SaaS) | [KIORLY_INVOICES.md](./KIORLY_INVOICES.md) | **Shipped** (SB-01) |
 | Kiorly payments | [KIORLY_PAYMENTS.md](./KIORLY_PAYMENTS.md) | **Shipped** (SB-02) |
 | Dunning | [DUNNING.md](./DUNNING.md) | **Shipped** (SB-03) |

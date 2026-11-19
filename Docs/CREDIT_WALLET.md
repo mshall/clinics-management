@@ -43,6 +43,20 @@ Organization → **Plan & billing** — credit wallet card and ledger table (`Ad
 
 Both referrer and referred receive one monthly plan-price credit (`CreditReason.REFERRAL`) after the referred org’s **first paid** Kiorly invoice (> 0). Fraud guards: same phone, shared card fingerprint, annual cap from market `commercialConfig.referral`. Tests: `cr09-referral.*.test.ts`.
 
+## CR-10 no-show guarantee credits
+
+Optional market offer (`commercialConfig.noShowGuarantee`, **`enabled: false` by default**):
+
+| Window | Rule |
+|--------|------|
+| Baseline | Days 0–`baselineDays` (default 30) after `OnboardingProgress.activatedAt`; need ≥ `minBaselineAppointments` (100) COMPLETED+NO_SHOW outcomes |
+| Evaluation | Days `baselineDays`–`evaluationDay` (default 120) |
+| Grant | If reduction ≥ `targetReductionPercent` (30%) and WhatsApp reminders + deposits are on → `CreditReason.NO_SHOW_GUARANTEE` for `creditMonths` (3) × monthly plan price |
+
+API: `GET /api/v1/billing/guarantee`. UI: Plan & billing guarantee tracker card (hidden when disabled). Daily scheduler evaluates and grants idempotently (`sourceRef=no-show-guarantee:<tenantId>`).
+
+Tests: `billing/cr10-no-show-guarantee.*.test.ts`.
+
 ## Follow-ups
 
 - Auto-grant hooks (Kiorex late reversal, promo campaigns beyond referral)

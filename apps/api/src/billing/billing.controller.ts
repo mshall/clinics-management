@@ -12,6 +12,7 @@ import { TrialEngineService } from "../subscriptions/trial-engine.service";
 import { CreditWalletService } from "../credits/credit-wallet.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { BillingService } from "./billing.service";
+import { NoShowGuaranteeService } from "./no-show-guarantee.service";
 
 @ApiTags("billing")
 @ApiBearerAuth("bearer")
@@ -24,6 +25,7 @@ export class BillingController {
     private readonly dunning: DunningService,
     private readonly trialEngine: TrialEngineService,
     private readonly creditWallet: CreditWalletService,
+    private readonly noShowGuarantee: NoShowGuaranteeService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -78,6 +80,12 @@ export class BillingController {
       page ? Number(page) : undefined,
       pageSize ? Number(pageSize) : undefined,
     );
+  }
+
+  /** CR-10 — no-show guarantee tracker (off by default via market commercialConfig). */
+  @Get("guarantee")
+  getNoShowGuarantee(@CurrentUser() user: JwtUser) {
+    return this.noShowGuarantee.getForTenant(user, requireTenantId(user));
   }
 
   @Post("subscription/preview-change")
