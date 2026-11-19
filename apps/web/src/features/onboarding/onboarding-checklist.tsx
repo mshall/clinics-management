@@ -11,6 +11,7 @@ import {
   type OnboardingStepDto,
   type OnboardingStepKey,
 } from "@/lib/onboarding-api";
+import { useAuthStore } from "@/stores/auth-store";
 
 type Props = {
   variant?: "card" | "page";
@@ -20,6 +21,8 @@ type Props = {
 export function OnboardingChecklist({ variant = "card", onDismiss }: Props) {
   const { t } = useTranslation();
   const qc = useQueryClient();
+  const authUser = useAuthStore((s) => s.user);
+  const showMfaSetup = Boolean(authUser?.isTenantOwner && !authUser?.mfaEnabled);
   const q = useQuery({
     queryKey: ["onboarding"],
     queryFn: fetchOnboardingProgress,
@@ -59,6 +62,20 @@ export function OnboardingChecklist({ variant = "card", onDismiss }: Props) {
       <CardHeader>
         <CardTitle className="text-lg">{t("onboarding.title")}</CardTitle>
         <CardDescription>{t("onboarding.subtitle")}</CardDescription>
+        {showMfaSetup ? (
+          <div className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm" data-testid="onboarding-mfa-setup">
+            <p className="font-medium">{t("onboarding.mfaSetupTitle", "Protect money with MFA")}</p>
+            <p className="mt-1 text-muted-foreground">
+              {t(
+                "onboarding.mfaSetupHint",
+                "Owners, admins and finance must enable authenticator MFA within 7 days. Billing locks after that until MFA is on.",
+              )}
+            </p>
+            <Button asChild variant="outline" size="sm" className="mt-2">
+              <Link to="/profile">{t("onboarding.mfaSetupCta", "Set up MFA in Profile")}</Link>
+            </Button>
+          </div>
+        ) : null}
         <div
           className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted"
           role="progressbar"

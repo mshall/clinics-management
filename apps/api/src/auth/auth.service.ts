@@ -167,6 +167,7 @@ export class AuthService {
         avatarRelativePath: true,
         mfaEnabled: true,
         mfaTotpSecret: true,
+        mfaWhatsAppEnabled: true,
         deletedAt: true,
         deactivatedAt: true,
       },
@@ -227,6 +228,7 @@ export class AuthService {
       avatarRelativePath?: string | null;
       mfaEnabled?: boolean;
       mfaTotpSecret?: string | null;
+      mfaWhatsAppEnabled?: boolean;
     },
     existingSession?: { sessionId: string; refreshToken: string },
   ) {
@@ -245,6 +247,7 @@ export class AuthService {
           avatarRelativePath: true,
           mfaEnabled: true,
           mfaTotpSecret: true,
+          mfaWhatsAppEnabled: true,
         },
       }));
     if (!user) throw new UnauthorizedException("User not found");
@@ -254,13 +257,17 @@ export class AuthService {
         throw new UnauthorizedException({
           message: "Multi-factor authentication code is required",
           errorCode: "MFA_REQUIRED",
+          mfaWhatsApp: Boolean(user.mfaWhatsAppEnabled),
         });
       }
       const code = mfaCode.trim();
-      const totpOk = verifyTotpCode(user.mfaTotpSecret, code);
+      const totpOk = user.mfaTotpSecret ? verifyTotpCode(user.mfaTotpSecret, code) : false;
       if (!totpOk) {
-        const recoveryOk = await this.mfa.consumeRecoveryCode(user.id, code);
-        if (!recoveryOk) throw new UnauthorizedException("Invalid authenticator or recovery code");
+        const waOk = user.mfaWhatsAppEnabled ? await this.mfa.verifyWhatsAppMfaCode(user.id, code) : false;
+        if (!waOk) {
+          const recoveryOk = await this.mfa.consumeRecoveryCode(user.id, code);
+          if (!recoveryOk) throw new UnauthorizedException("Invalid authenticator, WhatsApp OTP, or recovery code");
+        }
       }
     }
 
