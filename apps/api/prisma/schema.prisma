@@ -1190,6 +1190,7 @@ model Tenant {
   clinicAdminScopes ClinicAdminScope[]
   patients       Patient[]
   encounters     Encounter[]
+  clinicalOrders ClinicalOrder[]
   revenueEntries RevenueEntry[]
   expenses       Expense[]
   employees      Employee[]
@@ -1636,6 +1637,7 @@ model Clinic {
   lastCalledTicketNumber Int?
   patientsHome     Patient[]       @relation("PatientHomeBranch")
   encounters       Encounter[]
+  clinicalOrders   ClinicalOrder[]
   revenueEntries   RevenueEntry[]
   expenses         Expense[]
   employees        Employee[]
@@ -1757,6 +1759,7 @@ model Patient {
   consents             PatientConsent[]
   messagingConsents      MessagingConsent[]
   recordShareConsents  PatientRecordShareConsent[]
+  clinicalOrders       ClinicalOrder[]
   servicePackages      PatientServicePackage[]
   billingPayments      BillingPayment[]
   fiscalDocuments      FiscalDocument[]
@@ -2053,6 +2056,64 @@ model Encounter {
   @@index([patientId])
   @@index([appointmentId])
   @@index([tenantId, followUpStatus, followUpDueAt])
+  clinicalOrders ClinicalOrder[]
+}
+
+/// CL-06 — lab & radiology orders as first-class records (results structured + PDF).
+enum ClinicalOrderKind {
+  LAB
+  IMAGING
+}
+
+enum ClinicalOrderStatus {
+  DRAFT
+  ORDERED
+  IN_PROGRESS
+  RESULTS_READY
+  CANCELLED
+}
+
+model ClinicalOrder {
+  id                     String              @id @default(cuid())
+  tenantId               String
+  tenant                 Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId               String
+  clinic                 Clinic              @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patientId              String
+  patient                Patient             @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  encounterId            String?
+  encounter              Encounter?          @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+  kind                   ClinicalOrderKind
+  status                 ClinicalOrderStatus @default(DRAFT)
+  orderedAt              DateTime?
+  resultsReadyAt         DateTime?
+  resultsJson            Json?
+  resultsPdfRelativePath String?
+  notes                  String?
+  notifiedAt             DateTime?
+  createdByUserId        String?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  items                  ClinicalOrderItem[]
+
+  @@index([tenantId, patientId, status])
+  @@index([tenantId, encounterId])
+}
+
+model ClinicalOrderItem {
+  id          String        @id @default(cuid())
+  orderId     String
+  order       ClinicalOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  code        String?
+  nameEn      String
+  nameAr      String        @default("")
+  resultValue String?
+  resultUnit  String?
+  resultFlag  String?
+  sortOrder   Int           @default(0)
+  createdAt   DateTime      @default(now())
+
+  @@index([orderId])
 }
 
 model Diagnosis {
