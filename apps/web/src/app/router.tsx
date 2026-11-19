@@ -5,6 +5,7 @@ import { ProtectedRoute } from "@/app/layouts/protected-route";
 import { RouteLoadingFallback } from "@/components/route-loading-fallback";
 import { LoginPage } from "@/features/auth/login-page";
 import { SignupPage } from "@/features/signup/signup-page";
+import { MarketingHomePage } from "@/features/marketing/marketing-home-page";
 import { LegalDocumentPage } from "@/features/legal/legal-document-page";
 import { ForgotPasswordPage } from "@/features/auth/forgot-password-page";
 import { ResetPasswordPage } from "@/features/auth/reset-password-page";
@@ -77,6 +78,8 @@ function defer(Page: LazyExoticComponent<ComponentType>) {
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
   { path: "/signup", element: <SignupPage /> },
+  { path: "/marketing", element: <MarketingHomePage /> },
+  { path: "/pricing", element: <MarketingHomePage /> },
   { path: "/legal/:docId", element: <LegalDocumentPage /> },
   { path: "/r/:token", element: <AppointmentReschedulePage /> },
   { path: "/pay/:token", element: <DepositPayPage /> },

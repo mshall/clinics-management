@@ -3693,5 +3693,26 @@
     "offlineSchedule": "Cached schedule",
     "offlineReadOnly": "Read-only while offline. Changes sync when you reconnect.",
     "backHome": "Back to home"
+  },
+  "marketing": {
+    "login": "Sign in",
+    "signup": "Start free",
+    "heroTitle": "Clinic software that pays for itself with Kiorex",
+    "heroBody": "Run your practice in Arabic and English. Book, chart, and collect — then fill empty slots from Kiorex.",
+    "ctaSignup": "Create clinic",
+    "ctaPricing": "See pricing",
+    "ctaDemo": "Book a demo",
+    "foundingLeft": "{{count}} founding seats left",
+    "specialtiesTitle": "Built for your specialty",
+    "specialtiesBody": "Templates and flows for Egypt’s most common clinic types.",
+    "pricingTitle": "Pricing",
+    "pricingBody": "Live prices from the Kiorly catalog for your market — never hardcoded.",
+    "calcTitle": "How many Kiorex patients make Kiorly free?",
+    "calcBody": "Commission from attended Kiorex patients can offset your monthly plan. Fee comes from the public Kiorex rate card.",
+    "calcPlan": "Plan",
+    "calcPatients": "Kiorex patients / month",
+    "calcFee": "Fee / patient",
+    "calcBreakeven": "Break-even",
+    "calcNet": "Net SaaS after offset"
   }
 }
