@@ -44,6 +44,10 @@ export const ClaimsWorkspacePage = lazyNamed(
   () => import("@/features/front-desk/claims-workspace-page"),
   "ClaimsWorkspacePage",
 );
+export const AiReceptionistInboxPage = lazyNamed(
+  () => import("@/features/messaging/ai-receptionist-inbox-page"),
+  "AiReceptionistInboxPage",
+);
 export const WaitingRoomPage = lazyNamed(
   () => import("@/features/front-desk/waiting-room-page"),
   "WaitingRoomPage",

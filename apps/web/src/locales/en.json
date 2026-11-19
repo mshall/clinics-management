@@ -3826,5 +3826,22 @@
     "import": "Import & match",
     "remittanceImported": "Remittance imported — {{pct}}% matched",
     "remitJsonInvalid": "Remittance JSON is invalid"
+  },
+  "aiReceptionist": {
+    "title": "AI receptionist",
+    "subtitle": "Egyptian Arabic WhatsApp receptionist — booking, hours, prices; clinical questions hand over to staff.",
+    "denied": "Messaging is not enabled for your plan.",
+    "inbox": "Conversation inbox",
+    "inboxHint": "Recent patient turns handled by the WhatsApp AI receptionist.",
+    "filter": "Filter",
+    "filterAll": "All turns",
+    "filterHandover": "Handed over only",
+    "when": "When",
+    "phone": "Phone",
+    "intent": "Intent",
+    "inbound": "Patient",
+    "reply": "Reply",
+    "handedOver": "Handover",
+    "empty": "No conversations yet."
   }
 }

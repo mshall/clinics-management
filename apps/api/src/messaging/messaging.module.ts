@@ -29,6 +29,8 @@ import { EmailService } from "./email.service";
 import { EmailOutboxService } from "./email-outbox.service";
 import { EmailBounceController } from "./email-bounce.controller";
 import { ScheduledReportsService } from "./scheduled-reports.service";
+import { WhatsAppAiReceptionistController } from "./whatsapp-ai-receptionist.controller";
+import { WhatsAppAiReceptionistService } from "./whatsapp-ai-receptionist.service";
 
 @Module({
   imports: [AuditModule, forwardRef(() => SchedulingModule), PatientsModule, SupportModule],
@@ -39,6 +41,7 @@ import { ScheduledReportsService } from "./scheduled-reports.service";
     InstallmentRemindersController,
     DigestsController,
     EmailBounceController,
+    WhatsAppAiReceptionistController,
   ],
   providers: [
     WaitlistAutofillService,
@@ -53,6 +56,7 @@ import { ScheduledReportsService } from "./scheduled-reports.service";
     WhatsAppSendService,
     WhatsAppWebhookService,
     WhatsAppInboundRepliesService,
+    WhatsAppAiReceptionistService,
     OutboxEventService,
     OutboxDeliveryService,
     OutboxDispatcherService,

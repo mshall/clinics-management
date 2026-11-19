@@ -124,7 +124,9 @@ describe("GT-04 support ops & first-response SLA", () => {
     const audit = { recordEvent: async () => undefined } as unknown as AuditService;
     const consent = { revokeAllWhatsAppForPhone: async () => 0 } as unknown as MessagingConsentService;
     const inbound = {} as WhatsAppInboundRepliesService;
-    const webhook = new WhatsAppWebhookService(prismaSvc, audit, inbound, consent, support);
+    const webhook = new WhatsAppWebhookService(prismaSvc, audit, inbound, consent, support, {
+      handleInboundText: async () => null,
+    } as never);
     const msgId = `wamid.support.${suffix}`;
     const result = await webhook.handlePayload({
       entry: [

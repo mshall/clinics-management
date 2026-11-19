@@ -180,6 +180,11 @@ export function FrontDeskBoardPage() {
             </Link>
           </Button>
           <Button asChild variant="outline" size="sm">
+            <Link to="/messaging/ai-receptionist" data-testid="ai-receptionist-link">
+              {t("aiReceptionist.title", "AI receptionist")}
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
             <Link to={`/front-desk/waiting-room?clinicId=${activeClinic}`} target="_blank">
               {t("frontDesk.waitingScreen", "Waiting-room screen")}
             </Link>
