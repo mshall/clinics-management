@@ -139,3 +139,6 @@ Tests: `sb06-price-indexation.node.test.ts`, `sb06-price-indexation.integration.
 - Signup + Kiorly billing invoices (`KiorlyInvoice`) charging against subscribed `planPrice`.
 - Public marketing site consuming `GET /public/plans`.
 - See **[AUDIT_BILLING.md](./AUDIT_BILLING.md)** — SC-07 billing audit catalog, `GET /admin/platform/audit`, platform org Audit tab.
+## Marketing site (GT-01)
+
+Public `/marketing` and `/pricing` (same page). Plans from `GET /public/plans`, Kiorex fees from `GET /public/kiorex-fees`, founding seats from `GET /public/cohorts/FOUNDING_EG/remaining`. Calculator: ceil(monthly plan / fee). Display amounts are the API amount strings unchanged.
