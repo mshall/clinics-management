@@ -17,6 +17,32 @@ import {
 } from "./provider-profile-schema";
 import type { PutProviderProfileDto } from "./dto/put-provider-profile.dto";
 
+export type PublishedFee = {
+  appointmentTypeId: string;
+  nameEn: string;
+  nameAr: string;
+  amount: number;
+  currency: string;
+  /** KXM-PAY-01: the clinic's deposit for this visit type (null = none). Kiorex requires it before confirming payment. */
+  depositAmount: number | null;
+};
+
+export function publishedFee(
+  t: { id: string; nameEn: string; nameAr: string; feeAmount: unknown; depositAmount?: unknown },
+  profileFee: unknown,
+  currency: string,
+): PublishedFee {
+  const dep = t.depositAmount == null ? null : Number(t.depositAmount);
+  return {
+    appointmentTypeId: t.id,
+    nameEn: t.nameEn,
+    nameAr: t.nameAr,
+    amount: Number(profileFee ?? t.feeAmount),
+    currency,
+    depositAmount: dep != null && dep > 0 ? dep : null,
+  };
+}
+
 export type ProviderProfileEditorDto = {
   listingId: string;
   clinicId: string;
@@ -49,7 +75,7 @@ export type PublishedProviderDto = {
   completenessPercent: number;
   updatedAt: string;
   provider: ProviderProfileJson & {
-    fees: { appointmentTypeId: string; nameEn: string; nameAr: string; amount: number; currency: string }[];
+    fees: PublishedFee[];
     payers: { id: string; nameEn: string; nameAr: string }[];
   };
   clinic: {
@@ -246,7 +272,7 @@ export class MarketplaceProviderProfileService {
           isActive: true,
           OR: [{ clinicId: row.clinicId }, { clinicId: null }],
         },
-        select: { id: true, nameEn: true, nameAr: true, feeAmount: true },
+        select: { id: true, nameEn: true, nameAr: true, feeAmount: true, depositAmount: true },
       }),
       profile.acceptedPayerIds?.length
         ? this.prisma.payerCompany.findMany({
@@ -257,13 +283,7 @@ export class MarketplaceProviderProfileService {
     ]);
 
     const completenessPercent = await this.completenessForListing(row);
-    const fees = types.map((t) => ({
-      appointmentTypeId: t.id,
-      nameEn: t.nameEn,
-      nameAr: t.nameAr,
-      amount: Number(profile.feesByAppointmentTypeId?.[t.id] ?? t.feeAmount),
-      currency: clinic.defaultCurrency,
-    }));
+    const fees = types.map((t) => publishedFee(t, profile.feesByAppointmentTypeId?.[t.id], clinic.defaultCurrency));
 
     return {
       listingId: row.id,
