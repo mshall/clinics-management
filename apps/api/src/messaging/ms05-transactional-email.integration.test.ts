@@ -17,7 +17,8 @@ describe("MS-05 transactional email integration", () => {
     const tenant = await prisma.tenant.findFirst({ where: { status: "ACTIVE" }, orderBy: { createdAt: "asc" } });
     assert.ok(tenant, "seeded tenant required");
     tenantId = tenant.id;
-    email = new EmailService(prisma as never, new DevEmailProvider());
+    email = new EmailService(prisma as never);
+    email.useProvider(new DevEmailProvider());
     outbox = new EmailOutboxService(email);
   });
 

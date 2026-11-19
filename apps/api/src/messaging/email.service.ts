@@ -22,13 +22,13 @@ export type SendTransactionalEmailInput = {
 @Injectable()
 export class EmailService {
   private readonly log = new Logger(EmailService.name);
-  private readonly provider: EmailProvider;
+  private provider: EmailProvider = createEmailProvider();
 
-  constructor(
-    private readonly prisma: PrismaService,
-    provider?: EmailProvider,
-  ) {
-    this.provider = provider ?? createEmailProvider();
+  constructor(private readonly prisma: PrismaService) {}
+
+  /** Test seam — Nest must not DI the provider (interface → Object metadata). */
+  useProvider(provider: EmailProvider) {
+    this.provider = provider;
   }
 
   /** Send a bilingual transactional email and persist EmailMessage for bounce tracking. */
