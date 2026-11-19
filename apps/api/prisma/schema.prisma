@@ -868,6 +868,23 @@ model StaffDigestPreference {
   @@index([tenantId])
 }
 
+/// RP-02 — weekly Excel/PDF report delivery to owners (email + WhatsApp).
+model TenantReportSchedule {
+  tenantId         String   @id
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  enabled          Boolean  @default(true)
+  /// xlsx | pdf
+  format           String   @default("xlsx")
+  /// JSON string array of report keys (e.g. ["payments","operations"]).
+  reportKeys       Json     @default("[\"payments\",\"operations\"]")
+  channelEmail     Boolean  @default(true)
+  channelWhatsApp  Boolean  @default(true)
+  /// ISO day of week 1=Monday … 7=Sunday.
+  dayOfWeek        Int      @default(1)
+  hourLocal        Int      @default(9)
+  updatedAt        DateTime @updatedAt
+}
+
 /// MS-04 — in-app owner/doctor notices (CR-07 progress, monthly recap, weekly insights).
 model StaffInAppNotice {
   id        String    @id @default(cuid())
@@ -1181,6 +1198,7 @@ model Tenant {
   entitlementOverrides           TenantEntitlementOverride[]
   paymentChannels                TenantPaymentChannel[]
   userMoneyVisibilityOverrides   UserMoneyVisibilityOverride[]
+  reportSchedule                 TenantReportSchedule?
   salesRepCode                   String?
   referralCode                   String?
   creditWallet                   CreditWallet?

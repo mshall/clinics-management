@@ -64,6 +64,12 @@ const DEFAULT_TEMPLATES: { key: string; channel: MessageChannel; bodyEn: string;
       "{{name}}، هذا الأسبوع: {{visits}} زيارة، تحصيل {{revenue}}، {{noshows}} غياب، {{kiorex}} مريض كيوركس، كيورلي مجاني {{progress}}٪.",
   },
   {
+    key: "owner_scheduled_report",
+    channel: MessageChannel.WHATSAPP,
+    bodyEn: "{{name}}, your weekly clinic reports ({{keys}}, {{format}}) are ready in Kiorly Reports.",
+    bodyAr: "{{name}}، تقاريرك الأسبوعية ({{keys}}، {{format}}) جاهزة في تقارير كيورلي.",
+  },
+  {
     key: "kiorex_progress_nudge",
     channel: MessageChannel.WHATSAPP,
     bodyEn: "{{name}}: Kiorex progress reached {{threshold}}% toward free Kiorly for {{period}}.",
