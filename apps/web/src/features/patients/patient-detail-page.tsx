@@ -149,6 +149,15 @@ export function PatientDetailPage() {
 
   const handleCreateEncounter = () => {
     if (createEncounter.isPending) return;
+    if (patient?.profileComplete === false) {
+      encounterValidation.showIssues([
+        t(
+          "patients.errorProfileIncompleteForEncounter",
+          "Complete this patient profile before starting an encounter.",
+        ),
+      ]);
+      return;
+    }
     const issues = collectQuickEncounterIssues({ clinicId: defaultClinicId }, t);
     if (issues.length > 0) {
       encounterValidation.showIssues(issues);
@@ -281,13 +290,15 @@ export function PatientDetailPage() {
               </Button>
               {canEditPatient ? (
                 <Button type="button" variant="outline" onClick={() => setEditOpen(true)}>
-                  {t("patients.editPatient", "Edit patient")}
+                  {patient.profileComplete === false
+                    ? t("patients.completeProfile", "Complete profile")
+                    : t("patients.editPatient", "Edit patient")}
                 </Button>
               ) : null}
               {canViewEncounters ? (
                 <Button
                   type="button"
-                  disabled={createEncounter.isPending}
+                  disabled={createEncounter.isPending || patient.profileComplete === false}
                   onClick={handleCreateEncounter}
                 >
                   {t("patients.newEncounter")}

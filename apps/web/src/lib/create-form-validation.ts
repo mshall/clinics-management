@@ -30,12 +30,26 @@ export function collectAppointmentCreateIssues(
     start: string;
     end: string;
     openingTime?: string;
+    /** When true, require provisional name + phone instead of an existing patientId. */
+    newPatientMode?: boolean;
+    provisionalFirstName?: string;
+    provisionalLastName?: string;
+    provisionalPhone?: string;
   },
   t: TFunction,
 ): string[] {
   const issues: string[] = [];
   if (!input.clinicId.trim()) issues.push(t("appointments.errorClinicRequired", "Select a clinic."));
-  if (!input.patientId.trim()) issues.push(t("appointments.errorPatientRequired", "Select a patient."));
+  if (input.newPatientMode) {
+    if (!input.provisionalFirstName?.trim() || !input.provisionalLastName?.trim()) {
+      issues.push(t("appointments.errorProvisionalNameRequired", "Enter the new patient's first and last name."));
+    }
+    if (!input.provisionalPhone?.trim()) {
+      issues.push(t("appointments.errorProvisionalPhoneRequired", "Enter a phone number for the new patient."));
+    }
+  } else if (!input.patientId.trim()) {
+    issues.push(t("appointments.errorPatientRequired", "Select a patient."));
+  }
   if (!input.clinicianId.trim()) issues.push(t("appointments.errorClinicianRequired", "Select a clinician."));
   if (!input.start.trim()) {
     issues.push(t("appointments.errorStartRequired", "Start date/time is required."));

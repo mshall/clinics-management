@@ -19,6 +19,7 @@ function appointmentsService(entitled: Set<string>) {
     {} as never,
     {} as never,
     {} as never,
+    {} as never,
     { isEntitled: async (_t: string, key: string) => entitled.has(key) } as never,
     { settleAppointmentDepositsTx: async () => ({ outcome: "WAIT", settled: 0 }) } as never,
   );

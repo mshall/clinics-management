@@ -50,6 +50,11 @@ export class PatientDto {
   @ApiPropertyOptional({ description: "ON-08 demo patient (excluded from reports, revenue, commissions and messages)" })
   isSample?: boolean;
 
+  @ApiPropertyOptional({
+    description: "False for provisional first-visit charts created at booking; must be completed before check-in/encounter",
+  })
+  profileComplete?: boolean;
+
   @ApiPropertyOptional({ description: "Whether a national ID / SSN scan is on file" })
   hasNationalIdDoc?: boolean;
 

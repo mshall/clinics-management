@@ -7,11 +7,24 @@ import { PatientsService } from "./patients.service";
 import { Patient360Service } from "./patient-360.service";
 import { MessagingConsentService } from "./messaging-consent.service";
 import { NewPatientService } from "./new-patient.service";
+import { ProvisionalPatientService } from "./provisional-patient.service";
 
 @Module({
   imports: [AuditModule, ComplianceModule, UserNavTabsModule],
   controllers: [PatientsController],
-  providers: [PatientsService, Patient360Service, MessagingConsentService, NewPatientService],
-  exports: [PatientsService, Patient360Service, MessagingConsentService, NewPatientService],
+  providers: [
+    PatientsService,
+    Patient360Service,
+    MessagingConsentService,
+    NewPatientService,
+    ProvisionalPatientService,
+  ],
+  exports: [
+    PatientsService,
+    Patient360Service,
+    MessagingConsentService,
+    NewPatientService,
+    ProvisionalPatientService,
+  ],
 })
 export class PatientsModule {}

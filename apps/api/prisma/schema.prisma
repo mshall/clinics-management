@@ -1765,6 +1765,8 @@ model Patient {
   needsChaperone       Boolean  @default(false)
   /// ON-08 — "Try with sample patient": excluded from reports, never revenue, commissions or messages.
   isSample             Boolean  @default(false)
+  /// False for quick-book first-visit placeholders: appointment allowed; check-in/encounter/complete blocked until staff finish registration.
+  profileComplete      Boolean  @default(true)
   dataProtectionConsents PatientDataProtectionConsent[]
   consents             PatientConsent[]
   messagingConsents      MessagingConsent[]

@@ -4,12 +4,18 @@ import { Badge } from "@/components/ui/badge";
 type Props = {
   bookingSource?: string | null;
   isNewPatientAtBooking?: boolean | null;
+  patientProfileComplete?: boolean | null;
   className?: string;
 };
 
-export function AppointmentSourceBadges({ bookingSource, isNewPatientAtBooking, className }: Props) {
+export function AppointmentSourceBadges({
+  bookingSource,
+  isNewPatientAtBooking,
+  patientProfileComplete,
+  className,
+}: Props) {
   const { t } = useTranslation();
-  if (!bookingSource && isNewPatientAtBooking == null) return null;
+  if (!bookingSource && isNewPatientAtBooking == null && patientProfileComplete !== false) return null;
 
   const isKiorex =
     bookingSource === "KIOREX_MARKETPLACE" || bookingSource === "KIOREX_WHATSAPP";
@@ -29,6 +35,11 @@ export function AppointmentSourceBadges({ bookingSource, isNewPatientAtBooking, 
       {isNewPatientAtBooking ? (
         <Badge variant="default" className="font-normal text-xs">
           {t("appointments.newPatientChip", "New")}
+        </Badge>
+      ) : null}
+      {patientProfileComplete === false ? (
+        <Badge variant="outline" className="border-amber-500/60 font-normal text-xs text-amber-800 dark:text-amber-200">
+          {t("appointments.profileIncompleteChip", "Profile incomplete")}
         </Badge>
       ) : null}
     </span>

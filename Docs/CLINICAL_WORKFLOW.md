@@ -2,6 +2,10 @@
 
 Configurable specialty forms, physician shortcuts, safety checks, vitals trends, generated letters, and note locking — built on the existing **SOAP** encounter editor.
 
+## First-visit booking without a full patient chart
+
+Staff can book an appointment for a **new patient** with name + phone only (`provisionalPatient` on `POST /appointments`). That creates a provisional `Patient` (`profileComplete=false`) and stamps `isNewPatientAtBooking` as usual. **Check-in, encounter create, and marking the appointment completed** are blocked until staff finish registration (patient edit with `completeProfile`). Existing patients are unchanged (`profileComplete=true`).
+
 ## Template builder
 
 - **API:** `GET/POST /api/v1/clinical/form-templates` (`?clinicId=` on list); `DELETE /api/v1/clinical/form-templates/:id` for clinic-only customs.

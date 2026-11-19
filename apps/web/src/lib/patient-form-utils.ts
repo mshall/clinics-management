@@ -77,6 +77,7 @@ export function collectPatientDemographicsValidationIssues(
 
 export function demographicsFormToPatchBody(
   values: PatientDemographicsFormValues,
+  opts?: { completeProfile?: boolean },
 ): Record<string, string | boolean | undefined> {
   return {
     firstNameEn: values.firstNameEn.trim(),
@@ -91,6 +92,7 @@ export function demographicsFormToPatchBody(
     homeBranchId: values.homeBranchId || undefined,
     isVip: values.isVip,
     needsChaperone: values.needsChaperone,
+    ...(opts?.completeProfile ? { completeProfile: true } : {}),
     ...patientAcquisitionFormToBody(values.acquisition),
   };
 }

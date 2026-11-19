@@ -124,6 +124,7 @@ export class PatientsService {
     isVip: boolean;
     needsChaperone: boolean;
     isSample?: boolean;
+    profileComplete?: boolean;
     homeBranch: { nameEn: string } | null;
     documents?: {
       id: string;
@@ -161,6 +162,7 @@ export class PatientsService {
     dto.isVip = p.isVip;
     dto.needsChaperone = p.needsChaperone;
     dto.isSample = p.isSample === true;
+    dto.profileComplete = p.profileComplete !== false;
     if (opts?.includeDocuments && p.documents) {
       dto.documents = p.documents.map((d) => this.mapDoc(d));
     }
@@ -457,6 +459,7 @@ export class PatientsService {
         homeBranchId: dto.homeBranchId ?? null,
         isVip: dto.isVip ?? false,
         needsChaperone: dto.needsChaperone ?? false,
+        profileComplete: true,
         allergies: allergyInputs.length
           ? {
               create: allergyInputs.map((a) => ({
@@ -610,6 +613,31 @@ export class PatientsService {
       }
       if (dto.acquisitionOtherDetail !== undefined) {
         data.acquisitionOtherDetail = dto.acquisitionOtherDetail?.trim() || null;
+      }
+    }
+
+    if (dto.completeProfile === true || (!existing.profileComplete && dto.gender && dto.gender !== Gender.UNKNOWN)) {
+      const nextGender = (dto.gender ?? existing.gender) as Gender;
+      const nextFirstAr = (dto.firstNameAr ?? existing.firstNameAr ?? "").trim();
+      const nextLastAr = (dto.lastNameAr ?? existing.lastNameAr ?? "").trim();
+      const nextFirstEn = (dto.firstNameEn ?? existing.firstNameEn).trim();
+      const nextLastEn = (dto.lastNameEn ?? existing.lastNameEn).trim();
+      const nextPhone = (dto.phone ?? existing.phone).trim();
+      if (!nextFirstEn || !nextLastEn || !nextFirstAr || !nextLastAr || !nextPhone) {
+        throw new BadRequestException("Complete patient names and phone before finishing the profile");
+      }
+      if (nextGender === Gender.UNKNOWN) {
+        throw new BadRequestException("Select patient gender before finishing the profile");
+      }
+      data.profileComplete = true;
+      if (!dto.acquisitionChannel && !existing.acquisitionChannel) {
+        Object.assign(
+          data,
+          patientAcquisitionUpdateData({
+            acquisitionChannel: PatientAcquisitionChannel.OTHER,
+            acquisitionOtherDetail: "Completed after provisional booking",
+          }),
+        );
       }
     }
 

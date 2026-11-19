@@ -18,6 +18,11 @@ export class AppointmentDto {
   @ApiProperty()
   patientId!: string;
 
+  @ApiPropertyOptional({
+    description: "False when the linked patient is a provisional first-visit chart; complete registration before check-in/encounter/complete",
+  })
+  patientProfileComplete?: boolean;
+
   @ApiProperty()
   clinicianId!: string;
 

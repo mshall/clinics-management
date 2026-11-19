@@ -14,6 +14,7 @@ import type { JwtUser } from "../auth/jwt-user";
 import { parseFrontDeskRoomLabels } from "../common/front-desk-room-labels";
 import { PrismaService } from "../prisma/prisma.service";
 import { PatientsService } from "../patients/patients.service";
+import { assertPatientProfileComplete } from "../patients/patient-profile.guard";
 import {
   collectEncounterVisitFeeBalance,
   getEncounterVisitFeeReceivableSummary,
@@ -82,6 +83,7 @@ export class FrontDeskService {
     if (apt.status === AppointmentStatus.CANCELLED || apt.status === AppointmentStatus.COMPLETED) {
       throw new BadRequestException("Cannot check in this appointment");
     }
+    await assertPatientProfileComplete(this.prisma, tenantId, apt.patientId);
 
     if (body.consentCapture) {
       await this.consent.captureCheckInBundle(tenantId, apt.patientId, user.userId, body.consentCapture);

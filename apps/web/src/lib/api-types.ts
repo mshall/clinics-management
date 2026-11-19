@@ -202,6 +202,8 @@ export interface AppointmentDto {
   clinicNameEn?: string | null;
   clinicNameAr?: string | null;
   patientId: string;
+  /** False when the patient chart is provisional (first-visit quick book). */
+  patientProfileComplete?: boolean;
   clinicianId: string;
   /** Employee first/last when linked, else user displayName */
   clinicianName?: string | null;

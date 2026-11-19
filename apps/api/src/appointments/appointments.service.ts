@@ -46,6 +46,8 @@ import type { AppointmentDto } from "./dto/appointment.dto";
 import type { UpdateAppointmentDto } from "./dto/update-appointment.dto";
 import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 import { NewPatientService } from "../patients/new-patient.service";
+import { ProvisionalPatientService } from "../patients/provisional-patient.service";
+import { assertPatientProfileComplete } from "../patients/patient-profile.guard";
 import { isCommissionChargeableBooking } from "./booking-attribution";
 import { CommissionChargeService, type BilledReversalCreditIntent } from "../kiorex/commission-charge.service";
 import { AppointmentOutboxService } from "../messaging/appointment-outbox.service";
@@ -53,7 +55,16 @@ import { DepositSettlementService } from "../billing/deposit-settlement.service"
 import { auditClinicCancellation, clinicCancellationEventMetadata, clinicCancellationPatch } from "./kiorex-clinic-cancel";
 
 const appointmentDtoInclude = {
-  patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true, noShowCount: true, requiresAppointmentDeposit: true } },
+  patient: {
+    select: {
+      mrn: true,
+      firstNameEn: true,
+      lastNameEn: true,
+      noShowCount: true,
+      requiresAppointmentDeposit: true,
+      profileComplete: true,
+    },
+  },
   clinic: { select: { nameEn: true, nameAr: true } },
   clinician: {
     select: {
@@ -78,6 +89,7 @@ export class AppointmentsService {
     private readonly frontDeskFlow: FrontDeskFlowService,
     private readonly featureFlags: FeatureFlagsService,
     private readonly newPatients: NewPatientService,
+    private readonly provisionalPatients: ProvisionalPatientService,
     private readonly commissionCharges: CommissionChargeService,
     private readonly slots: SlotService,
     private readonly appointmentOutbox: AppointmentOutboxService,
@@ -190,6 +202,7 @@ export class AppointmentsService {
       clinicNameEn: row.clinic?.nameEn ?? null,
       clinicNameAr: row.clinic?.nameAr ?? null,
       patientId: row.patientId,
+      patientProfileComplete: patient?.profileComplete ?? true,
       clinicianId: row.clinicianId,
       clinicianName: clinicianParts.display,
       clinicianFirstNameEn: clinicianParts.firstNameEn,
@@ -663,9 +676,27 @@ export class AppointmentsService {
     },
     actor?: JwtUser,
   ): Promise<AppointmentDto> {
+    const hasPatientId = Boolean(dto.patientId?.trim());
+    const hasProvisional = Boolean(dto.provisionalPatient);
+    if (hasPatientId === hasProvisional) {
+      throw new BadRequestException(
+        "Provide either patientId or provisionalPatient (not both) when booking an appointment",
+      );
+    }
+
+    let patientId = dto.patientId?.trim() ?? "";
+    if (dto.provisionalPatient) {
+      const resolved = await this.provisionalPatients.resolveOrCreateProvisional(
+        tenantId,
+        dto.clinicId,
+        dto.provisionalPatient,
+      );
+      patientId = resolved.patientId;
+    }
+
     const [clinic, patient, clinician] = await Promise.all([
       this.prisma.clinic.findFirst({ where: { id: dto.clinicId, tenantId } }),
-      this.prisma.patient.findFirst({ where: { id: dto.patientId, tenantId, deletedAt: null } }),
+      this.prisma.patient.findFirst({ where: { id: patientId, tenantId, deletedAt: null } }),
       findActiveSchedulingPhysician(this.prisma, tenantId, dto.clinicianId),
     ]);
     if (!clinic || !patient || !clinician) throw new BadRequestException("Invalid clinic, patient, or clinician");
@@ -681,7 +712,7 @@ export class AppointmentsService {
         effective = await this.scheduling.assertAppointmentTypeBookingRules(
           tenantId,
           dto.clinicId,
-          dto.patientId,
+          patientId,
           dto.clinicianId.trim(),
           dto.appointmentTypeId,
           start,
@@ -745,13 +776,13 @@ export class AppointmentsService {
       (integration.integrationClientId ? BookingSource.INTEGRATION : BookingSource.FRONT_DESK);
     const attributionJson =
       integration.attributionJson ?? dto.attributionJson ?? null;
-    const newPatientStamp = await this.newPatients.stampNewPatientAtBooking(tenantId, dto.patientId, start);
+    const newPatientStamp = await this.newPatients.stampNewPatientAtBooking(tenantId, patientId, start);
 
     const row = await this.prisma.appointment.create({
       data: {
         tenantId,
         clinicId: dto.clinicId,
-        patientId: dto.patientId,
+        patientId,
         clinicianId: dto.clinicianId,
         appointmentTypeId: dto.appointmentTypeId ?? null,
         seriesId: dto.seriesId ?? null,
@@ -802,6 +833,9 @@ export class AppointmentsService {
     await this.assertAppointmentAccess(viewer, existing);
     if (existing.status === AppointmentStatus.COMPLETED) {
       throw new BadRequestException("Cannot change status of a completed appointment");
+    }
+    if (status === AppointmentStatus.COMPLETED || status === AppointmentStatus.CHECKED_IN) {
+      await assertPatientProfileComplete(this.prisma, tenantId, existing.patientId);
     }
     if (status === AppointmentStatus.COMPLETED) {
       await assertNoOpenEncounterForAppointmentComplete(this.prisma, tenantId, id);
@@ -941,6 +975,12 @@ export class AppointmentsService {
     }
 
     const nextStatus = dto.status !== undefined ? dto.status : undefined;
+    if (
+      nextStatus === AppointmentStatus.COMPLETED ||
+      nextStatus === AppointmentStatus.CHECKED_IN
+    ) {
+      await assertPatientProfileComplete(this.prisma, tenantId, patientId);
+    }
     if (nextStatus === AppointmentStatus.COMPLETED) {
       await assertNoOpenEncounterForAppointmentComplete(this.prisma, tenantId, id);
       await assertScheduledTransferFeeCollected(this.prisma, tenantId, id);

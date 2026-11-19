@@ -261,7 +261,18 @@ export function AppointmentDetailPage() {
     },
   });
 
+  const profileIncomplete = apt?.patientProfileComplete === false;
+
   const tryMarkCompleted = () => {
+    if (profileIncomplete) {
+      toast.error(
+        t(
+          "appointments.errorProfileIncomplete",
+          "Complete the patient profile before marking this appointment complete.",
+        ),
+      );
+      return;
+    }
     if (apt?.openEncounterId) {
       setCompleteBlockedOpen(true);
       return;
@@ -271,6 +282,15 @@ export function AppointmentDetailPage() {
 
   const onSave = () => {
     if (!id || readOnly) return;
+    if (profileIncomplete && (status === "COMPLETED" || status === "CHECKED_IN")) {
+      const msg = t(
+        "appointments.errorProfileIncomplete",
+        "Complete the patient profile before check-in or completing this appointment.",
+      );
+      setFormErr(msg);
+      toast.error(msg);
+      return;
+    }
     if (status === "COMPLETED" && apt?.openEncounterId) {
       setCompleteBlockedOpen(true);
       return;
@@ -474,6 +494,7 @@ export function AppointmentDetailPage() {
           <AppointmentSourceBadges
             bookingSource={apt.bookingSource}
             isNewPatientAtBooking={apt.isNewPatientAtBooking}
+            patientProfileComplete={apt.patientProfileComplete}
           />
           {apt.whatsappConfirmedAt ? (
             <Badge variant="secondary" className="font-normal">
@@ -484,6 +505,19 @@ export function AppointmentDetailPage() {
           <DepositBadge deposit={apt.deposit} />
         </div>
       </div>
+      {profileIncomplete ? (
+        <div className="rounded-md border border-amber-500/50 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-950 dark:text-amber-100">
+          <p>
+            {t(
+              "appointments.profileIncompleteBanner",
+              "This is a first-visit booking with an incomplete patient profile. Finish registration before check-in, starting an encounter, or completing the appointment.",
+            )}
+          </p>
+          <Button asChild variant="outline" size="sm" className="mt-2">
+            <Link to={`/patients/${apt.patientId}`}>{t("appointments.completePatientProfile", "Complete patient profile")}</Link>
+          </Button>
+        </div>
+      ) : null}
       {apt.noShowRisk && apt.noShowRisk.band !== "LOW" ? (
         <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm" data-testid="no-show-risk-detail">
           <p className="text-muted-foreground">{noShowRiskExplanation(apt.noShowRisk, t)}</p>
@@ -506,13 +540,15 @@ export function AppointmentDetailPage() {
         </p>
       ) : null}
 
-      <QuickCheckInPanel
-        appointment={apt}
-        currency={resolveClinicCurrency(apt.clinicId) ?? "AED"}
-        examRoomOptions={
-          aptClinic?.frontDeskRoomLabels?.length ? aptClinic.frontDeskRoomLabels : ["Room 1", "Room 2", "Room 3"]
-        }
-      />
+      {!profileIncomplete ? (
+        <QuickCheckInPanel
+          appointment={apt}
+          currency={resolveClinicCurrency(apt.clinicId) ?? "AED"}
+          examRoomOptions={
+            aptClinic?.frontDeskRoomLabels?.length ? aptClinic.frontDeskRoomLabels : ["Room 1", "Room 2", "Room 3"]
+          }
+        />
+      ) : null}
       <AppointmentVisitFlowCard appointment={apt} />
       <OutboundMessageLog patientId={apt.patientId} appointmentId={apt.id} />
 
@@ -680,6 +716,15 @@ export function AppointmentDetailPage() {
                             if (status !== "COMPLETED") tryMarkCompleted();
                             return;
                           }
+                          if (code === "CHECKED_IN" && profileIncomplete) {
+                            toast.error(
+                              t(
+                                "appointments.errorProfileIncomplete",
+                                "Complete the patient profile before check-in or completing this appointment.",
+                              ),
+                            );
+                            return;
+                          }
                           if (code === status) return;
                           setStatus(code);
                           toastStatusDraft(code);
@@ -702,6 +747,15 @@ export function AppointmentDetailPage() {
                       const v = e.target.value;
                       if (v === "COMPLETED") {
                         tryMarkCompleted();
+                        return;
+                      }
+                      if (v === "CHECKED_IN" && profileIncomplete) {
+                        toast.error(
+                          t(
+                            "appointments.errorProfileIncomplete",
+                            "Complete the patient profile before check-in or completing this appointment.",
+                          ),
+                        );
                         return;
                       }
                       setStatus(v);

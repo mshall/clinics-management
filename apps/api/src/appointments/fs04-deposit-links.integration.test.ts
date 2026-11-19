@@ -29,6 +29,7 @@ const appointments = new AppointmentsService(
   {} as never,
   { isEnabled: async () => false } as never,
   {} as never,
+  {} as never,
   { onCancelOrNoShow: async () => null, applyCreditIntents: async () => undefined } as never,
   { invalidateAndNotify: async () => undefined } as never,
   new AppointmentOutboxService(new OutboxEventService(svc)),

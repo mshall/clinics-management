@@ -51,9 +51,14 @@ export function PatientEditDialog({ patient, open, onOpenChange }: PatientEditDi
     setPhoneConflict(null);
   }, [open, patient]);
 
+  const needsProfileCompletion = patient.profileComplete === false;
+
   const patchMut = useMutation({
     mutationFn: () =>
-      apiPatch<PatientDto>(`/api/v1/patients/${patient.id}`, demographicsFormToPatchBody(values)),
+      apiPatch<PatientDto>(
+        `/api/v1/patients/${patient.id}`,
+        demographicsFormToPatchBody(values, { completeProfile: needsProfileCompletion }),
+      ),
     onSuccess: () => {
       setFormErr(null);
       validation.clear();
@@ -63,6 +68,7 @@ export function PatientEditDialog({ patient, open, onOpenChange }: PatientEditDi
       void qc.invalidateQueries({ queryKey: ["admin", "org-patients"] });
       void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
       void qc.invalidateQueries({ queryKey: ["patient", patient.id, "header-alerts"] });
+      void qc.invalidateQueries({ queryKey: ["appointments"] });
     },
     onError: (e: unknown) => {
       const conflict = parsePhoneConflictFromError(e);
@@ -98,9 +104,21 @@ export function PatientEditDialog({ patient, open, onOpenChange }: PatientEditDi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto" aria-describedby={undefined}>
         <DialogHeader>
-          <DialogTitle>{t("patients.editPatientTitle", "Edit patient")}</DialogTitle>
+          <DialogTitle>
+            {needsProfileCompletion
+              ? t("patients.completeProfileTitle", "Complete patient profile")
+              : t("patients.editPatientTitle", "Edit patient")}
+          </DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-3 pt-1">
+          {needsProfileCompletion ? (
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+              {t(
+                "patients.completeProfileHint",
+                "This chart was created for a first-time booking. Finish registration before check-in, encounters, or completing the appointment.",
+              )}
+            </p>
+          ) : null}
           {formErr ? <p className="text-sm text-destructive">{formErr}</p> : null}
           <div className="space-y-2">
             <Label required>{t("patients.firstNameEn")}</Label>

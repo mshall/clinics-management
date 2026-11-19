@@ -50,6 +50,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { FrontDeskFlowService } from "../front-desk/front-desk-flow.service";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
 import { PatientsService } from "../patients/patients.service";
+import { assertPatientProfileComplete } from "../patients/patient-profile.guard";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { AddDiagnosisDto } from "./dto/add-diagnosis.dto";
 import type { AddEncounterMedicationDto } from "./dto/add-encounter-medication.dto";
@@ -419,6 +420,7 @@ export class EncountersService {
     ]);
     if (!clinic) throw new BadRequestException("Invalid clinicId");
     if (!patient) throw new BadRequestException("Invalid patientId");
+    await assertPatientProfileComplete(this.prisma, tenantId, dto.patientId);
 
     if (hasPatientAcquisitionInput(dto)) {
       validatePatientAcquisition(dto);

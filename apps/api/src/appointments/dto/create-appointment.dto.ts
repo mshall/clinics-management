@@ -1,17 +1,41 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { AppointmentStatus, BookingSource } from "@prisma/client";
 import { Type } from "class-transformer";
-import { IsBoolean, IsDateString, IsEnum, IsNumber, IsOptional, IsString, MaxLength, Min, ValidateNested } from "class-validator";
+import {
+  IsBoolean,
+  IsDateString,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+  ValidateIf,
+  ValidateNested,
+} from "class-validator";
 import { ScheduledFeeCollectionDto } from "../../common/dto/scheduled-fee-collection.dto";
+import { ProvisionalPatientDto } from "./provisional-patient.dto";
 
 export class CreateAppointmentDto {
   @ApiProperty()
   @IsString()
   clinicId!: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional({
+    description: "Existing patient id. Omit when provisionalPatient is provided for a first-time booking.",
+  })
+  @ValidateIf((o: CreateAppointmentDto) => !o.provisionalPatient)
   @IsString()
-  patientId!: string;
+  patientId?: string;
+
+  @ApiPropertyOptional({
+    type: ProvisionalPatientDto,
+    description: "Quick intake for a first-time visit without a finished patient profile",
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ProvisionalPatientDto)
+  provisionalPatient?: ProvisionalPatientDto;
 
   @ApiProperty()
   @IsString()

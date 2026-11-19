@@ -185,6 +185,10 @@ export function AppointmentsPage() {
   const isCallCenter = authUser?.role === "call_center";
   const bookHoursLocale = localeForLanguage(i18n.language);
   const [patientId, setPatientId] = useState("");
+  const [bookPatientMode, setBookPatientMode] = useState<"existing" | "new">("existing");
+  const [provisionalFirstName, setProvisionalFirstName] = useState("");
+  const [provisionalLastName, setProvisionalLastName] = useState("");
+  const [provisionalPhone, setProvisionalPhone] = useState("");
   const [clinicianId, setClinicianId] = useState("");
   const [pinnedPhysicianItem, setPinnedPhysicianItem] = useState<PickListItem | null>(null);
   useEffect(() => {
@@ -342,16 +346,28 @@ export function AppointmentsPage() {
     start,
     end,
     openingTime: clinicOpeningTime,
+    newPatientMode: bookPatientMode === "new",
+    provisionalFirstName,
+    provisionalLastName,
+    provisionalPhone,
   };
 
   const buildCreateBody = (confirmOverlap = false): Record<string, unknown> => {
     const startsAt = toAppointmentIso(start);
     const body: Record<string, unknown> = {
       clinicId,
-      patientId,
       clinicianId,
       startsAt,
     };
+    if (bookPatientMode === "new") {
+      body.provisionalPatient = {
+        firstNameEn: provisionalFirstName.trim(),
+        lastNameEn: provisionalLastName.trim(),
+        phone: provisionalPhone.trim(),
+      };
+    } else {
+      body.patientId = patientId;
+    }
     if (end.trim()) body.endsAt = toAppointmentIso(end);
     if (confirmOverlap) body.confirmOverlap = true;
     if (canSetAppointmentFees) {
@@ -416,6 +432,10 @@ export function AppointmentsPage() {
       toast.success(message);
       setPatientId("");
       setSelectedBookPatientItem(null);
+      setBookPatientMode("existing");
+      setProvisionalFirstName("");
+      setProvisionalLastName("");
+      setProvisionalPhone("");
       bookPatientPickSearch.resetSearch();
       setClinicianId(authUser?.role === "physician" && authUser.id ? authUser.id : "");
       setPinnedPhysicianItem(null);
@@ -625,30 +645,90 @@ export function AppointmentsPage() {
             </div>
             <div className="space-y-2 sm:col-span-2">
               <Label required>{t("appointments.patient")}</Label>
-              <p className="text-xs text-muted-foreground">{t("encounters.selectPatientHint")}</p>
-              <SearchablePickList
-                items={bookPatientItems}
-                value={patientId}
-                selectedItem={bookPatientSelectedItem}
-                onValueChange={(id, item) => {
-                  setPatientId(id);
-                  if (item) setSelectedBookPatientItem(item);
-                  else {
-                    const fromList = bookPatientItems.find((p) => p.value === id);
-                    if (fromList) setSelectedBookPatientItem(fromList);
-                  }
-                }}
-                onSearchQueryChange={bookPatientPickSearch.setSearch}
-                onOpen={bookPatientPickSearch.handleOpen}
-                searchPlaceholder={t("encounters.patientSearchPlaceholder")}
-                placeholder={t("appointments.pick")}
-                emptyMessage={
-                  bookPatientsPending ? t("common.loading") : t("encounters.noPatientsMatch", "No patients match.")
-                }
-                localFilter={false}
-                minSearchLength={1}
-                idleMessage={t("encounters.patientSearchIdle", "Start typing to show matching patients.")}
-              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={bookPatientMode === "existing" ? "default" : "outline"}
+                  onClick={() => setBookPatientMode("existing")}
+                >
+                  {t("appointments.existingPatient", "Existing patient")}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={bookPatientMode === "new" ? "default" : "outline"}
+                  onClick={() => {
+                    setBookPatientMode("new");
+                    setPatientId("");
+                    setSelectedBookPatientItem(null);
+                  }}
+                >
+                  {t("appointments.newPatientBooking", "New patient (first visit)")}
+                </Button>
+              </div>
+              {bookPatientMode === "existing" ? (
+                <>
+                  <p className="text-xs text-muted-foreground">{t("encounters.selectPatientHint")}</p>
+                  <SearchablePickList
+                    items={bookPatientItems}
+                    value={patientId}
+                    selectedItem={bookPatientSelectedItem}
+                    onValueChange={(id, item) => {
+                      setPatientId(id);
+                      if (item) setSelectedBookPatientItem(item);
+                      else {
+                        const fromList = bookPatientItems.find((p) => p.value === id);
+                        if (fromList) setSelectedBookPatientItem(fromList);
+                      }
+                    }}
+                    onSearchQueryChange={bookPatientPickSearch.setSearch}
+                    onOpen={bookPatientPickSearch.handleOpen}
+                    searchPlaceholder={t("encounters.patientSearchPlaceholder")}
+                    placeholder={t("appointments.pick")}
+                    emptyMessage={
+                      bookPatientsPending ? t("common.loading") : t("encounters.noPatientsMatch", "No patients match.")
+                    }
+                    localFilter={false}
+                    minSearchLength={1}
+                    idleMessage={t("encounters.patientSearchIdle", "Start typing to show matching patients.")}
+                  />
+                </>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <p className="text-xs text-muted-foreground sm:col-span-2">
+                    {t(
+                      "appointments.provisionalBookingHint",
+                      "Book with name and phone only. Finish the patient profile before check-in, starting an encounter, or marking the visit complete. No-shows never require a full chart.",
+                    )}
+                  </p>
+                  <div className="space-y-2">
+                    <Label required>{t("patients.firstNameEn")}</Label>
+                    <Input
+                      value={provisionalFirstName}
+                      onChange={(e) => setProvisionalFirstName(e.target.value)}
+                      autoComplete="given-name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label required>{t("patients.lastNameEn")}</Label>
+                    <Input
+                      value={provisionalLastName}
+                      onChange={(e) => setProvisionalLastName(e.target.value)}
+                      autoComplete="family-name"
+                    />
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label required>{t("patients.phone")}</Label>
+                    <Input
+                      value={provisionalPhone}
+                      onChange={(e) => setProvisionalPhone(e.target.value)}
+                      autoComplete="tel"
+                      inputMode="tel"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
             <div className="space-y-2 sm:col-span-2">
               <Label required>{t("appointments.clinician")}</Label>
