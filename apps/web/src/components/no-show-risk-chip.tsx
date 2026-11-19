@@ -1,3 +1,4 @@
+import { isFlagOn, useEffectiveFlags } from "@/features/flags/use-effective-flags";
 import { useTranslation } from "react-i18next";
 import { badgeVariants } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -20,7 +21,8 @@ type Props = {
 /** FS-05 low / medium / high chip; the label always states how the estimate was made. */
 export function NoShowRiskChip({ risk, className, interactive = true }: Props) {
   const { t } = useTranslation();
-  if (!risk) return null;
+  const { data: flags } = useEffectiveFlags();
+  if (!risk || !isFlagOn(flags, "clinic.no_show_risk")) return null;
   const explanation = noShowRiskExplanation(risk, t);
   const suggestion = noShowRiskSuggestionText(risk, t);
   const chipClass = cn(

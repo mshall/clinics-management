@@ -3906,5 +3906,25 @@
     "save": "حفظ",
     "saved": "تم حفظ إعدادات الطباعة",
     "previewTicket": "معاينة تذكرة الانتظار"
+  },
+  "flags": {
+    "managedBanner": "تُدار من لوحة مدير كيوريكس العام",
+    "snapshotInfo": "اللقطة v{{version}} · عمرها {{age}} ثانية",
+    "noSnapshotYet": "بانتظار أول لقطة؛ تُطبَّق الإعدادات الافتراضية.",
+    "snapshotStale": "اللقطة قديمة",
+    "temporarilyUnavailable": "هذه الميزة غير متاحة مؤقتًا.",
+    "readOnly": "للقراءة فقط",
+    "source": "المصدر",
+    "sourcedefault": "افتراضي (وراثة التفعيل)",
+    "sourceglobal": "متوقفة على مستوى المنصة",
+    "sourcemarket": "متوقفة على مستوى السوق",
+    "sourceorg": "متوقفة لمؤسستك",
+    "sourceplan": "غير متاحة في باقتك",
+    "sourcegate": "مفعّلة · بانتظار اعتماد الإطلاق",
+    "sourcedependency": "ميزة أب متوقفة",
+    "sourcemarket-on": "مفعّلة من السوق",
+    "sourceorg-on": "مفعّلة للمؤسسة",
+    "orgCannotOverride": "أُوقفت على مستوى أعلى من مؤسستك ولا يمكن تغييرها هنا.",
+    "platformOnly": "تُدار من المنصة"
   }
 }

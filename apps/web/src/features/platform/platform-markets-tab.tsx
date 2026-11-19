@@ -11,6 +11,7 @@ import { apiErrorMessage } from "@/features/platform/platform-shared";
 import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/http";
 import type { TenantFeatureFlagRow } from "@/features/admin/tenant-feature-flags-panel";
 import { Badge } from "@/components/ui/badge";
+import { ManagedFlagsBanner, useFlagStatus } from "@/features/flags/managed-flags-banner";
 import { featureFlagLabel } from "@/lib/feature-flag-labels";
 import { AWS_DATA_REGIONS, BASE_CURRENCY_OPTIONS, MARKET_COUNTRY_OPTIONS } from "@/lib/market-pack-options";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
@@ -54,6 +55,8 @@ export function PlatformMarketsTab() {
   const [timezone, setTimezone] = useState("UTC");
   const [err, setErr] = useState<string | null>(null);
   const [flagsMarketId, setFlagsMarketId] = useState<string | null>(null);
+  const flagStatus = useFlagStatus();
+  const flagsReadOnly = flagStatus.data?.managed ?? false;
   const [commercialMarketId, setCommercialMarketId] = useState<string | null>(null);
   const [legalMarketId, setLegalMarketId] = useState<string | null>(null);
 
@@ -314,6 +317,9 @@ export function PlatformMarketsTab() {
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <ManagedFlagsBanner />
+            </div>
             {marketFlagsQuery.isPending ? (
               <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
             ) : (
@@ -326,6 +332,7 @@ export function PlatformMarketsTab() {
                     </Badge>
                   </div>
                   <p className="font-mono text-xs text-muted-foreground">{f.key}</p>
+                  {flagsReadOnly ? null : (
                   <Button
                     type="button"
                     size="sm"
@@ -342,6 +349,7 @@ export function PlatformMarketsTab() {
                   >
                     {t("admin.toggle")}
                   </Button>
+                  )}
                 </div>
               ))
             )}

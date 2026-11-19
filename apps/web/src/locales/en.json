@@ -3902,5 +3902,25 @@
     "save": "Save",
     "saved": "Print settings saved",
     "previewTicket": "Preview queue ticket"
+  },
+  "flags": {
+    "managedBanner": "Managed in Kiorex super admin",
+    "snapshotInfo": "Snapshot v{{version}} · {{age}} s old",
+    "noSnapshotYet": "Waiting for the first snapshot; code defaults apply.",
+    "snapshotStale": "Snapshot is stale",
+    "temporarilyUnavailable": "This capability is temporarily unavailable.",
+    "readOnly": "Read-only",
+    "source": "Source",
+    "sourcedefault": "Default (inherit ON)",
+    "sourceglobal": "Platform (global) OFF",
+    "sourcemarket": "Market OFF",
+    "sourceorg": "Organization OFF",
+    "sourceplan": "Not in your plan",
+    "sourcegate": "ON · awaiting gate",
+    "sourcedependency": "A parent flag is OFF",
+    "sourcemarket-on": "Market ON",
+    "sourceorg-on": "Organization ON",
+    "orgCannotOverride": "Switched off above your organization; it cannot be changed here.",
+    "platformOnly": "Platform-managed"
   }
 }

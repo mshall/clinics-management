@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiGet, apiPatch } from "@/lib/http";
+import { ManagedFlagsBanner, useFlagStatus } from "@/features/flags/managed-flags-banner";
+import { Badge } from "@/components/ui/badge";
 import { featureFlagLabel } from "@/lib/feature-flag-labels";
 
 type FeatureFlagRow = {
@@ -10,6 +12,9 @@ type FeatureFlagRow = {
   key: string;
   enabled: boolean;
   description: string | null;
+  managed?: boolean;
+  launchLocked?: boolean;
+  awaitingGate?: boolean;
 };
 
 export function PlatformOverviewPage() {
@@ -20,6 +25,9 @@ export function PlatformOverviewPage() {
     queryKey: ["platform", "feature-flags"],
     queryFn: () => apiGet<FeatureFlagRow[]>("/api/v1/admin/platform/feature-flags"),
   });
+
+  const status = useFlagStatus();
+  const readOnly = status.data?.managed ?? false;
 
   const flagMut = useMutation({
     mutationFn: ({ key, enabled }: { key: string; enabled: boolean }) =>
@@ -37,6 +45,7 @@ export function PlatformOverviewPage() {
         <CardDescription>{t("platform.featureFlagsHint")}</CardDescription>
       </CardHeader>
       <CardContent>
+        <ManagedFlagsBanner />
         {flagsQuery.isPending ? (
           <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
         ) : (
@@ -47,15 +56,21 @@ export function PlatformOverviewPage() {
                   <span className="font-medium">{featureFlagLabel(t, f.key, f.description ?? f.key)}</span>
                   <p className="font-mono text-xs text-muted-foreground">{f.key}</p>
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={f.enabled ? "default" : "outline"}
-                  disabled={flagMut.isPending}
-                  onClick={() => flagMut.mutate({ key: f.key, enabled: !f.enabled })}
-                >
-                  {f.enabled ? t("platform.flagOn") : t("platform.flagOff")}
-                </Button>
+                {readOnly ? (
+                  <Badge variant={f.enabled ? "default" : "secondary"} data-testid={`flag-readonly-${f.key}`}>
+                    {f.awaitingGate ? t("flags.sourcegate") : f.enabled ? t("platform.flagOn") : t("platform.flagOff")}
+                  </Badge>
+                ) : (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={f.enabled ? "default" : "outline"}
+                    disabled={flagMut.isPending}
+                    onClick={() => flagMut.mutate({ key: f.key, enabled: !f.enabled })}
+                  >
+                    {f.enabled ? t("platform.flagOn") : t("platform.flagOff")}
+                  </Button>
+                )}
               </li>
             ))}
           </ul>

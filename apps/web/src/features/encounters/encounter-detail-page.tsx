@@ -60,6 +60,7 @@ import {
 } from "@/lib/visit-collection";
 import { generatePrescriptionPng } from "@/lib/prescription-image";
 import { EncounterClinicalTools } from "@/features/clinical/encounter-clinical-tools";
+import { Feature } from "@/features/flags/feature";
 import { EncounterScribePanel } from "@/features/clinical/encounter-scribe-panel";
 import { EncounterOrdersPanel } from "@/features/clinical/encounter-orders-panel";
 import { EncounterSignoffTrail } from "@/features/encounters/encounter-signoff-trail";
@@ -958,6 +959,7 @@ export function EncounterDetailPage() {
             ) : null}
             {enc && draft ? (
               <EntitlementGate entitlement="ai_scribe" requiredPlan="PRO">
+                <Feature flag="clinic.ai_scribe">
                 <EncounterScribePanel
                   encounterId={enc.id}
                   onApplySoap={(partial) => {
@@ -967,6 +969,7 @@ export function EncounterDetailPage() {
                     if (partial.plan !== undefined) setPlan(partial.plan ?? "");
                   }}
                 />
+                </Feature>
               </EntitlementGate>
             ) : null}
             {enc ? (
