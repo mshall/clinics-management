@@ -338,7 +338,7 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 **Stage F · Phase 1b** — After public launch
 
 - [x] Step 101 · CR-10 · No-show guarantee credits (optional, off by default) `2135ff2`
-- [ ] Step 102 · KX-11 · Consent-based record sharing with the patient app
+- [x] Step 102 · KX-11 · Consent-based record sharing with the patient app 
 - [ ] Step 103 · CL-06 · Lab & radiology orders as records
 - [ ] Step 104 · CL-07 · Specialty packs: dental chart, aesthetics before/after, physio plans
 - [ ] Step 105 · MN-05 · Company contracts & TPA claims
