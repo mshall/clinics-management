@@ -146,3 +146,4 @@
 | 105 MN-05 | `29e1419` | Claim batches + remittance ≥90% match + B2B payer outbox; claims workspace; no ETA. |
 | 106 MS-06 | `55cea4c` | Egyptian Arabic WhatsApp AI receptionist; clinical→handover; inbox; SlotService booking hints. |
 | 107 RP-04 | `8b65315` | AR aging per payer + payouts + branch P&L; totals reconcile to claim/revenue tables. |
+| 108 UX-04 | `bda08d7` | 80 mm ticket/receipt PDFs for Epson+Star; print settings; WCAG focus/contrast. |
