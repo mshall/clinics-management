@@ -32,6 +32,15 @@ export function HelpDrawer() {
         <div className="space-y-6 p-4">
           <section className="space-y-2">
             <h3 className="text-sm font-semibold">{t("help.guideTitle")}</h3>
+            <Link
+              to="/help"
+              onClick={close}
+              className="flex items-center gap-2 text-sm font-medium text-primary underline-offset-2 hover:underline"
+              data-testid="help-open-centre"
+            >
+              <BookOpen className="size-4 shrink-0" />
+              {t("help.centre.open")}
+            </Link>
             <ul className="space-y-1 text-sm">
               {guide.sections.map((s) => (
                 <li key={s.id}>

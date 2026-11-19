@@ -68,6 +68,7 @@ export const CustomerSupportPage = lazyNamed(
 );
 export const AdminPage = lazyNamed(() => import("@/features/admin/admin-page"), "AdminPage");
 export const GuideBookPage = lazyNamed(() => import("@/features/guide/guide-book-page"), "GuideBookPage");
+export const HelpCentrePage = lazyNamed(() => import("@/features/help/help-centre-page"), "HelpCentrePage");
 export const PlatformOverviewPage = lazyNamed(
   () => import("@/features/platform/platform-overview-page"),
   "PlatformOverviewPage",

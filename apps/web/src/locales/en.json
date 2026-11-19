@@ -3066,6 +3066,17 @@
     "subtitle": "Guides, short videos and a safe sample patient to practise on.",
     "guideTitle": "Guide for your role",
     "fullGuide": "Open the full guide",
+    "centre": {
+      "open": "Open help centre (articles & search)",
+      "title": "Help centre",
+      "subtitle": "Task-based articles by plan tier, search, and 60-second Arabic videos for the golden flow.",
+      "count": "{{count}} support articles",
+      "searchPlaceholder": "Search help articles…",
+      "tierAll": "All plans",
+      "articlesTitle": "Articles",
+      "results": "{{count}} results",
+      "empty": "No articles match that search."
+    },
     "videosTitle": "60-second videos (Arabic)",
     "videoSoon": "coming soon",
     "videos": {
