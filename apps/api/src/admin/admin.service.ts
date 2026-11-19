@@ -26,7 +26,7 @@ import type { PatchTenantSettingsDto } from "./dto/patch-tenant-settings.dto";
 import { isBaseCurrency } from "../common/base-currencies";
 import { syncInheritedClinicCurrencies } from "../common/sync-inherited-clinic-currencies";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
-import { FEATURE_FLAG_KEYS, isKnownFeatureFlagKey } from "../feature-flags/feature-flag-keys";
+import { CLINIC_FLAG_KEYS, getFlagDefinition, isKnownFeatureFlagKey } from "../feature-flags/feature-flag-keys";
 import {
   normalizeOrgTaxRegistrationNumber,
   syncClinicInvoiceTaxFromTenant,
@@ -323,16 +323,28 @@ export class AdminService {
   }
 
   async listFeatureFlags() {
-    const flags = await this.prisma.featureFlag.findMany({
-      where: { key: { in: [...FEATURE_FLAG_KEYS] } },
-      orderBy: { key: "asc" },
-    });
-    return flags.map((f) => ({
-      id: f.id,
-      key: f.key,
-      enabled: f.enabled,
-      description: f.description,
+    const rows = await this.prisma.featureFlag.findMany({ where: { key: { in: [...CLINIC_FLAG_KEYS] } } });
+    const idByKey = new Map(rows.map((r) => [r.key, r.id]));
+    const views = await this.featureFlags.listGlobal();
+    return views.map((v) => ({
+      id: idByKey.get(v.key) ?? v.key,
+      key: v.key,
+      enabled: v.globalEnabled,
+      description: v.description,
+      descriptionAr: v.descriptionAr,
+      class: v.class,
+      scopes: v.scopes,
+      dependsOn: v.dependsOn,
+      launchLocked: v.launchLocked,
+      awaitingGate: v.awaitingGate,
+      source: v.source,
+      managed: v.managed,
     }));
+  }
+
+  /** FF05: banner + freshness for the platform flag pages. */
+  featureFlagStatus() {
+    return { managed: this.featureFlags.isManaged(), snapshot: this.featureFlags.snapshotMeta() };
   }
 
   async createTenantUser(tenantId: string, dto: CreateTenantUserDto, actor?: JwtUser) {
@@ -789,11 +801,13 @@ export class AdminService {
   }
 
   async setFeatureFlag(key: string, enabled: boolean) {
-    const row = await this.prisma.featureFlag.findUnique({ where: { key } });
-    if (!row) throw new NotFoundException("Feature flag not found");
-    return this.prisma.featureFlag.update({
+    this.featureFlags.assertNotManaged();
+    const def = getFlagDefinition(key);
+    if (!def) throw new NotFoundException("Feature flag not found");
+    return this.prisma.featureFlag.upsert({
       where: { key },
-      data: { enabled },
+      create: { key, enabled, description: def.descriptionEn },
+      update: { enabled },
     });
   }
 

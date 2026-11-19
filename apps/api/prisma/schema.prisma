@@ -4252,3 +4252,30 @@ model UserSession {
   @@index([userId, revokedAt])
   @@index([userId, expiresAt])
 }
+
+/// FF03 — last-known Kiorex control-plane flag snapshot per product (fail-static persistence).
+model KiorexFlagSnapshot {
+  product       String    @id
+  version       Int
+  etag          String?
+  payload       Json
+  signature     String?
+  generatedAt   DateTime
+  fetchedAt     DateTime
+  lastAttemptAt DateTime?
+  lastError     String?
+  updatedAt     DateTime  @updatedAt
+}
+
+/// FF06 — platform-level audit trail of snapshot changes (tenant-scoped AuditLog rows are written for org-scope changes).
+model KiorexFlagAuditEvent {
+  id          String   @id @default(cuid())
+  product     String
+  fromVersion Int?
+  toVersion   Int
+  source      String
+  changes     Json
+  createdAt   DateTime @default(now())
+
+  @@index([product, createdAt])
+}

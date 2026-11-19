@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from "@nestjs/common";
+import { FeatureFlagsService, requireFeature } from "../feature-flags/feature-flags-public";
+import { Body, Controller, Get, Optional, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { PaymentMethod } from "@prisma/client";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -29,6 +30,7 @@ export class BillingController {
     private readonly noShowGuarantee: NoShowGuaranteeService,
     private readonly specialtyPacks: SpecialtyPacksService,
     private readonly prisma: PrismaService,
+    @Optional() private readonly featureFlags?: FeatureFlagsService,
   ) {}
 
   /** PL-08 — paywall view/conversion telemetry (feeds PA-05 later). */
@@ -170,7 +172,7 @@ export class BillingController {
   }
 
   @Post("payments")
-  recordPayment(
+  async recordPayment(
     @CurrentUser() user: JwtUser,
     @Body()
     body: {
@@ -182,7 +184,12 @@ export class BillingController {
       submitEta?: boolean;
     },
   ) {
-    return this.billing.recordPayment(requireTenantId(user), user, body);
+    const tenantId = requireTenantId(user);
+    // card_payments OFF: card allocation hidden/blocked at cashier; cash and other methods remain.
+    if (this.featureFlags && body.allocations?.some((a) => a.method === "CARD")) {
+      await requireFeature(this.featureFlags, tenantId, "card_payments");
+    }
+    return this.billing.recordPayment(tenantId, user, body);
   }
 
   @Post("cash-close")

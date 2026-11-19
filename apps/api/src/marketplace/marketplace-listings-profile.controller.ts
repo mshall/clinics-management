@@ -16,11 +16,12 @@ import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
 import { PutProviderProfileDto } from "./dto/put-provider-profile.dto";
+import { FeatureGuard, RequiresFeature } from "../feature-flags/feature-flags-public";
 import { MarketplaceProviderProfileService } from "./marketplace-provider-profile.service";
 
 @ApiTags("marketplace")
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, FeatureGuard)
 @Controller("marketplace-listings")
 export class MarketplaceListingsProfileController {
   constructor(private readonly profiles: MarketplaceProviderProfileService) {}
@@ -31,12 +32,14 @@ export class MarketplaceListingsProfileController {
     return this.profiles.getEditor(user, id);
   }
 
+  @RequiresFeature("clinic.kiorex_listing")
   @Put(":id/profile")
   @ApiOperation({ summary: "Update Kiorex provider profile" })
   putProfile(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PutProviderProfileDto) {
     return this.profiles.putProfile(user, id, body);
   }
 
+  @RequiresFeature("clinic.kiorex_listing")
   @Post(":id/profile/photo")
   @ApiConsumes("multipart/form-data")
   @UseInterceptors(

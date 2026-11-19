@@ -4,13 +4,14 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
+import { FeatureGuard, RequiresFeature } from "../feature-flags/feature-flags-public";
 import { RecordShareService } from "./record-share.service";
 
 /** KX-11 — clinic UI toggles (kept out of PatientsModule to avoid Nest import cycles). */
 @ApiTags("patients")
 @ApiBearerAuth("bearer")
 @Controller("patients")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, FeatureGuard)
 export class RecordShareClinicController {
   constructor(private readonly recordShare: RecordShareService) {}
 
@@ -20,6 +21,7 @@ export class RecordShareClinicController {
     return this.recordShare.listForPatient(requireTenantId(user), id);
   }
 
+  @RequiresFeature("clinic.record_share_patient_app")
   @Put(":id/record-share-consent")
   @ApiOperation({ summary: "KX-11 — update record-share consent scopes" })
   putRecordShareConsent(

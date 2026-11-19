@@ -101,6 +101,13 @@ export class PlatformAdminController {
     return this.platform.listFeatureFlags(user);
   }
 
+  @Get("feature-flags-status")
+  @ApiOperation({ summary: "Whether flags are managed by the Kiorex control plane + snapshot freshness (FF05)" })
+  @ApiOkResponse()
+  featureFlagStatus(@CurrentUser() user: JwtUser) {
+    return this.platform.featureFlagStatus(user);
+  }
+
   @Patch("feature-flags/:key")
   @ApiOperation({ summary: "Toggle a global feature flag" })
   @ApiOkResponse()

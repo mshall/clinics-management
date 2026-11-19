@@ -1,4 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UseGuards } from "@nestjs/common";
+import { FeatureFlagsService, specialtyTemplateFlagKey } from "../feature-flags/feature-flags-public";
+import { LAUNCH_SPECIALTIES } from "./launch-specialty-templates";
+import { Body, Controller, Delete, Get, Optional, Param, Patch, Post, Put, Query, UseGuards } from "@nestjs/common";
 import {
   ClinicalLetterType,
   ClinicalOrderKind,
@@ -33,15 +35,27 @@ export class ClinicalController {
     private readonly drugCatalog: DrugCatalogService,
     private readonly orders: ClinicalOrdersService,
     private readonly packs: SpecialtyPacksService,
+    @Optional() private readonly flags?: FeatureFlagsService,
   ) {}
 
   @Get("form-templates")
-  listTemplates(
+  async listTemplates(
     @CurrentUser() user: JwtUser,
     @Query("specialty") specialty?: ClinicalSpecialty,
     @Query("clinicId") clinicId?: string,
   ) {
-    return this.clinical.listTemplates(requireTenantId(user), user, specialty, clinicId);
+    const tenantId = requireTenantId(user);
+    const rows = await this.clinical.listTemplates(tenantId, user, specialty, clinicId);
+    // clinic.specialty_templates.<code> (launch-locked): built-in templates stay hidden from new encounters until the
+    // gate is recorded in the Kiorex super admin. Only enforced once Kiorex is the authority for flags; custom and
+    // already-used templates are never hidden.
+    if (!this.flags || !this.flags.isManaged()) return rows;
+    const visible: typeof rows = [];
+    for (const r of rows) {
+      const gated = r.isSystemDefault && (LAUNCH_SPECIALTIES as readonly string[]).includes(r.specialty);
+      if (!gated || (await this.flags.isEnabled(tenantId, specialtyTemplateFlagKey(r.specialty)))) visible.push(r);
+    }
+    return visible;
   }
 
   @Post("form-templates")

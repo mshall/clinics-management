@@ -125,6 +125,8 @@ export class WaitlistAutofillService implements OnModuleInit, OnModuleDestroy {
       return null;
     }
     if (!(await this.featureFlags.isEnabled(slot.tenantId, "whatsapp_reminders"))) return null;
+    // clinic.waitlist_autofill OFF: waitlist kept, no automatic offers.
+    if (!(await this.featureFlags.isEnabled(slot.tenantId, "clinic.waitlist_autofill"))) return null;
     if (await this.slotTaken(slot)) {
       await this.closeSlot(slot.id, WaitlistOpenSlotStatus.FILLED_ELSEWHERE, now);
       return null;

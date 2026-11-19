@@ -195,6 +195,7 @@ export class MarketsService {
     this.assertPlatform(user);
     const row = await this.prisma.market.findFirst({ where: { id: marketId } });
     if (!row) throw new NotFoundException("Market not found");
+    this.featureFlags.assertNotManaged();
     assertSubProcessorAllowedForFeatureFlag(row, key, enabled);
     await this.featureFlags.setMarketFlag(marketId, key, enabled);
     return this.featureFlags.listForMarket(marketId);

@@ -10,6 +10,7 @@ export const OPERATIONAL_ALERT_IDS = [
   "KIORLY_PAYMENT_WEBHOOK_FAILED",
   "SIGNUP_FUNNEL_DROP",
   "INTEGRATION_FAILURE_SPIKE",
+  "FLAG_SNAPSHOT_STALE",
 ] as const;
 
 export type OperationalAlertId = (typeof OPERATIONAL_ALERT_IDS)[number];
@@ -32,6 +33,7 @@ export const OPERATIONAL_DASHBOARD_IDS = [
   "payment_webhooks",
   "signup_funnel",
   "integration_failures",
+  "flag_snapshot",
 ] as const;
 
 export type OperationalDashboardId = (typeof OPERATIONAL_DASHBOARD_IDS)[number];
@@ -100,6 +102,15 @@ export const OPERATIONAL_ALERTS: OperationalAlertDefinition[] = [
     titleAr: "ارتفاع فشل تكامل الحجز / API",
     severity: "warning",
   },
+  {
+    id: "FLAG_SNAPSHOT_STALE",
+    auditAction: "FLAG_SNAPSHOT_STALE",
+    dashboardId: "flag_snapshot",
+    runbookDoc: "FLAG_SNAPSHOT_STALE.md",
+    titleEn: "Kiorex feature-flag snapshot is stale (> 10 min)",
+    titleAr: "لقطة أعلام الميزات من كيوريكس قديمة (أكثر من 10 دقائق)",
+    severity: "warning",
+  },
 ];
 
 export const OPERATIONAL_DASHBOARDS: OperationalDashboardPanel[] = [
@@ -144,6 +155,13 @@ export const OPERATIONAL_DASHBOARDS: OperationalDashboardPanel[] = [
     titleAr: "فشل التكامل",
     alertIds: ["INTEGRATION_FAILURE_SPIKE"],
     queryHint: "IntegrationFailureLog count last 1h; Governance → Failing operations",
+  },
+  {
+    id: "flag_snapshot",
+    titleEn: "Flag snapshot freshness",
+    titleAr: "حداثة لقطة الأعلام",
+    alertIds: ["FLAG_SNAPSHOT_STALE"],
+    queryHint: "KiorexFlagSnapshot.fetchedAt age; log `FLAG_SNAPSHOT_STALE`; GET /admin/platform/feature-flags (snapshot.ageSeconds)",
   },
 ];
 

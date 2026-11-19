@@ -4,7 +4,9 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from "@nestjs/common";
+import { FeatureFlagsService, flagOn } from "../feature-flags/feature-flags-public";
 import {
   CommissionChargeStatus,
   CreditReason,
@@ -67,6 +69,7 @@ export class CommissionChargeService {
     private readonly kiorexRates: KiorexCommissionService,
     private readonly outbox: OutboxEventService,
     private readonly creditWallet: CreditWalletService,
+    @Optional() private readonly flags?: FeatureFlagsService,
   ) {}
 
   async onCheckIn(tx: Tx, tenantId: string, appointmentId: string, attendedAt: Date): Promise<void> {
@@ -87,6 +90,8 @@ export class CommissionChargeService {
       },
     });
     if (!apt || apt.patient.isSample) return;
+    // clinic.commission_settlement OFF: new commission charges stop; already-CONFIRMED charges still settle.
+    if (!(await flagOn(this.flags, tenantId, "clinic.commission_settlement"))) return;
     if (!isCommissionChargeableBooking(apt.bookingSource, apt.isNewPatientAtBooking)) return;
 
     const marketId = apt.clinic.tenant.marketId;

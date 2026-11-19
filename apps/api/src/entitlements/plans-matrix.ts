@@ -59,6 +59,8 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "billing/split-payments.controller.ts": { kind: "gated", entitlement: "mod_invoices" },
   "billing/claims.controller.ts": { kind: "gated", entitlement: "mod_invoices" },
   "revenue-share/revenue-share.controller.ts": { kind: "gated", entitlement: "mod_revenue" },
+  "feature-flags/feature-flags.controller.ts": { kind: "open" },
+  "feature-flags/kiorex-flag-webhook.controller.ts": { kind: "webhook" },
   "growth/growth-referral.controller.ts": { kind: "open" },
   "billing-platform/kiorly-invoices.controller.ts": { kind: "open" },
   "billing-platform/kiorly-billing-payments.controller.ts": { kind: "open" },

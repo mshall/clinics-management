@@ -349,6 +349,12 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 **Stage G · Kiorex v2 (Wave A, app side)** — branch `kiorex` only; specs in `_docs/KX-05` §07–08, `KX-08` §08–09, `KX-21` §01
 
 - [x] KX21-A · Application adapters: no `@aws-sdk/*` outside `src/platform/adapters/*` (secrets, email, object storage) — `platform/adapters/kx21-aws-sdk-boundary.node.test.ts` · `apps/api/src/platform/README.md`
+- [x] Step FF01 · Flag registry expanded to the full Kiorly Clinic catalogue (AR/EN, class, dependencies; unknown key fails CI) — `feature-flags/ff01-registry.node.test.ts` · `Docs/FEATURE_FLAGS.md`
+- [x] Step FF02 · Default-ON resolution with the 7 rules; launch-locked OFF until gate evidence — `feature-flags/ff02-resolution.node.test.ts`
+- [x] Step FF03 · Snapshot client (ETag, 30 s, HMAC) + `flag.changed` webhook, last-known persisted (fail-static) — `feature-flags/ff03-snapshot.node.test.ts` · migration `20261119280000_ff03_kiorex_flag_snapshot`
+- [x] Step FF04 · `@RequiresFeature` / `FeatureGuard` → 403 FEATURE_DISABLED on module entry points; per-flag OFF contract tests; ADR-025 safety-never-flags test — `feature-flags/ff04-feature-guard.node.test.ts` · `feature-flags/ff-safety-never-flags.node.test.ts`
+- [x] Step FF05 · Platform flag pages read-only mirror + org page effective value/source (web) — `apps/web/e2e/ff05-flags.spec.ts` (Playwright not run locally)
+- [x] Step FF06 · Audit events on snapshot change + `FLAG_SNAPSHOT_STALE` on-call alert (>10 min) — `Docs/runbooks/FLAG_SNAPSHOT_STALE.md`
 
 ---
 

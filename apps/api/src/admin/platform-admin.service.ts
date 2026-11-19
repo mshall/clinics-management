@@ -726,6 +726,11 @@ export class PlatformAdminService {
     return this.admin.listFeatureFlags();
   }
 
+  featureFlagStatus(user: JwtUser) {
+    this.assertPlatform(user);
+    return this.admin.featureFlagStatus();
+  }
+
   setFeatureFlag(user: JwtUser, key: string, enabled: boolean) {
     this.assertPlatform(user);
     return this.admin.setFeatureFlag(key, enabled);

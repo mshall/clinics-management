@@ -7,12 +7,13 @@ import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { EntitlementGuard } from "../entitlements/entitlement.guard";
 import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
+import { FeatureGuard, RequiresFeature } from "../feature-flags/feature-flags-public";
 import { ClaimsService } from "./claims.service";
 
 /** MN-05 — company contracts & TPA claims. */
 @ApiTags("claims")
 @ApiBearerAuth("bearer")
-@UseGuards(JwtAuthGuard, EntitlementGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard, FeatureGuard)
 @RequiresEntitlement("mod_invoices")
 @Controller("claims")
 export class ClaimsController {
@@ -24,6 +25,7 @@ export class ClaimsController {
     return this.claims.listPayers(requireTenantId(user));
   }
 
+  @RequiresFeature("clinic.payers_tpa")
   @Post("payers")
   @ApiOperation({ summary: "Create or update a payer company" })
   upsertPayer(
@@ -49,6 +51,7 @@ export class ClaimsController {
     return this.claims.getBatch(requireTenantId(user), id);
   }
 
+  @RequiresFeature("clinic.payers_tpa")
   @Post("batches")
   @ApiOperation({ summary: "Create a draft claim batch from payer invoices in a period" })
   createBatch(

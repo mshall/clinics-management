@@ -1,4 +1,5 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { FeatureFlagsService, flagOn } from "../feature-flags/feature-flags-public";
+import { Injectable, Logger, Optional } from "@nestjs/common";
 import { AppointmentStatus, MessageChannel, Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import { hoursUntil, resolveKiorexCancellationPolicy } from "../marketplace/kiorex-booking-policy";
@@ -34,6 +35,7 @@ export class WhatsAppInboundRepliesService {
     private readonly rescheduleTokens: AppointmentRescheduleTokenService,
     private readonly consent: MessagingConsentService,
     private readonly waitlist: WaitlistAutofillService,
+    @Optional() private readonly flags?: FeatureFlagsService,
   ) {}
 
   async handleButtonReply(msg: InboundWhatsAppButton, action: WhatsAppReplyAction): Promise<boolean> {
@@ -51,6 +53,7 @@ export class WhatsAppInboundRepliesService {
         select: { tenantId: true },
       });
       if (!outbound) return false;
+      if (!(await flagOn(this.flags, outbound.tenantId, "clinic.whatsapp_inbound"))) return false;
       await this.prisma.whatsAppInboundEvent.create({
         data: {
           tenantId: outbound.tenantId,
@@ -66,6 +69,8 @@ export class WhatsAppInboundRepliesService {
     const outbound = await this.prisma.outboundMessage.findFirst({
       where: { providerMessageId: contextId },
     });
+    // clinic.whatsapp_inbound OFF: replies no longer change appointments; they are routed to the inbox.
+    if (outbound && !(await flagOn(this.flags, outbound.tenantId, "clinic.whatsapp_inbound"))) return false;
     if (!outbound?.appointmentId) {
       this.log.debug(`Inbound WhatsApp reply without appointment context: ${contextId}`);
       return false;

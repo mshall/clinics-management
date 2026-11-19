@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException, Optional } from "@nestjs/common";
 import {
   ClinicRecordStatus,
   ListingStatus,
@@ -9,6 +9,7 @@ import {
 import type { JwtUser } from "../auth/jwt-user";
 import { activeSchedulingPhysicianWhere } from "../common/active-scheduling-physician";
 import { hasAnyRoleInSet } from "../common/effective-roles";
+import { FeatureFlagsService, flagOn } from "../feature-flags/feature-flags-public";
 import { PrismaService } from "../prisma/prisma.service";
 import { normalizeWeekJson } from "../scheduling/availability-week-schema";
 import {
@@ -44,6 +45,7 @@ export class MarketplaceListingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxEventService,
+    @Optional() private readonly flags?: FeatureFlagsService,
   ) {}
 
   assertClinicManage(user: JwtUser, tenantId: string) {
@@ -187,11 +189,14 @@ export class MarketplaceListingService {
       kiorexBillingPaused: subscription?.tenant.kiorexBillingPausedAt != null,
     });
 
+    // clinic.kiorex_listing OFF: listing PAUSED on Kiorex; confirmed bookings and the booking link are untouched.
+    const flagPaused =
+      eligibility.status === ListingStatus.LIVE && !(await flagOn(this.flags, row.tenantId, "clinic.kiorex_listing"));
     const data: Prisma.MarketplaceListingUpdateInput = {
-      status: eligibility.status,
-      pausedReason: eligibility.pausedReason,
+      status: flagPaused ? ListingStatus.PAUSED : eligibility.status,
+      pausedReason: flagPaused ? "feature_disabled" : eligibility.pausedReason,
     };
-    if (eligibility.status === ListingStatus.LIVE && !row.listedAt) {
+    if (!flagPaused && eligibility.status === ListingStatus.LIVE && !row.listedAt) {
       data.listedAt = new Date();
     }
     if (eligibility.status !== ListingStatus.LIVE && eligibility.status !== ListingStatus.PAUSED) {

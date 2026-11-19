@@ -6,13 +6,14 @@ import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { EntitlementGuard } from "../entitlements/entitlement.guard";
 import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
+import { FeatureGuard, RequiresFeature } from "../feature-flags/feature-flags-public";
 import type { DepositPolicy } from "../markets/commercial-config.schema";
 import { type CreateDepositLinkBody, DepositLinkService } from "./deposit-link.service";
 
 /** FS-04 — deposits & payment links for high-risk bookings (Pro+). */
 @ApiTags("appointments")
 @ApiBearerAuth("bearer")
-@UseGuards(JwtAuthGuard, EntitlementGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard, FeatureGuard)
 @RequiresEntitlement("deposits")
 @Controller()
 export class DepositLinksController {
@@ -24,6 +25,7 @@ export class DepositLinksController {
     return this.links.requirement(requireTenantId(user), id);
   }
 
+  @RequiresFeature("clinic.kiorly_pay_deposits")
   @Post("appointments/:id/deposit-link")
   @ApiOperation({ summary: "Create a deposit payment link (clinic page or Kiorex Pay) and send it on WhatsApp" })
   createLink(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: CreateDepositLinkBody) {
@@ -35,6 +37,7 @@ export class DepositLinksController {
     return this.links.getPolicy(requireTenantId(user), clinicId);
   }
 
+  @RequiresFeature("clinic.kiorly_pay_deposits")
   @Put("clinics/:clinicId/deposit-policy")
   @ApiOperation({ summary: "Override the market deposit policy for a clinic (null resets)" })
   updatePolicy(

@@ -1,14 +1,18 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, Optional, Post, Req, UseGuards } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Request } from "express";
 import { PublicAuthRateLimitGuard } from "../common/rate-limit.guard";
+import { FeatureFlagsService, requireFeature } from "../feature-flags/feature-flags-public";
 import { SignupService } from "./signup.service";
 
 @ApiTags("public")
 @Controller("public/signup")
 @UseGuards(PublicAuthRateLimitGuard)
 export class PublicSignupController {
-  constructor(private readonly signup: SignupService) {}
+  constructor(
+    private readonly signup: SignupService,
+    @Optional() private readonly flags?: FeatureFlagsService,
+  ) {}
 
   @Get("markets")
   @ApiOperation({ summary: "Live markets available for self-serve signup" })
@@ -38,7 +42,7 @@ export class PublicSignupController {
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ description: "Provisioned clinic session (same shape as auth login)" })
   @ApiOperation({ summary: "Complete signup and receive session" })
-  complete(
+  async complete(
     @Body()
     body: {
       signupToken: string;
@@ -62,6 +66,10 @@ export class PublicSignupController {
   ) {
     const { signupToken, profile, specialty, clinic, planKey, salesRepCode, referralCode, ref, rep, legalAcceptances } =
       body;
+    // clinic.field_rep_onboarding OFF: rep codes are rejected at signup (global/market flag, no org yet).
+    if ((salesRepCode ?? rep)?.trim() && this.flags) {
+      await requireFeature(this.flags, null, "clinic.field_rep_onboarding");
+    }
     return this.signup.complete(signupToken, {
       profile,
       specialty,

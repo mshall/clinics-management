@@ -5,13 +5,14 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { EntitlementGuard } from "../entitlements/entitlement.guard";
 import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import type { JwtUser } from "../auth/jwt-user";
+import { FeatureGuard, RequiresFeature } from "../feature-flags/feature-flags-public";
 import { AssistantService } from "./assistant.service";
 import { AssistantChatDto, AssistantChatResponseDto, AssistantContextDto } from "./dto/assistant-chat.dto";
 
 @ApiTags("assistant")
 @ApiBearerAuth("bearer")
 @Controller("assistant")
-@UseGuards(JwtAuthGuard, EntitlementGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard, FeatureGuard)
 @RequiresEntitlement("ai_assistant")
 export class AssistantController {
   constructor(private readonly assistant: AssistantService) {}
@@ -23,6 +24,7 @@ export class AssistantController {
     return this.assistant.getContext(user, locale);
   }
 
+  @RequiresFeature("ai_assistant")
   @Post("chat")
   @ApiOperation({ summary: "Send a message to the role-aware AI assistant" })
   @ApiOkResponse({ type: AssistantChatResponseDto })

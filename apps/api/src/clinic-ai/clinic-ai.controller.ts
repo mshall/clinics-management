@@ -6,11 +6,12 @@ import { RequiresEntitlement } from "../entitlements/requires-entitlement.decora
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
+import { FeatureGuard, RequiresFeature } from "../feature-flags/feature-flags-public";
 import { ClinicAiService } from "./clinic-ai.service";
 
 @ApiTags("clinic-ai")
 @ApiBearerAuth("bearer")
-@UseGuards(JwtAuthGuard, EntitlementGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard, FeatureGuard)
 @Controller("clinic-ai")
 export class ClinicAiController {
   constructor(private readonly clinicAi: ClinicAiService) {}
@@ -22,12 +23,14 @@ export class ClinicAiController {
   }
 
   @RequiresEntitlement("mod_front_desk")
+  @RequiresFeature("clinic.no_show_risk")
   @Post("appointments/refresh-no-show-risk")
   refreshRisk(@CurrentUser() user: JwtUser, @Query("clinicId") clinicId?: string) {
     return this.clinicAi.refreshAppointmentNoShowRisks(requireTenantId(user), clinicId);
   }
 
   @RequiresEntitlement("ai_scribe")
+  @RequiresFeature("clinic.ai_scribe")
   @Post("encounters/:encounterId/scribe/start")
   startScribe(
     @CurrentUser() user: JwtUser,
@@ -47,6 +50,7 @@ export class ClinicAiController {
   }
 
   @RequiresEntitlement("ai_scribe")
+  @RequiresFeature("clinic.ai_scribe")
   @Post("scribe/:sessionId/audio")
   uploadAudio(
     @CurrentUser() user: JwtUser,
@@ -57,6 +61,7 @@ export class ClinicAiController {
   }
 
   @RequiresEntitlement("ai_scribe")
+  @RequiresFeature("clinic.ai_scribe")
   @Post("scribe/:sessionId/stop")
   stopScribe(
     @CurrentUser() user: JwtUser,

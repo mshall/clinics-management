@@ -64,6 +64,10 @@ export class WhatsAppAiReceptionistService {
     if (!(await this.featureFlags.isEnabled(tenantId, "whatsapp_reminders"))) {
       return null;
     }
+    // Launch-locked: OFF until gate evidence (Meta approval + consent copy) arrives; inbound goes to the human inbox.
+    if (!(await this.featureFlags.isEnabled(tenantId, "clinic.whatsapp_ai_receptionist"))) {
+      return null;
+    }
 
     const intent = classifyReceptionistIntent(input.text);
     const clinic = await this.prisma.clinic.findFirst({
