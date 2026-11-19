@@ -56,6 +56,9 @@ Boolean module keys by plan (`Yes` = entitled). Limits use numeric cells.
 | `instapay` | No | Yes | Yes | Yes |
 | `fawry` | No | Yes | Yes | Yes |
 | `dedicated_support` | No | No | No | Yes |
+| `pack_dental` | No | No | No | No |
+| `pack_aesthetics` | No | No | No | No |
+| `pack_physio` | No | No | No | No |
 <!-- MATRIX:END -->
 
 ## 03. Feature flags → entitlements
