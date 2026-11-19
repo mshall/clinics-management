@@ -7,6 +7,7 @@ Patient-side money for clinics (not Kiorly's own SaaS billing — that is `Kiorl
 | MN-01 | Refunds + credit notes, prepaid packages, deposits, patient balances, refund dialog + patient "Packages & refunds" tab | **Done** |
 | FS-04 | Payment-link deposits (`PENDING` → `HELD` on payment, `EXPIRED` / `CANCELLED` when unpaid), desk mark-paid, Kiorex Pay link callback; late patient cancellation forfeits per clinic policy — see [FRONT_DESK.md](./FRONT_DESK.md#deposits--payment-links-for-high-risk-bookings-fs-04) | **Done** |
 | KX-07 | Kiorex Pay deposits → held deposit on the booking → `BillingPayment` at check-in via `postRevenue`; refund/forfeit per policy; payouts reconciliation; deposit badge | **Done** |
+| MN-03 | Cash drawer shifts: open with a float, blind count at close, variance note, review flag above the market threshold, owner WhatsApp summary, bilingual Z-report (A4 + 80 mm thermal), shift screen — see [Cash drawer shifts](#cash-drawer-shifts-mn-03) | **Done** |
 | MN-02 | Doctor revenue-share rules (percent / fixed per visit / room rental, by doctor · visit type · category · payer · branch), monthly statements with adjustments, approve-to-lock, payout, bilingual PDF, reconciliation — see [Doctor revenue share](#doctor-revenue-share-mn-02) | **Done** |
 
 ## Money model
@@ -66,6 +67,18 @@ Cash close (`POST /billing/cash-close`) adds every non-`PAYMENT` cash movement o
 - Cash close ignores payments converted from deposits (cash was counted when the deposit was taken, or never touched the drawer for Kiorex Pay).
 - Payout report: `collected − (released + Kiorex-Pay refunds) = net due`; `net due − payouts = outstanding`. Audit: `KIOREX_DEPOSIT_PAID`, `KIOREX_PAYOUT_RECEIVED`.
 
+## Cash drawer shifts (MN-03)
+
+One open shift per clinic drawer (`CashierShift`, advisory lock per clinic). Front desk → **Cash drawer** (`/front-desk/cash-drawer`).
+
+- **Open** — `POST /billing/shifts/open { clinicId, openingFloat }`; Z-number is sequential per clinic; currency from the market pack.
+- **Blind count** — `GET /billing/shifts/current` never returns expected amounts for the open shift. `POST /billing/shifts/:id/close { countedCash, countedCard, note }` computes the expected drawer for `[openedAt, closedAt)`: float + cash payment allocations + signed non-payment cash movements (deposits, refunds, package sales/cancels), skipping payments converted from deposits; card likewise without float.
+- **Variance** — any cash or card difference requires a note (`VARIANCE_NOTE_REQUIRED`). Above market pack `providerConfig.billing.shiftVarianceReviewThreshold` (major units, default **50**) the shift is flagged `needsReview`; owner / finance (not the cashier, unless the owner) acknowledge it with `POST /billing/shifts/:id/review { note }`. Flagged list: `GET /billing/shifts?needsReview=true`.
+- **Owner summary** — close writes an INTERNAL outbox event `billing.shift_closed` in the same transaction; the engagement consumer (`messaging/internal-outbox-consumer.service.ts`, every 30 s) WhatsApps each tenant owner (phone from their employee record) the `owner_shift_summary` template (status OK / VARIANCE / REVIEW). Requires the `whatsapp_reminders` flag.
+- **Z-report** — `GET /billing/shifts/:id/z-report?format=a4|thermal` (bilingual PDF; thermal = 80 mm roll sized to content).
+- Audit: `CASHIER_SHIFT_OPENED`, `CASHIER_SHIFT_CLOSED` (expected, counted, variance, review flag), `CASHIER_SHIFT_REVIEWED`. Gated by `mod_invoices`; desk/finance roles or the owner.
+- The legacy day-level `POST /billing/cash-close` remains for API clients.
+
 ## Doctor revenue share (MN-02)
 
 Monthly statement per doctor, computed from **collected** revenue only — `POSTED` `RevenueEntry` rows with `postedAt` inside the month in the market timezone, excluding rejected bank transfers. Receivables (billed, not paid) never count. Refund rows are negative, so they reduce the doctor's share automatically.
@@ -86,6 +99,10 @@ Monthly statement per doctor, computed from **collected** revenue only — `POST
 - `apps/api/src/billing/kx07-kiorex-deposits.integration.test.ts` — deposit-paid idempotency, check-in conversion through `postRevenue`, refund reverses revenue without a drawer movement, cancellation release/forfeit, payouts reconciliation.
 - `apps/api/src/billing/kx07-kiorex-deposits.node.test.ts` — settlement outcomes, payout maths.
 - `apps/web/e2e/kx07-deposits.spec.ts` — deposit badge on the appointment, payouts card on the Kiorex tab.
+- `apps/api/src/billing/mn03-cashier-shift.integration.test.ts` — float + blind count, note required on variance, review flag above the threshold and owner review, INTERNAL outbox event per close, A4 / thermal Z-report.
+- `apps/api/src/messaging/mn03-owner-shift-summary.integration.test.ts` — consumer sends each owner with a phone one `owner_shift_summary` per closed shift, once; nothing when WhatsApp is off.
+- `apps/api/src/billing/mn03-cashier-shift.node.test.ts` — threshold from the market pack, drawer summary, variance and review maths.
+- `apps/web/e2e/mn03-cash-drawer.spec.ts` — open, blind count and close from the shift screen; over-threshold variance flagged and reviewed.
 - `apps/api/src/revenue-share/mn02-revenue-share.integration.test.ts` — totals reconcile with revenue for the period, rule precedence, room rental, fixed per visit, doctor scope, adjust → approve lock → mark paid, PDF.
 - `apps/api/src/revenue-share/mn02-revenue-share-engine.node.test.ts` — precedence, refunds, rental, unmatched, payable, timezone periods.
 - `apps/web/e2e/mn02-doctor-statements.spec.ts` — owner sees statements + balanced reconciliation; a doctor sees only their own, no approve.

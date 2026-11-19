@@ -399,55 +399,75 @@ function qrOps(text: string, x: number, y: number, side: number): string {
 
 // --- Document assembly ----------------------------------------------------------------------
 
-const PAGE_W = 595.28;
-const PAGE_H = 841.89;
-const MARGIN = 48;
-const CONTENT_W = PAGE_W - MARGIN * 2;
+type PageGeometry = { width: number; height: number; margin: number };
 
-export function buildBilingualPdf(sections: PdfSection[]): Buffer {
+const A4: PageGeometry = { width: 595.28, height: 841.89, margin: 48 };
+/** 80 mm receipt roll; height grows to fit each section on one strip. */
+const THERMAL_80: PageGeometry = { width: 226.77, height: 0, margin: 10 };
+
+export type PdfPageFormat = "A4" | "THERMAL_80";
+
+type PageStream = { stream: string; width: number; height: number };
+
+export function buildBilingualPdf(sections: PdfSection[], options: { format?: PdfPageFormat } = {}): Buffer {
   const font = loadArabicFont();
   const shaper = new TextShaper(font);
-  const pages: string[] = [];
+  const pages: PageStream[] = [];
+  const thermal = options.format === "THERMAL_80";
 
   for (const section of sections) {
-    const rtl = section.direction === "rtl";
-    let ops: string[] = [];
-    let y = PAGE_H - MARGIN;
-    const newPage = () => {
-      pages.push(ops.join("\n"));
-      ops = [];
-      y = PAGE_H - MARGIN;
-    };
-    const ensure = (h: number) => {
-      if (y - h < MARGIN) newPage();
-    };
-    const drawAt = (text: string, xStart: number, width: number, align: "start" | "end", size: number, bold: boolean) => {
-      const segs = shaper.segments(text, section.direction, size, bold);
-      const w = segs.reduce((s, seg) => s + seg.width, 0);
-      const alignRight = rtl ? align === "start" : align === "end";
-      const x = alignRight ? xStart + width - w : xStart;
-      ops.push(shaper.draw(segs, x, y, size, bold));
-    };
+    if (thermal) {
+      const probe = layoutSection(section, { ...THERMAL_80, height: 1_000_000 }, shaper);
+      const height = Math.max(120, Math.ceil(1_000_000 - probe.lowestY + THERMAL_80.margin));
+      pages.push(...layoutSection(section, { ...THERMAL_80, height }, shaper).pages);
+    } else {
+      pages.push(...layoutSection(section, A4, shaper).pages);
+    }
+  }
 
-    for (const row of section.rows) {
-      if (row.kind === "gap") {
-        y -= row.height ?? 8;
-        continue;
-      }
-      if (row.kind === "rule") {
-        ensure(10);
-        ops.push(`0.6 w ${MARGIN} ${(y + 4).toFixed(2)} m ${PAGE_W - MARGIN} ${(y + 4).toFixed(2)} l S`);
-        y -= 8;
-        continue;
-      }
-      if (row.kind === "qr") {
-        const side = row.size ?? 100;
-        ensure(side + 6);
-        const x0 = rtl ? PAGE_W - MARGIN - side : MARGIN;
-        ops.push(qrOps(row.text, x0, y - side, side));
-        y -= side + 6;
-        continue;
-      }
+  return assemblePdf(pages, font, shaper.usedGlyphs);
+}
+
+function layoutSection(section: PdfSection, g: PageGeometry, shaper: TextShaper): { pages: PageStream[]; lowestY: number } {
+  const PAGE_W = g.width;
+  const PAGE_H = g.height;
+  const MARGIN = g.margin;
+  const CONTENT_W = PAGE_W - MARGIN * 2;
+  const pages: PageStream[] = [];
+  const rtl = section.direction === "rtl";
+  let ops: string[] = [];
+  let y = PAGE_H - MARGIN;
+  let lowestY = y;
+  const newPage = () => {
+    pages.push({ stream: ops.join("\n"), width: PAGE_W, height: PAGE_H });
+    ops = [];
+    y = PAGE_H - MARGIN;
+  };
+  const ensure = (h: number) => {
+    if (y - h < MARGIN) newPage();
+  };
+  const drawAt = (text: string, xStart: number, width: number, align: "start" | "end", size: number, bold: boolean) => {
+    const segs = shaper.segments(text, section.direction, size, bold);
+    const w = segs.reduce((s, seg) => s + seg.width, 0);
+    const alignRight = rtl ? align === "start" : align === "end";
+    const x = alignRight ? xStart + width - w : xStart;
+    ops.push(shaper.draw(segs, x, y, size, bold));
+  };
+
+  for (const row of section.rows) {
+    if (row.kind === "gap") {
+      y -= row.height ?? 8;
+    } else if (row.kind === "rule") {
+      ensure(10);
+      ops.push(`0.6 w ${MARGIN} ${(y + 4).toFixed(2)} m ${PAGE_W - MARGIN} ${(y + 4).toFixed(2)} l S`);
+      y -= 8;
+    } else if (row.kind === "qr") {
+      const side = Math.min(row.size ?? 100, CONTENT_W);
+      ensure(side + 6);
+      const x0 = rtl ? PAGE_W - MARGIN - side : MARGIN;
+      ops.push(qrOps(row.text, x0, y - side, side));
+      y -= side + 6;
+    } else {
       const size = row.size ?? 10;
       const bold = row.bold ?? false;
       const lineH = size * 1.55;
@@ -457,33 +477,31 @@ export function buildBilingualPdf(sections: PdfSection[]): Buffer {
           drawAt(line, MARGIN, CONTENT_W, "start", size, bold);
           y -= lineH;
         }
-        continue;
-      }
-      if (row.kind === "pair") {
+      } else if (row.kind === "pair") {
         ensure(lineH);
         drawAt(row.label, MARGIN, CONTENT_W, "start", size, bold);
         drawAt(row.value, MARGIN, CONTENT_W, "end", size, bold);
         y -= lineH;
-        continue;
+      } else {
+        ensure(lineH);
+        const total = row.widths.reduce((s, w) => s + w, 0);
+        let offset = 0;
+        row.cells.forEach((cell, idx) => {
+          const w = (row.widths[idx]! / total) * CONTENT_W;
+          const colStart = rtl ? PAGE_W - MARGIN - offset - w : MARGIN + offset;
+          drawAt(cell, colStart, w - 4, idx === row.cells.length - 1 ? "end" : "start", size, bold);
+          offset += w;
+        });
+        y -= lineH;
       }
-      ensure(lineH);
-      const total = row.widths.reduce((s, w) => s + w, 0);
-      let offset = 0;
-      row.cells.forEach((cell, idx) => {
-        const w = (row.widths[idx]! / total) * CONTENT_W;
-        const colStart = rtl ? PAGE_W - MARGIN - offset - w : MARGIN + offset;
-        drawAt(cell, colStart, w - 4, idx === row.cells.length - 1 ? "end" : "start", size, bold);
-        offset += w;
-      });
-      y -= lineH;
     }
-    pages.push(ops.join("\n"));
+    lowestY = Math.min(lowestY, y);
   }
-
-  return assemblePdf(pages, font, shaper.usedGlyphs);
+  pages.push({ stream: ops.join("\n"), width: PAGE_W, height: PAGE_H });
+  return { pages, lowestY };
 }
 
-function assemblePdf(pageStreams: string[], font: ArabicFont | null, usedGlyphs: Set<number>): Buffer {
+function assemblePdf(pageStreams: PageStream[], font: ArabicFont | null, usedGlyphs: Set<number>): Buffer {
   const objects: Buffer[] = [];
   const add = (body: Buffer | string): number => {
     objects.push(typeof body === "string" ? Buffer.from(body, "latin1") : body);
@@ -532,8 +550,8 @@ function assemblePdf(pageStreams: string[], font: ArabicFont | null, usedGlyphs:
 
   const resources = `<< /Font << /F1 ${helveticaId} 0 R /F3 ${helveticaBoldId} 0 R${arabicFontRef} >> >>`;
   const pageIds: number[] = [];
-  for (const stream of pageStreams) {
-    const content = Buffer.from(stream, "latin1");
+  for (const page of pageStreams) {
+    const content = Buffer.from(page.stream, "latin1");
     const contentId = add(
       Buffer.concat([
         Buffer.from(`<< /Length ${content.length} >>\nstream\n`, "latin1"),
@@ -543,7 +561,7 @@ function assemblePdf(pageStreams: string[], font: ArabicFont | null, usedGlyphs:
     );
     pageIds.push(
       add(
-        `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${PAGE_W} ${PAGE_H}] /Contents ${contentId} 0 R /Resources ${resources} >>`,
+        `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${page.width} ${page.height}] /Contents ${contentId} 0 R /Resources ${resources} >>`,
       ),
     );
   }

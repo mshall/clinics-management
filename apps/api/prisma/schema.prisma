@@ -1043,6 +1043,7 @@ model FiscalPosChain {
 }
 
 model Tenant {
+  cashierShifts CashierShift[]
   id                    String          @id @default(cuid())
   name                  String
   nameAr                String          @default("")
@@ -1445,6 +1446,7 @@ model UserClinicEmployeePrivilegeGrant {
 }
 
 model Clinic {
+  cashierShifts CashierShift[]
   id               String          @id @default(cuid())
   tenantId         String
   tenant           Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -3171,6 +3173,44 @@ model CashierShiftClose {
   closedAt        DateTime @default(now())
 
   @@index([tenantId, clinicId, shiftDate])
+}
+
+/// MN-03 — cash drawer shift per clinic: opened with a float, closed with a blind count.
+model CashierShift {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId        String
+  clinic          Clinic    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  /// Z-report number, sequential per clinic.
+  zNumber         Int
+  /// OPEN | CLOSED
+  status          String    @default("OPEN")
+  currency        String
+  openingFloat    Decimal   @db.Decimal(14, 2)
+  openedBy        String
+  openedAt        DateTime  @default(now())
+  closedBy        String?
+  closedAt        DateTime?
+  expectedCash    Decimal?  @db.Decimal(14, 2)
+  expectedCard    Decimal?  @db.Decimal(14, 2)
+  countedCash     Decimal?  @db.Decimal(14, 2)
+  countedCard     Decimal?  @db.Decimal(14, 2)
+  cashVariance    Decimal?  @db.Decimal(14, 2)
+  cardVariance    Decimal?  @db.Decimal(14, 2)
+  varianceNote    String?
+  /// Market pack threshold in force at close.
+  reviewThreshold Decimal?  @db.Decimal(14, 2)
+  needsReview     Boolean   @default(false)
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  reviewNote      String?
+  /// Totals by method and by drawer movement type, frozen at close (Z-report).
+  summaryJson     Json?
+
+  @@unique([clinicId, zNumber])
+  @@index([tenantId, clinicId, status])
+  @@index([tenantId, needsReview])
 }
 
 /// MN-02 — doctor revenue-share rule. The most specific active match wins (clinician > service > payer > clinic, then priority).
