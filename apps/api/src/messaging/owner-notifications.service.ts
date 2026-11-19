@@ -59,11 +59,11 @@ export class OwnerNotificationsService {
     const clinic = await this.prisma.clinic.findFirst({ where: { id: p.clinicId, tenantId }, select: { nameEn: true } });
     const money = (n: number) => `${n.toFixed(2)} ${p.currency}`;
     const status = p.needsReview ? "REVIEW" : Math.abs(p.cashVariance) >= 0.01 ? "VARIANCE" : "OK";
-    const market = await resolveMarketForTenant(this.prisma, tenantId);
+    const tz = this.digests ? (await resolveMarketForTenant(this.prisma, tenantId)).timezone : "UTC";
     let queued = 0;
     for (const r of await this.ownerRecipients(tenantId)) {
       try {
-        if (this.digests && !(await this.digests.maySendOwnerShift(r.userId, new Date(), market.timezone))) continue;
+        if (this.digests && !(await this.digests.maySendOwnerShift(r.userId, new Date(), tz))) continue;
         await this.messaging.queueMessage(tenantId, {
           channel: MessageChannel.WHATSAPP,
           toPhone: r.phone,
