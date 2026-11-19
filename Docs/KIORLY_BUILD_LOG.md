@@ -139,3 +139,5 @@
 | 098 GT-04 | `959e1e6` | WhatsApp→ticket, macros, eng escalate; first-response SLA Sun–Thu 09–18 P1 4h; NH-023 |
 | 099 GT-05 | `b95219e` | POST demo/reset <60s; ROI calc; rep signup QR; Docs/SALES_KIT.md |
 | 100 GT-06 | `f10445b` | Hubs BILLING_AND_CREDITS + KIOREX_CONNECTOR; capability map + roadmap aligned |
+| 101 CR-10 | `2135ff2` | Market `noShowGuarantee` off by default; baseline/eval windows from activation; `GET /billing/guarantee` + tracker card; grant `NO_SHOW_GUARANTEE` when reduction ≥ target with reminders+deposits |
+
