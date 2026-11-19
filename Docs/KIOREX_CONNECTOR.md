@@ -11,7 +11,11 @@ How Kiorly talks to the **Kiorex** patient marketplace (HMAC marketplace API, co
 | Impact reports | [REPORTS_KIOREX_IMPACT.md](./REPORTS_KIOREX_IMPACT.md) | **Shipped** (RP-03) |
 | OpenAPI consumer contract | [QA_KIOREX_CONTRACT.md](./QA_KIOREX_CONTRACT.md) | **Shipped** (QA-04; NH-019 Kiorex CI) |
 | Sales kit / free calculator | [SALES_KIT.md](./SALES_KIT.md) · [PLANS_AND_PRICING.md](./PLANS_AND_PRICING.md) | **Shipped** (GT-01/GT-05) |
-| Consent-based record sharing | [KX11_RECORD_SHARE.md](./KX11_RECORD_SHARE.md) | **Shipped** (KX-11) |
+| Consent-based record sharing | [KX11_RECORD_SHARE.md](./KX11_RECORD_SHARE.md) | **Shipped** (KX-11; Rx PDF link added) |
+| Liquidity counts `GET /marketplace/v1/analytics/slot-capacity` | below | **Shipped** (contracts 1.1.0) |
+| Kiorex waitlist (`POST/GET/DELETE /marketplace/v1/waitlist`, offers accept/decline, `WAITLIST_OFFER`) | below | **Shipped** (contracts 1.1.0) |
+| e-Prescription / lab order hand-offs (`PrescriptionIssued`, `LabOrderPlaced`) | [FEATURE_FLAGS.md](./FEATURE_FLAGS.md) | **Shipped** (KCV203/204 Kiorly side; Pharmacy/Lab consumers: NH-026) |
+| Mock providers and the dev inbox | [MOCK_PROVIDERS.md](./MOCK_PROVIDERS.md) | **Shipped** |
 
 | Feature-flag control plane (snapshot client, `flag.changed` webhook, FEATURE_DISABLED) | [FEATURE_FLAGS.md](./FEATURE_FLAGS.md) | **Shipped** (FF01–FF06) |
 | Sign in with Kiorex Passport (OIDC, account link, back-channel logout) | [AUTH_SESSIONS.md](./AUTH_SESSIONS.md) | **Shipped** (KCV-201) |
@@ -33,3 +37,32 @@ How Kiorly talks to the **Kiorex** patient marketplace (HMAC marketplace API, co
 | Schedule | Sat–Thu 09:00–13:00 and 16:00–20:00 (Africa/Cairo); Consultation 30 min + Follow-up 15 min, both `marketplaceBookable` ⇒ slots for the next 14 days |
 
 Verify: `GET http://localhost:3000/api/v1/marketplace/v1/clinics` (signed) lists the two clinics; `kx-dev-seed.integration.test.ts` asserts idempotency, LIVE eligibility via the real recompute, and ≥ 20 slots over 14 days per doctor.
+
+## Liquidity counts (slots/day)
+
+`GET /marketplace/v1/analytics/slot-capacity?from=YYYY-MM-DD&to=YYYY-MM-DD[&clinicId][&clinicianId]` (HMAC, max 30 days, clinic-local
+days, inclusive). For every **LIVE** listing it returns the open marketplace slots per day, computed by the same slot engine that serves
+`/slots` (holds, bookings, daily cap, leave and blocked periods already excluded). Because types overlap in time, the count uses the
+clinician's shortest marketplace-bookable type (`typeId`, `slotMinutes` are returned). Response: `{ from, to, items[{clinicId, clinicianId,
+date, typeId, slotMinutes, openSlots}], totals[{date, openSlots}] }`. Counts only: no patient data.
+
+## Waitlist (Kiorex patients)
+
+| Call | Behaviour |
+|------|-----------|
+| `POST /marketplace/v1/waitlist` `{ externalRef, clinicId, clinicianId?, typeId?, preferredFrom?, preferredTo?, patient }` | Joins; **idempotent on `externalRef`**; needs a LIVE listing; creates/matches the patient and records marketplace consent |
+| `GET /marketplace/v1/waitlist/:externalRef` | Entry state `WAITING \| OFFERED \| BOOKED \| CANCELLED` |
+| `DELETE /marketplace/v1/waitlist/:externalRef` | Leaves; idempotent; withdraws a pending offer |
+| `POST /marketplace/v1/waitlist/offers/:offerId/accept` / `decline` | Patient answers a `WAITLIST_OFFER`. Accept books the slot as a `KIOREX_MARKETPLACE` appointment, `externalReference` = the waitlist ref, status CONFIRMED (so commission, events and cancellation policy apply as for any Kiorex booking) |
+
+FS-03 auto-fill (`clinic.waitlist_autofill`) treats Kiorex-sourced entries like any other, in order, but delivers the offer as the
+**`WAITLIST_OFFER` outbox event** `{ offerId, waitlistRef, clinicId, clinicianId, typeId?, startsAt, endsAt?, expiresAt, feeAmount }`
+instead of WhatsApp, so a clinic-side phone is not required. Offers expire after the market's hold window (default 15 min); a late
+accept returns `UNAVAILABLE` and never double-books. Migration `20261120010000_kxw_kiorex_waitlist` (additive columns `source`,
+`externalRef`, `platformIntegrationClientId`).
+
+## Contract version
+
+`@kiorex/contracts` **1.1.0** (additive minor; `npm run pack:local` in kiorex-contracts): the endpoints above, events `WAITLIST_OFFER` and
+`LabOrderPlaced`, `PrescriptionIssued` now emitted, `PRESCRIPTION_SHARED.pdf`. The OpenAPI file here and in kiorex-contracts are kept identical
+(drift test).

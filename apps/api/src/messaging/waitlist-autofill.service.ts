@@ -1,4 +1,4 @@
-import { forwardRef, Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
+import { forwardRef, Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit, Optional } from "@nestjs/common";
 import {
   AppointmentStatus,
   AppointmentWaitlistStatus,
@@ -15,6 +15,8 @@ import { PrismaService } from "../prisma/prisma.service";
 import { SlotService } from "../scheduling/slot.service";
 import { AppointmentOutboxService } from "./appointment-outbox.service";
 import { MessagingService } from "./messaging.service";
+import { OutboxEventService } from "./outbox-event.service";
+import { OUTBOX_EVENT } from "./outbox-event-types";
 import {
   WAITLIST_OFFER_TEMPLATE_KEY,
   WAITLIST_BOOKED_TEMPLATE_KEY,
@@ -23,6 +25,7 @@ import {
 } from "./whatsapp-reply-payloads";
 
 const SCAN_MS = 15_000;
+export const KIOREX_WAITLIST_SOURCE = "KIOREX";
 export const DEFAULT_WAITLIST_OFFER_HOLD_MINUTES = 15;
 
 /** Market pack `providerConfig.messaging.waitlist.offerHoldMinutes` (5–120), default 15. */
@@ -60,6 +63,7 @@ export class WaitlistAutofillService implements OnModuleInit, OnModuleDestroy {
     private readonly audit: AuditService,
     private readonly appointmentOutbox: AppointmentOutboxService,
     @Inject(forwardRef(() => SlotService)) private readonly slots: SlotService,
+    @Optional() private readonly outbox?: OutboxEventService,
   ) {}
 
   onModuleInit() {
@@ -148,7 +152,10 @@ export class WaitlistAutofillService implements OnModuleInit, OnModuleDestroy {
 
     for (const entry of candidates) {
       const phone = entry.patient.phone?.trim();
-      if (!phone || entry.patient.isSample) {
+      const viaKiorex = entry.source === KIOREX_WAITLIST_SOURCE;
+      // Kiorex-sourced entries are reached through the Kiorex patient app (WAITLIST_OFFER event), not WhatsApp,
+      // so a clinic-side phone is not required for them.
+      if (entry.patient.isSample || (!viaKiorex && !phone)) {
         await this.recordSkip(slot, entry, now, !phone ? "NO_PHONE" : "SAMPLE_PATIENT");
         continue;
       }
@@ -177,11 +184,47 @@ export class WaitlistAutofillService implements OnModuleInit, OnModuleDestroy {
         throw e;
       }
 
+      if (viaKiorex) {
+        try {
+          if (!this.outbox) throw new Error("outbox unavailable");
+          await this.outbox.enqueueEvent({
+            tenantId: slot.tenantId,
+            type: OUTBOX_EVENT.WAITLIST_OFFER,
+            aggregateType: "WaitlistOffer",
+            aggregateId: offerId,
+            payload: {
+              offerId,
+              waitlistRef: entry.externalRef,
+              clinicId: slot.clinicId,
+              clinicianId: slot.clinicianId,
+              ...(slot.appointmentTypeId ? { typeId: slot.appointmentTypeId } : {}),
+              startsAt: slot.startsAt.toISOString(),
+              ...(slot.endsAt ? { endsAt: slot.endsAt.toISOString() } : {}),
+              expiresAt: new Date(now.getTime() + holdMinutes * 60_000).toISOString(),
+              feeAmount: slot.feeAmount.toString(),
+            },
+          });
+        } catch (e) {
+          await this.closeOffer(offerId, WaitlistOfferStatus.SKIPPED, now, e instanceof Error ? e.message.slice(0, 200) : "EVENT_FAILED");
+          continue;
+        }
+        await this.audit.recordEvent({
+          tenantId: slot.tenantId,
+          actorId: null,
+          clinicId: slot.clinicId,
+          action: "WAITLIST_SLOT_OFFERED",
+          resource: "WaitlistSlotOffer",
+          resourceId: offerId,
+          metadata: { slotId: slot.id, waitlistEntryId: entry.id, expiresInMinutes: holdMinutes, channel: "KIOREX" },
+        });
+        return { offerId };
+      }
+
       try {
         const msg = await this.messaging.queueMessage(slot.tenantId, {
           patientId: entry.patientId,
           channel: MessageChannel.WHATSAPP,
-          toPhone: phone,
+          toPhone: phone!,
           templateKey: WAITLIST_OFFER_TEMPLATE_KEY,
           body: `A slot opened on ${await this.formatWhen(slot)}. Reply Accept within ${holdMinutes} min to book it.`,
           variables: {
@@ -227,8 +270,26 @@ export class WaitlistAutofillService implements OnModuleInit, OnModuleDestroy {
     const meta = (outbound?.metadata ?? {}) as { waitlistOfferId?: unknown };
     const offerId = typeof meta.waitlistOfferId === "string" ? meta.waitlistOfferId : null;
     if (!offerId) return { handled: false };
-    const offer = await this.prisma.waitlistSlotOffer.findUnique({ where: { id: offerId }, include: { slot: true } });
+    return this.respondToOffer(offerId, action, now);
+  }
+
+  /**
+   * Accept / decline an offer. Shared by the WhatsApp button reply and the Kiorex marketplace endpoints
+   * (`opts.kiorexClientId` set). Kiorex-sourced entries book as KIOREX_MARKETPLACE with the waitlist ref as the
+   * booking's external reference and send no WhatsApp messages.
+   */
+  async respondToOffer(
+    offerId: string,
+    action: Extract<WhatsAppReplyAction, "waitlist_accept" | "waitlist_decline">,
+    now: Date = new Date(),
+    opts: { kiorexClientId?: string } = {},
+  ): Promise<{ handled: boolean; outcome?: "BOOKED" | "DECLINED" | "UNAVAILABLE"; appointmentId?: string }> {
+    const offer = await this.prisma.waitlistSlotOffer.findUnique({
+      where: { id: offerId },
+      include: { slot: true, waitlistEntry: { select: { source: true, externalRef: true } } },
+    });
     if (!offer) return { handled: false };
+    const viaKiorex = offer.waitlistEntry.source === KIOREX_WAITLIST_SOURCE;
 
     if (action === "waitlist_decline") {
       const closed = await this.closeOffer(offer.id, WaitlistOfferStatus.DECLINED, now);
@@ -242,7 +303,7 @@ export class WaitlistAutofillService implements OnModuleInit, OnModuleDestroy {
         await this.closeOffer(offer.id, WaitlistOfferStatus.WITHDRAWN, now, "SLOT_TAKEN");
         await this.closeSlot(offer.slotId, WaitlistOpenSlotStatus.FILLED_ELSEWHERE, now);
       }
-      if (offer.status !== WaitlistOfferStatus.ACCEPTED) await this.notify(offer, WAITLIST_CLOSED_TEMPLATE_KEY);
+      if (offer.status !== WaitlistOfferStatus.ACCEPTED && !viaKiorex) await this.notify(offer, WAITLIST_CLOSED_TEMPLATE_KEY);
       return { handled: true, outcome: "UNAVAILABLE" };
     }
 
@@ -264,8 +325,13 @@ export class WaitlistAutofillService implements OnModuleInit, OnModuleDestroy {
           endsAt: slot.endsAt,
           feeAmount: slot.feeAmount,
           status: AppointmentStatus.CONFIRMED,
-          whatsappConfirmedAt: now,
-          bookingSource: BookingSource.FRONT_DESK,
+          ...(viaKiorex
+            ? {
+                bookingSource: BookingSource.KIOREX_MARKETPLACE,
+                externalReference: offer.waitlistEntry.externalRef,
+                platformIntegrationClientId: opts.kiorexClientId ?? null,
+              }
+            : { whatsappConfirmedAt: now, bookingSource: BookingSource.FRONT_DESK }),
           attributionJson: { source: "waitlist_autofill", waitlistOfferId: offer.id, slotId: slot.id },
         },
       });
@@ -286,7 +352,7 @@ export class WaitlistAutofillService implements OnModuleInit, OnModuleDestroy {
           previousStatus: AppointmentStatus.SCHEDULED,
           nextStatus: AppointmentStatus.CONFIRMED,
           bookingSource: apt.bookingSource,
-          metadata: { source: "waitlist_autofill" },
+          metadata: { source: "waitlist_autofill", ...(viaKiorex ? { externalReference: apt.externalReference } : {}) },
         },
         tx,
       );
@@ -304,7 +370,7 @@ export class WaitlistAutofillService implements OnModuleInit, OnModuleDestroy {
       resourceId: booked.id,
       metadata: { waitlistOfferId: offer.id, slotId: slot.id, sourceAppointmentId: slot.sourceAppointmentId },
     });
-    await this.notify(offer, WAITLIST_BOOKED_TEMPLATE_KEY);
+    if (!viaKiorex) await this.notify(offer, WAITLIST_BOOKED_TEMPLATE_KEY);
     return { handled: true, outcome: "BOOKED", appointmentId: booked.id };
   }
 

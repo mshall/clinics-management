@@ -30,6 +30,12 @@
     { "method": "post", "path": "/payouts", "operationId": "marketplaceRecordPayout" },
     { "method": "post", "path": "/analytics/profile-views", "operationId": "marketplaceSyncProfileViews" },
     { "method": "post", "path": "/reviews/aggregate", "operationId": "marketplaceSyncReviews" },
+    { "method": "get", "path": "/analytics/slot-capacity", "operationId": "marketplaceSlotCapacity" },
+    { "method": "post", "path": "/waitlist", "operationId": "marketplaceJoinWaitlist" },
+    { "method": "get", "path": "/waitlist/{externalRef}", "operationId": "marketplaceGetWaitlist" },
+    { "method": "delete", "path": "/waitlist/{externalRef}", "operationId": "marketplaceLeaveWaitlist" },
+    { "method": "post", "path": "/waitlist/offers/{offerId}/accept", "operationId": "marketplaceAcceptWaitlistOffer" },
+    { "method": "post", "path": "/waitlist/offers/{offerId}/decline", "operationId": "marketplaceDeclineWaitlistOffer" },
     { "method": "post", "path": "/appointments", "operationId": "marketplaceBookAppointment" },
     { "method": "get", "path": "/appointments/{id}", "operationId": "marketplaceGetAppointment" },
     { "method": "post", "path": "/appointments/{id}/cancel", "operationId": "marketplaceCancelAppointment" }

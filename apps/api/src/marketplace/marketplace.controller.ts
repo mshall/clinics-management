@@ -12,6 +12,8 @@ import { KiorexReviewsService, type ReviewAggregateBody } from "./kiorex-reviews
 import { KiorexOverviewService, type ProfileViewsBody } from "./kiorex-overview.service";
 import { KiorexDepositsService, type DepositPaidBody, type PayoutBody } from "../billing/kiorex-deposits.service";
 import { RecordShareService } from "./record-share.service";
+import { SlotCapacityService } from "./slot-capacity.service";
+import { MarketplaceWaitlistService, type MarketplaceWaitlistJoinBody } from "./marketplace-waitlist.service";
 
 @ApiTags("marketplace")
 @Controller("marketplace/v1")
@@ -31,6 +33,8 @@ export class MarketplaceController {
     private readonly overview: KiorexOverviewService,
     private readonly kiorexDeposits: KiorexDepositsService,
     private readonly recordShare: RecordShareService,
+    private readonly slotCapacity: SlotCapacityService,
+    private readonly waitlist: MarketplaceWaitlistService,
   ) {}
 
   @Get("auth/verify")
@@ -180,6 +184,50 @@ export class MarketplaceController {
   @ApiOperation({ summary: "Kiorex pushes a doctor's rating aggregate and verified reviews (KX-08)" })
   syncReviews(@MarketplaceClient() client: PlatformIntegrationPrincipal, @Body() body: ReviewAggregateBody) {
     return this.reviews.syncAggregate(client, body);
+  }
+
+  @Get("analytics/slot-capacity")
+  @ApiOperation({ summary: "Open marketplace slots per clinician per clinic-local day, for Kiorex liquidity (slots/day)" })
+  slotCapacityCounts(
+    @Query("from") from: string,
+    @Query("to") to: string,
+    @Query("clinicId") clinicId?: string,
+    @Query("clinicianId") clinicianId?: string,
+  ) {
+    return this.slotCapacity.capacity({ from, to, clinicId, clinicianId });
+  }
+
+  @Post("waitlist")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Kiorex patient joins a clinic/doctor waitlist; idempotent on externalRef" })
+  joinWaitlist(@MarketplaceClient() client: PlatformIntegrationPrincipal, @Body() body: MarketplaceWaitlistJoinBody) {
+    return this.waitlist.join(client, body);
+  }
+
+  @Get("waitlist/:externalRef")
+  @ApiOperation({ summary: "Get a Kiorex waitlist entry" })
+  getWaitlist(@MarketplaceClient() client: PlatformIntegrationPrincipal, @Param("externalRef") externalRef: string) {
+    return this.waitlist.get(client, externalRef);
+  }
+
+  @Delete("waitlist/:externalRef")
+  @ApiOperation({ summary: "Kiorex patient leaves the waitlist; idempotent, withdraws any pending offer" })
+  leaveWaitlist(@MarketplaceClient() client: PlatformIntegrationPrincipal, @Param("externalRef") externalRef: string) {
+    return this.waitlist.leave(client, externalRef);
+  }
+
+  @Post("waitlist/offers/:offerId/accept")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Patient accepts a WAITLIST_OFFER: books the slot as a Kiorex booking (outcome BOOKED | UNAVAILABLE)" })
+  acceptWaitlistOffer(@MarketplaceClient() client: PlatformIntegrationPrincipal, @Param("offerId") offerId: string) {
+    return this.waitlist.acceptOffer(client, offerId);
+  }
+
+  @Post("waitlist/offers/:offerId/decline")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Patient declines a WAITLIST_OFFER; the slot goes to the next person" })
+  declineWaitlistOffer(@MarketplaceClient() client: PlatformIntegrationPrincipal, @Param("offerId") offerId: string) {
+    return this.waitlist.declineOffer(client, offerId);
   }
 
   @Post("appointments")

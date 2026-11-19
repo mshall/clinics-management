@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Kiorex Marketplace API",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Platform connector for Kiorex (KX-01). Authenticate with HMAC headers."
   },
   "servers": [{ "url": "/marketplace/v1" }],
@@ -309,6 +309,132 @@
           "404": { "description": "Booking not found" },
           "422": { "description": "CANCELLATION_WINDOW_CLOSED or BOOKING_NOT_CHANGEABLE" }
         }
+      }
+    },
+    "/analytics/slot-capacity": {
+      "get": {
+        "operationId": "marketplaceSlotCapacity",
+        "summary": "Open marketplace slots per clinician per clinic-local day, for Kiorex liquidity (slots/day). Counts only, no PHI (additive, 1.1.0)",
+        "parameters": [
+          { "name": "from", "in": "query", "required": true, "schema": { "type": "string", "format": "date" }, "description": "Clinic-local first day, inclusive" },
+          { "name": "to", "in": "query", "required": true, "schema": { "type": "string", "format": "date" }, "description": "Clinic-local last day, inclusive; range max 30 days" },
+          { "name": "clinicId", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "clinicianId", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Per LIVE listing per day open slot counts (based on the clinician's shortest marketplace-bookable type) plus per-day totals",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["from", "to", "items", "totals"],
+                  "properties": {
+                    "from": { "type": "string", "format": "date" },
+                    "to": { "type": "string", "format": "date" },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": ["clinicId", "clinicianId", "date", "typeId", "slotMinutes", "openSlots"],
+                        "properties": {
+                          "clinicId": { "type": "string" },
+                          "clinicianId": { "type": "string" },
+                          "date": { "type": "string", "format": "date" },
+                          "typeId": { "type": "string" },
+                          "slotMinutes": { "type": "integer" },
+                          "openSlots": { "type": "integer", "minimum": 0 }
+                        }
+                      }
+                    },
+                    "totals": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": ["date", "openSlots"],
+                        "properties": { "date": { "type": "string", "format": "date" }, "openSlots": { "type": "integer", "minimum": 0 } }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Missing/invalid dates or range over 30 days" }
+        }
+      }
+    },
+    "/waitlist": {
+      "post": {
+        "operationId": "marketplaceJoinWaitlist",
+        "summary": "Kiorex patient joins a clinic/doctor waitlist; idempotent on externalRef (additive, 1.1.0). Slots that open are offered via the WAITLIST_OFFER event",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["externalRef", "clinicId", "patient"],
+                "properties": {
+                  "externalRef": { "type": "string", "description": "Kiorex waitlist reference" },
+                  "clinicId": { "type": "string" },
+                  "clinicianId": { "type": "string" },
+                  "typeId": { "type": "string" },
+                  "preferredFrom": { "type": "string", "format": "date-time" },
+                  "preferredTo": { "type": "string", "format": "date-time" },
+                  "notes": { "type": "string" },
+                  "marketplaceConsentGranted": { "type": "boolean" },
+                  "patient": {
+                    "type": "object",
+                    "required": ["phone", "firstNameEn", "lastNameEn"],
+                    "properties": {
+                      "phone": { "type": "string" },
+                      "firstNameEn": { "type": "string" },
+                      "lastNameEn": { "type": "string" },
+                      "nationalId": { "type": "string" },
+                      "email": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Waitlist entry (status WAITING | OFFERED | BOOKED | CANCELLED)" },
+          "400": { "description": "Invalid clinic, type, window or patient" },
+          "403": { "description": "No LIVE listing for the clinic/doctor" }
+        }
+      }
+    },
+    "/waitlist/{externalRef}": {
+      "get": {
+        "operationId": "marketplaceGetWaitlist",
+        "summary": "Get a Kiorex waitlist entry (additive, 1.1.0)",
+        "parameters": [{ "name": "externalRef", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Waitlist entry" }, "404": { "description": "Unknown entry" } }
+      },
+      "delete": {
+        "operationId": "marketplaceLeaveWaitlist",
+        "summary": "Kiorex patient leaves the waitlist; idempotent, withdraws a pending offer (additive, 1.1.0)",
+        "parameters": [{ "name": "externalRef", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Waitlist entry (CANCELLED, or BOOKED if already booked)" }, "404": { "description": "Unknown entry" } }
+      }
+    },
+    "/waitlist/offers/{offerId}/accept": {
+      "post": {
+        "operationId": "marketplaceAcceptWaitlistOffer",
+        "summary": "Patient accepts a WAITLIST_OFFER: Kiorly books the slot as a KIOREX_MARKETPLACE appointment with externalReference = waitlist ref (additive, 1.1.0)",
+        "parameters": [{ "name": "offerId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "{ offerId, outcome: BOOKED | UNAVAILABLE, appointmentId }" }, "404": { "description": "Unknown offer" } }
+      }
+    },
+    "/waitlist/offers/{offerId}/decline": {
+      "post": {
+        "operationId": "marketplaceDeclineWaitlistOffer",
+        "summary": "Patient declines a WAITLIST_OFFER; the slot goes to the next person (additive, 1.1.0)",
+        "parameters": [{ "name": "offerId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "{ offerId, outcome: DECLINED | UNAVAILABLE }" }, "404": { "description": "Unknown offer" } }
       }
     },
     "/analytics/profile-views": {

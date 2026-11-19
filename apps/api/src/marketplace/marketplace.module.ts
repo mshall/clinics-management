@@ -30,6 +30,8 @@ import { ClinicBookingPageService } from "./clinic-booking-page.service";
 import { KiorexOverviewService } from "./kiorex-overview.service";
 import { PublicBookingPageController } from "./public-booking-page.controller";
 import { RecordShareModule } from "./record-share.module";
+import { SlotCapacityService } from "./slot-capacity.service";
+import { MarketplaceWaitlistService } from "./marketplace-waitlist.service";
 
 @Module({
   imports: [
@@ -68,6 +70,8 @@ import { RecordShareModule } from "./record-share.module";
     MarketplacePatientIntakeService,
     MarketplaceBookingService,
     SlotHoldExpiryScheduler,
+    SlotCapacityService,
+    MarketplaceWaitlistService,
   ],
   exports: [MarketplaceListingService, PlatformIntegrationClientService, MarketplaceProviderProfileService],
 })
