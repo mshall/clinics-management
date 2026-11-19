@@ -22,6 +22,7 @@ import { FirstRunTour } from "@/features/help/first-run-tour";
 import { HelpDrawer } from "@/features/help/help-drawer";
 import { useHelpStore } from "@/stores/help-store";
 import { PwaInstallPrompt } from "@/features/pwa/pwa-install-prompt";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 
 export function AppShell() {
   const { t } = useTranslation();
@@ -112,7 +113,7 @@ export function AppShell() {
         <DunningBanner />
         <LegalAcceptanceBanner />
         {showReportingPeriodBar(pathname) ? <DateRangeBar /> : null}
-        <main className="mx-auto w-full min-w-0 max-w-[min(96rem,calc(100vw-1rem))] flex-1 p-3 sm:p-4 md:p-6">
+        <main className="mx-auto w-full min-w-0 max-w-[min(96rem,calc(100vw-1rem))] flex-1 p-3 pb-20 sm:p-4 md:p-6 md:pb-6">
           <Outlet />
         </main>
         <RoleAssistantWidget />
@@ -120,6 +121,7 @@ export function AppShell() {
         <HelpDrawer />
         <FirstRunTour />
         <PwaInstallPrompt />
+        <MobileBottomNav />
       </div>
     </div>
   );

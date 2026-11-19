@@ -56,7 +56,10 @@
     "governance": "الحوكمة والتدقيق",
     "frontDeskBoard": "لوحة الاستقبال",
     "guideBook": "كتيب التعليمات",
-    "kiorex": "كيوركس"
+    "kiorex": "كيوركس",
+    "mobileToday": "اليوم",
+    "mobileMore": "المزيد",
+    "mobileBottom": "التنقل الرئيسي"
   },
   "entitlements": {
     "upgradeTitle": "يتطلب ترقية",

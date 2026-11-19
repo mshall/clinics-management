@@ -556,7 +556,7 @@ export function EncounterDetailPage() {
   const activeMedTab = medTab;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 doctor-mobile-view md:space-y-6">
       <EncounterDeleteConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
