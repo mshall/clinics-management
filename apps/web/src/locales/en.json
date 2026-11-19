@@ -3865,5 +3865,14 @@
     "reconciled": "Reconciled",
     "mismatch": "Mismatch",
     "linkFromReports": "AR aging & branch P&L"
+  },
+  "printSettings": {
+    "title": "Thermal printing",
+    "subtitle": "80 mm receipt and queue-ticket profiles for Epson TM-T20III and Star TSP143III. Z-reports already support thermal from the cash drawer.",
+    "clinic": "Clinic",
+    "profile": "Printer profile",
+    "save": "Save",
+    "saved": "Print settings saved",
+    "previewTicket": "Preview queue ticket"
   }
 }

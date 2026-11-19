@@ -20,7 +20,8 @@
     --secondary: 210 25% 93%;
     --secondary-foreground: 222 40% 18%;
     --muted: 210 20% 94%;
-    --muted-foreground: 215 16% 40%;
+    /* UX-04 — WCAG AA: muted text ≥ 4.5:1 on background (~#4b5563 on #f8fafc) */
+    --muted-foreground: 215 18% 32%;
     --accent: 186 45% 92%;
     --accent-foreground: 200 70% 22%;
     --destructive: 0 72% 51%;
@@ -65,6 +66,12 @@
 
   #root {
     @apply min-h-screen min-w-0 overflow-x-clip;
+  }
+
+  /* UX-04 — visible keyboard focus (WCAG 2.4.7) */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
   }
 
   /* Numbers and codes stay LTR in Arabic (clinical norm) */

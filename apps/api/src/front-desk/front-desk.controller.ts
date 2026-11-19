@@ -1,7 +1,20 @@
-import { BadRequestException, Body, Controller, Get, Param, Post, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+  StreamableFile,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { memoryStorage } from "multer";
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiProduces, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { EntitlementGuard } from "../entitlements/entitlement.guard";
@@ -108,5 +121,66 @@ export class FrontDeskController {
       parsed.toVisitCollectionInput(),
       receipt,
     );
+  }
+
+  @Get("print-settings")
+  @ApiOperation({ summary: "UX-04 thermal printer profile for a clinic" })
+  printSettings(@CurrentUser() user: JwtUser, @Query("clinicId") clinicId: string) {
+    return this.frontDesk.getPrintSettings(requireTenantId(user), clinicId);
+  }
+
+  @Put("print-settings")
+  @ApiOperation({ summary: "UX-04 save thermal printer profile" })
+  putPrintSettings(
+    @CurrentUser() user: JwtUser,
+    @Body() body: { clinicId: string; thermalPrinterProfileId: string },
+  ) {
+    return this.frontDesk.putPrintSettings(requireTenantId(user), body.clinicId, body.thermalPrinterProfileId);
+  }
+
+  @Get("print/queue-ticket")
+  @ApiOperation({ summary: "UX-04 80 mm queue ticket PDF" })
+  @ApiProduces("application/pdf")
+  async printQueueTicket(
+    @CurrentUser() user: JwtUser,
+    @Query("clinicId") clinicId: string,
+    @Query("ticketNumber") ticketNumber: string,
+    @Query("patientName") patientName?: string,
+    @Query("locale") locale?: "en" | "ar",
+  ) {
+    const result = await this.frontDesk.thermalQueueTicket(requireTenantId(user), {
+      clinicId,
+      ticketNumber: Number(ticketNumber),
+      patientName,
+      locale,
+    });
+    return new StreamableFile(result.pdf, {
+      type: result.contentType,
+      disposition: `inline; filename="${result.filename}"`,
+    });
+  }
+
+  @Post("print/receipt")
+  @ApiOperation({ summary: "UX-04 80 mm payment receipt PDF" })
+  @ApiProduces("application/pdf")
+  async printReceipt(
+    @CurrentUser() user: JwtUser,
+    @Body()
+    body: {
+      clinicId: string;
+      patientName: string;
+      receiptNumber?: string;
+      lines?: { label: string; amount: string }[];
+      total: string;
+      currency?: string;
+      method?: string;
+      locale?: "en" | "ar";
+    },
+  ) {
+    const result = await this.frontDesk.thermalPaymentReceipt(requireTenantId(user), body);
+    return new StreamableFile(result.pdf, {
+      type: result.contentType,
+      disposition: `inline; filename="${result.filename}"`,
+    });
   }
 }
