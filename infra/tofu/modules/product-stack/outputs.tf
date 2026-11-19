@@ -5,6 +5,11 @@ output "app_url" {
   value       = var.enable_cdn ? "https://${local.has_domain ? var.domain : module.cdn[0].domain_name}" : "https://${module.container_service.service_url}"
 }
 
+output "alias_urls" {
+  description = "HTTPS URLs of the alias domains (e.g. nurse.kiorly.com); empty when none."
+  value       = [for d in var.alias_domains : "https://${d}"]
+}
+
 output "api_origin" {
   description = "Direct App Runner URL (https://<service_url>). Prefer app_url for users."
   value       = "https://${module.container_service.service_url}"
@@ -88,4 +93,9 @@ output "opensearch_endpoint" {
 output "redis_endpoint" {
   description = "Redis primary endpoint (null when disabled)."
   value       = one(aws_elasticache_replication_group.redis[*].primary_endpoint_address)
+}
+
+output "safety_alerts_topic_arn" {
+  description = "Dedicated safety on-call SNS topic (null when safety_alerts is disabled)."
+  value       = one(module.safety_alerts[*].topic_arn)
 }

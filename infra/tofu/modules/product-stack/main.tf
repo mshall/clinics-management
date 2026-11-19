@@ -52,6 +52,14 @@ resource "terraform_data" "cell_guard" {
       error_message = "The demo seed Lambda must never be enabled in production (HB09)."
     }
     precondition {
+      condition     = length(var.alias_domains) == 0 || local.has_domain
+      error_message = "alias_domains requires a primary domain and enable_cdn (aliases share its certificate and distribution)."
+    }
+    precondition {
+      condition     = alltrue([for d in var.alias_domains : var.zone_name != "" && endswith(d, ".${var.zone_name}")])
+      error_message = "Every alias domain must be inside zone_name (the SAN validation and alias records use the same hosted zone)."
+    }
+    precondition {
       condition     = !local.need_zone || var.zone_name != ""
       error_message = "zone_name is required when domain or email is configured."
     }
@@ -257,9 +265,14 @@ module "dns_certs" {
   source    = "../aws/dns-certs"
   providers = { aws = aws, aws.us_east_1 = aws.us_east_1 }
 
-  certificates           = { site = { domain = var.domain, zone_id = data.aws_route53_zone.this[0].zone_id } }
-  create_alias_records   = true
-  alias_records          = { site = { name = var.domain, zone_id = data.aws_route53_zone.this[0].zone_id } }
+  # Alias domains (e.g. nurse.kiorly.com, KX-08 / KX-23: Kiorly Nurse is an edition served by the Clinic stack) ride on
+  # the same certificate as SANs, the same distribution as extra CNAMEs, and get their own A/AAAA records.
+  certificates         = { site = { domain = var.domain, sans = var.alias_domains, zone_id = data.aws_route53_zone.this[0].zone_id } }
+  create_alias_records = true
+  alias_records = merge(
+    { site = { name = var.domain, zone_id = data.aws_route53_zone.this[0].zone_id } },
+    { for d in var.alias_domains : "alias-${d}" => { name = d, zone_id = data.aws_route53_zone.this[0].zone_id } },
+  )
   cloudfront_domain_name = module.cdn[0].domain_name
   cloudfront_zone_id     = module.cdn[0].hosted_zone_id
   tags                   = local.tags
@@ -273,7 +286,7 @@ module "cdn" {
   comment                         = "${var.product} ${var.env} SPA + App Runner API (no ALB/NAT)"
   web_bucket_regional_domain_name = module.web[0].bucket_regional_domain_name
   api_origin_domain               = module.container_service.service_url
-  aliases                         = local.has_domain ? [var.domain] : []
+  aliases                         = local.has_domain ? concat([var.domain], var.alias_domains) : []
   certificate_arn                 = local.has_domain ? module.dns_certs[0].certificate_arns["site"] : null
   web_acl_arn                     = var.waf_enabled ? module.waf[0].web_acl_arn : null
   tags                            = local.tags
@@ -299,4 +312,27 @@ module "observability" {
   log_retention_days       = var.log_retention_days
   budget_usd               = var.budget_usd
   tags                     = local.tags
+}
+
+# ---------------------------------------------------------------------------------------------------------
+# safety-alert delivery alarms (KX-09 SAFETY_ALERT_RAISED <= 60 s, KX-23 stop-ship). Off by default.
+# producer = Kiorly Clinic / Nurse edition; consumer = Kiorex (only if it consumes SAFETY_ALERT_RAISED).
+# ---------------------------------------------------------------------------------------------------------
+module "safety_alerts" {
+  count  = var.safety_alerts.enabled ? 1 : 0
+  source = "../aws/safety-alerts"
+
+  name                       = local.name
+  role                       = var.safety_alerts.role
+  application_log_group_name = "/aws/apprunner/${module.container_service.service_name}/${module.container_service.service_id}/application"
+  latency_threshold_ms       = var.safety_alerts.latency_threshold_ms
+  sns_kms_key_id             = try(local.kms["alerts"], null)
+  alarm_emails               = var.safety_alerts.alarm_emails
+  alarm_webhook_urls         = var.safety_alerts.alarm_webhook_urls
+  general_alerts_topic_arn   = module.observability.alerts_topic_arn
+  job_runner_function_name   = var.safety_alerts.watch_job_runner && local.has_jobs ? "${local.name}-job-runner" : null
+  tags                       = local.tags
+
+  # The observability module waits until App Runner has created its log groups (needed by the metric filters).
+  depends_on = [module.observability]
 }

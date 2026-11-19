@@ -192,3 +192,33 @@ variable "observability_enabled" {
   type        = bool
   default     = true
 }
+
+variable "nurse_alias_enabled" {
+  description = "Serve the Kiorly Nurse edition on nurse_domain as an alias of this stack (extra ACM SAN + CloudFront alternate domain + Route 53 records). KX-08: nurse.kiorly.com is an alias of the Clinic stack, no new stack/repo."
+  type        = bool
+  default     = false
+}
+
+variable "nurse_domain" {
+  description = "Nurse edition host name; must be inside zone_name and requires a primary domain."
+  type        = string
+  default     = "nurse.kiorly.com"
+}
+
+variable "enable_location" {
+  description = "Amazon Location map + route calculator (real-provider counterpart of the mock maps adapter). Default false: the adapter runs in MOCK mode. Enable only in the Provider go-live pass."
+  type        = bool
+  default     = false
+}
+
+variable "location_route_data_source" {
+  description = "Route calculator data provider: Esri | Here | Grab (verify Egypt coverage, NEEDS_HUMAN)."
+  type        = string
+  default     = "Esri"
+}
+
+variable "safety_alerts" {
+  description = "Safety-alert delivery alarms (enabled, role, latency_threshold_ms, alarm_emails, alarm_webhook_urls, watch_job_runner). KX-09: delivered <= 60 s."
+  type        = any
+  default     = {}
+}

@@ -11,6 +11,15 @@ Code: `infra/tofu/` (see `infra/tofu/README.md`). The CDK stack (`infra/src`) st
 | T4-alt | Import path if real tenant data exists | Documented in README §4 | — |
 | T5 | Point domains at OpenTofu CloudFront; destroy CDK stack; delete `infra/src` + CDK steps in deploy-aws.yml | Pending (after cutover) | Platform |
 
+## Rev 2.3 additions (backlog item 7, KX-23 Kiorly Nurse) - written, validated offline, not applied
+| Item | Status | Owner |
+|---|---|---|
+| `nurse.kiorly.com` alias on the Clinic stack (ACM SAN + CloudFront alias + Route 53; prod on, staging off) | Written; applies with the prod stack (T4) after `live/prod/global/dns` | Platform / Founder |
+| `modules/aws/location` (Amazon Location map + route calculator), default disabled, real-provider counterpart of the mock adapter | Written; enable only in "Provider go-live" (staging first); Egypt coverage/data-source check NEEDS_HUMAN | Platform / Founder |
+| `modules/aws/safety-alerts` (latency <= 60 s, failure, undelivered, job-runner errors) + dedicated SNS topic, Clinic (producer) and kiorex-platform (consumer) | Written; quiet until the API emits the documented log events; **on-call rota NEEDS_HUMAN** | Platform / API team |
+| `geostamp-retention-purge` scheduled job (EventBridge Scheduler -> API internal endpoint), `enabled = false` | Defined in tfvars; enable after the API endpoint exists and DPO confirms 12-month retention (KX-15) | API team / DPO |
+Details: `infra/tofu/README.md` section 6. App-side nurse host handling, OIDC redirect URIs (kiorex-account) and the adapter/endpoint/log events are separate work.
+
 ## Pipeline changes
 - `.github/workflows/deploy-aws-kiorex.yml`: no longer triggers on push to `kiorex` (manual only).
 - New: `infra-plan.yml`, `deploy.yml`, `release.yml`, `drift.yml` (apply workflows manual; enable push/tag triggers after founder approves first deploy). `deploy-aws.yml` (main) untouched.
