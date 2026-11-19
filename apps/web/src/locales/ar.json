@@ -1625,7 +1625,16 @@
     "exportPayments": "تصدير المدفوعات",
     "exportPaymentsHint": "التاريخ، المريض، الخدمة، المبلغ، الطريقة، المرجع — للمحاسب.",
     "scheduledReports": "التقارير الأسبوعية المجدولة",
-    "scheduledReportsHint": "إرسال بريد وواتساب للمالك كل أسبوع بروابط التصدير."
+    "scheduledReportsHint": "إرسال بريد وواتساب للمالك كل أسبوع بروابط التصدير.",
+    "kiorexImpactTitle": "أثر كيوركس",
+    "kiorexImpactHint": "الحجوزات، المرضى الجدد، إيراد الزيارات، العمولة، الخصم، والتكلفة الصافية لكل مريض جديد (مطابقة للبيان الشهري).",
+    "kiorexBookings": "الحجوزات",
+    "kiorexNewPatients": "مرضى جدد",
+    "kiorexCommission": "العمولة",
+    "kiorexOffset": "الخصم",
+    "kiorexNetCostPerPatient": "التكلفة الصافية / مريض جديد",
+    "kiorexMatchesStatement": "يطابق البيان الشهري (CR-11)",
+    "kiorexStatementPending": "مطابقة البيان معلّقة (لا عمولة مؤكدة بعد)"
   },
   "platform": {
     "title": "إدارة المنصة",

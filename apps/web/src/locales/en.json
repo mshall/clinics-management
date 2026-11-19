@@ -1624,7 +1624,16 @@
     "exportPayments": "Payments export",
     "exportPaymentsHint": "Date, patient, service, amount, method, reference — for your accountant.",
     "scheduledReports": "Weekly scheduled reports",
-    "scheduledReportsHint": "Email and WhatsApp the owner every week with export links."
+    "scheduledReportsHint": "Email and WhatsApp the owner every week with export links.",
+    "kiorexImpactTitle": "Kiorex impact",
+    "kiorexImpactHint": "Bookings, new patients, visit revenue, commission, offset, and net cost per new patient (reconciled with the monthly statement).",
+    "kiorexBookings": "Bookings",
+    "kiorexNewPatients": "New patients",
+    "kiorexCommission": "Commission",
+    "kiorexOffset": "Offset",
+    "kiorexNetCostPerPatient": "Net cost / new patient",
+    "kiorexMatchesStatement": "Matches monthly statement (CR-11)",
+    "kiorexStatementPending": "Statement reconcile pending (no confirmed commission yet)"
   },
   "platform": {
     "title": "Platform administration",

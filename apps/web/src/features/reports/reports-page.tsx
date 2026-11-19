@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import {
   useClinicsQuery,
   useReportsClinicBreakdownQuery,
+  useReportsKiorexImpactQuery,
   useReportsMonthlySeriesQuery,
   useReportsOperationsQuery,
   useReportsPatientAcquisitionQuery,
@@ -133,6 +134,8 @@ export function ReportsPage() {
   const series = useReportsMonthlySeriesQuery(from, to, clinicScopeId);
   const performance = useReportsPerformanceQuery(from, to, clinicScopeId);
   const operations = useReportsOperationsQuery(from, to, clinicScopeId);
+  const kiorexPeriod = from.slice(0, 7);
+  const kiorexImpact = useReportsKiorexImpactQuery(kiorexPeriod);
   const clinicBreakdown = useReportsClinicBreakdownQuery(from, to, !isPhysician && !clinicScopeId);
   const acquisition = useReportsPatientAcquisitionQuery(from, to);
 
@@ -253,6 +256,60 @@ export function ReportsPage() {
               </span>
             ) : null}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card data-testid="reports-kiorex-impact">
+        <CardHeader>
+          <CardTitle className="text-base">{t("reports.kiorexImpactTitle", "Kiorex impact")}</CardTitle>
+          <CardDescription>
+            {t(
+              "reports.kiorexImpactHint",
+              "Bookings, new patients, visit revenue, commission, offset, and net cost per new patient (reconciled with the monthly statement).",
+            )}{" "}
+            <span className="ltr-nums">({kiorexPeriod})</span>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {kiorexImpact.isPending ? (
+            <p className="text-sm text-muted-foreground">{t("common.loading", "Loading…")}</p>
+          ) : kiorexImpact.isError ? (
+            <p className="text-sm text-destructive">
+              {kiorexImpact.error instanceof Error ? kiorexImpact.error.message : t("common.error")}
+            </p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.kiorexBookings", "Bookings")}</p>
+                <p className="text-2xl font-semibold ltr-nums">{kiorexImpact.data?.bookings ?? 0}</p>
+              </div>
+              <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.kiorexNewPatients", "New patients")}</p>
+                <p className="text-2xl font-semibold ltr-nums">{kiorexImpact.data?.newPatients ?? 0}</p>
+              </div>
+              <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.kiorexCommission", "Commission")}</p>
+                <p className="text-2xl font-semibold ltr-nums">{kiorexImpact.data?.commission ?? 0}</p>
+              </div>
+              <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.kiorexOffset", "Offset")}</p>
+                <p className="text-2xl font-semibold ltr-nums">{kiorexImpact.data?.offset ?? 0}</p>
+              </div>
+              <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {t("reports.kiorexNetCostPerPatient", "Net cost / new patient")}
+                </p>
+                <p className="text-2xl font-semibold ltr-nums">{kiorexImpact.data?.netCostPerNewPatient ?? "—"}</p>
+              </div>
+              <div className="rounded-lg border bg-muted/30 px-4 py-3 sm:col-span-2">
+                <p className="text-xs text-muted-foreground">
+                  {kiorexImpact.data?.matchesStatement
+                    ? t("reports.kiorexMatchesStatement", "Matches monthly statement (CR-11)")
+                    : t("reports.kiorexStatementPending", "Statement reconcile pending (no confirmed commission yet)")}
+                </p>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

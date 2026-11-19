@@ -17,6 +17,7 @@ import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { NavTabAccessService } from "../user-nav-tabs/nav-tab-access.service";
 import { REPORTS_VIEW_ROLES } from "../user-nav-tabs/nav-tab-module-roles";
+import { KiorexImpactService } from "./kiorex-impact.service";
 import { ReportsExportService } from "./reports-export.service";
 import { ReportsService } from "./reports.service";
 
@@ -29,6 +30,7 @@ export class ReportsController {
   constructor(
     private readonly reports: ReportsService,
     private readonly exports: ReportsExportService,
+    private readonly kiorexImpact: KiorexImpactService,
     private readonly navTabAccess: NavTabAccessService,
   ) {}
 
@@ -126,6 +128,15 @@ export class ReportsController {
   async patientAcquisition(@CurrentUser() user: JwtUser, @Query("from") from?: string, @Query("to") to?: string) {
     await this.assertView(user);
     return this.reports.patientAcquisitionBreakdown(requireTenantId(user), from, to);
+  }
+
+  @Get("kiorex")
+  @RequiresEntitlement("mod_revenue")
+  @ApiOperation({ summary: "RP-03 Kiorex impact report for a billing period (all tiers with revenue)" })
+  @ApiOkResponse()
+  async kiorex(@CurrentUser() user: JwtUser, @Query("period") period?: string) {
+    // Available on Lite+ (mod_revenue); still requires reports nav for Pro+ UI, owners always see Kiorex tab.
+    return this.kiorexImpact.report(requireTenantId(user), period, user);
   }
 
   @Get("operations")
