@@ -48,6 +48,8 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "admin/platform-admin.controller.ts": { kind: "platform" },
   "admin/admin.controller.ts": { kind: "open" },
   "admin/data-explorer/admin-data-explorer.controller.ts": { kind: "gated", entitlement: "mod_data_explorer" },
+  /** Token download only (no JWT); token proves access to a READY org backup artifact. */
+  "admin/data-explorer/org-backup-download.controller.ts": { kind: "open" },
   "appointments/appointments.controller.ts": { kind: "open" },
   "appointments/deposit-links.controller.ts": { kind: "gated", entitlement: "deposits" },
   "appointments/public-deposit-link.controller.ts": { kind: "open" },

@@ -16,7 +16,10 @@ import {
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
-import { memoryStorage } from "multer";
+import { diskStorage } from "multer";
+import { mkdirSync } from "fs";
+import { join } from "path";
+import { randomBytes } from "crypto";
 import { CurrentUser } from "../../auth/current-user.decorator";
 import { JwtAuthGuard } from "../../auth/jwt-auth.guard";
 import { EntitlementGuard } from "../../entitlements/entitlement.guard";
@@ -27,6 +30,9 @@ import { OrgBackupService, type OrgBackupFormat } from "./org-backup.service";
 import { SubscriptionAccessGuard } from "../../subscriptions/subscription-access.guard";
 import { RequiresSubscriptionAccess } from "../../subscriptions/requires-subscription-access.decorator";
 import { SubscriptionAccessAction } from "../../subscriptions/subscription-access-policy";
+
+const IMPORT_TMP_DIR = join(process.cwd(), ".data", "imports");
+mkdirSync(IMPORT_TMP_DIR, { recursive: true });
 
 @ApiTags("admin-data-explorer")
 @ApiBearerAuth("bearer")
@@ -56,6 +62,14 @@ export class AdminDataExplorerController {
     return this.orgBackup.startExport(user, body.format, body.tables);
   }
 
+  @Get("export/jobs")
+  @RequiresSubscriptionAccess(SubscriptionAccessAction.EXPORT)
+  @ApiOperation({ summary: "List recent organization export/import jobs" })
+  listExportJobs(@CurrentUser() user: JwtUser, @Query("limit") limit?: string) {
+    const n = limit ? Number(limit) : 12;
+    return this.orgBackup.listRecentJobs(user, Number.isFinite(n) ? n : 12);
+  }
+
   @Get("export/jobs/:id")
   @RequiresSubscriptionAccess(SubscriptionAccessAction.EXPORT)
   @ApiOperation({ summary: "Poll organization export/import job progress" })
@@ -65,12 +79,19 @@ export class AdminDataExplorerController {
 
   @Get("export/jobs/:id/download")
   @RequiresSubscriptionAccess(SubscriptionAccessAction.EXPORT)
-  @ApiOperation({ summary: "Download a READY organization export artifact" })
+  @ApiOperation({ summary: "Stream a READY organization export artifact (authenticated)" })
   async downloadExportJob(@CurrentUser() user: JwtUser, @Param("id") id: string, @Res() res: Response) {
     const file = await this.orgBackup.downloadJob(user, id);
     res.setHeader("Content-Type", file.contentType);
+    res.setHeader("Content-Length", String(file.size));
     res.setHeader("Content-Disposition", `attachment; filename="${file.fileName}"`);
-    res.send(file.body);
+    res.setHeader("Cache-Control", "private, no-store");
+    const stream = this.orgBackup.openArtifactStream(file.artifactPath);
+    stream.on("error", () => {
+      if (!res.headersSent) res.status(500).end();
+      else res.end();
+    });
+    stream.pipe(res);
   }
 
   @Post("import")
@@ -86,7 +107,14 @@ export class AdminDataExplorerController {
   })
   @UseInterceptors(
     FileInterceptor("file", {
-      storage: memoryStorage(),
+      storage: diskStorage({
+        destination: (_req, _file, cb) => cb(null, IMPORT_TMP_DIR),
+        filename: (_req, file, cb) => {
+          const safe = (file.originalname || "backup").replace(/[^\w.\-]+/g, "_").slice(0, 120);
+          cb(null, `${Date.now()}-${randomBytes(8).toString("hex")}-${safe}`);
+        },
+      }),
+      // Large full backups; processing is async after upload so the HTTP request only covers transfer.
       limits: { fileSize: 512 * 1024 * 1024 },
     }),
   )

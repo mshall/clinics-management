@@ -3,8 +3,10 @@
 # Local / branch: kiorex uses profile aws-kiorex-profile via scripts/resolve-aws-profile.sh
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# Named profiles are for local CLI only. GitHub Actions already injects keys/OIDC into the
+# default credential chain — setting AWS_PROFILE=aws-kiorex-profile there fails (profile missing).
 RESOLVED_PROFILE="$(bash "$ROOT/scripts/resolve-aws-profile.sh")"
-if [[ -n "$RESOLVED_PROFILE" ]]; then
+if [[ -n "$RESOLVED_PROFILE" && -z "${AWS_ACCESS_KEY_ID:-}" && -z "${AWS_SESSION_TOKEN:-}" && -z "${AWS_WEB_IDENTITY_TOKEN_FILE:-}" ]]; then
   export AWS_PROFILE="$RESOLVED_PROFILE"
 fi
 export AWS_REGION="${AWS_REGION:-eu-central-1}"
