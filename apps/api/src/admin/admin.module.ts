@@ -13,6 +13,7 @@ import { AdminDataExplorerService } from "./data-explorer/admin-data-explorer.se
 import { PlatformAdminController } from "./platform-admin.controller";
 import { PlatformAdminService } from "./platform-admin.service";
 import { PlatformInsightsService } from "./platform-insights.service";
+import { PlatformGrowthService } from "./platform-growth.service";
 import { IntegrationFailureAdminService } from "./integration-failure-admin.service";
 import { TenantPaymentChannelsService } from "./tenant-payment-channels.service";
 import { SubscriptionsModule } from "../subscriptions/subscriptions.module";
@@ -43,6 +44,7 @@ import { AdminOutboxService } from "./admin-outbox.service";
     AdminDataExplorerService,
     PlatformAdminService,
     PlatformInsightsService,
+    PlatformGrowthService,
     IntegrationFailureAdminService,
     TenantPaymentChannelsService,
     AdminOutboxService,
