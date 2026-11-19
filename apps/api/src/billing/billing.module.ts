@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { ClinicalModule } from "../clinical/clinical.module";
 import { CreditsModule } from "../credits/credits.module";
 import { SubscriptionsModule } from "../subscriptions/subscriptions.module";
 import { BillingController } from "./billing.controller";
@@ -15,7 +16,7 @@ import { PatientMoneyController } from "./patient-money.controller";
 import { PatientMoneyService } from "./patient-money.service";
 
 @Module({
-  imports: [SubscriptionsModule, CreditsModule],
+  imports: [SubscriptionsModule, CreditsModule, ClinicalModule],
   controllers: [BillingController, PatientMoneyController, CashierShiftsController, SplitPaymentsController],
   providers: [
     BillingService,

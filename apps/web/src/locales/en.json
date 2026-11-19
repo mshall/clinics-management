@@ -2887,6 +2887,12 @@
     "granted": "Granted",
     "missing": "Missing"
   },
+  "specialtyPacks": {
+    "title": "Specialty packs",
+    "hint": "Add-on entitlements for dental chart, aesthetics before/after, and physio plans.",
+    "purchase": "Purchase",
+    "purchased": "Pack enabled"
+  },
   "clinicalOrders": {
     "title": "Lab & imaging orders",
     "kindLab": "Lab",

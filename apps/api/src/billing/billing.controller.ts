@@ -13,6 +13,7 @@ import { CreditWalletService } from "../credits/credit-wallet.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { BillingService } from "./billing.service";
 import { NoShowGuaranteeService } from "./no-show-guarantee.service";
+import { SpecialtyPacksService } from "../clinical/specialty-packs.service";
 
 @ApiTags("billing")
 @ApiBearerAuth("bearer")
@@ -26,6 +27,7 @@ export class BillingController {
     private readonly trialEngine: TrialEngineService,
     private readonly creditWallet: CreditWalletService,
     private readonly noShowGuarantee: NoShowGuaranteeService,
+    private readonly specialtyPacks: SpecialtyPacksService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -86,6 +88,20 @@ export class BillingController {
   @Get("guarantee")
   getNoShowGuarantee(@CurrentUser() user: JwtUser) {
     return this.noShowGuarantee.getForTenant(user, requireTenantId(user));
+  }
+
+  /** CL-07 — specialty pack add-ons (dental / aesthetics / physio). */
+  @Get("addons")
+  listSpecialtyAddons() {
+    return this.specialtyPacks.listAddons();
+  }
+
+  @Post("addons/purchase")
+  purchaseSpecialtyAddon(
+    @CurrentUser() user: JwtUser,
+    @Body() body: { entitlementKey: string },
+  ) {
+    return this.specialtyPacks.purchaseAddon(requireTenantId(user), user.userId, body.entitlementKey);
   }
 
   @Post("subscription/preview-change")

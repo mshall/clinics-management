@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UseGuards } from "@nestjs/common";
 import {
   ClinicalLetterType,
   ClinicalOrderKind,
@@ -18,6 +18,7 @@ import { ClinicalSafetyService } from "./clinical-safety.service";
 import { RxSafetyCheckService } from "./rx-safety-check.service";
 import { DrugCatalogService } from "./drug-catalog.service";
 import { ClinicalOrdersService } from "./clinical-orders.service";
+import { SpecialtyPacksService } from "./specialty-packs.service";
 
 @ApiTags("clinical")
 @ApiBearerAuth("bearer")
@@ -31,6 +32,7 @@ export class ClinicalController {
     private readonly rxSafety: RxSafetyCheckService,
     private readonly drugCatalog: DrugCatalogService,
     private readonly orders: ClinicalOrdersService,
+    private readonly packs: SpecialtyPacksService,
   ) {}
 
   @Get("form-templates")
@@ -177,5 +179,50 @@ export class ClinicalController {
     },
   ) {
     return this.orders.patch(requireTenantId(user), id, body);
+  }
+
+  /** CL-07 specialty packs */
+  @Get("specialty-packs/addons")
+  listSpecialtyAddons() {
+    return this.packs.listAddons();
+  }
+
+  @Get("patients/:patientId/dental-chart")
+  @RequiresEntitlement("pack_dental")
+  dentalChart(@CurrentUser() user: JwtUser, @Param("patientId") patientId: string) {
+    return this.packs.getDentalChart(requireTenantId(user), patientId);
+  }
+
+  @Put("patients/:patientId/dental-chart")
+  @RequiresEntitlement("pack_dental")
+  upsertDentalTooth(
+    @CurrentUser() user: JwtUser,
+    @Param("patientId") patientId: string,
+    @Body() body: { toothFdi: number; status?: string; planNote?: string; feeAmount?: number },
+  ) {
+    return this.packs.upsertDentalTooth(requireTenantId(user), patientId, body);
+  }
+
+  @Get("patients/:patientId/before-after")
+  @RequiresEntitlement("pack_aesthetics")
+  beforeAfter(@CurrentUser() user: JwtUser, @Param("patientId") patientId: string) {
+    return this.packs.listBeforeAfterPairs(requireTenantId(user), patientId);
+  }
+
+  @Post("physio-plans")
+  @RequiresEntitlement("pack_physio")
+  physioPlan(
+    @CurrentUser() user: JwtUser,
+    @Body()
+    body: {
+      clinicId: string;
+      patientId: string;
+      clinicianId: string;
+      label: string;
+      sessionCount: number;
+      notes?: string;
+    },
+  ) {
+    return this.packs.createPhysioPlan(requireTenantId(user), body);
   }
 }
