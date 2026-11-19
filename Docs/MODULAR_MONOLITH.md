@@ -6,7 +6,7 @@ Kiorly ships as a **single deployable API** (`apps/api`) with **bounded contexts
 
 | Bounded context | Nest folders (`apps/api/src/`) | Future service (optional) |
 |-----------------|--------------------------------|---------------------------|
-| **Kernel** | `common`, `prisma`, `auth`, `audit`, `storage`, `health`, `feature-flags` | Shared platform (auth, tenancy) |
+| **Kernel** | `common`, `prisma`, `auth`, `audit`, `storage`, `health`, `feature-flags`, `scope-of-practice` | Shared platform (auth, tenancy) |
 | **Organization** | `clinics`, `users`, `admin`, `markets`, `user-nav-tabs`, `user-clinic-privilege-grants`, `user-money-visibility` | Tenant / org service |
 | **Clinical** | `patients`, `appointments`, `encounters`, `clinical`, `scheduling`, `operations` | Clinical core |
 | **Front office** | `front-desk`, `billing`, `revenue`, `invoices`, `expenses`, `payroll`, `payroll-expenses` | Billing & cashier |

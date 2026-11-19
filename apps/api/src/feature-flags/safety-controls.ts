@@ -71,6 +71,25 @@ export const SAFETY_CONTROLS: readonly SafetyControl[] = [
     forbiddenKeyTokens: ["tenant_isolation", "authorization", "authz"],
   },
   {
+    id: "scope_of_practice_enforcement",
+    label: "Scope-of-practice enforcement (@RequiresScope, 403 SCOPE_NOT_ALLOWED; physios and nurses can never prescribe)",
+    paths: [
+      "scope-of-practice/scope.guard.ts",
+      "scope-of-practice/scope-of-practice.service.ts",
+      "scope-of-practice/profession-pack.ts",
+      "scope-of-practice/scope-capabilities.ts",
+      "scope-of-practice/requires-scope.decorator.ts",
+      "scope-of-practice/scope-not-allowed.exception.ts",
+    ],
+    forbiddenKeyTokens: ["scope_of_practice", "scope_not_allowed", "requires_scope"],
+  },
+  {
+    id: "profession_verification",
+    label: "Profession verification before listing (PRVER01-04)",
+    paths: ["clinician-verification/profession-verification.ts", "clinician-verification/kiorex-marketplace-gate.ts"],
+    forbiddenKeyTokens: ["profession_verif", "registration_verif", "prver"],
+  },
+  {
     id: "breach_response_tooling",
     label: "Breach-response tooling",
     paths: ["observability/notify-on-call.ts"],

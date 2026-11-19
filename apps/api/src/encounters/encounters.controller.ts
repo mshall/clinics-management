@@ -37,13 +37,14 @@ import { UpdateEncounterDto } from "./dto/update-encounter.dto";
 import { NavTabAccessService } from "../user-nav-tabs/nav-tab-access.service";
 import { ENCOUNTERS_MUTATE_ROLES, ENCOUNTERS_VIEW_ROLES } from "../user-nav-tabs/nav-tab-module-roles";
 import { EncountersService } from "./encounters.service";
+import { RequiresScope, ScopeGuard } from "../scope-of-practice/scope-of-practice-public";
 
 const UPLOAD_LIMIT = 15 * 1024 * 1024;
 
 @ApiTags("encounters")
 @ApiBearerAuth("bearer")
 @Controller("encounters")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ScopeGuard)
 export class EncountersController {
   constructor(
     private readonly encounters: EncountersService,
@@ -191,6 +192,7 @@ export class EncountersController {
     return { ok: true };
   }
 
+  @RequiresScope("rx.prescribe")
   @Post(":id/medications")
   @ApiOperation({ summary: "Add prescribed medication" })
   @ApiCreatedResponse({ type: EncounterMedicationDto })
@@ -203,6 +205,7 @@ export class EncountersController {
     return this.encounters.addMedication(requireTenantId(user), id, body, user);
   }
 
+  @RequiresScope("rx.prescribe")
   @Delete(":id/medications/:medicationId")
   @ApiOperation({ summary: "Remove medication (draft only)" })
   @ApiOkResponse({ description: "{ ok: true }" })
@@ -237,6 +240,7 @@ export class EncountersController {
     return { ok: true };
   }
 
+  @RequiresScope("encounter.sign")
   @Post(":id/amend")
   @ApiOperation({ summary: "Reopen a finalized locked encounter for correction (AMENDED status + reason)" })
   @ApiOkResponse({ type: EncounterDetailDto })
@@ -245,6 +249,7 @@ export class EncountersController {
     return this.encounters.amend(requireTenantId(user), user, id, body.reason ?? "");
   }
 
+  @RequiresScope("encounter.sign")
   @Post(":id/finalize")
   @ApiOperation({ summary: "Finalize encounter (clinician only; diagnoses + medications policy)" })
   @ApiOkResponse({ type: EncounterDetailDto })

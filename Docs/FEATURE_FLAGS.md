@@ -75,7 +75,7 @@ keep working. In web, wrap UI with `<Feature flag="…">` (`apps/web/src/feature
 (per-flag OFF at every scope) and `ff01-registry.node.test.ts` (every flag has an enforcement site).
 
 **Safety controls are never flags (ADR-025)**: Rx safety checks, encounter sign-off/lock/amendments, audit logging, consent
-enforcement, record view/print/export, privileged MFA, tenant isolation/authorization, breach tooling. `safety-controls.ts`
+enforcement, record view/print/export, privileged MFA, tenant isolation/authorization, breach tooling, **scope-of-practice enforcement (`@RequiresScope`, PRSOP) and profession verification before listing (PRVER)**. `safety-controls.ts`
 lists their code paths; `ff-safety-never-flags.node.test.ts` fails if any flag guard/check appears there or a flag key names a safety control.
 
 ---

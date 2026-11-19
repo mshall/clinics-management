@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from "@nestjs/common";
+import { ForbiddenException, Injectable, Optional } from "@nestjs/common";
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
 import { TenantRoleNavTabsService } from "../user-nav-tabs/tenant-role-nav-tabs.service";
@@ -23,6 +23,8 @@ import { redactionForMarket } from "../providers/ai/market-ai-redaction";
 import { UsageMeterService } from "../usage/usage-meter.service";
 import { UsageMetric } from "@prisma/client";
 import { randomUUID } from "node:crypto";
+import { professionPromptClause } from "../scope-of-practice/profession-prompt";
+import { ScopeOfPracticeService } from "../scope-of-practice/scope-of-practice.service";
 
 function pickLocale(locale: string | undefined, message: string): "en" | "ar" {
   if (locale === "ar" || locale === "en") return locale;
@@ -38,6 +40,7 @@ export class AssistantService {
     private readonly ai: AiGatewayService,
     private readonly featureFlags: FeatureFlagsService,
     private readonly usage: UsageMeterService,
+    @Optional() private readonly scope?: ScopeOfPracticeService,
   ) {}
 
   private async assistantEnabledForUser(user: JwtUser): Promise<boolean> {
@@ -241,7 +244,11 @@ export class AssistantService {
     const runtime = await this.ai.runtimeForTenant(tenantId);
     const promptVersion = runtime?.promptVersion ?? "v1";
     const liveJson = this.liveData.snapshotForPrompt(snapshot);
-    const system = buildMatureSystemPrompt(persona, navKeys, locale, liveJson, promptVersion);
+    // PRSOP04: the prompt carries the profession and its scope limits.
+    const sctx = this.scope ? await this.scope.resolveContext(user.userId) : null;
+    const system =
+      buildMatureSystemPrompt(persona, navKeys, locale, liveJson, promptVersion) +
+      (sctx ? professionPromptClause(sctx.pack, sctx.profession, locale) : "");
     const llm = await this.llmReply(tenantId, system, message, locale);
     if (llm?.trim() && tenantId) {
       await this.usage.incrementOnce(tenantId, UsageMetric.AI_ASSISTANT_REQUESTS, `assistant:${randomUUID()}`);

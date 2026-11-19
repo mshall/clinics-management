@@ -111,6 +111,16 @@ enum VerificationStatus {
   EXPIRED
 }
 
+/// ADR-029 / PRSOP01 — profession is a first-class attribute of every clinician (extensible by market pack).
+/// ASSISTANT = unlicensed supervised staff (PRSOP03): never listed, cannot sign.
+enum Profession {
+  PHYSICIAN
+  DENTIST
+  PHYSIOTHERAPIST
+  NURSE
+  ASSISTANT
+}
+
 enum ClinicalSpecialty {
   POLYCLINIC
   GENERAL_MEDICINE
@@ -1269,6 +1279,7 @@ model Tenant {
   kiorexCommissionCharges        KiorexCommissionCharge[]
   commissionDisputes             CommissionDispute[]
   clinicianVerifications         ClinicianVerification[]
+  professionalRegistrations      ProfessionalRegistration[]
   marketplaceListings            MarketplaceListing[]
   kiorexRatings                  KiorexRating[]
   kiorexReviews                  KiorexReview[]
@@ -1427,6 +1438,13 @@ model User {
   isTenantOwner    Boolean        @default(false)
   /// PL-07 — when false, physician cannot book or sign (billing seat over limit).
   billingSeatActive Boolean       @default(true)
+  /// PRSOP01 — expand phase: nullable; backfilled to PHYSICIAN/DENTIST for physician-role users. Clinician roles must carry one (service-enforced).
+  profession        Profession?
+  /// PRSOP03 — named supervising clinician (required when profession = ASSISTANT).
+  supervisorUserId  String?
+  supervisor        User?         @relation("UserSupervisor", fields: [supervisorUserId], references: [id], onDelete: SetNull)
+  supervisees       User[]        @relation("UserSupervisor")
+  professionalRegistrations ProfessionalRegistration[]
   mfaEnabled   Boolean        @default(false)
   mfaTotpSecret String?
   /// SC-04 — physicians may use WhatsApp OTP as the second factor instead of (or with) TOTP.
@@ -1529,12 +1547,53 @@ model ClinicianVerification {
   reviewDurationMs  Int?
   lastReviewChecklist Json              @default("[]")
   verifiedSpecialty ClinicalSpecialty?
+  /// PRVER01 — profession this record is being / was verified for (snapshot of User.profession at submit / approval).
+  profession          Profession?
+  verifiedProfession  Profession?
+  /// PRVER03 — name at last approval; a change forces re-verification (hazard H11).
+  verifiedName        String?
+  /// PRVER04 — solo practitioner (no agency/clinic behind them): extra identity evidence required.
+  isSolo              Boolean             @default(false)
+  /// PRVER03 — why the record was sent back to PENDING / EXPIRED (NAME_CHANGED, PROFESSION_CHANGED, SPECIALTY_CHANGED, LICENCE_EXPIRED).
+  reverifyReason      String?
+  verifiedAt          DateTime?
+  /// PRVER03 — earliest of licence expiry and the pack's periodic re-verification date.
+  nextReverifyAt      DateTime?
+  /// PRVER03 — highest expiry-reminder stage sent (index into the pack's reminderDays).
+  expiryReminderStage Int                 @default(0)
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
+  registrations   ProfessionalRegistration[]
 
   @@index([tenantId, status])
   @@index([status])
   @@index([pendingAt])
+  @@index([status, nextReverifyAt])
+}
+
+/// PRVER01 — one row per professional register checked before LIVE (syndicate, MoH licence, ...), per market pack rule.
+model ProfessionalRegistration {
+  id               String              @id @default(cuid())
+  tenantId         String
+  tenant           Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verificationId   String?
+  verification     ClinicianVerification? @relation(fields: [verificationId], references: [id], onDelete: SetNull)
+  profession       Profession
+  /// Register code from the market pack, e.g. EG_MEDICAL_SYNDICATE, EG_MOH_LICENCE.
+  registerCode     String
+  registrationNumber String
+  issuedAt         DateTime?
+  expiresAt        DateTime?
+  status           VerificationStatus  @default(PENDING)
+  verifiedAt       DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@unique([userId, registerCode])
+  @@index([tenantId, status])
+  @@index([status, expiresAt])
 }
 
 model UserNavTabGrant {

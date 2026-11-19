@@ -2,6 +2,7 @@ import { BadRequestException } from "@nestjs/common";
 import { MarketLaunchStatus, type Market } from "@prisma/client";
 import { assertMarketMatchesProductionBinding } from "./data-cells";
 import { hasCrossBorderLaunchApproval, marketRequiresCrossBorderApproval, readLegalConfig } from "./market-legal-guards";
+import { validateProfessionPack } from "../scope-of-practice/profession-pack";
 import { parseMarketTaxPack } from "./market-tax-pack";
 
 const REQUIRED_MARKET_STRINGS = [
@@ -26,6 +27,19 @@ export function assertMarketPackConfigured(market: Market | null | undefined): a
     throw new BadRequestException(`Market pack ${market.code} is missing weekendDays`);
   }
   assertMarketMatchesProductionBinding(market);
+  assertMarketProfessionPackValid(market);
+}
+
+/** PRSOP02: a market's `clinicalConfig.professionPack` override must be a valid matrix (unknown capability => reject). */
+export function assertMarketProfessionPackValid(market: Pick<Market, "code" | "clinicalConfig">): void {
+  const cfg = market.clinicalConfig;
+  if (!cfg || typeof cfg !== "object" || Array.isArray(cfg)) return;
+  const pack = (cfg as Record<string, unknown>).professionPack;
+  if (pack == null) return;
+  const errors = validateProfessionPack(pack);
+  if (errors.length) {
+    throw new BadRequestException(`Market pack ${market.code} has an invalid professionPack: ${errors.join("; ")}`);
+  }
 }
 
 /** LIVE markets must ship a complete tax pack (FD-00). */

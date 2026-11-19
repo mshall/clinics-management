@@ -25,6 +25,7 @@ export const TOP_LEVEL_FOLDER_TO_CONTEXT: Record<string, BoundedContextId> = {
   audit: "kernel",
   storage: "kernel",
   "feature-flags": "kernel",
+  "scope-of-practice": "kernel",
   staging: "kernel",
   observability: "kernel",
   signup: "kernel",

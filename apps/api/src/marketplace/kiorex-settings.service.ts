@@ -1,4 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { effectiveVerificationStatus, verificationBadge } from "../clinician-verification/profession-verification";
+import { resolveProfessionPack } from "../scope-of-practice/profession-pack";
+import { effectiveProfession } from "../scope-of-practice/scope-of-practice.service";
 import { Prisma } from "@prisma/client";
 import { SlotService } from "../scheduling/slot.service";
 import type { JwtUser } from "../auth/jwt-user";
@@ -63,7 +66,7 @@ export class KiorexSettingsService {
         tenantId: true,
         kiorexCancellationPolicy: true,
         marketplaceBookingAutoConfirm: true,
-        tenant: { select: { market: { select: { commercialConfig: true } } } },
+        tenant: { select: { market: { select: { commercialConfig: true, code: true, clinicalConfig: true } } } },
       },
     });
     if (!clinic) throw new NotFoundException("Clinic not found");
@@ -76,10 +79,14 @@ export class KiorexSettingsService {
     const marketCfg = safeParseCommercialConfig(clinic.tenant.market?.commercialConfig);
     const listings = await this.listings.listClinicListings(user, clinic.id, false);
     const clinicianIds = listings.map((l) => l.clinicianId);
-    const [verifications, templates, types] = await Promise.all([
+    const [verifications, users, templates, types] = await Promise.all([
       this.prisma.clinicianVerification.findMany({
         where: { tenantId: clinic.tenantId, userId: { in: clinicianIds } },
-        select: { userId: true, status: true },
+        select: { userId: true, status: true, verifiedProfession: true },
+      }),
+      this.prisma.user.findMany({
+        where: { tenantId: clinic.tenantId, id: { in: clinicianIds } },
+        select: { id: true, profession: true, role: true, additionalRoles: true },
       }),
       this.prisma.clinicianAvailabilityTemplate.findMany({
         where: { tenantId: clinic.tenantId, clinicId: clinic.id, clinicianId: { in: clinicianIds } },
@@ -102,6 +109,9 @@ export class KiorexSettingsService {
       }),
     ]);
     const verificationBy = new Map(verifications.map((v) => [v.userId, v.status]));
+    const verifiedProfessionBy = new Map(verifications.map((v) => [v.userId, v.verifiedProfession]));
+    const professionBy = new Map(users.map((u) => [u.id, effectiveProfession(u)]));
+    const pack = resolveProfessionPack(clinic.tenant.market);
     const capBy = new Map(templates.map((t) => [t.clinicianId, t.marketplaceDailyCap]));
     return {
       clinicId: clinic.id,
@@ -115,6 +125,17 @@ export class KiorexSettingsService {
         blockers: l.blockers,
         completenessPercent: l.completenessPercent,
         verificationStatus: verificationBy.get(l.clinicianId) ?? null,
+        // PRVER02 — the badge names the profession ("Verified physiotherapist"); only counts when verified for the current profession.
+        profession: professionBy.get(l.clinicianId) ?? null,
+        badge: verificationBadge(
+          pack,
+          professionBy.get(l.clinicianId) ?? null,
+          effectiveVerificationStatus(
+            { status: verificationBy.get(l.clinicianId) ?? "UNVERIFIED", verifiedProfession: verifiedProfessionBy.get(l.clinicianId) ?? null },
+            professionBy.get(l.clinicianId) ?? null,
+            pack,
+          ),
+        ),
         dailyCap: capBy.get(l.clinicianId) ?? null,
       })),
       appointmentTypes: types.map((t) => ({

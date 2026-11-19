@@ -23,11 +23,12 @@ import { RxSafetyCheckService } from "./rx-safety-check.service";
 import { DrugCatalogService } from "./drug-catalog.service";
 import { ClinicalOrdersService } from "./clinical-orders.service";
 import { SpecialtyPacksService } from "./specialty-packs.service";
+import { RequiresScope, ScopeGuard } from "../scope-of-practice/scope-of-practice-public";
 
 @ApiTags("clinical")
 @ApiBearerAuth("bearer")
 @Controller("clinical")
-@UseGuards(JwtAuthGuard, EntitlementGuard, FeatureGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard, FeatureGuard, ScopeGuard)
 @RequiresEntitlement("mod_clinical")
 export class ClinicalController {
   constructor(
@@ -125,6 +126,7 @@ export class ClinicalController {
     return this.drugCatalog.searchProducts(tenantId, user, q ?? "", Number.isFinite(lim) ? lim : 20);
   }
 
+  @RequiresScope("rx.prescribe")
   @Post("rx/check")
   rxCheck(
     @CurrentUser() user: JwtUser,
@@ -137,6 +139,7 @@ export class ClinicalController {
     return this.rxSafety.checkRx(requireTenantId(user), body.patientId, body.items ?? []);
   }
 
+  @RequiresScope("rx.prescribe")
   @Post("medications/safety-check")
   safetyCheck(
     @CurrentUser() user: JwtUser,
@@ -166,6 +169,7 @@ export class ClinicalController {
     return this.orders.list(requireTenantId(user), { encounterId, patientId });
   }
 
+  @RequiresScope("orders.lab_radiology")
   @Post("orders")
   createOrder(
     @CurrentUser() user: JwtUser,
@@ -182,6 +186,7 @@ export class ClinicalController {
     return this.orders.create(requireTenantId(user), user.userId, body);
   }
 
+  @RequiresScope("orders.lab_radiology")
   @Patch("orders/:id")
   patchOrder(
     @CurrentUser() user: JwtUser,
@@ -198,6 +203,7 @@ export class ClinicalController {
   }
 
   /** CL-06 — results as a PDF (structured results stay on the items / resultsJson). */
+  @RequiresScope("orders.lab_radiology")
   @Post("orders/:id/results-pdf")
   @UseInterceptors(FileInterceptor("file", { storage: memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } }))
   attachOrderResultsPdf(@CurrentUser() user: JwtUser, @Param("id") id: string, @UploadedFile() file?: Express.Multer.File) {
@@ -211,6 +217,7 @@ export class ClinicalController {
   }
 
   /** KCV204 — lab order handoff to Kiorly Lab via Kiorex (LabOrderPlaced; patient consent token required). */
+  @RequiresScope("orders.lab_radiology")
   @RequiresFeature("clinic.lab_order_handoff")
   @Post("orders/:id/handoff")
   handoffOrder(@CurrentUser() user: JwtUser, @Param("id") id: string) {

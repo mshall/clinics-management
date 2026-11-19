@@ -31,6 +31,7 @@ import { IsBoolean, IsEnum, IsNumber, IsOptional, Min } from "class-validator";
 import { memoryStorage } from "multer";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { RequiresScope, ScopeGuard } from "../scope-of-practice/scope-of-practice-public";
 import { EntitlementGuard } from "../entitlements/entitlement.guard";
 import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import type { JwtUser } from "../auth/jwt-user";
@@ -103,7 +104,7 @@ class PatchOperationStatusDto {
 @ApiTags("operations")
 @ApiBearerAuth("bearer")
 @Controller("operations")
-@UseGuards(JwtAuthGuard, EntitlementGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard, ScopeGuard)
 @RequiresEntitlement("mod_operations")
 export class OperationsController {
   constructor(
@@ -268,6 +269,7 @@ export class OperationsController {
     return this.operations.uploadDocument(requireTenantId(user), id, kind, description, file, user);
   }
 
+  @RequiresScope("rx.prescribe")
   @Post(":id/medications")
   @ApiOperation({ summary: "Add medication for this operation" })
   @ApiCreatedResponse({ type: OperationMedicationDto })
@@ -280,6 +282,7 @@ export class OperationsController {
     return this.operations.addMedication(requireTenantId(user), id, body, user);
   }
 
+  @RequiresScope("rx.prescribe")
   @Post(":id/reset-clinical")
   @ApiOperation({ summary: "Clear medications and optionally prescription documents (scheduled operations only)" })
   @ApiOkResponse({ description: "Clinical data cleared" })

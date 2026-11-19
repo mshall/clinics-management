@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
-import { EmploymentType, Prisma, UserRole } from "@prisma/client";
+import { EmploymentType, Prisma, Profession, UserRole } from "@prisma/client";
+import { applyReverification } from "../clinician-verification/reverify";
 import * as bcrypt from "bcryptjs";
 import { ensureUserEmployeeRecord } from "../common/clinic-staff-employee";
 import { assertCanAssignGroupAdminRole, assertCanCreateGroupAdminRole } from "../common/group-admin-role-policy";
@@ -368,6 +369,14 @@ export class AdminService {
           displayName: dto.displayName.trim(),
           passwordHash,
           role: dto.role,
+          // PRSOP01: clinician roles always carry a profession (default PHYSICIAN / NURSE; admins may pass another).
+          ...(dto.profession
+            ? { profession: dto.profession }
+            : hasRole(dto, UserRole.PHYSICIAN)
+              ? { profession: Profession.PHYSICIAN }
+              : hasRole(dto, UserRole.NURSE)
+                ? { profession: Profession.NURSE }
+                : {}),
         },
       });
       if (clinicIds.length) {
@@ -518,6 +527,23 @@ export class AdminService {
 
       return u;
     });
+
+    // PRVER03 / H11: a changed display name sends a VERIFIED clinician back for re-verification.
+    if (dto.displayName !== undefined && dto.displayName.trim() !== existing.displayName.trim()) {
+      const re = await applyReverification(this.prisma, userId, "NAME_CHANGED");
+      if (re) {
+        await this.prisma.auditLog.create({
+          data: {
+            tenantId,
+            actorId: actor?.userId ?? null,
+            action: "clinician.verification.reverify_required",
+            resource: "ClinicianVerification",
+            resourceId: re.id,
+            metadata: { reason: "NAME_CHANGED" },
+          },
+        });
+      }
+    }
 
     if (roleChanged && actor?.userId) {
       await this.prisma.auditLog.create({

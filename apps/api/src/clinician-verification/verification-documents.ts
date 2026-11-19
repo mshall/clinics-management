@@ -4,6 +4,12 @@ export const VERIFICATION_DOCUMENT_KINDS = [
   "SPECIALTY_CERTIFICATE",
   "CLINIC_LICENCE",
   "PROFILE_PHOTO",
+  /** PRVER01 — Ministry of Health licence (physio / nurse / dentist). */
+  "MOH_LICENCE",
+  /** PRVER04 — solo practitioners: selfie holding the national ID (ops compares by eye; no biometric provider). */
+  "ID_SELFIE",
+  /** PRVER04 — criminal-record certificate (solo nurses; wording and retention: Q8, NEEDS_HUMAN). */
+  "CRIMINAL_RECORD_CERT",
 ] as const;
 
 export type VerificationDocumentKind = (typeof VERIFICATION_DOCUMENT_KINDS)[number];
