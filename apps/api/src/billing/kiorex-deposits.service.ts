@@ -3,6 +3,7 @@ import { PaymentMethod, Prisma } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { resolveClinicCurrency } from "../common/clinic-currency";
 import { PrismaService } from "../prisma/prisma.service";
+import { hashDepositLinkToken } from "./deposit-policy";
 import { DepositSettlementService } from "./deposit-settlement.service";
 import { DEPOSIT_STATUS, REFUND_STATUS, canApproveRefunds, roundMoney } from "./patient-money";
 import { PatientMoneyService } from "./patient-money.service";
@@ -73,13 +74,16 @@ export class KiorexDepositsService {
     if (body.currency?.trim() && body.currency.trim().toUpperCase() !== currency.toUpperCase()) {
       throw new BadRequestException({ message: `Deposit currency must be ${currency}`, code: "DEPOSIT_CURRENCY_MISMATCH" });
     }
+    const pendingLink = await this.prisma.patientDeposit.findFirst({
+      where: { tenantId: apt.tenantId, appointmentId: apt.id, source: KIOREX_PAY_SOURCE, status: DEPOSIT_STATUS.PENDING },
+      orderBy: { createdAt: "desc" },
+    });
+    if (pendingLink && Math.abs(Number(pendingLink.amount) - amount) < 0.005) {
+      return this.payPendingLink(apt.tenantId, pendingLink.id, paymentRef, body.paidAt);
+    }
     try {
       const deposit = await this.prisma.$transaction(async (tx) => {
-        await tx.tenantPaymentChannel.upsert({
-          where: { tenantId_channelKey: { tenantId: apt.tenantId, channelKey: KIOREX_PAY_CHANNEL_KEY } },
-          create: { tenantId: apt.tenantId, channelKey: KIOREX_PAY_CHANNEL_KEY, name: "Kiorex Pay" },
-          update: {},
-        });
+        await this.ensureChannel(tx, apt.tenantId);
         const d = await this.money.recordHeldDeposit(tx, {
           tenantId: apt.tenantId,
           clinicId: apt.clinicId,
@@ -105,6 +109,45 @@ export class KiorexDepositsService {
       }
       throw e;
     }
+  }
+
+  /** FS-04 — Kiorex Pay collected a deposit-link payment (any booking source); idempotent on `paymentRef`. */
+  async depositLinkPaid(token: string, body: DepositPaidBody) {
+    const paymentRef = body.paymentRef?.trim();
+    if (!paymentRef) throw new BadRequestException("paymentRef is required");
+    const amount = roundMoney(Number(body.amount));
+    if (!Number.isFinite(amount) || amount <= 0) throw new BadRequestException("amount must be positive");
+    const replay = await this.prisma.patientDeposit.findFirst({ where: { source: KIOREX_PAY_SOURCE, externalRef: paymentRef } });
+    if (replay) return this.serialize(replay);
+    const d = await this.prisma.patientDeposit.findUnique({ where: { linkTokenHash: hashDepositLinkToken(token.trim()) } });
+    if (!d || d.source !== KIOREX_PAY_SOURCE) throw new NotFoundException("Payment link not found");
+    if (Math.abs(Number(d.amount) - amount) >= 0.005) {
+      throw new BadRequestException({ message: "Paid amount does not match the deposit", code: "DEPOSIT_AMOUNT_MISMATCH" });
+    }
+    if (body.currency?.trim() && body.currency.trim().toUpperCase() !== d.currency.toUpperCase()) {
+      throw new BadRequestException({ message: `Deposit currency must be ${d.currency}`, code: "DEPOSIT_CURRENCY_MISMATCH" });
+    }
+    return this.payPendingLink(d.tenantId, d.id, paymentRef, body.paidAt);
+  }
+
+  private async payPendingLink(tenantId: string, depositId: string, paymentRef: string, paidAtRaw?: string) {
+    const paidAt = paidAtRaw ? new Date(paidAtRaw) : new Date();
+    if (Number.isNaN(paidAt.getTime())) throw new BadRequestException("Invalid paidAt");
+    await this.prisma.$transaction((tx) => this.ensureChannel(tx, tenantId));
+    const d = await this.settlement.markLinkPaid(tenantId, null, depositId, {
+      method: PaymentMethod.KIOREX_PAY,
+      externalRef: paymentRef,
+      paidAt,
+    });
+    return this.serialize(d);
+  }
+
+  private async ensureChannel(tx: Prisma.TransactionClient, tenantId: string) {
+    await tx.tenantPaymentChannel.upsert({
+      where: { tenantId_channelKey: { tenantId, channelKey: KIOREX_PAY_CHANNEL_KEY } },
+      create: { tenantId, channelKey: KIOREX_PAY_CHANNEL_KEY, name: "Kiorex Pay" },
+      update: {},
+    });
   }
 
   /** Kiorex reports a payout to the clinic; idempotent on `payoutRef`. */
@@ -155,7 +198,13 @@ export class KiorexDepositsService {
     const range = { gte: from, lte: to };
     const [deposits, released, refunds, payouts] = await Promise.all([
       this.prisma.patientDeposit.findMany({
-        where: { tenantId, source: KIOREX_PAY_SOURCE, createdAt: range, ...clinic },
+        where: {
+          tenantId,
+          source: KIOREX_PAY_SOURCE,
+          status: { notIn: [DEPOSIT_STATUS.PENDING, DEPOSIT_STATUS.EXPIRED, DEPOSIT_STATUS.CANCELLED] },
+          createdAt: range,
+          ...clinic,
+        },
         orderBy: { createdAt: "desc" },
       }),
       this.prisma.patientDeposit.findMany({
@@ -185,7 +234,10 @@ export class KiorexDepositsService {
     };
   }
 
-  private serialize<T extends { amount: Prisma.Decimal }>(d: T): Omit<T, "amount"> & { amount: number } {
-    return { ...d, amount: Number(d.amount) };
+  private serialize<T extends { amount: Prisma.Decimal; linkTokenHash?: string | null }>(
+    d: T,
+  ): Omit<T, "amount" | "linkTokenHash"> & { amount: number } {
+    const { linkTokenHash: _hash, amount, ...rest } = d;
+    return { ...rest, amount: Number(amount) };
   }
 }

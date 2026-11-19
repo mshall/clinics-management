@@ -59,6 +59,7 @@ const appointments = new AppointmentsService(
   slots,
   appointmentOutbox,
   { isEntitled: async () => false } as never,
+  { settleAppointmentDepositsTx: async () => ({ outcome: "WAIT", settled: 0 }) } as never,
 );
 const settings = new KiorexSettingsService(prismaSvc, new MarketplaceListingService(prismaSvc, outbox), audit, slots);
 

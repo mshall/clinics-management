@@ -75,6 +75,25 @@ const salesRepSchema = z.object({
   retentionDays: z.number().int().min(0).max(730),
 });
 
+/** FS-04 — when a booking needs a deposit and how the payment link behaves; optional so existing packs stay valid. */
+export const depositPolicySchema = z.object({
+  noShowThreshold: z.number().int().min(1).max(50),
+  riskScoreThreshold: z.number().int().min(1).max(100),
+  defaultPercentOfFee: z.number().min(1).max(100),
+  linkExpiryHours: z.number().int().min(1).max(168),
+  autoCancelUnpaid: z.boolean(),
+});
+
+export type DepositPolicy = z.infer<typeof depositPolicySchema>;
+
+export const DEPOSIT_POLICY_DEFAULTS: DepositPolicy = {
+  noShowThreshold: 2,
+  riskScoreThreshold: 60,
+  defaultPercentOfFee: 30,
+  linkExpiryHours: 24,
+  autoCancelUnpaid: false,
+};
+
 export const SALES_REP_COMMISSION_DEFAULTS = { commissionPercent: 10, retentionDays: 90 } as const;
 
 export const commercialConfigSchema = z
@@ -85,6 +104,7 @@ export const commercialConfigSchema = z
     dunning: dunningSchema,
     referral: referralSchema,
     salesRep: salesRepSchema.optional(),
+    deposits: depositPolicySchema.optional(),
   })
   .superRefine((val, ctx) => {
     if (val.dunning.readOnlyAfterDays <= val.dunning.graceDays) {

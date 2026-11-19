@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEntitlement } from "@/hooks/use-entitlement";
 import { apiGet } from "@/lib/http";
 import { localeForLanguage } from "@/lib/locale-display";
 import { formatMoneyAmount } from "@/lib/money-display";
@@ -27,13 +28,14 @@ type PayoutReport = {
 export function KiorexPayoutsCard({ clinicId }: { clinicId: string }) {
   const { t, i18n } = useTranslation();
   const locale = localeForLanguage(i18n.language);
+  const entitled = useEntitlement("mod_invoices");
   const q = useQuery({
     queryKey: ["kiorex", "payouts", clinicId],
     queryFn: () => apiGet<PayoutReport>(`/api/v1/billing/kiorex-payouts?clinicId=${encodeURIComponent(clinicId)}`),
-    enabled: Boolean(clinicId),
+    enabled: Boolean(clinicId) && entitled,
     retry: false,
   });
-  if (q.isError) return null;
+  if (!entitled || q.isError) return null;
   const r = q.data;
   const money = (n: number) => formatMoneyAmount(n, r?.currency ?? "", locale);
   const tiles: { key: keyof PayoutReport["totals"]; label: string }[] = [

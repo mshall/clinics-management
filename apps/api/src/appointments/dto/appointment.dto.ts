@@ -149,4 +149,5 @@ export type AppointmentDepositView = {
   source: string;
   amount: number;
   currency: string;
+  linkExpiresAt: string | null;
 };

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { AppointmentStatusBadge, appointmentStatusClassName } from "@/components/appointment-status-badge";
 import { NoShowRiskChip } from "@/components/no-show-risk-chip";
 import { DepositBadge } from "@/components/deposit-badge";
+import { DepositPanel } from "./deposit-panel";
 import { noShowRiskExplanation, noShowRiskSuggestionText } from "@/lib/no-show-risk";
 import { AppointmentSourceBadges } from "@/components/appointment-source-badges";
 import { Badge } from "@/components/ui/badge";
@@ -491,6 +492,11 @@ export function AppointmentDetailPage() {
           ) : null}
         </div>
       ) : null}
+
+      <DepositPanel
+        appointmentId={apt.id}
+        upcoming={(apt.status === "SCHEDULED" || apt.status === "CONFIRMED") && new Date(apt.startsAt).getTime() > Date.now()}
+      />
 
       {formErr ? <p className="text-sm text-destructive">{formErr}</p> : null}
 

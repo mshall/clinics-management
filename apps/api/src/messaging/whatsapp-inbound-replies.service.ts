@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { AppointmentStatus, MessageChannel, Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
+import { hoursUntil, resolveKiorexCancellationPolicy } from "../marketplace/kiorex-booking-policy";
 import { PrismaService } from "../prisma/prisma.service";
 import { SchedulingService } from "../scheduling/scheduling.service";
 import { AppointmentRescheduleTokenService } from "./appointment-reschedule-token.service";
@@ -145,15 +146,37 @@ export class WhatsAppInboundRepliesService {
     });
   }
 
+  /** FS-04 — a late patient cancellation keeps the deposit, per the clinic policy (`depositRefundMinHours`). */
+  private async patientDepositRefundable(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    clinicId: string,
+    startsAt: Date,
+    now: Date,
+  ): Promise<boolean> {
+    const clinic = await tx.clinic.findFirst({
+      where: { id: clinicId, tenantId },
+      select: { kiorexCancellationPolicy: true, tenant: { select: { market: { select: { commercialConfig: true } } } } },
+    });
+    const policy = resolveKiorexCancellationPolicy(clinic?.tenant.market?.commercialConfig, clinic?.kiorexCancellationPolicy);
+    return hoursUntil(startsAt, now) >= policy.depositRefundMinHours;
+  }
+
   private async cancelAppointment(tenantId: string, appointmentId: string, clinicId: string): Promise<void> {
     const updated = await this.prisma.$transaction(async (tx) => {
       const apt = await tx.appointment.findFirst({ where: { id: appointmentId, tenantId } });
       if (!apt || apt.status === AppointmentStatus.CANCELLED || apt.status === AppointmentStatus.COMPLETED) {
         return null;
       }
+      const now = new Date();
       const row = await tx.appointment.update({
         where: { id: appointmentId },
-        data: { status: AppointmentStatus.CANCELLED },
+        data: {
+          status: AppointmentStatus.CANCELLED,
+          cancelledAt: now,
+          cancelledBy: "PATIENT",
+          depositRefundable: await this.patientDepositRefundable(tx, tenantId, clinicId, apt.startsAt, now),
+        },
       });
       await this.appointmentOutbox.emitStatusChange(
         {

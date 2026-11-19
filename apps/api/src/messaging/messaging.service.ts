@@ -32,6 +32,12 @@ const DEFAULT_TEMPLATES: { key: string; channel: MessageChannel; bodyEn: string;
     bodyAr: "موعدكم بعد ساعتين في {{clinic}}.",
   },
   {
+    key: "deposit_payment_link",
+    channel: MessageChannel.WHATSAPP,
+    bodyEn: "Hello {{name}}, please pay a deposit of {{amount}} to keep your appointment at {{clinic}}: {{link}} (within {{hours}} hours).",
+    bodyAr: "مرحباً {{name}}، يرجى دفع عربون {{amount}} لتأكيد موعدك في {{clinic}}: {{link}} (خلال {{hours}} ساعة).",
+  },
+  {
     key: "results_ready",
     channel: MessageChannel.WHATSAPP,
     bodyEn: "Your lab results are ready. Please contact {{clinic}}.",

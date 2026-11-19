@@ -13,6 +13,10 @@ export const DEPOSIT_STATUS = {
   APPLIED: "APPLIED",
   RELEASED: "RELEASED",
   FORFEITED: "FORFEITED",
+  /** FS-04 — payment link ran out unpaid. */
+  EXPIRED: "EXPIRED",
+  /** FS-04 — payment link voided (appointment ended or replaced) before it was paid. */
+  CANCELLED: "CANCELLED",
 } as const;
 
 export const PACKAGE_STATUS = {

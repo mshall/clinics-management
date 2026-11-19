@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
-import { AppointmentStatus, Prisma } from "@prisma/client";
+import { AppointmentStatus, PaymentMethod, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { DEPOSIT_STATUS, lockKey, roundMoney } from "./patient-money";
 import { PatientMoneyService } from "./patient-money.service";
@@ -61,6 +61,13 @@ export class DepositSettlementService implements OnModuleInit, OnModuleDestroy {
     });
     const outcome = depositOutcomeFor(apt);
     if (outcome === "WAIT") return { outcome, settled: 0 };
+    const pending = await tx.patientDeposit.findMany({
+      where: { tenantId, appointmentId, status: DEPOSIT_STATUS.PENDING },
+      select: { id: true },
+    });
+    for (const d of pending) {
+      await this.money.voidPendingDepositTx(tx, tenantId, actorId, d.id, "CANCELLED", `Appointment ${apt!.status.toLowerCase()} before the deposit was paid`);
+    }
     const held = await tx.patientDeposit.findMany({
       where: { tenantId, appointmentId, status: DEPOSIT_STATUS.HELD },
       orderBy: { createdAt: "asc" },
@@ -79,6 +86,20 @@ export class DepositSettlementService implements OnModuleInit, OnModuleDestroy {
       }
     }
     return { outcome, settled: held.length };
+  }
+
+  /** FS-04 — payment link paid (desk-confirmed transfer or Kiorex Pay callback), then settled if the visit already happened. */
+  async markLinkPaid(
+    tenantId: string,
+    actorId: string | null,
+    depositId: string,
+    p: { method: PaymentMethod; externalRef: string | null; paidAt?: Date },
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const d = await this.money.markDepositPaidTx(tx, tenantId, actorId, depositId, p);
+      if (d.appointmentId) await this.settleAppointmentDepositsTx(tx, tenantId, d.appointmentId, actorId);
+      return tx.patientDeposit.findUniqueOrThrow({ where: { id: d.id } });
+    });
   }
 
   /** Held deposit → BillingPayment whose single allocation carries the deposit revenue (posted via postRevenue). */

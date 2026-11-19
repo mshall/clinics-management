@@ -3317,7 +3317,9 @@
       "HELD": "Held",
       "APPLIED": "Applied",
       "RELEASED": "Returned",
-      "FORFEITED": "Kept (no-show)"
+      "FORFEITED": "Kept (no-show)",
+      "EXPIRED": "Link expired",
+      "CANCELLED": "Link cancelled"
     },
     "refunds": "Refunds",
     "nothingRefundable": "Nothing to refund.",
@@ -3357,7 +3359,9 @@
       "HELD": "paid",
       "APPLIED": "applied",
       "RELEASED": "refunded",
-      "FORFEITED": "forfeited"
+      "FORFEITED": "forfeited",
+      "EXPIRED": "link expired",
+      "CANCELLED": "link cancelled"
     },
     "source": {
       "CLINIC": "at clinic",
@@ -3380,5 +3384,41 @@
     "colPayout": "Payout",
     "colAmount": "Amount",
     "unpaid": "Not paid out yet"
+  },
+  "depositPanel": {
+    "ask": "Ask for a deposit",
+    "required": "Deposit required",
+    "reason": {
+      "PATIENT_FLAG": "patient flagged",
+      "NO_SHOWS": "previous no-shows",
+      "RISK_SCORE": "high no-show risk",
+      "APPOINTMENT_TYPE": "appointment type",
+      "MANUAL": "asked by the clinic"
+    },
+    "awaiting": "Payment link sent — awaiting payment until",
+    "copy": "Copy link",
+    "sentWhatsApp": "Sent on WhatsApp",
+    "notSent": "Not sent — copy the link and share it with the patient",
+    "resend": "Send a new link",
+    "sendLink": "Send payment link",
+    "markPaid": "Mark as paid",
+    "dialogTitle": "Send a deposit payment link",
+    "amount": "Deposit amount",
+    "providerClinic": "Pay the clinic (InstaPay / transfer)",
+    "dialogHint": "The patient gets the link on WhatsApp. Unpaid links expire per the clinic deposit policy.",
+    "send": "Send link",
+    "markPaidTitle": "Confirm deposit payment",
+    "reference": "Transaction reference",
+    "confirmPaid": "Confirm payment"
+  },
+  "depositPay": {
+    "notFound": "This payment link is not valid any more.",
+    "appointment": "Appointment",
+    "amount": "Deposit to pay",
+    "payBy": "Please pay before",
+    "howToPay": "How to pay",
+    "afterPaying": "After paying, send the transaction reference to the clinic so they can confirm your booking.",
+    "expired": "This payment link has expired. Please contact the clinic.",
+    "paid": "This deposit has been received. Thank you!"
   }
 }

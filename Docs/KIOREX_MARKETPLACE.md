@@ -97,6 +97,7 @@ Marketplace calls carry `clinicId`; tenant resolves from listing rows.
 - `POST /marketplace/v1/payouts` `{ payoutRef, clinicId?, amount, depositPaymentRefs? }` — Kiorex paid the clinic; idempotent on `payoutRef`.
 - At check-in the deposit becomes a `BillingPayment` via `postRevenue`; cancellations release or forfeit it per the KX-06 `depositRefundable` decision; no-shows forfeit. Details and money rules: [CLINIC_BILLING.md](./CLINIC_BILLING.md#kiorex-pay-deposits-kx-07).
 - Clinic UI: deposit badge on appointments; **Kiorex** tab → "Kiorex Pay deposits & payouts" card (`GET /api/v1/billing/kiorex-payouts`).
+- FS-04: clinics can also send a Kiorex Pay **deposit link** for any booking; Kiorex confirms with `POST /marketplace/v1/deposit-links/:token/paid` `{ amount, paymentRef }` (see [FRONT_DESK.md](./FRONT_DESK.md#deposits--payment-links-for-high-risk-bookings-fs-04)).
 
 ## KX-08 verified reviews
 

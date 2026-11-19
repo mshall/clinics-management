@@ -7,6 +7,66 @@
   },
   "servers": [{ "url": "/marketplace/v1" }],
   "paths": {
+    "/deposit-links/{token}/paid": {
+      "post": {
+        "operationId": "marketplaceDepositLinkPaid",
+        "summary": "Patient paid a clinic deposit link through Kiorex Pay (FS-04); held until check-in, applied via postRevenue",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "amount",
+                  "paymentRef"
+                ],
+                "properties": {
+                  "amount": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Must equal the requested deposit"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "paymentRef": {
+                    "type": "string",
+                    "maxLength": 120,
+                    "description": "Kiorex payment id — idempotency key"
+                  },
+                  "paidAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Deposit now HELD (replay returns the same deposit)"
+          },
+          "400": {
+            "description": "DEPOSIT_AMOUNT_MISMATCH, DEPOSIT_CURRENCY_MISMATCH or DEPOSIT_LINK_EXPIRED"
+          },
+          "404": {
+            "description": "Payment link not found"
+          }
+        }
+      }
+    },
     "/bookings/{externalRef}/deposit-paid": {
       "post": {
         "operationId": "marketplaceDepositPaid",
