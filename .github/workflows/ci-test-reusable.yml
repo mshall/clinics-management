@@ -71,7 +71,8 @@ jobs:
         id: pw
         run: |
           set -euo pipefail
-          ver="$(node -p "require('./apps/web/node_modules/@playwright/test/package.json').version")"
+          # Workspaces hoist @playwright/test to the repo root node_modules.
+          ver="$(node -p "require('@playwright/test/package.json').version")"
           echo "version=${ver}" >> "$GITHUB_OUTPUT"
 
       - name: Cache Playwright browsers
