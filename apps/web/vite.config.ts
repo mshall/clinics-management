@@ -43,8 +43,10 @@ function apiProxyConfigure(proxy: {
 
 const apiDevProxy = {
   "/api": {
-    target: "http://127.0.0.1:3010",
+    target: process.env.API_PROXY_TARGET ?? "http://127.0.0.1:3010",
     changeOrigin: true,
+    // KNED: forward the original Host (x-forwarded-host) so nurse.localhost selects the Nurse edition on sign-in surfaces.
+    xfwd: true,
     // Org full-backup downloads can be large; do not cut the proxy mid-stream.
     timeout: 0,
     proxyTimeout: 0,
@@ -61,22 +63,24 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["logo.svg", "logo.png"],
+      includeAssets: ["logo.svg", "favicon.svg", "apple-touch-icon.png"],
       manifest: {
-        name: "Kiorly",
+        name: "Kiorly by Kiorex",
         short_name: "Kiorly",
         description: "Kiorly clinic management — اليوم / Today",
         lang: "en",
-        theme_color: "#0f766e",
-        background_color: "#0f766e",
+        theme_color: "#3730A3",
+        background_color: "#F4F6FC",
         display: "standalone",
         orientation: "portrait-primary",
         start_url: "/",
         scope: "/",
         icons: [
-          { src: "/logo.png", sizes: "192x192", type: "image/png", purpose: "any" },
-          { src: "/logo.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
-          { src: "/logo.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+          { src: "/pwa/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: "/pwa/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+          { src: "/pwa/maskable-192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
+          { src: "/pwa/maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+          { src: "/favicon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
         ],
       },
       workbox: {

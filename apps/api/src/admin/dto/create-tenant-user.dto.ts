@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { UserRole } from "@prisma/client";
+import { Profession, UserRole } from "@prisma/client";
 import { IsArray, IsEmail, IsEnum, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
 
 export class CreateTenantUserDto {
@@ -32,4 +32,9 @@ export class CreateTenantUserDto {
   @IsArray()
   @IsString({ each: true })
   clinicIds?: string[];
+
+  @ApiPropertyOptional({ enum: Profession, description: "PRSOP01 — clinician profession (defaults to PHYSICIAN for physician-role users, NURSE for nurse-role users)." })
+  @IsOptional()
+  @IsEnum(Profession)
+  profession?: Profession;
 }

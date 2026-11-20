@@ -27,6 +27,15 @@ export const MODULE_ENTITLEMENT_KEYS = [
   "pack_dental",
   "pack_aesthetics",
   "pack_physio",
+  /** Rev 2.3 home visits: booking/execution/safety are in EVERY tier (P5); route view + dispatch are tiered (KX-05 plans table). */
+  "home_route_view",
+  "home_dispatch",
+  /** KX-23 §05 Nurse edition (only true on the NURSE_* plans and Enterprise). */
+  "nurse_family_updates",
+  "nurse_private_duty_shifts",
+  /** KNLAB01: sample collection against a lab order handed to Kiorly Lab (Nurse Pro and above). */
+  "nurse_lab_samples",
+  "nurse_agency",
   "max_clinicians",
   "max_branches",
   "max_assistant_seats",
@@ -64,6 +73,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "revenue-share/revenue-share.controller.ts": { kind: "gated", entitlement: "mod_revenue" },
   "dev-inbox/dev-inbox.controller.ts": { kind: "open" },
   "feature-flags/feature-flags.controller.ts": { kind: "open" },
+  "scope-of-practice/scope-of-practice.controller.ts": { kind: "open" },
   "feature-flags/kiorex-flag-webhook.controller.ts": { kind: "webhook" },
   "growth/growth-referral.controller.ts": { kind: "open" },
   "billing-platform/kiorly-invoices.controller.ts": { kind: "open" },
@@ -77,6 +87,8 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "clinical/rx-share.controller.ts": { kind: "open" },
   "cohorts/public-cohorts.controller.ts": { kind: "open" },
   "clinician-verification/clinician-verification.controller.ts": { kind: "open" },
+  "clinician-verification/profession.controller.ts": { kind: "open" },
+  "clinical/physio.controller.ts": { kind: "mixed", entitlement: "pack_physio", minDecorators: 1 },
   "clinician-verification/platform-verifications.controller.ts": { kind: "platform" },
   "clinics/clinics.controller.ts": { kind: "open" },
   "compliance/compliance.controller.ts": { kind: "open" },
@@ -117,6 +129,13 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "kiorex/public-kiorex-fees.controller.ts": { kind: "open" },
   "kiorex/kiorex-billing-charges.controller.ts": { kind: "open" },
   "marketplace/marketplace.controller.ts": { kind: "webhook" },
+  "home-visits/home-visits.controller.ts": { kind: "open" },
+  "home-visits/home-visit-internal.controller.ts": { kind: "webhook" },
+  "nurse/nurse-edition.controller.ts": { kind: "open" },
+  "nurse/nurse-clinical.controller.ts": { kind: "open" },
+  "nurse/nurse-mar.controller.ts": { kind: "open" },
+  "nurse/nurse-lab.controller.ts": { kind: "open" },
+  "nurse/nurse-agency.controller.ts": { kind: "open" },
   "marketplace/marketplace-org.controller.ts": { kind: "open" },
   "marketplace/marketplace-listings-profile.controller.ts": { kind: "open" },
   "marketplace/kiorex-settings.controller.ts": { kind: "open" },
@@ -167,7 +186,13 @@ export const ENTITLEMENT_MIN_PLAN: Record<string, PlanKey> = {
   dedicated_support: PlanKey.ENTERPRISE,
   pack_dental: PlanKey.PRO,
   pack_aesthetics: PlanKey.PRO,
-  pack_physio: PlanKey.PRO,
+  pack_physio: PlanKey.LITE,
+  home_route_view: PlanKey.PRO,
+  home_dispatch: PlanKey.CLINIC,
+  nurse_family_updates: PlanKey.NURSE_PRO,
+  nurse_private_duty_shifts: PlanKey.NURSE_PRO,
+  nurse_lab_samples: PlanKey.NURSE_PRO,
+  nurse_agency: PlanKey.NURSE_AGENCY,
   max_clinicians: PlanKey.PRO,
   max_branches: PlanKey.CLINIC,
   max_assistant_seats: PlanKey.PRO,
@@ -223,6 +248,10 @@ export const PLAN_NAV_TAB_PRESETS: Record<PlanKey, readonly string[]> = {
     "operations",
     "hr",
   ],
+  /** Nurse edition (KX-23 §03): Today · Visits · Patients · Care plans · Payments · Reports · Settings (Team/Dispatch for agencies). Tab ids reuse the existing nav keys; labels are edition terminology in the web. */
+  [PlanKey.NURSE_LITE]: ["dashboard", "appointments", "patients", "encounters", "revenue", "admin", "customer_support", "profile"],
+  [PlanKey.NURSE_PRO]: ["dashboard", "appointments", "patients", "encounters", "revenue", "reports", "admin", "customer_support", "profile"],
+  [PlanKey.NURSE_AGENCY]: ["dashboard", "appointments", "patients", "encounters", "revenue", "reports", "hr", "admin", "customer_support", "profile"],
   [PlanKey.ENTERPRISE]: [
     "dashboard",
     "patients",
@@ -241,7 +270,7 @@ export const PLAN_NAV_TAB_PRESETS: Record<PlanKey, readonly string[]> = {
   ],
 };
 
-export const PLAN_MATRIX: Record<PlanKey, Record<string, EntitlementSeedValue>> = {
+export const PLAN_MATRIX = {
   [PlanKey.LITE]: {
     max_clinicians: 2,
     max_branches: 1,
@@ -270,6 +299,12 @@ export const PLAN_MATRIX: Record<PlanKey, Record<string, EntitlementSeedValue>> 
     pack_dental: false,
     pack_aesthetics: false,
     pack_physio: false,
+    home_route_view: false,
+    home_dispatch: false,
+    nurse_family_updates: false,
+    nurse_private_duty_shifts: false,
+    nurse_lab_samples: false,
+    nurse_agency: false,
   },
   [PlanKey.PRO]: {
     max_clinicians: 10,
@@ -300,6 +335,12 @@ export const PLAN_MATRIX: Record<PlanKey, Record<string, EntitlementSeedValue>> 
     pack_dental: false,
     pack_aesthetics: false,
     pack_physio: false,
+    home_route_view: true,
+    home_dispatch: false,
+    nurse_family_updates: false,
+    nurse_private_duty_shifts: false,
+    nurse_lab_samples: false,
+    nurse_agency: false,
   },
   [PlanKey.CLINIC]: {
     max_clinicians: 50,
@@ -329,6 +370,12 @@ export const PLAN_MATRIX: Record<PlanKey, Record<string, EntitlementSeedValue>> 
     pack_dental: false,
     pack_aesthetics: false,
     pack_physio: false,
+    home_route_view: true,
+    home_dispatch: true,
+    nurse_family_updates: false,
+    nurse_private_duty_shifts: false,
+    nurse_lab_samples: false,
+    nurse_agency: false,
   },
   [PlanKey.ENTERPRISE]: {
     max_clinicians: -1,
@@ -357,15 +404,108 @@ export const PLAN_MATRIX: Record<PlanKey, Record<string, EntitlementSeedValue>> 
     dedicated_support: true,
     pack_dental: false,
     pack_aesthetics: false,
-    pack_physio: false,
+    pack_physio: true,
+    home_route_view: true,
+    home_dispatch: true,
+    nurse_family_updates: true,
+    nurse_private_duty_shifts: true,
+    nurse_lab_samples: true,
+    nurse_agency: true,
   },
-};
+} as unknown as Record<PlanKey, Record<string, EntitlementSeedValue>>;
+
+/** Nurse edition plans (KX-23 §05). Seat limits: Lite/Pro = one nurse; Agency = 10 included (+ per extra nurse). */
+function nursePlan(over: Record<string, EntitlementSeedValue>): Record<string, EntitlementSeedValue> {
+  return {
+    max_clinicians: 1,
+    max_branches: 1,
+    max_assistant_seats: 2,
+    mod_clinical: true,
+    mod_front_desk: true,
+    mod_operations: false,
+    mod_invoices: true,
+    mod_revenue: true,
+    mod_expenses: false,
+    mod_hr: false,
+    mod_payroll: false,
+    mod_reports: true,
+    mod_messaging: false,
+    mod_integrations: false,
+    mod_data_explorer: false,
+    ai_assistant: false,
+    ai_scribe: false,
+    deposits: true,
+    multi_branch: false,
+    whatsapp_reminders: false,
+    card_payments: false,
+    instapay: false,
+    fawry: false,
+    dedicated_support: false,
+    pack_dental: false,
+    pack_aesthetics: false,
+    pack_physio: false,
+    home_route_view: false,
+    home_dispatch: false,
+    nurse_family_updates: false,
+    nurse_private_duty_shifts: false,
+    nurse_lab_samples: false,
+    nurse_agency: false,
+    ...over,
+  };
+}
+
+PLAN_MATRIX[PlanKey.NURSE_LITE] = nursePlan({});
+PLAN_MATRIX[PlanKey.NURSE_PRO] = nursePlan({
+  home_route_view: true,
+  whatsapp_reminders: true,
+  card_payments: true,
+  instapay: true,
+  fawry: true,
+  mod_messaging: true,
+  nurse_family_updates: true,
+  nurse_private_duty_shifts: true,
+  nurse_lab_samples: true,
+});
+PLAN_MATRIX[PlanKey.NURSE_AGENCY] = nursePlan({
+  max_clinicians: 10,
+  max_branches: 5,
+  max_assistant_seats: 30,
+  multi_branch: true,
+  home_route_view: true,
+  home_dispatch: true,
+  whatsapp_reminders: true,
+  card_payments: true,
+  instapay: true,
+  fawry: true,
+  mod_messaging: true,
+  mod_expenses: true,
+  mod_hr: true,
+  mod_payroll: true,
+  nurse_family_updates: true,
+  nurse_private_duty_shifts: true,
+  nurse_lab_samples: true,
+  nurse_agency: true,
+});
 
 /** CL-07 — specialty packs sold as billed add-ons (enable via tenant override after purchase). */
 export const SPECIALTY_PACK_ADDONS = [
   { key: "pack_dental", nameEn: "Dental chart pack", nameAr: "باقة مخطط الأسنان", monthlyAmount: 299 },
   { key: "pack_aesthetics", nameEn: "Aesthetics before/after pack", nameAr: "باقة التجميل قبل/بعد", monthlyAmount: 249 },
-  { key: "pack_physio", nameEn: "Physio treatment plans", nameAr: "خطط العلاج الطبيعي", monthlyAmount: 199 },
+  {
+    key: "pack_physio",
+    nameEn: "Physiotherapy pack",
+    nameAr: "باقة العلاج الطبيعي",
+    /** PROPOSED (KX-05 Rev 2.3 §07, KX-12): EGP 300 / org / month. NEEDS_HUMAN: pricing owner confirms before any billing. */
+    monthlyAmount: 300,
+    currency: "EGP",
+    priceStatus: "PROPOSED",
+    needsHuman: "NEEDS_HUMAN",
+    /** Plans on which it is an add-on; Enterprise includes it. */
+    addOnFor: ["LITE", "PRO", "CLINIC"],
+    includedIn: ["ENTERPRISE"],
+    /** Template flag (launch-locked, gate GPR2: never recorded by code). */
+    flagKey: "clinic.specialty_templates.physio",
+  },
 ] as const;
 
 export function planEntitlementRowsForSeed(): Record<PlanKey, Array<{ key: string; value: EntitlementSeedValue }>> {

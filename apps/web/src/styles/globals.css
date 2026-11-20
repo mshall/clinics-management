@@ -1,68 +1,35 @@
+@import "@fontsource-variable/jost/index.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-400.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-500.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-600.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-700.css";
+@import "../brand/tokens.css";
 @import "./material-theme.css";
 @import "./clinical-os-theme.css";
+@import "../brand/brand-bridge.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  /* Kiorly default — light */
-  :root,
-  html[data-theme="default-light"] {
-    --background: 210 20% 98%;
-    --foreground: 222 47% 11%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 200 85% 32%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 25% 93%;
-    --secondary-foreground: 222 40% 18%;
-    --muted: 210 20% 94%;
-    /* UX-04 — WCAG AA: muted text ≥ 4.5:1 on background (~#4b5563 on #f8fafc) */
-    --muted-foreground: 215 18% 32%;
-    --accent: 186 45% 92%;
-    --accent-foreground: 200 70% 22%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 214 20% 88%;
-    --input: 214 20% 88%;
-    --ring: 200 85% 32%;
-    --radius: 0.5rem;
-  }
-
-  /* Kiorly default — dark (#0f1419 base, #b8964a accent) */
-  html[data-theme="default-dark"] {
-    --background: 215 28% 8%;
-    --foreground: 45 15% 94%;
-    --card: 215 26% 11%;
-    --card-foreground: 45 12% 94%;
-    --popover: 215 26% 11%;
-    --popover-foreground: 45 12% 94%;
-    --primary: 43 44% 48%;
-    --primary-foreground: 215 32% 10%;
-    --secondary: 215 22% 16%;
-    --secondary-foreground: 45 10% 92%;
-    --muted: 215 18% 18%;
-    --muted-foreground: 215 12% 68%;
-    --accent: 43 28% 18%;
-    --accent-foreground: 43 55% 78%;
-    --destructive: 0 62% 45%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 215 18% 20%;
-    --input: 215 18% 20%;
-    --ring: 43 44% 52%;
-    --radius: 0.5rem;
-  }
-
   * {
     @apply border-border;
   }
 
+  html {
+    font-family: var(--kx-font);
+    font-feature-settings: "tnum" 0;
+  }
+
   body {
     @apply overflow-x-clip bg-background text-foreground antialiased;
+    font-family: var(--kx-font);
   }
+
+  h1, h2, h3 { letter-spacing: var(--kx-tracking-xl); }
+  :root[lang="ar"] h1, :root[lang="ar"] h2, :root[lang="ar"] h3, [dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3 { letter-spacing: 0; line-height: 1.4; }
+  [dir="rtl"] body { line-height: 1.6; }
 
   #root {
     @apply min-h-screen min-w-0 overflow-x-clip;
@@ -145,3 +112,141 @@
     stroke-dashoffset: 0;
   }
 }
+
+
+
+/* Nurse edition: field-first — 56px touch targets on phones (Q11). */
+@media (max-width: 767px) {
+  html[data-edition="nurse"] button.touch-manipulation:not(.kx-hdr),
+  html[data-edition="nurse"] input.touch-manipulation,
+  html[data-edition="nurse"] select.native-select,
+  html[data-edition="nurse"] textarea.touch-manipulation { min-height: var(--kx-touch-nurse); font-size: 1rem; }
+  html[data-edition="nurse"] button.touch-manipulation.w-11:not(.kx-hdr) { min-width: var(--kx-touch-nurse); }
+}
+
+/* Scannable data tables: sticky headers inside scroll containers, tabular numerals, calm focus. */
+table { font-variant-numeric: tabular-nums; }
+.kx-sticky-head thead th { position: sticky; top: 0; z-index: 1; background: hsl(var(--card)); }
+@media (prefers-reduced-motion: no-preference) {
+  main > * { animation: kx-page-in var(--kx-dur-slow) var(--kx-ease-decelerate) both; }
+}
+@keyframes kx-page-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* ---- Round 2 (Q11d): density control, page chrome, skeletons, motion ---- */
+:root { --kx-card-pad: 1.25rem; --kx-row-py: 0.75rem; --kx-filter-h: 2.25rem; }
+html[data-density="compact"] { --kx-card-pad: 0.875rem; --kx-row-py: 0.375rem; }
+html[data-edition="nurse"] { --kx-card-pad: 1rem; --kx-row-py: 0.875rem; }
+
+/* One page-title treatment for every route (many pages render a bare <h1> + <p>). */
+main h1 { font-size: 1.5rem; line-height: 1.25; font-weight: 600; letter-spacing: -0.015em; text-wrap: balance; }
+main h1 + p { margin-top: 0.25rem; max-width: 46rem; font-size: 0.875rem; line-height: 1.45; color: hsl(var(--muted-foreground)); }
+[dir="rtl"] main h1 { letter-spacing: 0; line-height: 1.45; }
+@media (max-width: 640px) { main h1 { font-size: 1.25rem; } }
+
+/* Sticky inside scroll: zebra-free rows, hairline separators, soft hover. */
+table thead th { background: hsl(var(--muted) / 0.55); }
+table tbody tr { transition: background-color var(--kx-dur-fast, 150ms) ease; }
+table tbody td, table tbody th { border-color: hsl(var(--border) / 0.7); }
+
+/* Skeletons use the brand .kx-skeleton; calm them when motion is reduced. */
+@media (prefers-reduced-motion: reduce) { .kx-skeleton { animation: none; } }
+
+/* Mirror directional icons in RTL (chevrons/arrows opt in with .rtl-flip). */
+[dir="rtl"] .rtl-flip { transform: scaleX(-1); }
+
+/* Keyboard hint keycap. */
+.kx-kbd { display: inline-flex; min-width: 1.25rem; height: 1.25rem; align-items: center; justify-content: center; padding: 0 0.3rem; border-radius: 0.3rem; border: 1px solid hsl(var(--border)); border-bottom-width: 2px; background: hsl(var(--card)); font: 600 0.6875rem/1 var(--kx-font); color: hsl(var(--muted-foreground)); }
+
+/* ---- Charts in brand ramps (indigo / ocean / coral first), hairline grid, tabular numerals ---- */
+:root {
+  --kx-chart-1: #3730A3; --kx-chart-2: #0369A1; --kx-chart-3: #E8735E; --kx-chart-4: #0F766E;
+  --kx-chart-5: #B45309; --kx-chart-6: #64748B; --kx-chart-7: #7C3AED;
+}
+html.dark {
+  --kx-chart-1: #A5A0F5; --kx-chart-2: #5BB8E8; --kx-chart-3: #F29A88; --kx-chart-4: #34D399;
+  --kx-chart-5: #FBBF24; --kx-chart-6: #94A3B8; --kx-chart-7: #A78BFA;
+}
+:root, html.dark {
+  --chart-1: var(--kx-chart-1); --chart-2: var(--kx-chart-2); --chart-3: var(--kx-chart-3); --chart-4: var(--kx-chart-4); --chart-5: var(--kx-chart-5);
+}
+.recharts-cartesian-grid line { stroke: hsl(var(--border)); stroke-dasharray: none; }
+.recharts-cartesian-axis-tick-value, .recharts-legend-item-text { fill: hsl(var(--muted-foreground)); font-size: 11px; font-variant-numeric: tabular-nums; }
+.recharts-legend-item-text { color: hsl(var(--muted-foreground)) !important; }
+.recharts-default-tooltip { background: hsl(var(--popover)) !important; border: 1px solid hsl(var(--border)) !important; border-radius: 0.625rem; box-shadow: var(--kx-shadow-2); font-variant-numeric: tabular-nums; }
+.recharts-tooltip-label { color: hsl(var(--foreground)); font-weight: 600; }
+.recharts-surface { overflow: visible; }
+@media (prefers-reduced-motion: reduce) { .recharts-wrapper * { animation: none !important; } }
+.recharts-tooltip-item { color: hsl(var(--foreground)) !important; }
+
+/* ---- Round 3 (Q11f): form controls, dialogs-as-sheets, section nav, safety states, clearance for the assistant FAB ---- */
+:root.dark, html.dark { color-scheme: dark; }
+
+/* Native selects share one look (custom chevron, brand radius, mirrors in RTL); unlayered so it also covers the many one-off select classes. */
+select:not([multiple]):not([size]) {
+  appearance: none; -webkit-appearance: none;
+  background-color: hsl(var(--card));
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236F7899' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 0.75rem center; background-size: 1rem;
+  padding-inline-end: 2.25rem; border-radius: 0.5rem; border-color: hsl(var(--input));
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+[dir="rtl"] select:not([multiple]):not([size]) { background-position: left 0.75rem center; }
+select:not([multiple]):not([size]):hover:not(:disabled) { border-color: hsl(var(--ring) / 0.6); }
+input[type="checkbox"], input[type="radio"] { accent-color: hsl(var(--primary)); width: 1.125rem; height: 1.125rem; flex-shrink: 0; cursor: pointer; }
+textarea { border-radius: 0.5rem; }
+
+/* Dialogs: calm open/close (opacity + scale via the individual `scale`/`translate` properties so the centring transform is untouched). */
+@media (prefers-reduced-motion: no-preference) {
+  .kx-dialog[data-state="open"] { animation: kx-dialog-in 180ms var(--kx-ease-decelerate) both; }
+  .kx-dialog[data-state="closed"] { animation: kx-dialog-out 120ms var(--kx-ease-accelerate) both; }
+  @media (max-width: 639px) {
+    .kx-dialog[data-state="open"] { animation-name: kx-sheet-in; animation-duration: 240ms; }
+    .kx-dialog[data-state="closed"] { animation-name: kx-sheet-out; }
+  }
+}
+@keyframes kx-dialog-in { from { opacity: 0; scale: 0.97; } to { opacity: 1; scale: 1; } }
+@keyframes kx-dialog-out { from { opacity: 1; scale: 1; } to { opacity: 0; scale: 0.98; } }
+@keyframes kx-sheet-in { from { opacity: 0.6; translate: 0 32px; } to { opacity: 1; translate: 0 0; } }
+@keyframes kx-sheet-out { from { translate: 0 0; } to { opacity: 0; translate: 0 32px; } }
+
+/* The floating assistant button must never cover the last row of a page. */
+main { padding-bottom: max(env(safe-area-inset-bottom), 4.5rem); }
+@media (max-width: 767px) { main { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom)); } }
+
+/* Section nav (admin / HR / platform): underline tabs that scroll sideways on phones. */
+.kx-secnav { display: flex; gap: 0.25rem; overflow-x: auto; overscroll-behavior-x: contain; border-bottom: 1px solid hsl(var(--border)); scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.kx-secnav::-webkit-scrollbar { display: none; }
+.kx-secnav > button, .kx-secnav > a { position: relative; flex: none; min-height: 2.75rem; padding: 0 0.875rem; font-size: 0.875rem; font-weight: 500; color: hsl(var(--muted-foreground)); white-space: nowrap; border-radius: 0.5rem 0.5rem 0 0; transition: color 150ms ease, background-color 150ms ease; }
+.kx-secnav > button:hover, .kx-secnav > a:hover { color: hsl(var(--foreground)); background: hsl(var(--muted) / 0.6); }
+.kx-secnav > [aria-current="true"], .kx-secnav > [aria-current="page"] { color: hsl(var(--primary)); font-weight: 600; }
+.kx-secnav > [aria-current="true"]::after, .kx-secnav > [aria-current="page"]::after { content: ""; position: absolute; inset-inline: 0.5rem; bottom: -1px; height: 2px; border-radius: 2px; background: hsl(var(--primary)); }
+
+/* Safety / clinical state callouts: icon + text + colour (never colour alone). */
+.kx-callout { display: flex; gap: 0.75rem; align-items: flex-start; border-radius: 0.75rem; border: 1px solid hsl(var(--border)); border-inline-start-width: 4px; padding: 0.75rem 1rem; background: hsl(var(--card)); }
+.kx-callout[data-tone="danger"] { border-color: hsl(var(--danger-text) / 0.35); border-inline-start-color: hsl(var(--danger-text)); background: hsl(var(--danger-text) / 0.07); }
+.kx-callout[data-tone="warn"] { border-color: hsl(var(--warning) / 0.4); border-inline-start-color: hsl(var(--warning)); background: hsl(var(--warning) / 0.1); }
+.kx-callout[data-tone="good"] { border-color: hsl(var(--success) / 0.35); border-inline-start-color: hsl(var(--success)); background: hsl(var(--success) / 0.08); }
+.kx-callout[data-tone="info"] { border-color: hsl(var(--info) / 0.35); border-inline-start-color: hsl(var(--info)); background: hsl(var(--info) / 0.08); }
+
+/* Sticky action bar for field work (phones): sits above the bottom nav. */
+.kx-actionbar { position: sticky; bottom: calc(4.25rem + env(safe-area-inset-bottom)); z-index: 20; display: flex; gap: 0.75rem; padding: 0.75rem; margin-inline: -0.25rem; border-radius: 1rem; border: 1px solid hsl(var(--border)); background: hsl(var(--card) / 0.96); backdrop-filter: blur(8px); box-shadow: var(--kx-shadow-3, var(--kx-shadow-2)); }
+@media (min-width: 768px) { .kx-actionbar { bottom: 1rem; } }
+
+/* Definition list rows used by read-only records (invoice totals, visit summaries). */
+.kx-dl { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem 1rem; font-size: 0.875rem; }
+.kx-dl dt { color: hsl(var(--muted-foreground)); }
+.kx-dl dd { text-align: end; font-variant-numeric: tabular-nums; font-weight: 500; }
+.kx-dl .kx-total { border-top: 1px solid hsl(var(--border)); padding-top: 0.5rem; font-size: 1rem; font-weight: 700; color: hsl(var(--foreground)); }
+
+/* Dialog padding vars drive the sticky footer so it sits flush with the bottom edge of the scrollport (sticky offsets ignore the container's padding). */
+.kx-dialog { --dlg-px: 1.5rem; --dlg-pb: 1.5rem; }
+@media (max-width: 639px) { .kx-dialog { --dlg-px: 1.25rem; --dlg-pb: max(1.25rem, env(safe-area-inset-bottom)); } }
+.kx-dialog-footer {
+  position: sticky; bottom: calc(var(--dlg-pb, 1.5rem) * -1); z-index: 2;
+  margin: 0.25rem calc(var(--dlg-px, 1.5rem) * -1) calc(var(--dlg-pb, 1.5rem) * -1);
+  padding: 0.75rem var(--dlg-px, 1.5rem) max(0.75rem, env(safe-area-inset-bottom));
+  border-top: 1px solid hsl(var(--border) / 0.7); background: hsl(var(--card) / 0.96); backdrop-filter: blur(6px);
+}
+
+/* Solid danger surfaces carrying white text need >= 4.5:1 in dark too (the dark --destructive token is tuned for red TEXT on dark surfaces). */
+html.dark .bg-destructive { background-color: hsl(0 72% 46%); }

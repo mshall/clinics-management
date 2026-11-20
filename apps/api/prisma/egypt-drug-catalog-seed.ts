@@ -68,7 +68,8 @@ export async function ensureEgyptDrugCatalog(prisma: PrismaClient): Promise<void
     update: { isActive: true, sourceName: DEMO_SOURCE.sourceName, sourceLicense: DEMO_SOURCE.sourceLicense },
   });
 
-  const products = [...CORE_PRODUCTS];
+  const products: ((typeof CORE_PRODUCTS)[number] | { [k: string]: any })[] = [...CORE_PRODUCTS];
+  // (loosely typed: generated filler products carry no per-ingredient strength)
   for (let i = 1; i <= 650; i += 1) {
     products.push({
       brandNameEn: `PharmaBrand-${String(i).padStart(4, "0")}`,
@@ -95,7 +96,7 @@ export async function ensureEgyptDrugCatalog(prisma: PrismaClient): Promise<void
     }
 
     const ingredientLinks: { ingredientId: string; strength: string | null }[] = [];
-    for (const ing of p.ingredients) {
+    for (const ing of p.ingredients as { nameEn: string; nameAr?: string; strength?: string }[]) {
       const row = await prisma.activeIngredient.upsert({
         where: { nameEn: ing.nameEn },
         create: { nameEn: ing.nameEn, nameAr: ing.nameAr ?? null },

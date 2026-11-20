@@ -10,7 +10,7 @@ test.describe("ON-07 field-sales rep console", () => {
     await page.goto("/login");
     await page.getByLabel(/email/i).fill("rep@kiorly.com");
     await page.getByLabel(/password/i).fill("demo");
-    await page.getByRole("button", { name: /sign in|log in/i }).click();
+    await page.getByRole("button", { name: /^(sign in|log in)$/i }).click();
     await page.waitForURL((u) => u.pathname === "/rep", { timeout: 30_000 });
     await expect(page.getByTestId("rep-code")).toHaveText("REP-DEMO");
 

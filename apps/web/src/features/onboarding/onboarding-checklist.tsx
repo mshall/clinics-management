@@ -3,6 +3,7 @@ import { Check, Circle, PartyPopper, SkipForward } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { Skeleton } from "@/components/skeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -41,11 +42,14 @@ export function OnboardingChecklist({ variant = "card", onDismiss }: Props) {
     if (q.data?.activationJustAchieved) setShowCelebrate(true);
   }, [q.data?.activationJustAchieved]);
 
+  if (q.isLoading && variant === "page") return <Card><CardContent className="space-y-3 pt-[var(--kx-card-pad)]" role="status" aria-busy="true">{[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-5" />)}</CardContent></Card>;
   if (q.isLoading || q.isError || !q.data) return null;
   if (q.data.completedAt && variant === "card") return null;
 
   const data = q.data;
   const pending = data.steps.filter((s) => s.status === "pending");
+  // Dashboard card: only what is left to do (first 4); the full checklist lives on /onboarding.
+  const visibleSteps = variant === "card" ? pending.slice(0, 4) : data.steps;
 
   return (
   <Card className={variant === "page" ? undefined : undefined}>
@@ -60,10 +64,10 @@ export function OnboardingChecklist({ variant = "card", onDismiss }: Props) {
         </CardHeader>
       ) : null}
       <CardHeader>
-        <CardTitle className="text-lg">{t("onboarding.title")}</CardTitle>
+        <CardTitle className="text-base">{t("onboarding.title")}</CardTitle>
         <CardDescription>{t("onboarding.subtitle")}</CardDescription>
         {showMfaSetup ? (
-          <div className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm" data-testid="onboarding-mfa-setup">
+          <div className="kx-callout mt-3 flex-col gap-1 text-sm" data-tone="warn" data-testid="onboarding-mfa-setup">
             <p className="font-medium">{t("onboarding.mfaSetupTitle", "Protect money with MFA")}</p>
             <p className="mt-1 text-muted-foreground">
               {t(
@@ -77,20 +81,20 @@ export function OnboardingChecklist({ variant = "card", onDismiss }: Props) {
           </div>
         ) : null}
         <div
-          className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted"
+          className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted"
           role="progressbar"
           aria-valuenow={data.progressPercent}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-label={t("onboarding.progress")}
         >
-          <div className="h-full bg-primary transition-all" style={{ width: `${data.progressPercent}%` }} />
+          <div className="h-full rounded-full bg-primary transition-[width] duration-500 ease-out motion-reduce:transition-none" style={{ width: `${data.progressPercent}%` }} />
         </div>
         <p className="text-xs text-muted-foreground">{t("onboarding.progressLabel", { percent: data.progressPercent })}</p>
       </CardHeader>
       <CardContent className="space-y-2">
         <ul className="space-y-1">
-          {data.steps.map((step) => (
+          {visibleSteps.map((step) => (
             <StepRow
               key={step.key}
               step={step}
@@ -109,7 +113,7 @@ export function OnboardingChecklist({ variant = "card", onDismiss }: Props) {
         ) : (
           <div className="flex flex-wrap gap-2 pt-2">
             <Button asChild variant="default" size="sm">
-              <Link to="/onboarding">{t("onboarding.viewAll")}</Link>
+              <Link to="/onboarding">{t("onboarding.viewAll")}{variant === "card" && pending.length > 4 ? ` (${pending.length})` : ""}</Link>
             </Button>
             {pending.length === 0 && onDismiss ? (
               <Button type="button" variant="outline" size="sm" onClick={onDismiss}>
@@ -140,26 +144,26 @@ function StepRow({
 }) {
   const icon =
     step.status === "done" ? (
-      <Check className="size-4 shrink-0 text-primary" aria-hidden />
+      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--success))] text-white"><Check className="size-3.5" aria-hidden /></span>
     ) : step.status === "skipped" ? (
-      <SkipForward className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"><SkipForward className="size-3.5" aria-hidden /></span>
     ) : (
-      <Circle className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+      <Circle className="size-6 shrink-0 text-border" strokeWidth={1.75} aria-hidden />
     );
 
   return (
-    <li className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted/60">
+    <li className="flex min-h-12 items-center gap-3 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-muted/60" data-status={step.status}>
       {icon}
-      <Link to={step.href} className="min-w-0 flex-1 text-start hover:underline">
+      <Link to={step.href} className={`min-w-0 flex-1 py-1 text-start hover:underline ${step.status === "done" ? "text-muted-foreground" : "font-medium"}`}>
         {label}
-        {!step.required ? <span className="ms-1 text-xs text-muted-foreground">({optionalLabel})</span> : null}
+        {!step.required ? <span className="ms-1 text-xs font-normal text-muted-foreground">({optionalLabel})</span> : null}
       </Link>
       {step.status === "pending" && !step.required ? (
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="h-7 shrink-0 text-xs"
+          className="h-9 shrink-0 text-xs"
           disabled={pending}
           onClick={() => onSkip(step.key)}
         >

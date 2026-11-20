@@ -169,7 +169,7 @@ export function RefundDialog({
             </div>
             <p className="text-xs text-muted-foreground">{t("patientMoney.refundExplainer")}</p>
             {pendingNote ? (
-              <p role="status" className="rounded-md bg-amber-50 p-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+              <p role="status" className="rounded-md bg-[hsl(var(--warning)/0.12)] p-2 text-sm text-[hsl(var(--warning))] ">
                 {t("patientMoney.refundPendingApproval")}
               </p>
             ) : null}
@@ -324,7 +324,7 @@ export function PatientMoneySection({ patientId, clinicId }: { patientId: string
       <div className="grid gap-3 sm:grid-cols-2">
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <PiggyBank className="h-5 w-5 text-emerald-600" aria-hidden />
+            <PiggyBank className="h-5 w-5 text-[hsl(var(--success))]" aria-hidden />
             <div>
               <p className="text-xs text-muted-foreground">{t("patientMoney.depositsHeld")}</p>
               <p className="text-lg font-semibold ltr-nums" data-testid="deposits-held">{fmt(data.depositsHeld)}</p>
@@ -333,7 +333,7 @@ export function PatientMoneySection({ patientId, clinicId }: { patientId: string
         </Card>
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <Package className="h-5 w-5 text-sky-600" aria-hidden />
+            <Package className="h-5 w-5 text-kx-ocean-700" aria-hidden />
             <div>
               <p className="text-xs text-muted-foreground">{t("patientMoney.packagesUnused")}</p>
               <p className="text-lg font-semibold ltr-nums">{fmt(data.packagesUnusedValue)}</p>

@@ -4,6 +4,7 @@
 locals {
   cells  = jsondecode(file("${path.root}/../../../../../../platform/data-cells.json")).cells
   cell   = "frankfurt"
+  env    = "staging"
   region = local.cells[local.cell].awsRegion
 }
 
@@ -43,6 +44,15 @@ provider "aws" {
   }
 }
 
+# Amazon Location (maps/routes) is a real-provider counterpart of the mock-default adapter: disabled unless enable_location.
+module "location" {
+  source  = "../../../../modules/aws/location"
+  enabled = var.enable_location
+  name    = "kiorly-clinic-${local.env}"
+
+  route_data_source = var.location_route_data_source
+}
+
 module "kiorly_clinic" {
   source    = "../../../../modules/product-stack"
   providers = { aws = aws, aws.us_east_1 = aws.us_east_1 }
@@ -54,19 +64,23 @@ module "kiorly_clinic" {
   stack_role = "clinic-platform-cell"
   image_tag  = var.git_sha
 
-  domain    = var.domain
-  zone_name = var.zone_name
+  domain        = var.domain
+  zone_name     = var.zone_name
+  alias_domains = var.nurse_alias_enabled ? [var.nurse_domain] : [] # nurse.kiorly.com (KX-08 / KX-23)
 
   api      = var.api
   db       = var.db
   uploads  = var.uploads
-  env_vars = var.env_vars
+  env_vars = merge(var.env_vars, module.location.env_vars)
 
+  extra_policy_json    = compact([module.location.policy_json])
   runtime_secrets      = var.runtime_secrets
   enable_database      = var.enable_database
   enable_uploads       = var.enable_uploads
   enable_cdn           = var.enable_cdn
   enable_seed_lambda   = var.enable_seed_lambda
+  enable_demo_seed     = var.enable_demo_seed
+  demo_seed_env        = var.demo_seed_env
   enable_email         = var.enable_email
   email_domain         = var.email_domain
   dmarc_report_address = var.dmarc_report_address
@@ -82,6 +96,7 @@ module "kiorly_clinic" {
   generated_secrets   = var.generated_secrets
   placeholder_secrets = var.placeholder_secrets
   scheduled_jobs      = var.scheduled_jobs
+  safety_alerts       = var.safety_alerts
 
   alarm_emails          = var.alarm_emails
   alarm_webhook_urls    = var.alarm_webhook_urls

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ResponsiveTable } from "@/components/responsive-table";
+import { PageHeader, StatCard, StatusChip } from "@/brand/ui-kit";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -120,19 +121,23 @@ export function CashDrawerPage() {
 
   return (
     <div className="space-y-6" data-testid="cash-drawer-page">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("cashDrawer.title", "Cash drawer")}</h1>
-          <p className="text-muted-foreground">{t("cashDrawer.subtitle", "Open the shift with a float, count the drawer at close, print the Z-report.")}</p>
-        </div>
-        <select className={nativeSelectClassName} value={activeClinic} onChange={(e) => setClinicId(e.target.value)} aria-label={t("cashDrawer.clinic", "Clinic")}>
-          {clinics.map((c) => (
-            <option key={c.id} value={c.id}>
-              {formatClinicNameFields(c.nameEn, c.nameAr, i18n.language, c.id)}
-            </option>
-          ))}
-        </select>
-      </div>
+      <PageHeader
+        className="mb-0"
+        title={t("cashDrawer.title", "Cash drawer")}
+        description={t("cashDrawer.subtitle", "Open the shift with a float, count the drawer at close, print the Z-report.")}
+        actions={
+          <>
+            <StatusChip tone={shift ? "good" : "neutral"}>{shift ? t("cashDrawer.stateOpen", "Drawer open") : t("cashDrawer.stateClosed", "Drawer closed")}</StatusChip>
+            <select className={nativeSelectClassName + " w-auto min-w-48"} value={activeClinic} onChange={(e) => setClinicId(e.target.value)} aria-label={t("cashDrawer.clinic", "Clinic")}>
+              {clinics.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {formatClinicNameFields(c.nameEn, c.nameAr, i18n.language, c.id)}
+                </option>
+              ))}
+            </select>
+          </>
+        }
+      />
 
       {result ? <CloseResult shift={result} money={money} /> : null}
 
@@ -154,11 +159,11 @@ export function CashDrawerPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
                 <Label htmlFor="counted-cash">{t("cashDrawer.countedCash", "Counted cash")}</Label>
-                <Input id="counted-cash" data-testid="counted-cash" type="number" min="0" step="0.01" value={countedCash} onChange={(e) => setCountedCash(e.target.value)} />
+                <Input id="counted-cash" data-testid="counted-cash" type="number" inputMode="decimal" min="0" step="0.01" value={countedCash} onChange={(e) => setCountedCash(e.target.value)} className="h-14 text-2xl font-semibold tabular-nums ltr-nums" />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="counted-card">{t("cashDrawer.countedCard", "Card slips total")}</Label>
-                <Input id="counted-card" data-testid="counted-card" type="number" min="0" step="0.01" value={countedCard} onChange={(e) => setCountedCard(e.target.value)} />
+                <Input id="counted-card" data-testid="counted-card" type="number" inputMode="decimal" min="0" step="0.01" value={countedCard} onChange={(e) => setCountedCard(e.target.value)} className="h-14 text-2xl font-semibold tabular-nums ltr-nums" />
               </div>
             </div>
             <div className="space-y-1">
@@ -167,7 +172,7 @@ export function CashDrawerPage() {
               </Label>
               <Textarea id="variance-note" data-testid="variance-note" value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
             </div>
-            <Button onClick={() => close.mutate(shift.id)} disabled={close.isPending || countedCash === ""} data-testid="close-shift">
+            <Button size="lg" className="h-12 w-full sm:w-auto" onClick={() => close.mutate(shift.id)} disabled={close.isPending || countedCash === ""} data-testid="close-shift">
               {t("cashDrawer.close", "Close shift")}
             </Button>
           </CardContent>
@@ -181,9 +186,9 @@ export function CashDrawerPage() {
           <CardContent className="flex flex-wrap items-end gap-3">
             <div className="space-y-1">
               <Label htmlFor="opening-float">{t("cashDrawer.float", "Opening float")}</Label>
-              <Input id="opening-float" data-testid="opening-float" type="number" min="0" step="0.01" value={float} onChange={(e) => setFloat(e.target.value)} className="w-40" />
+              <Input id="opening-float" data-testid="opening-float" type="number" inputMode="decimal" min="0" step="0.01" value={float} onChange={(e) => setFloat(e.target.value)} className="h-14 w-48 text-2xl font-semibold tabular-nums ltr-nums" />
             </div>
-            <Button onClick={() => open.mutate()} disabled={open.isPending || !activeClinic} data-testid="open-shift">
+            <Button size="lg" className="h-14 px-6" onClick={() => open.mutate()} disabled={open.isPending || !activeClinic} data-testid="open-shift">
               {t("cashDrawer.open", "Open shift")}
             </Button>
           </CardContent>
@@ -262,21 +267,10 @@ function CloseResult({ shift, money }: { shift: ClosedShift; money: (n: number |
               : t("cashDrawer.balanced", "The drawer balances.")}
         </CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-2 text-sm sm:grid-cols-3">
-        <div>
-          <p className="text-muted-foreground">{t("cashDrawer.expectedCash", "Expected cash")}</p>
-          <p className="font-medium ltr-nums">{money(shift.expectedCash, shift.currency)}</p>
-        </div>
-        <div>
-          <p className="text-muted-foreground">{t("cashDrawer.countedCash", "Counted cash")}</p>
-          <p className="font-medium ltr-nums">{money(shift.countedCash, shift.currency)}</p>
-        </div>
-        <div>
-          <p className="text-muted-foreground">{t("cashDrawer.variance", "Variance")}</p>
-          <p className="font-medium ltr-nums" data-testid="shift-variance">
-            {money(variance, shift.currency)}
-          </p>
-        </div>
+      <CardContent className="grid gap-3 text-sm sm:grid-cols-3">
+        <StatCard label={t("cashDrawer.expectedCash", "Expected cash")} value={<span className="ltr-nums">{money(shift.expectedCash, shift.currency)}</span>} />
+        <StatCard label={t("cashDrawer.countedCash", "Counted cash")} value={<span className="ltr-nums">{money(shift.countedCash, shift.currency)}</span>} />
+        <StatCard label={t("cashDrawer.variance", "Variance")} tone={shift.needsReview ? "bad" : Math.abs(variance) >= 0.01 ? "warn" : "good"} value={<span className="ltr-nums" data-testid="shift-variance">{money(variance, shift.currency)}</span>} hint={shift.needsReview ? t("cashDrawer.needsReview", "Needs review") : undefined} />
         <div className="sm:col-span-3">
           <ZReportButtons id={shift.id} />
         </div>

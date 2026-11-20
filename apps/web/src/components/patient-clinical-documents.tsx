@@ -225,7 +225,7 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
       key: "labs" as const,
       category: "LAB_RESULTS" as const,
       icon: FlaskConical,
-      iconClass: "text-emerald-600",
+      iconClass: "text-[hsl(var(--success))]",
       title: t("patients.clinicalLabs", "Lab results"),
       hint: t("patients.clinicalLabsHint", "Lab reports from registration and encounters."),
       items: data?.labs ?? [],
@@ -235,7 +235,7 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
       key: "radiology" as const,
       category: "RADIOLOGY" as const,
       icon: ScanLine,
-      iconClass: "text-sky-600",
+      iconClass: "text-kx-ocean-700",
       title: t("patients.clinicalRadiology", "Radiology"),
       hint: t("patients.clinicalRadiologyHint", "Imaging reports from registration and encounters."),
       items: data?.radiology ?? [],
@@ -245,7 +245,7 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
       key: "prescriptions" as const,
       category: "PRESCRIPTION" as const,
       icon: Pill,
-      iconClass: "text-violet-600",
+      iconClass: "text-kx-indigo-700",
       title: t("patients.clinicalPrescriptions", "Prescriptions"),
       hint: t("patients.clinicalPrescriptionsHint", "Prescriptions from registration and encounters."),
       items: data?.prescriptions ?? [],
@@ -288,7 +288,7 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <FileText className="h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+              <FileText className="h-4 w-4 shrink-0 text-[hsl(var(--warning))]" aria-hidden />
               {t("patients.clinicalOther", "Other documents")}
             </CardTitle>
             <CardDescription>

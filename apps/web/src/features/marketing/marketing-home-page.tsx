@@ -76,9 +76,9 @@ export function MarketingHomePage() {
   const net = Math.max(0, monthly - offset);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-emerald-50 text-slate-900" data-testid="marketing-home">
+    <div className="min-h-screen bg-gradient-to-b from-kx-ocean-50 via-white to-emerald-50 text-kx-neutral-950" data-testid="marketing-home">
       <header className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-4">
-        <div className="text-2xl font-semibold tracking-tight text-teal-800">Kiorly</div>
+        <div className="text-2xl font-semibold tracking-tight text-kx-ocean-900">Kiorly</div>
         <div className="flex items-center gap-2">
           <LanguageSwitcher />
           <Button asChild size="sm" variant="outline">
@@ -92,10 +92,10 @@ export function MarketingHomePage() {
 
       <main className="mx-auto max-w-5xl space-y-16 px-4 pb-20 pt-8">
         <section className="space-y-4">
-          <h1 className="max-w-2xl text-4xl font-semibold tracking-tight text-teal-950 sm:text-5xl">
+          <h1 className="max-w-2xl text-4xl font-semibold tracking-tight text-kx-ocean-950 sm:text-5xl">
             {t("marketing.heroTitle", "Clinic software that pays for itself with Kiorex")}
           </h1>
-          <p className="max-w-xl text-lg text-slate-600">
+          <p className="max-w-xl text-lg text-kx-neutral-700">
             {t(
               "marketing.heroBody",
               "Run your practice in Arabic and English. Book, chart, and collect — then fill empty slots from Kiorex.",
@@ -113,7 +113,7 @@ export function MarketingHomePage() {
             </Button>
           </div>
           {cohortQ.data ? (
-            <p className="text-sm text-teal-800 ltr-nums" data-testid="founding-remaining">
+            <p className="text-sm text-kx-ocean-900 ltr-nums" data-testid="founding-remaining">
               {t("marketing.foundingLeft", "{{count}} founding seats left", { count: cohortQ.data.remaining })}
             </p>
           ) : null}
@@ -121,10 +121,10 @@ export function MarketingHomePage() {
 
         <section className="space-y-3">
           <h2 className="text-2xl font-semibold">{t("marketing.specialtiesTitle", "Built for your specialty")}</h2>
-          <p className="text-slate-600">{t("marketing.specialtiesBody", "Templates and flows for Egypt’s most common clinic types.")}</p>
+          <p className="text-kx-neutral-700">{t("marketing.specialtiesBody", "Templates and flows for Egypt’s most common clinic types.")}</p>
           <ul className="flex flex-wrap gap-2">
             {CLINICAL_SPECIALTY_VALUES.slice(0, 12).map((s) => (
-              <li key={s} className="rounded-full border border-teal-100 bg-white/80 px-3 py-1 text-sm">
+              <li key={s} className="rounded-full border border-kx-ocean-100 bg-white/80 px-3 py-1 text-sm">
                 {formatClinicalSpecialty(s, t)}
               </li>
             ))}
@@ -133,7 +133,7 @@ export function MarketingHomePage() {
 
         <section id="pricing" className="space-y-4 scroll-mt-8">
           <h2 className="text-2xl font-semibold">{t("marketing.pricingTitle", "Pricing")}</h2>
-          <p className="text-slate-600">
+          <p className="text-kx-neutral-700">
             {t("marketing.pricingBody", "Live prices from the Kiorly catalog for your market — never hardcoded.")}
           </p>
           {plansQ.isPending ? (
@@ -160,13 +160,13 @@ export function MarketingHomePage() {
 
         <section id="calculator" className="space-y-4">
           <h2 className="text-2xl font-semibold">{t("marketing.calcTitle", "How many Kiorex patients make Kiorly free?")}</h2>
-          <p className="text-slate-600">
+          <p className="text-kx-neutral-700">
             {t(
               "marketing.calcBody",
               "Commission from attended Kiorex patients can offset your monthly plan. Fee comes from the public Kiorex rate card.",
             )}
           </p>
-          <div className="grid gap-4 rounded-xl border border-teal-100 bg-white/90 p-4 md:grid-cols-3">
+          <div className="grid gap-4 rounded-xl border border-kx-ocean-100 bg-white/90 p-4 md:grid-cols-3">
             <div>
               <label className="text-xs text-muted-foreground">{t("marketing.calcPlan", "Plan")}</label>
               <select

@@ -37,8 +37,8 @@ export function PatientConsentChips({ patientId }: { patientId: string }) {
             className={cn(
               "text-xs font-normal",
               row.granted
-                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100"
-                : "border-amber-500/50 bg-amber-500/10 text-amber-950 dark:text-amber-100",
+                ? "border-[hsl(var(--success)/0.4)] bg-emerald-500/10 text-[hsl(var(--success))] "
+                : "border-[hsl(var(--warning)/0.5)] bg-amber-500/10 text-[hsl(var(--warning))] ",
             )}
           >
             {t(labelKey, row.purpose)} · {row.granted ? t("patientConsent.granted", "Granted") : t("patientConsent.missing", "Missing")}

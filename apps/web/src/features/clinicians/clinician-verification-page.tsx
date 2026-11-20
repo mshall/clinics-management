@@ -12,7 +12,17 @@ import { CLINICAL_SPECIALTY_VALUES } from "@/lib/clinical-specialties";
 import { apiGet, apiPost, apiPostFormData } from "@/lib/http";
 import { ClinicianVerificationStatusChip } from "./clinician-verification-status-chip";
 
+type RegisterRule = { code: string; labelEn: string; labelAr: string; required: boolean; hasExpiry: boolean; isSyndicate: boolean };
+
 type VerificationDto = {
+  profession: string | null;
+  isSolo: boolean;
+  requiredDocuments: string[];
+  requiredRegisters: RegisterRule[];
+  registrations: { registerCode: string; registrationNumber: string; expiresAt: string | null; status: string }[];
+  badge: { verified: boolean; labelEn: string; labelAr: string };
+  nextReverifyAt: string | null;
+  reverifyReason: string | null;
   status: string;
   syndicateNumber: string | null;
   specialty: string | null;
@@ -22,10 +32,11 @@ type VerificationDto = {
   documents: { kind: string; originalFileName: string }[];
 };
 
-const DOC_KINDS = ["SYNDICATE_CARD", "SPECIALTY_CERTIFICATE", "CLINIC_LICENCE", "PROFILE_PHOTO"] as const;
+const OPTIONAL_DOC_KINDS = ["CLINIC_LICENCE", "PROFILE_PHOTO"] as const;
 
 export function ClinicianVerificationPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isAr = i18n.language.startsWith("ar");
   const qc = useQueryClient();
   const q = useQuery({
     queryKey: ["clinician-verification", "me"],
@@ -36,6 +47,8 @@ export function ClinicianVerificationPage() {
   const [titleEn, setTitleEn] = useState("");
   const [titleAr, setTitleAr] = useState("");
   const [nationalId, setNationalId] = useState("");
+  const [solo, setSolo] = useState(false);
+  const [regs, setRegs] = useState<Record<string, { number: string; expiresAt: string }>>({});
 
   const saveMut = useMutation({
     mutationFn: (submit: boolean) =>
@@ -45,6 +58,10 @@ export function ClinicianVerificationPage() {
         titleEn,
         titleAr,
         nationalId: nationalId || undefined,
+        solo,
+        registrations: Object.entries(regs)
+          .filter(([, r]) => r.number.trim())
+          .map(([registerCode, r]) => ({ registerCode, registrationNumber: r.number.trim(), expiresAt: r.expiresAt || undefined })),
         submit,
       }),
     onSuccess: async (data, submit) => {
@@ -76,7 +93,15 @@ export function ClinicianVerificationPage() {
     setSpecialty(v.specialty ?? "");
     setTitleEn(v.titleEn ?? "");
     setTitleAr(v.titleAr ?? "");
+    setSolo(Boolean(v.isSolo));
+    setRegs(
+      Object.fromEntries(
+        v.registrations.map((r) => [r.registerCode, { number: r.registrationNumber, expiresAt: r.expiresAt ? r.expiresAt.slice(0, 10) : "" }]),
+      ),
+    );
   }, [v]);
+  const docKinds = [...(v?.requiredDocuments ?? ["SYNDICATE_CARD", "SPECIALTY_CERTIFICATE"]), ...OPTIONAL_DOC_KINDS.filter((k) => !(v?.requiredDocuments ?? []).includes(k))];
+  const extraRegisters = (v?.requiredRegisters ?? []).filter((r) => !r.isSyndicate);
   const readOnly = v?.status === "PENDING" || v?.status === "VERIFIED";
 
   return (
@@ -84,7 +109,22 @@ export function ClinicianVerificationPage() {
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{t("verification.title", "Doctor verification")}</h1>
         <ClinicianVerificationStatusChip />
+        {v?.profession ? (
+          <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium" data-testid="verification-profession">
+            {t(`verification.profession.${v.profession}`, v.profession)}
+          </span>
+        ) : null}
       </div>
+      {v?.status === "VERIFIED" && v.nextReverifyAt ? (
+        <p className="text-sm text-muted-foreground ltr-nums">
+          {t("verification.nextReverify", "Next re-verification")}: {v.nextReverifyAt.slice(0, 10)}
+        </p>
+      ) : null}
+      {v?.reverifyReason && v.status !== "VERIFIED" ? (
+        <p className="rounded-md border border-[hsl(var(--warning)/0.4)] bg-amber-500/5 px-3 py-2 text-sm">
+          {t(`verification.reverify.${v.reverifyReason}`, v.reverifyReason)}
+        </p>
+      ) : null}
       <p className="text-sm text-muted-foreground">{t("verification.subtitle", "Required for Kiorex marketplace listing. Documents stay private.")}</p>
       {v?.status === "REJECTED" && v.rejectReason ? (
         <p className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">{v.rejectReason}</p>
@@ -108,6 +148,34 @@ export function ClinicianVerificationPage() {
               ))}
             </select>
           </div>
+          {extraRegisters.map((r) => (
+            <div key={r.code} className="grid gap-2 sm:col-span-2 sm:grid-cols-2" data-testid={`register-${r.code}`}>
+              <VerificationTextField
+                label={`${isAr ? r.labelAr : r.labelEn}${r.required ? " *" : ""}`}
+                value={regs[r.code]?.number ?? ""}
+                onChange={(val) => setRegs((p) => ({ ...p, [r.code]: { number: val, expiresAt: p[r.code]?.expiresAt ?? "" } }))}
+                disabled={readOnly}
+                className="ltr-nums"
+              />
+              {r.hasExpiry ? (
+                <div className="space-y-1.5">
+                  <Label>{t("verification.licenceExpiry", "Licence expiry date")}</Label>
+                  <Input
+                    type="date"
+                    disabled={readOnly}
+                    value={regs[r.code]?.expiresAt ?? ""}
+                    onChange={(e) => setRegs((p) => ({ ...p, [r.code]: { number: p[r.code]?.number ?? "", expiresAt: e.target.value } }))}
+                  />
+                </div>
+              ) : null}
+            </div>
+          ))}
+          {v?.profession === "NURSE" ? (
+            <label className="flex items-center gap-2 text-sm sm:col-span-2">
+              <input type="checkbox" checked={solo} disabled={readOnly} onChange={(e) => setSolo(e.target.checked)} />
+              {t("verification.solo", "I practise on my own (solo nurse): ID selfie and criminal-record certificate are required")}
+            </label>
+          ) : null}
           <VerificationTextField label={t("verification.titleEn", "Title (EN)")} value={titleEn} onChange={setTitleEn} disabled={readOnly} />
           <VerificationTextField label={t("verification.titleAr", "Title (AR)")} value={titleAr} onChange={setTitleAr} disabled={readOnly} />
           <VerificationTextField label={t("verification.nationalId", "National ID")} value={nationalId} onChange={setNationalId} disabled={readOnly} className="sm:col-span-2 ltr-nums" placeholder="••••••••" />
@@ -119,7 +187,7 @@ export function ClinicianVerificationPage() {
           <CardTitle className="text-base">{t("verification.documents", "Documents")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {DOC_KINDS.map((kind) => {
+          {docKinds.map((kind) => {
             const existing = v?.documents.find((d) => d.kind === kind);
             return (
               <div key={kind} className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">

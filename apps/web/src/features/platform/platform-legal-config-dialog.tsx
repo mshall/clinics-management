@@ -105,8 +105,8 @@ export function PlatformLegalConfigDialog({ marketId, marketLabel, open, onOpenC
               <p
                 className={
                   configQuery.data.launchApproved
-                    ? "text-sm text-emerald-700 dark:text-emerald-400"
-                    : "text-sm text-amber-700 dark:text-amber-400"
+                    ? "text-sm text-[hsl(var(--success))] "
+                    : "text-sm text-[hsl(var(--warning))] "
                 }
               >
                 {configQuery.data.launchApproved

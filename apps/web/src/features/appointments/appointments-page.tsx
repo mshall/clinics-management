@@ -15,6 +15,8 @@ import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/s
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { AppointmentStatusBadge, appointmentStatusLabel } from "@/components/appointment-status-badge";
+import { PageHeader } from "@/brand/ui-kit";
+import { TableSkeleton } from "@/components/skeleton";
 import { NoShowRiskChip } from "@/components/no-show-risk-chip";
 import { DepositBadge } from "@/components/deposit-badge";
 import { AppointmentSourceBadges } from "@/components/appointment-source-badges";
@@ -104,6 +106,28 @@ export function AppointmentsPage() {
   const [fltClinicId, setFltClinicId] = useState("");
   const [showSearchPanel, setShowSearchPanel] = useState(false);
   const [showBookPanel, setShowBookPanel] = useState(false);
+  // Quick-book from the calendar time grid: /appointments?book=1&start=YYYY-MM-DDTHH:mm opens the booking panel pre-filled.
+  useEffect(() => {
+    if (searchParams.get("book") !== "1" || !canBookAppointments) return;
+    const startParam = searchParams.get("start");
+    setShowBookPanel(true);
+    if (startParam && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(startParam)) setStart(startParam);
+    setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, canBookAppointments]);
+  // Power-user shortcut: N opens/closes the quick-book panel (desktop, when no field has focus).
+  useEffect(() => {
+    if (isPhysician || !canBookAppointments) return;
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (e.key.toLowerCase() !== "n" || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName) || el.closest("[role=dialog]"))) return;
+      e.preventDefault();
+      setShowBookPanel((v) => !v);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isPhysician, canBookAppointments]);
   const [afClinic, setAfClinic] = useState("");
   const [afStarts, setAfStarts] = useState("");
   const [afPatient, setAfPatient] = useState("");
@@ -530,19 +554,14 @@ export function AppointmentsPage() {
   return (
     <div className="space-y-6">
       <ValidationIssuesDialog {...validation.dialogProps} />
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          {isPhysician ? t("appointments.myTitle", "My appointments") : t("appointments.title")}
-        </h1>
-        <p className="text-muted-foreground">
-          {isPhysician
-            ? t(
-                "appointments.subtitlePhysician",
-                "Appointments where you are the assigned doctor. Use the date range to focus on upcoming visits."
-              )
-            : t("appointments.subtitle")}
-        </p>
-      </div>
+      <PageHeader
+        title={isPhysician ? t("appointments.myTitle", "My appointments") : t("appointments.title")}
+        description={
+          isPhysician
+            ? t("appointments.subtitlePhysician", "Appointments where you are the assigned doctor. Use the date range to focus on upcoming visits.")
+            : t("appointments.subtitle")
+        }
+      />
 
       {isError ? <p className="text-sm text-destructive">{error instanceof Error ? error.message : t("common.error")}</p> : null}
 
@@ -683,7 +702,7 @@ export function AppointmentsPage() {
             <CardTitle className="text-base">{t("appointments.book")}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 overflow-visible sm:grid-cols-2">
-            {bookOk ? <p className="text-sm text-emerald-600 sm:col-span-full dark:text-emerald-400">{bookOk}</p> : null}
+            {bookOk ? <p className="text-sm text-[hsl(var(--success))] sm:col-span-full ">{bookOk}</p> : null}
             {validation.formErr ? <p className="text-sm text-destructive sm:col-span-full">{validation.formErr}</p> : null}
             <div className="space-y-2 sm:col-span-2">
               <Label required>{t("appointments.clinic")}</Label>
@@ -841,7 +860,7 @@ export function AppointmentsPage() {
                     )}
               </p>
               {bookingAfterClosing ? (
-                <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-900 dark:text-amber-200">
+                <div className="rounded-lg border border-[hsl(var(--warning)/0.5)] bg-amber-500/10 px-3 py-2.5 text-sm text-[hsl(var(--warning))] ">
                   {t(
                     "appointments.afterClosingWarning",
                     "This appointment is after the clinic closing time ({{time}}). You can still book it, but please confirm this is intentional.",
@@ -962,8 +981,8 @@ export function AppointmentsPage() {
               <tbody>
                 {isPending ? (
                   <tr>
-                    <td colSpan={listColSpan} className="px-3 py-8 text-center text-muted-foreground">
-                      {t("common.loading")}
+                    <td colSpan={listColSpan} className="p-0">
+                      <TableSkeleton rows={7} cols={4} />
                     </td>
                   </tr>
                 ) : null}
@@ -986,7 +1005,7 @@ export function AppointmentsPage() {
                       key={a.id}
                       role="link"
                       tabIndex={0}
-                      className="cursor-pointer border-t border-border transition-colors hover:bg-muted/50"
+                      className="cursor-pointer border-t border-border/70 transition-colors hover:bg-accent/40 focus-visible:bg-accent/40"
                       onClick={() => navigate(`/appointments/${a.id}`)}
                       onKeyDown={(ev) => {
                         if (ev.key === "Enter" || ev.key === " ") {
@@ -995,7 +1014,7 @@ export function AppointmentsPage() {
                         }
                       }}
                     >
-                      <td className="max-w-[10rem] truncate px-3 py-2 text-xs sm:max-w-[14rem]">
+                      <td className="max-w-[10rem] px-3 py-2 sm:max-w-[16rem]">
                         {(() => {
                           const r = resolvePatientListLabel({
                             patientId: a.patientId,
@@ -1003,15 +1022,22 @@ export function AppointmentsPage() {
                             patientName: a.patientName,
                             registryLabel: patientLabel.get(a.patientId),
                           });
-                          return r.isIdFallback ? (
-                            <span className="font-mono text-muted-foreground ltr-nums">{r.text}</span>
+                          if (r.isIdFallback) return <span className="font-mono text-muted-foreground ltr-nums">{r.text}</span>;
+                          const [mrn, ...nameParts] = r.text.split(" — ");
+                          return nameParts.length ? (
+                            <>
+                              <span className="sr-only">{r.text}</span>
+                              <span aria-hidden className="block truncate text-sm font-medium">{nameParts.join(" — ")}</span>
+                              <span aria-hidden className="block text-xs text-muted-foreground ltr-nums">{mrn}</span>
+                            </>
                           ) : (
                             r.text
                           );
                         })()}
                       </td>
-                      <td className="px-3 py-2 ltr-nums text-xs">
-                        {new Date(a.startsAt).toLocaleString(localeForLanguage(i18n.language))}
+                      <td className="whitespace-nowrap px-3 py-2 text-sm">
+                        <div className="font-medium ltr-nums">{new Intl.DateTimeFormat(localeForLanguage(i18n.language), { dateStyle: "medium" }).format(new Date(a.startsAt))}</div>
+                        <div className="text-xs text-muted-foreground ltr-nums">{new Intl.DateTimeFormat(localeForLanguage(i18n.language), { timeStyle: "short" }).format(new Date(a.startsAt))}</div>
                       </td>
                       <td className="px-3 py-2">
                         <Badge
@@ -1025,7 +1051,7 @@ export function AppointmentsPage() {
                         </Badge>
                       </td>
                       <td className="px-3 py-2">
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
                           <AppointmentStatusBadge status={a.status} />
                           <NoShowRiskChip risk={a.noShowRisk} />
                           <DepositBadge deposit={a.deposit} />

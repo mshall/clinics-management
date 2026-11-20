@@ -6,6 +6,10 @@
 | PA-03 Platform review queue (SLA, checklist, median review time) | **Done** |
 | KX-01 Marketplace listing gate (appointment types) | **Done** |
 
+> **Rev 2.3:** verification is now per profession (physician, dentist, physiotherapist, nurse) with per-register `ProfessionalRegistration`
+> rows, profession-named badges, re-verification on name/profession/specialty change and licence-expiry reminders.
+> See [PROFESSIONS_AND_SCOPE.md](./PROFESSIONS_AND_SCOPE.md) (PRSOP01-04, PRVER01-04).
+
 ## Purpose
 
 Patients on **Kiorex** must book **verified** doctors. Verification is required for **marketplace listing** (`AppointmentType.marketplaceBookable`), not for day-to-day Kiorly clinic use.
@@ -26,7 +30,7 @@ Changing specialty after `VERIFIED` moves the record back to `PENDING` for re-re
 | POST | `/api/v1/clinicians/me/verification` (draft or `submit: true`) |
 | POST | `/api/v1/clinicians/me/verification/documents/:kind` (multipart) |
 | GET | `/api/v1/clinicians/me/verification/documents/:kind/file` (auth stream) |
-| GET | `/api/v1/admin/platform/verifications?status=PENDING` |
+| GET | `/api/v1/admin/platform/verifications?status=PENDING&profession=PHYSIOTHERAPIST` |
 | GET | `/api/v1/admin/platform/verifications/metrics` (median review ms, pending count) |
 | GET | `/api/v1/admin/platform/verifications/review-config` (checklist keys, reject templates, SLA hours) |
 | POST | `/api/v1/admin/platform/verifications/:id/decision` (`checklist`, `rejectReasonCode`) |

@@ -104,11 +104,11 @@ export function SignedPrescriptionActions({ encounterId, clinicId }: Props) {
 
   return (
     <div
-      className="rounded-xl border border-emerald-300/80 bg-emerald-50/40 p-3 dark:border-emerald-800 dark:bg-emerald-950/20"
+      className="rounded-xl border border-[hsl(var(--success)/0.3)] bg-[hsl(var(--success)/0.08)] p-3 "
       data-testid="signed-rx-actions"
     >
       <p className="mb-1 flex items-center gap-1.5 text-sm font-medium">
-        <ShieldCheck className="h-4 w-4 text-emerald-600" aria-hidden />
+        <ShieldCheck className="h-4 w-4 text-[hsl(var(--success))]" aria-hidden />
         {t("rxShare.title")}
       </p>
       <p className="mb-3 text-xs text-muted-foreground">{t("rxShare.hint")}</p>

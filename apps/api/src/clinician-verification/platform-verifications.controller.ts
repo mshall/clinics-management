@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Post, Query, StreamableFile, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
-import { VerificationStatus } from "@prisma/client";
+import { Profession, VerificationStatus } from "@prisma/client";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
@@ -29,11 +29,13 @@ export class PlatformVerificationsController {
   list(
     @CurrentUser() user: JwtUser,
     @Query("status") status?: VerificationStatus,
+    @Query("profession") profession?: Profession,
     @Query("page") page?: string,
     @Query("pageSize") pageSize?: string,
   ) {
     return this.service.listForPlatform(user, {
       status,
+      profession,
       page: page ? Number(page) : undefined,
       pageSize: pageSize ? Number(pageSize) : undefined,
     });

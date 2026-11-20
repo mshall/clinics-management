@@ -31,9 +31,11 @@ describe("PL-01 plan catalog", () => {
     await prisma.$disconnect();
   });
 
-  it("seed creates 4 plans and EG Pro / Clinic prices", async () => {
+  it("seed creates the 4 Clinic plans (+ 3 non-public Nurse edition plans) and EG Pro / Clinic prices", async () => {
     const count = await prisma.plan.count();
-    assert.equal(count, 4);
+    assert.equal(count, 7);
+    assert.equal(await prisma.plan.count({ where: { isPublic: true } }), 3, "Nurse plans are never in the public Clinic catalogue");
+    assert.equal(await prisma.planPrice.count({ where: { plan: { key: { in: [PlanKey.NURSE_LITE, PlanKey.NURSE_PRO, PlanKey.NURSE_AGENCY] } } } }), 0, "Nurse prices are PROPOSED / NEEDS_HUMAN: no PlanPrice rows");
 
     const eg = await prisma.market.findFirstOrThrow({ where: { code: "EG" } });
     const pro = await prisma.plan.findUniqueOrThrow({ where: { key: PlanKey.PRO } });

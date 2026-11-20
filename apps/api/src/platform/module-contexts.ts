@@ -25,6 +25,7 @@ export const TOP_LEVEL_FOLDER_TO_CONTEXT: Record<string, BoundedContextId> = {
   audit: "kernel",
   storage: "kernel",
   "feature-flags": "kernel",
+  "scope-of-practice": "kernel",
   staging: "kernel",
   observability: "kernel",
   signup: "kernel",
@@ -57,6 +58,9 @@ export const TOP_LEVEL_FOLDER_TO_CONTEXT: Record<string, BoundedContextId> = {
   clinical: "clinical",
   scheduling: "clinical",
   operations: "clinical",
+  "field-visit": "clinical",
+  "home-visits": "clinical",
+  nurse: "clinical",
 
   "front-desk": "front-office",
   billing: "front-office",

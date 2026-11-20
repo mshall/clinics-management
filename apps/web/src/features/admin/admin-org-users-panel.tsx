@@ -511,7 +511,7 @@ export function AdminOrgUsersPanel() {
         </CardHeader>
         <CardContent className="space-y-4">
           {legacyUsersApi ? (
-            <p className="text-sm text-amber-700 dark:text-amber-400">
+            <p className="text-sm text-[hsl(var(--warning))] ">
               {total < 10
                 ? t(
                     "admin.orgUsersLegacyApiEmpty",

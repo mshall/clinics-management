@@ -46,3 +46,36 @@ alarm_emails       = []   # NEEDS_HUMAN: on-call list
 alarm_webhook_urls = []   # NEEDS_HUMAN: Slack/WhatsApp bridge
 budget_usd         = 0    # NEEDS_HUMAN: monthly budget
 openai_secret_name = null # set once the secret exists
+
+# --- Rev 2.3 / KX-23 Kiorly Nurse + home visits (backlog item 7; nothing applied) ------------------------------
+# nurse.kiorly.com = alias of this stack (KX-08): extra ACM SAN + CloudFront alternate domain + Route 53 A/AAAA in zone kiorly.com.
+# Requires live/prod/global/dns applied first. NOTE: adding a SAN replaces the ACM certificate (create_before_destroy).
+nurse_alias_enabled = true
+nurse_domain        = "nurse.kiorly.com"
+
+# Amazon Location: OFF until the Provider go-live pass (mock adapter by default, KIORLY_PROVIDER_MODE=mock).
+enable_location            = false
+location_route_data_source = "Esri"
+
+# Safety-alert delivery alarms (stop-ship: alert > 60 s). The dedicated safety on-call rota is NEEDS_HUMAN.
+safety_alerts = {
+  enabled              = true
+  role                 = "producer"
+  latency_threshold_ms = 60000
+  alarm_emails         = [] # NEEDS_HUMAN: safety on-call rota (see README "Safety on-call")
+  alarm_webhook_urls   = [] # NEEDS_HUMAN: pager / WhatsApp bridge
+  watch_job_runner     = true
+}
+
+# Geostamp retention purge (KX-08: 12 months, then district only). DISABLED by default; enable after the API endpoint ships and
+# the DPO confirms retention under PDPL (KX-15). Infra owns only the clock.
+scheduled_jobs = {
+  geostamp-retention-purge = {
+    schedule = "cron(15 3 * * ? *)" # daily 03:15 Africa/Cairo
+    path     = "/api/v1/internal/jobs/geostamp-retention-purge"
+    timezone = "Africa/Cairo"
+    enabled  = false
+  }
+}
+
+enable_demo_seed = false # Q10: never seed demo data in prod (the plan fails if this is true)

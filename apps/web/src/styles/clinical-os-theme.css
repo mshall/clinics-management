@@ -3,90 +3,17 @@
  * Semantic HSL variables for Tailwind/shadcn; scoped to clinical-os-light | clinical-os-dark.
  */
 
-html[data-theme="clinical-os-light"] {
-  --background: 216 45% 98%;
-  --foreground: 220 43% 11%;
-  --card: 0 0% 100%;
-  --card-foreground: 220 43% 11%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 220 43% 11%;
-  --primary: 221 83% 53%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 215 39% 95%;
-  --secondary-foreground: 220 43% 11%;
-  --muted: 215 38% 95%;
-  --muted-foreground: 215 13% 43%;
-  --accent: 216 90% 96%;
-  --accent-foreground: 221 83% 43%;
-  --destructive: 0 65% 55%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 221 83% 53%;
-  --radius: 1rem;
-  --clinical-os-gold: 43 44% 50%;
-  --clinical-os-shadow: 0 4px 18px rgba(26, 51, 88, 0.045);
-}
-
-html[data-theme="clinical-os-dark"] {
-  --background: 218 45% 10%;
-  --foreground: 215 53% 97%;
-  --card: 216 38% 15%;
-  --card-foreground: 215 53% 97%;
-  --popover: 216 38% 15%;
-  --popover-foreground: 215 53% 97%;
-  --primary: 216 100% 75%;
-  --primary-foreground: 213 70% 17%;
-  --secondary: 214 36% 19%;
-  --secondary-foreground: 215 53% 97%;
-  --muted: 214 36% 19%;
-  --muted-foreground: 213 20% 74%;
-  --accent: 214 36% 21%;
-  --accent-foreground: 216 100% 75%;
-  --destructive: 356 100% 78%;
-  --destructive-foreground: 218 45% 10%;
-  --border: 215 27% 27%;
-  --input: 215 27% 27%;
-  --ring: 215 100% 88%;
-  --radius: 1rem;
-  --clinical-os-gold: 43 44% 62%;
-  --clinical-os-shadow: 0 3px 18px rgba(0, 0, 0, 0.1);
-}
+/* Colours for clinical-os-light/dark now come from ../brand/brand-bridge.css (Kiorly by Kiorex). */
 
 html.theme-clinical-os {
-  font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-  sans-serif;
+  font-family: var(--kx-font);
   -webkit-font-smoothing: antialiased;
-}
-
-html.theme-clinical-os[lang="ar"],
-html.theme-clinical-os[lang="ar"] body,
-html.theme-clinical-os[dir="rtl"],
-html.theme-clinical-os[dir="rtl"] body,
-html.theme-clinical-os[dir="rtl"] input,
-html.theme-clinical-os[dir="rtl"] button,
-html.theme-clinical-os[dir="rtl"] textarea {
-  font-family: Tajawal, Inter, system-ui, sans-serif;
-  font-weight: 600;
-}
-
-html.theme-clinical-os[dir="rtl"] h1,
-html.theme-clinical-os[dir="rtl"] h2,
-html.theme-clinical-os[dir="rtl"] h3,
-html.theme-clinical-os[dir="rtl"] strong {
-  font-weight: 700;
 }
 
 html.theme-clinical-os .border-border.bg-card,
 html.theme-clinical-os [class*="shadow-sm"].bg-card,
 html.theme-clinical-os .rounded-lg.border.bg-card {
-  box-shadow: var(--clinical-os-shadow);
+  box-shadow: var(--kx-shadow-1);
   border-color: hsl(var(--border));
 }
 

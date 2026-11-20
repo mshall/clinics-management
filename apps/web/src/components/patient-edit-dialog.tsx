@@ -8,7 +8,7 @@ import {
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { PatientPhoneField } from "@/components/patient-phone-field";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { PatientDto } from "@/lib/api-schema";
@@ -112,7 +112,7 @@ export function PatientEditDialog({ patient, open, onOpenChange }: PatientEditDi
         </DialogHeader>
         <div className="flex flex-col gap-3 pt-1">
           {needsProfileCompletion ? (
-            <p className="text-sm text-amber-800 dark:text-amber-200">
+            <p className="text-sm text-[hsl(var(--warning))] ">
               {t(
                 "patients.completeProfileHint",
                 "This chart was created for a first-time booking. Finish registration before check-in, encounters, or completing the appointment.",
@@ -232,14 +232,14 @@ export function PatientEditDialog({ patient, open, onOpenChange }: PatientEditDi
             </label>
           </div>
           <PatientAcquisitionFields values={values.acquisition} onChange={setAcquisition} />
-          <div className="flex flex-wrap gap-2 pt-2">
-            <Button type="button" disabled={patchMut.isPending} onClick={handleSave}>
-              {t("common.save", "Save")}
-            </Button>
+          <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t("common.cancel", "Cancel")}
             </Button>
-          </div>
+            <Button type="button" disabled={patchMut.isPending} onClick={handleSave}>
+              {t("common.save", "Save")}
+            </Button>
+          </DialogFooter>
         </div>
       </DialogContent>
     </Dialog>

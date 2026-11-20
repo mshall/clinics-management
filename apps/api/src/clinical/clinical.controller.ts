@@ -1,5 +1,5 @@
 import { FeatureGuard, FeatureFlagsService, RequiresFeature, specialtyTemplateFlagKey } from "../feature-flags/feature-flags-public";
-import { LAUNCH_SPECIALTIES } from "./launch-specialty-templates";
+import { isGatedTemplateSpecialty, specialtyTemplateCode } from "./launch-specialty-templates";
 import { Body, Controller, Delete, Get, Optional, Param, Patch, Post, Put, Query, StreamableFile, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { memoryStorage } from "multer";
@@ -23,11 +23,12 @@ import { RxSafetyCheckService } from "./rx-safety-check.service";
 import { DrugCatalogService } from "./drug-catalog.service";
 import { ClinicalOrdersService } from "./clinical-orders.service";
 import { SpecialtyPacksService } from "./specialty-packs.service";
+import { RequiresScope, ScopeGuard, ScopeOfPracticeService } from "../scope-of-practice/scope-of-practice-public";
 
 @ApiTags("clinical")
 @ApiBearerAuth("bearer")
 @Controller("clinical")
-@UseGuards(JwtAuthGuard, EntitlementGuard, FeatureGuard)
+@UseGuards(JwtAuthGuard, EntitlementGuard, FeatureGuard, ScopeGuard)
 @RequiresEntitlement("mod_clinical")
 export class ClinicalController {
   constructor(
@@ -38,6 +39,7 @@ export class ClinicalController {
     private readonly orders: ClinicalOrdersService,
     private readonly packs: SpecialtyPacksService,
     @Optional() private readonly flags?: FeatureFlagsService,
+    @Optional() private readonly scope?: ScopeOfPracticeService,
   ) {}
 
   @Get("form-templates")
@@ -47,15 +49,17 @@ export class ClinicalController {
     @Query("clinicId") clinicId?: string,
   ) {
     const tenantId = requireTenantId(user);
-    const rows = await this.clinical.listTemplates(tenantId, user, specialty, clinicId);
+    const allRows = await this.clinical.listTemplates(tenantId, user, specialty, clinicId);
+    // PRSOP02: only the templates the clinician's profession may document with (physio / nursing / dental / SOAP families)
+    const rows = this.scope ? await this.scope.filterTemplatesForUser(user.userId, allRows) : allRows;
     // clinic.specialty_templates.<code> (launch-locked): built-in launch-specialty templates are hidden from new
     // encounters ONLY when a Kiorex snapshot exists AND marks them gate-unsatisfied (or switched OFF). No snapshot
     // (dev / fresh deploy) => they show. Custom and already-used templates are never hidden.
     if (!this.flags) return rows;
     const visible: typeof rows = [];
     for (const r of rows) {
-      const gated = r.isSystemDefault && (LAUNCH_SPECIALTIES as readonly string[]).includes(r.specialty);
-      if (!gated || (await this.flags.isSpecialtyTemplateVisible(tenantId, specialtyTemplateFlagKey(r.specialty)))) visible.push(r);
+      const gated = r.isSystemDefault && isGatedTemplateSpecialty(r.specialty);
+      if (!gated || (await this.flags.isSpecialtyTemplateVisible(tenantId, specialtyTemplateFlagKey(specialtyTemplateCode(r.specialty))))) visible.push(r);
     }
     return visible;
   }
@@ -125,6 +129,7 @@ export class ClinicalController {
     return this.drugCatalog.searchProducts(tenantId, user, q ?? "", Number.isFinite(lim) ? lim : 20);
   }
 
+  @RequiresScope("rx.prescribe")
   @Post("rx/check")
   rxCheck(
     @CurrentUser() user: JwtUser,
@@ -137,6 +142,7 @@ export class ClinicalController {
     return this.rxSafety.checkRx(requireTenantId(user), body.patientId, body.items ?? []);
   }
 
+  @RequiresScope("rx.prescribe")
   @Post("medications/safety-check")
   safetyCheck(
     @CurrentUser() user: JwtUser,
@@ -166,6 +172,7 @@ export class ClinicalController {
     return this.orders.list(requireTenantId(user), { encounterId, patientId });
   }
 
+  @RequiresScope("orders.lab_radiology")
   @Post("orders")
   createOrder(
     @CurrentUser() user: JwtUser,
@@ -182,6 +189,7 @@ export class ClinicalController {
     return this.orders.create(requireTenantId(user), user.userId, body);
   }
 
+  @RequiresScope("orders.lab_radiology")
   @Patch("orders/:id")
   patchOrder(
     @CurrentUser() user: JwtUser,
@@ -198,6 +206,7 @@ export class ClinicalController {
   }
 
   /** CL-06 — results as a PDF (structured results stay on the items / resultsJson). */
+  @RequiresScope("orders.lab_radiology")
   @Post("orders/:id/results-pdf")
   @UseInterceptors(FileInterceptor("file", { storage: memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } }))
   attachOrderResultsPdf(@CurrentUser() user: JwtUser, @Param("id") id: string, @UploadedFile() file?: Express.Multer.File) {
@@ -211,6 +220,7 @@ export class ClinicalController {
   }
 
   /** KCV204 — lab order handoff to Kiorly Lab via Kiorex (LabOrderPlaced; patient consent token required). */
+  @RequiresScope("orders.lab_radiology")
   @RequiresFeature("clinic.lab_order_handoff")
   @Post("orders/:id/handoff")
   handoffOrder(@CurrentUser() user: JwtUser, @Param("id") id: string) {

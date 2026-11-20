@@ -69,7 +69,7 @@ export function PublicRxVerifyPage() {
     <Card data-testid="rx-verify-valid">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
-          <BadgeCheck className="h-6 w-6 text-emerald-600" aria-hidden />
+          <BadgeCheck className="h-6 w-6 text-[hsl(var(--success))]" aria-hidden />
           {t("rxVerify.valid")}
         </CardTitle>
       </CardHeader>

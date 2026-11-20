@@ -20,6 +20,14 @@ export type PlatformVerificationRow = {
   titleAr: string | null;
   hasNationalId: boolean;
   documents: { kind: string; originalFileName: string }[];
+  /** PRVER01/02 */
+  profession?: string | null;
+  isSolo?: boolean;
+  reviewChecklist?: string[];
+  registrations?: { registerCode: string; labelEn: string; labelAr: string; registrationNumber: string; expiresAt: string | null }[];
+  badge?: { verified: boolean; labelEn: string; labelAr: string };
+  reverifyReason?: string | null;
+  nextReverifyAt?: string | null;
   waitingMs: number | null;
   slaBreached: boolean | null;
   pendingAt: string | null;
@@ -28,6 +36,7 @@ export type PlatformVerificationRow = {
 type ReviewConfig = {
   slaTargetHours: number;
   checklistKeys: string[];
+  checklistLabels?: Record<string, { en: string; ar: string }>;
   rejectTemplates: { code: string; labelEn: string; labelAr: string }[];
 };
 
@@ -126,6 +135,28 @@ export function PlatformVerificationReviewDialog({ row, config, open, onOpenChan
             <span className="text-muted-foreground">{t("verification.syndicateNumber", "Syndicate number")}: </span>
             {row.syndicateNumber ?? "—"}
           </p>
+          {row.profession ? (
+            <p data-testid="review-profession">
+              <span className="text-muted-foreground">{t("verification.professionLabel", "Profession")}: </span>
+              {t(`verification.profession.${row.profession}`, row.profession)}
+              {row.isSolo ? ` · ${t("verification.soloTag", "solo practitioner")}` : ""}
+            </p>
+          ) : null}
+          {row.reverifyReason ? (
+            <p className="text-[hsl(var(--warning))] ">
+              {t("verification.reverifyBecause", "Re-verification because")}: {t(`verification.reverify.${row.reverifyReason}`, row.reverifyReason)}
+            </p>
+          ) : null}
+          {(row.registrations ?? []).length > 0 ? (
+            <ul className="list-disc ps-5" data-testid="review-registrations">
+              {(row.registrations ?? []).map((r) => (
+                <li key={r.registerCode} className="ltr-nums">
+                  {isAr ? r.labelAr : r.labelEn}: {r.registrationNumber}
+                  {r.expiresAt ? ` · ${t("verification.licenceExpiry", "Licence expiry date")} ${r.expiresAt.slice(0, 10)}` : ""}
+                </li>
+              ))}
+            </ul>
+          ) : null}
           {row.specialty ? (
             <p>
               <span className="text-muted-foreground">{t("verification.specialty", "Specialty")}: </span>
@@ -137,7 +168,7 @@ export function PlatformVerificationReviewDialog({ row, config, open, onOpenChan
               row.slaBreached
                 ? "font-medium text-destructive"
                 : row.waitingMs != null
-                  ? "text-amber-800 dark:text-amber-200"
+                  ? "text-[hsl(var(--warning))] "
                   : undefined
             }
           >
@@ -166,7 +197,7 @@ export function PlatformVerificationReviewDialog({ row, config, open, onOpenChan
         <div className="space-y-2">
           <p className="text-sm font-medium">{t("verification.checklist", "Review checklist")}</p>
           <ul className="space-y-2">
-            {(config?.checklistKeys ?? []).map((key) => {
+            {(row.reviewChecklist?.length ? row.reviewChecklist : (config?.checklistKeys ?? [])).map((key) => {
               const checked = checklist.includes(key);
               return (
                 <li key={key} className="flex items-start gap-2 text-sm">
@@ -182,7 +213,7 @@ export function PlatformVerificationReviewDialog({ row, config, open, onOpenChan
                     }}
                   />
                   <Label htmlFor={`chk-${key}`} className="font-normal leading-snug">
-                    {t(`verification.checklistItem.${key}`, key)}
+                    {t(`verification.checklistItem.${key}`, config?.checklistLabels?.[key]?.[isAr ? "ar" : "en"] ?? key)}
                   </Label>
                 </li>
               );

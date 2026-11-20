@@ -167,7 +167,7 @@ function ClinicalPairViewer({ patientId, pair, locale }: { patientId: string; pa
         {single.takenAt ? ` · ${new Date(single.takenAt).toLocaleString(locale)}` : ""}
       </p>
       {!pair.before || !pair.after ? (
-        <p className="text-xs text-amber-700 dark:text-amber-300">
+        <p className="text-xs text-[hsl(var(--warning))] ">
           {t("patients.partialPhotoPair", "Add both BEFORE and AFTER photos to enable the comparison slider.")}
         </p>
       ) : null}

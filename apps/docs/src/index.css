@@ -1,3 +1,8 @@
+@import "@fontsource-variable/jost/index.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-400.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-600.css";
+@import "./brand/tokens.css";
+
 *,
 *::before,
 *::after {
@@ -5,14 +10,14 @@
 }
 
 :root {
-  color-scheme: light;
-  --bg: #f4f7fb;
-  --surface: #ffffff;
-  --text: #0f172a;
-  --muted: #64748b;
-  --border: #e2e8f0;
-  --primary: #0ea5e9;
-  --primary-soft: #e0f2fe;
+  --bg: var(--kx-bg);
+  --surface: var(--kx-surface);
+  --text: var(--kx-text);
+  --muted: var(--kx-text-muted);
+  --border: var(--kx-border);
+  --primary: var(--kx-link);
+  --primary-soft: var(--kx-primary-soft);
+  --code-bg: var(--kx-bg-subtle);
   --sidebar-w: 18rem;
 }
 
@@ -24,7 +29,7 @@ body,
 }
 
 body {
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--kx-font);
   background: var(--bg);
   color: var(--text);
   line-height: 1.6;
@@ -54,6 +59,11 @@ a {
   font-size: 1rem;
   margin: 0 0 0.25rem;
 }
+.sidebar .brand { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 1.25rem; }
+.sidebar .brand .logo-dark { display: none; }
+:root[data-theme="dark"] .sidebar .brand .logo-light { display: none; }
+:root[data-theme="dark"] .sidebar .brand .logo-dark { display: block; }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] .sidebar .brand .logo-light { display: none; } :root[data-theme="auto"] .sidebar .brand .logo-dark { display: block; } }
 
 .sidebar .subtitle {
   color: var(--muted);
@@ -92,9 +102,11 @@ a {
   background: var(--primary-soft);
 }
 
+.nav-section a:focus-visible { outline-offset: 0; }
+
 .nav-section a.active {
   background: var(--primary-soft);
-  color: #0369a1;
+  color: var(--kx-primary);
   font-weight: 600;
 }
 
@@ -117,7 +129,7 @@ a {
 }
 
 .home-card code {
-  background: #f1f5f9;
+  background: var(--code-bg);
   padding: 0.1rem 0.35rem;
   border-radius: 0.25rem;
   font-size: 0.85em;
@@ -127,7 +139,7 @@ a {
   display: inline-block;
   font-size: 0.75rem;
   color: var(--muted);
-  background: #f8fafc;
+  background: var(--code-bg);
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 0.15rem 0.6rem;
@@ -161,13 +173,13 @@ a {
 }
 
 .markdown-body th {
-  background: #f8fafc;
+  background: var(--code-bg);
 }
 
 .markdown-body pre {
   overflow-x: auto;
-  background: #0f172a;
-  color: #e2e8f0;
+  background: var(--kx-neutral-950);
+  color: var(--kx-neutral-100);
   padding: 1rem;
   border-radius: 0.5rem;
   font-size: 0.85rem;
@@ -178,7 +190,7 @@ a {
 }
 
 .markdown-body :not(pre) > code {
-  background: #f1f5f9;
+  background: var(--code-bg);
   padding: 0.1rem 0.35rem;
   border-radius: 0.25rem;
   font-size: 0.85em;

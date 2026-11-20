@@ -188,7 +188,7 @@ function PaymentScene({ step }: { step: number }) {
       <MockCursor step={step} />
       <div className="flex justify-between text-[9px] text-muted-foreground">
         <span>Due</span>
-        <span className={cn("font-bold text-foreground transition-all", step >= 2 && "text-emerald-600")}>
+        <span className={cn("font-bold text-foreground transition-all", step >= 2 && "text-[hsl(var(--success))]")}>
           {step >= 2 ? "0.00" : "250.00"}
         </span>
       </div>

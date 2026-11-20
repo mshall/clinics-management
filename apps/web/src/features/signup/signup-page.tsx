@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { BrandLockup } from "@/components/brand-lockup";
 import { PatientPrivacyNoticeLink } from "@/components/patient-privacy-notice-link";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme-switcher";
@@ -140,8 +141,8 @@ export function SignupPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-muted/40 px-4 py-8">
-      <div className="mx-auto flex max-w-md flex-col gap-4">
+    <div className="min-h-dvh bg-muted/40 px-4 py-8 sm:py-12">
+      <div className="mx-auto flex max-w-md flex-col gap-5">
         <div className="flex items-center justify-between">
           <Link to="/login" className="text-sm text-muted-foreground underline">
             {t("signup.backToLogin")}
@@ -151,18 +152,24 @@ export function SignupPage() {
             <ThemeSwitcher />
           </div>
         </div>
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("signup.title")}</CardTitle>
-            <p className="text-sm text-muted-foreground">{t("signup.progress", { progress })}</p>
+        <div className="flex justify-center" aria-hidden="false"><BrandLockup height={40} /></div>
+        <Card className="shadow-[var(--kx-shadow-2)]">
+          <CardHeader className="space-y-3">
+            <CardTitle className="text-xl">{t("signup.title")}</CardTitle>
+            <div className="space-y-1.5">
+              <div role="progressbar" aria-label={t("signup.title")} aria-valuemin={1} aria-valuemax={STEPS} aria-valuenow={step + 1} className="flex gap-1.5">
+                {Array.from({ length: STEPS }, (_, i) => <span key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${i <= step ? "bg-primary" : "bg-muted"}`} />)}
+              </div>
+              <p className="text-sm text-muted-foreground">{t("signup.progress", { progress })}</p>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="grid gap-y-1.5 [&>button]:mt-3 [&>label:not(:first-child)]:mt-3">
             {step === 0 && (
               <>
                 <Label htmlFor="market">{t("signup.market")}</Label>
                 <select
                   id="market"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  className="native-select"
                   value={market}
                   onChange={(e) => setMarket(e.target.value)}
                 >

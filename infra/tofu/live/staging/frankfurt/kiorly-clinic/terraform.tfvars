@@ -43,3 +43,37 @@ alarm_emails       = [] # NEEDS_HUMAN: on-call list
 # Pre-existing secret {apiKey} created by scripts/configure-apprunner-openai.sh (name = <stack>/openai-api-key).
 # Set to the secret name once it exists, otherwise OPENAI_API_KEY is not injected.
 openai_secret_name = null
+
+# --- Rev 2.3 / KX-23 Kiorly Nurse + home visits (backlog item 7; nothing applied) ------------------------------
+# nurse.kiorly.com alias: OFF in staging (staging uses the CloudFront default domain, so there is no zone/cert to extend).
+# Turn on only together with a staging domain, e.g. domain = "app.staging.kiorly.com", nurse_domain = "nurse.staging.kiorly.com".
+nurse_alias_enabled = false
+nurse_domain        = "nurse.staging.kiorly.com" # placeholder, unused while the alias is off
+
+# Amazon Location: OFF - maps/routing adapter runs in MOCK mode (KIORLY_PROVIDER_MODE=mock). Enable in the Provider go-live pass.
+enable_location            = false
+location_route_data_source = "Esri"
+
+# Safety-alert delivery alarms: staging runs the field-visit safety drills (stop-ship: alert > 60 s).
+safety_alerts = {
+  enabled              = true
+  role                 = "producer"
+  latency_threshold_ms = 60000
+  alarm_emails         = [] # NEEDS_HUMAN: safety on-call rota (see README "Safety on-call")
+  alarm_webhook_urls   = []
+  watch_job_runner     = true
+}
+
+# Geostamp retention purge (KX-08: keep coarse geostamps 12 months, then reduce to district only). Infra owns only the clock;
+# the API owns the logic and must be idempotent + batched (the runner Lambda times out at 60 s). DISABLED until the API endpoint
+# exists and the DPO confirms the retention under PDPL (KX-15).
+scheduled_jobs = {
+  geostamp-retention-purge = {
+    schedule = "cron(15 3 * * ? *)" # daily 03:15 Africa/Cairo
+    path     = "/api/v1/internal/jobs/geostamp-retention-purge"
+    timezone = "Africa/Cairo"
+    enabled  = false
+  }
+}
+
+enable_demo_seed = true # Q10: staging demo data (non-production only; seeded by hand via scripts/seed-staging.sh)

@@ -1,9 +1,13 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
+import { Link } from "react-router-dom";
+import { Building2, CalendarDays, CalendarPlus, MonitorUp, Stethoscope, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { EmptyState, PageHeader, StatCard } from "@/brand/ui-kit";
+import { StatSkeleton } from "@/components/skeleton";
 import { useTranslation } from "react-i18next";
 import { Navigate } from "react-router-dom";
 import { defaultHomeForRole } from "@/lib/nav-policy";
 import { useAuthStore } from "@/stores/auth-store";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDashboardKpisQuery, useDashboardTodayQuery } from "@/lib/api-hooks";
 import { canViewDashboardFinancialKpis, canViewDashboardHrKpis } from "@/lib/dashboard-kpi-policy";
 import { formatMultiCurrencyAmounts } from "@/lib/money-display";
@@ -49,151 +53,100 @@ export function DashboardPage() {
     return <Navigate to={home} replace />;
   }
 
+  const flowTotal = Math.max(todayQ.data?.appointments ?? 0, 1);
+  const pct = (n: number) => Math.min(100, Math.round((n / flowTotal) * 100));
+
   return (
-    <div className="min-w-0 space-y-6">
+    <div className="min-w-0 space-y-5">
+      <PageHeader
+        title={t("dashboard.title")}
+        description={
+          <>
+            {t("dashboard.subtitle")}
+            {data?.periodFrom && data?.periodTo ? (
+              <span className="ms-2 inline-flex items-center rounded-md bg-muted px-1.5 py-0.5 text-xs ltr-nums">{data.periodFrom} → {data.periodTo}</span>
+            ) : null}
+          </>
+        }
+        actions={
+          <>
+            <Button asChild variant="outline" size="sm"><Link to="/front-desk/board"><MonitorUp className="size-4" />{t("frontDesk.liveBoard", "Live clinic board")}</Link></Button>
+            <Button asChild size="sm"><Link to="/appointments"><CalendarPlus className="size-4" />{t("appointments.book", "Book an appointment")}</Link></Button>
+          </>
+        }
+      />
       <OnboardingChecklistCard />
-      <div>
-        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{t("dashboard.title")}</h1>
-        <p className="text-sm text-muted-foreground sm:text-base">{t("dashboard.subtitle")}</p>
-        {data?.periodFrom && data?.periodTo ? (
-          <p className="mt-1 break-words text-xs text-muted-foreground ltr-nums">
-            {t("dashboard.period")}: {data.periodFrom} → {data.periodTo}
-          </p>
-        ) : null}
-      </div>
 
       {isError ? (
-        <p className="text-sm text-destructive">
-          {error instanceof Error ? error.message : t("dashboard.loadError")}
-        </p>
+        <EmptyState tone="error" compact title={t("dashboard.loadError")} description={error instanceof Error ? error.message : undefined} />
       ) : null}
 
       {todayQ.data ? (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">{t("dashboard.todayLive")}</CardTitle>
-            <CardDescription className="ltr-nums">{todayDateLabel}</CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 lg:grid-cols-6">
-            <TodayStat label={t("dashboard.today.appointments")} value={todayQ.data.appointments} locale={locale} />
-            <TodayStat label={t("dashboard.today.waiting")} value={todayQ.data.waiting} locale={locale} />
-            <TodayStat label={t("dashboard.today.seen")} value={todayQ.data.seen} locale={locale} />
-            <TodayStat label={t("dashboard.today.collected")} value={todayQ.data.collected} money locale={locale} />
-            <TodayStat label={t("dashboard.today.noShows")} value={todayQ.data.noShows} locale={locale} />
-            <TodayStat label={t("dashboard.today.checkedIn")} value={todayQ.data.checkedIn} locale={locale} />
-          </CardContent>
-        </Card>
+        <section aria-labelledby="dash-today" className="space-y-3">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 id="dash-today" className="flex items-center gap-2 text-sm font-semibold"><span aria-hidden className="relative inline-flex size-2"><span className="absolute inset-0 rounded-full bg-[hsl(var(--success))] opacity-60 motion-safe:animate-ping" /><span className="relative size-2 rounded-full bg-[hsl(var(--success))]" /></span>{t("dashboard.todayLive")}</h2>
+            <span className="text-xs text-muted-foreground ltr-nums">{todayDateLabel}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+            <StatCard tone="brand" label={t("dashboard.today.appointments")} value={fmt(todayQ.data.appointments, locale)} />
+            <StatCard tone="info" label={t("dashboard.today.checkedIn")} value={fmt(todayQ.data.checkedIn, locale)} />
+            <StatCard tone="warn" label={t("dashboard.today.waiting")} value={fmt(todayQ.data.waiting, locale)} />
+            <StatCard tone="good" label={t("dashboard.today.seen")} value={fmt(todayQ.data.seen, locale)} />
+            <StatCard tone="bad" label={t("dashboard.today.noShows")} value={fmt(todayQ.data.noShows, locale)} />
+            <StatCard tone="good" label={t("dashboard.today.collected")} value={fmt(todayQ.data.collected, locale, true)} />
+          </div>
+          <div className="space-y-1.5" role="img" aria-label={`${t("dashboard.today.seen")} ${pct(todayQ.data.seen)}%`}>
+            <div className="flex h-2 overflow-hidden rounded-full bg-muted">
+              <span className="bg-[hsl(var(--success))] transition-[width] duration-500 motion-reduce:transition-none" style={{ width: `${pct(todayQ.data.seen)}%` }} />
+              <span className="bg-[hsl(var(--info))] transition-[width] duration-500 motion-reduce:transition-none" style={{ width: `${pct(Math.max(todayQ.data.checkedIn - todayQ.data.seen, 0))}%` }} />
+              <span className="bg-[hsl(var(--warning))] transition-[width] duration-500 motion-reduce:transition-none" style={{ width: `${pct(todayQ.data.noShows)}%` }} />
+            </div>
+          </div>
+        </section>
+      ) : todayQ.isPending ? (
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">{Array.from({ length: 6 }).map((_, i) => <StatSkeleton key={i} />)}</div>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <KpiCard label={t("dashboard.kpi.patients")} value={data?.patients} loading={isPending} lng={i18n.language} />
-        <KpiCard
-          label={t("dashboard.kpi.encountersPeriod", "Encounters (period)")}
-          value={data?.encountersPeriodTotal ?? data?.encounters30d}
-          loading={isPending}
-          lng={i18n.language}
-        />
-        <KpiCard
-          label={t("dashboard.kpi.appointmentsPeriod", "Appointments (period)")}
-          value={data?.appointmentsPeriodTotal}
-          loading={isPending}
-          lng={i18n.language}
-        />
-        <KpiCard label={t("dashboard.kpi.branches")} value={data?.branches} loading={isPending} lng={i18n.language} />
-        {showHr ? (
-          <>
-            <KpiCard label={t("dashboard.kpi.headcount")} value={data?.headcount} loading={isPending} lng={i18n.language} />
-            <KpiCard label={t("dashboard.kpi.employees")} value={data?.employeeCount} loading={isPending} lng={i18n.language} />
-          </>
-        ) : null}
-      </div>
+      <section aria-labelledby="dash-period" className="space-y-3">
+        <h2 id="dash-period" className="text-sm font-semibold">{t("dashboard.period", "Reporting period")}</h2>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <Kpi label={t("dashboard.kpi.patients")} value={data?.patients} loading={isPending} locale={locale} icon={<Users className="size-4" />} />
+          <Kpi label={t("dashboard.kpi.encountersPeriod", "Encounters (period)")} value={data?.encountersPeriodTotal ?? data?.encounters30d} loading={isPending} locale={locale} icon={<Stethoscope className="size-4" />} />
+          <Kpi label={t("dashboard.kpi.appointmentsPeriod", "Appointments (period)")} value={data?.appointmentsPeriodTotal} loading={isPending} locale={locale} icon={<CalendarDays className="size-4" />} />
+          <Kpi label={t("dashboard.kpi.branches")} value={data?.branches} loading={isPending} locale={locale} icon={<Building2 className="size-4" />} />
+          {showHr ? (
+            <>
+              <Kpi label={t("dashboard.kpi.headcount")} value={data?.headcount} loading={isPending} locale={locale} />
+              <Kpi label={t("dashboard.kpi.employees")} value={data?.employeeCount} loading={isPending} locale={locale} />
+            </>
+          ) : null}
+        </div>
+      </section>
 
       {showFinancial ? (
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <MoneyKpiCard
-          label={t("dashboard.kpi.revenuePeriod", "Revenue (period)")}
-          display={revenueDisplay}
-          loading={isPending}
-        />
-        <MoneyKpiCard
-          label={t("dashboard.kpi.expensesPeriod", "Expenses (period)")}
-          display={expensesDisplay}
-          loading={isPending}
-        />
-        <MoneyKpiCard
-          label={t("dashboard.kpi.netPeriod", "Net (period)")}
-          display={netDisplay}
-          loading={isPending}
-        />
-      </div>
+        <section aria-labelledby="dash-money" className="space-y-3">
+          <h2 id="dash-money" className="text-sm font-semibold">{t("nav.revenue", "Revenue")}</h2>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <MoneyKpi label={t("dashboard.kpi.revenuePeriod", "Revenue (period)")} display={revenueDisplay} loading={isPending} tone="good" />
+            <MoneyKpi label={t("dashboard.kpi.expensesPeriod", "Expenses (period)")} display={expensesDisplay} loading={isPending} tone="warn" />
+            <MoneyKpi label={t("dashboard.kpi.netPeriod", "Net (period)")} display={netDisplay} loading={isPending} tone="brand" />
+          </div>
+        </section>
       ) : null}
     </div>
   );
 }
 
-function TodayStat({
-  label,
-  value,
-  money,
-  locale,
-}: {
-  label: string;
-  value: number;
-  money?: boolean;
-  locale: string;
-}) {
-  const display = money
-    ? new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
-    : new Intl.NumberFormat(locale).format(value);
-  return (
-    <div>
-      <p className="text-muted-foreground text-xs">{label}</p>
-      <p className="font-semibold ltr-nums">{display}</p>
-    </div>
-  );
+function fmt(value: number, locale: string, money?: boolean) {
+  return new Intl.NumberFormat(locale, money ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : undefined).format(value);
 }
 
-function KpiCard({
-  label,
-  value,
-  loading,
-  lng,
-}: {
-  label: string;
-  value: number | undefined;
-  loading: boolean;
-  lng: string;
-}) {
-  const display =
-    value === undefined || loading
-      ? "—"
-      : new Intl.NumberFormat(lng === "ar" ? "ar-AE" : "en-AE").format(value);
-
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardDescription>{label}</CardDescription>
-        <CardTitle className="text-2xl ltr-nums">{display}</CardTitle>
-      </CardHeader>
-    </Card>
-  );
+function Kpi({ label, value, loading, locale, icon }: { label: string; value: number | undefined; loading: boolean; locale: string; icon?: ReactNode }) {
+  if (loading || value === undefined) return <StatSkeleton />;
+  return <StatCard label={label} value={<span className="ltr-nums">{fmt(value, locale)}</span>} icon={icon} />;
 }
 
-function MoneyKpiCard({
-  label,
-  display,
-  loading,
-}: {
-  label: string;
-  display: string;
-  loading: boolean;
-}) {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardDescription>{label}</CardDescription>
-        <CardTitle className="text-lg ltr-nums sm:text-2xl">{loading ? "—" : display}</CardTitle>
-      </CardHeader>
-    </Card>
-  );
+function MoneyKpi({ label, display, loading, tone }: { label: string; display: string; loading: boolean; tone: "good" | "warn" | "brand" }) {
+  if (loading) return <StatSkeleton />;
+  return <StatCard tone={tone} label={label} value={<span className="ltr-nums break-words text-xl sm:text-2xl">{display || "—"}</span>} />;
 }

@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Header,
+  Headers,
   HttpCode,
   HttpStatus,
   Post,
@@ -17,6 +18,7 @@ import { JwtAuthGuard } from "./jwt-auth.guard";
 import type { JwtUser } from "./jwt-user";
 import { KiorexOidcService } from "./kiorex-oidc.service";
 import { loginMetaFromRequest } from "./request-client-meta";
+import { resolveEdition } from "../nurse/nurse-edition";
 
 /** KCV-201 — "Sign in with Kiorex Passport" alongside existing login (opt-in via KIOREX_OIDC_ISSUER). */
 @ApiTags("auth")
@@ -25,17 +27,19 @@ export class KiorexOidcController {
   constructor(private readonly oidc: KiorexOidcService) {}
 
   @Get("config")
-  @ApiOperation({ summary: "Whether the Sign in with Kiorex Passport button should be shown" })
-  async config() {
-    return { enabled: await this.oidc.isEnabled() };
+  @ApiOperation({ summary: "Whether the Sign in with Kiorex Passport button should be shown (edition by Host: nurse.kiorly.com defaults to Passport)" })
+  async config(@Headers("x-forwarded-host") fwd?: string, @Headers("host") host?: string) {
+    const edition = resolveEdition({ host: fwd ?? host });
+    // KNED / ADR-031: the Nurse edition defaults to "Sign in with Kiorex Passport"; the password form stays available as a fallback.
+    return { enabled: await this.oidc.isEnabled(), edition, defaultSignIn: edition === "NURSE" ? "KIOREX_PASSPORT" : "PASSWORD" };
   }
 
   @Post("start")
   @HttpCode(HttpStatus.OK)
   @UseGuards(PublicAuthRateLimitGuard)
   @ApiOperation({ summary: "Start Kiorex Passport sign-in (auth code + PKCE); returns the authorization URL" })
-  start() {
-    return this.oidc.startLogin();
+  start(@Headers("x-forwarded-host") fwd?: string, @Headers("host") host?: string) {
+    return this.oidc.startLogin(resolveEdition({ host: fwd ?? host }));
   }
 
   @Post("callback")

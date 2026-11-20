@@ -10,6 +10,7 @@ export function LegalAcceptanceBanner() {
   const token = useAuthStore((s) => s.accessToken);
   const [status, setStatus] = useState<LegalStatus | null>(null);
   const [busy, setBusy] = useState(false);
+  const [docsOpen, setDocsOpen] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -35,27 +36,25 @@ export function LegalAcceptanceBanner() {
   }
 
   return (
-    <div
-      role="status"
-      className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm"
-    >
-      <span>{t("legal.banner.prompt")}</span>
-      <div className="flex flex-wrap items-center gap-2">
-        {status.pending.map((p) => (
-          <Link
-            key={p.document}
-            to={`/legal/${p.document}`}
-            className="text-xs underline"
-            target="_blank"
-            rel="noreferrer"
-          >
-            {i18n.language.startsWith("ar") ? p.titleAr : p.titleEn}
-          </Link>
-        ))}
-        <Button type="button" size="sm" disabled={busy} onClick={() => void acceptAll()}>
+    <div role="status" className="border-b border-primary/15 bg-accent/70 px-3 py-1.5 text-sm text-accent-foreground sm:px-4 md:ps-6">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="min-w-0 flex-1 truncate font-medium max-sm:basis-full" title={t("legal.banner.prompt")}>{t("legal.banner.prompt")}</span>
+        <button type="button" className="text-xs font-medium underline underline-offset-4" aria-expanded={docsOpen} onClick={() => setDocsOpen((v) => !v)}>
+          {t("legal.banner.documents", "Documents")} ({status.pending.length})
+        </button>
+        <Button type="button" size="sm" className="kx-hdr ms-auto h-8 min-h-8 sm:ms-0 sm:h-7 sm:min-h-7" disabled={busy} onClick={() => void acceptAll()}>
           {t("legal.banner.accept")}
         </Button>
       </div>
+      {docsOpen ? (
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-primary/10 pt-1.5">
+          {status.pending.map((p) => (
+            <Link key={p.document} to={`/legal/${p.document}`} className="text-xs text-accent-foreground underline-offset-4 hover:underline" target="_blank" rel="noreferrer">
+              {i18n.language.startsWith("ar") ? p.titleAr : p.titleEn}
+            </Link>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

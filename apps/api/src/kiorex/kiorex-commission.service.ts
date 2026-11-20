@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { ClinicalSpecialty, FeeType, Prisma } from "@prisma/client";
+import { ClinicalSpecialty, FeeType, Prisma, type Profession, type ServiceLocation } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { isPlatformSuperAdmin } from "../common/platform-super-admin";
 import { PrismaService } from "../prisma/prisma.service";
@@ -13,6 +13,7 @@ import {
   effectiveFlatFee,
   isAboveBenchmarkTarget,
   resolveKiorexCommissionRate,
+  type RateContext,
   type RateRow,
 } from "./kiorex-commission-resolver";
 
@@ -90,6 +91,9 @@ export class KiorexCommissionService {
     body: {
       marketId: string;
       specialty?: ClinicalSpecialty | null;
+      /** Rev 2.3: narrow the rate to one profession and/or service location (e.g. a home-visit rate, Q13 NEEDS_HUMAN). */
+      profession?: Profession | null;
+      serviceLocation?: ServiceLocation | null;
       feeType: FeeType;
       amount?: number | string | null;
       percent?: number | string | null;
@@ -114,6 +118,8 @@ export class KiorexCommissionService {
       data: {
         marketId: market.id,
         specialty: body.specialty ?? null,
+        profession: body.profession ?? null,
+        serviceLocation: body.serviceLocation ?? null,
         feeType: body.feeType,
         amount: body.amount != null ? new Prisma.Decimal(String(body.amount)) : null,
         percent: body.percent != null ? new Prisma.Decimal(String(body.percent)) : null,
@@ -376,8 +382,9 @@ export class KiorexCommissionService {
     specialty: ClinicalSpecialty | null | undefined,
     visitFee: number,
     at: Date = new Date(),
+    ctx: RateContext = {},
   ): { commissionAmount: number; rate: RateRow | null } {
-    const rate = resolveKiorexCommissionRate(rows, specialty, at);
+    const rate = resolveKiorexCommissionRate(rows, specialty, at, ctx);
     if (!rate) return { commissionAmount: 0, rate: null };
     if (rate.feeType === FeeType.FLAT) {
       return { commissionAmount: rate.amount != null ? Number(rate.amount) : 0, rate };

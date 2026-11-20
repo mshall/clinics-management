@@ -46,6 +46,8 @@ type EvalContext = {
   legacyGlobal: Map<string, boolean>;
   legacyMarket: Map<string, boolean | null>;
   legacyTenant: Map<string, boolean | null>;
+  /** ADR-031 — organization edition; nurse.* keys are effective only for NURSE tenants. Undefined when not loaded (unit-test stubs). */
+  edition?: string | null;
 };
 
 const EMPTY_CTX: EvalContext = {
@@ -227,6 +229,7 @@ export class FeatureFlagsService {
     const ent = await this.entitlements.resolve(tenantId);
     return {
       tenantId,
+      edition: (tenant as { edition?: string }).edition,
       marketCode: tenant.market?.code ?? null,
       planEntitlements: (ent?.entitlements as Record<string, unknown> | undefined) ?? null,
       legacyGlobal: new Map(globals.map((g) => [g.key, g.enabled])),
@@ -269,6 +272,10 @@ export class FeatureFlagsService {
   private evalKey(ctx: EvalContext, key: string, path: string[]): FlagResolution {
     if (path.includes(key)) return { effective: false, source: "dependency", scope: "global", blockedParent: key };
     const def = getFlagDefinition(key);
+    // ADR-031: nurse.* capabilities exist only inside the Nurse edition. A Clinic-edition org is never "OFF at global", it simply is not a Nurse org.
+    if (def?.edition === "NURSE" && ctx.tenantId && ctx.edition !== undefined && ctx.edition !== def.edition) {
+      return { effective: false, source: "org", scope: "org" };
+    }
     const { g, m, o, snap } = this.layerValues(ctx, key);
 
     const entKey = isLegacyFeatureFlagKey(key) ? PLAN_GATED_FEATURE_FLAGS[key] : undefined;

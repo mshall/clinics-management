@@ -573,7 +573,7 @@ export function OrgUserPermissionsEditor({
             </Button>
           </div>
           {rolePreviewActive ? (
-            <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-100">
+            <p className="rounded-md border border-[hsl(var(--warning)/0.3)] bg-amber-500/10 px-3 py-2 text-xs text-[hsl(var(--warning))] ">
               {t(
                 "admin.orgUserPrimaryRolePreview",
                 "Previewing defaults for {{role}}. Nothing is saved until you confirm.",
@@ -598,7 +598,7 @@ export function OrgUserPermissionsEditor({
           <span className="ms-2 font-normal text-muted-foreground">
             · {formatUserRole(rolePreviewActive ? roleDraft : userRole, t)}
             {rolePreviewActive ? (
-              <span className="ms-1 text-amber-700 dark:text-amber-300">
+              <span className="ms-1 text-[hsl(var(--warning))] ">
                 ({t("admin.orgUserRolePreviewBadge", "preview")})
               </span>
             ) : null}
@@ -710,7 +710,7 @@ export function OrgUserPermissionsEditor({
             </p>
           ) : null}
           {moneySaveBanner === "ok" ? (
-            <p className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-900 dark:text-emerald-100" role="status">
+            <p className="rounded-md border border-[hsl(var(--success)/0.4)] bg-emerald-500/10 px-3 py-2 text-sm text-[hsl(var(--success))] " role="status">
               {t("admin.moneyVisibilitySaveSuccess", "Money visibility saved.")}
             </p>
           ) : null}

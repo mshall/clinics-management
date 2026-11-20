@@ -1,5 +1,7 @@
 # Clinics Management Platform
 
+> **QA / demo data:** synthetic Egyptian dataset, logins, URLs and reset instructions in [Docs/TEST_DATA.md](Docs/TEST_DATA.md) (DEV ONLY).
+
 A full-stack **clinic management system**: multi-clinic tenants, RBAC, patient registry, clinical encounters, scheduling, HR, expenses, revenue, reporting, and administration. The stack is a **NestJS** REST API with **Prisma** / **PostgreSQL**, and a **React** (Vite) SPA with **Tailwind CSS** and **i18n** (English / Arabic).
 
 **Repository:** [github.com/mshall/kiorly-clinics-management](https://github.com/mshall/kiorly-clinics-management)
@@ -384,3 +386,18 @@ Use **Amazon Lightsail** (fixed monthly) **or** one **EC2** instance (e.g. **t4g
 ## License
 
 Private / unlicensed unless you add a `LICENSE` file. Confirm ownership and terms with the repository owner before redistribution.
+
+## Brand ("Kiorly by Kiorex")
+Palette, typography and components come from the shared Kiorex brand kit (`_brand/` in the workspace), vendored into `apps/web/src/brand` and `apps/docs/src/brand` (tokens, Tailwind preset, `KiorexLogo`, shared UI primitives in `ui-kit.tsx`). Jost (Latin) and IBM Plex Sans Arabic are bundled via `@fontsource`. The Nurse edition keeps Nurse Rose `#E11D48` as its single accent (`html[data-edition="nurse"]`, see `brand-bridge.css`). Never redraw the logo: use the SVG/components. UI screenshots: `_docs/ui-review/kiorly-clinic` and `/kiorly-nurse` (`TAG=after node apps/web/scripts/ui-shots.mjs`; filters `ONLY`, `MODES`, `ROUTE`).
+
+### Clinical OS UX conventions (apps/web)
+- **Density**: `html[data-density="compact"]` (toggle in the top bar or `Shift+D`) tightens card padding (`--kx-card-pad`) and table rows (`--kx-row-py`); persisted per device (`stores/density-store.ts`).
+- **Keyboard** (desktop, no field focused): `?` cheat sheet, `g` then `d/p/a/b/e/r/k` to navigate, `Ctrl/Cmd+K` patient search (Enter opens the first hit), `N` quick-book on Appointments, `N`/`S` call/start on the front-desk board (`components/keyboard-shortcuts.tsx`).
+- **Calendar**: Appointments > Calendar has Month / Week / Day (`appointments-time-grid.tsx`): overlap packing, now-line, click an empty half-hour to quick-book (`/appointments?book=1&start=...`).
+- **Charts** use `--kx-chart-1..7` (indigo, ocean, coral first; designed dark set) with a hairline grid; numerals are tabular.
+- **A11y**: `scripts/axe-check.mjs` covers every redesigned page in EN/AR x light/dark (`SETS`, `LANGS`, `DARK`, `VERBOSE=1` env knobs); `lib/a11y-autofix.ts` wires legacy `<Label>`s to their control.
+- **Nurse e2e**: `bash scripts/nurse-e2e-stack.sh` (OPEN :3011/:5185) and `STACK=locked` (:3012/:5186) with `DATABASE_URL=...kiorly_test?connection_limit=3`; run `PLAYWRIGHT_NO_SERVER=1 npx playwright test --project=nurse-open|nurse-gated`. The Playwright API helper now follows `PLAYWRIGHT_BASE_URL` (override with `PLAYWRIGHT_API_URL`).
+- **Dialogs are sheets on phones** (`components/ui/dialog.tsx`): centred card from `sm` up, bottom sheet below it (drag handle, safe-area padding), sticky `DialogFooter` so the primary action never scrolls away. Options of `SearchablePickList` render in a body portal and carry `pointer-events-auto` (a modal Radix dialog sets `pointer-events:none` on `<body>`).
+- **Section navigation** for consoles: `components/section-nav.tsx` (`SectionNav`, buttons with `aria-current`) for Admin and HR; Platform uses `NavLink`s inside `.kx-secnav`. Underline tabs scroll sideways on phones.
+- **Clinical/safety states** use `.kx-callout[data-tone="danger|warn|good|info"]` (icon + text + tone; never colour alone) and `.kx-actionbar` (sticky 56 px action bar) in the Nurse pages (safety timer phases, MAR allergy/order blocks, lab refusals, critical vitals).
+- **Playwright on a shared Postgres**: the API rate-limits logins (20/min per email); the `login`/`apiLogin` helpers honour `Retry-After`. Run the suite against a throw-away stack on `kiorly_test` (`DATABASE_URL=...kiorly_test?connection_limit=2 bash scripts/nurse-e2e-stack.sh`, then `PLAYWRIGHT_BASE_URL=http://localhost:5185 PLAYWRIGHT_NO_SERVER=1 npx playwright test --project=chromium`). Screenshot sweep for round 3: `TAG=r3-after MODES=en-light,en-dark,ar-light VIEWS=desk node apps/web/scripts/ui-shots-r3.mjs`.

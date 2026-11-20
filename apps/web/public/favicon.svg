@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="206 206 688 468" role="img" aria-label="Kiorex mark">
+  <!-- Two facing chevrons (indigo ">" and ocean "<") with a coral ECG pulse through the centre. Founder artwork, 20 Nov 2026. -->
+  <polyline points="373,237 505,440 373,643" fill="none" stroke="#3730A3" stroke-width="38" stroke-linejoin="miter" stroke-linecap="butt"/>
+  <polyline points="720,237 588,440 720,643" fill="none" stroke="#0369A1" stroke-width="38" stroke-linejoin="miter" stroke-linecap="butt"/>
+  <path d="M222 440 H510 L525 428 L540 466 L557 392 L574 460 L588 441 H877" fill="none" stroke="#E8735E" stroke-width="11" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

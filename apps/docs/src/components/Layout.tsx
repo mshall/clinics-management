@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
+import { KiorexLogo } from "../brand/components";
 import { DOC_LINKS } from "../lib/navigation";
 
 export function Layout() {
@@ -8,7 +9,11 @@ export function Layout() {
   return (
     <div className="layout">
       <aside className="sidebar">
-        <h1>Kiorly Clinics</h1>
+        <div className="brand">
+          <KiorexLogo variant="lockup" product="kiorly" height={40} className="logo-light" />
+          <KiorexLogo variant="lockup" product="kiorly" tone="inverse" height={40} className="logo-dark" />
+        </div>
+        <h1 className="sr-only" style={{ position: "absolute", left: "-9999px" }}>Kiorly Clinics</h1>
         <p className="subtitle">Documentation portal</p>
 
         <nav className="nav-section">

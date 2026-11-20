@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PaymentMethod, Prisma, RevenueStatus } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { resolveClinicCurrency } from "../common/clinic-currency";
@@ -686,6 +686,18 @@ export class PatientMoneyService {
         message: "Only a deposit awaiting payment can be marked paid",
         code: deposit.status === DEPOSIT_STATUS.EXPIRED ? "DEPOSIT_LINK_EXPIRED" : "DEPOSIT_NOT_PENDING",
       });
+    }
+    if (p.externalRef) {
+      const dup = await tx.patientDeposit.findFirst({
+        where: { tenantId, source: deposit.source, externalRef: p.externalRef, NOT: { id: deposit.id } },
+        select: { id: true },
+      });
+      if (dup) {
+        throw new ConflictException({
+          message: "This payment reference was already used for another deposit",
+          code: "DEPOSIT_REFERENCE_DUPLICATE",
+        });
+      }
     }
     const updated = await tx.patientDeposit.update({
       where: { id: deposit.id },

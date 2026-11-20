@@ -1,0 +1,226 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.kiorex.com/events/LabOrderPlaced.schema.json",
+  "title": "LabOrderPlaced",
+  "description": "Kiorly Clinic handed a lab order to Kiorly Lab via Kiorex (KCV204, clinic.lab_order_handoff). A patient consent token (LAB_RESULTS record-share grant) is required. One event per order. Additive in 1.1.0; 1.6.0 adds the optional Nurse-edition fields (originEdition, prescriberName, identifiersChecked, patient, nurseCollection).",
+  "x-producer": "kiorly-clinic",
+  "x-status": "emitted",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "LabOrderPlaced"
+    },
+    "aggregateType": {
+      "const": "LabOrder"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "encounterId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "clinicId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "patientRef": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Kiorly patient reference; never a national ID."
+        },
+        "orderingClinicianId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "consentToken": {
+          "type": "string",
+          "minLength": 1
+        },
+        "orderedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "nameEn": {
+                "type": "string",
+                "minLength": 1
+              },
+              "nameAr": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "nameEn"
+            ]
+          }
+        },
+        "notes": {
+          "type": "string"
+        },
+        "preferredLabId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "aggregateType": {
+          "type": "string",
+          "description": "Injected by the Kiorly outbox; mirrors the envelope field."
+        },
+        "aggregateId": {
+          "type": "string",
+          "description": "Injected by the Kiorly outbox; mirrors the envelope field."
+        },
+        "originEdition": {
+          "enum": [
+            "CLINIC",
+            "NURSE"
+          ],
+          "description": "Edition that produced the hand-off (ADR-031). Additive in 1.6.0."
+        },
+        "prescriberName": {
+          "type": "string",
+          "description": "Doctor who requested the tests (nurse transcribes a doctor's order); relayed as referringDoctor.name."
+        },
+        "identifiersChecked": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "enum": [
+              "fullName",
+              "dateOfBirth",
+              "phone",
+              "nationalId",
+              "externalId"
+            ]
+          },
+          "description": "Kinds of the >= 2 DISTINCT identifiers the nurse verified against the patient record at collection (the Lab's vocabulary, plus fullName for nurse intake). Kinds only, never values."
+        },
+        "patient": {
+          "type": "object",
+          "description": "Minimum demographics the lab needs to accession a nurse-collected sample, sent only under the consent token. Kiorex relays it to the lab and does not store it (receipt payload is redacted). Never a national id.",
+          "properties": {
+            "fullName": {
+              "type": "string",
+              "minLength": 2
+            },
+            "dateOfBirth": {
+              "type": "string"
+            },
+            "sex": {
+              "enum": [
+                "M",
+                "F",
+                "OTHER",
+                "UNKNOWN"
+              ]
+            },
+            "phone": {
+              "type": "string"
+            },
+            "preferredLocale": {
+              "enum": [
+                "ar",
+                "en"
+              ]
+            }
+          },
+          "required": [
+            "fullName"
+          ]
+        },
+        "nurseCollection": {
+          "type": "object",
+          "description": "The collection facts recorded by the nurse (tube labels become specimen barcodes; chain of custody starts at collectedAt).",
+          "properties": {
+            "visitRef": {
+              "type": "string",
+              "minLength": 1
+            },
+            "collectorRef": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Opaque collector reference; never a phone number or national id."
+            },
+            "collectorName": {
+              "type": "string"
+            },
+            "collectedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "handedOverAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "temperatureC": {
+              "type": "number",
+              "minimum": -40,
+              "maximum": 60
+            },
+            "samples": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 20,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "pattern": "^[\\x21-\\x7e]{3,40}$"
+                  },
+                  "specimenType": {
+                    "type": "string",
+                    "minLength": 2
+                  },
+                  "container": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "label",
+                  "specimenType"
+                ]
+              }
+            }
+          },
+          "required": [
+            "visitRef",
+            "collectorRef",
+            "collectedAt",
+            "samples"
+          ]
+        }
+      },
+      "required": [
+        "orderId",
+        "clinicId",
+        "patientRef",
+        "consentToken",
+        "orderedAt",
+        "items"
+      ]
+    }
+  },
+  "required": [
+    "type",
+    "aggregateType",
+    "data"
+  ]
+}

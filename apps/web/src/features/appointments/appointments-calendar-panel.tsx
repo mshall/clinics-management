@@ -1,13 +1,16 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { AppointmentTimeGrid } from "./appointments-time-grid";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import {
   AppointmentStatusBadge,
   appointmentCalendarEventChipClassName,
+  statusDotClass,
 } from "@/components/appointment-status-badge";
 import { NoShowRiskChip } from "@/components/no-show-risk-chip";
 import { Button } from "@/components/ui/button";
+import { TableSkeleton } from "@/components/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useAppointmentsQuery, useClinicsQuery } from "@/lib/api-hooks";
@@ -36,6 +39,7 @@ import { resolvePatientListLabel } from "@/lib/patient-display";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
+import { canMutateAppointmentsNav } from "@/lib/nav-tab-access-policy";
 
 const MAX_EVENTS_IN_CELL = 2;
 const MAX_EVENTS_IN_CELL_LG = 3;
@@ -118,6 +122,8 @@ export function AppointmentsCalendarPanel() {
   const [selectedDayIso, setSelectedDayIso] = useState(() => toLocalDateIso(today));
   const { data: clinics = [] } = useClinicsQuery();
   const [clinicId, setClinicId] = useState("");
+  const [view, setView] = useState<"month" | "week" | "day">(() => { try { const v = localStorage.getItem("cms-cal-view"); return v === "week" || v === "day" ? v : "month"; } catch { return "month"; } });
+  useEffect(() => { try { localStorage.setItem("cms-cal-view", view); } catch { /* ignore */ } }, [view]);
 
   useEffect(() => {
     if (!requiresClinicSelection || clinicId || clinics.length === 0) return;
@@ -125,6 +131,7 @@ export function AppointmentsCalendarPanel() {
   }, [requiresClinicSelection, clinicId, clinics]);
 
   const range = useMemo(() => visibleGridBounds(cursor.year, cursor.month), [cursor.year, cursor.month]);
+  const canQuickBook = mode !== "physician" && canMutateAppointmentsNav(role, authUser?.navTabKeys, authUser?.navTabAccessModes);
   const calendarEnabled = mode === "physician" || mode === "organization" || Boolean(clinicId);
 
   const { data, isPending, isError, error } = useAppointmentsQuery({
@@ -155,6 +162,26 @@ export function AppointmentsCalendarPanel() {
       return { year: d.getFullYear(), month: d.getMonth() };
     });
   };
+  // Week/day navigation keeps the fetched month in sync with the visible date (the month grid covers whole weeks).
+  const shiftDays = (delta: number) => {
+    const d = parseLocalDateIso(selectedDayIso);
+    d.setDate(d.getDate() + delta);
+    setSelectedDayIso(toLocalDateIso(d));
+    setCursor({ year: d.getFullYear(), month: d.getMonth() });
+  };
+  const shift = (dir: 1 | -1) => (view === "month" ? shiftMonth(dir) : shiftDays(dir * (view === "week" ? 7 : 1)));
+  const weekDays = useMemo(() => {
+    const d = parseLocalDateIso(selectedDayIso);
+    const monday = new Date(d);
+    monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    return Array.from({ length: 7 }, (_, i) => { const x = new Date(monday); x.setDate(monday.getDate() + i); return x; });
+  }, [selectedDayIso]);
+  const gridDays = view === "week" ? weekDays : [selectedDay];
+  const periodLabel = view === "month"
+    ? monthLabel
+    : view === "day"
+      ? selectedDay.toLocaleDateString(loc, { weekday: "long", day: "numeric", month: "long" })
+      : `${weekDays[0]!.toLocaleDateString(loc, { day: "numeric", month: "short" })} – ${weekDays[6]!.toLocaleDateString(loc, { day: "numeric", month: "short" })}`;
 
   const goToToday = () => {
     const now = new Date();
@@ -173,83 +200,61 @@ export function AppointmentsCalendarPanel() {
       ) : null}
 
       <Card className="overflow-hidden">
-        <CardHeader className="space-y-4 border-b border-border/60 bg-muted/20 pb-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <CardTitle className="text-base font-medium text-muted-foreground">
-              {mode === "physician"
-                ? t("appointments.calendarMyTitle", "My calendar")
-                : mode === "organization"
-                  ? t("appointments.calendarOrgTitle", "Organization calendar")
-                  : t("appointments.calendarClinicTitle", "Clinic calendar")}
-            </CardTitle>
-            <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-primary" onClick={goToToday}>
-              {t("appointments.today", "Today")}
-            </Button>
-          </div>
-
-          <div className="flex items-center justify-center gap-2 sm:gap-4">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 shrink-0 rounded-full"
-              onClick={() => shiftMonth(-1)}
-            >
-              <ChevronLeft className="h-5 w-5" aria-hidden />
-              <span className="sr-only">{t("appointments.calendarPrev", "Previous month")}</span>
-            </Button>
-            <div className="min-w-0 flex-1 text-center">
-              <p className="truncate text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{monthLabel}</p>
-              <p className="text-sm font-medium text-muted-foreground ltr-nums sm:text-base">{yearLabel}</p>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 shrink-0 rounded-full"
-              onClick={() => shiftMonth(1)}
-            >
-              <ChevronRight className="h-5 w-5" aria-hidden />
-              <span className="sr-only">{t("appointments.calendarNext", "Next month")}</span>
-            </Button>
-          </div>
-
-          {showClinicFilter ? (
-            <div className="space-y-1.5">
-              <Label htmlFor="calendar-clinic">{t("appointments.clinic")}</Label>
-              <select
-                id="calendar-clinic"
-                className={cn(nativeSelectClassName, "max-w-full sm:max-w-md")}
-                value={clinicId}
-                onChange={(e) => setClinicId(e.target.value)}
-              >
-                {mode === "organization" ? (
-                  <option value="">{t("appointments.allClinics", "All clinics")}</option>
-                ) : null}
-                {clinics.length === 0 ? (
-                  <option value="">{t("appointments.noClinics", "No clinics")}</option>
-                ) : (
-                  clinics.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {formatClinicName(c, i18n.language)}
-                    </option>
-                  ))
-                )}
-              </select>
-              <p className="text-xs text-muted-foreground">
-                {mode === "organization"
-                  ? t(
-                      "appointments.calendarOrgHint",
-                      "All organization appointments for this month. Filter by clinic if needed.",
-                    )
-                  : t("appointments.calendarClinicHint", "All appointments at the selected clinic for this month.")}
+        <CardHeader className="space-y-0 border-b border-border/60 bg-card pb-3">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <div className="flex items-center gap-1">
+              <Button type="button" variant="ghost" size="icon" className="size-9 min-h-9 min-w-9 rounded-full md:size-9 md:min-h-9" onClick={() => shift(-1)}>
+                <ChevronLeft className="h-5 w-5 rtl-flip" aria-hidden />
+                <span className="sr-only">{t("appointments.calendarPrev", "Previous month")}</span>
+              </Button>
+              <p className="min-w-[9.5rem] text-center text-lg font-semibold tracking-tight sm:text-xl" aria-live="polite">
+                {periodLabel} <span className="font-medium text-muted-foreground ltr-nums">{yearLabel}</span>
               </p>
+              <Button type="button" variant="ghost" size="icon" className="size-9 min-h-9 min-w-9 rounded-full md:size-9 md:min-h-9" onClick={() => shift(1)}>
+                <ChevronRight className="h-5 w-5 rtl-flip" aria-hidden />
+                <span className="sr-only">{t("appointments.calendarNext", "Next month")}</span>
+              </Button>
             </div>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              {t("appointments.calendarPhysicianHint", "Appointments assigned to you across your clinic network.")}
-            </p>
-          )}
+            {showClinicFilter ? (
+              <div className="flex min-w-0 items-center gap-2">
+                <Label htmlFor="calendar-clinic" className="text-xs text-muted-foreground">{t("appointments.clinic")}</Label>
+                <select
+                  id="calendar-clinic"
+                  className={cn(nativeSelectClassName, "h-9 min-h-9 w-auto max-w-[16rem] py-1 md:h-9")}
+                  value={clinicId}
+                  onChange={(e) => setClinicId(e.target.value)}
+                >
+                  {mode === "organization" ? <option value="">{t("appointments.allClinics", "All clinics")}</option> : null}
+                  {clinics.length === 0 ? (
+                    <option value="">{t("appointments.noClinics", "No clinics")}</option>
+                  ) : (
+                    clinics.map((c) => (
+                      <option key={c.id} value={c.id}>{formatClinicName(c, i18n.language)}</option>
+                    ))
+                  )}
+                </select>
+              </div>
+            ) : null}
+            <div className="ms-auto flex items-center gap-2">
+              <div role="group" aria-label={t("kx2.calendarView", "Calendar view")} className="inline-flex rounded-lg border border-border bg-card p-0.5 text-xs shadow-[var(--kx-shadow-1)]">
+                {(["month", "week", "day"] as const).map((v) => (
+                  <button key={v} type="button" aria-pressed={view === v} data-testid={`calendar-view-${v}`} onClick={() => setView(v)} className={cn("rounded-md px-2.5 py-1.5 font-medium transition-colors", view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
+                    {t(`kx2.view.${v}`, v === "month" ? "Month" : v === "week" ? "Week" : "Day")}
+                  </button>
+                ))}
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={goToToday}>
+                {t("appointments.today", "Today")}
+              </Button>
+            </div>
+          </div>
+          <CardTitle className="sr-only">
+            {mode === "physician"
+              ? t("appointments.calendarMyTitle", "My calendar")
+              : mode === "organization"
+                ? t("appointments.calendarOrgTitle", "Organization calendar")
+                : t("appointments.calendarClinicTitle", "Clinic calendar")}
+          </CardTitle>
         </CardHeader>
 
         <CardContent className="space-y-0 p-0">
@@ -258,7 +263,18 @@ export function AppointmentsCalendarPanel() {
               {t("appointments.calendarPickClinic", "Select a clinic to load the calendar.")}
             </p>
           ) : isPending ? (
-            <p className="p-4 text-sm text-muted-foreground">{t("common.loading")}</p>
+            <div className="p-4"><TableSkeleton rows={8} cols={7} /></div>
+          ) : view !== "month" ? (
+            <AppointmentTimeGrid
+              days={gridDays}
+              appointments={items}
+              locale={loc}
+              language={i18n.language}
+              showClinic={mode === "organization"}
+              onOpen={openAppointment}
+              canBook={canQuickBook}
+              onQuickBook={(startIso) => navigate(`/appointments?book=1&start=${encodeURIComponent(startIso)}`)}
+            />
           ) : (
             <>
               <div className="border-b border-border bg-muted/30">
@@ -308,7 +324,7 @@ export function AppointmentsCalendarPanel() {
                         <span
                           className={cn(
                             "inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-xs font-medium ltr-nums sm:h-7 sm:min-w-7 sm:text-sm",
-                            isToday && "bg-red-500 font-semibold text-white shadow-sm",
+                            isToday && "bg-primary font-semibold text-primary-foreground shadow-sm",
                             !isToday && isSelected && "font-semibold text-primary",
                             !isToday && !isSelected && cell.inCurrentMonth && "text-foreground",
                             !cell.inCurrentMonth && "text-muted-foreground/45",
@@ -330,7 +346,7 @@ export function AppointmentsCalendarPanel() {
                               className={cn(
                                 "w-full truncate rounded-[4px] px-1 py-0.5 text-start text-[10px] font-medium leading-tight sm:text-[11px]",
                                 appointmentCalendarEventChipClassName(a.status),
-                                overlaps > 0 && "ring-1 ring-inset ring-amber-500/50",
+                                overlaps > 0 && "ring-1 ring-inset ring-[hsl(var(--warning)/0.5)]",
                               )}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -358,7 +374,7 @@ export function AppointmentsCalendarPanel() {
                               className={cn(
                                 "w-full truncate rounded-[4px] px-1.5 py-0.5 text-start text-[11px] font-medium leading-tight",
                                 appointmentCalendarEventChipClassName(a.status),
-                                overlaps > 0 && "ring-1 ring-inset ring-amber-500/50",
+                                overlaps > 0 && "ring-1 ring-inset ring-[hsl(var(--warning)/0.5)]",
                               )}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -411,14 +427,14 @@ export function AppointmentsCalendarPanel() {
                             type="button"
                             className={cn(
                               "flex w-full gap-3 rounded-xl border border-border/80 bg-card p-3 text-start touch-manipulation transition-colors hover:bg-muted/40 active:bg-muted/60 sm:items-center sm:p-4",
-                              overlapCount > 0 && "border-amber-500/40 bg-amber-500/5",
+                              overlapCount > 0 && "border-[hsl(var(--warning)/0.4)] bg-amber-500/5",
                             )}
                             onClick={() => openAppointment(a.id)}
                           >
                             <span
                               className={cn(
                                 "mt-1 w-1 shrink-0 self-stretch rounded-full sm:mt-0 sm:h-12",
-                                appointmentCalendarEventChipClassName(a.status),
+                                statusDotClass(a.status),
                               )}
                               aria-hidden
                             />
@@ -427,7 +443,7 @@ export function AppointmentsCalendarPanel() {
                                 {formatAppointmentTimeRange(a.startsAt, a.endsAt, loc)}
                               </p>
                               {overlapCount > 0 ? (
-                                <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                                <p className="text-xs font-medium text-[hsl(var(--warning))] ">
                                   {t(
                                     "appointments.calendarSharedSlot",
                                     "Shared time slot with {{count}} other patient(s)",

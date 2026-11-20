@@ -5,6 +5,8 @@ import { ClinicalController } from "./clinical.controller";
 import { ClinicalService } from "./clinical.service";
 import { ClinicalSafetyService } from "./clinical-safety.service";
 import { ClinicalOrdersService } from "./clinical-orders.service";
+import { PhysioController, PhysioPublicController } from "./physio.controller";
+import { PhysioService } from "./physio.service";
 import { SpecialtyPacksService } from "./specialty-packs.service";
 import { RxSafetyCheckService } from "./rx-safety-check.service";
 import { DrugCatalogService } from "./drug-catalog.service";
@@ -12,12 +14,13 @@ import { DrugDatasetImportService } from "./drug-dataset-import.service";
 
 @Module({
   imports: [MessagingModule, RecordShareModule],
-  controllers: [ClinicalController],
+  controllers: [ClinicalController, PhysioController, PhysioPublicController],
   providers: [
     ClinicalService,
     ClinicalSafetyService,
     ClinicalOrdersService,
     SpecialtyPacksService,
+    PhysioService,
     RxSafetyCheckService,
     DrugCatalogService,
     DrugDatasetImportService,

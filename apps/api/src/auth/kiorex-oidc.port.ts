@@ -9,6 +9,8 @@ export type KiorexOidcConfig = {
   clientId: string;
   clientSecret: string;
   redirectUri: string;
+  /** nurse.kiorly.com callback (Kiorly Nurse edition, ADR-031). Same client and audience; only the redirect URI differs. */
+  nurseRedirectUri: string;
 };
 
 export type KiorexIdentityClaims = {
@@ -20,11 +22,12 @@ export type KiorexIdentityClaims = {
 };
 
 export interface KiorexOidcPort {
-  authorizationUrl(p: { state: string; nonce: string; codeChallenge: string }): string;
+  authorizationUrl(p: { state: string; nonce: string; codeChallenge: string; redirectUri?: string }): string;
   /** Exchanges the code (PKCE), validating state, nonce and the ID token signature. */
   exchange(
     params: { code: string; state: string; iss?: string },
     checks: { state: string; nonce: string; codeVerifier: string },
+    opts?: { redirectUri?: string },
   ): Promise<KiorexIdentityClaims>;
   logoutKeys(): JWTVerifyGetKey;
   readonly issuer: string;
@@ -43,6 +46,9 @@ export function readKiorexOidcConfig(env: NodeJS.ProcessEnv = process.env): Kior
     clientId: env.KIOREX_OIDC_CLIENT_ID?.trim() || "kiorly-clinic",
     clientSecret,
     redirectUri: env.KIOREX_OIDC_REDIRECT_URI?.trim() || `${web}/auth/kiorex/callback`,
+    nurseRedirectUri:
+      env.KIOREX_OIDC_REDIRECT_URI_NURSE?.trim() ||
+      `${(env.NURSE_WEB_URL?.trim() || (prod ? "https://nurse.kiorly.com" : "http://nurse.localhost:5174")).replace(/\/+$/, "")}/auth/kiorex/callback`,
   };
 }
 
@@ -54,7 +60,7 @@ export async function createOpenIdClientPort(cfg: KiorexOidcConfig): Promise<Kio
   const client = new issuer.Client({
     client_id: cfg.clientId,
     client_secret: cfg.clientSecret,
-    redirect_uris: [cfg.redirectUri],
+    redirect_uris: [cfg.redirectUri, cfg.nurseRedirectUri],
     response_types: ["code"],
     token_endpoint_auth_method: "client_secret_basic",
   });
@@ -64,17 +70,18 @@ export async function createOpenIdClientPort(cfg: KiorexOidcConfig): Promise<Kio
   return {
     issuer: cfg.issuer,
     clientId: cfg.clientId,
-    authorizationUrl: ({ state, nonce, codeChallenge }) =>
+    authorizationUrl: ({ state, nonce, codeChallenge, redirectUri }) =>
       client.authorizationUrl({
+        ...(redirectUri ? { redirect_uri: redirectUri } : {}),
         scope: "openid profile phone",
         state,
         nonce,
         code_challenge: codeChallenge,
         code_challenge_method: "S256",
       }),
-    exchange: async (params, checks) => {
+    exchange: async (params, checks, opts) => {
       const set = await client.callback(
-        cfg.redirectUri,
+        opts?.redirectUri ?? cfg.redirectUri,
         { code: params.code, state: params.state, ...(params.iss ? { iss: params.iss } : {}) },
         { state: checks.state, nonce: checks.nonce, code_verifier: checks.codeVerifier },
       );

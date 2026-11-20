@@ -33,7 +33,7 @@ export function TrialBanner() {
   return (
     <div
       role="status"
-      className="flex flex-wrap items-center justify-between gap-2 border-b border-sky-500/40 bg-sky-500/10 px-4 py-2 text-sm"
+      className="flex flex-wrap items-center justify-between gap-2 border-b border-kx-ocean-600/40 bg-kx-ocean-600/10 px-4 py-2 text-sm"
     >
       <span>
         {t("trial.banner.daysLeft", { count: trial.daysLeft })} · {progressLabel}

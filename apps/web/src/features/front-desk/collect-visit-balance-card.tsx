@@ -118,7 +118,7 @@ export function CollectVisitBalanceCard({
   if (amount <= 0) return null;
 
   return (
-    <Card className="border-amber-500/40 bg-amber-500/5">
+    <Card className="border-[hsl(var(--warning)/0.4)] bg-amber-500/5">
       <CardHeader className="pb-2">
         <CardTitle className="text-base">{t("frontDesk.visitBalanceDue", "Visit balance due")}</CardTitle>
       </CardHeader>

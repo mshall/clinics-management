@@ -1,0 +1,285 @@
+{
+ "$comment": "DEV ONLY synthetic Kiorex marketplace bookings shared by the Kiorly Clinic demo seed (creates appointment demo_mk_<key>, externalReference demo_bk_<key>) and the Kiorex platform demo seed (creates BookingIntent demo_bk_<key> -> kiorlyAppointmentId demo_mk_<key>). dayOffset = days from today (UTC), hourUtc = start hour. Mirrored byte-identical in clinics-management/apps/api/prisma/demo and kiorex-platform/apps/api/prisma/demo.",
+ "bookings": [
+  {
+   "key": "mk01",
+   "doctorNameEn": "Dr Nadia Fouad",
+   "patientPhone": "+201000001001",
+   "dayOffset": -30,
+   "hourUtc": 8,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "mk02",
+   "doctorNameEn": "Dr Nadia Fouad",
+   "patientPhone": "+201000001001",
+   "dayOffset": -3,
+   "hourUtc": 9,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "mk03",
+   "doctorNameEn": "Dr Nadia Fouad",
+   "patientPhone": "+201000001002",
+   "dayOffset": 5,
+   "hourUtc": 10,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "PAID"
+  },
+  {
+   "key": "mk04",
+   "doctorNameEn": "Dr Walid Samy",
+   "patientPhone": "+201000001006",
+   "dayOffset": -21,
+   "hourUtc": 9,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "mk05",
+   "doctorNameEn": "Dr Walid Samy",
+   "patientPhone": "+201000001006",
+   "dayOffset": 7,
+   "hourUtc": 13,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "mk06",
+   "doctorNameEn": "Dr Walid Samy",
+   "patientPhone": "+201000001008",
+   "dayOffset": -9,
+   "hourUtc": 11,
+   "kiorexStatus": "NO_SHOW",
+   "kiorlyStatus": "NO_SHOW",
+   "deposit": "FORFEITED"
+  },
+  {
+   "key": "mk07",
+   "doctorNameEn": "Dr Tamer Shawky",
+   "patientPhone": "+201000001005",
+   "dayOffset": -14,
+   "hourUtc": 9,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "mk08",
+   "doctorNameEn": "Dr Tamer Shawky",
+   "patientPhone": "+201000001005",
+   "dayOffset": 12,
+   "hourUtc": 9,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "PAID"
+  },
+  {
+   "key": "mk09",
+   "doctorNameEn": "Dr Tamer Shawky",
+   "patientPhone": "+201000001009",
+   "dayOffset": 0,
+   "hourUtc": 11,
+   "kiorexStatus": "CHECKED_IN",
+   "kiorlyStatus": "CHECKED_IN",
+   "deposit": "PAID"
+  },
+  {
+   "key": "mk10",
+   "doctorNameEn": "Dr Rania Abdelaziz",
+   "patientPhone": "+201000001004",
+   "dayOffset": -18,
+   "hourUtc": 10,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "mk11",
+   "doctorNameEn": "Dr Rania Abdelaziz",
+   "patientPhone": "+201000001004",
+   "dayOffset": 2,
+   "hourUtc": 12,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "PAID"
+  },
+  {
+   "key": "mk12",
+   "doctorNameEn": "Dr Rania Abdelaziz",
+   "patientPhone": "+201000001010",
+   "dayOffset": -6,
+   "hourUtc": 8,
+   "kiorexStatus": "CANCELLED",
+   "kiorlyStatus": "CANCELLED",
+   "deposit": "REFUNDED"
+  },
+  {
+   "key": "mk13",
+   "doctorNameEn": "Dr Khaled Mansour",
+   "patientPhone": "+201000001007",
+   "dayOffset": -25,
+   "hourUtc": 14,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "mk14",
+   "doctorNameEn": "Dr Khaled Mansour",
+   "patientPhone": "+201000001011",
+   "dayOffset": 3,
+   "hourUtc": 9,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "mk15",
+   "doctorNameEn": "Dr Khaled Mansour",
+   "patientPhone": "+201000001012",
+   "dayOffset": 1,
+   "hourUtc": 15,
+   "kiorexStatus": "CANCELLED",
+   "kiorlyStatus": "CANCELLED",
+   "deposit": "REFUNDED"
+  },
+  {
+   "key": "mk16",
+   "doctorNameEn": "Dr Hossam Anwar",
+   "patientPhone": "+201000001007",
+   "dayOffset": -12,
+   "hourUtc": 10,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "mk17",
+   "doctorNameEn": "Dr Hossam Anwar",
+   "patientPhone": "+201000001007",
+   "dayOffset": 6,
+   "hourUtc": 10,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "PAID"
+  },
+  {
+   "key": "mk18",
+   "doctorNameEn": "Dr Ingy Lashin",
+   "patientPhone": "+201000001003",
+   "dayOffset": -8,
+   "hourUtc": 12,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "mk19",
+   "doctorNameEn": "Dr Ingy Lashin",
+   "patientPhone": "+201000001003",
+   "dayOffset": 9,
+   "hourUtc": 12,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "mk20",
+   "doctorNameEn": "Dr Sherif Bakr",
+   "patientPhone": "+201000001005",
+   "dayOffset": -40,
+   "hourUtc": 9,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "mk21",
+   "doctorNameEn": "Dr Sherif Bakr",
+   "patientPhone": "+201000001009",
+   "dayOffset": 4,
+   "hourUtc": 9,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "PAID"
+  },
+  {
+   "key": "mk22",
+   "doctorNameEn": "Dr Sherif Bakr",
+   "patientPhone": "+201000001012",
+   "dayOffset": 0,
+   "hourUtc": 13,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "mk23",
+   "doctorNameEn": "Dr Ola Gamal",
+   "patientPhone": "+201000001010",
+   "dayOffset": -5,
+   "hourUtc": 9,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "mk24",
+   "doctorNameEn": "Dr Ola Gamal",
+   "patientPhone": "+201000001010",
+   "dayOffset": 8,
+   "hourUtc": 9,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "PAID"
+  },
+  {
+   "key": "mk25",
+   "doctorNameEn": "Dr Medhat Younes",
+   "patientPhone": "+201000001011",
+   "dayOffset": -2,
+   "hourUtc": 10,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "mk26",
+   "doctorNameEn": "Dr Medhat Younes",
+   "patientPhone": "+201000001004",
+   "dayOffset": 10,
+   "hourUtc": 10,
+   "kiorexStatus": "PENDING_CLINIC",
+   "kiorlyStatus": "SCHEDULED",
+   "deposit": "PAID"
+  },
+  {
+   "key": "mk27",
+   "doctorNameEn": "Dr Nadia Fouad",
+   "patientPhone": "+201000001002",
+   "dayOffset": -15,
+   "hourUtc": 9,
+   "kiorexStatus": "CANCELLED",
+   "kiorlyStatus": "CANCELLED",
+   "deposit": "REFUNDED"
+  },
+  {
+   "key": "mk28",
+   "doctorNameEn": "Dr Tamer Shawky",
+   "patientPhone": "+201000001001",
+   "dayOffset": 15,
+   "hourUtc": 10,
+   "kiorexStatus": "HELD",
+   "kiorlyStatus": "SCHEDULED",
+   "deposit": "REQUIRED"
+  }
+ ]
+}

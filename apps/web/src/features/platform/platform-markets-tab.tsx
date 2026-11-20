@@ -191,7 +191,7 @@ export function PlatformMarketsTab() {
                             <span
                               className={
                                 m.status === "LIVE"
-                                  ? "rounded bg-emerald-500/15 px-2 py-0.5 text-emerald-700 dark:text-emerald-400 w-fit"
+                                  ? "rounded bg-emerald-500/15 px-2 py-0.5 text-[hsl(var(--success))] w-fit"
                                   : "rounded bg-muted px-2 py-0.5 w-fit"
                               }
                             >
@@ -208,11 +208,11 @@ export function PlatformMarketsTab() {
                         <td className="px-3 py-2 text-xs">
                           {m.crossBorderRequired ? (
                             m.legalLaunchApproved ? (
-                              <span className="text-emerald-700 dark:text-emerald-400">
+                              <span className="text-[hsl(var(--success))] ">
                                 {m.crossBorderApprovalRef ??
                                   t("platform.legal.pilotOnly", "Pilot exception")}
                                 {m.legalExpiresInDays != null && m.legalExpiresInDays <= 60 ? (
-                                  <span className="block text-amber-700 dark:text-amber-400">
+                                  <span className="block text-[hsl(var(--warning))] ">
                                     {t("platform.legal.expiresSoon", "{{days}}d to expiry", {
                                       days: m.legalExpiresInDays,
                                     })}
@@ -220,7 +220,7 @@ export function PlatformMarketsTab() {
                                 ) : null}
                               </span>
                             ) : (
-                              <span className="text-amber-700 dark:text-amber-400">
+                              <span className="text-[hsl(var(--warning))] ">
                                 {t("platform.legal.missingShort", "Missing approval")}
                               </span>
                             )

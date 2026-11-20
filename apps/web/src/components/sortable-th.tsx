@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +37,7 @@ export function SortableTh({
   filterValue,
   onFilterChange,
 }: SortableThProps) {
+  const { t } = useTranslation();
   const active = sortBy === column;
   const centered = align === "center";
   const hasFilter = onFilterChange != null;
@@ -76,10 +78,11 @@ export function SortableTh({
       <div className={cn("space-y-1", centered && "flex flex-col items-stretch")}>
         {sortButton}
         <Input
-          className={cn("h-8 text-base sm:text-xs", centered && "text-center")}
+          className={cn("h-7 min-h-7 rounded-md border-transparent bg-background/60 px-2 text-xs shadow-none placeholder:text-muted-foreground/70 hover:border-input focus-visible:border-input md:h-7 md:min-h-7", centered && "text-center")}
           value={filterValue}
           onChange={(e) => onFilterChange(e.target.value)}
-          placeholder="…"
+          placeholder={t("common.filter", "Filter")}
+          aria-label={`${t("common.filter", "Filter")}: ${typeof label === "string" ? label : column}`}
           onClick={(e) => e.stopPropagation()}
         />
       </div>
@@ -116,16 +119,18 @@ export function FilterTh({
   className?: string;
   align?: "start" | "center";
 }) {
+  const { t } = useTranslation();
   const centered = align === "center";
   return (
     <th className={cn("align-top px-3 py-2 font-medium", centered ? "text-center" : "text-start", className)}>
       <div className={cn("space-y-1", centered && "flex flex-col items-stretch")}>
         {filterColumnLabelRow(label, centered)}
         <Input
-          className={cn("h-8 text-base sm:text-xs", centered && "text-center")}
+          className={cn("h-7 min-h-7 rounded-md border-transparent bg-background/60 px-2 text-xs shadow-none placeholder:text-muted-foreground/70 hover:border-input focus-visible:border-input md:h-7 md:min-h-7", centered && "text-center")}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="…"
+          placeholder={t("common.filter", "Filter")}
+          aria-label={`${t("common.filter", "Filter")}: ${label}`}
         />
       </div>
     </th>

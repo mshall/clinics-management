@@ -55,7 +55,7 @@ function ConfirmOwnerCard({ clinic, onDone }: { clinic: RepClinicDto; onDone: ()
   const resend = useMutation({ mutationFn: () => repResendOtp(clinic.tenantId) });
   const ready = code.trim().length >= 4 && required.every((id) => checked[id]) && catalog.length > 0;
   return (
-    <div className="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3 dark:bg-amber-950/30" data-testid="rep-confirm">
+    <div className="space-y-2 rounded-md border border-[hsl(var(--warning)/0.3)] bg-[hsl(var(--warning)/0.12)] p-3 " data-testid="rep-confirm">
       <p className="text-sm">{t("rep.confirmIntro")}</p>
       <ul className="space-y-1 text-sm">
         {required.map((id) => {

@@ -41,6 +41,8 @@ describe("FS-01 scheduling engine", () => {
       maxDaysAhead: 30,
       depositAmount: null,
       newPatientOnly: false,
+      serviceLocation: "IN_CLINIC" as const,
+      homeSurchargeAmount: null,
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),

@@ -11,6 +11,15 @@ Code: `infra/tofu/` (see `infra/tofu/README.md`). The CDK stack (`infra/src`) st
 | T4-alt | Import path if real tenant data exists | Documented in README §4 | — |
 | T5 | Point domains at OpenTofu CloudFront; destroy CDK stack; delete `infra/src` + CDK steps in deploy-aws.yml | Pending (after cutover) | Platform |
 
+## Rev 2.3 additions (backlog item 7, KX-23 Kiorly Nurse) - written, validated offline, not applied
+| Item | Status | Owner |
+|---|---|---|
+| `nurse.kiorly.com` alias on the Clinic stack (ACM SAN + CloudFront alias + Route 53; prod on, staging off) | Written; applies with the prod stack (T4) after `live/prod/global/dns` | Platform / Founder |
+| `modules/aws/location` (Amazon Location map + route calculator), default disabled, real-provider counterpart of the mock adapter | Written; enable only in "Provider go-live" (staging first); Egypt coverage/data-source check NEEDS_HUMAN | Platform / Founder |
+| `modules/aws/safety-alerts` (latency <= 60 s, failure, undelivered, job-runner errors) + dedicated SNS topic, Clinic (producer) and kiorex-platform (consumer) | Written; quiet until the API emits the documented log events; **on-call rota NEEDS_HUMAN** | Platform / API team |
+| `geostamp-retention-purge` scheduled job (EventBridge Scheduler -> API internal endpoint), `enabled = false` | Defined in tfvars; enable after the API endpoint exists and DPO confirms 12-month retention (KX-15) | API team / DPO |
+Details: `infra/tofu/README.md` section 6. App-side nurse host handling, OIDC redirect URIs (kiorex-account) and the adapter/endpoint/log events are separate work.
+
 ## Pipeline changes
 - `.github/workflows/deploy-aws-kiorex.yml`: no longer triggers on push to `kiorex` (manual only).
 - New: `infra-plan.yml`, `deploy.yml`, `release.yml`, `drift.yml` (apply workflows manual; enable push/tag triggers after founder approves first deploy). `deploy-aws.yml` (main) untouched.
@@ -20,3 +29,11 @@ Code: `infra/tofu/` (see `infra/tofu/README.md`). The CDK stack (`infra/src`) st
 - Production account id (HB05), domains/registrar delegation + DNSSEC DS (HB08), on-call emails/webhooks, budget, OpenAI secret name, SES production access (NH-016).
 - HB07 outbound path from App Runner VPC egress (NAT or egress proxy) to be verified in staging.
 - `tflint` not run locally (not installed); `trivy` runs in CI.
+
+## Deployment checklist (staging first; a human runs every apply)
+1. Platform admin: bootstrap (T1), relax the SCP denies, confirm the staging account id (599243104052).
+2. `tofu fmt -check -recursive && tofu init -backend=false && tofu validate` in every live directory; `tofu test` in `infra/tofu/modules/product-stack` (demo-seed prod guard).
+3. Phase 1 apply (`-target=...container_service.aws_ecr_repository.this`), push the API image **and the seed image** (`apps/api/Dockerfile.seed`, tag = git sha) for each product, then the full apply (staging).
+4. Smoke: health endpoints, Passport sign-in, one booking against the staging stacks (mock providers).
+5. **Seed the demo data (staging only, optional):** `scripts/seed-staging.sh --dry-run`, then `scripts/seed-staging.sh --yes` from the workspace root: Passport Cognito users, Kiorly Clinic, Pharmacy, Lab, Kiorex provider sync, Kiorex. `enable_demo_seed` is true only in staging tfvars; the prod plan fails if it is ever true; the compiled seeds refuse unless `DEMO_SEED_ALLOWED=true` and `KIORLY_ENV` is non-production. Verify HB07 (egress for the provider sync) first. Logins: `TEST_DATA.md`.
+6. Golden flows + load test (T3), then founder sign-off before any production step (T4).

@@ -53,6 +53,7 @@ import { CommissionChargeService, type BilledReversalCreditIntent } from "../kio
 import { AppointmentOutboxService } from "../messaging/appointment-outbox.service";
 import { DepositSettlementService } from "../billing/deposit-settlement.service";
 import { auditClinicCancellation, clinicCancellationEventMetadata, clinicCancellationPatch } from "./kiorex-clinic-cancel";
+import { syncHomeVisitWithAppointmentStatus } from "../home-visits/home-visit-sync";
 
 const appointmentDtoInclude = {
   patient: {
@@ -889,6 +890,7 @@ export class AppointmentsService {
       }
       if (credit) creditIntents.push(credit);
       await this.depositSettlement.settleAppointmentDepositsTx(tx, tenantId, row.id, viewer?.userId ?? null);
+      await syncHomeVisitWithAppointmentStatus(tx, tenantId, row.id, row.status);
       await this.appointmentOutbox.emitStatusChange(
         {
           tenantId,
@@ -898,7 +900,13 @@ export class AppointmentsService {
           nextStatus: row.status,
           bookingSource: row.bookingSource,
           cancelledByPatient: false,
-          metadata: cancelPatch ? clinicCancellationEventMetadata(row) : undefined,
+          metadata: {
+            ...(cancelPatch ? clinicCancellationEventMetadata(row) : {}),
+            // KX-09 §04: home visits carry serviceLocation=HOME and (at check-in) the arrival time; in-clinic payloads are unchanged.
+            ...(row.serviceLocation === "HOME"
+              ? { serviceLocation: "HOME", ...(row.status === AppointmentStatus.CHECKED_IN && row.checkedInAt ? { arrivedAt: row.checkedInAt.toISOString() } : {}) }
+              : {}),
+          },
         },
         tx,
       );

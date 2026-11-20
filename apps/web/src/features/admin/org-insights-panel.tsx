@@ -52,8 +52,8 @@ function staffDisplayName(row: StaffRow): string {
 function scoreColorClass(score: number, min: number, max: number): string {
   if (max <= min) return "text-muted-foreground";
   const ratio = (score - min) / (max - min);
-  if (ratio >= 0.66) return "font-semibold text-emerald-600 dark:text-emerald-400";
-  if (ratio >= 0.33) return "font-semibold text-amber-600 dark:text-amber-400";
+  if (ratio >= 0.66) return "font-semibold text-[hsl(var(--success))] ";
+  if (ratio >= 0.33) return "font-semibold text-[hsl(var(--warning))] ";
   return "font-medium text-muted-foreground";
 }
 
@@ -217,17 +217,17 @@ export function OrgInsightsPanel() {
               {roleStars.map(({ role, winner }) => (
                 <Card
                   key={role}
-                  className="overflow-hidden border-amber-200/50 shadow-sm transition-shadow hover:shadow-md motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:duration-300 dark:border-amber-900/40"
+                  className="overflow-hidden border-[hsl(var(--warning)/0.5)] shadow-sm transition-shadow hover:shadow-md motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:duration-300 "
                 >
                   <CardContent className="flex items-start gap-2.5 p-3">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-950/50">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--warning)/0.12)] ">
                       <Trophy
                         className="size-5 text-amber-500 motion-safe:animate-[pulse_2.2s_ease-in-out_infinite]"
                         aria-hidden
                       />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[11px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200">
+                      <p className="truncate text-[11px] font-semibold uppercase tracking-wide text-[hsl(var(--warning))] ">
                         {t("admin.insights.topRoleTitle", "Top {{role}}", { role: formatUserRole(role, t) })}
                       </p>
                       <p className="truncate text-sm font-semibold leading-tight">{staffDisplayName(winner)}</p>

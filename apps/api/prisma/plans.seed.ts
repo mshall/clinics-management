@@ -6,6 +6,10 @@ const PLAN_META: Record<PlanKey, { nameEn: string; nameAr: string; sortOrder: nu
   PRO: { nameEn: "Pro", nameAr: "برو", sortOrder: 20, isPublic: true },
   CLINIC: { nameEn: "Clinic", nameAr: "عيادة", sortOrder: 30, isPublic: true },
   ENTERPRISE: { nameEn: "Enterprise", nameAr: "مؤسسات", sortOrder: 40, isPublic: false },
+  /** KX-23 §05 — Nurse edition plans. Prices are PROPOSED / NEEDS_HUMAN (code constants in src/nurse/nurse-plans.ts, no PlanPrice rows); never public in the Clinic catalogue. */
+  NURSE_LITE: { nameEn: "Nurse Lite", nameAr: "تمريض لايت", sortOrder: 110, isPublic: false },
+  NURSE_PRO: { nameEn: "Nurse Pro", nameAr: "تمريض برو", sortOrder: 120, isPublic: false },
+  NURSE_AGENCY: { nameEn: "Nurse Agency", nameAr: "تمريض للشركات", sortOrder: 130, isPublic: false },
 };
 
 const ENTITLEMENT_ROWS = planEntitlementRowsForSeed();

@@ -32,7 +32,8 @@ test("FS-04 send a deposit link, open the pay page, mark it paid", async ({ page
   await patientPage.close();
 
   await page.getByTestId("deposit-mark-paid").click();
-  await page.getByLabel("Transaction reference").fill("IPN-E2E-0001");
+  // Unique per run: (tenantId, source, externalRef) is unique, so a fixed reference only works once per database.
+  await page.getByLabel("Transaction reference").fill(`IPN-E2E-${Date.now()}`);
   await page.getByRole("button", { name: "Confirm payment" }).click();
   await expect(page.getByTestId("deposit-badge")).toHaveAttribute("data-status", "HELD", { timeout: 20_000 });
 });

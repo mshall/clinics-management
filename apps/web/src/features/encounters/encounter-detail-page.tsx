@@ -19,7 +19,7 @@ import {
   Upload,
   Wind,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -44,7 +44,6 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useEncounterQuery } from "@/lib/api-hooks";
 import type { EncounterDetailDto, EncounterDocumentDto } from "@/lib/api-types";
 import { ApiError, apiDelete, apiFetchBlob, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
-import { filterToolbarClassName } from "@/lib/form-control-styles";
 import { uploadFilesWithConcurrency } from "@/lib/upload-files-sequentially";
 import { canDeleteEncounter } from "@/lib/encounter-delete-policy";
 import { canGenerateInvoice } from "@/lib/invoice-generate-policy";
@@ -586,13 +585,13 @@ export function EncounterDetailPage() {
 
       <Dialog open={finalizeDialogOpen} onOpenChange={setFinalizeDialogOpen}>
         <DialogContent
-          className="gap-0 overflow-hidden border-amber-200 p-0 sm:max-w-md dark:border-amber-900/60"
+          className="gap-0 overflow-hidden border-[hsl(var(--warning)/0.3)] p-0 sm:max-w-md "
           aria-describedby="encounter-finalize-desc"
         >
-          <div className="border-b border-amber-100 bg-gradient-to-br from-amber-50 to-orange-50 px-6 py-5 dark:border-amber-900/40 dark:from-amber-950/80 dark:to-orange-950/40">
+          <div className="border-b border-[hsl(var(--warning)/0.3)] bg-gradient-to-br from-amber-50 to-orange-50 px-6 py-5 dark:from-amber-950/80 dark:to-orange-950/40">
             <DialogHeader className="space-y-3 text-start">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-100 ring-4 ring-amber-100/80 dark:bg-amber-900/60 dark:ring-amber-900/40">
-                <Lock className="h-5 w-5 text-amber-700 dark:text-amber-300" aria-hidden />
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[hsl(var(--warning)/0.12)] ring-4 ring-[hsl(var(--warning)/0.8)] ">
+                <Lock className="h-5 w-5 text-[hsl(var(--warning))] " aria-hidden />
               </div>
               <DialogTitle className="text-start text-xl">{t("encounters.confirmFinalizeTitle", "Finalize this encounter?")}</DialogTitle>
             </DialogHeader>
@@ -604,13 +603,13 @@ export function EncounterDetailPage() {
                 "Once finalized, SOAP notes, vitals, medications, and documents can no longer be edited. This action cannot be undone."
               )}
             </p>
-            <div className="rounded-lg border border-amber-200/80 bg-amber-50/50 px-3 py-2 text-sm dark:border-amber-900/50 dark:bg-amber-950/30">
+            <div className="rounded-lg border border-[hsl(var(--warning)/0.3)] bg-[hsl(var(--warning)/0.08)] px-3 py-2 text-sm ">
               <span className="text-muted-foreground">{t("encounters.status", "Status")}: </span>
-              <span className="font-medium text-amber-900 dark:text-amber-100">
+              <span className="font-medium text-[hsl(var(--warning))] ">
                 {enc ? encounterStatusLabel(t, enc.status) : "—"}
               </span>
               <span className="mx-2 text-muted-foreground">→</span>
-              <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+              <span className="font-semibold text-[hsl(var(--success))] ">
                 {encounterStatusLabel(t, "FINALIZED")}
               </span>
             </div>
@@ -620,7 +619,7 @@ export function EncounterDetailPage() {
               </Button>
               <Button
                 type="button"
-                className="bg-amber-600 text-white hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-500"
+                className="bg-amber-700 text-white hover:bg-amber-800 "
                 disabled={finalizeMutation.isPending}
                 onClick={() => finalizeMutation.mutate()}
               >
@@ -633,13 +632,13 @@ export function EncounterDetailPage() {
 
       <Dialog open={noMedsConfirmOpen} onOpenChange={setNoMedsConfirmOpen}>
         <DialogContent
-          className="gap-0 overflow-hidden border-slate-300 p-0 sm:max-w-md dark:border-slate-700"
+          className="gap-0 overflow-hidden border-kx-neutral-300 p-0 sm:max-w-md dark:border-kx-neutral-800"
           aria-describedby="encounter-no-meds-desc"
         >
-          <div className="border-b border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 px-6 py-5 dark:border-slate-800 dark:from-slate-900 dark:to-slate-950">
+          <div className="border-b border-kx-neutral-200 bg-gradient-to-br from-kx-neutral-50 to-kx-neutral-100 px-6 py-5 dark:border-kx-neutral-900 dark:from-kx-neutral-950 dark:to-kx-neutral-950">
             <DialogHeader className="space-y-3 text-start">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-200 ring-4 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-800/80">
-                <Ban className="h-5 w-5 text-slate-700 dark:text-slate-300" aria-hidden />
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-kx-neutral-200 ring-4 ring-kx-neutral-200/80 dark:bg-kx-neutral-900 dark:ring-kx-neutral-900/80">
+                <Ban className="h-5 w-5 text-kx-neutral-800 dark:text-kx-neutral-300" aria-hidden />
               </div>
               <DialogTitle className="text-start text-xl">{t("encounters.confirmNoMedsTitle", "Mark no medications prescribed?")}</DialogTitle>
             </DialogHeader>
@@ -827,71 +826,16 @@ export function EncounterDetailPage() {
           </CardTitle>
           <CardDescription>{draft ? t("encounters.editable") : t("encounters.readOnly")}</CardDescription>
         </CardHeader>
-        <CardContent className={filterToolbarClassName}>
-          <div className="flex min-w-[7rem] items-center gap-2">
-            <Heart className="h-4 w-4 shrink-0 text-rose-500" aria-hidden />
-            <div className="min-w-0 flex-1 space-y-1">
-              <Label className="text-xs text-muted-foreground">{t("encounters.hr")}</Label>
-              <Input
-                className="h-9 ltr-nums"
-                inputMode="numeric"
-                value={heartRate}
-                onChange={(e) => setHeartRate(e.target.value)}
-                disabled={!draft}
-                placeholder="bpm"
-              />
-            </div>
-          </div>
-          <div className="flex min-w-[7rem] items-center gap-2">
-            <Wind className="h-4 w-4 shrink-0 text-sky-500" aria-hidden />
-            <div className="min-w-0 flex-1 space-y-1">
-              <Label className="text-xs text-muted-foreground">{t("encounters.spo2")}</Label>
-              <Input
-                className="h-9 ltr-nums"
-                inputMode="numeric"
-                value={spo2}
-                onChange={(e) => setSpo2(e.target.value)}
-                disabled={!draft}
-                placeholder="%"
-              />
-            </div>
-          </div>
-          <div className="flex min-w-[10rem] items-center gap-2">
-            <Activity className="h-4 w-4 shrink-0 text-violet-500" aria-hidden />
-            <div className="flex gap-2">
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">{t("encounters.bpSys")}</Label>
-                <Input className="h-9 w-20 ltr-nums" value={bpSys} onChange={(e) => setBpSys(e.target.value)} disabled={!draft} />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">{t("encounters.bpDia")}</Label>
-                <Input className="h-9 w-20 ltr-nums" value={bpDia} onChange={(e) => setBpDia(e.target.value)} disabled={!draft} />
-              </div>
-            </div>
-          </div>
-          <div className="flex min-w-[7rem] items-center gap-2">
-            <Thermometer className="h-4 w-4 shrink-0 text-amber-500" aria-hidden />
-            <div className="min-w-0 flex-1 space-y-1">
-              <Label className="text-xs text-muted-foreground">{t("encounters.tempC")}</Label>
-              <Input className="h-9 ltr-nums" value={temperature} onChange={(e) => setTemperature(e.target.value)} disabled={!draft} />
-            </div>
-          </div>
-          <div className="flex min-w-[7rem] items-center gap-2">
-            <Scale className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-            <div className="min-w-0 flex-1 space-y-1">
-              <Label className="text-xs text-muted-foreground">{t("encounters.weightKg")}</Label>
-              <Input className="h-9 ltr-nums" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} disabled={!draft} />
-            </div>
-          </div>
-          <div className="flex min-w-[7rem] items-center gap-2">
-            <Ruler className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-            <div className="min-w-0 flex-1 space-y-1">
-              <Label className="text-xs text-muted-foreground">{t("encounters.heightCm")}</Label>
-              <Input className="h-9 ltr-nums" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} disabled={!draft} />
-            </div>
-          </div>
+        <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7 xl:items-end" data-testid="vitals-grid">
+          <VitalField icon={<Heart className="size-3.5 text-rose-500" aria-hidden />} label={t("encounters.hr")} unit="bpm" value={heartRate} onChange={setHeartRate} disabled={!draft} inputMode="numeric" />
+          <VitalField icon={<Wind className="size-3.5 text-kx-ocean-600" aria-hidden />} label={t("encounters.spo2")} unit="%" value={spo2} onChange={setSpo2} disabled={!draft} inputMode="numeric" />
+          <VitalField icon={<Activity className="size-3.5 text-kx-indigo-600" aria-hidden />} label={t("encounters.bpSys")} unit="mmHg" value={bpSys} onChange={setBpSys} disabled={!draft} inputMode="numeric" />
+          <VitalField icon={<Activity className="size-3.5 text-kx-indigo-600" aria-hidden />} label={t("encounters.bpDia")} unit="mmHg" value={bpDia} onChange={setBpDia} disabled={!draft} inputMode="numeric" />
+          <VitalField icon={<Thermometer className="size-3.5 text-amber-500" aria-hidden />} label={t("encounters.tempC")} unit="°C" value={temperature} onChange={setTemperature} disabled={!draft} inputMode="decimal" />
+          <VitalField icon={<Scale className="size-3.5 text-muted-foreground" aria-hidden />} label={t("encounters.weightKg")} unit="kg" value={weightKg} onChange={setWeightKg} disabled={!draft} inputMode="decimal" />
+          <VitalField icon={<Ruler className="size-3.5 text-muted-foreground" aria-hidden />} label={t("encounters.heightCm")} unit="cm" value={heightCm} onChange={setHeightCm} disabled={!draft} inputMode="decimal" />
           {draft ? (
-            <Button type="button" variant="secondary" size="sm" className="shrink-0" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+            <Button type="button" variant="secondary" size="sm" className="col-span-full justify-self-start" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
               {t("encounters.saveVitals")}
             </Button>
           ) : null}
@@ -1045,7 +989,7 @@ export function EncounterDetailPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <FlaskConical className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
+                <FlaskConical className="h-4 w-4 shrink-0 text-[hsl(var(--success))]" aria-hidden />
                 {t("encounters.labs")}
               </CardTitle>
               <CardDescription>{t("encounters.labsHint")}</CardDescription>
@@ -1106,7 +1050,7 @@ export function EncounterDetailPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <ScanLine className="h-4 w-4 shrink-0 text-sky-600" aria-hidden />
+                <ScanLine className="h-4 w-4 shrink-0 text-kx-ocean-700" aria-hidden />
                 {t("encounters.radiology")}
               </CardTitle>
               <CardDescription>{t("encounters.radiologyHint")}</CardDescription>
@@ -1176,7 +1120,7 @@ export function EncounterDetailPage() {
                 <TabsList className="grid h-auto w-full grid-cols-3 gap-1 p-1">
                   <TabsTrigger
                     value="none"
-                    className="gap-1.5 data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900 dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-slate-100"
+                    className="gap-1.5 data-[state=active]:bg-kx-neutral-100 data-[state=active]:text-kx-neutral-950 dark:data-[state=active]:bg-kx-neutral-900 dark:data-[state=active]:text-kx-neutral-100"
                   >
                     <Ban className="h-4 w-4 shrink-0" aria-hidden />
                     <span className="hidden sm:inline">{t("encounters.medModeNone")}</span>
@@ -1184,7 +1128,7 @@ export function EncounterDetailPage() {
                   </TabsTrigger>
                   <TabsTrigger
                     value="manual"
-                    className="gap-1.5 data-[state=active]:bg-emerald-100 data-[state=active]:text-emerald-950 dark:data-[state=active]:bg-emerald-950 dark:data-[state=active]:text-emerald-50"
+                    className="gap-1.5 data-[state=active]:bg-[hsl(var(--success)/0.12)] data-[state=active]:text-[hsl(var(--success))] dark:data-[state=active]:bg-emerald-950 dark:data-[state=active]:text-emerald-50"
                   >
                     <Pill className="h-4 w-4 shrink-0" aria-hidden />
                     <span className="hidden sm:inline">{t("encounters.medModeManual")}</span>
@@ -1197,7 +1141,7 @@ export function EncounterDetailPage() {
                   </TabsTrigger>
                   <TabsTrigger
                     value="prescription"
-                    className="gap-1.5 data-[state=active]:bg-violet-100 data-[state=active]:text-violet-950 dark:data-[state=active]:bg-violet-950 dark:data-[state=active]:text-violet-50"
+                    className="gap-1.5 data-[state=active]:bg-kx-indigo-100 data-[state=active]:text-kx-indigo-950 dark:data-[state=active]:bg-kx-indigo-950 dark:data-[state=active]:text-kx-indigo-50"
                   >
                     <FileUp className="h-4 w-4 shrink-0" aria-hidden />
                     <span className="hidden sm:inline">{t("encounters.medModePrescription")}</span>
@@ -1210,7 +1154,7 @@ export function EncounterDetailPage() {
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="none" className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-900/30">
+                <TabsContent value="none" className="rounded-xl border border-kx-neutral-200 bg-kx-neutral-50/50 p-4 dark:border-kx-neutral-900 dark:bg-kx-neutral-950/30">
                   <p className="text-sm text-muted-foreground">
                     {t(
                       "encounters.noMedsTabHint",
@@ -1218,11 +1162,11 @@ export function EncounterDetailPage() {
                     )}
                   </p>
                   {draft && noMedications ? (
-                    <p className="mt-2 text-sm font-medium text-slate-700 dark:text-slate-300">{t("encounters.noMedsActive", "Selected")}</p>
+                    <p className="mt-2 text-sm font-medium text-kx-neutral-800 dark:text-kx-neutral-300">{t("encounters.noMedsActive", "Selected")}</p>
                   ) : null}
                 </TabsContent>
 
-                <TabsContent value="manual" className="rounded-xl border border-emerald-200/80 bg-emerald-50/30 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+                <TabsContent value="manual" className="rounded-xl border border-[hsl(var(--success)/0.3)] bg-[hsl(var(--success)/0.08)] p-4 ">
                   {!medsPanelActive && draft ? (
                     <p className="mb-3 text-sm text-muted-foreground">{t("encounters.panelDisabledNoMeds")}</p>
                   ) : null}
@@ -1274,7 +1218,7 @@ export function EncounterDetailPage() {
                         </div>
                       ) : null}
                       {generatedRxPreview ? (
-                        <div className="rounded-xl border border-emerald-300/80 bg-background p-3 dark:border-emerald-800">
+                        <div className="rounded-xl border border-[hsl(var(--success)/0.3)] bg-background p-3 ">
                           <p className="mb-2 text-sm font-medium">{t("encounters.generatedPrescription")}</p>
                           <img
                             src={generatedRxPreview}
@@ -1352,7 +1296,7 @@ export function EncounterDetailPage() {
                   ) : null}
                 </TabsContent>
 
-                <TabsContent value="prescription" className="rounded-xl border border-violet-200/80 bg-violet-50/30 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
+                <TabsContent value="prescription" className="rounded-xl border border-kx-indigo-200/80 bg-kx-indigo-50/30 p-4 dark:border-kx-indigo-950/50 dark:bg-kx-indigo-950/20">
                   {!medsPanelActive && draft ? (
                     <p className="mb-3 text-sm text-muted-foreground">{t("encounters.panelDisabledNoMeds")}</p>
                   ) : null}
@@ -1375,14 +1319,14 @@ export function EncounterDetailPage() {
                         onClick={() => prescriptionFileRef.current?.click()}
                         className={cn(
                           "mb-4 flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-sm transition-colors",
-                          "border-violet-300 bg-violet-50/50 text-violet-900 hover:border-violet-400 hover:bg-violet-50",
-                          "dark:border-violet-700 dark:bg-violet-950/30 dark:text-violet-100 dark:hover:border-violet-500 dark:hover:bg-violet-950/50",
+                          "border-kx-indigo-300 bg-kx-indigo-50/50 text-kx-indigo-950 hover:border-kx-indigo-400 hover:bg-kx-indigo-50",
+                          "dark:border-kx-indigo-800 dark:bg-kx-indigo-950/30 dark:text-kx-indigo-100 dark:hover:border-kx-indigo-600 dark:hover:bg-kx-indigo-950/50",
                           uploadMutation.isPending && "pointer-events-none opacity-60"
                         )}
                       >
-                        <FileUp className="h-8 w-8 text-violet-500 dark:text-violet-400" aria-hidden />
+                        <FileUp className="h-8 w-8 text-kx-indigo-600 dark:text-kx-indigo-400" aria-hidden />
                         <span className="font-medium">{t("encounters.uploadPrescription", "Upload prescription")}</span>
-                        <span className="text-xs text-violet-700/80 dark:text-violet-300/80">{t("encounters.prescriptionUploadHint")}</span>
+                        <span className="text-xs text-kx-indigo-800/80 dark:text-kx-indigo-300/80">{t("encounters.prescriptionUploadHint")}</span>
                       </button>
                     </>
                   ) : null}
@@ -1454,6 +1398,20 @@ export function EncounterDetailPage() {
           defaultCurrency={visitFeeCurrency}
         />
       ) : null}
+    </div>
+  );
+}
+
+
+function VitalField({ icon, label, unit, value, onChange, disabled, inputMode }: { icon?: ReactNode; label: string; unit: string; value: string; onChange: (v: string) => void; disabled: boolean; inputMode: "numeric" | "decimal" }) {
+  const id = useId();
+  return (
+    <div className="min-w-0 space-y-1">
+      <Label htmlFor={id} className="flex items-center gap-1.5 text-xs text-muted-foreground">{icon}<span className="truncate">{label}</span></Label>
+      <div className="relative">
+        <Input id={id} className="h-11 pe-12 text-base font-semibold tabular-nums ltr-nums md:h-11" inputMode={inputMode} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} />
+        <span aria-hidden className="pointer-events-none absolute inset-y-0 end-3 flex items-center text-xs text-muted-foreground">{unit}</span>
+      </div>
     </div>
   );
 }

@@ -1,8 +1,17 @@
 import * as TabsPrimitive from "@radix-ui/react-tabs";
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
-const Tabs = TabsPrimitive.Root;
+/** Radix Tabs default to dir="ltr"; follow the document direction so Arabic tab lists and panels mirror correctly. */
+const Tabs = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Root>
+>(({ dir, ...props }, ref) => {
+  const { i18n } = useTranslation();
+  return <TabsPrimitive.Root ref={ref} dir={dir ?? (i18n.language.startsWith("ar") ? "rtl" : "ltr")} {...props} />;
+});
+Tabs.displayName = TabsPrimitive.Root.displayName;
 
 const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,

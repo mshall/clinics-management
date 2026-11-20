@@ -140,7 +140,7 @@ export function KiorexBookingLinkCard({ clinicId }: { clinicId: string }) {
               <canvas ref={canvasRef} className="rounded border border-border bg-white p-2" aria-hidden />
               <div className="min-w-0 flex-1 space-y-3">
                 <div className="flex gap-2">
-                  <Input readOnly value={data.url} dir="ltr" className="font-mono text-xs" data-testid="kiorex-booking-link-url" />
+                  <Input readOnly aria-label={t("kiorexTab.bookingLink.url", "Booking link")} value={data.url} dir="ltr" className="font-mono text-xs" data-testid="kiorex-booking-link-url" />
                   <CopyButton value={data.url} />
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -152,7 +152,7 @@ export function KiorexBookingLinkCard({ clinicId }: { clinicId: string }) {
                     <span className="ms-1">{t("kiorexTab.bookingLink.share", "Share")}</span>
                   </Button>
                 </div>
-                <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400" data-testid="kiorex-booking-link-free">
+                <p className="text-xs font-medium text-[hsl(var(--success))] " data-testid="kiorex-booking-link-free">
                   {t("kiorexTab.bookingLink.commissionFree", "No Kiorex commission on bookings made through this link.")}
                 </p>
               </div>

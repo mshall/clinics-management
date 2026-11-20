@@ -38,6 +38,10 @@ import { MessagingModule } from "./messaging/messaging.module";
 import { ClinicAiModule } from "./clinic-ai/clinic-ai.module";
 import { MarketsModule } from "./markets/markets.module";
 import { FeatureFlagsModule } from "./feature-flags/feature-flags.module";
+import { ScopeOfPracticeModule } from "./scope-of-practice/scope-of-practice.module";
+import { FieldVisitModule } from "./field-visit/field-visit.module";
+import { HomeVisitsModule } from "./home-visits/home-visits.module";
+import { NurseModule } from "./nurse/nurse.module";
 import { ProvidersModule } from "./providers/providers.module";
 import { PlansModule } from "./plans/plans.module";
 import { EntitlementsModule } from "./entitlements/entitlements.module";
@@ -98,6 +102,10 @@ import { PushModule } from "./push/push.module";
     ClinicAiModule,
     MarketsModule,
     FeatureFlagsModule,
+    ScopeOfPracticeModule,
+    FieldVisitModule,
+    HomeVisitsModule,
+    NurseModule,
     ProvidersModule,
     PlansModule,
     EntitlementsModule,

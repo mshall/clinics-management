@@ -76,16 +76,16 @@ export function EncounterProfileDocuments({ encounterId, status, canUpload }: Pr
         <input ref={radRef} type="file" className="hidden" accept="image/*,application/pdf" multiple />
         {isDraftLike ? <input ref={rxRef} type="file" className="hidden" accept="image/*,application/pdf" /> : null}
         <Button type="button" size="sm" variant="secondary" disabled={uploadMut.isPending} onClick={bindPick("LAB", labRef)}>
-          <FlaskConical className="me-1.5 h-3.5 w-3.5 text-sky-600" aria-hidden />
+          <FlaskConical className="me-1.5 h-3.5 w-3.5 text-kx-ocean-700" aria-hidden />
           {t("encounters.uploadLab", "Lab")}
         </Button>
         <Button type="button" size="sm" variant="secondary" disabled={uploadMut.isPending} onClick={bindPick("RADIOLOGY", radRef)}>
-          <ScanLine className="me-1.5 h-3.5 w-3.5 text-violet-600" aria-hidden />
+          <ScanLine className="me-1.5 h-3.5 w-3.5 text-kx-indigo-700" aria-hidden />
           {t("encounters.uploadRadiology", "Radiology")}
         </Button>
         {isDraftLike ? (
           <Button type="button" size="sm" variant="secondary" disabled={uploadMut.isPending} onClick={bindPick("PRESCRIPTION", rxRef)}>
-            <Pill className="me-1.5 h-3.5 w-3.5 text-emerald-600" aria-hidden />
+            <Pill className="me-1.5 h-3.5 w-3.5 text-[hsl(var(--success))]" aria-hidden />
             {t("encounters.uploadPrescription", "Prescription")}
           </Button>
         ) : null}

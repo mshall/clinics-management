@@ -8,13 +8,14 @@ for (const lang of ["en", "ar"] as const) {
     await page.addInitScript((l) => localStorage.setItem("i18nextLng", l), lang);
     await login(page, "admin@drahmedshall.com");
     await page.goto("/admin");
+    await page.getByRole("button", { name: /^organization & settings$/i }).click();
     await expect(page.getByTestId("flag-source-ai_assistant")).toBeVisible({ timeout: 20_000 });
   });
 }
 
 test("FF05 platform overview shows the managed banner only in managed mode", async ({ page, request }) => {
   test.setTimeout(60_000);
-  await login(page, "platform@kiorly.com");
+  await login(page, "superadmin@kiorly.com");
   await page.goto("/platform");
   const status = await page.evaluate(async () => {
     const tok = sessionStorage.getItem("accessToken") ?? "";

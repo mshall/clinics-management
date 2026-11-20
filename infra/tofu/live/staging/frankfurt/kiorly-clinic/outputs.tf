@@ -72,3 +72,33 @@ output "app_runner_service_arn" {
   description = "App Runner service ARN."
   value       = module.kiorly_clinic.app_runner_service_arn
 }
+
+output "alias_urls" {
+  description = "Alias URLs (nurse.kiorly.com when enabled)."
+  value       = module.kiorly_clinic.alias_urls
+}
+
+output "safety_alerts_topic_arn" {
+  description = "Safety on-call SNS topic (null when disabled)."
+  value       = module.kiorly_clinic.safety_alerts_topic_arn
+}
+
+output "location_map_name" {
+  description = "Amazon Location map (null while the maps adapter is mock)."
+  value       = module.location.map_name
+}
+
+output "location_route_calculator_name" {
+  description = "Amazon Location route calculator (null while the routing adapter is mock)."
+  value       = module.location.route_calculator_name
+}
+
+output "demo_seed_function_name" {
+  description = "Demo seed Lambda (staging only; null unless enable_demo_seed)."
+  value       = module.kiorly_clinic.demo_seed_function_name
+}
+
+output "demo_seed_invoke" {
+  description = "How to run the demo seed after the staging deploy (a human runs it; see scripts/seed-staging.sh)."
+  value       = module.kiorly_clinic.demo_seed_invoke
+}

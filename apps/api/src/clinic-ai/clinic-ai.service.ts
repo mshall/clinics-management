@@ -3,12 +3,15 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Optional,
 } from "@nestjs/common";
 import { AppointmentStatus, EncounterStatus, UsageMetric } from "@prisma/client";
 import { computeNoShowRisk } from "../common/no-show-risk";
 import { ConsentPolicyService } from "../compliance/consent-policy.service";
 import { CONSENT_PURPOSE_AI } from "../compliance/consent-policy.constants";
 import { PrismaService } from "../prisma/prisma.service";
+import { constrainDraftToScope } from "../scope-of-practice/profession-prompt";
+import { ScopeOfPracticeService } from "../scope-of-practice/scope-of-practice.service";
 import { UsageMeterService } from "../usage/usage-meter.service";
 import {
   assertPilotDraftLatency,
@@ -22,6 +25,7 @@ export class ClinicAiService {
     private readonly prisma: PrismaService,
     private readonly consent: ConsentPolicyService,
     private readonly usage: UsageMeterService,
+    @Optional() private readonly scope?: ScopeOfPracticeService,
   ) {}
 
   async preVisitSummary(tenantId: string, patientId: string) {
@@ -250,7 +254,13 @@ export class ClinicAiService {
 
     const wallStart = Date.now();
     const stt = await transcribeScribeAudio({ audioBytes, audioSeconds });
-    const draft = draftNoteFromTranscript(stt.transcript);
+    let draft = draftNoteFromTranscript(stt.transcript);
+    // PRSOP04: the draft never suggests actions outside the encounter clinician's profession.
+    if (this.scope) {
+      const enc = await this.prisma.encounter.findFirst({ where: { id: session.encounterId, tenantId }, select: { clinicianId: true } });
+      const ctx = enc ? await this.scope.resolveContext(enc.clinicianId) : null;
+      if (ctx) draft = constrainDraftToScope(draft, ctx.pack, ctx.profession);
+    }
     const draftLatencyMs = Date.now() - wallStart;
     const withinPilot = assertPilotDraftLatency(audioSeconds, draftLatencyMs);
 

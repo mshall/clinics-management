@@ -34,9 +34,8 @@ export function LanguageSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button variant="ghost" size="icon" className="kx-hdr md:size-9 md:min-h-9 md:min-w-9" aria-label={t("common.language")} title={t("common.language")}>
           <Languages className="size-4" />
-          <span className="hidden sm:inline">{t("common.language")}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[12rem]">

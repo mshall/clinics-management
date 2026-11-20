@@ -24,3 +24,4 @@ apps/web/test-results
 infra/cdk.out
 infra/lib
 .sync/
+dist-seed

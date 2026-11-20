@@ -27,6 +27,9 @@ test.describe("Patient manage actions by role", () => {
   test("call center can open edit patient on profile", async ({ page }) => {
     await login(page, "callcenter@kiorly.com");
     await page.getByRole("link", { name: /MRN-/i }).first().click();
-    await expect(page.getByRole("button", { name: /edit patient/i })).toBeVisible({ timeout: 15_000 });
+    await page.waitForURL(/\/patients\/[^/?]+$/, { timeout: 30_000 });
+    // The list unmounts a beat after the URL changes (lazy route); wait for the single profile-header button.
+    await expect(page.getByRole("button", { name: /edit patient/i })).toHaveCount(1, { timeout: 15_000 });
+    await expect(page.getByRole("button", { name: /edit patient/i })).toBeVisible();
   });
 });

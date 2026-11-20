@@ -1,4 +1,4 @@
-import { CircleHelp, LogOut, Menu } from "lucide-react";
+import { CircleHelp, LogOut, Menu, Rows3, Rows4 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -23,6 +23,11 @@ import { HelpDrawer } from "@/features/help/help-drawer";
 import { useHelpStore } from "@/stores/help-store";
 import { PwaInstallPrompt } from "@/features/pwa/pwa-install-prompt";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { KiorlyMark } from "@/brand/ui-kit";
+import { BrandLockup } from "@/components/brand-lockup";
+import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
+import { useDensityStore } from "@/stores/density-store";
+import { useA11yAutoFixes } from "@/lib/a11y-autofix";
 
 export function AppShell() {
   const { t } = useTranslation();
@@ -32,6 +37,9 @@ export function AppShell() {
   const signOut = useAuthStore((s) => s.signOut);
   const [mobileOpen, setMobileOpen] = useState(false);
   const openHelp = useHelpStore((s) => s.setDrawerOpen);
+  useA11yAutoFixes();
+  const density = useDensityStore((s) => s.density);
+  const toggleDensity = useDensityStore((s) => s.toggle);
 
   useEffect(() => {
     const syncNav = () => {
@@ -46,12 +54,8 @@ export function AppShell() {
   return (
     <div className="flex min-h-screen bg-muted/40">
       <aside className="sticky top-0 hidden h-screen min-h-0 w-60 shrink-0 border-e border-border bg-card md:flex md:flex-col">
-        <div className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-4">
-          <img src="/logo.svg" alt="" className="h-9 w-9 object-contain" width={36} height={36} />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold leading-tight">{t("app.name")}</p>
-            <p className="truncate text-xs text-muted-foreground">{t("app.tagline")}</p>
-          </div>
+        <div className="flex min-h-[4.5rem] shrink-0 items-center gap-3 border-b border-border px-4 py-3">
+          <BrandLockup />
         </div>
         <div className="flex min-h-0 flex-1 flex-col">
           <AppNavLinks />
@@ -59,52 +63,62 @@ export function AppShell() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-x-clip">
-        <header className="sticky top-0 z-10 flex min-h-14 flex-wrap items-center justify-between gap-2 border-b border-border bg-card/95 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-card/80 sm:gap-3 sm:px-4 md:h-14 md:flex-nowrap md:py-0 md:ps-6">
-          <div className="flex min-w-0 flex-1 items-center gap-2 md:hidden">
+        <header className="sticky top-0 z-10 flex min-h-14 flex-nowrap items-center justify-between gap-1 border-b border-border bg-card/95 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-card/80 sm:gap-3 sm:px-4 md:h-14 md:flex-nowrap md:py-0 md:ps-6">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 md:hidden">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
-                <Button variant="outline" size="icon" aria-label={t("common.menu")}>
+                <Button variant="outline" size="icon" className="kx-hdr" aria-label={t("common.menu")}>
                   <Menu className="size-5" />
                 </Button>
               </SheetTrigger>
               <SheetContent className="p-0" aria-describedby={undefined}>
                 <SheetTitle className="sr-only">{t("nav.menu")}</SheetTitle>
-                <SheetHeader className="flex h-14 shrink-0 flex-row items-center gap-3 border-b border-border px-4">
-                  <img src="/logo.svg" alt="" className="h-9 w-9 object-contain" width={36} height={36} />
-                  <div className="min-w-0 text-start">
-                    <p className="truncate text-sm font-semibold leading-tight">{t("app.name")}</p>
-                    <p className="truncate text-xs text-muted-foreground">{t("app.tagline")}</p>
-                  </div>
+                <SheetHeader className="flex min-h-[4.5rem] shrink-0 flex-row items-center gap-3 border-b border-border px-4">
+                  <BrandLockup />
                 </SheetHeader>
                 <AppNavLinks onNavigate={() => setMobileOpen(false)} />
               </SheetContent>
             </Sheet>
-            <span className="truncate text-sm font-semibold">{t("app.name")}</span>
+            <span className="shrink-0 sm:hidden"><KiorlyMark size={30} /></span>
+            <span className="hidden min-w-0 overflow-hidden sm:block"><BrandLockup height={24} tagline={false} /></span>
           </div>
-          <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-1.5 sm:w-auto sm:gap-2">
+          <div className="flex min-w-0 shrink-0 items-center justify-end gap-0.5 sm:gap-1.5">
             <GlobalPatientSearch />
             {user ? (
-              <span className="hidden max-w-[12rem] truncate text-sm text-muted-foreground sm:inline">
-                {user.displayName} · {formatUserRole(user.role, t)}
+              <span className="hidden max-w-[16rem] items-center gap-2 truncate border-s border-border/70 ps-3 text-sm leading-tight sm:inline-flex">
+                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-accent text-xs font-semibold text-accent-foreground" aria-hidden>{user.displayName.trim().charAt(0).toUpperCase()}</span>
+                <span className="flex min-w-0 flex-col"><span className="truncate font-medium">{user.displayName}</span><span className="truncate text-xs text-muted-foreground">{formatUserRole(user.role, t)}</span></span>
               </span>
             ) : null}
-            <Button variant="ghost" size="sm" className="gap-1" onClick={() => openHelp(true)} data-testid="help-open">
+            <Button variant="ghost" size="icon" className="kx-hdr md:size-9 md:min-h-9 md:min-w-9" onClick={() => openHelp(true)} data-testid="help-open" aria-label={t("help.button")} title={t("help.button")}>
               <CircleHelp className="size-4" />
-              <span className="hidden sm:inline">{t("help.button")}</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="kx-hdr hidden md:inline-flex md:size-9 md:min-h-9 md:min-w-9"
+              onClick={toggleDensity}
+              aria-pressed={density === "compact"}
+              aria-label={t("kx2.density", "Compact density")}
+              title={`${t("kx2.density", "Compact density")} (Shift+D)`}
+              data-testid="density-toggle"
+            >
+              {density === "compact" ? <Rows4 className="size-4" /> : <Rows3 className="size-4" />}
             </Button>
             <ThemeSwitcher />
             <LanguageSwitcher />
             <Button
               variant="ghost"
-              size="sm"
-              className="gap-1"
+              size="icon"
+              className="kx-hdr md:size-9 md:min-h-9 md:min-w-9"
+              title={t("auth.signOut")}
+              aria-label={t("auth.signOut")}
               onClick={() => {
                 signOut();
                 navigate("/login", { replace: true });
               }}
             >
-              <LogOut className="size-4" />
-              <span className="hidden sm:inline">{t("auth.signOut")}</span>
+              <LogOut className="size-4 rtl-flip" />
             </Button>
           </div>
         </header>
@@ -116,6 +130,7 @@ export function AppShell() {
         <main className="mx-auto w-full min-w-0 max-w-[min(96rem,calc(100vw-1rem))] flex-1 p-3 pb-20 sm:p-4 md:p-6 md:pb-6">
           <Outlet />
         </main>
+        <KeyboardShortcuts />
         <RoleAssistantWidget />
         <UpgradePaywallModal />
         <HelpDrawer />

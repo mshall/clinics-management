@@ -75,7 +75,13 @@ export class KiorexOidcService {
     return this.portPromise;
   }
 
-  private async begin(mode: "LOGIN" | "LINK", userId?: string): Promise<{ authorizationUrl: string }> {
+  /** Redirect URI for an edition (NURSE => nurse.kiorly.com). Null = the port default (Clinic). Never changes the client or audience. */
+  private redirectUriFor(edition: string | null | undefined): string | undefined {
+    if (edition !== "NURSE") return undefined;
+    return readKiorexOidcConfig()?.nurseRedirectUri;
+  }
+
+  private async begin(mode: "LOGIN" | "LINK", userId?: string, edition?: "CLINIC" | "NURSE"): Promise<{ authorizationUrl: string }> {
     if (!(await this.isEnabled())) throw new NotFoundException("Sign in with Kiorex Passport is not available");
     const port = await this.port();
     const state = b64url(randomBytes(24));
@@ -84,13 +90,13 @@ export class KiorexOidcService {
     const codeChallenge = b64url(createHash("sha256").update(codeVerifier).digest());
     await this.prisma.kiorexOidcTransaction.deleteMany({ where: { expiresAt: { lt: new Date() } } });
     await this.prisma.kiorexOidcTransaction.create({
-      data: { state, nonce, codeVerifier, mode, userId: userId ?? null, expiresAt: new Date(Date.now() + TXN_TTL_MS) },
+      data: { state, nonce, codeVerifier, mode, userId: userId ?? null, edition: edition ?? null, expiresAt: new Date(Date.now() + TXN_TTL_MS) },
     });
-    return { authorizationUrl: port.authorizationUrl({ state, nonce, codeChallenge }) };
+    return { authorizationUrl: port.authorizationUrl({ state, nonce, codeChallenge, redirectUri: this.redirectUriFor(edition) }) };
   }
 
-  startLogin() {
-    return this.begin("LOGIN");
+  startLogin(edition?: "CLINIC" | "NURSE") {
+    return this.begin("LOGIN", undefined, edition);
   }
 
   /** Link flow step 1: the signed-in Kiorly user re-authenticates with their existing password. */
@@ -139,7 +145,7 @@ export class KiorexOidcService {
     const port = await this.port();
     let claims;
     try {
-      claims = await port.exchange({ code, state, iss: input.iss }, { state, nonce: txn.nonce, codeVerifier: txn.codeVerifier });
+      claims = await port.exchange({ code, state, iss: input.iss }, { state, nonce: txn.nonce, codeVerifier: txn.codeVerifier }, { redirectUri: this.redirectUriFor(txn.edition) });
     } catch (e) {
       this.log.warn(`Kiorex Passport code exchange failed: ${e instanceof Error ? e.message : String(e)}`);
       throw new UnauthorizedException("Kiorex Passport sign-in failed");

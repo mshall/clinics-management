@@ -93,6 +93,7 @@ export function EncounterOrdersPanel({ encounterId, clinicId, patientId }: Props
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-2">
           <select
+            aria-label={t("clinicalOrders.kind", "Order type")}
             className={nativeSelectClassName}
             value={kind}
             onChange={(e) => setKind(e.target.value as "LAB" | "IMAGING")}

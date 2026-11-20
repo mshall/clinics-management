@@ -96,6 +96,12 @@ variable "domain" {
   default     = ""
 }
 
+variable "alias_domains" {
+  description = "Extra alternate domain names served by the same CloudFront distribution (e.g. [\"nurse.kiorly.com\"] for the Kiorly Nurse edition, KX-08). Added as ACM SANs + CloudFront aliases + Route 53 A/AAAA records. Must be inside zone_name. Empty = none."
+  type        = list(string)
+  default     = []
+}
+
 variable "zone_name" {
   description = "Route 53 hosted zone that holds `domain` (created by live/prod/global/dns). Required when domain or email is set."
   type        = string
@@ -283,4 +289,18 @@ variable "budget_usd" {
   description = "Monthly budget for this stack (0 = none)."
   type        = number
   default     = 0
+}
+
+# --- Safety-alert delivery alarms ------------------------------------------------------------------------------
+variable "safety_alerts" {
+  description = "Safety-alert delivery alarms (KX-09: delivered <= 60 s, on-call alarm if undelivered). role = producer (Kiorly Clinic / Nurse) or consumer (Kiorex ops). Reads structured JSON application logs, so it is provider-mode agnostic. alarm_emails / alarm_webhook_urls = dedicated safety on-call rota (NEEDS_HUMAN)."
+  type = object({
+    enabled              = optional(bool, false)
+    role                 = optional(string, "producer")
+    latency_threshold_ms = optional(number, 60000)
+    alarm_emails         = optional(list(string), [])
+    alarm_webhook_urls   = optional(list(string), [])
+    watch_job_runner     = optional(bool, false)
+  })
+  default = {}
 }

@@ -325,7 +325,8 @@ export function SearchablePickList({
       role="listbox"
       data-pick-list-panel
       className={cn(
-        "overflow-y-auto overscroll-contain rounded-md border border-border bg-background shadow-lg [-webkit-overflow-scrolling:touch] [touch-action:pan-y]",
+        // pointer-events-auto: the panel is portalled to <body>, which a modal Radix Dialog sets to pointer-events:none (options were unclickable inside dialogs).
+        "pointer-events-auto overflow-y-auto overscroll-contain rounded-md border border-border bg-background shadow-lg [-webkit-overflow-scrolling:touch] [touch-action:pan-y]",
         useFixedPortal ? "fixed z-[9999]" : "absolute inset-x-0 top-full z-[100] mt-1 max-h-56",
       )}
       style={
@@ -388,7 +389,10 @@ export function SearchablePickList({
         placeholder={open ? searchPlaceholder : placeholder}
         value={inputValue}
         disabled={disabled}
-        onFocus={() => openPicker()}
+        // Already open (e.g. the deferred mobile focus landing after the user started typing): do not re-seed / reset the search.
+        onFocus={() => {
+          if (!open) openPicker();
+        }}
         onClick={() => {
           if (!open) openPicker();
         }}

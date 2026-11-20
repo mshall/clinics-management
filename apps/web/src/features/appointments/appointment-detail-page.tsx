@@ -548,7 +548,7 @@ export function AppointmentDetailPage() {
         </div>
       </div>
       {profileIncomplete ? (
-        <div className="rounded-md border border-amber-500/50 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-950 dark:text-amber-100">
+        <div className="rounded-md border border-[hsl(var(--warning)/0.5)] bg-amber-500/10 px-3 py-2.5 text-sm text-[hsl(var(--warning))] ">
           <p>
             {t(
               "appointments.profileIncompleteBanner",
@@ -773,7 +773,7 @@ export function AppointmentDetailPage() {
                         disabled={saveMut.isPending || undoCheckInMut.isPending}
                         className={cn(
                           active
-                            ? cn(appointmentStatusClassName(code), "text-white shadow-sm hover:opacity-95")
+                            ? cn(appointmentStatusClassName(code), "font-semibold shadow-sm ring-2 ring-primary/50 hover:opacity-95")
                             : "border-border bg-background hover:bg-muted/60"
                         )}
                         onClick={() => {

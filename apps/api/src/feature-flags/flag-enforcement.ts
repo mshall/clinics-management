@@ -30,7 +30,7 @@ export const FLAG_ENFORCEMENT: Record<string, FlagEnforcement> = {
     files: ["marketplace/record-share-clinic.controller.ts", "marketplace/record-share.service.ts"],
   },
   "clinic.eprescription_handoff": { kind: "controller", files: ["clinical/rx-share.controller.ts"] },
-  "clinic.lab_order_handoff": { kind: "controller", files: ["clinical/clinical.controller.ts"] },
+  "clinic.lab_order_handoff": { kind: "controller", files: ["clinical/clinical.controller.ts", "nurse/lab-sample.service.ts"] },
   "clinic.payers_tpa": { kind: "controller", files: ["billing/claims.controller.ts"] },
   "clinic.specialty_templates.<code>": { kind: "controller", files: ["clinical/clinical.controller.ts"] },
   "clinic.referral_rewards": {
@@ -38,4 +38,18 @@ export const FLAG_ENFORCEMENT: Record<string, FlagEnforcement> = {
     files: ["growth/referral-attribution.service.ts", "growth/growth-referral.service.ts", "growth/referral-reward.service.ts"],
   },
   "clinic.field_rep_onboarding": { kind: "controller", files: ["signup/public-signup.controller.ts"] },
+  "clinic.profession.physiotherapy": { kind: "service", files: ["clinician-verification/clinician-verification.service.ts"] },
+  "clinic.home_visits": {
+    kind: "controller",
+    files: ["home-visits/home-visits.controller.ts", "home-visits/home-visit.service.ts", "home-visits/home-visit-config.service.ts"],
+  },
+  "clinic.home_route_view": { kind: "service", files: ["home-visits/home-visit-config.service.ts", "home-visits/home-visit.service.ts"] },
+  "clinic.home_dispatch": { kind: "service", files: ["home-visits/home-visit-config.service.ts", "home-visits/home-visit.service.ts"] },
+  "nurse.edition": { kind: "service", files: ["nurse/nurse-edition.service.ts"] },
+  "nurse.individual_tenants": { kind: "service", files: ["nurse/nurse-edition.service.ts"] },
+  "nurse.care_plans": { kind: "service", files: ["nurse/care-plan.service.ts"] },
+  "nurse.mar": { kind: "controller", files: ["nurse/nurse-mar.controller.ts"] },
+  "nurse.private_duty_shifts": { kind: "service", files: ["nurse/shift.service.ts"] },
+  "nurse.family_updates": { kind: "service", files: ["nurse/family-update.service.ts"] },
+  "nurse.individual_kiorex_listing": { kind: "service", files: ["marketplace/marketplace-listing-eligibility.ts"] },
 };

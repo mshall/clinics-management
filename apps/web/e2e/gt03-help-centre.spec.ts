@@ -4,7 +4,7 @@ async function login(page: Page) {
   await page.goto("/login");
   await page.getByLabel(/email/i).fill("admin@kiorly.com");
   await page.getByLabel(/password/i).fill("demo");
-  await page.getByRole("button", { name: /sign in|log in/i }).click();
+  await page.getByRole("button", { name: /^(sign in|log in)$/i }).click();
   await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 30_000 });
 }
 

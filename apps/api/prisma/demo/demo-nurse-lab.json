@@ -1,0 +1,49 @@
+{
+  "$comment": "KNLAB01 demo hand-offs: a Kiorly Nurse collects a sample at a home visit -> Kiorly Lab (via Kiorex) -> result back. DEV ONLY / synthetic. Byte-identical copies: clinics-management/apps/api/prisma/demo, kiorex-platform/apps/api/prisma/demo, kiorly-lab/apps/api/src/seed. Edit all four together. Times are day offsets from today 00:00 UTC (same convention as the home-visit spec). The clinic seed writes ClinicalOrder + LabSampleCollection (labStatus HANDED_OFF), the lab seed creates the KIORLY_NURSE order and advances it to `labTarget`, the Kiorex seed relays (NurseLabRelay) and pushes the lab status/custody/report back to the clinic.",
+  "consentTokenPrefix": "demo-rsc-",
+  "orders": [
+    {
+      "key": "nl1", "id": "demo_lo_nl1", "tenant": "nagy", "nurse": "nurse1", "collectorName": "Heba (agency nurse)",
+      "patient": { "phone": "+201000001013", "fullName": "Nabila Hamdy", "dateOfBirth": "1958-06-02", "sex": "F", "ref": "demo_p_nagy_h1013" },
+      "visitKey": "cp1_2", "prescriber": "Dr Tamer Shawky", "prescribedOffsetDays": -4,
+      "tests": ["CBC", "KFT"],
+      "tubes": [
+        { "label": "DEMO-NL1-EDTA", "specimenType": "Whole blood", "container": "EDTA (lavender)" },
+        { "label": "DEMO-NL1-SER", "specimenType": "Serum", "container": "Serum gel (yellow)" }
+      ],
+      "collected": { "off": -3, "hour": 8, "min": 25 }, "handedOver": { "off": -3, "hour": 9, "min": 10 }, "temperatureC": 5.4,
+      "identifiersChecked": ["FULL_NAME", "DATE_OF_BIRTH"],
+      "labTarget": "RELEASED"
+    },
+    {
+      "key": "nl2", "id": "demo_lo_nl2", "tenant": "nagy", "nurse": "nurse1", "collectorName": "Heba (agency nurse)",
+      "patient": { "phone": "+201000001013", "fullName": "Nabila Hamdy", "dateOfBirth": "1958-06-02", "sex": "F", "ref": "demo_p_nagy_h1013" },
+      "visitKey": "cp1_4", "prescriber": "Dr Tamer Shawky", "prescribedOffsetDays": -4,
+      "tests": ["GLU"],
+      "tubes": [{ "label": "DEMO-NL2-SER", "specimenType": "Serum", "container": "Serum gel (yellow)" }],
+      "collected": { "off": -1, "hour": 8, "min": 20 }, "handedOver": { "off": -1, "hour": 9, "min": 0 }, "temperatureC": 6.1,
+      "identifiersChecked": ["FULL_NAME", "DATE_OF_BIRTH", "PHONE"],
+      "labTarget": "AWAITING_VALIDATION"
+    },
+    {
+      "key": "nl3", "id": "demo_lo_nl3", "tenant": "nsolo", "nurse": "mona", "collectorName": "Nurse Mona Adel",
+      "patient": { "phone": "+201000001001", "fullName": "Hoda Mahmoud", "dateOfBirth": "1989-03-14", "sex": "F", "ref": "demo_p_nsolo_h1001" },
+      "visitKey": "hv_mona_done1", "prescriber": "Dr Nadia Fouad", "prescribedOffsetDays": -5,
+      "tests": ["CBC"],
+      "tubes": [{ "label": "DEMO-NL3-EDTA", "specimenType": "Whole blood", "container": "EDTA (lavender)" }],
+      "collected": { "off": -3, "hour": 8, "min": 30 }, "handedOver": { "off": -3, "hour": 9, "min": 5 }, "temperatureC": 4.8,
+      "identifiersChecked": ["FULL_NAME", "PHONE"],
+      "labTarget": "IN_TRANSIT"
+    },
+    {
+      "key": "nl4", "id": "demo_lo_nl4", "tenant": "nagy", "nurse": "nurse2", "collectorName": "Salma (agency nurse)",
+      "patient": { "phone": "+201000001008", "fullName": "Dalia Ibrahim", "dateOfBirth": "1988-04-25", "sex": "F", "ref": "demo_p_nagy_h1008" },
+      "visitKey": "hv_agy_done", "prescriber": "Dr Sherif Bakr", "prescribedOffsetDays": -3,
+      "tests": ["TSH"],
+      "tubes": [{ "label": "DEMO-NL4-SER", "specimenType": "Serum", "container": "Serum gel (yellow)" }],
+      "collected": { "off": -2, "hour": 9, "min": 25 }, "handedOver": { "off": -2, "hour": 10, "min": 0 }, "temperatureC": 5.0,
+      "identifiersChecked": ["FULL_NAME", "DATE_OF_BIRTH"],
+      "labTarget": "REFUSED", "refusalCode": "SAMPLE_UNMATCHED"
+    }
+  ]
+}

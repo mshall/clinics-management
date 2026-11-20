@@ -62,9 +62,9 @@ export function OperationPreSurgeryProfileDocs({ operationId, canUpload }: Props
   if (!canUpload) return null;
 
   return (
-    <section className="space-y-3 rounded-lg border border-dashed border-amber-500/30 bg-amber-500/5 p-3">
+    <section className="space-y-3 rounded-lg border border-dashed border-[hsl(var(--warning)/0.3)] bg-amber-500/5 p-3">
       <div>
-        <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
+        <p className="text-xs font-medium text-[hsl(var(--warning))] ">
           {t("patients.operationPreDocsTitle", "Add pre-surgery documents")}
         </p>
         <p className="text-xs text-muted-foreground">

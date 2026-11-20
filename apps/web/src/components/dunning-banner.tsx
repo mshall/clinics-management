@@ -26,10 +26,10 @@ export function DunningBanner() {
   const message = t(state.banner, state.banner);
   const isGrace = state.status === "GRACE" || state.status === "PAST_DUE";
   const tone = isGrace
-    ? "border-amber-500/40 bg-amber-500/10"
+    ? "border-[hsl(var(--warning)/0.4)] bg-amber-500/10"
     : state.status === "READ_ONLY"
-      ? "border-orange-500/40 bg-orange-500/10"
-      : "border-red-500/40 bg-red-500/10";
+      ? "border-[hsl(var(--warning)/0.4)] bg-orange-500/10"
+      : "border-[hsl(var(--danger-text)/0.4)] bg-red-500/10";
 
   return (
     <div role="alert" className={`flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2 text-sm ${tone}`}>

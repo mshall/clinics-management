@@ -1,5 +1,9 @@
 /** @type {import('tailwindcss').Config} */
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
+
 export default {
+  presets: [require("./src/brand/tailwind-preset.cjs")],
   darkMode: ["class"],
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
@@ -45,15 +49,7 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: [
-          "system-ui",
-          "-apple-system",
-          "Segoe UI",
-          "Roboto",
-          "Noto Sans Arabic",
-          "Noto Sans",
-          "sans-serif",
-        ],
+        sans: ["var(--kx-font)", "system-ui", "sans-serif"],
       },
     },
   },

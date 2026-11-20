@@ -58,7 +58,13 @@ Boolean module keys by plan (`Yes` = entitled). Limits use numeric cells.
 | `dedicated_support` | No | No | No | Yes |
 | `pack_dental` | No | No | No | No |
 | `pack_aesthetics` | No | No | No | No |
-| `pack_physio` | No | No | No | No |
+| `pack_physio` | No | No | No | Yes |
+| `home_route_view` | No | Yes | Yes | Yes |
+| `home_dispatch` | No | No | Yes | Yes |
+| `nurse_family_updates` | No | No | No | Yes |
+| `nurse_private_duty_shifts` | No | No | No | Yes |
+| `nurse_lab_samples` | No | No | No | Yes |
+| `nurse_agency` | No | No | No | Yes |
 <!-- MATRIX:END -->
 
 ## 03. Feature flags → entitlements

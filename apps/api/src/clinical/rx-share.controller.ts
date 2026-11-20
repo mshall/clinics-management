@@ -8,17 +8,19 @@ import { FeatureGuard, RequiresFeature } from "../feature-flags/feature-flags-pu
 import { NavTabAccessService } from "../user-nav-tabs/nav-tab-access.service";
 import { ENCOUNTERS_MUTATE_ROLES, ENCOUNTERS_VIEW_ROLES } from "../user-nav-tabs/nav-tab-module-roles";
 import { RxShareService } from "./rx-share.service";
+import { RequiresScope, ScopeGuard } from "../scope-of-practice/scope-of-practice-public";
 
 @ApiTags("encounters")
 @ApiBearerAuth("bearer")
 @Controller("encounters")
-@UseGuards(JwtAuthGuard, FeatureGuard)
+@UseGuards(JwtAuthGuard, FeatureGuard, ScopeGuard)
 export class RxShareController {
   constructor(
     private readonly rx: RxShareService,
     private readonly navTabAccess: NavTabAccessService,
   ) {}
 
+  @RequiresScope("rx.prescribe")
   @Post(":id/prescription/print")
   @ApiOperation({ summary: "CL-03: printable signed Rx (brand + ingredient + Arabic sig) with a fresh verification QR link" })
   @ApiOkResponse()
@@ -27,6 +29,7 @@ export class RxShareController {
     return this.rx.printable(requireTenantId(user), id, user);
   }
 
+  @RequiresScope("rx.prescribe")
   @Post(":id/prescription/send")
   @ApiOperation({ summary: "CL-03: send the signed Rx PDF to the patient on WhatsApp (approved template, consent-checked)" })
   @ApiOkResponse()
@@ -40,6 +43,7 @@ export class RxShareController {
     return this.rx.sendToPatient(requireTenantId(user), id, user);
   }
 
+  @RequiresScope("rx.prescribe")
   @RequiresFeature("clinic.eprescription_handoff")
   @Post(":id/prescription/handoff")
   @ApiOperation({

@@ -42,15 +42,16 @@ test.describe("Theme switcher", () => {
     await expectThemeApplied(page, "clinical-os-dark");
   });
 
+  // Material Light is the legacy default and is deliberately reset on reload (theme-store), so this uses Material Dark.
   test("authenticated shell keeps theme after navigation", async ({ page }) => {
     await page.goto("/login");
-    await selectTheme(page, /material — light/i);
+    await selectTheme(page, /material — dark/i);
     await login(page, "admin@kiorly.com");
-    await expectThemeApplied(page, "material-light");
+    await expectThemeApplied(page, "material-dark");
     await page.goto("/patients");
-    await expectThemeApplied(page, "material-light");
+    await expectThemeApplied(page, "material-dark");
     await page.getByRole("button", { name: /theme/i }).click();
-    await expect(page.getByRole("menuitemradio", { name: /material — light/i })).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByRole("menuitemradio", { name: /material — dark/i })).toHaveAttribute("aria-checked", "true");
   });
 
   test("theme persists when remember is enabled", async ({ page }) => {

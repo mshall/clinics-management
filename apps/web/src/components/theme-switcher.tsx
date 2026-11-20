@@ -41,9 +41,8 @@ export function ThemeSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2" aria-label={t("theme.label")}>
+        <Button variant="ghost" size="icon" className="kx-hdr md:size-9 md:min-h-9 md:min-w-9" aria-label={t("theme.label")} title={t("theme.label")}>
           <ThemeTriggerIcon themeId={themeId} />
-          <span className="hidden sm:inline">{t("theme.label")}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[14rem]">

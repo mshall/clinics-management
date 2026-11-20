@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { InvoiceDto } from "@/lib/api-types";
@@ -98,7 +98,10 @@ export function GenerateInvoiceDialog({
                 logoUrl={logo.url}
               />
             </div>
-            <div className="flex flex-wrap gap-2">
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                {t("common.close", "Close")}
+              </Button>
               <Button
                 type="button"
                 onClick={() => printInvoiceElement(previewId, generated.invoiceNumber) || toast.error(t("invoices.printBlocked", "Allow pop-ups to print"))}
@@ -106,16 +109,16 @@ export function GenerateInvoiceDialog({
                 <Printer className="me-2 h-4 w-4" />
                 {t("invoices.print", "Print")}
               </Button>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                {t("common.close", "Close")}
-              </Button>
-            </div>
+            </DialogFooter>
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="rounded-md border bg-muted/30 p-3">
-              <Label className="text-xs text-muted-foreground">{t("invoices.patient", "Patient")}</Label>
-              <p className="font-medium">{patientName}</p>
+            <div className="flex items-center gap-3 rounded-xl border border-border/80 bg-muted/40 p-3">
+              <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-foreground">{(patientName || "?").trim().charAt(0).toUpperCase()}</span>
+              <div className="min-w-0">
+                <div className="text-xs text-muted-foreground">{t("invoices.patient", "Patient")}</div>
+                <p className="truncate font-medium">{patientName}</p>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -137,7 +140,7 @@ export function GenerateInvoiceDialog({
                 </Button>
               </div>
               {lines.map((line, idx) => (
-                <div key={idx} className="grid gap-2 rounded-md border p-3 sm:grid-cols-[1fr_140px_auto] sm:items-end">
+                <div key={idx} className="grid gap-2 rounded-xl border border-border/80 bg-card p-3 shadow-[var(--kx-shadow-1)] sm:grid-cols-[1fr_9rem_auto] sm:items-end">
                   <div className="space-y-1">
                     <Label htmlFor={`inv-purpose-${idx}`}>{t("invoices.purpose", "Purpose")}</Label>
                     <Input
@@ -177,14 +180,21 @@ export function GenerateInvoiceDialog({
               ))}
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" disabled={submit.isPending || createMut.isPending} onClick={() => submit.mutate()}>
-                {t("invoices.generate", "Generate invoice")}
-              </Button>
+            <dl className="kx-dl rounded-xl bg-muted/40 p-3">
+              <dt>{t("invoices.lineItems", "Line items")}</dt>
+              <dd>{lines.length}</dd>
+              <dt className="kx-total">{t("invoices.total", "Total")}</dt>
+              <dd className="kx-total ltr-nums">{invoiceCurrency} {lines.reduce((sum, l) => sum + (Number.parseFloat(l.amountPaid) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</dd>
+            </dl>
+
+            <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 {t("common.cancel", "Cancel")}
               </Button>
-            </div>
+              <Button type="button" disabled={submit.isPending || createMut.isPending} onClick={() => submit.mutate()}>
+                {t("invoices.generate", "Generate invoice")}
+              </Button>
+            </DialogFooter>
           </div>
         )}
       </DialogContent>

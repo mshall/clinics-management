@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Headers, HttpCode, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Headers, HttpCode, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiHeader, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { IntegrationBookAppointmentDto } from "../integrations/dto/integration-book-appointment.dto";
 import { MarketplaceApiService } from "./marketplace-api.service";
@@ -13,6 +13,9 @@ import { KiorexOverviewService, type ProfileViewsBody } from "./kiorex-overview.
 import { KiorexDepositsService, type DepositPaidBody, type PayoutBody } from "../billing/kiorex-deposits.service";
 import { RecordShareService } from "./record-share.service";
 import { SlotCapacityService } from "./slot-capacity.service";
+import { CarePlanRequestService, type CarePlanRequestBody } from "../nurse/care-plan-request.service";
+import { LabSampleService, type LabStatusPush } from "../nurse/lab-sample.service";
+import { MarketplaceAccessService } from "./marketplace-access.service";
 import { MarketplaceWaitlistService, type MarketplaceWaitlistJoinBody } from "./marketplace-waitlist.service";
 
 @ApiTags("marketplace")
@@ -35,7 +38,27 @@ export class MarketplaceController {
     private readonly recordShare: RecordShareService,
     private readonly slotCapacity: SlotCapacityService,
     private readonly waitlist: MarketplaceWaitlistService,
+    private readonly carePlanRequests: CarePlanRequestService,
+    private readonly labSamples: LabSampleService,
+    private readonly access: MarketplaceAccessService,
   ) {}
+
+  @Post("care-plan-requests")
+  @HttpCode(200)
+  @ApiOperation({ summary: "DRAFT (P3, Nurse edition): request a multi-visit care plan; idempotent on requestRef; 403 FEATURE_DISABLED until nurse.care_plans (gate GKN1) is effective" })
+  async createCarePlanRequest(@Body() body: CarePlanRequestBody) {
+    if (!body?.clinicId?.trim()) throw new BadRequestException("clinicId is required");
+    const tenantId = await this.access.resolveTenantForMarketplaceClinic(body.clinicId, body.clinicianId);
+    return this.carePlanRequests.receive(tenantId, body);
+  }
+
+  /** KNLAB01 (contracts 1.6.0): Kiorex relays the lab's status + sanitized custody (+ secure link on release) for a Nurse-edition hand-off. Idempotent, monotonic. */
+  @Post("lab-orders/:orderId/status")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Kiorex relays the lab status/custody of a nurse-collected hand-off (no results, no PHI)" })
+  async labOrderStatus(@Param("orderId") orderId: string, @Body() body: LabStatusPush) {
+    return this.labSamples.applyLabStatus(orderId, body);
+  }
 
   @Get("auth/verify")
   @ApiOperation({ summary: "Verify marketplace client credentials" })
@@ -78,8 +101,12 @@ export class MarketplaceController {
     @Query("typeId") typeId: string,
     @Query("from") from: string,
     @Query("to") to: string,
+    @Query("serviceLocation") serviceLocation?: string,
+    @Query("district") district?: string,
+    @Query("lat") lat?: string,
+    @Query("lng") lng?: string,
   ) {
-    return this.api.listSlots(client, clinicId, clinicianId, typeId, from, to);
+    return this.api.listSlots(client, clinicId, clinicianId, typeId, from, to, { serviceLocation, district, lat, lng });
   }
 
   @Get("appointments/availability")

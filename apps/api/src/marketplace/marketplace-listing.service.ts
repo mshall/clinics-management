@@ -19,6 +19,9 @@ import {
 } from "./marketplace-listing-eligibility";
 import { parseProviderProfileJson, providerProfileCompletenessPercent } from "./provider-profile-schema";
 import { OutboxEventService } from "../messaging/outbox-event.service";
+import { effectiveVerificationStatus } from "../clinician-verification/profession-verification";
+import { resolveProfessionPack } from "../scope-of-practice/profession-pack";
+import { effectiveProfession } from "../scope-of-practice/scope-of-practice.service";
 import { OUTBOX_EVENT } from "../messaging/outbox-event-types";
 
 const CLINIC_ADMIN_ROLES = new Set<UserRole>([UserRole.GROUP_ADMIN, UserRole.CLINIC_ADMIN, UserRole.BRANCH_MANAGER]);
@@ -165,10 +168,10 @@ export class MarketplaceListingService implements OnModuleInit {
 
     const ownerPaused = row.pausedReason === "owner";
 
-    const [verification, subscription, typeCount, availability, clinic] = await Promise.all([
+    const [verification, subscription, typeCount, availability, clinic, tenantMarket] = await Promise.all([
       this.prisma.clinicianVerification.findUnique({
         where: { userId: row.clinicianId },
-        select: { status: true },
+        select: { status: true, verifiedProfession: true, user: { select: { profession: true, role: true, additionalRoles: true } } },
       }),
       this.prisma.subscription.findUnique({
         where: { tenantId: row.tenantId },
@@ -196,7 +199,15 @@ export class MarketplaceListingService implements OnModuleInit {
         where: { id: row.clinicId },
         select: { latitude: true, longitude: true, addressEn: true, addressAr: true },
       }),
+      this.prisma.tenant.findUnique({ where: { id: row.tenantId }, select: { edition: true, nurseTenantKind: true, market: { select: { code: true, clinicalConfig: true } } } }),
     ]);
+    const solo = tenantMarket?.edition === "NURSE" && tenantMarket.nurseTenantKind === "SOLO";
+    const soloListing = solo
+      ? {
+          flagEffective: this.flags ? (await this.flags.evaluate(row.tenantId, "nurse.individual_kiorex_listing")).effective : false,
+          prver04Checked: (await this.prisma.clinicianVerification.findUnique({ where: { userId: row.clinicianId }, select: { isSolo: true } }))?.isSolo === true,
+        }
+      : undefined;
 
     const profile = parseProviderProfileJson(row.profileJson);
     const completenessPercent = providerProfileCompletenessPercent({
@@ -207,13 +218,17 @@ export class MarketplaceListingService implements OnModuleInit {
     });
 
     const eligibility = evaluateMarketplaceListingEligibility({
-      verificationStatus: verification?.status ?? null,
+      // PRVER: LIVE needs VERIFIED for the clinician's CURRENT profession (never for unlicensed assistants).
+      verificationStatus: verification
+        ? effectiveVerificationStatus(verification, effectiveProfession(verification.user), resolveProfessionPack(tenantMarket?.market))
+        : null,
       subscriptionStatus: subscription?.status ?? null,
       marketplaceBookableTypeCount: typeCount,
       hasAvailability: availability ? weekHasBookableSlots(availability.weekJson) : false,
       profileCompletenessPercent: completenessPercent,
       ownerPaused,
       kiorexBillingPaused: subscription?.tenant.kiorexBillingPausedAt != null,
+      soloNurse: soloListing,
     });
 
     // clinic.kiorex_listing OFF: listing PAUSED on Kiorex; confirmed bookings and the booking link are untouched.

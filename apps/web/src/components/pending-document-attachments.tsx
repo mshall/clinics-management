@@ -133,10 +133,10 @@ export function PendingDocumentAttachments({
           type="button"
           variant="outline"
           size="sm"
-          className="gap-1 text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
+          className="gap-1 text-[hsl(var(--success))] hover:text-[hsl(var(--success))] "
           onClick={() => onChange((prev) => [...prev, emptyPendingDocumentRow()])}
         >
-          <Plus className="h-4 w-4 text-emerald-600" />
+          <Plus className="h-4 w-4 text-[hsl(var(--success))]" />
           {t("patients.addDocument", "Add a document")}
         </Button>
       </div>

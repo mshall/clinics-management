@@ -46,6 +46,8 @@ import { OrgRbacPanel } from "./org-rbac-panel";
 import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel";
 import { ClinicInvoiceSettingsPanel } from "@/features/invoices/clinic-invoice-settings-panel";
 import { ClinicPrescriptionSettingsPanel } from "@/features/prescriptions/clinic-prescription-settings-panel";
+import { PageHeader } from "@/brand/ui-kit";
+import { SectionNav } from "@/components/section-nav";
 import { TenantFeatureFlagsPanel } from "./tenant-feature-flags-panel";
 import { OrgWhatsAppRemindersCard } from "./org-whatsapp-reminders-card";
 import { AdminOrgBillingPanel } from "./admin-org-billing-panel";
@@ -322,55 +324,25 @@ export function AdminPage() {
   if (isClinicAdmin || isBranchManager) {
     return (
       <div className="space-y-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{t("nav.admin", "Administration")}</h1>
-            <p className="text-muted-foreground">
-              {isBranchManager
-                ? t("admin.branchManagerSubtitle", "Staff onboarding and governance for clinics you manage.")
-                : t("admin.clinicAdminSubtitle", "Staff onboarding and clinic governance.")}
-            </p>
-          </div>
-          <OrgHierarchyPanel scope="tenant" />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant={clinicAdminSection === "staff" ? "default" : "outline"}
-            onClick={() => setClinicAdminSection("staff")}
-          >
-            {t("admin.tabStaffOnboarding", "Staff onboarding")}
-          </Button>
-          {isClinicAdmin ? (
-            <Button
-              type="button"
-              size="sm"
-              variant={clinicAdminSection === "organization" ? "default" : "outline"}
-              onClick={() => setClinicAdminSection("organization")}
-            >
-              {t("admin.tabOrganization", "Organization & settings")}
-            </Button>
-          ) : null}
-          <Button
-            type="button"
-            size="sm"
-            variant={clinicAdminSection === "governance" ? "default" : "outline"}
-            onClick={() => setClinicAdminSection("governance")}
-          >
-            {t("admin.tabGovernance")}
-          </Button>
-          {canViewInsights ? (
-            <Button
-              type="button"
-              size="sm"
-              variant={clinicAdminSection === "insights" ? "default" : "outline"}
-              onClick={() => setClinicAdminSection("insights")}
-            >
-              {t("admin.tabInsights", "Insights & performance")}
-            </Button>
-          ) : null}
-        </div>
+        <PageHeader
+          title={t("nav.admin", "Administration")}
+          description={isBranchManager
+            ? t("admin.branchManagerSubtitle", "Staff onboarding and governance for clinics you manage.")
+            : t("admin.clinicAdminSubtitle", "Staff onboarding and clinic governance.")}
+          actions={<OrgHierarchyPanel scope="tenant" />}
+          className="mb-1"
+        />
+        <SectionNav
+          label={t("admin.sections", "Administration sections")}
+          value={clinicAdminSection}
+          onChange={setClinicAdminSection}
+          items={[
+            { id: "staff", label: t("admin.tabStaffOnboarding", "Staff onboarding") },
+            { id: "organization", label: t("admin.tabOrganization", "Organization & settings"), hidden: !isClinicAdmin },
+            { id: "governance", label: t("admin.tabGovernance") },
+            { id: "insights", label: t("admin.tabInsights", "Insights & performance"), hidden: !canViewInsights },
+          ]}
+        />
         {clinicAdminSection === "staff" ? (
           <div className="space-y-6">
             <StaffInvitationsPanel />
@@ -392,10 +364,7 @@ export function AdminPage() {
   if (isLitePlan && !isPlatformRole) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("liteAdmin.pageTitle")}</h1>
-          <p className="text-muted-foreground">{t("liteAdmin.subtitle")}</p>
-        </div>
+        <PageHeader className="mb-1" title={t("liteAdmin.pageTitle")} description={t("liteAdmin.subtitle")} />
         <StaffInvitationsPanel />
         <LiteAdminSettings />
       </div>
@@ -404,14 +373,11 @@ export function AdminPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          {overview.data?.currentTenant?.name
-            ? `${overview.data.currentTenant.name} ${t("admin.title")}`
-            : t("admin.title")}
-        </h1>
-        <p className="text-muted-foreground">{t("admin.subtitle")}</p>
-      </div>
+      <PageHeader
+        className="mb-1"
+        title={overview.data?.currentTenant?.name ? `${overview.data.currentTenant.name} ${t("admin.title")}` : t("admin.title")}
+        description={t("admin.subtitle")}
+      />
 
       {overview.isError ? (
         <p className="text-sm text-destructive">
@@ -419,44 +385,22 @@ export function AdminPage() {
         </p>
       ) : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
-        <Button type="button" size="sm" variant={adminSection === "clinics" ? "default" : "outline"} onClick={() => setAdminSection("clinics")}>
-          {t("admin.tabClinics", "Clinics & tenants")}
-        </Button>
-        {isGroupAdmin ? (
-          <>
-            <Button type="button" size="sm" variant={adminSection === "users" ? "default" : "outline"} onClick={() => setAdminSection("users")}>
-              {t("admin.tabOrgUsers", "Organization users")}
-            </Button>
-            <Button type="button" size="sm" variant={adminSection === "patients" ? "default" : "outline"} onClick={() => setAdminSection("patients")}>
-              {t("admin.tabOrgPatients", "Organization patients")}
-            </Button>
-          </>
-        ) : null}
-        <Button type="button" size="sm" variant={adminSection === "organization" ? "default" : "outline"} onClick={() => setAdminSection("organization")}>
-          {t("admin.tabOrganization", "Organization & settings")}
-        </Button>
-        {isGroupAdmin || isPlatformSuperAdmin ? (
-          <Button type="button" size="sm" variant={adminSection === "data" ? "default" : "outline"} onClick={() => setAdminSection("data")}>
-            {t("admin.tabDataExplorer", "Data explorer")}
-          </Button>
-        ) : null}
-        <Button type="button" size="sm" variant={adminSection === "governance" ? "default" : "outline"} onClick={() => setAdminSection("governance")}>
-          {t("admin.tabGovernance")}
-        </Button>
-        {canViewInsights ? (
-          <Button
-            type="button"
-            size="sm"
-            variant={adminSection === "insights" ? "default" : "outline"}
-            onClick={() => setAdminSection("insights")}
-          >
-            {t("admin.tabInsights", "Insights & performance")}
-          </Button>
-        ) : null}
-        </div>
-        <OrgHierarchyPanel scope="tenant" />
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <SectionNav
+          className="min-w-0 flex-1"
+          label={t("admin.sections", "Administration sections")}
+          value={adminSection}
+          onChange={setAdminSection}
+          items={[
+            { id: "clinics", label: t("admin.tabClinics", "Clinics & tenants") },
+            { id: "users", label: t("admin.tabOrgUsers", "Organization users"), hidden: !isGroupAdmin },
+            { id: "patients", label: t("admin.tabOrgPatients", "Organization patients"), hidden: !isGroupAdmin },
+            { id: "organization", label: t("admin.tabOrganization", "Organization & settings") },
+            { id: "data", label: t("admin.tabDataExplorer", "Data explorer"), hidden: !(isGroupAdmin || isPlatformSuperAdmin) },
+            { id: "governance", label: t("admin.tabGovernance") },
+            { id: "insights", label: t("admin.tabInsights", "Insights & performance"), hidden: !canViewInsights },
+          ]}
+        />
       </div>
 
       {adminSection === "governance" ? (

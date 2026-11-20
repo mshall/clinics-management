@@ -18,18 +18,24 @@ import {
   User,
   Users,
   Wallet,
+  MapPinned,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { NavLink, useLocation } from "react-router-dom";
+import { apiGet } from "@/lib/http";
 import { showNavItem } from "@/lib/nav-policy";
 import { canViewRevenue } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
+import { NurseNavLinks } from "@/features/nurse/nurse-nav";
 import { useAuthStore } from "@/stores/auth-store";
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   cn(
-    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-    isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+    "relative flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150",
+    isActive
+      ? "bg-accent text-accent-foreground before:absolute before:inset-y-2 before:start-0 before:w-[3px] before:rounded-full before:bg-primary"
+      : "text-muted-foreground hover:bg-muted hover:text-foreground"
   );
 
 export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
@@ -45,6 +51,10 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const showTab = (key: Parameters<typeof showNavItem>[1]) =>
     showNavItem(role, key, navTabKeys, roleNavTabKeys, employeePrivilegeGrants, allRoles, planEntitlements, planKey);
   const isPhysician = role === "physician";
+  // Home-visit route link: shown when the org's home-visit capability is effective (same cached query EditionBoot uses).
+  const hasToken = useAuthStore((s) => Boolean(s.accessToken));
+  const orgCtx = useQuery({ queryKey: ["nurse", "context"], queryFn: () => apiGet<{ edition?: "CLINIC" | "NURSE"; kind?: "SOLO" | "AGENCY" | null; features: Record<string, boolean> }>("/api/v1/nurse/context"), enabled: hasToken, staleTime: 5 * 60_000, retry: false });
+  const homeVisitsOn = orgCtx.data?.features?.["clinic.home_visits"] === true;
   const showRevenue = canViewRevenue(role) && showTab("revenue");
   const showPlatformNav =
     showTab("platform") ||
@@ -129,6 +139,7 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
           ) : null}
         </>
       ) : null}
+      {orgCtx.data?.edition === "NURSE" && signedIn && !showPlatformNav ? <NurseNavLinks agency={orgCtx.data.kind === "AGENCY"} navClass={navClass} onNavigate={onNavigate} /> : null}
       {showTab("dashboard") ? (
         <NavLink to="/" end className={navClass} onClick={() => onNavigate?.()}>
           <LayoutDashboard className="size-4 shrink-0" />
@@ -153,6 +164,12 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
             <CalendarDays className="size-4 shrink-0" />
             {isPhysician ? t("appointments.myNav", "My appointments") : t("nav.appointments")}
           </NavLink>
+          {homeVisitsOn && isPhysician ? (
+            <NavLink to="/home-visits/today" className={navClass} onClick={() => onNavigate?.()}>
+              <MapPinned className="size-4 shrink-0" />
+              {t("homeVisits.today")}
+            </NavLink>
+          ) : null}
           {!isPhysician ? (
             <NavLink
               to="/front-desk/board"

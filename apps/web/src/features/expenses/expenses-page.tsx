@@ -678,17 +678,13 @@ export function ExpensesPage() {
                     <tr
                       key={e.id}
                       className={`border-t border-border ${rowEditable ? "cursor-pointer hover:bg-muted/50" : "cursor-pointer hover:bg-muted/50"}`}
-                      role="button"
-                      tabIndex={0}
                       onClick={() => handleExpenseRowActivate(e)}
-                      onKeyDown={(ev) => {
-                        if (ev.key === "Enter" || ev.key === " ") {
-                          ev.preventDefault();
-                          handleExpenseRowActivate(e);
-                        }
-                      }}
                     >
-                      <td className="px-3 py-2">{formatExpenseCategory(e.category, t)}</td>
+                      <td className="px-3 py-2">
+                        <button type="button" className="rounded text-start font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={(ev) => { ev.stopPropagation(); handleExpenseRowActivate(e); }}>
+                          {formatExpenseCategory(e.category, t)}
+                        </button>
+                      </td>
                       <td className="px-3 py-2 text-muted-foreground">{e.vendorName ?? "—"}</td>
                       <td className="px-3 py-2 ltr-nums">{money(e.amount, e.currency)}</td>
                       <td className="px-3 py-2">

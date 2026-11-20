@@ -78,7 +78,7 @@ export function AdminReferralInviteCard() {
                   {t("admin.billing.referral.code", "Your code")}: <span className="font-mono font-semibold">{data.code}</span>
                 </p>
                 <div className="flex gap-2">
-                  <Input readOnly value={data.link ?? ""} className="font-mono text-xs" />
+                  <Input readOnly aria-label={t("admin.referralLinkLabel", "Referral link")} value={data.link ?? ""} className="font-mono text-xs" />
                   <Button type="button" size="sm" variant="outline" onClick={() => void copyLink()}>
                     {copied ? t("common.copied", "Copied") : t("common.copy", "Copy")}
                   </Button>

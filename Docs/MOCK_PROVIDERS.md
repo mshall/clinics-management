@@ -10,7 +10,7 @@
 | Variable | Effect |
 |----------|--------|
 | `KIORLY_PROVIDER_MODE` | Global default: `mock` (default) or `real` |
-| `KIORLY_PROVIDER_MODE_<KIND>` | Per integration: `EMAIL`, `WHATSAPP`, `SMS`, `PUSH`, `PSP`; wins over the global value |
+| `KIORLY_PROVIDER_MODE_<KIND>` | Per integration: `EMAIL`, `WHATSAPP`, `SMS`, `PUSH`, `PSP`, `MAPS`; wins over the global value |
 
 Unset means **mock**, in every environment. One back-compat rule: a **production** deployment that already carries the
 old enabling switch (`EMAIL_SES_ENABLED=1`, a WhatsApp access token, VAPID keys) stays real until the mode is set
@@ -28,6 +28,8 @@ the dev inbox.
 | SMS | Outbound worker marks the message `SENT` with a deterministic id and records it |
 | Push | `PushService` records the notification instead of calling web-push |
 | PSP | Gateways return deterministic fake sessions/charges; callbacks are simulated (below) |
+| Maps | `MockRouteMapsAdapter`: deterministic symmetric district-to-district travel minutes (10-45), mock navigation links; same `RouteMapsPort` the Amazon Location adapter will implement (PG-10) |
+| Safety alerts (SMS) | `MockSafetyAlertDispatcher` writes the alert (no address, no patient data) to the dev inbox as an SMS to the organisation safety contact; the same `safety_alert.*` log events are emitted so the infra alarms and the drill run unchanged (PG-13) |
 
 ## Dev inbox
 
