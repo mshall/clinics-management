@@ -4420,6 +4420,8 @@ model KiorexOidcTransaction {
   mode         String
   userId       String?
   sid          String?
+  /// ADR-031 / KNED: edition surface that started the sign-in (CLINIC | NURSE). Picks the redirect URI only; the client (aud = kiorly-clinic) is the same.
+  edition      String?
   createdAt    DateTime @default(now())
   expiresAt    DateTime
 
