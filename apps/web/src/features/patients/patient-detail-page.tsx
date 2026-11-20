@@ -58,8 +58,8 @@ import { calculateAgeFromDob, formatPatientDob, localeForLanguage } from "@/lib/
 import { patientAcquisitionDisplay, type PatientAcquisitionChannel } from "@/lib/patient-acquisition";
 import { showNavItem } from "@/lib/nav-policy";
 import { canEditPatientDetails } from "@/lib/patient-edit-policy";
-import { canCreateOperation } from "@/lib/operation-money-policy";
 import { canMutateNavTab } from "@/lib/nav-tab-access-policy";
+import { canEditOperationStage2 } from "@/lib/operation-stage-policy";
 import { useAuthStore } from "@/stores/auth-store";
 
 export function PatientDetailPage() {
@@ -78,7 +78,7 @@ export function PatientDetailPage() {
   const canViewPatientOperations = canViewOperationsNav || canViewEncounters;
   const canEditPatient = canEditPatientDetails(role, navTabKeys, navTabAccessModes);
   const canUploadEncounterDocs = canMutateNavTab("encounters", role, navTabKeys, navTabAccessModes);
-  const canUploadOperationDocs = canCreateOperation(role, navTabKeys, navTabAccessModes);
+  const canUploadOperationDocs = canEditOperationStage2(role, authUser?.additionalRoles);
   type ProfileTab =
     | "overview"
     | "smartSummary"

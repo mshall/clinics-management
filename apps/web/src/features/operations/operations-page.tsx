@@ -39,7 +39,7 @@ import {
   useSchedulingPhysiciansQuery,
 } from "@/lib/api-hooks";
 import type { OperationDetailDto, OperationDocumentDto, OperationDto } from "@/lib/api-types";
-import { ApiError, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
+import { ApiError, apiGet, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { canAdminEditCompletedOperation } from "@/lib/operation-admin-policy";
 import {
   canCreateOperation,
@@ -47,6 +47,12 @@ import {
   canViewOperationSummaryMoney,
   showOperationMoneyColumns,
 } from "@/lib/operation-money-policy";
+import {
+  canEditOperationStage1,
+  canEditOperationStage2,
+} from "@/lib/operation-stage-policy";
+import { OperationWizardSteps, type OperationWizardStage } from "@/features/operations/operation-wizard-steps";
+import { OperationDuplicateDialog } from "@/features/operations/operation-duplicate-dialog";
 import {
   operationCanOpenInWorkspace,
   operationClinicalFormEditable,
@@ -131,7 +137,10 @@ export function OperationsPage() {
     authUser?.role,
     authUser?.navTabKeys,
     authUser?.navTabAccessModes,
+    authUser?.additionalRoles,
   );
+  const canStage1 = canEditOperationStage1(authUser?.role, authUser?.additionalRoles);
+  const canStage2 = canEditOperationStage2(authUser?.role, authUser?.additionalRoles);
   const moneyOverrides = authUser?.moneyVisibilityOverrides;
   const showSummaryMoney = canViewOperationSummaryMoney(authUser?.role, moneyOverrides);
   const canEditFees = canEditOperationFees(authUser?.role, moneyOverrides);
@@ -222,6 +231,12 @@ export function OperationsPage() {
   const [generatedPrescriptionFile, setGeneratedPrescriptionFile] = useState<File | null>(null);
   const [pinnedPhysicianItem, setPinnedPhysicianItem] = useState<PickListItem | null>(null);
   const [acquisition, setAcquisition] = useState(emptyPatientAcquisitionFormValues);
+  const [createWizardStage, setCreateWizardStage] = useState<OperationWizardStage>(1);
+  const [editWizardStage, setEditWizardStage] = useState<OperationWizardStage>(1);
+  const [stage1BlockedMsg, setStage1BlockedMsg] = useState<string | null>(null);
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [duplicateOps, setDuplicateOps] = useState<OperationDto[]>([]);
+  const [duplicateChecking, setDuplicateChecking] = useState(false);
 
   const bookPatientPickSearch = useDebouncedPickListSearch();
   const bookDoctorPickSearch = useDebouncedPickListSearch();
@@ -331,6 +346,10 @@ export function OperationsPage() {
     setPrescriptionFile(medReset.prescriptionFile);
     setGeneratedPrescriptionFile(medReset.generatedPrescriptionFile);
     setAcquisition(emptyPatientAcquisitionFormValues());
+    setCreateWizardStage(1);
+    setStage1BlockedMsg(null);
+    setDuplicateDialogOpen(false);
+    setDuplicateOps([]);
   };
 
   const [efPatient, setEfPatient] = useState("");
@@ -425,6 +444,8 @@ export function OperationsPage() {
     setEditFormErr(null);
     editPatientPickSearch.resetSearch();
     editDoctorPickSearch.resetSearch();
+    setEditWizardStage(canStage1 ? 1 : 2);
+    setStage1BlockedMsg(null);
   };
 
   const editIsScheduled = editOp != null && operationStatusIsEditable(editOp.status ?? "BOOKED");
@@ -559,6 +580,28 @@ export function OperationsPage() {
   const collectEditValidation = () => {
     if (!editOp) return { issues: [] as string[], invalidDocRowIds: new Set<string>() };
     if (editIsScheduled) {
+      if (!canStage1) {
+        // Call center / stage-2-only: validate clinical prep, not booking fields.
+        return collectOperationCreateValidationIssues(
+          {
+            patientId: editOp.patientId,
+            clinicianId: editOp.clinicianId,
+            operationDate: editOp.operationDate,
+            totalCost: "",
+            downPayment: "",
+            feesOptional: true,
+            isContract: true,
+            docRows: editDocRows,
+            medTab: editMedTab,
+            prescriptionFile: editPrescriptionFile,
+            generatedPrescriptionFile: editGeneratedPrescriptionFile,
+            hasExistingPrescription: editHadExistingPrescription,
+            acquisition: emptyPatientAcquisitionFormValues(),
+            requireAcquisition: false,
+          },
+          t,
+        );
+      }
       return collectOperationCreateValidationIssues(
         {
           patientId: editPatientId,
@@ -580,6 +623,9 @@ export function OperationsPage() {
       );
     }
     const issues: string[] = [];
+    if (!canStage1) {
+      return { issues, invalidDocRowIds: new Set<string>() };
+    }
     if (!editPatientId.trim()) issues.push(t("operations.validationPatient", "Select a patient."));
     if (!editClinicianId.trim()) issues.push(t("operations.validationDoctor", "Select a performing doctor."));
     if (!editOperationDate.trim()) issues.push(t("operations.validationDate", "Enter the operation date."));
@@ -614,22 +660,31 @@ export function OperationsPage() {
   const saveEditOperation = async (opts?: { forceContract?: boolean }): Promise<OperationDto> => {
     if (!editOp) throw new Error("No operation selected");
     const contractFlag = Boolean(opts?.forceContract || editIsContract);
-    const op = await apiPatch<OperationDto>(`/api/v1/operations/${editOp.id}`, {
-      patientId: editPatientId,
-      clinicianId: editClinicianId,
-      operationDate: toOperationIso(editOperationDate),
-      ...(canEditFees
+    const stage2Only = !canStage1;
+    const op = await apiPatch<OperationDto>(
+      `/api/v1/operations/${editOp.id}`,
+      stage2Only
         ? {
-            totalCost: Number.parseFloat(editTotalCost),
-            downPayment: editDownPayment.trim() ? Number.parseFloat(editDownPayment) : 0,
-            feeCurrency: editFeeCurrency,
-            isContract: contractFlag,
+            comments: editComments.trim() || undefined,
+            ...(editIsScheduled ? { noMedications: editMedTab === "none" } : {}),
           }
-        : {}),
-      comments: editComments.trim() || undefined,
-      clinicId: editClinicId || undefined,
-      ...(editIsScheduled ? { noMedications: editMedTab === "none" } : {}),
-    });
+        : {
+            patientId: editPatientId,
+            clinicianId: editClinicianId,
+            operationDate: toOperationIso(editOperationDate),
+            ...(canEditFees
+              ? {
+                  totalCost: Number.parseFloat(editTotalCost),
+                  downPayment: editDownPayment.trim() ? Number.parseFloat(editDownPayment) : 0,
+                  feeCurrency: editFeeCurrency,
+                  isContract: contractFlag,
+                }
+              : {}),
+            comments: editComments.trim() || undefined,
+            clinicId: editClinicId || undefined,
+            ...(editIsScheduled ? { noMedications: editMedTab === "none" } : {}),
+          },
+    );
 
     if (!editIsScheduled) return op;
 
@@ -906,7 +961,56 @@ export function OperationsPage() {
     },
   });
 
+  const proceedCreateAfterValidation = (opts?: { forceContract?: boolean; skipDuplicateCheck?: boolean }) => {
+    const zeroWithoutContract = isZeroCostWithoutContract({
+      totalCost,
+      isContract: opts?.forceContract ? true : isContract,
+      feesOptional: !canEditFees,
+    });
+    if (zeroWithoutContract && !opts?.forceContract) {
+      setContractZeroDialogIntent("create");
+      setContractZeroDialogOpen(true);
+      return;
+    }
+    setFormErr(null);
+    setDocInvalidRowIds(new Set());
+    if (opts?.skipDuplicateCheck) {
+      createMut.mutate({ forceContract: opts?.forceContract });
+      return;
+    }
+    void (async () => {
+      setDuplicateChecking(true);
+      try {
+        const q = new URLSearchParams({
+          patientId,
+          clinicianId,
+          operationDate: toOperationIso(operationDate),
+        });
+        const found = await apiGet<OperationDto[]>(`/api/v1/operations/same-day-duplicates?${q.toString()}`);
+        if (found.length > 0) {
+          setDuplicateOps(found);
+          setDuplicateDialogOpen(true);
+          return;
+        }
+        createMut.mutate({ forceContract: opts?.forceContract });
+      } catch (e: unknown) {
+        createValidation.showError(e);
+      } finally {
+        setDuplicateChecking(false);
+      }
+    })();
+  };
+
   const handleCreateClick = () => {
+    if (!canStage1) {
+      setStage1BlockedMsg(
+        t(
+          "operations.stage1Restricted",
+          "Only a group supervisor or doctor assistant can fill booking details (patient, doctor, date, and cost). Call center can complete clinical prep on an existing operation.",
+        ),
+      );
+      return;
+    }
     const validation = collectOperationCreateValidationIssues(
       {
         patientId,
@@ -938,17 +1042,23 @@ export function OperationsPage() {
       ? validation.issues.filter((issue) => issue !== zeroContractGateMsg)
       : validation.issues;
     if (otherIssues.length > 0) {
+      // Prefer jumping to the stage that owns the first failing field.
+      const stage1Hints = [
+        t("operations.validationPatient", "Select a patient."),
+        t("operations.validationDoctor", "Select a performing doctor."),
+        t("operations.validationDate", "Enter the operation date."),
+        t("operations.validationTotalCost", "Enter a valid total cost."),
+        zeroContractGateMsg,
+      ];
+      if (otherIssues.some((issue) => stage1Hints.includes(issue))) {
+        setCreateWizardStage(1);
+      } else {
+        setCreateWizardStage(2);
+      }
       showCreateValidationIssues(otherIssues, validation.invalidDocRowIds);
       return;
     }
-    if (zeroWithoutContract) {
-      setContractZeroDialogIntent("create");
-      setContractZeroDialogOpen(true);
-      return;
-    }
-    setFormErr(null);
-    setDocInvalidRowIds(new Set());
-    createMut.mutate({});
+    proceedCreateAfterValidation();
   };
 
   const loc = localeForLanguage(i18n.language);
@@ -989,7 +1099,18 @@ export function OperationsPage() {
             return;
           }
           setIsContract(true);
-          createMut.mutate({ forceContract: true });
+          proceedCreateAfterValidation({ forceContract: true });
+        }}
+      />
+      <OperationDuplicateDialog
+        open={duplicateDialogOpen}
+        onOpenChange={setDuplicateDialogOpen}
+        duplicates={duplicateOps}
+        pending={createMut.isPending || duplicateChecking}
+        currencyFallback={feeCurrency}
+        onConfirmCreate={() => {
+          setDuplicateDialogOpen(false);
+          createMut.mutate({});
         }}
       />
       <Dialog
@@ -1347,16 +1468,48 @@ export function OperationsPage() {
                       <OperationPostSurgeryDocumentsSection
                         operationId={editOp.id}
                         documents={editOpDetail.documents}
-                        canUpload={canCreate}
+                        canUpload={canStage2}
                       />
                     ) : null}
                   </div>
                 ) : (
+                <div className="space-y-4">
+                {editIsScheduled ? (
+                  <>
+                    <OperationWizardSteps
+                      stage={editWizardStage}
+                      stage1Enabled={canStage1}
+                      onStageChange={(s) => {
+                        setStage1BlockedMsg(null);
+                        setEditWizardStage(s);
+                      }}
+                      onStage1Blocked={() =>
+                        setStage1BlockedMsg(
+                          t(
+                            "operations.stage1Restricted",
+                            "Only a group supervisor or doctor assistant can fill booking details (patient, doctor, date, and cost). Call center can complete clinical prep on an existing operation.",
+                          ),
+                        )
+                      }
+                    />
+                    {stage1BlockedMsg ? (
+                      <p
+                        className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-50"
+                        role="status"
+                        data-testid="operation-stage1-restricted"
+                      >
+                        {stage1BlockedMsg}
+                      </p>
+                    ) : null}
+                  </>
+                ) : null}
                 <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
                 {editIsScheduled && editOpDetailPending ? (
                   <p className="text-sm text-muted-foreground lg:col-span-2">{t("common.loading", "Loading…")}</p>
                 ) : null}
 
+                {( !editIsScheduled || editWizardStage === 1) ? (
+                <>
                 <fieldset className="space-y-3 rounded-lg border border-border p-3 sm:p-4">
                   <legend className="px-1 text-sm font-medium">{t("operations.sectionWhen", "When & where")}</legend>
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -1536,7 +1689,11 @@ export function OperationsPage() {
                     </>
                   ) : null}
                 </fieldset>
+                </>
+                ) : null}
 
+                {(!editIsScheduled || editWizardStage === 2) ? (
+                <>
                 <fieldset className="space-y-3 rounded-lg border border-border p-3 sm:p-4 lg:col-span-2">
                   <legend className="px-1 text-sm font-medium">{t("operations.comments", "Comments")}</legend>
                   <Textarea
@@ -1563,7 +1720,7 @@ export function OperationsPage() {
                     <OperationPostSurgeryDocumentsSection
                       operationId={editOp.id}
                       documents={editOpDetail.documents}
-                      canUpload={canCreate}
+                      canUpload={canStage2}
                     />
                   </div>
                 ) : null}
@@ -1615,8 +1772,11 @@ export function OperationsPage() {
                     </fieldset>
                   </>
                 ) : null}
+                </>
+                ) : null}
 
                 {editFormErr ? <p className="text-sm text-destructive lg:col-span-2">{editFormErr}</p> : null}
+                </div>
                 </div>
                 )}
               </div>
@@ -1770,6 +1930,21 @@ export function OperationsPage() {
           </CardHeader>
           {showCreatePanel ? (
             <CardContent className="space-y-6 overflow-visible">
+              <OperationWizardSteps
+                stage={createWizardStage}
+                stage1Enabled
+                onStageChange={(s) => {
+                  setStage1BlockedMsg(null);
+                  setCreateWizardStage(s);
+                }}
+              />
+              {stage1BlockedMsg ? (
+                <p className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-50" role="status">
+                  {stage1BlockedMsg}
+                </p>
+              ) : null}
+              {createWizardStage === 1 ? (
+                <div className="space-y-6">
               <fieldset className="space-y-3 rounded-lg border border-border p-4">
                 <legend className="px-1 text-sm font-medium">{t("operations.sectionWhen", "When & where")}</legend>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -1943,6 +2118,36 @@ export function OperationsPage() {
               </fieldset>
 
               <fieldset className="space-y-3 rounded-lg border border-border p-4">
+                <legend className="px-1 text-sm font-medium">
+                  {t("patients.howDidTheyFindUs", "How did they find us?")}
+                  {authUser?.operationAcquisitionRequired ? (
+                    <span className="ms-1 text-destructive" aria-hidden>
+                      *
+                    </span>
+                  ) : null}
+                </legend>
+                <PatientAcquisitionFields
+                  required={Boolean(authUser?.operationAcquisitionRequired)}
+                  values={acquisition}
+                  onChange={setAcquisition}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {authUser?.operationAcquisitionRequired
+                    ? t(
+                        "operations.acquisitionRequiredHint",
+                        "Required by your organization settings. Updates how this patient is recorded as having found the clinic.",
+                      )
+                    : t(
+                        "operations.acquisitionHint",
+                        "Optional. Updates how this patient is recorded as having found the clinic on their profile.",
+                      )}
+                </p>
+              </fieldset>
+
+                </div>
+              ) : (
+                <div className="space-y-6">
+              <fieldset className="space-y-3 rounded-lg border border-border p-4">
                 <legend className="px-1 text-sm font-medium">{t("operations.comments", "Comments")}</legend>
                 <Textarea
                   id="op-comments"
@@ -1981,42 +2186,36 @@ export function OperationsPage() {
                 />
               </fieldset>
 
-              <fieldset className="space-y-3 rounded-lg border border-border p-4">
-                <legend className="px-1 text-sm font-medium">
-                  {t("patients.howDidTheyFindUs", "How did they find us?")}
-                  {authUser?.operationAcquisitionRequired ? (
-                    <span className="ms-1 text-destructive" aria-hidden>
-                      *
-                    </span>
-                  ) : null}
-                </legend>
-                <PatientAcquisitionFields
-                  required={Boolean(authUser?.operationAcquisitionRequired)}
-                  values={acquisition}
-                  onChange={setAcquisition}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {authUser?.operationAcquisitionRequired
-                    ? t(
-                        "operations.acquisitionRequiredHint",
-                        "Required by your organization settings. Updates how this patient is recorded as having found the clinic.",
-                      )
-                    : t(
-                        "operations.acquisitionHint",
-                        "Optional. Updates how this patient is recorded as having found the clinic on their profile.",
-                      )}
-                </p>
-              </fieldset>
-
+                </div>
+              )}
               {formErr ? <p className="text-sm text-destructive">{formErr}</p> : null}
               {createOk ? <p className="text-sm text-[hsl(var(--success))]">{createOk}</p> : null}
-              <CreateActionButton
-                type="button"
-                disabled={createMut.isPending}
-                onClick={handleCreateClick}
-              >
-                {t("operations.save", "Save operation")}
-              </CreateActionButton>
+              <div className="flex flex-wrap gap-2">
+                {createWizardStage === 2 ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setCreateWizardStage(1)}
+                  >
+                    {t("operations.wizardBack", "Back to booking")}
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setCreateWizardStage(2)}
+                  >
+                    {t("operations.wizardNext", "Next: clinical prep")}
+                  </Button>
+                )}
+                <CreateActionButton
+                  type="button"
+                  disabled={createMut.isPending || duplicateChecking}
+                  onClick={handleCreateClick}
+                >
+                  {t("operations.save", "Save operation")}
+                </CreateActionButton>
+              </div>
             </CardContent>
           ) : null}
         </Card>

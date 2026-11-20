@@ -9,7 +9,8 @@
 | Allergies (structured) | Existing `PatientAllergy` | Existing section in summary + sidebar |
 | Timeline (filtered) | `GET /api/v1/patients/:id/timeline?types=` | `PatientTimeline` |
 | Family links | `GET/POST/DELETE .../family-links` | `PatientFamilyPanel` |
-| Merge duplicate | `POST .../merge` | `PatientMergeWizard` |
+| Merge duplicate | `POST .../merge` (optional `fieldChoices`) | `PatientMergeWizard` · Admin **Data explorer → Double-linked patients** |
+| Double-linked patients | `GET /admin/data-explorer/double-linked-patients` | Clusters by phone, national ID, or name+DOB; field-by-field merge |
 | Clinical photo gallery | `GET .../clinical-photos` | `PatientClinicalPhotoGallery` (metadata; upload wiring next) |
 
 ## Scheduling

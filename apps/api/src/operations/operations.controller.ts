@@ -2,7 +2,6 @@ import {
   BadRequestException,
   Body,
   Controller,
-  ForbiddenException,
   Get,
   Param,
   Patch,
@@ -46,8 +45,12 @@ import {
 } from "./dto/operation-clinical.dto";
 import { UpdateOperationDto } from "./dto/update-operation.dto";
 import { assertCanCompleteOperation } from "./operation-complete-roles";
+import {
+  OPERATION_INITIATE_ROLES,
+  OPERATION_STAGE2_ROLES,
+  assertCanInitiateOperation,
+} from "./operation-stage-roles";
 import { OperationsService } from "./operations.service";
-import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 import { NavTabAccessService } from "../user-nav-tabs/nav-tab-access.service";
 
 const UPLOAD_LIMIT = 15 * 1024 * 1024;
@@ -64,18 +67,14 @@ const OPERATIONS_VIEW_ROLES: Set<UserRole> = new Set([
   UserRole.FINANCE_OFFICER,
 ]);
 
-const OPERATIONS_CREATE_ROLES: Set<UserRole> = new Set([
-  UserRole.GROUP_ADMIN,
-  UserRole.GROUP_SUPERVISOR,
-  UserRole.CLINIC_ADMIN,
-  UserRole.BRANCH_MANAGER,
-  UserRole.CLINIC_ASSISTANT,
-  UserRole.RECEPTIONIST,
-  UserRole.CALL_CENTER,
-]);
+/** New operation booking (stage 1) — excludes call center. */
+const OPERATIONS_INITIATE_ROLES: Set<UserRole> = new Set(OPERATION_INITIATE_ROLES);
+
+/** Clinical prep mutations (stage 2): docs, meds, comments — includes call center. */
+const OPERATIONS_STAGE2_ROLES: Set<UserRole> = new Set(OPERATION_STAGE2_ROLES);
 
 const OPERATIONS_STATUS_ROLES: Set<UserRole> = new Set([
-  ...OPERATIONS_CREATE_ROLES,
+  ...OPERATIONS_STAGE2_ROLES,
   UserRole.PHYSICIAN,
 ]);
 
@@ -121,12 +120,22 @@ export class OperationsController {
     );
   }
 
-  private async assertCreateAccess(user: JwtUser): Promise<void> {
+  private async assertInitiateAccess(user: JwtUser): Promise<void> {
     await this.navTabAccess.assertMutateTab(
       user,
       "operations",
-      OPERATIONS_CREATE_ROLES,
-      "You do not have permission to schedule operations",
+      OPERATIONS_INITIATE_ROLES,
+      "Only a group supervisor or doctor assistant can schedule a new operation",
+    );
+    assertCanInitiateOperation(user);
+  }
+
+  private async assertStage2Access(user: JwtUser): Promise<void> {
+    await this.navTabAccess.assertMutateTab(
+      user,
+      "operations",
+      OPERATIONS_STAGE2_ROLES,
+      "You do not have permission to update operation clinical details",
     );
   }
 
@@ -194,11 +203,36 @@ export class OperationsController {
     return this.operations.listPayable(requireTenantId(user), user, clinicId);
   }
 
+  @Get("same-day-duplicates")
+  @ApiOperation({
+    summary:
+      "List existing non-cancelled operations for the same patient, doctor, and calendar day (duplicate booking guard)",
+  })
+  @ApiOkResponse({ type: OperationDto, isArray: true })
+  async sameDayDuplicates(
+    @CurrentUser() user: JwtUser,
+    @Query("patientId") patientId: string,
+    @Query("clinicianId") clinicianId: string,
+    @Query("operationDate") operationDate: string,
+  ) {
+    await this.assertViewAccess(user);
+    if (!patientId?.trim() || !clinicianId?.trim() || !operationDate?.trim()) {
+      throw new BadRequestException("patientId, clinicianId, and operationDate are required");
+    }
+    return this.operations.findSameDayDuplicates(
+      requireTenantId(user),
+      user,
+      patientId.trim(),
+      clinicianId.trim(),
+      operationDate.trim(),
+    );
+  }
+
   @Post()
   @ApiOperation({ summary: "Schedule a new operation" })
   @ApiCreatedResponse({ type: OperationDto })
   async create(@CurrentUser() user: JwtUser, @Body() body: CreateOperationDto) {
-    await this.assertCreateAccess(user);
+    await this.assertInitiateAccess(user);
     return this.operations.create(requireTenantId(user), body, user);
   }
 
@@ -255,7 +289,7 @@ export class OperationsController {
     @Body("kind") kindRaw?: string,
     @Body("description") description?: string,
   ): Promise<OperationDocumentDto> {
-    await this.assertCreateAccess(user);
+    await this.assertStage2Access(user);
     if (!file) throw new BadRequestException("file is required");
     const normalized = kindRaw?.trim().toUpperCase();
     const kind =
@@ -281,7 +315,7 @@ export class OperationsController {
     @Param("id") id: string,
     @Body() body: AddOperationMedicationDto,
   ) {
-    await this.assertCreateAccess(user);
+    await this.assertStage2Access(user);
     return this.operations.addMedication(requireTenantId(user), id, body, user);
   }
 
@@ -294,7 +328,7 @@ export class OperationsController {
     @Param("id") id: string,
     @Body() body?: { clearPrescription?: boolean },
   ) {
-    await this.assertCreateAccess(user);
+    await this.assertStage2Access(user);
     return this.operations.resetClinical(requireTenantId(user), id, user, body);
   }
 
@@ -334,7 +368,7 @@ export class OperationsController {
     @Param("id") id: string,
     @Body() body: { itemName: string; quantity?: number; unit?: string; catalogCode?: string },
   ) {
-    await this.assertCreateAccess(user);
+    await this.assertStage2Access(user);
     return this.operations.addSupply(requireTenantId(user), id, body);
   }
 
@@ -350,7 +384,7 @@ export class OperationsController {
 
   @Patch(":id/operation-note")
   async saveNote(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: Record<string, unknown>) {
-    await this.assertCreateAccess(user);
+    await this.assertStage2Access(user);
     return this.operations.saveOperationNote(requireTenantId(user), id, body);
   }
 }

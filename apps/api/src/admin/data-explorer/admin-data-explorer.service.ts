@@ -101,6 +101,13 @@ export class AdminDataExplorerService {
       { key: "users", label: "Users", scope: "tenant", ops: { list: true, get: true, create: false, patch: true, delete: false } },
       { key: "clinics", label: "Clinics", scope: "tenant", ops: { list: true, get: true, create: false, patch: true, delete: false } },
       { key: "patients", label: "Patients", scope: "tenant", ops: { list: true, get: true, create: true, patch: true, delete: false } },
+      {
+        key: "double_linked_patients",
+        label: "Double-linked patients",
+        scope: "tenant",
+        ops: { list: true, get: false, create: false, patch: false, delete: false },
+        tool: "double_linked_patients",
+      },
       { key: "patient_documents", label: "Patient documents", scope: "tenant", ops: { list: true, get: true, create: false, patch: false, delete: false } },
       { key: "employees", label: "Employees", scope: "tenant", ops: { list: true, get: true, create: false, patch: true, delete: false } },
       { key: "appointments", label: "Appointments", scope: "tenant", ops: { list: true, get: true, create: false, patch: true, delete: false } },
