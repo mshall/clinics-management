@@ -21,16 +21,38 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+free_port() {
+  local port="$1"
+  local pids
+  pids="$(lsof -ti ":$port" 2>/dev/null || true)"
+  if [[ -n "$pids" ]]; then
+    echo "[playwright-ci] freeing :$port ($pids)"
+    # shellcheck disable=SC2086
+    kill $pids 2>/dev/null || true
+    sleep 0.5
+    pids="$(lsof -ti ":$port" 2>/dev/null || true)"
+    if [[ -n "$pids" ]]; then
+      # shellcheck disable=SC2086
+      kill -9 $pids 2>/dev/null || true
+      sleep 0.25
+    fi
+  fi
+}
+
+free_port "$PORT"
+free_port "$WEB_PORT"
+
 if [ ! -f "$ROOT/apps/api/dist/src/main.js" ]; then
   echo "[playwright-ci] building API (faster than nest --watch on cold CI)…"
   npm run build -w api
 fi
 
 echo "[playwright-ci] starting API on :${PORT} (DATABASE_URL from CI)…"
-npm run start -w api &
+# Force Nest onto the CI port even if apps/api/.env says otherwise (e.g. main local 3020).
+env PORT="$PORT" API_PORT="$API_PORT" APP_WEB_URL="http://localhost:${WEB_PORT}" npm run start -w api &
 API_PID=$!
 
-bash "$ROOT/scripts/wait-api-ready.sh" "$API_WAIT_SEC"
+env API_PORT="$API_PORT" PORT="$PORT" bash "$ROOT/scripts/wait-api-ready.sh" "$API_WAIT_SEC"
 
 if [ "${PLAYWRIGHT_WEB_MODE:-}" = "preview" ] || [ -n "${CI:-}" ]; then
   if [ ! -d "$ROOT/apps/web/dist" ]; then

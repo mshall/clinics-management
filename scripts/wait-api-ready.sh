@@ -3,8 +3,15 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# Honor an explicitly exported API_PORT (Playwright CI uses 3010 even on main).
+_preset_api_port="${API_PORT:-}"
 # shellcheck source=scripts/local-dev-ports.sh
 source "$ROOT/scripts/local-dev-ports.sh"
+if [[ -n "$_preset_api_port" ]]; then
+  export API_PORT="$_preset_api_port"
+  export PORT="$_preset_api_port"
+fi
+unset _preset_api_port
 
 READY_URL="http://127.0.0.1:${API_PORT}/api/v1/health/ready"
 LIVE_URL="http://127.0.0.1:${API_PORT}/api/v1/health/live"
