@@ -404,6 +404,9 @@ export interface AdminOverviewDto {
       saasVatPercent: number;
     } | null;
     integrationFailureRetentionDays: number;
+    operationAcquisitionRequired?: boolean;
+    whatsAppRemindersEnabled?: boolean;
+    appointmentReminderHoursBefore?: number;
   } | null;
   registeredTenants: number;
   featureFlags: Array<{

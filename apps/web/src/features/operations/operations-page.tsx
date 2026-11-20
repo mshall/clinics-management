@@ -912,6 +912,7 @@ export function OperationsPage() {
         feesOptional: !canEditFees,
         isContract,
         acquisition,
+        requireAcquisition: Boolean(authUser?.operationAcquisitionRequired),
       },
       t,
     );
@@ -1971,13 +1972,29 @@ export function OperationsPage() {
               </fieldset>
 
               <fieldset className="space-y-3 rounded-lg border border-border p-4">
-                <legend className="px-1 text-sm font-medium">{t("patients.howDidTheyFindUs", "How did they find us?")}</legend>
-                <PatientAcquisitionFields required values={acquisition} onChange={setAcquisition} />
+                <legend className="px-1 text-sm font-medium">
+                  {t("patients.howDidTheyFindUs", "How did they find us?")}
+                  {authUser?.operationAcquisitionRequired ? (
+                    <span className="ms-1 text-destructive" aria-hidden>
+                      *
+                    </span>
+                  ) : null}
+                </legend>
+                <PatientAcquisitionFields
+                  required={Boolean(authUser?.operationAcquisitionRequired)}
+                  values={acquisition}
+                  onChange={setAcquisition}
+                />
                 <p className="text-xs text-muted-foreground">
-                  {t(
-                    "operations.acquisitionHint",
-                    "Updates how this patient is recorded as having found the clinic on their profile.",
-                  )}
+                  {authUser?.operationAcquisitionRequired
+                    ? t(
+                        "operations.acquisitionRequiredHint",
+                        "Required by your organization settings. Updates how this patient is recorded as having found the clinic.",
+                      )
+                    : t(
+                        "operations.acquisitionHint",
+                        "Optional. Updates how this patient is recorded as having found the clinic on their profile.",
+                      )}
                 </p>
               </fieldset>
 

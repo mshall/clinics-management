@@ -11,7 +11,7 @@ import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +24,7 @@ import { formatClinicName } from "@/lib/locale-display";
 import { clinicKindLabel, isRootClinic } from "@/lib/clinic-kind";
 import { useAuthStore } from "@/stores/auth-store";
 import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
+import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { ClinicFormFields } from "@/features/clinics/clinic-form-fields";
 import {
   clinicDetailToForm,
@@ -246,6 +247,7 @@ export function AdminPage() {
   const [feeOverride, setFeeOverride] = useState(false);
   const [trnOverride, setTrnOverride] = useState(false);
   const [vatOverride, setVatOverride] = useState(false);
+  const [operationAcquisitionRequiredDraft, setOperationAcquisitionRequiredDraft] = useState(false);
   useEffect(() => {
     if (!isPlatformSuperAdmin && !isGroupAdmin && adminSection === "data") setAdminSection("clinics");
   }, [isPlatformSuperAdmin, isGroupAdmin, adminSection]);
@@ -270,6 +272,11 @@ export function AdminPage() {
   useEffect(() => {
     const t = overview.data?.currentTenant;
     if (!t) return;
+    setOperationAcquisitionRequiredDraft(Boolean(t.operationAcquisitionRequired));
+  }, [overview.data?.currentTenant?.operationAcquisitionRequired]);
+  useEffect(() => {
+    const t = overview.data?.currentTenant;
+    if (!t) return;
   const trn = t.defaultTaxRegistrationNumberUsesMarketDefault
       ? (t.defaultTaxRegistrationNumber ?? "")
       : (t.defaultTaxRegistrationNumberOverride ?? t.defaultTaxRegistrationNumber ?? "");
@@ -284,6 +291,7 @@ export function AdminPage() {
       const vatN = Number.parseFloat(vatDraft);
       return apiPatch("/api/v1/admin/tenant-settings", {
         baseCurrency: currencyDraft,
+        operationAcquisitionRequired: operationAcquisitionRequiredDraft,
         ...(feeOverride
           ? { defaultVisitFee: Number.parseFloat(feeDraft) }
           : { defaultVisitFeeUseMarketDefault: true }),
@@ -601,6 +609,58 @@ export function AdminPage() {
                   onClick={() => patchOrgSettingsMut.mutate()}
                 >
                   {t("common.save", "Save")}
+                </Button>
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {isGroupAdmin ? (
+            <Card data-testid="admin-operation-settings">
+              <CardHeader>
+                <CardTitle className="text-base">
+                  {t("admin.operationSettings", "Operation settings")}
+                </CardTitle>
+                <CardDescription>
+                  {t(
+                    "admin.operationSettingsHint",
+                    "Controls required fields when staff create an operation.",
+                  )}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="op-acquisition-required">
+                    {t("admin.operationAcquisitionRequired", "How did they find us?")}
+                  </Label>
+                  <select
+                    id="op-acquisition-required"
+                    className={nativeSelectClassName}
+                    value={operationAcquisitionRequiredDraft ? "required" : "optional"}
+                    onChange={(e) =>
+                      setOperationAcquisitionRequiredDraft(e.target.value === "required")
+                    }
+                    data-testid="admin-operation-acquisition-required"
+                  >
+                    <option value="optional">
+                      {t("admin.operationAcquisitionOptional", "Optional (default)")}
+                    </option>
+                    <option value="required">
+                      {t("admin.operationAcquisitionMandatory", "Mandatory")}
+                    </option>
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    {t(
+                      "admin.operationAcquisitionRequiredHint",
+                      "When mandatory, staff must select an acquisition channel before saving a new operation.",
+                    )}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  disabled={patchOrgSettingsMut.isPending}
+                  onClick={() => patchOrgSettingsMut.mutate()}
+                >
+                  {t("admin.saveOperationSettings", "Save operation settings")}
                 </Button>
               </CardContent>
             </Card>

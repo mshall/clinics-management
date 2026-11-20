@@ -15,6 +15,14 @@ function validatePatientAcquisitionRequired(
   if (!values.channel) {
     return t("operations.errorAcquisitionRequired", "Select how the patient found the clinic.");
   }
+  return validatePatientAcquisitionDetails(values, t);
+}
+
+/** When acquisition is optional, still validate referral/other details if a channel is chosen. */
+function validatePatientAcquisitionDetails(
+  values: OperationAcquisitionFormValues,
+  t: TFunction,
+): string | null {
   if (values.channel === "DOCTOR_REFERRAL" && !values.referralName.trim()) {
     return t("patients.errorExplainMoreRequired", "Explain more is required.");
   }
@@ -135,9 +143,12 @@ export function collectOperationCreateValidationIssues(
     );
   }
 
-  if (input.requireAcquisition !== false) {
+  if (input.requireAcquisition) {
     const acquisitionErr = validatePatientAcquisitionRequired(input.acquisition, t);
     if (acquisitionErr) issues.push(acquisitionErr);
+  } else if (input.acquisition.channel) {
+    const detailErr = validatePatientAcquisitionDetails(input.acquisition, t);
+    if (detailErr) issues.push(detailErr);
   }
 
   return { issues, invalidDocRowIds };
