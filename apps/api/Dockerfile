@@ -25,6 +25,8 @@ COPY apps/api/prisma ./apps/api/prisma
 COPY apps/api/prisma.config.ts ./apps/api/prisma.config.ts
 COPY apps/api/docker-entrypoint.mjs ./apps/api/docker-entrypoint.mjs
 COPY apps/api/assets ./apps/api/assets
+# Runtime market/residency registries (SC-01 + MS-05). Nest resolves these from repo root via __dirname walk.
+COPY platform/data-cells.json platform/pdpc-egypt-filings.json platform/email-domain-auth.json ./platform/
 RUN npm ci --omit=dev && npm install -g prisma@7.10.1 tsx
 COPY --from=build /repo/apps/api/dist ./apps/api/dist
 COPY --from=build /repo/packages/field-visit/dist ./packages/field-visit/dist
