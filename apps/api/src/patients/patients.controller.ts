@@ -393,8 +393,22 @@ export class PatientsController {
   }
 
   @Post(":id/merge")
-  mergePatients(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: { sourcePatientId: string }) {
-    return this.patient360.mergePatients(requireTenantId(user), user, id, body.sourcePatientId);
+  mergePatients(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Body()
+    body: {
+      sourcePatientId: string;
+      fieldChoices?: Record<string, "target" | "source">;
+    },
+  ) {
+    return this.patient360.mergePatients(
+      requireTenantId(user),
+      user,
+      id,
+      body.sourcePatientId,
+      body.fieldChoices,
+    );
   }
 
   @Get(":id/clinical-photos")

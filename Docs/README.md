@@ -201,9 +201,16 @@ Shipped capabilities are listed in the PRD [§12.1 Delivered on `main`](./Clinic
 
 ---
 
-## Operations (edit parity)
+## Operations (two-stage wizard)
 
-Scheduled operations open an **edit dialog** that mirrors the **create** form: fieldset sections (When & where, Patient & doctor, Cost & payment, Comments, Documents, Medications), two-column layout on desktop, scrollable body with sticky actions on mobile. Completed operations support admin correction of fees and assignment (`PATCH /operations/:id`).
+Create and edit use a **two-stage wizard**:
+
+1. **Booking details** — patient, date & time, doctor, total cost / down payment, how they found us. Initiated and edited by **group supervisor** or **clinic (doctor) assistant** (plus org admins). **Call center cannot start a new operation** (create button hidden) and cannot return to stage 1 when editing; the UI explains that only supervisor/assistant can change booking fields.
+2. **Clinical prep** — lab/radiology/other documents, prescriptions/medications, comments. Call center may complete this stage on existing operations.
+
+**Same-day duplicate guard:** before create, `GET /operations/same-day-duplicates` checks patient + doctor + calendar day; a rich dialog shows existing operation details and warns against duplicates (create-anyway still available).
+
+Scheduled operations keep edit parity with create (wizard stages, two-column desktop layout, sticky actions). Completed operations support admin correction of fees and assignment (`PATCH /operations/:id`).
 
 ---
 

@@ -39,7 +39,7 @@ Professor / consultant in chronic pain, joints, spine, and neuritis (non-surgica
 | `admin@drahmedshall.com` | `demo` | Group admin | Full organization + Admin |
 | `supervisor@drahmedshall.com` | `demo` | Group supervisor | Org-wide patients (edit/delete), appointments, encounters, operations, expenses, revenue, reports (no Admin / HR / Clinics) |
 | `dr.ahmed@drahmedshall.com` | `demo` | Physician | All clinics (no single-clinic HR link) |
-| `callcenter@drahmedshall.com` | `demo` | Call center | Org-wide patients (edit/delete) & appointments |
+| `callcenter@drahmedshall.com` | `demo` | Call center | Org-wide patients (edit/delete) & appointments; operations **clinical prep only** (cannot create / edit booking stage) |
 | `finance@drahmedshall.com` | `demo` | Finance officer | Revenue, expenses, reports |
 | `hr@drahmedshall.com` | `demo` | HR officer | HR module |
 
@@ -115,7 +115,7 @@ When `platformSuperAdmin: true` (login / `GET /auth/me`), the **Administration**
 |------------|----------|-------------|
 | All tenants | Admin → **Clinics & tenants** → tenant table | `GET /api/v1/admin/tenants` — every organization in the platform |
 | Data explorer | Admin → **Data explorer** tab | `GET/POST/PATCH/DELETE /api/v1/admin/data-explorer/*` — direct CRUD on allowlisted tables |
-| Cross-tenant DB tables | Data explorer | `feature_flags`, `tenants`, `users`, `clinics`, `patients`, `employees`, `appointments`, `encounters`, `expenses`, `revenue_entries`, `audit_logs`, `clinic_admin_scopes`, `user_nav_tab_grants`, `diagnoses`, `encounter_medications`, `attendances`, `leave_requests` |
+| Cross-tenant DB tables | Data explorer | `feature_flags`, `tenants`, `users`, `clinics`, `patients`, **`double_linked_patients`** (duplicate-chart tool), `employees`, `appointments`, `encounters`, `expenses`, `revenue_entries`, `audit_logs`, `clinic_admin_scopes`, `user_nav_tab_grants`, `diagnoses`, `encounter_medications`, `attendances`, `leave_requests` |
 
 ### Group admin with platform flag (break-glass)
 
@@ -148,7 +148,7 @@ These users belong to **Kiorly Clinic Group (Demo)** and typically see data acro
 | `staff7@kiorly.com` | `demo` | HR Officer | Demo User 7 | HR module |
 | `nurse@kiorly.com` | `demo` | Nurse | Demo Nurse | Patients, appointments, encounters |
 | `receptionist@kiorly.com` | `demo` | Receptionist | Demo Receptionist | Front desk, operations |
-| `callcenter@kiorly.com` | `demo` | Call Center | Demo Call Center | Org-wide patients & appointments only (all clinics) |
+| `callcenter@kiorly.com` | `demo` | Call Center | Demo Call Center | Org-wide patients & appointments; operations stage-2 clinical prep only (no new operation) |
 | `assistant@kiorly.com` | `demo` | Clinic Assistant | Demo Clinic Assistant | Patients, appointments, encounters, operations, revenue, expenses |
 
 ### Additional seeded org users (`staff3` … `staff15`)
