@@ -11,8 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { absoluteDownloadUrl } from "@/lib/api-url";
 import { ApiError, apiDelete, apiGet, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
+import { downloadOrgBackupFile } from "@/lib/org-backup-download";
 import { DoubleLinkedPatientsPanel } from "@/features/admin/double-linked-patients-panel";
 
 type OrgBackupJob = {
@@ -29,15 +29,14 @@ type OrgBackupJob = {
   completedAt?: string | null;
 };
 
-/** Native browser download via absolute API URL (avoids Vite proxy mid-stream failures on large ZIPs). */
-function triggerNativeDownload(downloadUrl: string) {
-  const a = document.createElement("a");
-  a.href = absoluteDownloadUrl(downloadUrl);
-  a.rel = "noopener";
-  a.download = "";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+async function startOrgBackupDownload(
+  downloadUrl: string,
+  fileName: string | null | undefined,
+  onProgress?: (percent: number) => void,
+) {
+  return downloadOrgBackupFile(downloadUrl, fileName || "kiorly-org-backup.bin", {
+    onProgress: (p) => onProgress?.(p.percent),
+  });
 }
 
 type ExplorerOps = { list: boolean; get: boolean; create: boolean; patch: boolean; delete: boolean };
@@ -303,12 +302,72 @@ export function AdminDataExplorerPanel() {
           await qc.invalidateQueries({ queryKey: ["admin", "data-explorer", "export-jobs"] });
           if (mode === "export") {
             if (job.downloadUrl) {
-              triggerNativeDownload(job.downloadUrl);
-              toast.success(
-                t("admin.exportReadyToast", "Backup ready — download started ({{name}}).", {
-                  name: job.fileName || "backup",
-                }),
-              );
+              setProgress((prev) => ({
+                ...prev,
+                open: true,
+                mode,
+                title,
+                status: "running",
+                percent: Math.max(prev.percent, 1),
+                error: null,
+                detail: t(
+                  "admin.exportProgressDownloading",
+                  "Backup is ready — saving the file to your computer…",
+                ),
+              }));
+              try {
+                await startOrgBackupDownload(job.downloadUrl, job.fileName, (pct) => {
+                  setProgress((prev) => ({
+                    ...prev,
+                    open: true,
+                    mode,
+                    title,
+                    status: "running",
+                    percent: Math.max(1, Math.min(99, pct || prev.percent)),
+                    detail: t(
+                      "admin.exportProgressDownloading",
+                      "Backup is ready — saving the file to your computer…",
+                    ),
+                  }));
+                });
+                toast.success(
+                  t("admin.exportReadyToast", "Backup ready — download started ({{name}}).", {
+                    name: job.fileName || "backup",
+                  }),
+                );
+              } catch (e: unknown) {
+                if (e instanceof DOMException && e.name === "AbortError") {
+                  toast.message(t("admin.exportCancelledToast", "Backup cancelled."));
+                  setProgress((prev) => ({
+                    ...prev,
+                    open: true,
+                    status: "cancelled",
+                    detail: t(
+                      "admin.exportProgressCancelledDetail",
+                      "The operation was cancelled. You can start again when ready.",
+                    ),
+                  }));
+                  return;
+                }
+                const msg = e instanceof Error ? e.message : String(e);
+                toast.error(
+                  t(
+                    "admin.exportDownloadFailedToast",
+                    "Could not save the backup file. Try Download in Recent backup jobs.",
+                  ),
+                );
+                setProgress((prev) => ({
+                  ...prev,
+                  open: true,
+                  status: "failed",
+                  error: msg,
+                  detail: t(
+                    "admin.exportDownloadFailedHint",
+                    "The backup was prepared, but the browser could not finish saving it. Use Download in the list below.",
+                  ),
+                }));
+                return;
+              }
             } else {
               toast.success(
                 t(
@@ -328,6 +387,7 @@ export function AdminDataExplorerPanel() {
             status: "ready",
             open: true,
             error: null,
+            detail: t("admin.exportProgressReady", "File is ready. Your download should start shortly."),
           }));
           // Keep success visible briefly so the percentage and status are readable.
           window.setTimeout(() => setProgress((p) => ({ ...p, open: false })), 2200);
@@ -630,7 +690,25 @@ export function AdminDataExplorerPanel() {
                         type="button"
                         size="sm"
                         variant="secondary"
-                        onClick={() => triggerNativeDownload(job.downloadUrl!)}
+                        onClick={() => {
+                          void startOrgBackupDownload(job.downloadUrl!, job.fileName).then(
+                            () =>
+                              toast.success(
+                                t("admin.exportReadyToast", "Backup ready — download started ({{name}}).", {
+                                  name: job.fileName || "backup",
+                                }),
+                              ),
+                            (e: unknown) => {
+                              if (e instanceof DOMException && e.name === "AbortError") return;
+                              toast.error(
+                                t(
+                                  "admin.exportDownloadFailedToast",
+                                  "Could not save the backup file. Try Download in Recent backup jobs.",
+                                ),
+                              );
+                            },
+                          );
+                        }}
                       >
                         {t("admin.dataExplorerDownloadJob", "Download")}
                       </Button>

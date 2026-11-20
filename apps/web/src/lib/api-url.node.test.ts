@@ -32,6 +32,16 @@ describe("absoluteDownloadUrl (org backup)", () => {
     assert.equal(url, "http://127.0.0.1:3000/api/v1/admin/org-backup/download?token=abc");
   });
 
+  it("rewrites preview/e2e Vite 5174 the same way", () => {
+    const url = absoluteDownloadUrlForTest("/api/v1/admin/org-backup/download?token=abc", {
+      apiBase: "",
+      hostname: "localhost",
+      port: "5174",
+      protocol: "http:",
+    });
+    assert.equal(url, "http://localhost:3000/api/v1/admin/org-backup/download?token=abc");
+  });
+
   it("leaves absolute VITE_API_URL downloads unchanged", () => {
     const url = absoluteDownloadUrlForTest("/api/v1/admin/org-backup/download?token=abc", {
       apiBase: "https://api.example.com",

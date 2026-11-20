@@ -1,6 +1,6 @@
-import { Controller, Get, Query, Res } from "@nestjs/common";
+import { Controller, Get, Query, Req, Res } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
-import type { Response } from "express";
+import type { Request, Response } from "express";
 import { OrgBackupService } from "./org-backup.service";
 import { streamOrgBackupArtifact } from "./org-backup-stream";
 
@@ -17,8 +17,15 @@ export class OrgBackupDownloadController {
   @Get("download")
   @ApiOperation({ summary: "Download READY organization export via expiring token (no JWT)" })
   @ApiOkResponse({ description: "Streams the export artifact" })
-  async downloadByToken(@Query("token") token: string | undefined, @Res() res: Response) {
+  async downloadByToken(
+    @Query("token") token: string | undefined,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
     const file = await this.orgBackup.downloadByToken(token ?? "");
-    await streamOrgBackupArtifact(res, file);
+    // Disable request timeouts for long ZIP transfers (Nest/Express defaults can cut mid-stream).
+    req.setTimeout?.(0);
+    res.setTimeout?.(0);
+    await streamOrgBackupArtifact(res, file, req);
   }
 }

@@ -85,7 +85,15 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: "/index.html",
+        // Never let the SW own API navigations / large backup downloads.
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
+          {
+            urlPattern: ({ url }) =>
+              url.pathname.startsWith("/api/v1/admin/org-backup/") ||
+              /\/api\/v1\/admin\/data-explorer\/export\/jobs\/[^/]+\/download/.test(url.pathname),
+            handler: "NetworkOnly",
+          },
           {
             urlPattern: ({ url }) =>
               url.pathname.startsWith("/api/v1/dashboards/today") ||
