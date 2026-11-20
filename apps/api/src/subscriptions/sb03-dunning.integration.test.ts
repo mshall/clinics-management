@@ -17,8 +17,9 @@ import { DunningService } from "./dunning.service";
 import { MarketplaceListingService } from "../marketplace/marketplace-listing.service";
 import { OutboxEventService } from "../messaging/outbox-event.service";
 import { subscriptionAllowsAction, SubscriptionAccessAction } from "./subscription-access-policy";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 const legal = new LegalAcceptanceService(prismaSvc, new AuditService(prismaSvc));
 const billingSeats = new BillingSeatService(prismaSvc);

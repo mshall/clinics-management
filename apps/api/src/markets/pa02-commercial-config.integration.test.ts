@@ -6,8 +6,9 @@ import type { JwtUser } from "../auth/jwt-user";
 import { CommercialConfigService } from "./commercial-config.service";
 import { DEFAULT_COMMERCIAL_CONFIG } from "./commercial-config.schema";
 import { dunningTimelineFromFeatureDefaults } from "../subscriptions/dunning-config";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 const commercial = new CommercialConfigService(prismaSvc);
 

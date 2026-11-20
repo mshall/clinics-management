@@ -207,7 +207,7 @@ export function AppointmentsCalendarPanel() {
                 <ChevronLeft className="h-5 w-5 rtl-flip" aria-hidden />
                 <span className="sr-only">{t("appointments.calendarPrev", "Previous month")}</span>
               </Button>
-              <p className="min-w-[9.5rem] text-center text-lg font-semibold tracking-tight sm:text-xl" aria-live="polite">
+              <p className="min-w-38 text-center text-lg font-semibold tracking-tight sm:text-xl" aria-live="polite">
                 {periodLabel} <span className="font-medium text-muted-foreground ltr-nums">{yearLabel}</span>
               </p>
               <Button type="button" variant="ghost" size="icon" className="size-9 min-h-9 min-w-9 rounded-full md:size-9 md:min-h-9" onClick={() => shift(1)}>
@@ -236,7 +236,7 @@ export function AppointmentsCalendarPanel() {
               </div>
             ) : null}
             <div className="ms-auto flex items-center gap-2">
-              <div role="group" aria-label={t("kx2.calendarView", "Calendar view")} className="inline-flex rounded-lg border border-border bg-card p-0.5 text-xs shadow-[var(--kx-shadow-1)]">
+              <div role="group" aria-label={t("kx2.calendarView", "Calendar view")} className="inline-flex rounded-lg border border-border bg-card p-0.5 text-xs shadow-kx-1">
                 {(["month", "week", "day"] as const).map((v) => (
                   <button key={v} type="button" aria-pressed={view === v} data-testid={`calendar-view-${v}`} onClick={() => setView(v)} className={cn("rounded-md px-2.5 py-1.5 font-medium transition-colors", view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
                     {t(`kx2.view.${v}`, v === "month" ? "Month" : v === "week" ? "Week" : "Day")}
@@ -306,7 +306,7 @@ export function AppointmentsCalendarPanel() {
                       role="button"
                       tabIndex={0}
                       className={cn(
-                        "group relative flex min-h-[5.25rem] flex-col border-b border-r border-border/60 p-1 touch-manipulation sm:min-h-[6.25rem] lg:min-h-[7.5rem] lg:p-1.5",
+                        "group relative flex min-h-21 flex-col border-b border-r border-border/60 p-1 touch-manipulation sm:min-h-25 lg:min-h-30 lg:p-1.5",
                         idx % 7 === 6 && "border-r-0",
                         !cell.inCurrentMonth && "bg-muted/15",
                         isSelected && "bg-primary/10 ring-1 ring-inset ring-primary/25",
@@ -324,7 +324,7 @@ export function AppointmentsCalendarPanel() {
                         <span
                           className={cn(
                             "inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-xs font-medium ltr-nums sm:h-7 sm:min-w-7 sm:text-sm",
-                            isToday && "bg-primary font-semibold text-primary-foreground shadow-sm",
+                            isToday && "bg-primary font-semibold text-primary-foreground shadow-xs",
                             !isToday && isSelected && "font-semibold text-primary",
                             !isToday && !isSelected && cell.inCurrentMonth && "text-foreground",
                             !cell.inCurrentMonth && "text-muted-foreground/45",

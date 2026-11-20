@@ -168,7 +168,7 @@ function OpsKpiHelp({ tip }: { tip: string }) {
       <TooltipTrigger asChild>
         <button
           type="button"
-          className="inline-flex size-6 shrink-0 items-center justify-center rounded-full border border-sky-500/40 bg-sky-500/10 text-sky-700 shadow-sm transition-colors hover:border-sky-500/70 hover:bg-sky-500/15 hover:text-sky-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-sky-400/40 dark:bg-sky-400/10 dark:text-sky-300 dark:hover:text-sky-200"
+          className="inline-flex size-6 shrink-0 items-center justify-center rounded-full border border-sky-500/40 bg-sky-500/10 text-sky-700 shadow-xs transition-colors hover:border-sky-500/70 hover:bg-sky-500/15 hover:text-sky-800 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring dark:border-sky-400/40 dark:bg-sky-400/10 dark:text-sky-300 dark:hover:text-sky-200"
           aria-label={tip}
           onClick={(e) => {
             e.preventDefault();
@@ -183,7 +183,7 @@ function OpsKpiHelp({ tip }: { tip: string }) {
         side="top"
         align="end"
         sideOffset={8}
-        className="max-w-[17rem] text-start text-xs leading-snug"
+        className="max-w-68 text-start text-xs leading-snug"
         onPointerDownOutside={() => setOpen(false)}
       >
         {tip}
@@ -487,7 +487,7 @@ export function ReportsPage() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="tables" className="space-y-4 sm:space-y-6 focus-visible:outline-none">
+        <TabsContent value="tables" className="space-y-4 sm:space-y-6 focus-visible:outline-hidden">
 <Card data-testid="reports-kiorex-impact">
         <CardHeader>
           <CardTitle className="text-base">{t("reports.kiorexImpactTitle", "Kiorex impact")}</CardTitle>
@@ -1273,7 +1273,7 @@ export function ReportsPage() {
                         key={row.channel}
                         role="button"
                         tabIndex={0}
-                        className="cursor-pointer border-t transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
+                        className="cursor-pointer border-t transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-hidden"
                         onClick={() => setSelectedChannel({ channel: row.channel, label: row.label })}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
@@ -1303,7 +1303,7 @@ export function ReportsPage() {
 
         </TabsContent>
 
-        <TabsContent value="charts" className="space-y-4 sm:space-y-6 focus-visible:outline-none">
+        <TabsContent value="charts" className="space-y-4 sm:space-y-6 focus-visible:outline-hidden">
 <Card>
         <CardHeader>
           <CardTitle className="text-base">
@@ -1335,9 +1335,9 @@ export function ReportsPage() {
                   <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                   <YAxis tick={{ fontSize: 11 }} width={56} tickFormatter={(v) => String(v)} />
                   <ChartTooltip
-                    formatter={(value: number, name: string) => {
-                      const currency = name.split("_").pop() ?? series.data?.baseCurrency ?? orgBaseCurrency;
-                      const kind = name.startsWith("revenue_") ? t("nav.revenue") : t("nav.expenses");
+                    formatter={(value, name) => {
+                      const currency = String(name ?? "").split("_").pop() ?? series.data?.baseCurrency ?? orgBaseCurrency;
+                      const kind = String(name ?? "").startsWith("revenue_") ? t("nav.revenue") : t("nav.expenses");
                       return [money(Number(value), currency), `${kind} (${currency})`];
                     }}
                   />
@@ -1399,9 +1399,9 @@ export function ReportsPage() {
                         <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                         <YAxis tick={{ fontSize: 11 }} width={56} tickFormatter={(v) => money(Number(v), currency)} />
                         <ChartTooltip
-                          formatter={(value: number, name: string) => [
+                          formatter={(value, name) => [
                             money(Number(value), currency),
-                            name.startsWith("revenue_") ? t("nav.revenue") : t("nav.expenses"),
+                            String(name ?? "").startsWith("revenue_") ? t("nav.revenue") : t("nav.expenses"),
                           ]}
                         />
                         <Legend wrapperStyle={{ fontSize: 12 }} />
@@ -1445,7 +1445,7 @@ export function ReportsPage() {
                   <CartesianGrid vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                   <YAxis tick={{ fontSize: 11 }} allowDecimals={false} width={40} />
-                  <ChartTooltip formatter={(value: number) => [value, t("reports.visits", "Visits")]} labelFormatter={(l) => String(l)} />
+                  <ChartTooltip formatter={(value) => [value, t("reports.visits", "Visits")]} labelFormatter={(l) => String(l)} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                   <Area
                     type="monotone"
@@ -1483,7 +1483,7 @@ export function ReportsPage() {
                     <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                     <YAxis tick={{ fontSize: 11 }} width={56} tickFormatter={(v) => String(v)} />
                     <ChartTooltip
-                      formatter={(value: number, name: string) => {
+                      formatter={(value, name) => {
                         const currency = String(name).replace(/^revenue_/, "");
                         return [money(Number(value), currency), `${t("nav.revenue")} (${currency})`];
                       }}
@@ -1519,7 +1519,7 @@ export function ReportsPage() {
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                 <YAxis tick={{ fontSize: 11 }} allowDecimals={false} width={40} />
-                <ChartTooltip formatter={(value: number) => [value, t("reports.newPatients", "New patients")]} />
+                <ChartTooltip formatter={(value) => [value, t("reports.newPatients", "New patients")]} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar dataKey="newPatients" name={t("reports.newPatients", "New patients")} fill={REVENUE_CHART_COLOR} radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -1567,8 +1567,8 @@ export function ReportsPage() {
                         cx="50%"
                         cy="50%"
                         outerRadius="72%"
-                        label={({ label, percent }) =>
-                          `${label ?? ""} (${typeof percent === "number" ? Math.round(percent * 100) : 0}%)`
+                        label={({ name, percent }) =>
+                          `${name ?? ""} (${typeof percent === "number" ? Math.round(percent * 100) : 0}%)`
                         }
                         labelLine={false}
                       >
@@ -1577,7 +1577,7 @@ export function ReportsPage() {
                         ))}
                       </Pie>
                       <ChartTooltip
-                        formatter={(value: number, _name, item) => [
+                        formatter={(value, _name, item) => [
                           value,
                           (item as { payload?: { label?: string } })?.payload?.label ?? "",
                         ]}
@@ -1592,7 +1592,7 @@ export function ReportsPage() {
                       <CartesianGrid horizontal={false} />
                       <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
                       <YAxis type="category" dataKey="label" width={96} tick={{ fontSize: 10 }} />
-                      <ChartTooltip formatter={(value: number) => [value, t("reports.newPatients", "New patients")]} />
+                      <ChartTooltip formatter={(value) => [value, t("reports.newPatients", "New patients")]} />
                       <Bar dataKey="count" name={t("reports.newPatients", "New patients")} radius={[0, 4, 4, 0]}>
                         {acquisitionChartData.map((_, index) => (
                           <Cell key={index} fill={ACQUISITION_CHART_COLORS[index % ACQUISITION_CHART_COLORS.length]} />
@@ -1609,7 +1609,7 @@ export function ReportsPage() {
 
         </TabsContent>
 
-        <TabsContent value="finance" className="focus-visible:outline-none">
+        <TabsContent value="finance" className="focus-visible:outline-hidden">
           <Rp04FinanceReportsPage embedded />
         </TabsContent>
       </Tabs>

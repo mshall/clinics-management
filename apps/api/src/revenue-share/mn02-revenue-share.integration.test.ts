@@ -7,8 +7,9 @@ import { resolveMarketForTenant } from "../markets/market-resolver";
 import type { PrismaService } from "../prisma/prisma.service";
 import { periodRange } from "./revenue-share-engine";
 import { RevenueShareService } from "./revenue-share.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const svc = prisma as unknown as PrismaService;
 const share = new RevenueShareService(svc);
 

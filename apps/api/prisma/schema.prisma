@@ -5,7 +5,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum UserRole {
@@ -5018,4 +5017,81 @@ model LabSampleTube {
 
   @@unique([tenantId, label])
   @@index([collectionId])
+}
+
+enum MobileDeviceStatus {
+  ACTIVE
+  REVOKED
+}
+
+/// Kiorly Work staff app: one row per (user, device). The device-bound token is stored hashed (sha256), never in clear.
+model MobileDevice {
+  id           String             @id @default(cuid())
+  tenantId     String
+  userId       String
+  /// Client-generated UUID, stable per app install.
+  deviceId     String
+  platform     String
+  name         String
+  appVersion   String?
+  tokenHash    String
+  status       MobileDeviceStatus @default(ACTIVE)
+  /// The refresh session (UserSession.id) this device signed in with; revoking the device revokes it (remote sign-out).
+  sessionId    String?
+  pushToken    String?
+  pushProvider String?
+  lastSeenAt   DateTime?
+  revokedAt    DateTime?
+  revokedBy    String?
+  createdAt    DateTime           @default(now())
+
+  @@unique([userId, deviceId])
+  @@index([tenantId, status])
+}
+
+/// Mock push sender output = the staff in-app inbox (MOBILE_PUSH_MODE=mock). Bilingual, no raw clinical values.
+model MobilePush {
+  id          String    @id @default(cuid())
+  tenantId    String
+  userId      String
+  /// GENERAL | SAFETY | CLINICAL | OPS
+  kind        String
+  templateId  String
+  title       String
+  titleAr     String
+  body        String
+  bodyAr      String
+  data        Json      @default("{}")
+  status      String    @default("DELIVERED")
+  provider    String    @default("mock")
+  createdAt   DateTime  @default(now())
+  deliveredAt DateTime?
+  readAt      DateTime?
+
+  @@index([userId, createdAt])
+  @@index([tenantId, userId, readAt])
+}
+
+/// Acknowledgement note of a derived safety alert (ADR-025: read + acknowledge works on every plan).
+model MobileAlertAck {
+  id       String   @id @default(cuid())
+  tenantId String
+  alertKey String
+  ackedBy  String
+  note     String?
+  ackedAt  DateTime @default(now())
+
+  @@unique([tenantId, alertKey])
+}
+
+/// Doctor review (approval) of a lab/imaging result from the staff app.
+model MobileResultReview {
+  id         String   @id @default(cuid())
+  tenantId   String
+  orderId    String
+  reviewedBy String
+  note       String?
+  reviewedAt DateTime @default(now())
+
+  @@unique([tenantId, orderId])
 }

@@ -681,7 +681,7 @@ export function ExpensesPage() {
                       onClick={() => handleExpenseRowActivate(e)}
                     >
                       <td className="px-3 py-2">
-                        <button type="button" className="rounded text-start font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={(ev) => { ev.stopPropagation(); handleExpenseRowActivate(e); }}>
+                        <button type="button" className="rounded text-start font-medium hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring" onClick={(ev) => { ev.stopPropagation(); handleExpenseRowActivate(e); }}>
                           {formatExpenseCategory(e.category, t)}
                         </button>
                       </td>
@@ -922,23 +922,23 @@ export function ExpensesPage() {
           {detail ? (
             <dl className="space-y-3 text-sm">
               <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("expenses.clinic")}</dt>
+                <dt className="min-w-28 shrink-0 text-muted-foreground">{t("expenses.clinic")}</dt>
                 <dd className="font-medium">{clinicLabelForExpense(detail)}</dd>
               </div>
               <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("expenses.category")}</dt>
+                <dt className="min-w-28 shrink-0 text-muted-foreground">{t("expenses.category")}</dt>
                 <dd className="font-medium">{formatExpenseCategory(detail.category, t)}</dd>
               </div>
               <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("expenses.vendor")}</dt>
+                <dt className="min-w-28 shrink-0 text-muted-foreground">{t("expenses.vendor")}</dt>
                 <dd className="font-medium">{detail.vendorName?.trim() || "—"}</dd>
               </div>
               <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("expenses.amount")}</dt>
+                <dt className="min-w-28 shrink-0 text-muted-foreground">{t("expenses.amount")}</dt>
                 <dd className="font-medium ltr-nums">{money(detail.amount, detail.currency)}</dd>
               </div>
               <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("expenses.status")}</dt>
+                <dt className="min-w-28 shrink-0 text-muted-foreground">{t("expenses.status")}</dt>
                 <dd>
                   <Badge
                     variant={detail.status === "APPROVED" ? "default" : "secondary"}
@@ -949,13 +949,13 @@ export function ExpensesPage() {
                 </dd>
               </div>
               <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("expenses.date")}</dt>
+                <dt className="min-w-28 shrink-0 text-muted-foreground">{t("expenses.date")}</dt>
                 <dd className="font-medium ltr-nums">
                   {new Date(detail.incurredAt).toLocaleString(localeForLanguage(i18n.language))}
                 </dd>
               </div>
               <div className="flex flex-col gap-1 sm:flex-row sm:gap-3">
-                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("expenses.proof")}</dt>
+                <dt className="min-w-28 shrink-0 text-muted-foreground">{t("expenses.proof")}</dt>
                 <dd>
                   {detail.hasProof ? (
                     <div className="flex flex-wrap gap-2">
@@ -988,7 +988,7 @@ export function ExpensesPage() {
                 </dd>
               </div>
               <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("expenses.entryId")}</dt>
+                <dt className="min-w-28 shrink-0 text-muted-foreground">{t("expenses.entryId")}</dt>
                 <dd className="font-mono text-xs text-muted-foreground">{detail.id}</dd>
               </div>
             </dl>

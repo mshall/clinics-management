@@ -1,4 +1,4 @@
-FROM public.ecr.aws/lambda/nodejs:22
+FROM public.ecr.aws/lambda/nodejs:24
 
 RUN dnf install -y postgresql16 gzip && dnf clean all
 

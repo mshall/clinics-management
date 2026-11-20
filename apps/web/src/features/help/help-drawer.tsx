@@ -24,7 +24,7 @@ export function HelpDrawer() {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetContent className="end-0 start-auto w-[min(100%,24rem)] overflow-y-auto" aria-describedby={undefined} data-testid="help-drawer">
+      <SheetContent className="inset-e-0 inset-s-auto w-[min(100%,24rem)] overflow-y-auto" aria-describedby={undefined} data-testid="help-drawer">
         <SheetHeader>
           <SheetTitle>{t("help.title")}</SheetTitle>
           <p className="text-sm text-muted-foreground">{t("help.subtitle")}</p>

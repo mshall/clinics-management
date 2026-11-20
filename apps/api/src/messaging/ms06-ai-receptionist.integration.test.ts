@@ -6,8 +6,9 @@ import type { PrismaService } from "../prisma/prisma.service";
 import type { SlotService } from "../scheduling/slot.service";
 import type { MessagingService } from "./messaging.service";
 import { WhatsAppAiReceptionistService } from "./whatsapp-ai-receptionist.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 describe("MS-06 AI receptionist integration", () => {
   const stamp = Date.now();

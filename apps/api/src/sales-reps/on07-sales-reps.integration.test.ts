@@ -20,8 +20,9 @@ import type { PrismaService } from "../prisma/prisma.service";
 import { SignupProvisionService } from "../signup/signup-provision.service";
 import { AuthService } from "../auth/auth.service";
 import { SalesRepsService } from "./sales-reps.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const ps = prisma as unknown as PrismaService;
 const DEV_CODE = "424242";
 

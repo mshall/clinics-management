@@ -125,7 +125,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-b from-background to-muted/60">
+    <div className="flex min-h-screen flex-col bg-linear-to-b from-background to-muted/60">
       <header className="flex items-center justify-between gap-3 px-4 py-4 md:px-8">
         <div className="flex items-center gap-3">
           <BrandLockup height={40} />

@@ -1,16 +1,71 @@
-@import "@fontsource-variable/jost/index.css";
-@import "@fontsource/ibm-plex-sans-arabic/arabic-400.css";
-@import "@fontsource/ibm-plex-sans-arabic/arabic-500.css";
-@import "@fontsource/ibm-plex-sans-arabic/arabic-600.css";
-@import "@fontsource/ibm-plex-sans-arabic/arabic-700.css";
-@import "../brand/tokens.css";
-@import "./material-theme.css";
-@import "./clinical-os-theme.css";
-@import "../brand/brand-bridge.css";
+@import '@fontsource-variable/jost/index.css' layer(base);
+@import '@fontsource/ibm-plex-sans-arabic/arabic-400.css' layer(base);
+@import '@fontsource/ibm-plex-sans-arabic/arabic-500.css' layer(base);
+@import '@fontsource/ibm-plex-sans-arabic/arabic-600.css' layer(base);
+@import '@fontsource/ibm-plex-sans-arabic/arabic-700.css' layer(base);
+@import '../brand/tokens.css' layer(base);
+@import './material-theme.css' layer(base);
+@import './clinical-os-theme.css' layer(base);
+@import '../brand/brand-bridge.css' layer(base);
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@config '../../tailwind.config.js';
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@utility overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+@utility native-select {
+  @apply flex h-11 min-h-11 w-full touch-manipulation rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+@utility guide-wizard-playing {
+  & .guide-wizard-cursor {
+    animation: guide-cursor-pulse 1.8s ease-in-out infinite;
+  }
+}
+
+@utility guide-wizard-cursor {
+  .guide-wizard-playing & {
+    animation: guide-cursor-pulse 1.8s ease-in-out infinite;
+  }
+}
+
+@utility guide-wizard-typing {
+  &::after {
+    content: '|';
+    animation: guide-blink 1s step-end infinite;
+    margin-inline-start: 1px;
+  }
+}
+
+@utility guide-wizard-grow {
+  animation: guide-grow 2s ease-in-out infinite alternate;
+}
+
+@utility guide-wizard-line {
+  stroke-dasharray: 240;
+  animation: guide-draw 2.5s ease-in-out infinite alternate;
+}
 
 @layer base {
   * {
@@ -45,35 +100,6 @@
   .ltr-nums {
     direction: ltr;
     unicode-bidi: embed;
-  }
-}
-
-@layer utilities {
-  .overflow-x-auto {
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .native-select {
-    @apply flex h-11 min-h-11 w-full touch-manipulation rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50;
-  }
-
-  .guide-wizard-playing .guide-wizard-cursor {
-    animation: guide-cursor-pulse 1.8s ease-in-out infinite;
-  }
-
-  .guide-wizard-typing::after {
-    content: "|";
-    animation: guide-blink 1s step-end infinite;
-    margin-inline-start: 1px;
-  }
-
-  .guide-wizard-grow {
-    animation: guide-grow 2s ease-in-out infinite alternate;
-  }
-
-  .guide-wizard-line {
-    stroke-dasharray: 240;
-    animation: guide-draw 2.5s ease-in-out infinite alternate;
   }
 }
 

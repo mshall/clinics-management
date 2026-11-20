@@ -13,8 +13,9 @@ import { MESSAGING_CONSENT_TRANSACTIONAL } from "../patients/messaging-consent.c
 import { PrismaService } from "../prisma/prisma.service";
 import type { UsageMeterService } from "../usage/usage-meter.service";
 import { RX_READY_TEMPLATE_KEY, RxShareService } from "./rx-share.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 function service(): RxShareService {
   const prismaSvc = prisma as unknown as PrismaService;

@@ -1,4 +1,5 @@
 import type { TFunction } from "i18next";
+import type { TranslateLookupFn } from "@/lib/translate-fn";
 
 export const REVENUE_CATEGORIES = [
   "VISIT",
@@ -33,7 +34,7 @@ export function formatClinicNameFields(
   return label === "—" && !nameEn?.trim() && !nameAr?.trim() ? fallback : label;
 }
 
-export function formatRevenueCategory(category: string, t: TFunction): string {
+export function formatRevenueCategory(category: string, t: TranslateLookupFn): string {
   const key = `revenue.categories.${category}`;
   const translated = t(key);
   return translated === key ? category : translated;
@@ -45,7 +46,7 @@ export function formatRevenueCategory(category: string, t: TFunction): string {
  */
 export function formatRevenueLedgerCategory(
   category: string,
-  t: TFunction,
+  t: TranslateLookupFn,
   description?: string | null,
 ): string {
   const cat = category.trim().toUpperCase();

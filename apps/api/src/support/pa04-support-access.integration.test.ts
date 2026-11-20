@@ -5,8 +5,9 @@ import { Gender, PrismaClient, SupportAccessStatus, UserRole } from "@prisma/cli
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
 import { SupportAccessSessionService } from "./support-access-session.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 const access = new SupportAccessSessionService(prismaSvc);
 

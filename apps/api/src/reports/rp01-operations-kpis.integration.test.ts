@@ -5,8 +5,9 @@ import type { JwtUser } from "../auth/jwt-user";
 import type { PrismaService } from "../prisma/prisma.service";
 import { ReportsService } from "./reports.service";
 import { noShowRate } from "./operations-kpis";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 describe("RP-01 operations report integration", () => {
   let tenantId: string;

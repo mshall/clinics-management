@@ -15,8 +15,9 @@ import { PrismaService } from "../prisma/prisma.service";
 import { PlansService } from "./plans.service";
 import { PRICE_CHANGE_NOTICE_TOPIC } from "./price-indexation";
 import { PriceIndexationService } from "./price-indexation.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 const indexation = new PriceIndexationService(prismaSvc, new OutboxEventService(prismaSvc));
 const plans = new PlansService(prismaSvc, indexation);

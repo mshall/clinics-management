@@ -3,7 +3,7 @@
  * Semantic HSL variables for Tailwind/shadcn; scoped to clinical-os-light | clinical-os-dark.
  */
 
-/* Colours for clinical-os-light/dark now come from ../brand/brand-bridge.css (Kiorly by Kiorex). */
+/* Colours for clinical-os-light/dark now come from ../brand/brand-bridge.css (Kiorly Clinic by Kiorex). */
 
 html.theme-clinical-os {
   font-family: var(--kx-font);
@@ -11,7 +11,7 @@ html.theme-clinical-os {
 }
 
 html.theme-clinical-os .border-border.bg-card,
-html.theme-clinical-os [class*="shadow-sm"].bg-card,
+html.theme-clinical-os [class*="shadow-xs"].bg-card,
 html.theme-clinical-os .rounded-lg.border.bg-card {
   box-shadow: var(--kx-shadow-1);
   border-color: hsl(var(--border));

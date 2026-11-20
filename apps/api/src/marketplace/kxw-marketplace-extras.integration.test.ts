@@ -21,8 +21,9 @@ import { MarketplaceWaitlistService } from "./marketplace-waitlist.service";
 import type { PlatformIntegrationPrincipal } from "./platform-integration-client.service";
 import { RecordShareService } from "./record-share.service";
 import { SlotCapacityService } from "./slot-capacity.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 
 function snapshot(version: number, flags: FlagSnapshot["flags"]): FlagSnapshot {

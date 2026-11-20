@@ -34,7 +34,7 @@ export function AssistantMessageBody({ text, className }: Props) {
             return (
               <div
                 key={idx}
-                className="flex items-center justify-between gap-2 rounded-lg border border-border/70 bg-background/70 px-2.5 py-2 shadow-sm"
+                className="flex items-center justify-between gap-2 rounded-lg border border-border/70 bg-background/70 px-2.5 py-2 shadow-xs"
               >
                 <span className="text-xs font-semibold uppercase tracking-wide text-primary">{block.currency}</span>
                 <MetricValues block={block} idx={idx} />

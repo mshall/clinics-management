@@ -24,7 +24,7 @@ export function GuideWizardAnimation({ kind, activeStep, playing, labelEn, label
   return (
     <div
       className={cn(
-        "guide-wizard-shell relative overflow-hidden rounded-xl border border-border bg-gradient-to-b from-muted/80 to-background p-3 shadow-inner",
+        "guide-wizard-shell relative overflow-hidden rounded-xl border border-border bg-linear-to-b from-muted/80 to-background p-3 shadow-inner",
         playing && "guide-wizard-playing",
       )}
       aria-hidden
@@ -77,7 +77,7 @@ function MiniSidebar({ active }: { active: number }) {
           key={label}
           className={cn(
             "rounded px-1 py-1 text-[8px] font-medium transition-all duration-500",
-            i === active ? "bg-primary text-primary-foreground scale-105 shadow" : "text-muted-foreground",
+            i === active ? "bg-primary text-primary-foreground scale-105 shadow-sm" : "text-muted-foreground",
           )}
         >
           {label.slice(0, 4)}
@@ -89,10 +89,10 @@ function MiniSidebar({ active }: { active: number }) {
 
 function MockCursor({ step }: { step: number }) {
   const positions = [
-    "top-[28%] start-[22%]",
-    "top-[42%] start-[48%]",
-    "top-[58%] start-[72%]",
-    "top-[70%] start-[55%]",
+    "top-[28%] inset-s-[22%]",
+    "top-[42%] inset-s-[48%]",
+    "top-[58%] inset-s-[72%]",
+    "top-[70%] inset-s-[55%]",
   ];
   return (
     <span
@@ -132,7 +132,7 @@ function SearchScene({ step }: { step: number }) {
       <MockCursor step={step} />
       <div
         className={cn(
-          "flex items-center gap-2 rounded-lg border bg-card px-3 py-2 shadow-sm transition-all duration-500",
+          "flex items-center gap-2 rounded-lg border bg-card px-3 py-2 shadow-xs transition-all duration-500",
           step >= 0 && "ring-2 ring-primary/40",
         )}
       >
@@ -170,7 +170,7 @@ function BoardScene({ step }: { step: number }) {
               key={card}
               className={cn(
                 "rounded border border-border bg-muted/50 px-1 py-2 text-[8px] transition-all duration-500",
-                step % 3 === ci && card === 0 && "translate-x-1 border-primary bg-primary/10 shadow",
+                step % 3 === ci && card === 0 && "translate-x-1 border-primary bg-primary/10 shadow-sm",
               )}
             >
               #{card + 1}

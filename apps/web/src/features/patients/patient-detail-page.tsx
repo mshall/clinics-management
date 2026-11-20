@@ -228,7 +228,7 @@ export function PatientDetailPage() {
                     {name.slice(0, 1).toUpperCase()}
                   </div>
                 )}
-                <label className="absolute -bottom-1 -right-1 cursor-pointer rounded-full border bg-background p-1 shadow-sm" title={t("patients.uploadPhoto", "Upload photo")}>
+                <label className="absolute -bottom-1 -right-1 cursor-pointer rounded-full border bg-background p-1 shadow-xs" title={t("patients.uploadPhoto", "Upload photo")}>
                   <Camera className="h-4 w-4" />
                   <Input
                     type="file"

@@ -45,6 +45,11 @@ export function isClinicalOsTheme(themeId: ThemeId): boolean {
   return themeId.startsWith("clinical-os");
 }
 
+/** Same theme family, other brightness (default-/material-/clinical-os- light <-> dark). */
+export function themeWithMode(themeId: ThemeId, mode: "light" | "dark"): ThemeId {
+  return themeId.replace(/-(light|dark)$/, `-${mode}`) as ThemeId;
+}
+
 export function applyThemeDom(themeId: ThemeId) {
   const root = document.documentElement;
   root.dataset.theme = themeId;

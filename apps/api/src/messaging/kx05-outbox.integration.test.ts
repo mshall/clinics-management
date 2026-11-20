@@ -6,8 +6,9 @@ import { OutboxEventService } from "./outbox-event.service";
 import { OutboxDeliveryService } from "./outbox-delivery.service";
 import { OutboxDispatcherService } from "./outbox-dispatcher.service";
 import { OUTBOX_EVENT, OUTBOX_STATUS } from "./outbox-event-types";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 describe("KX-05 transactional outbox dispatcher", () => {
   let tenantId: string;

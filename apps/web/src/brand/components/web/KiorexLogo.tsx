@@ -1,11 +1,13 @@
 import * as React from "react";
-import { buildScene, PALETTE, PULSE_LENGTH, type Product, type Tone, type Variant } from "../shared/logo-scene";
+import { buildScene, langOf, PALETTE, productName, PULSE_LENGTH, type Product, type Tone, type Variant } from "../shared/logo-scene";
 
 export interface KiorexLogoProps extends Omit<React.SVGProps<SVGSVGElement>, "ref" | "height"> {
   variant?: Variant;
   tone?: Tone;
-  /** "kiorex" (default) | "kiorly" (adds "by Kiorex") | "passport" (adds PASSPORT) | "nurse" (Nurse Rose accent) */
+  /** "kiorex" (default) | "clinic" | "lab" | "pharmacy" ("Kiorly <Product> by Kiorex", each with its own accent) | "passport" (adds PASSPORT) | "nurse" (Nurse Rose accent). "kiorly" = deprecated alias of "clinic". */
   product?: Product;
+  /** UI language: "ar" (or ar-*) draws the Arabic wordmark (HarfBuzz-shaped outlines, mark on the right, words RTL) for clinic/lab/pharmacy; anything else = Latin. The artwork is identical. */
+  lang?: string;
   /** Height in px (or any CSS length); width follows the aspect ratio. Default 32. */
   height?: number | string;
   /** Draws the coral pulse in on mount (honours prefers-reduced-motion via tokens.css). */
@@ -14,14 +16,14 @@ export interface KiorexLogoProps extends Omit<React.SVGProps<SVGSVGElement>, "re
   title?: string;
 }
 
-const NAMES: Record<Product, string> = { kiorex: "Kiorex", kiorly: "Kiorly by Kiorex", passport: "Kiorex Passport", nurse: "Kiorly Nurse by Kiorex" };
 
 /** The Kiorex brand logo family — built from the founder's artwork geometry; never redrawn. */
-export function KiorexLogo({ variant = "lockup", tone = "color", product = "kiorex", height = 32, animated = false, title, ...rest }: KiorexLogoProps) {
-  const scene = React.useMemo(() => buildScene(variant, product), [variant, product]);
+export function KiorexLogo({ variant = "lockup", tone = "color", product = "kiorex", lang, height = 32, animated = false, title, ...rest }: KiorexLogoProps) {
+  const L = langOf(lang);
+  const scene = React.useMemo(() => buildScene(variant, product, L), [variant, product, L]);
   const pal = PALETTE[tone];
   const [x, y, w, h] = scene.viewBox;
-  const label = title ?? (variant === "mark" ? "Kiorex mark" : NAMES[product]);
+  const label = title ?? (variant === "mark" ? "Kiorex mark" : productName(product, L));
   const px = typeof height === "number" ? height : undefined;
   return (
     <svg
@@ -34,6 +36,7 @@ export function KiorexLogo({ variant = "lockup", tone = "color", product = "kior
       aria-label={label || undefined}
       aria-hidden={label ? undefined : true}
       focusable="false"
+      lang={label && L === "ar" && variant !== "mark" ? "ar" : undefined}
       {...rest}
     >
       {scene.nodes.map((n, i) => {

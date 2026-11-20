@@ -7,8 +7,9 @@ import { CONSENT_PURPOSE_AI } from "../compliance/consent-policy.constants";
 import type { PrismaService } from "../prisma/prisma.service";
 import { UsageMeterService } from "../usage/usage-meter.service";
 import { ClinicAiService } from "./clinic-ai.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 
 describe("AI-02 scribe STT integration", () => {

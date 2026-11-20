@@ -15,11 +15,12 @@ import { PrismaService } from "../prisma/prisma.service";
 import { CreditWalletService } from "./credit-wallet.service";
 import { decimalAmount } from "./credit-wallet-math";
 import { isPlatformSuperAdmin } from "../common/platform-super-admin";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
 config({ path: resolve(process.cwd(), ".env") });
 
 const isCi = process.env.CI === "true";
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const walletSvc = new CreditWalletService(prisma as unknown as PrismaService);
 
 describe("QA-02 credit wallet money path", () => {

@@ -24,8 +24,9 @@ import { ensureAllTenantSubscriptions } from "../src/subscriptions/subscription-
 import { ensureKiorexDevIntegration } from "./kiorex-dev.seed";
 import { ensureAllPilotTenants, pilotSeedEnabled } from "./pilot-tenants.seed";
 import { shellTenantSeedRow } from "./seed-tenant-fields";
+import { createPrismaClient } from "../src/prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 /** Extra synthetic rows for load / edge-case testing (keeps first 15 named demo patients stable). */
 const BULK_EXTRA_PATIENTS = 285;

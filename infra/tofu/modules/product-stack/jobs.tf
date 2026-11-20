@@ -77,7 +77,7 @@ resource "aws_lambda_function" "jobs" {
   count            = local.has_jobs ? 1 : 0
   function_name    = "${local.name}-job-runner"
   role             = aws_iam_role.jobs[0].arn
-  runtime          = "nodejs22.x"
+  runtime          = "nodejs24.x"
   handler          = "index.handler"
   filename         = data.archive_file.jobs[0].output_path
   source_code_hash = data.archive_file.jobs[0].output_base64sha256

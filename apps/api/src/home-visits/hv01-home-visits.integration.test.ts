@@ -3,8 +3,9 @@ import { after, before, describe, it } from "node:test";
 import { AppointmentStatus, HomeVisitState, PrismaClient } from "@prisma/client";
 import { encryptVisitAddress } from "./address-crypto";
 import { buildKit, buildWorld, cleanup, seedVisit, snapshotFor, type World } from "./hv-test-kit";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const suffix = `${Date.now()}`.slice(-9);
 
 type Kit = Awaited<ReturnType<typeof buildKit>>;
@@ -181,6 +182,12 @@ describe("HV* home visits (integration)", () => {
     };
     try {
       const plannedEnd = new Date("2031-05-05T10:00:00Z");
+      // The safety clock is global: drain visits left over from other seeds/tests (e.g. the Rev 2.3 demo data) two days
+      // before this drill so only the visit seeded below is in play afterwards.
+      const drainAt = new Date(plannedEnd.getTime() - 2 * 24 * 3_600_000);
+      await kit.safety.tick(drainAt);
+      await kit.safety.tick(new Date(drainAt.getTime() + 11 * 60_000));
+      await kit.safety.escalateUnacknowledged(new Date(drainAt.getTime() + 30 * 60_000));
       const { visit } = await seedVisit(prisma, w, { start: new Date(plannedEnd.getTime() - 30 * 60_000), minutes: 30 });
       await prisma.homeVisit.update({ where: { id: visit.id }, data: { state: "ARRIVED", arrivedAt: new Date(plannedEnd.getTime() - 25 * 60_000) } });
       let r = await kit.safety.tick(new Date(plannedEnd.getTime() + 29 * 60_000));

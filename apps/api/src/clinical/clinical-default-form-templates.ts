@@ -483,10 +483,11 @@ export function defaultFormTemplateMeta(specialty: ClinicalSpecialty): {
 }
 
 type TemplatePrisma = {
+  // Method syntax (bivariant parameters) so both PrismaClient delegates and test fakes are assignable.
   clinicalFormTemplate: {
-    findFirst: (args: unknown) => Promise<{ id: string; systemTemplateVersion?: number | null } | null>;
-    create: (args: unknown) => Promise<unknown>;
-    update: (args: unknown) => Promise<unknown>;
+    findFirst(args: unknown): PromiseLike<{ id: string; systemTemplateVersion?: number | null } | null>;
+    create(args: unknown): PromiseLike<unknown>;
+    update(args: unknown): PromiseLike<unknown>;
   };
 };
 

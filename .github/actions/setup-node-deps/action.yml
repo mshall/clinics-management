@@ -9,7 +9,7 @@ inputs:
   node-version:
     description: Node.js major version
     required: false
-    default: "22"
+    default: "26"
   include-infra:
     description: Also cache/install infra/ (separate package-lock.json)
     required: false
@@ -51,7 +51,7 @@ runs:
         echo "digest=${digest}" >> "$GITHUB_OUTPUT"
         echo "Dependency cache digest=${digest:0:12}… (files: ${files[*]})"
 
-    - uses: actions/setup-node@v6
+    - uses: actions/setup-node@v7
       with:
         node-version: ${{ inputs.node-version }}
         cache: npm
@@ -61,7 +61,7 @@ runs:
 
     - name: Restore workspace node_modules
       id: cache-modules
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: |
           node_modules
@@ -74,7 +74,7 @@ runs:
     - name: Restore infra node_modules
       id: cache-infra
       if: ${{ inputs.include-infra == 'true' }}
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: infra/node_modules
         key: nm-infra-${{ runner.os }}-node${{ inputs.node-version }}-${{ steps.lock.outputs.digest }}

@@ -10,8 +10,9 @@ import { LocalUploadBlobStorage } from "../storage/local-upload-blob.storage";
 import type { JwtUser } from "../auth/jwt-user";
 import { ClinicianVerificationService } from "./clinician-verification.service";
 import { VERIFICATION_REVIEW_CHECKLIST_KEYS } from "./verification-review-policy";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const uploads = new LocalUploadBlobStorage(path.join(process.cwd(), "uploads"));
 const audit = new AuditService(prisma as unknown as PrismaService);
 const service = new ClinicianVerificationService(prisma as unknown as PrismaService, uploads, audit);

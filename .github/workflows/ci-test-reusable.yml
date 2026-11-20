@@ -32,7 +32,7 @@ jobs:
       ALLOW_DEMO_SEED: "true"
       SEED_PILOT_TENANTS: "true"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup Node.js dependencies
         uses: ./.github/actions/setup-node-deps
@@ -77,7 +77,7 @@ jobs:
 
       - name: Cache Playwright browsers
         id: cache-playwright
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}

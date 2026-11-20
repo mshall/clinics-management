@@ -49,7 +49,7 @@ export function PatientTimeline({ patientId }: { patientId: string }) {
           ))}
         </div>
       </CardHeader>
-      <CardContent className="max-h-[28rem] space-y-2 overflow-y-auto text-sm">
+      <CardContent className="max-h-112 space-y-2 overflow-y-auto text-sm">
         {q.isPending ? (
           <p className="text-muted-foreground">{t("common.loading")}</p>
         ) : (

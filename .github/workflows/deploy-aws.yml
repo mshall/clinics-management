@@ -81,7 +81,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup Node.js dependencies
         uses: ./.github/actions/setup-node-deps
@@ -99,16 +99,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Block tracked OpenAI API keys in repo
         run: bash scripts/check-no-openai-secrets-in-git.sh
 
       # Host npm download cache only — cicd-deploy.sh always runs a fresh npm ci for CDK.
       # Do not restore/skip node_modules here: AWS image builds still npm ci inside Dockerfiles.
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: "26"
           cache: npm
           cache-dependency-path: |
             package-lock.json
@@ -184,11 +184,11 @@ jobs:
       STACK_EVENTS_RECENT: "80"
       LOG_SINCE: "3h"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Download deploy job full log
         continue-on-error: true
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: aws-deploy-full-log
           path: .
@@ -242,17 +242,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: aws-deploy-diagnostics
           path: .
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: "26"
           cache: npm
           cache-dependency-path: package-lock.json
 

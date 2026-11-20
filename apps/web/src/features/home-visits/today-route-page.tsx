@@ -99,7 +99,7 @@ export function TodayRoutePage() {
           {items.length > 0 ? (
             <p className="mt-1 flex items-center gap-2" aria-live="polite">
               <span className="tabular-nums ltr-nums">{doneCount}/{items.length}</span>
-              <span aria-hidden className="relative h-1.5 w-24 overflow-hidden rounded-full bg-muted"><span className="absolute inset-y-0 start-0 rounded-full bg-primary transition-[width] duration-500 motion-reduce:transition-none" style={{ width: `${(doneCount / items.length) * 100}%` }} /></span>
+              <span aria-hidden className="relative h-1.5 w-24 overflow-hidden rounded-full bg-muted"><span className="absolute inset-y-0 inset-s-0 rounded-full bg-primary transition-[width] duration-500 motion-reduce:transition-none" style={{ width: `${(doneCount / items.length) * 100}%` }} /></span>
             </p>
           ) : null}
         </div>
@@ -142,8 +142,8 @@ export function TodayRoutePage() {
               )}
               {(v.patient.phone || v.navigationUrl) ? (
                 <div className="grid grid-cols-2 gap-2">
-                  {v.navigationUrl ? <a className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 font-medium text-primary shadow-[var(--kx-shadow-1)]" href={v.navigationUrl} target="_blank" rel="noreferrer"><Navigation className="size-4" aria-hidden />{t("homeVisits.navigate")}</a> : null}
-                  {v.patient.phone ? <a className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 font-medium text-primary shadow-[var(--kx-shadow-1)] ltr-nums" href={`tel:${v.patient.phone}`}><Phone className="size-4" aria-hidden />{v.patient.phone}</a> : null}
+                  {v.navigationUrl ? <a className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 font-medium text-primary shadow-kx-1" href={v.navigationUrl} target="_blank" rel="noreferrer"><Navigation className="size-4" aria-hidden />{t("homeVisits.navigate")}</a> : null}
+                  {v.patient.phone ? <a className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 font-medium text-primary shadow-kx-1 ltr-nums" href={`tel:${v.patient.phone}`}><Phone className="size-4" aria-hidden />{v.patient.phone}</a> : null}
                 </div>
               ) : null}
               {v.fee || v.travelMinutesFromPrevious != null ? (

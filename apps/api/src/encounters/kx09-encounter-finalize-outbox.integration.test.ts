@@ -9,8 +9,9 @@ import { AppointmentOutboxService } from "../messaging/appointment-outbox.servic
 import { OutboxEventService } from "../messaging/outbox-event.service";
 import type { PrismaService } from "../prisma/prisma.service";
 import { EncountersService } from "./encounters.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 
 /** KX-09 §04 / KXM-LC: completing a Kiorex visit by signing its encounter must tell Kiorex (COMPLETED + review invitation). */

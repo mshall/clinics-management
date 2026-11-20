@@ -297,7 +297,7 @@ export function PlatformUsersTab() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="min-w-[12rem] max-w-xs space-y-2">
+          <div className="min-w-48 max-w-xs space-y-2">
             <Label>{t("platform.tabs.filterOrg")}</Label>
             <select
               className={nativeSelectClassName}

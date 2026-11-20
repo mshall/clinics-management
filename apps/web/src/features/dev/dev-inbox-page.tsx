@@ -147,7 +147,7 @@ export function DevInboxPage() {
           <CardHeader>
             <CardTitle className="text-base">{t("devInbox.messages", "Messages")}</CardTitle>
           </CardHeader>
-          <CardContent className="max-h-[32rem] space-y-1 overflow-auto">
+          <CardContent className="max-h-128 space-y-1 overflow-auto">
             {(list.data?.items ?? []).map((m) => (
               <button
                 key={m.id}

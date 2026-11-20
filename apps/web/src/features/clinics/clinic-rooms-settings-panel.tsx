@@ -210,7 +210,7 @@ export function ClinicRoomsSettingsPanel({ clinicId, roomLabels, canEdit }: Clin
                     </>
                   ) : (
                     <>
-                      <span className="min-w-[6rem] flex-1 text-sm font-medium">{label}</span>
+                      <span className="min-w-24 flex-1 text-sm font-medium">{label}</span>
                       <Button
                         type="button"
                         size="icon"

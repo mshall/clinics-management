@@ -1,11 +1,15 @@
 /**
- * Kiorly by Kiorex — shared layout primitives (vendored per repo; keep in sync with the copy in the other Kiorly apps).
+ * Kiorly Clinic / Lab / Pharmacy by Kiorex — shared layout primitives (vendored per repo; keep in sync with the copy in the other Kiorly apps).
  * Props carry already-translated strings, so this file has no i18n or routing dependency.
  */
 import { useId, useState, type HTMLAttributes, type ReactNode } from "react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { useTranslation } from "react-i18next";
 import { KiorexLogo, PulseLine } from "./components";
+import { footSegments } from "./components/shared/foot-text";
+import { KxControlPair, KxLanguageToggle, KxThemeToggle, withThemeTransition, type KxLang } from "./components/web/KxControls";
+export { KxControlPair };
 
 /** Decorative pulse line (hidden from assistive tech) for loaders/empty states. */
 export function Pulse({ size = 14, loop = false }: { size?: number; loop?: boolean }) {
@@ -50,14 +54,14 @@ export function PageHeader({ title, description, actions, eyebrow, className }: 
 }
 
 export function Surface({ className, ...p }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={kcn("rounded-xl border border-border/80 bg-card text-card-foreground shadow-[var(--kx-shadow-1)]", className)} {...p} />;
+  return <div className={kcn("rounded-xl border border-border/80 bg-card text-card-foreground shadow-kx-1", className)} {...p} />;
 }
 
 export function StatCard({ label, value, hint, icon, tone = "neutral", className }: { label: ReactNode; value: ReactNode; hint?: ReactNode; icon?: ReactNode; tone?: KTone; className?: string }) {
   const bar: Record<KTone, string> = { neutral: "bg-border", good: "bg-[hsl(var(--success))]", warn: "bg-[hsl(var(--warning))]", bad: "bg-[hsl(var(--danger-text))]", info: "bg-[hsl(var(--info))]", brand: "bg-primary" };
   return (
     <Surface className={kcn("relative overflow-hidden p-4", className)}>
-      <span aria-hidden className={kcn("absolute inset-y-0 start-0 w-1", bar[tone])} />
+      <span aria-hidden className={kcn("absolute inset-y-0 inset-s-0 w-1", bar[tone])} />
       <div className="flex items-start justify-between gap-2">
         <div className="text-xs font-medium text-muted-foreground">{label}</div>
         {icon && <div aria-hidden className="text-muted-foreground">{icon}</div>}
@@ -73,7 +77,7 @@ export function EmptyState({ title, description, action, tone = "empty", classNa
   return (
     <div role={tone === "error" ? "alert" : "status"} className={kcn("flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card/50 px-6 text-center", compact ? "py-8" : "py-14", className)}>
       <div className={kcn("flex items-center gap-3", tone === "offline" && "opacity-60 grayscale")}>
-        <KiorexLogo variant="mark" height={compact ? 36 : 52} title="" />
+        <KiorexLogo variant="mark" product={KIORLY_PRODUCT} height={compact ? 36 : 52} title="" />
       </div>
       <Pulse size={compact ? 14 : 18} />
       <div className="text-base font-semibold">{title}</div>
@@ -123,21 +127,48 @@ export function Stepper({ steps, current, className }: { steps: string[]; curren
   );
 }
 
-/** Kiorly by Kiorex lockup for sidebars/headers (Nurse edition uses the Nurse lockup). Switches to the inverse tone in dark mode. */
+/** The product this app is. The ONLY line that differs between the vendored copies of this file ("clinic" | "lab" | "pharmacy"); it selects the lockup text ("Kiorly Clinic by Kiorex") and accent colour. */
+export const KIORLY_PRODUCT: "clinic" | "lab" | "pharmacy" = "clinic";
+
+/** "Kiorly <Product> by Kiorex" lockup for sidebars/headers (Nurse edition of Clinic uses the Nurse lockup). Switches to the inverse tone in dark mode and to the Arabic wordmark («كيورلي للعيادات من كيوريكس», mark on the right) when the UI language is Arabic. */
 export function KiorlyBrand({ nurse, height = 30, className }: { nurse?: boolean; height?: number; className?: string }) {
-  const product = nurse ? "nurse" : "kiorly";
+  const product = nurse ? "nurse" : KIORLY_PRODUCT;
+  const { i18n } = useTranslation();
+  const lang = i18n.language;
   return (
     <span className={kcn("inline-flex", className)}>
-      <KiorexLogo variant="lockup" product={product} tone="color" height={height} className="dark:hidden" />
-      <KiorexLogo variant="lockup" product={product} tone="inverse" height={height} className="hidden dark:block" />
+      <KiorexLogo variant="lockup" product={product} lang={lang} tone="color" height={height} className="dark:hidden" />
+      <KiorexLogo variant="lockup" product={product} lang={lang} tone="inverse" height={height} className="hidden dark:block" />
     </span>
   );
 }
-export function KiorlyMark({ size = 28 }: { size?: number }) {
+/** Text version of the lockup (e.g. a login footer on the dark hero): the last letter of KIORLY (Y; ي in Arabic) and the WHOLE product word are set in the product accent (inverse tint), the rest inherits.
+ *  Letter joining: the ي span changes ONLY the colour (no weight/font change), so Arabic shaping stays connected across the span boundary. */
+const KIORLY_ACCENT_ON_DARK = { clinic: "#2DD4BF", lab: "#A78BFA", pharmacy: "#4ADE80" } as const;
+export function KiorlyFootText({ text, word }: { text: string; word: string }) {
+  const accent = KIORLY_ACCENT_ON_DARK[KIORLY_PRODUCT];
+  const segs = footSegments(text, word);
+  const node = (seg: (typeof segs)[number], i: number) => seg.kind === "last"
+    ? <span key={i} data-kx-accent="last" style={{ color: accent }}>{seg.text}</span>
+    : seg.kind === "word"
+      ? <span key={i} data-kx-accent="word" style={{ color: accent, fontWeight: 600 }}>{seg.text}</span>
+      : <span key={i}>{seg.text}</span>;
+  // The Arabic font fuses ل+ي into one required ligature glyph, which would take a single colour; "rlig" off on the brand word (only) keeps ي a separate, joined glyph.
+  const brand = segs.filter((s) => s.kind === "brand" || s.kind === "last");
+  const rest = segs.filter((s) => s.kind !== "brand" && s.kind !== "last");
+  return (
+    <>
+      {brand.length ? <span data-kx-brand style={{ fontFeatureSettings: '"rlig" 0' }}>{brand.map(node)}</span> : null}
+      {rest.map((s, i) => node(s, i + brand.length))}
+    </>
+  );
+}
+export function KiorlyMark({ size = 28, nurse }: { size?: number; nurse?: boolean }) {
+  const product = nurse ? "nurse" : KIORLY_PRODUCT;
   return (
     <span className="inline-flex">
-      <KiorexLogo variant="mark" tone="color" height={size} product="kiorly" className="dark:hidden" />
-      <KiorexLogo variant="mark" tone="inverse" height={size} product="kiorly" className="hidden dark:block" />
+      <KiorexLogo variant="mark" tone="color" height={size} product={product} className="dark:hidden" />
+      <KiorexLogo variant="mark" tone="inverse" height={size} product={product} className="hidden dark:block" />
     </span>
   );
 }
@@ -154,21 +185,36 @@ export function applyThemePref(pref: KxThemePref): void {
   const root = document.documentElement;
   root.classList.toggle("dark", dark);
   root.dataset.theme = dark ? "dark" : "light";
+  root.style.colorScheme = dark ? "dark" : "light";
 }
-/** Call once before React mounts. */
+/** Call once before React mounts (index.html also applies the saved theme inline, before first paint, so nothing flashes). */
 export function initTheme(): void {
   applyThemePref(readThemePref());
-  if (typeof matchMedia !== "undefined") matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (readThemePref() === "system") applyThemePref("system"); });
+  if (typeof matchMedia !== "undefined") matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (readThemePref() === "system") withThemeTransition(() => applyThemePref("system")); });
 }
+/** Shared theme control (sun / moon / monitor, cross-fading). Persists to localStorage `kx-theme`; the colour change is animated (reduced-motion safe). */
 export function ThemeToggle({ labels, className }: { labels: { light: string; dark: string; system: string; theme: string }; className?: string }) {
   const [pref, setPref] = useState<KxThemePref>(readThemePref);
-  const order: KxThemePref[] = ["system", "light", "dark"];
-  const next = order[(order.indexOf(pref) + 1) % order.length]!;
-  const glyph = pref === "dark" ? "☾" : pref === "light" ? "☀" : "◐";
   return (
-    <button type="button" aria-label={`${labels.theme}: ${labels[pref]}`} title={`${labels.theme}: ${labels[pref]}`} className={kcn("inline-flex size-10 items-center justify-center rounded-lg border border-border bg-card text-base text-foreground shadow-[var(--kx-shadow-1)] transition-colors hover:bg-accent", className)}
-      onClick={() => { try { localStorage.setItem(THEME_KEY, next); } catch { /* ignore */ } setPref(next); applyThemePref(next); }}>
-      <span aria-hidden>{glyph}</span>
-    </button>
+    <KxThemeToggle value={pref} labels={labels} className={className} onChange={(next) => {
+      try { localStorage.setItem(THEME_KEY, next); } catch { /* ignore */ }
+      setPref(next);
+      withThemeTransition(() => applyThemePref(next));
+    }} />
+  );
+}
+/** Shared language control (globe + AR / EN). `onChange` is the app's own setLang (sets lang/dir on <html> and persists). */
+export function LanguageToggle({ onChange, className }: { onChange: (next: KxLang) => void; className?: string }) {
+  const { t, i18n } = useTranslation();
+  return <KxLanguageToggle lang={i18n.language} onChange={onChange} className={className} labels={{ language: t("lang.label"), english: t("lang.english"), arabic: t("lang.arabic") }} />;
+}
+/** The lockup ("Kiorly <Product> by Kiorex") with the localised product tagline ("<Product> Management") beneath it: sidebar, drawer, login and onboarding all use this. */
+export function KiorlyBrandLockup({ height = 44, tagline = true, nurse, className }: { height?: number; tagline?: boolean; nurse?: boolean; className?: string }) {
+  const { t } = useTranslation();
+  return (
+    <div className={kcn("min-w-0", className)} data-kx-lockup>
+      <KiorlyBrand nurse={nurse} height={height} />
+      {tagline ? <p data-kx-tagline className="mt-0.5 truncate text-[11px] leading-tight text-muted-foreground">{t("app.tagline")}</p> : null}
+    </div>
   );
 }

@@ -14,8 +14,9 @@ import { BillingSeatService } from "./billing-seat.service";
 import { SubscriptionService } from "./subscription.service";
 import { TrialEngineService } from "./trial-engine.service";
 import { foundingTrialEndsAt, resolveTrialConfig, standardTrialEndsAt } from "./trial-config";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 const legal = new LegalAcceptanceService(prismaSvc, new AuditService(prismaSvc));
 const billingSeats = new BillingSeatService(prismaSvc);

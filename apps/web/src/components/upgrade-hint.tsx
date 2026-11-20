@@ -20,7 +20,7 @@ export function UpgradeHint({ entitlement, requiredPlan, onUpgrade }: Props) {
   const target = requiredPlan ?? "PRO";
 
   return (
-    <div className="rounded-xl border border-border bg-gradient-to-b from-accent/60 to-card px-5 py-7 text-center text-sm">
+    <div className="rounded-xl border border-border bg-linear-to-b from-accent/60 to-card px-5 py-7 text-center text-sm">
       <p className="font-medium">{t("entitlements.upgradeTitle", "Upgrade required")}</p>
       <p className="mt-1 text-muted-foreground">
         {t(

@@ -1,3 +1,4 @@
+import type { TranslateFn } from "@/lib/translate-fn";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Timer } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -55,7 +56,7 @@ function formatPeriodEnd(iso: string | null | undefined, language: string): stri
 
 function formatPeriodRelative(
   iso: string | null | undefined,
-  t: (key: string, fallback: string, opts?: Record<string, unknown>) => string,
+  t: TranslateFn,
 ): string | null {
   if (!iso) return null;
   const end = new Date(iso);
@@ -210,7 +211,7 @@ export function PlatformTenantConsolePage() {
                     ) : null}
                   </p>
                   <div
-                    className="flex items-start gap-3 rounded-xl border border-emerald-500/35 bg-gradient-to-br from-emerald-500/15 to-emerald-600/5 px-4 py-3.5 text-emerald-900 shadow-sm dark:from-emerald-500/20 dark:to-emerald-900/10 dark:text-emerald-200"
+                    className="flex items-start gap-3 rounded-xl border border-emerald-500/35 bg-linear-to-br from-emerald-500/15 to-emerald-600/5 px-4 py-3.5 text-emerald-900 shadow-xs dark:from-emerald-500/20 dark:to-emerald-900/10 dark:text-emerald-200"
                     data-testid="subscription-period-end"
                   >
                     <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
@@ -299,7 +300,7 @@ export function PlatformTenantConsolePage() {
                       onChange={(e) => setPlanSeats(e.target.value)}
                     />
                   </div>
-                  <div className="min-w-[12rem] flex-1">
+                  <div className="min-w-48 flex-1">
                     <label className="text-xs text-muted-foreground">{t("platform.setPlanReason", "Reason")}</label>
                     <Input value={planReason} onChange={(e) => setPlanReason(e.target.value)} />
                   </div>
@@ -355,7 +356,7 @@ export function PlatformTenantConsolePage() {
                   <label className="text-xs text-muted-foreground">Days</label>
                   <Input className="w-24" value={trialDays} onChange={(e) => setTrialDays(e.target.value)} />
                 </div>
-                <div className="min-w-[12rem] flex-1">
+                <div className="min-w-48 flex-1">
                   <label className="text-xs text-muted-foreground">Reason</label>
                   <Input value={trialReason} onChange={(e) => setTrialReason(e.target.value)} />
                 </div>
@@ -378,7 +379,7 @@ export function PlatformTenantConsolePage() {
                   <label className="text-xs text-muted-foreground">Amount</label>
                   <Input className="w-28" value={creditAmount} onChange={(e) => setCreditAmount(e.target.value)} />
                 </div>
-                <div className="min-w-[12rem] flex-1">
+                <div className="min-w-48 flex-1">
                   <label className="text-xs text-muted-foreground">Reason</label>
                   <Input value={creditReason} onChange={(e) => setCreditReason(e.target.value)} />
                 </div>

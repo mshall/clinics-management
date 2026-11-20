@@ -52,40 +52,49 @@ export function readKiorexOidcConfig(env: NodeJS.ProcessEnv = process.env): Kior
   };
 }
 
-/** Real implementation (lazy discovery so a down IdP never blocks API boot). */
+/** Real implementation (lazy discovery so a down IdP never blocks API boot). openid-client v6 (functional API). */
 export async function createOpenIdClientPort(cfg: KiorexOidcConfig): Promise<KiorexOidcPort> {
-  const { Issuer } = await import("openid-client");
+  const oidc = await import("openid-client");
   const { createRemoteJWKSet } = await import("jose");
-  const issuer = await Issuer.discover(cfg.issuer);
-  const client = new issuer.Client({
-    client_id: cfg.clientId,
-    client_secret: cfg.clientSecret,
-    redirect_uris: [cfg.redirectUri, cfg.nurseRedirectUri],
-    response_types: ["code"],
-    token_endpoint_auth_method: "client_secret_basic",
-  });
-  const jwksUri = issuer.metadata.jwks_uri;
+  // Dev IdP (kiorex-account) is plain http on localhost; openid-client v6 refuses http unless explicitly allowed.
+  const allowHttp = cfg.issuer.startsWith("http://") && process.env.NODE_ENV !== "production";
+  const config = await oidc.discovery(
+    new URL(cfg.issuer),
+    cfg.clientId,
+    { redirect_uris: [cfg.redirectUri, cfg.nurseRedirectUri], response_types: ["code"] },
+    oidc.ClientSecretBasic(cfg.clientSecret),
+    allowHttp ? { execute: [oidc.allowInsecureRequests] } : undefined,
+  );
+  const jwksUri = config.serverMetadata().jwks_uri;
   if (!jwksUri) throw new Error("Kiorex issuer metadata has no jwks_uri");
   const keys = createRemoteJWKSet(new URL(jwksUri));
   return {
     issuer: cfg.issuer,
     clientId: cfg.clientId,
     authorizationUrl: ({ state, nonce, codeChallenge, redirectUri }) =>
-      client.authorizationUrl({
-        ...(redirectUri ? { redirect_uri: redirectUri } : {}),
-        scope: "openid profile phone",
-        state,
-        nonce,
-        code_challenge: codeChallenge,
-        code_challenge_method: "S256",
-      }),
+      oidc
+        .buildAuthorizationUrl(config, {
+          redirect_uri: redirectUri ?? cfg.redirectUri,
+          scope: "openid profile phone",
+          state,
+          nonce,
+          code_challenge: codeChallenge,
+          code_challenge_method: "S256",
+        })
+        .href,
     exchange: async (params, checks, opts) => {
-      const set = await client.callback(
-        opts?.redirectUri ?? cfg.redirectUri,
-        { code: params.code, state: params.state, ...(params.iss ? { iss: params.iss } : {}) },
-        { state: checks.state, nonce: checks.nonce, code_verifier: checks.codeVerifier },
-      );
-      const c = set.claims();
+      // v6 derives the token-request redirect_uri from the callback URL (minus its query), so rebuild it.
+      const callbackUrl = new URL(opts?.redirectUri ?? cfg.redirectUri);
+      callbackUrl.searchParams.set("code", params.code);
+      callbackUrl.searchParams.set("state", params.state);
+      if (params.iss) callbackUrl.searchParams.set("iss", params.iss);
+      const tokens = await oidc.authorizationCodeGrant(config, callbackUrl, {
+        expectedState: checks.state,
+        expectedNonce: checks.nonce,
+        pkceCodeVerifier: checks.codeVerifier,
+      });
+      const c = tokens.claims();
+      if (!c) throw new Error("Kiorex token response carried no ID token");
       return {
         sub: c.sub,
         sid: typeof c.sid === "string" ? c.sid : undefined,

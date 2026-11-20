@@ -68,7 +68,7 @@ export function SetPlanConfirmDialog({
         className="gap-0 overflow-hidden p-0 sm:max-w-md"
         aria-describedby="set-plan-confirm-description"
       >
-        <div className="border-b border-sky-500/25 bg-gradient-to-br from-sky-500/10 via-sky-500/5 to-transparent px-6 py-5 dark:from-sky-500/15 dark:via-sky-900/10">
+        <div className="border-b border-sky-500/25 bg-linear-to-br from-sky-500/10 via-sky-500/5 to-transparent px-6 py-5 dark:from-sky-500/15 dark:via-sky-900/10">
           <DialogHeader className="space-y-3 text-start">
             <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-500/20 text-sky-800 ring-4 ring-sky-500/10 dark:text-sky-200">
               <CalendarClock className="h-5 w-5" aria-hidden />
@@ -109,7 +109,7 @@ export function SetPlanConfirmDialog({
           </dl>
 
           <div
-            className="rounded-xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 to-emerald-600/5 px-4 py-3.5 text-emerald-900 dark:from-emerald-500/20 dark:to-emerald-900/10 dark:text-emerald-200"
+            className="rounded-xl border border-emerald-500/30 bg-linear-to-br from-emerald-500/15 to-emerald-600/5 px-4 py-3.5 text-emerald-900 dark:from-emerald-500/20 dark:to-emerald-900/10 dark:text-emerald-200"
             data-testid="set-plan-confirm-period"
           >
             <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-emerald-700 dark:text-emerald-400">

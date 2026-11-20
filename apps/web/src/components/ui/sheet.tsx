@@ -45,13 +45,13 @@ const SheetContent = React.forwardRef<
         if (isPickListPortalTarget(e.target)) e.preventDefault();
       }}
       className={cn(
-        "fixed inset-y-0 z-50 flex h-full w-[min(100%,20rem)] flex-col border border-border bg-card shadow-[var(--kx-shadow-4)] start-0",
+        "fixed inset-y-0 z-50 flex h-full w-[min(100%,20rem)] flex-col border border-border bg-card shadow-kx-4 inset-s-0",
         className
       )}
       {...props}
     >
       {children}
-      <SheetPrimitive.Close className="absolute end-3 top-3 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+      <SheetPrimitive.Close className="absolute inset-e-3 top-3 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
         <X className="h-4 w-4" />
         <SheetCloseLabel />
       </SheetPrimitive.Close>

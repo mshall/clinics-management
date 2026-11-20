@@ -19,8 +19,9 @@ import { KiorlyInvoicesService } from "./kiorly-invoices.service";
 import { CreditWalletService } from "../credits/credit-wallet.service";
 import { isKiorlyDunningPaused } from "./kiorly-dunning";
 import type { DunningService } from "../subscriptions/dunning.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 const gateways = new PaymentGatewayRegistry();
 const paymentMethods = new KiorlyPaymentMethodsService(prismaSvc, gateways);

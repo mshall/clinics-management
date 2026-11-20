@@ -191,7 +191,7 @@ function BeforeAfterSlider({
 
   return (
     <div className="space-y-3">
-      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl border border-border bg-muted shadow-inner">
+      <div className="relative aspect-4/3 w-full overflow-hidden rounded-xl border border-border bg-muted shadow-inner">
         <ClinicalPhotoImage
           patientId={patientId}
           photoId={afterId}
@@ -211,10 +211,10 @@ function BeforeAfterSlider({
           className="pointer-events-none absolute inset-y-0 w-0.5 bg-white shadow-[0_0_8px_rgba(0,0,0,0.45)]"
           style={{ left: `${position}%` }}
         />
-        <span className="pointer-events-none absolute start-3 top-3 rounded bg-black/50 px-2 py-0.5 text-xs font-medium text-white">
+        <span className="pointer-events-none absolute inset-s-3 top-3 rounded bg-black/50 px-2 py-0.5 text-xs font-medium text-white">
           {t("patients.beforePhoto", "Before")}
         </span>
-        <span className="pointer-events-none absolute end-3 top-3 rounded bg-black/50 px-2 py-0.5 text-xs font-medium text-white">
+        <span className="pointer-events-none absolute inset-e-3 top-3 rounded bg-black/50 px-2 py-0.5 text-xs font-medium text-white">
           {t("patients.afterPhoto", "After")}
         </span>
       </div>

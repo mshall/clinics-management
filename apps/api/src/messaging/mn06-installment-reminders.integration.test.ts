@@ -6,8 +6,9 @@ import type { FeatureFlagsService } from "../feature-flags/feature-flags.service
 import type { PrismaService } from "../prisma/prisma.service";
 import { INSTALLMENT_REMINDER_TEMPLATE_KEY, InstallmentRemindersService } from "./installment-reminders.service";
 import type { MessagingService } from "./messaging.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const svc = prisma as unknown as PrismaService;
 
 describe("MN-06 installment WhatsApp reminders", () => {

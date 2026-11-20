@@ -18,8 +18,9 @@ import { assertDemoSeedAllowed } from "../../src/common/demo-seed-guard";
 import { FIRST_F, FIRST_M, LAST, PERSONAS, TENANTS, type DocSpec } from "./demo-data";
 import { NURSE_DEMO_TENANT_NAMES } from "../nurse-demo.seed";
 import { seedRev23 } from "./seed-rev23";
+import { createPrismaClient } from "../../src/prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const DEMO_PASSWORD = "Demo@12345"; // DEV ONLY
 const RESET = process.argv.includes("--reset");
 const VAT = 14; // plain configurable VAT % shown on invoices (market-pack config)

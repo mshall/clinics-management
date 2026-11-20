@@ -217,7 +217,7 @@ export function OrgInsightsPanel() {
               {roleStars.map(({ role, winner }) => (
                 <Card
                   key={role}
-                  className="overflow-hidden border-[hsl(var(--warning)/0.5)] shadow-sm transition-shadow hover:shadow-md motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:duration-300 "
+                  className="overflow-hidden border-[hsl(var(--warning)/0.5)] shadow-xs transition-shadow hover:shadow-md motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:duration-300 "
                 >
                   <CardContent className="flex items-start gap-2.5 p-3">
                     <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--warning)/0.12)] ">

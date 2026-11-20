@@ -327,7 +327,7 @@ export function SearchablePickList({
       className={cn(
         // pointer-events-auto: the panel is portalled to <body>, which a modal Radix Dialog sets to pointer-events:none (options were unclickable inside dialogs).
         "pointer-events-auto overflow-y-auto overscroll-contain rounded-md border border-border bg-background shadow-lg [-webkit-overflow-scrolling:touch] [touch-action:pan-y]",
-        useFixedPortal ? "fixed z-[9999]" : "absolute inset-x-0 top-full z-[100] mt-1 max-h-56",
+        useFixedPortal ? "fixed z-9999" : "absolute inset-x-0 top-full z-100 mt-1 max-h-56",
       )}
       style={
         useFixedPortal && panelStyle
@@ -356,7 +356,7 @@ export function SearchablePickList({
             aria-selected={value === i.value}
             disabled={disabled}
             className={cn(
-              "flex w-full min-h-11 cursor-pointer flex-col gap-0.5 border-b border-border px-3 py-2.5 text-start text-sm last:border-b-0 hover:bg-muted/60 active:bg-muted/80 disabled:opacity-50 select-none [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]",
+              "flex w-full min-h-11 cursor-pointer flex-col gap-0.5 border-b border-border px-3 py-2.5 text-start text-sm last:border-b-0 hover:bg-muted/60 active:bg-muted/80 disabled:opacity-50 select-none [-webkit-tap-highlight-color:transparent] touch-manipulation",
               value === i.value && "bg-muted/80",
             )}
             onClick={selectOption(i)}
@@ -409,7 +409,7 @@ export function SearchablePickList({
         }}
       />
       <ChevronDown
-        className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 shrink-0 opacity-50"
+        className="pointer-events-none absolute inset-e-3 top-1/2 size-4 -translate-y-1/2 shrink-0 opacity-50"
         aria-hidden
       />
       {open
@@ -434,8 +434,8 @@ export function SearchablePickList({
           aria-expanded={false}
           aria-controls={listboxId}
           className={cn(
-            "flex h-11 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-start text-sm shadow-sm transition-colors touch-manipulation [-webkit-tap-highlight-color:transparent]",
-            "hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "flex h-11 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-start text-sm shadow-xs transition-colors touch-manipulation [-webkit-tap-highlight-color:transparent]",
+            "hover:bg-muted/50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
             !displayText && "text-muted-foreground",
             disabled && "cursor-not-allowed opacity-50",
             invalid && "border-destructive ring-1 ring-destructive",

@@ -198,7 +198,7 @@ export function PlatformClinicsTab() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="min-w-[12rem] max-w-xs space-y-2">
+          <div className="min-w-48 max-w-xs space-y-2">
             <Label>{t("platform.tabs.filterOrg")}</Label>
             <select
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"

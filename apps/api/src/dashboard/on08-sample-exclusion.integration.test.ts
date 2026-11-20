@@ -6,8 +6,9 @@ import type { JwtUser } from "../auth/jwt-user";
 import { SampleDataService } from "../onboarding/sample-data.service";
 import type { PrismaService } from "../prisma/prisma.service";
 import { DashboardService } from "./dashboard.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const ps = prisma as unknown as PrismaService;
 
 describe("ON-08 sample patient excluded from dashboard KPIs", () => {

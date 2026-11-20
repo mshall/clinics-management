@@ -148,5 +148,5 @@ function Kpi({ label, value, loading, locale, icon }: { label: string; value: nu
 
 function MoneyKpi({ label, display, loading, tone }: { label: string; display: string; loading: boolean; tone: "good" | "warn" | "brand" }) {
   if (loading) return <StatSkeleton />;
-  return <StatCard tone={tone} label={label} value={<span className="ltr-nums break-words text-xl sm:text-2xl">{display || "—"}</span>} />;
+  return <StatCard tone={tone} label={label} value={<span className="ltr-nums wrap-break-word text-xl sm:text-2xl">{display || "—"}</span>} />;
 }

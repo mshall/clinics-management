@@ -87,7 +87,7 @@ html.theme-material .shadow-md {
   box-shadow: var(--md-elevation-2);
 }
 
-html.theme-material .shadow-sm {
+html.theme-material .shadow-xs {
   box-shadow: var(--md-elevation-1);
 }
 

@@ -49,7 +49,7 @@ const toneClass: Record<LineStyle["tone"], string> = {
   neutral: "border-border/80 bg-muted/30 text-foreground",
   info: "border-kx-ocean-600/25 bg-kx-ocean-600/10 text-kx-ocean-950 dark:text-kx-ocean-50",
   warn: "border-[hsl(var(--warning)/0.3)] bg-amber-500/10 text-[hsl(var(--warning))] ",
-  accent: "border-kx-indigo-600/25 bg-gradient-to-br from-kx-indigo-600/15 to-kx-indigo-600/10 text-foreground",
+  accent: "border-kx-indigo-600/25 bg-linear-to-br from-kx-indigo-600/15 to-kx-indigo-600/10 text-foreground",
   success: "border-[hsl(var(--success)/0.25)] bg-emerald-500/10 text-[hsl(var(--success))] ",
 };
 
@@ -73,7 +73,7 @@ export function PreVisitSmartSummaryCard({ patientId }: { patientId: string }) {
   if (q.isError || !q.data?.lines?.length) return null;
 
   return (
-    <Card className="overflow-hidden border-kx-indigo-600/20 bg-gradient-to-br from-kx-indigo-600/5 via-background to-kx-ocean-600/5 shadow-sm">
+    <Card className="overflow-hidden border-kx-indigo-600/20 bg-linear-to-br from-kx-indigo-600/5 via-background to-kx-ocean-600/5 shadow-xs">
       <CardHeader className="pb-3">
         <AiFeatureLabel featureId="pre_visit_summary" showDisclosure />
       </CardHeader>
@@ -86,7 +86,7 @@ export function PreVisitSmartSummaryCard({ patientId }: { patientId: string }) {
               <li
                 key={i}
                 className={cn(
-                  "flex gap-3 rounded-lg border p-3 text-sm leading-snug shadow-sm",
+                  "flex gap-3 rounded-lg border p-3 text-sm leading-snug shadow-xs",
                   toneClass[style.tone],
                   i === 0 ? "sm:col-span-2" : "",
                 )}

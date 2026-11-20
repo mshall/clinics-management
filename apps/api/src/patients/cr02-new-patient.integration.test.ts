@@ -8,8 +8,9 @@ import {
 } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { NewPatientService } from "./new-patient.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const newPatients = new NewPatientService(prisma as unknown as PrismaService);
 
 describe("CR-02 NewPatientService.isNewToTenant", () => {

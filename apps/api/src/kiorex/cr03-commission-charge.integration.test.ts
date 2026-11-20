@@ -15,8 +15,9 @@ import { KiorexCommissionService } from "./kiorex-commission.service";
 import { CommissionChargeService } from "./commission-charge.service";
 import { COMMISSION_CHARGE_CREATED, COMMISSION_CHARGE_REVERSED } from "./commission-charge-topics";
 import { isActiveCommissionChargeStatus } from "./commission-charge-status";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 
 describe("CR-03 Kiorex commission charges", () => {

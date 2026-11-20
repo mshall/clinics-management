@@ -83,13 +83,13 @@ export function PlatformLayout() {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5" aria-busy="true">
-          {Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-[4.5rem] rounded-xl" />)}
+          {Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-18 rounded-xl" />)}
         </div>
       )}
 
       <nav aria-label={t("platform.title")} className="kx-secnav">
         {sections.map((x) => (
-          <NavLink key={x.to} to={x.to} end={x.end} className="inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{x.label}</NavLink>
+          <NavLink key={x.to} to={x.to} end={x.end} className="inline-flex items-center focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring">{x.label}</NavLink>
         ))}
       </nav>
 

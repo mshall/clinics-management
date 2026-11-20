@@ -51,7 +51,7 @@ We adopt a **modular monolith** for the backend rather than microservices in v1.
 | Cache / Queues | Redis (Docker locally) | Available in compose; ElastiCache optional for prod scale |
 | Object Storage | **Amazon S3 (production)** / local `uploads/` (development) | Attachments, prescriptions, patient documents, logos — `UPLOAD_STORAGE=s3` on App Runner |
 | Auth | **JWT (symmetric `JWT_SECRET`)** via `@nestjs/jwt`; **bcryptjs** password hashes; **TOTP MFA** optional per user | Implemented: `POST /auth/login` (+ `mfaCode`), `GET /auth/me`, MFA setup/confirm/disable. Refresh tokens, OIDC SSO — roadmap |
-| Frontend Web | **React 18 + Vite + TypeScript** | Fast DX, modern tooling |
+| Frontend Web | **React 19 + Vite 8 + TypeScript 6** | Fast DX, modern tooling |
 | State Mgmt | TanStack Query + Zustand | Server state and lightweight client state |
 | UI Library | shadcn/ui + Tailwind CSS + Radix | Accessible, themeable, RTL-friendly |
 | i18n | i18next + react-i18next | EN/AR with RTL |
@@ -1078,7 +1078,7 @@ model AuditLog {
 ## 9. Frontend (Web) — `apps/web`
 
 ### 9.1 Stack
-- React 18, Vite, TypeScript strict mode.
+- React 19, Vite 8, TypeScript strict mode.
 - React Router for routing.
 - TanStack Query for server state.
 - Zustand for ephemeral client state.

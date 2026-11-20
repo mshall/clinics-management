@@ -9,8 +9,9 @@ import { PrismaService } from "../prisma/prisma.service";
 import { MessagingService } from "./messaging.service";
 import { ConsentPolicyService } from "../compliance/consent-policy.service";
 import { UsageMeterService } from "../usage/usage-meter.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 function messagingStack(): { messaging: MessagingService; consent: MessagingConsentService } {
   const prismaSvc = prisma as unknown as PrismaService;

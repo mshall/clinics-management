@@ -38,7 +38,7 @@ export function Patient360Summary({ patientId }: { patientId: string }) {
     queryFn: () => apiGet<Summary>(`/api/v1/patients/${patientId}/summary`),
   });
 
-  if (q.isPending) return <Card><CardContent className="grid gap-4 pt-[var(--kx-card-pad)] md:grid-cols-3">{[0, 1, 2].map((i) => <div key={i} className="space-y-2"><Skeleton className="h-3 w-24" /><Skeleton className="h-4 w-40" /><Skeleton className="h-4 w-32" /></div>)}</CardContent></Card>;
+  if (q.isPending) return <Card><CardContent className="grid gap-4 pt-(--kx-card-pad) md:grid-cols-3">{[0, 1, 2].map((i) => <div key={i} className="space-y-2"><Skeleton className="h-3 w-24" /><Skeleton className="h-4 w-40" /><Skeleton className="h-4 w-32" /></div>)}</CardContent></Card>;
   if (q.isError || !q.data) return null;
   const s = q.data;
   const dtf = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });

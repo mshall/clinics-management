@@ -33,7 +33,7 @@ export function OperationContractZeroDialog({
         className="gap-0 overflow-hidden p-0 sm:max-w-md"
         aria-describedby="operation-contract-zero-description"
       >
-        <div className="border-b border-amber-500/25 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent px-6 py-5 dark:from-amber-500/15 dark:via-amber-900/10">
+        <div className="border-b border-amber-500/25 bg-linear-to-br from-amber-500/10 via-amber-500/5 to-transparent px-6 py-5 dark:from-amber-500/15 dark:via-amber-900/10">
           <DialogHeader className="space-y-3 text-start">
             <div className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-500/20 text-amber-800 ring-4 ring-amber-500/10 dark:text-amber-200">
               <FileSignature className="h-5 w-5" aria-hidden />

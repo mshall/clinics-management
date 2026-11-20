@@ -1,3 +1,4 @@
+import type { TranslateFn } from "@/lib/translate-fn";
 import { ApiError } from "@/lib/http";
 
 export type PatientPhoneConflictPatient = {
@@ -47,7 +48,7 @@ export function parsePhoneConflictFromError(e: unknown): PatientPhoneConflictPat
 
 export function phoneConflictMessage(
   patient: PatientPhoneConflictPatient,
-  t: (key: string, fallback: string, opts?: Record<string, unknown>) => string,
+  t: TranslateFn,
   language: string,
 ): string {
   const name = patientPhoneConflictName(patient, language);

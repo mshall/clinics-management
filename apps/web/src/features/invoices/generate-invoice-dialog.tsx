@@ -140,7 +140,7 @@ export function GenerateInvoiceDialog({
                 </Button>
               </div>
               {lines.map((line, idx) => (
-                <div key={idx} className="grid gap-2 rounded-xl border border-border/80 bg-card p-3 shadow-[var(--kx-shadow-1)] sm:grid-cols-[1fr_9rem_auto] sm:items-end">
+                <div key={idx} className="grid gap-2 rounded-xl border border-border/80 bg-card p-3 shadow-kx-1 sm:grid-cols-[1fr_9rem_auto] sm:items-end">
                   <div className="space-y-1">
                     <Label htmlFor={`inv-purpose-${idx}`}>{t("invoices.purpose", "Purpose")}</Label>
                     <Input

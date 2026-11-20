@@ -4,8 +4,9 @@ import { BillingInterval, CreditReason, PlanKey, Prisma, PrismaClient, Subscript
 import { PrismaService } from "../prisma/prisma.service";
 import { CreditWalletService } from "./credit-wallet.service";
 import { decimalAmount, sumLedgerAmounts } from "./credit-wallet-math";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const walletSvc = new CreditWalletService(prisma as unknown as PrismaService);
 
 describe("CR-05 credit wallet service", () => {

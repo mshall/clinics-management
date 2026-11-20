@@ -10,8 +10,9 @@ import type { JwtUser } from "../auth/jwt-user";
 import { ACTIVE_PRICE_WHERE } from "../plans/plans-active-prices";
 import { legalAcceptancesPayload, requiredLegalForSignup } from "../legal/legal-catalog";
 import * as bcrypt from "bcryptjs";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 const legal = new LegalAcceptanceService(prismaSvc, new AuditService(prismaSvc));
 const billingSeats = new BillingSeatService(prismaSvc);

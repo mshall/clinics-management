@@ -5,8 +5,9 @@ import * as bcrypt from "bcryptjs";
 import { OnboardingService } from "./onboarding.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const audit = new AuditService(prisma as unknown as PrismaService);
 const onboarding = new OnboardingService(prisma as unknown as PrismaService, audit);
 

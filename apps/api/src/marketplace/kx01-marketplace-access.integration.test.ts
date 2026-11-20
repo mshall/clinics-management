@@ -15,8 +15,9 @@ import { MarketplaceAccessService } from "./marketplace-access.service";
 import { MarketplaceListingService } from "./marketplace-listing.service";
 import { OutboxEventService } from "../messaging/outbox-event.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const access = new MarketplaceAccessService(prisma as never);
 const outbox = new OutboxEventService(prisma as unknown as PrismaService);
 const listings = new MarketplaceListingService(prisma as unknown as PrismaService, outbox);

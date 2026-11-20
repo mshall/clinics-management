@@ -219,7 +219,7 @@ export function ClinicFormFields({
             <img
               src={values.logoUrl.trim()}
               alt=""
-              className="max-h-20 max-w-[12rem] object-contain"
+              className="max-h-20 max-w-48 object-contain"
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = "none";
               }}

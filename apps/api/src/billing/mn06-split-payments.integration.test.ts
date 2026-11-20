@@ -6,8 +6,9 @@ import { upsertEncounterVisitFeeRevenue } from "../common/visit-fee-ledger";
 import { postRevenue } from "../compliance/post-revenue";
 import type { PrismaService } from "../prisma/prisma.service";
 import { SplitPaymentService } from "./split-payment.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const svc = prisma as unknown as PrismaService;
 const split = new SplitPaymentService(svc);
 const code = (c: string) => (e: { response?: { code?: string } }) => e.response?.code === c;

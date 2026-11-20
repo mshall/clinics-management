@@ -6,6 +6,7 @@ import {
   isClinicalOsTheme,
   isDarkTheme,
   isThemeId,
+  themeWithMode,
 } from "./theme-store";
 
 test("default theme is Clinical OS light", () => {
@@ -24,4 +25,9 @@ test("clinical-os dark uses dark flag", () => {
   assert.equal(isDarkTheme("clinical-os-light"), false);
   assert.equal(isClinicalOsTheme("clinical-os-light"), true);
   assert.equal(isClinicalOsTheme("material-light"), false);
+});
+test("themeWithMode flips brightness inside the same theme family", () => {
+  assert.equal(themeWithMode("clinical-os-light", "dark"), "clinical-os-dark");
+  assert.equal(themeWithMode("material-dark", "light"), "material-light");
+  assert.equal(themeWithMode("default-light", "dark"), "default-dark");
 });

@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "@kiorly-docs": path.resolve(__dirname, "../../Docs"),
+      "@kiorly-docs": path.resolve(import.meta.dirname, "../../Docs"),
     },
   },
   server: {

@@ -155,7 +155,7 @@ export function ClaimsWorkspacePage() {
 
   const importRemittance = useMutation({
     mutationFn: () => {
-      let lines: { externalRef: string; amount: number }[] = [];
+      let lines: { externalRef: string; amount: number }[];
       try {
         lines = JSON.parse(remitJson) as { externalRef: string; amount: number }[];
       } catch {
@@ -195,7 +195,7 @@ export function ClaimsWorkspacePage() {
           <CardDescription>{t("claims.payersHint")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[12rem] flex-1">
+          <div className="min-w-48 flex-1">
             <Label htmlFor="claims-payer">{t("claims.payer")}</Label>
             <select
               id="claims-payer"
@@ -211,7 +211,7 @@ export function ClaimsWorkspacePage() {
               ))}
             </select>
           </div>
-          <div className="min-w-[10rem] flex-1">
+          <div className="min-w-40 flex-1">
             <Label htmlFor="new-payer">{t("claims.newPayer")}</Label>
             <Input
               id="new-payer"
@@ -372,7 +372,7 @@ export function ClaimsWorkspacePage() {
               <h3 className="font-medium">{t("claims.importRemittance")}</h3>
               <p className="text-xs text-muted-foreground">{t("claims.importRemittanceHint")}</p>
               <div className="flex flex-wrap gap-3">
-                <div className="min-w-[10rem] flex-1">
+                <div className="min-w-40 flex-1">
                   <Label htmlFor="remit-ref">{t("claims.remittanceRef")}</Label>
                   <Input id="remit-ref" value={remitRef} onChange={(e) => setRemitRef(e.target.value)} />
                 </div>
@@ -380,7 +380,7 @@ export function ClaimsWorkspacePage() {
               <Label htmlFor="remit-json">{t("claims.remittanceLines")}</Label>
               <textarea
                 id="remit-json"
-                className="min-h-[8rem] w-full rounded-md border bg-background p-2 font-mono text-xs"
+                className="min-h-32 w-full rounded-md border bg-background p-2 font-mono text-xs"
                 value={remitJson}
                 onChange={(e) => setRemitJson(e.target.value)}
                 data-testid="claims-remit-json"

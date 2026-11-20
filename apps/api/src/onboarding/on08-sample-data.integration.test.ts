@@ -14,8 +14,9 @@ import { MESSAGING_CONSENT_TRANSACTIONAL } from "../patients/messaging-consent.c
 import { MessagingConsentService } from "../patients/messaging-consent.service";
 import type { PrismaService } from "../prisma/prisma.service";
 import { SampleDataService } from "./sample-data.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const ps = prisma as unknown as PrismaService;
 const sampleData = new SampleDataService(ps, new AuditService(ps));
 

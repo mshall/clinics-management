@@ -3,7 +3,7 @@ import { config } from "dotenv";
 import { resolve } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { PaymentMethod, UserRole, type PrismaClient } from "@prisma/client";
-import { PrismaClient as PC } from "@prisma/client";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 import { PrismaService } from "../prisma/prisma.service";
 import { BillingService } from "./billing.service";
 
@@ -12,7 +12,7 @@ config({ path: resolve(process.cwd(), ".env") });
 const isCi = process.env.CI === "true";
 
 describe("QA-02 patient billing money path", () => {
-  const prisma = new PC() as PrismaClient;
+  const prisma = createPrismaClient();
   let billing: BillingService;
   let tenantId: string;
   let clinicId: string;

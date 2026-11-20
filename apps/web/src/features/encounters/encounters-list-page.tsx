@@ -838,7 +838,7 @@ export function EncountersListPage() {
                       <td className="px-3 py-2">
                         <Badge
                           variant="outline"
-                          className="max-w-[14rem] truncate border-primary/35 bg-primary/5 font-normal text-foreground"
+                          className="max-w-56 truncate border-primary/35 bg-primary/5 font-normal text-foreground"
                           title={formatClinicNameFields(e.clinicNameEn, e.clinicNameAr, i18n.language)}
                         >
                           {formatClinicNameFields(e.clinicNameEn, e.clinicNameAr, i18n.language)}

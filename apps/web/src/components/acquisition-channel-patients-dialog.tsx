@@ -211,7 +211,7 @@ export function AcquisitionChannelPatientsDialog({
                             t,
                           )}
                         </td>
-                        <td className="max-w-[12rem] truncate px-3 py-2 text-xs text-muted-foreground" title={acquisitionDetail(p)}>
+                        <td className="max-w-48 truncate px-3 py-2 text-xs text-muted-foreground" title={acquisitionDetail(p)}>
                           {acquisitionDetail(p)}
                         </td>
                       </tr>

@@ -105,8 +105,8 @@ function SectionBlock({
   const summary = section.summaryEn;
 
   return (
-    <Card id={section.id} className="scroll-mt-20 overflow-hidden border-border/80 shadow-sm lg:col-span-2">
-      <div className={cn("h-1 w-full bg-gradient-to-r", SECTION_ACCENTS[index % SECTION_ACCENTS.length] ?? SECTION_ACCENTS[0])} />
+    <Card id={section.id} className="scroll-mt-20 overflow-hidden border-border/80 shadow-xs lg:col-span-2">
+      <div className={cn("h-1 w-full bg-linear-to-r", SECTION_ACCENTS[index % SECTION_ACCENTS.length] ?? SECTION_ACCENTS[0])} />
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="max-w-3xl space-y-2">
@@ -142,7 +142,7 @@ function SectionBlock({
               className={cn(
                 "rounded-xl border p-3 transition-all duration-300",
                 si === activeStep
-                  ? "border-primary/50 bg-primary/5 shadow-sm"
+                  ? "border-primary/50 bg-primary/5 shadow-xs"
                   : "border-border/60 bg-muted/20 hover:bg-muted/35",
               )}
             >
@@ -323,7 +323,7 @@ function MotionHero(props: {
 }) {
   const { headline, headlineAr, subtitleEn, subtitleAr, roleLabel, navKeys, t } = props;
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/10 via-card to-card px-6 py-10 shadow-sm sm:px-10">
+    <div className="relative overflow-hidden rounded-2xl border border-border bg-linear-to-br from-primary/10 via-card to-card px-6 py-10 shadow-xs sm:px-10">
       <BrandingBlobs />
       <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-2xl space-y-3">
@@ -385,8 +385,8 @@ function MotionHero(props: {
 function BrandingBlobs() {
   return (
     <>
-      <div className="pointer-events-none absolute -end-16 -top-16 size-48 rounded-full bg-primary/10 blur-3xl guide-wizard-playing" />
-      <div className="pointer-events-none absolute -bottom-20 -start-10 size-56 rounded-full bg-kx-indigo-600/10 blur-3xl" />
+      <div className="pointer-events-none absolute -inset-e-16 -top-16 size-48 rounded-full bg-primary/10 blur-3xl guide-wizard-playing" />
+      <div className="pointer-events-none absolute -bottom-20 -inset-s-10 size-56 rounded-full bg-kx-indigo-600/10 blur-3xl" />
     </>
   );
 }

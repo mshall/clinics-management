@@ -1,6 +1,7 @@
 {
   "app": {
     "name": "Kiorly",
+    "docTitle": "Kiorly Clinic by Kiorex",
     "tagline": "Clinic Management",
     "orgPlan": "Plan",
     "orgPlanHint": "Your organization's current Kiorly plan"
@@ -493,7 +494,8 @@
     "groupClinicalOs": "Kiorly Clinical OS",
     "clinicalOsLight": "Clinical OS — Light",
     "clinicalOsDark": "Clinical OS — Dark",
-    "rememberForNextLogin": "Use as default when I sign in again"
+    "rememberForNextLogin": "Use as default when I sign in again",
+    "system": "System"
   },
   "dateRange": {
     "label": "Reporting period",
@@ -4888,5 +4890,10 @@
       "day": "Day"
     },
     "nextUp": "Next up"
+  },
+  "lang": {
+    "label": "Language",
+    "english": "English",
+    "arabic": "Arabic"
   }
 }

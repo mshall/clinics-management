@@ -87,7 +87,7 @@ export function AiReceptionistInboxPage() {
                         <span className="ms-1 text-xs text-muted-foreground">{t("aiReceptionist.handedOver")}</span>
                       ) : null}
                     </td>
-                    <td className="p-2 max-w-[14rem]">{row.inboundText}</td>
+                    <td className="p-2 max-w-56">{row.inboundText}</td>
                     <td className="p-2 max-w-[16rem]">{row.replyText}</td>
                   </tr>
                 ))}

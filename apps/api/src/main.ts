@@ -14,12 +14,7 @@ import { MulterExceptionFilter } from "./common/multer-exception.filter";
 import { PrismaClientExceptionFilter } from "./common/prisma-exception.filter";
 import { IntegrationFailureExceptionFilter } from "./integrations/integration-failure.filter";
 import { webBuildIdMiddleware } from "./common/web-build-id.middleware";
-import * as compressionImport from "compression";
-
-const compressionMiddleware =
-  typeof compressionImport === "function"
-    ? compressionImport
-    : (compressionImport as { default: typeof compressionImport }).default;
+import compressionMiddleware from "compression";
 
 async function bootstrap() {
   bootstrapTelemetry();

@@ -648,7 +648,7 @@ export function AdminPage() {
               }
             }}
           >
-            <DialogContent className="max-h-[min(90vh,40rem)] overflow-y-auto sm:max-w-[36rem]" aria-describedby={undefined}>
+            <DialogContent className="max-h-[min(90vh,40rem)] overflow-y-auto sm:max-w-xl" aria-describedby={undefined}>
               <DialogHeader>
                 <DialogTitle>{t("admin.addClinicDialogTitle")}</DialogTitle>
               </DialogHeader>

@@ -1,6 +1,7 @@
 import { BillingInterval, PlanKey, PrismaClient, SubscriptionStatus, UserRole, type Prisma } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { NURSE_SERVICE_CATALOGUE } from "../src/nurse/nurse-services";
+import { createPrismaClient } from "../src/prisma/create-prisma-client";
 
 /**
  * KNED seeded demo tenants (KX-23): one SOLO nurse practice and one AGENCY with a dispatcher, two nurses and an aide. Minimal and IDEMPOTENT by
@@ -64,7 +65,7 @@ export async function ensureNurseDemoTenants(prisma: PrismaClient): Promise<Nurs
 }
 
 if (require.main === module) {
-  const prisma = new PrismaClient();
+  const prisma = createPrismaClient();
   ensureNurseDemoTenants(prisma)
     .then((r) => console.log(JSON.stringify(r, null, 2)))
     .finally(() => prisma.$disconnect());

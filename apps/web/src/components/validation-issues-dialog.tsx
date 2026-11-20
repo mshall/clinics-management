@@ -25,7 +25,7 @@ export function ValidationIssuesDialog({
         className="gap-0 overflow-hidden p-0 sm:max-w-md"
         aria-describedby="validation-issues-dialog-description"
       >
-        <div className="border-b border-destructive/20 bg-gradient-to-br from-destructive/5 to-destructive/10 px-6 py-5 dark:from-destructive/10 dark:to-destructive/5">
+        <div className="border-b border-destructive/20 bg-linear-to-br from-destructive/5 to-destructive/10 px-6 py-5 dark:from-destructive/10 dark:to-destructive/5">
           <DialogHeader className="space-y-3 text-start">
             <div className="flex h-11 w-11 items-center justify-center rounded-full bg-destructive/15 text-destructive ring-4 ring-destructive/10">
               <CircleAlert className="h-5 w-5" aria-hidden />

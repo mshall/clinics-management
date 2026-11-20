@@ -5,8 +5,9 @@ import type { JwtUser } from "../auth/jwt-user";
 import type { PrismaService } from "../prisma/prisma.service";
 import { DrugCatalogService } from "./drug-catalog.service";
 import { resolveDrugIngredients } from "./drug-ingredient-resolver";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const catalog = new DrugCatalogService(prisma as unknown as PrismaService);
 
 function percentile(samples: number[], p: number): number {

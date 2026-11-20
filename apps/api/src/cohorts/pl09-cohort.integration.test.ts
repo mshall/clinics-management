@@ -4,8 +4,9 @@ import { BillingInterval, PlanKey, SubscriptionStatus } from "@prisma/client";
 import { CohortService } from "./cohort.service";
 import { PrismaClient } from "@prisma/client";
 import { FOUNDING_EG_COHORT_KEY } from "../../prisma/founding-cohort-seed";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const cohorts = new CohortService();
 
 describe("PL-09 founding cohort", () => {

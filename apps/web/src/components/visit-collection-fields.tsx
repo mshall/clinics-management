@@ -118,7 +118,7 @@ export const VisitCollectionFields = forwardRef<VisitCollectionFieldsHandle, Pro
                 data-testid={`collection-method-${opt.id}`}
                 onClick={() => pick(opt)}
                 className={cn(
-                  "min-h-11 min-w-20 rounded-md border px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50",
+                  "min-h-11 min-w-20 rounded-md border px-4 text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50",
                   active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:bg-muted",
                 )}
               >

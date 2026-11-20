@@ -32,6 +32,6 @@ import { VisitRecordService } from "./visit-record.service";
   imports: [AppointmentsModule, AuditModule, EncountersModule, EntitlementsModule, FeatureFlagsModule, HomeVisitsModule, MessagingModule, SchedulingModule, ScopeOfPracticeModule, SignupModule],
   controllers: [NursePublicController, NurseEditionController, NurseClinicalController, NurseMarController, NurseAgencyController, NurseLabController],
   providers: [NurseEditionService, CarePlanService, CarePlanRequestService, MarketplacePatientIntakeService, VisitRecordService, DoctorOrderService, MedicationAdministrationService, ShiftService, FamilyUpdateService, AgencyService, NurseReportsService, LabSampleService, RecordShareService],
-  exports: [NurseEditionService, CarePlanRequestService, DoctorOrderService, FamilyUpdateService, LabSampleService],
+  exports: [NurseEditionService, CarePlanRequestService, DoctorOrderService, FamilyUpdateService, LabSampleService, VisitRecordService],
 })
 export class NurseModule {}

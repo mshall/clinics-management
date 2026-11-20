@@ -6,8 +6,9 @@ import { RecordShareService } from "../marketplace/record-share.service";
 import { buildKit, buildWorld, cleanup, seedVisit, snapshotFor, type World } from "../home-visits/hv-test-kit";
 import type { PrismaService } from "../prisma/prisma.service";
 import { LabSampleService, type RecordCollectionInput } from "./lab-sample.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const p = prisma as unknown as PrismaService;
 const suffix = `${Date.now()}`.slice(-9);
 

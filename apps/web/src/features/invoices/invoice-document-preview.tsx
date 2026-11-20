@@ -26,7 +26,7 @@ export function InvoiceDocumentPreview({ invoice, language, className, logoUrl }
 
   return (
     <div
-      className={cn("mx-auto w-full max-w-[210mm] rounded-md border shadow-sm print:shadow-none", className)}
+      className={cn("mx-auto w-full max-w-[210mm] rounded-md border shadow-xs print:shadow-none", className)}
       style={{ backgroundColor: bg }}
       dir={rtl ? "rtl" : "ltr"}
     >

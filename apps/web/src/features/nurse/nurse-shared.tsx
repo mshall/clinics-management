@@ -133,7 +133,7 @@ export function PatientPicker({ value, onChange, label, id = "nurse-patient" }: 
     return (
       <div className="space-y-1">
         <Label htmlFor={id}>{label ?? t("nurse.common.patient")}</Label>
-        <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-2.5 text-sm shadow-[var(--kx-shadow-1)]" data-testid="nurse-patient-selected">
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-2.5 text-sm shadow-kx-1" data-testid="nurse-patient-selected">
           <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent font-semibold text-accent-foreground">{patientName(value).charAt(0).toUpperCase()}</span>
           <span className="min-w-0 flex-1 truncate font-medium">{patientName(value)}{value.mrn ? <span className="ms-1 font-normal text-muted-foreground">· {value.mrn}</span> : null}</span>
           <button type="button" className="min-h-11 shrink-0 rounded-lg px-3 font-medium text-primary hover:bg-accent" onClick={() => onChange(null)}>
@@ -151,7 +151,7 @@ export function PatientPicker({ value, onChange, label, id = "nurse-patient" }: 
       {list.isError ? <ErrorBlock error={list.error} /> : null}
       {list.data ? (
         list.data.items.length ? (
-          <div className="max-h-[22rem] divide-y overflow-auto rounded-xl border bg-card shadow-[var(--kx-shadow-1)]" role="listbox" aria-label={t("nurse.common.patient")}>
+          <div className="max-h-88 divide-y overflow-auto rounded-xl border bg-card shadow-kx-1" role="listbox" aria-label={t("nurse.common.patient")}>
             {list.data.items.map((p) => (
               <button key={p.id} type="button" role="option" aria-selected={false} className="flex min-h-14 w-full items-center gap-3 px-3 py-2 text-start text-sm transition-colors hover:bg-muted active:bg-muted" data-testid="nurse-patient-option" onClick={() => onChange(p)}>
                 <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent font-semibold text-accent-foreground">{patientName(p).charAt(0).toUpperCase()}</span>
@@ -177,7 +177,7 @@ export function Field({ label, htmlFor, children, hint }: { label: string; htmlF
   );
 }
 
-export const selectClass = "min-h-12 w-full rounded-lg border border-input bg-card px-3 py-2 text-base shadow-[var(--kx-shadow-1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:min-h-11 md:text-sm";
+export const selectClass = "min-h-12 w-full rounded-lg border border-input bg-card px-3 py-2 text-base shadow-kx-1 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring md:min-h-11 md:text-sm";
 
 export type AppointmentTypeRow = { id: string; nameEn: string; nameAr: string; durationMinutes: number; feeAmount: string | number; serviceLocation: "IN_CLINIC" | "HOME"; homeSurchargeAmount?: string | number | null; clinicId?: string | null; isActive: boolean; bufferBeforeMin?: number; bufferAfterMin?: number };
 

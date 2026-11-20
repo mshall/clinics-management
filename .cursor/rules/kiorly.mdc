@@ -6,7 +6,7 @@ alwaysApply: true
 # Kiorly repo rules (mshall/clinics-management)
 
 You are working in a TypeScript monorepo:
-- apps/api: NestJS 10 + Prisma (PostgreSQL). Modules live in apps/api/src/<module>. Keep module boundaries (see apps/api/src/platform/module-boundaries.node.test.ts and Docs/MODULAR_MONOLITH.md).
+- apps/api: NestJS 12 + Prisma 7 (PostgreSQL). Modules live in apps/api/src/<module>. Keep module boundaries (see apps/api/src/platform/module-boundaries.node.test.ts and Docs/MODULAR_MONOLITH.md).
 - apps/web: React + Vite + Tailwind + i18next. Features in apps/web/src/features/<feature>. Every user-facing string goes into BOTH apps/web/src/locales/en.json and ar.json (Arabic is first-class, RTL).
 - apps/docs: documentation portal. Docs/*.md are the product docs.
 

@@ -39,6 +39,8 @@ test.describe("UX flows & data wiring smoke", () => {
     ]);
     expect(seriesRes.ok()).toBeTruthy();
     await expect(page.getByRole("heading", { name: /reports/i })).toBeVisible();
+    // Charts live under the "Charts" tab since the Reports tabs reorganisation.
+    await page.getByRole("tab", { name: /charts/i }).click();
     await expect(page.locator(".recharts-surface").first()).toBeVisible();
   });
 

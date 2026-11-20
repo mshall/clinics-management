@@ -15,8 +15,9 @@ import { legalAcceptancesPayload, requiredLegalForSignup } from "../legal/legal-
 import { CohortService } from "../cohorts/cohort.service";
 import { ReferralAttributionService } from "../growth/referral-attribution.service";
 import { ReferralCodeService } from "../growth/referral-code.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 const markets = new MarketsService(prismaSvc, {} as FeatureFlagsService, {} as MarketProvisionService);
 const legal = new LegalAcceptanceService(prismaSvc, new AuditService(prismaSvc));

@@ -19,8 +19,9 @@ import { MarketplaceProviderProfileService } from "./marketplace-provider-profil
 import { SlotHoldService } from "./slot-hold.service";
 import type { PlatformIntegrationPrincipal } from "./platform-integration-client.service";
 import type { PrismaService } from "../prisma/prisma.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const suffix = `${Date.now()}`.slice(-9);
 
 /** KX-09 §03 v2.3 / contracts 1.5.0: the Kiorly side of home visits as Kiorex sees it (slots, holds, bookings, provider sync, events). */

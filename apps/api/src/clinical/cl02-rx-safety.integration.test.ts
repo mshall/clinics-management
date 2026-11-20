@@ -6,8 +6,9 @@ import { PrismaService } from "../prisma/prisma.service";
 import { RxSafetyCheckService } from "./rx-safety-check.service";
 import { DrugCatalogService } from "./drug-catalog.service";
 import { EncountersService } from "../encounters/encounters.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 describe("CL-02 Rx safety on save", () => {
   let tenantId: string;

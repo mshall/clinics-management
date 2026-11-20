@@ -1,4 +1,5 @@
-import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, Optional } from "@nestjs/common";
+import { MobilePushService } from "../mobile/mobile-push.service";
 import {
   AppointmentQueueStage,
   AppointmentStatus,
@@ -50,6 +51,7 @@ export class FrontDeskService {
     private readonly trialEngine: TrialEngineService,
     private readonly commissionCharges: CommissionChargeService,
     private readonly deposits: DepositSettlementService,
+    @Optional() private readonly mobilePush?: MobilePushService,
   ) {}
 
   quickSearch(tenantId: string, user: JwtUser, q: string) {
@@ -190,6 +192,10 @@ export class FrontDeskService {
       };
     });
     void this.trialEngine.onQualifyingVisit(tenantId).catch(() => undefined);
+    if (this.mobilePush) {
+      const cid = await this.prisma.appointment.findUnique({ where: { id: appointmentId }, select: { clinicianId: true } });
+      if (cid) void this.mobilePush.notifyUsers(tenantId, [cid.clinicianId], "PATIENT_CHECKED_IN", { appointmentId }).catch(() => undefined);
+    }
     return result;
   }
 

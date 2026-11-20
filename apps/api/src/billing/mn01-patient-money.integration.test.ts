@@ -7,8 +7,9 @@ import { postRevenue } from "../compliance/post-revenue";
 import type { PrismaService } from "../prisma/prisma.service";
 import { BillingService } from "./billing.service";
 import { PatientMoneyService } from "./patient-money.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const money = new PatientMoneyService(prisma as unknown as PrismaService);
 const billing = new BillingService(prisma as unknown as PrismaService);
 

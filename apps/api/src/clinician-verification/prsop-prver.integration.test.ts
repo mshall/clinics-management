@@ -13,8 +13,9 @@ import { ClinicianVerificationService } from "./clinician-verification.service";
 import { ProfessionReverificationService } from "./profession-reverification.service";
 import { applyReverification } from "./reverify";
 import { tenantHasVerifiedPhysician } from "./kiorex-marketplace-gate";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const uploads = new LocalUploadBlobStorage(path.join(process.cwd(), "uploads"));
 const audit = new AuditService(prisma as unknown as PrismaService);
 const service = new ClinicianVerificationService(prisma as unknown as PrismaService, uploads, audit);
