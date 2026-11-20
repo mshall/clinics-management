@@ -25,8 +25,8 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 
 const SECTION_ACCENTS = [
-  "from-violet-500/15 via-transparent to-transparent",
-  "from-sky-500/15 via-transparent to-transparent",
+  "from-kx-indigo-600/15 via-transparent to-transparent",
+  "from-kx-ocean-600/15 via-transparent to-transparent",
   "from-emerald-500/15 via-transparent to-transparent",
   "from-amber-500/15 via-transparent to-transparent",
 ];
@@ -386,7 +386,7 @@ function BrandingBlobs() {
   return (
     <>
       <div className="pointer-events-none absolute -end-16 -top-16 size-48 rounded-full bg-primary/10 blur-3xl guide-wizard-playing" />
-      <div className="pointer-events-none absolute -bottom-20 -start-10 size-56 rounded-full bg-violet-500/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-20 -start-10 size-56 rounded-full bg-kx-indigo-600/10 blur-3xl" />
     </>
   );
 }

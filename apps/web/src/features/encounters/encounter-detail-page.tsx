@@ -633,13 +633,13 @@ export function EncounterDetailPage() {
 
       <Dialog open={noMedsConfirmOpen} onOpenChange={setNoMedsConfirmOpen}>
         <DialogContent
-          className="gap-0 overflow-hidden border-slate-300 p-0 sm:max-w-md dark:border-slate-700"
+          className="gap-0 overflow-hidden border-kx-neutral-300 p-0 sm:max-w-md dark:border-kx-neutral-800"
           aria-describedby="encounter-no-meds-desc"
         >
-          <div className="border-b border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 px-6 py-5 dark:border-slate-800 dark:from-slate-900 dark:to-slate-950">
+          <div className="border-b border-kx-neutral-200 bg-gradient-to-br from-kx-neutral-50 to-kx-neutral-100 px-6 py-5 dark:border-kx-neutral-900 dark:from-kx-neutral-950 dark:to-kx-neutral-950">
             <DialogHeader className="space-y-3 text-start">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-200 ring-4 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-800/80">
-                <Ban className="h-5 w-5 text-slate-700 dark:text-slate-300" aria-hidden />
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-kx-neutral-200 ring-4 ring-kx-neutral-200/80 dark:bg-kx-neutral-900 dark:ring-kx-neutral-900/80">
+                <Ban className="h-5 w-5 text-kx-neutral-800 dark:text-kx-neutral-300" aria-hidden />
               </div>
               <DialogTitle className="text-start text-xl">{t("encounters.confirmNoMedsTitle", "Mark no medications prescribed?")}</DialogTitle>
             </DialogHeader>
@@ -843,7 +843,7 @@ export function EncounterDetailPage() {
             </div>
           </div>
           <div className="flex min-w-[7rem] items-center gap-2">
-            <Wind className="h-4 w-4 shrink-0 text-sky-500" aria-hidden />
+            <Wind className="h-4 w-4 shrink-0 text-kx-ocean-600" aria-hidden />
             <div className="min-w-0 flex-1 space-y-1">
               <Label className="text-xs text-muted-foreground">{t("encounters.spo2")}</Label>
               <Input
@@ -857,7 +857,7 @@ export function EncounterDetailPage() {
             </div>
           </div>
           <div className="flex min-w-[10rem] items-center gap-2">
-            <Activity className="h-4 w-4 shrink-0 text-violet-500" aria-hidden />
+            <Activity className="h-4 w-4 shrink-0 text-kx-indigo-600" aria-hidden />
             <div className="flex gap-2">
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">{t("encounters.bpSys")}</Label>
@@ -1106,7 +1106,7 @@ export function EncounterDetailPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <ScanLine className="h-4 w-4 shrink-0 text-sky-600" aria-hidden />
+                <ScanLine className="h-4 w-4 shrink-0 text-kx-ocean-700" aria-hidden />
                 {t("encounters.radiology")}
               </CardTitle>
               <CardDescription>{t("encounters.radiologyHint")}</CardDescription>
@@ -1176,7 +1176,7 @@ export function EncounterDetailPage() {
                 <TabsList className="grid h-auto w-full grid-cols-3 gap-1 p-1">
                   <TabsTrigger
                     value="none"
-                    className="gap-1.5 data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900 dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-slate-100"
+                    className="gap-1.5 data-[state=active]:bg-kx-neutral-100 data-[state=active]:text-kx-neutral-950 dark:data-[state=active]:bg-kx-neutral-900 dark:data-[state=active]:text-kx-neutral-100"
                   >
                     <Ban className="h-4 w-4 shrink-0" aria-hidden />
                     <span className="hidden sm:inline">{t("encounters.medModeNone")}</span>
@@ -1197,7 +1197,7 @@ export function EncounterDetailPage() {
                   </TabsTrigger>
                   <TabsTrigger
                     value="prescription"
-                    className="gap-1.5 data-[state=active]:bg-violet-100 data-[state=active]:text-violet-950 dark:data-[state=active]:bg-violet-950 dark:data-[state=active]:text-violet-50"
+                    className="gap-1.5 data-[state=active]:bg-kx-indigo-100 data-[state=active]:text-kx-indigo-950 dark:data-[state=active]:bg-kx-indigo-950 dark:data-[state=active]:text-kx-indigo-50"
                   >
                     <FileUp className="h-4 w-4 shrink-0" aria-hidden />
                     <span className="hidden sm:inline">{t("encounters.medModePrescription")}</span>
@@ -1210,7 +1210,7 @@ export function EncounterDetailPage() {
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="none" className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-900/30">
+                <TabsContent value="none" className="rounded-xl border border-kx-neutral-200 bg-kx-neutral-50/50 p-4 dark:border-kx-neutral-900 dark:bg-kx-neutral-950/30">
                   <p className="text-sm text-muted-foreground">
                     {t(
                       "encounters.noMedsTabHint",
@@ -1218,7 +1218,7 @@ export function EncounterDetailPage() {
                     )}
                   </p>
                   {draft && noMedications ? (
-                    <p className="mt-2 text-sm font-medium text-slate-700 dark:text-slate-300">{t("encounters.noMedsActive", "Selected")}</p>
+                    <p className="mt-2 text-sm font-medium text-kx-neutral-800 dark:text-kx-neutral-300">{t("encounters.noMedsActive", "Selected")}</p>
                   ) : null}
                 </TabsContent>
 
@@ -1352,7 +1352,7 @@ export function EncounterDetailPage() {
                   ) : null}
                 </TabsContent>
 
-                <TabsContent value="prescription" className="rounded-xl border border-violet-200/80 bg-violet-50/30 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
+                <TabsContent value="prescription" className="rounded-xl border border-kx-indigo-200/80 bg-kx-indigo-50/30 p-4 dark:border-kx-indigo-950/50 dark:bg-kx-indigo-950/20">
                   {!medsPanelActive && draft ? (
                     <p className="mb-3 text-sm text-muted-foreground">{t("encounters.panelDisabledNoMeds")}</p>
                   ) : null}
@@ -1375,14 +1375,14 @@ export function EncounterDetailPage() {
                         onClick={() => prescriptionFileRef.current?.click()}
                         className={cn(
                           "mb-4 flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-sm transition-colors",
-                          "border-violet-300 bg-violet-50/50 text-violet-900 hover:border-violet-400 hover:bg-violet-50",
-                          "dark:border-violet-700 dark:bg-violet-950/30 dark:text-violet-100 dark:hover:border-violet-500 dark:hover:bg-violet-950/50",
+                          "border-kx-indigo-300 bg-kx-indigo-50/50 text-kx-indigo-950 hover:border-kx-indigo-400 hover:bg-kx-indigo-50",
+                          "dark:border-kx-indigo-800 dark:bg-kx-indigo-950/30 dark:text-kx-indigo-100 dark:hover:border-kx-indigo-600 dark:hover:bg-kx-indigo-950/50",
                           uploadMutation.isPending && "pointer-events-none opacity-60"
                         )}
                       >
-                        <FileUp className="h-8 w-8 text-violet-500 dark:text-violet-400" aria-hidden />
+                        <FileUp className="h-8 w-8 text-kx-indigo-600 dark:text-kx-indigo-400" aria-hidden />
                         <span className="font-medium">{t("encounters.uploadPrescription", "Upload prescription")}</span>
-                        <span className="text-xs text-violet-700/80 dark:text-violet-300/80">{t("encounters.prescriptionUploadHint")}</span>
+                        <span className="text-xs text-kx-indigo-800/80 dark:text-kx-indigo-300/80">{t("encounters.prescriptionUploadHint")}</span>
                       </button>
                     </>
                   ) : null}

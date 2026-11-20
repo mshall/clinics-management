@@ -20,7 +20,7 @@ type Props = { clinicId: string };
 const tone: Record<string, string> = {
   LIVE: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-200",
   PAUSED: "bg-amber-500/15 text-amber-900 dark:text-amber-100",
-  PENDING_VERIFICATION: "bg-blue-500/15 text-blue-900",
+  PENDING_VERIFICATION: "bg-kx-ocean-600/15 text-kx-ocean-950",
   DRAFT: "bg-muted text-muted-foreground",
 };
 

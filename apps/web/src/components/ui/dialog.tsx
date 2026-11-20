@@ -45,7 +45,7 @@ const DialogContent = React.forwardRef<
         if (isPickListPortalTarget(e.target)) e.preventDefault();
       }}
       className={cn(
-        "fixed left-1/2 top-1/2 z-50 grid w-[min(100%-2rem,28rem)] max-h-[min(90dvh,40rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto overscroll-contain border border-border bg-card p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg touch-manipulation",
+        "fixed left-1/2 top-1/2 z-50 grid w-[min(100%-2rem,28rem)] max-h-[min(90dvh,40rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto overscroll-contain border border-border bg-card p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-[var(--kx-shadow-4)] duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-2xl touch-manipulation",
         className
       )}
       {...props}

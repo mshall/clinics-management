@@ -32,8 +32,10 @@ import { useAuthStore } from "@/stores/auth-store";
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   cn(
-    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-    isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+    "relative flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150",
+    isActive
+      ? "bg-accent text-accent-foreground before:absolute before:inset-y-2 before:start-0 before:w-[3px] before:rounded-full before:bg-primary"
+      : "text-muted-foreground hover:bg-muted hover:text-foreground"
   );
 
 export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {

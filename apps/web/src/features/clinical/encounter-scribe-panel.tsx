@@ -160,7 +160,7 @@ export function EncounterScribePanel({ encounterId, disabled, onApplySoap }: Pro
   if (disabled) return null;
 
   return (
-    <Card className="border-sky-500/20 bg-gradient-to-br from-sky-500/5 via-background to-emerald-500/5">
+    <Card className="border-kx-ocean-600/20 bg-gradient-to-br from-kx-ocean-600/5 via-background to-emerald-500/5">
       <CardHeader className="pb-2">
         <AiFeatureLabel featureId="chart_scribe" showDisclosure />
       </CardHeader>

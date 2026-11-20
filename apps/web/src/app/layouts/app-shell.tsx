@@ -23,6 +23,7 @@ import { HelpDrawer } from "@/features/help/help-drawer";
 import { useHelpStore } from "@/stores/help-store";
 import { PwaInstallPrompt } from "@/features/pwa/pwa-install-prompt";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { BrandLockup } from "@/components/brand-lockup";
 
 export function AppShell() {
   const { t } = useTranslation();
@@ -46,12 +47,8 @@ export function AppShell() {
   return (
     <div className="flex min-h-screen bg-muted/40">
       <aside className="sticky top-0 hidden h-screen min-h-0 w-60 shrink-0 border-e border-border bg-card md:flex md:flex-col">
-        <div className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-4">
-          <img src="/logo.svg" alt="" className="h-9 w-9 object-contain" width={36} height={36} />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold leading-tight">{t("app.name")}</p>
-            <p className="truncate text-xs text-muted-foreground">{t("app.tagline")}</p>
-          </div>
+        <div className="flex min-h-[4.5rem] shrink-0 items-center gap-3 border-b border-border px-4 py-3">
+          <BrandLockup />
         </div>
         <div className="flex min-h-0 flex-1 flex-col">
           <AppNavLinks />
@@ -69,17 +66,13 @@ export function AppShell() {
               </SheetTrigger>
               <SheetContent className="p-0" aria-describedby={undefined}>
                 <SheetTitle className="sr-only">{t("nav.menu")}</SheetTitle>
-                <SheetHeader className="flex h-14 shrink-0 flex-row items-center gap-3 border-b border-border px-4">
-                  <img src="/logo.svg" alt="" className="h-9 w-9 object-contain" width={36} height={36} />
-                  <div className="min-w-0 text-start">
-                    <p className="truncate text-sm font-semibold leading-tight">{t("app.name")}</p>
-                    <p className="truncate text-xs text-muted-foreground">{t("app.tagline")}</p>
-                  </div>
+                <SheetHeader className="flex min-h-[4.5rem] shrink-0 flex-row items-center gap-3 border-b border-border px-4">
+                  <BrandLockup />
                 </SheetHeader>
                 <AppNavLinks onNavigate={() => setMobileOpen(false)} />
               </SheetContent>
             </Sheet>
-            <span className="truncate text-sm font-semibold">{t("app.name")}</span>
+            <BrandLockup height={26} tagline={false} />
           </div>
           <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-1.5 sm:w-auto sm:gap-2">
             <GlobalPatientSearch />

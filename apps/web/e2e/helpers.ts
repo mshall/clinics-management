@@ -16,7 +16,7 @@ export async function login(page: Page, email: string, password = "demo"): Promi
     (r) => r.url().includes("/api/v1/auth/login") && r.request().method() === "POST",
     { timeout: 120_000 },
   );
-  await page.getByRole("button", { name: /sign in|تسجيل الدخول/i }).click();
+  await page.getByRole("button", { name: /^(sign in|تسجيل الدخول)$/i }).click();
   const res = await loginPost;
   if (!res.ok()) {
     const body = await res.text().catch(() => "");

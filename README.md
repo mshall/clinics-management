@@ -386,3 +386,6 @@ Use **Amazon Lightsail** (fixed monthly) **or** one **EC2** instance (e.g. **t4g
 ## License
 
 Private / unlicensed unless you add a `LICENSE` file. Confirm ownership and terms with the repository owner before redistribution.
+
+## Brand ("Kiorly by Kiorex")
+Palette, typography and components come from the shared Kiorex brand kit (`_brand/` in the workspace), vendored into `apps/web/src/brand` and `apps/docs/src/brand` (tokens, Tailwind preset, `KiorexLogo`, shared UI primitives in `ui-kit.tsx`). Jost (Latin) and IBM Plex Sans Arabic are bundled via `@fontsource`. The Nurse edition keeps Nurse Rose `#E11D48` as its single accent (`html[data-edition="nurse"]`, see `brand-bridge.css`). Never redraw the logo: use the SVG/components. UI screenshots: `_docs/ui-review/` (`node apps/web/scripts/ui-shots.mjs before|after`).

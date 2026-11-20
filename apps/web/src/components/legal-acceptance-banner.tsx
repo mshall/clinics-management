@@ -37,15 +37,15 @@ export function LegalAcceptanceBanner() {
   return (
     <div
       role="status"
-      className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm"
+      className="flex flex-wrap items-center justify-between gap-2 border-b border-primary/20 bg-accent px-4 py-2.5 text-sm text-accent-foreground"
     >
       <span>{t("legal.banner.prompt")}</span>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         {status.pending.map((p) => (
           <Link
             key={p.document}
             to={`/legal/${p.document}`}
-            className="text-xs underline"
+            className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
             target="_blank"
             rel="noreferrer"
           >

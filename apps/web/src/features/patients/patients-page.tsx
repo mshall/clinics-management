@@ -673,7 +673,7 @@ export function PatientsPage() {
                         </span>
                       )}
                       {p.isSample ? (
-                        <span className="ms-2 rounded border border-amber-400 px-1.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                        <span className="ms-2 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground ring-1 ring-inset ring-border">
                           {t("help.sample.badge")}
                         </span>
                       ) : null}

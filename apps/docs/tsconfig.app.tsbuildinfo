@@ -1,1 +1,1 @@
-{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/components/layout.tsx","./src/components/markdownview.tsx","./src/lib/navigation.ts"],"version":"5.7.3"}
+{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/brand/components/index.ts","./src/brand/components/shared/logo-scene.ts","./src/brand/components/shared/wordmarks.generated.ts","./src/brand/components/web/kiorexlogo.tsx","./src/components/layout.tsx","./src/components/markdownview.tsx","./src/lib/navigation.ts"],"version":"5.7.3"}

@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 const TONE: Record<string, string> = {
   PENDING: "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100",
   HELD: "border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-100",
-  APPLIED: "border-sky-300 bg-sky-50 text-sky-900 dark:border-sky-700 dark:bg-sky-950 dark:text-sky-100",
+  APPLIED: "border-kx-ocean-300 bg-kx-ocean-50 text-kx-ocean-950 dark:border-kx-ocean-800 dark:bg-kx-ocean-950 dark:text-kx-ocean-100",
   RELEASED: "border-muted bg-muted text-muted-foreground",
   FORFEITED: "border-muted bg-muted text-muted-foreground",
 };

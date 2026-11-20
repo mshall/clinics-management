@@ -1,68 +1,35 @@
+@import "@fontsource-variable/jost/index.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-400.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-500.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-600.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-700.css";
+@import "../brand/tokens.css";
 @import "./material-theme.css";
 @import "./clinical-os-theme.css";
+@import "../brand/brand-bridge.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  /* Kiorly default — light */
-  :root,
-  html[data-theme="default-light"] {
-    --background: 210 20% 98%;
-    --foreground: 222 47% 11%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 200 85% 32%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 25% 93%;
-    --secondary-foreground: 222 40% 18%;
-    --muted: 210 20% 94%;
-    /* UX-04 — WCAG AA: muted text ≥ 4.5:1 on background (~#4b5563 on #f8fafc) */
-    --muted-foreground: 215 18% 32%;
-    --accent: 186 45% 92%;
-    --accent-foreground: 200 70% 22%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 214 20% 88%;
-    --input: 214 20% 88%;
-    --ring: 200 85% 32%;
-    --radius: 0.5rem;
-  }
-
-  /* Kiorly default — dark (#0f1419 base, #b8964a accent) */
-  html[data-theme="default-dark"] {
-    --background: 215 28% 8%;
-    --foreground: 45 15% 94%;
-    --card: 215 26% 11%;
-    --card-foreground: 45 12% 94%;
-    --popover: 215 26% 11%;
-    --popover-foreground: 45 12% 94%;
-    --primary: 43 44% 48%;
-    --primary-foreground: 215 32% 10%;
-    --secondary: 215 22% 16%;
-    --secondary-foreground: 45 10% 92%;
-    --muted: 215 18% 18%;
-    --muted-foreground: 215 12% 68%;
-    --accent: 43 28% 18%;
-    --accent-foreground: 43 55% 78%;
-    --destructive: 0 62% 45%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 215 18% 20%;
-    --input: 215 18% 20%;
-    --ring: 43 44% 52%;
-    --radius: 0.5rem;
-  }
-
   * {
     @apply border-border;
   }
 
+  html {
+    font-family: var(--kx-font);
+    font-feature-settings: "tnum" 0;
+  }
+
   body {
     @apply overflow-x-clip bg-background text-foreground antialiased;
+    font-family: var(--kx-font);
   }
+
+  h1, h2, h3 { letter-spacing: var(--kx-tracking-xl); }
+  :root[lang="ar"] h1, :root[lang="ar"] h2, :root[lang="ar"] h3, [dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3 { letter-spacing: 0; line-height: 1.4; }
+  [dir="rtl"] body { line-height: 1.6; }
 
   #root {
     @apply min-h-screen min-w-0 overflow-x-clip;
@@ -147,11 +114,20 @@
 }
 
 
-/* KNED02 — Kiorly Nurse edition: Nurse Rose (#E11D48) accent on the unchanged Kiorly palette. Higher specificity than every
-   html[data-theme="..."] block so it wins in all themes, light and dark. Set by EditionBoot from the Host / the org's edition. */
-html[data-edition="nurse"],
-html[data-edition="nurse"][data-theme] {
-  --primary: 347 83% 51%;
-  --primary-foreground: 0 0% 100%;
-  --ring: 347 83% 51%;
+
+/* Nurse edition: field-first — 56px touch targets on phones (Q11). */
+@media (max-width: 767px) {
+  html[data-edition="nurse"] button.touch-manipulation,
+  html[data-edition="nurse"] input.touch-manipulation,
+  html[data-edition="nurse"] select.native-select,
+  html[data-edition="nurse"] textarea.touch-manipulation { min-height: var(--kx-touch-nurse); font-size: 1rem; }
+  html[data-edition="nurse"] button.touch-manipulation.w-11 { min-width: var(--kx-touch-nurse); }
 }
+
+/* Scannable data tables: sticky headers inside scroll containers, tabular numerals, calm focus. */
+table { font-variant-numeric: tabular-nums; }
+.kx-sticky-head thead th { position: sticky; top: 0; z-index: 1; background: hsl(var(--card)); }
+@media (prefers-reduced-motion: no-preference) {
+  main > * { animation: kx-page-in var(--kx-dur-slow) var(--kx-ease-decelerate) both; }
+}
+@keyframes kx-page-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }

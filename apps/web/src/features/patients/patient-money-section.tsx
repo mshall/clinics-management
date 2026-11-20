@@ -333,7 +333,7 @@ export function PatientMoneySection({ patientId, clinicId }: { patientId: string
         </Card>
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <Package className="h-5 w-5 text-sky-600" aria-hidden />
+            <Package className="h-5 w-5 text-kx-ocean-700" aria-hidden />
             <div>
               <p className="text-xs text-muted-foreground">{t("patientMoney.packagesUnused")}</p>
               <p className="text-lg font-semibold ltr-nums">{fmt(data.packagesUnusedValue)}</p>

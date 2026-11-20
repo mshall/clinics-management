@@ -1,5 +1,7 @@
+import { EmptyState, PageHeader, StatusChip } from "@/brand/ui-kit";
+import { PulseLine } from "@/brand/components";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Inbox, Loader2, Lock } from "lucide-react";
+import { AlertTriangle, Lock } from "lucide-react";
 import { useDeferredValue, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
@@ -56,13 +58,7 @@ export function useErrorText() {
 export function PageShell({ title, subtitle, actions, children, testId }: { title: string; subtitle?: string; actions?: ReactNode; children: ReactNode; testId?: string }) {
   return (
     <div className="mx-auto w-full max-w-3xl space-y-4 p-4 pb-24 md:pb-6" data-testid={testId}>
-      <header className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h1 className="text-xl font-semibold">{title}</h1>
-          {subtitle ? <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p> : null}
-        </div>
-        {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
-      </header>
+      <PageHeader title={title} description={subtitle} actions={actions} />
       {children}
     </div>
   );
@@ -71,17 +67,16 @@ export function PageShell({ title, subtitle, actions, children, testId }: { titl
 export function LoadingBlock() {
   const { t } = useTranslation();
   return (
-    <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status" data-testid="nurse-loading">
-      <Loader2 className="size-4 animate-spin" aria-hidden /> {t("nurse.common.loading")}
-    </p>
+    <div className="flex items-center gap-3 py-2 text-sm text-muted-foreground" role="status" data-testid="nurse-loading">
+      <PulseLine size={14} loop label="" /> <span>{t("nurse.common.loading")}</span>
+    </div>
   );
 }
 
 export function EmptyBlock({ message }: { message: string }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground" data-testid="nurse-empty">
-      <Inbox className="size-6" aria-hidden />
-      <p>{message}</p>
+    <div data-testid="nurse-empty">
+      <EmptyState compact title={message} />
     </div>
   );
 }
@@ -90,12 +85,12 @@ export function ErrorBlock({ error, onRetry }: { error: unknown; onRetry?: () =>
   const { t } = useTranslation();
   const text = useErrorText();
   return (
-    <div className="flex items-start gap-2 rounded-lg border border-destructive/50 bg-destructive/5 p-3 text-sm" role="alert" data-testid="nurse-error">
-      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
+    <div className="flex items-start gap-3 rounded-xl border border-[hsl(var(--danger-text)/0.35)] bg-[hsl(var(--danger-text)/0.07)] p-4 text-sm" role="alert" data-testid="nurse-error">
+      <AlertTriangle className="mt-0.5 size-5 shrink-0 text-[hsl(var(--danger-text))]" aria-hidden />
       <div className="min-w-0 flex-1">
         <p>{text(error)}</p>
         {onRetry ? (
-          <button type="button" className="mt-1 min-h-11 text-primary underline" onClick={onRetry}>
+          <button type="button" className="mt-1 min-h-11 font-medium text-primary underline-offset-4 hover:underline" onClick={onRetry}>
             {t("nurse.common.retry")}
           </button>
         ) : null}
@@ -273,6 +268,6 @@ export function currentPosition(): Promise<{ lat: number; lng: number }> {
 }
 
 export function StatusPill({ tone, children }: { tone: "ok" | "warn" | "bad" | "muted"; children: ReactNode }) {
-  const cls = { ok: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300", warn: "bg-amber-500/15 text-amber-700 dark:text-amber-300", bad: "bg-destructive/15 text-destructive", muted: "bg-muted text-muted-foreground" }[tone];
-  return <span className={cn("inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium", cls)}>{children}</span>;
+  const map = { ok: "good", warn: "warn", bad: "bad", muted: "neutral" } as const;
+  return <StatusChip tone={map[tone]}>{children}</StatusChip>;
 }

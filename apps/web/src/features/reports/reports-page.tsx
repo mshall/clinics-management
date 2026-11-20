@@ -59,7 +59,7 @@ const ACQUISITION_CHART_COLORS = [
 const REVENUE_CHART_COLOR = "hsl(221 83% 53%)";
 const EXPENSE_CHART_COLOR = "hsl(215 14% 52%)";
 
-const REVENUE_TEXT_CLASS = "font-semibold text-sky-700 dark:text-sky-400";
+const REVENUE_TEXT_CLASS = "font-semibold text-kx-ocean-800 dark:text-kx-ocean-400";
 const EXPENSE_TEXT_CLASS = "font-semibold text-muted-foreground";
 
 function amountForCurrency(rows: { currency: string; amount: number }[], currency: string): number {

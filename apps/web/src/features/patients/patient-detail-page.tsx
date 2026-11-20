@@ -320,7 +320,7 @@ export function PatientDetailPage() {
             {t("patients.tabOverview", "Overview")}
           </TabsTrigger>
           <TabsTrigger value="smartSummary" className="gap-1.5">
-            <Sparkles className="h-4 w-4 shrink-0 text-violet-500" aria-hidden />
+            <Sparkles className="h-4 w-4 shrink-0 text-kx-indigo-600" aria-hidden />
             {t("patients.tabSmartSummary", "Smart summary")}
           </TabsTrigger>
           {canViewEncounters ? (

@@ -45,7 +45,7 @@ const SheetContent = React.forwardRef<
         if (isPickListPortalTarget(e.target)) e.preventDefault();
       }}
       className={cn(
-        "fixed inset-y-0 z-50 flex h-full w-[min(100%,20rem)] flex-col border border-border bg-card shadow-lg start-0",
+        "fixed inset-y-0 z-50 flex h-full w-[min(100%,20rem)] flex-col border border-border bg-card shadow-[var(--kx-shadow-4)] start-0",
         className
       )}
       {...props}

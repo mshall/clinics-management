@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { BrandLockup } from "@/components/brand-lockup";
 import { useTranslation } from "react-i18next";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { KiorexPassportButton, useKiorexConfig } from "@/features/auth/kiorex-passport";
@@ -127,11 +128,7 @@ export function LoginPage() {
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-background to-muted/60">
       <header className="flex items-center justify-between gap-3 px-4 py-4 md:px-8">
         <div className="flex items-center gap-3">
-          <img src="/logo.svg" alt="" className="h-10 w-10 object-contain shadow-sm" width={40} height={40} />
-          <div>
-            <p className="text-sm font-semibold leading-tight">{t("app.name")}</p>
-            <p className="text-xs text-muted-foreground">{t("app.tagline")}</p>
-          </div>
+          <BrandLockup height={40} />
         </div>
         <div className="flex items-center gap-2">
           <ThemeSwitcher />

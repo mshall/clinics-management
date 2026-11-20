@@ -153,7 +153,7 @@ export function MedicationsPrescriptionDraftPanel({
         <TabsList className="grid h-auto w-full grid-cols-3 gap-1 p-1">
           <TabsTrigger
             value="none"
-            className="gap-1.5 data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900 dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-slate-100"
+            className="gap-1.5 data-[state=active]:bg-kx-neutral-100 data-[state=active]:text-kx-neutral-950 dark:data-[state=active]:bg-kx-neutral-900 dark:data-[state=active]:text-kx-neutral-100"
           >
             <Ban className="h-4 w-4 shrink-0" aria-hidden />
             <span className="hidden sm:inline">{t("encounters.medModeNone")}</span>
@@ -174,7 +174,7 @@ export function MedicationsPrescriptionDraftPanel({
           </TabsTrigger>
           <TabsTrigger
             value="prescription"
-            className="gap-1.5 data-[state=active]:bg-violet-100 data-[state=active]:text-violet-950 dark:data-[state=active]:bg-violet-950 dark:data-[state=active]:text-violet-50"
+            className="gap-1.5 data-[state=active]:bg-kx-indigo-100 data-[state=active]:text-kx-indigo-950 dark:data-[state=active]:bg-kx-indigo-950 dark:data-[state=active]:text-kx-indigo-50"
           >
             <FileUp className="h-4 w-4 shrink-0" aria-hidden />
             <span className="hidden sm:inline">{t("encounters.medModePrescription")}</span>
@@ -187,7 +187,7 @@ export function MedicationsPrescriptionDraftPanel({
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="none" className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-900/30">
+        <TabsContent value="none" className="rounded-xl border border-kx-neutral-200 bg-kx-neutral-50/50 p-4 dark:border-kx-neutral-900 dark:bg-kx-neutral-950/30">
           <p className="text-sm text-muted-foreground">
             {t(
               "encounters.noMedsTabHint",
@@ -296,7 +296,7 @@ export function MedicationsPrescriptionDraftPanel({
 
         <TabsContent
           value="prescription"
-          className="rounded-xl border border-violet-200/80 bg-violet-50/30 p-4 dark:border-violet-900/50 dark:bg-violet-950/20"
+          className="rounded-xl border border-kx-indigo-200/80 bg-kx-indigo-50/30 p-4 dark:border-kx-indigo-950/50 dark:bg-kx-indigo-950/20"
         >
           <input
             ref={prescriptionFileRef}
@@ -319,13 +319,13 @@ export function MedicationsPrescriptionDraftPanel({
             onClick={() => prescriptionFileRef.current?.click()}
             className={cn(
               "mb-4 flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-sm transition-colors",
-              "border-violet-300 bg-violet-50/50 text-violet-900 hover:border-violet-400 hover:bg-violet-50",
-              "dark:border-violet-700 dark:bg-violet-950/30 dark:text-violet-100 dark:hover:border-violet-500 dark:hover:bg-violet-950/50",
+              "border-kx-indigo-300 bg-kx-indigo-50/50 text-kx-indigo-950 hover:border-kx-indigo-400 hover:bg-kx-indigo-50",
+              "dark:border-kx-indigo-800 dark:bg-kx-indigo-950/30 dark:text-kx-indigo-100 dark:hover:border-kx-indigo-600 dark:hover:bg-kx-indigo-950/50",
             )}
           >
-            <FileUp className="h-8 w-8 text-violet-500 dark:text-violet-400" aria-hidden />
+            <FileUp className="h-8 w-8 text-kx-indigo-600 dark:text-kx-indigo-400" aria-hidden />
             <span className="font-medium">{t("encounters.uploadPrescription", "Upload prescription")}</span>
-            <span className="text-xs text-violet-700/80 dark:text-violet-300/80">{t("encounters.prescriptionUploadHint")}</span>
+            <span className="text-xs text-kx-indigo-800/80 dark:text-kx-indigo-300/80">{t("encounters.prescriptionUploadHint")}</span>
           </button>
           <ul className="space-y-2 text-sm">
             {prescriptionFile ? (

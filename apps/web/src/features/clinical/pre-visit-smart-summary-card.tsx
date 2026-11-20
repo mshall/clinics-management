@@ -47,17 +47,17 @@ function styleForLine(line: string, index: number): LineStyle {
 
 const toneClass: Record<LineStyle["tone"], string> = {
   neutral: "border-border/80 bg-muted/30 text-foreground",
-  info: "border-sky-500/25 bg-sky-500/10 text-sky-950 dark:text-sky-50",
+  info: "border-kx-ocean-600/25 bg-kx-ocean-600/10 text-kx-ocean-950 dark:text-kx-ocean-50",
   warn: "border-amber-500/30 bg-amber-500/10 text-amber-950 dark:text-amber-50",
-  accent: "border-violet-500/25 bg-gradient-to-br from-violet-500/15 to-indigo-500/10 text-foreground",
+  accent: "border-kx-indigo-600/25 bg-gradient-to-br from-kx-indigo-600/15 to-kx-indigo-600/10 text-foreground",
   success: "border-emerald-500/25 bg-emerald-500/10 text-emerald-950 dark:text-emerald-50",
 };
 
 const iconToneClass: Record<LineStyle["tone"], string> = {
   neutral: "text-muted-foreground",
-  info: "text-sky-600",
+  info: "text-kx-ocean-700",
   warn: "text-amber-600",
-  accent: "text-violet-600",
+  accent: "text-kx-indigo-700",
   success: "text-emerald-600",
 };
 
@@ -73,7 +73,7 @@ export function PreVisitSmartSummaryCard({ patientId }: { patientId: string }) {
   if (q.isError || !q.data?.lines?.length) return null;
 
   return (
-    <Card className="overflow-hidden border-violet-500/20 bg-gradient-to-br from-violet-500/5 via-background to-sky-500/5 shadow-sm">
+    <Card className="overflow-hidden border-kx-indigo-600/20 bg-gradient-to-br from-kx-indigo-600/5 via-background to-kx-ocean-600/5 shadow-sm">
       <CardHeader className="pb-3">
         <AiFeatureLabel featureId="pre_visit_summary" showDisclosure />
       </CardHeader>
