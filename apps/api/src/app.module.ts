@@ -1,4 +1,6 @@
 import { Module } from "@nestjs/common";
+import { MobileModule } from "./mobile/mobile.module";
+import { MobilePushModule } from "./mobile/mobile-push.module";
 import { APP_GUARD } from "@nestjs/core";
 import { ConfigModule } from "@nestjs/config";
 import { AuditModule } from "./audit/audit.module";
@@ -122,6 +124,8 @@ import { PushModule } from "./push/push.module";
     CohortsModule,
     GrowthModule,
     PushModule,
+    MobilePushModule,
+    MobileModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: PrivilegedMfaGuard }],
 })

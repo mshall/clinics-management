@@ -12,6 +12,7 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:demo": "DEMO_SEED_ALLOWED=true tsx prisma/demo/seed-demo.ts",
+    "db:seed:mobile": "DEMO_SEED_ALLOWED=true tsx prisma/demo/seed-mobile.ts",
     "db:seed:nurse": "tsx prisma/nurse-demo.seed.ts",
     "db:seed:demo:rev23": "DEMO_SEED_ALLOWED=true tsx prisma/demo/seed-rev23.ts",
     "demo:reset": "tsx scripts/reset-sales-demo-tenant.ts",

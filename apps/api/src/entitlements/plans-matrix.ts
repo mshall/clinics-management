@@ -36,6 +36,8 @@ export const MODULE_ENTITLEMENT_KEYS = [
   /** KNLAB01: sample collection against a lab order handed to Kiorly Lab (Nurse Pro and above). */
   "nurse_lab_samples",
   "nurse_agency",
+  /** Kiorly Work staff mobile app (commercial entitlement, NOT a safety control: the safety-alert inbox works on every plan). */
+  "mobile_staff_app",
   "max_clinicians",
   "max_branches",
   "max_assistant_seats",
@@ -55,6 +57,8 @@ export type ControllerPolicy =
 /** Relative path under `apps/api/src`. */
 export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> = {
   "admin/platform-admin.controller.ts": { kind: "platform" },
+  /** Kiorly Work: gated by MobileInterceptor (`mobile_staff_app`), with the ADR-025 safety-alert routes open on every plan. */
+  "mobile/mobile.controller.ts": { kind: "open" },
   "admin/admin.controller.ts": { kind: "open" },
   "admin/data-explorer/admin-data-explorer.controller.ts": { kind: "gated", entitlement: "mod_data_explorer" },
   /** Token download only (no JWT); token proves access to a READY org backup artifact. */
@@ -193,6 +197,7 @@ export const ENTITLEMENT_MIN_PLAN: Record<string, PlanKey> = {
   nurse_private_duty_shifts: PlanKey.NURSE_PRO,
   nurse_lab_samples: PlanKey.NURSE_PRO,
   nurse_agency: PlanKey.NURSE_AGENCY,
+  mobile_staff_app: PlanKey.PRO,
   max_clinicians: PlanKey.PRO,
   max_branches: PlanKey.CLINIC,
   max_assistant_seats: PlanKey.PRO,
@@ -305,6 +310,7 @@ export const PLAN_MATRIX = {
     nurse_private_duty_shifts: false,
     nurse_lab_samples: false,
     nurse_agency: false,
+    mobile_staff_app: false,
   },
   [PlanKey.PRO]: {
     max_clinicians: 10,
@@ -341,6 +347,7 @@ export const PLAN_MATRIX = {
     nurse_private_duty_shifts: false,
     nurse_lab_samples: false,
     nurse_agency: false,
+    mobile_staff_app: true,
   },
   [PlanKey.CLINIC]: {
     max_clinicians: 50,
@@ -376,6 +383,7 @@ export const PLAN_MATRIX = {
     nurse_private_duty_shifts: false,
     nurse_lab_samples: false,
     nurse_agency: false,
+    mobile_staff_app: true,
   },
   [PlanKey.ENTERPRISE]: {
     max_clinicians: -1,
@@ -411,6 +419,7 @@ export const PLAN_MATRIX = {
     nurse_private_duty_shifts: true,
     nurse_lab_samples: true,
     nurse_agency: true,
+    mobile_staff_app: true,
   },
 } as unknown as Record<PlanKey, Record<string, EntitlementSeedValue>>;
 
@@ -450,6 +459,7 @@ function nursePlan(over: Record<string, EntitlementSeedValue>): Record<string, E
     nurse_private_duty_shifts: false,
     nurse_lab_samples: false,
     nurse_agency: false,
+    mobile_staff_app: false,
     ...over,
   };
 }
@@ -464,6 +474,7 @@ PLAN_MATRIX[PlanKey.NURSE_PRO] = nursePlan({
   mod_messaging: true,
   nurse_family_updates: true,
   nurse_private_duty_shifts: true,
+  mobile_staff_app: true,
   nurse_lab_samples: true,
 });
 PLAN_MATRIX[PlanKey.NURSE_AGENCY] = nursePlan({
@@ -485,6 +496,7 @@ PLAN_MATRIX[PlanKey.NURSE_AGENCY] = nursePlan({
   nurse_private_duty_shifts: true,
   nurse_lab_samples: true,
   nurse_agency: true,
+  mobile_staff_app: true,
 });
 
 /** CL-07 — specialty packs sold as billed add-ons (enable via tenant override after purchase). */

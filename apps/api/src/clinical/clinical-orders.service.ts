@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, Optional } from "@nestjs/common";
+import { MobilePushService } from "../mobile/mobile-push.service";
 import {
   ClinicalOrderKind,
   ClinicalOrderStatus,
@@ -24,6 +25,7 @@ export class ClinicalOrdersService {
     @Optional() private readonly recordShare?: RecordShareService,
     @Optional() private readonly outbox?: OutboxEventService,
     @Optional() @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads?: UploadBlobStorage,
+    @Optional() private readonly mobilePush?: MobilePushService,
   ) {}
 
   /** CL-06 results as PDF: stored privately under the tenant; the order keeps only the relative key. */
@@ -152,6 +154,8 @@ export class ClinicalOrdersService {
 
     if (becomingReady) {
       await this.notifyResultsReady(updated);
+      const doc = updated.createdByUserId ?? (await this.prisma.encounter.findFirst({ where: { id: updated.encounterId ?? "" }, select: { clinicianId: true } }))?.clinicianId;
+      if (this.mobilePush && doc) void this.mobilePush.notifyUsers(updated.tenantId, [doc], "LAB_RESULT_READY", { orderId: updated.id }).catch(() => undefined);
     }
 
     return updated;

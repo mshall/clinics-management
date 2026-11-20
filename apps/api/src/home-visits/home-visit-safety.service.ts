@@ -1,4 +1,5 @@
-import { Injectable, Inject, Logger } from "@nestjs/common";
+import { Injectable, Inject, Logger, Optional } from "@nestjs/common";
+import { MobilePushService } from "../mobile/mobile-push.service";
 import { HomeSafetyAlertKind, HomeVisitState, Prisma, type HomeVisit } from "@prisma/client";
 import { answerSafetyPrompt, buildSafetyAlert, buildSos, SAFETY_ALERT_SLA_SECONDS, SAFETY_ANSWER_WINDOW_MIN, type FieldVisit, type SafetyAlert, type SafetyState } from "@kiorly/field-visit";
 import { FIELD_VISIT_PORT, type FieldVisitPort } from "../field-visit/field-visit.port";
@@ -29,6 +30,7 @@ export class HomeVisitSafetyService {
     private readonly prisma: PrismaService,
     @Inject(FIELD_VISIT_PORT) private readonly port: FieldVisitPort,
     private readonly outbox: OutboxEventService,
+    @Optional() private readonly mobilePush?: MobilePushService,
   ) {}
 
   /** Package view of a persisted visit (history reduced to the stamps the alert needs). */
@@ -80,6 +82,11 @@ export class HomeVisitSafetyService {
       data: { tenantId, visitId, kind, raisedAt: now, dueAt, status: "PENDING" },
     });
     emitSafetyLog({ event: "safety_alert.raised", alertId: row.id, kind });
+    // Kiorly Work inbox (mock push): managers, owners and the visit clinician. Safety control: never gated by plan.
+    if (this.mobilePush) {
+      const mgr = await this.prisma.user.findMany({ where: { tenantId, deletedAt: null, OR: [{ isTenantOwner: true }, { role: { in: ["GROUP_ADMIN", "BRANCH_MANAGER", "CLINIC_ADMIN"] } }] }, select: { id: true } });
+      await this.mobilePush.notifyUsers(tenantId, [...mgr.map((m) => m.id), ...(loaded.v.clinicianId ? [loaded.v.clinicianId] : [])], "HOME_SAFETY_ALERT", { alertKey: `hv_${row.id}`, kind });
+    }
 
     const kiorexBooking = loaded.v.appointment.platformIntegrationClientId != null;
     // Kiorex ops is told through the outbox (5 s dispatch loop) for Kiorex bookings only: non-Kiorex visits have no Kiorex-side consumer.
