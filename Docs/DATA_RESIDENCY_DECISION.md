@@ -56,8 +56,9 @@ Engineering may continue on Frankfurt with synthetic/demo data and pilots, but *
 | **Registry** | `platform/data-cells.json` — cells, store regions, EG binding |
 | **Market pack** | `assertMarketMatchesProductionBinding` on pack validation |
 | **Tenant create** | `assertTenantDeploymentCellMatchesMarket` in platform admin |
+| **Runtime image** | App Runner `apps/api/Dockerfile` must **`COPY`** `platform/data-cells.json` (and sibling PDPC / email-domain registries) to `/repo/platform/` — otherwise appointment create and `/markets/current` return 500 |
 | **Infra** | CDK tags `KiorlyHostCell`, `KiorlyDataRegion` on RDS and S3; outputs `HostCell`, `DataRegion` |
-| **Tests** | API: `data-residency.node.test.ts`, `data-residency.integration.test.ts`. Infra CDK tagging tests run **outside** the default GitHub `ci:test` job (local / `infra` package when changing CDK). |
+| **Tests** | API: `data-residency.node.test.ts`, `data-residency.integration.test.ts`, `dockerfile-api-platform-coverage.node.test.ts`. Infra CDK tagging tests run **outside** the default GitHub `ci:test` job (local / `infra` package when changing CDK). |
 
 ---
 
