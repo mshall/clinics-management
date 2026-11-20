@@ -499,7 +499,7 @@ Authorization model:
 |---|---|
 | **User ↔ employee lifecycle** — deactivate, soft archive, restore; cascades both sides; archived Active/Archived tabs (admin + HR) | Shipped |
 | **Clinic disable / reactivate** — `ClinicOperatingPeriod` history; cascade disable branches; active/disabled directory tabs | Shipped |
-| **Reports overhaul** — Tables / Charts / AR aging & branch P&L tabs; export+scope row; combined acquisition table with encounter & operation shares; charts tied to header **From → To**; multi-currency P&L; mobile-responsive layout | Shipped |
+| **Reports overhaul** — Tables / Charts / AR aging & branch P&L tabs; export+scope row; colored KPI tiles; channel icons in acquisition tables; combined acquisition shares; multi-currency P&L | Shipped |
 | **Multi-currency group reports** — per-clinic breakdown by currency; org/clinic scope selector | Shipped |
 | **Clinic invoice settings** — logo upload, section toggles, background color; invoice module | Shipped |
 | **Prescription clinic branding** — logo + EN/AR header description on Rx PDF/image | Shipped |

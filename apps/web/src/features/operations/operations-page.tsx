@@ -583,12 +583,17 @@ export function OperationsPage() {
     if (!editPatientId.trim()) issues.push(t("operations.validationPatient", "Select a patient."));
     if (!editClinicianId.trim()) issues.push(t("operations.validationDoctor", "Select a performing doctor."));
     if (!editOperationDate.trim()) issues.push(t("operations.validationDate", "Enter the operation date."));
-    if (
-      canEditFees &&
-      (!editTotalCost.trim() || Number.isNaN(Number.parseFloat(editTotalCost)))
-    ) {
+    if (canEditFees && !editTotalCost.trim()) {
+      issues.push(
+        t(
+          "operations.errorTotalRequired",
+          "Enter the total cost or check if the operation is contract.",
+        ),
+      );
+    } else if (canEditFees && Number.isNaN(Number.parseFloat(editTotalCost))) {
       issues.push(t("operations.validationTotalCost", "Enter a valid total cost."));
     } else if (
+
       canEditFees &&
       isZeroCostWithoutContract({
         totalCost: editTotalCost,
@@ -599,7 +604,7 @@ export function OperationsPage() {
       issues.push(
         t(
           "operations.errorContractRequiredForZero",
-          "Total cost cannot be zero unless you mark this as a contract (تعاقد).",
+          "Enter the total cost or check if the operation is contract.",
         ),
       );
     }
@@ -757,9 +762,13 @@ export function OperationsPage() {
       isContract: editIsContract,
       feesOptional: !canEditFees,
     });
-    const otherIssues = validation.issues.filter(
-      (issue) => !issue.includes("تعاقد") && !/contract/i.test(issue) && !/zero/i.test(issue),
+    const zeroContractGateMsg = t(
+      "operations.errorContractRequiredForZero",
+      "Enter the total cost or check if the operation is contract.",
     );
+    const otherIssues = zeroWithoutContract
+      ? validation.issues.filter((issue) => issue !== zeroContractGateMsg)
+      : validation.issues;
     if (otherIssues.length > 0) {
       showEditValidationIssues(otherIssues, validation.invalidDocRowIds);
       return;
@@ -921,12 +930,13 @@ export function OperationsPage() {
       isContract,
       feesOptional: !canEditFees,
     });
-    const otherIssues = validation.issues.filter(
-      (issue) =>
-        !issue.includes("تعاقد") &&
-        !/contract/i.test(issue) &&
-        !/zero/i.test(issue),
+    const zeroContractGateMsg = t(
+      "operations.errorContractRequiredForZero",
+      "Enter the total cost or check if the operation is contract.",
     );
+    const otherIssues = zeroWithoutContract
+      ? validation.issues.filter((issue) => issue !== zeroContractGateMsg)
+      : validation.issues;
     if (otherIssues.length > 0) {
       showCreateValidationIssues(otherIssues, validation.invalidDocRowIds);
       return;

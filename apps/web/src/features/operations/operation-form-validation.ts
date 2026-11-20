@@ -89,7 +89,12 @@ export function collectOperationCreateValidationIssues(
   }
   if (!input.feesOptional) {
     if (!input.totalCost.trim()) {
-      issues.push(t("operations.errorTotalRequired", "Enter the total cost."));
+      issues.push(
+        t(
+          "operations.errorTotalRequired",
+          "Enter the total cost or check if the operation is contract.",
+        ),
+      );
     } else {
       const total = Number.parseFloat(input.totalCost);
       if (Number.isNaN(total)) {
@@ -100,7 +105,7 @@ export function collectOperationCreateValidationIssues(
         issues.push(
           t(
             "operations.errorContractRequiredForZero",
-            "Total cost cannot be zero unless you mark this as a contract (تعاقد).",
+            "Enter the total cost or check if the operation is contract.",
           ),
         );
       }

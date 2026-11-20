@@ -13,7 +13,7 @@ import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -411,7 +411,13 @@ export function ExpensesPage() {
       <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <Card className="min-w-0 lg:max-w-2xl">
           <CardHeader className="pb-2 pt-4">
-            <CardTitle className="text-sm font-medium">{t("expenses.searchLedger", "Search ledger")}</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("expenses.reportingScope", "Reporting scope")}</CardTitle>
+            <CardDescription className="text-xs">
+              {t(
+                "expenses.reportingScopeHint",
+                "Choose a date range and clinic scope for the expenses ledger.",
+              )}
+            </CardDescription>
           </CardHeader>
           <CardContent className={`${filterToolbarClassName} pb-4`}>
             <div className={filterFieldClassName}>
@@ -423,7 +429,7 @@ export function ExpensesPage() {
               <Input className="ltr-nums" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
             </div>
             <div className={filterFieldClassName}>
-              <Label className="text-xs">{t("expenses.clinic")}</Label>
+              <Label className="text-xs">{t("expenses.clinicScope", "Clinic scope")}</Label>
               {singleManagedClinic ? (
                 <p className="flex min-h-11 items-center rounded-md border border-input bg-muted/40 px-2 text-sm">
                   {formatClinicName(singleManagedClinic, i18n.language)}

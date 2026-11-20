@@ -1,5 +1,19 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { BarChart3, CircleHelp, Landmark, Table2 } from "lucide-react";
+import {
+  BarChart3,
+  Building2,
+  CircleDollarSign,
+  CircleHelp,
+  HeartPulse,
+  Landmark,
+  Percent,
+  Scissors,
+  Share2,
+  Table2,
+  UserPlus,
+  Users,
+  Wallet,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   Area,
@@ -52,6 +66,7 @@ import {
   patientAcquisitionLabel,
   type PatientAcquisitionChannel,
 } from "@/lib/patient-acquisition";
+import { AcquisitionChannelCell, ReportColumnHead } from "@/lib/patient-acquisition-icons";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import { useAuthStore } from "@/stores/auth-store";
@@ -492,37 +507,75 @@ export function ReportsPage() {
               {kiorexImpact.error instanceof Error ? kiorexImpact.error.message : t("common.error")}
             </p>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.kiorexBookings", "Bookings")}</p>
-                <p className="text-2xl font-semibold ltr-nums">{kiorexImpact.data?.bookings ?? 0}</p>
+            <TooltipProvider delayDuration={0}>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <OpsKpiTile
+                  label={t("reports.kiorexBookings", "Bookings")}
+                  tip={t(
+                    "reports.kiorexBookingsHelp",
+                    "Marketplace bookings attributed to Kiorex in the selected month.",
+                  )}
+                  labelClassName="text-violet-700 dark:text-violet-400"
+                  valueClassName="text-violet-700 dark:text-violet-400"
+                >
+                  {kiorexImpact.data?.bookings ?? 0}
+                </OpsKpiTile>
+                <OpsKpiTile
+                  label={t("reports.kiorexNewPatients", "New patients")}
+                  tip={t(
+                    "reports.kiorexNewPatientsHelp",
+                    "New patients acquired through Kiorex in the selected month.",
+                  )}
+                  labelClassName="text-emerald-700 dark:text-emerald-400"
+                  valueClassName="text-emerald-700 dark:text-emerald-400"
+                >
+                  {kiorexImpact.data?.newPatients ?? 0}
+                </OpsKpiTile>
+                <OpsKpiTile
+                  label={t("reports.kiorexCommission", "Commission")}
+                  tip={t(
+                    "reports.kiorexCommissionHelp",
+                    "Commission owed for Kiorex bookings in the selected month.",
+                  )}
+                  labelClassName="text-amber-700 dark:text-amber-400"
+                  valueClassName="text-amber-700 dark:text-amber-400"
+                >
+                  {kiorexImpact.data?.commission ?? 0}
+                </OpsKpiTile>
+                <OpsKpiTile
+                  label={t("reports.kiorexOffset", "Offset")}
+                  tip={t(
+                    "reports.kiorexOffsetHelp",
+                    "Credits or offsets applied against Kiorex commission.",
+                  )}
+                  labelClassName="text-sky-700 dark:text-sky-400"
+                  valueClassName="text-sky-700 dark:text-sky-400"
+                >
+                  {kiorexImpact.data?.offset ?? 0}
+                </OpsKpiTile>
+                <OpsKpiTile
+                  label={t("reports.kiorexNetCostPerPatient", "Net cost / new patient")}
+                  tip={t(
+                    "reports.kiorexNetCostHelp",
+                    "Net Kiorex cost divided by new patients acquired in the month.",
+                  )}
+                  labelClassName="text-rose-700 dark:text-rose-400"
+                  valueClassName="text-rose-700 dark:text-rose-400"
+                  meta={
+                    <p className="text-xs text-muted-foreground">
+                      {kiorexImpact.data?.matchesStatement
+                        ? t("reports.kiorexMatchesStatement", "Matches monthly statement (CR-11)")
+                        : t(
+                            "reports.kiorexStatementPending",
+                            "Statement reconcile pending (no confirmed commission yet)",
+                          )}
+                    </p>
+                  }
+                >
+                  {kiorexImpact.data?.netCostPerNewPatient ?? "—"}
+                </OpsKpiTile>
               </div>
-              <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.kiorexNewPatients", "New patients")}</p>
-                <p className="text-2xl font-semibold ltr-nums">{kiorexImpact.data?.newPatients ?? 0}</p>
-              </div>
-              <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.kiorexCommission", "Commission")}</p>
-                <p className="text-2xl font-semibold ltr-nums">{kiorexImpact.data?.commission ?? 0}</p>
-              </div>
-              <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.kiorexOffset", "Offset")}</p>
-                <p className="text-2xl font-semibold ltr-nums">{kiorexImpact.data?.offset ?? 0}</p>
-              </div>
-              <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  {t("reports.kiorexNetCostPerPatient", "Net cost / new patient")}
-                </p>
-                <p className="text-2xl font-semibold ltr-nums">{kiorexImpact.data?.netCostPerNewPatient ?? "—"}</p>
-              </div>
-              <div className="rounded-lg border bg-muted/30 px-4 py-3 sm:col-span-2">
-                <p className="text-xs text-muted-foreground">
-                  {kiorexImpact.data?.matchesStatement
-                    ? t("reports.kiorexMatchesStatement", "Matches monthly statement (CR-11)")
-                    : t("reports.kiorexStatementPending", "Statement reconcile pending (no confirmed commission yet)")}
-                </p>
-              </div>
-            </div>
+            </TooltipProvider>
           )}
         </CardContent>
       </Card>
@@ -645,7 +698,8 @@ export function ReportsPage() {
                       "reports.visitsHelp",
                       "Encounters created in the selected period for this clinic scope (draft and finalized).",
                     )}
-                    labelClassName="text-muted-foreground"
+                    labelClassName="text-sky-700 dark:text-sky-400"
+                    valueClassName="text-sky-700 dark:text-sky-400"
                   >
                     {performance.data?.visits ?? 0}
                   </OpsKpiTile>
@@ -655,7 +709,8 @@ export function ReportsPage() {
                       "reports.newPatientsHelp",
                       "Patients whose first registration (createdAt) falls in this period for the selected scope.",
                     )}
-                    labelClassName="text-muted-foreground"
+                    labelClassName="text-emerald-700 dark:text-emerald-400"
+                    valueClassName="text-emerald-700 dark:text-emerald-400"
                   >
                     {performance.data?.newPatients ?? 0}
                   </OpsKpiTile>
@@ -665,7 +720,8 @@ export function ReportsPage() {
                       "reports.appointmentsCompletedHelp",
                       "Appointments marked completed in the selected period for this clinic scope.",
                     )}
-                    labelClassName="text-muted-foreground"
+                    labelClassName="text-violet-700 dark:text-violet-400"
+                    valueClassName="text-violet-700 dark:text-violet-400"
                   >
                     {performance.data?.appointmentsCompleted ?? 0}
                   </OpsKpiTile>
@@ -675,7 +731,8 @@ export function ReportsPage() {
                       "reports.currenciesActiveHelp",
                       "Distinct currencies that appear on posted revenue or expenses in this period.",
                     )}
-                    labelClassName="text-muted-foreground"
+                    labelClassName="text-amber-700 dark:text-amber-400"
+                    valueClassName="text-amber-700 dark:text-amber-400"
                   >
                     {performanceByCurrency.length}
                   </OpsKpiTile>
@@ -686,7 +743,8 @@ export function ReportsPage() {
                         "reports.kiorexRatingHelp",
                         "Average patient rating from Kiorex marketplace reviews linked to this organization.",
                       )}
-                      labelClassName="text-muted-foreground"
+                      labelClassName="text-rose-700 dark:text-rose-400"
+                      valueClassName="text-rose-700 dark:text-rose-400"
                       meta={
                         <p className="text-xs text-muted-foreground">
                           {t("kiorexTab.ratings.count", "{{count}} reviews", {
@@ -845,20 +903,42 @@ export function ReportsPage() {
                   <ResponsiveTableElement minWidth="xl">
                     <thead className="bg-muted/60">
                       <tr className="text-start">
-                        <th className="px-3 py-2 text-start font-medium">{t("reports.clinicColumn", "Clinic")}</th>
-                        <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.encounters", "Encounters")}</th>
-                        <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.operations", "Operations")}</th>
-                        <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.newPatients", "New patients")}</th>
-                        <th className="px-3 py-2 text-start font-medium">{t("reports.currencyColumn", "Currency")}</th>
-                        <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.revenueTotal", "Total revenue")}</th>
-                        <th className="px-3 py-2 text-end font-medium ltr-nums">
-                          {t("reports.encounterRevenue", "Encounter / visit fees")}
+                        <th className="px-3 py-2 text-start font-medium">
+                          <ReportColumnHead icon={<Building2 className="size-3.5" />} label={t("reports.clinicColumn", "Clinic")} tone="slate" />
                         </th>
-                        <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.operationRevenue", "Operations revenue")}</th>
-                        <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.otherRevenue", "Other revenue")}</th>
-                        <th className="px-3 py-2 text-start font-medium">{t("reports.otherRevenueBreakdown", "Other breakdown")}</th>
-                        <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.expenses", "Expenses")}</th>
-                        <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.netProfit", "Net profit")}</th>
+                        <th className="px-3 py-2 text-end font-medium ltr-nums">
+                          <ReportColumnHead className="justify-end" icon={<HeartPulse className="size-3.5" />} label={t("reports.encounters", "Encounters")} tone="sky" />
+                        </th>
+                        <th className="px-3 py-2 text-end font-medium ltr-nums">
+                          <ReportColumnHead className="justify-end" icon={<Scissors className="size-3.5" />} label={t("reports.operations", "Operations")} tone="violet" />
+                        </th>
+                        <th className="px-3 py-2 text-end font-medium ltr-nums">
+                          <ReportColumnHead className="justify-end" icon={<UserPlus className="size-3.5" />} label={t("reports.newPatients", "New patients")} tone="emerald" />
+                        </th>
+                        <th className="px-3 py-2 text-start font-medium">
+                          <ReportColumnHead icon={<CircleDollarSign className="size-3.5" />} label={t("reports.currencyColumn", "Currency")} tone="amber" />
+                        </th>
+                        <th className="px-3 py-2 text-end font-medium ltr-nums">
+                          <ReportColumnHead className="justify-end" icon={<Wallet className="size-3.5" />} label={t("reports.revenueTotal", "Total revenue")} tone="emerald" />
+                        </th>
+                        <th className="px-3 py-2 text-end font-medium ltr-nums">
+                          <ReportColumnHead className="justify-end" icon={<HeartPulse className="size-3.5" />} label={t("reports.encounterRevenue", "Encounter / visit fees")} tone="sky" />
+                        </th>
+                        <th className="px-3 py-2 text-end font-medium ltr-nums">
+                          <ReportColumnHead className="justify-end" icon={<Scissors className="size-3.5" />} label={t("reports.operationRevenue", "Operations revenue")} tone="violet" />
+                        </th>
+                        <th className="px-3 py-2 text-end font-medium ltr-nums">
+                          <ReportColumnHead className="justify-end" icon={<CircleDollarSign className="size-3.5" />} label={t("reports.otherRevenue", "Other revenue")} tone="amber" />
+                        </th>
+                        <th className="px-3 py-2 text-start font-medium">
+                          <ReportColumnHead icon={<Share2 className="size-3.5" />} label={t("reports.otherRevenueBreakdown", "Other breakdown")} tone="slate" />
+                        </th>
+                        <th className="px-3 py-2 text-end font-medium ltr-nums">
+                          <ReportColumnHead className="justify-end" icon={<Wallet className="size-3.5" />} label={t("reports.expenses", "Expenses")} tone="rose" />
+                        </th>
+                        <th className="px-3 py-2 text-end font-medium ltr-nums">
+                          <ReportColumnHead className="justify-end" icon={<CircleDollarSign className="size-3.5" />} label={t("reports.netProfit", "Net profit")} tone="emerald" />
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -985,20 +1065,24 @@ export function ReportsPage() {
                 <ResponsiveTableElement minWidth="md">
                   <thead className="bg-muted/60">
                     <tr className="text-start">
-                      <th className="px-3 py-2 font-medium">{t("reports.acquisitionChannel", "Channel")}</th>
-                      <th className="px-3 py-2 text-end font-medium ltr-nums">
-                        {t("reports.encounters", "Encounters")}
+                      <th className="px-3 py-2 font-medium">
+                        <ReportColumnHead icon={<Share2 className="size-3.5" />} label={t("reports.acquisitionChannel", "Channel")} tone="violet" />
                       </th>
                       <th className="px-3 py-2 text-end font-medium ltr-nums">
-                        {t("reports.operationChannelMoney", "Paid / total")}
+                        <ReportColumnHead className="justify-end" icon={<HeartPulse className="size-3.5" />} label={t("reports.encounters", "Encounters")} tone="sky" />
+                      </th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        <ReportColumnHead className="justify-end" icon={<Wallet className="size-3.5" />} label={t("reports.operationChannelMoney", "Paid / total")} tone="emerald" />
                       </th>
                     </tr>
                   </thead>
                   <tbody>
                     {encounterAcquisitionRows.map((row) => (
                       <tr key={row.channel} className="border-t">
-                        <td className="px-3 py-2">{row.label}</td>
-                        <td className="px-3 py-2 text-end ltr-nums tabular-nums">{row.encounterCount}</td>
+                        <td className="px-3 py-2">
+                          <AcquisitionChannelCell channel={row.channel} label={row.label} t={t} />
+                        </td>
+                        <td className="px-3 py-2 text-end font-semibold text-sky-700 ltr-nums tabular-nums dark:text-sky-400">{row.encounterCount}</td>
                         <td className="px-3 py-2 text-end text-xs ltr-nums tabular-nums">
                           {row.byCurrency.length === 0 ? (
                             "—"
@@ -1077,24 +1161,28 @@ export function ReportsPage() {
                 <ResponsiveTableElement minWidth="md">
                   <thead className="bg-muted/60">
                     <tr className="text-start">
-                      <th className="px-3 py-2 font-medium">{t("reports.acquisitionChannel", "Channel")}</th>
-                      <th className="px-3 py-2 text-end font-medium ltr-nums">
-                        {t("reports.operations", "Operations")}
+                      <th className="px-3 py-2 font-medium">
+                        <ReportColumnHead icon={<Share2 className="size-3.5" />} label={t("reports.acquisitionChannel", "Channel")} tone="violet" />
                       </th>
                       <th className="px-3 py-2 text-end font-medium ltr-nums">
-                        {t("reports.contractOps", "Contract")}
+                        <ReportColumnHead className="justify-end" icon={<Scissors className="size-3.5" />} label={t("reports.operations", "Operations")} tone="sky" />
                       </th>
                       <th className="px-3 py-2 text-end font-medium ltr-nums">
-                        {t("reports.operationChannelMoney", "Paid / total")}
+                        <ReportColumnHead className="justify-end" icon={<Percent className="size-3.5" />} label={t("reports.contractOps", "Contract")} tone="emerald" />
+                      </th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        <ReportColumnHead className="justify-end" icon={<Wallet className="size-3.5" />} label={t("reports.operationChannelMoney", "Paid / total")} tone="amber" />
                       </th>
                     </tr>
                   </thead>
                   <tbody>
                     {operationAcquisitionRows.map((row) => (
                       <tr key={row.channel} className="border-t">
-                        <td className="px-3 py-2">{row.label}</td>
-                        <td className="px-3 py-2 text-end ltr-nums tabular-nums">{row.operationCount}</td>
-                        <td className="px-3 py-2 text-end ltr-nums tabular-nums text-emerald-800 dark:text-emerald-300">
+                        <td className="px-3 py-2">
+                          <AcquisitionChannelCell channel={row.channel} label={row.label} t={t} />
+                        </td>
+                        <td className="px-3 py-2 text-end font-semibold text-sky-700 ltr-nums tabular-nums dark:text-sky-400">{row.operationCount}</td>
+                        <td className="px-3 py-2 text-end font-semibold ltr-nums tabular-nums text-emerald-800 dark:text-emerald-300">
                           {row.contractCount}
                         </td>
                         <td className="px-3 py-2 text-end text-xs ltr-nums tabular-nums">
@@ -1156,13 +1244,27 @@ export function ReportsPage() {
                 <ResponsiveTableElement minWidth="lg">
                   <thead className="bg-muted/60">
                     <tr className="text-start">
-                      <th className="px-3 py-2 font-medium">{t("reports.acquisitionChannel", "Channel")}</th>
-                      <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.acquisitionCount", "Patients")}</th>
-                      <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.acquisitionShare", "Share")}</th>
-                      <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.encounters", "Encounters")}</th>
-                      <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.encounterShare", "Encounter share")}</th>
-                      <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.operations", "Operations")}</th>
-                      <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.operationShare", "Operation share")}</th>
+                      <th className="px-3 py-2 font-medium">
+                        <ReportColumnHead icon={<Share2 className="size-3.5" />} label={t("reports.acquisitionChannel", "Channel")} tone="violet" />
+                      </th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        <ReportColumnHead className="justify-end" icon={<Users className="size-3.5" />} label={t("reports.acquisitionCount", "Patients")} tone="sky" />
+                      </th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        <ReportColumnHead className="justify-end" icon={<Percent className="size-3.5" />} label={t("reports.acquisitionShare", "Share")} tone="sky" />
+                      </th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        <ReportColumnHead className="justify-end" icon={<HeartPulse className="size-3.5" />} label={t("reports.encounters", "Encounters")} tone="emerald" />
+                      </th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        <ReportColumnHead className="justify-end" icon={<Percent className="size-3.5" />} label={t("reports.encounterShare", "Encounter share")} tone="emerald" />
+                      </th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        <ReportColumnHead className="justify-end" icon={<Scissors className="size-3.5" />} label={t("reports.operations", "Operations")} tone="amber" />
+                      </th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        <ReportColumnHead className="justify-end" icon={<Percent className="size-3.5" />} label={t("reports.operationShare", "Operation share")} tone="amber" />
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1180,13 +1282,15 @@ export function ReportsPage() {
                           }
                         }}
                       >
-                        <td className="px-3 py-2">{row.label}</td>
-                        <td className="px-3 py-2 text-end ltr-nums tabular-nums">{row.patientCount}</td>
-                        <td className="px-3 py-2 text-end ltr-nums tabular-nums">{row.patientShare}%</td>
-                        <td className="px-3 py-2 text-end ltr-nums tabular-nums">{row.encounterCount}</td>
-                        <td className="px-3 py-2 text-end ltr-nums tabular-nums">{row.encounterShare}%</td>
-                        <td className="px-3 py-2 text-end ltr-nums tabular-nums">{row.operationCount}</td>
-                        <td className="px-3 py-2 text-end ltr-nums tabular-nums">{row.operationShare}%</td>
+                        <td className="px-3 py-2">
+                          <AcquisitionChannelCell channel={row.channel} label={row.label} t={t} />
+                        </td>
+                        <td className="px-3 py-2 text-end font-semibold text-sky-700 ltr-nums tabular-nums dark:text-sky-400">{row.patientCount}</td>
+                        <td className="px-3 py-2 text-end text-sky-700/80 ltr-nums tabular-nums dark:text-sky-400/80">{row.patientShare}%</td>
+                        <td className="px-3 py-2 text-end font-semibold text-emerald-700 ltr-nums tabular-nums dark:text-emerald-400">{row.encounterCount}</td>
+                        <td className="px-3 py-2 text-end text-emerald-700/80 ltr-nums tabular-nums dark:text-emerald-400/80">{row.encounterShare}%</td>
+                        <td className="px-3 py-2 text-end font-semibold text-amber-700 ltr-nums tabular-nums dark:text-amber-400">{row.operationCount}</td>
+                        <td className="px-3 py-2 text-end text-amber-700/80 ltr-nums tabular-nums dark:text-amber-400/80">{row.operationShare}%</td>
                       </tr>
                     ))}
                   </tbody>
