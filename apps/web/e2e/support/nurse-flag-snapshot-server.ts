@@ -17,13 +17,15 @@ const SNAPSHOT_PATH = pick<string>(snapshotModule, "SNAPSHOT_PATH");
 
 if (process.env.NODE_ENV === "production") throw new Error("The E2E flag snapshot fixture must never run in production");
 const port = Number(process.env.NURSE_E2E_FLAGS_PORT ?? 4101);
+/** Comma separated flag keys whose gate stays UNSATISFIED (the "locked" stack shows the awaiting-gate states for real). */
+const locked = new Set((process.env.NURSE_E2E_LOCKED_FLAGS ?? "").split(",").map((k) => k.trim()).filter(Boolean));
 const secret = process.env.KIOREX_FLAGS_SECRET ?? "e2e_flags_secret";
 
 const snapshot = {
   product: "kiorly-clinic",
   version: 1,
   generatedAt: new Date().toISOString(),
-  flags: CLINIC_FLAG_DEFINITIONS.map((d) => ({ key: d.key, class: d.class, scopes: [...d.scopes], dependsOn: [...d.dependsOn], launchLocked: d.launchLocked, gateSatisfied: true, values: {} })),
+  flags: CLINIC_FLAG_DEFINITIONS.map((d) => ({ key: d.key, class: d.class, scopes: [...d.scopes], dependsOn: [...d.dependsOn], launchLocked: d.launchLocked, gateSatisfied: !locked.has(d.key), values: {} })),
 };
 const body = JSON.stringify({ ...snapshot, signature: signSnapshot(secret, snapshot as never) });
 

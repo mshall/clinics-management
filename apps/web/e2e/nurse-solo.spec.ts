@@ -57,11 +57,12 @@ test("solo nurse: home visit end to end with vitals, critical-value escalation a
   await expect(page.getByTestId("mar-need-order")).toBeVisible();
   await expect(page.getByTestId("mar-submit")).toBeDisabled();
   await page.getByTestId("mar-add-order").click();
-  await page.getByLabel("Prescriber (doctor)").fill("Dr. Amr Hassan");
-  await page.getByLabel("Medicine", { exact: true }).first().fill("Paracetamol 500mg");
-  await page.getByLabel("Dose", { exact: true }).first().fill("500 mg");
-  await page.getByLabel("Route", { exact: true }).first().fill("oral");
-  await page.getByLabel(/I confirm the prescriber/).check();
+  const dlg = page.getByTestId("mar-order-dialog");
+  await dlg.getByLabel("Prescriber (doctor)").fill("Dr. Amr Hassan");
+  await dlg.locator("#ord-med-0").fill("Paracetamol 500mg");
+  await dlg.locator("#ord-dose-0").fill("500 mg");
+  await dlg.locator("#ord-route-0").fill("oral");
+  await dlg.getByLabel(/I confirm the prescriber/).check();
   await page.getByTestId("mar-order-submit").click();
   await expect(page.getByTestId("mar-order")).toBeVisible();
   await page.getByTestId("mar-administer-line").click();
@@ -79,10 +80,14 @@ test("solo nurse: home visit end to end with vitals, critical-value escalation a
   await page.goBack();
   await expect(page.getByTestId("nurse-visit-record")).toBeVisible();
   await page.getByTestId("visit-sign").click();
+  await expect(page.getByTestId("nurse-error")).toHaveCount(0, { timeout: 15_000 });
   await expect(page.getByTestId("visit-family-update")).toBeVisible({ timeout: 30_000 });
   await page.goto("/home-visits/today");
   const card2 = page.getByTestId("home-visit-card").filter({ hasText: patient.lastNameEn });
-  await card2.getByRole("button", { name: "Finished" }).click();
+  // signing finalizes the encounter, which completes the appointment and the home visit; if it is still ARRIVED the nurse taps Finished
+  await expect(card2).toBeVisible();
+  const finishBtn = card2.getByRole("button", { name: "Finished" });
+  if (await finishBtn.isVisible().catch(() => false)) await finishBtn.click();
   await expect.poll(async () => (await visitOf(patient.id)).state, { timeout: 30_000 }).toBe("FINISHED");
   const vitals = await prisma.vitalsObservation.findMany({ where: { patientId: patient.id } });
   expect(vitals.filter((v) => v.critical).every((v) => v.escalationAction === "CALLED_DOCTOR")).toBe(true);

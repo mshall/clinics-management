@@ -4055,7 +4055,8 @@
       "nurse_mar": "The structured medication record is waiting for launch approval. Until then, write medication given as free text in the visit record. Doctor's-order safety checks always apply once it opens.",
       "nurse_family_updates": "Family updates are switched off for this practice (they also need WhatsApp reminders).",
       "nurse_private_duty_shifts": "Private-duty shifts are switched off or not included in your plan.",
-      "clinic_home_dispatch": "Smart dispatch suggestions are switched off. You can still assign visits manually."
+      "clinic_home_dispatch": "Smart dispatch suggestions are switched off. You can still assign visits manually.",
+      "clinic_lab_order_handoff": "Handing samples to the lab is switched off. You can still read past orders and their status."
     },
     "nav": {
       "today": "Today",
@@ -4068,7 +4069,8 @@
       "family": "Family updates",
       "reports": "Reports",
       "safety": "Safety",
-      "onboarding": "Set-up"
+      "onboarding": "Set-up",
+      "lab": "Lab samples"
     },
     "login": {
       "orEmail": "or sign in with email or phone"
@@ -4162,7 +4164,8 @@
       "afterSign": "After the visit",
       "afterSignHelp": "Nurses never prescribe. The record is locked; finish the visit from the Today screen.",
       "sendFamily": "Send family update (WhatsApp)",
-      "familySent": "Family update: {{sent}} sent, {{skipped}} skipped (no consent)."
+      "familySent": "Family update: {{sent}} sent, {{skipped}} skipped (no consent).",
+      "openLab": "Lab samples"
     },
     "vitals": {
       "title": "Vitals",
@@ -4288,7 +4291,8 @@
       "addLine": "Add medicine line",
       "controlledOrder": "This is a controlled-medicine order",
       "confirmOrder": "I confirm the prescriber, date and expiry match the document",
-      "orderSaved": "Doctor's order saved."
+      "orderSaved": "Doctor's order saved.",
+      "allergiesUnknown": "Allergies could not be loaded. Ask the patient about allergies before giving anything; the system still checks recorded allergies when you record a dose."
     },
     "services": {
       "title": "Services and prices",
@@ -4550,6 +4554,163 @@
       "hint": "Comma separated, e.g. nasr-city, heliopolis",
       "cap": "Max visits per day (optional)",
       "saved": "Zones saved."
+    },
+    "lab": {
+      "title": "Lab samples",
+      "subtitle": "Collect a sample for a doctor's lab request and hand it to the lab.",
+      "rule": "A nurse never orders tests on her own authority: you transcribe the doctor's request, then collect and hand over.",
+      "empty": "No lab orders yet.",
+      "requestedBy": "Requested by {{doctor}} on {{date}}",
+      "notCollected": "Not collected",
+      "newTitle": "Transcribe a doctor's lab request",
+      "newHelp": "Enter the doctor and the tests exactly as written. Every test needs its lab catalogue code.",
+      "doctor": "Requesting doctor",
+      "requestDate": "Date of the request",
+      "testCode": "Lab code",
+      "testCodeHint": "From the lab catalogue",
+      "testName": "Test name",
+      "addTest": "Add a test",
+      "notes": "Notes (optional)",
+      "confirmDoctor": "I confirm I am transcribing a doctor's request",
+      "create": "Save lab order",
+      "created": "Lab order saved. Collect the sample next.",
+      "detailTitle": "Lab order",
+      "collectTitle": "Collect and hand over the sample",
+      "identifiersTitle": "Check the patient's identity",
+      "identifiersHelp": "Ask the patient and enter at least two. They are compared with the record; wrong-patient samples are the classic lab harm.",
+      "needTwo": "Enter at least two identifiers.",
+      "identifierKinds": {
+        "FULL_NAME": "Full name",
+        "DATE_OF_BIRTH": "Date of birth",
+        "PHONE": "Phone"
+      },
+      "contractKinds": {
+        "fullName": "full name",
+        "dateOfBirth": "date of birth",
+        "phone": "phone"
+      },
+      "collectedAt": "Collected at",
+      "handedOverAt": "Handed over at",
+      "handedHint": "Optional",
+      "temperature": "Transport temperature (C)",
+      "tubes": "Tubes",
+      "tubeLabel": "Tube label",
+      "tubeLabelHint": "3-40 characters, no spaces, unique",
+      "specimenType": "Specimen",
+      "specimens": {
+        "BLOOD": "Blood",
+        "URINE": "Urine",
+        "STOOL": "Stool",
+        "SWAB": "Swab",
+        "OTHER": "Other"
+      },
+      "container": "Container (optional)",
+      "addTube": "Add a tube",
+      "consentNote": "The patient's consent to share lab orders with a lab is checked automatically. Without it nothing is handed over.",
+      "handOff": "Hand sample to the lab",
+      "handedOff": "Sample handed to the lab.",
+      "custodyTitle": "Chain of custody",
+      "labNumber": "Lab order number {{number}}",
+      "tubesList": "Tubes: {{labels}}",
+      "checkedKinds": "Identity checked: {{kinds}}",
+      "byNurse": "nurse",
+      "byLab": "lab",
+      "resultReleased": "The result was released; open it from the patient's record.",
+      "refused": "Refused",
+      "nothingSent": "Nothing was sent to the lab.",
+      "upgradeTitle": "Lab samples need Nurse Pro",
+      "upgradeHelp": "Upgrade your plan to collect samples and hand them to the lab. Everything else keeps working.",
+      "status": {
+        "HANDED_OFF": "Handed to lab",
+        "ACCEPTED": "Accepted by lab",
+        "COLLECTED": "Collected",
+        "IN_LAB": "In the lab",
+        "PARTIALLY_RESULTED": "Partly resulted",
+        "AWAITING_VALIDATION": "Awaiting validation",
+        "VALIDATED": "Validated",
+        "RELEASED": "Result released",
+        "CANCELLED": "Cancelled",
+        "REJECTED_BY_LAB": "Rejected by lab"
+      },
+      "custody": {
+        "COLLECTED": "Collected",
+        "HANDED_OVER": "Handed over",
+        "RECEIVED": "Received by lab",
+        "RECEIVED_AT_LAB": "Received by lab",
+        "REJECTED": "Rejected",
+        "STORED": "Stored",
+        "ANALYZED": "Analysed"
+      },
+      "block": {
+        "LAB_HANDOFF_NO_CONSENT": {
+          "title": "patient has not consented",
+          "help": "Without the patient's consent to share lab orders, nothing can be handed to a lab. Ask the patient to give consent."
+        },
+        "CONSENT_REVOKED": {
+          "title": "consent was withdrawn",
+          "help": "The patient withdrew consent. Do not collect or hand over; ask them to consent again."
+        },
+        "TWO_IDENTIFIERS_REQUIRED": {
+          "title": "two identifiers needed",
+          "help": "Check at least two identifiers, for example full name and date of birth."
+        },
+        "IDENTIFIER_MISMATCH": {
+          "title": "identifier does not match",
+          "help": "Do not collect. Re-confirm who the patient is before going on."
+        },
+        "IDENTIFIER_UNVERIFIABLE": {
+          "title": "cannot be checked",
+          "help": "The record has no value for this identifier. Use a different identifier."
+        },
+        "COLLECTED_IN_FUTURE": {
+          "title": "collection time is in the future",
+          "help": "Enter the real time the sample was taken."
+        },
+        "COLLECTED_TIME_INVALID": {
+          "title": "collection time is not valid",
+          "help": "Enter the real time the sample was taken (not too long ago)."
+        },
+        "HANDOVER_TIME_INVALID": {
+          "title": "hand-over time is not valid",
+          "help": "The hand-over cannot be before the collection or in the future."
+        },
+        "TEMPERATURE_INVALID": {
+          "title": "temperature is not valid",
+          "help": "Enter the transport temperature in degrees Celsius."
+        },
+        "TUBE_REQUIRED": {
+          "title": "no tube recorded",
+          "help": "Record at least one tube label."
+        },
+        "TUBE_LABEL_INVALID": {
+          "title": "tube label is not valid",
+          "help": "A label is 3-40 printable characters without spaces."
+        },
+        "TUBE_LABEL_DUPLICATE": {
+          "title": "duplicate tube label",
+          "help": "Every tube needs its own unique label, and a label already used cannot be reused."
+        },
+        "SPECIMEN_TYPE_REQUIRED": {
+          "title": "specimen type missing",
+          "help": "Choose the specimen type for every tube."
+        },
+        "DOCTOR_ORDER_REQUIRED": {
+          "title": "a doctor's request is required",
+          "help": "Tick the confirmation that you are transcribing a doctor's request."
+        },
+        "PRESCRIBER_REQUIRED": {
+          "title": "doctor and date required",
+          "help": "Enter the doctor's name and the date of the request."
+        },
+        "ITEM_CODE_REQUIRED": {
+          "title": "test code missing",
+          "help": "Every test needs its lab catalogue code and name."
+        },
+        "REJECTED_BY_LAB": {
+          "title": "the lab rejected the sample",
+          "help": "Contact the lab and the doctor; a new sample may be needed."
+        }
+      }
     }
   }
 }

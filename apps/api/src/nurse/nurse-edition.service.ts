@@ -10,7 +10,7 @@ import { CLINIC_BRAND, NURSE_BRAND, canChangeEdition, isEdition, navigationFor, 
 import { NURSE_PLANS } from "./nurse-plans";
 
 /** The nurse.* keys the web needs to show/hide Nurse-only modules. (Flag evaluation is edition-aware: Clinic orgs always get false.) */
-const NURSE_FEATURE_KEYS = ["nurse.care_plans", "nurse.mar", "nurse.private_duty_shifts", "nurse.family_updates", "nurse.individual_kiorex_listing", "clinic.home_visits", "clinic.home_route_view", "clinic.home_dispatch"] as const;
+const NURSE_FEATURE_KEYS = ["nurse.care_plans", "nurse.mar", "nurse.private_duty_shifts", "nurse.family_updates", "nurse.individual_kiorex_listing", "clinic.lab_order_handoff", "clinic.home_visits", "clinic.home_route_view", "clinic.home_dispatch"] as const;
 
 @Injectable()
 export class NurseEditionService {

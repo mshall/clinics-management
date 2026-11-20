@@ -47,7 +47,10 @@ describe("Kiorly Nurse web i18n", () => {
       "nurse.onboarding.steps": ["profession_verification", "coverage_zones", "services_offered", "prices", "availability", "safety_contact"].flatMap((s) => [`${s}.title`, `${s}.help`]),
       "nurse.visit.tasks": ["injection", "dressing", "vitals", "catheter", "education"],
       "nurse.visit": ["assessment", "intervention", "evaluation", "freeText"],
-      "nurse.gate": ["nurse_care_plans", "nurse_mar", "nurse_family_updates", "nurse_private_duty_shifts", "clinic_home_dispatch", "generic", "title"],
+      "nurse.lab.status": ["HANDED_OFF", "ACCEPTED", "COLLECTED", "IN_LAB", "PARTIALLY_RESULTED", "AWAITING_VALIDATION", "VALIDATED", "RELEASED", "CANCELLED", "REJECTED_BY_LAB"],
+      "nurse.lab.block": ["LAB_HANDOFF_NO_CONSENT", "CONSENT_REVOKED", "TWO_IDENTIFIERS_REQUIRED", "IDENTIFIER_MISMATCH", "IDENTIFIER_UNVERIFIABLE", "COLLECTED_IN_FUTURE", "COLLECTED_TIME_INVALID", "HANDOVER_TIME_INVALID", "TEMPERATURE_INVALID", "TUBE_REQUIRED", "TUBE_LABEL_INVALID", "TUBE_LABEL_DUPLICATE", "SPECIMEN_TYPE_REQUIRED", "DOCTOR_ORDER_REQUIRED", "PRESCRIBER_REQUIRED", "ITEM_CODE_REQUIRED", "REJECTED_BY_LAB"].flatMap((c) => [`${c}.title`, `${c}.help`]),
+      "nurse.lab.identifierKinds": ["FULL_NAME", "DATE_OF_BIRTH", "PHONE"],
+      "nurse.gate": ["nurse_care_plans", "nurse_mar", "nurse_family_updates", "nurse_private_duty_shifts", "clinic_home_dispatch", "clinic_lab_order_handoff", "generic", "title"],
       "nurse.dispatch.blockReason": ["CLINICIAN_NOT_VERIFIED", "AIDE_NEVER_SENT_ALONE", "NOT_A_CLINICIAN", "CLINICIAN_NOT_FOUND"],
       "nurse.mar.block": ["DOCTOR_ORDER_REQUIRED", "ORDER_PATIENT_MISMATCH", "ORDER_REVOKED", "ORDER_EXPIRED", "MEDICINE_NOT_IN_ORDER", "ALLERGY_CONFLICT", "DUPLICATE_ADMINISTRATION", "CONTROLLED_REQUIRES_CONTROLLED_ORDER", "CONTROLLED_REQUIRES_WITNESS"].flatMap((c) => [`${c}.title`, `${c}.help`]),
     };

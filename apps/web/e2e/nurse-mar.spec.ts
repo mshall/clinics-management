@@ -1,13 +1,17 @@
 import { expect, test } from "@playwright/test";
-import { createPatient, ensureHomeSettings, prisma, SOLO_EMAIL, tenantOf, uiLogin, verifyNurse } from "./nurse-fixtures";
+import { apiLogin, bookHomeVisit, clearToday, createPatient, ensureHomeSettings, homeType, prisma, SOLO_EMAIL, tenantOf, uiLogin, verifyNurse } from "./nurse-fixtures";
 
 /** Q7 — MAR blocks are shown as blocks (allergy, expired / revoked order, controlled witness); nothing is recorded when refused. */
-test("MAR: allergy conflict, expired order and controlled-witness blocks", async ({ page }) => {
+test("MAR: allergy conflict, expired order and controlled-witness blocks", async ({ page, request, baseURL }) => {
   test.setTimeout(180_000);
   const me = await tenantOf(SOLO_EMAIL);
   await verifyNurse(SOLO_EMAIL);
   await ensureHomeSettings(me.tenantId, me.userId);
   const patient = await createPatient(me.tenantId, "Mar", { allergy: "PENICILLIN" });
+  // the nurse can only open patients she has a visit with
+  await clearToday(me.tenantId, me.userId);
+  const type = await homeType(me.tenantId);
+  await bookHomeVisit(request, baseURL!, await apiLogin(request, baseURL!, SOLO_EMAIL), { clinicId: me.clinicId, patientId: patient.id, clinicianId: me.userId, typeId: type.id, minutesFromNow: 40 });
   const day = (n: number) => new Date(Date.now() + n * 86_400_000);
   const base = { tenantId: me.tenantId, patientId: patient.id, source: "PHOTO_UPLOAD" as const, prescriberName: "Dr. E2E", confirmedByNurseId: me.userId, confirmedAt: new Date() };
   await prisma.doctorOrder.create({ data: { ...base, orderedOn: day(-1), expiresOn: day(20), linesJson: [{ medicineName: "Amoxicillin 500mg", dose: "500 mg", route: "oral" }] } });

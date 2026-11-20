@@ -3,7 +3,7 @@ import { SOLO_EMAIL, uiLogin } from "./nurse-fixtures";
 
 /** Q7 — shared dev stack: GKN1 / GKN2 are unrecorded (human gates), so the web must show the awaiting-gate states, never a broken screen. */
 test("Nurse login: Sign in with Kiorex Passport is the primary action on the Nurse host", async ({ page }) => {
-  await page.goto("http://nurse.localhost:5174/login", { waitUntil: "domcontentloaded" });
+  await page.goto("http://nurse.localhost:5186/login", { waitUntil: "domcontentloaded" });
   const primary = page.getByTestId("nurse-login-primary");
   await expect(primary).toBeVisible({ timeout: 30_000 });
   await expect(primary.getByTestId("kiorex-passport-button")).toBeVisible();

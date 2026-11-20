@@ -82,7 +82,8 @@ export async function ensureHomeSettings(tenantId: string, clinicianId: string):
 let counter = 0;
 export async function createPatient(tenantId: string, label: string, opts: { allergy?: "PENICILLIN" | "ASPIRIN" } = {}) {
   const tag = `${Date.now()}${++counter}`.slice(-9);
-  const patient = await prisma.patient.create({ data: { tenantId, mrn: `E2E-${tag}`, firstNameEn: `E2E ${label}`, lastNameEn: `Patient ${tag}`, gender: "F", phone: `+2010${tag.padStart(8, "0").slice(-8)}` } });
+  const home = await prisma.clinic.findFirst({ where: { tenantId }, select: { id: true } });
+  const patient = await prisma.patient.create({ data: { tenantId, homeBranchId: home?.id, mrn: `E2E-${tag}`, firstNameEn: `E2E ${label}`, lastNameEn: `Patient ${tag}`, gender: "F", phone: `+2010${tag.padStart(8, "0").slice(-8)}` } });
   if (opts.allergy) await prisma.patientAllergy.create({ data: { tenantId, patientId: patient.id, code: opts.allergy } });
   return patient;
 }

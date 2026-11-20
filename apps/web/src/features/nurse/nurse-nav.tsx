@@ -1,4 +1,4 @@
-import { CalendarClock, ClipboardList, FileBarChart, Inbox, MapPinned, Pill, ShieldAlert, Tag, Users2, HeartHandshake, Rocket } from "lucide-react";
+import { CalendarClock, ClipboardList, FileBarChart, Inbox, MapPinned, Pill, ShieldAlert, Tag, Users2, HeartHandshake, Rocket, FlaskConical } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
@@ -11,6 +11,7 @@ export const NURSE_NAV_ITEMS: NurseNavItem[] = [
   { to: "/nurse/care-plans", labelKey: "nurse.nav.carePlans", icon: ClipboardList },
   { to: "/nurse/inbox", labelKey: "nurse.nav.inbox", icon: Inbox },
   { to: "/nurse/mar", labelKey: "nurse.nav.mar", icon: Pill },
+  { to: "/nurse/lab", labelKey: "nurse.nav.lab", icon: FlaskConical },
   { to: "/nurse/dispatch", labelKey: "nurse.nav.dispatch", icon: Users2, agencyOnly: true },
   { to: "/nurse/shifts", labelKey: "nurse.nav.shifts", icon: CalendarClock },
   { to: "/nurse/services", labelKey: "nurse.nav.services", icon: Tag },

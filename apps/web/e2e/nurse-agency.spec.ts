@@ -23,6 +23,7 @@ test("agency dispatch: assign / reassign verified nurses; aides and unverified s
   await bookHomeVisit(request, baseURL!, ownerToken, { clinicId: agency.clinicId, patientId: patient.id, clinicianId: nurse1.userId, typeId: type.id, minutesFromNow: 90 });
 
   await uiLogin(page, AGENCY.dispatcher);
+  await page.goto("/"); // Nurse home gate: agency office staff land on dispatch
   await expect(page).toHaveURL(/nurse\/dispatch/, { timeout: 30_000 });
   const row = page.getByTestId("dispatch-visit").filter({ hasText: patient.lastNameEn });
   await expect(row).toBeVisible({ timeout: 30_000 });

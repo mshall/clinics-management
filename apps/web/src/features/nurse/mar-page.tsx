@@ -98,6 +98,12 @@ export function MarPage() {
             <CardHeader className="pb-1"><CardTitle className="text-base">{t("nurse.mar.allergies")}</CardTitle></CardHeader>
             <CardContent className="text-sm">
               {allergies.isLoading ? <LoadingBlock /> : null}
+              {allergies.isError ? (
+                <div role="alert" data-testid="mar-allergies-error" className="space-y-1">
+                  <ErrorBlock error={allergies.error} onRetry={() => void allergies.refetch()} />
+                  <p className="text-destructive">{t("nurse.mar.allergiesUnknown")}</p>
+                </div>
+              ) : null}
               {allergies.data && allergies.data.length === 0 ? <p className="text-muted-foreground">{t("nurse.mar.noAllergies")}</p> : null}
               <div className="flex flex-wrap gap-2">{allergies.data?.map((a, i) => <StatusPill key={a.id ?? i} tone="bad">{allergyLabel(a.code, (k, d) => t(k, d))}{a.otherComment ? ` (${a.otherComment})` : ""}</StatusPill>)}</div>
             </CardContent>

@@ -150,3 +150,5 @@ export const NurseFamilyPage = lazyNamed(() => import("@/features/nurse/family-r
 export const NurseReportsPage = lazyNamed(() => import("@/features/nurse/family-reports-pages"), "NurseReportsPage");
 export const FamilySummaryPage = lazyNamed(() => import("@/features/nurse/family-reports-pages"), "FamilySummaryPage");
 export const NurseOnboardingPage = lazyNamed(() => import("@/features/nurse/onboarding-page"), "NurseOnboardingPage");
+export const NurseLabOrdersPage = lazyNamed(() => import("@/features/nurse/lab-page"), "LabOrdersPage");
+export const NurseLabOrderDetailPage = lazyNamed(() => import("@/features/nurse/lab-page"), "LabOrderDetailPage");

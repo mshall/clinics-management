@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Phone } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -66,8 +66,34 @@ export function VisitRecordPage() {
   const [draft, setDraft] = useState<{ checklist: ChecklistItem[]; assessment: string; intervention: string; evaluation: string; freeText: string; medicationFreeText: string } | null>(null);
   const [newTask, setNewTask] = useState("");
   useEffect(() => {
-    if (rec.data && !draft) setDraft({ checklist: rec.data.checklist ?? [], assessment: rec.data.assessment ?? "", intervention: rec.data.intervention ?? "", evaluation: rec.data.evaluation ?? "", freeText: rec.data.freeText ?? "", medicationFreeText: rec.data.medicationFreeText ?? "" });
-  }, [rec.data, draft]);
+    if (rec.data && !draft && !rec.isFetching) setDraft({ checklist: rec.data.checklist ?? [], assessment: rec.data.assessment ?? "", intervention: rec.data.intervention ?? "", evaluation: rec.data.evaluation ?? "", freeText: rec.data.freeText ?? "", medicationFreeText: rec.data.medicationFreeText ?? "" });
+  }, [rec.data, draft, rec.isFetching]);
+
+  // Autosave: field notes must survive leaving the page (e.g. to the MAR) and a dropped connection. Debounced; flushed on leave.
+  const savedRef = useRef<string>("");
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+  const lockedRef = useRef(false);
+  useEffect(() => {
+    if (rec.data && savedRef.current === "") savedRef.current = JSON.stringify({ checklist: rec.data.checklist ?? [], assessment: rec.data.assessment ?? "", intervention: rec.data.intervention ?? "", evaluation: rec.data.evaluation ?? "", freeText: rec.data.freeText ?? "", medicationFreeText: rec.data.medicationFreeText ?? "" });
+  }, [rec.data]);
+  useEffect(() => {
+    if (!draft || lockedRef.current) return;
+    const snap = JSON.stringify(draft);
+    if (snap === savedRef.current) return;
+    const id = window.setTimeout(() => {
+      savedRef.current = snap;
+      void apiPut(`/api/v1/nurse/visits/${appointmentId}/record`, draft).catch(() => { savedRef.current = ""; });
+    }, 1200);
+    return () => window.clearTimeout(id);
+  }, [draft, appointmentId]);
+  useEffect(() => () => {
+    const d = draftRef.current;
+    if (d && !lockedRef.current && JSON.stringify(d) !== savedRef.current) {
+      qc.setQueryData<VisitRecord>(["nurse", "visit-record", appointmentId], (old) => (old ? { ...old, ...d } : old));
+      void apiPut(`/api/v1/nurse/visits/${appointmentId}/record`, d).catch(() => undefined);
+    }
+  }, [appointmentId, qc]);
 
   const save = useMutation({
     mutationFn: () => apiPut<VisitRecord>(`/api/v1/nurse/visits/${appointmentId}/record`, draft),
@@ -87,6 +113,7 @@ export function VisitRecordPage() {
 
   const r = rec.data;
   const locked = Boolean(r?.locked || r?.status === "SIGNED");
+  lockedRef.current = locked;
   const openCritical = r?.vitals.filter((v) => v.critical && !v.escalationAction) ?? [];
   const signBlockedByCritical = openCritical.length > 0 || errorCode(sign.error) === "CRITICAL_VALUE_NOT_ESCALATED";
   const lang = i18n.language.startsWith("ar") ? "ar" : "en";
@@ -105,6 +132,7 @@ export function VisitRecordPage() {
           <div className="flex flex-wrap items-center gap-2">
             <StatusPill tone={locked ? "ok" : "warn"}>{locked ? t("nurse.visit.statusSigned", { at: fmtDateTime(r.signedAt) }) : t("nurse.visit.statusDraft")}</StatusPill>
             <Button asChild variant="outline" size="sm" className="min-h-11"><Link to={`/nurse/mar/${r.patientId}?visit=${appointmentId}`}>{t("nurse.visit.openMar")}</Link></Button>
+            <Button asChild variant="outline" size="sm" className="min-h-11"><Link to={`/nurse/lab?visit=${appointmentId}`} data-testid="visit-lab-link">{t("nurse.visit.openLab")}</Link></Button>
           </div>
 
           {openCritical.length > 0 ? <CriticalBanner vitals={openCritical[0]!} lang={lang} onLogged={() => void qc.invalidateQueries({ queryKey: key })} /> : null}

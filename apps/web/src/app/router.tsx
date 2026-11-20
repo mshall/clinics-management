@@ -87,6 +87,8 @@ import {
   NurseReportsPage,
   FamilySummaryPage,
   NurseOnboardingPage,
+  NurseLabOrdersPage,
+  NurseLabOrderDetailPage,
 } from "@/lib/lazy-pages";
 
 function defer(Page: LazyExoticComponent<ComponentType>) {
@@ -195,6 +197,8 @@ export const router = createBrowserRouter([
       { path: "nurse/family", element: defer(NurseFamilyPage) },
       { path: "nurse/reports", element: defer(NurseReportsPage) },
       { path: "nurse/onboarding", element: defer(NurseOnboardingPage) },
+      { path: "nurse/lab", element: defer(NurseLabOrdersPage) },
+      { path: "nurse/lab/:orderId", element: defer(NurseLabOrderDetailPage) },
       { path: "privacy", element: defer(DataPrivacyPage) },
       { path: "profile/verification", element: <NavGate tab="profile">{defer(ClinicianVerificationPage)}</NavGate> },
       { path: "hr", element: <NavGate tab="hr">{defer(HrPage)}</NavGate> },
