@@ -1300,6 +1300,8 @@ Workflows in `.github/workflows/`:
 | `deploy-aws.yml` | Push to `main` (and manual `workflow_dispatch`) | CI test + web build → `cdk deploy` → DbSeed Lambda → post-deploy smoke (ready + demo login) |
 | `pr-synth-build.yml` | Pull requests | CDK synth + build smoke (no AWS deploy) |
 
+**Dependency caching:** `.github/actions/setup-node-deps` restores lockfile-keyed `node_modules` (and optionally `infra/node_modules`) so CI/synth/web-build skip `npm ci` when lockfiles are unchanged. npm’s download cache (`actions/setup-node` `cache: npm`) still applies. **Deploy jobs** keep a fresh host `npm ci` inside `scripts/cicd-deploy.sh`; App Runner / Lambda images still `npm ci` inside their Dockerfiles — Actions module cache does not change shipped images.
+
 Authentication to AWS uses **GitHub OIDC** (`AWS_DEPLOY_ROLE_ARN` secret). There is no separate `ci.yml`, `e2e.yml`, or multi-env promote pipeline in this repo yet — add before hardening production release gates.
 
 ## 16. Environments

@@ -215,7 +215,21 @@ export function AdminDataExplorerPanel() {
   async function pollJobUntilReady(jobId: string, title: string, mode: "export" | "import") {
     pollAbortRef.current = false;
     backgroundPollIds.current.add(jobId);
-    setProgress({ open: true, title, percent: 2, status: "running" });
+    setProgress((prev) => ({
+      open: true,
+      title,
+      mode,
+      percent: Math.max(prev.percent || 2, 2),
+      status: "running",
+      error: null,
+      detail:
+        mode === "import"
+          ? t("admin.importProgressWorking", "Restoring SQL and files in the background…")
+          : t(
+              "admin.exportProgressWorking",
+              "Preparing your file in the background. You can close this dialog — we will notify you when it is ready.",
+            ),
+    }));
     try {
       for (;;) {
         if (pollAbortRef.current) return;
@@ -223,8 +237,9 @@ export function AdminDataExplorerPanel() {
         setProgress((prev) => ({
           ...prev,
           // Keep dialog open only if still showing; background toast covers dismiss case.
-          open: prev.open,
+          open: prev.open || job.status === "FAILED",
           title,
+          mode,
           percent: job.progress ?? prev.percent,
           status: job.status === "FAILED" ? "failed" : job.status === "READY" ? "ready" : "running",
           error: job.error,
@@ -246,9 +261,15 @@ export function AdminDataExplorerPanel() {
           setProgress((prev) => ({
             ...prev,
             open: true,
+            mode,
+            title,
             status: "failed",
             error: msg,
             percent: job.progress ?? prev.percent,
+            detail: t(
+              "admin.importProgressFailedHint",
+              "The job stopped before finishing. Review the error below, then try again with a valid backup file.",
+            ),
           }));
           throw new Error(msg);
         }
@@ -273,8 +294,17 @@ export function AdminDataExplorerPanel() {
           } else {
             toast.success(t("admin.importProgressReady", "Import finished."));
           }
-          setProgress((prev) => ({ ...prev, percent: 100, status: "ready", open: prev.open }));
-          window.setTimeout(() => setProgress((p) => ({ ...p, open: false })), 1200);
+          setProgress((prev) => ({
+            ...prev,
+            mode,
+            title,
+            percent: 100,
+            status: "ready",
+            open: true,
+            error: null,
+          }));
+          // Keep success visible briefly so the percentage and status are readable.
+          window.setTimeout(() => setProgress((p) => ({ ...p, open: false })), 2200);
           return;
         }
         await new Promise((r) => window.setTimeout(r, 800));
@@ -318,6 +348,7 @@ export function AdminDataExplorerPanel() {
       setProgress((prev) => ({
         ...prev,
         open: true,
+        mode: "export",
         status: "failed",
         error: msg,
         // Do not force 100% on failure.
@@ -332,6 +363,25 @@ export function AdminDataExplorerPanel() {
   async function runOrgImport(file: File) {
     setFormError(null);
     setImporting(true);
+    const importTitle = t("admin.importProgressTitle", "Importing organization backup");
+    setProgress({
+      open: true,
+      title: importTitle,
+      mode: "import",
+      percent: 3,
+      status: "running",
+      error: null,
+      detail: t(
+        "admin.importProgressUploading",
+        "Uploading {{name}} ({{size}})…",
+        {
+          name: file.name,
+          size: file.size > 1024 * 1024
+            ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+            : `${Math.max(1, Math.round(file.size / 1024))} KB`,
+        },
+      ),
+    });
     try {
       const fd = new FormData();
       fd.append("file", file);
@@ -340,7 +390,16 @@ export function AdminDataExplorerPanel() {
       await qc.invalidateQueries({ queryKey: ["admin", "data-explorer", "export-jobs"] });
       setImporting(false);
       if (importInputRef.current) importInputRef.current.value = "";
-      await pollJobUntilReady(job.id, t("admin.importProgressTitle", "Importing organization backup"), "import");
+      setProgress((prev) => ({
+        ...prev,
+        open: true,
+        mode: "import",
+        title: importTitle,
+        percent: Math.max(job.progress ?? 5, 5),
+        status: "running",
+        detail: t("admin.importProgressWorking", "Restoring SQL and files in the background…"),
+      }));
+      await pollJobUntilReady(job.id, importTitle, "import");
       await qc.invalidateQueries({ queryKey: ["admin", "data-explorer", "list"] });
     } catch (e: unknown) {
       const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e);
@@ -348,9 +407,15 @@ export function AdminDataExplorerPanel() {
       setProgress((prev) => ({
         ...prev,
         open: true,
+        mode: "import",
+        title: importTitle,
         status: "failed",
         error: msg,
-        percent: Math.min(prev.percent, 99),
+        percent: Math.min(Math.max(prev.percent, 1), 99),
+        detail: t(
+          "admin.importProgressFailedHint",
+          "The job stopped before finishing. Review the error below, then try again with a valid backup file.",
+        ),
       }));
       setImporting(false);
       if (importInputRef.current) importInputRef.current.value = "";
