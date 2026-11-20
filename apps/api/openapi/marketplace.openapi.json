@@ -1298,7 +1298,7 @@
       "post": {
         "operationId": "marketplaceLabOrderStatus",
         "summary": "KNLAB01 (Nurse edition, contracts 1.6.0): Kiorex relays the lab's status for a hand-off, with the sanitized chain of custody and (on release) the secure link",
-        "description": "Idempotent and monotonic on `status`. `orderId` is the Kiorly LabOrderPlaced orderId (the ClinicalOrder id). Carries no results and no PHI: a status, custody events (type, time, temperature, NURSE|LAB) and, when RELEASED, reportId + secure link.",
+        "description": "Idempotent; the headline `status` is monotonic (a stale push answers 200 applied:false). `orderId` is the Kiorly LabOrderPlaced orderId (the ClinicalOrder id). Carries no results and no PHI: a status, custody events (type, time, temperature, NURSE|LAB) and, when RELEASED, reportId + secure link.",
         "parameters": [
           {
             "name": "orderId",
@@ -1404,13 +1404,29 @@
         },
         "responses": {
           "200": {
-            "description": "Applied or already applied"
+            "description": "Applied, or already applied. Body {applied:boolean,status}: applied=false when a stale push would have moved the status backwards (custody still refreshes).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "applied",
+                    "status"
+                  ],
+                  "properties": {
+                    "applied": {
+                      "type": "boolean"
+                    },
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
           },
           "404": {
             "description": "Unknown hand-off for this tenant"
-          },
-          "409": {
-            "description": "Status would move backwards (ignored, reported)"
           }
         }
       }
