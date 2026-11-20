@@ -104,7 +104,7 @@ export function SignedPrescriptionActions({ encounterId, clinicId }: Props) {
 
   return (
     <div
-      className="rounded-xl border border-[hsl(var(--success)/0.8)] bg-[hsl(var(--success)/0.4)] p-3 "
+      className="rounded-xl border border-[hsl(var(--success)/0.3)] bg-[hsl(var(--success)/0.08)] p-3 "
       data-testid="signed-rx-actions"
     >
       <p className="mb-1 flex items-center gap-1.5 text-sm font-medium">

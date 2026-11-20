@@ -121,7 +121,7 @@ export function TodayRoutePage() {
         const isNext = v.id === nextId;
         const addr = v.address.masked ? null : [v.address.line1, v.address.building, v.address.floor && `${t("homeVisits.floor")} ${v.address.floor}`, v.address.flat && `${t("homeVisits.flat")} ${v.address.flat}`, v.address.landmark, v.address.district].filter(Boolean).join(", ");
         return (
-          <Card key={v.id} data-testid="home-visit-card" data-next={isNext ? "true" : undefined} className={isNext ? "border-primary/40 ring-1 ring-primary/20" : v.state === "FINISHED" ? "opacity-80" : undefined}>
+          <Card key={v.id} data-testid="home-visit-card" data-next={isNext ? "true" : undefined} className={isNext ? "border-primary/40 ring-1 ring-primary/20" : undefined}>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-start justify-between gap-3 text-base">
                 <span className="flex min-w-0 items-baseline gap-2">

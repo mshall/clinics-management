@@ -603,7 +603,7 @@ export function EncounterDetailPage() {
                 "Once finalized, SOAP notes, vitals, medications, and documents can no longer be edited. This action cannot be undone."
               )}
             </p>
-            <div className="rounded-lg border border-[hsl(var(--warning)/0.8)] bg-[hsl(var(--warning)/0.5)] px-3 py-2 text-sm ">
+            <div className="rounded-lg border border-[hsl(var(--warning)/0.3)] bg-[hsl(var(--warning)/0.08)] px-3 py-2 text-sm ">
               <span className="text-muted-foreground">{t("encounters.status", "Status")}: </span>
               <span className="font-medium text-[hsl(var(--warning))] ">
                 {enc ? encounterStatusLabel(t, enc.status) : "—"}
@@ -619,7 +619,7 @@ export function EncounterDetailPage() {
               </Button>
               <Button
                 type="button"
-                className="bg-amber-600 text-white hover:bg-amber-700 "
+                className="bg-amber-700 text-white hover:bg-amber-800 "
                 disabled={finalizeMutation.isPending}
                 onClick={() => finalizeMutation.mutate()}
               >
@@ -1168,7 +1168,7 @@ export function EncounterDetailPage() {
                   ) : null}
                 </TabsContent>
 
-                <TabsContent value="manual" className="rounded-xl border border-[hsl(var(--success)/0.8)] bg-[hsl(var(--success)/0.3)] p-4 ">
+                <TabsContent value="manual" className="rounded-xl border border-[hsl(var(--success)/0.3)] bg-[hsl(var(--success)/0.08)] p-4 ">
                   {!medsPanelActive && draft ? (
                     <p className="mb-3 text-sm text-muted-foreground">{t("encounters.panelDisabledNoMeds")}</p>
                   ) : null}
@@ -1220,7 +1220,7 @@ export function EncounterDetailPage() {
                         </div>
                       ) : null}
                       {generatedRxPreview ? (
-                        <div className="rounded-xl border border-[hsl(var(--success)/0.8)] bg-background p-3 ">
+                        <div className="rounded-xl border border-[hsl(var(--success)/0.3)] bg-background p-3 ">
                           <p className="mb-2 text-sm font-medium">{t("encounters.generatedPrescription")}</p>
                           <img
                             src={generatedRxPreview}

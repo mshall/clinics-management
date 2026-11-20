@@ -226,6 +226,7 @@ export function KiorexBookingSettingsCard({ clinicId, settings }: { clinicId: st
                           type="number"
                           min={0}
                           step="0.5"
+                          aria-label={t("kiorexTab.booking.minNotice", "Min notice (hours)")}
                           className="h-8 w-20"
                           value={td.minNoticeHours}
                           onChange={(e) => setType(a.id, { minNoticeHours: e.target.value })}
@@ -236,6 +237,7 @@ export function KiorexBookingSettingsCard({ clinicId, settings }: { clinicId: st
                           type="number"
                           min={1}
                           max={365}
+                          aria-label={t("kiorexTab.booking.maxDaysAhead", "Max days ahead")}
                           className="h-8 w-20"
                           value={td.maxDaysAhead}
                           onChange={(e) => setType(a.id, { maxDaysAhead: e.target.value })}
@@ -246,6 +248,7 @@ export function KiorexBookingSettingsCard({ clinicId, settings }: { clinicId: st
                           type="number"
                           min={0}
                           max={a.feeAmount}
+                          aria-label={t("kiorexTab.booking.deposit", "Deposit")}
                           className="h-8 w-24"
                           placeholder={t("kiorexTab.booking.noDeposit", "None")}
                           value={td.deposit}

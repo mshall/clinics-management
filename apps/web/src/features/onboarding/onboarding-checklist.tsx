@@ -3,6 +3,7 @@ import { Check, Circle, PartyPopper, SkipForward } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { Skeleton } from "@/components/skeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -41,6 +42,7 @@ export function OnboardingChecklist({ variant = "card", onDismiss }: Props) {
     if (q.data?.activationJustAchieved) setShowCelebrate(true);
   }, [q.data?.activationJustAchieved]);
 
+  if (q.isLoading && variant === "page") return <Card><CardContent className="space-y-3 pt-[var(--kx-card-pad)]" role="status" aria-busy="true">{[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-5" />)}</CardContent></Card>;
   if (q.isLoading || q.isError || !q.data) return null;
   if (q.data.completedAt && variant === "card") return null;
 

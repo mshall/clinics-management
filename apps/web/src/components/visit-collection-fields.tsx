@@ -124,7 +124,7 @@ export const VisitCollectionFields = forwardRef<VisitCollectionFieldsHandle, Pro
               >
                 {opt.label}
                 {shortcutHints ? (
-                  <kbd className="ms-2 hidden rounded border border-current/30 px-1 text-[10px] opacity-70 lg:inline">
+                  <kbd className="ms-2 hidden rounded border border-current/40 px-1 text-[11px] font-semibold lg:inline">
                     Alt+{i + 1}
                   </kbd>
                 ) : null}

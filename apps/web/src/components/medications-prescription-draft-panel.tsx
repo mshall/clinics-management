@@ -198,7 +198,7 @@ export function MedicationsPrescriptionDraftPanel({
 
         <TabsContent
           value="manual"
-          className="rounded-xl border border-[hsl(var(--success)/0.8)] bg-[hsl(var(--success)/0.3)] p-4 "
+          className="rounded-xl border border-[hsl(var(--success)/0.3)] bg-[hsl(var(--success)/0.08)] p-4 "
         >
           <ul className="space-y-2 text-sm">
             {medications.map((m) => (
@@ -240,7 +240,7 @@ export function MedicationsPrescriptionDraftPanel({
                 <p className="text-xs text-muted-foreground">{t("encounters.generatePrescriptionHint")}</p>
               </div>
               {generatedPreview ? (
-                <div className="rounded-xl border border-[hsl(var(--success)/0.8)] bg-background p-3 ">
+                <div className="rounded-xl border border-[hsl(var(--success)/0.3)] bg-background p-3 ">
                   <p className="mb-2 text-sm font-medium">{t("encounters.generatedPrescription")}</p>
                   <img
                     src={generatedPreview}

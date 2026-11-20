@@ -77,7 +77,7 @@ export function DepositPanel({ appointmentId, upcoming }: { appointmentId: strin
   }
 
   return (
-    <div className="space-y-2 rounded-md border border-[hsl(var(--warning)/0.3)] bg-[hsl(var(--warning)/0.6)] px-3 py-2 text-sm " data-testid="deposit-panel">
+    <div className="space-y-2 rounded-md border border-[hsl(var(--warning)/0.3)] bg-[hsl(var(--warning)/0.08)] px-3 py-2 text-sm " data-testid="deposit-panel">
       {!dep && r.required ? (
         <p className="font-medium" data-testid="deposit-required">
           {t("depositPanel.required", "Deposit required")}:{" "}

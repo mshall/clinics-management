@@ -708,7 +708,7 @@ export function AppointmentDetailPage() {
                         disabled={saveMut.isPending}
                         className={cn(
                           active
-                            ? cn(appointmentStatusClassName(code), "text-white shadow-sm hover:opacity-95")
+                            ? cn(appointmentStatusClassName(code), "font-semibold shadow-sm ring-2 ring-primary/50 hover:opacity-95")
                             : "border-border bg-background hover:bg-muted/60"
                         )}
                         onClick={() => {

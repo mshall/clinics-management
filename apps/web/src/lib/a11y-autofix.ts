@@ -15,10 +15,18 @@ export function applyA11yAutoFixes(root: ParentNode = document): void {
     const controls = Array.from(scope.querySelectorAll<HTMLElement>("input:not([type=hidden]), select, textarea")).filter(
       (c) => !c.hasAttribute("aria-label") && !c.hasAttribute("aria-labelledby") && !c.closest("label") && (!c.id || !document.querySelector(`label[for="${CSS.escape(c.id)}"]`)),
     );
-    if (controls.length !== 1) return;
-    const control = controls[0]!;
-    if (!control.id) control.id = `kx-af-${++seq}`;
-    label.htmlFor = control.id;
+    if (controls.length === 0) return;
+    if (controls.length === 1) {
+      const control = controls[0]!;
+      if (!control.id) control.id = `kx-af-${++seq}`;
+      label.htmlFor = control.id;
+      return;
+    }
+    // Several controls under one label (e.g. a date + time pair in the next sibling): all share the label as their accessible name.
+    const next = label.nextElementSibling;
+    if (controls.length > 3 || !next || !controls.every((c) => next.contains(c))) return;
+    if (!label.id) label.id = `kx-afl-${++seq}`;
+    controls.forEach((c) => c.setAttribute("aria-labelledby", label.id));
   });
   root.querySelectorAll<SVGElement>('.recharts-wrapper [role="img"]:not([aria-label]):not([aria-labelledby])').forEach((el) => el.setAttribute("aria-hidden", "true"));
 }
