@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { apiUrl } from "@/lib/api-url";
+import { absoluteDownloadUrl } from "@/lib/api-url";
 import { ApiError, apiDelete, apiGet, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 
 type OrgBackupJob = {
@@ -28,9 +28,10 @@ type OrgBackupJob = {
   completedAt?: string | null;
 };
 
+/** Native browser download via absolute API URL (avoids Vite proxy mid-stream failures on large ZIPs). */
 function triggerNativeDownload(downloadUrl: string) {
   const a = document.createElement("a");
-  a.href = apiUrl(downloadUrl);
+  a.href = absoluteDownloadUrl(downloadUrl);
   a.rel = "noopener";
   a.download = "";
   document.body.appendChild(a);
@@ -91,7 +92,9 @@ export function AdminDataExplorerPanel() {
   const importInputRef = useRef<HTMLInputElement>(null);
   /** Only set when the user cancels the in-flight job entirely (not when closing the dialog). */
   const pollAbortRef = useRef(false);
+  const activeJobIdRef = useRef<string | null>(null);
   const backgroundPollIds = useRef(new Set<string>());
+  const [cancellingExport, setCancellingExport] = useState(false);
 
   const catalogQ = useQuery({
     queryKey: ["admin", "data-explorer", "catalog"],
@@ -214,6 +217,7 @@ export function AdminDataExplorerPanel() {
 
   async function pollJobUntilReady(jobId: string, title: string, mode: "export" | "import") {
     pollAbortRef.current = false;
+    activeJobIdRef.current = jobId;
     backgroundPollIds.current.add(jobId);
     setProgress((prev) => ({
       open: true,
@@ -227,34 +231,52 @@ export function AdminDataExplorerPanel() {
           ? t("admin.importProgressWorking", "Restoring SQL and files in the background…")
           : t(
               "admin.exportProgressWorking",
-              "Preparing your file in the background. You can close this dialog — we will notify you when it is ready.",
+              "Preparing your file. You can cancel this operation or wait until the backup is ready.",
             ),
     }));
     try {
       for (;;) {
         if (pollAbortRef.current) return;
         const job = await apiGet<OrgBackupJob>(`/api/v1/admin/data-explorer/export/jobs/${jobId}`);
+        const uiStatus =
+          job.status === "FAILED"
+            ? "failed"
+            : job.status === "CANCELLED"
+              ? "cancelled"
+              : job.status === "READY"
+                ? "ready"
+                : "running";
         setProgress((prev) => ({
           ...prev,
           // Keep dialog open only if still showing; background toast covers dismiss case.
-          open: prev.open || job.status === "FAILED",
+          open: prev.open || job.status === "FAILED" || job.status === "CANCELLED",
           title,
           mode,
           percent: job.progress ?? prev.percent,
-          status: job.status === "FAILED" ? "failed" : job.status === "READY" ? "ready" : "running",
+          status: uiStatus,
           error: job.error,
           detail:
             job.status === "READY"
               ? mode === "import"
                 ? t("admin.importProgressReady", "Import finished.")
                 : t("admin.exportProgressReady", "File is ready. Your download should start shortly.")
-              : mode === "import"
-                ? t("admin.importProgressWorking", "Restoring SQL and files in the background…")
-                : t(
-                    "admin.exportProgressWorking",
-                    "Preparing your file in the background. You can close this dialog — we will notify you when it is ready.",
-                  ),
+              : job.status === "CANCELLED"
+                ? t(
+                    "admin.exportProgressCancelledDetail",
+                    "The operation was cancelled. You can start again when ready.",
+                  )
+                : mode === "import"
+                  ? t("admin.importProgressWorking", "Restoring SQL and files in the background…")
+                  : t(
+                      "admin.exportProgressWorking",
+                      "Preparing your file. You can cancel this operation or wait until the backup is ready.",
+                    ),
         }));
+        if (job.status === "CANCELLED") {
+          toast.message(t("admin.exportCancelledToast", "Backup cancelled."));
+          await qc.invalidateQueries({ queryKey: ["admin", "data-explorer", "export-jobs"] });
+          return;
+        }
         if (job.status === "FAILED") {
           const msg = job.error || t("common.error");
           toast.error(msg);
@@ -311,6 +333,35 @@ export function AdminDataExplorerPanel() {
       }
     } finally {
       backgroundPollIds.current.delete(jobId);
+      if (activeJobIdRef.current === jobId) activeJobIdRef.current = null;
+    }
+  }
+
+  async function cancelActiveJob() {
+    const jobId = activeJobIdRef.current;
+    if (!jobId || cancellingExport) return;
+    setCancellingExport(true);
+    pollAbortRef.current = true;
+    try {
+      await apiPost(`/api/v1/admin/data-explorer/export/jobs/${encodeURIComponent(jobId)}/cancel`, {});
+      toast.message(t("admin.exportCancelledToast", "Backup cancelled."));
+      setProgress((prev) => ({
+        ...prev,
+        open: true,
+        status: "cancelled",
+        detail: t(
+          "admin.exportProgressCancelledDetail",
+          "The operation was cancelled. You can start again when ready.",
+        ),
+      }));
+      await qc.invalidateQueries({ queryKey: ["admin", "data-explorer", "export-jobs"] });
+    } catch (e: unknown) {
+      const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e);
+      toast.error(msg);
+      // Resume polling if cancel failed.
+      pollAbortRef.current = false;
+    } finally {
+      setCancellingExport(false);
     }
   }
 
@@ -546,7 +597,7 @@ export function AdminDataExplorerPanel() {
           <p className="text-xs text-muted-foreground">
             {t(
               "admin.dataExplorerExportDocumentsHint",
-              "Documents ZIP includes patient, encounter, employee, expense, and operation files from local disk or S3, plus manifest.json. Full backup also embeds the SQL dump for one-step restore. Jobs run in the background — close the progress dialog anytime; we notify you when the file is ready.",
+              "Documents ZIP includes patient, encounter, employee, expense, and operation files from local disk or S3, plus manifest.json. Full backup also embeds the SQL dump for one-step restore. Use Cancel in the progress dialog to stop, or wait until the file is ready.",
             )}
           </p>
 
@@ -787,9 +838,11 @@ export function AdminDataExplorerPanel() {
       <ExportProgressDialog
         state={progress}
         onOpenChange={(open) => {
-          // Closing the dialog does NOT cancel the background job — polling continues and toasts on completion.
+          // Closing the dialog does NOT cancel the background job — use Cancel for that.
           setProgress((p) => ({ ...p, open }));
         }}
+        onCancel={progress.status === "running" ? () => void cancelActiveJob() : undefined}
+        cancelling={cancellingExport}
       />
     </div>
   );

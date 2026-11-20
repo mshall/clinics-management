@@ -2,6 +2,7 @@ import { Controller, Get, Query, Res } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import { OrgBackupService } from "./org-backup.service";
+import { streamOrgBackupArtifact } from "./org-backup-stream";
 
 /**
  * Public (token-gated) download for organization backup artifacts.
@@ -18,15 +19,6 @@ export class OrgBackupDownloadController {
   @ApiOkResponse({ description: "Streams the export artifact" })
   async downloadByToken(@Query("token") token: string | undefined, @Res() res: Response) {
     const file = await this.orgBackup.downloadByToken(token ?? "");
-    res.setHeader("Content-Type", file.contentType);
-    res.setHeader("Content-Length", String(file.size));
-    res.setHeader("Content-Disposition", `attachment; filename="${file.fileName}"`);
-    res.setHeader("Cache-Control", "private, no-store");
-    const stream = this.orgBackup.openArtifactStream(file.artifactPath);
-    stream.on("error", () => {
-      if (!res.headersSent) res.status(500).end();
-      else res.end();
-    });
-    stream.pipe(res);
+    await streamOrgBackupArtifact(res, file);
   }
 }

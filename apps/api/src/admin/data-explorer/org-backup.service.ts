@@ -21,8 +21,10 @@ import {
   type TenantDocumentManifest,
 } from "./tenant-documents-export";
 import { generateTenantSqlExport } from "./tenant-sql-export";
+import { ExportCancelledError } from "./org-backup-errors";
 
 export type OrgBackupFormat = "SQL" | "DOCUMENTS" | "FULL";
+export { ExportCancelledError };
 
 const EXPORT_TTL_HOURS = 72;
 const ALLOWED_SQL_TABLES = new Set([
@@ -76,11 +78,27 @@ export type OrgBackupArtifact = {
 export class OrgBackupService {
   /** Plain download tokens kept in-process so async jobs can expose a native browser download URL. */
   private readonly downloadTokens = new Map<string, string>();
+  /** In-flight cancel signals for RUNNING export/import jobs. */
+  private readonly cancelRequested = new Set<string>();
 
   constructor(
     private readonly prisma: PrismaService,
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
   ) {}
+
+  private async throwIfCancelled(jobId: string): Promise<void> {
+    if (this.cancelRequested.has(jobId)) throw new ExportCancelledError();
+    const row = await this.prisma.tenantExportJob.findUnique({
+      where: { id: jobId },
+      select: { status: true },
+    });
+    if (row?.status === "CANCELLED") throw new ExportCancelledError();
+  }
+
+  private async cleanupPartialArtifact(artifactPath: string | null | undefined) {
+    if (!artifactPath) return;
+    await unlink(artifactPath).catch(() => undefined);
+  }
 
   private publicJob(
     job: {
@@ -121,6 +139,16 @@ export class OrgBackupService {
   }
 
   private async setProgress(jobId: string, progress: number, patch: Prisma.TenantExportJobUpdateInput = {}) {
+    if (this.cancelRequested.has(jobId)) throw new ExportCancelledError();
+    const current = await this.prisma.tenantExportJob.findUnique({
+      where: { id: jobId },
+      select: { status: true },
+    });
+    if (current?.status === "CANCELLED") throw new ExportCancelledError();
+    // Never mark READY if the user already cancelled (race with cancelJob).
+    if (patch.status === "READY" && this.cancelRequested.has(jobId)) {
+      throw new ExportCancelledError();
+    }
     return this.prisma.tenantExportJob.update({
       where: { id: jobId },
       data: { progress: Math.max(0, Math.min(100, Math.round(progress))), ...patch },
@@ -166,6 +194,13 @@ export class OrgBackupService {
     });
     // Fire-and-forget; client polls progress (or dismisses UI and relies on toast + job list).
     void this.runExport(job.id, format, user).catch(async (e) => {
+      this.cancelRequested.delete(job.id);
+      if (e instanceof ExportCancelledError) return;
+      const current = await this.prisma.tenantExportJob.findUnique({
+        where: { id: job.id },
+        select: { status: true },
+      });
+      if (current?.status === "CANCELLED") return;
       const msg = e instanceof Error ? e.message : String(e);
       await this.prisma.tenantExportJob.update({
         where: { id: job.id },
@@ -178,6 +213,28 @@ export class OrgBackupService {
       });
     });
     return this.publicJob(job);
+  }
+
+  async cancelJob(user: JwtUser, id: string) {
+    assertDataExplorerAccess(user);
+    const tenantId = assertExplorerTenant(user);
+    const job = await this.prisma.tenantExportJob.findFirst({ where: { id, tenantId } });
+    if (!job) throw new NotFoundException("Export job not found");
+    if (job.status !== "PENDING" && job.status !== "RUNNING") {
+      return this.publicJob(job, { downloadToken: await this.ensureDownloadToken(job) });
+    }
+    this.cancelRequested.add(id);
+    const updated = await this.prisma.tenantExportJob.update({
+      where: { id },
+      data: {
+        status: "CANCELLED",
+        error: "Cancelled by user",
+        completedAt: new Date(),
+      },
+    });
+    await this.cleanupPartialArtifact(job.artifactPath);
+    await this.audit(tenantId, user.userId, id, "org.export.cancelled");
+    return this.publicJob(updated);
   }
 
   async getJob(user: JwtUser, id: string) {
@@ -251,135 +308,166 @@ export class OrgBackupService {
   }
 
   private async runExport(jobId: string, format: OrgBackupFormat, user: JwtUser) {
-    const job = await this.prisma.tenantExportJob.findUniqueOrThrow({ where: { id: jobId } });
-    const tenantId = job.tenantId;
-    const tables = Array.isArray(job.tablesJson) ? (job.tablesJson as string[]) : undefined;
-    const allowFeatureFlags = isDataExplorerPlatformOperator(user);
-    const dir = join(process.cwd(), ".data", "exports", tenantId);
-    await mkdir(dir, { recursive: true });
+    let partialPath: string | null = null;
+    try {
+      await this.throwIfCancelled(jobId);
+      const job = await this.prisma.tenantExportJob.findUniqueOrThrow({ where: { id: jobId } });
+      const tenantId = job.tenantId;
+      const tables = Array.isArray(job.tablesJson) ? (job.tablesJson as string[]) : undefined;
+      const allowFeatureFlags = isDataExplorerPlatformOperator(user);
+      const dir = join(process.cwd(), ".data", "exports", tenantId);
+      await mkdir(dir, { recursive: true });
 
-    await this.setProgress(jobId, 8, { status: "RUNNING" });
+      await this.setProgress(jobId, 8, { status: "RUNNING" });
+      await this.throwIfCancelled(jobId);
 
-    if (format === "SQL") {
-      await this.setProgress(jobId, 25);
+      if (format === "SQL") {
+        await this.setProgress(jobId, 25);
+        await this.throwIfCancelled(jobId);
+        const sql = await generateTenantSqlExport(this.prisma, tenantId, { tables, allowFeatureFlags });
+        await this.throwIfCancelled(jobId);
+        await this.setProgress(jobId, 85);
+        const path = join(dir, `${jobId}.sql`);
+        partialPath = path;
+        await writeFile(path, sql, "utf8");
+        await this.throwIfCancelled(jobId);
+        const { token, hash } = this.mintDownloadToken(jobId);
+        const updated = await this.setProgress(jobId, 100, {
+          status: "READY",
+          artifactPath: path,
+          fileName: `kiorly-org-${tenantId}-export.sql`,
+          contentType: "application/sql; charset=utf-8",
+          downloadTokenHash: hash,
+          expiresAt: new Date(Date.now() + EXPORT_TTL_HOURS * 3600_000),
+          completedAt: new Date(),
+          rowCounts: { bytes: Buffer.byteLength(sql, "utf8") },
+        });
+        await this.audit(tenantId, user.userId, jobId, "org.export.sql.ready");
+        return this.publicJob(updated, { downloadToken: token });
+      }
+
+      if (format === "DOCUMENTS") {
+        await this.setProgress(jobId, 20);
+        await this.throwIfCancelled(jobId);
+        const archive = await createTenantDocumentsArchive(this.prisma, this.uploads, tenantId, tables, {
+          allowFeatureFlags,
+          finalize: false,
+        });
+        await this.throwIfCancelled(jobId);
+        await this.setProgress(jobId, 70);
+        const path = join(dir, `${jobId}-documents.zip`);
+        partialPath = path;
+        await this.writeArchiveToFile(archive, path, true, async (p) => {
+          await this.throwIfCancelled(jobId);
+          await this.setProgress(jobId, 70 + Math.round(p * 25));
+        });
+        await this.throwIfCancelled(jobId);
+        const { token, hash } = this.mintDownloadToken(jobId);
+        const updated = await this.setProgress(jobId, 100, {
+          status: "READY",
+          artifactPath: path,
+          fileName: `kiorly-org-${tenantId}-documents.zip`,
+          contentType: "application/zip",
+          downloadTokenHash: hash,
+          expiresAt: new Date(Date.now() + EXPORT_TTL_HOURS * 3600_000),
+          completedAt: new Date(),
+        });
+        await this.audit(tenantId, user.userId, jobId, "org.export.documents.ready");
+        return this.publicJob(updated, { downloadToken: token });
+      }
+
+      // FULL = SQL + documents in one ZIP (round-trip package)
+      await this.setProgress(jobId, 12);
+      await this.throwIfCancelled(jobId);
       const sql = await generateTenantSqlExport(this.prisma, tenantId, { tables, allowFeatureFlags });
-      await this.setProgress(jobId, 85);
-      const path = join(dir, `${jobId}.sql`);
-      await writeFile(path, sql, "utf8");
-      const { token, hash } = this.mintDownloadToken(jobId);
-      const updated = await this.setProgress(jobId, 100, {
-        status: "READY",
-        artifactPath: path,
-        fileName: `kiorly-org-${tenantId}-export.sql`,
-        contentType: "application/sql; charset=utf-8",
-        downloadTokenHash: hash,
-        expiresAt: new Date(Date.now() + EXPORT_TTL_HOURS * 3600_000),
-        completedAt: new Date(),
-        rowCounts: { bytes: Buffer.byteLength(sql, "utf8") },
-      });
-      await this.audit(tenantId, user.userId, jobId, "org.export.sql.ready");
-      return this.publicJob(updated, { downloadToken: token });
-    }
-
-    if (format === "DOCUMENTS") {
-      await this.setProgress(jobId, 20);
-      const archive = await createTenantDocumentsArchive(this.prisma, this.uploads, tenantId, tables, {
+      await this.throwIfCancelled(jobId);
+      await this.setProgress(jobId, 40);
+      const { entries, selectedEntities } = await collectTenantDocumentEntries(this.prisma, tenantId, tables, {
         allowFeatureFlags,
-        finalize: false,
       });
-      await this.setProgress(jobId, 70);
-      const path = join(dir, `${jobId}-documents.zip`);
-      await this.writeArchiveToFile(archive, path, true, (p) => this.setProgress(jobId, 70 + Math.round(p * 25)));
+      await this.throwIfCancelled(jobId);
+      await this.setProgress(jobId, 55);
+
+      const path = join(dir, `${jobId}-full.zip`);
+      partialPath = path;
+      const archive = new ZipArchive({ zlib: { level: 6 } });
+      // Pipe early so entries stream to disk instead of buffering the whole ZIP in memory.
+      const writePromise = this.writeArchiveToFile(archive, path, false);
+
+      archive.append(sql, { name: "organization-export.sql" });
+      const manifest: TenantDocumentManifest = {
+        tenantId,
+        exportedAt: new Date().toISOString(),
+        selectedEntities,
+        files: [],
+        skipped: [],
+      };
+      let i = 0;
+      for (const entry of entries) {
+        await this.throwIfCancelled(jobId);
+        i += 1;
+        try {
+          await this.uploads.assertExists(entry.kind, entry.relativePath);
+          const body = await this.readUpload(entry.kind, entry.relativePath);
+          archive.append(body, { name: `files/${entry.zipPath}` });
+          manifest.files.push({
+            zipPath: `files/${entry.zipPath}`,
+            originalFileName: entry.originalFileName,
+            mimeType: entry.mimeType,
+            entityType: entry.entityType,
+            entityId: entry.entityId,
+            storageKind: entry.kind,
+            relativePath: entry.relativePath,
+          });
+        } catch {
+          manifest.skipped.push({ zipPath: `files/${entry.zipPath}`, reason: "not_found_in_storage" });
+        }
+        if (i % 5 === 0) {
+          await this.setProgress(jobId, 55 + Math.round((i / Math.max(entries.length, 1)) * 30));
+        }
+      }
+      archive.append(JSON.stringify(manifest, null, 2), { name: "manifest.json" });
+      archive.append(
+        [
+          "Kiorly organization backup package",
+          "- organization-export.sql — database rows (run after Prisma migrate on target)",
+          "- files/ — uploaded patient / encounter / operation / employee / expense documents",
+          "- manifest.json — maps each file back to storage kind + relativePath for import",
+          "",
+          "Import via Admin → Organization data → Import backup (ZIP or SQL).",
+          "",
+        ].join("\n"),
+        { name: "README.txt" },
+      );
+
+      await this.throwIfCancelled(jobId);
+      await this.setProgress(jobId, 90);
+      await archive.finalize();
+      await writePromise;
+      await this.throwIfCancelled(jobId);
+
       const { token, hash } = this.mintDownloadToken(jobId);
       const updated = await this.setProgress(jobId, 100, {
         status: "READY",
         artifactPath: path,
-        fileName: `kiorly-org-${tenantId}-documents.zip`,
+        fileName: `kiorly-org-${tenantId}-full-backup.zip`,
         contentType: "application/zip",
         downloadTokenHash: hash,
         expiresAt: new Date(Date.now() + EXPORT_TTL_HOURS * 3600_000),
         completedAt: new Date(),
+        rowCounts: { sqlBytes: Buffer.byteLength(sql, "utf8"), files: manifest.files.length },
       });
-      await this.audit(tenantId, user.userId, jobId, "org.export.documents.ready");
+      await this.audit(tenantId, user.userId, jobId, "org.export.full.ready");
       return this.publicJob(updated, { downloadToken: token });
-    }
-
-    // FULL = SQL + documents in one ZIP (round-trip package)
-    await this.setProgress(jobId, 12);
-    const sql = await generateTenantSqlExport(this.prisma, tenantId, { tables, allowFeatureFlags });
-    await this.setProgress(jobId, 40);
-    const { entries, selectedEntities } = await collectTenantDocumentEntries(this.prisma, tenantId, tables, {
-      allowFeatureFlags,
-    });
-    await this.setProgress(jobId, 55);
-
-    const path = join(dir, `${jobId}-full.zip`);
-    const archive = new ZipArchive({ zlib: { level: 6 } });
-    // Pipe early so entries stream to disk instead of buffering the whole ZIP in memory.
-    const writePromise = this.writeArchiveToFile(archive, path, false);
-
-    archive.append(sql, { name: "organization-export.sql" });
-    const manifest: TenantDocumentManifest = {
-      tenantId,
-      exportedAt: new Date().toISOString(),
-      selectedEntities,
-      files: [],
-      skipped: [],
-    };
-    let i = 0;
-    for (const entry of entries) {
-      i += 1;
-      try {
-        await this.uploads.assertExists(entry.kind, entry.relativePath);
-        const body = await this.readUpload(entry.kind, entry.relativePath);
-        archive.append(body, { name: `files/${entry.zipPath}` });
-        manifest.files.push({
-          zipPath: `files/${entry.zipPath}`,
-          originalFileName: entry.originalFileName,
-          mimeType: entry.mimeType,
-          entityType: entry.entityType,
-          entityId: entry.entityId,
-          storageKind: entry.kind,
-          relativePath: entry.relativePath,
-        });
-      } catch {
-        manifest.skipped.push({ zipPath: `files/${entry.zipPath}`, reason: "not_found_in_storage" });
+    } catch (e) {
+      if (e instanceof ExportCancelledError) {
+        await this.cleanupPartialArtifact(partialPath);
+        return;
       }
-      if (i % 5 === 0) {
-        await this.setProgress(jobId, 55 + Math.round((i / Math.max(entries.length, 1)) * 30));
-      }
+      throw e;
+    } finally {
+      this.cancelRequested.delete(jobId);
     }
-    archive.append(JSON.stringify(manifest, null, 2), { name: "manifest.json" });
-    archive.append(
-      [
-        "Kiorly organization backup package",
-        "- organization-export.sql — database rows (run after Prisma migrate on target)",
-        "- files/ — uploaded patient / encounter / operation / employee / expense documents",
-        "- manifest.json — maps each file back to storage kind + relativePath for import",
-        "",
-        "Import via Admin → Organization data → Import backup (ZIP or SQL).",
-        "",
-      ].join("\n"),
-      { name: "README.txt" },
-    );
-
-    await this.setProgress(jobId, 90);
-    await archive.finalize();
-    await writePromise;
-
-    const { token, hash } = this.mintDownloadToken(jobId);
-    const updated = await this.setProgress(jobId, 100, {
-      status: "READY",
-      artifactPath: path,
-      fileName: `kiorly-org-${tenantId}-full-backup.zip`,
-      contentType: "application/zip",
-      downloadTokenHash: hash,
-      expiresAt: new Date(Date.now() + EXPORT_TTL_HOURS * 3600_000),
-      completedAt: new Date(),
-      rowCounts: { sqlBytes: Buffer.byteLength(sql, "utf8"), files: manifest.files.length },
-    });
-    await this.audit(tenantId, user.userId, jobId, "org.export.full.ready");
-    return this.publicJob(updated, { downloadToken: token });
   }
 
   private async writeArchiveToFile(
