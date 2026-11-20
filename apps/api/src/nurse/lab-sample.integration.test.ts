@@ -116,7 +116,7 @@ describe("KNLAB01 nurse sample collection -> LabOrderPlaced (integration)", () =
     const r = await svc.recordCollection(w.tenantId, w.clinician.jwt, o, good({ collectedAt, handedOverAt: new Date(Date.now() - 5 * 60_000).toISOString() }));
     assert.equal(r.alreadyHandedOff, false);
     assert.equal(r.labStatus, "HANDED_OFF");
-    assert.deepEqual(r.identifiersChecked, ["FULL_NAME", "DATE_OF_BIRTH"]);
+    assert.deepEqual(r.identifiersChecked, ["fullName", "dateOfBirth"]);
     assert.equal(r.tubes[0]!.label, `NRS-${suffix}-A`);
     const ev = await prisma.outboxEvent.findMany({ where: { tenantId: w.tenantId, type: "LabOrderPlaced" } });
     assert.equal(ev.length, 1);

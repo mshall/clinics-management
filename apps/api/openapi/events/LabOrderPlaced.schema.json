@@ -102,11 +102,15 @@
           "type": "array",
           "minItems": 2,
           "items": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 40
+            "enum": [
+              "fullName",
+              "dateOfBirth",
+              "phone",
+              "nationalId",
+              "externalId"
+            ]
           },
-          "description": "Kinds of the >= 2 identifiers the nurse verified at collection (FULL_NAME, DATE_OF_BIRTH, PHONE, MRN ...). Kinds only, never values."
+          "description": "Kinds of the >= 2 DISTINCT identifiers the nurse verified against the patient record at collection (the Lab's vocabulary, plus fullName for nurse intake). Kinds only, never values."
         },
         "patient": {
           "type": "object",

@@ -19,8 +19,8 @@ const code = (fn: () => unknown) => {
 
 describe("KNLAB01 collection safety checks (pure, never flagged)", () => {
   it("needs at least two DISTINCT identifier kinds that match the record", () => {
-    assert.deepEqual(verifyIdentifiers(patient, [{ kind: "full_name", value: " amira  SAMY " }, { kind: "DATE_OF_BIRTH", value: "1990-04-12" }]), ["FULL_NAME", "DATE_OF_BIRTH"]);
-    assert.deepEqual(verifyIdentifiers(patient, [{ kind: "FULL_NAME", value: "أميرة سامي" }, { kind: "PHONE", value: "01000000001" }]), ["FULL_NAME", "PHONE"]);
+    assert.deepEqual(verifyIdentifiers(patient, [{ kind: "full_name", value: " amira  SAMY " }, { kind: "DATE_OF_BIRTH", value: "1990-04-12" }]), ["fullName", "dateOfBirth"]);
+    assert.deepEqual(verifyIdentifiers(patient, [{ kind: "FULL_NAME", value: "أميرة سامي" }, { kind: "PHONE", value: "01000000001" }]), ["fullName", "phone"]);
     assert.equal(code(() => verifyIdentifiers(patient, [{ kind: "FULL_NAME", value: "Amira Samy" }])), "TWO_IDENTIFIERS_REQUIRED");
     assert.equal(code(() => verifyIdentifiers(patient, [{ kind: "FULL_NAME", value: "Amira Samy" }, { kind: "FULL_NAME", value: "Amira Samy" }])), "TWO_IDENTIFIERS_REQUIRED");
     assert.equal(code(() => verifyIdentifiers(patient, [{ kind: "FULL_NAME", value: "Amira Samy" }, { kind: "SHOE_SIZE", value: "41" }])), "TWO_IDENTIFIERS_REQUIRED");
@@ -30,7 +30,7 @@ describe("KNLAB01 collection safety checks (pure, never flagged)", () => {
     assert.equal(code(() => verifyIdentifiers(patient, [{ kind: "FULL_NAME", value: "Amira Samy" }, { kind: "DATE_OF_BIRTH", value: "1991-04-12" }])), "IDENTIFIER_MISMATCH");
     assert.equal(code(() => verifyIdentifiers(patient, [{ kind: "FULL_NAME", value: "Amira Samy" }, { kind: "PHONE", value: "01099999999" }])), "IDENTIFIER_MISMATCH");
     try {
-      verifyIdentifiers(patient, [{ kind: "FULL_NAME", value: "Someone Else" }, { kind: "MRN", value: "MRN-7" }]);
+      verifyIdentifiers(patient, [{ kind: "FULL_NAME", value: "Someone Else" }, { kind: "PHONE", value: "01000000001" }]);
     } catch (e) {
       assert.equal((e as LabSampleRuleError).kind, "FULL_NAME");
       assert.ok(!(e as Error).message.includes("Someone"));
@@ -77,7 +77,7 @@ describe("Nurse LabOrderPlaced validates against the kiorex-contracts 1.6.0 sche
   const validate = ajv.compile(load("LabOrderPlaced"));
   const data = labOrderPlacedNurseData({
     orderId: "ord_1", clinicId: "cl_1", patientRef: "pat_1", orderingClinicianId: "u1", consentToken: "rsc_abcdefabcdefabcd", orderedAt: new Date("2026-11-20T09:00:00Z"),
-    items: [{ code: "CBC", nameEn: "Complete blood count" }], prescriberName: "Dr Hesham", identifiersChecked: ["FULL_NAME", "DATE_OF_BIRTH"],
+    items: [{ code: "CBC", nameEn: "Complete blood count" }], prescriberName: "Dr Hesham", identifiersChecked: ["fullName", "dateOfBirth"],
     patient: { fullName: "Amira Samy", dateOfBirth: new Date("1990-04-12T00:00:00Z"), sex: "F", phone: "+201000000001" }, visitRef: "apt_1", collectorRef: "u1", collectorName: "Nurse Mona",
     collectedAt: new Date("2026-11-20T09:30:00Z"), handedOverAt: new Date("2026-11-20T09:45:00Z"), temperatureC: 5, samples: [{ label: "NRS-0001-A", specimenType: "BLOOD", container: "EDTA" }],
   });
@@ -89,7 +89,7 @@ describe("Nurse LabOrderPlaced validates against the kiorex-contracts 1.6.0 sche
     assert.equal(data.originEdition, "NURSE");
   });
   it("a single identifier or a bad tube label would be rejected by the contract too", () => {
-    assert.ok(!validate(env({ ...data, identifiersChecked: ["FULL_NAME"] })));
+    assert.ok(!validate(env({ ...data, identifiersChecked: ["fullName"] })));
     assert.ok(!validate(env({ ...data, nurseCollection: { ...data.nurseCollection, samples: [{ label: "a b", specimenType: "BLOOD" }] } })));
   });
 });

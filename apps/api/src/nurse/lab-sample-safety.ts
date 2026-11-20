@@ -5,8 +5,10 @@ import type { Gender } from "@prisma/client";
  * so the checks run on every collection: >= 2 identifiers matched against the record, a real (not future) collection time, a sane
  * hand-over time, a valid and unique tube label, and the patient's consent.
  */
-export const IDENTIFIER_KINDS = ["FULL_NAME", "DATE_OF_BIRTH", "PHONE", "MRN"] as const;
+export const IDENTIFIER_KINDS = ["FULL_NAME", "DATE_OF_BIRTH", "PHONE"] as const;
 export type IdentifierKind = (typeof IDENTIFIER_KINDS)[number];
+/** The contract vocabulary of `LabOrderPlaced.identifiersChecked` (kiorex-contracts 1.6.0 = the Lab's identifier kinds, plus fullName for nurse intake). */
+export const CONTRACT_IDENTIFIER_KIND: Record<IdentifierKind, "fullName" | "dateOfBirth" | "phone"> = { FULL_NAME: "fullName", DATE_OF_BIRTH: "dateOfBirth", PHONE: "phone" };
 export type IdentifierInput = { kind: string; value: string };
 
 export type LabSampleFailureCode =
@@ -45,7 +47,7 @@ const digits = (s: string) => s.replace(/\D/g, "");
 export type PatientForCheck = { mrn: string; firstNameEn: string; lastNameEn: string; firstNameAr: string | null; lastNameAr: string | null; dob: Date | null; phone: string | null };
 
 /** At least two DISTINCT supported kinds, each matching the patient record. Returns the kinds checked (never values). */
-export function verifyIdentifiers(patient: PatientForCheck, given: IdentifierInput[] | undefined): IdentifierKind[] {
+export function verifyIdentifiers(patient: PatientForCheck, given: IdentifierInput[] | undefined): string[] {
   const known = new Map<IdentifierKind, string>();
   for (const g of given ?? []) {
     const kind = String(g?.kind ?? "").toUpperCase() as IdentifierKind;
@@ -57,7 +59,7 @@ export function verifyIdentifiers(patient: PatientForCheck, given: IdentifierInp
     if (ok === null) throw new LabSampleRuleError("IDENTIFIER_UNVERIFIABLE", "The record has no value to check this identifier against", kind);
     if (!ok) throw new LabSampleRuleError("IDENTIFIER_MISMATCH", "The identifier does not match the patient record: do not collect, re-confirm the patient", kind);
   }
-  return [...known.keys()];
+  return [...known.keys()].map((k) => CONTRACT_IDENTIFIER_KIND[k]);
 }
 
 function matches(kind: IdentifierKind, value: string, p: PatientForCheck): boolean | null {
@@ -76,8 +78,6 @@ function matches(kind: IdentifierKind, value: string, p: PatientForCheck): boole
       const n = Math.min(got.length, have.length, 11);
       return have.slice(-n) === got.slice(-n);
     }
-    case "MRN":
-      return norm(p.mrn) === norm(value);
   }
 }
 
