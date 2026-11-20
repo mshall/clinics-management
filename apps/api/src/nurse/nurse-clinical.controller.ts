@@ -164,6 +164,16 @@ export class NurseClinicalController {
   }
 
   // ---- family + reports ----
+  @Get("patients/:patientId/family-contacts")
+  familyContacts(@CurrentUser() u: JwtUser, @Param("patientId") patientId: string) {
+    return this.family.contactsFor(requireTenantId(u), patientId);
+  }
+
+  @Put("patients/:patientId/family-contacts/:contactId/consent")
+  setFamilyConsent(@CurrentUser() u: JwtUser, @Param("patientId") patientId: string, @Param("contactId") contactId: string, @Body() b: { granted: boolean }) {
+    return this.family.setConsent(requireTenantId(u), u.userId, patientId, contactId, b?.granted === true);
+  }
+
   @Post("visits/:appointmentId/family-update")
   @HttpCode(200)
   familyUpdate(@CurrentUser() u: JwtUser, @Param("appointmentId") id: string) {

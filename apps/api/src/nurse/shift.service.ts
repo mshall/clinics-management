@@ -76,6 +76,12 @@ export class ShiftService {
 
   async list(tenantId: string, user: JwtUser, q: { nurseId?: string }) {
     const rows = await this.prisma.shiftBooking.findMany({ where: { tenantId, ...(q.nurseId ? { nurseId: q.nurseId } : {}) }, orderBy: { startsAt: "asc" }, take: 200 });
-    return { items: rows.map((r) => this.view(r)) };
+    const [patients, nurses] = await Promise.all([
+      this.prisma.patient.findMany({ where: { tenantId, id: { in: [...new Set(rows.map((r) => r.patientId))] } }, select: { id: true, firstNameEn: true, lastNameEn: true } }),
+      this.prisma.user.findMany({ where: { tenantId, id: { in: [...new Set(rows.map((r) => r.nurseId))] } }, select: { id: true, displayName: true } }),
+    ]);
+    const pn = new Map(patients.map((x) => [x.id, `${x.firstNameEn} ${x.lastNameEn}`.trim()]));
+    const nn = new Map(nurses.map((x) => [x.id, x.displayName]));
+    return { items: rows.map((r) => ({ ...this.view(r), patientName: pn.get(r.patientId) ?? null, nurseName: nn.get(r.nurseId) ?? null })) };
   }
 }

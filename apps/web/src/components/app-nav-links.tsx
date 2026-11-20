@@ -27,6 +27,7 @@ import { apiGet } from "@/lib/http";
 import { showNavItem } from "@/lib/nav-policy";
 import { canViewRevenue } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
+import { NurseNavLinks } from "@/features/nurse/nurse-nav";
 import { useAuthStore } from "@/stores/auth-store";
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
@@ -50,7 +51,7 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const isPhysician = role === "physician";
   // Home-visit route link: shown when the org's home-visit capability is effective (same cached query EditionBoot uses).
   const hasToken = useAuthStore((s) => Boolean(s.accessToken));
-  const orgCtx = useQuery({ queryKey: ["nurse", "context"], queryFn: () => apiGet<{ features: Record<string, boolean> }>("/api/v1/nurse/context"), enabled: hasToken, staleTime: 5 * 60_000, retry: false });
+  const orgCtx = useQuery({ queryKey: ["nurse", "context"], queryFn: () => apiGet<{ edition?: "CLINIC" | "NURSE"; kind?: "SOLO" | "AGENCY" | null; features: Record<string, boolean> }>("/api/v1/nurse/context"), enabled: hasToken, staleTime: 5 * 60_000, retry: false });
   const homeVisitsOn = orgCtx.data?.features?.["clinic.home_visits"] === true;
   const showRevenue = canViewRevenue(role) && showTab("revenue");
   const showPlatformNav =
@@ -136,6 +137,7 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
           ) : null}
         </>
       ) : null}
+      {orgCtx.data?.edition === "NURSE" && signedIn && !showPlatformNav ? <NurseNavLinks agency={orgCtx.data.kind === "AGENCY"} navClass={navClass} onNavigate={onNavigate} /> : null}
       {showTab("dashboard") ? (
         <NavLink to="/" end className={navClass} onClick={() => onNavigate?.()}>
           <LayoutDashboard className="size-4 shrink-0" />

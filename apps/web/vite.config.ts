@@ -45,6 +45,8 @@ const apiDevProxy = {
   "/api": {
     target: "http://127.0.0.1:3010",
     changeOrigin: true,
+    // KNED: forward the original Host (x-forwarded-host) so nurse.localhost selects the Nurse edition on sign-in surfaces.
+    xfwd: true,
     // Org full-backup downloads can be large; do not cut the proxy mid-stream.
     timeout: 0,
     proxyTimeout: 0,

@@ -24,6 +24,7 @@ import { DevInboxPage } from "@/features/dev/dev-inbox-page";
 import { ClinicalTemplatesRedirect } from "@/features/clinical/clinical-templates-redirect";
 import { EncounterDetailNavGate } from "@/components/encounter-detail-nav-gate";
 import { NavGate } from "@/components/nav-gate";
+import { NurseHomeGate } from "@/features/nurse/nurse-home-gate";
 import { PlatformLayout } from "@/features/platform/platform-layout";
 import { ProfileGate } from "@/features/profile/profile-gate";
 import { DoctorRevenueGate } from "@/features/revenue/doctor-revenue-gate";
@@ -72,6 +73,20 @@ import {
   DataPrivacyPage,
   WaitingRoomPage,
   TodayRoutePage,
+  CarePlansPage,
+  CarePlanDetailPage,
+  VisitRecordPage,
+  MarPage,
+  MarIndexPage,
+  NurseServicesPage,
+  NurseDispatchPage,
+  NurseShiftsPage,
+  NurseSafetyPage,
+  NurseInboxPage,
+  NurseFamilyPage,
+  NurseReportsPage,
+  FamilySummaryPage,
+  NurseOnboardingPage,
 } from "@/lib/lazy-pages";
 
 function defer(Page: LazyExoticComponent<ComponentType>) {
@@ -93,6 +108,8 @@ export const router = createBrowserRouter([
   { path: "/pay/:token", element: <DepositPayPage /> },
   { path: "/b/:slug", element: <PublicBookingPage /> },
   { path: "/rx/:token", element: <PublicRxVerifyPage /> },
+  // KNFAM01 — public family summary (token-gated, clinically minimal).
+  { path: "/f/:token", element: defer(FamilySummaryPage) },
   // Mock-provider dev inbox (development tool; the API answers 404 in production unless DEV_INBOX_ENABLED=1).
   { path: "/dev/inbox", element: <DevInboxPage /> },
   { path: "/invite/:token", element: <AcceptInvitationPage /> },
@@ -114,7 +131,7 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      { index: true, element: <NavGate tab="dashboard">{defer(DashboardPage)}</NavGate> },
+      { index: true, element: <NurseHomeGate><NavGate tab="dashboard">{defer(DashboardPage)}</NavGate></NurseHomeGate> },
       { path: "onboarding", element: <OnboardingPage /> },
       { path: "onboarding/import", element: <ImportWizardPage /> },
       { path: "offline/today", element: <OfflineTodayPage /> },
@@ -164,6 +181,20 @@ export const router = createBrowserRouter([
       { path: "doctor-revenue", element: <DoctorRevenueGate /> },
       { path: "profile", element: <ProfileGate /> },
       { path: "home-visits/today", element: <TodayRoutePage /> },
+      // Kiorly Nurse edition screens (KNCP / KNREC / KNMAR / KNSVC / KNAG / HVSAF / KNFAM / KNRPT). The API enforces scope of practice and flags; nothing here gates safety.
+      { path: "nurse/care-plans", element: defer(CarePlansPage) },
+      { path: "nurse/care-plans/:id", element: defer(CarePlanDetailPage) },
+      { path: "nurse/visits/:appointmentId", element: defer(VisitRecordPage) },
+      { path: "nurse/mar", element: defer(MarIndexPage) },
+      { path: "nurse/mar/:patientId", element: defer(MarPage) },
+      { path: "nurse/services", element: defer(NurseServicesPage) },
+      { path: "nurse/dispatch", element: defer(NurseDispatchPage) },
+      { path: "nurse/shifts", element: defer(NurseShiftsPage) },
+      { path: "nurse/safety", element: defer(NurseSafetyPage) },
+      { path: "nurse/inbox", element: defer(NurseInboxPage) },
+      { path: "nurse/family", element: defer(NurseFamilyPage) },
+      { path: "nurse/reports", element: defer(NurseReportsPage) },
+      { path: "nurse/onboarding", element: defer(NurseOnboardingPage) },
       { path: "privacy", element: defer(DataPrivacyPage) },
       { path: "profile/verification", element: <NavGate tab="profile">{defer(ClinicianVerificationPage)}</NavGate> },
       { path: "hr", element: <NavGate tab="hr">{defer(HrPage)}</NavGate> },

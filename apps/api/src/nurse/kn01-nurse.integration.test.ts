@@ -233,7 +233,7 @@ describe("KN* Kiorly Nurse edition (integration)", () => {
     const sent: { key: string; to: string; vars: Record<string, string>; body: string | undefined }[] = [];
     const wa = { sendTemplateForTenant: async (_t: string, key: string, to: string, vars: Record<string, string>, o?: { renderedBody?: string }) => (sent.push({ key, to, vars, body: o?.renderedBody }), { ok: true }) };
     await prisma.tenant.update({ where: { id: w.tenantId }, data: { whatsAppRemindersEnabled: true } }); // nurse.family_updates depends on whatsapp_reminders
-    const svc = new FamilyUpdateService(p, kit.flags, wa as never);
+    const svc = new FamilyUpdateService(p, kit.flags, wa as never, new AuditService(p));
     const { appt } = await seedVisit(prisma, w, { start: new Date(Date.now() + 5 * 3600_000) });
     await assert.rejects(svc.sendForVisit(w.tenantId, appt.id), /Visit record not found/);
     await prisma.visitRecord.create({ data: { tenantId: w.tenantId, appointmentId: appt.id, patientId: w.patient.id, nurseId: w.clinician.row.id, checklistJson: [{ task: "Injection given", done: true }, { task: "Vitals", done: false }], status: "DRAFT" } });
@@ -243,6 +243,12 @@ describe("KN* Kiorly Nurse edition (integration)", () => {
     const notConsented = await prisma.patient.create({ data: { tenantId: w.tenantId, mrn: `FAM2-${suffix}`, firstNameEn: "Cousin", lastNameEn: "Family", gender: "M", phone: `+2012${suffix.slice(-8)}` } });
     for (const c of [consented, notConsented]) await prisma.patientFamilyLink.create({ data: { tenantId: w.tenantId, fromPatientId: w.patient.id, toPatientId: c.id, relation: "CHILD" } });
     await prisma.messagingConsent.create({ data: { tenantId: w.tenantId, patientId: consented.id, channel: "WHATSAPP", purpose: "FAMILY_UPDATES", granted: true, source: "TEST" } });
+    // consent management used by the Nurse web (explicit, per contact, default off)
+    const contacts = await svc.contactsFor(w.tenantId, w.patient.id);
+    assert.deepEqual(contacts.items.map((c) => [c.patientId, c.consentGranted]).sort(), [[consented.id, true], [notConsented.id, false]].sort());
+    assert.deepEqual(await svc.setConsent(w.tenantId, w.admin.jwt.userId, w.patient.id, notConsented.id, true), { patientId: notConsented.id, consentGranted: true });
+    await svc.setConsent(w.tenantId, w.admin.jwt.userId, w.patient.id, notConsented.id, false);
+    await assert.rejects(svc.setConsent(w.tenantId, w.admin.jwt.userId, w.patient.id, w.clinician.row.id, true), /Family contact not found/);
     const res = await svc.sendForVisit(w.tenantId, appt.id, "https://app.kiorly.test");
     assert.equal(res.sent, 1);
     assert.deepEqual(res.skipped, [{ patientId: notConsented.id, reason: "NO_CONSENT" }]);
@@ -253,7 +259,7 @@ describe("KN* Kiorly Nurse edition (integration)", () => {
     assert.deepEqual(summary.tasksDone, ["Injection given"]);
     assert.ok(!JSON.stringify(summary).match(/vital|medic|address|phone|Patient/i), "summary page is clinically minimal");
     await assert.rejects(svc.publicSummary("bad.token"), /invalid or has expired/);
-    const off = new FamilyUpdateService(p, (await buildKit(prisma, snapshotFor({ off: ["nurse.family_updates"] }))).flags, wa as never);
+    const off = new FamilyUpdateService(p, (await buildKit(prisma, snapshotFor({ off: ["nurse.family_updates"] }))).flags, wa as never, new AuditService(p));
     await assert.rejects(off.sendForVisit(w.tenantId, appt.id), (e: { getResponse: () => { key: string } }) => e.getResponse().key === "nurse.family_updates");
   });
 

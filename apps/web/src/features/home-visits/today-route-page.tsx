@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +11,7 @@ import { apiGet, apiPost } from "@/lib/http";
 type Address = { masked: true; district: string } | { masked: false; district: string; line1?: string; building?: string; floor?: string; flat?: string; landmark?: string };
 type Visit = {
   id: string;
+  appointmentId?: string;
   state: "REQUESTED" | "CONFIRMED" | "ON_MY_WAY" | "ARRIVED" | "FINISHED" | "ABORTED_UNSAFE" | "CANCELLED" | "NO_SHOW";
   plannedStartsAt: string;
   plannedEndsAt: string;
@@ -62,7 +64,10 @@ export function TodayRoutePage() {
   const items = route.data?.items ?? [];
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-4" data-testid="home-today-route">
-      <h1 className="text-xl font-semibold">{t("homeVisits.today")}</h1>
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-xl font-semibold">{t("homeVisits.today")}</h1>
+        <Button asChild size="sm" variant="outline"><Link to="/nurse/safety">{t("nurse.safety.title")}</Link></Button>
+      </div>
       {sos ? (
         <Card className="border-destructive" role="alert" data-testid="sos-panel">
           <CardContent className="space-y-1 p-4">
@@ -98,6 +103,9 @@ export function TodayRoutePage() {
                 {v.state === "CONFIRMED" ? <Button size="sm" disabled={act.isPending} onClick={() => act.mutate({ id: v.id, action: "depart" })}>{t("homeVisits.onMyWay")}</Button> : null}
                 {v.state === "ON_MY_WAY" ? <Button size="sm" disabled={act.isPending} onClick={() => act.mutate({ id: v.id, action: "arrive" })}>{t("homeVisits.arrived")}</Button> : null}
                 {v.state === "ARRIVED" ? <Button size="sm" disabled={act.isPending} onClick={() => act.mutate({ id: v.id, action: "finish" })}>{t("homeVisits.finished")}</Button> : null}
+                {v.appointmentId && (v.state === "ARRIVED" || v.state === "FINISHED") ? (
+                  <Button asChild size="sm" variant="outline" data-testid="open-visit-record"><Link to={`/nurse/visits/${v.appointmentId}`}>{t("nurse.visit.open")}</Link></Button>
+                ) : null}
                 {active ? (
                   <>
                     <Button size="sm" variant="outline" onClick={() => setUnsafeFor(unsafeFor === v.id ? null : v.id)}>{t("homeVisits.leaveUnsafe")}</Button>

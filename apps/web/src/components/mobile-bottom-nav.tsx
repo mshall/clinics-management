@@ -1,4 +1,6 @@
-import { CalendarDays, Stethoscope, UserRound, Sparkles, MoreHorizontal } from "lucide-react";
+import { CalendarDays, Stethoscope, UserRound, Sparkles, MoreHorizontal, MapPinned, ClipboardList, ShieldAlert, Pill } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { apiGet } from "@/lib/http";
 import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
 import { showNavItem } from "@/lib/nav-policy";
@@ -26,9 +28,22 @@ export function MobileBottomNav() {
   const showTab = (key: Parameters<typeof showNavItem>[1]) =>
     showNavItem(role, key, navTabKeys, roleNavTabKeys, employeePrivilegeGrants, allRoles, planEntitlements, planKey);
 
-  if (!role) return null;
+  // Kiorly Nurse edition: field-first bottom bar (Today route, care plans, MAR, safety, more). Same cached query EditionBoot uses.
+  const hasToken = useAuthStore((s) => Boolean(s.accessToken));
+  const ctx = useQuery({ queryKey: ["nurse", "context"], queryFn: () => apiGet<{ edition?: "CLINIC" | "NURSE" }>("/api/v1/nurse/context"), enabled: hasToken, staleTime: 5 * 60_000, retry: false });
 
-  const items: Array<{ to: string; label: string; icon: typeof CalendarDays; show: boolean; end?: boolean }> = [
+  if (!role) return null;
+  const nurse = ctx.data?.edition === "NURSE";
+
+  const items: Array<{ to: string; label: string; icon: typeof CalendarDays; show: boolean; end?: boolean }> = nurse
+    ? [
+        { to: "/home-visits/today", label: t("nurse.nav.today"), icon: MapPinned, show: true },
+        { to: "/nurse/care-plans", label: t("nurse.nav.carePlans"), icon: ClipboardList, show: true },
+        { to: "/nurse/mar", label: t("nurse.nav.mar"), icon: Pill, show: true },
+        { to: "/nurse/safety", label: t("nurse.nav.safety"), icon: ShieldAlert, show: true },
+        { to: "/profile", label: t("nav.mobileMore", t("nav.profile")), icon: MoreHorizontal, show: true },
+      ]
+    : [
     { to: "/", label: t("nav.mobileToday", t("nav.dashboard")), icon: CalendarDays, show: showTab("dashboard"), end: true },
     { to: "/patients", label: t("nav.patients"), icon: UserRound, show: showTab("patients") },
     { to: "/encounters", label: t("nav.encounters"), icon: Stethoscope, show: showTab("encounters") },

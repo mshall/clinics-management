@@ -3,6 +3,7 @@ import { ConflictException, Injectable, NotFoundException } from "@nestjs/common
 import { MessageChannel } from "@prisma/client";
 import { FeatureFlagsService, requireFeature } from "../feature-flags/feature-flags-public";
 import { WhatsAppSendService } from "../messaging/whatsapp-send.service";
+import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
 
 export const FAMILY_UPDATES_CONSENT_PURPOSE = "FAMILY_UPDATES";
@@ -43,6 +44,7 @@ export class FamilyUpdateService {
     private readonly prisma: PrismaService,
     private readonly flags: FeatureFlagsService,
     private readonly whatsapp: WhatsAppSendService,
+    private readonly audit: AuditService,
   ) {}
 
   async sendForVisit(tenantId: string, appointmentId: string, baseUrl = process.env.APP_WEB_URL ?? "http://localhost:5174") {
@@ -65,6 +67,26 @@ export class FamilyUpdateService {
       sent.push(l.toPatient.id);
     }
     return { sent: sent.length, skipped };
+  }
+
+  /** KNFAM01 — family contacts of a patient with the FAMILY_UPDATES WhatsApp consent state (consent is per contact, explicit, default NOT granted). */
+  async contactsFor(tenantId: string, patientId: string) {
+    const links = await this.prisma.patientFamilyLink.findMany({ where: { tenantId, fromPatientId: patientId }, include: { toPatient: { select: { id: true, firstNameEn: true, lastNameEn: true, phone: true } } } });
+    const consents = await this.prisma.messagingConsent.findMany({ where: { tenantId, patientId: { in: links.map((l) => l.toPatient.id) }, channel: MessageChannel.WHATSAPP, purpose: FAMILY_UPDATES_CONSENT_PURPOSE } });
+    const byPatient = new Map(consents.map((c) => [c.patientId, c.granted]));
+    return { items: links.map((l) => ({ linkId: l.id, relation: l.relation, patientId: l.toPatient.id, name: `${l.toPatient.firstNameEn} ${l.toPatient.lastNameEn}`.trim(), phone: l.toPatient.phone, consentGranted: byPatient.get(l.toPatient.id) === true })) };
+  }
+
+  async setConsent(tenantId: string, actorId: string, patientId: string, contactPatientId: string, granted: boolean) {
+    const link = await this.prisma.patientFamilyLink.findFirst({ where: { tenantId, fromPatientId: patientId, toPatientId: contactPatientId } });
+    if (!link) throw new NotFoundException("Family contact not found");
+    await this.prisma.messagingConsent.upsert({
+      where: { patientId_channel_purpose: { patientId: contactPatientId, channel: MessageChannel.WHATSAPP, purpose: FAMILY_UPDATES_CONSENT_PURPOSE } },
+      create: { tenantId, patientId: contactPatientId, channel: MessageChannel.WHATSAPP, purpose: FAMILY_UPDATES_CONSENT_PURPOSE, granted, source: "staff_ui" },
+      update: { granted, source: "staff_ui" },
+    });
+    await this.audit.recordEvent({ tenantId, actorId, clinicId: null, action: "family_updates.consent_updated", resource: "Patient", resourceId: contactPatientId, metadata: { granted } });
+    return { patientId: contactPatientId, consentGranted: granted };
   }
 
   /** Public summary page data: coarse and clinically minimal (nurse first name, time, tasks done). Never vitals, medicines or the address. */

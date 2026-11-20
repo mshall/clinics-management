@@ -54,6 +54,7 @@ export class VisitRecordService {
     return {
       id: r.id,
       appointmentId: r.appointmentId,
+      patientId: r.patientId,
       status: r.status,
       checklist: r.checklistJson,
       assessment: r.assessment,

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { KiorexPassportButton } from "@/features/auth/kiorex-passport";
+import { KiorexPassportButton, useKiorexConfig } from "@/features/auth/kiorex-passport";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,9 @@ export function LoginPage() {
   const [loginMode, setLoginMode] = useState<"email" | "phone">("email");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
+  // KNED: on the Nurse edition (nurse.kiorly.com) "Sign in with Kiorex Passport" is the primary action; the password form stays below it.
+  const kx = useKiorexConfig();
+  const nursePrimary = kx.data?.enabled === true && kx.data.defaultSignIn === "KIOREX_PASSPORT";
 
   useEffect(() => {
     let cancelled = false;
@@ -141,6 +144,12 @@ export function LoginPage() {
             <CardTitle>{t("auth.signIn")}</CardTitle>
           </CardHeader>
           <CardContent>
+            {nursePrimary ? (
+              <div className="mb-4 space-y-2" data-testid="nurse-login-primary">
+                <KiorexPassportButton />
+                <p className="text-center text-xs text-muted-foreground">{t("nurse.login.orEmail")}</p>
+              </div>
+            ) : null}
             <div className="mb-4 flex gap-2">
               <Button type="button" variant={loginMode === "email" ? "default" : "outline"} onClick={() => setLoginMode("email")}>
                 {t("auth.email")}
@@ -149,9 +158,11 @@ export function LoginPage() {
                 {t("auth.phoneLogin")}
               </Button>
             </div>
-            <div className="mb-4">
-              <KiorexPassportButton />
-            </div>
+            {nursePrimary ? null : (
+              <div className="mb-4">
+                <KiorexPassportButton />
+              </div>
+            )}
             {loginMode === "email" ? (
             <form className="space-y-4" onSubmit={(e) => void handleSubmit(e)}>
               {apiReady === false ? (

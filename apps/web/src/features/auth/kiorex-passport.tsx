@@ -19,7 +19,7 @@ type CallbackResult =
   | { status: "LINK_REQUIRED" }
   | { status: "LINKED" };
 
-function useKiorexConfig() {
+export function useKiorexConfig() {
   return useQuery({
     queryKey: ["auth", "kiorex", "config"],
     queryFn: () => apiGet<{ enabled: boolean; edition?: "CLINIC" | "NURSE"; defaultSignIn?: "KIOREX_PASSPORT" | "PASSWORD" }>("/api/v1/auth/kiorex/config"),

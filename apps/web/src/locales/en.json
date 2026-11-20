@@ -4007,5 +4007,549 @@
       "CANCELLED": "Cancelled",
       "NO_SHOW": "No-show"
     }
+  },
+  "nurse": {
+    "common": {
+      "loading": "Loading...",
+      "retry": "Try again",
+      "patient": "Patient",
+      "nurse": "Nurse",
+      "change": "Change",
+      "searchPatient": "Search by name, phone or MRN",
+      "noPatients": "No patients found.",
+      "choose": "Choose...",
+      "cancel": "Cancel",
+      "save": "Save",
+      "add": "Add",
+      "remove": "Remove",
+      "back": "Back",
+      "all": "All",
+      "status": "Status"
+    },
+    "errors": {
+      "generic": "Something went wrong. Please try again.",
+      "FEATURE_DISABLED": "This capability is not available yet.",
+      "SCOPE_NOT_ALLOWED": "This action is outside your scope of practice.",
+      "CONSENT_REQUIRED": "The patient has not consented to share this.",
+      "CLINICIAN_NOT_VERIFIED": "This nurse is not verified yet, so cannot be sent to patients.",
+      "AIDE_NEVER_SENT_ALONE": "Nursing aides are never sent to a home alone.",
+      "NOT_A_CLINICIAN": "This person is not a nurse.",
+      "CLINICIAN_NOT_FOUND": "Nurse not found.",
+      "OUT_OF_COVERAGE": "The address is outside this nurse's coverage zones.",
+      "CLINICIAN_BUSY": "This nurse already has a visit at that time.",
+      "HOME_VISIT_NOT_REASSIGNABLE": "A visit that has already started cannot be reassigned.",
+      "CRITICAL_VALUE_NOT_ESCALATED": "Log the action taken for the critical value before signing.",
+      "VISIT_RECORD_LOCKED": "The visit record is signed and locked.",
+      "CARE_PLAN_ALREADY_ENDED": "This care plan has already ended.",
+      "CARE_PLAN_STATE": "This action is not possible in the care plan's current state.",
+      "VISIT_NOT_SIGNED": "Sign the visit record before sending the family update.",
+      "FIRST_HOME_VISIT_REQUIRES_VERIFIED_PHONE_OR_DEPOSIT": "A first home visit needs a verified phone number or a deposit.",
+      "NURSE_BUSY": "The nurse already has a shift at this time.",
+      "SHIFT_STATE": "This action is not possible in the shift's current state.",
+      "CARE_PLAN_REQUEST_DECIDED": "This request has already been decided."
+    },
+    "gate": {
+      "title": "Not available yet",
+      "generic": "This capability is switched off or waiting for launch approval. Everything already booked keeps working, and safety features are never switched off.",
+      "nurse_care_plans": "New care plans are waiting for launch approval (clinical sign-off). Existing plans and their visits keep working.",
+      "nurse_mar": "The structured medication record is waiting for launch approval. Until then, write medication given as free text in the visit record. Doctor's-order safety checks always apply once it opens.",
+      "nurse_family_updates": "Family updates are switched off for this practice (they also need WhatsApp reminders).",
+      "nurse_private_duty_shifts": "Private-duty shifts are switched off or not included in your plan.",
+      "clinic_home_dispatch": "Smart dispatch suggestions are switched off. You can still assign visits manually."
+    },
+    "nav": {
+      "today": "Today",
+      "carePlans": "Care plans",
+      "inbox": "Kiorex requests",
+      "mar": "Medication (MAR)",
+      "dispatch": "Dispatch",
+      "shifts": "Shifts",
+      "services": "Services & prices",
+      "family": "Family updates",
+      "reports": "Reports",
+      "safety": "Safety",
+      "onboarding": "Set-up"
+    },
+    "login": {
+      "orEmail": "or sign in with email or phone"
+    },
+    "address": {
+      "title": "Visit address",
+      "district": "District",
+      "districtHint": "e.g. nasr-city",
+      "line1": "Street",
+      "building": "Building",
+      "floor": "Floor",
+      "flat": "Flat",
+      "landmark": "Landmark"
+    },
+    "carePlans": {
+      "title": "Care plans",
+      "subtitle": "Repeated home visits for one patient: services x frequency x duration.",
+      "new": "New care plan",
+      "create": "Create plan and book visits",
+      "created": "Care plan created: {{count}} visits booked.",
+      "unscheduled": "{{count}} wanted visits could not be booked (no free slot).",
+      "empty": "No care plans yet.",
+      "starts": "Starts {{date}}",
+      "remaining": "{{count}} of {{total}} visits remaining",
+      "status": {
+        "ACTIVE": "Active",
+        "PAUSED": "Paused",
+        "ENDED": "Ended"
+      },
+      "planTitle": "Plan title",
+      "startDate": "Start date",
+      "services": "Services",
+      "service": "Service",
+      "everyDays": "Every (days)",
+      "durationDays": "For (days)",
+      "timeOfDay": "Time",
+      "addService": "Add another service",
+      "addressConfirmed": "I confirmed the address with the patient or family",
+      "pause": "Pause",
+      "resume": "Resume",
+      "extend": "Extend",
+      "end": "End plan",
+      "paused": "Plan paused. Future visits were released.",
+      "done": {
+        "resume": "Plan resumed.",
+        "extend": "Plan extended.",
+        "end": "Plan ended."
+      },
+      "extraDays": "Extra days",
+      "endReason": "Reason",
+      "endReasons": {
+        "COMPLETED": "Completed",
+        "CANCELLED_BY_PATIENT": "Cancelled by the patient",
+        "CANCELLED_BY_PROVIDER": "Cancelled by the nurse or agency",
+        "EXPIRED": "Expired"
+      },
+      "dischargeNote": "Discharge note",
+      "dischargeHint": "Required. What was done, the patient's condition and any follow-up advice.",
+      "shareDischarge": "Share discharge summary with the patient",
+      "shared": "Discharge summary shared.",
+      "visits": "Visits",
+      "doctorOrders": "Doctor's orders and MAR"
+    },
+    "visit": {
+      "title": "Visit record",
+      "open": "Visit record",
+      "backToToday": "Back to today",
+      "statusDraft": "Draft",
+      "statusSigned": "Signed {{at}}",
+      "openMar": "Medication (MAR)",
+      "checklist": "Tasks done",
+      "newTask": "New task",
+      "tasks": {
+        "injection": "Injection given",
+        "dressing": "Wound dressing changed",
+        "vitals": "Vitals taken",
+        "catheter": "Catheter care",
+        "education": "Patient / family education"
+      },
+      "notes": "Nursing notes",
+      "assessment": "Assessment",
+      "intervention": "Intervention",
+      "evaluation": "Evaluation",
+      "freeText": "Other notes",
+      "medicationFreeText": "Medication given (free text)",
+      "medicationFreeTextHint": "The structured medication record is not open yet. Write medicine, dose, route and time.",
+      "saved": "Visit record saved.",
+      "sign": "Sign and lock",
+      "signed": "Visit record signed and locked.",
+      "signBlocked": "A critical value has no action logged. Log it above before signing.",
+      "afterSign": "After the visit",
+      "afterSignHelp": "Nurses never prescribe. The record is locked; finish the visit from the Today screen.",
+      "sendFamily": "Send family update (WhatsApp)",
+      "familySent": "Family update: {{sent}} sent, {{skipped}} skipped (no consent)."
+    },
+    "vitals": {
+      "title": "Vitals",
+      "record": "Record vitals",
+      "recorded": "Vitals recorded.",
+      "history": "Vitals history",
+      "placeholderRanges": "Normal ranges are a placeholder until the medical officer signs them off.",
+      "keys": {
+        "systolic": "Systolic (mmHg)",
+        "diastolic": "Diastolic (mmHg)",
+        "pulse": "Pulse (bpm)",
+        "temperatureC": "Temp (C)",
+        "spo2": "SpO2 (%)",
+        "respiratoryRate": "Resp. rate",
+        "glucoseMgDl": "Glucose (mg/dL)",
+        "painScore": "Pain (0-10)"
+      },
+      "flags": {
+        "LOW": "low",
+        "HIGH": "high",
+        "CRITICAL_LOW": "critically low",
+        "CRITICAL_HIGH": "critically high"
+      }
+    },
+    "escalation": {
+      "title": "Critical value",
+      "call123": "Call 123 (ambulance)",
+      "action": "Action taken",
+      "note": "Note",
+      "log": "Log action",
+      "logged": "Action logged.",
+      "pending": "action not logged",
+      "actions": {
+        "CALLED_DOCTOR": "Called the doctor",
+        "CALLED_123": "Called 123",
+        "MONITORING": "Monitoring, will recheck",
+        "OTHER": "Other action"
+      }
+    },
+    "mar": {
+      "title": "Medication record (MAR)",
+      "subtitle": "Choose a patient to open their doctor's orders and medication record.",
+      "rule": "No order, no administration. Every entry is checked against an active doctor's order, allergies and recent doses.",
+      "gateOffHelp": "In the meantime record medicine given as free text in the visit record. You cannot give a medicine without a doctor's order.",
+      "allergies": "Recorded allergies",
+      "noAllergies": "No allergies recorded. Ask the patient before giving anything.",
+      "orders": "Doctor's orders",
+      "noOrders": "No doctor's order on file. Add one (photo of the prescription) before giving any medicine.",
+      "noActiveOrder": "No active, unexpired order. You cannot record an administration.",
+      "orderStatus": {
+        "ACTIVE": "Active",
+        "EXPIRED": "Expired",
+        "REVOKED": "Revoked"
+      },
+      "controlled": "Controlled",
+      "source": {
+        "PHOTO_UPLOAD": "Photo",
+        "SHARED_KIORLY": "Shared by doctor"
+      },
+      "expires": "Valid until {{date}}",
+      "administer": "Give",
+      "revoke": "Revoke order",
+      "revoked": "Order revoked.",
+      "addOrder": "Add doctor's order",
+      "backToVisit": "Back to visit",
+      "recordTitle": "Record medicine given",
+      "needOrder": "Add an active doctor's order first.",
+      "order": "Doctor's order",
+      "medicine": "Medicine",
+      "dose": "Dose",
+      "route": "Route",
+      "witness": "Witness",
+      "witnessHint": "Controlled medicines need a witness.",
+      "record": "Record administration",
+      "recorded": "Administration recorded.",
+      "given": "Given so far",
+      "noneGiven": "Nothing given yet.",
+      "blocked": "Blocked",
+      "nothingRecorded": "Nothing was recorded.",
+      "block": {
+        "DOCTOR_ORDER_REQUIRED": {
+          "title": "no doctor's order",
+          "help": "Medicines can only be given against a doctor's order. Add or choose an order first."
+        },
+        "ORDER_PATIENT_MISMATCH": {
+          "title": "order belongs to another patient",
+          "help": "Use an order written for this patient."
+        },
+        "ORDER_REVOKED": {
+          "title": "order revoked",
+          "help": "The doctor's order is no longer active. Ask the doctor for a new one."
+        },
+        "ORDER_EXPIRED": {
+          "title": "order expired",
+          "help": "The order has passed its expiry date. Ask the doctor to renew it."
+        },
+        "MEDICINE_NOT_IN_ORDER": {
+          "title": "medicine is not on the order",
+          "help": "Only medicines listed on the doctor's order can be given."
+        },
+        "ALLERGY_CONFLICT": {
+          "title": "allergy conflict",
+          "help": "A recorded allergy matches this medicine. Do not give it; contact the doctor."
+        },
+        "DUPLICATE_ADMINISTRATION": {
+          "title": "possible duplicate dose",
+          "help": "This medicine was already given within the minimum interval. Wait, or contact the doctor."
+        },
+        "CONTROLLED_REQUIRES_CONTROLLED_ORDER": {
+          "title": "controlled medicine needs a controlled order",
+          "help": "Controlled medicines are given only against an order marked controlled."
+        },
+        "CONTROLLED_REQUIRES_WITNESS": {
+          "title": "witness required",
+          "help": "Enter the name of the witness for this controlled medicine."
+        }
+      },
+      "photoHelp": "Enter what the prescription says. You confirm the prescriber, date and expiry; the photo itself is kept in the patient's documents.",
+      "prescriber": "Prescriber (doctor)",
+      "orderedOn": "Date on the order",
+      "expiresOnLabel": "Valid until",
+      "minInterval": "Min. interval (min)",
+      "addLine": "Add medicine line",
+      "controlledOrder": "This is a controlled-medicine order",
+      "confirmOrder": "I confirm the prescriber, date and expiry match the document",
+      "orderSaved": "Doctor's order saved."
+    },
+    "services": {
+      "title": "Services and prices",
+      "subtitle": "Your home-visit services. Set your own prices.",
+      "proposedNote": "Starting prices are placeholders, not a published tariff. Set the prices you charge. Plan prices below are proposed and not final.",
+      "empty": "No home-visit services yet.",
+      "meta": "{{minutes}} min, travel buffers {{before}}/{{after}} min",
+      "price": "Visit price",
+      "surcharge": "Home surcharge",
+      "total": "Patient pays {{total}}",
+      "saved": "Price saved.",
+      "plansTitle": "Plans",
+      "plansNote": "Proposed prices, not published.",
+      "proposed": "Proposed",
+      "custom": "Custom",
+      "perMonth": "EGP {{price}} / month",
+      "annual": "EGP {{price}} / month billed annually",
+      "safetyAll": "Home-visit safety is included in every plan."
+    },
+    "dispatch": {
+      "title": "Dispatch",
+      "subtitle": "Assign visits to verified nurses, manage the roster and shifts.",
+      "visits": "Visits",
+      "roster": "Roster",
+      "shifts": "Shifts",
+      "filter": {
+        "all": "All",
+        "unassigned": "Unassigned"
+      },
+      "noVisits": "No upcoming visits to dispatch.",
+      "unassigned": "Unassigned",
+      "assignedTo": "Assigned to {{name}}",
+      "assign": "Assign",
+      "reassign": "Reassign",
+      "confirmAssign": "Confirm assignment",
+      "assigned": "Visit assigned.",
+      "suggested": "Suggested",
+      "reasons": {
+        "IN_ZONE": "in zone",
+        "CONTINUITY": "knows the patient"
+      },
+      "notDispatchable": "Cannot be assigned",
+      "blockReason": {
+        "CLINICIAN_NOT_VERIFIED": "not verified",
+        "AIDE_NEVER_SENT_ALONE": "aide: never sent alone",
+        "NOT_A_CLINICIAN": "not a nurse",
+        "CLINICIAN_NOT_FOUND": "not found"
+      },
+      "noRoster": "No nurses or aides in the roster yet.",
+      "kind": {
+        "NURSE": "Nurse",
+        "AIDE": "Aide"
+      },
+      "dispatchable": "Can be dispatched",
+      "manage": "Manage",
+      "skills": "Skills",
+      "languages": "Languages",
+      "payPerVisit": "Pay per visit",
+      "payPerHour": "Pay per shift hour",
+      "rosterSaved": "Roster saved.",
+      "payStatement": "Pay statement (last 30 days)",
+      "payLine": "{{visits}} visits, {{hours}} shift hours: {{total}}",
+      "cashOwed": "Cash collected at homes, owed to the agency: {{amount}}",
+      "noRates": "Pay rates are not set yet.",
+      "zonesFor": "Coverage zones: {{name}}",
+      "availabilityFor": "Availability: {{name}}"
+    },
+    "shifts": {
+      "title": "Private-duty shifts",
+      "subtitle": "8, 12 or 24 hour shifts at a patient's home, with check-in and handover.",
+      "new": "Book a shift",
+      "book": "Book",
+      "booked": "Shift booked.",
+      "empty": "No shifts yet.",
+      "hours": "{{count}} h",
+      "starts": "Starts",
+      "duration": "Duration",
+      "status": {
+        "BOOKED": "Booked",
+        "IN_PROGRESS": "In progress",
+        "COMPLETED": "Completed",
+        "CANCELLED": "Cancelled"
+      },
+      "checkIn": "Check in",
+      "checkedIn": "Checked in.",
+      "checkOut": "Check out",
+      "checkedOut": "Checked out. Handover saved.",
+      "handover": "Handover note",
+      "handoverHint": "What the next nurse needs to know.",
+      "handoverTo": "Hand over to"
+    },
+    "safety": {
+      "title": "Safety",
+      "subtitle": "Check-in timer, SOS and leaving an unsafe visit. Always available.",
+      "emergency": "Emergency numbers",
+      "ambulance": "Ambulance",
+      "police": "Police",
+      "timerTitle": "Check-in timer",
+      "noActive": "No visit in progress. SOS and the check-in timer appear when you are on your way or have arrived.",
+      "phase": {
+        "before": "Check-in prompt in {{time}}",
+        "grace": "Check-in prompt in {{time}}",
+        "prompt": "Tap I'm safe within {{time}}",
+        "alert": "No answer: your safety contact is being alerted"
+      },
+      "timerHelp": "30 minutes after the planned end you are asked if you are safe. With no answer for {{alert}} minutes your safety contact is alerted.",
+      "imSafe": "I'm safe",
+      "answered": "Thanks, check-in recorded.",
+      "abortCategory": "What best describes it?",
+      "categories": {
+        "THREAT_OR_VIOLENCE": "Threat or violence",
+        "UNSAFE_ENVIRONMENT": "Unsafe environment",
+        "PATIENT_IMPAIRED_OR_AGGRESSIVE": "Patient or others impaired or aggressive",
+        "OTHER": "Other"
+      },
+      "abortDone": "You left the visit safely. It is not a no-show and carries no penalty. Your safety contact was alerted.",
+      "contactTitle": "Safety contact",
+      "contactSet": "Alerts go to {{name}}.",
+      "contactMissing": "No safety contact is set. Add one: without it, safety alerts have nowhere to go.",
+      "contactName": "Contact name",
+      "contactPhone": "Contact phone",
+      "contactSaved": "Safety contact saved.",
+      "alertsTitle": "Safety alerts",
+      "noAlerts": "No safety alerts.",
+      "alertKind": {
+        "NO_ANSWER": "No answer to check-in",
+        "SOS": "SOS",
+        "UNSAFE_ABORT": "Left visit: unsafe"
+      },
+      "ack": "Acknowledge",
+      "resolve": "Resolve"
+    },
+    "inbox": {
+      "title": "Kiorex requests",
+      "subtitle": "Home bookings and care-plan requests that came through Kiorex.",
+      "bookings": "Home bookings",
+      "noBookings": "No upcoming Kiorex home bookings.",
+      "dispatch": "Dispatch",
+      "planRequests": "Care-plan requests",
+      "noPlanRequests": "No care-plan requests.",
+      "status": {
+        "RECEIVED": "New",
+        "ACCEPTED": "Accepted",
+        "DECLINED": "Declined"
+      },
+      "planMeta": "District: {{district}} · Preferred start: {{date}}",
+      "accept": "Accept and plan visits",
+      "accepted": "Request accepted. The care plan was created.",
+      "decline": "Decline",
+      "declineReason": "Reason (optional)",
+      "declined": "Request declined.",
+      "openPlan": "Open care plan"
+    },
+    "family": {
+      "title": "Family updates",
+      "subtitle": "After a signed visit, consenting family contacts get a short WhatsApp with a link.",
+      "privacy": "The message contains only a link: no names, no clinical details. The summary page shows the nurse's first name, the date and the tasks done. Contacts must consent first.",
+      "noContacts": "No family contacts linked to this patient.",
+      "consent": "Agrees to WhatsApp visit updates",
+      "consentSaved": "Consent saved.",
+      "addHelp": "Add family contacts on the patient's page.",
+      "openPatient": "Open patient",
+      "mock": "WhatsApp is simulated for now: messages are stored in the dev inbox.",
+      "devInbox": "Open dev inbox",
+      "summaryTitle": "Home visit summary",
+      "summaryInvalid": "This link is invalid or has expired.",
+      "completed": "Visit completed",
+      "summaryLine": "{{nurse}} visited on {{date}}.",
+      "summaryFooter": "For questions, contact the nurse or agency directly."
+    },
+    "reports": {
+      "title": "Reports",
+      "subtitle": "Your activity for a period. Totals only: no patient names or addresses.",
+      "from": "From",
+      "to": "To",
+      "invalidRange": "The end date must be after the start date.",
+      "empty": "No visits in this period.",
+      "minutes": "{{count}} min",
+      "tiles": {
+        "visitsDone": "Visits done",
+        "hours": "Hours worked",
+        "revenue": "Revenue",
+        "surcharge": "Home surcharge revenue",
+        "travel": "Travel time",
+        "planCompletion": "Care-plan completion",
+        "missed": "Missed-visit rate",
+        "alerts": "Safety alerts"
+      },
+      "aggregatesOnly": "Numbers are aggregates for the chosen period."
+    },
+    "onboarding": {
+      "title": "Set up your practice",
+      "kind": {
+        "SOLO": "Solo nurse",
+        "AGENCY": "Nursing agency"
+      },
+      "progress": "{{done}} of {{total}} steps done",
+      "complete": "All set. You are ready for visits.",
+      "done": "Done",
+      "todo": "To do",
+      "evidence": "Evidence needed",
+      "evidenceItems": {
+        "id_selfie_match": "ID and selfie match",
+        "criminal_record_certificate": "Criminal-record certificate"
+      },
+      "openVerification": "Open verification",
+      "openServices": "Set services and prices",
+      "openSafety": "Set safety contact",
+      "steps": {
+        "profession_verification": {
+          "title": "Verify your nursing licence",
+          "help": "Needed before you can be sent to patients or listed on Kiorex."
+        },
+        "coverage_zones": {
+          "title": "Choose your coverage zones",
+          "help": "The districts you will travel to."
+        },
+        "services_offered": {
+          "title": "Pick the services you offer",
+          "help": "Injections, dressings, infusions and more."
+        },
+        "prices": {
+          "title": "Set your prices",
+          "help": "Every service needs a price above zero."
+        },
+        "availability": {
+          "title": "Set your weekly availability",
+          "help": "Patients can only book inside these hours."
+        },
+        "safety_contact": {
+          "title": "Add a safety contact",
+          "help": "Someone who is alerted if you do not check in or press SOS."
+        }
+      },
+      "kiorexTitle": "Kiorex listing",
+      "kiorexSolo": "Solo nurses are listed on Kiorex only after launch approval and checked ID evidence. The software works fully without a listing.",
+      "kiorexAgency": "Agencies are listed on Kiorex; the agency assigns the nurse for each booking.",
+      "listingPaused": "Individual listing is paused for now. Your practice keeps working."
+    },
+    "availability": {
+      "title": "Weekly availability",
+      "saved": "Availability saved.",
+      "from": "From",
+      "to": "To",
+      "invalid": "End time must be after start time.",
+      "days": {
+        "0": "Sunday",
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday"
+      }
+    },
+    "zones": {
+      "title": "Coverage zones",
+      "districts": "Districts",
+      "hint": "Comma separated, e.g. nasr-city, heliopolis",
+      "cap": "Max visits per day (optional)",
+      "saved": "Zones saved."
+    }
   }
 }

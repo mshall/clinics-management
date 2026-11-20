@@ -135,3 +135,18 @@ export const PlatformKiorexRatesTab = lazyNamed(
   "PlatformKiorexRatesTab",
 );
 export const TodayRoutePage = lazyNamed(() => import("@/features/home-visits/today-route-page"), "TodayRoutePage");
+
+export const CarePlansPage = lazyNamed(() => import("@/features/nurse/care-plans-page"), "CarePlansPage");
+export const CarePlanDetailPage = lazyNamed(() => import("@/features/nurse/care-plan-detail-page"), "CarePlanDetailPage");
+export const VisitRecordPage = lazyNamed(() => import("@/features/nurse/visit-record-page"), "VisitRecordPage");
+export const MarPage = lazyNamed(() => import("@/features/nurse/mar-page"), "MarPage");
+export const MarIndexPage = lazyNamed(() => import("@/features/nurse/mar-page"), "MarIndexPage");
+export const NurseServicesPage = lazyNamed(() => import("@/features/nurse/services-page"), "ServicesPage");
+export const NurseDispatchPage = lazyNamed(() => import("@/features/nurse/dispatch-page"), "DispatchPage");
+export const NurseShiftsPage = lazyNamed(() => import("@/features/nurse/dispatch-page"), "ShiftsPage");
+export const NurseSafetyPage = lazyNamed(() => import("@/features/nurse/safety-page"), "SafetyPage");
+export const NurseInboxPage = lazyNamed(() => import("@/features/nurse/requests-inbox-page"), "RequestsInboxPage");
+export const NurseFamilyPage = lazyNamed(() => import("@/features/nurse/family-reports-pages"), "FamilyPage");
+export const NurseReportsPage = lazyNamed(() => import("@/features/nurse/family-reports-pages"), "NurseReportsPage");
+export const FamilySummaryPage = lazyNamed(() => import("@/features/nurse/family-reports-pages"), "FamilySummaryPage");
+export const NurseOnboardingPage = lazyNamed(() => import("@/features/nurse/onboarding-page"), "NurseOnboardingPage");
