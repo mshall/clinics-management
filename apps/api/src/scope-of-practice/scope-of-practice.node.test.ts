@@ -224,3 +224,22 @@ describe("ADR-025 scope of practice is never a flag", () => {
     }
   });
 });
+
+import { templateCapabilityForSpecialty } from "./scope-of-practice.service";
+import { scopeAllows as scopeAllowsT, EG_PROFESSION_PACK as EG_PACK_T } from "./profession-pack";
+
+describe("PRSOP02 template filtering by profession", () => {
+  it("maps template specialties to documentation families", () => {
+    assert.equal(templateCapabilityForSpecialty("DENTISTRY"), "encounter.template.dental_chart");
+    assert.equal(templateCapabilityForSpecialty("PHYSIO_THERAPY"), "encounter.template.physio");
+    assert.equal(templateCapabilityForSpecialty("CARDIOLOGY"), "encounter.template.soap");
+    assert.equal(templateCapabilityForSpecialty("CUSTOM"), "encounter.template.soap");
+  });
+  it("physiotherapists are offered physio templates only; physicians the SOAP families; dentists the dental chart", () => {
+    const specs = ["PHYSIO_THERAPY", "DENTISTRY", "CARDIOLOGY", "CUSTOM"];
+    const allowed = (p: "PHYSIOTHERAPIST" | "PHYSICIAN" | "DENTIST") => specs.filter((s) => scopeAllowsT(EG_PACK_T, p, templateCapabilityForSpecialty(s)));
+    assert.deepEqual(allowed("PHYSIOTHERAPIST"), ["PHYSIO_THERAPY"]);
+    assert.deepEqual(allowed("PHYSICIAN"), ["CARDIOLOGY", "CUSTOM"]);
+    assert.deepEqual(allowed("DENTIST"), ["DENTISTRY"]);
+  });
+});

@@ -63,5 +63,5 @@ an overdue record to `EXPIRED` (reason `LICENCE_EXPIRED` or `INTERVAL_ELAPSED`),
 ## Follow-ups (not in this change)
 
 - Contract migration: make `User.profession` NOT NULL for clinician roles after one release (expand-contract).
-- Template enforcement (`encounter.template.*`) is in the matrix and `/scope-of-practice/me` but the template list is not yet filtered server-side.
+- Template enforcement (`encounter.template.*`): `GET /clinical/form-templates` is filtered server-side by the clinician's profession (`ScopeOfPracticeService.filterTemplatesForUser`: DENTISTRY -> dental_chart, PHYSIO_THERAPY -> physio, everything else SOAP; users without a profession are unfiltered). Unit tests in `scope-of-practice.node.test.ts`.
 - Tests: `scope-of-practice.node.test.ts`, `profession-verification.node.test.ts`, `profession-prompt.node.test.ts`, `prsop-prver.integration.test.ts`, `prsop-scope-contract.integration.test.ts`.

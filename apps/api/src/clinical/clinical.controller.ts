@@ -23,7 +23,7 @@ import { RxSafetyCheckService } from "./rx-safety-check.service";
 import { DrugCatalogService } from "./drug-catalog.service";
 import { ClinicalOrdersService } from "./clinical-orders.service";
 import { SpecialtyPacksService } from "./specialty-packs.service";
-import { RequiresScope, ScopeGuard } from "../scope-of-practice/scope-of-practice-public";
+import { RequiresScope, ScopeGuard, ScopeOfPracticeService } from "../scope-of-practice/scope-of-practice-public";
 
 @ApiTags("clinical")
 @ApiBearerAuth("bearer")
@@ -39,6 +39,7 @@ export class ClinicalController {
     private readonly orders: ClinicalOrdersService,
     private readonly packs: SpecialtyPacksService,
     @Optional() private readonly flags?: FeatureFlagsService,
+    @Optional() private readonly scope?: ScopeOfPracticeService,
   ) {}
 
   @Get("form-templates")
@@ -48,7 +49,9 @@ export class ClinicalController {
     @Query("clinicId") clinicId?: string,
   ) {
     const tenantId = requireTenantId(user);
-    const rows = await this.clinical.listTemplates(tenantId, user, specialty, clinicId);
+    const allRows = await this.clinical.listTemplates(tenantId, user, specialty, clinicId);
+    // PRSOP02: only the templates the clinician's profession may document with (physio / nursing / dental / SOAP families)
+    const rows = this.scope ? await this.scope.filterTemplatesForUser(user.userId, allRows) : allRows;
     // clinic.specialty_templates.<code> (launch-locked): built-in launch-specialty templates are hidden from new
     // encounters ONLY when a Kiorex snapshot exists AND marks them gate-unsatisfied (or switched OFF). No snapshot
     // (dev / fresh deploy) => they show. Custom and already-used templates are never hidden.

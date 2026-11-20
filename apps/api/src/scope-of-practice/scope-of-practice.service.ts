@@ -20,6 +20,13 @@ export function effectiveProfession(row: ScopeUserRow): Profession | null {
   return null;
 }
 
+/** PRSOP: the documentation template family a form template belongs to (by its specialty); custom and general templates are SOAP. */
+export function templateCapabilityForSpecialty(specialty: string | null | undefined): ScopeCapability {
+  if (specialty === "DENTISTRY") return "encounter.template.dental_chart";
+  if (specialty === "PHYSIO_THERAPY") return "encounter.template.physio";
+  return "encounter.template.soap";
+}
+
 @Injectable()
 export class ScopeOfPracticeService {
   constructor(private readonly prisma: PrismaService) {}
@@ -45,6 +52,18 @@ export class ScopeOfPracticeService {
     if (!scopeAllows(ctx.pack, ctx.profession, capability)) {
       throw new ScopeNotAllowedException(capability, ctx.profession);
     }
+  }
+
+  /**
+   * PRSOP02 server-side template filtering: a clinician is offered only the encounter templates their profession's scope allows
+   * (a physiotherapist never sees the physician SOAP or dental-chart templates, and so on). Users without a profession (legacy / owner-only
+   * accounts) are unfiltered. Safety control (ADR-025): never flag-gated.
+   */
+  async filterTemplatesForUser<T extends { specialty: string | null }>(userId: string, rows: T[]): Promise<T[]> {
+    const ctx = await this.resolveContext(userId);
+    if (!ctx || ctx.profession == null) return rows;
+    const { profession, pack } = ctx;
+    return rows.filter((r) => scopeAllows(pack, profession, templateCapabilityForSpecialty(r.specialty)));
   }
 
   async describeForUser(userId: string) {
