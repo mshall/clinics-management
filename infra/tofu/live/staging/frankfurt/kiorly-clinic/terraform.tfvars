@@ -75,3 +75,5 @@ scheduled_jobs = {
     enabled  = false
   }
 }
+
+enable_demo_seed = true # Q10: staging demo data (non-production only; seeded by hand via scripts/seed-staging.sh)

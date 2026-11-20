@@ -11,7 +11,7 @@ locals {
 
   seed_enabled = var.enable_seed_lambda && var.env != "prod"
   has_jobs     = length(var.scheduled_jobs) > 0
-  use_vpc      = var.enable_database || var.enable_seed_lambda || var.enable_opensearch || var.enable_redis
+  use_vpc      = var.enable_database || var.enable_seed_lambda || var.enable_demo_seed || var.enable_opensearch || var.enable_redis
   has_domain   = var.domain != "" && var.enable_cdn
   need_zone    = local.has_domain || (var.enable_email && var.email_domain != "")
 
@@ -241,7 +241,7 @@ module "container_service" {
   connector_subnet_ids         = local.use_vpc ? module.network[0].public_subnet_ids : []
   connector_security_group_ids = local.use_vpc ? [module.network[0].connector_security_group_id] : []
   observability_enabled        = var.observability_enabled
-  extra_ecr_repositories       = local.seed_enabled ? ["${local.name}-seed"] : []
+  extra_ecr_repositories       = local.seed_enabled || local.demo_seed_enabled ? ["${local.name}-seed"] : []
   force_delete_repository      = var.env != "prod"
   tags                         = local.tags
 }
@@ -308,7 +308,7 @@ module "observability" {
   rds_identifier           = var.enable_database ? module.database[0].identifier : null
   rds_allocated_storage_gb = var.enable_database ? module.database[0].allocated_storage_gb : 20
   rds_instance_class       = var.db.instance_class
-  lambda_function_names    = local.seed_enabled ? ["${local.name}-db-seed"] : []
+  lambda_function_names    = concat(local.seed_enabled ? ["${local.name}-db-seed"] : [], local.demo_seed_enabled ? ["${local.name}-demo-seed"] : [])
   log_retention_days       = var.log_retention_days
   budget_usd               = var.budget_usd
   tags                     = local.tags

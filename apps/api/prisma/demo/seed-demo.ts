@@ -5,7 +5,7 @@
  *   npm run db:seed:demo -w api -- --reset   first deletes ONLY the three demo tenants (+ their rows), then re-creates
  *                                            with dates re-anchored to "today"
  *
- * Never touches non-demo tenants. Refuses to run in production unless ALLOW_DEMO_SEED=true.
+ * Never touches non-demo tenants. Refuses unless DEMO_SEED_ALLOWED=true and the environment is non-production (src/common/demo-seed-guard.ts). Compiled: `npm run build:seed -w api && node dist-seed/prisma/demo/seed-demo.js`.
  * No tax-authority anything: VAT is a plain configurable % line on invoices.
  * Names, phones (+20100000xxxx), e-mails (@demo.kiorex.test) are fictional.
  */
@@ -14,7 +14,7 @@ import * as bcrypt from "bcryptjs";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { isDemoSeedBlockedInProduction } from "../../src/common/seed-demo-guard";
+import { assertDemoSeedAllowed } from "../../src/common/demo-seed-guard";
 import { FIRST_F, FIRST_M, LAST, PERSONAS, TENANTS, type DocSpec } from "./demo-data";
 import { NURSE_DEMO_TENANT_NAMES } from "../nurse-demo.seed";
 import { seedRev23 } from "./seed-rev23";
@@ -59,7 +59,7 @@ async function resetDemo(tenantIds: string[]) {
 }
 
 async function main() {
-  if (isDemoSeedBlockedInProduction()) throw new Error("demo seed blocked in production");
+  assertDemoSeedAllowed("Kiorly Clinic (demo tenants na/df/ss + Nurse edition)");
   const market = await prisma.market.findFirst({ where: { code: "EG" } });
   if (!market) throw new Error("EG market missing: run `npm run db:seed -w api` first");
   const plans = Object.fromEntries((await prisma.plan.findMany()).map((p) => [p.key, p]));

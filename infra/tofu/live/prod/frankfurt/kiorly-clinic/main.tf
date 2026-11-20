@@ -79,6 +79,8 @@ module "kiorly_clinic" {
   enable_uploads       = var.enable_uploads
   enable_cdn           = var.enable_cdn
   enable_seed_lambda   = var.enable_seed_lambda
+  enable_demo_seed     = var.enable_demo_seed
+  demo_seed_env        = var.demo_seed_env
   enable_email         = var.enable_email
   email_domain         = var.email_domain
   dmarc_report_address = var.dmarc_report_address

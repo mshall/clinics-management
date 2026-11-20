@@ -29,3 +29,11 @@ Details: `infra/tofu/README.md` section 6. App-side nurse host handling, OIDC re
 - Production account id (HB05), domains/registrar delegation + DNSSEC DS (HB08), on-call emails/webhooks, budget, OpenAI secret name, SES production access (NH-016).
 - HB07 outbound path from App Runner VPC egress (NAT or egress proxy) to be verified in staging.
 - `tflint` not run locally (not installed); `trivy` runs in CI.
+
+## Deployment checklist (staging first; a human runs every apply)
+1. Platform admin: bootstrap (T1), relax the SCP denies, confirm the staging account id (599243104052).
+2. `tofu fmt -check -recursive && tofu init -backend=false && tofu validate` in every live directory; `tofu test` in `infra/tofu/modules/product-stack` (demo-seed prod guard).
+3. Phase 1 apply (`-target=...container_service.aws_ecr_repository.this`), push the API image **and the seed image** (`apps/api/Dockerfile.seed`, tag = git sha) for each product, then the full apply (staging).
+4. Smoke: health endpoints, Passport sign-in, one booking against the staging stacks (mock providers).
+5. **Seed the demo data (staging only, optional):** `scripts/seed-staging.sh --dry-run`, then `scripts/seed-staging.sh --yes` from the workspace root: Passport Cognito users, Kiorly Clinic, Pharmacy, Lab, Kiorex provider sync, Kiorex. `enable_demo_seed` is true only in staging tfvars; the prod plan fails if it is ever true; the compiled seeds refuse unless `DEMO_SEED_ALLOWED=true` and `KIORLY_ENV` is non-production. Verify HB07 (egress for the provider sync) first. Logins: `TEST_DATA.md`.
+6. Golden flows + load test (T3), then founder sign-off before any production step (T4).

@@ -23,13 +23,16 @@ import { encryptVisitAddress } from "../../src/home-visits/address-crypto";
 import { NURSE_DEMO_PASSWORD, NURSE_DEMO_TENANT_NAMES, ensureNurseDemoTenants } from "../nurse-demo.seed";
 import { NURSE_SERVICE_CATALOGUE } from "../../src/nurse/nurse-services";
 import { PERSONAS } from "./demo-data";
+import { assertDemoSeedAllowed } from "../../src/common/demo-seed-guard";
 
 const DAY = 86_400_000;
 const MIN = 60_000;
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 const PASSPORT_ISSUER = process.env.KIOREX_OIDC_ISSUER?.trim().replace(/\/+$/, "") || "http://localhost:4400";
 /** Passport (kiorex-account) subjects of the Nurse demo personas — keep in sync with kiorex-account/config/seed-users.json. */
-const sub = (n: number) => `01HZKXD${String(n).padStart(19, "0")}`;
+/** AWS staging (Cognito generates the subs): DEMO_SUB_MAP_JSON = { "+201000001001": "<cognito sub>" } from scripts/seed-cognito-demo.mjs; locally the dev IdP subs below. */
+const SUB_MAP: Record<string, string> = (() => { try { return JSON.parse(process.env.DEMO_SUB_MAP_JSON || "{}"); } catch { return {}; } })();
+const sub = (n: number) => SUB_MAP[`+20100000${String(n).padStart(4, "0")}`] ?? `01HZKXD${String(n).padStart(19, "0")}`;
 const NURSE_PASSPORT: Record<string, number> = {
   "mona@nurse-demo.kiorly.test": 3001, "owner@nurse-demo.kiorly.test": 3002, "dispatch@nurse-demo.kiorly.test": 3003, "nurse1@nurse-demo.kiorly.test": 3004,
   "nurse2@nurse-demo.kiorly.test": 3005, "aide@nurse-demo.kiorly.test": 3006, "nurse3@nurse-demo.kiorly.test": 3007, "nurse4@nurse-demo.kiorly.test": 3008, "nurse5@nurse-demo.kiorly.test": 3009,
@@ -47,6 +50,7 @@ export type HvJson = {
   addresses: Record<string, { key: string; label: string; governorate: string; district: string; street: string; building?: string; floor?: string; flat?: string; landmark?: string; lat?: number; lng?: number }[]>;
   visits: HvSpec[];
   carePlans: { key: string; provider: string; phone: string; addr: string; svc: string; title: string; startOff: number; count: number; hour: number; nurse: string; requestRef: string }[];
+  carePlanRequests: { id: string; provider: string; phone: string; addr: string; svc: string; status: string; startOff: number }[];
 };
 
 type Ctx = { prisma: PrismaClient; marketId: string; mpClientId: string; now: Date; at: (off: number, hour: number, min?: number) => Date };
@@ -383,6 +387,49 @@ export async function seedRev23(prisma: PrismaClient, opts: { at: (off: number, 
   await many(prisma, "physioOutcomeMeasure", meas);
   await many(prisma, "physioHepLink", [{ id: "demo_phep_1", tenantId: T.na, planId: "demo_ppl_1", tokenHash: sha("demo-hep-token-1"), expiresAt: at(30, 0), sharedAt: at(-10, 11) }]);
 
+  // ──────────────────────────── 10. record-share consents + care-plan requests + KNLAB01 nurse samples (Q10) ────────────────────────────
+  // Record-share consents (the LAB_RESULTS grant supplies the lab hand-off consent token): granted for the Nurse clients, REVOKED for Rana (agency), none for Nourhan (solo)
+  // so the "no consent" refusal (LAB_HANDOFF_NO_CONSENT) can be tried. Clinic-edition personas 1..8 are granted too.
+  const consentRows: any[] = [];
+  const grant = (pid: string, tenantId: string, scope: string, state: "GRANTED" | "REVOKED") => consentRows.push({ id: `demo_rsc_${pid}_${scope}`, tenantId, patientId: pid, scope, granted: state === "GRANTED", source: "KIOREX", capturedAt: at(-30, 9), revokedAt: state === "REVOKED" ? at(-2, 9) : null });
+  for (const p of patRows) {
+    const tk = Object.keys(T).find((k) => T[k] === p.tenantId)!; if (tk !== "nagy" && tk !== "nsolo") continue;
+    if (p.id.endsWith("h1004") && tk === "nsolo") continue; // Nourhan: never asked
+    const revoked = p.id.endsWith("h1012") && tk === "nagy"; // Rana: shared, then withdrew
+    for (const scope of ["VISIT_SUMMARY", "LAB_RESULTS"]) grant(p.id, p.tenantId, scope, revoked && scope === "LAB_RESULTS" ? "REVOKED" : "GRANTED");
+  }
+  for (let n = 1; n <= 8; n++) for (const scope of ["VISIT_SUMMARY", "PRESCRIPTIONS", "LAB_RESULTS"]) grant(`demo_p_na_${n}`, T.na, scope, "GRANTED");
+  await many(prisma, "patientRecordShareConsent", consentRows);
+
+  // care-plan requests (KXMHV08 / KN-03): accepted (-> the real care plan), received (waiting in the nurse inbox) and declined, mirrored by Kiorex `CarePlanBooking`
+  const nameFor = (tk: string, phone: string) => nameOf(phone, hvJson.visits.find((x) => x.phone === phone && patientTenant(x.provider) === tk)).en;
+  const cpr: any[] = [];
+  for (const c of hvJson.carePlans) {
+    const tk = patientTenant(c.provider); const [fn, ln] = nameFor(tk, c.phone); const a = addrOf(c.phone, c.addr);
+    cpr.push({ id: `demo_cpr_${c.key}`, tenantId: T[tk], clinicId: clinicOf[tk], clinicianId: U[c.nurse], typeId: typeOfSvc[tk][c.svc].id, requestRef: c.requestRef, preferredStartDate: at(c.startOff - 1, 0), notes: "Post-operative wound care after discharge (demo)", visitAddressCiphertext: a ? encryptVisitAddress({ district: a.district, line1: a.street, building: a.building, floor: a.floor, flat: a.flat, landmark: a.landmark, lat: a.lat, lng: a.lng }, T[tk]) : null, patientPhone: c.phone, patientFirstName: fn, patientLastName: ln, status: "ACCEPTED", carePlanId: `demo_cp_${c.key}`, decidedById: U[c.nurse], decidedAt: at(c.startOff - 1, 6), createdAt: at(c.startOff - 2, 10) });
+  }
+  for (const c of hvJson.carePlanRequests) {
+    const tk = patientTenant(c.provider); const [fn, ln] = nameFor(tk, c.phone); const a = addrOf(c.phone, c.addr);
+    const declined = c.status === "REJECTED";
+    cpr.push({ id: `demo_cpr_${c.id}`, tenantId: T[tk], clinicId: clinicOf[tk], clinicianId: null, typeId: typeOfSvc[tk][c.svc].id, requestRef: c.id, preferredStartDate: at(c.startOff, 0), notes: declined ? "Needs a nurse who speaks Nubian (demo)" : "Elderly care visits twice a week for a month (demo)", visitAddressCiphertext: a ? encryptVisitAddress({ district: a.district, line1: a.street, building: a.building, floor: a.floor, flat: a.flat, landmark: a.landmark, lat: a.lat, lng: a.lng }, T[tk]) : null, patientPhone: c.phone, patientFirstName: fn, patientLastName: ln, status: declined ? "DECLINED" : "RECEIVED", declineReason: declined ? "No nurse available for that language and district" : null, decidedById: declined ? U.dispatch : null, decidedAt: declined ? new Date(now.getTime() - 2 * 3_600_000) : null, createdAt: new Date(now.getTime() - (declined ? 5 : 1) * 3_600_000) });
+  }
+  await many(prisma, "carePlanRequest", cpr);
+
+  // KNLAB01: samples a nurse collected at a visit (clinic side: order + collection + tubes; Lab and Kiorex seeds complete the other halves, the Kiorex seed pushes the lab status back)
+  const nlSpec = JSON.parse(readFileSync(join(__dirname, "demo-nurse-lab.json"), "utf8")) as { consentTokenPrefix: string; orders: any[] };
+  const TEST_NAME: Record<string, [string, string]> = { CBC: ["Complete blood count", "صورة دم كاملة"], KFT: ["Kidney function", "وظائف الكلى"], GLU: ["Fasting glucose", "سكر صائم"], LFT: ["Liver enzymes", "وظائف الكبد"], TSH: ["TSH", "هرمون الغدة الدرقية"] };
+  const nlOrders: any[] = []; const nlItems: any[] = []; const nlCollections: any[] = []; const nlTubes: any[] = [];
+  for (const o of nlSpec.orders) {
+    const visit = built.find((b) => b.key === o.visitKey); if (!visit) throw new Error(`nurse-lab spec ${o.key}: unknown visit ${o.visitKey}`);
+    const tenantId = T[o.tenant]; const collectedAt = at(o.collected.off, o.collected.hour, o.collected.min); const handedOverAt = at(o.handedOver.off, o.handedOver.hour, o.handedOver.min);
+    nlOrders.push({ id: o.id, tenantId, clinicId: clinicOf[o.tenant], patientId: o.patient.ref, kind: "LAB", status: "ORDERED", orderedAt: collectedAt, notes: `Transcribed from ${o.prescriber}'s request (demo)`, createdByUserId: U[o.nurse], prescriberName: o.prescriber, prescribedOn: at(o.prescribedOffsetDays, 0) });
+    o.tests.forEach((code: string, i: number) => nlItems.push({ id: `${o.id}_i${i}`, orderId: o.id, code, nameEn: TEST_NAME[code][0], nameAr: TEST_NAME[code][1], sortOrder: i }));
+    nlCollections.push({ id: `demo_lsc_${o.key}`, tenantId, orderId: o.id, patientId: o.patient.ref, appointmentId: visit.apptId, collectorUserId: U[o.nurse], collectedAt, handedOverAt, temperatureC: o.temperatureC, identifiersChecked: o.identifiersChecked, consentTokenHash: sha(`${nlSpec.consentTokenPrefix}${o.key}`), prescriberName: o.prescriber, labStatus: "HANDED_OFF" });
+    o.tubes.forEach((t: any, i: number) => nlTubes.push({ id: `demo_lst_${o.key}_${i}`, tenantId, collectionId: `demo_lsc_${o.key}`, label: t.label, specimenType: t.specimenType, container: t.container }));
+  }
+  await many(prisma, "clinicalOrder", nlOrders); await many(prisma, "clinicalOrderItem", nlItems);
+  await many(prisma, "labSampleCollection", nlCollections); await many(prisma, "labSampleTube", nlTubes);
+
   log.push(`nurse tenants (solo+agency): ${nurseUsers.length} users, ${patRows.length} patients`, `${vers.length + docVer.length + 1} verifications / ${regRows.length} registrations`, `${hvRows.length} home visits (${apptRows.length} appointments), ${alertRows.length} safety alerts, ${incRows.length} incidents`, `${carePlanRows.length} care plan, ${vrRows.length} visit records, ${vitRows.length} vitals, ${orders.length} doctor orders, ${adminRows.length} administrations`, "physio: 2 plans, 6 sessions, HEP link");
   return log.join("; ");
 }
@@ -394,6 +441,7 @@ export async function resetNurseDemo(prisma: PrismaClient, deleteTenant: (ids: s
 }
 
 if (require.main === module) {
+  assertDemoSeedAllowed("Kiorly Clinic Rev 2.3 part (Nurse edition, physio, home visits)");
   const prisma = new PrismaClient();
   const today0 = new Date(); today0.setUTCHours(0, 0, 0, 0);
   seedRev23(prisma, { at: (off, hour, min = 0) => new Date(today0.getTime() + off * DAY + hour * 3_600_000 + min * MIN) })

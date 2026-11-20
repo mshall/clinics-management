@@ -9,11 +9,17 @@ COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 COPY packages/field-visit/package.json packages/field-visit/
 RUN npm ci && npm install -g prisma@6.19.3
+COPY packages ./packages
 COPY apps/api/prisma ./apps/api/prisma
 COPY apps/api/prisma.config.ts ./apps/api/prisma.config.ts
+COPY apps/api/tsconfig.json apps/api/tsconfig.seed.json ./apps/api/
+COPY apps/api/scripts/copy-seed-assets.mjs ./apps/api/scripts/copy-seed-assets.mjs
+COPY apps/api/src ./apps/api/src
 WORKDIR /repo/apps/api
 ENV DATABASE_URL="postgresql://build:build@127.0.0.1:5432/build?schema=public"
 RUN npx prisma generate
+# Q10: compiled demo seed (plain `node`, no tsx/ts-node at run time): dist-seed/prisma/demo/seed-demo.js (+ the base seed dist-seed/prisma/seed.js)
+RUN npm run build -w @kiorly/field-visit --silent && npm run build:seed
 
 FROM public.ecr.aws/lambda/nodejs:22
 RUN dnf install -y openssl ca-certificates && dnf clean all
@@ -29,5 +35,11 @@ COPY apps/api/src/staging ${LAMBDA_TASK_ROOT}/src/staging
 COPY apps/api/src/nurse/nurse-services.ts ${LAMBDA_TASK_ROOT}/src/nurse/nurse-services.ts
 COPY apps/api/prisma/pilot-tenants.seed.ts ${LAMBDA_TASK_ROOT}/prisma/pilot-tenants.seed.ts
 COPY infra/lambda/db-seed/run.mjs ${LAMBDA_TASK_ROOT}/index.mjs
+# Q10: demo-data seed Lambda (handler demo-seed.handler, only deployed when enable_demo_seed = true; non-production)
+COPY --from=build /repo/apps/api/dist-seed ${LAMBDA_TASK_ROOT}/dist-seed
+# workspace packages: node_modules/@kiorly/field-visit is a symlink to ../../packages/field-visit
+COPY --from=build /repo/packages ${LAMBDA_TASK_ROOT}/packages
+COPY infra/lambda/demo-seed/run.mjs ${LAMBDA_TASK_ROOT}/demo-seed.mjs
+ENV SEED_PRODUCT=kiorly-clinic SEED_BASE_ENTRY=dist-seed/prisma/seed.js SEED_DEMO_ENTRY=dist-seed/prisma/demo/seed-demo.js
 ENV PATH="${LAMBDA_TASK_ROOT}/node_modules/.bin:/usr/local/bin:${PATH}"
 CMD ["index.handler"]

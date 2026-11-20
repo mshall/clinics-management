@@ -125,3 +125,6 @@ with `X-Internal-Job-Key`, retried twice. The API must make it idempotent and ba
 logic. `enabled = false` until that endpoint exists and the DPO signs off; enabling is a one-word tfvars change.
 
 Offline check for this section: `cd live/{staging,prod}/frankfurt/kiorly-clinic && tofu init -backend=false && tofu validate`.
+
+## 7. Demo-data seeding on staging (Q10, non-production only)
+`modules/product-stack/demo_seed.tf` adds a `<name>-demo-seed` container-image Lambda (isolated subnets, DB access, least-privilege IAM, `MODE=mock`) created **only** when `enable_demo_seed = true` (default false; true only in `live/staging/**/terraform.tfvars`). A plan with `env = "prod"` and `enable_demo_seed = true` fails (`terraform_data.demo_seed_guard`), covered offline by `tofu test` in `modules/product-stack` (`tests/demo_seed_guard.tftest.hcl`, mock provider). Outputs `demo_seed_function_name` and `demo_seed_invoke` give the invocation. The Lambda image is the `<name>-seed` ECR repo built from `apps/api/Dockerfile.seed` (handler `demo-seed.handler`, source `infra/lambda/demo-seed/run.mjs`, test `node --test infra/lambda/demo-seed/run.test.mjs`). It is never invoked by OpenTofu or CI: after a human deployed staging, run `scripts/seed-staging.sh` from the workspace root (see `Docs/TEST_DATA.md` -> "Seeding staging on AWS").

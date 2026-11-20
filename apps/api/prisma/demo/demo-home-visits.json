@@ -64,6 +64,7 @@
     { "key": "cp1", "provider": "agency", "phone": "+201000001013", "addr": "home", "svc": "wound_dressing", "title": "Post-operative wound care, 10 days", "startOff": -4, "count": 10, "hour": 8, "nurse": "nurse1", "requestRef": "kx_cp_demo_1", "kiorexStatus": "CONFIRMED" }
   ],
   "carePlanRequests": [
-    { "id": "kx_cp_demo_2", "provider": "agency", "phone": "+201000001005", "addr": "home", "svc": "elderly_care_visit", "status": "REQUESTED", "startOff": 5 }
+    { "id": "kx_cp_demo_2", "provider": "agency", "phone": "+201000001005", "addr": "home", "svc": "elderly_care_visit", "status": "REQUESTED", "startOff": 5 },
+    { "id": "kx_cp_demo_3", "provider": "agency", "phone": "+201000001012", "addr": "home", "svc": "elderly_care_visit", "status": "REJECTED", "startOff": 8 }
   ]
 }
