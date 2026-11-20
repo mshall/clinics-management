@@ -6,6 +6,11 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 API_WAIT_SEC="${PLAYWRIGHT_API_WAIT_SEC:-180}"
+# Match Vite proxy + preview ports (apps/web/vite.config.ts → 3010 / 5174).
+export PORT="${PORT:-3010}"
+export API_PORT="${API_PORT:-$PORT}"
+export API_PROXY_TARGET="${API_PROXY_TARGET:-http://127.0.0.1:${PORT}}"
+export PLAYWRIGHT_BASE_URL="${PLAYWRIGHT_BASE_URL:-http://127.0.0.1:5174}"
 
 cleanup() {
   kill "${API_PID:-}" "${WEB_PID:-}" 2>/dev/null || true
@@ -17,7 +22,7 @@ if [ ! -f "$ROOT/apps/api/dist/src/main.js" ]; then
   npm run build -w api
 fi
 
-echo "[playwright-ci] starting API (DATABASE_URL from CI)…"
+echo "[playwright-ci] starting API on :${PORT} (DATABASE_URL from CI)…"
 npm run start -w api &
 API_PID=$!
 
