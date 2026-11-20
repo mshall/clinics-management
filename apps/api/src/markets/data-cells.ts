@@ -54,6 +54,11 @@ let cached: DataCellsRegistry | null = null;
 export function loadDataCellsRegistry(): DataCellsRegistry {
   if (cached) return cached;
   const path = join(repoRootFromApiSrc(), "platform", "data-cells.json");
+  if (!existsSync(path)) {
+    throw new Error(
+      `Missing platform/data-cells.json at ${path}. The API image must COPY platform/data-cells.json (see apps/api/Dockerfile).`,
+    );
+  }
   cached = JSON.parse(readFileSync(path, "utf8")) as DataCellsRegistry;
   return cached;
 }
