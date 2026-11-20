@@ -5,7 +5,9 @@
 import { useId, useState, type HTMLAttributes, type ReactNode } from "react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { useTranslation } from "react-i18next";
 import { KiorexLogo, PulseLine } from "./components";
+import { footSegments } from "./components/shared/foot-text";
 
 /** Decorative pulse line (hidden from assistive tech) for loaders/empty states. */
 export function Pulse({ size = 14, loop = false }: { size?: number; loop?: boolean }) {
@@ -126,22 +128,38 @@ export function Stepper({ steps, current, className }: { steps: string[]; curren
 /** The product this app is. The ONLY line that differs between the vendored copies of this file ("clinic" | "lab" | "pharmacy"); it selects the lockup text ("Kiorly Clinic by Kiorex") and accent colour. */
 export const KIORLY_PRODUCT: "clinic" | "lab" | "pharmacy" = "clinic";
 
-/** "Kiorly <Product> by Kiorex" lockup for sidebars/headers (Nurse edition of Clinic uses the Nurse lockup). Switches to the inverse tone in dark mode. */
+/** "Kiorly <Product> by Kiorex" lockup for sidebars/headers (Nurse edition of Clinic uses the Nurse lockup). Switches to the inverse tone in dark mode and to the Arabic wordmark («كيورلي للعيادات من كيوريكس», mark on the right) when the UI language is Arabic. */
 export function KiorlyBrand({ nurse, height = 30, className }: { nurse?: boolean; height?: number; className?: string }) {
   const product = nurse ? "nurse" : KIORLY_PRODUCT;
+  const { i18n } = useTranslation();
+  const lang = i18n.language;
   return (
     <span className={kcn("inline-flex", className)}>
-      <KiorexLogo variant="lockup" product={product} tone="color" height={height} className="dark:hidden" />
-      <KiorexLogo variant="lockup" product={product} tone="inverse" height={height} className="hidden dark:block" />
+      <KiorexLogo variant="lockup" product={product} lang={lang} tone="color" height={height} className="dark:hidden" />
+      <KiorexLogo variant="lockup" product={product} lang={lang} tone="inverse" height={height} className="hidden dark:block" />
     </span>
   );
 }
-/** Text version of the lockup (e.g. a login footer on the dark hero): the whole product word is set in the product accent (inverse tint), the rest inherits. */
+/** Text version of the lockup (e.g. a login footer on the dark hero): the last letter of KIORLY (Y; ي in Arabic) and the WHOLE product word are set in the product accent (inverse tint), the rest inherits.
+ *  Letter joining: the ي span changes ONLY the colour (no weight/font change), so Arabic shaping stays connected across the span boundary. */
 const KIORLY_ACCENT_ON_DARK = { clinic: "#2DD4BF", lab: "#A78BFA", pharmacy: "#4ADE80" } as const;
 export function KiorlyFootText({ text, word }: { text: string; word: string }) {
-  const i = word ? text.indexOf(word) : -1;
-  if (i < 0) return <>{text}</>;
-  return <>{text.slice(0, i)}<span style={{ color: KIORLY_ACCENT_ON_DARK[KIORLY_PRODUCT], fontWeight: 600 }}>{word}</span>{text.slice(i + word.length)}</>;
+  const accent = KIORLY_ACCENT_ON_DARK[KIORLY_PRODUCT];
+  const segs = footSegments(text, word);
+  const node = (seg: (typeof segs)[number], i: number) => seg.kind === "last"
+    ? <span key={i} data-kx-accent="last" style={{ color: accent }}>{seg.text}</span>
+    : seg.kind === "word"
+      ? <span key={i} data-kx-accent="word" style={{ color: accent, fontWeight: 600 }}>{seg.text}</span>
+      : <span key={i}>{seg.text}</span>;
+  // The Arabic font fuses ل+ي into one required ligature glyph, which would take a single colour; "rlig" off on the brand word (only) keeps ي a separate, joined glyph.
+  const brand = segs.filter((s) => s.kind === "brand" || s.kind === "last");
+  const rest = segs.filter((s) => s.kind !== "brand" && s.kind !== "last");
+  return (
+    <>
+      {brand.length ? <span data-kx-brand style={{ fontFeatureSettings: '"rlig" 0' }}>{brand.map(node)}</span> : null}
+      {rest.map((s, i) => node(s, i + brand.length))}
+    </>
+  );
 }
 export function KiorlyMark({ size = 28, nurse }: { size?: number; nurse?: boolean }) {
   const product = nurse ? "nurse" : KIORLY_PRODUCT;

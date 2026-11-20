@@ -1,6 +1,7 @@
 {
   "app": {
     "name": "Kiorly",
+    "docTitle": "Kiorly Clinic by Kiorex",
     "tagline": "Clinic Management"
   },
   "clinicalSpecialties": {

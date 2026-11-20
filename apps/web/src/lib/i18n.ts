@@ -12,6 +12,7 @@ function applyDocumentDirection(lng: string) {
   const rtl = lng === "ar";
   document.documentElement.dir = rtl ? "rtl" : "ltr";
   document.documentElement.lang = lng === "ar" ? "ar-EG" : "en";
+  if (document.documentElement.dataset.edition !== "nurse") document.title = i18n.t("app.docTitle", { lng }); // Nurse edition owns its own title (edition.ts)
   applyNumeralPreferenceToDocument();
 }
 
