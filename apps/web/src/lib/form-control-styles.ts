@@ -1,6 +1,6 @@
 /** Shared classes for native form controls — 44px min touch targets on mobile. */
 export const nativeSelectClassName =
-  "flex h-11 min-h-11 w-full min-w-0 touch-manipulation rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm";
+  "flex h-11 min-h-11 w-full min-w-0 touch-manipulation rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm";
 
 /** Page root stack — prevents flex children from blowing past the viewport. */
 export const pageStackClassName = "min-w-0 space-y-6";
@@ -10,7 +10,7 @@ export const filterToolbarClassName =
   "grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 xl:flex xl:flex-wrap xl:items-end";
 
 /** Single filter field inside {@link filterToolbarClassName}. */
-export const filterFieldClassName = "min-w-0 w-full space-y-1.5 xl:min-w-[9rem] xl:max-w-[16rem] xl:flex-1";
+export const filterFieldClassName = "min-w-0 w-full space-y-1.5 xl:min-w-36 xl:max-w-[16rem] xl:flex-1";
 
 /** Tighter filter row (admin chips, small toolbars). */
 export const filterToolbarCompactClassName =

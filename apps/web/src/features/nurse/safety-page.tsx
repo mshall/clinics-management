@@ -51,8 +51,8 @@ function EmergencyCard() {
     <section aria-label={t("nurse.safety.emergency")} className="space-y-2">
       <p className="flex items-center gap-2 text-sm font-semibold"><Siren className="size-5 text-[hsl(var(--danger-text))]" aria-hidden />{t("nurse.safety.emergency")}</p>
       <div className="grid grid-cols-2 gap-3">
-        <a href="tel:123" className="flex min-h-16 flex-col items-center justify-center rounded-2xl bg-destructive px-3 py-2 text-destructive-foreground shadow-[var(--kx-shadow-2)] active:translate-y-px"><span className="flex items-center gap-2 text-2xl font-bold tabular-nums"><Phone className="size-5" aria-hidden />123</span><span className="text-sm opacity-95">{t("nurse.safety.ambulance")}</span></a>
-        <a href="tel:122" className="flex min-h-16 flex-col items-center justify-center rounded-2xl border-2 border-[hsl(var(--danger-text))] bg-card px-3 py-2 text-[hsl(var(--danger-text))] shadow-[var(--kx-shadow-1)] active:translate-y-px"><span className="flex items-center gap-2 text-2xl font-bold tabular-nums"><Phone className="size-5" aria-hidden />122</span><span className="text-sm">{t("nurse.safety.police")}</span></a>
+        <a href="tel:123" className="flex min-h-16 flex-col items-center justify-center rounded-2xl bg-destructive px-3 py-2 text-destructive-foreground shadow-kx-2 active:translate-y-px"><span className="flex items-center gap-2 text-2xl font-bold tabular-nums"><Phone className="size-5" aria-hidden />123</span><span className="text-sm opacity-95">{t("nurse.safety.ambulance")}</span></a>
+        <a href="tel:122" className="flex min-h-16 flex-col items-center justify-center rounded-2xl border-2 border-[hsl(var(--danger-text))] bg-card px-3 py-2 text-[hsl(var(--danger-text))] shadow-kx-1 active:translate-y-px"><span className="flex items-center gap-2 text-2xl font-bold tabular-nums"><Phone className="size-5" aria-hidden />122</span><span className="text-sm">{t("nurse.safety.police")}</span></a>
       </div>
     </section>
   );

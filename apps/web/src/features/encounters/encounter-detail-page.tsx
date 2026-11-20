@@ -588,7 +588,7 @@ export function EncounterDetailPage() {
           className="gap-0 overflow-hidden border-[hsl(var(--warning)/0.3)] p-0 sm:max-w-md "
           aria-describedby="encounter-finalize-desc"
         >
-          <div className="border-b border-[hsl(var(--warning)/0.3)] bg-gradient-to-br from-amber-50 to-orange-50 px-6 py-5 dark:from-amber-950/80 dark:to-orange-950/40">
+          <div className="border-b border-[hsl(var(--warning)/0.3)] bg-linear-to-br from-amber-50 to-orange-50 px-6 py-5 dark:from-amber-950/80 dark:to-orange-950/40">
             <DialogHeader className="space-y-3 text-start">
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[hsl(var(--warning)/0.12)] ring-4 ring-[hsl(var(--warning)/0.8)] ">
                 <Lock className="h-5 w-5 text-[hsl(var(--warning))] " aria-hidden />
@@ -635,7 +635,7 @@ export function EncounterDetailPage() {
           className="gap-0 overflow-hidden border-kx-neutral-300 p-0 sm:max-w-md dark:border-kx-neutral-800"
           aria-describedby="encounter-no-meds-desc"
         >
-          <div className="border-b border-kx-neutral-200 bg-gradient-to-br from-kx-neutral-50 to-kx-neutral-100 px-6 py-5 dark:border-kx-neutral-900 dark:from-kx-neutral-950 dark:to-kx-neutral-950">
+          <div className="border-b border-kx-neutral-200 bg-linear-to-br from-kx-neutral-50 to-kx-neutral-100 px-6 py-5 dark:border-kx-neutral-900 dark:from-kx-neutral-950 dark:to-kx-neutral-950">
             <DialogHeader className="space-y-3 text-start">
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-kx-neutral-200 ring-4 ring-kx-neutral-200/80 dark:bg-kx-neutral-900 dark:ring-kx-neutral-900/80">
                 <Ban className="h-5 w-5 text-kx-neutral-800 dark:text-kx-neutral-300" aria-hidden />
@@ -1306,7 +1306,7 @@ function VitalField({ icon, label, unit, value, onChange, disabled, inputMode }:
       <Label htmlFor={id} className="flex items-center gap-1.5 text-xs text-muted-foreground">{icon}<span className="truncate">{label}</span></Label>
       <div className="relative">
         <Input id={id} className="h-11 pe-12 text-base font-semibold tabular-nums ltr-nums md:h-11" inputMode={inputMode} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} />
-        <span aria-hidden className="pointer-events-none absolute inset-y-0 end-3 flex items-center text-xs text-muted-foreground">{unit}</span>
+        <span aria-hidden className="pointer-events-none absolute inset-y-0 inset-e-3 flex items-center text-xs text-muted-foreground">{unit}</span>
       </div>
     </div>
   );

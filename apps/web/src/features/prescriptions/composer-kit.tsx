@@ -14,7 +14,7 @@ export type ComposerMode = "none" | "manual" | "prescription";
 
 export function ComposerModeTabs({ medCount, rxCount }: { medCount: number; rxCount: number }) {
   const { t } = useTranslation();
-  const trigger = "min-h-11 flex-1 gap-1.5 rounded-lg px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-[var(--kx-shadow-1)]";
+  const trigger = "min-h-11 flex-1 gap-1.5 rounded-lg px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-kx-1";
   const count = (n: number) => (n > 0 ? <span className="ms-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-background/90 px-1.5 text-[11px] font-semibold tabular-nums text-foreground" data-testid="composer-count">{n}</span> : null);
   return (
     <TabsList className="grid h-auto w-full grid-cols-3 gap-1 rounded-xl bg-muted/70 p-1" aria-label={t("encounters.medications")}>
@@ -40,7 +40,7 @@ export function ComposerEmpty({ icon, children }: { icon?: ReactNode; children: 
 
 export function MedLine({ name, dosage, frequency, unverified, unverifiedLabel, onRemove, removing, removeLabel }: { name: string; dosage?: string | null; frequency?: string | null; unverified?: boolean; unverifiedLabel?: string; onRemove?: () => void; removing?: boolean; removeLabel: string }) {
   return (
-    <li className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5 shadow-[var(--kx-shadow-1)]" data-testid="med-line">
+    <li className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5 shadow-kx-1" data-testid="med-line">
       <span aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground"><Pill className="h-4 w-4" /></span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold" dir="auto">{name}{unverified ? <StatusChip tone="warn" dot={false} className="ms-2 align-middle">{unverifiedLabel}</StatusChip> : null}</p>
@@ -62,7 +62,7 @@ export function MedLine({ name, dosage, frequency, unverified, unverifiedLabel, 
 
 export function RxDropzone({ onPick, disabled, title, hint }: { onPick: () => void; disabled?: boolean; title: string; hint: string }) {
   return (
-    <button type="button" onClick={onPick} disabled={disabled} className={kcn("flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed border-primary/30 bg-accent/40 px-4 py-7 text-sm transition-colors hover:border-primary/60 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", disabled && "pointer-events-none opacity-60")}>
+    <button type="button" onClick={onPick} disabled={disabled} className={kcn("flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed border-primary/30 bg-accent/40 px-4 py-7 text-sm transition-colors hover:border-primary/60 hover:bg-accent focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring", disabled && "pointer-events-none opacity-60")}>
       <span aria-hidden className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary"><FileUp className="h-5 w-5" /></span>
       <span className="font-semibold">{title}</span>
       <span className="max-w-sm text-xs text-muted-foreground">{hint}</span>
@@ -72,7 +72,7 @@ export function RxDropzone({ onPick, disabled, title, hint }: { onPick: () => vo
 
 export function RxFileRow({ name, onView, onReplace, onRemove, viewLabel, replaceLabel, removeLabel, busy }: { name: string; onView?: () => void; onReplace?: () => void; onRemove?: () => void; viewLabel: string; replaceLabel: string; removeLabel: string; busy?: boolean }) {
   return (
-    <li className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5 shadow-[var(--kx-shadow-1)]" data-testid="rx-file-row">
+    <li className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5 shadow-kx-1" data-testid="rx-file-row">
       <span aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground"><FileText className="h-4 w-4" /></span>
       <span className="min-w-0 flex-1 truncate text-sm font-medium" dir="auto">{name}</span>
       <div className="flex shrink-0 gap-1">

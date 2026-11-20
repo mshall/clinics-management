@@ -604,7 +604,7 @@ export function AdminDataExplorerPanel() {
           ) : null}
 
           <div className="flex flex-wrap items-end gap-3">
-            <div className="min-w-[14rem] flex-1 space-y-2">
+            <div className="min-w-56 flex-1 space-y-2">
               <Label htmlFor="de-table">{t("admin.dataExplorerTable", "Table")}</Label>
               <select
                 id="de-table"
@@ -668,7 +668,7 @@ export function AdminDataExplorerPanel() {
                     return (
                       <tr key={id || JSON.stringify(row).slice(0, 40)} className="border-t border-border">
                         {columns.map((c) => (
-                          <td key={c} className="max-w-[14rem] truncate px-2 py-1.5 font-mono" title={formatCell(row[c])}>
+                          <td key={c} className="max-w-56 truncate px-2 py-1.5 font-mono" title={formatCell(row[c])}>
                             {formatCell(row[c])}
                           </td>
                         ))}

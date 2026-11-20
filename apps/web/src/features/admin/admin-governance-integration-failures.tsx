@@ -410,7 +410,7 @@ export function AdminGovernanceIntegrationFailures() {
         <CardContent className="space-y-3">
           <div className="flex flex-wrap items-end gap-2">
             {view === "events" ? (
-              <div className="min-w-[12rem] flex-1 space-y-2">
+              <div className="min-w-48 flex-1 space-y-2">
                 <label className="text-sm font-medium" htmlFor="failure-q">
                   {t("admin.governanceFailuresSearch", "Search")}
                 </label>
@@ -485,7 +485,7 @@ export function AdminGovernanceIntegrationFailures() {
                   </label>
                   <select
                     id="failure-client"
-                    className="h-9 max-w-[12rem] rounded-md border border-input bg-background px-2 text-sm"
+                    className="h-9 max-w-48 rounded-md border border-input bg-background px-2 text-sm"
                     value={integrationClientId}
                     onChange={(e) => {
                       setIntegrationClientId(e.target.value);
@@ -506,7 +506,7 @@ export function AdminGovernanceIntegrationFailures() {
                   </label>
                   <select
                     id="failure-clinic"
-                    className="h-9 max-w-[12rem] rounded-md border border-input bg-background px-2 text-sm"
+                    className="h-9 max-w-48 rounded-md border border-input bg-background px-2 text-sm"
                     value={clinicId}
                     onChange={(e) => {
                       setClinicId(e.target.value);

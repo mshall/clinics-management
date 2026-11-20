@@ -76,7 +76,7 @@ export function MarketingHomePage() {
   const net = Math.max(0, monthly - offset);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-kx-ocean-50 via-white to-emerald-50 text-kx-neutral-950" data-testid="marketing-home">
+    <div className="min-h-screen bg-linear-to-b from-kx-ocean-50 via-white to-emerald-50 text-kx-neutral-950" data-testid="marketing-home">
       <header className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-4">
         <div className="text-2xl font-semibold tracking-tight text-kx-ocean-900">Kiorly</div>
         <div className="flex items-center gap-2">

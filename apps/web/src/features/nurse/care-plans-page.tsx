@@ -97,7 +97,7 @@ export function CarePlansPage() {
                   <StatusPill tone={tone(p.status)}>{t(`nurse.carePlans.status.${p.status}`)}</StatusPill>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span aria-hidden className="relative h-2 flex-1 overflow-hidden rounded-full bg-muted"><span className="absolute inset-y-0 start-0 rounded-full bg-primary" style={{ width: `${p.visitsTotal ? Math.round((p.visitsDone / p.visitsTotal) * 100) : 0}%` }} /></span>
+                  <span aria-hidden className="relative h-2 flex-1 overflow-hidden rounded-full bg-muted"><span className="absolute inset-y-0 inset-s-0 rounded-full bg-primary" style={{ width: `${p.visitsTotal ? Math.round((p.visitsDone / p.visitsTotal) * 100) : 0}%` }} /></span>
                   <span className="text-sm font-semibold tabular-nums ltr-nums">{p.visitsDone}/{p.visitsTotal}</span>
                 </div>
                 <p className="text-sm text-muted-foreground">{t("nurse.carePlans.starts", { date: fmtDate(p.startDate) })} · {t("nurse.carePlans.remaining", { count: p.visitsRemaining, total: p.visitsTotal })}</p>

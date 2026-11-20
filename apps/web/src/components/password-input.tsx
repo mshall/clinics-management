@@ -35,7 +35,7 @@ export function PasswordInput({
     return (
       <>
         <div className={cn("flex flex-wrap items-center gap-2", className)}>
-          <Input id={id} value="••••••••" disabled className="max-w-[12rem]" />
+          <Input id={id} value="••••••••" disabled className="max-w-48" />
           <Button type="button" variant="outline" size="sm" onClick={() => setUnlockConfirmOpen(true)}>
             {t("platform.changePassword")}
           </Button>
@@ -77,7 +77,7 @@ export function PasswordInput({
         type="button"
         variant="ghost"
         size="icon"
-        className="absolute end-0 top-0 h-10 w-10"
+        className="absolute inset-e-0 top-0 h-10 w-10"
         aria-label={visible ? t("platform.hidePassword") : t("platform.showPassword")}
         onClick={() => setVisible((v) => !v)}
       >

@@ -71,7 +71,7 @@ export function AppShell() {
   return (
     <div className="flex min-h-screen bg-muted/40">
       <aside className="sticky top-0 hidden h-screen min-h-0 w-60 shrink-0 border-e border-border bg-card md:flex md:flex-col">
-        <div className="flex min-h-[4.5rem] shrink-0 items-center gap-3 border-b border-border px-4 py-3">
+        <div className="flex min-h-18 shrink-0 items-center gap-3 border-b border-border px-4 py-3">
           <BrandLockup />
         </div>
         <div className="flex min-h-0 flex-1 flex-col">
@@ -80,7 +80,7 @@ export function AppShell() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-x-clip">
-        <header className="sticky top-0 z-10 flex min-h-14 flex-nowrap items-center gap-1 border-b border-border bg-card/95 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-card/80 sm:gap-3 sm:px-4 md:h-14 md:flex-nowrap md:py-0 md:ps-6">
+        <header className="sticky top-0 z-10 flex min-h-14 flex-nowrap items-center gap-1 border-b border-border bg-card/95 px-3 py-2 backdrop-blur-sm supports-backdrop-filter:bg-card/80 sm:gap-3 sm:px-4 md:h-14 md:flex-nowrap md:py-0 md:ps-6">
           <div className="flex min-w-0 items-center gap-1.5 md:hidden">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
@@ -90,7 +90,7 @@ export function AppShell() {
               </SheetTrigger>
               <SheetContent className="p-0" aria-describedby={undefined}>
                 <SheetTitle className="sr-only">{t("nav.menu")}</SheetTitle>
-                <SheetHeader className="flex min-h-[4.5rem] shrink-0 flex-row items-center gap-3 border-b border-border px-4">
+                <SheetHeader className="flex min-h-18 shrink-0 flex-row items-center gap-3 border-b border-border px-4">
                   <BrandLockup />
                 </SheetHeader>
                 <AppNavLinks onNavigate={() => setMobileOpen(false)} />
@@ -105,7 +105,7 @@ export function AppShell() {
             {orgPlanKey ? (
               <Badge
                 variant="outline"
-                className="max-w-[9rem] shrink-0 gap-1 border-sky-500/30 bg-sky-500/10 font-semibold text-sky-800 dark:text-sky-300 sm:max-w-[10rem]"
+                className="max-w-36 shrink-0 gap-1 border-sky-500/30 bg-sky-500/10 font-semibold text-sky-800 dark:text-sky-300 sm:max-w-40"
                 data-testid="header-org-plan"
                 title={t("app.orgPlanHint", "Your organization's current Kiorly plan")}
               >

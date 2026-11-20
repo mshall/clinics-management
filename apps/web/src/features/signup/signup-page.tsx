@@ -153,7 +153,7 @@ export function SignupPage() {
           </div>
         </div>
         <div className="flex justify-center" aria-hidden="false"><BrandLockup height={40} /></div>
-        <Card className="shadow-[var(--kx-shadow-2)]">
+        <Card className="shadow-kx-2">
           <CardHeader className="space-y-3">
             <CardTitle className="text-xl">{t("signup.title")}</CardTitle>
             <div className="space-y-1.5">

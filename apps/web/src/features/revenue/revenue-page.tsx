@@ -548,7 +548,7 @@ export function RevenuePage() {
         ) : null}
 
         <div className="flex min-w-0 flex-col gap-2">
-          <Card className="border-emerald-200/70 bg-gradient-to-r from-emerald-50/80 to-transparent dark:border-emerald-900/50 dark:from-emerald-950/30">
+          <Card className="border-emerald-200/70 bg-linear-to-r from-emerald-50/80 to-transparent dark:border-emerald-900/50 dark:from-emerald-950/30">
             <CardContent className="flex items-center gap-3 py-3 pe-4 ps-3">
               <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-emerald-600/15 text-emerald-700 dark:text-emerald-400">
                 <ArrowUpRight className="size-4" aria-hidden />
@@ -564,7 +564,7 @@ export function RevenuePage() {
               <CircleDollarSign className="size-5 shrink-0 text-emerald-600/40 dark:text-emerald-400/40" aria-hidden />
             </CardContent>
           </Card>
-          <Card className="border-sky-200/70 bg-gradient-to-r from-sky-50/80 to-transparent dark:border-sky-900/50 dark:from-sky-950/30">
+          <Card className="border-sky-200/70 bg-linear-to-r from-sky-50/80 to-transparent dark:border-sky-900/50 dark:from-sky-950/30">
             <CardContent className="flex items-center gap-3 py-3 pe-4 ps-3">
               <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-sky-600/15 text-sky-700 dark:text-sky-400">
                 <ArrowDownLeft className="size-4" aria-hidden />
@@ -637,7 +637,7 @@ export function RevenuePage() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="tables" className="space-y-6 focus-visible:outline-none">
+        <TabsContent value="tables" className="space-y-6 focus-visible:outline-hidden">
           {breakdownEnabled ? (
             <Card>
               <CardHeader>
@@ -780,7 +780,7 @@ export function RevenuePage() {
                           }}
                         >
                           <td
-                            className="max-w-[14rem] truncate px-3 py-2 font-medium"
+                            className="max-w-56 truncate px-3 py-2 font-medium"
                             title={clinicDisplayName(r, i18n.language)}
                           >
                             {clinicDisplayName(r, i18n.language)}
@@ -821,7 +821,7 @@ export function RevenuePage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="charts" className="space-y-6 focus-visible:outline-none">
+        <TabsContent value="charts" className="space-y-6 focus-visible:outline-hidden">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">
@@ -960,45 +960,45 @@ export function RevenuePage() {
           {detail ? (
             <dl className="space-y-3 text-sm">
               <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("revenue.clinic")}</dt>
+                <dt className="min-w-28 shrink-0 text-muted-foreground">{t("revenue.clinic")}</dt>
                 <dd className="font-medium">{clinicDisplayName(detail, i18n.language)}</dd>
               </div>
               <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("revenue.category")}</dt>
+                <dt className="min-w-28 shrink-0 text-muted-foreground">{t("revenue.category")}</dt>
                 <dd className="font-medium">
                   {formatRevenueLedgerCategory(detail.category, t, detail.description)}
                 </dd>
               </div>
               <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("revenue.status")}</dt>
+                <dt className="min-w-28 shrink-0 text-muted-foreground">{t("revenue.status")}</dt>
                 <dd className="font-medium">{formatRevenueStatus(detail.status, t)}</dd>
               </div>
               <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("revenue.gross")}</dt>
+                <dt className="min-w-28 shrink-0 text-muted-foreground">{t("revenue.gross")}</dt>
                 <dd className="font-medium ltr-nums">{money(detail.grossAmount, detail.currency)}</dd>
               </div>
               <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("revenue.tax")}</dt>
+                <dt className="min-w-28 shrink-0 text-muted-foreground">{t("revenue.tax")}</dt>
                 <dd className="font-medium ltr-nums">{money(detail.taxAmount, detail.currency)}</dd>
               </div>
               <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("revenue.net")}</dt>
+                <dt className="min-w-28 shrink-0 text-muted-foreground">{t("revenue.net")}</dt>
                 <dd className="font-medium ltr-nums">{money(detail.netAmount, detail.currency)}</dd>
               </div>
               <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("revenue.posted")}</dt>
+                <dt className="min-w-28 shrink-0 text-muted-foreground">{t("revenue.posted")}</dt>
                 <dd className="font-medium ltr-nums">
                   {new Date(detail.postedAt).toLocaleString(localeForLanguage(i18n.language))}
                 </dd>
               </div>
               {detail.description?.trim() ? (
                 <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-                  <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("revenue.description")}</dt>
+                  <dt className="min-w-28 shrink-0 text-muted-foreground">{t("revenue.description")}</dt>
                   <dd className="font-medium">{detail.description}</dd>
                 </div>
               ) : null}
               <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-                <dt className="min-w-[7rem] shrink-0 text-muted-foreground">{t("revenue.entryId")}</dt>
+                <dt className="min-w-28 shrink-0 text-muted-foreground">{t("revenue.entryId")}</dt>
                 <dd className="font-mono text-xs text-muted-foreground">{detail.id}</dd>
               </div>
             </dl>

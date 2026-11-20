@@ -86,7 +86,7 @@ export function PwaInstallPrompt() {
       role="dialog"
       aria-label={t("pwa.installTitle")}
     >
-      <div className="rounded-xl border bg-background/95 p-4 shadow-lg backdrop-blur">
+      <div className="rounded-xl border bg-background/95 p-4 shadow-lg backdrop-blur-sm">
         {visible ? (
           <>
             <p className="text-sm font-medium">{t("pwa.installTitle")}</p>

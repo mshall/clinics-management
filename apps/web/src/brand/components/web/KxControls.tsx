@@ -8,8 +8,8 @@ export type KxLang = "en" | "ar";
 
 export const KX_CONTROL_CLASS =
   "kx-ctl relative inline-flex h-10 min-w-10 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-sm font-medium text-foreground " +
-  "shadow-[var(--kx-shadow-1)] transition-[background-color,border-color,transform] duration-150 hover:bg-accent hover:text-accent-foreground active:scale-95 " +
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none motion-reduce:active:scale-100";
+  "shadow-kx-1 transition-[background-color,border-color,transform] duration-150 hover:bg-accent hover:text-accent-foreground active:scale-95 " +
+  "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none motion-reduce:active:scale-100";
 
 const ICON =
   "absolute inset-0 m-auto size-[18px] transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none";

@@ -97,7 +97,7 @@ export function EncounterSpecialtyForm({
   return (
     <div className="space-y-3 rounded-lg border border-border bg-muted/10 p-3">
       <div className="flex flex-wrap items-end justify-between gap-2">
-        <div className="min-w-[12rem] flex-1 space-y-2">
+        <div className="min-w-48 flex-1 space-y-2">
           <Label htmlFor="clinical-template">{t("clinical.specialtyFormTemplate", "Specialty form template")}</Label>
           <select
             id="clinical-template"

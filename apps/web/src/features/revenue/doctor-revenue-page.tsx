@@ -101,7 +101,7 @@ export function DoctorRevenuePage() {
                 {rows.map((r) => (
                   <tr key={r.id} className="border-t border-border">
                     <td className="px-3 py-2">{formatRevenueCategory(r.category, t)}</td>
-                    <td className="max-w-[14rem] truncate px-3 py-2 text-muted-foreground" title={clinicCellLabel(r, i18n.language)}>
+                    <td className="max-w-56 truncate px-3 py-2 text-muted-foreground" title={clinicCellLabel(r, i18n.language)}>
                       {clinicCellLabel(r, i18n.language)}
                     </td>
                     <td className="px-3 py-2 ltr-nums">{rowMoney(r)}</td>

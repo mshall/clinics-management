@@ -87,7 +87,7 @@ export function AdminGovernancePanel() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex flex-wrap items-end gap-2">
-            <div className="min-w-[12rem] flex-1 space-y-2">
+            <div className="min-w-48 flex-1 space-y-2">
               <label className="text-sm font-medium" htmlFor="audit-q">
                 {t("admin.auditSearch")}
               </label>

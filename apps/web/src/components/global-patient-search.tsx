@@ -64,7 +64,7 @@ export function GlobalPatientSearch() {
       </Button>
       <button
         type="button"
-        className="hidden h-9 min-w-[14rem] items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 text-sm text-muted-foreground transition-colors hover:bg-muted md:inline-flex"
+        className="hidden h-9 min-w-56 items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 text-sm text-muted-foreground transition-colors hover:bg-muted md:inline-flex"
         onClick={() => setOpen(true)}
       >
         <Search className="size-3.5 shrink-0" />

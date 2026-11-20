@@ -66,9 +66,9 @@ export function EmployeeProfilePage() {
         </Button>
       </div>
 
-      <Card className="overflow-hidden border-border/80 shadow-sm">
+      <Card className="overflow-hidden border-border/80 shadow-xs">
         <div className="relative h-36 sm:h-44" style={coverStyle} aria-hidden>
-          <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/10 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-t from-background/80 via-background/10 to-transparent" />
         </div>
 
         <CardContent className="relative px-4 pb-6 pt-0 sm:px-6">
@@ -138,7 +138,7 @@ function ProfileFact({
   value: ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-[var(--kx-shadow-1)]">
+    <div className="rounded-xl border border-border bg-card p-4 shadow-kx-1">
       <dt className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         <Icon className="size-3.5" aria-hidden />
         {label}

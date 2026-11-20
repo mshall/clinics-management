@@ -29,12 +29,12 @@ export function ExportProgressDialog({
 
   const headerTone =
     state.status === "failed"
-      ? "border-destructive/25 bg-gradient-to-br from-destructive/10 via-destructive/5 to-transparent dark:from-destructive/15"
+      ? "border-destructive/25 bg-linear-to-br from-destructive/10 via-destructive/5 to-transparent dark:from-destructive/15"
       : state.status === "ready"
-        ? "border-emerald-500/25 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent dark:from-emerald-500/15"
+        ? "border-emerald-500/25 bg-linear-to-br from-emerald-500/10 via-emerald-500/5 to-transparent dark:from-emerald-500/15"
         : isImport
-          ? "border-sky-500/25 bg-gradient-to-br from-sky-500/10 via-sky-500/5 to-transparent dark:from-sky-500/15"
-          : "border-violet-500/25 bg-gradient-to-br from-violet-500/10 via-violet-500/5 to-transparent dark:from-violet-500/15";
+          ? "border-sky-500/25 bg-linear-to-br from-sky-500/10 via-sky-500/5 to-transparent dark:from-sky-500/15"
+          : "border-violet-500/25 bg-linear-to-br from-violet-500/10 via-violet-500/5 to-transparent dark:from-violet-500/15";
 
   const iconWrap =
     state.status === "failed"
@@ -166,7 +166,7 @@ export function ExportProgressDialog({
                   ? t("admin.importProgressErrorTitle", "Why import failed")
                   : t("admin.exportProgressErrorTitle", "Why export failed")}
               </p>
-              <p className="mt-1 whitespace-pre-wrap break-words leading-relaxed">{state.error}</p>
+              <p className="mt-1 whitespace-pre-wrap wrap-break-word leading-relaxed">{state.error}</p>
             </div>
           ) : null}
 

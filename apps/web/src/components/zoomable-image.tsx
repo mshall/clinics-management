@@ -201,7 +201,7 @@ export function ZoomableImage({
               <ChevronLeft className="h-4 w-4" />
             </Button>
             {slideLabel ? (
-              <span className="min-w-[4.5rem] text-center text-xs text-muted-foreground ltr-nums">{slideLabel}</span>
+              <span className="min-w-18 text-center text-xs text-muted-foreground ltr-nums">{slideLabel}</span>
             ) : null}
             <Button
               type="button"
@@ -275,7 +275,7 @@ export function ZoomableImage({
         </Button>
         <button
           type="button"
-          className="min-w-[3rem] rounded px-1 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline disabled:pointer-events-none disabled:opacity-50 ltr-nums"
+          className="min-w-12 rounded px-1 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline disabled:pointer-events-none disabled:opacity-50 ltr-nums"
           aria-label={t("common.zoomReset", "Reset zoom")}
           title={t("common.zoomReset", "Reset zoom")}
           disabled={loading}
@@ -294,7 +294,7 @@ export function ZoomableImage({
               type="button"
               variant="secondary"
               size="icon"
-              className="absolute start-2 top-1/2 z-10 h-9 w-9 -translate-y-1/2 shadow-md"
+              className="absolute inset-s-2 top-1/2 z-10 h-9 w-9 -translate-y-1/2 shadow-md"
               aria-label={t("common.previousImage", "Previous image")}
               disabled={!canPrevious || loading}
               onClick={onPrevious}
@@ -305,7 +305,7 @@ export function ZoomableImage({
               type="button"
               variant="secondary"
               size="icon"
-              className="absolute end-2 top-1/2 z-10 h-9 w-9 -translate-y-1/2 shadow-md"
+              className="absolute inset-e-2 top-1/2 z-10 h-9 w-9 -translate-y-1/2 shadow-md"
               aria-label={t("common.nextImage", "Next image")}
               disabled={!canNext || loading}
               onClick={onNext}

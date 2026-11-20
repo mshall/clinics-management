@@ -18,7 +18,7 @@ export interface ResponsiveTableProps extends HTMLAttributes<HTMLDivElement> {
 /** Horizontally scrollable table wrapper for narrow viewports. */
 export function ResponsiveTable({ className, children, ...props }: ResponsiveTableProps) {
   return (
-    <div tabIndex={0} className={cn("-mx-1 overflow-x-auto rounded-md border px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:mx-0 sm:px-0", className)} {...props}>
+    <div tabIndex={0} className={cn("-mx-1 overflow-x-auto rounded-md border px-1 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring sm:mx-0 sm:px-0", className)} {...props}>
       {children}
     </div>
   );

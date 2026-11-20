@@ -281,7 +281,7 @@ function CustodyTimeline({ c }: { c: Collection }) {
         <ol className="space-y-2 border-s ps-4" data-testid="lab-custody-events">
           {c.custody.map((e, i) => (
             <li key={i} className="relative">
-              <span className="absolute -start-[1.4rem] top-1.5 size-2.5 rounded-full bg-primary" aria-hidden />
+              <span className="absolute inset-s-[-1.4rem] top-1.5 size-2.5 rounded-full bg-primary" aria-hidden />
               <p className="font-medium">{t(`nurse.lab.custody.${e.type}`, e.type)} <span className="text-muted-foreground">· {e.by === "NURSE" ? t("nurse.lab.byNurse") : t("nurse.lab.byLab")}{e.label ? ` · ${e.label}` : ""}</span></p>
               <p className="text-xs text-muted-foreground">{fmtDateTime(e.occurredAt)}{e.temperatureC != null ? ` · ${e.temperatureC} C` : ""}</p>
             </li>

@@ -63,7 +63,7 @@ export function PrintSettingsCard() {
         <CardDescription>{t("printSettings.subtitle")}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-wrap items-end gap-3">
-        <div className="min-w-[12rem]">
+        <div className="min-w-48">
           <Label htmlFor="print-clinic">{t("printSettings.clinic")}</Label>
           <select
             id="print-clinic"
@@ -81,7 +81,7 @@ export function PrintSettingsCard() {
             ))}
           </select>
         </div>
-        <div className="min-w-[14rem] flex-1">
+        <div className="min-w-56 flex-1">
           <Label htmlFor="print-profile">{t("printSettings.profile")}</Label>
           <select
             id="print-profile"

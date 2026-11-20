@@ -1014,7 +1014,7 @@ export function AppointmentsPage() {
                         }
                       }}
                     >
-                      <td className="max-w-[10rem] px-3 py-2 sm:max-w-[16rem]">
+                      <td className="max-w-40 px-3 py-2 sm:max-w-[16rem]">
                         {(() => {
                           const r = resolvePatientListLabel({
                             patientId: a.patientId,
@@ -1042,7 +1042,7 @@ export function AppointmentsPage() {
                       <td className="px-3 py-2">
                         <Badge
                           variant="outline"
-                          className="max-w-[14rem] truncate border-primary/35 bg-primary/5 font-normal text-foreground"
+                          className="max-w-56 truncate border-primary/35 bg-primary/5 font-normal text-foreground"
                           title={clinicLabel ?? undefined}
                         >
                           {clinicLabel ?? (

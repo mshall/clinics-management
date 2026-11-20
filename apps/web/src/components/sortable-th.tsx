@@ -46,9 +46,9 @@ export function SortableTh({
     <button
       type="button"
       className={cn(
-        "inline-flex h-8 items-center gap-1 rounded-md px-2 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "inline-flex h-8 items-center gap-1 rounded-md px-2 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         centered ? "mx-auto w-full max-w-full justify-center" : "-ms-2 justify-start",
-        hasFilter && "w-full min-w-0 justify-start -ms-0"
+        hasFilter && "w-full min-w-0 justify-start ms-0"
       )}
       onClick={() => onSort(column)}
     >

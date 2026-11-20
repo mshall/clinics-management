@@ -155,7 +155,7 @@ export function PlatformKiorexRatesTab() {
           </div>
 
           <div className="overflow-x-auto rounded-md border border-border">
-            <table className="w-full min-w-[48rem] text-sm">
+            <table className="w-full min-w-3xl text-sm">
               <thead className="bg-muted/50 text-start text-xs text-muted-foreground">
                 <tr>
                   <th className="px-3 py-2">{t("platform.kiorex.colMarket", "Market")}</th>

@@ -44,7 +44,7 @@ export function ConfirmDialog({
           className={cn(
             "border-b px-6 py-5",
             variant === "destructive"
-              ? "border-destructive/20 bg-gradient-to-br from-destructive/5 to-destructive/10 dark:from-destructive/10 dark:to-destructive/5"
+              ? "border-destructive/20 bg-linear-to-br from-destructive/5 to-destructive/10 dark:from-destructive/10 dark:to-destructive/5"
               : "border-border bg-muted/40",
           )}
         >

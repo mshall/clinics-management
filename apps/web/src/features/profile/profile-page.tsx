@@ -154,9 +154,9 @@ export function ProfilePage() {
   return (
     <>
       <div className="mx-auto w-full max-w-3xl space-y-4 pb-8">
-        <Card className="overflow-hidden border-border/80 shadow-sm">
+        <Card className="overflow-hidden border-border/80 shadow-xs">
           <div className="relative h-36 sm:h-44" style={coverStyle} aria-hidden>
-            <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/10 to-transparent" />
+            <div className="absolute inset-0 bg-linear-to-t from-background/80 via-background/10 to-transparent" />
           </div>
 
           <CardContent className="relative px-4 pb-6 pt-0 sm:px-6">
@@ -179,7 +179,7 @@ export function ProfilePage() {
                     </div>
                   )}
                   <label
-                    className="absolute bottom-1 end-1 cursor-pointer rounded-full border border-border bg-background p-2 shadow-sm transition-colors hover:bg-muted"
+                    className="absolute bottom-1 inset-e-1 cursor-pointer rounded-full border border-border bg-background p-2 shadow-xs transition-colors hover:bg-muted"
                     title={t("profile.changeAvatar", "Change profile picture")}
                   >
                     <Camera className="size-4" aria-hidden />

@@ -168,7 +168,7 @@ function OpsKpiHelp({ tip }: { tip: string }) {
       <TooltipTrigger asChild>
         <button
           type="button"
-          className="inline-flex size-6 shrink-0 items-center justify-center rounded-full border border-sky-500/40 bg-sky-500/10 text-sky-700 shadow-sm transition-colors hover:border-sky-500/70 hover:bg-sky-500/15 hover:text-sky-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-sky-400/40 dark:bg-sky-400/10 dark:text-sky-300 dark:hover:text-sky-200"
+          className="inline-flex size-6 shrink-0 items-center justify-center rounded-full border border-sky-500/40 bg-sky-500/10 text-sky-700 shadow-xs transition-colors hover:border-sky-500/70 hover:bg-sky-500/15 hover:text-sky-800 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring dark:border-sky-400/40 dark:bg-sky-400/10 dark:text-sky-300 dark:hover:text-sky-200"
           aria-label={tip}
           onClick={(e) => {
             e.preventDefault();
@@ -183,7 +183,7 @@ function OpsKpiHelp({ tip }: { tip: string }) {
         side="top"
         align="end"
         sideOffset={8}
-        className="max-w-[17rem] text-start text-xs leading-snug"
+        className="max-w-68 text-start text-xs leading-snug"
         onPointerDownOutside={() => setOpen(false)}
       >
         {tip}
@@ -487,7 +487,7 @@ export function ReportsPage() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="tables" className="space-y-4 sm:space-y-6 focus-visible:outline-none">
+        <TabsContent value="tables" className="space-y-4 sm:space-y-6 focus-visible:outline-hidden">
 <Card data-testid="reports-kiorex-impact">
         <CardHeader>
           <CardTitle className="text-base">{t("reports.kiorexImpactTitle", "Kiorex impact")}</CardTitle>
@@ -1273,7 +1273,7 @@ export function ReportsPage() {
                         key={row.channel}
                         role="button"
                         tabIndex={0}
-                        className="cursor-pointer border-t transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
+                        className="cursor-pointer border-t transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-hidden"
                         onClick={() => setSelectedChannel({ channel: row.channel, label: row.label })}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
@@ -1303,7 +1303,7 @@ export function ReportsPage() {
 
         </TabsContent>
 
-        <TabsContent value="charts" className="space-y-4 sm:space-y-6 focus-visible:outline-none">
+        <TabsContent value="charts" className="space-y-4 sm:space-y-6 focus-visible:outline-hidden">
 <Card>
         <CardHeader>
           <CardTitle className="text-base">
@@ -1609,7 +1609,7 @@ export function ReportsPage() {
 
         </TabsContent>
 
-        <TabsContent value="finance" className="focus-visible:outline-none">
+        <TabsContent value="finance" className="focus-visible:outline-hidden">
           <Rp04FinanceReportsPage embedded />
         </TabsContent>
       </Tabs>

@@ -56,7 +56,7 @@ export function FirstRunTour() {
       aria-modal="false"
       aria-labelledby="first-run-tour-title"
       data-testid="first-run-tour"
-      className="fixed bottom-4 start-4 z-40 w-[min(22rem,calc(100vw-2rem))] rounded-lg border border-border bg-card p-4 shadow-lg"
+      className="fixed bottom-4 inset-s-4 z-40 w-[min(22rem,calc(100vw-2rem))] rounded-lg border border-border bg-card p-4 shadow-lg"
     >
       <div className="mb-2 flex items-start justify-between gap-2">
         <p className="text-xs text-muted-foreground">{t("help.tour.progress", { current: index + 1, total: steps.length })}</p>

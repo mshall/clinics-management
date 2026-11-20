@@ -54,14 +54,14 @@ export function PageHeader({ title, description, actions, eyebrow, className }: 
 }
 
 export function Surface({ className, ...p }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={kcn("rounded-xl border border-border/80 bg-card text-card-foreground shadow-[var(--kx-shadow-1)]", className)} {...p} />;
+  return <div className={kcn("rounded-xl border border-border/80 bg-card text-card-foreground shadow-kx-1", className)} {...p} />;
 }
 
 export function StatCard({ label, value, hint, icon, tone = "neutral", className }: { label: ReactNode; value: ReactNode; hint?: ReactNode; icon?: ReactNode; tone?: KTone; className?: string }) {
   const bar: Record<KTone, string> = { neutral: "bg-border", good: "bg-[hsl(var(--success))]", warn: "bg-[hsl(var(--warning))]", bad: "bg-[hsl(var(--danger-text))]", info: "bg-[hsl(var(--info))]", brand: "bg-primary" };
   return (
     <Surface className={kcn("relative overflow-hidden p-4", className)}>
-      <span aria-hidden className={kcn("absolute inset-y-0 start-0 w-1", bar[tone])} />
+      <span aria-hidden className={kcn("absolute inset-y-0 inset-s-0 w-1", bar[tone])} />
       <div className="flex items-start justify-between gap-2">
         <div className="text-xs font-medium text-muted-foreground">{label}</div>
         {icon && <div aria-hidden className="text-muted-foreground">{icon}</div>}

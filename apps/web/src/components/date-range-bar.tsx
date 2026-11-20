@@ -39,9 +39,9 @@ export function DateRangeBar() {
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <Label htmlFor="range-from" className="text-xs text-muted-foreground">{t("dateRange.from")}</Label>
-          <Input id="range-from" className="ltr-nums h-9 w-auto min-w-[9.5rem] md:h-9" type="date" value={draftFrom} onChange={(e) => setDraftFrom(e.target.value)} />
+          <Input id="range-from" className="ltr-nums h-9 w-auto min-w-38 md:h-9" type="date" value={draftFrom} onChange={(e) => setDraftFrom(e.target.value)} />
           <Label htmlFor="range-to" className="text-xs text-muted-foreground">{t("dateRange.to")}</Label>
-          <Input id="range-to" className="ltr-nums h-9 w-auto min-w-[9.5rem] md:h-9" type="date" value={draftTo} onChange={(e) => setDraftTo(e.target.value)} />
+          <Input id="range-to" className="ltr-nums h-9 w-auto min-w-38 md:h-9" type="date" value={draftTo} onChange={(e) => setDraftTo(e.target.value)} />
           <Button type="button" size="sm" className="h-9 sm:h-9" onClick={apply}>
             {t("dateRange.apply")}
           </Button>

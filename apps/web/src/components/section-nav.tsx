@@ -25,7 +25,7 @@ export function SectionNav<T extends string>({ items, value, onChange, label, cl
     <div className={cn("flex items-end gap-3", className)}>
       <nav aria-label={label} className="kx-secnav min-w-0 flex-1">
         {items.filter((i) => !i.hidden).map((i) => (
-          <button key={i.id} type="button" aria-current={value === i.id ? "true" : undefined} onClick={() => onChange(i.id)} className="touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <button key={i.id} type="button" aria-current={value === i.id ? "true" : undefined} onClick={() => onChange(i.id)} className="touch-manipulation focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring">
             <span className="inline-flex items-center gap-1.5">
               {i.label}
               {i.badge != null && <span className="rounded-full bg-muted px-1.5 text-[0.6875rem] font-semibold tabular-nums text-muted-foreground">{i.badge}</span>}

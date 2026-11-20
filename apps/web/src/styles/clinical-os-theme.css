@@ -11,7 +11,7 @@ html.theme-clinical-os {
 }
 
 html.theme-clinical-os .border-border.bg-card,
-html.theme-clinical-os [class*="shadow-sm"].bg-card,
+html.theme-clinical-os [class*="shadow-xs"].bg-card,
 html.theme-clinical-os .rounded-lg.border.bg-card {
   box-shadow: var(--kx-shadow-1);
   border-color: hsl(var(--border));

@@ -686,7 +686,7 @@ export function PatientsPage() {
                       </span>
                     </td>
                     <td className="px-3 py-2 ltr-nums">{p.dob ?? t("common.notAvailable", "—")}</td>
-                    <td className="max-w-[10rem] truncate px-3 py-2 text-xs text-muted-foreground">{p.email ?? "—"}</td>
+                    <td className="max-w-40 truncate px-3 py-2 text-xs text-muted-foreground">{p.email ?? "—"}</td>
                     <td className="px-3 py-2 text-muted-foreground">{p.homeBranch}</td>
                     {canManagePatients ? (
                       <td className="px-3 py-2 text-end">

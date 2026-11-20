@@ -121,7 +121,7 @@ export function FrontDeskBoardPage() {
   const totalRooms = boardQ.data?.rooms?.length ?? 0;
 
   const renderRow = (w: QueueRow, actions: "waiting" | "exam") => (
-    <div key={w.appointmentId} data-stage={w.queueStage} className="group flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl border border-border/80 bg-card px-3 py-2.5 shadow-[var(--kx-shadow-1)] transition-[box-shadow,border-color] duration-150 hover:border-primary/30 hover:shadow-[var(--kx-shadow-2)]">
+    <div key={w.appointmentId} data-stage={w.queueStage} className="group flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl border border-border/80 bg-card px-3 py-2.5 shadow-kx-1 transition-[box-shadow,border-color] duration-150 hover:border-primary/30 hover:shadow-kx-2">
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <span className="grid size-12 shrink-0 place-items-center rounded-lg bg-accent font-mono text-lg font-bold tabular-nums text-accent-foreground ltr-nums" aria-label={t("frontDesk.ticket", "Ticket")}>#{w.ticketNumber ?? "—"}</span>
         <div className="min-w-0">
@@ -162,7 +162,7 @@ export function FrontDeskBoardPage() {
 
   const loadingRows = (
     <div className="space-y-2" role="status" aria-busy="true">
-      {[0, 1, 2].map((i) => <Skeleton key={i} className="h-[4.5rem] rounded-xl" />)}
+      {[0, 1, 2].map((i) => <Skeleton key={i} className="h-18 rounded-xl" />)}
     </div>
   );
 
@@ -192,7 +192,7 @@ export function FrontDeskBoardPage() {
           ["/front-desk/claims", "claims-link", t("claims.title", "Claims")],
           ["/messaging/ai-receptionist", "ai-receptionist-link", t("aiReceptionist.title", "AI receptionist")],
         ].map(([to, id, label]) => (
-          <Link key={id} to={to!} data-testid={id} className="rounded-full border border-border bg-card px-3 py-1 text-sm font-medium text-muted-foreground shadow-[var(--kx-shadow-1)] transition-colors hover:border-primary/30 hover:text-foreground">{label}</Link>
+          <Link key={id} to={to!} data-testid={id} className="rounded-full border border-border bg-card px-3 py-1 text-sm font-medium text-muted-foreground shadow-kx-1 transition-colors hover:border-primary/30 hover:text-foreground">{label}</Link>
         ))}
         <span data-testid="front-desk-shortcuts" className="ms-auto hidden items-center gap-3 text-xs text-muted-foreground lg:flex">
           <span><kbd className="kx-kbd">N</kbd> {t("frontDesk.kbdCallNext", "call next")}</span>

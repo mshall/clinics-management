@@ -143,7 +143,7 @@ export function RoleAssistantWidget() {
                   "rounded-xl px-3 py-2.5",
                   line.role === "user"
                     ? "ms-4 border border-primary/20 bg-primary/10 text-sm text-foreground"
-                    : "me-2 border border-border/60 bg-muted/80 text-foreground shadow-sm",
+                    : "me-2 border border-border/60 bg-muted/80 text-foreground shadow-xs",
                 )}
               >
                 {line.role === "assistant" ? (

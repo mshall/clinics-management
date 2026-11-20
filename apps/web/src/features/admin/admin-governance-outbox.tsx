@@ -92,7 +92,7 @@ export function AdminGovernanceOutbox() {
               ))}
             </select>
           </div>
-          <div className="min-w-[10rem] flex-1 space-y-1">
+          <div className="min-w-40 flex-1 space-y-1">
             <Label htmlFor="outbox-type">{t("admin.governanceOutboxTypeFilter", "Event type")}</Label>
             <Input
               id="outbox-type"

@@ -34,7 +34,7 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
   cn(
     "relative flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150",
     isActive
-      ? "bg-accent text-accent-foreground before:absolute before:inset-y-2 before:start-0 before:w-[3px] before:rounded-full before:bg-primary"
+      ? "bg-accent text-accent-foreground before:absolute before:inset-y-2 before:inset-s-0 before:w-[3px] before:rounded-full before:bg-primary"
       : "text-muted-foreground hover:bg-muted hover:text-foreground"
   );
 

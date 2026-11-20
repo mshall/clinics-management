@@ -50,8 +50,8 @@ function StatTile({
   }[accent];
 
   return (
-    <div className={cn("flex gap-3 rounded-xl border p-4 shadow-sm", accentClass)}>
-      <div className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-background/90 shadow-sm">
+    <div className={cn("flex gap-3 rounded-xl border p-4 shadow-xs", accentClass)}>
+      <div className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-background/90 shadow-xs">
         <Icon className="size-5" aria-hidden />
       </div>
       <div className="min-w-0 flex-1">

@@ -85,7 +85,7 @@ export function HelpCentrePage() {
       </header>
 
       <div className="relative">
-        <Search className="pointer-events-none absolute top-1/2 size-4 -translate-y-1/2 text-muted-foreground start-3" />
+        <Search className="pointer-events-none absolute top-1/2 size-4 -translate-y-1/2 text-muted-foreground inset-s-3" />
         <Input
           value={query}
           onChange={(e) => onQuery(e.target.value)}

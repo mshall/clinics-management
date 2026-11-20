@@ -557,7 +557,7 @@ export function CustomerSupportPage() {
                 {canMutateSupport ? (
                   <div className="flex flex-wrap gap-2 pt-1" data-testid="support-ops-actions">
                     <select
-                      className="h-9 max-w-[14rem] rounded-md border border-input bg-background px-2 text-sm"
+                      className="h-9 max-w-56 rounded-md border border-input bg-background px-2 text-sm"
                       defaultValue=""
                       disabled={applyMacroMutation.isPending}
                       onChange={(e) => {

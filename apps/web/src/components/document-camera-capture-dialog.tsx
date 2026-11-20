@@ -165,7 +165,7 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
             <p className="text-sm text-destructive">{cameraError}</p>
           ) : (
             <div className="overflow-hidden rounded-md border border-border bg-black">
-              <video ref={videoRef} className="aspect-[4/3] w-full object-contain" playsInline muted />
+              <video ref={videoRef} className="aspect-4/3 w-full object-contain" playsInline muted />
             </div>
           )}
           {!useNativeCamera && processing ? (

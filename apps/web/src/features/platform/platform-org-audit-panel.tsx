@@ -90,7 +90,7 @@ export function PlatformOrgAuditPanel({ tenantId }: { tenantId: string }) {
             ))}
           </select>
         </div>
-        <div className="min-w-[12rem] flex-1 space-y-1">
+        <div className="min-w-48 flex-1 space-y-1">
           <Label htmlFor="platform-audit-q">{t("admin.auditSearch", "Search actions, resources, or people")}</Label>
           <SearchInput
             id="platform-audit-q"

@@ -119,10 +119,10 @@ export function AppointmentTimeGrid({
   const cols = days.length;
 
   return (
-    <div ref={scroller} className="max-h-[calc(100vh-15rem)] min-h-[26rem] overflow-auto" data-testid="appointments-time-grid">
-      <div className="min-w-[44rem]">
+    <div ref={scroller} className="max-h-[calc(100vh-15rem)] min-h-104 overflow-auto" data-testid="appointments-time-grid">
+      <div className="min-w-176">
         {/* Sticky day header */}
-        <div className="sticky top-0 z-[5] grid border-b border-border bg-card/95 backdrop-blur" style={{ gridTemplateColumns: `3.5rem repeat(${cols}, minmax(0, 1fr))` }}>
+        <div className="sticky top-0 z-5 grid border-b border-border bg-card/95 backdrop-blur-sm" style={{ gridTemplateColumns: `3.5rem repeat(${cols}, minmax(0, 1fr))` }}>
           <div />
           {days.map((d) => {
             const isToday = sameLocalDay(d, today);
@@ -138,7 +138,7 @@ export function AppointmentTimeGrid({
         <div className="relative grid" style={{ gridTemplateColumns: `3.5rem repeat(${cols}, minmax(0, 1fr))`, height }}>
           <div className="relative">
             {hours.map((h, i) => (
-              <div key={h} className="absolute end-2 -translate-y-1/2 text-[11px] text-muted-foreground ltr-nums" style={{ top: i * HOUR_PX }}>
+              <div key={h} className="absolute inset-e-2 -translate-y-1/2 text-[11px] text-muted-foreground ltr-nums" style={{ top: i * HOUR_PX }}>
                 {i > 0 ? hourFmt.format(new Date(2000, 0, 1, h)) : ""}
               </div>
             ))}
@@ -147,7 +147,7 @@ export function AppointmentTimeGrid({
             const placed = placeDay(byDay.get(toLocalDateIso(d)) ?? []);
             const isToday = sameLocalDay(d, today);
             return (
-              <div key={d.toISOString()} className={cn("relative border-s border-border/60", isToday && "bg-primary/[0.03]")}>
+              <div key={d.toISOString()} className={cn("relative border-s border-border/60", isToday && "bg-primary/3")}>
                 {hours.map((h, i) => (
                   <div key={h} className="absolute inset-x-0 border-t border-border/50" style={{ top: i * HOUR_PX, height: HOUR_PX }}>
                     {canBook && onQuickBook
@@ -185,7 +185,7 @@ export function AppointmentTimeGrid({
                       onClick={() => onOpen(p.a.id)}
                       title={`${timeFmt.format(p.start)}–${timeFmt.format(p.end)} · ${patient.text}`}
                       className={cn(
-                        "absolute z-[1] overflow-hidden rounded-md border border-border/70 border-s-[3px] px-1.5 py-1 text-start shadow-[var(--kx-shadow-1)] transition-[box-shadow,transform] duration-150 hover:z-[3] hover:shadow-[var(--kx-shadow-2)] focus-visible:z-[3]",
+                        "absolute z-1 overflow-hidden rounded-md border border-border/70 border-s-[3px] px-1.5 py-1 text-start shadow-kx-1 transition-[box-shadow,transform] duration-150 hover:z-3 hover:shadow-kx-2 focus-visible:z-3",
                         TINT[p.a.status.toUpperCase()] ?? TINT.SCHEDULED,
                       )}
                       style={{ top, height: h, insetInlineStart: `calc(${(p.col / p.cols) * 100}% + 2px)`, width: `calc(${100 / p.cols}% - 4px)` }}
@@ -202,7 +202,7 @@ export function AppointmentTimeGrid({
                   );
                 })}
                 {isToday && nowTop >= 0 && nowTop <= height ? (
-                  <div aria-hidden className="pointer-events-none absolute inset-x-0 z-[4] flex items-center" style={{ top: nowTop }}>
+                  <div aria-hidden className="pointer-events-none absolute inset-x-0 z-4 flex items-center" style={{ top: nowTop }}>
                     <span className="size-2 -ms-1 rounded-full bg-[hsl(var(--ring))]" />
                     <span className="h-px flex-1 bg-[hsl(var(--ring))]" />
                   </div>

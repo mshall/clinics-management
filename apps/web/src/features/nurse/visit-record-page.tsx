@@ -144,7 +144,7 @@ export function VisitRecordPage() {
                 {draft.checklist.map((c, i) => (
                   <li key={i}>
                     <label className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border px-3 text-base transition-colors ${c.done ? "border-[hsl(var(--success)/0.4)] bg-[hsl(var(--success)/0.08)]" : "border-border bg-card"}`}>
-                      <input type="checkbox" className="!size-6" disabled={locked} checked={c.done} onChange={(e) => setDraft({ ...draft, checklist: draft.checklist.map((x, j) => (j === i ? { ...x, done: e.target.checked } : x)) })} />
+                      <input type="checkbox" className="size-6!" disabled={locked} checked={c.done} onChange={(e) => setDraft({ ...draft, checklist: draft.checklist.map((x, j) => (j === i ? { ...x, done: e.target.checked } : x)) })} />
                       {c.task}
                     </label>
                   </li>
@@ -190,7 +190,7 @@ export function VisitRecordPage() {
           {!locked ? (
             <div className="kx-actionbar flex-wrap">
               <Button variant="outline" size="lg" className="min-h-14 flex-1 text-base" disabled={save.isPending} onClick={() => save.mutate()} data-testid="visit-save">{t("nurse.common.save")}</Button>
-              <Button size="lg" className="min-h-14 flex-[2] text-base" disabled={sign.isPending || signBlockedByCritical} onClick={() => sign.mutate()} data-testid="visit-sign">{t("nurse.visit.sign")}</Button>
+              <Button size="lg" className="min-h-14 flex-2 text-base" disabled={sign.isPending || signBlockedByCritical} onClick={() => sign.mutate()} data-testid="visit-sign">{t("nurse.visit.sign")}</Button>
               {signBlockedByCritical ? <p className="w-full text-sm font-medium text-[hsl(var(--danger-text))]" role="status">{t("nurse.visit.signBlocked")}</p> : null}
             </div>
           ) : (
