@@ -13,6 +13,9 @@ bash scripts/ensure-local-dev-db.sh
 npm run prisma:generate -w api
 npm run db:deploy -w api
 npm run db:seed -w api
+# Mobile staff-app integration tests need demo tenants + mobile fixtures (not in the base seed).
+npm run db:seed:demo -w api
+npm run db:seed:mobile -w api
 npm run typecheck
 npm run test:unit -w web
 npm run test:unit -w api
