@@ -30,11 +30,17 @@ import {
   useReportsKiorexImpactQuery,
   useReportsMonthlySeriesQuery,
   useReportsOperationsQuery,
+  useReportsEncounterAcquisitionQuery,
+  useReportsOperationAcquisitionQuery,
   useReportsPatientAcquisitionQuery,
   useReportsPerformanceQuery,
 } from "@/lib/api-hooks";
 import { apiDownload } from "@/lib/http";
-import type { ReportsClinicBreakdownItemDto, ReportsCurrencyTotalsDto, ReportsMonthlySeriesItemDto } from "@/lib/api-types";
+import type {
+  ReportsClinicBreakdownItemDto,
+  ReportsCurrencyTotalsDto,
+  ReportsMonthlySeriesItemDto,
+} from "@/lib/api-types";
 import { formatClinicName, formatRevenueCategory, localeForLanguage } from "@/lib/locale-display";
 import { formatMoneyAmount } from "@/lib/money-display";
 import {
@@ -128,6 +134,8 @@ export function ReportsPage() {
   const { from, to } = useDateRangeStore();
   const [scopeClinicId, setScopeClinicId] = useState("");
   const [selectedChannel, setSelectedChannel] = useState<{ channel: string; label: string } | null>(null);
+  /** "" | "contract" | "standard" */
+  const [opAcquisitionContractFilter, setOpAcquisitionContractFilter] = useState("");
 
   const { data: clinics = [] } = useClinicsQuery();
   const clinicScopeId = scopeClinicId.trim() || undefined;
@@ -139,6 +147,17 @@ export function ReportsPage() {
   const kiorexImpact = useReportsKiorexImpactQuery(kiorexPeriod);
   const clinicBreakdown = useReportsClinicBreakdownQuery(from, to, !isPhysician && !clinicScopeId);
   const acquisition = useReportsPatientAcquisitionQuery(from, to);
+  const operationAcquisition = useReportsOperationAcquisitionQuery({
+    from,
+    to,
+    clinicId: clinicScopeId,
+    isContract: opAcquisitionContractFilter || undefined,
+  });
+  const encounterAcquisition = useReportsEncounterAcquisitionQuery({
+    from,
+    to,
+    clinicId: clinicScopeId,
+  });
 
   const currencies = series.data?.currencies ?? performance.data?.byCurrency.map((r) => r.currency) ?? [];
   const chartData = useMemo(
@@ -159,6 +178,28 @@ export function ReportsPage() {
   }, [acquisition.data?.items, t]);
 
   const acquisitionTotal = acquisition.data?.total ?? 0;
+
+  const operationAcquisitionRows = useMemo(() => {
+    return (operationAcquisition.data?.items ?? []).map((item) => ({
+      ...item,
+      label:
+        item.channel === "UNKNOWN"
+          ? t("reports.acquisitionUnknown", "Not specified")
+          : patientAcquisitionLabel(item.channel as PatientAcquisitionChannel, t),
+      paidTotal: item.byCurrency.reduce((sum, m) => sum + m.paidAmount, 0),
+      costTotal: item.byCurrency.reduce((sum, m) => sum + m.totalCost, 0),
+    }));
+  }, [operationAcquisition.data?.items, t]);
+
+  const encounterAcquisitionRows = useMemo(() => {
+    return (encounterAcquisition.data?.items ?? []).map((item) => ({
+      ...item,
+      label:
+        item.channel === "UNKNOWN"
+          ? t("reports.acquisitionUnknown", "Not specified")
+          : patientAcquisitionLabel(item.channel as PatientAcquisitionChannel, t),
+    }));
+  }, [encounterAcquisition.data?.items, t]);
   const scopeLabel =
     clinicScopeId != null && clinicScopeId !== ""
       ? formatClinicName(
@@ -505,12 +546,27 @@ export function ReportsPage() {
                         <div>
                           <p className="text-xs text-muted-foreground">{t("reports.operations", "Operations")}</p>
                           <p className="font-medium ltr-nums tabular-nums">{row.operationCount}</p>
+                          {(row.contractOperationCount ?? 0) > 0 ? (
+                            <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                              {t("reports.contractOpsShort", "{{count}} contract", {
+                                count: row.contractOperationCount,
+                              })}
+                            </p>
+                          ) : null}
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">{t("reports.newPatients", "New patients")}</p>
                           <p className="font-medium ltr-nums tabular-nums">{row.newPatients}</p>
                         </div>
                       </div>
+                      {(row.operationPaidTotal ?? 0) > 0 || (row.operationTotalCost ?? 0) > 0 ? (
+                        <p className="mt-2 text-xs text-muted-foreground ltr-nums">
+                          {t("reports.operationMoneyLine", "Ops paid {{paid}} · total {{total}}", {
+                            paid: money(row.operationPaidTotal ?? 0, row.defaultCurrency),
+                            total: money(row.operationTotalCost ?? 0, row.defaultCurrency),
+                          })}
+                        </p>
+                      ) : null}
                       {row.byCurrency.length === 0 ? (
                         <p className="mt-2 text-sm text-muted-foreground">—</p>
                       ) : (
@@ -595,7 +651,14 @@ export function ReportsPage() {
                                 {row.clinic.visits}
                               </td>
                               <td rowSpan={row.clinicRowSpan} className="px-3 py-3 text-end ltr-nums tabular-nums">
-                                {row.clinic.operationCount}
+                                <p>{row.clinic.operationCount}</p>
+                                {(row.clinic.contractOperationCount ?? 0) > 0 ? (
+                                  <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                                    {t("reports.contractOpsShort", "{{count}} contract", {
+                                      count: row.clinic.contractOperationCount,
+                                    })}
+                                  </p>
+                                ) : null}
                               </td>
                               <td rowSpan={row.clinicRowSpan} className="px-3 py-3 text-end ltr-nums tabular-nums">
                                 {row.clinic.newPatients}
@@ -863,6 +926,179 @@ export function ReportsPage() {
               </BarChart>
             </ResponsiveContainer>
           </ChartFrame>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            {t("reports.encounterAcquisitionTitle", "Encounters by how they found us")}
+          </CardTitle>
+          <CardDescription>
+            {t(
+              "reports.encounterAcquisitionHint",
+              "Finalized visits and visit-fee money by acquisition channel for {{from}} → {{to}}.",
+              { from, to },
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {encounterAcquisition.isError ? (
+            <p className="text-sm text-destructive">
+              {encounterAcquisition.error instanceof Error
+                ? encounterAcquisition.error.message
+                : t("common.error")}
+            </p>
+          ) : encounterAcquisition.isPending ? (
+            <p className="text-sm text-muted-foreground">{t("common.loading", "Loading…")}</p>
+          ) : (encounterAcquisition.data?.totalEncounters ?? 0) === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {t("reports.encounterAcquisitionEmpty", "No finalized encounters in this period.")}
+            </p>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground ltr-nums">
+                {t("reports.encounterAcquisitionTotal", "{{count}} encounters in range", {
+                  count: encounterAcquisition.data?.totalEncounters ?? 0,
+                })}
+              </p>
+              <ResponsiveTable>
+                <ResponsiveTableElement minWidth="md">
+                  <thead className="bg-muted/60">
+                    <tr className="text-start">
+                      <th className="px-3 py-2 font-medium">{t("reports.acquisitionChannel", "Channel")}</th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        {t("reports.encounters", "Encounters")}
+                      </th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        {t("reports.operationChannelMoney", "Paid / total")}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {encounterAcquisitionRows.map((row) => (
+                      <tr key={row.channel} className="border-t">
+                        <td className="px-3 py-2">{row.label}</td>
+                        <td className="px-3 py-2 text-end ltr-nums tabular-nums">{row.encounterCount}</td>
+                        <td className="px-3 py-2 text-end text-xs ltr-nums tabular-nums">
+                          {row.byCurrency.length === 0 ? (
+                            "—"
+                          ) : (
+                            <ul className="space-y-0.5">
+                              {row.byCurrency.map((m) => (
+                                <li key={m.currency}>
+                                  {money(m.paidAmount, m.currency)} / {money(m.totalCost, m.currency)}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </ResponsiveTableElement>
+              </ResponsiveTable>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1.5">
+            <CardTitle className="text-base">
+              {t("reports.operationAcquisitionTitle", "Operations by how they found us")}
+            </CardTitle>
+            <CardDescription>
+              {t(
+                "reports.operationAcquisitionHint",
+                "Procedure volume and money by acquisition channel for {{from}} → {{to}}. Filter to contract (تعاقد) or standard paid operations.",
+                { from, to },
+              )}
+            </CardDescription>
+          </div>
+          <div className="w-full sm:w-52">
+            <Label htmlFor="op-acq-contract-filter" className="text-xs text-muted-foreground">
+              {t("operations.contractFilter", "Contract type")}
+            </Label>
+            <select
+              id="op-acq-contract-filter"
+              className={nativeSelectClassName}
+              value={opAcquisitionContractFilter}
+              onChange={(e) => setOpAcquisitionContractFilter(e.target.value)}
+              data-testid="reports-operation-acquisition-contract-filter"
+            >
+              <option value="">{t("operations.contractFilterAll", "All operations")}</option>
+              <option value="contract">{t("operations.contractFilterContract", "Contract (تعاقد)")}</option>
+              <option value="standard">{t("operations.contractFilterStandard", "Standard (paid)")}</option>
+            </select>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {operationAcquisition.isError ? (
+            <p className="text-sm text-destructive">
+              {operationAcquisition.error instanceof Error
+                ? operationAcquisition.error.message
+                : t("common.error")}
+            </p>
+          ) : operationAcquisition.isPending ? (
+            <p className="text-sm text-muted-foreground">{t("common.loading", "Loading…")}</p>
+          ) : (operationAcquisition.data?.totalOperations ?? 0) === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {t("reports.operationAcquisitionEmpty", "No operations in this period for the selected filters.")}
+            </p>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground ltr-nums">
+                {t("reports.operationAcquisitionTotal", "{{ops}} operations · {{contracts}} contract", {
+                  ops: operationAcquisition.data?.totalOperations ?? 0,
+                  contracts: operationAcquisition.data?.totalContract ?? 0,
+                })}
+              </p>
+              <ResponsiveTable>
+                <ResponsiveTableElement minWidth="md">
+                  <thead className="bg-muted/60">
+                    <tr className="text-start">
+                      <th className="px-3 py-2 font-medium">{t("reports.acquisitionChannel", "Channel")}</th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        {t("reports.operations", "Operations")}
+                      </th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        {t("reports.contractOps", "Contract")}
+                      </th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        {t("reports.operationChannelMoney", "Paid / total")}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {operationAcquisitionRows.map((row) => (
+                      <tr key={row.channel} className="border-t">
+                        <td className="px-3 py-2">{row.label}</td>
+                        <td className="px-3 py-2 text-end ltr-nums tabular-nums">{row.operationCount}</td>
+                        <td className="px-3 py-2 text-end ltr-nums tabular-nums text-emerald-800 dark:text-emerald-300">
+                          {row.contractCount}
+                        </td>
+                        <td className="px-3 py-2 text-end text-xs ltr-nums tabular-nums">
+                          {row.byCurrency.length === 0 ? (
+                            "—"
+                          ) : (
+                            <ul className="space-y-0.5">
+                              {row.byCurrency.map((m) => (
+                                <li key={m.currency}>
+                                  {money(m.paidAmount, m.currency)} / {money(m.totalCost, m.currency)}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </ResponsiveTableElement>
+              </ResponsiveTable>
+            </>
+          )}
         </CardContent>
       </Card>
 

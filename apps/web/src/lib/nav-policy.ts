@@ -257,6 +257,11 @@ export function effectiveNavKeys(
   if (hasHrNavAccessFromGrants(employeePrivilegeGrants)) {
     out.add("hr");
   }
+  // Platform operators are not on a clinic subscription. Attaching synthetic Enterprise
+  // entitlements for AI must not run the org plan nav preset (which drops platform_* tabs).
+  if (role === "platform_super_admin") {
+    return out;
+  }
   if (planKey || planEntitlements) {
     const filtered = applyPlanNavPipeline(out, planKey, planEntitlements);
     return new Set(filtered as NavItemKey[]);

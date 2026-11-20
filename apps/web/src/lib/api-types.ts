@@ -275,6 +275,10 @@ export interface OperationDto {
   paidAmount: number;
   balanceDue: number;
   feeCurrency: string;
+  /** Contract / تعاقد — allows zero total cost */
+  isContract: boolean;
+  /** How the patient found us (snapshot at booking) */
+  acquisitionChannel?: string | null;
   comments: string | null;
   status: string;
   createdAt: string;
@@ -713,6 +717,9 @@ export interface ReportsClinicBreakdownItemDto {
   defaultCurrency: string;
   visits: number;
   operationCount: number;
+  contractOperationCount?: number;
+  operationPaidTotal?: number;
+  operationTotalCost?: number;
   newPatients: number;
   byCurrency: ReportsCurrencyTotalsDto[];
 }
@@ -743,6 +750,57 @@ export interface ReportsPatientAcquisitionDto {
   };
   total: number;
   items: ReportsPatientAcquisitionItemDto[];
+}
+
+export interface ReportsOperationAcquisitionMoneyDto {
+  currency: string;
+  totalCost: number;
+  paidAmount: number;
+}
+
+export interface ReportsOperationAcquisitionItemDto {
+  channel: string;
+  operationCount: number;
+  contractCount: number;
+  byCurrency: ReportsOperationAcquisitionMoneyDto[];
+}
+
+export interface ReportsOperationAcquisitionDto {
+  period: {
+    from: string;
+    to: string;
+    start: string;
+    end: string;
+  };
+  clinicId: string | null;
+  isContractFilter: boolean | null;
+  totalOperations: number;
+  totalContract: number;
+  items: ReportsOperationAcquisitionItemDto[];
+}
+
+export interface ReportsEncounterAcquisitionMoneyDto {
+  currency: string;
+  totalCost: number;
+  paidAmount: number;
+}
+
+export interface ReportsEncounterAcquisitionItemDto {
+  channel: string;
+  encounterCount: number;
+  byCurrency: ReportsEncounterAcquisitionMoneyDto[];
+}
+
+export interface ReportsEncounterAcquisitionDto {
+  period: {
+    from: string;
+    to: string;
+    start: string;
+    end: string;
+  };
+  clinicId: string | null;
+  totalEncounters: number;
+  items: ReportsEncounterAcquisitionItemDto[];
 }
 
 export interface ReportsPatientAcquisitionPatientDto {

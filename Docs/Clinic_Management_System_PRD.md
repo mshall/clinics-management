@@ -331,6 +331,9 @@ A dedicated **Platform Super Administrator** operates **outside any organization
 
 - The **Reports** area charts **visit volume** (finalized encounters), **posted revenue**, and **new patient registrations** per calendar month from live ledger and patient data—not illustrative placeholders.
 - **Patient acquisition** breakdown (how patients found the clinic) with date range filter; each channel row is **clickable** to open a paginated patient list dialog for that channel and period.
+- **Operations contract (تعاقد):** fee editors cannot set operation total cost to **0** unless they mark the operation as a **contract**; a rich confirmation dialog explains the rule. Contract ops are filterable on the Operations list (`isContract`) and in Reports.
+- **Operations by acquisition channel:** Reports shows procedure volume and paid/total money by “how they found us”, with optional contract vs standard filter; clinic breakdown includes contract operation counts and ops money totals.
+- **Encounters by acquisition channel:** Reports shows finalized visit counts and visit-fee paid/total money by “how they found us”.
 
 ### 6.6.2 Customer support & operational tracking
 

@@ -14,6 +14,26 @@ export type ResolvedEntitlements = {
 export class EntitlementsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /** Synthetic Enterprise entitlements for platform super admins (no tenant subscription). */
+  async resolvePlatformOperator(): Promise<ResolvedEntitlements> {
+    const plan = await this.prisma.plan.findUnique({ where: { key: PlanKey.ENTERPRISE } });
+    if (!plan) {
+      return {
+        plan: { key: PlanKey.ENTERPRISE, status: SubscriptionStatus.ACTIVE },
+        entitlements: { ai_assistant: true },
+      };
+    }
+    const planEntitlements = await this.prisma.planEntitlement.findMany({ where: { planId: plan.id } });
+    const map: Record<string, EntitlementValue> = {};
+    for (const row of planEntitlements) {
+      map[row.key] = parseEntitlementValue(row.valueJson);
+    }
+    return {
+      plan: { key: PlanKey.ENTERPRISE, status: SubscriptionStatus.ACTIVE },
+      entitlements: map,
+    };
+  }
+
   async resolve(tenantId: string): Promise<ResolvedEntitlements> {
 
     const sub = await this.prisma.subscription.findUnique({

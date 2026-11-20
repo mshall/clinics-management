@@ -349,23 +349,37 @@ export class PatientsService {
     lastNameEn: true,
     firstNameAr: true,
     lastNameAr: true,
+    dob: true,
+    gender: true,
+    profileComplete: true,
+    createdAt: true,
   } as const;
 
   private mapPhoneConflictPatient(p: {
     id: string;
     mrn: string;
+    phone: string;
     firstNameEn: string;
     lastNameEn: string;
     firstNameAr: string | null;
     lastNameAr: string | null;
+    dob: Date | null;
+    gender: string;
+    profileComplete: boolean;
+    createdAt: Date;
   }): PatientPhoneConflictPatientDto {
     return {
       id: p.id,
       mrn: p.mrn,
+      phone: p.phone,
       firstNameEn: p.firstNameEn,
       lastNameEn: p.lastNameEn,
       firstNameAr: p.firstNameAr,
       lastNameAr: p.lastNameAr,
+      dob: p.dob ? p.dob.toISOString().slice(0, 10) : null,
+      gender: p.gender,
+      profileComplete: p.profileComplete,
+      createdAt: p.createdAt.toISOString(),
     };
   }
 

@@ -58,6 +58,12 @@ export class OperationDto {
   @ApiProperty({ description: "Currency amounts are recorded in (may differ from clinic default)" })
   feeCurrency!: string;
 
+  @ApiProperty({ description: "Contract / تعاقد — allows zero total cost" })
+  isContract!: boolean;
+
+  @ApiPropertyOptional({ description: "How the patient found us (snapshot at booking)" })
+  acquisitionChannel?: string | null;
+
   @ApiPropertyOptional()
   comments!: string | null;
 

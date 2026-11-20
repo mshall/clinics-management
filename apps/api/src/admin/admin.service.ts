@@ -161,13 +161,29 @@ export class AdminService {
     };
   }
 
-  async listTenants(pageStr?: string, pageSizeStr?: string, sortByStr?: string, sortOrderStr?: string) {
+  async listTenants(
+    pageStr?: string,
+    pageSizeStr?: string,
+    sortByStr?: string,
+    sortOrderStr?: string,
+    qRaw?: string,
+  ) {
     const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
     const sortField = pickSortField(sortByStr, ["name", "createdAt", "baseCurrency"] as const, "name");
     const sortDir = parseSortOrder(sortOrderStr);
+    const q = qRaw?.trim() ?? "";
+    const where = q
+      ? {
+          OR: [
+            { name: { contains: q, mode: "insensitive" as const } },
+            { nameAr: { contains: q, mode: "insensitive" as const } },
+          ],
+        }
+      : {};
     const [total, rows] = await Promise.all([
-      this.prisma.tenant.count(),
+      this.prisma.tenant.count({ where }),
       this.prisma.tenant.findMany({
+        where,
         orderBy: { [sortField]: sortDir },
         skip,
         take: pageSize,

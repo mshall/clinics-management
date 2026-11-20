@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
+import { PatientPhoneField } from "@/components/patient-phone-field";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { AppointmentDeleteConfirmDialog, type AppointmentDeleteTarget } from "@/features/appointments/appointment-delete-confirm-dialog";
 import { AppointmentOverlapConfirmDialog } from "@/features/appointments/appointment-overlap-confirm-dialog";
@@ -26,6 +27,11 @@ import { useAdminOverviewQuery, useAppointmentsQuery, useClinicsQuery, usePatien
 import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
 import { canDeleteAppointment } from "@/lib/appointment-delete-policy";
 import { ApiError, apiDelete, apiGet, apiPost } from "@/lib/http";
+import {
+  parsePhoneConflictFromError,
+  phoneConflictMessage,
+  type PatientPhoneConflictPatient,
+} from "@/lib/patient-phone-conflict";
 import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
 import { physicianToPickListItem } from "@/lib/physician-display";
 import { formatClinicName, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
@@ -189,6 +195,8 @@ export function AppointmentsPage() {
   const [provisionalFirstName, setProvisionalFirstName] = useState("");
   const [provisionalLastName, setProvisionalLastName] = useState("");
   const [provisionalPhone, setProvisionalPhone] = useState("");
+  const [provisionalPhoneConflict, setProvisionalPhoneConflict] =
+    useState<PatientPhoneConflictPatient | null>(null);
   const [clinicianId, setClinicianId] = useState("");
   const [pinnedPhysicianItem, setPinnedPhysicianItem] = useState<PickListItem | null>(null);
   useEffect(() => {
@@ -382,8 +390,36 @@ export function AppointmentsPage() {
     return body;
   };
 
+  const useExistingPatientFromPhoneConflict = (existing: PatientPhoneConflictPatient) => {
+    const item: PickListItem = {
+      value: existing.id,
+      label: `${existing.firstNameEn} ${existing.lastNameEn}`.trim(),
+      hint: existing.mrn,
+    };
+    setBookPatientMode("existing");
+    setPatientId(existing.id);
+    setSelectedBookPatientItem(item);
+    setProvisionalFirstName("");
+    setProvisionalLastName("");
+    setProvisionalPhone("");
+    setProvisionalPhoneConflict(null);
+    toast.success(
+      t(
+        "appointments.switchedToExistingPatient",
+        "Using existing patient {{name}} ({{mrn}}). Finish booking below.",
+        {
+          name: `${existing.firstNameEn} ${existing.lastNameEn}`.trim(),
+          mrn: existing.mrn,
+        },
+      ),
+    );
+  };
+
   const handleCreateAppointment = async () => {
     const issues = collectAppointmentCreateIssues(appointmentCreateInput, t);
+    if (bookPatientMode === "new" && provisionalPhoneConflict) {
+      issues.push(phoneConflictMessage(provisionalPhoneConflict, t, i18n.language));
+    }
     if (issues.length > 0) {
       validation.showIssues(issues);
       return;
@@ -407,6 +443,12 @@ export function AppointmentsPage() {
       }
       createMut.mutate(false);
     } catch (e) {
+      const conflict = parsePhoneConflictFromError(e);
+      if (conflict) {
+        setProvisionalPhoneConflict(conflict);
+        validation.showIssues([phoneConflictMessage(conflict, t, i18n.language)]);
+        return;
+      }
       validation.showError(e);
     }
   };
@@ -414,6 +456,9 @@ export function AppointmentsPage() {
   const createMut = useMutation({
     mutationFn: (confirmOverlap: boolean) => {
       const issues = collectAppointmentCreateIssues(appointmentCreateInput, t);
+      if (bookPatientMode === "new" && provisionalPhoneConflict) {
+        issues.push(phoneConflictMessage(provisionalPhoneConflict, t, i18n.language));
+      }
       if (issues.length > 0) throw new Error(issues.join(" "));
       if (canSetAppointmentFees) {
         const trimmedFee = bookFee.trim();
@@ -436,6 +481,7 @@ export function AppointmentsPage() {
       setProvisionalFirstName("");
       setProvisionalLastName("");
       setProvisionalPhone("");
+      setProvisionalPhoneConflict(null);
       bookPatientPickSearch.resetSearch();
       setClinicianId(authUser?.role === "physician" && authUser.id ? authUser.id : "");
       setPinnedPhysicianItem(null);
@@ -450,6 +496,12 @@ export function AppointmentsPage() {
     },
     onError: (e: unknown) => {
       setBookOk(null);
+      const conflict = parsePhoneConflictFromError(e);
+      if (conflict) {
+        setProvisionalPhoneConflict(conflict);
+        validation.showIssues([phoneConflictMessage(conflict, t, i18n.language)]);
+        return;
+      }
       validation.showError(e);
     },
   });
@@ -718,13 +770,18 @@ export function AppointmentsPage() {
                       autoComplete="family-name"
                     />
                   </div>
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label required>{t("patients.phone")}</Label>
-                    <Input
+                  <div className="sm:col-span-2">
+                    <PatientPhoneField
                       value={provisionalPhone}
-                      onChange={(e) => setProvisionalPhone(e.target.value)}
-                      autoComplete="tel"
-                      inputMode="tel"
+                      onChange={setProvisionalPhone}
+                      enabled={showBookPanel && bookPatientMode === "new"}
+                      externalConflict={provisionalPhoneConflict}
+                      onConflictChange={setProvisionalPhoneConflict}
+                      onUseExisting={useExistingPatientFromPhoneConflict}
+                      useExistingLabel={t(
+                        "appointments.phoneConflictBookExisting",
+                        "Book with this patient",
+                      )}
                     />
                   </div>
                 </div>

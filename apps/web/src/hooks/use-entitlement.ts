@@ -10,7 +10,12 @@ function truthy(value: unknown): boolean {
 
 export function useEntitlement(key: string): boolean {
   const entitlements = useAuthStore((s) => s.user?.entitlements);
-  return useMemo(() => truthy(entitlements?.[key]), [entitlements, key]);
+  const platformSuperAdmin = useAuthStore((s) => s.user?.platformSuperAdmin);
+  return useMemo(() => {
+    // Platform operators are not on a clinic plan — do not show paywalls for them.
+    if (platformSuperAdmin) return true;
+    return truthy(entitlements?.[key]);
+  }, [entitlements, key, platformSuperAdmin]);
 }
 
 export function usePlanKey(): string | null {
