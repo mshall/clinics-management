@@ -20,6 +20,7 @@ const sets = [
   { email: "admin@kiorly.com", pw: "demo", routes: ["/hr", "/hr?tab=employees", "/hr?tab=attendance", "/hr?tab=leave", "/admin",
     { route: "/admin", open: ["role=button[name=/^(Organization & settings|المؤسسة والإعدادات)$/i]"] },
     { route: "/hr?tab=employees", open: ["role=button[name=/add employee|إضافة موظف/i]"] },
+    { route: "/hr?tab=employees", open: ["tr[role=link], a[href^='/hr/employees/']"] },
     { route: "/patients", open: ["role=button[name=/register patient|new patient|تسجيل مريض|مريض جديد/i]"] },
     { route: "/encounters", open: ["role=button[name=/new encounter|زيارة جديدة|مقابلة جديدة/i]"] } ] },
   { email: "superadmin@kiorly.com", pw: "demo", routes: ["/platform", "/platform/organizations", "/platform/users", "/platform/clinics", "/platform/insights", "/platform/markets", "/platform/plans", "/platform/kiorex-rates", "/platform/verifications", "/platform/disputes"] },

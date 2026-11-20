@@ -98,6 +98,10 @@ module "kiorly_clinic" {
   scheduled_jobs      = var.scheduled_jobs
   safety_alerts       = var.safety_alerts
 
+  enable_home_visit_address_key = var.enable_home_visit_address_key # HVPRV01
+  egress_mode                   = var.egress_mode                   # HB07
+  extra_interface_endpoints     = var.extra_interface_endpoints
+
   alarm_emails          = var.alarm_emails
   alarm_webhook_urls    = var.alarm_webhook_urls
   log_retention_days    = var.log_retention_days

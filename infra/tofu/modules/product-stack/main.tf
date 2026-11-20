@@ -27,6 +27,9 @@ locals {
     KiorlyStackRole  = var.stack_role
   }, var.tags)
 
+  # HVPRV01: 32 random bytes as hex (decoded by apps/api/src/home-visits/address-crypto.ts: >= 64 hex chars => hex).
+  generated_hex_secrets = var.enable_home_visit_address_key ? { home-visit-address-key = { key = "key", bytes = 32 } } : {}
+
   generated_secrets = merge(
     { jwt = { key = "jwt", length = 48 } },
     local.has_jobs ? { internal-jobs = { key = "key", length = 48 } } : {},
@@ -83,13 +86,14 @@ data "aws_route53_zone" "this" {
 module "secrets" {
   source = "../aws/secrets"
 
-  name                 = local.name
-  kms_purposes         = var.use_cmk ? toset(compact([var.enable_database ? "rds" : "", var.enable_uploads ? "uploads" : "", "secrets", "alerts"])) : toset([])
-  generated_secrets    = local.generated_secrets
-  placeholder_secrets  = var.placeholder_secrets
-  openai_secret_name   = var.openai_secret_name
-  recovery_window_days = var.env == "prod" ? 30 : 0
-  tags                 = local.tags
+  name                  = local.name
+  kms_purposes          = var.use_cmk ? toset(compact([var.enable_database ? "rds" : "", var.enable_uploads ? "uploads" : "", "secrets", "alerts"])) : toset([])
+  generated_secrets     = local.generated_secrets
+  generated_hex_secrets = local.generated_hex_secrets
+  placeholder_secrets   = var.placeholder_secrets
+  openai_secret_name    = var.openai_secret_name
+  recovery_window_days  = var.env == "prod" ? 30 : 0
+  tags                  = local.tags
 }
 
 locals {
@@ -103,8 +107,10 @@ module "network" {
   count  = local.use_vpc ? 1 : 0
   source = "../aws/network"
 
-  name = local.name
-  tags = local.tags
+  name                      = local.name
+  egress_mode               = var.egress_mode
+  extra_interface_endpoints = var.extra_interface_endpoints
+  tags                      = local.tags
 }
 
 # ---------------------------------------------------------------------------------------------------------
@@ -214,6 +220,7 @@ locals {
   runtime_secrets = merge(
     { JWT_SECRET = module.secrets.secret_field_arns["jwt"] },
     local.has_jobs ? { INTERNAL_JOB_KEY = module.secrets.secret_field_arns["internal-jobs"] } : {},
+    var.enable_home_visit_address_key ? { HOME_VISIT_ADDRESS_ENCRYPTION_KEY = module.secrets.secret_field_arns["home-visit-address-key"] } : {},
     module.secrets.openai_secret_arn == null ? {} : { OPENAI_API_KEY = "${module.secrets.openai_secret_arn}:apiKey::" },
     var.runtime_secrets,
   )
@@ -238,7 +245,7 @@ module "container_service" {
   kms_key_arns                 = [for k in ["secrets", "uploads"] : local.kms[k] if contains(keys(local.kms), k)]
   extra_policy_json            = concat(var.enable_email ? [module.email[0].send_policy_json] : [], var.extra_policy_json)
   enable_vpc_connector         = local.use_vpc
-  connector_subnet_ids         = local.use_vpc ? module.network[0].public_subnet_ids : []
+  connector_subnet_ids         = local.use_vpc ? module.network[0].connector_subnet_ids : []
   connector_security_group_ids = local.use_vpc ? [module.network[0].connector_security_group_id] : []
   observability_enabled        = var.observability_enabled
   extra_ecr_repositories       = local.seed_enabled || local.demo_seed_enabled ? ["${local.name}-seed"] : []

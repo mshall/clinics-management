@@ -13,6 +13,21 @@ output "public_subnet_ids" {
   value       = sort(aws_subnet.public[*].id)
 }
 
+output "connector_subnet_ids" {
+  description = "Subnets for the App Runner VPC connector: the NAT-routed app subnets when egress_mode != none, else the public subnets (unchanged default)."
+  value       = local.nat_enabled ? sort(aws_subnet.app[*].id) : sort(aws_subnet.public[*].id)
+}
+
+output "egress_mode" {
+  description = "HB07 outbound mode in effect (none, nat_single, nat_per_az)."
+  value       = var.egress_mode
+}
+
+output "nat_public_ips" {
+  description = "NAT elastic IPs (allow-list these at third-party providers that require fixed source addresses). Empty when egress_mode = none."
+  value       = aws_eip.nat[*].public_ip
+}
+
 output "isolated_subnet_ids" {
   description = "Isolated subnets (RDS, endpoints, Lambda)."
   value       = aws_subnet.isolated[*].id

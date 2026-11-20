@@ -103,16 +103,15 @@ export function SignedPrescriptionActions({ encounterId, clinicId }: Props) {
   });
 
   return (
-    <div
-      className="rounded-xl border border-[hsl(var(--success)/0.3)] bg-[hsl(var(--success)/0.08)] p-3 "
-      data-testid="signed-rx-actions"
-    >
-      <p className="mb-1 flex items-center gap-1.5 text-sm font-medium">
-        <ShieldCheck className="h-4 w-4 text-[hsl(var(--success))]" aria-hidden />
-        {t("rxShare.title")}
-      </p>
-      <p className="mb-3 text-xs text-muted-foreground">{t("rxShare.hint")}</p>
-      <div className="flex flex-wrap gap-2">
+    <div className="kx-callout flex-col" data-tone="good" data-testid="signed-rx-actions">
+      <div className="flex items-start gap-2.5">
+        <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[hsl(var(--success))]" aria-hidden />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold">{t("rxShare.title")}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{t("rxShare.hint")}</p>
+        </div>
+      </div>
+      <div className="flex w-full flex-wrap gap-2">
         <Button
           type="button"
           size="sm"

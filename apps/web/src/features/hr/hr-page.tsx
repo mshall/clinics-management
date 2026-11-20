@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { MoreHorizontal, Trash2, UserCheck, UserX } from "lucide-react";
+import { CalendarClock, MoreHorizontal, Trash2, UserCheck, UserX, Users, Wallet } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
-import { PageHeader } from "@/brand/ui-kit";
+import { PageHeader, Skeleton, StatCard } from "@/brand/ui-kit";
 import { SectionNav } from "@/components/section-nav";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
@@ -816,33 +816,31 @@ export function HrPage() {
       />
 
       {tab === "summary" ? (
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{t("hr.kpiHeadcount")}</CardTitle>
-            </CardHeader>
-            <CardContent className="text-2xl font-semibold ltr-nums">
-              {summary.isPending ? "—" : summary.data?.employeeCount}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{t("hr.kpiPayroll")}</CardTitle>
-            </CardHeader>
-            <CardContent className="text-2xl font-semibold ltr-nums">
-              {summary.isPending
-                ? "—"
-                : formatMultiCurrencyAmounts(summary.data?.monthlyPayrollByCurrency ?? [], locale)}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{t("hr.kpiPendingLeave")}</CardTitle>
-            </CardHeader>
-            <CardContent className="text-2xl font-semibold ltr-nums">
-              {summary.isPending ? "—" : summary.data?.pendingLeaveRequests}
-            </CardContent>
-          </Card>
+        <div className="grid gap-4 sm:grid-cols-3" data-testid="hr-kpis">
+          <StatCard
+            label={t("hr.kpiHeadcount")}
+            icon={<Users className="h-4 w-4" />}
+            tone="brand"
+            value={summary.isPending ? <Skeleton className="h-8 w-16" /> : <span className="ltr-nums">{summary.data?.employeeCount}</span>}
+          />
+          <StatCard
+            label={t("hr.kpiPayroll")}
+            icon={<Wallet className="h-4 w-4" />}
+            tone="info"
+            value={
+              summary.isPending ? (
+                <Skeleton className="h-8 w-32" />
+              ) : (
+                <span className="ltr-nums" dir="ltr">{formatMultiCurrencyAmounts(summary.data?.monthlyPayrollByCurrency ?? [], locale)}</span>
+              )
+            }
+          />
+          <StatCard
+            label={t("hr.kpiPendingLeave")}
+            icon={<CalendarClock className="h-4 w-4" />}
+            tone={(summary.data?.pendingLeaveRequests ?? 0) > 0 ? "warn" : "good"}
+            value={summary.isPending ? <Skeleton className="h-8 w-12" /> : <span className="ltr-nums">{summary.data?.pendingLeaveRequests}</span>}
+          />
         </div>
       ) : null}
 

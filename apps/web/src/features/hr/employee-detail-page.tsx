@@ -27,6 +27,7 @@ import { ApiError, apiDelete, apiFetchBlob, apiPatch, apiPost, apiPostFormData }
 import { formatClinicName, formatClinicNameFields, formatEmploymentType, formatUserRole, localeForLanguage } from "@/lib/locale-display";
 import { formatEmployeeName } from "@/lib/employee-display";
 import { formatEmployeeSalaryAmount } from "@/lib/money-display";
+import { CompensationFields, CompensationSummary } from "@/features/hr/compensation-kit";
 import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -593,6 +594,11 @@ export function EmployeeDetailPage() {
                 </div>
               )}
               <div className="space-y-2">
+                <Label>{t("hr.hireDate")}</Label>
+                <Input className="ltr-nums" type="date" value={hireDate} onChange={(e) => setHireDate(e.target.value)} />
+              </div>
+              <CompensationFields title={t("admin.orgUserHrSection", "HR & payroll")} hint={t("admin.orgUserHrSectionHint", "Contract type and monthly salary for the linked employee record. Salaries appear automatically in monthly PAYROLL expenses.")}>
+              <div className="space-y-2">
                 <Label>{t("hr.contractType", "Contract type")}</Label>
                 <SearchablePickList
                   items={empTypeItems}
@@ -601,10 +607,6 @@ export function EmployeeDetailPage() {
                   searchPlaceholder={t("hr.filterEmpType")}
                   placeholder={t("hr.contractType", "Contract type")}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label>{t("hr.hireDate")}</Label>
-                <Input className="ltr-nums" type="date" value={hireDate} onChange={(e) => setHireDate(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label>{t("hr.salaryBase", { currency: orgBaseCurrency })}</Label>
@@ -617,6 +619,7 @@ export function EmployeeDetailPage() {
                   {t("hr.salaryCurrencyOrgDefaultHint", { currency: orgBaseCurrency })}
                 </p>
               </div>
+              </CompensationFields>
               <div className="space-y-2 sm:col-span-2">
                 <Label>{t("hr.replaceIdDocument", "Replace ID / passport")}</Label>
                 <Input
@@ -663,16 +666,13 @@ export function EmployeeDetailPage() {
                   <Separator />
                 </>
               ) : null}
-              <Row
-                label={t("hr.contractType", "Contract type")}
-                value={<Badge variant="secondary">{formatEmploymentType(emp.employmentType, t)}</Badge>}
-              />
-              <Separator />
               <Row label={t("hr.hireDate")} value={<span className="ltr-nums">{emp.hireDate}</span>} />
               <Separator />
-              <Row
+              <CompensationSummary
                 label={t("hr.salaryBase", { currency: orgBaseCurrency })}
-                value={<span className="ltr-nums">{emp ? formatEmployeeSalaryAmount(emp, clinics, locale, orgBaseCurrency) : "—"}</span>}
+                amount={emp ? formatEmployeeSalaryAmount(emp, clinics, locale, orgBaseCurrency) : "—"}
+                contractLabel={t("hr.contractType", "Contract type")}
+                contract={formatEmploymentType(emp.employmentType, t)}
               />
               {emp.hasIdDoc ? (
                 <>

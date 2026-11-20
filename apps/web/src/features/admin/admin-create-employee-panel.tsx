@@ -1,3 +1,4 @@
+import { CompensationFields } from "@/features/hr/compensation-kit";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -185,6 +186,7 @@ export function AdminCreateEmployeePanel() {
             <Label>{t("hr.jobTitle")}</Label>
             <Input value={empTitle} onChange={(e) => setEmpTitle(e.target.value)} />
           </div>
+          <CompensationFields title={t("admin.orgUserHrSection", "HR & payroll")} hint={t("admin.orgUserHrSectionHint", "Contract type and monthly salary for the linked employee record. Salaries appear automatically in monthly PAYROLL expenses.")}>
           <div className="space-y-2">
             <Label>{t("hr.employmentType", "Employment type")}</Label>
             <SearchablePickList
@@ -203,6 +205,7 @@ export function AdminCreateEmployeePanel() {
             <Label>{t("hr.salaryCurrency", "Salary currency")}</Label>
             <BaseCurrencySelect value={empSalaryCurrency} onChange={setEmpSalaryCurrency} />
           </div>
+          </CompensationFields>
           <div className="space-y-2 sm:col-span-2">
             <Label>{t("hr.idDocument", "ID / passport (PDF or image)")}</Label>
             <Input

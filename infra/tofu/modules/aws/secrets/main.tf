@@ -75,6 +75,26 @@ resource "aws_secretsmanager_secret_version" "generated" {
   secret_string = jsonencode({ (each.value.key) = random_password.generated[each.key].result })
 }
 
+resource "random_id" "hex" {
+  for_each    = var.generated_hex_secrets
+  byte_length = each.value.bytes
+}
+
+resource "aws_secretsmanager_secret" "hex" {
+  for_each                = var.generated_hex_secrets
+  name                    = "${var.name}/${each.key}"
+  description             = "${var.name} ${each.key} (generated ${each.value.bytes} random bytes as hex; JSON field '${each.value.key}'; do not rotate without a re-encryption job)"
+  kms_key_id              = contains(var.kms_purposes, "secrets") ? aws_kms_key.this["secrets"].arn : null
+  recovery_window_in_days = var.recovery_window_days
+  tags                    = var.tags
+}
+
+resource "aws_secretsmanager_secret_version" "hex" {
+  for_each      = var.generated_hex_secrets
+  secret_id     = aws_secretsmanager_secret.hex[each.key].id
+  secret_string = jsonencode({ (each.value.key) = random_id.hex[each.key].hex })
+}
+
 resource "aws_secretsmanager_secret" "placeholder" {
   for_each                = var.placeholder_secrets
   name                    = "${var.name}/${each.key}"
