@@ -10,5 +10,5 @@ export type TrialStatus = {
 };
 
 export function fetchTrialStatus(): Promise<TrialStatus> {
-  return apiGet<TrialStatus>("/billing/trial");
+  return apiGet<TrialStatus>("/api/v1/billing/trial");
 }

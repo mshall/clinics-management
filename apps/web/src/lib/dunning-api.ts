@@ -11,5 +11,5 @@ export type SubscriptionAccessState = {
 };
 
 export async function fetchSubscriptionAccessState(): Promise<SubscriptionAccessState> {
-  return apiGet<SubscriptionAccessState>("/billing/access-state");
+  return apiGet<SubscriptionAccessState>("/api/v1/billing/access-state");
 }
