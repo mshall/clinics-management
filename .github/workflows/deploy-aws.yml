@@ -54,9 +54,7 @@
 name: Deploy to AWS
 
 on:
-  push:
-    branches:
-      - main
+  # Manual only (founder decision, Nov 2026): no CDK deploy on push. Kiorex v2 infra is OpenTofu (infra/tofu); this legacy CDK flow is kept for reference.
   workflow_dispatch:
 
 permissions:
