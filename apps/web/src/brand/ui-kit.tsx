@@ -8,6 +8,8 @@ import { twMerge } from "tailwind-merge";
 import { useTranslation } from "react-i18next";
 import { KiorexLogo, PulseLine } from "./components";
 import { footSegments } from "./components/shared/foot-text";
+import { KxControlPair, KxLanguageToggle, KxThemeToggle, withThemeTransition, type KxLang } from "./components/web/KxControls";
+export { KxControlPair };
 
 /** Decorative pulse line (hidden from assistive tech) for loaders/empty states. */
 export function Pulse({ size = 14, loop = false }: { size?: number; loop?: boolean }) {
@@ -183,21 +185,36 @@ export function applyThemePref(pref: KxThemePref): void {
   const root = document.documentElement;
   root.classList.toggle("dark", dark);
   root.dataset.theme = dark ? "dark" : "light";
+  root.style.colorScheme = dark ? "dark" : "light";
 }
-/** Call once before React mounts. */
+/** Call once before React mounts (index.html also applies the saved theme inline, before first paint, so nothing flashes). */
 export function initTheme(): void {
   applyThemePref(readThemePref());
-  if (typeof matchMedia !== "undefined") matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (readThemePref() === "system") applyThemePref("system"); });
+  if (typeof matchMedia !== "undefined") matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (readThemePref() === "system") withThemeTransition(() => applyThemePref("system")); });
 }
+/** Shared theme control (sun / moon / monitor, cross-fading). Persists to localStorage `kx-theme`; the colour change is animated (reduced-motion safe). */
 export function ThemeToggle({ labels, className }: { labels: { light: string; dark: string; system: string; theme: string }; className?: string }) {
   const [pref, setPref] = useState<KxThemePref>(readThemePref);
-  const order: KxThemePref[] = ["system", "light", "dark"];
-  const next = order[(order.indexOf(pref) + 1) % order.length]!;
-  const glyph = pref === "dark" ? "☾" : pref === "light" ? "☀" : "◐";
   return (
-    <button type="button" aria-label={`${labels.theme}: ${labels[pref]}`} title={`${labels.theme}: ${labels[pref]}`} className={kcn("inline-flex size-10 items-center justify-center rounded-lg border border-border bg-card text-base text-foreground shadow-[var(--kx-shadow-1)] transition-colors hover:bg-accent", className)}
-      onClick={() => { try { localStorage.setItem(THEME_KEY, next); } catch { /* ignore */ } setPref(next); applyThemePref(next); }}>
-      <span aria-hidden>{glyph}</span>
-    </button>
+    <KxThemeToggle value={pref} labels={labels} className={className} onChange={(next) => {
+      try { localStorage.setItem(THEME_KEY, next); } catch { /* ignore */ }
+      setPref(next);
+      withThemeTransition(() => applyThemePref(next));
+    }} />
+  );
+}
+/** Shared language control (globe + AR / EN). `onChange` is the app's own setLang (sets lang/dir on <html> and persists). */
+export function LanguageToggle({ onChange, className }: { onChange: (next: KxLang) => void; className?: string }) {
+  const { t, i18n } = useTranslation();
+  return <KxLanguageToggle lang={i18n.language} onChange={onChange} className={className} labels={{ language: t("lang.label"), english: t("lang.english"), arabic: t("lang.arabic") }} />;
+}
+/** The lockup ("Kiorly <Product> by Kiorex") with the localised product tagline ("<Product> Management") beneath it: sidebar, drawer, login and onboarding all use this. */
+export function KiorlyBrandLockup({ height = 44, tagline = true, nurse, className }: { height?: number; tagline?: boolean; nurse?: boolean; className?: string }) {
+  const { t } = useTranslation();
+  return (
+    <div className={kcn("min-w-0", className)} data-kx-lockup>
+      <KiorlyBrand nurse={nurse} height={height} />
+      {tagline ? <p data-kx-tagline className="mt-0.5 truncate text-[11px] leading-tight text-muted-foreground">{t("app.tagline")}</p> : null}
+    </div>
   );
 }

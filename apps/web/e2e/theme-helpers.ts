@@ -8,10 +8,18 @@ export type E2EThemeId =
   | "clinical-os-light"
   | "clinical-os-dark";
 
-/** Open theme menu and pick a theme by English label (matches en locale). */
+/** The header now has the shared light/dark toggle (one button) instead of a family menu: families are seeded through the per-tab session key the app reads before first paint. */
 export async function selectTheme(page: Page, label: RegExp): Promise<void> {
-  await page.getByRole("button", { name: /theme/i }).click();
-  await page.getByRole("menuitemradio", { name: label }).click();
+  const id = label.source.includes("material") ? (/dark/.test(label.source) ? "material-dark" : "material-light")
+    : label.source.includes("default") ? (/dark/.test(label.source) ? "default-dark" : "default-light")
+    : (/dark/.test(label.source) ? "clinical-os-dark" : "clinical-os-light");
+  await page.evaluate((v) => sessionStorage.setItem("cms-theme-session", v), id);
+  await page.reload();
+}
+
+/** Click the shared theme toggle (light <-> dark inside the current family). */
+export async function toggleTheme(page: Page): Promise<void> {
+  await page.locator("[data-kx-control=theme]:visible").first().click();
 }
 
 export async function expectThemeApplied(page: Page, themeId: E2EThemeId): Promise<void> {

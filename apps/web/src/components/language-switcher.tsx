@@ -1,62 +1,35 @@
-import { Languages } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { KX_CONTROL_CLASS, KxLanguageToggle } from "@/brand/components/web/KxControls";
 import type { AppLocale } from "@/lib/i18n";
 import { persistLocale } from "@/lib/locale-cookie";
-import {
-  persistArabicNumeralsPreference,
-  readArabicNumeralsPreference,
-  type NumeralPreference,
-} from "@/lib/arabic-numerals";
-import { useState } from "react";
+import { persistArabicNumeralsPreference, readArabicNumeralsPreference, type NumeralPreference } from "@/lib/arabic-numerals";
 
-export function LanguageSwitcher() {
+/** Shared globe + EN/AR toggle (i18n sets dir/lang on <html>, persistLocale stores it); in Arabic a sibling button keeps the Western / Arabic-Indic digits preference. */
+export function LanguageSwitcher({ drawer = false }: { drawer?: boolean }) {
   const { t, i18n } = useTranslation();
   const [numerals, setNumerals] = useState<NumeralPreference>(() => readArabicNumeralsPreference());
+  const ar = i18n.language.startsWith("ar");
 
   function setLocale(lng: AppLocale) {
     void i18n.changeLanguage(lng);
     persistLocale(lng);
   }
 
-  function setNumeralPref(pref: NumeralPreference) {
-    persistArabicNumeralsPreference(pref);
-    setNumerals(pref);
+  function toggleNumerals() {
+    const next: NumeralPreference = numerals === "latn" ? "arab" : "latn";
+    persistArabicNumeralsPreference(next);
+    setNumerals(next);
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="kx-hdr md:size-9 md:min-h-9 md:min-w-9" aria-label={t("common.language")} title={t("common.language")}>
-          <Languages className="size-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[12rem]">
-        <DropdownMenuItem onClick={() => setLocale("en")}>{t("common.english")}</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setLocale("ar")}>{t("common.arabic")}</DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          disabled={i18n.language !== "ar"}
-          onClick={() => setNumeralPref("latn")}
-          className={numerals === "latn" ? "font-medium" : undefined}
-        >
-          {t("common.numeralsWestern")}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          disabled={i18n.language !== "ar"}
-          onClick={() => setNumeralPref("arab")}
-          className={numerals === "arab" ? "font-medium" : undefined}
-        >
-          {t("common.numeralsArabic")}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <KxLanguageToggle lang={i18n.language} onChange={setLocale} labels={{ language: t("lang.label"), english: t("lang.english"), arabic: t("lang.arabic") }} />
+      {ar ? (
+        <button type="button" className={`${KX_CONTROL_CLASS} px-2 text-xs font-semibold ${drawer ? "" : "max-sm:hidden"}`} aria-pressed={numerals === "arab"} aria-label={numerals === "arab" ? t("common.numeralsArabic") : t("common.numeralsWestern")} title={numerals === "arab" ? t("common.numeralsArabic") : t("common.numeralsWestern")} onClick={toggleNumerals}>
+          <span aria-hidden dir="ltr">{numerals === "arab" ? "١٢٣" : "123"}</span>
+        </button>
+      ) : null}
+    </>
   );
 }

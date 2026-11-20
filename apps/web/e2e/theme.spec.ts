@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { login } from "./helpers";
-import { expectThemeApplied, selectTheme } from "./theme-helpers";
+import { expectThemeApplied, selectTheme, toggleTheme } from "./theme-helpers";
 
 test.describe("Theme switcher", () => {
   test("login page defaults to Clinical OS Light", async ({ page }) => {
@@ -50,18 +50,29 @@ test.describe("Theme switcher", () => {
     await expectThemeApplied(page, "material-dark");
     await page.goto("/patients");
     await expectThemeApplied(page, "material-dark");
-    await page.getByRole("button", { name: /theme/i }).click();
-    await expect(page.getByRole("menuitemradio", { name: /material — dark/i })).toHaveAttribute("aria-checked", "true");
+    await expect(page.locator("[data-kx-control=theme]:visible").first()).toHaveAttribute("data-theme-mode", "dark");
   });
 
-  test("theme persists when remember is enabled", async ({ page }) => {
+  test("shared toggle flips light/dark in the same family, persists across reload, and sets no flash before paint", async ({ page }) => {
     await page.goto("/login");
-    await selectTheme(page, /material — dark/i);
-    await page.getByRole("button", { name: /theme/i }).click();
-    await page.getByRole("menuitemcheckbox", { name: /use as default when i sign in again/i }).click();
-    await page.keyboard.press("Escape");
+    await expectThemeApplied(page, "clinical-os-light");
+    await toggleTheme(page);
+    await expectThemeApplied(page, "clinical-os-dark");
     await page.reload();
-    await expectThemeApplied(page, "material-dark");
+    await expectThemeApplied(page, "clinical-os-dark");
+    await toggleTheme(page);
+    await expectThemeApplied(page, "clinical-os-light");
+  });
+
+  test("shared language toggle shows the current code and switches dir/lang", async ({ page }) => {
+    await page.goto("/login");
+    const lang = page.locator("[data-kx-control=language]:visible").first();
+    await expect(lang).toContainText("EN");
+    await lang.click();
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    await expect(lang).toContainText("AR");
+    await page.reload();
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   });
 });
 

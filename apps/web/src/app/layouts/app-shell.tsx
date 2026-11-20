@@ -94,6 +94,7 @@ export function AppShell() {
                   <BrandLockup />
                 </SheetHeader>
                 <AppNavLinks onNavigate={() => setMobileOpen(false)} />
+                <div data-kx-controls className="mt-auto flex shrink-0 items-center gap-2 border-t border-border p-3"><ThemeSwitcher /><LanguageSwitcher drawer /></div>
               </SheetContent>
             </Sheet>
             <span className="shrink-0 sm:hidden"><KiorlyMark size={30} nurse={nurseEdition} /></span>

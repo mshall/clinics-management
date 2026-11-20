@@ -12,6 +12,19 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta property="og:image" content="/og-image.png" />
     <title>Kiorly Clinic by Kiorex</title>
+    <script>/* Apply saved theme + language before first paint (no flash). Mirrors src/stores/theme-store.ts and src/lib/locale-cookie.ts. */
+      (function () { try {
+        var r = document.documentElement, id = null, st = null;
+        try { st = sessionStorage.getItem("cms-theme-session"); } catch (e) {}
+        if (!st) { var raw = localStorage.getItem("cms-theme"); var o = raw && JSON.parse(raw); if (o && o.state && o.state.persistDefault && o.state.themeId) st = o.state.themeId; }
+        id = /^(default|material|clinical-os)-(light|dark)$/.test(st || "") ? st : "clinical-os-light";
+        var dark = /-dark$/.test(id);
+        r.dataset.theme = id; r.classList.toggle("dark", dark); r.style.colorScheme = dark ? "dark" : "light";
+        r.classList.toggle("theme-material", id.indexOf("material") === 0); r.classList.toggle("theme-clinical-os", id.indexOf("clinical-os") === 0);
+        var m = document.cookie.match(/(?:^|; )cms_locale=([^;]+)/), l = m ? m[1] : localStorage.getItem("cms_locale");
+        if (l === "ar") { r.lang = "ar-EG"; r.dir = "rtl"; }
+      } catch (e) {} })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

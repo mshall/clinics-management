@@ -494,7 +494,8 @@
     "groupClinicalOs": "Kiorly Clinical OS",
     "clinicalOsLight": "Clinical OS — فاتح",
     "clinicalOsDark": "Clinical OS — داكن",
-    "rememberForNextLogin": "استخدامه افتراضيًا عند تسجيل الدخول لاحقًا"
+    "rememberForNextLogin": "استخدامه افتراضيًا عند تسجيل الدخول لاحقًا",
+    "system": "النظام"
   },
   "dateRange": {
     "label": "فترة التقارير",
@@ -4888,5 +4889,10 @@
       "day": "يوم"
     },
     "nextUp": "التالي"
+  },
+  "lang": {
+    "label": "اللغة",
+    "english": "الإنجليزية",
+    "arabic": "العربية"
   }
 }
