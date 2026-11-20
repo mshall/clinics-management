@@ -12,6 +12,7 @@ import { useAssistantChatMutation, useAssistantContextQuery } from "@/lib/assist
 import { useEntitlement } from "@/hooks/use-entitlement";
 import { useAuthStore } from "@/stores/auth-store";
 import { isAssistantEnabledForRole } from "@/lib/assistant-policy";
+import { useNurseContext } from "@/features/nurse/nurse-shared";
 import { AssistantMessageBody } from "@/features/assistant/assistant-message-body";
 import { Badge } from "@/components/ui/badge";
 
@@ -23,6 +24,8 @@ export function RoleAssistantWidget() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const roleOk = Boolean(accessToken && user && isAssistantEnabledForRole(user.role));
   const entitled = useEntitlement("ai_assistant");
+  // Kiorly Nurse has no AI assistant (and no upgrade upsell over the field screens): the widget is a Clinic-edition feature.
+  const nurseEdition = useNurseContext().data?.edition === "NURSE";
   const locale = i18n.language === "ar" ? "ar" : "en";
   const rtl = locale === "ar";
 
@@ -76,7 +79,7 @@ export function RoleAssistantWidget() {
     );
   };
 
-  if (!roleOk) return null;
+  if (!roleOk || nurseEdition) return null;
 
   /** AI-04 — Lite (and any plan without ai_assistant) sees a clear upgrade path, not a missing FAB. */
   if (!entitled) {

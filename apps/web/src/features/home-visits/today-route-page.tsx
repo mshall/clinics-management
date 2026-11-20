@@ -63,7 +63,7 @@ export function TodayRoutePage() {
 
   const items = route.data?.items ?? [];
   return (
-    <div className="mx-auto max-w-2xl space-y-4 p-4" data-testid="home-today-route">
+    <div className="mx-auto max-w-2xl space-y-4 p-4 pb-24 md:pb-4" data-testid="home-today-route">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">{t("homeVisits.today")}</h1>
         <Button asChild size="sm" variant="outline"><Link to="/nurse/safety">{t("nurse.safety.title")}</Link></Button>

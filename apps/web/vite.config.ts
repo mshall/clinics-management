@@ -43,7 +43,7 @@ function apiProxyConfigure(proxy: {
 
 const apiDevProxy = {
   "/api": {
-    target: "http://127.0.0.1:3010",
+    target: process.env.API_PROXY_TARGET ?? "http://127.0.0.1:3010",
     changeOrigin: true,
     // KNED: forward the original Host (x-forwarded-host) so nurse.localhost selects the Nurse edition on sign-in surfaces.
     xfwd: true,
