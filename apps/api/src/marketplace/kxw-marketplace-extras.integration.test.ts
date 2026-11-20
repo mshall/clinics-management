@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
-import { AppointmentStatus, ListingStatus, PrismaClient, WaitlistOpenSlotStatus } from "@prisma/client";
+import {
+  AppointmentStatus,
+  AppointmentWaitlistStatus,
+  ListingStatus,
+  PrismaClient,
+  WaitlistOpenSlotStatus,
+} from "@prisma/client";
 import { ensureKiorexDevIntegration, KX_DEV_CLIENT_KEY, KX_DEV_TENANT_NAME } from "../../prisma/kiorex-dev.seed";
 import { AuditService } from "../audit/audit.service";
 import { ConsentPolicyService } from "../compliance/consent-policy.service";
@@ -202,7 +208,22 @@ describe("KXW marketplace extras: slot-capacity, waitlist, flag-driven listing s
         openKey: `kxw-${stamp}`,
       },
     });
-    await autofill.processTenant(tenantId);
+    // Isolate this slot: leftover WAITING rows / other OPEN slots on the shared Kiorex
+    // demo tenant otherwise steal the offer before this entry is considered.
+    await prisma.appointmentWaitlistEntry.updateMany({
+      where: {
+        tenantId,
+        clinicId,
+        status: AppointmentWaitlistStatus.WAITING,
+        id: { not: entry.id },
+      },
+      data: { status: AppointmentWaitlistStatus.CANCELLED },
+    });
+    await prisma.waitlistOpenSlot.updateMany({
+      where: { tenantId, status: WaitlistOpenSlotStatus.OPEN, id: { not: slot.id } },
+      data: { status: WaitlistOpenSlotStatus.CLOSED, closedAt: new Date() },
+    });
+    await autofill.offerNext(slot.id);
     const offer = await prisma.waitlistSlotOffer.findFirstOrThrow({ where: { slotId: slot.id, waitlistEntryId: entry.id } });
     assert.equal(offer.status, "PENDING");
     assert.equal(offer.outboundMessageId, null);
