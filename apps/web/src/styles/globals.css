@@ -117,11 +117,11 @@
 
 /* Nurse edition: field-first — 56px touch targets on phones (Q11). */
 @media (max-width: 767px) {
-  html[data-edition="nurse"] button.touch-manipulation,
+  html[data-edition="nurse"] button.touch-manipulation:not(.kx-hdr),
   html[data-edition="nurse"] input.touch-manipulation,
   html[data-edition="nurse"] select.native-select,
   html[data-edition="nurse"] textarea.touch-manipulation { min-height: var(--kx-touch-nurse); font-size: 1rem; }
-  html[data-edition="nurse"] button.touch-manipulation.w-11 { min-width: var(--kx-touch-nurse); }
+  html[data-edition="nurse"] button.touch-manipulation.w-11:not(.kx-hdr) { min-width: var(--kx-touch-nurse); }
 }
 
 /* Scannable data tables: sticky headers inside scroll containers, tabular numerals, calm focus. */
@@ -131,3 +131,49 @@ table { font-variant-numeric: tabular-nums; }
   main > * { animation: kx-page-in var(--kx-dur-slow) var(--kx-ease-decelerate) both; }
 }
 @keyframes kx-page-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* ---- Round 2 (Q11d): density control, page chrome, skeletons, motion ---- */
+:root { --kx-card-pad: 1.25rem; --kx-row-py: 0.75rem; --kx-filter-h: 2.25rem; }
+html[data-density="compact"] { --kx-card-pad: 0.875rem; --kx-row-py: 0.375rem; }
+html[data-edition="nurse"] { --kx-card-pad: 1rem; --kx-row-py: 0.875rem; }
+
+/* One page-title treatment for every route (many pages render a bare <h1> + <p>). */
+main h1 { font-size: 1.5rem; line-height: 1.25; font-weight: 600; letter-spacing: -0.015em; text-wrap: balance; }
+main h1 + p { margin-top: 0.25rem; max-width: 46rem; font-size: 0.875rem; line-height: 1.45; color: hsl(var(--muted-foreground)); }
+[dir="rtl"] main h1 { letter-spacing: 0; line-height: 1.45; }
+@media (max-width: 640px) { main h1 { font-size: 1.25rem; } }
+
+/* Sticky inside scroll: zebra-free rows, hairline separators, soft hover. */
+table thead th { background: hsl(var(--muted) / 0.55); }
+table tbody tr { transition: background-color var(--kx-dur-fast, 150ms) ease; }
+table tbody td, table tbody th { border-color: hsl(var(--border) / 0.7); }
+
+/* Skeletons use the brand .kx-skeleton; calm them when motion is reduced. */
+@media (prefers-reduced-motion: reduce) { .kx-skeleton { animation: none; } }
+
+/* Mirror directional icons in RTL (chevrons/arrows opt in with .rtl-flip). */
+[dir="rtl"] .rtl-flip { transform: scaleX(-1); }
+
+/* Keyboard hint keycap. */
+.kx-kbd { display: inline-flex; min-width: 1.25rem; height: 1.25rem; align-items: center; justify-content: center; padding: 0 0.3rem; border-radius: 0.3rem; border: 1px solid hsl(var(--border)); border-bottom-width: 2px; background: hsl(var(--card)); font: 600 0.6875rem/1 var(--kx-font); color: hsl(var(--muted-foreground)); }
+
+/* ---- Charts in brand ramps (indigo / ocean / coral first), hairline grid, tabular numerals ---- */
+:root {
+  --kx-chart-1: #3730A3; --kx-chart-2: #0369A1; --kx-chart-3: #E8735E; --kx-chart-4: #0F766E;
+  --kx-chart-5: #B45309; --kx-chart-6: #64748B; --kx-chart-7: #7C3AED;
+}
+html.dark {
+  --kx-chart-1: #A5A0F5; --kx-chart-2: #5BB8E8; --kx-chart-3: #F29A88; --kx-chart-4: #34D399;
+  --kx-chart-5: #FBBF24; --kx-chart-6: #94A3B8; --kx-chart-7: #A78BFA;
+}
+:root, html.dark {
+  --chart-1: var(--kx-chart-1); --chart-2: var(--kx-chart-2); --chart-3: var(--kx-chart-3); --chart-4: var(--kx-chart-4); --chart-5: var(--kx-chart-5);
+}
+.recharts-cartesian-grid line { stroke: hsl(var(--border)); stroke-dasharray: none; }
+.recharts-cartesian-axis-tick-value, .recharts-legend-item-text { fill: hsl(var(--muted-foreground)); font-size: 11px; font-variant-numeric: tabular-nums; }
+.recharts-legend-item-text { color: hsl(var(--muted-foreground)) !important; }
+.recharts-default-tooltip { background: hsl(var(--popover)) !important; border: 1px solid hsl(var(--border)) !important; border-radius: 0.625rem; box-shadow: var(--kx-shadow-2); font-variant-numeric: tabular-nums; }
+.recharts-tooltip-label { color: hsl(var(--foreground)); font-weight: 600; }
+.recharts-surface { overflow: visible; }
+@media (prefers-reduced-motion: reduce) { .recharts-wrapper * { animation: none !important; } }
+.recharts-tooltip-item { color: hsl(var(--foreground)) !important; }

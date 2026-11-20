@@ -19,7 +19,7 @@ import {
   Upload,
   Wind,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -44,7 +44,6 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useEncounterQuery } from "@/lib/api-hooks";
 import type { EncounterDetailDto, EncounterDocumentDto } from "@/lib/api-types";
 import { ApiError, apiDelete, apiFetchBlob, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
-import { filterToolbarClassName } from "@/lib/form-control-styles";
 import { uploadFilesWithConcurrency } from "@/lib/upload-files-sequentially";
 import { canDeleteEncounter } from "@/lib/encounter-delete-policy";
 import { canGenerateInvoice } from "@/lib/invoice-generate-policy";
@@ -827,71 +826,18 @@ export function EncounterDetailPage() {
           </CardTitle>
           <CardDescription>{draft ? t("encounters.editable") : t("encounters.readOnly")}</CardDescription>
         </CardHeader>
-        <CardContent className={filterToolbarClassName}>
-          <div className="flex min-w-[7rem] items-center gap-2">
-            <Heart className="h-4 w-4 shrink-0 text-rose-500" aria-hidden />
-            <div className="min-w-0 flex-1 space-y-1">
-              <Label className="text-xs text-muted-foreground">{t("encounters.hr")}</Label>
-              <Input
-                className="h-9 ltr-nums"
-                inputMode="numeric"
-                value={heartRate}
-                onChange={(e) => setHeartRate(e.target.value)}
-                disabled={!draft}
-                placeholder="bpm"
-              />
-            </div>
+        <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 lg:items-end" data-testid="vitals-grid">
+          <VitalField icon={<Heart className="size-3.5 text-rose-500" aria-hidden />} label={t("encounters.hr")} unit="bpm" value={heartRate} onChange={setHeartRate} disabled={!draft} inputMode="numeric" />
+          <VitalField icon={<Wind className="size-3.5 text-kx-ocean-600" aria-hidden />} label={t("encounters.spo2")} unit="%" value={spo2} onChange={setSpo2} disabled={!draft} inputMode="numeric" />
+          <div className="col-span-2 grid grid-cols-2 gap-3 sm:col-span-1 lg:col-span-1">
+            <VitalField icon={<Activity className="size-3.5 text-kx-indigo-600" aria-hidden />} label={t("encounters.bpSys")} unit="mmHg" value={bpSys} onChange={setBpSys} disabled={!draft} inputMode="numeric" />
+            <VitalField label={t("encounters.bpDia")} unit="mmHg" value={bpDia} onChange={setBpDia} disabled={!draft} inputMode="numeric" />
           </div>
-          <div className="flex min-w-[7rem] items-center gap-2">
-            <Wind className="h-4 w-4 shrink-0 text-kx-ocean-600" aria-hidden />
-            <div className="min-w-0 flex-1 space-y-1">
-              <Label className="text-xs text-muted-foreground">{t("encounters.spo2")}</Label>
-              <Input
-                className="h-9 ltr-nums"
-                inputMode="numeric"
-                value={spo2}
-                onChange={(e) => setSpo2(e.target.value)}
-                disabled={!draft}
-                placeholder="%"
-              />
-            </div>
-          </div>
-          <div className="flex min-w-[10rem] items-center gap-2">
-            <Activity className="h-4 w-4 shrink-0 text-kx-indigo-600" aria-hidden />
-            <div className="flex gap-2">
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">{t("encounters.bpSys")}</Label>
-                <Input className="h-9 w-20 ltr-nums" value={bpSys} onChange={(e) => setBpSys(e.target.value)} disabled={!draft} />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">{t("encounters.bpDia")}</Label>
-                <Input className="h-9 w-20 ltr-nums" value={bpDia} onChange={(e) => setBpDia(e.target.value)} disabled={!draft} />
-              </div>
-            </div>
-          </div>
-          <div className="flex min-w-[7rem] items-center gap-2">
-            <Thermometer className="h-4 w-4 shrink-0 text-amber-500" aria-hidden />
-            <div className="min-w-0 flex-1 space-y-1">
-              <Label className="text-xs text-muted-foreground">{t("encounters.tempC")}</Label>
-              <Input className="h-9 ltr-nums" value={temperature} onChange={(e) => setTemperature(e.target.value)} disabled={!draft} />
-            </div>
-          </div>
-          <div className="flex min-w-[7rem] items-center gap-2">
-            <Scale className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-            <div className="min-w-0 flex-1 space-y-1">
-              <Label className="text-xs text-muted-foreground">{t("encounters.weightKg")}</Label>
-              <Input className="h-9 ltr-nums" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} disabled={!draft} />
-            </div>
-          </div>
-          <div className="flex min-w-[7rem] items-center gap-2">
-            <Ruler className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-            <div className="min-w-0 flex-1 space-y-1">
-              <Label className="text-xs text-muted-foreground">{t("encounters.heightCm")}</Label>
-              <Input className="h-9 ltr-nums" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} disabled={!draft} />
-            </div>
-          </div>
+          <VitalField icon={<Thermometer className="size-3.5 text-amber-500" aria-hidden />} label={t("encounters.tempC")} unit="°C" value={temperature} onChange={setTemperature} disabled={!draft} inputMode="decimal" />
+          <VitalField icon={<Scale className="size-3.5 text-muted-foreground" aria-hidden />} label={t("encounters.weightKg")} unit="kg" value={weightKg} onChange={setWeightKg} disabled={!draft} inputMode="decimal" />
+          <VitalField icon={<Ruler className="size-3.5 text-muted-foreground" aria-hidden />} label={t("encounters.heightCm")} unit="cm" value={heightCm} onChange={setHeightCm} disabled={!draft} inputMode="decimal" />
           {draft ? (
-            <Button type="button" variant="secondary" size="sm" className="shrink-0" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+            <Button type="button" variant="secondary" size="sm" className="col-span-full justify-self-start" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
               {t("encounters.saveVitals")}
             </Button>
           ) : null}
@@ -1454,6 +1400,20 @@ export function EncounterDetailPage() {
           defaultCurrency={visitFeeCurrency}
         />
       ) : null}
+    </div>
+  );
+}
+
+
+function VitalField({ icon, label, unit, value, onChange, disabled, inputMode }: { icon?: ReactNode; label: string; unit: string; value: string; onChange: (v: string) => void; disabled: boolean; inputMode: "numeric" | "decimal" }) {
+  const id = useId();
+  return (
+    <div className="min-w-0 space-y-1">
+      <Label htmlFor={id} className="flex items-center gap-1.5 text-xs text-muted-foreground">{icon}<span className="truncate">{label}</span></Label>
+      <div className="relative">
+        <Input id={id} className="h-10 pe-12 text-base font-semibold tabular-nums ltr-nums" inputMode={inputMode} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} />
+        <span aria-hidden className="pointer-events-none absolute inset-y-0 end-3 flex items-center text-xs text-muted-foreground">{unit}</span>
+      </div>
     </div>
   );
 }

@@ -215,15 +215,15 @@ export function PatientDetailPage() {
 
   return (
     <div className="space-y-6 doctor-mobile-view">
-      <Card className="sticky top-14 z-[5] border-b md:static md:z-auto">
-        <CardContent className="pt-4 md:pt-6">
+      <Card className="sticky top-14 z-[5] md:static md:z-auto">
+        <CardContent className="pt-4 md:pt-5">
           <div className="flex flex-col gap-4 md:gap-6 md:flex-row md:items-start md:justify-between">
             <div className="flex items-start gap-3 md:gap-4">
               <div className="relative">
                 {avatarDataUrl ? (
-                  <img src={avatarDataUrl} alt={name} className="h-16 w-16 rounded-full border object-cover md:h-24 md:w-24" />
+                  <img src={avatarDataUrl} alt={name} className="h-16 w-16 rounded-full border object-cover md:h-20 md:w-20" />
                 ) : (
-                  <div className="flex h-24 w-24 items-center justify-center rounded-full border bg-muted text-xl font-semibold">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full border border-primary/20 bg-accent text-xl font-semibold text-accent-foreground md:h-20 md:w-20">
                     {name.slice(0, 1).toUpperCase()}
                   </div>
                 )}
@@ -239,7 +239,7 @@ export function PatientDetailPage() {
               </div>
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-2xl font-bold tracking-tight">{name}</h1>
+                  <h1 className="text-2xl font-semibold tracking-tight">{name}</h1>
                   <PatientChartAlerts patientId={patient.id} />
                   <PatientConsentChips patientId={patient.id} />
                   <PatientPrivacyNoticeLink />
@@ -252,7 +252,7 @@ export function PatientDetailPage() {
                     </Badge>
                   ) : null}
                 </div>
-                <p className="text-muted-foreground">{patient.homeBranch ?? "—"}</p>
+                <p className="mt-0.5 text-sm text-muted-foreground">{patient.homeBranch ?? "—"}{patientAge != null ? <span className="ltr-nums"> · {patientAge} {t("patients.yearsShort", "y")}</span> : null}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
                   <button
                     type="button"
@@ -281,7 +281,6 @@ export function PatientDetailPage() {
                     {t("patients.photoGallery", "Clinical photo gallery")}
                   </button>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">{t("patients.photoOptional", "Profile photo is optional.")}</p>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">

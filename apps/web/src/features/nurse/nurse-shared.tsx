@@ -150,15 +150,13 @@ export function PatientPicker({ value, onChange, label, id = "nurse-patient" }: 
       {list.isError ? <ErrorBlock error={list.error} /> : null}
       {list.data ? (
         list.data.items.length ? (
-          <ul className="max-h-56 divide-y overflow-auto rounded-md border" role="listbox" aria-label={t("nurse.common.patient")}>
+          <div className="max-h-56 divide-y overflow-auto rounded-md border" role="listbox" aria-label={t("nurse.common.patient")}>
             {list.data.items.map((p) => (
-              <li key={p.id}>
-                <button type="button" role="option" aria-selected={false} className="min-h-11 w-full px-3 py-2 text-start text-sm hover:bg-muted" data-testid="nurse-patient-option" onClick={() => onChange(p)}>
-                  {patientName(p)} <span className="text-muted-foreground">{p.mrn ?? ""} {p.phone ?? ""}</span>
-                </button>
-              </li>
+              <button key={p.id} type="button" role="option" aria-selected={false} className="block min-h-11 w-full px-3 py-2 text-start text-sm hover:bg-muted" data-testid="nurse-patient-option" onClick={() => onChange(p)}>
+                {patientName(p)} <span className="text-muted-foreground">{p.mrn ?? ""} {p.phone ?? ""}</span>
+              </button>
             ))}
-          </ul>
+          </div>
         ) : (
           <p className="text-sm text-muted-foreground">{t("nurse.common.noPatients")}</p>
         )

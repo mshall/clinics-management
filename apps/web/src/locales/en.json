@@ -67,7 +67,12 @@
     "currentPlan": "current",
     "upgradeCta": "View plans",
     "modalTitle": "Upgrade your plan",
-    "modalDescription": "This capability requires a higher plan. Organization owners can change plan under Admin → Plan & billing."
+    "modalDescription": "This capability requires a higher plan. Organization owners can change plan under Admin → Plan & billing.",
+    "names": {
+      "mod_operations": "Operations",
+      "mod_hr": "HR",
+      "mod_reports": "Reports"
+    }
   },
   "paywall": {
     "goToBilling": "Plan & billing",
@@ -135,7 +140,13 @@
     "vipPatient": "VIP patient",
     "needsChaperone": "Needs a chaperone",
     "checkInShortcutHint": "Ctrl+Enter to check in · Alt+1… to pick the payment method",
-    "boardShortcuts": "Shortcuts: N call next · S start next visit · Ctrl+K find patient"
+    "boardShortcuts": "Shortcuts: N call next · S start next visit · Ctrl+K find patient",
+    "tools": "Front desk tools",
+    "ticket": "Ticket",
+    "longestWait": "Longest wait",
+    "kbdCallNext": "call next",
+    "kbdStartNext": "start next visit",
+    "kbdFind": "find patient"
   },
   "auth": {
     "signIn": "Sign in",
@@ -735,7 +746,8 @@
     "viewExistingPatient": "View patient",
     "checkingPhone": "Checking phone number…",
     "photoOptional": "Profile photo is optional.",
-    "uploadPhoto": "Upload photo"
+    "uploadPhoto": "Upload photo",
+    "yearsShort": "y"
   },
   "encounters": {
     "title": "Encounter",
@@ -1045,7 +1057,8 @@
       "PATIENT": "patient",
       "CLINIC": "clinic",
       "SYSTEM": "system (not confirmed in time)"
-    }
+    },
+    "quickBook": "Quick book"
   },
   "scheduling": {
     "appointmentTypesTitle": "Appointment types",
@@ -2956,7 +2969,8 @@
     "pinchZoomHint": "Pinch to zoom. Drag when zoomed in. Use flip left/right to rotate. Click zoom % to reset.",
     "copyFailed": "Could not copy",
     "numeralsWestern": "Western digits (1 2 3)",
-    "numeralsArabic": "Arabic-Indic digits (١ ٢ ٣)"
+    "numeralsArabic": "Arabic-Indic digits (١ ٢ ٣)",
+    "filter": "Filter"
   },
   "patientConsent": {
     "header": "Consent status",
@@ -4713,5 +4727,21 @@
         }
       }
     }
+  },
+  "kx2": {
+    "shortcuts": {
+      "title": "Keyboard shortcuts",
+      "hint": "Available on desktop when no field is focused.",
+      "density": "Toggle compact density",
+      "goTo": "Go to"
+    },
+    "density": "Compact density",
+    "calendarView": "Calendar view",
+    "view": {
+      "month": "Month",
+      "week": "Week",
+      "day": "Day"
+    },
+    "nextUp": "Next up"
   }
 }

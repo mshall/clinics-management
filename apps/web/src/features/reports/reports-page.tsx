@@ -47,17 +47,17 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useDateRangeStore } from "@/stores/date-range-store";
 
 const ACQUISITION_CHART_COLORS = [
-  "hsl(221 83% 53%)",
-  "hsl(142 70% 40%)",
-  "hsl(38 92% 50%)",
-  "hsl(280 65% 55%)",
-  "hsl(0 72% 51%)",
-  "hsl(174 60% 40%)",
-  "hsl(215 20% 55%)",
+  "var(--kx-chart-1)",
+  "var(--kx-chart-2)",
+  "var(--kx-chart-3)",
+  "var(--kx-chart-4)",
+  "var(--kx-chart-5)",
+  "var(--kx-chart-7)",
+  "var(--kx-chart-6)",
 ];
 
-const REVENUE_CHART_COLOR = "hsl(221 83% 53%)";
-const EXPENSE_CHART_COLOR = "hsl(215 14% 52%)";
+const REVENUE_CHART_COLOR = "var(--kx-chart-2)";
+const EXPENSE_CHART_COLOR = "var(--kx-chart-3)";
 
 const REVENUE_TEXT_CLASS = "font-semibold text-kx-ocean-800 dark:text-kx-ocean-400";
 const EXPENSE_TEXT_CLASS = "font-semibold text-muted-foreground";
@@ -683,7 +683,7 @@ export function ReportsPage() {
             <ChartFrame>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <CartesianGrid vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                   <YAxis tick={{ fontSize: 11 }} width={56} tickFormatter={(v) => String(v)} />
                   <Tooltip
@@ -741,7 +741,7 @@ export function ReportsPage() {
                   <ChartFrame className="h-56 w-full sm:h-72">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <CartesianGrid vertical={false} />
                         <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                         <YAxis tick={{ fontSize: 11 }} width={56} tickFormatter={(v) => money(Number(v), currency)} />
                         <Tooltip
@@ -788,7 +788,7 @@ export function ReportsPage() {
             <ChartFrame className="h-56 w-full sm:h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <CartesianGrid vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                   <YAxis tick={{ fontSize: 11 }} allowDecimals={false} width={40} />
                   <Tooltip formatter={(value: number) => [value, t("reports.visits", "Visits")]} labelFormatter={(l) => String(l)} />
@@ -818,7 +818,7 @@ export function ReportsPage() {
             <ChartFrame className="h-56 w-full sm:h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <CartesianGrid vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                   <YAxis tick={{ fontSize: 11 }} width={56} tickFormatter={(v) => String(v)} />
                   <Tooltip
@@ -854,7 +854,7 @@ export function ReportsPage() {
           <ChartFrame className="h-56 w-full sm:h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <CartesianGrid vertical={false} />
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                 <YAxis tick={{ fontSize: 11 }} allowDecimals={false} width={40} />
                 <Tooltip formatter={(value: number) => [value, t("reports.newPatients", "New patients")]} />
@@ -928,7 +928,7 @@ export function ReportsPage() {
                 <ChartFrame className="h-56 w-full sm:h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={acquisitionChartData} layout="vertical" margin={{ top: 8, right: 8, left: 4, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
+                      <CartesianGrid horizontal={false} />
                       <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
                       <YAxis type="category" dataKey="label" width={96} tick={{ fontSize: 10 }} />
                       <Tooltip formatter={(value: number) => [value, t("reports.newPatients", "New patients")]} />

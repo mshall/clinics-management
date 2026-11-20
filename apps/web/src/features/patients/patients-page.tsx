@@ -663,20 +663,18 @@ export function PatientsPage() {
                     </td>
                     <td className="px-3 py-2 font-mono text-xs ltr-nums">{p.mrn}</td>
                     <td className="px-3 py-2">
-                      {i18n.language === "ar" && p.firstNameAr ? (
-                        <span>
-                          {p.firstNameAr} {p.lastNameAr}
-                        </span>
-                      ) : (
-                        <span>
-                          {p.firstNameEn} {p.lastNameEn}
-                        </span>
-                      )}
-                      {p.isSample ? (
-                        <span className="ms-2 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground ring-1 ring-inset ring-border">
-                          {t("help.sample.badge")}
-                        </span>
-                      ) : null}
+                      {(() => {
+                        const nm = i18n.language === "ar" && p.firstNameAr ? `${p.firstNameAr} ${p.lastNameAr ?? ""}`.trim() : `${p.firstNameEn} ${p.lastNameEn}`.trim();
+                        return (
+                          <div className="flex items-center gap-2.5">
+                            <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-accent text-xs font-semibold text-accent-foreground">{nm.charAt(0).toUpperCase()}</span>
+                            <span className="min-w-0 truncate font-medium">{nm}</span>
+                            {p.isSample ? (
+                              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground ring-1 ring-inset ring-border">{t("help.sample.badge")}</span>
+                            ) : null}
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-3 py-2 text-center">
                       <span className="text-xs font-medium text-muted-foreground">

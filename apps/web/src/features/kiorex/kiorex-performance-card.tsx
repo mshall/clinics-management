@@ -139,7 +139,7 @@ export function KiorexPerformanceCard({ clinicId }: { clinicId: string }) {
                     {n(o.freeProgress.patientsAttended)} / {n(o.freeProgress.patientsTarget)}
                   </span>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={o.freeProgress.progressPercent} aria-valuemin={0} aria-valuemax={100}>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-muted" role="progressbar" aria-label={t("kiorexTab.performance.freeProgress", "Progress to free month")} aria-valuenow={o.freeProgress.progressPercent} aria-valuemin={0} aria-valuemax={100}>
                   <div className="h-full bg-primary" style={{ width: `${Math.min(100, o.freeProgress.progressPercent)}%` }} />
                 </div>
               </div>
@@ -154,9 +154,9 @@ export function KiorexPerformanceCard({ clinicId }: { clinicId: string }) {
                   <YAxis yAxisId="views" tick={{ fontSize: 11 }} allowDecimals={false} width={40} orientation={isAr ? "left" : "right"} />
                   <Tooltip />
                   <Legend />
-                  <Bar yAxisId="count" dataKey="bookings" name={t("kiorexTab.performance.bookings", "Bookings")} fill="hsl(var(--primary) / 0.45)" />
-                  <Bar yAxisId="count" dataKey="attended" name={t("kiorexTab.performance.attended", "Attended")} fill="hsl(var(--primary))" />
-                  <Line yAxisId="views" type="monotone" dataKey="views" name={t("kiorexTab.performance.views", "Profile views")} stroke="#f59e0b" dot={false} />
+                  <Bar yAxisId="count" dataKey="bookings" name={t("kiorexTab.performance.bookings", "Bookings")} fill="var(--kx-chart-2)" fillOpacity={0.45} radius={[3, 3, 0, 0]} />
+                  <Bar yAxisId="count" dataKey="attended" name={t("kiorexTab.performance.attended", "Attended")} fill="var(--kx-chart-1)" radius={[3, 3, 0, 0]} />
+                  <Line yAxisId="views" type="monotone" dataKey="views" name={t("kiorexTab.performance.views", "Profile views")} stroke="var(--kx-chart-3)" strokeWidth={2} dot={false} />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>

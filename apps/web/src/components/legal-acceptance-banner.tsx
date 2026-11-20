@@ -36,30 +36,25 @@ export function LegalAcceptanceBanner() {
   }
 
   return (
-    <div
-      role="status"
-      className="flex flex-wrap items-center justify-between gap-2 border-b border-primary/20 bg-accent px-4 py-2.5 text-sm text-accent-foreground"
-    >
-      <span>{t("legal.banner.prompt")}</span>
-      <button type="button" className="text-xs font-medium underline underline-offset-4 sm:hidden" aria-expanded={docsOpen} onClick={() => setDocsOpen((v) => !v)}>
-        {t("legal.banner.documents", "Documents")} ({status.pending.length})
-      </button>
-      <div className={`flex-wrap items-center gap-x-3 gap-y-1 max-sm:w-full ${docsOpen ? "flex" : "hidden sm:flex"}`}>
-        {status.pending.map((p) => (
-          <Link
-            key={p.document}
-            to={`/legal/${p.document}`}
-            className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-            target="_blank"
-            rel="noreferrer"
-          >
-            {i18n.language.startsWith("ar") ? p.titleAr : p.titleEn}
-          </Link>
-        ))}
-      </div>
-      <Button type="button" size="sm" disabled={busy} onClick={() => void acceptAll()}>
+    <div role="status" className="border-b border-primary/15 bg-accent/70 px-3 py-1.5 text-sm text-accent-foreground sm:px-4 md:ps-6">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="min-w-0 flex-1 truncate font-medium max-sm:whitespace-normal" title={t("legal.banner.prompt")}>{t("legal.banner.prompt")}</span>
+        <button type="button" className="text-xs font-medium underline underline-offset-4" aria-expanded={docsOpen} onClick={() => setDocsOpen((v) => !v)}>
+          {t("legal.banner.documents", "Documents")} ({status.pending.length})
+        </button>
+        <Button type="button" size="sm" className="kx-hdr h-8 min-h-8 sm:h-7 sm:min-h-7" disabled={busy} onClick={() => void acceptAll()}>
           {t("legal.banner.accept")}
-      </Button>
+        </Button>
+      </div>
+      {docsOpen ? (
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-primary/10 pt-1.5">
+          {status.pending.map((p) => (
+            <Link key={p.document} to={`/legal/${p.document}`} className="text-xs text-accent-foreground underline-offset-4 hover:underline" target="_blank" rel="noreferrer">
+              {i18n.language.startsWith("ar") ? p.titleAr : p.titleEn}
+            </Link>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

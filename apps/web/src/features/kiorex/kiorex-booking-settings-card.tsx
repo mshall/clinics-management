@@ -165,6 +165,7 @@ export function KiorexBookingSettingsCard({ clinicId, settings }: { clinicId: st
                               type="number"
                               min={0}
                               max={200}
+                              aria-label={t("kiorexTab.booking.dailyCap", "Daily cap")}
                               className="h-8 w-20"
                               value={dd.dailyCap}
                               onChange={(e) => setDoctor(d.listingId, { dailyCap: e.target.value })}

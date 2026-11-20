@@ -46,6 +46,8 @@ export function OnboardingChecklist({ variant = "card", onDismiss }: Props) {
 
   const data = q.data;
   const pending = data.steps.filter((s) => s.status === "pending");
+  // Dashboard card: only what is left to do (first 4); the full checklist lives on /onboarding.
+  const visibleSteps = variant === "card" ? pending.slice(0, 4) : data.steps;
 
   return (
   <Card className={variant === "page" ? undefined : undefined}>
@@ -60,7 +62,7 @@ export function OnboardingChecklist({ variant = "card", onDismiss }: Props) {
         </CardHeader>
       ) : null}
       <CardHeader>
-        <CardTitle className="text-lg">{t("onboarding.title")}</CardTitle>
+        <CardTitle className="text-base">{t("onboarding.title")}</CardTitle>
         <CardDescription>{t("onboarding.subtitle")}</CardDescription>
         {showMfaSetup ? (
           <div className="mt-3 rounded-md border border-[hsl(var(--warning)/0.4)] bg-amber-500/10 px-3 py-2 text-sm" data-testid="onboarding-mfa-setup">
@@ -77,20 +79,20 @@ export function OnboardingChecklist({ variant = "card", onDismiss }: Props) {
           </div>
         ) : null}
         <div
-          className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted"
+          className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted"
           role="progressbar"
           aria-valuenow={data.progressPercent}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-label={t("onboarding.progress")}
         >
-          <div className="h-full bg-primary transition-all" style={{ width: `${data.progressPercent}%` }} />
+          <div className="h-full rounded-full bg-primary transition-[width] duration-500 ease-out motion-reduce:transition-none" style={{ width: `${data.progressPercent}%` }} />
         </div>
         <p className="text-xs text-muted-foreground">{t("onboarding.progressLabel", { percent: data.progressPercent })}</p>
       </CardHeader>
       <CardContent className="space-y-2">
         <ul className="space-y-1">
-          {data.steps.map((step) => (
+          {visibleSteps.map((step) => (
             <StepRow
               key={step.key}
               step={step}
@@ -109,7 +111,7 @@ export function OnboardingChecklist({ variant = "card", onDismiss }: Props) {
         ) : (
           <div className="flex flex-wrap gap-2 pt-2">
             <Button asChild variant="default" size="sm">
-              <Link to="/onboarding">{t("onboarding.viewAll")}</Link>
+              <Link to="/onboarding">{t("onboarding.viewAll")}{variant === "card" && pending.length > 4 ? ` (${pending.length})` : ""}</Link>
             </Button>
             {pending.length === 0 && onDismiss ? (
               <Button type="button" variant="outline" size="sm" onClick={onDismiss}>

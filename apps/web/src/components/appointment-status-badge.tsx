@@ -7,15 +7,15 @@ import { cn } from "@/lib/utils";
 export function appointmentCalendarEventChipClassName(status: string): string {
   switch (status.toUpperCase()) {
     case "COMPLETED":
-      return "bg-[hsl(var(--success))] text-white dark:text-[#0C0D1F]";
+      return "bg-[hsl(var(--success)/0.14)] text-[hsl(var(--success))] border-s-2 border-[hsl(var(--success))]";
     case "CANCELLED":
-      return "bg-[hsl(var(--danger-text))]/85 text-white line-through dark:text-[#0C0D1F]";
+      return "bg-[hsl(var(--danger-text)/0.10)] text-[hsl(var(--danger-text))] line-through border-s-2 border-[hsl(var(--danger-text))]";
     case "CONFIRMED":
-      return "bg-[hsl(var(--info))] text-white dark:text-[#0C0D1F]";
+      return "bg-[hsl(var(--info)/0.14)] text-[hsl(var(--info))] border-s-2 border-[hsl(var(--info))]";
     case "CHECKED_IN":
-      return "bg-primary text-primary-foreground";
+      return "bg-accent text-accent-foreground border-s-2 border-primary";
     case "SCHEDULED":
-      return "bg-kx-neutral-600 text-white dark:bg-kx-neutral-400 dark:text-[#0C0D1F]";
+      return "bg-muted text-foreground border-s-2 border-muted-foreground";
     default:
       return "bg-muted text-muted-foreground";
   }
@@ -57,16 +57,28 @@ export function appointmentStatusLabel(status: string, t: TFunction): string {
   }
 }
 
+export function statusDotClass(status: string): string {
+  switch (status.toUpperCase()) {
+    case "COMPLETED": return "bg-[hsl(var(--success))]";
+    case "CANCELLED": return "bg-[hsl(var(--danger-text))]";
+    case "CONFIRMED": return "bg-[hsl(var(--info))]";
+    case "CHECKED_IN": return "bg-primary";
+    default: return "bg-muted-foreground";
+  }
+}
+
 export function AppointmentStatusBadge({ status, className }: { status: string; className?: string }) {
   const { t } = useTranslation();
   return (
     <span
+      data-status={status.toUpperCase()}
       className={cn(
-        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium",
+        "inline-flex w-fit items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium",
         appointmentStatusClassName(status),
         className
       )}
     >
+      <span aria-hidden className={cn("size-1.5 rounded-full", statusDotClass(status))} />
       {appointmentStatusLabel(status, t)}
     </span>
   );

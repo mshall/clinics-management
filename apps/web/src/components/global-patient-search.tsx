@@ -56,7 +56,7 @@ export function GlobalPatientSearch() {
         type="button"
         variant="outline"
         size="icon"
-        className="size-9 shrink-0 md:hidden"
+        className="kx-hdr shrink-0 md:hidden"
         aria-label={t("frontDesk.searchPatients", "Find patient")}
         onClick={() => setOpen(true)}
       >
@@ -64,12 +64,12 @@ export function GlobalPatientSearch() {
       </Button>
       <button
         type="button"
-        className="hidden min-w-0 items-center gap-2 rounded-md border border-border bg-muted/40 px-2 py-1 text-xs text-muted-foreground hover:bg-muted md:inline-flex"
+        className="hidden h-9 min-w-[14rem] items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 text-sm text-muted-foreground transition-colors hover:bg-muted md:inline-flex"
         onClick={() => setOpen(true)}
       >
         <Search className="size-3.5 shrink-0" />
         <span className="truncate">{t("frontDesk.searchPatients", "Find patient")}</span>
-        <kbd className="hidden shrink-0 rounded border bg-background px-1 font-mono text-[10px] lg:inline">⌘K</kbd>
+        <kbd className="kx-kbd hidden lg:inline-flex">⌘K</kbd>
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="gap-3 sm:max-w-lg">
@@ -80,6 +80,7 @@ export function GlobalPatientSearch() {
             autoFocus
             value={q}
             onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && items[0]) { e.preventDefault(); pick(items[0].id); } }}
             placeholder={t("frontDesk.globalSearchPh", "Phone, national ID, MRN, or name")}
           />
           <ul className="max-h-72 space-y-1 overflow-y-auto text-sm">

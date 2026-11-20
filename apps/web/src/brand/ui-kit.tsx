@@ -39,7 +39,7 @@ export function StatusChip({ tone = "neutral", dot = true, className, children }
 export function PageHeader({ title, description, actions, eyebrow, className }: { title: ReactNode; description?: ReactNode; actions?: ReactNode; eyebrow?: ReactNode; className?: string }) {
   return (
     <header className={kcn("mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-border/70 pb-4", className)}>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1 basis-72">
         {eyebrow && <div className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">{eyebrow}</div>}
         <h1 className="text-balance text-2xl font-semibold leading-tight tracking-tight">{title}</h1>
         {description && <p className="mt-1 max-w-prose text-sm text-muted-foreground">{description}</p>}
