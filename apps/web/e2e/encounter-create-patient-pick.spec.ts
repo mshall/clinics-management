@@ -13,15 +13,16 @@ test.describe("Encounter create patient picker", () => {
     await expect(dialog).toBeVisible();
 
     await dialog.getByRole("button", { name: /pick patient/i }).click();
-    await dialog.getByRole("combobox").fill("a");
+    await dialog.locator('input[role="combobox"]').fill("a");
 
-    const firstOption = dialog.getByRole("option").first();
+    // The (non-inline) pick-list panel is portalled to <body>, outside the dialog subtree.
+    const firstOption = page.locator("[data-pick-list-panel]").getByRole("option").first();
     await expect(firstOption).toBeVisible({ timeout: 15_000 });
     const optionLabel = (await firstOption.locator(".font-medium").first().textContent())?.trim() ?? "";
     expect(optionLabel.length).toBeGreaterThan(0);
 
     await firstOption.click();
-    await expect(dialog.getByRole("combobox")).toHaveCount(0);
+    await expect(dialog.locator('input[role="combobox"]')).toHaveCount(0);
     await expect(dialog.getByRole("button", { name: optionLabel })).toBeVisible();
   });
 });

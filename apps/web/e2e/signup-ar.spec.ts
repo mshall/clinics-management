@@ -26,6 +26,8 @@ test.describe("ON-01 signup (Arabic)", () => {
     await page.getByRole("button", { name: /متابعة|Continue/i }).click();
 
     await page.getByRole("button", { name: /لايت|Lite/i }).click();
+    // Accepting the required legal documents is mandatory before the clinic can be created (legal gate).
+    for (const box of await page.locator('input[id^="legal-"]').all()) await box.check();
     const complete = page.waitForResponse(
       (r) => r.url().includes("/api/v1/public/signup/complete") && r.request().method() === "POST",
       { timeout: 120_000 },
@@ -35,6 +37,6 @@ test.describe("ON-01 signup (Arabic)", () => {
     expect(res.ok()).toBeTruthy();
 
     await page.waitForURL((u) => u.pathname.includes("onboarding"), { timeout: 60_000 });
-    await expect(page.getByRole("heading", { name: /مرحباً|Welcome/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /مرحباً|Welcome/i }).first()).toBeVisible();
   });
 });

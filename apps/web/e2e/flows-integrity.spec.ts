@@ -9,11 +9,11 @@ test.describe("UX flows & data wiring smoke", () => {
     await expect(page.getByRole("button", { name: /advanced search/i })).toHaveCount(0);
   });
 
-  test("group admin admin page shows create employee in organization tab", async ({ page }) => {
-    await login(page, "admin@kiorly.com");
+  // Group admins create employees in HR (next test); the clinic admin's /admin "Staff onboarding" section hosts the quick create-employee card.
+  test("clinic admin page shows create employee in staff onboarding", async ({ page }) => {
+    await login(page, "clinicadmin@kiorly.com");
     await page.goto("/admin");
-    await page.getByRole("button", { name: /organization/i }).click();
-    await expect(page.getByRole("heading", { name: /create employee/i })).toBeVisible();
+    await expect(page.getByText(/create employee/i).first()).toBeVisible();
   });
 
   test("group admin HR tab uses login provisioning create employee dialog", async ({ page }) => {
@@ -23,7 +23,7 @@ test.describe("UX flows & data wiring smoke", () => {
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByText(/login email/i)).toBeVisible();
     await expect(dialog.getByText(/linked login account/i)).toHaveCount(0);
-    const clinicField = dialog.getByRole("combobox").first();
+    const clinicField = dialog.locator('input[role="combobox"]').first();
     await clinicField.click();
     await clinicField.fill("Dubai");
     await dialog.locator('[data-pick-list-panel][role="listbox"]').getByRole("option").first().click();

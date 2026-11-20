@@ -14,7 +14,7 @@ async function pickClinicByTypingAndClick(
   dialog: import("@playwright/test").Locator,
   query: string,
 ) {
-  const clinicField = dialog.getByRole("combobox").first();
+  const clinicField = dialog.locator('input[role="combobox"]').first();
   await clinicField.click();
   await clinicField.fill(query);
   const listbox = dialog.locator('[data-pick-list-panel][role="listbox"]');
@@ -28,13 +28,14 @@ async function pickClinicByTypingAndClick(
 }
 
 test.describe("HR create employee clinic picker", () => {
+  // The seeded HR officer is clinic-scoped (HR clinic grant = 6th October & Sheikh Zayed Clinic); they can only pick clinics they manage.
   test("HR officer can type and click to select clinic", async ({ page }) => {
     await login(page, "hr@drahmedshall.com");
     const dialog = await openCreateEmployeeDialog(page);
     await expect(dialog.getByText(/login email/i)).toBeVisible();
 
-    const label = await pickClinicByTypingAndClick(page, dialog, "Capital");
-    expect(label.toLowerCase()).toContain("capital");
+    const label = await pickClinicByTypingAndClick(page, dialog, "October");
+    expect(label.toLowerCase()).toContain("october");
   });
 
   test("group admin can type and click to select clinic", async ({ page }) => {

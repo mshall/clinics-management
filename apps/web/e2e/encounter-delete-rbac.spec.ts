@@ -32,9 +32,16 @@ test.describe("Encounter delete by organization role", () => {
     await expectEncounterDeleteVisible(page);
   });
 
-  test("call center sees delete on encounters list", async ({ page }) => {
+  // CALL_CENTER's role ceiling (nav-tab-keys ROLE_MAX) has no "encounters" tab, so the list API is forbidden outright (no delete to see).
+  test("call center has no encounters access", async ({ page }) => {
     await login(page, "callcenter@drahmedshall.com");
-    await expectEncounterDeleteVisible(page);
+    await page.goto("/patients");
+    const status = await page.evaluate(async () => {
+      const token = (JSON.parse(localStorage.getItem("cms-auth") ?? "{}") as { state?: { accessToken?: string } }).state?.accessToken ?? "";
+      return (await fetch("/api/v1/encounters?page=1&pageSize=1", { headers: { Authorization: `Bearer ${token}` } })).status;
+    });
+    expect(status).toBe(403);
+    await expect(page.getByRole("link", { name: /^encounters$/i })).toHaveCount(0);
   });
 
   test("physician does not see delete on encounters list", async ({ page }) => {
@@ -51,12 +58,15 @@ test.describe("Encounter delete by organization role", () => {
     await login(page, "physician@kiorly.com");
     await page.goto("/encounters");
     const status = await page.evaluate(async () => {
-      const listRes = await fetch("/api/v1/encounters?page=1&pageSize=1", { credentials: "include" });
+      // The session token lives in the persisted zustand store (localStorage "cms-auth"), not in cookies.
+      const token = (JSON.parse(localStorage.getItem("cms-auth") ?? "{}") as { state?: { accessToken?: string } }).state?.accessToken ?? "";
+      const headers = { Authorization: `Bearer ${token}` };
+      const listRes = await fetch("/api/v1/encounters?page=1&pageSize=1", { headers });
       if (!listRes.ok) return listRes.status;
       const list = (await listRes.json()) as { items?: Array<{ id: string }> };
       const id = list.items?.[0]?.id;
       if (!id) return null;
-      const delRes = await fetch(`/api/v1/encounters/${id}`, { method: "DELETE", credentials: "include" });
+      const delRes = await fetch(`/api/v1/encounters/${id}`, { method: "DELETE", headers });
       return delRes.status;
     });
     expect(status).toBe(403);

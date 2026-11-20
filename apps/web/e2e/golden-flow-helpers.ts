@@ -16,7 +16,13 @@ export async function apiLogin(
   email: string,
   password = "demo",
 ): Promise<ApiSession> {
-  const res = await request.post(`${API_BASE}/auth/login`, { data: { email, password } });
+  let res = await request.post(`${API_BASE}/auth/login`, { data: { email, password } });
+  // The API rate-limits logins per email (20/min); a full-suite run exceeds that, so honour Retry-After instead of failing.
+  for (let attempt = 0; res.status() === 429 && attempt < 3; attempt += 1) {
+    const body = (await res.json().catch(() => ({}))) as { retryAfterSec?: number };
+    await new Promise((r) => setTimeout(r, ((body.retryAfterSec ?? 20) + 1) * 1000));
+    res = await request.post(`${API_BASE}/auth/login`, { data: { email, password } });
+  }
   expect(res.ok(), `login ${email}: ${await res.text()}`).toBeTruthy();
   const body = (await res.json()) as {
     accessToken: string;
