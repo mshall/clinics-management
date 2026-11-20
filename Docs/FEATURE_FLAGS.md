@@ -31,6 +31,17 @@ dependencies live in code). Scopes: G global · M market · O organization.
 | `clinic.specialty_templates.<code>` | Launch-locked | G M | gate: specialty board sign-off (NH010); physio (`clinic.specialty_templates.physio`): GPR2, human, never recorded by code | form-template list: hidden **only when a Kiorex snapshot exists AND marks the specialty gate-unsatisfied** (or OFF); no snapshot or a snapshot without the key ⇒ dev defaults show them |
 | `clinic.referral_rewards` | Commercial | G M | — | referral attribution at signup, **new code minting** (`GET /growth/referral`) and **new reward grants** (referral stays PENDING while OFF; credits already earned are honoured) |
 | `clinic.field_rep_onboarding` | Commercial | G M | — | rep code at public signup |
+| `clinic.profession.physiotherapy` | Module | G M | — | `PATCH /clinicians/:id/profession` to PHYSIOTHERAPIST (new physio sign-ups; existing physios keep working) |
+| `clinic.home_visits` | Launch-locked | G M O | gate: GHV1 + GHV2 (human evidence, never recorded by code) | NEW home bookings, new HOME visit types and enabling a clinician for home visits; booked visits, reads, execution and **all safety endpoints** are never gated (ADR-025) |
+| `clinic.home_route_view` | Module | G M O | clinic.home_visits | route legs + navigation links on `GET /home-visits/route` (OFF = list view only) |
+| `clinic.home_dispatch` | Module | G M O | clinic.home_visits | `GET /home-visits/:id/suggestions` (OFF = manual assignment, `POST /assign` still works) |
+| `nurse.edition` | Module | G M | — | Nurse sign-up (`POST /public/nurse/signup/complete`); existing Nurse tenants unaffected. Edition-gated: **nurse.\* keys are effective only for NURSE-edition organizations** |
+| `nurse.individual_tenants` | Commercial | G M | nurse.edition | solo-nurse sign-up |
+| `nurse.care_plans` | Launch-locked | G M O | gate: GKN1 | creating care plans (active plans complete) |
+| `nurse.mar` | Launch-locked | G M O | gate: GKN1 | structured MAR endpoints (OFF = medication as free text in the visit record); the order requirement and allergy/duplicate checks are never flags |
+| `nurse.private_duty_shifts` | Module | G M O | nurse.edition | shift booking |
+| `nurse.family_updates` | Integration | G M O | whatsapp_reminders | post-visit family WhatsApp updates |
+| `nurse.individual_kiorex_listing` | Launch-locked | G M | kiorex.home_visits · gate: GKN2 | listing of SOLO nurses on Kiorex (agencies list under `clinic.kiorex_listing`) |
 
 The five pre-v2 keys (`ai_assistant`, `whatsapp_reminders`, `instapay`, `fawry`, `card_payments`) are unchanged
 (`FEATURE_FLAG_KEYS`, plan entitlement mapping, DB rows).

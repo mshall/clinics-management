@@ -20,7 +20,7 @@ export type FeatureFlagKey = (typeof FEATURE_FLAG_KEYS)[number];
 
 export type FlagScopeName = "global" | "market" | "org";
 export type FlagClass = "Module" | "Commercial" | "Integration" | "AI" | "Launch-locked";
-export type FlagProduct = "kiorly-clinic" | "kiorex" | "kiorex-account" | "kiorly-pharmacy" | "kiorly-lab";
+export type FlagProduct = "kiorly-clinic" | "kiorly-nurse" | "kiorex" | "kiorex-account" | "kiorly-pharmacy" | "kiorly-lab";
 
 export type FlagDefinition = {
   key: string;
@@ -33,6 +33,8 @@ export type FlagDefinition = {
   gate: string | null;
   /** True for `clinic.specialty_templates.<code>` style families. */
   keyPattern?: boolean;
+  /** Set on nurse.* keys: effective only for organizations whose edition is NURSE (ADR-031). */
+  edition?: "NURSE";
   descriptionEn: string;
   descriptionAr: string;
   whenOffEn: string;
@@ -47,6 +49,11 @@ type ClinicInput = Omit<FlagDefinition, "product" | "launchLocked" | "gate"> &
 
 function clinic(def: ClinicInput): FlagDefinition {
   return { product: "kiorly-clinic", launchLocked: false, gate: null, ...def };
+}
+
+/** Kiorly Nurse is an EDITION of Kiorly Clinic (ADR-031): its keys live in the same registry (KX-23 §07), `edition: "NURSE"`. */
+function nurse(def: ClinicInput): FlagDefinition {
+  return { product: "kiorly-nurse", launchLocked: false, gate: null, edition: "NURSE", ...def };
 }
 
 /** Flags owned by Kiorly Clinic. */
@@ -256,6 +263,124 @@ export const CLINIC_FLAG_DEFINITIONS: readonly FlagDefinition[] = [
     whenOffEn: "Rep codes rejected at signup; earned commissions honoured",
     whenOffAr: "تُرفض أكواد المندوبين عند التسجيل؛ تُحترم العمولات المكتسبة",
   }),
+  clinic({
+    key: "clinic.profession.physiotherapy",
+    scopes: GM,
+    class: "Module",
+    dependsOn: [],
+    descriptionEn: "Physiotherapist sign-ups and physiotherapy practice (KX-05 section 06)",
+    descriptionAr: "تسجيل أخصائيي العلاج الطبيعي وممارسة العلاج الطبيعي (KX-05 القسم 06)",
+    whenOffEn: "No new physio sign-ups; existing physios keep working",
+    whenOffAr: "لا تسجيلات جديدة لأخصائيي العلاج الطبيعي؛ يواصل الحاليون عملهم",
+  }),
+  clinic({
+    key: "clinic.home_visits",
+    scopes: GMO,
+    class: "Launch-locked",
+    dependsOn: [],
+    launchLocked: true,
+    gate: "GHV1 + GHV2",
+    descriptionEn: "Home visits for clinicians (shared by the Clinic and Nurse editions)",
+    descriptionAr: "الزيارات المنزلية للممارسين (مشتركة بين إصدارَي العيادة والتمريض)",
+    whenOffEn: "Home visit types hidden for new bookings; booked visits honoured",
+    whenOffAr: "تُخفى أنواع الزيارات المنزلية للحجوزات الجديدة؛ تُحترم الزيارات المحجوزة",
+  }),
+  clinic({
+    key: "clinic.home_route_view",
+    scopes: GMO,
+    class: "Module",
+    dependsOn: ["clinic.home_visits"],
+    descriptionEn: "Map and route view for the day's home visits",
+    descriptionAr: "عرض الخريطة والمسار لزيارات اليوم المنزلية",
+    whenOffEn: "List view only",
+    whenOffAr: "عرض القائمة فقط",
+  }),
+  clinic({
+    key: "clinic.home_dispatch",
+    scopes: GMO,
+    class: "Module",
+    dependsOn: ["clinic.home_visits"],
+    descriptionEn: "Zone-based assignment suggestions for home visits across clinicians",
+    descriptionAr: "اقتراح إسناد الزيارات المنزلية بين الممارسين حسب المنطقة",
+    whenOffEn: "Manual assignment",
+    whenOffAr: "إسناد يدوي",
+  }),
+  nurse({
+    key: "nurse.edition",
+    scopes: GM,
+    class: "Module",
+    dependsOn: [],
+    descriptionEn: "Kiorly Nurse edition: sign-ups and the nurse workspace",
+    descriptionAr: "إصدار كيورلي للتمريض: التسجيل ومساحة عمل الممرض",
+    whenOffEn: "No new Nurse sign-ups; existing tenants read-only with export",
+    whenOffAr: "لا تسجيلات جديدة للتمريض؛ المستأجرون الحاليون للقراءة فقط مع التصدير",
+  }),
+  nurse({
+    key: "nurse.individual_tenants",
+    scopes: GM,
+    class: "Commercial",
+    dependsOn: ["nurse.edition"],
+    descriptionEn: "Solo nurse plans at sign-up",
+    descriptionAr: "باقات الممرض المنفرد عند التسجيل",
+    whenOffEn: "Solo plans hidden at sign-up; existing solos keep working",
+    whenOffAr: "تُخفى باقات المنفرد عند التسجيل؛ يواصل الحاليون عملهم",
+  }),
+  nurse({
+    key: "nurse.care_plans",
+    scopes: GMO,
+    class: "Launch-locked",
+    dependsOn: [],
+    launchLocked: true,
+    gate: "GKN1",
+    descriptionEn: "Nursing care plans that generate recurring home visits",
+    descriptionAr: "خطط الرعاية التمريضية التي تولّد زيارات منزلية متكررة",
+    whenOffEn: "Single visits only; active plans complete",
+    whenOffAr: "زيارات مفردة فقط؛ تُستكمل الخطط النشطة",
+  }),
+  nurse({
+    key: "nurse.mar",
+    scopes: GMO,
+    class: "Launch-locked",
+    dependsOn: [],
+    launchLocked: true,
+    gate: "GKN1",
+    descriptionEn: "Medication administration record against a doctor's order",
+    descriptionAr: "سجل إعطاء الأدوية بناءً على أمر الطبيب",
+    whenOffEn: "Medication recorded as free text in the visit record",
+    whenOffAr: "تُسجَّل الأدوية كنص حر في سجل الزيارة",
+  }),
+  nurse({
+    key: "nurse.private_duty_shifts",
+    scopes: GMO,
+    class: "Module",
+    dependsOn: ["nurse.edition"],
+    descriptionEn: "Private-duty shift booking (8, 12 and 24 hours)",
+    descriptionAr: "حجز ورديات الرعاية الخاصة (8 و12 و24 ساعة)",
+    whenOffEn: "Shift booking hidden",
+    whenOffAr: "يُخفى حجز الورديات",
+  }),
+  nurse({
+    key: "nurse.family_updates",
+    scopes: GMO,
+    class: "Integration",
+    dependsOn: ["whatsapp_reminders"],
+    descriptionEn: "Post-visit family updates by WhatsApp template (no clinical content in the message)",
+    descriptionAr: "تحديثات الأسرة بعد الزيارة عبر قالب واتساب (دون محتوى سريري في الرسالة)",
+    whenOffEn: "No family messages",
+    whenOffAr: "لا رسائل للأسرة",
+  }),
+  nurse({
+    key: "nurse.individual_kiorex_listing",
+    scopes: GM,
+    class: "Launch-locked",
+    dependsOn: ["kiorex.home_visits"],
+    launchLocked: true,
+    gate: "GKN2",
+    descriptionEn: "Listing of solo nurses on the Kiorex marketplace",
+    descriptionAr: "إدراج الممرضين المنفردين على سوق كيوريكس",
+    whenOffEn: "Solo nurses not listed on Kiorex",
+    whenOffAr: "لا يُدرج الممرضون المنفردون على كيوريكس",
+  }),
 ];
 
 /**
@@ -268,6 +393,7 @@ export const EXTERNAL_PARENT_FLAG_KEYS = [
   "pharmacy.module",
   "lab.module",
   "account.provider_sso",
+  "kiorex.home_visits",
 ] as const;
 
 /** Concrete (non-pattern) keys owned by Kiorly Clinic. */

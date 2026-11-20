@@ -63,7 +63,8 @@ describe("FF01 flag registry", () => {
     const cat = JSON.parse(readFileSync(p, "utf8")) as {
       flags: { key: string; product: string; scopes: string[]; class: string; dependsOn: string[]; launchLocked: boolean }[];
     };
-    const mine = cat.flags.filter((f) => f.product === "kiorly-clinic");
+    // Kiorly Nurse is an edition of this codebase (ADR-031): its nurse.* keys (product "kiorly-nurse") live in the same registry.
+    const mine = cat.flags.filter((f) => f.product === "kiorly-clinic" || f.product === "kiorly-nurse");
     assert.deepEqual(
       mine.map((f) => f.key).sort(),
       CLINIC_FLAG_DEFINITIONS.map((d) => d.key).sort(),
@@ -74,6 +75,11 @@ describe("FF01 flag registry", () => {
       assert.equal(d.class, f.class, f.key);
       assert.deepEqual([...d.dependsOn], f.dependsOn, f.key);
       assert.equal(d.launchLocked, f.launchLocked, f.key);
+      assert.equal(d.product, f.product, f.key);
+      assert.equal(d.edition ?? undefined, (f as { edition?: string }).edition, f.key);
+      // Launch-locked gates are human evidence (GHV1/GHV2/GKN1/GKN2): the registry names them, code never records them.
+      const gateIds = (f as { gateIds?: string[] }).gateIds ?? [];
+      for (const g of gateIds) assert.ok(d.gate?.includes(g) ?? false, `${f.key} gate text names ${g}`);
     }
   });
 
