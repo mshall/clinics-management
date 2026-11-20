@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# Stop stale local dev processes so `npm run dev` binds 3000 + 5173 reliably.
+# Stop stale local dev processes so `npm run dev` can bind this branch's ports.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=scripts/local-dev-ports.sh
+source "$ROOT/scripts/local-dev-ports.sh"
 
 kill_port() {
   local port="$1"
@@ -30,9 +32,11 @@ kill_port() {
   fi
 }
 
-for port in 3000 5173 5174 5175 4175; do
+# Always free this branch's ports, plus the shared alternates so restarts are reliable.
+for port in "$API_PORT" "$WEB_PORT" "$DOCS_PORT" 3000 3010 3020 5173 5174 5175 5190 5191 4175; do
   kill_port "$port"
 done
 
-bash "$ROOT/scripts/wait-tcp-port-free.sh" 3000 15
-bash "$ROOT/scripts/wait-tcp-port-free.sh" 5173 10
+bash "$ROOT/scripts/wait-tcp-port-free.sh" "$API_PORT" 15
+bash "$ROOT/scripts/wait-tcp-port-free.sh" "$WEB_PORT" 10
+echo "Local ports ready: API :${API_PORT} · web :${WEB_PORT} · docs :${DOCS_PORT}"

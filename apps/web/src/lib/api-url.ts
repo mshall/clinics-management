@@ -10,6 +10,20 @@ export function apiUrl(path: string): string {
   return base ? `${base}${p}` : p;
 }
 
+/** Local web port → Nest API port (main uses 5190→3020; other branches 5174→3010). */
+const LOCAL_WEB_TO_API_PORT: Record<string, string> = {
+  "5173": "3000",
+  "5174": "3010",
+  "5180": "3010",
+  "5190": "3020",
+};
+
+function localDevApiPort(webPort: string): string {
+  const fromVite = (import.meta.env.VITE_DEV_API_PORT as string | undefined)?.trim();
+  if (fromVite) return fromVite;
+  return LOCAL_WEB_TO_API_PORT[webPort] ?? "3010";
+}
+
 /**
  * Absolute URL for large file downloads (org backup ZIP/SQL).
  * Same-origin `/api` via the Vite / preview proxy often drops mid-stream ("Failed - Network error");
@@ -21,11 +35,12 @@ export function absoluteDownloadUrl(path: string): string {
   if (typeof window === "undefined") return resolved;
   const { protocol, hostname, port } = window.location;
   const isLocalHost = hostname === "127.0.0.1" || hostname === "localhost";
-  // Vite (5173+), preview/e2e (5174+), and common local alt ports.
-  const isLocalDevWeb = isLocalHost && /^(517\d|3001|4173)$/.test(port || "");
+  // Vite / preview local web ports (517x, 518x, 519x) and common alt ports.
+  const isLocalDevWeb = isLocalHost && /^(517\d|518\d|519\d|3001|4173)$/.test(port || "");
   if (isLocalDevWeb) {
     const apiHost = hostname === "localhost" ? "localhost" : "127.0.0.1";
-    return `${protocol}//${apiHost}:3000${resolved}`;
+    const apiPort = localDevApiPort(port || "");
+    return `${protocol}//${apiHost}:${apiPort}${resolved}`;
   }
   return resolved;
 }

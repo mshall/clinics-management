@@ -2,7 +2,10 @@
 # Local smoke: staff JWT + integration bearer appointment flows.
 set -euo pipefail
 
-API_BASE="${API_BASE:-http://localhost:3000/api/v1}"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=scripts/local-dev-ports.sh
+source "$ROOT/scripts/local-dev-ports.sh"
+API_BASE="${API_BASE:-http://localhost:${API_PORT}/api/v1}"
 ADMIN_EMAIL="${SMOKE_LOGIN_EMAIL:-admin@drahmedshall.com}"
 ADMIN_PASSWORD="${SMOKE_LOGIN_PASSWORD:-demo}"
 

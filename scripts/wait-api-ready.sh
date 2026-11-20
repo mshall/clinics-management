@@ -3,7 +3,9 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-API_PORT="${API_PORT:-3000}"
+# shellcheck source=scripts/local-dev-ports.sh
+source "$ROOT/scripts/local-dev-ports.sh"
+
 READY_URL="http://127.0.0.1:${API_PORT}/api/v1/health/ready"
 LIVE_URL="http://127.0.0.1:${API_PORT}/api/v1/health/live"
 MAX_SEC="${1:-120}"

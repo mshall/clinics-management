@@ -6,11 +6,15 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 API_WAIT_SEC="${PLAYWRIGHT_API_WAIT_SEC:-180}"
-# Match Vite proxy + preview ports (apps/web/vite.config.ts → 3010 / 5174).
-export PORT="${PORT:-3010}"
-export API_PORT="${API_PORT:-$PORT}"
-export API_PROXY_TARGET="${API_PROXY_TARGET:-http://127.0.0.1:${PORT}}"
+# Fixed CI ports (ignore developer-shell main-branch 3020/5190).
+export PORT=3010
+export API_PORT=3010
+export WEB_PORT=5174
+export API_PROXY_TARGET=http://127.0.0.1:3010
 export PLAYWRIGHT_BASE_URL="${PLAYWRIGHT_BASE_URL:-http://127.0.0.1:5174}"
+export VITE_DEV_API_PORT=3010
+# Avoid vite preview binding the local main web port if it leaked into the env.
+unset DOCS_PORT || true
 
 cleanup() {
   kill "${API_PID:-}" "${WEB_PID:-}" 2>/dev/null || true

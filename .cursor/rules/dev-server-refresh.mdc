@@ -23,8 +23,8 @@ Whenever you complete meaningful edits in this monorepo (Nest API, Vite web, Pri
 
 1. **Regenerate Prisma client** when `apps/api/prisma/schema.prisma` or migrations changed: run `npm run prisma:generate -w api` from the repo root (or `npx prisma generate` from `apps/api`), and `npx prisma migrate deploy` when migrations must be applied to the DB the user is using.
 2. **Restart the dev stack** so file watchers and the Nest/Vite processes reload everything:
-   - Stop the existing root dev process for this repo if one is running (same machine: free ports **3000** and **5173** / **5174** if needed, or stop the prior `npm run dev` job).
-   - From the **repository root**, run a **fresh** `npm run dev` (this project uses `concurrently` for API + web).
+ - Stop the existing root dev process for this repo if one is running (same machine: free branch ports via `bash scripts/free-dev-ports.sh` — **main** uses **3020** / **5190** / **5191**; other branches **3010** / **5174** / **5175** — or stop the prior `npm run dev` job).
+ - From the **repository root**, run a **fresh** `npm run dev` (this project uses `concurrently` for API + web + docs).
 3. Do **not** assume an old background `npm run dev` is still authoritative after your edits—restart it yourself when you have shell access.
 
 Skip only for edits that cannot affect runtime (e.g. comments-only in docs with no build impact)—when in doubt, restart.
@@ -34,9 +34,9 @@ Skip only for edits that cannot affect runtime (e.g. comments-only in docs with 
 Treat local dev refresh as **part of finishing the task**, not a follow-up for the user.
 
 1. **Never** end a turn that changed runtime code with only “refresh your browser” or “run `npm run dev`” — run restart and verification yourself in that same turn when shell access is available.
-2. After restart, **confirm** the API is up with **`npm run api:ensure`** or `curl` `http://127.0.0.1:3000/api/v1/health/ready` → JSON with `"database":"ok"` (not `/health/live` alone — that can pass while a dying Nest process shuts down and Vite will still proxy-fail until watch recompiles).
-3. Do **not** start Vite before the API is ready: root `npm run dev` uses `scripts/wait-api-ready.sh` (3× consecutive ready checks). If the user sees “Local API is not reachable”, restart from repo root: `npm run db:ensure && npm run dev` and wait for **`API listening on http://127.0.0.1:3000/api/v1`** in the `[api]` log.
+2. After restart, **confirm** the API is up with **`npm run api:ensure`** (uses `scripts/local-dev-ports.sh`) or `curl` the branch API ready URL → JSON with `"database":"ok"` (not `/health/live` alone — that can pass while a dying Nest process shuts down and Vite will still proxy-fail until watch recompiles).
+3. Do **not** start Vite before the API is ready: root `npm run dev` uses `scripts/wait-api-ready.sh` (3× consecutive ready checks). If the user sees “Local API is not reachable”, restart from repo root: `npm run db:ensure && npm run dev` and wait for **`API listening on http://127.0.0.1:<API_PORT>/api/v1`** in the `[api]` log (`main` → **3020**).
 4. In the summary, state briefly that the stack was restarted and is healthy — do **not** ask the user to restart unless the agent cannot access the machine or a command failed after retry.
 5. **Browser:** Vite usually hot-reloads the web app; a hard refresh is only needed if the user still sees stale UI. You do not need to ask them to refresh when the dev stack was restarted successfully.
 6. Applies after **push** as well as local edits when you still have shell access on this machine (restart so their local tab matches what they will test).
-7. Avoid orphaned dev stacks: killing port 3000 without restarting `npm run dev` in the same turn is what causes “API not reachable” for the user — always pair port cleanup with a fresh root `npm run dev` when you touched runtime code.
+7. Avoid orphaned dev stacks: killing the API port without restarting `npm run dev` in the same turn is what causes “API not reachable” for the user — always pair `bash scripts/free-dev-ports.sh` with a fresh root `npm run dev` when you touched runtime code.
