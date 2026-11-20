@@ -65,7 +65,7 @@ export function DrugSearchAutocomplete({
         autoComplete="off"
       />
       {!drugProductId && value.trim().length > 1 ? (
-        <p className="text-xs text-amber-700 dark:text-amber-400">
+        <p className="text-xs text-[hsl(var(--warning))] ">
           {t("clinical.safetyUnavailable", "Safety check unavailable — select a catalog drug for ingredient-level checks.")}
         </p>
       ) : null}

@@ -247,7 +247,7 @@ export function PatientDetailPage() {
                     {patient.mrn}
                   </Badge>
                   {patient.isSample ? (
-                    <Badge variant="outline" className="border-amber-400 text-amber-700 dark:text-amber-300" data-testid="sample-patient-badge">
+                    <Badge variant="outline" className="border-[hsl(var(--warning)/0.3)] text-[hsl(var(--warning))] " data-testid="sample-patient-badge">
                       {t("help.sample.badge")}
                     </Badge>
                   ) : null}

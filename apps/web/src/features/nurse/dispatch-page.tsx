@@ -191,7 +191,7 @@ function RosterDialog({ nurse, onClose }: { nurse: RosterItem; onClose: () => vo
             <p className="font-medium">{t("nurse.dispatch.payStatement")}</p>
             <p>{t("nurse.dispatch.payLine", { visits: pay.data.visits, hours: pay.data.shiftHours, total: money(pay.data.totalPay) })}</p>
             <p className="text-muted-foreground">{t("nurse.dispatch.cashOwed", { amount: money(pay.data.cashOwedToAgency) })}</p>
-            {!pay.data.payRatesConfigured ? <p className="text-amber-600 dark:text-amber-400">{t("nurse.dispatch.noRates")}</p> : null}
+            {!pay.data.payRatesConfigured ? <p className="text-[hsl(var(--warning))] ">{t("nurse.dispatch.noRates")}</p> : null}
           </div>
         ) : null}
         <ZonesEditor clinicianId={nurse.userId} title={t("nurse.dispatch.zonesFor", { name: nurse.name })} />

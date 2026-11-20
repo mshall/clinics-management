@@ -41,7 +41,7 @@ export function EncounterSignoffTrail({ encounter, canAmend }: Props) {
     <section className="space-y-2 rounded-lg border border-border bg-muted/20 p-3 text-sm" data-testid="encounter-signoff-trail">
       {encounter.signedAt ? (
         <p className="flex flex-wrap items-center gap-1.5" data-testid="encounter-signed-line">
-          <ShieldCheck className="h-4 w-4 text-emerald-600" aria-hidden />
+          <ShieldCheck className="h-4 w-4 text-[hsl(var(--success))]" aria-hidden />
           {encounter.signedByName
             ? t("signoff.signedBy", "Signed by {{name}} · {{at}}", { name: encounter.signedByName, at: fmt(encounter.signedAt) })
             : t("signoff.signedAt", "Signed · {{at}}", { at: fmt(encounter.signedAt) })}

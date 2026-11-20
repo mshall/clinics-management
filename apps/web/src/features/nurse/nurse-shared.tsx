@@ -1,5 +1,4 @@
-import { EmptyState, PageHeader, StatusChip } from "@/brand/ui-kit";
-import { PulseLine } from "@/brand/components";
+import { EmptyState, PageHeader, Pulse, StatusChip } from "@/brand/ui-kit";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Lock } from "lucide-react";
 import { useDeferredValue, useState, type ReactNode } from "react";
@@ -68,7 +67,7 @@ export function LoadingBlock() {
   const { t } = useTranslation();
   return (
     <div className="flex items-center gap-3 py-2 text-sm text-muted-foreground" role="status" data-testid="nurse-loading">
-      <PulseLine size={14} loop label="" /> <span>{t("nurse.common.loading")}</span>
+      <Pulse size={14} loop /> <span>{t("nurse.common.loading")}</span>
     </div>
   );
 }
@@ -103,8 +102,8 @@ export function ErrorBlock({ error, onRetry }: { error: unknown; onRetry?: () =>
 export function GateNotice({ feature, compact }: { feature: string; compact?: boolean }) {
   const { t } = useTranslation();
   return (
-    <div className={cn("flex items-start gap-2 rounded-lg border border-amber-500/60 bg-amber-500/10 text-sm", compact ? "p-2" : "p-3")} role="status" data-testid="nurse-gate-notice" data-feature={feature}>
-      <Lock className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+    <div className={cn("flex items-start gap-2 rounded-lg border border-[hsl(var(--warning)/0.6)] bg-amber-500/10 text-sm", compact ? "p-2" : "p-3")} role="status" data-testid="nurse-gate-notice" data-feature={feature}>
+      <Lock className="mt-0.5 size-4 shrink-0 text-[hsl(var(--warning))] " aria-hidden />
       <div>
         <p className="font-medium">{t("nurse.gate.title")}</p>
         <p className="text-muted-foreground">{t(`nurse.gate.${feature.replace(/\./g, "_")}`, t("nurse.gate.generic"))}</p>

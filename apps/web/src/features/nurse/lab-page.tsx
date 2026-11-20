@@ -203,7 +203,7 @@ function CollectionForm({ orderId, appointmentId, disabled }: { orderId: string;
                 <Input id={`lab-id-${k}`} className="min-h-11" type={k === "DATE_OF_BIRTH" ? "date" : "text"} value={checked[k] ?? ""} onChange={(e) => setChecked({ ...checked, [k]: e.target.value })} />
               </Field>
             ))}
-            {idents.length < 2 ? <p className="text-xs text-amber-600 dark:text-amber-400">{t("nurse.lab.needTwo")}</p> : null}
+            {idents.length < 2 ? <p className="text-xs text-[hsl(var(--warning))] ">{t("nurse.lab.needTwo")}</p> : null}
           </fieldset>
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label={t("nurse.lab.collectedAt")} htmlFor="lab-collected"><Input id="lab-collected" type="datetime-local" className="min-h-11" value={collectedAt} onChange={(e) => setCollectedAt(e.target.value)} /></Field>

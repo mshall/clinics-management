@@ -188,8 +188,8 @@ function SectionBlock({
         </ol>
 
         {section.tipsEn?.length ? (
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
-            <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200">
+          <div className="rounded-lg border border-[hsl(var(--warning)/0.3)] bg-amber-500/5 p-3">
+            <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[hsl(var(--warning))] ">
               <Lightbulb className="size-4" />
               <span dir="ltr">Pro tips</span>
               <span className="opacity-60">/</span>
@@ -198,7 +198,7 @@ function SectionBlock({
             <ul className="grid gap-2 md:grid-cols-2 text-sm text-muted-foreground">
               {section.tipsEn.map((tip, i) => (
                 <li key={tip} className="flex gap-2">
-                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-amber-600" />
+                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-[hsl(var(--warning))]" />
                   <div>
                     <p dir="ltr">{tip}</p>
                     {section.tipsAr?.[i] ? <p dir="rtl" className="text-xs">{section.tipsAr[i]}</p> : null}

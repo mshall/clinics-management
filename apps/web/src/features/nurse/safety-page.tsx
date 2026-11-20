@@ -94,7 +94,7 @@ function ActiveVisitSafety() {
       <CardContent className="space-y-3">
         {route.isLoading ? <LoadingBlock /> : null}
         {route.isError ? <ErrorBlock error={route.error} onRetry={() => void route.refetch()} /> : null}
-        {aborted ? <p className="rounded-md border border-emerald-500/50 bg-emerald-500/10 p-3 text-sm" role="status" data-testid="abort-done">{t("nurse.safety.abortDone")}</p> : null}
+        {aborted ? <p className="rounded-md border border-[hsl(var(--success)/0.5)] bg-emerald-500/10 p-3 text-sm" role="status" data-testid="abort-done">{t("nurse.safety.abortDone")}</p> : null}
         {!active && route.data ? <EmptyBlock message={t("nurse.safety.noActive")} /> : null}
         {active ? (
           <>
@@ -156,7 +156,7 @@ function SafetyContactCard() {
         {contact.isLoading ? <LoadingBlock /> : null}
         {contact.isError ? <ErrorBlock error={contact.error} /> : null}
         {contact.data ? (
-          contact.data.configured ? <p className="text-sm">{t("nurse.safety.contactSet", { name: contact.data.name ?? "" })}</p> : <p className="rounded-md border border-amber-500/60 bg-amber-500/10 p-2 text-sm" role="alert">{t("nurse.safety.contactMissing")}</p>
+          contact.data.configured ? <p className="text-sm">{t("nurse.safety.contactSet", { name: contact.data.name ?? "" })}</p> : <p className="rounded-md border border-[hsl(var(--warning)/0.6)] bg-amber-500/10 p-2 text-sm" role="alert">{t("nurse.safety.contactMissing")}</p>
         ) : null}
         <form className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); if (name.trim() && phone.trim()) save.mutate(); }}>
           <Field label={t("nurse.safety.contactName")} htmlFor="sc-name"><Input id="sc-name" className="min-h-11" value={name} onChange={(e) => setName(e.target.value)} /></Field>

@@ -63,7 +63,7 @@ export function OnboardingChecklist({ variant = "card", onDismiss }: Props) {
         <CardTitle className="text-lg">{t("onboarding.title")}</CardTitle>
         <CardDescription>{t("onboarding.subtitle")}</CardDescription>
         {showMfaSetup ? (
-          <div className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm" data-testid="onboarding-mfa-setup">
+          <div className="mt-3 rounded-md border border-[hsl(var(--warning)/0.4)] bg-amber-500/10 px-3 py-2 text-sm" data-testid="onboarding-mfa-setup">
             <p className="font-medium">{t("onboarding.mfaSetupTitle", "Protect money with MFA")}</p>
             <p className="mt-1 text-muted-foreground">
               {t(

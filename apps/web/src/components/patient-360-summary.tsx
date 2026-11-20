@@ -102,7 +102,7 @@ export function Patient360Summary({ patientId }: { patientId: string }) {
           <p className="text-xs font-medium uppercase text-muted-foreground">{t("patients.alerts", "Alerts")}</p>
           <ul className="space-y-1">
             {s.alerts.map((a, i) => (
-              <li key={i} className="text-amber-900 dark:text-amber-100">
+              <li key={i} className="text-[hsl(var(--warning))] ">
                 {isAr ? a.messageAr : a.messageEn}
               </li>
             ))}

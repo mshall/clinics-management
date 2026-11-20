@@ -20,7 +20,7 @@ export function ServicesPage() {
   const ar = i18n.language.startsWith("ar");
   return (
     <PageShell title={t("nurse.services.title")} subtitle={t("nurse.services.subtitle")} testId="nurse-services">
-      <p className="rounded-md border border-amber-500/60 bg-amber-500/10 p-3 text-sm" data-testid="services-proposed-note">{t("nurse.services.proposedNote")}</p>
+      <p className="rounded-md border border-[hsl(var(--warning)/0.6)] bg-amber-500/10 p-3 text-sm" data-testid="services-proposed-note">{t("nurse.services.proposedNote")}</p>
       {services.isLoading ? <LoadingBlock /> : null}
       {services.isError ? <ErrorBlock error={services.error} onRetry={() => void services.refetch()} /> : null}
       {services.data && services.data.length === 0 ? <EmptyBlock message={t("nurse.services.empty")} /> : null}

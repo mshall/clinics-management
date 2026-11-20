@@ -120,7 +120,7 @@ export function ProfileMfaPanel() {
             : t("profile.mfaStatusOff", "Protect your account with a TOTP authenticator app.")}
         </p>
         {recoveryCodes?.length ? (
-          <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3">
+          <div className="rounded-md border border-[hsl(var(--warning)/0.4)] bg-amber-500/10 p-3">
             <p className="font-medium">{t("profile.mfaRecoverySave", "Save these recovery codes (shown once):")}</p>
             <ul className="mt-2 grid grid-cols-2 gap-1 font-mono text-xs ltr-nums">
               {recoveryCodes.map((c) => (

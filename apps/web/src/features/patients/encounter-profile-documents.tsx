@@ -85,7 +85,7 @@ export function EncounterProfileDocuments({ encounterId, status, canUpload }: Pr
         </Button>
         {isDraftLike ? (
           <Button type="button" size="sm" variant="secondary" disabled={uploadMut.isPending} onClick={bindPick("PRESCRIPTION", rxRef)}>
-            <Pill className="me-1.5 h-3.5 w-3.5 text-emerald-600" aria-hidden />
+            <Pill className="me-1.5 h-3.5 w-3.5 text-[hsl(var(--success))]" aria-hidden />
             {t("encounters.uploadPrescription", "Prescription")}
           </Button>
         ) : null}

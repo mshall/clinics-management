@@ -9,10 +9,10 @@ type VerificationDto = { status: string; badge?: { verified: boolean; labelEn: s
 
 const tone: Record<string, string> = {
   UNVERIFIED: "bg-muted text-muted-foreground",
-  PENDING: "bg-amber-500/15 text-amber-800 dark:text-amber-200",
-  VERIFIED: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-200",
+  PENDING: "bg-amber-500/15 text-[hsl(var(--warning))] ",
+  VERIFIED: "bg-emerald-500/15 text-[hsl(var(--success))] ",
   REJECTED: "bg-destructive/15 text-destructive",
-  EXPIRED: "bg-orange-500/15 text-orange-800",
+  EXPIRED: "bg-orange-500/15 text-[hsl(var(--warning))]",
 };
 
 export function ClinicianVerificationStatusChip() {

@@ -319,7 +319,7 @@ export function AdminOrgBillingPanel({ canManage }: { canManage: boolean }) {
                   <li key={m.metric} className="space-y-1">
                     <div className="flex justify-between gap-2">
                       <span>{t(`admin.billing.usage.metric.${m.metric}`, m.metric)}</span>
-                      <span className={m.atLimit ? "text-destructive font-medium" : m.nearLimit ? "text-amber-700" : ""}>
+                      <span className={m.atLimit ? "text-destructive font-medium" : m.nearLimit ? "text-[hsl(var(--warning))]" : ""}>
                         {m.quantity} / {m.limit}
                       </span>
                     </div>

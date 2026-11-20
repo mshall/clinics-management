@@ -154,7 +154,7 @@ export function PlatformVerificationsTab() {
                       )}
                       {row.isSolo ? <Badge variant="outline" className="ms-1">{t("verification.soloTag", "solo practitioner")}</Badge> : null}
                       {row.reverifyReason ? (
-                        <div className="mt-1 text-xs text-amber-800 dark:text-amber-200">
+                        <div className="mt-1 text-xs text-[hsl(var(--warning))] ">
                           {t(`verification.reverify.${row.reverifyReason}`, row.reverifyReason)}
                         </div>
                       ) : null}

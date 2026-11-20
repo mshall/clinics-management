@@ -225,7 +225,7 @@ export function FrontDeskBoardPage() {
             {(boardQ.data?.rooms ?? []).map((r) => (
               <div key={r.label} className="flex justify-between gap-2 rounded border px-2 py-1 text-sm">
                 <span>{r.label}</span>
-                <span className={r.free ? "text-emerald-600" : "text-amber-600"}>
+                <span className={r.free ? "text-[hsl(var(--success))]" : "text-[hsl(var(--warning))]"}>
                   {r.free ? t("frontDesk.roomFree", "Free") : t("frontDesk.roomBusy", "In use")}
                 </span>
               </div>

@@ -295,7 +295,7 @@ function VitalsHistory({ vitals }: { vitals: Vitals[] }) {
               <p className="flex flex-wrap gap-2">
                 {VITALS.filter((k) => v[k] != null).map((k) => {
                   const f = v.flags?.[k];
-                  return <span key={k} className={f ? (f.startsWith("CRITICAL") ? "font-semibold text-destructive" : "font-medium text-amber-600 dark:text-amber-400") : ""}>{t(`nurse.vitals.keys.${k}`)} {String(v[k])}{f ? ` (${t(`nurse.vitals.flags.${f}`)})` : ""}</span>;
+                  return <span key={k} className={f ? (f.startsWith("CRITICAL") ? "font-semibold text-destructive" : "font-medium text-[hsl(var(--warning))] ") : ""}>{t(`nurse.vitals.keys.${k}`)} {String(v[k])}{f ? ` (${t(`nurse.vitals.flags.${f}`)})` : ""}</span>;
                 })}
               </p>
             </li>

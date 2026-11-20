@@ -506,7 +506,7 @@ export function AppointmentDetailPage() {
         </div>
       </div>
       {profileIncomplete ? (
-        <div className="rounded-md border border-amber-500/50 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-950 dark:text-amber-100">
+        <div className="rounded-md border border-[hsl(var(--warning)/0.5)] bg-amber-500/10 px-3 py-2.5 text-sm text-[hsl(var(--warning))] ">
           <p>
             {t(
               "appointments.profileIncompleteBanner",

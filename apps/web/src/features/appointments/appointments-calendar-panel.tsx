@@ -330,7 +330,7 @@ export function AppointmentsCalendarPanel() {
                               className={cn(
                                 "w-full truncate rounded-[4px] px-1 py-0.5 text-start text-[10px] font-medium leading-tight sm:text-[11px]",
                                 appointmentCalendarEventChipClassName(a.status),
-                                overlaps > 0 && "ring-1 ring-inset ring-amber-500/50",
+                                overlaps > 0 && "ring-1 ring-inset ring-[hsl(var(--warning)/0.5)]",
                               )}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -358,7 +358,7 @@ export function AppointmentsCalendarPanel() {
                               className={cn(
                                 "w-full truncate rounded-[4px] px-1.5 py-0.5 text-start text-[11px] font-medium leading-tight",
                                 appointmentCalendarEventChipClassName(a.status),
-                                overlaps > 0 && "ring-1 ring-inset ring-amber-500/50",
+                                overlaps > 0 && "ring-1 ring-inset ring-[hsl(var(--warning)/0.5)]",
                               )}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -411,7 +411,7 @@ export function AppointmentsCalendarPanel() {
                             type="button"
                             className={cn(
                               "flex w-full gap-3 rounded-xl border border-border/80 bg-card p-3 text-start touch-manipulation transition-colors hover:bg-muted/40 active:bg-muted/60 sm:items-center sm:p-4",
-                              overlapCount > 0 && "border-amber-500/40 bg-amber-500/5",
+                              overlapCount > 0 && "border-[hsl(var(--warning)/0.4)] bg-amber-500/5",
                             )}
                             onClick={() => openAppointment(a.id)}
                           >
@@ -427,7 +427,7 @@ export function AppointmentsCalendarPanel() {
                                 {formatAppointmentTimeRange(a.startsAt, a.endsAt, loc)}
                               </p>
                               {overlapCount > 0 ? (
-                                <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                                <p className="text-xs font-medium text-[hsl(var(--warning))] ">
                                   {t(
                                     "appointments.calendarSharedSlot",
                                     "Shared time slot with {{count}} other patient(s)",

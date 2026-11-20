@@ -45,8 +45,8 @@ function StatTile({
   const accentClass = {
     sky: "border-kx-ocean-600/25 bg-kx-ocean-600/5 [&_svg]:text-kx-ocean-700 dark:[&_svg]:text-kx-ocean-400",
     violet: "border-kx-indigo-600/25 bg-kx-indigo-600/5 [&_svg]:text-kx-indigo-700 dark:[&_svg]:text-kx-indigo-400",
-    emerald: "border-emerald-500/25 bg-emerald-500/5 [&_svg]:text-emerald-600 dark:[&_svg]:text-emerald-400",
-    amber: "border-amber-500/25 bg-amber-500/5 [&_svg]:text-amber-600 dark:[&_svg]:text-amber-400",
+    emerald: "border-[hsl(var(--success)/0.25)] bg-emerald-500/5 [&_svg]:text-[hsl(var(--success))] dark:[&_svg]:text-emerald-400",
+    amber: "border-[hsl(var(--warning)/0.25)] bg-amber-500/5 [&_svg]:text-[hsl(var(--warning))] dark:[&_svg]:text-amber-400",
   }[accent];
 
   return (

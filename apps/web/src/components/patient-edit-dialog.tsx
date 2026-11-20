@@ -112,7 +112,7 @@ export function PatientEditDialog({ patient, open, onOpenChange }: PatientEditDi
         </DialogHeader>
         <div className="flex flex-col gap-3 pt-1">
           {needsProfileCompletion ? (
-            <p className="text-sm text-amber-800 dark:text-amber-200">
+            <p className="text-sm text-[hsl(var(--warning))] ">
               {t(
                 "patients.completeProfileHint",
                 "This chart was created for a first-time booking. Finish registration before check-in, encounters, or completing the appointment.",

@@ -14,11 +14,11 @@ export type RxSafetyAlert = {
 function severityClass(severity: string): string {
   switch (severity) {
     case "contraindicated":
-      return "border-red-600/50 bg-red-500/15 text-red-950 dark:text-red-100";
+      return "border-red-600/50 bg-red-500/15 text-[hsl(var(--danger-text))] ";
     case "major":
-      return "border-orange-600/50 bg-orange-500/15 text-orange-950 dark:text-orange-100";
+      return "border-orange-600/50 bg-orange-500/15 text-[hsl(var(--warning))] ";
     case "moderate":
-      return "border-amber-600/50 bg-amber-500/15 text-amber-950 dark:text-amber-100";
+      return "border-amber-600/50 bg-amber-500/15 text-[hsl(var(--warning))] ";
     case "minor":
       return "border-kx-ocean-700/40 bg-kx-ocean-600/10 text-kx-ocean-950 dark:text-kx-ocean-100";
     case "unavailable":

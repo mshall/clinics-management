@@ -261,7 +261,7 @@ export function AdminIntegrationClientsPanel() {
         </div>
 
         {revealedToken ? (
-          <div className="space-y-2 rounded-md border border-amber-500/40 bg-amber-500/5 p-3">
+          <div className="space-y-2 rounded-md border border-[hsl(var(--warning)/0.4)] bg-amber-500/5 p-3">
             <p className="text-xs text-muted-foreground">
               {t("admin.integrations.tokenOnce", "Copy this bearer token now — it will not be shown again:")}
             </p>
@@ -463,7 +463,7 @@ function WebhookSecretBanner({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="space-y-2 rounded-md border border-amber-500/40 bg-amber-500/5 p-3">
+    <div className="space-y-2 rounded-md border border-[hsl(var(--warning)/0.4)] bg-amber-500/5 p-3">
       <p className="text-xs text-muted-foreground">{label}</p>
       <input type="text" className="w-full border rounded-md px-2 py-1.5 font-mono text-xs bg-muted" readOnly value={value} />
       <Button type="button" size="sm" variant="outline" onClick={onDismiss}>

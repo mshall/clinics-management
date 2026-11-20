@@ -225,7 +225,7 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
       key: "labs" as const,
       category: "LAB_RESULTS" as const,
       icon: FlaskConical,
-      iconClass: "text-emerald-600",
+      iconClass: "text-[hsl(var(--success))]",
       title: t("patients.clinicalLabs", "Lab results"),
       hint: t("patients.clinicalLabsHint", "Lab reports from registration and encounters."),
       items: data?.labs ?? [],
@@ -288,7 +288,7 @@ export function PatientClinicalDocuments({ patientId }: PatientClinicalDocuments
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <FileText className="h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+              <FileText className="h-4 w-4 shrink-0 text-[hsl(var(--warning))]" aria-hidden />
               {t("patients.clinicalOther", "Other documents")}
             </CardTitle>
             <CardDescription>

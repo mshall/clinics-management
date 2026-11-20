@@ -586,13 +586,13 @@ export function EncounterDetailPage() {
 
       <Dialog open={finalizeDialogOpen} onOpenChange={setFinalizeDialogOpen}>
         <DialogContent
-          className="gap-0 overflow-hidden border-amber-200 p-0 sm:max-w-md dark:border-amber-900/60"
+          className="gap-0 overflow-hidden border-[hsl(var(--warning)/0.3)] p-0 sm:max-w-md "
           aria-describedby="encounter-finalize-desc"
         >
-          <div className="border-b border-amber-100 bg-gradient-to-br from-amber-50 to-orange-50 px-6 py-5 dark:border-amber-900/40 dark:from-amber-950/80 dark:to-orange-950/40">
+          <div className="border-b border-[hsl(var(--warning)/0.3)] bg-gradient-to-br from-amber-50 to-orange-50 px-6 py-5 dark:from-amber-950/80 dark:to-orange-950/40">
             <DialogHeader className="space-y-3 text-start">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-100 ring-4 ring-amber-100/80 dark:bg-amber-900/60 dark:ring-amber-900/40">
-                <Lock className="h-5 w-5 text-amber-700 dark:text-amber-300" aria-hidden />
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[hsl(var(--warning)/0.12)] ring-4 ring-[hsl(var(--warning)/0.8)] ">
+                <Lock className="h-5 w-5 text-[hsl(var(--warning))] " aria-hidden />
               </div>
               <DialogTitle className="text-start text-xl">{t("encounters.confirmFinalizeTitle", "Finalize this encounter?")}</DialogTitle>
             </DialogHeader>
@@ -604,13 +604,13 @@ export function EncounterDetailPage() {
                 "Once finalized, SOAP notes, vitals, medications, and documents can no longer be edited. This action cannot be undone."
               )}
             </p>
-            <div className="rounded-lg border border-amber-200/80 bg-amber-50/50 px-3 py-2 text-sm dark:border-amber-900/50 dark:bg-amber-950/30">
+            <div className="rounded-lg border border-[hsl(var(--warning)/0.8)] bg-[hsl(var(--warning)/0.5)] px-3 py-2 text-sm ">
               <span className="text-muted-foreground">{t("encounters.status", "Status")}: </span>
-              <span className="font-medium text-amber-900 dark:text-amber-100">
+              <span className="font-medium text-[hsl(var(--warning))] ">
                 {enc ? encounterStatusLabel(t, enc.status) : "—"}
               </span>
               <span className="mx-2 text-muted-foreground">→</span>
-              <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+              <span className="font-semibold text-[hsl(var(--success))] ">
                 {encounterStatusLabel(t, "FINALIZED")}
               </span>
             </div>
@@ -620,7 +620,7 @@ export function EncounterDetailPage() {
               </Button>
               <Button
                 type="button"
-                className="bg-amber-600 text-white hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-500"
+                className="bg-amber-600 text-white hover:bg-amber-700 "
                 disabled={finalizeMutation.isPending}
                 onClick={() => finalizeMutation.mutate()}
               >
@@ -1045,7 +1045,7 @@ export function EncounterDetailPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <FlaskConical className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
+                <FlaskConical className="h-4 w-4 shrink-0 text-[hsl(var(--success))]" aria-hidden />
                 {t("encounters.labs")}
               </CardTitle>
               <CardDescription>{t("encounters.labsHint")}</CardDescription>
@@ -1184,7 +1184,7 @@ export function EncounterDetailPage() {
                   </TabsTrigger>
                   <TabsTrigger
                     value="manual"
-                    className="gap-1.5 data-[state=active]:bg-emerald-100 data-[state=active]:text-emerald-950 dark:data-[state=active]:bg-emerald-950 dark:data-[state=active]:text-emerald-50"
+                    className="gap-1.5 data-[state=active]:bg-[hsl(var(--success)/0.12)] data-[state=active]:text-[hsl(var(--success))] dark:data-[state=active]:bg-emerald-950 dark:data-[state=active]:text-emerald-50"
                   >
                     <Pill className="h-4 w-4 shrink-0" aria-hidden />
                     <span className="hidden sm:inline">{t("encounters.medModeManual")}</span>
@@ -1222,7 +1222,7 @@ export function EncounterDetailPage() {
                   ) : null}
                 </TabsContent>
 
-                <TabsContent value="manual" className="rounded-xl border border-emerald-200/80 bg-emerald-50/30 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+                <TabsContent value="manual" className="rounded-xl border border-[hsl(var(--success)/0.8)] bg-[hsl(var(--success)/0.3)] p-4 ">
                   {!medsPanelActive && draft ? (
                     <p className="mb-3 text-sm text-muted-foreground">{t("encounters.panelDisabledNoMeds")}</p>
                   ) : null}
@@ -1274,7 +1274,7 @@ export function EncounterDetailPage() {
                         </div>
                       ) : null}
                       {generatedRxPreview ? (
-                        <div className="rounded-xl border border-emerald-300/80 bg-background p-3 dark:border-emerald-800">
+                        <div className="rounded-xl border border-[hsl(var(--success)/0.8)] bg-background p-3 ">
                           <p className="mb-2 text-sm font-medium">{t("encounters.generatedPrescription")}</p>
                           <img
                             src={generatedRxPreview}

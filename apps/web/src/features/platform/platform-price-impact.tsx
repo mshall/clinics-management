@@ -74,7 +74,7 @@ export function PriceImpactPanel({ impact }: { impact: PriceImpactPreview }) {
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">{t("platform.plans.mrrDelta")}</dt>
-          <dd className={`font-semibold ltr-nums ${delta > 0 ? "text-emerald-700" : delta < 0 ? "text-destructive" : ""}`}>
+          <dd className={`font-semibold ltr-nums ${delta > 0 ? "text-[hsl(var(--success))]" : delta < 0 ? "text-destructive" : ""}`}>
             {delta > 0 ? "+" : ""}
             {impact.mrrDelta} {impact.currency}
           </dd>

@@ -109,7 +109,7 @@ export function AdminKiorlyPayDialog({
           <DialogDescription>
             {invoiceNumber} — {amountDue} {currency}
             {paymentUnderReview ? (
-              <span className="mt-2 block text-amber-600 dark:text-amber-400">
+              <span className="mt-2 block text-[hsl(var(--warning))] ">
                 {t("admin.billing.invoices.underReviewBanner", "Payment under review — dunning paused")}
               </span>
             ) : null}

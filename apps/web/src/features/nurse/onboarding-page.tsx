@@ -35,7 +35,7 @@ export function NurseOnboardingPage() {
                 <Card data-testid="onboarding-step" data-step={s.key} data-done={String(s.done)}>
                   <CardContent className="space-y-2 p-4 text-sm">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="flex items-center gap-2 font-medium">{s.done ? <CheckCircle2 className="size-5 text-emerald-600" aria-hidden /> : <Circle className="size-5 text-muted-foreground" aria-hidden />}{t(`nurse.onboarding.steps.${s.key}.title`)}</p>
+                      <p className="flex items-center gap-2 font-medium">{s.done ? <CheckCircle2 className="size-5 text-[hsl(var(--success))]" aria-hidden /> : <Circle className="size-5 text-muted-foreground" aria-hidden />}{t(`nurse.onboarding.steps.${s.key}.title`)}</p>
                       <StatusPill tone={s.done ? "ok" : "warn"}>{s.done ? t("nurse.onboarding.done") : t("nurse.onboarding.todo")}</StatusPill>
                     </div>
                     <p className="text-muted-foreground">{t(`nurse.onboarding.steps.${s.key}.help`)}</p>
@@ -54,7 +54,7 @@ export function NurseOnboardingPage() {
             <CardContent className="space-y-1 p-4 text-sm">
               <p className="font-medium">{t("nurse.onboarding.kiorexTitle")}</p>
               <p className="text-muted-foreground">{kind === "AGENCY" ? t("nurse.onboarding.kiorexAgency") : t("nurse.onboarding.kiorexSolo")}</p>
-              {kind !== "AGENCY" && listingOn === false ? <p className="text-amber-600 dark:text-amber-400" data-testid="onboarding-listing-paused">{t("nurse.onboarding.listingPaused")}</p> : null}
+              {kind !== "AGENCY" && listingOn === false ? <p className="text-[hsl(var(--warning))] " data-testid="onboarding-listing-paused">{t("nurse.onboarding.listingPaused")}</p> : null}
             </CardContent>
           </Card>
         </>

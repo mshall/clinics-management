@@ -161,7 +161,7 @@ export function MedicationsPrescriptionDraftPanel({
           </TabsTrigger>
           <TabsTrigger
             value="manual"
-            className="gap-1.5 data-[state=active]:bg-emerald-100 data-[state=active]:text-emerald-950 dark:data-[state=active]:bg-emerald-950 dark:data-[state=active]:text-emerald-50"
+            className="gap-1.5 data-[state=active]:bg-[hsl(var(--success)/0.12)] data-[state=active]:text-[hsl(var(--success))] dark:data-[state=active]:bg-emerald-950 dark:data-[state=active]:text-emerald-50"
           >
             <Pill className="h-4 w-4 shrink-0" aria-hidden />
             <span className="hidden sm:inline">{t("encounters.medModeManual")}</span>
@@ -198,7 +198,7 @@ export function MedicationsPrescriptionDraftPanel({
 
         <TabsContent
           value="manual"
-          className="rounded-xl border border-emerald-200/80 bg-emerald-50/30 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20"
+          className="rounded-xl border border-[hsl(var(--success)/0.8)] bg-[hsl(var(--success)/0.3)] p-4 "
         >
           <ul className="space-y-2 text-sm">
             {medications.map((m) => (
@@ -240,7 +240,7 @@ export function MedicationsPrescriptionDraftPanel({
                 <p className="text-xs text-muted-foreground">{t("encounters.generatePrescriptionHint")}</p>
               </div>
               {generatedPreview ? (
-                <div className="rounded-xl border border-emerald-300/80 bg-background p-3 dark:border-emerald-800">
+                <div className="rounded-xl border border-[hsl(var(--success)/0.8)] bg-background p-3 ">
                   <p className="mb-2 text-sm font-medium">{t("encounters.generatedPrescription")}</p>
                   <img
                     src={generatedPreview}

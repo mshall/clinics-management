@@ -61,7 +61,7 @@ export function OfflineTodayPage() {
         <h1 className="text-xl font-semibold">{t("pwa.offlineTodayTitle")}</h1>
         <p className="text-sm text-muted-foreground ltr-nums">{dateLabel}</p>
         {!online ? (
-          <p className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-400">{t("pwa.offlineBanner")}</p>
+          <p className="mt-2 text-xs font-medium text-[hsl(var(--warning))] ">{t("pwa.offlineBanner")}</p>
         ) : null}
       </div>
 

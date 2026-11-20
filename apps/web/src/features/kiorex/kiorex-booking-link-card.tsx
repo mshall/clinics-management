@@ -152,7 +152,7 @@ export function KiorexBookingLinkCard({ clinicId }: { clinicId: string }) {
                     <span className="ms-1">{t("kiorexTab.bookingLink.share", "Share")}</span>
                   </Button>
                 </div>
-                <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400" data-testid="kiorex-booking-link-free">
+                <p className="text-xs font-medium text-[hsl(var(--success))] " data-testid="kiorex-booking-link-free">
                   {t("kiorexTab.bookingLink.commissionFree", "No Kiorex commission on bookings made through this link.")}
                 </p>
               </div>

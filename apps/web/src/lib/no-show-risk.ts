@@ -57,10 +57,10 @@ export function noShowRiskSuggestionText(view: Pick<NoShowRiskView, "suggestion"
 export function noShowRiskChipClassName(band: NoShowRiskBand): string {
   switch (band) {
     case "HIGH":
-      return "border-red-500/50 bg-red-500/10 text-red-700 dark:text-red-300";
+      return "border-[hsl(var(--danger-text)/0.5)] bg-red-500/10 text-[hsl(var(--danger-text))] ";
     case "MEDIUM":
-      return "border-amber-500/50 bg-amber-500/10 text-amber-800 dark:text-amber-300";
+      return "border-[hsl(var(--warning)/0.5)] bg-amber-500/10 text-[hsl(var(--warning))] ";
     default:
-      return "border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300";
+      return "border-[hsl(var(--success)/0.4)] bg-emerald-500/10 text-[hsl(var(--success))] ";
   }
 }

@@ -2,10 +2,15 @@
  * Kiorly by Kiorex — shared layout primitives (vendored per repo; keep in sync with the copy in the other Kiorly apps).
  * Props carry already-translated strings, so this file has no i18n or routing dependency.
  */
-import { useId, type HTMLAttributes, type ReactNode } from "react";
+import { useId, useState, type HTMLAttributes, type ReactNode } from "react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { KiorexLogo, PulseLine } from "./components";
+
+/** Decorative pulse line (hidden from assistive tech) for loaders/empty states. */
+export function Pulse({ size = 14, loop = false }: { size?: number; loop?: boolean }) {
+  return <span aria-hidden="true" className="inline-flex"><PulseLine size={size} loop={loop} label="" /></span>;
+}
 
 export const kcn = (...i: ClassValue[]) => twMerge(clsx(i));
 
@@ -70,7 +75,7 @@ export function EmptyState({ title, description, action, tone = "empty", classNa
       <div className={kcn("flex items-center gap-3", tone === "offline" && "opacity-60 grayscale")}>
         <KiorexLogo variant="mark" height={compact ? 36 : 52} title="" />
       </div>
-      <PulseLine size={compact ? 14 : 18} loop={false} label="" />
+      <Pulse size={compact ? 14 : 18} />
       <div className="text-base font-semibold">{title}</div>
       {description && <p className="max-w-sm text-sm text-muted-foreground">{description}</p>}
       {action && <div className="mt-1">{action}</div>}
@@ -134,5 +139,36 @@ export function KiorlyMark({ size = 28 }: { size?: number }) {
       <KiorexLogo variant="mark" tone="color" height={size} product="kiorly" className="dark:hidden" />
       <KiorexLogo variant="mark" tone="inverse" height={size} product="kiorly" className="hidden dark:block" />
     </span>
+  );
+}
+
+/* ---- Theme (light / dark / system) for apps without their own theme store ---- */
+export type KxThemePref = "light" | "dark" | "system";
+const THEME_KEY = "kx-theme";
+export function readThemePref(): KxThemePref {
+  try { const v = localStorage.getItem(THEME_KEY); if (v === "light" || v === "dark" || v === "system") return v; } catch { /* ignore */ }
+  return "system";
+}
+export function applyThemePref(pref: KxThemePref): void {
+  const dark = pref === "dark" || (pref === "system" && typeof matchMedia !== "undefined" && matchMedia("(prefers-color-scheme: dark)").matches);
+  const root = document.documentElement;
+  root.classList.toggle("dark", dark);
+  root.dataset.theme = dark ? "dark" : "light";
+}
+/** Call once before React mounts. */
+export function initTheme(): void {
+  applyThemePref(readThemePref());
+  if (typeof matchMedia !== "undefined") matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (readThemePref() === "system") applyThemePref("system"); });
+}
+export function ThemeToggle({ labels, className }: { labels: { light: string; dark: string; system: string; theme: string }; className?: string }) {
+  const [pref, setPref] = useState<KxThemePref>(readThemePref);
+  const order: KxThemePref[] = ["system", "light", "dark"];
+  const next = order[(order.indexOf(pref) + 1) % order.length]!;
+  const glyph = pref === "dark" ? "☾" : pref === "light" ? "☀" : "◐";
+  return (
+    <button type="button" aria-label={`${labels.theme}: ${labels[pref]}`} title={`${labels.theme}: ${labels[pref]}`} className={kcn("inline-flex size-10 items-center justify-center rounded-lg border border-border bg-card text-base text-foreground shadow-[var(--kx-shadow-1)] transition-colors hover:bg-accent", className)}
+      onClick={() => { try { localStorage.setItem(THEME_KEY, next); } catch { /* ignore */ } setPref(next); applyThemePref(next); }}>
+      <span aria-hidden>{glyph}</span>
+    </button>
   );
 }

@@ -143,7 +143,7 @@ export function PlatformVerificationReviewDialog({ row, config, open, onOpenChan
             </p>
           ) : null}
           {row.reverifyReason ? (
-            <p className="text-amber-800 dark:text-amber-200">
+            <p className="text-[hsl(var(--warning))] ">
               {t("verification.reverifyBecause", "Re-verification because")}: {t(`verification.reverify.${row.reverifyReason}`, row.reverifyReason)}
             </p>
           ) : null}
@@ -168,7 +168,7 @@ export function PlatformVerificationReviewDialog({ row, config, open, onOpenChan
               row.slaBreached
                 ? "font-medium text-destructive"
                 : row.waitingMs != null
-                  ? "text-amber-800 dark:text-amber-200"
+                  ? "text-[hsl(var(--warning))] "
                   : undefined
             }
           >

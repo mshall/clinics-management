@@ -110,10 +110,10 @@ export function PatientClinicalSectionUpload({ patientId, category }: PatientCli
         type="button"
         variant="outline"
         size="sm"
-        className="mt-4 w-full gap-1 text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
+        className="mt-4 w-full gap-1 text-[hsl(var(--success))] hover:text-[hsl(var(--success))] "
         onClick={() => setOpen(true)}
       >
-        <Plus className="h-4 w-4 text-emerald-600" />
+        <Plus className="h-4 w-4 text-[hsl(var(--success))]" />
         {addButtonLabel(category, t)}
       </Button>
     );

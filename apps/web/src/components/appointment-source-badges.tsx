@@ -38,7 +38,7 @@ export function AppointmentSourceBadges({
         </Badge>
       ) : null}
       {patientProfileComplete === false ? (
-        <Badge variant="outline" className="border-amber-500/60 font-normal text-xs text-amber-800 dark:text-amber-200">
+        <Badge variant="outline" className="border-[hsl(var(--warning)/0.6)] font-normal text-xs text-[hsl(var(--warning))] ">
           {t("appointments.profileIncompleteChip", "Profile incomplete")}
         </Badge>
       ) : null}

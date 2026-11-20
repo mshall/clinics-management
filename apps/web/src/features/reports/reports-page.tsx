@@ -453,7 +453,7 @@ export function ReportsPage() {
                         </div>
                         <div>
                           <dt className="text-muted-foreground">{t("reports.netProfit", "Net profit")}</dt>
-                          <dd className={`font-semibold ltr-nums ${row.netProfit < 0 ? "text-destructive" : "text-emerald-700 dark:text-emerald-400"}`}>
+                          <dd className={`font-semibold ltr-nums ${row.netProfit < 0 ? "text-destructive" : "text-[hsl(var(--success))] "}`}>
                             {money(row.netProfit, row.currency)}
                           </dd>
                         </div>

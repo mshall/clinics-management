@@ -915,10 +915,10 @@ export function OperationsPage() {
           }
         }}
       >
-        <DialogContent aria-describedby={undefined} className="max-w-md border-amber-200/80 dark:border-amber-900/50">
+        <DialogContent aria-describedby={undefined} className="max-w-md border-[hsl(var(--warning)/0.8)] ">
           <div className="space-y-4">
             <DialogHeader className="space-y-3 text-start">
-              <div className="flex size-10 items-center justify-center rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+              <div className="flex size-10 items-center justify-center rounded-full bg-[hsl(var(--warning)/0.12)] text-[hsl(var(--warning))] ">
                 <Lock className="size-5" aria-hidden />
               </div>
               <DialogTitle className="text-start text-xl">
@@ -937,9 +937,9 @@ export function OperationsPage() {
                   )}
             </p>
             {completePipelineSkip ? (
-              <div className="rounded-lg border border-amber-500/35 bg-amber-500/10 p-3 text-sm text-amber-950 dark:text-amber-50">
+              <div className="rounded-lg border border-[hsl(var(--warning)/0.35)] bg-amber-500/10 p-3 text-sm text-[hsl(var(--warning))] ">
                 <div className="flex gap-2">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--warning))]" aria-hidden />
                   <div className="space-y-1">
                     <p className="font-medium">{t("operations.pipelineSkipTitle", "Skip in-progress stages?")}</p>
                     <p className="text-xs opacity-90">
@@ -1843,7 +1843,7 @@ export function OperationsPage() {
               </fieldset>
 
               {formErr ? <p className="text-sm text-destructive">{formErr}</p> : null}
-              {createOk ? <p className="text-sm text-emerald-600">{createOk}</p> : null}
+              {createOk ? <p className="text-sm text-[hsl(var(--success))]">{createOk}</p> : null}
               <CreateActionButton
                 type="button"
                 disabled={createMut.isPending}

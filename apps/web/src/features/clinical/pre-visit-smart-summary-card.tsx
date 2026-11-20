@@ -48,17 +48,17 @@ function styleForLine(line: string, index: number): LineStyle {
 const toneClass: Record<LineStyle["tone"], string> = {
   neutral: "border-border/80 bg-muted/30 text-foreground",
   info: "border-kx-ocean-600/25 bg-kx-ocean-600/10 text-kx-ocean-950 dark:text-kx-ocean-50",
-  warn: "border-amber-500/30 bg-amber-500/10 text-amber-950 dark:text-amber-50",
+  warn: "border-[hsl(var(--warning)/0.3)] bg-amber-500/10 text-[hsl(var(--warning))] ",
   accent: "border-kx-indigo-600/25 bg-gradient-to-br from-kx-indigo-600/15 to-kx-indigo-600/10 text-foreground",
-  success: "border-emerald-500/25 bg-emerald-500/10 text-emerald-950 dark:text-emerald-50",
+  success: "border-[hsl(var(--success)/0.25)] bg-emerald-500/10 text-[hsl(var(--success))] ",
 };
 
 const iconToneClass: Record<LineStyle["tone"], string> = {
   neutral: "text-muted-foreground",
   info: "text-kx-ocean-700",
-  warn: "text-amber-600",
+  warn: "text-[hsl(var(--warning))]",
   accent: "text-kx-indigo-700",
-  success: "text-emerald-600",
+  success: "text-[hsl(var(--success))]",
 };
 
 export function PreVisitSmartSummaryCard({ patientId }: { patientId: string }) {

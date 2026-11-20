@@ -631,7 +631,7 @@ export function AppointmentsPage() {
             <CardTitle className="text-base">{t("appointments.book")}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 overflow-visible sm:grid-cols-2">
-            {bookOk ? <p className="text-sm text-emerald-600 sm:col-span-full dark:text-emerald-400">{bookOk}</p> : null}
+            {bookOk ? <p className="text-sm text-[hsl(var(--success))] sm:col-span-full ">{bookOk}</p> : null}
             {validation.formErr ? <p className="text-sm text-destructive sm:col-span-full">{validation.formErr}</p> : null}
             <div className="space-y-2 sm:col-span-2">
               <Label required>{t("appointments.clinic")}</Label>
@@ -784,7 +784,7 @@ export function AppointmentsPage() {
                     )}
               </p>
               {bookingAfterClosing ? (
-                <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-900 dark:text-amber-200">
+                <div className="rounded-lg border border-[hsl(var(--warning)/0.5)] bg-amber-500/10 px-3 py-2.5 text-sm text-[hsl(var(--warning))] ">
                   {t(
                     "appointments.afterClosingWarning",
                     "This appointment is after the clinic closing time ({{time}}). You can still book it, but please confirm this is intentional.",
