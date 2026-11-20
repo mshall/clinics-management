@@ -378,7 +378,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     // CloudFront needs the origin hostname only. Intrinsic-only parsing used CfnConditions on GetAtt(ServiceUrl),
     // which CloudFormation rejects ("Cannot reference resources in the Conditions block"). Parse at deploy time.
     const originHostParser = new lambda.Function(this, "AppRunnerOriginHostParser", {
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       handler: "index.onEvent",
       timeout: cdk.Duration.seconds(30),
       code: lambda.Code.fromInline(`

@@ -1,7 +1,7 @@
 # One-shot idempotent Prisma seed (Lambda / CI). Build from repo root:
 #   docker build -f apps/api/Dockerfile.seed .
 # Build on the Lambda base image so Prisma ships rhel-openssl-3.0.x engine binaries.
-FROM public.ecr.aws/lambda/nodejs:22 AS build
+FROM public.ecr.aws/lambda/nodejs:24 AS build
 RUN dnf install -y openssl ca-certificates && dnf clean all
 WORKDIR /repo
 COPY package.json package-lock.json ./
@@ -21,7 +21,7 @@ RUN npx prisma generate
 # Q10: compiled demo seed (plain `node`, no tsx/ts-node at run time): dist-seed/prisma/demo/seed-demo.js (+ the base seed dist-seed/prisma/seed.js)
 RUN npm run build -w @kiorly/field-visit --silent && npm run build:seed
 
-FROM public.ecr.aws/lambda/nodejs:22
+FROM public.ecr.aws/lambda/nodejs:24
 RUN dnf install -y openssl ca-certificates && dnf clean all
 COPY --from=build /repo/node_modules ${LAMBDA_TASK_ROOT}/node_modules
 COPY --from=build /repo/apps/api/prisma ${LAMBDA_TASK_ROOT}/prisma
