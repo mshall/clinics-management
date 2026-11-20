@@ -81,7 +81,7 @@ export function AppShell() {
                 {user.displayName} · {formatUserRole(user.role, t)}
               </span>
             ) : null}
-            <Button variant="ghost" size="sm" className="gap-1" onClick={() => openHelp(true)} data-testid="help-open">
+            <Button variant="ghost" size="sm" className="gap-1" onClick={() => openHelp(true)} data-testid="help-open" aria-label={t("help.button")}>
               <CircleHelp className="size-4" />
               <span className="hidden sm:inline">{t("help.button")}</span>
             </Button>
@@ -91,6 +91,7 @@ export function AppShell() {
               variant="ghost"
               size="sm"
               className="gap-1"
+              aria-label={t("auth.signOut")}
               onClick={() => {
                 signOut();
                 navigate("/login", { replace: true });

@@ -61,9 +61,9 @@ html[data-edition="nurse"]:not(.dark), html[data-edition="nurse"][data-theme]:no
   --ring: 347 77% 50%;
 }
 html[data-edition="nurse"].dark, html[data-edition="nurse"][data-theme].dark {
-  --primary: 347 77% 50%;
-  --primary-foreground: 0 0% 100%;
+  --primary: 351 95% 71%;
+  --primary-foreground: 341 62% 10%;
   --accent: 335 49% 15%;
-  --accent-foreground: 345 87% 82%;
-  --ring: 347 87% 67%;
+  --accent-foreground: 349 96% 82%;
+  --ring: 351 95% 71%;
 }

@@ -9,7 +9,7 @@ import { useAuthStore } from "@/stores/auth-store";
 
 const itemClass = ({ isActive }: { isActive: boolean }) =>
   cn(
-    "flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[11px] font-medium transition-colors duration-150 [html[data-edition=nurse]_&]:min-h-16 [html[data-edition=nurse]_&]:text-xs [html[data-edition=nurse]_&_svg]:size-6",
+    "flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[11px] font-medium transition-colors duration-150 [html[data-edition=nurse]_&]:min-h-16 [html[data-edition=nurse]_&]:text-[11px] [html[data-edition=nurse]_&_svg]:size-6",
     isActive ? "text-primary" : "text-muted-foreground",
   );
 

@@ -10,6 +10,7 @@ export function LegalAcceptanceBanner() {
   const token = useAuthStore((s) => s.accessToken);
   const [status, setStatus] = useState<LegalStatus | null>(null);
   const [busy, setBusy] = useState(false);
+  const [docsOpen, setDocsOpen] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -40,7 +41,10 @@ export function LegalAcceptanceBanner() {
       className="flex flex-wrap items-center justify-between gap-2 border-b border-primary/20 bg-accent px-4 py-2.5 text-sm text-accent-foreground"
     >
       <span>{t("legal.banner.prompt")}</span>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <button type="button" className="text-xs font-medium underline underline-offset-4 sm:hidden" aria-expanded={docsOpen} onClick={() => setDocsOpen((v) => !v)}>
+        {t("legal.banner.documents", "Documents")} ({status.pending.length})
+      </button>
+      <div className={`flex-wrap items-center gap-x-3 gap-y-1 max-sm:w-full ${docsOpen ? "flex" : "hidden sm:flex"}`}>
         {status.pending.map((p) => (
           <Link
             key={p.document}
@@ -52,10 +56,10 @@ export function LegalAcceptanceBanner() {
             {i18n.language.startsWith("ar") ? p.titleAr : p.titleEn}
           </Link>
         ))}
-        <Button type="button" size="sm" disabled={busy} onClick={() => void acceptAll()}>
-          {t("legal.banner.accept")}
-        </Button>
       </div>
+      <Button type="button" size="sm" disabled={busy} onClick={() => void acceptAll()}>
+          {t("legal.banner.accept")}
+      </Button>
     </div>
   );
 }

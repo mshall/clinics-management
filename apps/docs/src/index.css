@@ -63,7 +63,7 @@ a {
 .sidebar .brand .logo-dark { display: none; }
 :root[data-theme="dark"] .sidebar .brand .logo-light { display: none; }
 :root[data-theme="dark"] .sidebar .brand .logo-dark { display: block; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sidebar .brand .logo-light { display: none; } :root:not([data-theme="light"]) .sidebar .brand .logo-dark { display: block; } }
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] .sidebar .brand .logo-light { display: none; } :root[data-theme="auto"] .sidebar .brand .logo-dark { display: block; } }
 
 .sidebar .subtitle {
   color: var(--muted);

@@ -5,7 +5,8 @@ const phase = process.argv[2] ?? "after";
 const base = process.env.BASE ?? "http://localhost:5174";
 const out = path.resolve(process.cwd(), "../../../_docs/ui-review");
 const sets = [
-  { dir: "kiorly-clinic", email: "frontdesk1.na@demo.kiorex.test", device: { width: 1440, height: 900 }, routes: ["/", "/appointments", "/front-desk/board", "/patients", "/revenue", "/reports"] },
+  { dir: "kiorly-clinic", email: "frontdesk1.na@demo.kiorex.test", device: { width: 1440, height: 900 }, routes: ["/appointments", "/front-desk/board", "/patients"] },
+  { dir: "kiorly-clinic", email: "owner.na@demo.kiorex.test", device: { width: 1440, height: 900 }, routes: ["/", "/revenue", "/reports", "/expenses"], prefix: "owner-" },
   { dir: "kiorly-nurse", email: "mona@nurse-demo.kiorly.test", device: { width: 414, height: 860 }, routes: ["/home-visits/today", "/nurse/care-plans", "/nurse/mar", "/nurse/safety"] },
 ];
 const browser = await chromium.launch();
@@ -17,7 +18,7 @@ for (const s of sets) {
     await page.goto(`${base}/login`, { waitUntil: "domcontentloaded" });
     await page.evaluate(([l, d]) => { try { localStorage.setItem("cms_locale", l); localStorage.setItem("cms-theme", JSON.stringify({ state: { themeId: d ? "clinical-os-dark" : "clinical-os-light", persistDefault: true }, version: 0 })); } catch {} }, [mode.lang, mode.dark]);
     await page.reload({ waitUntil: "domcontentloaded" });
-    if (mode.n === "en-light") await page.screenshot({ path: `${out}/${s.dir}/${phase}-login-${mode.n}.png` });
+    if (mode.n === "en-light") await page.screenshot({ path: `${out}/${s.dir}/${phase}-${s.prefix ?? ""}login-${mode.n}.png` });
     await page.locator("#email").fill(s.email);
     await page.locator("#password").fill("Demo@12345");
     await page.locator("button[type=submit]").first().click();
@@ -25,8 +26,8 @@ for (const s of sets) {
     await ctx.addCookies([{ name: "cms_locale", value: mode.lang, url: base }]);
     for (const r of s.routes) {
       await page.goto(base + r, { waitUntil: "domcontentloaded" }).catch(() => {});
-      await page.waitForTimeout(1800);
-      await page.screenshot({ path: `${out}/${s.dir}/${phase}-${(r.replace(/\//g, "_").slice(1) || "home")}-${mode.n}.png` });
+      await page.waitForTimeout(3000);
+      await page.screenshot({ path: `${out}/${s.dir}/${phase}-${s.prefix ?? ""}${(r.replace(/\//g, "_").slice(1) || "home")}-${mode.n}.png` });
     }
     await ctx.close();
   }

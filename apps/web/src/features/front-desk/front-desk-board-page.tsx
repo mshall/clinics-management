@@ -157,7 +157,7 @@ export function FrontDeskBoardPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <select className={nativeSelectClassName} value={activeClinic} onChange={(e) => setClinicId(e.target.value)}>
+          <select className={nativeSelectClassName} value={activeClinic} onChange={(e) => setClinicId(e.target.value)} aria-label={t("cashDrawer.clinic", "Clinic")}>
             {clinics.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.nameEn}

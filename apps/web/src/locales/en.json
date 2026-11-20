@@ -211,6 +211,7 @@
       "load": "Could not load legal documents."
     },
     "banner": {
+      "documents": "Documents",
       "prompt": "Updated legal terms require your acceptance before paid features.",
       "accept": "Accept all"
     },
