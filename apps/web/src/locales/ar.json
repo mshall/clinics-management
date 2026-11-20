@@ -1,7 +1,17 @@
 {
   "app": {
     "name": "كيورلي",
-    "tagline": "إدارة العيادات"
+    "tagline": "إدارة العيادات",
+    "orgPlan": "الخطة",
+    "orgPlanHint": "خطة كيورلي الحالية لمؤسستك"
+  },
+  "plans": {
+    "names": {
+      "LITE": "لايت",
+      "PRO": "برو",
+      "CLINIC": "كلنك",
+      "ENTERPRISE": "مؤسسات"
+    }
   },
   "clinicalSpecialties": {
     "POLYCLINIC": "عيادة متعددة التخصصات",
