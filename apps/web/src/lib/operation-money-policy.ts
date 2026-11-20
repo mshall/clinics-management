@@ -4,7 +4,8 @@ import {
   operationMoneyVisibleForUser,
   showOperationMoneyColumnsForUser,
 } from "@/lib/money-visibility-policy";
-import { canMutateOperations, type NavTabAccessMode } from "@/lib/nav-tab-access-policy";
+import type { NavTabAccessMode } from "@/lib/nav-tab-access-policy";
+import { canInitiateOperation } from "@/lib/operation-stage-policy";
 import type { DemoRole } from "@/lib/roles";
 
 const OPERATION_MONEY_ROLES = new Set<DemoRole>([
@@ -40,12 +41,14 @@ export function showOperationMoneyColumns(
   return canViewOperationSummaryMoney(role) || role === "physician";
 }
 
+/** Schedule a new operation (stage 1). Call center cannot initiate. */
 export function canCreateOperation(
   role: DemoRole | undefined,
   navTabKeys?: string[] | null,
   navTabAccessModes?: Record<string, NavTabAccessMode> | null,
+  additionalRoles?: DemoRole[] | null,
 ): boolean {
-  return canMutateOperations(role, navTabKeys, navTabAccessModes);
+  return canInitiateOperation(role, navTabKeys, navTabAccessModes, additionalRoles);
 }
 
 /** @deprecated Prefer `operation.financialsVisible` from the API for row-level display. */

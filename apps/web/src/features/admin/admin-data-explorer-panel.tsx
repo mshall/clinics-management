@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { absoluteDownloadUrl } from "@/lib/api-url";
 import { ApiError, apiDelete, apiGet, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
+import { DoubleLinkedPatientsPanel } from "@/features/admin/double-linked-patients-panel";
 
 type OrgBackupJob = {
   id: string;
@@ -46,6 +47,8 @@ export type DataExplorerTableMeta = {
   label: string;
   scope: string;
   exportable?: boolean;
+  /** Special admin tools that are not generic table CRUD. */
+  tool?: string;
   ops: ExplorerOps;
 };
 
@@ -111,12 +114,13 @@ export function AdminDataExplorerPanel() {
   });
 
   const meta = catalogQ.data?.tables.find((x) => x.key === table);
+  const isDoubleLinkedTool = table === "double_linked_patients" || meta?.tool === "double_linked_patients";
 
   const listQ = useQuery({
     queryKey: ["admin", "data-explorer", "list", table, page, pageSize],
     queryFn: () =>
       apiGet<PaginatedRows>(`/api/v1/admin/data-explorer/${encodeURIComponent(table)}?page=${page}&pageSize=${pageSize}`),
-    enabled: Boolean(table),
+    enabled: Boolean(table) && !isDoubleLinkedTool,
   });
 
   useEffect(() => {
@@ -678,7 +682,7 @@ export function AdminDataExplorerPanel() {
             ) : null}
           </div>
 
-          {meta ? (
+          {meta && !isDoubleLinkedTool ? (
             <p className="text-xs text-muted-foreground">
               {t("admin.dataExplorerOps", "Operations:")} {meta.ops.list ? "list " : ""}
               {meta.ops.get ? "view " : ""}
@@ -688,19 +692,23 @@ export function AdminDataExplorerPanel() {
             </p>
           ) : null}
 
+          {isDoubleLinkedTool ? <DoubleLinkedPatientsPanel /> : null}
+
           {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
 
-          {listQ.isError ? (
+          {!isDoubleLinkedTool && listQ.isError ? (
             <p className="text-sm text-destructive">{listQ.error instanceof Error ? listQ.error.message : t("common.error")}</p>
           ) : null}
 
-          {listQ.isPending && table ? <p className="text-sm text-muted-foreground">{t("common.loading")}</p> : null}
+          {!isDoubleLinkedTool && listQ.isPending && table ? (
+            <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+          ) : null}
 
-          {table && !listQ.isPending && listQ.data?.items.length === 0 ? (
+          {!isDoubleLinkedTool && table && !listQ.isPending && listQ.data?.items.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("admin.dataExplorerEmpty", "No rows in this table.")}</p>
           ) : null}
 
-          {columns.length > 0 ? (
+          {!isDoubleLinkedTool && columns.length > 0 ? (
             <ResponsiveTable>
               <table className="w-full min-w-[640px] text-xs">
                 <thead className="bg-muted/60">

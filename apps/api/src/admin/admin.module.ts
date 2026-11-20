@@ -23,6 +23,7 @@ import { CreditsModule } from "../credits/credits.module";
 import { BillingPlatformModule } from "../billing-platform/billing-platform.module";
 import { ComplianceModule } from "../compliance/compliance.module";
 import { MessagingModule } from "../messaging/messaging.module";
+import { PatientsModule } from "../patients/patients.module";
 import { AdminOutboxService } from "./admin-outbox.service";
 import { SalesKitService } from "../staging/sales-kit.service";
 
@@ -39,6 +40,7 @@ import { SalesKitService } from "../staging/sales-kit.service";
     BillingPlatformModule,
     ComplianceModule,
     MessagingModule,
+    PatientsModule,
   ],
   controllers: [AdminController, AdminDataExplorerController, OrgBackupDownloadController, PlatformAdminController],
   providers: [

@@ -16,6 +16,11 @@ import {
   loadUserMoneyVisibilityOverrides,
 } from "../common/user-money-visibility";
 import { PrismaService } from "../prisma/prisma.service";
+import { clusterDoubleLinkedPatients } from "./double-linked-patients";
+import {
+  patientMergeTargetUpdateData,
+  type PatientMergeFieldChoices,
+} from "./patient-merge-fields";
 
 const ACTIVE_APPT = new Set<AppointmentStatus>([
   AppointmentStatus.SCHEDULED,
@@ -404,7 +409,13 @@ export class Patient360Service {
     await this.prisma.patientFamilyLink.delete({ where: { id: linkId } });
   }
 
-  async mergePatients(tenantId: string, user: JwtUser, targetId: string, sourcePatientId: string) {
+  async mergePatients(
+    tenantId: string,
+    user: JwtUser,
+    targetId: string,
+    sourcePatientId: string,
+    fieldChoices?: PatientMergeFieldChoices,
+  ) {
     if (targetId === sourcePatientId) throw new BadRequestException("Source and target must differ");
     const [target, source] = await Promise.all([
       this.prisma.patient.findFirst({ where: { id: targetId, tenantId, deletedAt: null } }),
@@ -412,7 +423,28 @@ export class Patient360Service {
     ]);
     if (!target || !source) throw new NotFoundException("Patient not found");
 
+    const targetUpdate = patientMergeTargetUpdateData(target, source, fieldChoices);
+    const takingPhone = fieldChoices?.phone === "source";
+    const takingNationalId = fieldChoices?.nationalId === "source" && Boolean(source.nationalId);
+
     await this.prisma.$transaction(async (tx) => {
+      // Free unique / soft-unique fields on source before copying onto target.
+      if (takingPhone || takingNationalId) {
+        await tx.patient.update({
+          where: { id: sourcePatientId },
+          data: {
+            ...(takingPhone
+              ? { phone: `merged-pending-${sourcePatientId.slice(0, 8)}-${source.phone}` }
+              : {}),
+            ...(takingNationalId ? { nationalId: null } : {}),
+          },
+        });
+      }
+
+      if (Object.keys(targetUpdate).length > 0) {
+        await tx.patient.update({ where: { id: targetId }, data: targetUpdate });
+      }
+
       const move = { patientId: targetId };
       await tx.encounter.updateMany({ where: { tenantId, patientId: sourcePatientId }, data: move });
       await tx.appointment.updateMany({ where: { tenantId, patientId: sourcePatientId }, data: move });
@@ -428,7 +460,11 @@ export class Patient360Service {
       await tx.supportTicket.updateMany({ where: { tenantId, patientId: sourcePatientId }, data: move });
       await tx.patient.update({
         where: { id: sourcePatientId },
-        data: { deletedAt: new Date(), phone: `merged-${sourcePatientId.slice(0, 8)}-${source.phone}` },
+        data: {
+          deletedAt: new Date(),
+          phone: `merged-${sourcePatientId.slice(0, 8)}-${source.phone}`,
+          nationalId: null,
+        },
       });
       await tx.auditLog.create({
         data: {
@@ -438,11 +474,52 @@ export class Patient360Service {
           resource: "Patient",
           resourceId: targetId,
           patientId: targetId,
-          metadata: { sourcePatientId, targetPatientId: targetId } as Prisma.InputJsonValue,
+          metadata: {
+            sourcePatientId,
+            targetPatientId: targetId,
+            fieldChoices: fieldChoices ?? null,
+          } as Prisma.InputJsonValue,
         },
       });
     });
     return { ok: true, targetPatientId: targetId, mergedPatientId: sourcePatientId };
+  }
+
+  async listDoubleLinkedPatients(tenantId: string) {
+    const rows = await this.prisma.patient.findMany({
+      where: { tenantId, deletedAt: null, isSample: false },
+      select: {
+        id: true,
+        mrn: true,
+        firstNameEn: true,
+        lastNameEn: true,
+        firstNameAr: true,
+        lastNameAr: true,
+        phone: true,
+        email: true,
+        nationalId: true,
+        dob: true,
+        gender: true,
+        homeBranchId: true,
+        createdAt: true,
+      },
+      take: 5000,
+      orderBy: { createdAt: "desc" },
+    });
+    const clusters = clusterDoubleLinkedPatients(rows);
+    return {
+      clusters: clusters.map((c) => ({
+        reason: c.reason,
+        matchKey: c.matchKey,
+        patients: c.patients.map((p) => ({
+          ...p,
+          dob: p.dob?.toISOString() ?? null,
+          createdAt: p.createdAt.toISOString(),
+        })),
+      })),
+      totalClusters: clusters.length,
+      scannedPatients: rows.length,
+    };
   }
 
   async listClinicalPhotos(tenantId: string, patientId: string) {

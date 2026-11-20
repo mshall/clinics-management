@@ -41,6 +41,7 @@ import {
   assertOperationContractCost,
   isZeroCostAllowedForComplete,
 } from "./operation-contract-cost";
+import { assertMayApplyOperationUpdate } from "./operation-stage-roles";
 import { assertDownPaymentBeforeInProgress } from "./operation-status-money";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { AddOperationMedicationDto, OperationDocumentDto, OperationMedicationDto } from "./dto/operation-clinical.dto";
@@ -582,6 +583,51 @@ export class OperationsService {
     return { totalOperations, revenueByCurrency, byClinic, operations };
   }
 
+  /**
+   * Same patient + same performing doctor + same calendar day (tenant local date from the ISO timestamp),
+   * excluding cancelled operations. Used as a duplicate-booking guard before create.
+   */
+  async findSameDayDuplicates(
+    tenantId: string,
+    user: JwtUser,
+    patientId: string,
+    clinicianId: string,
+    operationDateIso: string,
+    excludeOperationId?: string,
+  ): Promise<OperationDto[]> {
+    const operationDate = new Date(operationDateIso);
+    if (Number.isNaN(operationDate.getTime())) {
+      throw new BadRequestException("Invalid operation date");
+    }
+    const dayStart = new Date(operationDate);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayEnd.getDate() + 1);
+
+    const moneyVis = await this.moneyOverrides(tenantId, user);
+    const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
+    const and: Prisma.OperationWhereInput[] = [
+      { tenantId },
+      { patientId },
+      { clinicianId },
+      { status: { not: OperationStatus.CANCELLED } },
+      { operationDate: { gte: dayStart, lt: dayEnd } },
+    ];
+    if (excludeOperationId) and.push({ id: { not: excludeOperationId } });
+    if (scopeIds !== null) {
+      if (!scopeIds.length) return [];
+      and.push({ clinicId: { in: scopeIds } });
+    }
+
+    const rows = await this.prisma.operation.findMany({
+      where: { AND: and },
+      include: operationInclude,
+      orderBy: { operationDate: "asc" },
+      take: 20,
+    });
+    return rows.map((r) => this.mapRow(r, user, moneyVis));
+  }
+
   async create(tenantId: string, dto: CreateOperationDto, user: JwtUser): Promise<OperationDto> {
     const moneyVis = await this.moneyOverrides(tenantId, user);
     const feesDeferred = !canEditOperationFeesForViewer(user, moneyVis);
@@ -767,6 +813,7 @@ export class OperationsService {
     });
     if (!existing) throw new NotFoundException("Operation not found");
     await this.assertOperationAccess(viewer, existing);
+    assertMayApplyOperationUpdate(viewer, dto);
 
     if (
       !canEditOperationFeesForViewer(viewer, moneyVis) &&

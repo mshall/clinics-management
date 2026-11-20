@@ -31,6 +31,8 @@ import { streamOrgBackupArtifact } from "./org-backup-stream";
 import { SubscriptionAccessGuard } from "../../subscriptions/subscription-access.guard";
 import { RequiresSubscriptionAccess } from "../../subscriptions/requires-subscription-access.decorator";
 import { SubscriptionAccessAction } from "../../subscriptions/subscription-access-policy";
+import { Patient360Service } from "../../patients/patient-360.service";
+import { assertDataExplorerAccess, assertExplorerTenant } from "./data-explorer-access";
 
 const IMPORT_TMP_DIR = join(process.cwd(), ".data", "imports");
 mkdirSync(IMPORT_TMP_DIR, { recursive: true });
@@ -44,6 +46,7 @@ export class AdminDataExplorerController {
   constructor(
     private readonly explorer: AdminDataExplorerService,
     private readonly orgBackup: OrgBackupService,
+    private readonly patient360: Patient360Service,
   ) {}
 
   @Get("tables")
@@ -51,6 +54,16 @@ export class AdminDataExplorerController {
   @ApiOkResponse()
   tables(@CurrentUser() user: JwtUser) {
     return this.explorer.catalog(user);
+  }
+
+  @Get("double-linked-patients")
+  @ApiOperation({
+    summary: "Find likely duplicate patient charts (same phone, national ID, or name+DOB)",
+  })
+  @ApiOkResponse()
+  doubleLinkedPatients(@CurrentUser() user: JwtUser) {
+    assertDataExplorerAccess(user);
+    return this.patient360.listDoubleLinkedPatients(assertExplorerTenant(user));
   }
 
   @Post("export/jobs")
