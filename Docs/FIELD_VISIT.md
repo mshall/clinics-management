@@ -1,6 +1,6 @@
 # Field visit package and API port (KCV206)
 
-Status: **package extracted and wired behind an interface; the home-visit feature (HVCFG/HVBK/HVPRV/HVEXE/HVSAF/HVFEE/HVRPT) is the next step.**
+Status: **package extracted and wired behind an interface (part 1); the home-visit feature (HVCFG/HVBK/HVPRV/HVEXE/HVSAF/HVFEE/HVRPT) is built on it (part 2): see [HOME_VISITS.md](./HOME_VISITS.md).** The package gained the `UNSAFE_ABORT` alert kind; `FieldVisitPort.deliverSafetyAlert` takes the organisation safety contact per call.
 Gates GHV1 (counsel memo) and GHV2 (CMO-signed safety protocol) are human gates and are **not recorded**; `clinic.home_visits` stays launch-locked.
 
 | Piece | Where |
@@ -26,7 +26,7 @@ The constants are CMO-protocol territory (GHV2): this change implements the KX-0
 `pretest:unit`, `pretest:integration`, `typecheck`, `build` scripts build it first. `apps/api/Dockerfile` and `Dockerfile.seed` copy
 `packages/field-visit/package.json` (npm ci needs the workspace manifest) and the runner image copies the built `dist`.
 
-## For the next agent (home visits)
+## Home visits (done) - how they use the port
 
 Depend on `FIELD_VISIT_PORT`, not the package. Persist `FieldVisit` snapshots yourself (`HomeVisit` table, encrypted `addressSnapshot`), run
 `evaluateSafetyTimer` from a scheduler with a tick ≤ 15 s (the SLA budget in the drill assumes it) and use `FieldVisitService.defaultDispatchers(tenantId, contact)`.

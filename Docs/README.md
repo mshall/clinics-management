@@ -52,6 +52,8 @@ See **[Documentation_Portal.md](./Documentation_Portal.md)** for module layout, 
 | [**PLANS_AND_ENTITLEMENTS.md**](./PLANS_AND_ENTITLEMENTS.md) | PL-04 entitlement matrix hub |
 | [**BILLING_AND_CREDITS.md**](./BILLING_AND_CREDITS.md) | GT-06 hub — SaaS + clinic money docs |
 | [**KIOREX_CONNECTOR.md**](./KIOREX_CONNECTOR.md) | GT-06 hub — marketplace / commission docs |
+| [**HOME_VISITS.md**](./HOME_VISITS.md) | Home visits HV* (ADR-030): address privacy, safety timer/SOS, geostamp retention, flags vs never-flags |
+| [**NURSE_EDITION.md**](./NURSE_EDITION.md) | Kiorly Nurse edition KN* (ADR-031/032): edition, plans (PROPOSED), care plans, MAR, shifts, agency |
 | [**PRODUCT_EPIC_ROADMAP.md**](./PRODUCT_EPIC_ROADMAP.md) | Launch vs Phase 1b epic list |
 | [**EGYPT_GO_LIVE.md**](./EGYPT_GO_LIVE.md) | Egypt launch: data protection, backup, legal pack, pilot (no tax-authority reporting) |
 | [**COMPLIANCE_CONTROLS.md**](./COMPLIANCE_CONTROLS.md) | ISO 27001 / HIPAA / SOC / FISMA control mapping (non-certification) |

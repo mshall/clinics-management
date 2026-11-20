@@ -66,3 +66,17 @@ accept returns `UNAVAILABLE` and never double-books. Migration `20261120010000_k
 `@kiorex/contracts` **1.1.0** (additive minor; `npm run pack:local` in kiorex-contracts): the endpoints above, events `WAITLIST_OFFER` and
 `LabOrderPlaced`, `PrescriptionIssued` now emitted, `PRESCRIPTION_SHARED.pdf`. The OpenAPI file here and in kiorex-contracts are kept identical
 (drift test).
+
+## Rev 2.3 additions (KX-09 v2.3, kiorex-contracts 1.5.0) - Kiorly side
+
+`apps/api/openapi/marketplace.openapi.json` is the 1.2.0 spec from contracts 1.5.0 (byte-identical; the drift test is back to equality). Both editions (Clinic and Nurse) use the same client and endpoints.
+
+| Contract | Kiorly behaviour |
+|---|---|
+| `GET /providers` | adds `profession`, `edition`, `serviceLocations[]`, `coverageDistricts[]`, `verification.register`, `assignsClinician` (agencies); HOME is published only while `clinic.home_visits` is effective and the clinician takes home visits; fees carry `serviceLocation` and a separate `homeSurcharge` (never part of `amount`, BR56) |
+| `GET /clinics/:id/slots` | optional `serviceLocation`, `district`, `lat`, `lng`; HOME needs `district` (400 `DISTRICT_REQUIRED`); slots carry `serviceLocation` + `district`; **422 `OUT_OF_COVERAGE`**; OFF flag = 403 `FEATURE_DISABLED` |
+| `POST /holds` | `visitAddress` required for HOME types (422 `VISIT_ADDRESS_REQUIRED`), coverage checked, stored encrypted, never echoed |
+| `POST /bookings` | address carried from the hold (or sent again); every HOME rule re-checked; zone changed after the hold => 422 `OUT_OF_COVERAGE` and the hold is released (KX-09 §08); response has `serviceLocation` |
+| Events | `HOME_VISIT_ASSIGNED` (name, badge, profession; no phone/photo yet), `HOME_VISIT_EN_ROUTE`, `HOME_VISIT_ABORTED_UNSAFE` (`noShow:false`, `HOLD_FOR_REVIEW`), `SAFETY_ALERT_RAISED` (Kiorex bookings; `SafetyAlert` aggregate), `CARE_PLAN_CONFIRMED/_ENDED` (plans with a `requestRef`), `ReferralIssued` / `MedicationOrderShared` builders; `CHECKED_IN`/`COMPLETED` of HOME visits add `serviceLocation: "HOME"` (+ `arrivedAt`); in-clinic payloads are unchanged. Builders are validated against the vendored contract schemas (`apps/api/openapi/events/`) |
+
+Not implemented: `POST /care-plan-requests` (P3 draft). Docs: [HOME_VISITS.md](./HOME_VISITS.md), [NURSE_EDITION.md](./NURSE_EDITION.md).

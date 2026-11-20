@@ -26,6 +26,7 @@ COPY apps/api/src/entitlements ${LAMBDA_TASK_ROOT}/src/entitlements
 COPY apps/api/src/feature-flags/feature-flag-keys.ts ${LAMBDA_TASK_ROOT}/src/feature-flags/feature-flag-keys.ts
 COPY apps/api/src/subscriptions ${LAMBDA_TASK_ROOT}/src/subscriptions
 COPY apps/api/src/staging ${LAMBDA_TASK_ROOT}/src/staging
+COPY apps/api/src/nurse/nurse-services.ts ${LAMBDA_TASK_ROOT}/src/nurse/nurse-services.ts
 COPY apps/api/prisma/pilot-tenants.seed.ts ${LAMBDA_TASK_ROOT}/prisma/pilot-tenants.seed.ts
 COPY infra/lambda/db-seed/run.mjs ${LAMBDA_TASK_ROOT}/index.mjs
 ENV PATH="${LAMBDA_TASK_ROOT}/node_modules/.bin:/usr/local/bin:${PATH}"
