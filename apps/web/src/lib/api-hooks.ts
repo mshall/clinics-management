@@ -32,6 +32,7 @@ import type {
   ReportsPatientAcquisitionDto,
   ReportsPatientAcquisitionPatientDto,
   ReportsOperationAcquisitionDto,
+  ReportsEncounterAcquisitionDto,
   TenantListItemDto,
   UserListItemDto,
 } from "@/lib/api-types";
@@ -1056,6 +1057,31 @@ export function useReportsOperationAcquisitionQuery(params: {
     enabled: params.enabled !== false,
     queryFn: () =>
       apiGet<ReportsOperationAcquisitionDto>(`/api/v1/reports/operation-acquisition?${q.toString()}`),
+  });
+}
+
+export function useReportsEncounterAcquisitionQuery(params: {
+  from: string;
+  to: string;
+  clinicId?: string;
+  enabled?: boolean;
+}) {
+  const viewerId = useAuthStore((s) => s.user?.id ?? "");
+  const range = sanitizeReportingRange(params.from, params.to);
+  const q = new URLSearchParams({ from: range.from, to: range.to });
+  if (params.clinicId?.trim()) q.set("clinicId", params.clinicId.trim());
+  return useQuery({
+    queryKey: [
+      "reports",
+      "encounter-acquisition",
+      range.from,
+      range.to,
+      params.clinicId ?? "",
+      viewerId,
+    ],
+    enabled: params.enabled !== false,
+    queryFn: () =>
+      apiGet<ReportsEncounterAcquisitionDto>(`/api/v1/reports/encounter-acquisition?${q.toString()}`),
   });
 }
 

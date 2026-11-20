@@ -688,6 +688,110 @@ export class ReportsService {
   }
 
   /**
+   * Encounters (visits) by patient acquisition channel with visit fee paid/total money.
+   */
+  async encounterAcquisitionRevenue(
+    tenantId: string,
+    fromStr?: string,
+    toStr?: string,
+    clinicIdStr?: string,
+    viewer?: JwtUser,
+  ) {
+    const { start, end } = resolveReportingRange(fromStr, toStr);
+    const clinicId = clinicIdStr?.trim() || null;
+    const scopeClinicIds = await this.resolveScopeClinicIds(tenantId, viewer);
+    if (clinicId) this.assertClinicInScope(clinicId, scopeClinicIds);
+
+    const and: Prisma.EncounterWhereInput[] = [
+      { tenantId },
+      { status: { in: [EncounterStatus.FINALIZED, EncounterStatus.AMENDED] } },
+      { finalizedAt: { gte: start, lte: end } },
+      { patient: { isSample: false, deletedAt: null } },
+    ];
+    if (clinicId) and.push({ clinicId });
+    else if (scopeClinicIds?.length) and.push({ clinicId: { in: scopeClinicIds } });
+    if (viewer && hasRole(viewer, UserRole.PHYSICIAN)) {
+      and.push({ clinicianId: viewer.userId });
+    }
+
+    const rows = await this.prisma.encounter.findMany({
+      where: { AND: and },
+      select: {
+        id: true,
+        visitFeeAmount: true,
+        visitFeeCurrency: true,
+        patient: { select: { acquisitionChannel: true } },
+        revenueEntries: {
+          where: {
+            status: RevenueStatus.POSTED,
+            category: { in: ["VISIT_FEE", "VISIT"] },
+          },
+          select: { netAmount: true, currency: true },
+        },
+      },
+    });
+
+    type MoneyBucket = { currency: string; totalCost: number; paidAmount: number };
+    type ChannelAgg = {
+      channel: string;
+      encounterCount: number;
+      byCurrency: Map<string, MoneyBucket>;
+    };
+
+    const byChannel = new Map<string, ChannelAgg>();
+    for (const row of rows) {
+      const channel = row.patient.acquisitionChannel ?? "UNKNOWN";
+      let agg = byChannel.get(channel);
+      if (!agg) {
+        agg = { channel, encounterCount: 0, byCurrency: new Map() };
+        byChannel.set(channel, agg);
+      }
+      agg.encounterCount += 1;
+
+      const feeCurrency = row.visitFeeCurrency || "EGP";
+      const total = Number(row.visitFeeAmount);
+      const feeBucket =
+        agg.byCurrency.get(feeCurrency) ?? { currency: feeCurrency, totalCost: 0, paidAmount: 0 };
+      feeBucket.totalCost += total;
+      agg.byCurrency.set(feeCurrency, feeBucket);
+
+      for (const rev of row.revenueEntries) {
+        const cur = rev.currency || feeCurrency;
+        const paidBucket =
+          agg.byCurrency.get(cur) ?? { currency: cur, totalCost: 0, paidAmount: 0 };
+        paidBucket.paidAmount += Number(rev.netAmount);
+        agg.byCurrency.set(cur, paidBucket);
+      }
+    }
+
+    const channels = [...Object.values(PatientAcquisitionChannel), "UNKNOWN"] as const;
+    const items = channels
+      .map((channel) => {
+        const agg = byChannel.get(channel);
+        if (!agg) return null;
+        return {
+          channel,
+          encounterCount: agg.encounterCount,
+          byCurrency: [...agg.byCurrency.values()].sort((a, b) => a.currency.localeCompare(b.currency)),
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => row != null)
+      .sort((a, b) => b.encounterCount - a.encounterCount);
+
+    return {
+      period: {
+        from: formatLocalYmd(start),
+        to: formatLocalYmd(end),
+        start: start.toISOString(),
+        end: end.toISOString(),
+      },
+      clinicId,
+      totalEncounters: rows.length,
+      items,
+    };
+  }
+
+  /**
    * Count new patient registrations by acquisition channel (how they found us) in a date range.
    */
   async patientAcquisitionBreakdown(tenantId: string, fromStr?: string, toStr?: string) {

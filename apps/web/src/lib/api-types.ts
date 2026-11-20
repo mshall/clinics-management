@@ -779,6 +779,30 @@ export interface ReportsOperationAcquisitionDto {
   items: ReportsOperationAcquisitionItemDto[];
 }
 
+export interface ReportsEncounterAcquisitionMoneyDto {
+  currency: string;
+  totalCost: number;
+  paidAmount: number;
+}
+
+export interface ReportsEncounterAcquisitionItemDto {
+  channel: string;
+  encounterCount: number;
+  byCurrency: ReportsEncounterAcquisitionMoneyDto[];
+}
+
+export interface ReportsEncounterAcquisitionDto {
+  period: {
+    from: string;
+    to: string;
+    start: string;
+    end: string;
+  };
+  clinicId: string | null;
+  totalEncounters: number;
+  items: ReportsEncounterAcquisitionItemDto[];
+}
+
 export interface ReportsPatientAcquisitionPatientDto {
   id: string;
   mrn: string;

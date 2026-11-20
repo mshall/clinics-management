@@ -30,6 +30,7 @@ import {
   useReportsKiorexImpactQuery,
   useReportsMonthlySeriesQuery,
   useReportsOperationsQuery,
+  useReportsEncounterAcquisitionQuery,
   useReportsOperationAcquisitionQuery,
   useReportsPatientAcquisitionQuery,
   useReportsPerformanceQuery,
@@ -152,6 +153,11 @@ export function ReportsPage() {
     clinicId: clinicScopeId,
     isContract: opAcquisitionContractFilter || undefined,
   });
+  const encounterAcquisition = useReportsEncounterAcquisitionQuery({
+    from,
+    to,
+    clinicId: clinicScopeId,
+  });
 
   const currencies = series.data?.currencies ?? performance.data?.byCurrency.map((r) => r.currency) ?? [];
   const chartData = useMemo(
@@ -184,6 +190,16 @@ export function ReportsPage() {
       costTotal: item.byCurrency.reduce((sum, m) => sum + m.totalCost, 0),
     }));
   }, [operationAcquisition.data?.items, t]);
+
+  const encounterAcquisitionRows = useMemo(() => {
+    return (encounterAcquisition.data?.items ?? []).map((item) => ({
+      ...item,
+      label:
+        item.channel === "UNKNOWN"
+          ? t("reports.acquisitionUnknown", "Not specified")
+          : patientAcquisitionLabel(item.channel as PatientAcquisitionChannel, t),
+    }));
+  }, [encounterAcquisition.data?.items, t]);
   const scopeLabel =
     clinicScopeId != null && clinicScopeId !== ""
       ? formatClinicName(
@@ -910,6 +926,80 @@ export function ReportsPage() {
               </BarChart>
             </ResponsiveContainer>
           </ChartFrame>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            {t("reports.encounterAcquisitionTitle", "Encounters by how they found us")}
+          </CardTitle>
+          <CardDescription>
+            {t(
+              "reports.encounterAcquisitionHint",
+              "Finalized visits and visit-fee money by acquisition channel for {{from}} → {{to}}.",
+              { from, to },
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {encounterAcquisition.isError ? (
+            <p className="text-sm text-destructive">
+              {encounterAcquisition.error instanceof Error
+                ? encounterAcquisition.error.message
+                : t("common.error")}
+            </p>
+          ) : encounterAcquisition.isPending ? (
+            <p className="text-sm text-muted-foreground">{t("common.loading", "Loading…")}</p>
+          ) : (encounterAcquisition.data?.totalEncounters ?? 0) === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {t("reports.encounterAcquisitionEmpty", "No finalized encounters in this period.")}
+            </p>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground ltr-nums">
+                {t("reports.encounterAcquisitionTotal", "{{count}} encounters in range", {
+                  count: encounterAcquisition.data?.totalEncounters ?? 0,
+                })}
+              </p>
+              <ResponsiveTable>
+                <ResponsiveTableElement minWidth="md">
+                  <thead className="bg-muted/60">
+                    <tr className="text-start">
+                      <th className="px-3 py-2 font-medium">{t("reports.acquisitionChannel", "Channel")}</th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        {t("reports.encounters", "Encounters")}
+                      </th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        {t("reports.operationChannelMoney", "Paid / total")}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {encounterAcquisitionRows.map((row) => (
+                      <tr key={row.channel} className="border-t">
+                        <td className="px-3 py-2">{row.label}</td>
+                        <td className="px-3 py-2 text-end ltr-nums tabular-nums">{row.encounterCount}</td>
+                        <td className="px-3 py-2 text-end text-xs ltr-nums tabular-nums">
+                          {row.byCurrency.length === 0 ? (
+                            "—"
+                          ) : (
+                            <ul className="space-y-0.5">
+                              {row.byCurrency.map((m) => (
+                                <li key={m.currency}>
+                                  {money(m.paidAmount, m.currency)} / {money(m.totalCost, m.currency)}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </ResponsiveTableElement>
+              </ResponsiveTable>
+            </>
+          )}
         </CardContent>
       </Card>
 

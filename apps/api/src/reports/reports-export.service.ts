@@ -133,6 +133,26 @@ export class ReportsExportService {
           ),
         );
       }
+      case "encounter-acquisition": {
+        const data = await this.reports.encounterAcquisitionRevenue(
+          tenantId,
+          from,
+          to,
+          clinicId,
+          viewer,
+        );
+        return data.items.flatMap((item) =>
+          (item.byCurrency.length ? item.byCurrency : [{ currency: "", totalCost: 0, paidAmount: 0 }]).map(
+            (money) => ({
+              channel: item.channel,
+              encounterCount: item.encounterCount,
+              currency: money.currency,
+              totalCost: money.totalCost,
+              paidAmount: money.paidAmount,
+            }),
+          ),
+        );
+      }
       case "payments":
         return this.paymentsRows(tenantId, from, to, clinicId, viewer);
       default:

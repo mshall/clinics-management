@@ -154,6 +154,27 @@ export class ReportsController {
     );
   }
 
+  @Get("encounter-acquisition")
+  @ApiOperation({
+    summary: "Finalized encounters grouped by patient acquisition channel with visit fee paid/total",
+  })
+  @ApiOkResponse()
+  async encounterAcquisition(
+    @CurrentUser() user: JwtUser,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("clinicId") clinicId?: string,
+  ) {
+    await this.assertView(user);
+    return this.reports.encounterAcquisitionRevenue(
+      requireTenantId(user),
+      from,
+      to,
+      clinicId,
+      user,
+    );
+  }
+
   @Get("kiorex")
   @RequiresEntitlement("mod_revenue")
   @ApiOperation({ summary: "RP-03 Kiorex impact report for a billing period (all tiers with revenue)" })

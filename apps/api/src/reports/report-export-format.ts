@@ -11,6 +11,7 @@ export const REPORT_EXPORT_KEYS = [
   "monthly-series",
   "patient-acquisition",
   "operation-acquisition",
+  "encounter-acquisition",
 ] as const;
 
 export type ReportExportKey = (typeof REPORT_EXPORT_KEYS)[number];
@@ -28,6 +29,7 @@ export const MONEY_REPORT_KEYS: ReadonlySet<ReportExportKey> = new Set([
   "monthly-series",
   "operations",
   "operation-acquisition",
+  "encounter-acquisition",
 ]);
 
 export function escapeXml(value: string): string {
