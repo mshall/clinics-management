@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { isZeroCostWithoutContract } from "./operation-form-validation";
+import { isZeroCostWithoutContract } from "./operation-contract-cost";
 
 describe("isZeroCostWithoutContract", () => {
   it("detects zero without contract for fee editors", () => {
