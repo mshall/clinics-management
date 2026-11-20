@@ -10,6 +10,8 @@ import { SchedulingModule } from "../scheduling/scheduling.module";
 import { ScopeOfPracticeModule } from "../scope-of-practice/scope-of-practice.module";
 import { SignupModule } from "../signup/signup.module";
 import { AgencyService } from "./agency.service";
+import { MarketplacePatientIntakeService } from "../marketplace/marketplace-patient-intake.service";
+import { CarePlanRequestService } from "./care-plan-request.service";
 import { CarePlanService } from "./care-plan.service";
 import { DoctorOrderService } from "./doctor-order.service";
 import { FamilyUpdateService } from "./family-update.service";
@@ -26,7 +28,7 @@ import { VisitRecordService } from "./visit-record.service";
 @Module({
   imports: [AppointmentsModule, AuditModule, EncountersModule, EntitlementsModule, FeatureFlagsModule, HomeVisitsModule, MessagingModule, SchedulingModule, ScopeOfPracticeModule, SignupModule],
   controllers: [NursePublicController, NurseEditionController, NurseClinicalController, NurseMarController, NurseAgencyController],
-  providers: [NurseEditionService, CarePlanService, VisitRecordService, DoctorOrderService, MedicationAdministrationService, ShiftService, FamilyUpdateService, AgencyService, NurseReportsService],
-  exports: [NurseEditionService, DoctorOrderService, FamilyUpdateService],
+  providers: [NurseEditionService, CarePlanService, CarePlanRequestService, MarketplacePatientIntakeService, VisitRecordService, DoctorOrderService, MedicationAdministrationService, ShiftService, FamilyUpdateService, AgencyService, NurseReportsService],
+  exports: [NurseEditionService, CarePlanRequestService, DoctorOrderService, FamilyUpdateService],
 })
 export class NurseModule {}

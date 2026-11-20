@@ -5,6 +5,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { RequiresScope, ScopeGuard } from "../scope-of-practice/scope-of-practice-public";
+import { CarePlanRequestService } from "./care-plan-request.service";
 import { CarePlanService, type CarePlanInput } from "./care-plan.service";
 import { FamilyUpdateService } from "./family-update.service";
 import { NurseReportsService } from "./nurse-reports.service";
@@ -20,6 +21,7 @@ import type { VitalsInput } from "./vitals";
 export class NurseClinicalController {
   constructor(
     private readonly plans: CarePlanService,
+    private readonly planRequests: CarePlanRequestService,
     private readonly records: VisitRecordService,
     private readonly shifts: ShiftService,
     private readonly family: FamilyUpdateService,
@@ -71,6 +73,25 @@ export class NurseClinicalController {
   @HttpCode(200)
   shareDischarge(@CurrentUser() u: JwtUser, @Param("id") id: string) {
     return this.plans.shareDischarge(requireTenantId(u), id);
+  }
+
+  // ---- care-plan inbox (Kiorex P3 requests; reading is never gated, accepting creates a plan and is gated by nurse.care_plans) ----
+  @Get("care-plan-requests")
+  listPlanRequests(@CurrentUser() u: JwtUser, @Query("status") status?: string) {
+    return this.planRequests.list(requireTenantId(u), status);
+  }
+
+  @Post("care-plan-requests/:id/accept")
+  @HttpCode(200)
+  @RequiresScope("home_visits.perform")
+  acceptPlanRequest(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: Parameters<CarePlanRequestService["accept"]>[3]) {
+    return this.planRequests.accept(requireTenantId(u), u, id, b);
+  }
+
+  @Post("care-plan-requests/:id/decline")
+  @HttpCode(200)
+  declinePlanRequest(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: { reason?: string }) {
+    return this.planRequests.decline(requireTenantId(u), u, id, b?.reason);
   }
 
   // ---- visit record / vitals ----

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Headers, HttpCode, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Headers, HttpCode, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiHeader, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { IntegrationBookAppointmentDto } from "../integrations/dto/integration-book-appointment.dto";
 import { MarketplaceApiService } from "./marketplace-api.service";
@@ -13,6 +13,8 @@ import { KiorexOverviewService, type ProfileViewsBody } from "./kiorex-overview.
 import { KiorexDepositsService, type DepositPaidBody, type PayoutBody } from "../billing/kiorex-deposits.service";
 import { RecordShareService } from "./record-share.service";
 import { SlotCapacityService } from "./slot-capacity.service";
+import { CarePlanRequestService, type CarePlanRequestBody } from "../nurse/care-plan-request.service";
+import { MarketplaceAccessService } from "./marketplace-access.service";
 import { MarketplaceWaitlistService, type MarketplaceWaitlistJoinBody } from "./marketplace-waitlist.service";
 
 @ApiTags("marketplace")
@@ -35,7 +37,18 @@ export class MarketplaceController {
     private readonly recordShare: RecordShareService,
     private readonly slotCapacity: SlotCapacityService,
     private readonly waitlist: MarketplaceWaitlistService,
+    private readonly carePlanRequests: CarePlanRequestService,
+    private readonly access: MarketplaceAccessService,
   ) {}
+
+  @Post("care-plan-requests")
+  @HttpCode(200)
+  @ApiOperation({ summary: "DRAFT (P3, Nurse edition): request a multi-visit care plan; idempotent on requestRef; 403 FEATURE_DISABLED until nurse.care_plans (gate GKN1) is effective" })
+  async createCarePlanRequest(@Body() body: CarePlanRequestBody) {
+    if (!body?.clinicId?.trim()) throw new BadRequestException("clinicId is required");
+    const tenantId = await this.access.resolveTenantForMarketplaceClinic(body.clinicId, body.clinicianId);
+    return this.carePlanRequests.receive(tenantId, body);
+  }
 
   @Get("auth/verify")
   @ApiOperation({ summary: "Verify marketplace client credentials" })
