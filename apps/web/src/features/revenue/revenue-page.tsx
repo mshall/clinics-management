@@ -326,11 +326,11 @@ export function RevenuePage() {
 
       <Card>
         <CardHeader className="pb-2 pt-4">
-          <CardTitle className="text-sm font-medium">{t("revenue.reportingPeriod", "Reporting period")}</CardTitle>
+          <CardTitle className="text-sm font-medium">{t("revenue.reportingScope", "Reporting scope")}</CardTitle>
           <CardDescription className="text-xs">
             {t(
-              "revenue.reportingPeriodHint",
-              "Date range and clinic scope apply automatically to totals, tables, and charts.",
+              "revenue.reportingScopeHint",
+              "Choose a date range and clinic scope for totals, tables, and charts.",
             )}
           </CardDescription>
         </CardHeader>
@@ -360,7 +360,7 @@ export function RevenuePage() {
             />
           </div>
           <div className={filterFieldClassName}>
-            <Label className="text-xs">{t("revenue.ledgerClinicFilter", "Clinic scope")}</Label>
+            <Label className="text-xs">{t("revenue.clinicScope", "Clinic scope")}</Label>
             {singleManagedClinic ? (
               <p className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-2 text-sm">
                 {formatClinicName(singleManagedClinic, i18n.language)}
