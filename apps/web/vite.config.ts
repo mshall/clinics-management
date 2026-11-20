@@ -5,13 +5,13 @@ import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 function loadBuildId(): string {
-  const idFile = path.resolve(__dirname, ".build-id");
+  const idFile = path.resolve(import.meta.dirname, ".build-id");
   if (existsSync(idFile)) return readFileSync(idFile, "utf8").trim();
   return "dev-local";
 }
 
 function loadBuildBuiltAt(): string {
-  const atFile = path.resolve(__dirname, ".build-built-at");
+  const atFile = path.resolve(import.meta.dirname, ".build-built-at");
   if (existsSync(atFile)) return readFileSync(atFile, "utf8").trim();
   return new Date(0).toISOString();
 }
@@ -123,7 +123,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
   server: {
