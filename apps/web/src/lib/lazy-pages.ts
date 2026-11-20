@@ -134,3 +134,4 @@ export const PlatformKiorexRatesTab = lazyNamed(
   () => import("@/features/platform/platform-kiorex-rates-tab"),
   "PlatformKiorexRatesTab",
 );
+export const TodayRoutePage = lazyNamed(() => import("@/features/home-visits/today-route-page"), "TodayRoutePage");

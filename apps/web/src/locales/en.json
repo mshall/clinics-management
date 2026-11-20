@@ -3973,5 +3973,39 @@
     "sourceorg-on": "Organization ON",
     "orgCannotOverride": "Switched off above your organization; it cannot be changed here.",
     "platformOnly": "Platform-managed"
+  },
+  "homeVisits": {
+    "today": "Today",
+    "none": "No home visits for this day.",
+    "needLocation": "Allow location access to continue.",
+    "failed": "The action could not be completed.",
+    "onMyWay": "On my way",
+    "arrived": "Arrived",
+    "finished": "Finished",
+    "leaveUnsafe": "Leave visit - unsafe",
+    "unsafeHelp": "This ends the visit with no penalty and is never recorded as a no-show. Your safety contact is alerted.",
+    "unsafeReason": "What happened?",
+    "confirmLeave": "Leave and alert safety contact",
+    "sos": "SOS",
+    "sosSent": "SOS sent to your safety contact with your live location.",
+    "sosNotDelivered": "SOS could not be delivered - call for help now.",
+    "callAmbulance": "Ambulance: {{number}}",
+    "callPolice": "Police: {{number}}",
+    "addressMasked": "Address hidden ({{district}})",
+    "floor": "floor",
+    "flat": "flat",
+    "fee": "Fee {{base}} + home surcharge {{surcharge}}",
+    "travel": "{{minutes}} min travel from the previous visit",
+    "navigate": "Open in maps",
+    "state": {
+      "REQUESTED": "Requested",
+      "CONFIRMED": "Confirmed",
+      "ON_MY_WAY": "On my way",
+      "ARRIVED": "Arrived",
+      "FINISHED": "Finished",
+      "ABORTED_UNSAFE": "Left - unsafe",
+      "CANCELLED": "Cancelled",
+      "NO_SHOW": "No-show"
+    }
   }
 }

@@ -71,6 +71,7 @@ import {
   Rp04FinanceReportsPage,
   DataPrivacyPage,
   WaitingRoomPage,
+  TodayRoutePage,
 } from "@/lib/lazy-pages";
 
 function defer(Page: LazyExoticComponent<ComponentType>) {
@@ -162,6 +163,7 @@ export const router = createBrowserRouter([
       { path: "clinic-revenue", element: <Navigate to="/revenue" replace /> },
       { path: "doctor-revenue", element: <DoctorRevenueGate /> },
       { path: "profile", element: <ProfileGate /> },
+      { path: "home-visits/today", element: <TodayRoutePage /> },
       { path: "privacy", element: defer(DataPrivacyPage) },
       { path: "profile/verification", element: <NavGate tab="profile">{defer(ClinicianVerificationPage)}</NavGate> },
       { path: "hr", element: <NavGate tab="hr">{defer(HrPage)}</NavGate> },

@@ -22,7 +22,7 @@ type CallbackResult =
 function useKiorexConfig() {
   return useQuery({
     queryKey: ["auth", "kiorex", "config"],
-    queryFn: () => apiGet<{ enabled: boolean }>("/api/v1/auth/kiorex/config"),
+    queryFn: () => apiGet<{ enabled: boolean; edition?: "CLINIC" | "NURSE"; defaultSignIn?: "KIOREX_PASSPORT" | "PASSWORD" }>("/api/v1/auth/kiorex/config"),
     staleTime: 60_000,
     retry: false,
   });
@@ -37,7 +37,8 @@ export function KiorexPassportButton() {
   return (
     <Button
       type="button"
-      variant="outline"
+      // KNED / ADR-031: "Sign in with Kiorex Passport" is the default (primary) action in the Nurse edition; the password form stays below it.
+      variant={data.defaultSignIn === "KIOREX_PASSPORT" ? "default" : "outline"}
       className="w-full"
       data-testid="kiorex-passport-button"
       disabled={busy}

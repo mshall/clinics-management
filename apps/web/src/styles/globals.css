@@ -145,3 +145,13 @@
     stroke-dashoffset: 0;
   }
 }
+
+
+/* KNED02 — Kiorly Nurse edition: Nurse Rose (#E11D48) accent on the unchanged Kiorly palette. Higher specificity than every
+   html[data-theme="..."] block so it wins in all themes, light and dark. Set by EditionBoot from the Host / the org's edition. */
+html[data-edition="nurse"],
+html[data-edition="nurse"][data-theme] {
+  --primary: 347 83% 51%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 347 83% 51%;
+}
