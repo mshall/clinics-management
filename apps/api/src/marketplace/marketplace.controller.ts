@@ -78,8 +78,12 @@ export class MarketplaceController {
     @Query("typeId") typeId: string,
     @Query("from") from: string,
     @Query("to") to: string,
+    @Query("serviceLocation") serviceLocation?: string,
+    @Query("district") district?: string,
+    @Query("lat") lat?: string,
+    @Query("lng") lng?: string,
   ) {
-    return this.api.listSlots(client, clinicId, clinicianId, typeId, from, to);
+    return this.api.listSlots(client, clinicId, clinicianId, typeId, from, to, { serviceLocation, district, lat, lng });
   }
 
   @Get("appointments/availability")

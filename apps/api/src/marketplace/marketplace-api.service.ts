@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, Optional } from "@nestjs/common";
 import { IntegrationScope } from "@prisma/client";
 import { IntegrationsAppointmentsService } from "../integrations/integrations-appointments.service";
 import type { IntegrationPrincipal } from "../integrations/integration.types";
@@ -10,6 +10,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { ListingStatus } from "@prisma/client";
 import { SlotService } from "../scheduling/slot.service";
 import { SLOT_CHANNEL } from "../scheduling/slot-channel";
+import { HomeVisitService } from "../home-visits/home-visit.service";
 
 @Injectable()
 export class MarketplaceApiService {
@@ -19,6 +20,7 @@ export class MarketplaceApiService {
     private readonly listings: MarketplaceListingService,
     private readonly prisma: PrismaService,
     private readonly slots: SlotService,
+    @Optional() private readonly homeVisits?: HomeVisitService,
   ) {}
 
   verify(client: PlatformIntegrationPrincipal) {
@@ -79,9 +81,23 @@ export class MarketplaceApiService {
     typeId: string,
     from: string,
     to: string,
+    extra: { serviceLocation?: string; district?: string; lat?: string; lng?: string } = {},
   ) {
-    void client;
-    return this.availability(client, clinicId, clinicianId, typeId, from, to);
+    const base = await this.availability(client, clinicId, clinicianId, typeId, from, to);
+    const requested = extra.serviceLocation?.trim().toUpperCase();
+    if (requested && requested !== "HOME" && requested !== "IN_CLINIC") throw new BadRequestException("serviceLocation must be IN_CLINIC or HOME");
+    const type = await this.prisma.appointmentType.findFirst({ where: { id: typeId, clinicId }, select: { serviceLocation: true, tenantId: true } });
+    const typeIsHome = type?.serviceLocation === "HOME";
+    // KX-09 §03: HOME slots need a district; coverage is checked (422 OUT_OF_COVERAGE) and each slot carries serviceLocation + district.
+    if (requested === "HOME" || typeIsHome) {
+      if (requested && requested !== "HOME") throw new BadRequestException("This visit type is a home visit type");
+      if (!typeIsHome) throw new BadRequestException("This visit type is not a home visit type");
+      if (!extra.district?.trim()) throw new BadRequestException({ code: "DISTRICT_REQUIRED", message: "district is required for HOME slots" });
+      if (!this.homeVisits) throw new BadRequestException("Home visits are not available");
+      const slots = await this.homeVisits.filterHomeSlots({ tenantId: type!.tenantId, clinicId, clinicianId, district: extra.district, slots: base.slots });
+      return { ...base, serviceLocation: "HOME" as const, district: extra.district.trim().toLowerCase(), slots };
+    }
+    return { ...base, slots: base.slots.map((s) => ({ ...s, serviceLocation: "IN_CLINIC" as const, district: null })) };
   }
 
   async book(client: PlatformIntegrationPrincipal, clinicId: string, body: IntegrationBookAppointmentDto) {

@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.kiorex.com/events/ReferralIssued.schema.json",
+  "title": "ReferralIssued",
+  "description": "A clinic issued a referral to a clinic of another tenant (e.g. physiotherapy, PT04) through Kiorex. A patient consent token is required (KX-09 §04). Carries a secure link and ids only; the referral content is fetched by the receiver with the consent token, never embedded here.",
+  "x-producer": "kiorly-clinic",
+  "x-status": "v2-draft",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "ReferralIssued"
+    },
+    "aggregateType": {
+      "const": "Referral"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "referralId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fromClinicId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "toClinicId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Receiving clinic when the patient chose one; otherwise the receiver is resolved by Kiorex."
+        },
+        "toProfession": {
+          "enum": [
+            "PHYSICIAN",
+            "DENTIST",
+            "PHYSIOTHERAPIST",
+            "NURSE"
+          ],
+          "description": "ADR-029. Market packs may extend the list in a later additive minor."
+        },
+        "patientRef": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Kiorex subject or Kiorly patient reference; never a national ID."
+        },
+        "referrerId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "consentToken": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Opaque token derived from the patient's active record-share grant (rsc_...)."
+        },
+        "issuedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "secureLink": {
+          "type": "string",
+          "format": "uri"
+        },
+        "diagnosis": false,
+        "notes": false,
+        "content": false,
+        "aggregateType": {
+          "type": "string",
+          "description": "Injected by the Kiorly outbox; mirrors the envelope field."
+        },
+        "aggregateId": {
+          "type": "string",
+          "description": "Injected by the Kiorly outbox; mirrors the envelope field."
+        }
+      },
+      "required": [
+        "referralId",
+        "fromClinicId",
+        "patientRef",
+        "referrerId",
+        "consentToken",
+        "issuedAt"
+      ]
+    }
+  },
+  "required": [
+    "type",
+    "aggregateType",
+    "data"
+  ]
+}

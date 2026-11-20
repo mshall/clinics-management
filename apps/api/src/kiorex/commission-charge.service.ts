@@ -19,6 +19,7 @@ import { CreditWalletService } from "../credits/credit-wallet.service";
 import { OutboxEventService } from "../messaging/outbox-event.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { isCommissionChargeableBooking } from "../appointments/booking-attribution";
+import { effectiveProfession } from "../scope-of-practice/scope-of-practice.service";
 import { COMMISSION_CHARGE_CREATED, COMMISSION_CHARGE_REVERSED } from "./commission-charge-topics";
 import { isActiveCommissionChargeStatus } from "./commission-charge-status";
 import { KiorexCommissionService } from "./kiorex-commission.service";
@@ -84,12 +85,16 @@ export class CommissionChargeService {
         feeAmount: true,
         bookingSource: true,
         isNewPatientAtBooking: true,
+        serviceLocation: true,
         patient: { select: { isSample: true } },
         clinic: { select: { defaultCurrency: true, tenant: { select: { marketId: true, market: { select: { id: true, featureDefaults: true } } } } } },
-        clinician: { select: { employee: { select: { clinicalSpecialty: true } } } },
+        clinician: { select: { profession: true, role: true, additionalRoles: true, employee: { select: { clinicalSpecialty: true } } } },
       },
     });
     if (!apt || apt.patient.isSample) return;
+    // BR55: only the FIRST attended visit is commissionable. A care-plan follow-up (sequence > 1) never is, whatever its booking source.
+    const planVisit = await tx.carePlanVisit.findUnique({ where: { appointmentId }, select: { sequence: true } });
+    if (planVisit && planVisit.sequence > 1) return;
     // clinic.commission_settlement OFF: new commission charges stop; already-CONFIRMED charges still settle.
     if (!(await flagOn(this.flags, tenantId, "clinic.commission_settlement"))) return;
     if (!isCommissionChargeableBooking(apt.bookingSource, apt.isNewPatientAtBooking)) return;
@@ -100,7 +105,9 @@ export class CommissionChargeService {
     const rows = await tx.kiorexCommissionRate.findMany({ where: { marketId } });
     const specialty = apt.clinician.employee?.clinicalSpecialty ?? null;
     const visitFee = Number(apt.feeAmount);
-    const resolved = this.kiorexRates.resolveForBooking(rows, specialty, visitFee, attendedAt);
+    // BR56: the home surcharge is a separate field (Appointment.homeSurchargeAmount) and is never part of visitFee (S) or the commission base (C).
+    const profession = effectiveProfession(apt.clinician);
+    const resolved = this.kiorexRates.resolveForBooking(rows, specialty, visitFee, attendedAt, { profession, serviceLocation: apt.serviceLocation });
     if (!resolved.rate) return;
 
     const currency =

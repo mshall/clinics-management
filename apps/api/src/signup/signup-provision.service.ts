@@ -6,6 +6,8 @@ import {
   MessageChannel,
   PlanKey,
   Prisma,
+  Profession,
+  ServiceLocation,
   SubscriptionStatus,
   TenantStatus,
   UserRole,
@@ -21,6 +23,8 @@ import { isBaseCurrency } from "../common/base-currencies";
 import { defaultCurrencyForCountry } from "../common/country-default-currency";
 import { isClinicalSpecialty } from "../common/clinical-specialties";
 import { PLAN_NAV_TAB_PRESETS } from "../entitlements/plans-matrix";
+import { DEFAULT_HOME_TRAVEL_BUFFER_MIN } from "../home-visits/home-visit-rules";
+import { NURSE_SERVICE_CATALOGUE } from "../nurse/nurse-services";
 import { MarketsService } from "../markets/markets.service";
 import { clinicInvoiceDefaultsFromTenant, tenantCreateDefaultsFromMarket } from "../markets/market-tax-pack";
 import { assertTenantDeploymentCellMatchesMarket } from "../markets/data-cells";
@@ -67,6 +71,7 @@ export type SignupProvisionResult = {
   phone: string;
   salesRepCode: string | null;
   referralCode: string | null;
+  edition: "CLINIC" | "NURSE";
 };
 
 export type SignupProvisionInput = {
@@ -86,6 +91,9 @@ export type SignupProvisionInput = {
   salesRepCode?: string;
   referralCode?: string;
   legalAcceptances?: { document: string; version: string }[];
+  /** ADR-031 / KNED01 — NURSE = Kiorly Nurse sign-up (plan NURSE_*; `nurseKind` SOLO = organization of one, AGENCY = 5..200 nurses). Default CLINIC. */
+  edition?: "CLINIC" | "NURSE";
+  nurseKind?: "SOLO" | "AGENCY";
   /** ON-07 — field rep creating the tenant; tenant stays PENDING_OWNER and legal is accepted at owner confirmation. */
   onBehalfOfSalesRepId?: string;
 };
@@ -109,12 +117,19 @@ export class SignupProvisionService {
     if (!password || password.length < 8) throw new BadRequestException("Password must be at least 8 characters");
     const displayName = input.profile.displayName?.trim();
     if (!displayName) throw new BadRequestException("Name is required");
-    if (!isClinicalSpecialty(input.specialty)) throw new BadRequestException("Invalid specialty");
-    const specialty = input.specialty as ClinicalSpecialty;
+    const edition: "CLINIC" | "NURSE" = input.edition === "NURSE" ? "NURSE" : "CLINIC";
+    const nurseKind = edition === "NURSE" ? (input.nurseKind === "AGENCY" ? "AGENCY" : "SOLO") : null;
+    // The Nurse edition has no medical specialty: the storage default is GENERAL_MEDICINE and scope of practice (profession NURSE) decides what the user may do.
+    const specialtyInput = edition === "NURSE" ? ClinicalSpecialty.GENERAL_MEDICINE : input.specialty;
+    if (!isClinicalSpecialty(specialtyInput)) throw new BadRequestException("Invalid specialty");
+    const specialty = specialtyInput as ClinicalSpecialty;
 
     const planRaw = input.planKey?.trim().toUpperCase();
-    const planKey = planRaw === PlanKey.PRO || planRaw === PlanKey.LITE ? (planRaw as PlanKey) : null;
-    if (!planKey) throw new BadRequestException("planKey must be LITE or PRO");
+    const allowed: string[] = edition === "NURSE" ? [PlanKey.NURSE_LITE, PlanKey.NURSE_PRO, PlanKey.NURSE_AGENCY] : [PlanKey.PRO, PlanKey.LITE];
+    const planKey = planRaw && allowed.includes(planRaw) ? (planRaw as PlanKey) : null;
+    if (!planKey) throw new BadRequestException(edition === "NURSE" ? "planKey must be NURSE_LITE, NURSE_PRO or NURSE_AGENCY" : "planKey must be LITE or PRO");
+    if (edition === "NURSE" && nurseKind === "SOLO" && planKey === PlanKey.NURSE_AGENCY) throw new BadRequestException("Nurse Agency is for agencies; choose Agency");
+    if (edition === "NURSE" && nurseKind === "AGENCY" && planKey !== PlanKey.NURSE_AGENCY) throw new BadRequestException("Agencies sign up on Nurse Agency");
 
     if (!input.onBehalfOfSalesRepId) this.legal.assertSignupLegal(planKey, input.legalAcceptances);
 
@@ -156,6 +171,8 @@ export class SignupProvisionService {
           deploymentCell: packDefaults.deploymentCell,
           baseCurrency: market.defaultCurrency?.trim() || defaultCurrency,
           defaultLocale: market.defaultLocale || "ar",
+          edition,
+          nurseTenantKind: nurseKind,
           defaultVisitFee: packDefaults.defaultVisitFee,
           defaultInvoiceVatPercent: packDefaults.defaultInvoiceVatPercent,
           defaultTaxRegistrationNumber: packDefaults.defaultTaxRegistrationNumber,
@@ -173,9 +190,12 @@ export class SignupProvisionService {
           email,
           displayName,
           passwordHash,
-          role: UserRole.PHYSICIAN,
-          additionalRoles: [UserRole.GROUP_ADMIN],
+          // Clinician logins are role PHYSICIAN + a profession (PRSOP): a solo nurse owner is PHYSICIAN-role with profession NURSE;
+          // an agency owner is an administrator (not a clinician) and is never listed or sent to a visit.
+          role: edition === "NURSE" && nurseKind === "AGENCY" ? UserRole.CLINIC_ADMIN : UserRole.PHYSICIAN,
+          additionalRoles: edition === "NURSE" && nurseKind === "AGENCY" ? [UserRole.GROUP_ADMIN] : [UserRole.GROUP_ADMIN],
           isTenantOwner: true,
+          ...(edition === "NURSE" && nurseKind === "SOLO" ? { profession: Profession.NURSE } : {}),
         },
       });
 
@@ -222,7 +242,7 @@ export class SignupProvisionService {
           lastNameAr: displayName,
           email,
           phone: input.phone,
-          jobTitle: "Physician",
+          jobTitle: edition === "NURSE" ? (nurseKind === "AGENCY" ? "Agency owner" : "Nurse") : "Physician",
           employmentType: EmploymentType.FULL_TIME,
           clinicalSpecialty: specialty,
           hireDate: openedAt,
@@ -247,9 +267,10 @@ export class SignupProvisionService {
 
       const now = new Date();
       const periodEnd = addBillingPeriod(now, interval);
-      const paidTrial = planKey === PlanKey.PRO || planKey === PlanKey.CLINIC;
-      const trialPlan =
-        paidTrial ? await tx.plan.findUnique({ where: { key: planKey === PlanKey.CLINIC ? PlanKey.CLINIC : PlanKey.PRO } }) : null;
+      const paidTrial = planKey === PlanKey.PRO || planKey === PlanKey.CLINIC || planKey === PlanKey.NURSE_PRO || planKey === PlanKey.NURSE_AGENCY;
+      const trialPlan = paidTrial
+        ? await tx.plan.findUnique({ where: { key: planKey === PlanKey.CLINIC || edition === "NURSE" ? planKey : PlanKey.PRO } })
+        : null;
 
       let status: SubscriptionStatus = SubscriptionStatus.ACTIVE;
       let trialStartsAt: Date | null = null;
@@ -299,7 +320,25 @@ export class SignupProvisionService {
       }
 
       const visitFee = Number(tenant.defaultVisitFee);
-      const typeSeeds = defaultAppointmentTypesForSpecialty(specialty);
+      if (edition === "NURSE") {
+        // KNSVC01/02: the service catalogue as HOME visit types with 30/30 travel buffers. They cannot be BOOKED until clinic.home_visits is effective (gates GHV1+GHV2).
+        for (const svc of NURSE_SERVICE_CATALOGUE) {
+          await tx.appointmentType.create({
+            data: {
+              tenantId: tenant.id,
+              clinicId: clinic.id,
+              nameEn: svc.nameEn,
+              nameAr: svc.nameAr,
+              durationMinutes: svc.durationMinutes,
+              feeAmount: Math.round(visitFee * svc.feeFactor * 100) / 100,
+              serviceLocation: ServiceLocation.HOME,
+              bufferBeforeMin: DEFAULT_HOME_TRAVEL_BUFFER_MIN,
+              bufferAfterMin: DEFAULT_HOME_TRAVEL_BUFFER_MIN,
+            },
+          });
+        }
+      }
+      const typeSeeds = edition === "NURSE" ? [] : defaultAppointmentTypesForSpecialty(specialty);
       for (const seed of typeSeeds) {
         await tx.appointmentType.create({
           data: {
@@ -339,7 +378,7 @@ export class SignupProvisionService {
       }
 
       const navPreset = PLAN_NAV_TAB_PRESETS[planKey];
-      for (const role of [UserRole.GROUP_ADMIN, UserRole.PHYSICIAN]) {
+      for (const role of [UserRole.GROUP_ADMIN, UserRole.PHYSICIAN, ...(edition === "NURSE" ? [UserRole.CLINIC_ADMIN, UserRole.RECEPTIONIST] : [])]) {
         await tx.tenantRoleNavTabGrant.create({
           data: {
             tenantId: tenant.id,
@@ -368,6 +407,7 @@ export class SignupProvisionService {
         phone: input.phone,
         salesRepCode: tenant.salesRepCode,
         referralCode: tenant.referralCode,
+        edition,
       };
     });
     if (input.legalAcceptances?.length) {

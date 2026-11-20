@@ -31,7 +31,7 @@ export interface FieldVisitPort {
   canViewAddress(viewer: Viewer, visit: Pick<FieldVisit, "state" | "assignedClinicianId" | "endedAtMs">, nowMs: number): boolean;
   evaluateSafetyTimer(visit: Pick<FieldVisit, "id" | "state" | "plannedEndMs">, state: SafetyState, nowMs: number): SafetyEvaluation;
   /** Builds and delivers a safety alert (timer expiry or SOS) through the organisation's channels; never throws. */
-  deliverSafetyAlert(alert: SafetyAlert, dueAtMs: number): Promise<DeliveryResult>;
+  deliverSafetyAlert(alert: SafetyAlert, dueAtMs: number, to?: { tenantId: string | null; contactAddress: string }): Promise<DeliveryResult>;
 }
 
 export const FIELD_VISIT_PORT = Symbol("FIELD_VISIT_PORT");

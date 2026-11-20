@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
   UnprocessableEntityException,
 } from "@nestjs/common";
 import {
@@ -40,6 +41,10 @@ import {
   resolveKiorexCancellationPolicy,
 } from "./kiorex-booking-policy";
 import { PushService } from "../push/push.service";
+import { encryptVisitAddress } from "../home-visits/address-crypto";
+import { HomeVisitRuleException, OutOfCoverageException } from "../home-visits/home-visit.errors";
+import { HomeVisitService } from "../home-visits/home-visit.service";
+import { parseVisitAddress, VisitAddressError, type VisitAddress } from "../home-visits/visit-address";
 
 export type MarketplaceBookingBody = {
   clinicId: string;
@@ -57,6 +62,9 @@ export type MarketplaceBookingBody = {
   /** KX-09: bookings made from the clinic's own booking page are CLINIC_LINK (never commissioned). */
   channel?: typeof CLINIC_LINK_CHANNEL | "MARKETPLACE";
   bookingPageSlug?: string;
+  /** KX-09 §03 — HOME visit types: the address normally travels on the hold; sending it here too is accepted. */
+  visitAddress?: unknown;
+  serviceLocation?: string;
 };
 
 @Injectable()
@@ -73,6 +81,7 @@ export class MarketplaceBookingService {
     private readonly slots: SlotService,
     private readonly newPatients: NewPatientService,
     private readonly push: PushService,
+    @Optional() private readonly homeVisits?: HomeVisitService,
   ) {}
 
   async getByExternalRef(client: PlatformIntegrationPrincipal, externalRef: string) {
@@ -169,6 +178,56 @@ export class MarketplaceBookingService {
       });
     }
 
+    // HVBK01/03 + HVSAF03: HOME visit types need an in-zone address (from the hold, or sent here) and pass every booking rule.
+    const isHome = typeRow.serviceLocation === "HOME";
+    let home: { address: VisitAddress; ciphertext: string } | null = null;
+    if (isHome) {
+      if (!this.homeVisits) throw new BadRequestException("Home visits are not available");
+      const holdRow = body.holdId
+        ? await this.prisma.slotHold.findFirst({ where: { id: body.holdId, platformIntegrationClientId: client.id } })
+        : body.holdExternalRef
+          ? await this.prisma.slotHold.findFirst({ where: { externalRef: body.holdExternalRef.trim(), platformIntegrationClientId: client.id } })
+          : null;
+      let address: VisitAddress;
+      let ciphertext: string;
+      try {
+        if (body.visitAddress != null) {
+          address = parseVisitAddress(body.visitAddress, { requireLine1: true });
+          ciphertext = encryptVisitAddress(address, tenantId);
+        } else if (holdRow?.visitAddressCiphertext && holdRow.visitDistrict) {
+          address = { district: holdRow.visitDistrict };
+          ciphertext = holdRow.visitAddressCiphertext;
+        } else {
+          throw new VisitAddressError("VISIT_ADDRESS_REQUIRED", "visitAddress is required for HOME visit types");
+        }
+      } catch (e) {
+        if (e instanceof VisitAddressError) throw new HomeVisitRuleException(e.code, e.message);
+        throw e;
+      }
+      const patientRow = await this.prisma.patient.findFirst({ where: { id: patientId, tenantId }, select: { id: true, gender: true } });
+      try {
+        await this.homeVisits.assertBookable({
+          tenantId,
+          clinicId: body.clinicId,
+          clinicianId: body.clinicianId,
+          type: typeRow,
+          startsAt: start,
+          endsAt: end,
+          address,
+          patient: patientRow,
+          source: viaClinicLink ? "FRONT_DESK" : "KIOREX",
+        });
+      } catch (e) {
+        // KX-09 §08: zone changed after the hold -> release the hold; Kiorex shows in-zone alternatives.
+        if (e instanceof OutOfCoverageException && holdRow) {
+          await this.prisma.slotHold.delete({ where: { id: holdRow.id } }).catch(() => undefined);
+          await this.slots.invalidateAndNotify(tenantId, body.clinicId, body.clinicianId, "slot_hold_released");
+        }
+        throw e;
+      }
+      home = { address, ciphertext };
+    }
+
     try {
       const created = await this.prisma.$transaction(
         async (tx) => {
@@ -244,6 +303,8 @@ export class MarketplaceBookingService {
             startsAt: start,
             endsAt: end,
             feeAmount: typeRow.feeAmount,
+            // BR56: the home surcharge is its own field; it never enters feeAmount (the base commission / revenue-share fee).
+            ...(isHome ? { serviceLocation: "HOME" as const, homeSurchargeAmount: typeRow.homeSurchargeAmount } : {}),
             status,
             bookingSource,
             attributionJson: (attribution ?? undefined) as Prisma.InputJsonValue | undefined,
@@ -257,6 +318,23 @@ export class MarketplaceBookingService {
         });
 
         if (hold) await tx.slotHold.delete({ where: { id: hold.id } });
+
+        if (home && this.homeVisits) {
+          await this.homeVisits.createForAppointment(tx, {
+            tenantId,
+            clinicId: body.clinicId,
+            appointmentId: appt.id,
+            patientId,
+            clinicianId: body.clinicianId,
+            startsAt: start,
+            endsAt: end,
+            address: home.address,
+            addressCiphertext: home.ciphertext,
+            addressConfirmed: true, // the patient entered it in Kiorex
+            appointmentConfirmed: status === AppointmentStatus.CONFIRMED,
+            surcharge: typeRow.homeSurchargeAmount ? Number(typeRow.homeSurchargeAmount) : null,
+          });
+        }
 
         if (status === AppointmentStatus.CONFIRMED) {
           await this.appointmentOutbox.emitStatusChange(
@@ -591,9 +669,11 @@ export class MarketplaceBookingService {
     cancellationReason?: string | null;
     depositRefundable?: boolean | null;
     rescheduleCount?: number;
+    serviceLocation?: "IN_CLINIC" | "HOME";
   }) {
     return {
       appointmentId: row.id,
+      serviceLocation: row.serviceLocation ?? "IN_CLINIC",
       clinicId: row.clinicId,
       clinicianId: row.clinicianId,
       patientId: row.patientId,

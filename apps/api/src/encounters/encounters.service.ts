@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { syncHomeVisitWithAppointmentStatus } from "../home-visits/home-visit-sync";
 import {
   AppointmentStatus,
   EncounterDocumentKind,
@@ -1186,6 +1187,7 @@ export class EncountersService {
           where: { id: aptId },
           data: { status: AppointmentStatus.COMPLETED, endsAt: finalizedAt },
         });
+        await syncHomeVisitWithAppointmentStatus(tx, tenantId, aptId, AppointmentStatus.COMPLETED);
         await this.commissionCharges.onComplete(tx, tenantId, aptId);
         // KX-09 §04: finalizing the note completes the visit, so the COMPLETED (+ review-eligible) events must reach Kiorex too.
         if (before && before.status !== AppointmentStatus.COMPLETED) {

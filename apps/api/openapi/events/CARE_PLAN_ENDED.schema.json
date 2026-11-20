@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.kiorex.com/events/CARE_PLAN_ENDED.schema.json",
+  "title": "CARE_PLAN_ENDED",
+  "description": "DRAFT (phase P3, Nurse edition): a confirmed care plan ended. Follow-up visits of a care plan are never charged a Kiorex fee (KX-23). IDs and counts only.",
+  "x-producer": "kiorly-clinic",
+  "x-status": "v2-draft",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "CARE_PLAN_ENDED"
+    },
+    "aggregateType": {
+      "const": "CarePlan"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "carePlanId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "clinicId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "requestRef": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "requestRef of the Kiorex care-plan request, when it originated there."
+        },
+        "endedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "reason": {
+          "enum": [
+            "COMPLETED",
+            "CANCELLED_BY_PATIENT",
+            "CANCELLED_BY_PROVIDER",
+            "EXPIRED"
+          ],
+          "description": "Assumption: narrowest set; no clinical reason."
+        },
+        "visitsCompleted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cancelledAppointmentIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "visitAddress": false,
+        "address": false,
+        "line1": false,
+        "lat": false,
+        "lng": false,
+        "latitude": false,
+        "longitude": false,
+        "geostamp": false,
+        "phone": false,
+        "aggregateType": {
+          "type": "string",
+          "description": "Injected by the Kiorly outbox; mirrors the envelope field."
+        },
+        "aggregateId": {
+          "type": "string",
+          "description": "Injected by the Kiorly outbox; mirrors the envelope field."
+        }
+      },
+      "required": [
+        "carePlanId",
+        "clinicId",
+        "endedAt",
+        "reason"
+      ]
+    }
+  },
+  "required": [
+    "type",
+    "aggregateType",
+    "data"
+  ]
+}

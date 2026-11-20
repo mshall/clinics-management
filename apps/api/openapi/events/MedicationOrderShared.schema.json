@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.kiorex.com/events/MedicationOrderShared.schema.json",
+  "title": "MedicationOrderShared",
+  "description": "A doctor's signed medication order was shared with a Nurse-edition tenant through Kiorex consent (a nurse may only administer against a doctor's order, BR57; MAR checks are never a flag). Carries the signed order version, expiry and a secure link only: medicine lines, doses and clinical text are never embedded.",
+  "x-producer": "kiorly-clinic",
+  "x-status": "v2-draft",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "MedicationOrderShared"
+    },
+    "aggregateType": {
+      "const": "DoctorOrder"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fromClinicId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "toClinicId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Receiving Nurse-edition tenant (organization of one for a solo nurse)."
+        },
+        "patientRef": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Kiorex subject or Kiorly patient reference; never a national ID."
+        },
+        "prescriberId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "orderVersion": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "signedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "consentToken": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Opaque token derived from the patient's active record-share grant (rsc_...)."
+        },
+        "secureLink": {
+          "type": "string",
+          "format": "uri"
+        },
+        "items": false,
+        "medications": false,
+        "lines": false,
+        "aggregateType": {
+          "type": "string",
+          "description": "Injected by the Kiorly outbox; mirrors the envelope field."
+        },
+        "aggregateId": {
+          "type": "string",
+          "description": "Injected by the Kiorly outbox; mirrors the envelope field."
+        }
+      },
+      "required": [
+        "orderId",
+        "fromClinicId",
+        "patientRef",
+        "prescriberId",
+        "orderVersion",
+        "signedAt",
+        "expiresAt",
+        "consentToken"
+      ]
+    }
+  },
+  "required": [
+    "type",
+    "aggregateType",
+    "data"
+  ]
+}

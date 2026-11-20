@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, NotFoundException, Optional } from "@nestjs/common";
 import { ListingStatus, Prisma, VerificationStatus } from "@prisma/client";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -6,6 +6,9 @@ import type { JwtUser } from "../auth/jwt-user";
 import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { OutboxEventService } from "../messaging/outbox-event.service";
+import { FeatureFlagsService } from "../feature-flags/feature-flags-public";
+import { effectiveProfession } from "../scope-of-practice/scope-of-practice.service";
+import { resolveProfessionPack } from "../scope-of-practice/profession-pack";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import { MarketplaceListingService } from "./marketplace-listing.service";
 import {
@@ -25,10 +28,14 @@ export type PublishedFee = {
   currency: string;
   /** KXM-PAY-01: the clinic's deposit for this visit type (null = none). Kiorex requires it before confirming payment. */
   depositAmount: number | null;
+  /** Rev 2.3 (contracts 1.5.0): only present for HOME visit types. */
+  serviceLocation?: "HOME";
+  /** BR56: separate from `amount`; Kiorex shows amount + homeSurcharge; Kiorly never lets it enter commission (S) or the settlement base (C). */
+  homeSurcharge?: number;
 };
 
 export function publishedFee(
-  t: { id: string; nameEn: string; nameAr: string; feeAmount: unknown; depositAmount?: unknown },
+  t: { id: string; nameEn: string; nameAr: string; feeAmount: unknown; depositAmount?: unknown; serviceLocation?: string; homeSurchargeAmount?: unknown },
   profileFee: unknown,
   currency: string,
 ): PublishedFee {
@@ -40,6 +47,7 @@ export function publishedFee(
     amount: Number(profileFee ?? t.feeAmount),
     currency,
     depositAmount: dep != null && dep > 0 ? dep : null,
+    ...(t.serviceLocation === "HOME" ? { serviceLocation: "HOME" as const, homeSurcharge: t.homeSurchargeAmount == null ? 0 : Number(t.homeSurchargeAmount) } : {}),
   };
 }
 
@@ -67,6 +75,15 @@ export type ProviderProfileEditorDto = {
 };
 
 export type PublishedProviderDto = {
+  /** Rev 2.3 (KX-09 §03, contracts 1.5.0): additive provider-sync fields. */
+  profession?: string;
+  edition?: "CLINIC" | "NURSE";
+  serviceLocations?: ("IN_CLINIC" | "HOME")[];
+  /** District codes only; no polygons or coordinates. */
+  coverageDistricts?: string[];
+  verification?: { register: string };
+  /** Agencies only: the agency assigns a clinician after booking (HOME_VISIT_ASSIGNED). */
+  assignsClinician?: boolean;
   listingId: string;
   tenantId: string;
   clinicId: string;
@@ -103,6 +120,7 @@ export class MarketplaceProviderProfileService {
     private readonly outbox: OutboxEventService,
     private readonly audit: AuditService,
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
+    @Optional() private readonly flags?: FeatureFlagsService,
   ) {}
 
   async getEditor(user: JwtUser, listingId: string): Promise<ProviderProfileEditorDto> {
@@ -272,7 +290,7 @@ export class MarketplaceProviderProfileService {
           isActive: true,
           OR: [{ clinicId: row.clinicId }, { clinicId: null }],
         },
-        select: { id: true, nameEn: true, nameAr: true, feeAmount: true, depositAmount: true },
+        select: { id: true, nameEn: true, nameAr: true, feeAmount: true, depositAmount: true, serviceLocation: true, homeSurchargeAmount: true },
       }),
       profile.acceptedPayerIds?.length
         ? this.prisma.payerCompany.findMany({
@@ -283,9 +301,13 @@ export class MarketplaceProviderProfileService {
     ]);
 
     const completenessPercent = await this.completenessForListing(row);
-    const fees = types.map((t) => publishedFee(t, profile.feesByAppointmentTypeId?.[t.id], clinic.defaultCurrency));
+    // HOME is offered only while clinic.home_visits is effective and the clinician takes home visits ("Home visit types hidden for new bookings").
+    const v23 = await this.v23Fields(row.tenantId, row.clinicianId, types.map((t) => t.serviceLocation));
+    const offered = types.filter((t) => t.serviceLocation !== "HOME" || v23.homeOffered);
+    const fees = offered.map((t) => publishedFee(t, profile.feesByAppointmentTypeId?.[t.id], clinic.defaultCurrency));
 
     return {
+      ...v23.fields,
       listingId: row.id,
       tenantId: row.tenantId,
       clinicId: row.clinicId,
@@ -314,6 +336,29 @@ export class MarketplaceProviderProfileService {
         photos: profile.clinicPhotoRelativePaths ?? [],
       },
     };
+  }
+
+  private async v23Fields(tenantId: string, clinicianId: string, typeLocations: string[]) {
+    const hasHomeTypes = typeLocations.includes("HOME");
+    const [tenant, user, settings] = await Promise.all([
+      this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { edition: true, nurseTenantKind: true, market: { select: { code: true, clinicalConfig: true } } } }),
+      this.prisma.user.findUnique({ where: { id: clinicianId }, select: { profession: true, role: true, additionalRoles: true } }),
+      this.prisma.clinicianHomeSettings.findUnique({ where: { tenantId_clinicianId: { tenantId, clinicianId } } }),
+    ]);
+    const profession = user ? effectiveProfession(user) : null;
+    const homeFlag = this.flags ? (await this.flags.evaluate(tenantId, "clinic.home_visits")).effective : false;
+    const homeOffered = Boolean(hasHomeTypes && homeFlag && settings?.acceptsHomeVisits);
+    const pack = resolveProfessionPack(tenant?.market);
+    const register = profession ? pack.verification[profession]?.registers.find((r) => r.isSyndicate)?.code : undefined;
+    const fields: Pick<PublishedProviderDto, "profession" | "edition" | "serviceLocations" | "coverageDistricts" | "verification" | "assignsClinician"> = {
+      ...(profession ? { profession } : {}),
+      edition: tenant?.edition ?? "CLINIC",
+      serviceLocations: [...(typeLocations.some((l) => l !== "HOME") || typeLocations.length === 0 ? (["IN_CLINIC"] as const) : []), ...(homeOffered ? (["HOME"] as const) : [])],
+      coverageDistricts: homeOffered ? settings?.coverageDistrictIds ?? [] : [],
+      ...(register ? { verification: { register } } : {}),
+      ...(tenant?.nurseTenantKind === "AGENCY" ? { assignsClinician: true } : {}),
+    };
+    return { fields, homeOffered };
   }
 
   private async buildEditorDto(row: Prisma.MarketplaceListingGetPayload<object>): Promise<ProviderProfileEditorDto> {

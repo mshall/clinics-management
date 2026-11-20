@@ -2,14 +2,14 @@
  * Provider mode (CLAUDE.md "Messaging & provider integrations are MOCKED for now").
  *
  * Every third-party integration sits behind an adapter with `MODE=mock|real`, default **mock**:
- *   KIORLY_PROVIDER_MODE_<KIND>   per integration (EMAIL, WHATSAPP, SMS, PUSH, PSP)
+ *   KIORLY_PROVIDER_MODE_<KIND>   per integration (EMAIL, WHATSAPP, SMS, PUSH, PSP, MAPS)
  *   KIORLY_PROVIDER_MODE          global default for every kind
  * Unset => mock. The only legacy exception: in NODE_ENV=production a deployment that already carries the old
  * enabling switch (EMAIL_SES_ENABLED=1, WhatsApp access token, VAPID keys) keeps behaving as real until it sets
  * the mode explicitly. Real providers are wired in a dedicated pre-launch pass (Docs/KIORLY_NEEDS_HUMAN.md,
  * "Provider go-live"). No credentials ever live in code.
  */
-export type ProviderKind = "email" | "whatsapp" | "sms" | "push" | "psp";
+export type ProviderKind = "email" | "whatsapp" | "sms" | "push" | "psp" | "maps";
 export type ProviderMode = "mock" | "real";
 
 const LEGACY_REAL_SWITCH: Record<ProviderKind, () => boolean> = {
@@ -18,6 +18,7 @@ const LEGACY_REAL_SWITCH: Record<ProviderKind, () => boolean> = {
   sms: () => false,
   push: () => Boolean(process.env.WEB_PUSH_VAPID_PUBLIC?.trim() && process.env.WEB_PUSH_VAPID_PRIVATE?.trim()),
   psp: () => false,
+  maps: () => false,
 };
 
 function parse(raw: string | undefined): ProviderMode | null {
@@ -36,7 +37,7 @@ export function isMock(kind: ProviderKind): boolean {
   return providerMode(kind) === "mock";
 }
 
-export const PROVIDER_KINDS: readonly ProviderKind[] = ["email", "whatsapp", "sms", "push", "psp"];
+export const PROVIDER_KINDS: readonly ProviderKind[] = ["email", "whatsapp", "sms", "push", "psp", "maps"];
 
 export function providerModes(): Record<ProviderKind, ProviderMode> {
   return Object.fromEntries(PROVIDER_KINDS.map((k) => [k, providerMode(k)])) as Record<ProviderKind, ProviderMode>;

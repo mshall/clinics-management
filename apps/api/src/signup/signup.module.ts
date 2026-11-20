@@ -34,6 +34,6 @@ import { GrowthModule } from "../growth/growth.module";
   ],
   controllers: [PublicSignupController],
   providers: [SignupService, SignupOtpService, SignupProvisionService],
-  exports: [SignupProvisionService],
+  exports: [SignupProvisionService, SignupService],
 })
 export class SignupModule {}

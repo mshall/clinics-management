@@ -4,8 +4,10 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  Optional,
   StreamableFile,
 } from "@nestjs/common";
+import { FeatureFlagsService, requireFeature } from "../feature-flags/feature-flags-public";
 import { ClinicalSpecialty, Prisma, Profession, UserRole, VerificationStatus } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
@@ -179,6 +181,7 @@ export class ClinicianVerificationService {
     private readonly prisma: PrismaService,
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
     private readonly audit: AuditService,
+    @Optional() private readonly flags?: FeatureFlagsService,
   ) {}
 
   /** Market pack (profession verification rules) for a tenant. */
@@ -271,6 +274,9 @@ export class ClinicianVerificationService {
     if (existing.status === VerificationStatus.PENDING) {
       throw new BadRequestException("Verification is pending review");
     }
+    // PRVER04 / ADR-032: the Nurse edition decides who is "solo": a nurse in a SOLO organization always gets the extra evidence checklist (ID selfie + criminal-record certificate).
+    const org = await this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { edition: true, nurseTenantKind: true } });
+    if (org?.edition === "NURSE" && org.nurseTenantKind === "SOLO" && profession === Profession.NURSE) body = { ...body, solo: true };
 
     const data: Prisma.ClinicianVerificationUpdateInput = { profession };
     if (body.syndicateNumber !== undefined) data.syndicateNumber = body.syndicateNumber.trim() || null;
@@ -762,6 +768,10 @@ export class ClinicianVerificationService {
     if (!target) throw new NotFoundException("User not found");
     const pack = await this.packForTenant(actor.tenantId);
     const previous = effectiveProfession(target);
+    // New physio sign-ups are switchable (clinic.profession.physiotherapy OFF: existing physios keep working; this only blocks NEW ones).
+    if (profession === Profession.PHYSIOTHERAPIST && previous !== Profession.PHYSIOTHERAPIST && this.flags) {
+      await requireFeature(this.flags, actor.tenantId, "clinic.profession.physiotherapy");
+    }
 
     let supervisor: string | null = null;
     if (profession === Profession.ASSISTANT) {

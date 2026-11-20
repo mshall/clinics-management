@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.kiorex.com/events/envelope.schema.json",
+  "title": "KiorexEventEnvelope",
+  "description": "Outbox/webhook envelope. Kiorly's body is exactly {eventId,type,aggregateType,aggregateId,target,occurredAt,data}. Consumers de-duplicate on eventId (at-least-once).",
+  "type": "object",
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique per event (Kiorly: outbox row id). De-dup key."
+    },
+    "type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "aggregateType": {
+      "type": "string",
+      "minLength": 1
+    },
+    "aggregateId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target": {
+      "type": "string",
+      "description": "Kiorly outbox target, e.g. KIOREX. Optional for other producers."
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "data": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "eventId",
+    "type",
+    "aggregateType",
+    "aggregateId",
+    "occurredAt",
+    "data"
+  ]
+}

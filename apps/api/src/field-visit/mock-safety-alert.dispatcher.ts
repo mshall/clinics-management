@@ -24,12 +24,14 @@ export class MockSafetyAlertDispatcher implements SafetyAlertDispatcher {
     const body =
       alert.kind === "SOS"
         ? `Kiorly SOS from a home visit (${alert.visitId}). ${where}. Ambulance ${alert.emergencyNumbers.ambulance}, police ${alert.emergencyNumbers.police}.`
-        : `Kiorly safety check: no answer after a home visit overran (${alert.visitId}). ${where}. Please call the clinician; ambulance ${alert.emergencyNumbers.ambulance}, police ${alert.emergencyNumbers.police}.`;
+        : alert.kind === "UNSAFE_ABORT"
+          ? `Kiorly: a clinician left a home visit as unsafe (${alert.visitId}). ${where}. Please check on them; ambulance ${alert.emergencyNumbers.ambulance}, police ${alert.emergencyNumbers.police}.`
+          : `Kiorly safety check: no answer after a home visit overran (${alert.visitId}). ${where}. Please call the clinician; ambulance ${alert.emergencyNumbers.ambulance}, police ${alert.emergencyNumbers.police}.`;
     await DevInboxRecorder.record({
       channel: "SMS",
       tenantId: this.tenantId,
       toAddress: this.toAddress,
-      templateKey: alert.kind === "SOS" ? "home_visit.sos" : "home_visit.safety_alert",
+      templateKey: alert.kind === "SOS" ? "home_visit.sos" : alert.kind === "UNSAFE_ABORT" ? "home_visit.unsafe_abort" : "home_visit.safety_alert",
       bodyText: body,
       variables: { visitId: alert.visitId, kind: alert.kind, contactId: alert.contactId },
       relatedId: alert.visitId,

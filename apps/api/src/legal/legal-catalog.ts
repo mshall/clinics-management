@@ -84,7 +84,7 @@ export const SIGNUP_PAID_LEGAL: LegalDocumentId[] = [
 
 export function isPaidPlanKey(planKey: PlanKey | string): boolean {
   const k = String(planKey).toUpperCase();
-  return k !== PlanKey.LITE;
+  return k !== PlanKey.LITE && k !== PlanKey.NURSE_LITE;
 }
 
 export function requiredLegalForSignup(planKey: PlanKey | string): LegalDocumentId[] {

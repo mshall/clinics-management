@@ -50,3 +50,17 @@ export function outboxTargetTenantWebhook(webhookId: string): string {
 
 export const OUTBOX_DISPATCH_MAX_ATTEMPTS = 8;
 export const OUTBOX_LAG_ALERT_MS = 2 * 60 * 1000;
+/**
+ * Rev 2.3 events (kiorex-contracts 1.5.0, KX-09 §04). Additive to `OUTBOX_EVENT`; payload builders live in
+ * `home-visits/home-visit-events.ts` and are validated against the contract JSON Schemas in CI.
+ */
+export const OUTBOX_EVENT_V23 = {
+  HOME_VISIT_ASSIGNED: "HOME_VISIT_ASSIGNED",
+  HOME_VISIT_EN_ROUTE: "HOME_VISIT_EN_ROUTE",
+  HOME_VISIT_ABORTED_UNSAFE: "HOME_VISIT_ABORTED_UNSAFE",
+  SAFETY_ALERT_RAISED: "SAFETY_ALERT_RAISED",
+  CARE_PLAN_CONFIRMED: "CARE_PLAN_CONFIRMED",
+  CARE_PLAN_ENDED: "CARE_PLAN_ENDED",
+  REFERRAL_ISSUED: "ReferralIssued",
+  MEDICATION_ORDER_SHARED: "MedicationOrderShared",
+} as const;

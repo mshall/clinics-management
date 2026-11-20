@@ -9,6 +9,8 @@ export const MARKETPLACE_BLOCKER = {
   OWNER: "owner",
   PROFILE: "profile",
   QUALITY: "quality",
+  /** KX-23 KNKX02 / ADR-032: a SOLO nurse lists only when nurse.individual_kiorex_listing is effective (launch-locked, gate GKN2) AND PRVER04 evidence was checked. */
+  SOLO_NURSE: "solo_nurse_listing",
 } as const;
 
 export type MarketplaceBlockerCode = (typeof MARKETPLACE_BLOCKER)[keyof typeof MARKETPLACE_BLOCKER];
@@ -22,6 +24,12 @@ export type MarketplaceListingEligibilityInput = {
   ownerPaused?: boolean;
   /** SB-05: Lite commission invoice unpaid past the market pause window. */
   kiorexBillingPaused?: boolean;
+  /**
+   * Set only for SOLO nurse organizations (Nurse edition, ADR-032). `flagEffective` is the nurse.individual_kiorex_listing flag
+   * (launch-locked behind gate GKN2, a human gate never recorded by code); `prver04Checked` = the verification was submitted as solo,
+   * so the ID selfie match and criminal-record certificate checklist applied. Agencies list under clinic.kiorex_listing instead.
+   */
+  soloNurse?: { flagEffective: boolean; prver04Checked: boolean };
 };
 
 export type MarketplaceListingEligibility = {
@@ -61,9 +69,16 @@ export function evaluateMarketplaceListingEligibility(
   if (input.profileCompletenessPercent < PROVIDER_PROFILE_COMPLETENESS_MIN) {
     blockers.push(MARKETPLACE_BLOCKER.PROFILE);
   }
+  if (input.soloNurse && !(input.soloNurse.flagEffective && input.soloNurse.prver04Checked)) {
+    blockers.push(MARKETPLACE_BLOCKER.SOLO_NURSE);
+  }
 
   if (input.ownerPaused) {
     return { blockers, status: ListingStatus.PAUSED, pausedReason: MARKETPLACE_BLOCKER.OWNER };
+  }
+  if (blockers.includes(MARKETPLACE_BLOCKER.SOLO_NURSE)) {
+    // Not listed on Kiorex; the software keeps working for the solo nurse (Q7 default: software only until GKN2).
+    return { blockers, status: ListingStatus.PAUSED, pausedReason: MARKETPLACE_BLOCKER.SOLO_NURSE };
   }
   if (blockers.includes(MARKETPLACE_BLOCKER.BILLING)) {
     return { blockers, status: ListingStatus.PAUSED, pausedReason: MARKETPLACE_BLOCKER.BILLING };

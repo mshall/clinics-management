@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import {
   applyEvent,
   canBook,
@@ -37,10 +37,17 @@ export function districtsFromMarket(market: { clinicalConfig?: unknown } | null 
   return raw == null ? [] : parseDistrictList(raw);
 }
 
+/** Optional override of the default (mock/real by MODE) dispatchers; unbound in production wiring, used by tests. */
+export const FIELD_VISIT_DISPATCHERS = Symbol("FIELD_VISIT_DISPATCHERS");
+
 @Injectable()
 export class FieldVisitService implements FieldVisitPort {
-  /** Safety contact address per tenant is resolved by the caller (home-visit feature); the port takes the dispatchers' view. */
-  constructor(private readonly dispatchers: SafetyAlertDispatcher[] = FieldVisitService.defaultDispatchers()) {}
+  private readonly dispatchers: SafetyAlertDispatcher[];
+
+  /** Per-tenant dispatchers (organisation safety contact) are built per alert via `deliverSafetyAlert(..., to)`; these are the fallback. */
+  constructor(@Optional() @Inject(FIELD_VISIT_DISPATCHERS) dispatchers?: SafetyAlertDispatcher[]) {
+    this.dispatchers = dispatchers ?? FieldVisitService.defaultDispatchers();
+  }
 
   static defaultDispatchers(tenantId: string | null = null, contactAddress = "safety-contact"): SafetyAlertDispatcher[] {
     return [isMock("sms") ? new MockSafetyAlertDispatcher(tenantId, contactAddress) : new UnwiredRealSafetyAlertDispatcher()];
@@ -66,7 +73,8 @@ export class FieldVisitService implements FieldVisitPort {
     return evaluateSafety(visit, state, nowMs);
   }
 
-  deliverSafetyAlert(alert: SafetyAlert, dueAtMs: number): Promise<DeliveryResult> {
-    return deliverSafetyAlert(alert, this.dispatchers, dueAtMs, Date.now);
+  deliverSafetyAlert(alert: SafetyAlert, dueAtMs: number, to?: { tenantId: string | null; contactAddress: string }): Promise<DeliveryResult> {
+    const dispatchers = to ? FieldVisitService.defaultDispatchers(to.tenantId, to.contactAddress) : this.dispatchers;
+    return deliverSafetyAlert(alert, dispatchers, dueAtMs, Date.now);
   }
 }

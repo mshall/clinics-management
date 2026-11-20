@@ -67,7 +67,7 @@ export function answerSafetyPrompt(state: SafetyState, nowMs: number): SafetySta
 }
 
 export type SafetyAlert = {
-  kind: "NO_ANSWER" | "SOS";
+  kind: "NO_ANSWER" | "SOS" | "UNSAFE_ABORT";
   visitId: string;
   raisedAtMs: number;
   contactId: string;

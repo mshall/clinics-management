@@ -34,6 +34,9 @@ const PLAN_RANK: Record<PlanKey, number> = {
   PRO: 1,
   CLINIC: 2,
   ENTERPRISE: 3,
+  NURSE_LITE: 0,
+  NURSE_PRO: 1,
+  NURSE_AGENCY: 2,
 };
 
 export function planTierRank(key: PlanKey): number {

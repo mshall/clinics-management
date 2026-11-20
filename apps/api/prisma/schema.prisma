@@ -480,6 +480,9 @@ model KiorexCommissionRate {
   id                 String             @id @default(cuid())
   marketId           String
   market             Market             @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  /// Rev 2.3 — optional narrowing: a rate may apply to one profession and/or one service location (most specific wins).
+  profession         Profession?
+  serviceLocation    ServiceLocation?
   specialty          ClinicalSpecialty?
   feeType            FeeType            @default(FLAT)
   amount             Decimal?           @db.Decimal(14, 2)
@@ -578,6 +581,10 @@ enum PlanKey {
   PRO
   CLINIC
   ENTERPRISE
+  /// KX-23 §05 Nurse edition plans (prices PROPOSED / NEEDS_HUMAN).
+  NURSE_LITE
+  NURSE_PRO
+  NURSE_AGENCY
 }
 
 enum CreditEntryType {
@@ -1285,6 +1292,17 @@ model Tenant {
   clinicianVerifications             ClinicianVerification[]
   professionalRegistrations          ProfessionalRegistration[]
   physioReferrals                    PhysioReferral[]
+  homeClinicianSettings              ClinicianHomeSettings[]
+  homeVisits                         HomeVisit[]
+  homeVisitGeostamps                 HomeVisitGeostamp[]
+  homeSafetyAlerts                   HomeSafetyAlert[]
+  carePlans                          CarePlan[]
+  visitRecords                       VisitRecord[]
+  vitalsObservations                 VitalsObservation[]
+  doctorOrders                       DoctorOrder[]
+  medicationAdministrations          MedicationAdministration[]
+  shiftBookings                      ShiftBooking[]
+  nurseRosterProfiles                NurseRosterProfile[]
   physioAssessments                  PhysioAssessment[]
   physioPlans                        PhysioTreatmentPlan[]
   marketplaceListings                MarketplaceListing[]
@@ -1297,6 +1315,13 @@ model Tenant {
   kiorlySettlementCarryIn            Decimal?                           @db.Decimal(14, 2)
   /// SB-05: Lite commission unpaid past the market pause window — Kiorex listings paused (Kiorly keeps working).
   kiorexBillingPausedAt              DateTime?
+  /// ADR-031 — CLINIC | NURSE. Changeable only by the Kiorex super admin (KNED04); never changes DB, API or connector.
+  edition                            OrganizationEdition                @default(CLINIC)
+  /// NURSE edition: SOLO (organization of one) | AGENCY (ADR-032). Null for the Clinic edition.
+  nurseTenantKind                    String?
+  /// HVSAF01 — organisation safety contact that receives safety-timer and SOS alerts (BR53).
+  safetyContactName                  String?
+  safetyContactPhone                 String?
   planPriceMigrations                PlanPriceMigration[]
   onboardingProgress                 OnboardingProgress?
   importJobs                         ImportJob[]
@@ -2470,6 +2495,10 @@ model Appointment {
   cancellationReason           String?
   depositRefundable            Boolean?
   rescheduleCount              Int                          @default(0)
+  /// ADR-030 — copied from the appointment type at booking.
+  serviceLocation              ServiceLocation              @default(IN_CLINIC)
+  homeSurchargeAmount          Decimal?                     @db.Decimal(14, 2)
+  homeVisit                    HomeVisit?
   revenueEntries               RevenueEntry[]
   encounters                   Encounter[]
   rescheduleToken              AppointmentRescheduleToken?
@@ -2869,6 +2898,9 @@ model SlotHold {
   externalRef                 String                    @unique
   platformIntegrationClientId String
   platformIntegrationClient   PlatformIntegrationClient @relation(fields: [platformIntegrationClientId], references: [id], onDelete: Cascade)
+  /// HVBK03 — AES-256-GCM ciphertext of the visitAddress JSON carried on the hold (HOME visit types only).
+  visitAddressCiphertext      String?
+  visitDistrict               String?
   expiresAt                   DateTime
   createdAt                   DateTime                  @default(now())
 
@@ -3037,6 +3069,10 @@ model AppointmentType {
   depositAmount       Decimal?                           @db.Decimal(14, 2)
   newPatientOnly      Boolean                            @default(false)
   isActive            Boolean                            @default(true)
+  /// ADR-030 — IN_CLINIC | HOME. HOME types use bufferBeforeMin/bufferAfterMin as travel buffers (default 30/30).
+  serviceLocation     ServiceLocation                    @default(IN_CLINIC)
+  /// HVFEE01 — separate invoice line, included in the fee shown on Kiorex; never enters S or C (BR56).
+  homeSurchargeAmount Decimal?                           @db.Decimal(14, 2)
   appointments        Appointment[]
   series              AppointmentSeries[]
   waitlist            AppointmentWaitlistEntry[]
@@ -4540,4 +4576,348 @@ model PhysioHepLink {
   expiresAt DateTime
   sharedAt  DateTime?
   createdAt DateTime            @default(now())
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Rev 2.3 — home visits (ADR-030, HV*) and the Nurse edition (ADR-031, KN*)
+// ---------------------------------------------------------------------------------------------------------------
+
+enum ServiceLocation {
+  IN_CLINIC
+  HOME
+}
+
+enum OrganizationEdition {
+  CLINIC
+  NURSE
+}
+
+enum HomeVisitState {
+  REQUESTED
+  CONFIRMED
+  ON_MY_WAY
+  ARRIVED
+  FINISHED
+  ABORTED_UNSAFE
+  CANCELLED
+  NO_SHOW
+}
+
+enum HomeSafetyAlertKind {
+  NO_ANSWER
+  SOS
+  UNSAFE_ABORT
+}
+
+/// HVCFG02/03 + HVBK06 — one row per clinician: coverage districts, optional travel cap, daily cap, hours and gender restriction (BR60).
+model ClinicianHomeSettings {
+  id                      String   @id @default(cuid())
+  tenantId                String
+  tenant                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicianId             String
+  acceptsHomeVisits       Boolean  @default(true)
+  coverageDistrictIds     String[] @default([])
+  maxTravelMinutes        Int?
+  startDistrictId         String?
+  dailyVisitCap           Int?
+  /// { "mon": [["09:00","17:00"]], ... } clinic-local time; null = the clinician's normal availability template.
+  homeHoursJson           Json?
+  /// BR60 — clinician-owned: only patients of this gender may book home visits (M | F); null = no restriction.
+  restrictToPatientGender Gender?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@unique([tenantId, clinicianId])
+}
+
+/// HVBK03/HVPRV01 — the home-visit fact for an appointment. The address is AES-256-GCM ciphertext; `districtId` stays in clear (coarse, analytics-safe).
+model HomeVisit {
+  id                 String              @id @default(cuid())
+  tenantId           String
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId           String
+  appointmentId      String              @unique
+  appointment        Appointment         @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  patientId          String
+  clinicianId        String?
+  state              HomeVisitState      @default(REQUESTED)
+  districtId         String
+  addressCiphertext  String?
+  /// Set when the 24 h masking (BR52) job (or a read past the window) wipes the ciphertext.
+  addressMaskedAt    DateTime?
+  addressConfirmedAt DateTime?
+  plannedStartsAt    DateTime
+  plannedEndsAt      DateTime
+  enRouteAt          DateTime?
+  arrivedAt          DateTime?
+  finishedAt         DateTime?
+  endedAt            DateTime?
+  abortReason        String?
+  surchargeAmount    Decimal?            @db.Decimal(14, 2)
+  /// HVSAF01 state machine timestamps (see @kiorly/field-visit SafetyState).
+  safetyPromptSentAt DateTime?
+  safetyAnsweredAt   DateTime?
+  safetyAlertSentAt  DateTime?
+  /// KNAG — who assigned the clinician (dispatcher) and when.
+  assignedById       String?
+  assignedAt         DateTime?
+  geostamps          HomeVisitGeostamp[]
+  alerts             HomeSafetyAlert[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  @@index([tenantId, clinicianId, plannedStartsAt])
+  @@index([tenantId, state])
+  @@index([endedAt, addressMaskedAt])
+}
+
+/// HVEXE01 — coarse (~1 km) stamps per state change; lat/lng wiped after 12 months, district kept (geostamp retention purge).
+model HomeVisitGeostamp {
+  id         String    @id @default(cuid())
+  tenantId   String
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  visitId    String
+  visit      HomeVisit @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  /// Lifecycle state the stamp belongs to (ON_MY_WAY, ARRIVED, FINISHED, ABORTED_UNSAFE, SOS).
+  kind       String
+  lat        Float?
+  lng        Float?
+  districtId String?
+  recordedAt DateTime  @default(now())
+  /// Set when lat/lng were removed by the retention purge.
+  purgedAt   DateTime?
+
+  @@index([tenantId, recordedAt])
+  @@index([visitId])
+  @@index([purgedAt, recordedAt])
+}
+
+/// HVSAF01/02 — a delivered (or failing) safety alert. Contains NO address and NO patient data.
+model HomeSafetyAlert {
+  id              String              @id @default(cuid())
+  tenantId        String
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  visitId         String
+  visit           HomeVisit           @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  kind            HomeSafetyAlertKind
+  raisedAt        DateTime
+  dueAt           DateTime
+  deliveredAt     DateTime?
+  deliveryChannel String?
+  latencyMs       Int?
+  withinSla       Boolean             @default(false)
+  /// DELIVERED | FAILED (on-call paged) | ACKNOWLEDGED | RESOLVED | ESCALATED
+  status          String              @default("PENDING")
+  acknowledgedAt  DateTime?
+  resolvedAt      DateTime?
+  escalatedAt     DateTime?
+  createdAt       DateTime            @default(now())
+
+  @@index([tenantId, status, raisedAt])
+  @@index([visitId])
+}
+
+/// KNAG01/03/04 — roster attributes for agency nurses (and aides, who are never sent alone or listed).
+model NurseRosterProfile {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId          String
+  skills          String[] @default([])
+  languages       String[] @default([])
+  /// KNAG03 — pay per finished visit / per shift hour, agency-owned (never paid by Kiorex Pay).
+  payPerVisit     Decimal? @db.Decimal(14, 2)
+  payPerShiftHour Decimal? @db.Decimal(14, 2)
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([tenantId, userId])
+}
+
+/// KNCP01-03 — care plan = services × frequency × duration; generates recurring home visits through the slot engine.
+model CarePlan {
+  id               String          @id @default(cuid())
+  tenantId         String
+  tenant           Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId         String
+  patientId        String
+  /// Primary assigned nurse (agencies may reassign per visit).
+  nurseId          String?
+  title            String
+  /// ACTIVE | PAUSED | ENDED
+  status           String          @default("ACTIVE")
+  startDate        DateTime        @db.Date
+  /// [{ appointmentTypeId, frequencyPerWeek | everyDays, durationDays, timeOfDay "HH:mm" }]
+  itemsJson        Json
+  visitsTotal      Int             @default(0)
+  visitsDone       Int             @default(0)
+  /// KNCP02 — MN01 package that prices the plan (deposit, instalments or pay-per-visit).
+  servicePackageId String?
+  endedAt          DateTime?
+  dischargeNote    String?
+  /// Kiorex care-plan request this plan answers (P3, idempotent); CARE_PLAN_CONFIRMED / _ENDED are emitted only for plans with a requestRef.
+  requestRef       String?         @unique
+  /// KNCP03 — record shared to the patient's Kiorex vault only by consent.
+  sharedToVaultAt  DateTime?
+  createdById      String?
+  visits           CarePlanVisit[]
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([tenantId, patientId])
+  @@index([tenantId, status])
+}
+
+model CarePlanVisit {
+  id            String   @id @default(cuid())
+  carePlanId    String
+  carePlan      CarePlan @relation(fields: [carePlanId], references: [id], onDelete: Cascade)
+  appointmentId String   @unique
+  sequence      Int
+  createdAt     DateTime @default(now())
+
+  @@index([carePlanId])
+}
+
+/// KNREC01 — nursing visit record: checklist, assessment / intervention / evaluation. Signed and auto-locked like encounters (CL05).
+model VisitRecord {
+  id                 String                     @id @default(cuid())
+  tenantId           String
+  tenant             Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  appointmentId      String                     @unique
+  patientId          String
+  nurseId            String
+  carePlanId         String?
+  /// [{ task, done, note? }]
+  checklistJson      Json                       @default("[]")
+  assessment         String?
+  intervention       String?
+  evaluation         String?
+  freeText           String?
+  /// nurse.mar OFF → medication recorded as free text here (KX-23 §07).
+  medicationFreeText String?
+  /// DRAFT | SIGNED (locked; amendments are versioned elsewhere like encounters)
+  status             String                     @default("DRAFT")
+  signedAt           DateTime?
+  lockedAt           DateTime?
+  vitals             VitalsObservation[]
+  administrations    MedicationAdministration[]
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+
+  @@index([tenantId, patientId])
+  @@index([tenantId, nurseId])
+}
+
+/// KNREC02/KNESC01 — vitals with out-of-range flags (thresholds from the market pack, CMO-signed) and escalation log.
+model VitalsObservation {
+  id               String       @id @default(cuid())
+  tenantId         String
+  tenant           Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patientId        String
+  visitRecordId    String?
+  visitRecord      VisitRecord? @relation(fields: [visitRecordId], references: [id], onDelete: SetNull)
+  recordedById     String
+  recordedAt       DateTime     @default(now())
+  systolic         Int?
+  diastolic        Int?
+  pulse            Int?
+  temperatureC     Decimal?     @db.Decimal(4, 1)
+  spo2             Int?
+  respiratoryRate  Int?
+  glucoseMgDl      Int?
+  painScore        Int?
+  /// { systolic: "HIGH" | "LOW" | "CRITICAL_HIGH" | "CRITICAL_LOW", ... }
+  flagsJson        Json         @default("{}")
+  critical         Boolean      @default(false)
+  /// KNESC01 — action taken after a critical value (CALLED_DOCTOR | CALLED_123 | MONITORING | OTHER) and when.
+  escalationAction String?
+  escalationNote   String?
+  escalatedAt      DateTime?
+
+  @@index([tenantId, patientId, recordedAt])
+}
+
+/// KNMAR02/03 — the doctor's order every administration is recorded against (BR57). Never optional.
+model DoctorOrder {
+  id                 String                     @id @default(cuid())
+  tenantId           String
+  tenant             Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patientId          String
+  /// SHARED_KIORLY (MedicationOrderShared by consent) | PHOTO_UPLOAD (nurse confirms prescriber name and date)
+  source             String
+  prescriberName     String
+  orderedOn          DateTime                   @db.Date
+  expiresOn          DateTime                   @db.Date
+  /// BR35 — controlled medicines need an order marked controlled and a witness; never supplied through Kiorex.
+  controlled         Boolean                    @default(false)
+  /// [{ medicineName, drugProductId?, dose, route, frequency }]
+  linesJson          Json
+  documentKey        String?
+  /// MedicationOrderShared id (idempotent receipt) and its signed order version.
+  externalRef        String?                    @unique
+  orderVersion       String?
+  /// ACTIVE | REVOKED. Expiry is derived from expiresOn and enforced on every administration.
+  status             String                     @default("ACTIVE")
+  confirmedByNurseId String?
+  confirmedAt        DateTime?
+  createdAt          DateTime                   @default(now())
+  administrations    MedicationAdministration[]
+
+  @@index([tenantId, patientId])
+}
+
+/// KNMAR01 — one medication administration. `doctorOrderId` is mandatory: no order, no row (ADR-025 safety control).
+model MedicationAdministration {
+  id              String       @id @default(cuid())
+  tenantId        String
+  tenant          Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patientId       String
+  visitRecordId   String?
+  visitRecord     VisitRecord? @relation(fields: [visitRecordId], references: [id], onDelete: SetNull)
+  doctorOrderId   String
+  doctorOrder     DoctorOrder  @relation(fields: [doctorOrderId], references: [id], onDelete: Restrict)
+  medicineName    String
+  drugProductId   String?
+  dose            String
+  route           String
+  administeredAt  DateTime
+  nurseId         String
+  witnessUserId   String?
+  witnessName     String?
+  /// Result of the allergy + duplicate checks that ran on this entry (never skippable).
+  safetyCheckJson Json         @default("{}")
+  createdAt       DateTime     @default(now())
+
+  @@index([tenantId, patientId, administeredAt])
+  @@index([doctorOrderId])
+}
+
+/// KNSH01 — private-duty shifts (8 / 12 / 24 h) with geostamped check-in/out and a handover note.
+model ShiftBooking {
+  id                String    @id @default(cuid())
+  tenantId          String
+  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patientId         String
+  nurseId           String
+  startsAt          DateTime
+  endsAt            DateTime
+  durationHours     Int
+  /// BOOKED | IN_PROGRESS | COMPLETED | CANCELLED
+  status            String    @default("BOOKED")
+  checkInAt         DateTime?
+  checkInLat        Float?
+  checkInLng        Float?
+  checkOutAt        DateTime?
+  checkOutLat       Float?
+  checkOutLng       Float?
+  handoverNote      String?
+  /// Next nurse who receives the handover.
+  handoverToNurseId String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([tenantId, nurseId, startsAt])
+  @@index([tenantId, patientId])
 }

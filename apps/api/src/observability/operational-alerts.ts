@@ -11,6 +11,7 @@ export const OPERATIONAL_ALERT_IDS = [
   "SIGNUP_FUNNEL_DROP",
   "INTEGRATION_FAILURE_SPIKE",
   "FLAG_SNAPSHOT_STALE",
+  "SAFETY_ALERT_UNDELIVERED",
 ] as const;
 
 export type OperationalAlertId = (typeof OPERATIONAL_ALERT_IDS)[number];
@@ -34,6 +35,7 @@ export const OPERATIONAL_DASHBOARD_IDS = [
   "signup_funnel",
   "integration_failures",
   "flag_snapshot",
+  "safety_alerts",
 ] as const;
 
 export type OperationalDashboardId = (typeof OPERATIONAL_DASHBOARD_IDS)[number];
@@ -111,6 +113,15 @@ export const OPERATIONAL_ALERTS: OperationalAlertDefinition[] = [
     titleAr: "لقطة أعلام الميزات من كيوريكس قديمة (أكثر من 10 دقائق)",
     severity: "warning",
   },
+  {
+    id: "SAFETY_ALERT_UNDELIVERED",
+    auditAction: "SAFETY_ALERT_UNDELIVERED",
+    dashboardId: "safety_alerts",
+    runbookDoc: "SAFETY_ALERT_UNDELIVERED.md",
+    titleEn: "Home-visit safety alert not delivered or not acknowledged in time (KX-09: delivered <= 60 s)",
+    titleAr: "تنبيه سلامة الزيارة المنزلية لم يُسلَّم أو لم يُؤكَّد في الوقت المحدد",
+    severity: "critical",
+  },
 ];
 
 export const OPERATIONAL_DASHBOARDS: OperationalDashboardPanel[] = [
@@ -162,6 +173,13 @@ export const OPERATIONAL_DASHBOARDS: OperationalDashboardPanel[] = [
     titleAr: "حداثة لقطة الأعلام",
     alertIds: ["FLAG_SNAPSHOT_STALE"],
     queryHint: "KiorexFlagSnapshot.fetchedAt age; log `FLAG_SNAPSHOT_STALE`; GET /admin/platform/feature-flags (snapshot.ageSeconds)",
+  },
+  {
+    id: "safety_alerts",
+    titleEn: "Home-visit safety alerts",
+    titleAr: "تنبيهات سلامة الزيارات المنزلية",
+    alertIds: ["SAFETY_ALERT_UNDELIVERED"],
+    queryHint: "HomeSafetyAlert `status IN (FAILED, ESCALATED)`; log events safety_alert.raised / delivered / delivery_failed (infra/tofu/modules/aws/safety-alerts)",
   },
 ];
 

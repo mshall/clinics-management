@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { SlotService } from "../scheduling/slot.service";
@@ -7,6 +7,11 @@ import type { PlatformIntegrationPrincipal } from "./platform-integration-client
 import { DEFAULT_SLOT_HOLD_MINUTES, SLOT_TAKEN_CODE } from "./marketplace-booking.constants";
 import { MarketplaceAccessService } from "./marketplace-access.service";
 import { ACTIVE_APPOINTMENT_STATUSES, addMinutes } from "../common/appointment-scheduling";
+import { encryptVisitAddress } from "../home-visits/address-crypto";
+import { FeatureFlagsService, requireFeature } from "../feature-flags/feature-flags-public";
+import { HomeVisitRuleException } from "../home-visits/home-visit.errors";
+import { HomeVisitService } from "../home-visits/home-visit.service";
+import { parseVisitAddress, VisitAddressError } from "../home-visits/visit-address";
 
 export type CreateSlotHoldInput = {
   clinicId: string;
@@ -15,6 +20,8 @@ export type CreateSlotHoldInput = {
   startsAt: string;
   endsAt?: string;
   externalRef: string;
+  /** KX-09 §03 / HVBK03 — required for HOME visit types, ignored (never stored) for in-clinic types. */
+  visitAddress?: unknown;
 };
 
 @Injectable()
@@ -23,6 +30,8 @@ export class SlotHoldService {
     private readonly prisma: PrismaService,
     private readonly slots: SlotService,
     private readonly access: MarketplaceAccessService,
+    @Optional() private readonly homeVisits?: HomeVisitService,
+    @Optional() private readonly flags?: FeatureFlagsService,
   ) {}
 
   async createHold(client: PlatformIntegrationPrincipal, body: CreateSlotHoldInput) {
@@ -39,6 +48,25 @@ export class SlotHoldService {
     const existingRef = await this.prisma.slotHold.findUnique({ where: { externalRef: ref } });
     if (existingRef && existingRef.expiresAt > new Date()) {
       return this.serializeHold(existingRef);
+    }
+
+    // HVBK03: a HOME visit type needs the patient's address on the hold (stored encrypted; never echoed back, never logged).
+    const holdType = await this.prisma.appointmentType.findFirst({ where: { id: body.typeId, tenantId, clinicId: body.clinicId }, select: { serviceLocation: true } });
+    let visitAddressCiphertext: string | null = null;
+    let visitDistrict: string | null = null;
+    if (holdType?.serviceLocation === "HOME") {
+      if (this.flags) await requireFeature(this.flags, tenantId, "clinic.home_visits"); // new home bookings are launch-locked
+      let address;
+      try {
+        address = parseVisitAddress(body.visitAddress, { requireLine1: true });
+      } catch (e) {
+        if (e instanceof VisitAddressError) throw new HomeVisitRuleException(e.code, e.message);
+        throw e;
+      }
+      if (!this.homeVisits) throw new BadRequestException("Home visits are not available");
+      await this.homeVisits.assertCovered(tenantId, body.clinicianId, address.district); // 422 OUT_OF_COVERAGE
+      visitAddressCiphertext = encryptVisitAddress(address, tenantId);
+      visitDistrict = address.district;
     }
 
     const available = await this.slots.getSlots({
@@ -91,6 +119,8 @@ export class SlotHoldService {
             endsAt: end,
             externalRef: ref,
             platformIntegrationClientId: client.id,
+            visitAddressCiphertext,
+            visitDistrict,
             expiresAt: addMinutes(new Date(), DEFAULT_SLOT_HOLD_MINUTES),
           },
         });
@@ -170,8 +200,11 @@ export class SlotHoldService {
     externalRef: string;
     expiresAt: Date;
     createdAt: Date;
+    visitDistrict?: string | null;
   }) {
     return {
+      // Only the district is ever echoed (KX-09: addresses are carried Kiorex -> Kiorly, not back).
+      ...(hold.visitDistrict ? { serviceLocation: "HOME" as const, district: hold.visitDistrict } : {}),
       id: hold.id,
       clinicId: hold.clinicId,
       clinicianId: hold.clinicianId,

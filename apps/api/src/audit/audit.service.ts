@@ -144,12 +144,16 @@ function pickClinicId(body: unknown, response: unknown): string | null {
   return fromObj(body) ?? fromObj(response);
 }
 
-function safeMetadata(method: string, path: string, body: unknown): Record<string, unknown> | undefined {
+/** Home-visit PHI that must never reach audit metadata (BR52 address masking, geostamp minimisation): addresses, coordinates, live location. */
+export const AUDIT_REDACTED_BODY_KEYS = ["visitAddress", "address", "lat", "lng", "liveLocation", "geostamp"] as const;
+
+export function safeMetadata(method: string, path: string, body: unknown): Record<string, unknown> | undefined {
   const meta: Record<string, unknown> = { method, path };
   if (body && typeof body === "object" && !Array.isArray(body)) {
     const rec = { ...(body as Record<string, unknown>) };
     delete rec.password;
     delete rec.passwordHash;
+    for (const k of AUDIT_REDACTED_BODY_KEYS) delete rec[k];
     if (Object.keys(rec).length > 0) meta.body = rec;
   }
   return meta;
