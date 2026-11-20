@@ -1,5 +1,5 @@
 /**
- * Kiorly by Kiorex — shared layout primitives (vendored per repo; keep in sync with the copy in the other Kiorly apps).
+ * Kiorly Clinic / Lab / Pharmacy by Kiorex — shared layout primitives (vendored per repo; keep in sync with the copy in the other Kiorly apps).
  * Props carry already-translated strings, so this file has no i18n or routing dependency.
  */
 import { useId, useState, type HTMLAttributes, type ReactNode } from "react";
@@ -73,7 +73,7 @@ export function EmptyState({ title, description, action, tone = "empty", classNa
   return (
     <div role={tone === "error" ? "alert" : "status"} className={kcn("flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card/50 px-6 text-center", compact ? "py-8" : "py-14", className)}>
       <div className={kcn("flex items-center gap-3", tone === "offline" && "opacity-60 grayscale")}>
-        <KiorexLogo variant="mark" height={compact ? 36 : 52} title="" />
+        <KiorexLogo variant="mark" product={KIORLY_PRODUCT} height={compact ? 36 : 52} title="" />
       </div>
       <Pulse size={compact ? 14 : 18} />
       <div className="text-base font-semibold">{title}</div>
@@ -123,9 +123,12 @@ export function Stepper({ steps, current, className }: { steps: string[]; curren
   );
 }
 
-/** Kiorly by Kiorex lockup for sidebars/headers (Nurse edition uses the Nurse lockup). Switches to the inverse tone in dark mode. */
+/** The product this app is. The ONLY line that differs between the vendored copies of this file ("clinic" | "lab" | "pharmacy"); it selects the lockup text ("Kiorly Clinic by Kiorex") and accent colour. */
+export const KIORLY_PRODUCT: "clinic" | "lab" | "pharmacy" = "clinic";
+
+/** "Kiorly <Product> by Kiorex" lockup for sidebars/headers (Nurse edition of Clinic uses the Nurse lockup). Switches to the inverse tone in dark mode. */
 export function KiorlyBrand({ nurse, height = 30, className }: { nurse?: boolean; height?: number; className?: string }) {
-  const product = nurse ? "nurse" : "kiorly";
+  const product = nurse ? "nurse" : KIORLY_PRODUCT;
   return (
     <span className={kcn("inline-flex", className)}>
       <KiorexLogo variant="lockup" product={product} tone="color" height={height} className="dark:hidden" />
@@ -133,11 +136,19 @@ export function KiorlyBrand({ nurse, height = 30, className }: { nurse?: boolean
     </span>
   );
 }
-export function KiorlyMark({ size = 28 }: { size?: number }) {
+/** Text version of the lockup (e.g. a login footer on the dark hero): the whole product word is set in the product accent (inverse tint), the rest inherits. */
+const KIORLY_ACCENT_ON_DARK = { clinic: "#2DD4BF", lab: "#A78BFA", pharmacy: "#4ADE80" } as const;
+export function KiorlyFootText({ text, word }: { text: string; word: string }) {
+  const i = word ? text.indexOf(word) : -1;
+  if (i < 0) return <>{text}</>;
+  return <>{text.slice(0, i)}<span style={{ color: KIORLY_ACCENT_ON_DARK[KIORLY_PRODUCT], fontWeight: 600 }}>{word}</span>{text.slice(i + word.length)}</>;
+}
+export function KiorlyMark({ size = 28, nurse }: { size?: number; nurse?: boolean }) {
+  const product = nurse ? "nurse" : KIORLY_PRODUCT;
   return (
     <span className="inline-flex">
-      <KiorexLogo variant="mark" tone="color" height={size} product="kiorly" className="dark:hidden" />
-      <KiorexLogo variant="mark" tone="inverse" height={size} product="kiorly" className="hidden dark:block" />
+      <KiorexLogo variant="mark" tone="color" height={size} product={product} className="dark:hidden" />
+      <KiorexLogo variant="mark" tone="inverse" height={size} product={product} className="hidden dark:block" />
     </span>
   );
 }

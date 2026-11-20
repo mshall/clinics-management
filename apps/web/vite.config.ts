@@ -65,7 +65,7 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["logo.svg", "favicon.svg", "apple-touch-icon.png"],
       manifest: {
-        name: "Kiorly by Kiorex",
+        name: "Kiorly Clinic by Kiorex",
         short_name: "Kiorly",
         description: "Kiorly clinic management — اليوم / Today",
         lang: "en",

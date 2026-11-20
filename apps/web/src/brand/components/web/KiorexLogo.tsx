@@ -1,10 +1,10 @@
 import * as React from "react";
-import { buildScene, PALETTE, PULSE_LENGTH, type Product, type Tone, type Variant } from "../shared/logo-scene";
+import { buildScene, PALETTE, PRODUCT_NAMES, PULSE_LENGTH, type Product, type Tone, type Variant } from "../shared/logo-scene";
 
 export interface KiorexLogoProps extends Omit<React.SVGProps<SVGSVGElement>, "ref" | "height"> {
   variant?: Variant;
   tone?: Tone;
-  /** "kiorex" (default) | "kiorly" (adds "by Kiorex") | "passport" (adds PASSPORT) | "nurse" (Nurse Rose accent) */
+  /** "kiorex" (default) | "clinic" | "lab" | "pharmacy" ("Kiorly <Product> by Kiorex", each with its own accent) | "passport" (adds PASSPORT) | "nurse" (Nurse Rose accent). "kiorly" = deprecated alias of "clinic". */
   product?: Product;
   /** Height in px (or any CSS length); width follows the aspect ratio. Default 32. */
   height?: number | string;
@@ -14,14 +14,13 @@ export interface KiorexLogoProps extends Omit<React.SVGProps<SVGSVGElement>, "re
   title?: string;
 }
 
-const NAMES: Record<Product, string> = { kiorex: "Kiorex", kiorly: "Kiorly by Kiorex", passport: "Kiorex Passport", nurse: "Kiorly Nurse by Kiorex" };
 
 /** The Kiorex brand logo family — built from the founder's artwork geometry; never redrawn. */
 export function KiorexLogo({ variant = "lockup", tone = "color", product = "kiorex", height = 32, animated = false, title, ...rest }: KiorexLogoProps) {
   const scene = React.useMemo(() => buildScene(variant, product), [variant, product]);
   const pal = PALETTE[tone];
   const [x, y, w, h] = scene.viewBox;
-  const label = title ?? (variant === "mark" ? "Kiorex mark" : NAMES[product]);
+  const label = title ?? (variant === "mark" ? "Kiorex mark" : PRODUCT_NAMES[product]);
   const px = typeof height === "number" ? height : undefined;
   return (
     <svg

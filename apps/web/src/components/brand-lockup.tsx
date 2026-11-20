@@ -15,7 +15,7 @@ export function useNurseEditionDom(): boolean {
   return nurse;
 }
 
-/** "Kiorly by Kiorex" lockup (or Kiorly Nurse) with the localised product tagline beneath. */
+/** "Kiorly Clinic by Kiorex" lockup (or Kiorly Nurse) with the localised product tagline beneath. */
 export function BrandLockup({ height = 44, tagline = true }: { height?: number; tagline?: boolean }) {
   const { t } = useTranslation();
   const nurse = useNurseEditionDom();

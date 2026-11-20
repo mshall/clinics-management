@@ -24,7 +24,7 @@ import { useHelpStore } from "@/stores/help-store";
 import { PwaInstallPrompt } from "@/features/pwa/pwa-install-prompt";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { KiorlyMark } from "@/brand/ui-kit";
-import { BrandLockup } from "@/components/brand-lockup";
+import { BrandLockup, useNurseEditionDom } from "@/components/brand-lockup";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { useDensityStore } from "@/stores/density-store";
 import { useA11yAutoFixes } from "@/lib/a11y-autofix";
@@ -38,6 +38,7 @@ export function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const openHelp = useHelpStore((s) => s.setDrawerOpen);
   useA11yAutoFixes();
+  const nurseEdition = useNurseEditionDom();
   const density = useDensityStore((s) => s.density);
   const toggleDensity = useDensityStore((s) => s.toggle);
 
@@ -79,7 +80,7 @@ export function AppShell() {
                 <AppNavLinks onNavigate={() => setMobileOpen(false)} />
               </SheetContent>
             </Sheet>
-            <span className="shrink-0 sm:hidden"><KiorlyMark size={30} /></span>
+            <span className="shrink-0 sm:hidden"><KiorlyMark size={30} nurse={nurseEdition} /></span>
             <span className="hidden min-w-0 overflow-hidden sm:block"><BrandLockup height={24} tagline={false} /></span>
           </div>
           <div className="flex min-w-0 shrink-0 items-center justify-end gap-0.5 sm:gap-1.5">

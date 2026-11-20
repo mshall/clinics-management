@@ -3,7 +3,7 @@
  * Semantic HSL variables for Tailwind/shadcn; scoped to clinical-os-light | clinical-os-dark.
  */
 
-/* Colours for clinical-os-light/dark now come from ../brand/brand-bridge.css (Kiorly by Kiorex). */
+/* Colours for clinical-os-light/dark now come from ../brand/brand-bridge.css (Kiorly Clinic by Kiorex). */
 
 html.theme-clinical-os {
   font-family: var(--kx-font);
