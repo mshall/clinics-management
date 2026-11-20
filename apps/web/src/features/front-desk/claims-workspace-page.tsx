@@ -155,7 +155,7 @@ export function ClaimsWorkspacePage() {
 
   const importRemittance = useMutation({
     mutationFn: () => {
-      let lines: { externalRef: string; amount: number }[] = [];
+      let lines: { externalRef: string; amount: number }[];
       try {
         lines = JSON.parse(remitJson) as { externalRef: string; amount: number }[];
       } catch {
