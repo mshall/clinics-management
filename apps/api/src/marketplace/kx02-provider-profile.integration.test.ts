@@ -208,10 +208,17 @@ describe("KX-02 provider profile", () => {
   });
 
   it("Kiorex can fully resync via paged providers endpoint", async () => {
-    const page1 = await profiles.listProvidersForKiorex({ page: 1, pageSize: 10 });
-    assert.ok(page1.total >= 1);
-    assert.equal(page1.items.length, page1.total);
-    const page2 = await profiles.listProvidersForKiorex({ page: 2, pageSize: 10 });
-    assert.equal(page2.items.length, 0);
+    // Page through everything (the DB may hold more providers than one page, e.g. after the demo seeds).
+    const pageSize = 10;
+    const first = await profiles.listProvidersForKiorex({ page: 1, pageSize });
+    assert.ok(first.total >= 1);
+    const seen = [...first.items];
+    const pages = Math.ceil(first.total / pageSize);
+    for (let page = 2; page <= pages; page++) {
+      seen.push(...(await profiles.listProvidersForKiorex({ page, pageSize })).items);
+    }
+    assert.equal(seen.length, first.total, "every provider is returned exactly once across the pages");
+    const beyond = await profiles.listProvidersForKiorex({ page: pages + 1, pageSize });
+    assert.equal(beyond.items.length, 0);
   });
 });

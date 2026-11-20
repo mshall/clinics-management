@@ -20,7 +20,7 @@ export const crossBorderTransferSchema = z.object({
       for (let i = 0; i < ids.length; i++) {
         if (!SC01_SUB_PROCESSOR_IDS.has(ids[i]!)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: `Unknown sub-processor id: ${ids[i]}`,
             path: [i],
           });
