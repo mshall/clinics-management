@@ -772,7 +772,7 @@ export function OperationsPage() {
     setEditDocInvalidRowIds(new Set());
     editValidation.clear();
     setEditFormErr(null);
-    editMut.mutate();
+    editMut.mutate({});
   };
 
   const handleEditCompleteClick = () => {
@@ -791,7 +791,7 @@ export function OperationsPage() {
   const handleConfirmEditComplete = () => {
     setEditCompleteConfirmOpen(false);
     setPendingCompleteAfterSave(true);
-    editMut.mutate();
+    editMut.mutate({});
   };
 
   const operationSummaryDetails = (o: OperationDto, currency: string) => (
@@ -937,7 +937,7 @@ export function OperationsPage() {
     }
     setFormErr(null);
     setDocInvalidRowIds(new Set());
-    createMut.mutate();
+    createMut.mutate({});
   };
 
   const loc = localeForLanguage(i18n.language);
