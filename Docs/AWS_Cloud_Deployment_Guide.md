@@ -53,7 +53,7 @@ Source: `infra/src/kiorly-clinics-management-stack.ts`.
 ## 3. Prerequisites
 
 - AWS account; **OIDC** trust for GitHub Actions (see `.github/workflows/deploy-aws.yml` header comments).
-- **Node.js 20+**, **npm**, **Docker** (CDK builds API/seed images).
+- **Node.js 26 (Active LTS)**, **npm**, **Docker** (CDK builds API/seed images).
 - One-time: `npx cdk bootstrap aws://ACCOUNT_ID/eu-central-1` from `infra/`.
 - GitHub secret **`AWS_DEPLOY_ROLE_ARN`** with permission to deploy the stack and invoke DbSeedFn.
 
@@ -199,7 +199,7 @@ VITE_API_URL="https://YOUR_APP_URL" npm run build
 - Does **not** wipe existing data or reset passwords on existing accounts.
 - Ensures demo orgs, users, clinics, patients when missing.
 - Documented accounts: [`Test_Data_Users.md`](./Test_Data_Users.md).
-- **Lambda image:** `apps/api/Dockerfile.seed` (Node 22 Lambda base). Handler: `infra/lambda/db-seed/run.mjs` → `prisma migrate deploy`, enum repair, `tsx prisma/seed.ts`.
+- **Lambda image:** `apps/api/Dockerfile.seed` (Node 24 Lambda base). Handler: `infra/lambda/db-seed/run.mjs` → `prisma migrate deploy`, enum repair, `tsx prisma/seed.ts`.
 - **Bundling:** any `prisma/*.ts` import of `../src/…` must have a matching **`COPY`** in `Dockerfile.seed` (enforced by `dockerfile-seed-src-coverage.node.test.ts`). Current copies include at least: `src/entitlements`, `src/subscriptions`, `src/feature-flags/feature-flag-keys.ts`, `src/common/seed-demo-guard.ts`, `src/staging`.
 
 Re-invoke manually:

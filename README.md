@@ -7,11 +7,13 @@
 **The clinic management platform of the Kiorly suite, built Arabic-first.**
 Multi-clinic tenants, front desk and queues, encounters and prescriptions, HR, billing and reports, **home visits**, and the **Nurse edition** for home nursing and agencies. It works on its own; with Kiorex switched on it is also the only system of record for marketplace appointments.
 
-![NestJS](https://img.shields.io/badge/NestJS-10-0D9488?logo=nestjs&logoColor=white)
-![Prisma](https://img.shields.io/badge/Prisma-6-3730A3?logo=prisma&logoColor=white)
+![NestJS](https://img.shields.io/badge/NestJS-12-0D9488?logo=nestjs&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-7-3730A3?logo=prisma&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%2B-0369A1?logo=postgresql&logoColor=white)
-![React](https://img.shields.io/badge/React-18%20%2B%20Vite-0D9488?logo=react&logoColor=white)
-![Node](https://img.shields.io/badge/node-%3E%3D20-3730A3?logo=node.js&logoColor=white)
+![React](https://img.shields.io/badge/React-19%20%2B%20Vite%208-0D9488?logo=react&logoColor=white)
+![Node](https://img.shields.io/badge/node-26%20LTS-3730A3?logo=node.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-6.0-0369A1?logo=typescript&logoColor=white)
+![Tailwind](https://img.shields.io/badge/Tailwind-4-0D9488?logo=tailwindcss&logoColor=white)
 ![Languages](https://img.shields.io/badge/Arabic--first-AR%20%7C%20EN%20%7C%20RTL-0369A1)
 ![Edition](https://img.shields.io/badge/edition-Clinic%20%2B%20Nurse-E11D48)
 ![Unit tests](https://img.shields.io/badge/unit%20tests-795%20passing-0D9488)
@@ -38,8 +40,8 @@ Kiorly Clinic is a full-stack **clinic management system** for healthcare groups
 | | |
 |---|---|
 | **Product** | Kiorly Clinic by Kiorex (accent Clinic Teal `#0D9488`), with the **Nurse edition** (accent Nurse Rose `#E11D48`) in the same app |
-| **API** | NestJS 10 + Prisma 6 + PostgreSQL, **modular monolith**, `:3010`, prefix `/api/v1`, Swagger `/docs`; 190 Prisma models, 85 enums, 179 migrations |
-| **Web** | React 18 + Vite + TanStack Query + React Router + Tailwind + shadcn-style primitives, `:5174`; docs portal `:5175` |
+| **API** | NestJS 12 + Prisma 7 (driver adapter) + PostgreSQL, **modular monolith**, `:3010`, prefix `/api/v1`, Swagger `/docs`; 190 Prisma models, 85 enums, 179 migrations |
+| **Web** | React 19 + Vite 8 + TanStack Query 5 + React Router 7 + Tailwind 4 + shadcn-style primitives (Radix), `:5174`; docs portal `:5175` |
 | **Languages** | **Arabic and English**, full RTL, Jost and IBM Plex Sans Arabic, light, dark and a compact density mode |
 | **Roles** | 13 user roles (group admin, branch manager, physician, nurse, receptionist, finance, HR, call centre ...) plus professions Physician, Dentist, Physiotherapist, Nurse, Assistant |
 | **Editions and plans** | Edition `CLINIC` or `NURSE`; plans Lite, Pro, Clinic, Enterprise and Nurse Lite, Pro, Agency (see [Plans](#plans-and-entitlements)) |
@@ -344,7 +346,7 @@ Captured from the running app with synthetic data (English, light theme first, t
 
 ## Quick start
 
-Prerequisites: Node 20+, npm 9+, PostgreSQL (the workspace cluster on `:5433`, or Docker Compose on `:5432`; see [full local setup](#local-setup) below).
+Prerequisites: Node 26 (Active LTS, see `.nvmrc`), npm 11+, PostgreSQL (the workspace cluster on `:5433`, or Docker Compose on `:5432`; see [full local setup](#local-setup) below).
 
 ```bash
 npm install
@@ -383,6 +385,22 @@ npm run typecheck && npm run lint
 | Perf | load smoke, slot load, Lighthouse budget | `scripts/` |
 
 Merge is by pull request with the **CI test** check required (`bash scripts/apply-github-branch-protection.sh`).
+
+### Toolchain and dependency versions
+
+Refreshed 20 Nov 2026 (see [Docs/UPGRADE_NOTES.md](Docs/UPGRADE_NOTES.md) for the migration log, pins and what unblocks them).
+
+| Area | Version | Notes |
+|---|---|---|
+| Node.js / npm | **26 LTS** / 11 | `.nvmrc`, `engines`, Dockerfiles (`node:26-bookworm-slim`), CI `setup-node`; Lambda images and runtime stay on `nodejs24.x` (26 is still preview on Lambda) |
+| TypeScript | **6.0** | 7 (native) blocked by typescript-eslint, openapi-typescript and the Nest CLI |
+| NestJS | **12** (+ config, jwt, passport, swagger, CLI) | Express 5 |
+| Prisma | **7** + `@prisma/adapter-pg` | `createPrismaClient()` factory in `apps/api/src/prisma` |
+| Validation / auth libs | zod 4, class-validator 0.15, jose 6, openid-client 6, bcryptjs 3 | |
+| React / Vite | **19** / **8** (Rolldown) | plugin-react 6, PWA plugin 2 |
+| Tailwind / UI | **4**, tailwind-merge 3, Radix, lucide 1, Recharts 3, i18next 27 | |
+| Test and lint | Playwright 1.65, ESLint 10, typescript-eslint 8.73, fast-check 4, Node test runner | |
+| Infra | aws-cdk-lib 2.277, OpenTofu AWS provider `~> 6.0`, GitHub Actions on current majors | Postgres stays 16 (RDS) |
 
 ## Folder map
 
@@ -456,6 +474,7 @@ Minimal local set; the full commented list is in [`apps/api/.env.example`](apps/
 | [Docs/MOBILE.md](Docs/MOBILE.md) | Backend contract for the Kiorly mobile app (design in progress) |
 | [Docs/NURSE_EDITION.md](Docs/NURSE_EDITION.md) · [Docs/HOME_VISITS.md](Docs/HOME_VISITS.md) · [Docs/PROFESSIONS_AND_SCOPE.md](Docs/PROFESSIONS_AND_SCOPE.md) | Rev 2.3 features |
 | [Docs/KIOREX_CONNECTOR.md](Docs/KIOREX_CONNECTOR.md) | Everything about the Kiorex link |
+| [Docs/UPGRADE_NOTES.md](Docs/UPGRADE_NOTES.md) | Toolchain and dependency upgrade log, overrides, pins |
 | [Docs/FEATURE_FLAGS.md](Docs/FEATURE_FLAGS.md) | Layered flags, safety list |
 | [Docs/PLANS_AND_ENTITLEMENTS.md](Docs/PLANS_AND_ENTITLEMENTS.md) | Entitlement matrix |
 | [Docs/MODULAR_MONOLITH.md](Docs/MODULAR_MONOLITH.md) | Bounded contexts and import rules |
@@ -610,9 +629,9 @@ Typical flows:
 
 | Layer | Technology |
 |--------|------------|
-| API | NestJS 10, Prisma 6, PostgreSQL (**modular monolith** — bounded contexts as Nest modules) |
+| API | NestJS 12, Prisma 7, PostgreSQL (**modular monolith** — bounded contexts as Nest modules) |
 | Auth | Passport JWT, `bcryptjs` |
-| Web | React 18, Vite, TanStack Query, React Router, Tailwind, shadcn-style UI primitives |
+| Web | React 19, Vite 8, TanStack Query, React Router 7, Tailwind 4, shadcn-style UI primitives |
 | Monorepo | npm workspaces (`apps/api`, `apps/web`) |
 
 See **[Docs/MODULAR_MONOLITH.md](./Docs/MODULAR_MONOLITH.md)** for bounded contexts, import rules, and microservice extraction. CI runs all `src/**/*.node.test.ts` via `npm run test:unit -w api` (glob — add a `*.node.test.ts` file and it is picked up automatically). Merge via PR with **CI test / CI test** required (`bash scripts/apply-github-branch-protection.sh` — needs `gh` + admin; enforces for admins too).
@@ -623,8 +642,8 @@ See **[Docs/MODULAR_MONOLITH.md](./Docs/MODULAR_MONOLITH.md)** for bounded conte
 
 ## Prerequisites
 
-- **Node.js** 20+ (LTS recommended)
-- **npm** 9+
+- **Node.js** 26 (Active LTS; `.nvmrc`); `engines` allows 24 LTS and newer (the Lambda seed image runs 24)
+- **npm** 11+
 - **Docker** and Docker Compose (for local PostgreSQL / Redis)
 
 ---
