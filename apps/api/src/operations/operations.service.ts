@@ -36,6 +36,10 @@ import {
   operationSummaryFinancialsVisibleForViewer,
 } from "../common/user-money-visibility";
 import { assertCanCompleteOperation } from "./operation-complete-roles";
+import {
+  assertOperationContractCost,
+  isZeroCostAllowedForComplete,
+} from "./operation-contract-cost";
 import { assertDownPaymentBeforeInProgress } from "./operation-status-money";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
 import type { AddOperationMedicationDto, OperationDocumentDto, OperationMedicationDto } from "./dto/operation-clinical.dto";
@@ -250,6 +254,8 @@ export class OperationsService {
       paidAmount: financialsVisible ? paidAmount : 0,
       balanceDue: financialsVisible ? balanceDue : 0,
       feeCurrency: row.feeCurrency,
+      isContract: row.isContract,
+      acquisitionChannel: row.acquisitionChannel ?? null,
       comments: row.comments,
       status: row.status,
       createdAt: row.createdAt.toISOString(),
@@ -345,6 +351,7 @@ export class OperationsService {
     clinicIdStr?: string,
     statusStr?: string,
     patientIdStr?: string,
+    isContractStr?: string,
   ) {
     const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
     if (scopeIds !== null && !scopeIds.length) {
@@ -379,6 +386,18 @@ export class OperationsService {
       and.push({ patientId });
     }
 
+    const contractFilter = isContractStr?.trim().toLowerCase();
+    if (contractFilter === "true" || contractFilter === "1" || contractFilter === "contract") {
+      and.push({ isContract: true });
+    } else if (
+      contractFilter === "false" ||
+      contractFilter === "0" ||
+      contractFilter === "standard" ||
+      contractFilter === "non_contract"
+    ) {
+      and.push({ isContract: false });
+    }
+
     const clinicId = clinicIdStr?.trim();
     if (scopeIds !== null) {
       if (clinicId) {
@@ -406,7 +425,14 @@ export class OperationsService {
     return paginate(rows.map((r) => this.mapRow(r, user, moneyVis)), total, page, pageSize);
   }
 
-  async summary(tenantId: string, user: JwtUser, fromStr?: string, toStr?: string, clinicIdStr?: string) {
+  async summary(
+    tenantId: string,
+    user: JwtUser,
+    fromStr?: string,
+    toStr?: string,
+    clinicIdStr?: string,
+    isContractStr?: string,
+  ) {
     const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
     if (scopeIds !== null && !scopeIds.length) {
       return {
@@ -440,6 +466,17 @@ export class OperationsService {
     and.push({ operationDate: { gte: start, lte: end } });
     if (hasRole(user, UserRole.PHYSICIAN)) {
       and.push({ clinicianId: user.userId });
+    }
+    const contractFilter = isContractStr?.trim().toLowerCase();
+    if (contractFilter === "true" || contractFilter === "1" || contractFilter === "contract") {
+      and.push({ isContract: true });
+    } else if (
+      contractFilter === "false" ||
+      contractFilter === "0" ||
+      contractFilter === "standard" ||
+      contractFilter === "non_contract"
+    ) {
+      and.push({ isContract: false });
     }
     const clinicId = clinicIdStr?.trim();
     if (scopeIds !== null) {
@@ -475,6 +512,7 @@ export class OperationsService {
           totalCost: true,
           paidAmount: true,
           feeCurrency: true,
+          isContract: true,
           clinicId: true,
           clinic: { select: { nameEn: true, nameAr: true } },
           patient: { select: { mrn: true, firstNameEn: true, lastNameEn: true } },
@@ -528,6 +566,7 @@ export class OperationsService {
       paidAmount: hideMoney ? 0 : Number(r.paidAmount),
       totalCost: hideMoney ? 0 : Number(r.totalCost),
       feeCurrency: r.feeCurrency,
+      isContract: r.isContract,
     }));
 
     if (hideMoney) {
@@ -544,11 +583,14 @@ export class OperationsService {
 
   async create(tenantId: string, dto: CreateOperationDto, user: JwtUser): Promise<OperationDto> {
     const moneyVis = await this.moneyOverrides(tenantId, user);
-    if (!canEditOperationFeesForViewer(user, moneyVis)) {
+    const feesDeferred = !canEditOperationFeesForViewer(user, moneyVis);
+    if (feesDeferred) {
       dto = { ...dto, totalCost: 0, downPayment: 0 };
     }
     const totalCost = dto.totalCost ?? 0;
     const downPayment = dto.downPayment ?? 0;
+    const isContract = Boolean(dto.isContract);
+    assertOperationContractCost({ totalCost, isContract, feesDeferred });
     if (downPayment > totalCost) {
       throw new BadRequestException("Down payment cannot exceed total cost");
     }
@@ -614,6 +656,8 @@ export class OperationsService {
           downPayment,
           paidAmount: downPayment,
           feeCurrency,
+          isContract,
+          acquisitionChannel: dto.acquisitionChannel,
           comments: dto.comments?.trim() || null,
           status: OperationStatus.BOOKED,
           noMedications: dto.noMedications ?? false,
@@ -719,7 +763,10 @@ export class OperationsService {
 
     if (
       !canEditOperationFeesForViewer(viewer, moneyVis) &&
-      (dto.totalCost !== undefined || dto.downPayment !== undefined || dto.feeCurrency !== undefined)
+      (dto.totalCost !== undefined ||
+        dto.downPayment !== undefined ||
+        dto.feeCurrency !== undefined ||
+        dto.isContract !== undefined)
     ) {
       throw new ForbiddenException("You do not have permission to edit operation fees");
     }
@@ -737,6 +784,8 @@ export class OperationsService {
 
     const totalCost = dto.totalCost ?? Number(existing.totalCost);
     const downPayment = dto.downPayment ?? Number(existing.downPayment);
+    const isContract = dto.isContract ?? existing.isContract;
+    assertOperationContractCost({ totalCost, isContract });
     if (downPayment > totalCost) {
       throw new BadRequestException("Down payment cannot exceed total cost");
     }
@@ -776,6 +825,7 @@ export class OperationsService {
           downPayment,
           paidAmount,
           feeCurrency,
+          isContract,
           ...(dto.noMedications !== undefined ? { noMedications: dto.noMedications } : {}),
         },
         include: operationInclude,
@@ -875,7 +925,9 @@ export class OperationsService {
   ): Promise<OperationDto> {
     const totalCost = dto.totalCost ?? Number(existing.totalCost);
     const downPayment = dto.downPayment ?? Number(existing.downPayment);
-    if (totalCost <= 0) {
+    const isContract = dto.isContract ?? existing.isContract;
+    assertOperationContractCost({ totalCost, isContract });
+    if (totalCost <= 0 && !isZeroCostAllowedForComplete(totalCost, isContract)) {
       throw new BadRequestException("Operation total cost must be greater than zero");
     }
     if (downPayment > totalCost) {
@@ -895,13 +947,15 @@ export class OperationsService {
     const description = this.operationRevenueDescription(patientName, clinicianName);
 
     const row = await this.prisma.$transaction(async (tx) => {
-      await syncPostedOperationContractRevenue(tx, tenantId, id, {
-        clinicId: fields.clinicId,
-        description,
-        grossAmount: totalCost,
-        netAmount: totalCost,
-        currency: feeCurrency,
-      });
+      if (totalCost > 0) {
+        await syncPostedOperationContractRevenue(tx, tenantId, id, {
+          clinicId: fields.clinicId,
+          description,
+          grossAmount: totalCost,
+          netAmount: totalCost,
+          currency: feeCurrency,
+        });
+      }
       return tx.operation.update({
         where: { id },
         data: {
@@ -910,6 +964,7 @@ export class OperationsService {
           downPayment,
           paidAmount: totalCost,
           feeCurrency,
+          isContract,
         },
         include: operationInclude,
       });
@@ -953,7 +1008,7 @@ export class OperationsService {
       const total = Number(existing.totalCost);
       const paid = Number(existing.paidAmount);
       const remaining = Math.max(0, total - paid);
-      if (total <= 0) {
+      if (total <= 0 && !isZeroCostAllowedForComplete(total, existing.isContract)) {
         throw new BadRequestException("Operation total cost must be greater than zero to complete");
       }
 
@@ -1169,6 +1224,8 @@ export class OperationsService {
 
     const totalCost = dto.totalCost ?? 0;
     const downPayment = dto.downPayment ?? 0;
+    const isContract = Boolean(dto.isContract);
+    assertOperationContractCost({ totalCost, isContract });
     if (downPayment > totalCost) {
       throw new BadRequestException("Down payment cannot exceed total cost");
     }
@@ -1216,6 +1273,8 @@ export class OperationsService {
           downPayment,
           paidAmount: downPayment,
           feeCurrency,
+          isContract,
+          acquisitionChannel: dto.acquisitionChannel,
           comments: dto.comments?.trim() || null,
           status: OperationStatus.BOOKED,
           noMedications: dto.noMedications ?? false,

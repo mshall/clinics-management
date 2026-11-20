@@ -259,6 +259,7 @@ export class ReportsService {
       visitGrouped,
       patientGrouped,
       operationGrouped,
+      contractOperationGrouped,
     ] = await Promise.all([
       this.prisma.revenueEntry.groupBy({
         by: ["clinicId", "currency"],
@@ -322,6 +323,18 @@ export class ReportsService {
           ...(scopeClinicIds?.length ? { clinicId: { in: scopeClinicIds } } : {}),
         },
         _count: { _all: true },
+        _sum: { paidAmount: true, totalCost: true },
+      }),
+      this.prisma.operation.groupBy({
+        by: ["clinicId"],
+        where: {
+          tenantId,
+          isContract: true,
+          status: { in: [OperationStatus.COMPLETED, OperationStatus.DISCHARGED] },
+          operationDate: { gte: start, lte: end },
+          ...(scopeClinicIds?.length ? { clinicId: { in: scopeClinicIds } } : {}),
+        },
+        _count: { _all: true },
       }),
     ]);
 
@@ -374,6 +387,18 @@ export class ReportsService {
 
     const visitsByClinic = new Map(visitGrouped.map((row) => [row.clinicId, row._count._all]));
     const operationsByClinic = new Map(operationGrouped.map((row) => [row.clinicId, row._count._all]));
+    const contractOpsByClinic = new Map(
+      contractOperationGrouped.map((row) => [row.clinicId, row._count._all]),
+    );
+    const operationMoneyByClinic = new Map(
+      operationGrouped.map((row) => [
+        row.clinicId,
+        {
+          paidTotal: Number(row._sum.paidAmount ?? 0),
+          totalCost: Number(row._sum.totalCost ?? 0),
+        },
+      ]),
+    );
     const patientsByClinic = new Map(
       patientGrouped.filter((row) => row.homeBranchId).map((row) => [row.homeBranchId!, row._count._all]),
     );
@@ -394,6 +419,7 @@ export class ReportsService {
         otherRevMap.get(clinic.id) ?? new Map(),
         otherBreakdownMap.get(clinic.id) ?? new Map(),
       );
+      const opMoney = operationMoneyByClinic.get(clinic.id);
       return {
         clinicId: clinic.id,
         clinicNameEn: clinic.nameEn,
@@ -401,6 +427,9 @@ export class ReportsService {
         defaultCurrency: clinic.defaultCurrency,
         visits: visitsByClinic.get(clinic.id) ?? 0,
         operationCount: operationsByClinic.get(clinic.id) ?? 0,
+        contractOperationCount: contractOpsByClinic.get(clinic.id) ?? 0,
+        operationPaidTotal: opMoney?.paidTotal ?? 0,
+        operationTotalCost: opMoney?.totalCost ?? 0,
         newPatients: patientsByClinic.get(clinic.id) ?? 0,
         byCurrency,
       };
@@ -539,6 +568,122 @@ export class ReportsService {
       baseCurrency: tenant?.baseCurrency ?? "AED",
       currencies,
       items: buckets,
+    };
+  }
+
+  /**
+   * Operations money by acquisition channel (how they found us), with optional contract filter.
+   */
+  async operationAcquisitionRevenue(
+    tenantId: string,
+    fromStr?: string,
+    toStr?: string,
+    clinicIdStr?: string,
+    isContractStr?: string,
+    viewer?: JwtUser,
+  ) {
+    const { start, end } = resolveReportingRange(fromStr, toStr);
+    const clinicId = clinicIdStr?.trim() || null;
+    const scopeClinicIds = await this.resolveScopeClinicIds(tenantId, viewer);
+    if (clinicId) this.assertClinicInScope(clinicId, scopeClinicIds);
+
+    const and: Prisma.OperationWhereInput[] = [
+      { tenantId },
+      { operationDate: { gte: start, lte: end } },
+      { status: { not: OperationStatus.CANCELLED } },
+    ];
+    if (clinicId) and.push({ clinicId });
+    else if (scopeClinicIds?.length) and.push({ clinicId: { in: scopeClinicIds } });
+    if (viewer && hasRole(viewer, UserRole.PHYSICIAN)) {
+      and.push({ clinicianId: viewer.userId });
+    }
+
+    const contractFilter = isContractStr?.trim().toLowerCase();
+    if (contractFilter === "true" || contractFilter === "1" || contractFilter === "contract") {
+      and.push({ isContract: true });
+    } else if (
+      contractFilter === "false" ||
+      contractFilter === "0" ||
+      contractFilter === "standard" ||
+      contractFilter === "non_contract"
+    ) {
+      and.push({ isContract: false });
+    }
+
+    const rows = await this.prisma.operation.findMany({
+      where: { AND: and },
+      select: {
+        acquisitionChannel: true,
+        isContract: true,
+        feeCurrency: true,
+        totalCost: true,
+        paidAmount: true,
+      },
+    });
+
+    type MoneyBucket = { currency: string; totalCost: number; paidAmount: number };
+    type ChannelAgg = {
+      channel: string;
+      operationCount: number;
+      contractCount: number;
+      byCurrency: Map<string, MoneyBucket>;
+    };
+
+    const byChannel = new Map<string, ChannelAgg>();
+    for (const row of rows) {
+      const channel = row.acquisitionChannel ?? "UNKNOWN";
+      let agg = byChannel.get(channel);
+      if (!agg) {
+        agg = { channel, operationCount: 0, contractCount: 0, byCurrency: new Map() };
+        byChannel.set(channel, agg);
+      }
+      agg.operationCount += 1;
+      if (row.isContract) agg.contractCount += 1;
+      const cur = row.feeCurrency || "EGP";
+      const money = agg.byCurrency.get(cur) ?? { currency: cur, totalCost: 0, paidAmount: 0 };
+      money.totalCost += Number(row.totalCost);
+      money.paidAmount += Number(row.paidAmount);
+      agg.byCurrency.set(cur, money);
+    }
+
+    const channels = [...Object.values(PatientAcquisitionChannel), "UNKNOWN"] as const;
+    const items = channels
+      .map((channel) => {
+        const agg = byChannel.get(channel);
+        if (!agg) return null;
+        return {
+          channel,
+          operationCount: agg.operationCount,
+          contractCount: agg.contractCount,
+          byCurrency: [...agg.byCurrency.values()].sort((a, b) => a.currency.localeCompare(b.currency)),
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => row != null)
+      .sort((a, b) => b.operationCount - a.operationCount);
+
+    const totalOperations = rows.length;
+    const totalContract = rows.filter((r) => r.isContract).length;
+
+    return {
+      period: {
+        from: formatLocalYmd(start),
+        to: formatLocalYmd(end),
+        start: start.toISOString(),
+        end: end.toISOString(),
+      },
+      clinicId,
+      isContractFilter:
+        contractFilter === "true" || contractFilter === "1" || contractFilter === "contract"
+          ? true
+          : contractFilter === "false" ||
+              contractFilter === "0" ||
+              contractFilter === "standard" ||
+              contractFilter === "non_contract"
+            ? false
+            : null,
+      totalOperations,
+      totalContract,
+      items,
     };
   }
 

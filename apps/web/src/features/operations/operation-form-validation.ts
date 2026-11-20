@@ -39,6 +39,8 @@ export type OperationCreateValidationInput = {
   downPayment: string;
   /** When true, total cost may be omitted (e.g. call center booking). */
   feesOptional?: boolean;
+  /** Contract / تعاقد — required when fee editors set total to 0. */
+  isContract?: boolean;
   docRows: PendingDocumentRow[];
   medTab: MedTab;
   prescriptionFile: File | null;
@@ -48,6 +50,20 @@ export type OperationCreateValidationInput = {
   /** When false, skip acquisition (e.g. scheduled operation edit). */
   requireAcquisition?: boolean;
 };
+
+/** True when fee editors entered 0 (or blank parsed as 0) without the contract flag. */
+export function isZeroCostWithoutContract(input: {
+  totalCost: string;
+  isContract?: boolean;
+  feesOptional?: boolean;
+}): boolean {
+  if (input.feesOptional) return false;
+  if (input.isContract) return false;
+  const raw = input.totalCost.trim();
+  if (!raw) return false;
+  const total = Number.parseFloat(raw);
+  return !Number.isNaN(total) && total === 0;
+}
 
 export type OperationCreateValidationResult = {
   issues: string[];
@@ -84,6 +100,13 @@ export function collectOperationCreateValidationIssues(
         issues.push(t("operations.errorTotalInvalid", "Enter a valid total cost amount."));
       } else if (total < 0) {
         issues.push(t("operations.errorTotalNegative", "Total cost cannot be negative."));
+      } else if (total === 0 && !input.isContract) {
+        issues.push(
+          t(
+            "operations.errorContractRequiredForZero",
+            "Total cost cannot be zero unless you mark this as a contract (تعاقد).",
+          ),
+        );
       }
     }
   } else if (input.totalCost.trim()) {

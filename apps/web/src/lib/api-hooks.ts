@@ -31,6 +31,7 @@ import type {
   ReportsPerformanceDto,
   ReportsPatientAcquisitionDto,
   ReportsPatientAcquisitionPatientDto,
+  ReportsOperationAcquisitionDto,
   TenantListItemDto,
   UserListItemDto,
 } from "@/lib/api-types";
@@ -460,6 +461,8 @@ export interface OperationsListParams {
   clinicId?: string;
   patientId?: string;
   status?: string;
+  /** "true" | "false" | "contract" | "standard" */
+  isContract?: string;
   page?: number;
   pageSize?: number;
   sortBy?: string;
@@ -481,6 +484,7 @@ export function useOperationsQuery(params: OperationsListParams) {
   if (listParams.clinicId?.trim()) q.set("clinicId", listParams.clinicId.trim());
   if (listParams.patientId?.trim()) q.set("patientId", listParams.patientId.trim());
   if (listParams.status?.trim()) q.set("status", listParams.status.trim());
+  if (listParams.isContract?.trim()) q.set("isContract", listParams.isContract.trim());
   if (listParams.sortBy) q.set("sortBy", listParams.sortBy);
   if (listParams.sortOrder) q.set("sortOrder", listParams.sortOrder);
   return useQuery({
@@ -491,6 +495,7 @@ export function useOperationsQuery(params: OperationsListParams) {
       listParams.clinicId ?? "",
       listParams.patientId ?? "",
       listParams.status ?? "",
+      listParams.isContract ?? "",
       listParams.page ?? 1,
       listParams.pageSize ?? 10,
       listParams.sortBy,
@@ -510,13 +515,26 @@ export function useOperationQuery(id: string | undefined) {
   });
 }
 
-export function useOperationsSummaryQuery(params: { from: string; to: string; clinicId?: string }) {
+export function useOperationsSummaryQuery(params: {
+  from: string;
+  to: string;
+  clinicId?: string;
+  isContract?: string;
+}) {
   const q = new URLSearchParams();
   q.set("from", params.from);
   q.set("to", params.to);
   if (params.clinicId?.trim()) q.set("clinicId", params.clinicId.trim());
+  if (params.isContract?.trim()) q.set("isContract", params.isContract.trim());
   return useQuery({
-    queryKey: ["operations", "summary", params.from, params.to, params.clinicId ?? ""],
+    queryKey: [
+      "operations",
+      "summary",
+      params.from,
+      params.to,
+      params.clinicId ?? "",
+      params.isContract ?? "",
+    ],
     queryFn: () => apiGet<OperationSummaryDto>(`/api/v1/operations/summary?${q.toString()}`),
     staleTime: QUERY_STALE.list,
   });
@@ -1010,6 +1028,34 @@ export function useReportsPatientAcquisitionQuery(from: string, to: string) {
   return useQuery({
     queryKey: ["reports", "patient-acquisition", range.from, range.to, viewerId],
     queryFn: () => apiGet<ReportsPatientAcquisitionDto>(`/api/v1/reports/patient-acquisition?${q.toString()}`),
+  });
+}
+
+export function useReportsOperationAcquisitionQuery(params: {
+  from: string;
+  to: string;
+  clinicId?: string;
+  isContract?: string;
+  enabled?: boolean;
+}) {
+  const viewerId = useAuthStore((s) => s.user?.id ?? "");
+  const range = sanitizeReportingRange(params.from, params.to);
+  const q = new URLSearchParams({ from: range.from, to: range.to });
+  if (params.clinicId?.trim()) q.set("clinicId", params.clinicId.trim());
+  if (params.isContract?.trim()) q.set("isContract", params.isContract.trim());
+  return useQuery({
+    queryKey: [
+      "reports",
+      "operation-acquisition",
+      range.from,
+      range.to,
+      params.clinicId ?? "",
+      params.isContract ?? "",
+      viewerId,
+    ],
+    enabled: params.enabled !== false,
+    queryFn: () =>
+      apiGet<ReportsOperationAcquisitionDto>(`/api/v1/reports/operation-acquisition?${q.toString()}`),
   });
 }
 

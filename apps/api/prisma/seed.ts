@@ -1,6 +1,7 @@
 import {
   AppointmentStatus,
   AttendanceStatus,
+  BillingInterval,
   EmploymentType,
   EncounterStatus,
   type Encounter,
@@ -9,6 +10,7 @@ import {
   LeaveStatus,
   LeaveType,
   Locale,
+  PlanKey,
   PrismaClient,
   RevenueStatus,
   UserRole,
@@ -599,6 +601,42 @@ async function seedDrAhmedGroup(passwordHash: string) {
   return { tenant: drAhmedTenant, clinics: drAhmedClinics };
 }
 
+/**
+ * Demo orgs need Clinic+ so Operations (`mod_operations`) and related nav stay visible.
+ * `ensureAllTenantSubscriptions` only creates missing rows and will not upgrade an existing Pro/Lite sub.
+ */
+async function ensureDemoOrgsOnClinicPlusPlan(): Promise<void> {
+  const enterprise = await prisma.plan.findUnique({ where: { key: PlanKey.ENTERPRISE } });
+  if (!enterprise) return;
+  const names = [DR_AHMED_TENANT_NAME, KIORLY_TENANT_NAME];
+  for (const name of names) {
+    const tenant = await prisma.tenant.findFirst({ where: { name }, select: { id: true, marketId: true } });
+    if (!tenant) continue;
+    const sub = await prisma.subscription.findUnique({
+      where: { tenantId: tenant.id },
+      include: { plan: true },
+    });
+    if (!sub) continue;
+    if (sub.plan.key === PlanKey.ENTERPRISE || sub.plan.key === PlanKey.CLINIC) continue;
+    const price = await prisma.planPrice.findFirst({
+      where: {
+        planId: enterprise.id,
+        interval: BillingInterval.MONTHLY,
+        validTo: null,
+        ...(tenant.marketId ? { marketId: tenant.marketId } : {}),
+      },
+      orderBy: { priceVersion: "desc" },
+    });
+    await prisma.subscription.update({
+      where: { id: sub.id },
+      data: {
+        planId: enterprise.id,
+        planPriceId: price?.id ?? sub.planPriceId,
+      },
+    });
+  }
+}
+
 async function ensureIncrementalSeed(passwordHash: string) {
   await ensureSuperAdmin(passwordHash);
   await ensureDemoSalesRep(passwordHash);
@@ -613,6 +651,7 @@ async function ensureIncrementalSeed(passwordHash: string) {
   await ensurePlanCatalog(prisma);
   await ensureFoundingCohort(prisma);
   await ensureAllTenantSubscriptions(prisma);
+  await ensureDemoOrgsOnClinicPlusPlan();
   if (pilotSeedEnabled()) {
     await ensureAllPilotTenants(prisma, passwordHash);
   }
@@ -1261,6 +1300,7 @@ async function seedFreshDatabase(passwordHash: string) {
   await ensurePlanCatalog(prisma);
   await ensureFoundingCohort(prisma);
   await ensureAllTenantSubscriptions(prisma);
+  await ensureDemoOrgsOnClinicPlusPlan();
   if (pilotSeedEnabled()) {
     await ensureAllPilotTenants(prisma, passwordHash);
   }

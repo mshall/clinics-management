@@ -22,6 +22,7 @@ function platformAdminPartial(): PlatformAdminService {
     null as never,
     creditWallet,
     null as never,
+    null as never,
   );
 }
 

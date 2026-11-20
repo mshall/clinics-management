@@ -137,8 +137,9 @@ export class PlatformAdminController {
     @Query("pageSize") pageSize?: string,
     @Query("sortBy") sortBy?: string,
     @Query("sortOrder") sortOrder?: string,
+    @Query("q") q?: string,
   ) {
-    return this.platform.listTenants(user, page, pageSize, sortBy, sortOrder);
+    return this.platform.listTenants(user, page, pageSize, sortBy, sortOrder, q);
   }
 
   @Post("tenants")
@@ -336,6 +337,32 @@ export class PlatformAdminController {
     @Body() body: { days: number; reason: string; trialConfigOverride?: Record<string, unknown> },
   ) {
     return this.platform.extendTenantTrial(user, tenantId, body);
+  }
+
+  @Post("tenants/:tenantId/set-plan")
+  @ApiOperation({
+    summary: "Force-assign a catalog plan on an organization (platform super admin ops)",
+  })
+  setPlan(
+    @CurrentUser() user: JwtUser,
+    @Param("tenantId") tenantId: string,
+    @Body()
+    body: {
+      planKey: "LITE" | "PRO" | "CLINIC" | "ENTERPRISE";
+      reason: string;
+      interval?: "MONTHLY" | "ANNUAL" | "YEARLY";
+      clinicianSeats?: number;
+      status?: "ACTIVE" | "TRIALING";
+    },
+  ) {
+    const intervalRaw = body.interval === "YEARLY" ? "ANNUAL" : body.interval;
+    return this.platform.setTenantPlan(user, tenantId, {
+      planKey: body.planKey as never,
+      reason: body.reason,
+      interval: intervalRaw as never,
+      clinicianSeats: body.clinicianSeats,
+      status: body.status,
+    });
   }
 
   @Put("tenants/:tenantId/entitlement-overrides/:key")

@@ -96,10 +96,20 @@ export class AuthService {
         ? await loadUserMoneyVisibilityOverrides(this.prisma, user.tenantId, user.id)
         : undefined;
     const mfaEnabled = Boolean(user.mfaEnabled);
+    const platformSuperAdmin = isPlatformSuperAdmin({
+      email: user.email,
+      role: user.role,
+      additionalRoles: user.additionalRoles ?? [],
+    });
     const entitlementsBundle =
       user.tenantId != null ? await this.entitlements.resolve(user.tenantId) : null;
-    const planEntitlements = entitlementsBundle?.entitlements;
-    const planKey = entitlementsBundle?.plan?.key ?? PlanKey.ENTERPRISE;
+    // Platform operators have no org subscription — expose Enterprise-level flags so UI
+    // gates (e.g. AI assistant) do not show a false "upgrade to Pro" paywall.
+    const platformEntitlements = platformSuperAdmin && !user.tenantId
+      ? await this.entitlements.resolvePlatformOperator()
+      : null;
+    const planEntitlements = entitlementsBundle?.entitlements ?? platformEntitlements?.entitlements;
+    const planKey = entitlementsBundle?.plan?.key ?? platformEntitlements?.plan.key ?? PlanKey.ENTERPRISE;
     const effectiveNavTabKeys =
       navTabKeys?.length
         ? applyPlanNavPipeline(navTabKeys, planKey, planEntitlements)
@@ -120,11 +130,7 @@ export class AuthService {
       roleNavTabKeys: effectiveRoleNavTabKeys,
       navTabAccessModes: navTabAccessModes ?? undefined,
       tenantBaseCurrency,
-      platformSuperAdmin: isPlatformSuperAdmin({
-        email: user.email,
-        role: user.role,
-        additionalRoles: user.additionalRoles ?? [],
-      }),
+      platformSuperAdmin,
       hasAvatar: Boolean(user.avatarRelativePath),
       mfaEnabled,
       mfaEnrollmentRequired: principalRequiresMfaEnrollment(user) && !mfaEnabled,
@@ -136,8 +142,8 @@ export class AuthService {
           moneyVisibilityOverrides.appointments !== "ROLE_DEFAULT")
           ? moneyVisibilityOverrides
           : undefined,
-      plan: entitlementsBundle?.plan ?? undefined,
-      entitlements: entitlementsBundle?.entitlements ?? undefined,
+      plan: entitlementsBundle?.plan ?? platformEntitlements?.plan,
+      entitlements: entitlementsBundle?.entitlements ?? platformEntitlements?.entitlements,
     };
   }
 

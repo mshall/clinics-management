@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { PasswordInput } from "@/components/password-input";
+import { SearchInput } from "@/components/search-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -18,6 +19,7 @@ import { PlatformOrgAuditPanel } from "@/features/platform/platform-org-audit-pa
 import { apiErrorMessage, type TenantRow } from "@/features/platform/platform-shared";
 import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { apiGet, apiPost } from "@/lib/http";
 import type { Paginated } from "@/lib/paginated";
 type DialogMode = null | "create" | { edit: string };
@@ -29,6 +31,8 @@ export function PlatformOrganizationsTab() {
 
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
   const [orgEditTab, setOrgEditTab] = useState<OrgEditTab>("settings");
+  const [orgSearch, setOrgSearch] = useState("");
+  const debouncedOrgSearch = useDebouncedValue(orgSearch.trim(), 300);
 
   const [tenantName, setTenantName] = useState("");
   const [tenantNameAr, setTenantNameAr] = useState("");
@@ -46,8 +50,17 @@ export function PlatformOrganizationsTab() {
   const validation = useValidationIssuesDialog({ intent: "create" });
 
   const tenantsQuery = useQuery({
-    queryKey: ["platform", "tenants"],
-    queryFn: () => apiGet<Paginated<TenantRow>>("/api/v1/admin/platform/tenants?page=1&pageSize=200&sortBy=name&sortOrder=asc"),
+    queryKey: ["platform", "tenants", debouncedOrgSearch],
+    queryFn: () => {
+      const q = new URLSearchParams({
+        page: "1",
+        pageSize: "200",
+        sortBy: "name",
+        sortOrder: "asc",
+      });
+      if (debouncedOrgSearch) q.set("q", debouncedOrgSearch);
+      return apiGet<Paginated<TenantRow>>(`/api/v1/admin/platform/tenants?${q.toString()}`);
+    },
   });
 
   const operableMarketsQuery = useQuery({
@@ -186,9 +199,21 @@ export function PlatformOrganizationsTab() {
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
+          <SearchInput
+            value={orgSearch}
+            onChange={(e) => setOrgSearch(e.target.value)}
+            placeholder={t("platform.orgSearchPlaceholder", "Search organizations by name…")}
+            className="max-w-md"
+          />
           {tenantsQuery.isPending ? (
             <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+          ) : tenantRows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {debouncedOrgSearch
+                ? t("platform.orgSearchEmpty", "No organizations match “{{q}}”.", { q: debouncedOrgSearch })
+                : t("platform.orgEmpty", "No organizations yet.")}
+            </p>
           ) : (
             <ResponsiveTable>
               <table className="w-full min-w-[640px] text-sm">
@@ -198,6 +223,7 @@ export function PlatformOrganizationsTab() {
                     <th className="px-3 py-2 text-start">{t("admin.clinics")}</th>
                     <th className="px-3 py-2 text-start">{t("admin.users")}</th>
                     <th className="px-3 py-2 text-start">{t("platform.patients")}</th>
+                    <th className="px-3 py-2 text-end">{t("common.actions", "Actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -211,12 +237,34 @@ export function PlatformOrganizationsTab() {
                       <td className="px-3 py-2 ltr-nums">{row.counts.clinics}</td>
                       <td className="px-3 py-2 ltr-nums">{row.counts.users}</td>
                       <td className="px-3 py-2 ltr-nums">{row.counts.patients}</td>
+                      <td className="px-3 py-2 text-end">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          asChild
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Link to={`/platform/organizations/${row.id}`}>
+                            {t("platform.openTenantConsole", "Plan & lifecycle")}
+                          </Link>
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </ResponsiveTable>
           )}
+          {tenantsQuery.data && tenantsQuery.data.total > tenantRows.length ? (
+            <p className="text-xs text-muted-foreground">
+              {t(
+                "platform.orgListTruncated",
+                "Showing {{shown}} of {{total}}. Use search to find a specific organization.",
+                { shown: tenantRows.length, total: tenantsQuery.data.total },
+              )}
+            </p>
+          ) : null}
         </CardContent>
       </Card>
 

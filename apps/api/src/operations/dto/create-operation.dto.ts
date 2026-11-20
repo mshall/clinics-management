@@ -38,6 +38,14 @@ export class CreateOperationDto extends PatientAcquisitionFieldsDto {
   @Min(0)
   downPayment?: number;
 
+  @ApiPropertyOptional({
+    description:
+      "When true, marks this as a contract operation (تعاقد). Required if totalCost is 0 for fee editors.",
+  })
+  @IsOptional()
+  @IsBoolean()
+  isContract?: boolean;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
