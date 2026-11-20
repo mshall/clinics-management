@@ -7,6 +7,7 @@ import { AppNavLinks } from "@/components/app-nav-links";
 import { DateRangeBar } from "@/components/date-range-bar";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme-switcher";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useAuthStore } from "@/stores/auth-store";
@@ -29,6 +30,20 @@ import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { useDensityStore } from "@/stores/density-store";
 import { useA11yAutoFixes } from "@/lib/a11y-autofix";
 
+function orgPlanLabel(planKey: string, t: (key: string, fallback: string) => string): string {
+  const keys: Record<string, [string, string]> = {
+    LITE: ["plans.names.LITE", "Lite"],
+    PRO: ["plans.names.PRO", "Pro"],
+    CLINIC: ["plans.names.CLINIC", "Clinic"],
+    ENTERPRISE: ["plans.names.ENTERPRISE", "Enterprise"],
+    NURSE_LITE: ["plans.names.NURSE_LITE", "Nurse Lite"],
+    NURSE_PRO: ["plans.names.NURSE_PRO", "Nurse Pro"],
+    NURSE_AGENCY: ["plans.names.NURSE_AGENCY", "Nurse Agency"],
+  };
+  const pair = keys[planKey];
+  return pair ? t(pair[0], pair[1]) : planKey;
+}
+
 export function AppShell() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
@@ -41,6 +56,7 @@ export function AppShell() {
   const nurseEdition = useNurseEditionDom();
   const density = useDensityStore((s) => s.density);
   const toggleDensity = useDensityStore((s) => s.toggle);
+  const orgPlanKey = user?.tenantId && user.plan?.key ? user.plan.key : null;
 
   useEffect(() => {
     const syncNav = () => {
@@ -64,8 +80,8 @@ export function AppShell() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-x-clip">
-        <header className="sticky top-0 z-10 flex min-h-14 flex-nowrap items-center justify-between gap-1 border-b border-border bg-card/95 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-card/80 sm:gap-3 sm:px-4 md:h-14 md:flex-nowrap md:py-0 md:ps-6">
-          <div className="flex min-w-0 flex-1 items-center gap-1.5 md:hidden">
+        <header className="sticky top-0 z-10 flex min-h-14 flex-nowrap items-center gap-1 border-b border-border bg-card/95 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-card/80 sm:gap-3 sm:px-4 md:h-14 md:flex-nowrap md:py-0 md:ps-6">
+          <div className="flex min-w-0 items-center gap-1.5 md:hidden">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
                 <Button variant="outline" size="icon" className="kx-hdr" aria-label={t("common.menu")}>
@@ -83,8 +99,21 @@ export function AppShell() {
             <span className="shrink-0 sm:hidden"><KiorlyMark size={30} nurse={nurseEdition} /></span>
             <span className="hidden min-w-0 overflow-hidden sm:block"><BrandLockup height={24} tagline={false} /></span>
           </div>
-          <div className="flex min-w-0 shrink-0 items-center justify-end gap-0.5 sm:gap-1.5">
+          <div className="ms-auto flex min-w-0 shrink-0 items-center justify-end gap-0.5 sm:gap-1.5">
             <GlobalPatientSearch />
+            {orgPlanKey ? (
+              <Badge
+                variant="outline"
+                className="max-w-[9rem] shrink-0 gap-1 border-sky-500/30 bg-sky-500/10 font-semibold text-sky-800 dark:text-sky-300 sm:max-w-[10rem]"
+                data-testid="header-org-plan"
+                title={t("app.orgPlanHint", "Your organization's current Kiorly plan")}
+              >
+                <span className="hidden text-[10px] font-medium uppercase tracking-wide text-sky-700/70 dark:text-sky-300/70 sm:inline">
+                  {t("app.orgPlan", "Plan")}
+                </span>
+                <span className="truncate">{orgPlanLabel(orgPlanKey, t)}</span>
+              </Badge>
+            ) : null}
             {user ? (
               <span className="hidden max-w-[16rem] items-center gap-2 truncate border-s border-border/70 ps-3 text-sm leading-tight sm:inline-flex">
                 <span className="grid size-7 shrink-0 place-items-center rounded-full bg-accent text-xs font-semibold text-accent-foreground" aria-hidden>{user.displayName.trim().charAt(0).toUpperCase()}</span>

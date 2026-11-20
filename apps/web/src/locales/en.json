@@ -2,7 +2,20 @@
   "app": {
     "name": "Kiorly",
     "docTitle": "Kiorly Clinic by Kiorex",
-    "tagline": "Clinic Management"
+    "tagline": "Clinic Management",
+    "orgPlan": "Plan",
+    "orgPlanHint": "Your organization's current Kiorly plan"
+  },
+  "plans": {
+    "names": {
+      "LITE": "Lite",
+      "PRO": "Pro",
+      "CLINIC": "Clinic",
+      "ENTERPRISE": "Enterprise",
+      "NURSE_LITE": "Nurse Lite",
+      "NURSE_PRO": "Nurse Pro",
+      "NURSE_AGENCY": "Nurse Agency"
+    }
   },
   "clinicalSpecialties": {
     "POLYCLINIC": "Polyclinic",
@@ -1512,7 +1525,6 @@
       "OPERATION_DOWN_PAYMENT": "Operation down payment",
       "OTHER": "Other"
     },
-
     "statuses": {
       "POSTED": "Posted",
       "VOID": "Void"
