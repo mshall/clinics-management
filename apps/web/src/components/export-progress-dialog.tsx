@@ -9,7 +9,7 @@ export type ExportProgressState = {
   title: string;
   detail?: string;
   percent: number;
-  status: "running" | "ready" | "failed";
+  status: "running" | "ready" | "failed" | "cancelled";
   error?: string | null;
   /** Drives import vs export copy and icons. */
   mode?: "export" | "import";
@@ -18,17 +18,23 @@ export type ExportProgressState = {
 export function ExportProgressDialog({
   state,
   onOpenChange,
+  onCancel,
+  cancelling = false,
 }: {
   state: ExportProgressState;
   onOpenChange: (open: boolean) => void;
+  /** When set, shows Cancel while the job is running (export or import). */
+  onCancel?: () => void;
+  cancelling?: boolean;
 }) {
   const { t } = useTranslation();
   const pct = Math.max(0, Math.min(100, Math.round(state.percent)));
   const mode = state.mode ?? "export";
   const isImport = mode === "import";
+  const canCancel = Boolean(onCancel) && state.status === "running";
 
   const headerTone =
-    state.status === "failed"
+    state.status === "failed" || state.status === "cancelled"
       ? "border-destructive/25 bg-gradient-to-br from-destructive/10 via-destructive/5 to-transparent dark:from-destructive/15"
       : state.status === "ready"
         ? "border-emerald-500/25 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent dark:from-emerald-500/15"
@@ -37,7 +43,7 @@ export function ExportProgressDialog({
           : "border-violet-500/25 bg-gradient-to-br from-violet-500/10 via-violet-500/5 to-transparent dark:from-violet-500/15";
 
   const iconWrap =
-    state.status === "failed"
+    state.status === "failed" || state.status === "cancelled"
       ? "bg-destructive/15 text-destructive ring-destructive/10"
       : state.status === "ready"
         ? "bg-emerald-500/20 text-emerald-800 ring-emerald-500/10 dark:text-emerald-200"
@@ -46,7 +52,7 @@ export function ExportProgressDialog({
           : "bg-violet-500/20 text-violet-800 ring-violet-500/10 dark:text-violet-200";
 
   const barClass =
-    state.status === "failed"
+    state.status === "failed" || state.status === "cancelled"
       ? "bg-destructive"
       : state.status === "ready"
         ? "bg-emerald-500"
@@ -55,7 +61,7 @@ export function ExportProgressDialog({
           : "bg-violet-500";
 
   const Icon =
-    state.status === "failed"
+    state.status === "failed" || state.status === "cancelled"
       ? AlertTriangle
       : state.status === "ready"
         ? CheckCircle2
@@ -68,11 +74,13 @@ export function ExportProgressDialog({
       ? isImport
         ? t("admin.importProgressDone", "Import complete")
         : t("admin.exportProgressDone", "Complete")
-      : state.status === "failed"
-        ? isImport
-          ? t("admin.importProgressFailed", "Import failed")
-          : t("admin.exportProgressFailed", "Failed")
-        : t("admin.exportProgressPercent", "{{percent}}% complete", { percent: pct });
+      : state.status === "cancelled"
+        ? t("admin.exportProgressCancelled", "Cancelled")
+        : state.status === "failed"
+          ? isImport
+            ? t("admin.importProgressFailed", "Import failed")
+            : t("admin.exportProgressFailed", "Failed")
+          : t("admin.exportProgressPercent", "{{percent}}% complete", { percent: pct });
 
   const description =
     state.status === "failed"
@@ -80,17 +88,19 @@ export function ExportProgressDialog({
           "admin.importProgressFailedHint",
           "The job stopped before finishing. Review the error below, then try again with a valid backup file.",
         )
-      : state.detail ||
-        (state.status === "ready"
-          ? isImport
-            ? t("admin.importProgressReady", "Import finished.")
-            : t("admin.exportProgressReady", "File is ready. Your download should start shortly.")
-          : isImport
-            ? t("admin.importProgressWorking", "Restoring SQL and files in the background…")
-            : t(
-                "admin.exportProgressWorking",
-                "Preparing your file in the background. You can close this dialog — we will notify you when it is ready.",
-              ));
+      : state.status === "cancelled"
+        ? t("admin.exportProgressCancelledDetail", "The operation was cancelled. You can start again when ready.")
+        : state.detail ||
+          (state.status === "ready"
+            ? isImport
+              ? t("admin.importProgressReady", "Import finished.")
+              : t("admin.exportProgressReady", "File is ready. Your download should start shortly.")
+            : isImport
+              ? t("admin.importProgressWorking", "Restoring SQL and files in the background…")
+              : t(
+                  "admin.exportProgressWorking",
+                  "Preparing your file. You can cancel this operation or wait until the backup is ready.",
+                ));
 
   return (
     <Dialog open={state.open} onOpenChange={onOpenChange}>
@@ -122,7 +132,7 @@ export function ExportProgressDialog({
                 <p
                   className={cn(
                     "mt-1 text-3xl font-semibold leading-none ltr-nums tabular-nums",
-                    state.status === "failed"
+                    state.status === "failed" || state.status === "cancelled"
                       ? "text-destructive"
                       : state.status === "ready"
                         ? "text-emerald-700 dark:text-emerald-400"
@@ -172,21 +182,46 @@ export function ExportProgressDialog({
 
           {state.status === "running" ? (
             <p className="text-xs text-muted-foreground">
-              {isImport
+              {canCancel
                 ? t(
-                    "admin.importProgressBackgroundHint",
-                    "You can close this dialog — the restore keeps running in the background. Re-open from Recent backup jobs if needed.",
+                    "admin.exportProgressCancelOrWaitHint",
+                    "Cancel to stop now, or leave this open and wait until the file is ready.",
                   )
-                : t(
-                    "admin.exportProgressBackgroundHint",
-                    "This runs as a background job so large backups do not time out in the browser.",
-                  )}
+                : isImport
+                  ? t(
+                      "admin.importProgressBackgroundHint",
+                      "You can close this dialog — the restore keeps running in the background. Re-open from Recent backup jobs if needed.",
+                    )
+                  : t(
+                      "admin.exportProgressBackgroundHint",
+                      "This runs as a background job so large backups do not time out in the browser.",
+                    )}
             </p>
           ) : null}
 
-          {state.status === "failed" || state.status === "ready" ? (
+          {state.status === "running" && canCancel ? (
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={cancelling}
+                onClick={() => onCancel?.()}
+                data-testid="backup-progress-cancel"
+              >
+                {cancelling
+                  ? t("admin.exportProgressCancelling", "Cancelling…")
+                  : t("common.cancel", "Cancel")}
+              </Button>
+            </div>
+          ) : null}
+
+          {state.status === "failed" || state.status === "ready" || state.status === "cancelled" ? (
             <div className="flex justify-end pt-1">
-              <Button type="button" variant={state.status === "failed" ? "outline" : "default"} onClick={() => onOpenChange(false)}>
+              <Button
+                type="button"
+                variant={state.status === "ready" ? "default" : "outline"}
+                onClick={() => onOpenChange(false)}
+              >
                 {t("common.close", "Close")}
               </Button>
             </div>

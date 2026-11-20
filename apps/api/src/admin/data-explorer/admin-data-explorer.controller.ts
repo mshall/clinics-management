@@ -27,6 +27,7 @@ import { RequiresEntitlement } from "../../entitlements/requires-entitlement.dec
 import type { JwtUser } from "../../auth/jwt-user";
 import { AdminDataExplorerService } from "./admin-data-explorer.service";
 import { OrgBackupService, type OrgBackupFormat } from "./org-backup.service";
+import { streamOrgBackupArtifact } from "./org-backup-stream";
 import { SubscriptionAccessGuard } from "../../subscriptions/subscription-access.guard";
 import { RequiresSubscriptionAccess } from "../../subscriptions/requires-subscription-access.decorator";
 import { SubscriptionAccessAction } from "../../subscriptions/subscription-access-policy";
@@ -77,21 +78,19 @@ export class AdminDataExplorerController {
     return this.orgBackup.getJob(user, id);
   }
 
+  @Post("export/jobs/:id/cancel")
+  @RequiresSubscriptionAccess(SubscriptionAccessAction.EXPORT)
+  @ApiOperation({ summary: "Cancel a PENDING/RUNNING organization export or import job" })
+  cancelExportJob(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.orgBackup.cancelJob(user, id);
+  }
+
   @Get("export/jobs/:id/download")
   @RequiresSubscriptionAccess(SubscriptionAccessAction.EXPORT)
   @ApiOperation({ summary: "Stream a READY organization export artifact (authenticated)" })
   async downloadExportJob(@CurrentUser() user: JwtUser, @Param("id") id: string, @Res() res: Response) {
     const file = await this.orgBackup.downloadJob(user, id);
-    res.setHeader("Content-Type", file.contentType);
-    res.setHeader("Content-Length", String(file.size));
-    res.setHeader("Content-Disposition", `attachment; filename="${file.fileName}"`);
-    res.setHeader("Cache-Control", "private, no-store");
-    const stream = this.orgBackup.openArtifactStream(file.artifactPath);
-    stream.on("error", () => {
-      if (!res.headersSent) res.status(500).end();
-      else res.end();
-    });
-    stream.pipe(res);
+    await streamOrgBackupArtifact(res, file);
   }
 
   @Post("import")

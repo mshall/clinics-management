@@ -31,6 +31,11 @@ async function bootstrap() {
       threshold: 1024,
       filter: (req, res) => {
         if (req.headers["x-no-compression"]) return false;
+        // Large org-backup ZIP/SQL streams set Content-Length; gzip would desync and Chrome reports "Failed - Network error".
+        const path = req.url ?? "";
+        if (path.includes("/admin/org-backup/download") || /\/export\/jobs\/[^/]+\/download/.test(path)) {
+          return false;
+        }
         return compressionMiddleware.filter(req, res);
       },
     }),
