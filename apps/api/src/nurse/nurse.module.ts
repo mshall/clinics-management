@@ -15,6 +15,9 @@ import { CarePlanRequestService } from "./care-plan-request.service";
 import { CarePlanService } from "./care-plan.service";
 import { DoctorOrderService } from "./doctor-order.service";
 import { FamilyUpdateService } from "./family-update.service";
+import { LabSampleService } from "./lab-sample.service";
+import { NurseLabController } from "./nurse-lab.controller";
+import { RecordShareService } from "../marketplace/record-share.service";
 import { MedicationAdministrationService } from "./medication-administration.service";
 import { NurseAgencyController } from "./nurse-agency.controller";
 import { NurseClinicalController } from "./nurse-clinical.controller";
@@ -27,8 +30,8 @@ import { VisitRecordService } from "./visit-record.service";
 
 @Module({
   imports: [AppointmentsModule, AuditModule, EncountersModule, EntitlementsModule, FeatureFlagsModule, HomeVisitsModule, MessagingModule, SchedulingModule, ScopeOfPracticeModule, SignupModule],
-  controllers: [NursePublicController, NurseEditionController, NurseClinicalController, NurseMarController, NurseAgencyController],
-  providers: [NurseEditionService, CarePlanService, CarePlanRequestService, MarketplacePatientIntakeService, VisitRecordService, DoctorOrderService, MedicationAdministrationService, ShiftService, FamilyUpdateService, AgencyService, NurseReportsService],
-  exports: [NurseEditionService, CarePlanRequestService, DoctorOrderService, FamilyUpdateService],
+  controllers: [NursePublicController, NurseEditionController, NurseClinicalController, NurseMarController, NurseAgencyController, NurseLabController],
+  providers: [NurseEditionService, CarePlanService, CarePlanRequestService, MarketplacePatientIntakeService, VisitRecordService, DoctorOrderService, MedicationAdministrationService, ShiftService, FamilyUpdateService, AgencyService, NurseReportsService, LabSampleService, RecordShareService],
+  exports: [NurseEditionService, CarePlanRequestService, DoctorOrderService, FamilyUpdateService, LabSampleService],
 })
 export class NurseModule {}

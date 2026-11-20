@@ -14,6 +14,7 @@ import { KiorexDepositsService, type DepositPaidBody, type PayoutBody } from "..
 import { RecordShareService } from "./record-share.service";
 import { SlotCapacityService } from "./slot-capacity.service";
 import { CarePlanRequestService, type CarePlanRequestBody } from "../nurse/care-plan-request.service";
+import { LabSampleService, type LabStatusPush } from "../nurse/lab-sample.service";
 import { MarketplaceAccessService } from "./marketplace-access.service";
 import { MarketplaceWaitlistService, type MarketplaceWaitlistJoinBody } from "./marketplace-waitlist.service";
 
@@ -38,6 +39,7 @@ export class MarketplaceController {
     private readonly slotCapacity: SlotCapacityService,
     private readonly waitlist: MarketplaceWaitlistService,
     private readonly carePlanRequests: CarePlanRequestService,
+    private readonly labSamples: LabSampleService,
     private readonly access: MarketplaceAccessService,
   ) {}
 
@@ -48,6 +50,14 @@ export class MarketplaceController {
     if (!body?.clinicId?.trim()) throw new BadRequestException("clinicId is required");
     const tenantId = await this.access.resolveTenantForMarketplaceClinic(body.clinicId, body.clinicianId);
     return this.carePlanRequests.receive(tenantId, body);
+  }
+
+  /** KNLAB01 (contracts 1.6.0): Kiorex relays the lab's status + sanitized custody (+ secure link on release) for a Nurse-edition hand-off. Idempotent, monotonic. */
+  @Post("lab-orders/:orderId/status")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Kiorex relays the lab status/custody of a nurse-collected hand-off (no results, no PHI)" })
+  async labOrderStatus(@Param("orderId") orderId: string, @Body() body: LabStatusPush) {
+    return this.labSamples.applyLabStatus(orderId, body);
   }
 
   @Get("auth/verify")

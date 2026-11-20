@@ -1298,6 +1298,7 @@ model Tenant {
   homeSafetyAlerts                   HomeSafetyAlert[]
   carePlans                          CarePlan[]
   carePlanRequests                   CarePlanRequest[]
+  labSampleCollections               LabSampleCollection[]
   visitRecords                       VisitRecord[]
   vitalsObservations                 VitalsObservation[]
   doctorOrders                       DoctorOrder[]
@@ -2181,17 +2182,17 @@ enum ClinicalOrderStatus {
 }
 
 model ClinicalOrder {
-  id                     String              @id @default(cuid())
+  id                     String               @id @default(cuid())
   tenantId               String
-  tenant                 Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant                 Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   clinicId               String
-  clinic                 Clinic              @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinic                 Clinic               @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   patientId              String
-  patient                Patient             @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patient                Patient              @relation(fields: [patientId], references: [id], onDelete: Cascade)
   encounterId            String?
-  encounter              Encounter?          @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+  encounter              Encounter?           @relation(fields: [encounterId], references: [id], onDelete: SetNull)
   kind                   ClinicalOrderKind
-  status                 ClinicalOrderStatus @default(DRAFT)
+  status                 ClinicalOrderStatus  @default(DRAFT)
   orderedAt              DateTime?
   resultsReadyAt         DateTime?
   resultsJson            Json?
@@ -2199,9 +2200,13 @@ model ClinicalOrder {
   notes                  String?
   notifiedAt             DateTime?
   createdByUserId        String?
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  /// KNLAB01: the doctor whose lab request a nurse transcribed (a nurse never orders on her own authority).
+  prescriberName         String?
+  prescribedOn           DateTime?           @db.Date
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
   items                  ClinicalOrderItem[]
+  sampleCollection       LabSampleCollection?
 
   @@index([tenantId, patientId, status])
   @@index([tenantId, encounterId])
@@ -4951,4 +4956,58 @@ model CarePlanRequest {
   updatedAt              DateTime  @updatedAt
 
   @@index([tenantId, status, createdAt])
+}
+
+/// KNLAB01 / KLORD05 — a sample the nurse collected against a LAB order, handed to Kiorly Lab through Kiorex (`LabOrderPlaced`).
+/// Stores identifier KINDS (never values), the SHA-256 of the consent token, and the lab status/custody mirror pushed back by Kiorex (no PHI, no results).
+model LabSampleCollection {
+  id                 String          @id @default(cuid())
+  tenantId           String
+  tenant             Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orderId            String          @unique
+  order              ClinicalOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  patientId          String
+  /// The home visit this was collected on (the event's visitRef); null for a collection recorded outside a visit.
+  appointmentId      String?
+  collectorUserId    String
+  collectedAt        DateTime
+  handedOverAt       DateTime?
+  temperatureC       Decimal?        @db.Decimal(4, 1)
+  /// ["FULL_NAME","DATE_OF_BIRTH"]: which identifiers were checked against the patient record (never the values).
+  identifiersChecked Json
+  consentTokenHash   String
+  prescriberName     String?
+  outboxEventId      String?
+  /// Mirror of the Kiorex push (POST /marketplace/v1/lab-orders/:orderId/status). RECEIVED_BY_KIOREX until the lab answers.
+  labStatus          String          @default("HANDED_OFF")
+  labOrderNumber     String?
+  labId              String?
+  labStatusAt        DateTime?
+  rejectionCode      String?
+  /// [{ label, type, occurredAt, by: NURSE|LAB, temperatureC }]
+  custodyJson        Json?
+  reportId           String?
+  reportVersion      Int?
+  resultSecureLink   String?
+  resultReleasedAt   DateTime?
+  tubes              LabSampleTube[]
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  @@index([tenantId, patientId])
+  @@index([tenantId, appointmentId])
+}
+
+model LabSampleTube {
+  id           String              @id @default(cuid())
+  tenantId     String
+  collectionId String
+  collection   LabSampleCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  /// Barcode on the physical tube; unique per tenant (the lab enforces uniqueness per lab).
+  label        String
+  specimenType String
+  container    String?
+
+  @@unique([tenantId, label])
+  @@index([collectionId])
 }

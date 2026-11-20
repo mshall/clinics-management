@@ -33,6 +33,8 @@ export const MODULE_ENTITLEMENT_KEYS = [
   /** KX-23 §05 Nurse edition (only true on the NURSE_* plans and Enterprise). */
   "nurse_family_updates",
   "nurse_private_duty_shifts",
+  /** KNLAB01: sample collection against a lab order handed to Kiorly Lab (Nurse Pro and above). */
+  "nurse_lab_samples",
   "nurse_agency",
   "max_clinicians",
   "max_branches",
@@ -132,6 +134,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "nurse/nurse-edition.controller.ts": { kind: "open" },
   "nurse/nurse-clinical.controller.ts": { kind: "open" },
   "nurse/nurse-mar.controller.ts": { kind: "open" },
+  "nurse/nurse-lab.controller.ts": { kind: "open" },
   "nurse/nurse-agency.controller.ts": { kind: "open" },
   "marketplace/marketplace-org.controller.ts": { kind: "open" },
   "marketplace/marketplace-listings-profile.controller.ts": { kind: "open" },
@@ -188,6 +191,7 @@ export const ENTITLEMENT_MIN_PLAN: Record<string, PlanKey> = {
   home_dispatch: PlanKey.CLINIC,
   nurse_family_updates: PlanKey.NURSE_PRO,
   nurse_private_duty_shifts: PlanKey.NURSE_PRO,
+  nurse_lab_samples: PlanKey.NURSE_PRO,
   nurse_agency: PlanKey.NURSE_AGENCY,
   max_clinicians: PlanKey.PRO,
   max_branches: PlanKey.CLINIC,
@@ -299,6 +303,7 @@ export const PLAN_MATRIX = {
     home_dispatch: false,
     nurse_family_updates: false,
     nurse_private_duty_shifts: false,
+    nurse_lab_samples: false,
     nurse_agency: false,
   },
   [PlanKey.PRO]: {
@@ -334,6 +339,7 @@ export const PLAN_MATRIX = {
     home_dispatch: false,
     nurse_family_updates: false,
     nurse_private_duty_shifts: false,
+    nurse_lab_samples: false,
     nurse_agency: false,
   },
   [PlanKey.CLINIC]: {
@@ -368,6 +374,7 @@ export const PLAN_MATRIX = {
     home_dispatch: true,
     nurse_family_updates: false,
     nurse_private_duty_shifts: false,
+    nurse_lab_samples: false,
     nurse_agency: false,
   },
   [PlanKey.ENTERPRISE]: {
@@ -402,6 +409,7 @@ export const PLAN_MATRIX = {
     home_dispatch: true,
     nurse_family_updates: true,
     nurse_private_duty_shifts: true,
+    nurse_lab_samples: true,
     nurse_agency: true,
   },
 } as unknown as Record<PlanKey, Record<string, EntitlementSeedValue>>;
@@ -440,6 +448,7 @@ function nursePlan(over: Record<string, EntitlementSeedValue>): Record<string, E
     home_dispatch: false,
     nurse_family_updates: false,
     nurse_private_duty_shifts: false,
+    nurse_lab_samples: false,
     nurse_agency: false,
     ...over,
   };
@@ -455,6 +464,7 @@ PLAN_MATRIX[PlanKey.NURSE_PRO] = nursePlan({
   mod_messaging: true,
   nurse_family_updates: true,
   nurse_private_duty_shifts: true,
+  nurse_lab_samples: true,
 });
 PLAN_MATRIX[PlanKey.NURSE_AGENCY] = nursePlan({
   max_clinicians: 10,
@@ -473,6 +483,7 @@ PLAN_MATRIX[PlanKey.NURSE_AGENCY] = nursePlan({
   mod_payroll: true,
   nurse_family_updates: true,
   nurse_private_duty_shifts: true,
+  nurse_lab_samples: true,
   nurse_agency: true,
 });
 

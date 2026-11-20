@@ -30,7 +30,7 @@ export const FLAG_ENFORCEMENT: Record<string, FlagEnforcement> = {
     files: ["marketplace/record-share-clinic.controller.ts", "marketplace/record-share.service.ts"],
   },
   "clinic.eprescription_handoff": { kind: "controller", files: ["clinical/rx-share.controller.ts"] },
-  "clinic.lab_order_handoff": { kind: "controller", files: ["clinical/clinical.controller.ts"] },
+  "clinic.lab_order_handoff": { kind: "controller", files: ["clinical/clinical.controller.ts", "nurse/lab-sample.service.ts"] },
   "clinic.payers_tpa": { kind: "controller", files: ["billing/claims.controller.ts"] },
   "clinic.specialty_templates.<code>": { kind: "controller", files: ["clinical/clinical.controller.ts"] },
   "clinic.referral_rewards": {

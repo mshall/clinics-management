@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Kiorex Marketplace API",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "description": "Platform connector for Kiorex (KX-01). Authenticate with HMAC headers. v1.2.0 (KX-09 Rev 2.3, additive): provider sync profession/edition/home-visit fields, serviceLocation+district on slots, visitAddress on holds, 422 OUT_OF_COVERAGE, care-plan-requests (P3 draft). The same client serves both Kiorly editions (Clinic and Nurse)."
   },
   "servers": [
@@ -1290,6 +1290,127 @@
           },
           "422": {
             "description": "CARE_PLANS_NOT_OFFERED (provider does not offer care plans) or OUT_OF_COVERAGE"
+          }
+        }
+      }
+    },
+    "/lab-orders/{orderId}/status": {
+      "post": {
+        "operationId": "marketplaceLabOrderStatus",
+        "summary": "KNLAB01 (Nurse edition, contracts 1.6.0): Kiorex relays the lab's status for a hand-off, with the sanitized chain of custody and (on release) the secure link",
+        "description": "Idempotent and monotonic on `status`. `orderId` is the Kiorly LabOrderPlaced orderId (the ClinicalOrder id). Carries no results and no PHI: a status, custody events (type, time, temperature, NURSE|LAB) and, when RELEASED, reportId + secure link.",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "REJECTED_BY_LAB",
+                      "ACCEPTED",
+                      "COLLECTED",
+                      "IN_LAB",
+                      "PARTIALLY_RESULTED",
+                      "AWAITING_VALIDATION",
+                      "VALIDATED",
+                      "RELEASED",
+                      "CANCELLED"
+                    ]
+                  },
+                  "labOrderNumber": {
+                    "type": "string"
+                  },
+                  "labId": {
+                    "type": "string"
+                  },
+                  "occurredAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "rejectionCode": {
+                    "type": "string"
+                  },
+                  "reportId": {
+                    "type": "string"
+                  },
+                  "reportVersion": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "secureLink": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "signedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "custody": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "type",
+                        "occurredAt",
+                        "by"
+                      ],
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "occurredAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "by": {
+                          "type": "string",
+                          "enum": [
+                            "NURSE",
+                            "LAB"
+                          ]
+                        },
+                        "temperatureC": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Applied or already applied"
+          },
+          "404": {
+            "description": "Unknown hand-off for this tenant"
+          },
+          "409": {
+            "description": "Status would move backwards (ignored, reported)"
           }
         }
       }
