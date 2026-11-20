@@ -16,7 +16,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { ArrowDownLeft, ArrowUpRight, CircleDollarSign } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, BarChart3, CircleDollarSign, Table2 } from "lucide-react";
 import { CreateActionButton } from "@/components/create-action-button";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
@@ -29,6 +29,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { featureTabTriggerClassName, featureTabsListClassName } from "@/lib/feature-tabs";
 import {
   useClinicsQuery,
   useClinicRevenueBreakdownQuery,
@@ -323,21 +324,98 @@ export function RevenuePage() {
       </div>
       {isError ? <p className="text-sm text-destructive">{error instanceof Error ? error.message : t("common.error")}</p> : null}
 
+      <Card>
+        <CardHeader className="pb-2 pt-4">
+          <CardTitle className="text-sm font-medium">{t("revenue.reportingPeriod", "Reporting period")}</CardTitle>
+          <CardDescription className="text-xs">
+            {t(
+              "revenue.reportingPeriodHint",
+              "Date range and clinic scope apply automatically to totals, tables, and charts.",
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className={`${filterToolbarClassName} pb-4`}>
+          <div className={filterFieldClassName}>
+            <Label className="text-xs">{t("dateRange.from")}</Label>
+            <Input
+              className="ltr-nums"
+              type="date"
+              value={from}
+              onChange={(e) => {
+                setRange(e.target.value, to);
+                setPage(1);
+              }}
+            />
+          </div>
+          <div className={filterFieldClassName}>
+            <Label className="text-xs">{t("common.to", "To")}</Label>
+            <Input
+              className="ltr-nums"
+              type="date"
+              value={to}
+              onChange={(e) => {
+                setRange(from, e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          <div className={filterFieldClassName}>
+            <Label className="text-xs">{t("revenue.ledgerClinicFilter", "Clinic scope")}</Label>
+            {singleManagedClinic ? (
+              <p className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-2 text-sm">
+                {formatClinicName(singleManagedClinic, i18n.language)}
+              </p>
+            ) : (
+              <select
+                className={nativeSelectClassName}
+                value={filterClinicId}
+                onChange={(e) => {
+                  setFilterClinicId(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">{t("revenue.allClinicsOrganization", "All clinics (organization)")}</option>
+                {clinics.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {formatClinicName(c, i18n.language)}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+          <div className={filterActionsClassName}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="h-11 w-full min-[420px]:w-auto"
+              onClick={() => {
+                resetToCurrentMonth();
+                setPage(1);
+                void qc.invalidateQueries();
+              }}
+            >
+              {t("revenue.thisMonth", "This month")}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <div
         className={cn(
           "grid gap-3",
-          canPostRevenue ? "lg:grid-cols-[minmax(0,1.35fr)_minmax(16rem,22rem)] lg:items-start" : "grid-cols-1",
+          canPostRevenue ? "lg:grid-cols-[minmax(0,1fr)_minmax(14rem,18rem)] lg:items-start" : "grid-cols-1",
         )}
       >
         {canPostRevenue ? (
           <Card className="min-w-0">
-            <CardHeader className="pb-2 pt-4">
-              <CardTitle className="text-base">{t("revenue.post")}</CardTitle>
-              <CardDescription className="text-xs">
+            <CardHeader className="space-y-1 pb-2 pt-3">
+              <CardTitle className="text-sm font-semibold">{t("revenue.post")}</CardTitle>
+              <CardDescription className="text-[11px] leading-snug">
                 {t("revenue.postHint", "Post encounter or operation payments for the selected clinic.")}
               </CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 pb-3">
               <div className="space-y-2 sm:col-span-2 lg:col-span-3">
                 <Label>{t("revenue.linkOperation", "Link to operation (optional)")}</Label>
                 <select
@@ -505,82 +583,7 @@ export function RevenuePage() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader className="pb-2 pt-4">
-          <CardTitle className="text-sm font-medium">{t("revenue.reportingPeriod", "Reporting period")}</CardTitle>
-          <CardDescription className="text-xs">
-            {t(
-              "revenue.reportingPeriodHint",
-              "Date range and clinic scope apply automatically to totals, tables, and charts.",
-            )}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className={`${filterToolbarClassName} pb-4`}>
-          <div className={filterFieldClassName}>
-            <Label className="text-xs">{t("dateRange.from")}</Label>
-            <Input
-              className="ltr-nums"
-              type="date"
-              value={from}
-              onChange={(e) => {
-                setRange(e.target.value, to);
-                setPage(1);
-              }}
-            />
-          </div>
-          <div className={filterFieldClassName}>
-            <Label className="text-xs">{t("common.to", "To")}</Label>
-            <Input
-              className="ltr-nums"
-              type="date"
-              value={to}
-              onChange={(e) => {
-                setRange(from, e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-          <div className={filterFieldClassName}>
-            <Label className="text-xs">{t("revenue.ledgerClinicFilter", "Clinic scope")}</Label>
-            {singleManagedClinic ? (
-              <p className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-2 text-sm">
-                {formatClinicName(singleManagedClinic, i18n.language)}
-              </p>
-            ) : (
-              <select
-                className={nativeSelectClassName}
-                value={filterClinicId}
-                onChange={(e) => {
-                  setFilterClinicId(e.target.value);
-                  setPage(1);
-                }}
-              >
-                <option value="">{t("revenue.allClinicsOrganization", "All clinics (organization)")}</option>
-                {clinics.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {formatClinicName(c, i18n.language)}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-          <div className={filterActionsClassName}>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="h-11 w-full min-[420px]:w-auto"
-              onClick={() => {
-                resetToCurrentMonth();
-                setPage(1);
-                void qc.invalidateQueries();
-              }}
-            >
-              {t("revenue.thisMonth", "This month")}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      
 
       {receivableRows.length > 0 ? (
         <Card>
@@ -623,9 +626,15 @@ export function RevenuePage() {
       ) : null}
 
       <Tabs value={mainTab} onValueChange={setMainTab} className="space-y-4">
-        <TabsList className="grid h-auto w-full max-w-md grid-cols-2 gap-1 p-1">
-          <TabsTrigger value="tables">{t("revenue.tabTables", "Tables")}</TabsTrigger>
-          <TabsTrigger value="charts">{t("revenue.tabCharts", "Charts")}</TabsTrigger>
+        <TabsList className={cn(featureTabsListClassName, "max-w-md grid-cols-2")}>
+          <TabsTrigger value="tables" className={featureTabTriggerClassName("sky")}>
+            <Table2 className="size-4 shrink-0" aria-hidden />
+            {t("revenue.tabTables", "Tables")}
+          </TabsTrigger>
+          <TabsTrigger value="charts" className={featureTabTriggerClassName("violet")}>
+            <BarChart3 className="size-4 shrink-0" aria-hidden />
+            {t("revenue.tabCharts", "Charts")}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="tables" className="space-y-6 focus-visible:outline-none">
