@@ -219,7 +219,7 @@ aws lambda invoke --function-name <DbSeedFunctionName> /tmp/seed-out.json
 
 Supported in product: patient registration documents, national ID scan, encounter lab/radiology/prescription files, expense proofs, employee ID docs.
 
-**Data explorer org backup:** Group admins (with data explorer access) can export **SQL**, **documents ZIP**, or a **full** backup (SQL + blobs in one ZIP with `manifest.json` mapping files to patients/encounters/operations/etc.). Jobs are **background** (progress UI is dismissible; toast + recent-jobs list when ready). Downloads use a short-lived **token URL** streamed from disk so large ZIPs do not buffer in the browser or hit request timeouts. The same ZIP/SQL artifacts can be re-imported (async) into the org. The API reads uploads from local `uploads/` in dev or **S3** in App Runner.
+**Data explorer org backup:** Group admins (with data explorer access) can export **SQL**, **documents ZIP**, or a **full** backup (SQL + blobs in one ZIP with `manifest.json` mapping files to patients/encounters/operations/etc.). Jobs are **background** (progress UI supports **Cancel** or wait-until-ready; toast + recent-jobs list when ready). Downloads use a short-lived **token URL** streamed from disk (no response compression; Content-Length preserved) so large ZIPs do not buffer in the browser or hit request timeouts — local Vite bypasses the `/api` proxy for these downloads to avoid mid-stream “Failed - Network error”. The same ZIP/SQL artifacts can be re-imported (async) into the org. The API reads uploads from local `uploads/` in dev or **S3** in App Runner.
 
 ---
 

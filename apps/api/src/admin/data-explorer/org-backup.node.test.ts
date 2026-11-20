@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { unzipSync, zipSync } from "fflate";
+import { ExportCancelledError } from "./org-backup-errors";
 
 describe("org backup package layout", () => {
   it("full backup zip contains SQL, manifest and nested files paths", () => {
@@ -48,5 +49,14 @@ describe("org backup package layout", () => {
       unzipped[`files/${zipPath}`];
     assert.ok(data);
     assert.equal(data!.length, 3);
+  });
+});
+
+describe("org backup cancel", () => {
+  it("ExportCancelledError is identifiable for fire-and-forget catch", () => {
+    const err = new ExportCancelledError();
+    assert.equal(err.name, "ExportCancelledError");
+    assert.ok(err instanceof ExportCancelledError);
+    assert.match(err.message, /cancelled/i);
   });
 });
