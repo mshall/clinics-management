@@ -81,4 +81,12 @@ export class PatchTenantSettingsDto {
   @Min(1)
   @Max(168)
   appointmentReminderHoursBefore?: number;
+
+  @ApiPropertyOptional({
+    description:
+      "When true, creating an operation requires How did they find us? (acquisition channel). Default false (optional).",
+  })
+  @IsOptional()
+  @IsBoolean()
+  operationAcquisitionRequired?: boolean;
 }

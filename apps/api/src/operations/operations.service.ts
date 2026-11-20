@@ -14,8 +14,9 @@ import { findActiveSchedulingPhysician } from "../common/active-scheduling-physi
 import { fetchClinicScopeIds } from "../common/clinic-scope";
 import { hasRole } from "../common/effective-roles";
 import {
+  assertOperationAcquisition,
+  hasPatientAcquisitionInput,
   patientAcquisitionUpdateData,
-  requirePatientAcquisition,
 } from "../common/patient-acquisition";
 import { resolveClinicCurrency } from "../common/clinic-currency";
 import { isBaseCurrency } from "../common/base-currencies";
@@ -624,7 +625,11 @@ export class OperationsService {
     const clinic = await this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId }, select: { id: true } });
     if (!clinic) throw new BadRequestException("Clinic not found");
 
-    requirePatientAcquisition(dto);
+    const tenantSettings = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { operationAcquisitionRequired: true },
+    });
+    assertOperationAcquisition(dto, Boolean(tenantSettings?.operationAcquisitionRequired));
 
     const scopeIds = await fetchClinicScopeIds(this.prisma, tenantId, user);
     if (scopeIds !== null && !scopeIds.includes(clinicId)) {
@@ -639,10 +644,12 @@ export class OperationsService {
     const feeCurrency = await this.resolveOperationFeeCurrency(tenantId, clinicId, dto.feeCurrency);
 
     const row = await this.prisma.$transaction(async (tx) => {
-      await tx.patient.update({
-        where: { id: dto.patientId },
-        data: patientAcquisitionUpdateData(dto),
-      });
+      if (hasPatientAcquisitionInput(dto)) {
+        await tx.patient.update({
+          where: { id: dto.patientId },
+          data: patientAcquisitionUpdateData(dto),
+        });
+      }
 
       const op = await tx.operation.create({
         data: {
@@ -657,7 +664,7 @@ export class OperationsService {
           paidAmount: downPayment,
           feeCurrency,
           isContract,
-          acquisitionChannel: dto.acquisitionChannel,
+          acquisitionChannel: dto.acquisitionChannel ?? null,
           comments: dto.comments?.trim() || null,
           status: OperationStatus.BOOKED,
           noMedications: dto.noMedications ?? false,
@@ -1242,7 +1249,11 @@ export class OperationsService {
       throw new BadRequestException("Invalid clinic, patient, or clinician");
     }
 
-    requirePatientAcquisition(dto);
+    const tenantSettings = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { operationAcquisitionRequired: true },
+    });
+    assertOperationAcquisition(dto, Boolean(tenantSettings?.operationAcquisitionRequired));
 
     const operationDate = new Date(dto.operationDate);
     if (Number.isNaN(operationDate.getTime())) {
@@ -1256,10 +1267,12 @@ export class OperationsService {
       select: { firstNameEn: true, lastNameEn: true },
     });
     const row = await this.prisma.$transaction(async (tx) => {
-      await tx.patient.update({
-        where: { id: dto.patientId },
-        data: patientAcquisitionUpdateData(dto),
-      });
+      if (hasPatientAcquisitionInput(dto)) {
+        await tx.patient.update({
+          where: { id: dto.patientId },
+          data: patientAcquisitionUpdateData(dto),
+        });
+      }
 
       const op = await tx.operation.create({
         data: {
@@ -1274,7 +1287,7 @@ export class OperationsService {
           paidAmount: downPayment,
           feeCurrency,
           isContract,
-          acquisitionChannel: dto.acquisitionChannel,
+          acquisitionChannel: dto.acquisitionChannel ?? null,
           comments: dto.comments?.trim() || null,
           status: OperationStatus.BOOKED,
           noMedications: dto.noMedications ?? false,

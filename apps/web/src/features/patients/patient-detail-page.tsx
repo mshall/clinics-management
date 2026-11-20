@@ -45,6 +45,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { featureTabTriggerClassName, featureTabsListClassName } from "@/lib/feature-tabs";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { useClinicsQuery, useEncountersQuery, usePatientQuery } from "@/lib/api-hooks";
@@ -215,7 +216,7 @@ export function PatientDetailPage() {
 
   return (
     <div className="space-y-6 doctor-mobile-view">
-      <Card className="sticky top-14 z-[5] border-b md:static md:z-auto">
+      <Card className="border-b">
         <CardContent className="pt-4 md:pt-6">
           <div className="flex flex-col gap-4 md:gap-6 md:flex-row md:items-start md:justify-between">
             <div className="flex items-start gap-3 md:gap-4">
@@ -314,42 +315,42 @@ export function PatientDetailPage() {
         onValueChange={(v) => setProfileTab(v as ProfileTab)}
         className="space-y-4"
       >
-        <TabsList className="h-auto w-full max-w-full justify-start">
-          <TabsTrigger value="overview" className="gap-1.5">
+        <TabsList className={featureTabsListClassName}>
+          <TabsTrigger value="overview" className={featureTabTriggerClassName("sky")}>
             <LayoutGrid className="h-4 w-4 shrink-0" aria-hidden />
             {t("patients.tabOverview", "Overview")}
           </TabsTrigger>
-          <TabsTrigger value="smartSummary" className="gap-1.5">
-            <Sparkles className="h-4 w-4 shrink-0 text-violet-500" aria-hidden />
+          <TabsTrigger value="smartSummary" className={featureTabTriggerClassName("violet")}>
+            <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
             {t("patients.tabSmartSummary", "Smart summary")}
           </TabsTrigger>
           {canViewEncounters ? (
-            <TabsTrigger value="encounters" className="gap-1.5">
+            <TabsTrigger value="encounters" className={featureTabTriggerClassName("emerald")}>
               <HeartPulse className="h-4 w-4 shrink-0" aria-hidden />
               {t("patients.encounters")}
             </TabsTrigger>
           ) : null}
           {canViewPatientOperations ? (
-            <TabsTrigger value="operations" className="gap-1.5">
+            <TabsTrigger value="operations" className={featureTabTriggerClassName("amber")}>
               <Scissors className="h-4 w-4 shrink-0" aria-hidden />
               {t("patients.tabOperations", "Operations")}
             </TabsTrigger>
           ) : null}
-          <TabsTrigger value="medicalDocuments" className="gap-1.5">
+          <TabsTrigger value="medicalDocuments" className={featureTabTriggerClassName("sky")}>
             <FileStack className="h-4 w-4 shrink-0" aria-hidden />
             {t("patients.tabMedicalDocuments", "Medical documents")}
           </TabsTrigger>
-          <TabsTrigger value="invoices" className="gap-1.5">
+          <TabsTrigger value="invoices" className={featureTabTriggerClassName("emerald")}>
             <Receipt className="h-4 w-4 shrink-0" aria-hidden />
             {t("patients.tabInvoices", "Invoices")}
           </TabsTrigger>
           {canViewMoney ? (
-            <TabsTrigger value="money" className="gap-1.5" data-testid="patient-tab-money">
+            <TabsTrigger value="money" className={featureTabTriggerClassName("violet")} data-testid="patient-tab-money">
               <Wallet className="h-4 w-4 shrink-0" aria-hidden />
               {t("patientMoney.tab")}
             </TabsTrigger>
           ) : null}
-          <TabsTrigger value="notifications" className="gap-1.5">
+          <TabsTrigger value="notifications" className={featureTabTriggerClassName("amber")}>
             <Bell className="h-4 w-4 shrink-0" aria-hidden />
             {t("patients.tabNotificationSettings", "Notification settings")}
           </TabsTrigger>

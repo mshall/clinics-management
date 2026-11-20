@@ -1,16 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { PatientAcquisitionChannel } from "@prisma/client";
-import { IsBoolean, IsDateString, IsEnum, IsIn, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
+import { IsBoolean, IsDateString, IsIn, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
 import { PatientAcquisitionFieldsDto } from "../../common/dto/patient-acquisition-fields.dto";
 import { BASE_CURRENCIES } from "../../common/base-currencies";
 
+/** Acquisition fields are optional unless the tenant sets operationAcquisitionRequired. */
 export class CreateOperationDto extends PatientAcquisitionFieldsDto {
-  @ApiProperty({
-    enum: PatientAcquisitionChannel,
-    description: "How the patient found the clinic (updates the patient profile)",
-  })
-  @IsEnum(PatientAcquisitionChannel)
-  declare acquisitionChannel: PatientAcquisitionChannel;
   @ApiProperty()
   @IsString()
   patientId!: string;

@@ -331,7 +331,8 @@ A dedicated **Platform Super Administrator** operates **outside any organization
 
 - The **Reports** area charts **visit volume** (finalized encounters), **posted revenue**, and **new patient registrations** per calendar month from live ledger and patient data—not illustrative placeholders.
 - **Patient acquisition** breakdown (how patients found the clinic) with date range filter; each channel row is **clickable** to open a paginated patient list dialog for that channel and period.
-- **Operations contract (تعاقد):** fee editors cannot set operation total cost to **0** unless they mark the operation as a **contract**; a rich confirmation dialog explains the rule. Contract ops are filterable on the Operations list (`isContract`) and in Reports.
+- **Operations contract (تعاقد):** fee editors cannot set operation total cost to **0** unless they mark the operation as a **contract**; a rich confirmation dialog includes a **contract checkbox** and explains the rule (or check the operation as a contract). Contract ops are filterable on the Operations list (`isContract`) and in Reports.
+- **Operations acquisition required (org setting):** group admins set **How did they find us?** to **optional (default)** or **mandatory** under Admin → Organization → Operation settings; when mandatory, create-operation requires an acquisition channel.
 - **Operations by acquisition channel:** Reports shows procedure volume and paid/total money by “how they found us”, with optional contract vs standard filter; clinic breakdown includes contract operation counts and ops money totals.
 - **Encounters by acquisition channel:** Reports shows finalized visit counts and visit-fee paid/total money by “how they found us”.
 
@@ -498,7 +499,7 @@ Authorization model:
 |---|---|
 | **User ↔ employee lifecycle** — deactivate, soft archive, restore; cascades both sides; archived Active/Archived tabs (admin + HR) | Shipped |
 | **Clinic disable / reactivate** — `ClinicOperatingPeriod` history; cascade disable branches; active/disabled directory tabs | Shipped |
-| **Reports overhaul** — all charts tied to header **From → To**; clinic breakdown table; multi-currency performance P&L; mobile-responsive layout; revenue (color) vs expense (grey) styling | Shipped |
+| **Reports overhaul** — Tables / Charts / AR aging & branch P&L tabs; export+scope row; combined acquisition table with encounter & operation shares; charts tied to header **From → To**; multi-currency P&L; mobile-responsive layout | Shipped |
 | **Multi-currency group reports** — per-clinic breakdown by currency; org/clinic scope selector | Shipped |
 | **Clinic invoice settings** — logo upload, section toggles, background color; invoice module | Shipped |
 | **Prescription clinic branding** — logo + EN/AR header description on Rx PDF/image | Shipped |

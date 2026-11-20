@@ -33,22 +33,22 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v6
+      - name: Setup Node.js dependencies (workspace + infra)
+        uses: ./.github/actions/setup-node-deps
         with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            infra/package-lock.json
-
-      - name: Install dependencies
-        run: bash scripts/npm-ci-workflow.sh
-
-      - name: Install infra dependencies
-        run: NPM_CONFIG_LOGLEVEL=error npm ci --prefix infra --no-audit --no-fund
+          include-infra: "true"
+          cache-key-prefix: workspace-infra
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
       - name: CDK synth (web build + infra synth)
-        run: npm run infra:synth
+        # infra:synth runs `npm run infra:install` (npm ci --prefix infra). Skip that when
+        # infra/node_modules was restored — lockfile-keyed cache already matches.
+        run: |
+          set -euo pipefail
+          npm run build -w web
+          if [ ! -d infra/node_modules/aws-cdk-lib ]; then
+            npm run infra:install
+          fi
+          npm run synth --prefix infra

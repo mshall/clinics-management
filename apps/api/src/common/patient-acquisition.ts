@@ -14,6 +14,20 @@ export function requirePatientAcquisition(dto: PatientAcquisitionInput): void {
   validatePatientAcquisition(dto);
 }
 
+/** Enforce tenant operationAcquisitionRequired setting (optional by default). */
+export function assertOperationAcquisition(
+  dto: PatientAcquisitionInput,
+  required: boolean,
+): void {
+  if (required) {
+    requirePatientAcquisition(dto);
+    return;
+  }
+  if (hasPatientAcquisitionInput(dto)) {
+    validatePatientAcquisition(dto);
+  }
+}
+
 export function validatePatientAcquisition(dto: PatientAcquisitionInput): void {
   if (dto.acquisitionChannel === PatientAcquisitionChannel.DOCTOR_REFERRAL) {
     if (!dto.acquisitionReferralName?.trim()) {

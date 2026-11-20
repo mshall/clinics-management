@@ -85,14 +85,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: package-lock.json
-
-      - name: Install dependencies
-        run: bash scripts/npm-ci-workflow.sh
+      - name: Setup Node.js dependencies
+        uses: ./.github/actions/setup-node-deps
 
       - name: Build web (tsc + vite)
         env:
@@ -112,6 +106,8 @@ jobs:
       - name: Block tracked OpenAI API keys in repo
         run: bash scripts/check-no-openai-secrets-in-git.sh
 
+      # Host npm download cache only — cicd-deploy.sh always runs a fresh npm ci for CDK.
+      # Do not restore/skip node_modules here: AWS image builds still npm ci inside Dockerfiles.
       - uses: actions/setup-node@v6
         with:
           node-version: "22"

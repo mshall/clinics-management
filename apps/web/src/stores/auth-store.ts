@@ -29,6 +29,8 @@ export interface AuthUser {
   hasAvatar?: boolean;
   /** Organization base currency (default for clinics that inherit org settings) */
   tenantBaseCurrency?: string | null;
+  /** When true, creating an operation requires How did they find us? */
+  operationAcquisitionRequired?: boolean;
   mfaEnabled?: boolean;
   moneyVisibilityOverrides?: MoneyVisibilityOverrides | null;
   plan?: { key: string; status: string } | null;
@@ -53,6 +55,7 @@ interface AuthState {
       hasAvatar?: boolean;
       mfaEnabled?: boolean;
       tenantBaseCurrency?: string | null;
+      operationAcquisitionRequired?: boolean;
       moneyVisibilityOverrides?: MoneyVisibilityOverrides | null;
       plan?: { key: string; status: string } | null;
       entitlements?: Record<string, unknown> | null;
@@ -90,6 +93,7 @@ export const useAuthStore = create<AuthState>()(
             platformSuperAdmin: Boolean(raw.platformSuperAdmin),
             hasAvatar: Boolean(raw.hasAvatar),
             tenantBaseCurrency: raw.tenantBaseCurrency ?? null,
+            operationAcquisitionRequired: Boolean(raw.operationAcquisitionRequired),
             mfaEnabled: Boolean(raw.mfaEnabled),
             moneyVisibilityOverrides: raw.moneyVisibilityOverrides ?? undefined,
             plan: raw.plan ?? undefined,
@@ -125,6 +129,9 @@ export const useAuthStore = create<AuthState>()(
             platformSuperAdmin: Boolean(me.platformSuperAdmin),
             hasAvatar: Boolean((me as { hasAvatar?: boolean }).hasAvatar),
             tenantBaseCurrency: (me as AuthUserDto).tenantBaseCurrency ?? null,
+            operationAcquisitionRequired: Boolean(
+              (me as AuthUserDto & { operationAcquisitionRequired?: boolean }).operationAcquisitionRequired,
+            ),
             mfaEnabled: Boolean((me as AuthUserDto).mfaEnabled),
             moneyVisibilityOverrides: (me as AuthUserDto & { moneyVisibilityOverrides?: MoneyVisibilityOverrides | null })
               .moneyVisibilityOverrides ?? undefined,
