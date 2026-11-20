@@ -56,7 +56,7 @@ export function useErrorText() {
 
 export function PageShell({ title, subtitle, actions, children, testId }: { title: string; subtitle?: string; actions?: ReactNode; children: ReactNode; testId?: string }) {
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-4 p-4 pb-24 md:pb-6" data-testid={testId}>
+    <div className="mx-auto w-full max-w-3xl space-y-4 pb-24 md:pb-6" data-testid={testId}>
       <PageHeader title={title} description={subtitle} actions={actions} />
       {children}
     </div>
@@ -84,7 +84,7 @@ export function ErrorBlock({ error, onRetry }: { error: unknown; onRetry?: () =>
   const { t } = useTranslation();
   const text = useErrorText();
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-[hsl(var(--danger-text)/0.35)] bg-[hsl(var(--danger-text)/0.07)] p-4 text-sm" role="alert" data-testid="nurse-error">
+    <div className="kx-callout text-sm" data-tone="danger" role="alert" data-testid="nurse-error">
       <AlertTriangle className="mt-0.5 size-5 shrink-0 text-[hsl(var(--danger-text))]" aria-hidden />
       <div className="min-w-0 flex-1">
         <p>{text(error)}</p>
@@ -102,8 +102,8 @@ export function ErrorBlock({ error, onRetry }: { error: unknown; onRetry?: () =>
 export function GateNotice({ feature, compact }: { feature: string; compact?: boolean }) {
   const { t } = useTranslation();
   return (
-    <div className={cn("flex items-start gap-2 rounded-lg border border-[hsl(var(--warning)/0.6)] bg-amber-500/10 text-sm", compact ? "p-2" : "p-3")} role="status" data-testid="nurse-gate-notice" data-feature={feature}>
-      <Lock className="mt-0.5 size-4 shrink-0 text-[hsl(var(--warning))] " aria-hidden />
+    <div className={cn("kx-callout text-sm", compact && "px-3 py-2")} data-tone="warn" role="status" data-testid="nurse-gate-notice" data-feature={feature}>
+      <Lock className="mt-0.5 size-5 shrink-0 text-[hsl(var(--warning))]" aria-hidden />
       <div>
         <p className="font-medium">{t("nurse.gate.title")}</p>
         <p className="text-muted-foreground">{t(`nurse.gate.${feature.replace(/\./g, "_")}`, t("nurse.gate.generic"))}</p>
@@ -133,9 +133,10 @@ export function PatientPicker({ value, onChange, label, id = "nurse-patient" }: 
     return (
       <div className="space-y-1">
         <Label htmlFor={id}>{label ?? t("nurse.common.patient")}</Label>
-        <div className="flex items-center justify-between gap-2 rounded-md border p-2 text-sm" data-testid="nurse-patient-selected">
-          <span className="min-w-0 truncate">{patientName(value)}{value.mrn ? ` · ${value.mrn}` : ""}</span>
-          <button type="button" className="min-h-11 shrink-0 px-2 text-primary underline" onClick={() => onChange(null)}>
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-2.5 text-sm shadow-[var(--kx-shadow-1)]" data-testid="nurse-patient-selected">
+          <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent font-semibold text-accent-foreground">{patientName(value).charAt(0).toUpperCase()}</span>
+          <span className="min-w-0 flex-1 truncate font-medium">{patientName(value)}{value.mrn ? <span className="ms-1 font-normal text-muted-foreground">· {value.mrn}</span> : null}</span>
+          <button type="button" className="min-h-11 shrink-0 rounded-lg px-3 font-medium text-primary hover:bg-accent" onClick={() => onChange(null)}>
             {t("nurse.common.change")}
           </button>
         </div>
@@ -145,15 +146,16 @@ export function PatientPicker({ value, onChange, label, id = "nurse-patient" }: 
   return (
     <div className="space-y-1">
       <Label htmlFor={id}>{label ?? t("nurse.common.patient")}</Label>
-      <Input id={id} className="min-h-11" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("nurse.common.searchPatient")} autoComplete="off" />
+      <Input id={id} className="min-h-12 text-base" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("nurse.common.searchPatient")} autoComplete="off" />
       {list.isLoading ? <LoadingBlock /> : null}
       {list.isError ? <ErrorBlock error={list.error} /> : null}
       {list.data ? (
         list.data.items.length ? (
-          <div className="max-h-56 divide-y overflow-auto rounded-md border" role="listbox" aria-label={t("nurse.common.patient")}>
+          <div className="max-h-[22rem] divide-y overflow-auto rounded-xl border bg-card shadow-[var(--kx-shadow-1)]" role="listbox" aria-label={t("nurse.common.patient")}>
             {list.data.items.map((p) => (
-              <button key={p.id} type="button" role="option" aria-selected={false} className="block min-h-11 w-full px-3 py-2 text-start text-sm hover:bg-muted" data-testid="nurse-patient-option" onClick={() => onChange(p)}>
-                {patientName(p)} <span className="text-muted-foreground">{p.mrn ?? ""} {p.phone ?? ""}</span>
+              <button key={p.id} type="button" role="option" aria-selected={false} className="flex min-h-14 w-full items-center gap-3 px-3 py-2 text-start text-sm transition-colors hover:bg-muted active:bg-muted" data-testid="nurse-patient-option" onClick={() => onChange(p)}>
+                <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent font-semibold text-accent-foreground">{patientName(p).charAt(0).toUpperCase()}</span>
+                <span className="min-w-0"><span className="block truncate text-base font-medium">{patientName(p)}</span><span className="block truncate text-xs text-muted-foreground ltr-nums">{[p.mrn, p.phone].filter(Boolean).join(" · ")}</span></span>
               </button>
             ))}
           </div>
@@ -175,7 +177,7 @@ export function Field({ label, htmlFor, children, hint }: { label: string; htmlF
   );
 }
 
-export const selectClass = "min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+export const selectClass = "min-h-12 w-full rounded-lg border border-input bg-card px-3 py-2 text-base shadow-[var(--kx-shadow-1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:min-h-11 md:text-sm";
 
 export type AppointmentTypeRow = { id: string; nameEn: string; nameAr: string; durationMinutes: number; feeAmount: string | number; serviceLocation: "IN_CLINIC" | "HOME"; homeSurchargeAmount?: string | number | null; clinicId?: string | null; isActive: boolean; bufferBeforeMin?: number; bufferAfterMin?: number };
 

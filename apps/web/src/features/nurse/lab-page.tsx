@@ -25,8 +25,8 @@ function LabProblem({ error }: { error: unknown }) {
   const { t } = useTranslation();
   if (error instanceof ApiError && error.status === 402) {
     return (
-      <div className="flex items-start gap-2 rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm" role="status" data-testid="lab-upgrade">
-        <Lock className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+      <div className="kx-callout text-sm" data-tone="info" role="status" data-testid="lab-upgrade">
+        <Lock className="mt-0.5 size-5 shrink-0 text-[hsl(var(--info))]" aria-hidden />
         <div><p className="font-medium">{t("nurse.lab.upgradeTitle")}</p><p className="text-muted-foreground">{t("nurse.lab.upgradeHelp")}</p></div>
       </div>
     );
@@ -36,8 +36,8 @@ function LabProblem({ error }: { error: unknown }) {
   if (code && (LAB_BLOCKS as readonly string[]).includes(code)) {
     const kind = errorBody<{ identifierKind?: string }>(error)?.identifierKind;
     return (
-      <div className="space-y-1 rounded-lg border-2 border-destructive bg-destructive/10 p-3 text-sm" role="alert" data-testid="lab-block" data-code={code}>
-        <p className="font-semibold text-destructive">{t("nurse.lab.refused")}: {t(`nurse.lab.block.${code}.title`)}{kind ? ` (${t(`nurse.lab.identifierKinds.${kind}`, kind)})` : ""}</p>
+      <div className="kx-callout flex-col gap-1 text-sm" data-tone="danger" role="alert" data-testid="lab-block" data-code={code}>
+        <p className="text-base font-semibold text-[hsl(var(--danger-text))]">{t("nurse.lab.refused")}: {t(`nurse.lab.block.${code}.title`)}{kind ? ` (${t(`nurse.lab.identifierKinds.${kind}`, kind)})` : ""}</p>
         <p>{t(`nurse.lab.block.${code}.help`)}</p>
         <p className="text-muted-foreground">{t("nurse.lab.nothingSent")}</p>
       </div>
@@ -63,7 +63,7 @@ export function LabOrdersPage() {
   return (
     <PageShell title={t("nurse.lab.title")} subtitle={t("nurse.lab.subtitle")} testId="nurse-lab" actions={visit ? <Button asChild variant="outline" className="min-h-11"><Link to={`/nurse/visits/${visit}`}>{t("nurse.mar.backToVisit")}</Link></Button> : undefined}>
       {flagOff ? <GateNotice feature="clinic.lab_order_handoff" /> : null}
-      <p className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm"><FlaskConical className="me-2 inline size-4 text-primary" aria-hidden />{t("nurse.lab.rule")}</p>
+      <div className="kx-callout" data-tone="info"><FlaskConical className="mt-0.5 size-5 shrink-0 text-[hsl(var(--info))]" aria-hidden /><p className="text-sm font-medium">{t("nurse.lab.rule")}</p></div>
       {visit && !flagOff ? <NewLabOrder appointmentId={visit} /> : null}
       {orders.isLoading ? <LoadingBlock /> : null}
       {orders.isError ? <LabProblem error={orders.error} /> : null}
@@ -72,9 +72,9 @@ export function LabOrdersPage() {
         {orders.data?.map((o) => (
           <li key={o.id}>
             <Card data-testid="lab-order-card">
-              <CardContent className="flex flex-wrap items-center justify-between gap-2 p-4 text-sm">
-                <div>
-                  <Link className="font-medium text-primary underline" to={`/nurse/lab/${o.id}${visit ? `?visit=${visit}` : ""}`}>{o.items.map((i) => i.nameEn).join(", ")}</Link>
+              <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm">
+                <div className="min-w-0">
+                  <Link className="block min-h-11 text-base font-semibold text-primary underline-offset-4 hover:underline" to={`/nurse/lab/${o.id}${visit ? `?visit=${visit}` : ""}`}>{o.items.map((i) => i.nameEn).join(", ")}</Link>
                   <p className="text-muted-foreground">{t("nurse.lab.requestedBy", { doctor: o.prescriberName ?? "-", date: o.prescribedOn ? fmtDate(o.prescribedOn) : "-" })}</p>
                 </div>
                 <StatusPill tone={o.collection ? labTone(o.collection.labStatus) : "warn"}>{o.collection ? t(`nurse.lab.status.${o.collection.labStatus ?? "HANDED_OFF"}`, o.collection.labStatus ?? "HANDED_OFF") : t("nurse.lab.notCollected")}</StatusPill>
@@ -120,7 +120,7 @@ function NewLabOrder({ appointmentId }: { appointmentId: string }) {
           <Field label={t("nurse.lab.notes")} htmlFor="lab-notes"><Textarea id="lab-notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} /></Field>
           <label className="flex min-h-11 items-start gap-2 text-sm"><input type="checkbox" className="mt-2 size-5" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} /> {t("nurse.lab.confirmDoctor")}</label>
           {create.isError ? <LabProblem error={create.error} /> : null}
-          <Button type="submit" className="min-h-11" disabled={!valid || create.isPending} data-testid="lab-create">{t("nurse.lab.create")}</Button>
+          <Button type="submit" size="lg" className="min-h-14 w-full text-base" disabled={!valid || create.isPending} data-testid="lab-create">{t("nurse.lab.create")}</Button>
         </form>
       </CardContent>
     </Card>
@@ -200,10 +200,10 @@ function CollectionForm({ orderId, appointmentId, disabled }: { orderId: string;
             <p className="text-xs text-muted-foreground">{t("nurse.lab.identifiersHelp")}</p>
             {IDENT.map((k) => (
               <Field key={k} label={t(`nurse.lab.identifierKinds.${k}`)} htmlFor={`lab-id-${k}`}>
-                <Input id={`lab-id-${k}`} className="min-h-11" type={k === "DATE_OF_BIRTH" ? "date" : "text"} value={checked[k] ?? ""} onChange={(e) => setChecked({ ...checked, [k]: e.target.value })} />
+                <Input id={`lab-id-${k}`} className="min-h-12 text-base" type={k === "DATE_OF_BIRTH" ? "date" : "text"} value={checked[k] ?? ""} onChange={(e) => setChecked({ ...checked, [k]: e.target.value })} />
               </Field>
             ))}
-            {idents.length < 2 ? <p className="text-xs text-[hsl(var(--warning))] ">{t("nurse.lab.needTwo")}</p> : null}
+            {idents.length < 2 ? <p className="text-sm font-medium text-[hsl(var(--warning))]">{t("nurse.lab.needTwo")} <span className="tabular-nums">({idents.length}/2)</span></p> : <p className="text-sm font-medium text-[hsl(var(--success))]">{t("nurse.lab.identifiersTitle")} ({idents.length}/2)</p>}
           </fieldset>
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label={t("nurse.lab.collectedAt")} htmlFor="lab-collected"><Input id="lab-collected" type="datetime-local" className="min-h-11" value={collectedAt} onChange={(e) => setCollectedAt(e.target.value)} /></Field>
@@ -213,7 +213,7 @@ function CollectionForm({ orderId, appointmentId, disabled }: { orderId: string;
           <div className="space-y-2">
             <p className="text-sm font-medium">{t("nurse.lab.tubes")}</p>
             {tubes.map((x, i) => (
-              <div key={i} className="grid gap-2 rounded-md border p-2 sm:grid-cols-3" data-testid="lab-tube">
+              <div key={i} className="grid gap-3 rounded-xl border border-border bg-muted/30 p-3 sm:grid-cols-3" data-testid="lab-tube">
                 <Field label={t("nurse.lab.tubeLabel")} htmlFor={`lab-tl-${i}`} hint={t("nurse.lab.tubeLabelHint")}><Input id={`lab-tl-${i}`} className="min-h-11" value={x.label} onChange={(e) => setTubes((ts) => ts.map((y, j) => (j === i ? { ...y, label: e.target.value } : y)))} /></Field>
                 <Field label={t("nurse.lab.specimenType")} htmlFor={`lab-st-${i}`}>
                   <select id={`lab-st-${i}`} className={selectClass} value={x.specimenType} onChange={(e) => setTubes((ts) => ts.map((y, j) => (j === i ? { ...y, specimenType: e.target.value } : y)))}>
@@ -227,10 +227,39 @@ function CollectionForm({ orderId, appointmentId, disabled }: { orderId: string;
           </div>
           <p className="text-xs text-muted-foreground">{t("nurse.lab.consentNote")}</p>
           {collect.isError ? <LabProblem error={collect.error} /> : null}
-          <Button type="submit" className="min-h-12" disabled={!valid || disabled || collect.isPending} data-testid="lab-collect-submit">{t("nurse.lab.handOff")}</Button>
+          <Button type="submit" size="lg" className="min-h-14 w-full text-base" disabled={!valid || disabled || collect.isPending} data-testid="lab-collect-submit">{t("nurse.lab.handOff")}</Button>
         </form>
       </CardContent>
     </Card>
+  );
+}
+
+/** Four-stage progress for a sample so the nurse sees at a glance where it is (collected, handed over, received, result). */
+function SampleProgress({ c }: { c: Collection }) {
+  const { t } = useTranslation();
+  const rejected = c.labStatus === "REJECTED_BY_LAB" || c.labStatus === "CANCELLED";
+  const received = c.custody.some((e) => e.type === "RECEIVED" || e.type === "RECEIVED_AT_LAB") || ["ACCEPTED", "COLLECTED", "IN_LAB", "PARTIALLY_RESULTED", "AWAITING_VALIDATION", "VALIDATED", "RELEASED"].includes(c.labStatus ?? "");
+  const released = c.labStatus === "RELEASED" || Boolean(c.result?.releasedAt);
+  const steps = [
+    { id: "collected", label: t("nurse.lab.custody.COLLECTED"), done: true },
+    { id: "handed", label: t("nurse.lab.custody.HANDED_OVER"), done: Boolean(c.handedOverAt) || c.custody.some((e) => e.type === "HANDED_OVER") || received },
+    { id: "received", label: t("nurse.lab.custody.RECEIVED"), done: received },
+    { id: "result", label: t("nurse.lab.status.RELEASED"), done: released },
+  ];
+  const current = steps.findIndex((x) => !x.done);
+  return (
+    <ol className="grid grid-cols-4 gap-1" aria-label={t("nurse.lab.custodyTitle")} data-testid="lab-progress">
+      {steps.map((x, i) => (
+        <li key={x.id} aria-current={i === current ? "step" : undefined} className="flex flex-col items-center gap-1 text-center">
+          <span className="flex w-full items-center">
+            <span aria-hidden className={`h-0.5 flex-1 ${i === 0 ? "opacity-0" : x.done || i === current ? "bg-primary" : "bg-border"}`} />
+            <span className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${x.done ? (rejected && i === steps.length - 1 ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground") : i === current ? (rejected ? "bg-[hsl(var(--danger-text))] text-white" : "bg-accent text-accent-foreground ring-2 ring-primary") : "bg-muted text-muted-foreground"}`}>{x.done ? "\u2713" : i + 1}</span>
+            <span aria-hidden className={`h-0.5 flex-1 ${i === steps.length - 1 ? "opacity-0" : steps[i + 1]!.done || i + 1 === current ? "bg-primary" : "bg-border"}`} />
+          </span>
+          <span className={`text-[0.6875rem] leading-tight ${i === current ? "font-semibold" : "text-muted-foreground"}`}>{x.label}</span>
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -240,10 +269,11 @@ function CustodyTimeline({ c }: { c: Collection }) {
     <Card data-testid="lab-custody">
       <CardHeader className="pb-1"><CardTitle className="flex flex-wrap items-center justify-between gap-2 text-base"><span>{t("nurse.lab.custodyTitle")}</span><StatusPill tone={labTone(c.labStatus)}>{t(`nurse.lab.status.${c.labStatus ?? "HANDED_OFF"}`, c.labStatus ?? "HANDED_OFF")}</StatusPill></CardTitle></CardHeader>
       <CardContent className="space-y-3 text-sm">
+        <SampleProgress c={c} />
         {c.labOrderNumber ? <p>{t("nurse.lab.labNumber", { number: c.labOrderNumber })}</p> : null}
         {c.labStatus === "REJECTED_BY_LAB" ? (
-          <div className="rounded-md border-2 border-destructive bg-destructive/10 p-3" role="alert" data-testid="lab-rejected">
-            <p className="font-semibold text-destructive">{t("nurse.lab.block.REJECTED_BY_LAB.title")}{c.rejectionCode ? ` (${c.rejectionCode})` : ""}</p>
+          <div className="kx-callout flex-col gap-1" data-tone="danger" role="alert" data-testid="lab-rejected">
+            <p className="text-base font-semibold text-[hsl(var(--danger-text))]">{t("nurse.lab.block.REJECTED_BY_LAB.title")}{c.rejectionCode ? ` (${c.rejectionCode})` : ""}</p>
             <p>{t("nurse.lab.block.REJECTED_BY_LAB.help")}</p>
           </div>
         ) : null}

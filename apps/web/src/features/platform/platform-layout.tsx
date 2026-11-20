@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Navigate, Outlet } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
+import { NavLink, Navigate, Outlet } from "react-router-dom";
+import { PageHeader, Skeleton, StatCard } from "@/brand/ui-kit";
 import { apiGet } from "@/lib/http";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -51,31 +51,47 @@ export function PlatformLayout() {
 
   const ov = overviewQuery.data;
 
+  const sections: { to: string; label: string; end?: boolean }[] = [
+    { to: "/platform", label: t("nav.platformOverview"), end: true },
+    { to: "/platform/organizations", label: t("platform.kpi.orgs") },
+    { to: "/platform/users", label: t("platform.kpi.users") },
+    { to: "/platform/clinics", label: t("platform.kpi.clinics") },
+    { to: "/platform/insights", label: t("nav.platformInsights", "Insights") },
+    { to: "/platform/markets", label: t("nav.platformMarkets", "Market launch") },
+    { to: "/platform/plans", label: t("nav.platformPlans", "Plans & pricing") },
+    { to: "/platform/kiorex-rates", label: t("nav.platformKiorex", "Kiorex fees") },
+    { to: "/platform/verifications", label: t("nav.platformVerifications", "Doctor verification") },
+    { to: "/platform/disputes", label: t("nav.platformDisputes", "Commission disputes") },
+    { to: "/platform/drug-datasets", label: t("nav.platformDrugDatasets", "Drug datasets") },
+  ];
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t("platform.title")}</h1>
-        <p className="text-muted-foreground">{t("platform.subtitle")}</p>
-      </div>
+    <div className="space-y-5">
+      <PageHeader title={t("platform.title")} description={t("platform.subtitle")} className="mb-0" />
 
       {ov ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           {[
-            { label: t("platform.kpi.orgs"), value: ov.tenantCount },
-            { label: t("platform.kpi.users"), value: ov.userCount },
-            { label: t("platform.kpi.clinics"), value: ov.clinicCount },
-            { label: t("platform.kpi.patients"), value: ov.patientCount },
-            { label: t("platform.kpi.encounters"), value: ov.encounterCount },
+            { label: t("platform.kpi.orgs"), value: ov.tenantCount, tone: "brand" as const },
+            { label: t("platform.kpi.users"), value: ov.userCount, tone: "info" as const },
+            { label: t("platform.kpi.clinics"), value: ov.clinicCount, tone: "neutral" as const },
+            { label: t("platform.kpi.patients"), value: ov.patientCount, tone: "good" as const },
+            { label: t("platform.kpi.encounters"), value: ov.encounterCount, tone: "neutral" as const },
           ].map((k) => (
-            <Card key={k.label}>
-              <CardContent className="pt-4">
-                <p className="text-xs text-muted-foreground">{k.label}</p>
-                <p className="text-2xl font-semibold ltr-nums">{k.value}</p>
-              </CardContent>
-            </Card>
+            <StatCard key={k.label} label={k.label} value={<span className="ltr-nums">{k.value.toLocaleString()}</span>} tone={k.tone} />
           ))}
         </div>
-      ) : null}
+      ) : (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5" aria-busy="true">
+          {Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-[4.5rem] rounded-xl" />)}
+        </div>
+      )}
+
+      <nav aria-label={t("platform.title")} className="kx-secnav">
+        {sections.map((x) => (
+          <NavLink key={x.to} to={x.to} end={x.end} className="inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{x.label}</NavLink>
+        ))}
+      </nav>
 
       <Outlet />
     </div>

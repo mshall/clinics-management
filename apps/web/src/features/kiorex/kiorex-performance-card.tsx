@@ -1,3 +1,4 @@
+import { EmptyState } from "@/brand/ui-kit";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -67,7 +68,7 @@ export function KiorexPerformanceCard({ clinicId }: { clinicId: string }) {
           <Label htmlFor="kiorex-period">{t("kiorexTab.performance.period", "Month")}</Label>
           <select
             id="kiorex-period"
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+            className="native-select h-10 min-h-10"
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
           >
@@ -145,6 +146,9 @@ export function KiorexPerformanceCard({ clinicId }: { clinicId: string }) {
               </div>
             ) : null}
 
+            {chartData.every((d) => !d.bookings && !d.attended && !d.views) ? (
+              <EmptyState compact title={t("kiorexTab.performance.noActivity", "No Kiorex activity yet this month")} description={t("kiorexTab.performance.noActivityHint", "Profile views and bookings from Kiorex will chart here as they arrive.")} />
+            ) : (
             <div className="h-64" dir="ltr">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
@@ -160,6 +164,7 @@ export function KiorexPerformanceCard({ clinicId }: { clinicId: string }) {
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
+            )}
           </>
         ) : null}
       </CardContent>

@@ -67,7 +67,7 @@ export function OnboardingChecklist({ variant = "card", onDismiss }: Props) {
         <CardTitle className="text-base">{t("onboarding.title")}</CardTitle>
         <CardDescription>{t("onboarding.subtitle")}</CardDescription>
         {showMfaSetup ? (
-          <div className="mt-3 rounded-md border border-[hsl(var(--warning)/0.4)] bg-amber-500/10 px-3 py-2 text-sm" data-testid="onboarding-mfa-setup">
+          <div className="kx-callout mt-3 flex-col gap-1 text-sm" data-tone="warn" data-testid="onboarding-mfa-setup">
             <p className="font-medium">{t("onboarding.mfaSetupTitle", "Protect money with MFA")}</p>
             <p className="mt-1 text-muted-foreground">
               {t(
@@ -144,26 +144,26 @@ function StepRow({
 }) {
   const icon =
     step.status === "done" ? (
-      <Check className="size-4 shrink-0 text-primary" aria-hidden />
+      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--success))] text-white"><Check className="size-3.5" aria-hidden /></span>
     ) : step.status === "skipped" ? (
-      <SkipForward className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"><SkipForward className="size-3.5" aria-hidden /></span>
     ) : (
-      <Circle className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+      <Circle className="size-6 shrink-0 text-border" strokeWidth={1.75} aria-hidden />
     );
 
   return (
-    <li className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted/60">
+    <li className="flex min-h-12 items-center gap-3 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-muted/60" data-status={step.status}>
       {icon}
-      <Link to={step.href} className="min-w-0 flex-1 text-start hover:underline">
+      <Link to={step.href} className={`min-w-0 flex-1 py-1 text-start hover:underline ${step.status === "done" ? "text-muted-foreground" : "font-medium"}`}>
         {label}
-        {!step.required ? <span className="ms-1 text-xs text-muted-foreground">({optionalLabel})</span> : null}
+        {!step.required ? <span className="ms-1 text-xs font-normal text-muted-foreground">({optionalLabel})</span> : null}
       </Link>
       {step.status === "pending" && !step.required ? (
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="h-7 shrink-0 text-xs"
+          className="h-9 shrink-0 text-xs"
           disabled={pending}
           onClick={() => onSkip(step.key)}
         >

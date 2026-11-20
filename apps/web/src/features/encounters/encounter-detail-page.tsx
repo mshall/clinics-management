@@ -826,13 +826,11 @@ export function EncounterDetailPage() {
           </CardTitle>
           <CardDescription>{draft ? t("encounters.editable") : t("encounters.readOnly")}</CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 lg:items-end" data-testid="vitals-grid">
+        <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7 xl:items-end" data-testid="vitals-grid">
           <VitalField icon={<Heart className="size-3.5 text-rose-500" aria-hidden />} label={t("encounters.hr")} unit="bpm" value={heartRate} onChange={setHeartRate} disabled={!draft} inputMode="numeric" />
           <VitalField icon={<Wind className="size-3.5 text-kx-ocean-600" aria-hidden />} label={t("encounters.spo2")} unit="%" value={spo2} onChange={setSpo2} disabled={!draft} inputMode="numeric" />
-          <div className="col-span-2 grid grid-cols-2 gap-3 sm:col-span-1 lg:col-span-1">
-            <VitalField icon={<Activity className="size-3.5 text-kx-indigo-600" aria-hidden />} label={t("encounters.bpSys")} unit="mmHg" value={bpSys} onChange={setBpSys} disabled={!draft} inputMode="numeric" />
-            <VitalField label={t("encounters.bpDia")} unit="mmHg" value={bpDia} onChange={setBpDia} disabled={!draft} inputMode="numeric" />
-          </div>
+          <VitalField icon={<Activity className="size-3.5 text-kx-indigo-600" aria-hidden />} label={t("encounters.bpSys")} unit="mmHg" value={bpSys} onChange={setBpSys} disabled={!draft} inputMode="numeric" />
+          <VitalField icon={<Activity className="size-3.5 text-kx-indigo-600" aria-hidden />} label={t("encounters.bpDia")} unit="mmHg" value={bpDia} onChange={setBpDia} disabled={!draft} inputMode="numeric" />
           <VitalField icon={<Thermometer className="size-3.5 text-amber-500" aria-hidden />} label={t("encounters.tempC")} unit="°C" value={temperature} onChange={setTemperature} disabled={!draft} inputMode="decimal" />
           <VitalField icon={<Scale className="size-3.5 text-muted-foreground" aria-hidden />} label={t("encounters.weightKg")} unit="kg" value={weightKg} onChange={setWeightKg} disabled={!draft} inputMode="decimal" />
           <VitalField icon={<Ruler className="size-3.5 text-muted-foreground" aria-hidden />} label={t("encounters.heightCm")} unit="cm" value={heightCm} onChange={setHeightCm} disabled={!draft} inputMode="decimal" />
@@ -1411,7 +1409,7 @@ function VitalField({ icon, label, unit, value, onChange, disabled, inputMode }:
     <div className="min-w-0 space-y-1">
       <Label htmlFor={id} className="flex items-center gap-1.5 text-xs text-muted-foreground">{icon}<span className="truncate">{label}</span></Label>
       <div className="relative">
-        <Input id={id} className="h-10 pe-12 text-base font-semibold tabular-nums ltr-nums" inputMode={inputMode} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} />
+        <Input id={id} className="h-11 pe-12 text-base font-semibold tabular-nums ltr-nums md:h-11" inputMode={inputMode} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} />
         <span aria-hidden className="pointer-events-none absolute inset-y-0 end-3 flex items-center text-xs text-muted-foreground">{unit}</span>
       </div>
     </div>

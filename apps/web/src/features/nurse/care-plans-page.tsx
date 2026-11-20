@@ -91,12 +91,16 @@ export function CarePlansPage() {
         {plans.data?.items.map((p) => (
           <li key={p.id}>
             <Card data-testid="care-plan-card">
-              <CardContent className="flex flex-wrap items-center justify-between gap-2 p-4">
-                <div className="min-w-0">
-                  <Link to={`/nurse/care-plans/${p.id}`} className="font-medium text-primary underline-offset-2 hover:underline">{p.title}</Link>
-                  <p className="text-sm text-muted-foreground">{t("nurse.carePlans.starts", { date: fmtDate(p.startDate) })} · {t("nurse.carePlans.remaining", { count: p.visitsRemaining, total: p.visitsTotal })}</p>
+              <CardContent className="space-y-3 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <Link to={`/nurse/care-plans/${p.id}`} className="min-h-11 min-w-0 flex-1 text-base font-semibold leading-snug text-primary underline-offset-4 hover:underline">{p.title}</Link>
+                  <StatusPill tone={tone(p.status)}>{t(`nurse.carePlans.status.${p.status}`)}</StatusPill>
                 </div>
-                <StatusPill tone={tone(p.status)}>{t(`nurse.carePlans.status.${p.status}`)}</StatusPill>
+                <div className="flex items-center gap-3">
+                  <span aria-hidden className="relative h-2 flex-1 overflow-hidden rounded-full bg-muted"><span className="absolute inset-y-0 start-0 rounded-full bg-primary" style={{ width: `${p.visitsTotal ? Math.round((p.visitsDone / p.visitsTotal) * 100) : 0}%` }} /></span>
+                  <span className="text-sm font-semibold tabular-nums ltr-nums">{p.visitsDone}/{p.visitsTotal}</span>
+                </div>
+                <p className="text-sm text-muted-foreground">{t("nurse.carePlans.starts", { date: fmtDate(p.startDate) })} · {t("nurse.carePlans.remaining", { count: p.visitsRemaining, total: p.visitsTotal })}</p>
               </CardContent>
             </Card>
           </li>

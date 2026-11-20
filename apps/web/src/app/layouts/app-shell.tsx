@@ -23,6 +23,7 @@ import { HelpDrawer } from "@/features/help/help-drawer";
 import { useHelpStore } from "@/stores/help-store";
 import { PwaInstallPrompt } from "@/features/pwa/pwa-install-prompt";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { KiorlyMark } from "@/brand/ui-kit";
 import { BrandLockup } from "@/components/brand-lockup";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { useDensityStore } from "@/stores/density-store";
@@ -78,7 +79,8 @@ export function AppShell() {
                 <AppNavLinks onNavigate={() => setMobileOpen(false)} />
               </SheetContent>
             </Sheet>
-            <span className="min-w-0 overflow-hidden"><BrandLockup height={24} tagline={false} /></span>
+            <span className="shrink-0 sm:hidden"><KiorlyMark size={30} /></span>
+            <span className="hidden min-w-0 overflow-hidden sm:block"><BrandLockup height={24} tagline={false} /></span>
           </div>
           <div className="flex min-w-0 shrink-0 items-center justify-end gap-0.5 sm:gap-1.5">
             <GlobalPatientSearch />

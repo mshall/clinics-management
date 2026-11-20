@@ -52,7 +52,7 @@ export function FamilyPage() {
           <p className="text-sm text-muted-foreground">{t("nurse.family.addHelp")} <Link className="text-primary underline" to={`/patients/${patient.id}`}>{t("nurse.family.openPatient")}</Link></p>
         </>
       ) : null}
-      <p className="text-sm text-muted-foreground">{t("nurse.family.mock")} <Link className="text-primary underline" to="/dev/inbox">{t("nurse.family.devInbox")}</Link></p>
+      <p className="text-sm text-muted-foreground">{t("nurse.family.mock")} <Link className="font-medium text-[hsl(var(--danger-text))] underline underline-offset-4" to="/dev/inbox">{t("nurse.family.devInbox")}</Link></p>
     </PageShell>
   );
 }

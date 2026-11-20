@@ -106,13 +106,17 @@ export function TodayRoutePage() {
         <Button asChild size="sm" variant="outline"><Link to="/nurse/safety"><ShieldAlert className="size-4" aria-hidden />{t("nurse.safety.title")}</Link></Button>
       </div>
       {sos ? (
-        <Card className="border-destructive" role="alert" data-testid="sos-panel">
-          <CardContent className="space-y-1 p-4">
-            <p className="font-semibold">{sos.delivered ? t("homeVisits.sosSent") : t("homeVisits.sosNotDelivered")}</p>
-            <p>{t("homeVisits.callAmbulance", { number: sos.show.ambulance })}</p>
-            <p>{t("homeVisits.callPolice", { number: sos.show.police })}</p>
-          </CardContent>
-        </Card>
+        <div className="kx-callout" data-tone="danger" role="alert" data-testid="sos-panel">
+          <ShieldAlert className="mt-0.5 size-6 shrink-0 text-[hsl(var(--danger-text))]" aria-hidden />
+          <div className="min-w-0 flex-1 space-y-2">
+            <p className="text-base font-semibold">{sos.delivered ? t("homeVisits.sosSent") : t("homeVisits.sosNotDelivered")}</p>
+            <div className="grid grid-cols-2 gap-2">
+              <a className="inline-flex min-h-14 items-center justify-center gap-2 rounded-xl bg-destructive px-3 text-base font-semibold text-destructive-foreground" href={`tel:${sos.show.ambulance}`}><Phone className="size-5" aria-hidden /><span className="ltr-nums">{sos.show.ambulance}</span></a>
+              <a className="inline-flex min-h-14 items-center justify-center gap-2 rounded-xl border border-[hsl(var(--danger-text)/0.5)] bg-card px-3 text-base font-semibold text-[hsl(var(--danger-text))]" href={`tel:${sos.show.police}`}><Phone className="size-5" aria-hidden /><span className="ltr-nums">{sos.show.police}</span></a>
+            </div>
+            <p className="text-sm text-muted-foreground">{t("homeVisits.callAmbulance", { number: sos.show.ambulance })} · {t("homeVisits.callPolice", { number: sos.show.police })}</p>
+          </div>
+        </div>
       ) : null}
       {route.isLoading ? <div role="status" aria-busy="true" className="space-y-3">{[0, 1].map((i) => <Skeleton key={i} className="h-40 rounded-xl" />)}</div> : null}
       {!route.isLoading && items.length === 0 ? <EmptyState compact title={t("homeVisits.none")} /> : null}
@@ -123,13 +127,11 @@ export function TodayRoutePage() {
         return (
           <Card key={v.id} data-testid="home-visit-card" data-next={isNext ? "true" : undefined} className={isNext ? "border-primary/40 ring-1 ring-primary/20" : undefined}>
             <CardHeader className="pb-2">
-              <CardTitle className="flex items-start justify-between gap-3 text-base">
-                <span className="flex min-w-0 items-baseline gap-2">
-                  <span className="whitespace-nowrap text-lg font-semibold tabular-nums ltr-nums">{timeFmt.format(new Date(v.plannedStartsAt))}</span>
-                  <span className="truncate">{v.patient.name ?? v.district}</span>
-                </span>
+              <div className="flex items-center justify-between gap-3">
+                <span className="whitespace-nowrap text-2xl font-semibold tabular-nums tracking-tight ltr-nums">{timeFmt.format(new Date(v.plannedStartsAt))}</span>
                 <StatusChip tone={tone(v.state)} className="shrink-0">{t(`homeVisits.state.${v.state}`)}</StatusChip>
-              </CardTitle>
+              </div>
+              <CardTitle className="text-lg font-semibold leading-snug">{v.patient.name ?? v.district}</CardTitle>
               {isNext ? <p className="text-xs font-medium text-primary">{t("kx2.nextUp", "Next up")}</p> : null}
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
@@ -157,16 +159,18 @@ export function TodayRoutePage() {
                 ) : null}
                 {active ? (
                   <>
-                    <Button size="sm" variant="outline" onClick={() => setUnsafeFor(unsafeFor === v.id ? null : v.id)}>{t("homeVisits.leaveUnsafe")}</Button>
-                    <Button size="sm" variant="destructive" data-testid="sos-button" disabled={act.isPending} onClick={() => act.mutate({ id: v.id, action: "sos" })}><ShieldAlert className="size-4" aria-hidden />{t("homeVisits.sos")}</Button>
+                    <div className="grid w-full grid-cols-2 gap-2">
+                      <Button size="lg" variant="outline" className="w-full" onClick={() => setUnsafeFor(unsafeFor === v.id ? null : v.id)}>{t("homeVisits.leaveUnsafe")}</Button>
+                      <Button size="lg" variant="destructive" className="w-full" data-testid="sos-button" disabled={act.isPending} onClick={() => act.mutate({ id: v.id, action: "sos" })}><ShieldAlert className="size-5" aria-hidden />{t("homeVisits.sos")}</Button>
+                    </div>
                   </>
                 ) : null}
               </div>
               {unsafeFor === v.id ? (
-                <div className="space-y-2 rounded-lg border p-3">
-                  <p className="text-xs text-muted-foreground">{t("homeVisits.unsafeHelp")}</p>
-                  <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("homeVisits.unsafeReason")} />
-                  <Button size="sm" disabled={!reason.trim() || act.isPending} onClick={() => act.mutate({ id: v.id, action: "abort-unsafe", body: { reason } })}>{t("homeVisits.confirmLeave")}</Button>
+                <div className="kx-callout flex-col" data-tone="warn">
+                  <p className="text-sm">{t("homeVisits.unsafeHelp")}</p>
+                  <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("homeVisits.unsafeReason")} aria-label={t("homeVisits.unsafeReason")} />
+                  <Button size="lg" className="w-full" disabled={!reason.trim() || act.isPending} onClick={() => act.mutate({ id: v.id, action: "abort-unsafe", body: { reason } })}>{t("homeVisits.confirmLeave")}</Button>
                 </div>
               ) : null}
             </CardContent>

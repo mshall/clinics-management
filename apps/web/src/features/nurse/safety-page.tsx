@@ -48,14 +48,13 @@ export function SafetyPage() {
 function EmergencyCard() {
   const { t } = useTranslation();
   return (
-    <Card>
-      <CardContent className="flex flex-wrap items-center gap-3 p-4">
-        <Siren className="size-5 text-destructive" aria-hidden />
-        <p className="text-sm font-medium">{t("nurse.safety.emergency")}</p>
-        <a href="tel:123" className="inline-flex min-h-11 items-center gap-2 rounded-md border px-3 text-sm"><Phone className="size-4" aria-hidden /> 123 · {t("nurse.safety.ambulance")}</a>
-        <a href="tel:122" className="inline-flex min-h-11 items-center gap-2 rounded-md border px-3 text-sm"><Phone className="size-4" aria-hidden /> 122 · {t("nurse.safety.police")}</a>
-      </CardContent>
-    </Card>
+    <section aria-label={t("nurse.safety.emergency")} className="space-y-2">
+      <p className="flex items-center gap-2 text-sm font-semibold"><Siren className="size-5 text-[hsl(var(--danger-text))]" aria-hidden />{t("nurse.safety.emergency")}</p>
+      <div className="grid grid-cols-2 gap-3">
+        <a href="tel:123" className="flex min-h-16 flex-col items-center justify-center rounded-2xl bg-destructive px-3 py-2 text-destructive-foreground shadow-[var(--kx-shadow-2)] active:translate-y-px"><span className="flex items-center gap-2 text-2xl font-bold tabular-nums"><Phone className="size-5" aria-hidden />123</span><span className="text-sm opacity-95">{t("nurse.safety.ambulance")}</span></a>
+        <a href="tel:122" className="flex min-h-16 flex-col items-center justify-center rounded-2xl border-2 border-[hsl(var(--danger-text))] bg-card px-3 py-2 text-[hsl(var(--danger-text))] shadow-[var(--kx-shadow-1)] active:translate-y-px"><span className="flex items-center gap-2 text-2xl font-bold tabular-nums"><Phone className="size-5" aria-hidden />122</span><span className="text-sm">{t("nurse.safety.police")}</span></a>
+      </div>
+    </section>
   );
 }
 
@@ -94,31 +93,39 @@ function ActiveVisitSafety() {
       <CardContent className="space-y-3">
         {route.isLoading ? <LoadingBlock /> : null}
         {route.isError ? <ErrorBlock error={route.error} onRetry={() => void route.refetch()} /> : null}
-        {aborted ? <p className="rounded-md border border-[hsl(var(--success)/0.5)] bg-emerald-500/10 p-3 text-sm" role="status" data-testid="abort-done">{t("nurse.safety.abortDone")}</p> : null}
+        {aborted ? <div className="kx-callout" data-tone="good" role="status" data-testid="abort-done"><ShieldCheck className="size-5 shrink-0 text-[hsl(var(--success))]" aria-hidden /><p className="text-sm">{t("nurse.safety.abortDone")}</p></div> : null}
         {!active && route.data ? <EmptyBlock message={t("nurse.safety.noActive")} /> : null}
         {active ? (
           <>
             <p className="text-sm">{active.patient.name ?? active.district} · {fmtDateTime(active.plannedStartsAt)} <StatusPill tone="ok">{t(`homeVisits.state.${active.state}`)}</StatusPill></p>
-            <p className="text-lg font-semibold tabular-nums" data-testid="safety-timer" data-phase={phase} role="timer" aria-live="off">
-              {phase === "before" ? t("nurse.safety.phase.before", { time: mmss(promptAt - now) }) : null}
-              {phase === "grace" ? t("nurse.safety.phase.grace", { time: mmss(promptAt - now) }) : null}
-              {phase === "prompt" ? t("nurse.safety.phase.prompt", { time: mmss(alertAt - now) }) : null}
-              {phase === "alert" ? t("nurse.safety.phase.alert") : null}
-            </p>
+            <div className="kx-callout" data-tone={phase === "alert" ? "danger" : phase === "prompt" ? "warn" : phase === "grace" ? "info" : "good"} data-phase-callout={phase}>
+              {phase === "alert" ? <Siren className="size-6 shrink-0 text-[hsl(var(--danger-text))]" aria-hidden /> : phase === "prompt" ? <TimerReset className="size-6 shrink-0 text-[hsl(var(--warning))]" aria-hidden /> : <ShieldCheck className="size-6 shrink-0 text-[hsl(var(--success))]" aria-hidden />}
+              <p className="text-xl font-semibold leading-snug tabular-nums" data-testid="safety-timer" data-phase={phase} role="timer" aria-live="off">
+                {phase === "before" ? t("nurse.safety.phase.before", { time: mmss(promptAt - now) }) : null}
+                {phase === "grace" ? t("nurse.safety.phase.grace", { time: mmss(promptAt - now) }) : null}
+                {phase === "prompt" ? t("nurse.safety.phase.prompt", { time: mmss(alertAt - now) }) : null}
+                {phase === "alert" ? t("nurse.safety.phase.alert") : null}
+              </p>
+            </div>
             <p className="text-xs text-muted-foreground">{t("nurse.safety.timerHelp", { prompt: PROMPT_AFTER_END_MIN, alert: ALERT_AFTER_PROMPT_MIN })}</p>
-            <div className="flex flex-wrap gap-2">
-              <Button className="min-h-12" disabled={answer.isPending} onClick={() => answer.mutate()} data-testid="safety-answer"><ShieldCheck className="size-4" aria-hidden /> {t("nurse.safety.imSafe")}</Button>
-              <Button variant="destructive" className="min-h-12" disabled={sosM.isPending} onClick={() => sosM.mutate()} data-testid="safety-sos"><Siren className="size-4" aria-hidden /> {t("homeVisits.sos")}</Button>
-              <Button variant="outline" className="min-h-12" onClick={() => setLeaving((x) => !x)} data-testid="safety-leave">{t("homeVisits.leaveUnsafe")}</Button>
+            <div className="grid gap-3">
+              <Button size="lg" className="min-h-14 w-full text-base" disabled={answer.isPending} onClick={() => answer.mutate()} data-testid="safety-answer"><ShieldCheck className="size-5" aria-hidden /> {t("nurse.safety.imSafe")}</Button>
+              <div className="grid grid-cols-2 gap-3">
+                <Button variant="destructive" size="lg" className="min-h-14 w-full text-base" disabled={sosM.isPending} onClick={() => sosM.mutate()} data-testid="safety-sos"><Siren className="size-5" aria-hidden /> {t("homeVisits.sos")}</Button>
+                <Button variant="outline" size="lg" className="min-h-14 w-full text-base" onClick={() => setLeaving((x) => !x)} data-testid="safety-leave">{t("homeVisits.leaveUnsafe")}</Button>
+              </div>
             </div>
             {sos ? (
-              <div className="rounded-md border-2 border-destructive p-3 text-sm" role="alert" data-testid="sos-panel">
-                <p className="font-semibold">{sos.delivered ? t("homeVisits.sosSent") : t("homeVisits.sosNotDelivered")}</p>
-                <p>{t("homeVisits.callAmbulance", { number: sos.show.ambulance })} · {t("homeVisits.callPolice", { number: sos.show.police })}</p>
+              <div className="kx-callout" data-tone="danger" role="alert" data-testid="sos-panel">
+                <Siren className="mt-0.5 size-6 shrink-0 text-[hsl(var(--danger-text))]" aria-hidden />
+                <div>
+                  <p className="font-semibold">{sos.delivered ? t("homeVisits.sosSent") : t("homeVisits.sosNotDelivered")}</p>
+                  <p className="text-sm">{t("homeVisits.callAmbulance", { number: sos.show.ambulance })} · {t("homeVisits.callPolice", { number: sos.show.police })}</p>
+                </div>
               </div>
             ) : null}
             {leaving ? (
-              <form className="space-y-3 rounded-md border p-3" onSubmit={(e) => { e.preventDefault(); if (reason.trim()) abort.mutate(); }} data-testid="abort-form">
+              <form className="kx-callout flex-col" data-tone="warn" onSubmit={(e) => { e.preventDefault(); if (reason.trim()) abort.mutate(); }} data-testid="abort-form">
                 <p className="text-sm text-muted-foreground">{t("homeVisits.unsafeHelp")}</p>
                 <Field label={t("nurse.safety.abortCategory")} htmlFor="abort-cat">
                   <select id="abort-cat" className={selectClass} value={category} onChange={(e) => setCategory(e.target.value as typeof category)}>
@@ -127,7 +134,7 @@ function ActiveVisitSafety() {
                 </Field>
                 <Field label={t("homeVisits.unsafeReason")} htmlFor="abort-reason"><Input id="abort-reason" className="min-h-11" value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
                 {abort.isError ? <ErrorBlock error={abort.error} /> : null}
-                <Button type="submit" variant="destructive" className="min-h-11" disabled={!reason.trim() || abort.isPending} data-testid="abort-confirm">{t("homeVisits.confirmLeave")}</Button>
+                <Button type="submit" variant="destructive" size="lg" className="min-h-14 w-full text-base" disabled={!reason.trim() || abort.isPending} data-testid="abort-confirm">{t("homeVisits.confirmLeave")}</Button>
               </form>
             ) : null}
           </>
@@ -156,7 +163,7 @@ function SafetyContactCard() {
         {contact.isLoading ? <LoadingBlock /> : null}
         {contact.isError ? <ErrorBlock error={contact.error} /> : null}
         {contact.data ? (
-          contact.data.configured ? <p className="text-sm">{t("nurse.safety.contactSet", { name: contact.data.name ?? "" })}</p> : <p className="rounded-md border border-[hsl(var(--warning)/0.6)] bg-amber-500/10 p-2 text-sm" role="alert">{t("nurse.safety.contactMissing")}</p>
+          contact.data.configured ? <p className="text-sm">{t("nurse.safety.contactSet", { name: contact.data.name ?? "" })}</p> : <div className="kx-callout" data-tone="warn" role="alert"><Siren className="size-5 shrink-0 text-[hsl(var(--warning))]" aria-hidden /><p className="text-sm font-medium">{t("nurse.safety.contactMissing")}</p></div>
         ) : null}
         <form className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); if (name.trim() && phone.trim()) save.mutate(); }}>
           <Field label={t("nurse.safety.contactName")} htmlFor="sc-name"><Input id="sc-name" className="min-h-11" value={name} onChange={(e) => setName(e.target.value)} /></Field>

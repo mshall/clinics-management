@@ -177,3 +177,76 @@ html.dark {
 .recharts-surface { overflow: visible; }
 @media (prefers-reduced-motion: reduce) { .recharts-wrapper * { animation: none !important; } }
 .recharts-tooltip-item { color: hsl(var(--foreground)) !important; }
+
+/* ---- Round 3 (Q11f): form controls, dialogs-as-sheets, section nav, safety states, clearance for the assistant FAB ---- */
+:root.dark, html.dark { color-scheme: dark; }
+
+/* Native selects share one look (custom chevron, brand radius, mirrors in RTL); unlayered so it also covers the many one-off select classes. */
+select:not([multiple]):not([size]) {
+  appearance: none; -webkit-appearance: none;
+  background-color: hsl(var(--card));
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236F7899' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 0.75rem center; background-size: 1rem;
+  padding-inline-end: 2.25rem; border-radius: 0.5rem; border-color: hsl(var(--input));
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+[dir="rtl"] select:not([multiple]):not([size]) { background-position: left 0.75rem center; }
+select:not([multiple]):not([size]):hover:not(:disabled) { border-color: hsl(var(--ring) / 0.6); }
+input[type="checkbox"], input[type="radio"] { accent-color: hsl(var(--primary)); width: 1.125rem; height: 1.125rem; flex-shrink: 0; cursor: pointer; }
+textarea { border-radius: 0.5rem; }
+
+/* Dialogs: calm open/close (opacity + scale via the individual `scale`/`translate` properties so the centring transform is untouched). */
+@media (prefers-reduced-motion: no-preference) {
+  .kx-dialog[data-state="open"] { animation: kx-dialog-in 180ms var(--kx-ease-decelerate) both; }
+  .kx-dialog[data-state="closed"] { animation: kx-dialog-out 120ms var(--kx-ease-accelerate) both; }
+  @media (max-width: 639px) {
+    .kx-dialog[data-state="open"] { animation-name: kx-sheet-in; animation-duration: 240ms; }
+    .kx-dialog[data-state="closed"] { animation-name: kx-sheet-out; }
+  }
+}
+@keyframes kx-dialog-in { from { opacity: 0; scale: 0.97; } to { opacity: 1; scale: 1; } }
+@keyframes kx-dialog-out { from { opacity: 1; scale: 1; } to { opacity: 0; scale: 0.98; } }
+@keyframes kx-sheet-in { from { opacity: 0.6; translate: 0 32px; } to { opacity: 1; translate: 0 0; } }
+@keyframes kx-sheet-out { from { translate: 0 0; } to { opacity: 0; translate: 0 32px; } }
+
+/* The floating assistant button must never cover the last row of a page. */
+main { padding-bottom: max(env(safe-area-inset-bottom), 4.5rem); }
+@media (max-width: 767px) { main { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom)); } }
+
+/* Section nav (admin / HR / platform): underline tabs that scroll sideways on phones. */
+.kx-secnav { display: flex; gap: 0.25rem; overflow-x: auto; overscroll-behavior-x: contain; border-bottom: 1px solid hsl(var(--border)); scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.kx-secnav::-webkit-scrollbar { display: none; }
+.kx-secnav > button, .kx-secnav > a { position: relative; flex: none; min-height: 2.75rem; padding: 0 0.875rem; font-size: 0.875rem; font-weight: 500; color: hsl(var(--muted-foreground)); white-space: nowrap; border-radius: 0.5rem 0.5rem 0 0; transition: color 150ms ease, background-color 150ms ease; }
+.kx-secnav > button:hover, .kx-secnav > a:hover { color: hsl(var(--foreground)); background: hsl(var(--muted) / 0.6); }
+.kx-secnav > [aria-current="true"], .kx-secnav > [aria-current="page"] { color: hsl(var(--primary)); font-weight: 600; }
+.kx-secnav > [aria-current="true"]::after, .kx-secnav > [aria-current="page"]::after { content: ""; position: absolute; inset-inline: 0.5rem; bottom: -1px; height: 2px; border-radius: 2px; background: hsl(var(--primary)); }
+
+/* Safety / clinical state callouts: icon + text + colour (never colour alone). */
+.kx-callout { display: flex; gap: 0.75rem; align-items: flex-start; border-radius: 0.75rem; border: 1px solid hsl(var(--border)); border-inline-start-width: 4px; padding: 0.75rem 1rem; background: hsl(var(--card)); }
+.kx-callout[data-tone="danger"] { border-color: hsl(var(--danger-text) / 0.35); border-inline-start-color: hsl(var(--danger-text)); background: hsl(var(--danger-text) / 0.07); }
+.kx-callout[data-tone="warn"] { border-color: hsl(var(--warning) / 0.4); border-inline-start-color: hsl(var(--warning)); background: hsl(var(--warning) / 0.1); }
+.kx-callout[data-tone="good"] { border-color: hsl(var(--success) / 0.35); border-inline-start-color: hsl(var(--success)); background: hsl(var(--success) / 0.08); }
+.kx-callout[data-tone="info"] { border-color: hsl(var(--info) / 0.35); border-inline-start-color: hsl(var(--info)); background: hsl(var(--info) / 0.08); }
+
+/* Sticky action bar for field work (phones): sits above the bottom nav. */
+.kx-actionbar { position: sticky; bottom: calc(4.25rem + env(safe-area-inset-bottom)); z-index: 20; display: flex; gap: 0.75rem; padding: 0.75rem; margin-inline: -0.25rem; border-radius: 1rem; border: 1px solid hsl(var(--border)); background: hsl(var(--card) / 0.96); backdrop-filter: blur(8px); box-shadow: var(--kx-shadow-3, var(--kx-shadow-2)); }
+@media (min-width: 768px) { .kx-actionbar { bottom: 1rem; } }
+
+/* Definition list rows used by read-only records (invoice totals, visit summaries). */
+.kx-dl { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem 1rem; font-size: 0.875rem; }
+.kx-dl dt { color: hsl(var(--muted-foreground)); }
+.kx-dl dd { text-align: end; font-variant-numeric: tabular-nums; font-weight: 500; }
+.kx-dl .kx-total { border-top: 1px solid hsl(var(--border)); padding-top: 0.5rem; font-size: 1rem; font-weight: 700; color: hsl(var(--foreground)); }
+
+/* Dialog padding vars drive the sticky footer so it sits flush with the bottom edge of the scrollport (sticky offsets ignore the container's padding). */
+.kx-dialog { --dlg-px: 1.5rem; --dlg-pb: 1.5rem; }
+@media (max-width: 639px) { .kx-dialog { --dlg-px: 1.25rem; --dlg-pb: max(1.25rem, env(safe-area-inset-bottom)); } }
+.kx-dialog-footer {
+  position: sticky; bottom: calc(var(--dlg-pb, 1.5rem) * -1); z-index: 2;
+  margin: 0.25rem calc(var(--dlg-px, 1.5rem) * -1) calc(var(--dlg-pb, 1.5rem) * -1);
+  padding: 0.75rem var(--dlg-px, 1.5rem) max(0.75rem, env(safe-area-inset-bottom));
+  border-top: 1px solid hsl(var(--border) / 0.7); background: hsl(var(--card) / 0.96); backdrop-filter: blur(6px);
+}
+
+/* Solid danger surfaces carrying white text need >= 4.5:1 in dark too (the dark --destructive token is tuned for red TEXT on dark surfaces). */
+html.dark .bg-destructive { background-color: hsl(0 72% 46%); }

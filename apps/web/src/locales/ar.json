@@ -2813,7 +2813,9 @@
     "dataExplorerImport": "استيراد SQL أو ZIP",
     "dataExplorerImportHint": "استورد نفس ملفات التصدير: organization-export.sql أو ZIP كامل/مستندات مع SQL وملفات/ وmanifest.json. يعمل كمهمة خلفية حتى لا تنتهي المهلة.",
     "dataExplorerRecentJobs": "مهام النسخ الأخيرة",
-    "dataExplorerDownloadJob": "تنزيل"
+    "dataExplorerDownloadJob": "تنزيل",
+    "sections": "أقسام الإدارة",
+    "referralLinkLabel": "رابط الإحالة"
   },
   "pagination": {
     "showing": "{{from}}–{{to}} من {{total}}",
@@ -3394,7 +3396,9 @@
       "allBranches": "كل الفروع",
       "rating": "تقييم Kiorex",
       "freeReached": "Kiorly مجاني هذا الشهر",
-      "freeProgress": "{{count}} مرضى إضافيين من Kiorex ويصبح Kiorly مجانيًا هذا الشهر"
+      "freeProgress": "{{count}} مرضى إضافيين من Kiorex ويصبح Kiorly مجانيًا هذا الشهر",
+      "noActivity": "لا يوجد نشاط من كيوريكس هذا الشهر بعد",
+      "noActivityHint": "ستظهر هنا مشاهدات الملف والحجوزات القادمة من كيوريكس فور وصولها."
     },
     "booking": {
       "title": "الحجز عبر Kiorex",

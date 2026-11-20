@@ -18,7 +18,7 @@ import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/s
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DialogFooter, Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SearchInput } from "@/components/search-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -645,13 +645,18 @@ export function EncountersListPage() {
                   values={acquisitionValues}
                   onChange={setAcquisitionValues}
                 />
-                <CreateActionButton
-                  type="button"
-                  disabled={createMut.isPending}
-                  onClick={handleCreateEncounter}
-                >
-                  {t("encounters.createAndOpen", "Create & open")}
-                </CreateActionButton>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+                    {t("common.cancel", "Cancel")}
+                  </Button>
+                  <CreateActionButton
+                    type="button"
+                    disabled={createMut.isPending}
+                    onClick={handleCreateEncounter}
+                  >
+                    {t("encounters.createAndOpen", "Create & open")}
+                  </CreateActionButton>
+                </DialogFooter>
               </div>
             </DialogContent>
           </Dialog>

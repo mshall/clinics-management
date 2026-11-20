@@ -2813,7 +2813,9 @@
     "dataExplorerImport": "Import SQL or ZIP backup",
     "dataExplorerImportHint": "Import the same files export produces: organization-export.sql, or a full/documents ZIP with organization-export.sql + files/ + manifest.json. Runs as a background job so large restores do not time out.",
     "dataExplorerRecentJobs": "Recent backup jobs",
-    "dataExplorerDownloadJob": "Download"
+    "dataExplorerDownloadJob": "Download",
+    "sections": "Administration sections",
+    "referralLinkLabel": "Referral link"
   },
   "pagination": {
     "showing": "{{from}}–{{to}} of {{total}}",
@@ -3394,7 +3396,9 @@
       "allBranches": "All branches",
       "rating": "Kiorex rating",
       "freeReached": "Kiorly is free this month",
-      "freeProgress": "{{count}} more Kiorex patients and Kiorly is free this month"
+      "freeProgress": "{{count}} more Kiorex patients and Kiorly is free this month",
+      "noActivity": "No Kiorex activity yet this month",
+      "noActivityHint": "Profile views and bookings from Kiorex will chart here as they arrive."
     },
     "booking": {
       "title": "Booking on Kiorex",

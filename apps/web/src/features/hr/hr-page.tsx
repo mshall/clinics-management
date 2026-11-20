@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
+import { PageHeader } from "@/brand/ui-kit";
+import { SectionNav } from "@/components/section-nav";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
 import { ResponsiveTable } from "@/components/responsive-table";
@@ -801,29 +803,17 @@ export function HrPage() {
       <ValidationIssuesDialog {...attValidation.dialogProps} />
       <ValidationIssuesDialog {...leaveValidation.dialogProps} />
       <ValidationIssuesDialog {...lifecycleValidation.dialogProps} />
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("hr.title")}</h1>
-          <p className="text-muted-foreground">{t("hr.subtitle")}</p>
-        </div>
-        <OrgHierarchyPanel scope="tenant" />
-      </div>
+      <PageHeader className="mb-0" title={t("hr.title")} description={t("hr.subtitle")} actions={<OrgHierarchyPanel scope="tenant" />} />
 
-      <div className="flex flex-wrap gap-2">
-        {tabs.map((x) => (
-          <Button
-            key={x.id}
-            size="sm"
-            variant={tab === x.id ? "default" : "outline"}
-            onClick={() => {
-              setTab(x.id);
-              setSearchParams(x.id === "summary" ? {} : { tab: x.id }, { replace: true });
-            }}
-          >
-            {x.label}
-          </Button>
-        ))}
-      </div>
+      <SectionNav
+        label={t("hr.title")}
+        value={tab}
+        onChange={(id) => {
+          setTab(id);
+          setSearchParams(id === "summary" ? {} : { tab: id }, { replace: true });
+        }}
+        items={tabs.map((x) => ({ id: x.id, label: x.label }))}
+      />
 
       {tab === "summary" ? (
         <div className="grid gap-4 sm:grid-cols-3">

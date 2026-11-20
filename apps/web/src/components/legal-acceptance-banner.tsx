@@ -38,11 +38,11 @@ export function LegalAcceptanceBanner() {
   return (
     <div role="status" className="border-b border-primary/15 bg-accent/70 px-3 py-1.5 text-sm text-accent-foreground sm:px-4 md:ps-6">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="min-w-0 flex-1 truncate font-medium max-sm:whitespace-normal" title={t("legal.banner.prompt")}>{t("legal.banner.prompt")}</span>
+        <span className="min-w-0 flex-1 truncate font-medium max-sm:basis-full" title={t("legal.banner.prompt")}>{t("legal.banner.prompt")}</span>
         <button type="button" className="text-xs font-medium underline underline-offset-4" aria-expanded={docsOpen} onClick={() => setDocsOpen((v) => !v)}>
           {t("legal.banner.documents", "Documents")} ({status.pending.length})
         </button>
-        <Button type="button" size="sm" className="kx-hdr h-8 min-h-8 sm:h-7 sm:min-h-7" disabled={busy} onClick={() => void acceptAll()}>
+        <Button type="button" size="sm" className="kx-hdr ms-auto h-8 min-h-8 sm:ms-0 sm:h-7 sm:min-h-7" disabled={busy} onClick={() => void acceptAll()}>
           {t("legal.banner.accept")}
         </Button>
       </div>

@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiGet, apiPost, apiPut } from "@/lib/http";
@@ -64,12 +64,16 @@ function VisitsTab() {
         {rows.map((v) => (
           <li key={v.id}>
             <Card data-testid="dispatch-visit">
-              <CardContent className="flex flex-wrap items-center justify-between gap-2 p-4 text-sm">
-                <div>
-                  <p className="font-medium">{fmtDateTime(v.plannedStartsAt)} · {v.patient.name ?? v.district}</p>
-                  <p className="text-muted-foreground">{v.district} · {v.clinicianId ? t("nurse.dispatch.assignedTo", { name: names.get(v.clinicianId) ?? "-" }) : t("nurse.dispatch.unassigned")}{v.source === "KIOREX" ? ` · Kiorex` : ""}</p>
+              <CardContent className="space-y-3 p-4 text-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-muted-foreground tabular-nums">{fmtDateTime(v.plannedStartsAt)}</p>
+                    <p className="truncate text-base font-semibold">{v.patient.name ?? v.district}</p>
+                    <p className="text-muted-foreground">{v.district}{v.source === "KIOREX" ? ` · Kiorex` : ""}</p>
+                  </div>
+                  <StatusPill tone={v.clinicianId ? "ok" : "warn"}>{v.clinicianId ? t("nurse.dispatch.assignedTo", { name: names.get(v.clinicianId) ?? "-" }) : t("nurse.dispatch.unassigned")}</StatusPill>
                 </div>
-                <Button size="sm" variant="outline" className="min-h-11" onClick={() => setTarget(v)} data-testid="dispatch-assign">{v.clinicianId ? t("nurse.dispatch.reassign") : t("nurse.dispatch.assign")}</Button>
+                <Button size="lg" variant={v.clinicianId ? "outline" : "default"} className="min-h-12 w-full" onClick={() => setTarget(v)} data-testid="dispatch-assign">{v.clinicianId ? t("nurse.dispatch.reassign") : t("nurse.dispatch.assign")}</Button>
               </CardContent>
             </Card>
           </li>
@@ -113,16 +117,16 @@ function AssignDialog({ visit, roster, onClose }: { visit: HomeVisitRow; roster:
           </select>
         </Field>
         {blocked.length ? (
-          <div className="rounded-md border p-2 text-sm" data-testid="assign-blocked">
-            <p className="font-medium">{t("nurse.dispatch.notDispatchable")}</p>
+          <div className="kx-callout flex-col gap-1 text-sm" data-tone="warn" data-testid="assign-blocked">
+            <p className="font-semibold">{t("nurse.dispatch.notDispatchable")}</p>
             <ul className="list-disc ps-5 text-muted-foreground">{blocked.map((r) => <li key={r.userId}>{r.name}: {t(`nurse.dispatch.blockReason.${r.notDispatchableReason}`, r.notDispatchableReason ?? "")}</li>)}</ul>
           </div>
         ) : null}
         {assign.isError ? (isGateError(assign.error) ? <GateNotice feature="clinic.home_dispatch" /> : <div role="alert" data-testid="assign-error" data-code={code ?? ""}><ErrorBlock error={assign.error} /></div>) : null}
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" className="min-h-11" onClick={onClose}>{t("nurse.common.cancel")}</Button>
-          <Button className="min-h-11" disabled={!nurseId || assign.isPending} onClick={() => assign.mutate()} data-testid="assign-confirm">{t("nurse.dispatch.confirmAssign")}</Button>
-        </div>
+        <DialogFooter>
+          <Button variant="outline" className="min-h-12" onClick={onClose}>{t("nurse.common.cancel")}</Button>
+          <Button className="min-h-12" disabled={!nurseId || assign.isPending} onClick={() => assign.mutate()} data-testid="assign-confirm">{t("nurse.dispatch.confirmAssign")}</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -141,13 +145,13 @@ function RosterTab() {
         {roster.data?.items.map((r) => (
           <li key={r.userId}>
             <Card data-testid="roster-row" data-kind={r.kind} data-dispatchable={String(r.dispatchable)}>
-              <CardContent className="space-y-1 p-4 text-sm">
+              <CardContent className="space-y-2 p-4 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-medium">{r.name} <span className="text-muted-foreground">· {t(`nurse.dispatch.kind.${r.kind}`)}</span></p>
+                  <p className="flex items-center gap-3 text-base font-semibold"><span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-foreground">{r.name.charAt(0).toUpperCase()}</span><span>{r.name}<span className="block text-xs font-normal text-muted-foreground">{t(`nurse.dispatch.kind.${r.kind}`)}</span></span></p>
                   {r.dispatchable ? <StatusPill tone="ok">{t("nurse.dispatch.dispatchable")}</StatusPill> : <StatusPill tone="bad">{t(`nurse.dispatch.blockReason.${r.notDispatchableReason}`, r.notDispatchableReason ?? "")}</StatusPill>}
                 </div>
                 <p className="text-muted-foreground">{[...r.skills, ...r.languages].join(" · ") || "-"}{r.zones.length ? ` · ${r.zones.join(", ")}` : ""}</p>
-                {r.kind === "NURSE" ? <Button size="sm" variant="outline" className="min-h-11" onClick={() => setEditing(r)}>{t("nurse.dispatch.manage")}</Button> : null}
+                {r.kind === "NURSE" ? <Button variant="outline" className="min-h-12 w-full sm:w-auto" onClick={() => setEditing(r)}>{t("nurse.dispatch.manage")}</Button> : null}
               </CardContent>
             </Card>
           </li>
@@ -187,7 +191,7 @@ function RosterDialog({ nurse, onClose }: { nurse: RosterItem; onClose: () => vo
         </div>
         <Button className="min-h-11" disabled={save.isPending} onClick={() => save.mutate()}>{t("nurse.common.save")}</Button>
         {pay.data ? (
-          <div className="rounded-md border p-3 text-sm" data-testid="pay-statement">
+          <div className="kx-callout flex-col gap-1 text-sm" data-tone="info" data-testid="pay-statement">
             <p className="font-medium">{t("nurse.dispatch.payStatement")}</p>
             <p>{t("nurse.dispatch.payLine", { visits: pay.data.visits, hours: pay.data.shiftHours, total: money(pay.data.totalPay) })}</p>
             <p className="text-muted-foreground">{t("nurse.dispatch.cashOwed", { amount: money(pay.data.cashOwedToAgency) })}</p>

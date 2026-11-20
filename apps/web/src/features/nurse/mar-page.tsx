@@ -93,21 +93,22 @@ export function MarPage() {
         </>
       ) : (
         <>
-          <p className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm" data-testid="mar-rule"><ShieldAlert className="me-2 inline size-4 text-primary" aria-hidden />{t("nurse.mar.rule")}</p>
-          <Card data-testid="mar-allergies">
-            <CardHeader className="pb-1"><CardTitle className="text-base">{t("nurse.mar.allergies")}</CardTitle></CardHeader>
-            <CardContent className="text-sm">
+          <div className="kx-callout" data-tone="info" data-testid="mar-rule"><ShieldAlert className="mt-0.5 size-5 shrink-0 text-[hsl(var(--info))]" aria-hidden /><p className="text-sm font-medium">{t("nurse.mar.rule")}</p></div>
+          <section className="kx-callout" data-tone={allergies.isError || (allergies.data && allergies.data.length > 0) ? "danger" : allergies.data ? "good" : "info"} data-testid="mar-allergies" aria-label={t("nurse.mar.allergies")}>
+            <ShieldAlert className={`mt-0.5 size-5 shrink-0 ${allergies.isError || (allergies.data && allergies.data.length > 0) ? "text-[hsl(var(--danger-text))]" : "text-[hsl(var(--success))]"}`} aria-hidden />
+            <div className="min-w-0 flex-1 space-y-2 text-sm">
+              <h2 className="text-base font-semibold">{t("nurse.mar.allergies")}</h2>
               {allergies.isLoading ? <LoadingBlock /> : null}
               {allergies.isError ? (
                 <div role="alert" data-testid="mar-allergies-error" className="space-y-1">
                   <ErrorBlock error={allergies.error} onRetry={() => void allergies.refetch()} />
-                  <p className="text-destructive">{t("nurse.mar.allergiesUnknown")}</p>
+                  <p className="font-medium text-[hsl(var(--danger-text))]">{t("nurse.mar.allergiesUnknown")}</p>
                 </div>
               ) : null}
               {allergies.data && allergies.data.length === 0 ? <p className="text-muted-foreground">{t("nurse.mar.noAllergies")}</p> : null}
               <div className="flex flex-wrap gap-2">{allergies.data?.map((a, i) => <StatusPill key={a.id ?? i} tone="bad">{allergyLabel(a.code, (k, d) => t(k, d))}{a.otherComment ? ` (${a.otherComment})` : ""}</StatusPill>)}</div>
-            </CardContent>
-          </Card>
+            </div>
+          </section>
 
           <Card>
             <CardHeader className="pb-1"><CardTitle className="text-base">{t("nurse.mar.orders")}</CardTitle></CardHeader>
@@ -115,12 +116,12 @@ export function MarPage() {
               {orders.isLoading ? <LoadingBlock /> : null}
               {orders.isError ? <ErrorBlock error={orders.error} onRetry={() => void orders.refetch()} /> : null}
               {orders.data && orders.data.items.length === 0 ? <EmptyBlock message={t("nurse.mar.noOrders")} /> : null}
-              {orders.data && orders.data.items.length > 0 && active.length === 0 ? <p className="flex items-center gap-2 text-sm text-destructive" role="alert" data-testid="mar-no-active-order"><Ban className="size-4" aria-hidden /> {t("nurse.mar.noActiveOrder")}</p> : null}
+              {orders.data && orders.data.items.length > 0 && active.length === 0 ? <div className="kx-callout" data-tone="danger" role="alert" data-testid="mar-no-active-order"><Ban className="size-5 shrink-0 text-[hsl(var(--danger-text))]" aria-hidden /><p className="text-sm font-medium">{t("nurse.mar.noActiveOrder")}</p></div> : null}
               <ul className="space-y-3">
                 {orders.data?.items.map((o) => {
                   const usable = o.status === "ACTIVE" && !isExpired(o);
                   return (
-                    <li key={o.id} className="rounded-md border p-3 text-sm" data-testid="mar-order">
+                    <li key={o.id} className={`rounded-xl border p-3 text-sm ${usable ? "border-border bg-card" : "border-dashed bg-muted/40 opacity-80"}`} data-testid="mar-order">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="font-medium">{o.prescriberName} · {fmtDate(o.orderedOn)}</p>
                         <span className="flex flex-wrap gap-1">
@@ -132,9 +133,9 @@ export function MarPage() {
                       <p className="text-muted-foreground">{t("nurse.mar.expires", { date: fmtDate(o.expiresOn) })}</p>
                       <ul className="mt-2 space-y-1">
                         {o.lines.map((l, i) => (
-                          <li key={i} className="flex flex-wrap items-center justify-between gap-2">
-                            <span>{l.medicineName} {l.dose ?? ""} {l.route ?? ""} {l.frequency ?? ""}</span>
-                            {usable ? <Button size="sm" variant="outline" className="min-h-11" onClick={() => setPrefill({ order: o, line: l })} data-testid="mar-administer-line">{t("nurse.mar.administer")}</Button> : null}
+                          <li key={i} className="flex items-center justify-between gap-3 rounded-lg bg-muted/50 px-3 py-2">
+                            <span className="min-w-0"><span className="block truncate text-base font-semibold">{l.medicineName}</span><span className="block text-muted-foreground">{[l.dose, l.route, l.frequency].filter(Boolean).join(" · ")}</span></span>
+                            {usable ? <Button size="lg" className="min-h-12 shrink-0" onClick={() => setPrefill({ order: o, line: l })} data-testid="mar-administer-line">{t("nurse.mar.administer")}</Button> : null}
                           </li>
                         ))}
                       </ul>
@@ -154,7 +155,7 @@ export function MarPage() {
               {admins.isLoading ? <LoadingBlock /> : null}
               {admins.data && admins.data.items.length === 0 ? <EmptyBlock message={t("nurse.mar.noneGiven")} /> : null}
               <ul className="divide-y text-sm" data-testid="mar-given">
-                {admins.data?.items.map((a) => <li key={a.id} className="py-2">{fmtDateTime(a.administeredAt)} · <strong>{a.medicineName}</strong> {a.dose} {a.route}</li>)}
+                {admins.data?.items.map((a) => <li key={a.id} className="flex items-start gap-3 py-3"><span aria-hidden className="mt-1.5 size-2.5 shrink-0 rounded-full bg-[hsl(var(--success))]" /><span><strong className="text-base">{a.medicineName}</strong> <span className="text-muted-foreground">{[a.dose, a.route].filter(Boolean).join(" · ")}</span><span className="block text-xs text-muted-foreground tabular-nums">{fmtDateTime(a.administeredAt)}</span></span></li>)}
               </ul>
             </CardContent>
           </Card>
@@ -206,7 +207,7 @@ function AdministerForm({ patientId, visitAppointmentId, orders, prefill }: { pa
           {order?.controlled ? (
             <Field label={t("nurse.mar.witness")} htmlFor="mar-witness" hint={t("nurse.mar.witnessHint")}><Input id="mar-witness" className="min-h-11" value={witness} onChange={(e) => setWitness(e.target.value)} /></Field>
           ) : null}
-          <div className="sm:col-span-2"><Button type="submit" className="min-h-11" disabled={!valid || give.isPending} data-testid="mar-submit">{t("nurse.mar.record")}</Button></div>
+          <div className="sm:col-span-2"><Button type="submit" size="lg" className="min-h-14 w-full text-base" disabled={!valid || give.isPending} data-testid="mar-submit">{t("nurse.mar.record")}</Button></div>
         </form>
         {give.isError ? <MarBlock error={give.error} /> : null}
       </CardContent>
@@ -221,8 +222,8 @@ function MarBlock({ error }: { error: unknown }) {
   if (isGateError(error)) return <GateNotice feature="nurse.mar" />;
   if (code && (MAR_BLOCK_CODES as readonly string[]).includes(code)) {
     return (
-      <div className="space-y-1 rounded-lg border-2 border-destructive bg-destructive/10 p-3 text-sm" role="alert" data-testid="mar-block" data-code={code}>
-        <p className="flex items-center gap-2 font-semibold text-destructive"><Ban className="size-5" aria-hidden /> {t("nurse.mar.blocked")}: {t(`nurse.mar.block.${code}.title`)}</p>
+      <div className="kx-callout flex-col gap-1 text-sm" data-tone="danger" role="alert" data-testid="mar-block" data-code={code}>
+        <p className="flex items-center gap-2 text-base font-semibold text-[hsl(var(--danger-text))]"><Ban className="size-5 shrink-0" aria-hidden /> {t("nurse.mar.blocked")}: {t(`nurse.mar.block.${code}.title`)}</p>
         <p>{t(`nurse.mar.block.${code}.help`)}</p>
         <p className="text-muted-foreground">{t("nurse.mar.nothingRecorded")}</p>
         {i18n.exists(`nurse.mar.block.${code}.title`) ? null : <p>{String(errorBody<{ message?: string }>(error)?.message ?? "")}</p>}
@@ -272,7 +273,7 @@ function PhotoOrderDialog({ patientId, onClose }: { patientId: string; onClose: 
           {create.isError ? <ErrorBlock error={create.error} /> : null}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" className="min-h-11" onClick={onClose}>{t("nurse.common.cancel")}</Button>
-            <Button type="submit" className="min-h-11" disabled={!valid || create.isPending} data-testid="mar-order-submit">{t("nurse.common.save")}</Button>
+            <Button type="submit" size="lg" className="min-h-12" disabled={!valid || create.isPending} data-testid="mar-order-submit">{t("nurse.common.save")}</Button>
           </div>
         </form>
       </DialogContent>

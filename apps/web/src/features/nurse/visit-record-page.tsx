@@ -140,11 +140,11 @@ export function VisitRecordPage() {
           <Card>
             <CardHeader className="pb-1"><CardTitle className="text-base">{t("nurse.visit.checklist")}</CardTitle></CardHeader>
             <CardContent className="space-y-2">
-              <ul className="space-y-1" data-testid="visit-checklist">
+              <ul className="space-y-2" data-testid="visit-checklist">
                 {draft.checklist.map((c, i) => (
                   <li key={i}>
-                    <label className="flex min-h-11 items-center gap-3 text-sm">
-                      <input type="checkbox" className="size-5" disabled={locked} checked={c.done} onChange={(e) => setDraft({ ...draft, checklist: draft.checklist.map((x, j) => (j === i ? { ...x, done: e.target.checked } : x)) })} />
+                    <label className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border px-3 text-base transition-colors ${c.done ? "border-[hsl(var(--success)/0.4)] bg-[hsl(var(--success)/0.08)]" : "border-border bg-card"}`}>
+                      <input type="checkbox" className="!size-6" disabled={locked} checked={c.done} onChange={(e) => setDraft({ ...draft, checklist: draft.checklist.map((x, j) => (j === i ? { ...x, done: e.target.checked } : x)) })} />
                       {c.task}
                     </label>
                   </li>
@@ -188,10 +188,10 @@ export function VisitRecordPage() {
           {sign.isError ? <ErrorBlock error={sign.error} /> : null}
           {save.isError ? <ErrorBlock error={save.error} /> : null}
           {!locked ? (
-            <div className="sticky bottom-16 z-10 flex flex-wrap justify-end gap-2 rounded-lg border bg-card/95 p-2 backdrop-blur md:bottom-2">
-              <Button variant="outline" className="min-h-11" disabled={save.isPending} onClick={() => save.mutate()} data-testid="visit-save">{t("nurse.common.save")}</Button>
-              <Button className="min-h-11" disabled={sign.isPending || signBlockedByCritical} onClick={() => sign.mutate()} data-testid="visit-sign">{t("nurse.visit.sign")}</Button>
-              {signBlockedByCritical ? <p className="w-full text-end text-xs text-destructive" role="status">{t("nurse.visit.signBlocked")}</p> : null}
+            <div className="kx-actionbar flex-wrap">
+              <Button variant="outline" size="lg" className="min-h-14 flex-1 text-base" disabled={save.isPending} onClick={() => save.mutate()} data-testid="visit-save">{t("nurse.common.save")}</Button>
+              <Button size="lg" className="min-h-14 flex-[2] text-base" disabled={sign.isPending || signBlockedByCritical} onClick={() => sign.mutate()} data-testid="visit-sign">{t("nurse.visit.sign")}</Button>
+              {signBlockedByCritical ? <p className="w-full text-sm font-medium text-[hsl(var(--danger-text))]" role="status">{t("nurse.visit.signBlocked")}</p> : null}
             </div>
           ) : (
             <Card>
@@ -222,10 +222,10 @@ function CriticalBanner({ vitals, lang, onLogged }: { vitals: Vitals; lang: "en"
     onSuccess: () => { toast.success(t("nurse.escalation.logged")); onLogged(); },
   });
   return (
-    <div className="space-y-3 rounded-lg border-2 border-destructive bg-destructive/10 p-4" role="alert" data-testid="critical-banner">
-      <p className="flex items-center gap-2 font-semibold text-destructive"><AlertTriangle className="size-5" aria-hidden /> {t("nurse.escalation.title")}</p>
+    <div className="kx-callout flex-col gap-3" data-tone="danger" role="alert" data-testid="critical-banner">
+      <p className="flex items-center gap-2 text-lg font-semibold text-[hsl(var(--danger-text))]"><AlertTriangle className="size-6" aria-hidden /> {t("nurse.escalation.title")}</p>
       <p className="text-sm">{lang === "ar" ? "قيمة حرجة: اتصل بالطبيب الآن. إذا كان المريض غير مستقر اتصل بـ 123 (الإسعاف)." : "Critical value: call the doctor now. If the patient is unstable call 123 (ambulance)."}</p>
-      <a href="tel:123" className="inline-flex min-h-11 items-center gap-2 rounded-md bg-destructive px-4 text-sm font-medium text-destructive-foreground"><Phone className="size-4" aria-hidden /> {t("nurse.escalation.call123")}</a>
+      <a href="tel:123" className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-destructive px-4 text-lg font-bold text-destructive-foreground"><Phone className="size-5" aria-hidden /> {t("nurse.escalation.call123")}</a>
       <div className="grid gap-2 sm:grid-cols-2">
         <Field label={t("nurse.escalation.action")} htmlFor="esc-action">
           <select id="esc-action" className={selectClass} value={action} onChange={(e) => setAction(e.target.value as typeof action)}>
@@ -235,7 +235,7 @@ function CriticalBanner({ vitals, lang, onLogged }: { vitals: Vitals; lang: "en"
         <Field label={t("nurse.escalation.note")} htmlFor="esc-note"><Input id="esc-note" className="min-h-11" value={note} onChange={(e) => setNote(e.target.value)} /></Field>
       </div>
       {log.isError ? <ErrorBlock error={log.error} /> : null}
-      <Button className="min-h-11" disabled={log.isPending} onClick={() => log.mutate()} data-testid="escalation-log">{t("nurse.escalation.log")}</Button>
+      <Button size="lg" className="min-h-14 w-full text-base" disabled={log.isPending} onClick={() => log.mutate()} data-testid="escalation-log">{t("nurse.escalation.log")}</Button>
     </div>
   );
 }
@@ -262,11 +262,11 @@ function VitalsForm({ patientId, appointmentId, onRecorded }: { patientId: strin
         <form className="grid grid-cols-2 gap-3 sm:grid-cols-4" onSubmit={(e) => { e.preventDefault(); if (hasAny) rec.mutate(); }} data-testid="vitals-form">
           {VITALS.map((k) => (
             <Field key={k} label={t(`nurse.vitals.keys.${k}`)} htmlFor={`vital-${k}`}>
-              <Input id={`vital-${k}`} inputMode="decimal" type="number" step={step(k)} className="min-h-11" value={v[k] ?? ""} onChange={(e) => setV({ ...v, [k]: e.target.value })} />
+              <Input id={`vital-${k}`} inputMode="decimal" type="number" step={step(k)} className="min-h-14 text-xl font-semibold tabular-nums ltr-nums" value={v[k] ?? ""} onChange={(e) => setV({ ...v, [k]: e.target.value })} />
             </Field>
           ))}
           <div className="col-span-2 flex items-end sm:col-span-4">
-            <Button type="submit" className="min-h-11" disabled={!hasAny || rec.isPending} data-testid="vitals-submit">{t("nurse.vitals.record")}</Button>
+            <Button type="submit" size="lg" className="min-h-14 w-full text-base" disabled={!hasAny || rec.isPending} data-testid="vitals-submit">{t("nurse.vitals.record")}</Button>
           </div>
         </form>
         {rec.isError ? <ErrorBlock error={rec.error} /> : null}
@@ -295,7 +295,7 @@ function VitalsHistory({ vitals }: { vitals: Vitals[] }) {
               <p className="flex flex-wrap gap-2">
                 {VITALS.filter((k) => v[k] != null).map((k) => {
                   const f = v.flags?.[k];
-                  return <span key={k} className={f ? (f.startsWith("CRITICAL") ? "font-semibold text-destructive" : "font-medium text-[hsl(var(--warning))] ") : ""}>{t(`nurse.vitals.keys.${k}`)} {String(v[k])}{f ? ` (${t(`nurse.vitals.flags.${f}`)})` : ""}</span>;
+                  return <span key={k} className={f ? (f.startsWith("CRITICAL") ? "rounded-md bg-[hsl(var(--danger-text)/0.1)] px-1.5 font-semibold text-[hsl(var(--danger-text))]" : "rounded-md bg-[hsl(var(--warning)/0.12)] px-1.5 font-medium text-[hsl(var(--warning))]") : ""}>{t(`nurse.vitals.keys.${k}`)} {String(v[k])}{f ? ` (${t(`nurse.vitals.flags.${f}`)})` : ""}</span>;
                 })}
               </p>
             </li>
